@@ -30,7 +30,7 @@ Out of scope:
 - social engineering
 - vulnerability reports that require access to another user's account, email inbox, or private infrastructure
 
-For implementation guardrails around token-in-URL handling, inline scripts, CSP, Safe Browsing, and classifier-sensitive copy, see [docs/security-governance.md](./docs/security-governance.md).
+For implementation guardrails around token-in-URL handling, inline scripts, CSP, and Safe Browsing, see [docs/security-governance.md](./docs/security-governance.md). The classifier-sensitive page-copy guardrail (`npm run check:sensitive-page-copy`) is documented in [docs/scripts.md](./docs/scripts.md).
 
 ## Handling
 

@@ -75,7 +75,7 @@ Measures supply contraction rate. Only negative changes contribute stress.
 - **1d normalization:** `[0%, 0] → [1%, 15] → [3%, 40] → [5%, 65] → [10%, 85] → [20%, 100]`
 - **7d normalization:** `[0%, 0] → [3%, 15] → [7%, 40] → [15%, 70] → [30%, 100]`
 - **Blend:** `0.6 * norm1d + 0.4 * norm7d`
-- **Size dampening:** `sizeFactor = min(1, log10(max(mcap, $1M) / $1M) / 3)` — small coins (<$50M) get reduced signal
+- **Size dampening:** `sizeFactor = min(1, log10(max(mcap, $1M) / $1M) / 3)` — every coin below $1B gets reduced signal ($100M ≈ 0.67x, $50M ≈ 0.57x, $10M ≈ 0.33x); the factor reaches 1.0 only at $1B+
 - **Anchor availability:** if both previous-day and previous-week supply anchors are absent, the sub-signal is unavailable and its weight is redistributed. If one anchor is present, the present side is scored and the missing side contributes zero velocity. Explicit finite zero anchors stay available and produce zero velocity stress rather than a divide-by-zero or a false contraction
 
 ### S_pool — Pool Balance Drift
@@ -100,13 +100,13 @@ Smoothed with previous reading when available.
 ### S_price — Price Confidence Degradation
 
 Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, null price=100.
-+15 transition bonus when confidence degrades from previous reading.
++15 transition bonus when confidence degrades from previous reading, capped at 100. The `high` → `single-source` reclassification is exempt: it is treated as a labelling change from the consensus honesty fix, not a real degradation, and adds no bonus.
 
 ### S_diverg — Cross-Source Price Divergence
 
 Max of: primary deviation from peg, DEX deviation from peg, cross-source spread (all in bps).
 
-- DEX input comes only from `dex_prices` rows refreshed within the live depeg trust window (`DEX_FRESHNESS_SEC = 2100`, currently 35 minutes) **and** backed by at least `$1M` of aggregate source TVL, matching the live depeg trust floor
+- DEX input comes only from `dex_prices` rows refreshed within the live depeg trust window (`DEX_FRESHNESS_SEC = 4500`, currently 75 minutes) **and** backed by at least `$1M` of aggregate source TVL, matching the live depeg trust floor
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`
 - Smoothed with previous reading.
@@ -161,7 +161,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 - **NAV tokens** (`flags.navToken`): Excluded entirely (price appreciates, not pegged)
 - **Non-USD pegs:** S_diverg dampened by 0.7 factor (noisier FX pricing)
-- **Small coins (<$50M):** S_supply dampened via size factor
+- **Coins under $1B:** S_supply dampened via the log size factor (full signal only at $1B+)
 - **No DEX data:** S_pool and S_liq marked unavailable, weight redistributed
 - **No blacklist tracking:** S_black unavailable for most coins
 - **New coins / no history:** Signals gracefully degrade to unavailable; Supply Velocity is unavailable until at least one previous-day or previous-week supply anchor exists
@@ -188,7 +188,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 **Cron name:** `compute-dews`
 
-**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel written on the first cron run that reaches persistence — even if that run is degraded by other source failures or wrote no rows. Before that first run, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Stale `dex_liquidity` and stale `mint_burn_hourly` freshness are recorded in metadata, but rows that meet signal-coverage requirements are still persisted. The same metadata includes `dependencies.dexLiquidity` diagnostics from `dex_liquidity_publication_generations` so operators can distinguish stale DEWS inputs caused by a failed/latest DEX publication from normal downstream catch-up.
+**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail (`fallbackMode: "degraded-inputs"`) or when a core persisted input row is malformed (`malformedCoreInputRows > 0`, `fallbackMode: "malformed-persisted-inputs"`). Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel written on the first cron run that reaches persistence — even if that run is degraded by other source failures or wrote no rows. Before that first run, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Stale `dex_liquidity` and stale `mint_burn_hourly` freshness are recorded in metadata, but rows that meet signal-coverage requirements are still persisted. The same metadata includes `dependencies.dexLiquidity` diagnostics from `dex_liquidity_publication_generations` so operators can distinguish stale DEWS inputs caused by a failed/latest DEX publication from normal downstream catch-up.
 
 **Off-chain confirmation resilience:** CoinGecko and DefiLlama confirmation fetches used by the pending-depeg pipeline are wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
 
@@ -214,9 +214,9 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 ### `GET /api/stress-signals`
 
-**All coins (no params):** Returns latest DEWS for readable tracked stablecoins. The response-level freshness headers use the latest aggregate publication timestamp (`updatedAt`) so one retained frozen/long-tail row does not stale the entire `/depeg` surface; `oldestComputedAt` remains in the body for consumers that need to detect per-coin lag. Pre-launch tracked entries are excluded because the handler gates on readable tracked IDs.
+**All coins (no params):** Returns latest DEWS for active tracked stablecoins. The response-level freshness headers use the latest aggregate publication timestamp (`updatedAt`) so one retained long-tail row does not stale the entire `/depeg` surface; `oldestComputedAt` remains in the body for consumers that need to detect per-coin lag. Non-active tracked entries (pre-launch, quarantined, delisted, frozen) are excluded because the aggregate handler gates rows on `ACTIVE_IDS`, and `eligibleCount` is the active-registry size.
 
-When a coin has insufficient data in a cycle (`computeDEWS() === null`), that run skips writes for the coin, so this endpoint continues serving the last valid cached row.
+When a coin has insufficient data in a cycle (`computeDEWS() === null`), that run skips writes for the coin. Because current reads are scoped to the exact published generation, the coin is absent from the aggregate response (it still counts toward `missingCount`) and the single-coin route returns `current: null` with `currentStatus: "unavailable"`; its previous row is not resurrected except on the legacy/no-pointer compatibility path.
 
 Current DEWS readers verify the exact pointer generation against `stress_signal_publication_rows`; Telegram snapshots and smoothing continue to use the full latest materialization within the published bound. That prevents partially written newer runs from becoming visible. PSI likewise requires the exact pointed generation, so incomplete coverage fails closed rather than mixing rows from different runs.
 
@@ -237,7 +237,7 @@ Current DEWS readers verify the exact pointer generation against `stress_signal_
 
 **Single coin:** `?stablecoin=usdt-tether&days=30` (default 30, min 1, max 365) — Returns latest + daily history.
 
-Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs return `404` with `Stablecoin not tracked`.
+Unknown IDs return `404` with `Unknown stablecoin`; non-readable (pre-launch) tracked IDs return `404` with `Stablecoin not tracked`. Quarantined, delisted and frozen IDs stay readable on the single-coin path even though the aggregate response excludes them.
 
 ```text
 {
@@ -276,7 +276,7 @@ Repair modes:
 | ------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
 | `DEWSBadge`   | `src/components/dews-badge.tsx`   | Table rows (hidden when CALM)                                                         |
 | `DEWSDetail`  | `src/components/dews-detail.tsx`  | Stablecoin detail page; contextual methodology hint + footer links on the detail card |
-| `DEWSSummary` | `src/components/dews-summary.tsx` | Homepage widget / depeg-page hero radar; title-level contextual methodology hint      |
+| `DEWSSummary` | `src/components/dews-summary.tsx` | Depeg-page hero radar; title-level contextual methodology hint                         |
 
 **Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/api-hooks.ts`
 

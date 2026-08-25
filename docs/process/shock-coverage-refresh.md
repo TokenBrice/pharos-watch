@@ -22,7 +22,7 @@ Worst-case gap between scheduled attempts is 48h, leaving a roughly 24h manual/r
 | Attest journal replays    | `generate-safety-score-v9-shock-coverage-attestations.ts`                   | A journal did not replay byte-identically offline        |
 | Regenerate registry       | `generate-safety-score-v9-shock-coverage-registry.ts`                       | Journal/registry projection is inconsistent              |
 | Verify self-consistency   | both generators with `--check`                                              | A generated artifact is stale after its own run          |
-| Assert scoring freshness  | `scripts/ci/check-shock-coverage-freshness.ts`                              | A target is missing, incomplete, unattested, or too old  |
+| Assert scoring freshness  | `scripts/ci/check-shock-coverage-freshness.ts`                              | A target is missing, incomplete, unattested, or past the 36h refresh budget the check enforces (half the 72h policy bound) |
 | Run shock-coupled tests   | `vitest` over the registry, extension-shock, and fact-set suites            | The refreshed data would fail the PR gate — the PR would be unmergeable |
 
 Each stage is a separate step, so a partial refresh (for example V1 succeeding and V2 failing) fails the job **before** any branch, commit, or PR is created. Nothing unverified reaches the registry.

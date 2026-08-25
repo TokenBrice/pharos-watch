@@ -37,15 +37,15 @@ An inherited claim is curated as a wrapper reserve slice naming the parent, not 
 
 ### A reviewer-scoped open question is limited evidence (`9.27`)
 
-`mintAuthority.review.scopedQuestions` records an open question a reviewer investigated and could not close, scoped to exactly one control named by `chain:address` or by its label, with the question text, its own `reviewedAt`, `reviewer`, and sources. While that review date sits inside a 90-day freshness window, the named control's gap publishes `scoped-control-question` and takes the 69 `control-scoped-gap` ceiling instead of the 55 `control-unverified` ceiling — an investigated, dated, bounded unknown is limited evidence, not absent evidence. Past the window the gap reverts to the hard ceiling, so a named gap cannot become a permanent softener; the row stays in the `DEPLOYMENT_CONTROLS` curation queue either way. A scoped question softens only the control it names: the whole-asset inventory reason softens only when every unresolved control carries a fresh scoped question, and the legacy all-or-nothing `unresolvedQuestions` list keeps its existing semantics. Deployment-scoped controls with a null supply share also gain a materiality release in `9.27`: when the supply partition is complete and reconciled, the deployment's measured rows bound the share and a proven sub-threshold bound stops binding the ceiling; global-claim controls are never released by materiality.
+`mintAuthority.review.scopedQuestions` records an open question a reviewer investigated and could not close, scoped to exactly one control named by `chain:address` or by its label, with the question text, its own `reviewedAt`, `reviewer`, and sources. While that review date sits inside a 90-day freshness window, the named control's gap publishes `scoped-control-question` and takes the 69 `control-scoped-gap` ceiling instead of the 55 `control-unverified` ceiling — an investigated, dated, bounded unknown is limited evidence, not absent evidence. Past the window the gap reverts to the hard ceiling, so a named gap cannot become a permanent softener; the row stays in the `DEPLOYMENT_CONTROLS` curation queue either way. A scoped question softens only the control it names: the whole-asset inventory reason softens only when every unresolved control carries a fresh scoped question, and the legacy all-or-nothing `unresolvedQuestions` list keeps its existing semantics. Deployment-scoped controls with a null supply share also gain a materiality release in `9.27`: when the supply partition is complete and reconciled, the deployment's measured rows bound the share — zero when no row exists for it — and a proven sub-threshold bound stops binding the ceiling; a missing or unreconciled partition keeps the fail-closed treatment, and global-claim controls are never released by materiality.
 
 Since `9.28` the same contract covers structured bridge controls via `bridgeRouteRisk.scopedQuestions`, with `controlRef` naming the control by `id`, exact label, or `controllerChain:controllerAddress`. Because the compiled bridge fact is the route-level merge of its structured controls, the merged overlay inherits the softening only when every unresolved contributor on that route is named by a fresh question — one unnamed unresolved sibling keeps the hard treatment. Conservative route-derived fallback controls, which have no reviewer behind them, never take a scoped question.
 
-Since `9.3` the live mint component's top rung is 100: a derived `none-resolved` posture states that no reviewed control can mint, authorize minting, or expand issuance on this component's scope, so the component scores its proven maximum. The motivating LUSD/BOLD case proves the absence outright on immutable, owner-renounced deployments. The oracle and bridge tier tables are independent calibrations and keep their existing values.
+Since `9.3` the live mint component's top rung is 100: a derived `none-resolved` posture states that no reviewed control can mint, authorize minting, or expand issuance on this component's scope, so the component scores its proven maximum instead of reserving five unreachable points. The motivating LUSD/BOLD case proves the absence outright on immutable, owner-renounced deployments. The oracle and bridge tier tables are independent calibrations and keep their existing values.
 
 ### Mint posture derivation and quality ladder (`9.32`)
 
-The live mint component derives its posture from reviewed control facts in a fixed order. An active mint incident first pins `unbounded-or-compromised`. A missing control or an unknown cap, claim-impairment, or economic-loss fact stays `unknown`. For economically unbounded minting, continuous or periodic reconciliation — or prudential supervision — derives `unbounded-reconciled`; an unknown reconciliation answer derives `unbounded-reconciliation-unknown`; and a confirmed `none` or `not-applicable` answer without prudential supervision derives `unbounded-or-compromised`. A reviewed absence of claim impairment derives `none-resolved` before cap grading. After that check, verified `collateral-gated` semantics derive the collateral-gated rung, followed by raiseable or periodic controls, bounded controls, and finally concentrated administration.
+The live mint component derives its posture from reviewed control facts in a fixed order. An active mint incident first pins `unbounded-or-compromised`. A missing control derives `none-resolved` when no control key is authored and the reviewed mechanism is immutable with a `not-applicable` reconciliation, and otherwise stays `unknown`; an unknown cap, claim-impairment, or economic-loss fact also stays `unknown`. For economically unbounded minting, continuous or periodic reconciliation — or prudential supervision — derives `unbounded-reconciled`; an unknown reconciliation answer derives `unbounded-reconciliation-unknown`; and a confirmed `none` or `not-applicable` answer without prudential supervision derives `unbounded-or-compromised`. A reviewed absence of claim impairment derives `none-resolved` before cap grading. After that check, verified `collateral-gated` semantics derive the collateral-gated rung, followed by raiseable or periodic controls, bounded controls, and finally concentrated administration.
 
 These are posture qualities before quorum, custody, module, incident-decay, and other merged mint signals:
 
@@ -53,14 +53,16 @@ These are posture qualities before quorum, custody, module, incident-decay, and 
 | --- | ---: | --- |
 | `none-resolved` | 100 | Hardened |
 | `bounded-admin` | 85 | Hardened |
-| Prudentially reconciled | 80 | Managed |
-| `partially-bounded-admin` or attestation-only reconciled | 70 | Governed / Managed |
+| Prudentially reconciled | 80 | Managed / Concentrated |
+| `partially-bounded-admin` or attestation-only reconciled | 70 | Governed / Managed / Concentrated |
 | `concentrated-admin` | 55 | Concentrated |
 | `unbounded-reconciled` (base) | 55 | Managed |
 | `collateral-gated` | 50 | Concentrated |
 | `unknown` | 45 | NR |
 | `unbounded-reconciliation-unknown` | 35 | Exposed |
 | `unbounded-or-compromised` | 25 | Exposed |
+
+The published band is derived from the posture, never from the graded quality, and the prudential and attestation-only gradings apply to `unbounded-reconciled` and to a continuously reconciled `concentrated-admin`; an 80 or a 70 therefore publishes under whichever of those two bands its posture carries.
 
 The reconciliation vocabulary records what the reviewer established, not interchangeable empty states:
 
@@ -74,7 +76,7 @@ The reconciliation vocabulary records what the reviewer established, not interch
 
 For an unbounded path, `unknown` therefore receives the intermediate 35 rung, below the unreviewed-control quality of 45 but above the confirmed 25 floor. `none` and `not-applicable` take the confirmed floor unless prudential supervision independently qualifies the path as reconciled.
 
-The `capSemantics` vocabulary is `unbounded`, `collateral-gated`, `raiseable`, `bounded`, and `unknown`. `collateral-gated` is curator-asserted with sources: every live mint path must require collateral by construction, no privileged party may mint arbitrarily, and every minter-authorization or mint-logic replacement or upgrade path must be absent, renounced, or behind a timelock of at least 86400 seconds. Anything weaker remains `unbounded`. `raiseable` records a numeric bound an administrator can change; `bounded` records a bound that cannot be raised through a live privileged path; `unknown` records an unresolved cap fact.
+The curated authoring field is `mintAuthority.economicCapSemantics`, whose vocabulary is `unbounded`, `collateral-gated`, `raiseable`, `bounded`, and `unknown`; the compiled control fact the derivation reads, `capSemantics.kind`, adds `not-applicable` for a control with no mint capability, which is the fall-through graded as concentrated administration. `collateral-gated` is curator-asserted with sources: every live mint path must require collateral by construction, no privileged party may mint arbitrarily, and every minter-authorization or mint-logic replacement or upgrade path must be absent, renounced, or behind a timelock of at least 86400 seconds. Anything weaker remains `unbounded`. `raiseable` records a numeric bound an administrator can change; `bounded` records a bound that cannot be raised through a live privileged path; `unknown` records an unresolved cap fact.
 
 Seasoned credit remains 10 points after at least 60 months. The existing reconciled-posture path is unchanged. A non-active `unbounded-or-compromised` posture and an `unbounded-reconciliation-unknown` posture are now also eligible without a reconciliation requirement because those rungs are unreconciled by definition. The adverse floor uses a dedicated ceiling of 39, rather than the generic next-rung-minus-one result of 34 introduced by the new 35 rung. The reconciliation-unknown rung uses the ordinary ladder ceiling of 44. An active incident is never eligible, and resolved-incident decay caps still apply after seasoning.
 
@@ -101,7 +103,7 @@ Historical scores were derived from curated `mintAuthority` metadata now authore
 Primary fields:
 
 - `mintPath` - route family, such as immutable user collateral, permissioned minter, issuer direct mint, bridge/OFT synthetic, M0 minter, or inherited wrapper.
-- `authorityPosture` - reviewed posture band: none resolved (whole-of-chain), none resolved mint (mint-scoped), bounded admin, partially bounded admin, unbounded reconciled, concentrated admin, unbounded or compromised, or unknown.
+- `authorityPosture` - reviewed posture band: none resolved (whole-of-chain), none resolved mint (mint-scoped), bounded admin, partially bounded admin, unbounded reconciled, concentrated admin, collateral gated, unbounded reconciliation unknown, unbounded or compromised, or unknown.
 - `confidence` - evidence quality: verified, probable, manual-review, or unknown.
 - `controls[]` - mint-capable or mint-adjacent control paths, including role, authority type, direct mint ability, threshold, signer count, timelock, cap status, cap-mutability evidence, Safe module/guard state, key-custody attestation, sources, and evidence.
 - `inheritedFrom` - parent stablecoin id for wrappers and variants that inherit mint authority from a reviewed parent.
@@ -174,6 +176,7 @@ When adding or updating `mintAuthority` metadata:
 
 1. Verify source links, current controls, thresholds, module/guard status, cap authority, proxy/admin reads, bridge route checks, and unresolved questions.
 2. Do not publish scanner output directly. `scripts/maintenance/audit-mint-authority.ts` writes candidates under `agents/mint-authority-candidates/`; a reviewer must curate metadata by hand.
-3. Regenerate stablecoin projections and run metadata checks.
-4. Run focused scoring and surface tests when score-affecting fields change.
-5. Update this doc, `/methodology`, and route docs if weights, caps, bands, inheritance, or public display semantics change.
+3. Use the advisory audits for review breadth and ownership: `npm run audit:mint-authority-review` for the curated review backlog and cited-source probe, and `npm run audit:mint-bridge-ownership` for authored mint/bridge domain ownership. Neither gates a merge; see [scripts.md](./scripts.md#manual-advisory-scripts).
+4. Regenerate stablecoin projections and run metadata checks.
+5. Run focused scoring and surface tests when score-affecting fields change.
+6. Update this doc, `/methodology`, and route docs if weights, caps, bands, inheritance, or public display semantics change.

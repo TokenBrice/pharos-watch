@@ -9,6 +9,8 @@ Applies to `functions/**`.
 - `docs/operator-origin-access.md`
 - `docs/deployment-process.md`
 
+Per-change routing is owned by `docs/doc-ownership.json`; run `node --import tsx scripts/ci/pharos-change-contract.ts` for the docs, checks, and rules that match the exact files you touch. The list above is the offline starting point, not the full contract.
+
 ## Rules
 
 See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file only documents functions-specific items.
@@ -19,10 +21,11 @@ See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file onl
 - Keep Pages env contracts aligned with `functions/lib/ops-env.ts`, `functions/lib/site-api-env.ts`, and `.env.example`.
 - Do not import `worker/src/**`; shared cross-runtime policy belongs in `shared/lib/**`.
 
-- For `functions/selector-snapshot/**`, read `docs/screener-picker-page.md`. It owns the write controls, trusted-provenance contract, source batching, retention behavior, and escalation path; do not duplicate that volatile implementation snapshot here.
+- For `functions/selector-snapshot/**`, read `docs/screener-picker-page.md`. It owns the write controls, trusted-provenance contract, retention behavior, and escalation path; source batching against the shared Workers connection budget lives in `functions/lib/selector-canonical-snapshot.ts`. Do not duplicate that volatile implementation snapshot here.
 
 ## Common Checks
 
-- Pages Functions tests under `functions/__tests__`
+- Pages Functions tests under `functions/**/__tests__`
 - `npm run check:env-contract`
-- `npm run check:worker-boundary`
+- `npm run test:smoke-transport` when host routing changes
+- `npm run lint:changed` (ESLint enforces the ADR-2 `worker/src/**` import ban)

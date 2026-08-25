@@ -18,7 +18,7 @@ One generator, one composition, two editions selected by `--edition`.
 | --- | --- | --- |
 | Purpose | Living reference, always current | The campaign artifact a human posts |
 | Trigger | Unattended, by the refresh workflow | Deliberate, by an operator |
-| Date treatment | Once in the footer | Month/issue lockup plus footer provenance |
+| Date treatment | Once in the footer | Issue lockup in the masthead plus footer provenance (the month reaches the archive name and alt text, not the poster) |
 | Default basename | `safety-score-map-latest` | `safety-score-map-<YYYY-MM>` |
 | Movers window | Since the previous snapshot | Month-boundary snapshots |
 | Published to | KV, and therefore the live route | Not published by any automation |
@@ -74,11 +74,11 @@ The workflow reads `safety-map:snapshot:latest` to arm the delta guard, renders 
 | `safety-map:latest.png` | Same bytes, stable URL for the site |
 | `safety-map:latest.json` | Manifest — **written last, the commit marker** |
 
-Because the manifest is written last, a consumer that requires it can never observe a half-published set. The dated PNG is read back and hash-compared immediately after it is written, before the latest PNG is promoted; a verification failure at that point leaves the previous complete image live, while the manifest-last sequence still leaves a tolerated cross-key window in which the image and manifest can describe different editions. Both PNG keys are hash-compared before the manifest is written. A publish that would land behind the live manifest's render time is refused outright.
+Because the manifest is written last, a consumer that requires it can never observe a half-published set. The dated PNG is read back and hash-compared immediately after it is written, before the latest PNG is promoted; a verification failure at that point leaves the previous complete image live, while the manifest-last sequence still leaves a tolerated cross-key window in which the image and manifest can describe different editions. A publish that would land behind the live manifest's render time is refused outright.
 
 Keys live under the single-purpose `safety-map:` prefix inside the existing `SELECTOR_SNAPSHOTS` namespace — the same namespace `functions/selector-snapshot/[[path]].ts` uses. Reusing it changes account state not at all, so the weekly Cloudflare account-state drift check needs no manifest update. (R2 was rejected for this reason among others: that check normalizes `d1` and `kv_namespace` bindings only, so an R2 bucket would be unmonitored surface.)
 
-Failure surfaces as a red run and a GitHub notification. It does **not** page anyone: `ALERT_WEBHOOK_URL` is unset in production, so `sendAlert()` silently no-ops. The reliable human-visible signal is the digest ops line described below.
+Failure surfaces as a red run and a GitHub notification. It does **not** page anyone: no webhook-alerting path for this job exists in the repository. The reliable human-visible signal is the digest ops line described below.
 
 ### Provisioning
 

@@ -2,14 +2,16 @@
 
 How to publish a post to [/blog](https://pharos.watch/blog/). The blog is for
 product and story updates — **not** a changelog (`/changelog/` owns release
-notes). Keep posts editorial: what shipped, what's next, and why.
+notes; its publishing contract is [below](#changelog)). Keep posts editorial:
+what shipped, what's next, and why.
 
 ## Architecture
 
 - **Registry:** `src/data/blog/index.ts` — one `BlogPost` per post (the single
   source of truth). Guarded by `src/data/blog/__tests__/blog-registry.test.ts`.
 - **Post bodies:** `src/data/blog/posts/<slug>.md` — Markdown, rendered by
-  `src/app/blog/[slug]/page.tsx` (react-markdown, same plugin stack as `/docs`).
+  `src/app/blog/[slug]/page.tsx` (react-markdown, `remarkGfm` + `rehypeSlug` — no
+  heading autolinks, unlike `/docs`).
 - **Hub:** `src/app/blog/page.tsx` lists posts newest-first.
 - **Feed:** `src/app/feed/blog.xml/route.ts` → `/feed/blog.xml` (the legacy
   extensionless `/feed/blog` path is a `_redirects` 301).
@@ -59,6 +61,54 @@ notes). Keep posts editorial: what shipped, what's next, and why.
   the `/blog/` hub and `/feed/blog.xml`; if you add them, regenerate and run
   `npm run check:llms-txt`. Keep it to the hub — do not add per-post entries, so
   publishing never forces an llms.txt regen.
-- **Discovery** is wired once and needs no per-post work: nav Reference group,
-  footer, command palette, sitemap, RSS `<link>` in `layout.tsx`, and the
-  sitemap-tree page all pick posts up from the registry.
+- **Discovery** is wired once and needs no per-post work: the sitemap, the
+  sitemap-tree page, and the RSS feed enumerate posts straight from the
+  registry; the nav Reference group, footer, command palette, and the feed
+  `<link>` in `layout.tsx` are static links to the `/blog/` hub and
+  `/feed/blog.xml`.
+
+## Changelog
+
+`/changelog/` is the other half of the boundary above: one entry per week,
+linked from the global utility nav (`src/lib/nav-config.ts`). It shares nothing
+with the blog contract — separate registry, no post bodies, no RSS feed.
+
+- **Registry:** one file per week at `src/data/changelogs/<dateRange.to>.ts`
+  exporting `entry`, imported into the `src/data/changelogs/index.ts` barrel,
+  which re-sorts newest-first. Shape and per-field rules live in
+  `src/data/changelogs/types.ts`; the guard is
+  `src/data/changelogs/__tests__/index.test.ts`.
+- **The filename is data.** It must equal `dateRange.to`, and every dated file
+  must be registered in the barrel. Both dates must be `YYYY-MM-DD` — the
+  barrel sort and the page's year dividers compare them lexicographically, so
+  any other format sorts wrong rather than failing loudly.
+- **The commit list is capped; the count is not.** `commits` holds at most the
+  20 the card renders, while `stats.totalCommits` is the authoritative
+  noise-filtered total for the window and may be larger. Git is the archive —
+  do not re-expand the array to close the gap.
+- **Entry copy limits:** `summary[].href` is an internal absolute path only
+  (external URLs are rejected by the type and the test), and `fieldNotes` — the
+  optional editor's note — is capped at 80 words.
+- **Week anchors are public API.** Each entry renders with `id="week-<to>"`,
+  and the page's `ItemList` JSON-LD publishes that same fragment as every
+  week's `url` and `mainEntityOfPage`. Changing the id format breaks the
+  structured data, not just inbound links.
+
+## Publish a changelog week
+
+1. **Add the entry file** and its barrel import.
+2. **Refresh the Markdown twin.** `/changelog/` serves a generated `.md`
+   variant, and its *whole index* is snapshot-tested against
+   `scripts/__tests__/fixtures/markdown/changelog-index.md`. Every new week —
+   and any copy or renderer change — fails that snapshot until you run
+   `npm run refresh:markdown-fixtures` and commit the fixture in the same
+   change.
+3. **Test** the registry, page, Markdown export, and sitemap:
+   ```bash
+   npx vitest run src/data/changelogs src/app/changelog scripts/__tests__/generate-markdown-exports.test.ts src/app/__tests__/sitemap-frozen.test.ts
+   ```
+4. **Commit and push** as usual. Discovery needs no per-week work:
+   `src/app/sitemap.ts` stamps `/changelog/` from the newest `dateRange.to`,
+   floored by the route's Git edit date, and `public/llms.txt` links the hub
+   only. A week is a fragment on one page, so nothing paginates as the registry
+   grows.

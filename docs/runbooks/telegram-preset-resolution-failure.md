@@ -2,20 +2,19 @@
 
 ## Symptom
 
-`presetQueryFailures` or `presetResolutionFailures` rises in dispatch metadata, or preset-followers stop receiving alerts while direct and global subscribers continue to receive them.
+`presetQueryFailures` or `presetResolutionFailures` rises in dispatch metadata, or Telegram delivery stalls for a run because the alert source event never finishes preset resolution — direct, global, and preset targets all wait on the same source event.
 
 Detection signals:
 
 - `/api/status` -> `telegramBot.presetQueryFailures` shows a non-zero counter (only emitted when greater than zero).
-- `crons["dispatch-telegram-alerts"].lastRun.metadata` contains `presetFailure: true`, `presetQueryFailures > 0`, or `presetResolutionFailures > 0`.
-- Direct and global delivery counts are normal in the same run; the gap is preset-only.
-- Wrangler tail logs `dynamic preset query failed` (`failureKind: 'query-failed'`) or `dynamic preset resolution failed` (`failureKind: 'resolution-failed'`) from `loadPresetSubscriberRowsBatch` when `telegram_preset_subscriptions` has rows but the preset query throws or the stablecoins cache is missing.
+- `crons["dispatch-telegram-alerts"].lastRun.metadata` contains `presetQueryFailures > 0` or `presetResolutionFailures > 0`. `presetFailure: true` only means source resolution was incomplete on that run — it is also set when preset resolution pages were merely deferred to the next tick (`last_error_class = 'preset_pages_pending'`), so confirm one of the counters before treating it as a failure.
+- Wrangler tail logs `dynamic preset source page query failed` (`failureKind: 'query-failed'`) or `dynamic preset source page resolution failed` (`failureKind: 'resolution-failed'`) from `module: telegram-alert-source-events` when `telegram_preset_subscriptions` has rows but the preset query throws or the strict stablecoins cache is missing; a failing follower page logs `dynamic preset follower page query failed` from the same module.
 
-Behavior: preset-backed subscriber maps fail closed to empty for the affected alert type, while direct and global subscribers continue when their inputs load safely. The run still writes snapshots and records `presetFailure` metadata, so preset followers may miss the event unless an operator resends after the resolver recovers. See [`docs/telegram-alerts.md`](../telegram-alerts.md) section "Preset Watchlists" for the fail-closed contract.
+Behavior: the alert source event stays incomplete and delivery stays closed for every target family — direct, global, and preset — rather than treating preset-backed recipients as an empty list. Snapshot baselines do not advance while source resolution is incomplete, and the run records `presetFailure` metadata. A later dispatch run resumes the same source event without replaying terminal targets, so no operator resend is needed unless the source event passes its TTL and is expired. See [`docs/telegram-alerts.md`](../telegram-alerts.md) section "Preset Watchlists" for the fail-closed contract.
 
 ## Quick Diagnostic Checklist
 
-1. **D1 schema drift?** The `telegram_preset_subscriptions` query lives in `loadPresetSubscriberRowsBatch` (`worker/src/cron/dispatch-telegram-subscribers.ts`), which calls `resolveTelegramPresetTargets` to map preset aliases to coins. Confirm the migration list (`worker/migrations/MANIFEST.md`) is in sync and the latest migration matches the deployed Worker.
+1. **D1 schema drift?** The live `telegram_preset_subscriptions` queries run in `resolveMemberships` and `resolveFollowerPage` (`worker/src/cron/telegram-alert-source-events.ts`), driven by `resolveTelegramAlertSourcePresetPages`; `resolveMemberships` calls `resolveTelegramPresetTargets` to map preset aliases to coins. Confirm the migration list (`worker/migrations/MANIFEST.md`) is in sync and the latest migration matches the deployed Worker.
 2. **Stablecoins cache available?** The resolver reads the strict `stablecoins` cache plus `ACTIVE_STABLECOINS` (active coins only; every non-active lifecycle is excluded). A missing or malformed stablecoins cache makes resolution fail closed. Check the `sync-stablecoins` cron and the `stablecoins` cache row before looking at safety-alert source state.
 3. **TRACKED_STABLECOINS drift?** If a deploy changed `shared/data/stablecoins/coins.generated.json` while the preset rows reference an alias that no longer maps to any active coin, the resolver may return zero targets. Verify each canonical preset alias (`usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`) still produces a non-empty target set.
 4. **Transient D1 failure?** `presetQueryFailures` increments when the `telegram_preset_subscriptions` SELECT throws. Check the `telegram-api` and D1 circuits via [`db-connectivity.md`](./db-connectivity.md).

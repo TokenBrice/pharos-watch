@@ -185,7 +185,11 @@ export function makeChainSupplySnapshotDb(input: MockTableConfig[] | SnapshotDbO
 }
 
 export function makePsiSnapshotDb(input: MockTableConfig[] = []): MockD1Database {
-  return mockD1([...input, { match: "INSERT OR REPLACE INTO stability_index", rows: [] }]);
+  return mockD1([
+    ...input,
+    { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
+    { match: "INSERT INTO stability_index", rows: [] },
+  ]);
 }
 
 export type PsiAverageRow = {

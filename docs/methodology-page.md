@@ -21,7 +21,7 @@
 - **Version metadata:** `shared/lib/methodology-versions/constants.ts` is the shared runtime version/path surface; domain modules under the same directory own structured changelog collections and registry metadata.
 - **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, redemption backstop, mint/burn flow, yield, depeg, depeg resolver, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`. Retired Mint Authority is the one structured lane without a standalone route; its history remains at `/methodology/#mint-authority-score`.
 - **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`, which renders an overview block linking back to the current methodology and public docs archive before the version cards
-- **Changelog sitemap policy:** `src/app/sitemap.ts` promotes only the explicit `METHODOLOGY_CHANGELOG_SITEMAP_PATHS` allowlist. A changelog route should stay on that list only when it has enough standalone context for external readers, normally through the shared overview block plus a useful latest-version summary.
+- **Changelog sitemap policy:** `METHODOLOGY_CHANGELOG_SITEMAP_PATHS` (`shared/lib/methodology-versions/registry.ts`) is derived from every `METHODOLOGY_CHANGELOG_REGISTRY` entry's `publicPath`, and `src/app/sitemap.ts` re-exports and spreads it, so registering a changelog lane automatically promotes its route. Register a lane only when its route has enough standalone context for external readers, normally through the shared overview block plus a useful latest-version summary.
 - **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory with custom authored content sections, while `src/app/methodology/scoring-changelog/content.tsx` renders the machine-readable changelog order with authored detail maps from `content-v8.tsx`, the `content-v7-*.tsx` modules, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` (with `content-v6.tsx` merging `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`)
 - **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared version/changelog constants from `shared/lib/methodology-versions/constants.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
 
@@ -43,7 +43,7 @@
 | PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/methodology-versions/depeg-dews.ts`                                                                                                                                              |
 | Depeg Duration Resolver | `shared/lib/depeg-resolver/` (DDR/DDRR resolver), `shared/lib/methodology-versions/depeg-resolver.ts`                                                                                                                                          |
 | Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/methodology-versions/blacklist-tracker.ts`                                                                                                              |
-| Chain Health Score    | `shared/lib/chains/health.ts`, `shared/lib/chains/index.ts`, `shared/lib/methodology-versions/chain-health.ts` — weighted composite (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%). Sub-factors: HHI-based concentration, supply-weighted quality (Safety Scores over rated supply only, not-rated supply excluded and the average renormalized, computed once rated supply coverage clears 50%), supply-weighted peg proximity, Shannon entropy backing diversity, and L2BEAT-first chain environment (stage/risk snapshot for matched scaling projects, Pharos resilience-tier fallback when unmatched). Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
+| Chain Health Score    | `shared/lib/chains/health.ts`, `shared/lib/chains/index.ts`, `shared/lib/chains/l2beat-risk.ts`, `shared/lib/methodology-versions/chain-health.ts` — formula, factors, not-rated gate, and bands are owned by [chain-health.md](./chain-health.md) |
 
 ---
 
@@ -70,12 +70,7 @@ If you add a new methodology changelog route, follow the existing pattern:
 3. Add the public route in `src/app/methodology/*-changelog/page.tsx` using `createStandardMethodologyChangelogRoute(...)` (the standard factory used by every non-scoring route); `createMethodologyChangelogRoute(...)` is reserved for the `scoring-changelog` special case with custom authored content.
 4. Wire the new anchor/path into `src/lib/methodology-context.ts` if any cards/tooltips deep-link to it.
 
-If the Chain Health methodology changes, also update:
-
-1. `docs/chains-page.md`
-2. `shared/data/methodology-changelogs/chain-health/`
-3. `docs/api-reference.md` (`GET /api/chains`)
-4. `src/app/chains/page.tsx` and `src/app/chains/[chain]/client.tsx` if any user-facing factor labels or weights change
+If the Chain Health methodology changes, follow the single update contract in [chain-health.md](./chain-health.md#update-contract).
 
 If the current V9 mint component or the retired Mint Authority Score history changes, also update:
 
@@ -102,13 +97,13 @@ For the safety-score changelog specifically, update both:
 
 `src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form sections live under the `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`. In addition, three single-topic sub-anchors are exposed so per-metric labels (added in the May 2026 detail-page work) can target them without re-rendering a full top-level section:
 
-Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, and the V9 mint component) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which appends the inline `vX.Y` methodology version as a small superscript and routes the badge through the unified `MethodologyHint` tooltip. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip. The mint component retains the terminal v1.3 history link for context; it is not a live standalone scoring lane.
+Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, and the V9 mint component) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which appends the inline `vX.Y` methodology version as a small superscript and routes the badge through the unified `MethodologyHint` tooltip. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip. The mint component keeps a terminal `v1.3` version badge and closing note for context — its section passes no `changelogPath`, so there is no "Version history" link, and in-app mint tooltips carry the Safety Score version and scoring-changelog path instead; it is not a live standalone scoring lane.
 
 ### Blacklist tracker {#blacklist-tracker}
 
 Per-coin record of issuer-led freeze, release, and destroy events drawn from on-chain freeze-ledger logs. `BLACKLIST_STABLECOINS` in `shared/types/market.ts` owns the response/UI/archive identity union. Live on-chain scan admission is a separate reviewed contract roster, `CONTRACT_CONFIGS` in `worker/src/lib/blacklist-contracts.ts`; do not infer that every UI identity is actively scanned or that an omitted identity lacks an administrative freeze surface. The source registries and their coverage tests own the volatile roster rather than this page.
 
-The detail page renders the existing per-coin blacklist module unchanged, plus a "Recent activity" badge rendered alongside the hero tertiary metrics (linking to the `#blacklist` anchor) when one of two thresholds is hit over a trailing 7-day window:
+The detail page renders the existing per-coin blacklist module unchanged. `RecentBlacklistBanner` (`src/components/stablecoin-detail/recent-blacklist-banner.tsx`) implements a "Recent activity" badge (linking to the `#blacklist` anchor) for when one of two thresholds is hit over a trailing 7-day window, but it currently has no production render site — the hero tertiary-metrics wiring that mounted it was dropped in a later presentation refactor — so the badge does not appear on the detail page today. Its thresholds are:
 
 - `freezes >= 5` (when `destroys === 0`), or
 - any `destroys > 0`.
@@ -117,7 +112,7 @@ The banner is feature-flagged (`NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`, see [proce
 
 ### Bluechip rating {#bluechip}
 
-Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The active roster includes mapped assets whose synced external Bluechip grade is A-tier and whose Pharos report-card overall grade is A-tier (`A-`, `A`, or `A+`). It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience.
+Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The active roster's rule admits mapped assets whose synced external Bluechip grade is A-tier and whose Pharos report-card overall grade is A-tier (`A-`, `A`, or `A+`). It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in the page copy (`src/app/about/bluechip/content.tsx`), but `BluechipActiveList` (`src/app/about/bluechip/active-list.tsx`) currently short-circuits to a "temporarily unavailable while the V9 grade floor is under review" placeholder, so no assets are listed while that hold stands.
 
 ### Proof of Reserves
 
@@ -139,7 +134,7 @@ The cadence field is rendered alongside the tier badge as supporting text (e.g. 
 `StablecoinMeta` carries three optional editorial fields used by the detail-page hero and mechanism diagram. None of these change scoring — they only affect how a coin is presented:
 
 - `oneLiner?: string` — short editorial verdict rendered as the hero TL;DR when `NEXT_PUBLIC_PHAROS_HERO_VERDICT` is on (see [process/feature-flags.md](process/feature-flags.md)).
-- `mechanismArchetype?: MechanismArchetype` — coarse classification (e.g. `fiat-cash`, `cdp`, `synthetic-delta-neutral`, etc.) used by the mechanism diagram primitives. The full enum lives in `shared/types/core.ts`.
+- `mechanismArchetype?: MechanismArchetype` — coarse classification (e.g. `fiat-cash`, `cdp`, `synthetic-delta-neutral`, etc.) used by the mechanism diagram primitives. The full enum (`MECHANISM_ARCHETYPE_VALUES`) lives in `shared/types/stablecoin-taxonomy.ts` and is re-exported from `shared/types/core.ts`.
 - `proofOfReserves.attestorTier?` and `proofOfReserves.cadence?` — see the [Proof of Reserves](#proof-of-reserves) sub-section above.
 
 ## Show Your Work

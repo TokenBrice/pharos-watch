@@ -20,7 +20,7 @@ Still true:
 - Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
 - the UI treats Access as one operator gate and does not infer or display read-only/mutating roles from unverified browser-visible identity claims
 - scripts and automation should use `ops-api.pharos.watch` plus Access service-token headers
-- there is no preview-host admin exception left: the reserve-recovery fault injector that held the only `workers.dev` carve-out has been removed, so every admin route now requires the operator origin
+- the reserve-recovery fault injector that held the `workers.dev` admin route has been removed, but the carve-out in the auth host check has not: `isAccessProtectedAdminHost()` in `worker/src/lib/auth.ts` still treats any `*.workers.dev` preview hostname as an Access-protected admin host, so an ops-api Access JWT replayed against the Worker preview URL (`preview_urls = true`) still authenticates as admin; every other non-operator host returns `404` on admin paths
 - same-origin `/api/admin/*` smoke on `ops.pharos.watch` may require a bootstrapped `CF_Authorization` session cookie even when the same CI token can reach the UI shell; a token-backed HTML response alone does not guarantee that Pages Functions receives `Cf-Access-Jwt-Assertion`
 
 ---
@@ -83,7 +83,9 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 
 Use the derived runtime exports in `worker/src/lib/env.ts`, `functions/lib/ops-env.ts`, and `functions/lib/site-api-env.ts` when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` and `CF_ACCESS_OPS_UI_AUD` are worker-reserved but Pages-active.
 
-For `/_site-data/*` and server-recomputed selector snapshots, configure `SITE_API_SHARED_SECRET`; every Pages host requires the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`. Arbitrary, non-HTTPS, credentialed, port-bearing, and path-bearing origins fail closed before secrets are attached. Bind `DB` for attribution and selector quota writes, and configure the dedicated `SELECTOR_SNAPSHOT_IP_HASH_SECRET` HMAC pepper.
+For `/_site-data/*` and server-recomputed selector snapshots, configure `SITE_API_SHARED_SECRET`; every Pages host requires the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`, and anything else fails closed before secrets are attached (contract in [Worker Infrastructure: Site-Data Auth](./worker-infrastructure.md#site-data-auth)). Bind `DB` for attribution and selector quota writes, and configure the dedicated `SELECTOR_SNAPSHOT_IP_HASH_SECRET` HMAC pepper.
+
+Build-time and release-time fetchers in `scripts/lib/sync-from-api.ts` attach `SITE_API_SHARED_SECRET` only to direct reads of `SITE_API_ORIGIN`; `SITE_API_SHARED_SECRET_TRUSTED_ORIGINS` is the comma-separated allowlist that extends that egress set, normally for preview Worker runs. An entry is honoured only when it parses as an HTTPS origin whose hostname ends in `.workers.dev`, so the variable cannot redirect the secret to an arbitrary host. It is a build-side egress control only: it does not grant any origin access to the Worker or Pages runtimes, which keep their own fail-closed checks. A read that carries the shared secret never also carries `X-API-Key`, and `/_site-data/*` reads carry neither, since those go out browser-shaped with `Origin` alone.
 
 ---
 
@@ -106,7 +108,7 @@ The current proxy now fails closed on its own trust boundary:
 - Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints/` (for example `/api/api-keys/:id/update`).
 - HTTP method rules are enforced through the shared endpoint validators (`validateRouteMatchMethod()` in the Worker router, backed by `validateAllowedEndpointMethods()`), so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
-- Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
+- Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`. Only `POST` reaches that check in practice: the shared method validator runs first and rejects `PUT`, `PATCH`, and `DELETE` with `405` and `Allow: GET, POST`.
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. After signature-verifying the UI Access JWT and normalizing its email claim, it injects that verified value as `Cf-Access-Authenticated-User-Email` for durable audit attribution; a browser-supplied actor header is ignored. It also adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself, so browser callers never supply server-to-server credentials.
 - The proxy reflects only `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, and `X-Idempotent-Replay` back to the browser. This preserves replay/certainty semantics without opening arbitrary upstream headers. A final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
 - Request bodies are capped incrementally at 128 KiB, including when `Content-Length` is absent or understated; oversized requests return `413`. Upstream responses are buffered under the shared 16 MiB proxy cap before returning to the browser; oversized or unreadable upstream responses return `502`.
@@ -424,6 +426,10 @@ Expected:
 - `http://api.pharos.watch/...` returns `308` to the matching `https://api.pharos.watch/...`
 - `http://site-api.pharos.watch/...` returns `308` to the matching `https://site-api.pharos.watch/...`
 - no plaintext HTTP request reaches Worker auth or app handlers anymore
+
+### Workspace route verification
+
+The automated coverage of the operator workspace routes is `npm run test:ops-browser`, documented in [Testing & Linting](./testing.md). It runs against the local static export with fixture API responses, so it validates the workspace routes, layout, and accessibility only — it does not exercise this document's Access applications, service tokens, or CORS boundary, which stay covered by the checks above and by `npm run test:smoke-ops`.
 
 ---
 

@@ -22,7 +22,7 @@ Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`; do not copy it
 
 - `BLUECHIP_SLUG_MAP` maps supported Bluechip slugs to canonical Pharos IDs.
 - Only coins present in both systems are fetched.
-- The daily sync applies `includeActiveTrackedIds()`, so only explicitly active mapped assets are fetched; every inactive lifecycle state is excluded from the refreshed ratings cache.
+- The daily sync applies `includeActiveTrackedIds()`, so only explicitly active mapped assets are fetched; inactive lifecycle states are never re-fetched, but the cron merges fresh rows onto the previous cache, so a rating cached while the asset was active is retained until the cache key is rewritten.
 - Missing or unrated Bluechip rows are skipped rather than synthesized.
 
 ---
@@ -31,7 +31,7 @@ Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`; do not copy it
 
 `syncBluechip()` in `worker/src/cron/sync-bluechip.ts`:
 
-1. Skips work when the `bluechip-ratings` cache is newer than 6 hours.
+1. Skips work when the `bluechip-ratings` cache is newer than 6 hours, then returns `status: "degraded"` with `reason: "bluechip-circuit-open"` and fetches nothing when the shared Bluechip circuit breaker is open.
 2. Iterates the configured slug mappings in batches of 3, with a 500ms inter-batch delay.
 3. Fetches `backend.bluechip.org/coin-data/{slug}` with the shared Worker `USER_AGENT`.
 4. Discards 404s, empty payloads, and rows without a `grade`.
@@ -71,7 +71,7 @@ Each cached map value is a `BluechipRating` (`shared/types/bluechip.ts`, re-expo
 - Uses the `slow` cache profile (`public, s-maxage=3600, max-age=300`).
 - Applies freshness headers with a 43,200-second max-age budget (the `Warning: stale` header fires at 8x that, ~345,600s; `_meta.status` becomes `stale` at 12x, ~518,400s).
 - Returns a top-level object keyed by canonical Pharos stablecoin ID.
-- The handler is a custom cache reader that appends `_meta = { updatedAt, ageSeconds, status }` to the plain-object response after reading the cached Bluechip payload.
+- The endpoint is the shared `createCacheHandler()` factory bound to the `bluechip-ratings` cache key and `BluechipRatingsMapSchema`; it returns 503 when the cache row is missing or the payload fails validation, and otherwise appends `_meta = { updatedAt, ageSeconds, status }` to the plain-object response.
 
 See [API Reference](./api-reference.md) for the exact response shape.
 
@@ -79,9 +79,11 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 ## Frontend Usage
 
-- `src/hooks/api-hooks.ts` exposes `useBluechipRatings()` with `CRON_24H`.
-- `src/components/bluechip-header-badge.tsx` renders the external `Bluechip: <grade>` badge/link in the stablecoin detail hero so the grade is clearly separate from Pharos-owned scores.
-- `src/app/compare/client.tsx` includes Bluechip data in compare-page fetch orchestration and freshness tracking.
+- `src/hooks/api-hooks.ts` exposes `useBluechipRatings()` via the registered `bluechipRatings` query descriptor, whose producer interval is `CRON_BLUECHIP` (derived from `CRON_INTERVALS["sync-bluechip"]`).
+- `src/components/bluechip-header-badge.tsx` renders the external `Bluechip: <grade>` badge/link plus the Pharos-owned `Pharos Bluechip · since YYYY-MM` link to `/about/bluechip/` in the stablecoin detail hero, so the external grade stays clearly separate from Pharos-owned scores.
+- `src/hooks/use-selector.ts` reads the ratings map as one of the Selector's inputs.
+- `src/app/about/bluechip/active-list.tsx` renders the Pharos Bluechip roster from the ratings map plus V9 report cards.
+- `src/hooks/use-compare-data-model.ts` folds Bluechip ratings into the compare-page query slices, error propagation, `bluechipMap` projection, and refetch orchestration behind `src/components/compare/compare-client.tsx` (re-exported by `src/app/compare/client.tsx`).
 
 `src/lib/bluechip.ts` contains:
 - `BLUECHIP_REPORT_BASE` (`https://bluechip.org/en/coins`)

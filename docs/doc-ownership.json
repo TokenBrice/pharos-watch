@@ -99,9 +99,9 @@
       "risk": "medium",
       "docsToRead": ["docs/process/blog-publishing.md", "docs/og-images.md"],
       "docsLikelyRequired": ["docs/process/blog-publishing.md when the publishing contract changes", "docs/og-images.md when social-image behavior changes"],
-      "checks": ["npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts"],
-      "hardRules": ["Blog registry and post bodies are source; sitemap dates are derived from committed Git history."],
-      "prefixes": ["src/data/blog/", "src/app/blog/", "src/app/feed/blog.xml/"],
+      "checks": ["npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts", "npx vitest run src/data/changelogs src/app/changelog scripts/__tests__/generate-markdown-exports.test.ts"],
+      "hardRules": ["Blog registry and post bodies are source; sitemap dates are derived from committed Git history.", "A new weekly changelog entry re-renders the whole /changelog/ markdown fixture: run npm run refresh:markdown-fixtures and commit it in the same change."],
+      "prefixes": ["src/data/blog/", "src/app/blog/", "src/app/feed/blog.xml/", "src/data/changelogs/", "src/app/changelog/"],
       "exactPaths": ["src/components/home-blog-banner.tsx"]
     },
     {
@@ -123,7 +123,7 @@
       "docsLikelyRequired": ["runtime methodology doc", "structured methodology changelog entry", "src/app/methodology/sections/* when methodology UI changes"],
       "checks": ["focused scoring tests", "npm run check:doc-sync"],
       "hardRules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."],
-      "prefixes": ["src/app/methodology/", "src/components/methodology/"],
+      "prefixes": ["src/app/methodology/", "src/components/methodology-"],
       "regexes": ["^docs/.*methodology", "^shared/data/methodology-changelogs/", "^shared/lib/.*(score|scoring|dews|report-card|stability-index|liquidity|resilience|peg)", "^shared/lib/(p4-exit-route-capacity|exit-route-capacity-point|exit-route-identity|exit-route-output|dex-deployment-coverage)\\.ts$", "^worker/src/.*(dews|report-card|stability-index|liquidity|mint-burn|yield|blacklist|reserve)"]
     },
     {
@@ -132,7 +132,7 @@
       "risk": "medium",
       "docsToRead": ["docs/architecture.md", "docs/operator-origin-access.md", "functions/AGENTS.md", "docs/worker-infrastructure.md only when Worker host/auth lane changes"],
       "docsLikelyRequired": ["docs/architecture.md", "docs/worker-infrastructure.md", "docs/deployment-process.md"],
-      "checks": ["Pages Functions tests", "npm run test:smoke-transport when host routing changes"],
+      "checks": ["Pages Functions tests", "npm run check:env-contract", "npm run test:smoke-transport when host routing changes"],
       "hardRules": ["Browser reads should use same-origin /_site-data/* unless explicitly exempt."],
       "prefixes": ["functions/"],
       "exactPaths": ["shared/lib/site-data-lane.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts"]
@@ -227,15 +227,15 @@
     },
     {
       "name": "frontend-routes",
-      "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/nav-config.ts", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts", "shared/lib/public-docs.ts", "next.config.ts"],
+      "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/nav-config.ts", "src/lib/page-metadata.ts", "src/lib/public-route-inventory.ts", "src/app/sitemap.ts", "src/app/robots.ts", "shared/lib/public-docs.ts", "next.config.ts"],
       "docs": ["docs/README.md", "docs/architecture.md", "docs/homepage.md", "docs/start-page.md", "docs/stablecoin-detail-page.md", "docs/chains-page.md", "docs/coverage-page.md", "docs/status-dashboard.md"],
       "notes": ["Use the source path or public route to locate the nearest route-specific contract; the listed docs are representative, not a second route inventory."]
     },
     {
       "name": "editorial-publishing",
-      "sources": ["src/data/blog/**", "src/app/blog/**", "src/app/feed/blog.xml/**", "src/components/home-blog-banner.tsx"],
+      "sources": ["src/data/blog/**", "src/app/blog/**", "src/app/feed/blog.xml/**", "src/components/home-blog-banner.tsx", "src/data/changelogs/**", "src/app/changelog/**"],
       "docs": ["docs/process/blog-publishing.md", "docs/og-images.md"],
-      "notes": ["Registry metadata, post bodies, feed output, banner freshness, sitemap dates, and optional per-post cover/social images form one publishing contract."]
+      "notes": ["Registry metadata, post bodies, feed output, banner freshness, sitemap dates, and optional per-post cover/social images form one publishing contract.", "The weekly /changelog/ registry is the second surface in that doc: entry files, barrel, page JSON-LD, and the snapshot-tested markdown export move together."]
     },
     {
       "name": "design-system",
@@ -251,7 +251,7 @@
     },
     {
       "name": "methodology",
-      "sources": ["shared/data/methodology-changelogs/**", "shared/lib/*-version.ts", "shared/lib/methodology-versions/**", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "shared/lib/depeg-resolver/**", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "worker/src/cron/compute-depeg-resolver.ts", "worker/src/api/depeg-resolver.ts", "src/app/methodology/**"],
+      "sources": ["shared/data/methodology-changelogs/**", "shared/lib/methodology-versions/**", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "shared/lib/depeg-resolver/**", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "worker/src/cron/compute-depeg-resolver.ts", "worker/src/api/depeg-resolver.ts", "src/app/methodology/**"],
       "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/depeg-detection.md", "docs/dews.md", "docs/depeg-resolver.md", "docs/dex-liquidity.md", "docs/mint-authority-scoring.md", "docs/stability-index.md", "docs/mint-burn-flows.md", "docs/yield-intelligence.md", "docs/pricing-pipeline.md", "docs/blacklist-tracker.md", "docs/chain-health.md", "shared/data/methodology-changelogs/**"],
       "notes": ["Versioned methodology changes update the structured changelog source; public pages and Markdown exports render from that registry."]
     },
@@ -263,7 +263,7 @@
     },
     {
       "name": "safety-score-v9",
-      "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9-*.ts", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/snapshot-safety-grade-history.ts", "worker/migrations/0201_safety_score_history_v2.sql", "worker/migrations/0226_safety_score_v9_canonical_cache.sql"],
+      "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9-*.ts", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/snapshot-safety-grade-history.ts"],
       "docs": ["docs/report-cards.md", "docs/worker-infrastructure.md", "docs/data-flow-map.md", "docs/api-reference.md", "docs/telegram-alerts.md", "docs/tape-page.md", "docs/process/safety-score-equivalence-harness.md", "docs/process/safety-score-curation-expiry-sweep.md"],
       "notes": ["V9 is the canonical Safety Score publication. Current consumers fail closed when the accepted publication is unavailable or held. Curation expiry and stale reserve-review sweeps use the recurring process page."]
     },
@@ -275,9 +275,15 @@
     },
     {
       "name": "pages-functions-hosting",
-      "sources": ["functions/**", "shared/lib/site-data-lane.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts", "scripts/maintenance/serve-static-export.mjs", "next.config.ts"],
+      "sources": ["functions/**", "shared/lib/site-data-lane.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts", "scripts/maintenance/serve-static-export.ts", "next.config.ts"],
       "docs": ["docs/architecture.md", "docs/worker-infrastructure.md", "docs/deployment-process.md", "docs/operator-origin-access.md"],
       "notes": ["Same-origin site-data proxy behavior and internal host lanes are coupled."]
+    },
+    {
+      "name": "worker-env-contract",
+      "sources": ["shared/lib/env-contract.ts", "shared/lib/env-contract/**", "worker/src/lib/env.ts", "worker/wrangler.toml", "scripts/ci/check-env-contract.ts"],
+      "docs": ["docs/worker-infrastructure.md", "docs/operator-origin-access.md", "docs/deployment-process.md", "docs/scripts.md", "README.md"],
+      "notes": ["Canonical declaration site for worker bindings, kill switches, and staged rollout modes; `npm run check:env-contract` regenerates the marked env tables in docs/worker-infrastructure.md and docs/operator-origin-access.md and fails on stale env names in the other listed docs.", "The generated tables only carry each key's one-line description. Operator prose - what a switch actually suspends, what it deliberately leaves running, and any runbook step - is hand-written and must be updated in the same change."]
     },
     {
       "name": "validation-and-ci",
@@ -293,9 +299,9 @@
     },
     {
       "name": "security-surface",
-      "sources": ["src/app/layout.tsx", "src/app/api/**", "functions/_site-data/**", "functions/admin/**", "functions/admin-api/**", "functions/lib/*-env.ts", "shared/lib/runtime-origins.ts"],
+      "sources": ["src/app/layout.tsx", "src/app/api/**", "functions/_middleware.ts", "functions/_site-data/**", "functions/admin/**", "functions/admin-api/**", "functions/lib/*-env.ts", "shared/lib/runtime-origins.ts", "shared/lib/site-csp.ts", "public/_headers", "public/_routes.json"],
       "docs": ["docs/security-governance.md", "docs/incident-response/safe-browsing-flag.md", "docs/operator-origin-access.md"],
-      "notes": ["Inline script signatures, token-in-URL discipline, host gating, and origin allowlists govern Safe Browsing classifier risk and operator-origin access; update playbooks when touching these surfaces."]
+      "notes": ["Inline script signatures, token-in-URL discipline, host gating, and origin allowlists govern Safe Browsing classifier risk and operator-origin access; update playbooks when touching these surfaces.", "CSP nonce middleware, the shared CSP builder, and the managed static fallback headers route here; a change to any of them must keep docs/security-governance.md#csp-posture and `npm run check:site-csp-sync` in agreement."]
     }
   ]
 }

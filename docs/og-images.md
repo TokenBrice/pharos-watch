@@ -112,7 +112,7 @@ tsx scripts/maintenance/build-og-learn-images.ts   # writes SVGs to agents/og-le
 ### When to renew
 
 - After a mechanism diagram update (any change under `src/components/stablecoin-detail/mechanism-diagrams/`).
-- After an archetype title change in `build-og-learn-images.ts`.
+- After an archetype title change in `MECHANISM_EXPLAINER_TITLES` (`src/lib/mechanism-explainer-registry.ts`), which the build reads through `MECHANISM_EXPLAINER_ENTRIES`.
 - After a new mechanism archetype is added (also requires a new content module per `docs/learn-mechanisms-page.md`).
 
 ## 4. Case-study cards (`public/og-learn-case-*.png`)
@@ -145,6 +145,8 @@ Static checked-in 1200×630 profile cards for `/screener/picker/`. They are inte
 | `og-selector-yield.png` | Yield profile |
 | `og-selector-trading.png` | Active Trading profile |
 
+Only `og-selector-default.png` is selected by route metadata today. `/screener/picker/` is a single route that resolves profiles client-side, so the three profile cards are checked-in assets no route currently serves.
+
 Ownership lives with the Stablecoin Picker route contract in [screener-picker-page.md](./screener-picker-page.md).
 
 ## 6. Blog cards (`public/og-blog.png`, `public/blog/*-cover.png`)
@@ -175,8 +177,8 @@ The shared frame inlines the Pharos brand mark as SVG paths (`worker/src/lib/og-
 
 ## CI guardrails
 
-- `npm run seo:check` (`scripts/ci/check-seo-static.mjs`) inspects the built `out/` for OG metadata. As part of T2, this check also asserts that every relative `og:image` / `twitter:image` URL resolves to a file in `out/`. This catches broken references like the historical `/og-default.png` regression.
-- The merge gate runs `seo:check` whenever the diff is Pages-impacting.
+- `npm run seo:check` (`scripts/ci/check-seo-static.mjs`) inspects the built `out/` for OG metadata. As part of T2, this check also asserts that every same-origin `og:image` / `twitter:image` URL — root-relative, or absolute on `pharos.watch` — resolves to a file in `out/`; cards on other hosts (the `api.pharos.watch` dynamic routes) are skipped. This catches broken references like the historical `/og-default.png` regression.
+- `seo:check` is not part of the PR merge gate. It runs post-merge in `.github/workflows/pages-release.yml` via `npm run check:pages-release`, and locally through `npm run check:release`.
 
 ## Orphans (intentional)
 

@@ -457,13 +457,13 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
       "Per-coin record of issuer-led freezes, releases, and destroys, drawn from on-chain freeze-ledger events on supported assets.",
     detail:
       "Centralized stablecoins with admin freeze functions are tracked; events outside the supported asset set are excluded.",
-    methodologyPath: "/methodology/#blacklist-tracker",
+    methodologyPath: "/methodology/#blacklist-tracker-methodology",
   },
   bluechip: {
     title: "Bluechip Rating",
     summary:
       "Top-tier classification for stablecoins meeting Pharos's strictest safety, liquidity, and resilience thresholds.",
-    methodologyPath: "/methodology/#bluechip",
+    methodologyPath: "/methodology/#safety-scores-methodology",
   },
   proofOfReserves: {
     title: "Proof of Reserves",
@@ -471,6 +471,6 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
       "Issuer-published evidence — independent audit, real-time on-chain feed, or self-reported attestation — that circulating supply is matched by reserve assets.",
     detail:
       "Tier reflects attestor quality (Big-4 / regional CPA / niche / self / none) and cadence (daily-NAV / real-time / daily / weekly / monthly / quarterly / semi-annual / annual / ad-hoc).",
-    methodologyPath: "/methodology/#proof-of-reserves",
+    methodologyPath: "/methodology/#safety-scores-methodology",
   },
 };

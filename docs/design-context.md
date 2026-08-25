@@ -1,6 +1,6 @@
 # Design Context
 
-> Canonical human-facing source. The root [`DESIGN.md`](../DESIGN.md) is a compact, hand-maintained machine-readable reference for AI screen generation, not a generated artifact. Keep both aligned with the **as-built code** when brand tokens, typography, or homepage composition change: frost-blue + the drawn lighthouse identity are retained, with the global top nav and the left "watch column" sidebar retired.
+> Canonical human-facing source. The root [`DESIGN.md`](../DESIGN.md) is a compact, hand-maintained machine-readable reference for AI screen generation, not a generated artifact. Keep both aligned with the **as-built code** when brand tokens, typography, or homepage composition change: frost-blue + the drawn lighthouse identity are retained, with a global top nav replacing the retired left "watch column" sidebar.
 
 ## Users
 
@@ -62,7 +62,7 @@ Every scored/evidence module on `/stablecoin/[id]/` compiles to one shape (owner
 
 - **Header**: `DETAIL_MODULE_*` constants + `StablecoinModuleTitle` with `MethodologyLabel`; the title lockup is coin icon → ticker → module title so standalone screenshots retain their subject. Right slot order is score (`ScorePill`) → status chip → freshness (`FreshnessIndicator`). Recommendation and cross-coin modules that are not about the current asset keep an ordinary `DetailSectionTitle`.
 - **Summary layer** (always visible): verdict line, bounded-vocabulary facts (`FactGrid`, the hero passport grammar), at most one primary visual, and **current-state** callouts only.
-- **Detail layer**: breakdowns, tables, long prose, and historical incidents fold behind `ModuleDisclosure` (named labels, native `<details>`), collapsed by default **at every breakpoint** — desktop included. The one sanctioned auto-open is the weakest Safety Score pillar at `lg+`.
+- **Detail layer**: breakdowns, tables, long prose, and historical incidents fold behind `ModuleDisclosure` (named labels, native `<details>`), collapsed by default **at every breakpoint** — desktop included. There is no sanctioned auto-open: the Safety Score V9 pillars fold too (owner decision 2026-08-11 superseded the 2026-08-08 desktop weakest-pillar auto-open, which left the card's left column far taller than Reserve Composition at `xl+`).
 - **Footer**: `EvidenceFooter` — one line of methodology links, folded `Sources (N)` (collapsed everywhere, kept in the DOM for crawlers), right-aligned reviewed/updated stamp.
 - **Semantic color**: red/amber callouts are reserved for *active* state; resolved incidents render as calm folded history.
 - **Drawn rails** (2026-08-08): Mint Authority and Redemption draw their mechanism as compact rails (`MintAuthorityRail`, `RedemptionRouteRail`) — issuer → controls → supply and holder → access gate → venue → output — where every glyph encodes a published field (signer dots = threshold, clock = timelock, gate geometry = access model, arrow label = settlement). Scores sit on a `ScoreBandSpectrum`: **ordinal** band ladder for posture-derived bands (V9 mint — score cutoffs were retired in 9.1, so no marker), **range** track with a score marker only where tones genuinely derive from score cutoffs (redemption 80/65/50/35). Both read "right = safer". Never invent band names or score ranges for a spectrum.

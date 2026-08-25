@@ -15,27 +15,17 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 ## First checks
 
 1. **`sync-stablecoins` cron:** Admin page → Crons section. Is the cron healthy? Last successful run recent (< 2× expected interval)?
-2. **Publication completeness:** for `stablecoin_publication_*`, inspect `/api/status.dataQuality.stablecoinPublication`: missing IDs, active-ID waivers, expected/published counts, generation, and publication evidence. A schema-valid cache can still be incomplete.
-3. **Active current-price coverage:** for `active_price_coverage_*`, inspect `activePriceCoverage`: missing IDs, eligibility/streak evidence, and provider diagnostics. This is distinct from historical chart price coverage.
+2. **Publication completeness:** for `stablecoin_publication_*`, inspect `/api/status.dataQuality.stablecoinPublication`: missing IDs, active-ID waivers, expected/present/waived counts, expired waivers, and the `observedAt` timestamp of the publication evidence. A schema-valid cache can still be incomplete.
+3. **Active current-price coverage:** for `active_price_coverage_*`, inspect `/api/health.activePriceCoverage` (it is not exposed on `/api/status`): missing IDs, eligibility/streak evidence, and per-gap source and rejection detail. This is distinct from historical chart price coverage.
 4. **Pricing provider diagnostics:** inspect `/api/status.priceProviderDiagnostics`. Any upstream (Binance, CoinGecko, DefiLlama) reporting sustained failures?
 
 ## Remediation
 
 - **Historical price backfill:** `backfill-cg-prices` repairs historical `supply_history` price rows only. It does not republish the exact stablecoin publication or repair current-price coverage, so use it only when historical CoinGecko gaps are independently implicated.
 - **Republish cache:** inspect `sync-stablecoins`, clear a stuck lease or provider breaker when applicable, then let the next quarter-hourly run publish the cache. Use `backfill-cg-prices` only when the incident also points at missing historical CoinGecko prices.
-- **Circuit breaker:** if a provider breaker is open, delete its `cache` row. `POST /api/reset-circuit-breaker` was retired on 2026-08-09; this single delete is exactly what it ran, and the next call re-probes closed. Scoped live-reserve breakers use the same key convention, `circuit:live-reserves:<scope>`.
-
-  ```bash
-  npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-    "DELETE FROM cache WHERE key = 'circuit:<source>';"
-  ```
+- **Circuit breaker:** if a provider breaker is open, clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md); the pricing sources here are ordinary `circuit:<source>` rows, and scoped live-reserve breakers use `circuit:live-reserves:<scope>`.
 - **Address-price provider headroom:** production pins `ADDRESS_PRICE_PROVIDERS_ENABLED=coingecko-onchain-address` in `worker/wrangler.toml`, retaining only the authenticated exact-address lane while the public GeckoTerminal corroboration pass stays outside the quarter-hour invocation. Do not widen that allowlist as part of cache remediation unless a fresh Worker headroom audit proves the scheduled run can complete with the added provider. Reset provider breakers only after confirming the next sync will not immediately consume the same disabled or exhausted lane.
-- **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, delete the lease row. `POST /api/reset-cron-lease` was retired on 2026-08-09 and ran exactly this statement. Do not clear a lease while `/api/status` shows an active, fresh `inFlight` progress row for the same job.
-
-  ```bash
-  npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-    "DELETE FROM cron_leases WHERE job = 'sync-stablecoins';"
-  ```
+- **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, clear the stale lease per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-stablecoins`.
 
 ## Prevention
 

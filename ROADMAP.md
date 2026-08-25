@@ -12,10 +12,7 @@ This roadmap is intentionally directional. Methodology and data-pipeline changes
 
 ## Good First Public Contributions
 
-- Data corrections with primary-source links.
-- API examples or docs clarifications.
-- Accessibility and responsive-layout fixes.
-- Stablecoin source coverage research that follows the existing docs and schema.
+[CONTRIBUTING.md](./CONTRIBUTING.md) owns the contribution lanes and the review expectations for each one.
 
 ## Changelog
 

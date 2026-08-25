@@ -47,7 +47,7 @@ ORDER BY rows DESC;
 ## Common Causes
 
 - All supplemental families emitted zero candidates, so the cron refused to overwrite the previous aggregate cache.
-- One per-family cache is malformed or stale. The post-V9 publisher should still load other fresh family caches and report `partial-family-cache` metadata instead of dropping all optional coverage.
+- One per-family cache is malformed or stale. The post-V9 publisher should still load other fresh family caches and report `sourceCoverage.supplementalFallbackMode` as `partial-family-cache`, or `partial-family-cache-aggregate-merge` when the still-fresh aggregate cache backfills the degraded family, instead of dropping all optional coverage. Only the required families raise that flag; a degraded audit-only `vaultsFyi` family cache leaves it `null`.
 - One successful per-family run emitted zero candidates. That family may intentionally publish an empty per-family cache to clear a previous non-empty family snapshot without overwriting the aggregate cache.
 - Optional protocol APIs timed out inside the family budget.
 - Optional RPC families exhausted their family budget or missed many chain targets.
@@ -58,7 +58,7 @@ ORDER BY rows DESC;
 
 - If the latest supplemental run is a single `empty-snapshot`, keep serving the previous snapshot and wait for the next 4-hour run unless optional coverage is business-critical for an incident.
 - If `sync-yield-supplemental` metadata shows one family dominating misses or budget exhaustion, inspect `sourceCoverage.sourceFamilySummaries` first. It gives compact per-family status, raw/emitted counts, audit inventory counts, budget/cap flags, miss reasons, chain breakdowns, and bounded missing-target examples. `sourceCoverage.sourceFamilyCounts` is candidate-oriented; audit-only inventory such as vaults.fyi lives in `sourceCoverage.sourceFamilyInventoryCounts`. Do not move heavy family fetches onto the post-V9 publisher.
-- If the job is stale due to a stuck lease, first confirm `/api/status` has no fresh matching `inFlight` progress. `POST /api/reset-cron-lease` is retired; then delete only `cron_leases.job = 'sync-yield-supplemental'` with scoped remote D1 SQL and verify the next four-hour run.
+- If the job is stale due to a stuck lease, clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-supplemental`, and verify the next four-hour run.
 - If the cache is malformed, preserve the malformed value for debugging and let a later successful supplemental run replace it.
 
 ## Abort Conditions

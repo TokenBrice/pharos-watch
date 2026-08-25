@@ -1,11 +1,6 @@
 # Shadow Stablecoins
 
-Two metadata entries are maintained outside the tracked public stablecoin set for historical PSI and depeg continuity:
-
-- `ust-terra`
-- `iron-iron-finance`
-
-They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated from the tracked stablecoin registry (`shared/lib/stablecoins/registry.ts`, backed by per-coin files in `shared/data/stablecoins/coins/*.json` plus `shared/data/stablecoins/coins.generated.json`).
+A small set of metadata entries is maintained outside the tracked public stablecoin set for historical PSI and depeg continuity. `shared/lib/shadow-stablecoins.ts` owns that inventory and each entry's fields; the entries are intentionally separated from the tracked stablecoin registry (`shared/lib/stablecoins/registry.ts`, backed by per-coin files in `shared/data/stablecoins/coins/*.json` plus `shared/data/stablecoins/coins.generated.json`).
 
 ---
 
@@ -13,36 +8,21 @@ They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated 
 
 Shadow stablecoins preserve historically important collapse events in systems that would otherwise undercount past systemic stress after an asset is delisted from the public dashboard.
 
-They are used where historical continuity matters:
+`shared/lib/psi-eligible.ts` combines active tracked assets with the shadow set into `PSI_ELIGIBLE_STABLECOINS` / `PSI_ELIGIBLE_IDS`, excluding every non-active tracked entry. Any consumer of that set inherits shadow assets, so depeg detection, DEWS, supply snapshots, and the price/depeg/DEWS replay and backfill paths reach shadow assets through it rather than through their own lists.
 
-- `shared/lib/psi-eligible.ts` combines active tracked + shadow assets into `PSI_ELIGIBLE_STABLECOINS`, excluding every non-active tracked entry
-- `worker/src/cron/detect-depegs.ts` and `worker/src/cron/compute-dews.ts` use the PSI-eligible set
-- `worker/src/cron/stability-index.ts` filters the live cache against `PSI_ELIGIBLE_IDS`
-- `worker/src/cron/snapshot-supply.ts` and `worker/src/api/backfill-supply-history.ts` use the PSI-eligible registry
-- `worker/src/api/backfill-cg-prices.ts` also needs the PSI-eligible registry so replay-critical shadow price gaps can be repaired
-- `worker/src/api/backfill-depegs.ts` can backfill shadow assets the same way it backfills tracked assets
-- `worker/src/api/backfill-dews.ts` can replay DEWS rows over the PSI-eligible universe
-- `worker/src/lib/psi-history-universe.ts` centralizes the historical PSI/DEWS replay universe
-- `shared/lib/stablecoin-id-registry.ts` includes shadow entries in PSI-inclusive canonical ID resolution; public readable ID resolution excludes shadow-only entries
+Two scope details do not follow from that rule:
+
+- `CORE_PSI_ELIGIBLE_IDS` (core-aggregate active + shadow) is narrower than `PSI_ELIGIBLE_IDS`, and the [Stability Index](./stability-index.md) filters the live cache and published DEWS rows against the narrower set; historical PSI replay and recompute (`worker/src/lib/psi-history-universe.ts`, `worker/src/lib/psi-recompute.ts`) build their universe and denominator from that same narrower set
+- `shared/lib/stablecoin-id-registry.ts` includes shadow entries in PSI-inclusive canonical ID resolution, while public readable ID resolution excludes shadow-only entries
 
 ---
 
 ## Current Inventory
 
-### `ust-terra`
+The current entries and their metadata live in `shared/lib/shadow-stablecoins.ts` and are not restated here. Two per-asset notes matter beyond that metadata:
 
-- `llamaId: "3"`
-- `detailProvider: "defillama"`
-- `geckoId: "terrausd"`
-- Included in the live DefiLlama-ID registry path via `REGISTRY_BY_LLAMA_ID`
-- Historical PSI replay and live PSI depeg grouping also canonicalize legacy `ust-terra-classic` depeg rows onto `ust-terra` so shadow supply history and collapse-era depegs join back together
-
-### `iron-iron-finance`
-
-- No DefiLlama stablecoin ID
-- `detailProvider: "coingecko"`
-- `geckoId: "iron-stablecoin"`
-- Exists mainly for registry/backfill/history continuity; the source file notes that supply history needs manual DB insertion for the peak-collapse period
+- the collapse-era UST entry carries a DefiLlama stablecoin ID, so it also resolves through the live DefiLlama-ID registry path, and historical PSI replay and live PSI depeg grouping both canonicalize legacy `ust-terra-classic` depeg rows onto it so shadow supply history and collapse-era depegs join back together
+- the IRON Finance entry has no DefiLlama stablecoin ID and exists mainly for registry/backfill/history continuity; its supply history needs a manual database insert for the peak-collapse period, because neither DefiLlama nor CoinGecko exposes market-cap data for it
 
 ---
 
@@ -61,8 +41,6 @@ Operational consequence:
 
 ---
 
-## Gotchas
+## Maintenance
 
-- Do not add a shadow asset to `shared/data/stablecoins/coins/*.json` unless it should become publicly tracked everywhere
-- Do not remove a shadow asset without checking PSI, depeg backfill, and supply-history continuity first
-- If a shadow asset gains a reliable live source, update both `shared/lib/shadow-stablecoins.ts` and the paths that depend on `PSI_ELIGIBLE_STABLECOINS`
+Adding, removing, or promoting a shadow asset is a maintainer operation. [Stablecoin Data Registry](./stablecoin-data.md#editing-rules) owns those rules, including the continuity checks required before a shadow asset is removed.

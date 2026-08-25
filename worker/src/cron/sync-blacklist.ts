@@ -27,6 +27,9 @@ const BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS = 10_000;
 // concurrency aligned with that implementation and the shared six-connection
 // trigger budget; throughput is controlled independently by requests/second.
 const BLACKLIST_PROVIDER_LIVE_CONCURRENCY = 1;
+// TronGrid always runs at this rate; for Etherscan it is only the fallback the
+// scheduled slot overrides with a faster injected limiter. Run metadata reports
+// each limiter's own rate rather than this constant.
 const BLACKLIST_PROVIDER_REQUESTS_PER_SECOND = 3;
 
 type SyncBlacklistResult = {
@@ -249,7 +252,8 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         blacklistProviderCalls,
         maxProviderSplitDepth,
         providerLimiterLiveConcurrency: BLACKLIST_PROVIDER_LIVE_CONCURRENCY,
-        providerLimiterRequestsPerSecond: BLACKLIST_PROVIDER_REQUESTS_PER_SECOND,
+        etherscanLimiterRequestsPerSecond: etherscanLimiter.requestsPerSecond ?? null,
+        tronLimiterRequestsPerSecond: tronLimiter.requestsPerSecond ?? null,
         legacyIdentityEventMigrated: legacyIdentityMigration.eventMigrated,
         legacyIdentityBalanceMigrated: legacyIdentityMigration.balanceMigrated,
         legacyIdentityAmbiguousSkipped: legacyIdentityMigration.ambiguousSkipped,

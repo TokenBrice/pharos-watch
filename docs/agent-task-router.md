@@ -9,7 +9,7 @@ The machine-readable routing source of truth is [doc-ownership.json](./doc-owner
 From the repository root, run:
 
 ```bash
-node --import tsx scripts/ci/pharos-change-contract.ts --markdown
+node --import tsx scripts/ci/pharos-change-contract.ts
 ```
 
 Use `--staged` when the intended change is staged but not committed. The command reports:
@@ -40,4 +40,4 @@ Use [README.md](./README.md) to choose between public reference, engineering con
 
 ## Methodology Changes
 
-Methodology history is structured under `shared/data/methodology-changelogs/` and rendered by the public `/methodology/*-changelog/` routes. Update the owning methodology document, structured changelog entry, and `/methodology` section when behavior changes. Do not create a second Markdown timeline.
+Methodology history is structured under `shared/data/methodology-changelogs/` and rendered by the public `/methodology/*-changelog/` routes. ADR-3 in [architecture.md](./architecture.md#architectural-decision-records) lists every target a methodology change must update. Do not create a second Markdown timeline.

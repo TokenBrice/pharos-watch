@@ -73,6 +73,8 @@ A positive number is not sufficient when its semantics are wrong. Contractual pa
 | `delisted` | Reviewed as outside listing scope | Excluded permanently unless a new scope decision is approved | Read-only profile with reason and source |
 | `frozen` | Previously active instrument has ended or failed and is archived | Excluded | Archived profile and cemetery record |
 
+Only active rows enter live producers and score recomputation. Quarantined and delisted records keep static detail pages but are excluded from the screener, compare, aggregates, alerts, and new provider refreshes.
+
 Quarantine is operational, not punitive. A quarantine review records `changedAt`, a concrete reason, and `reviewBy`. The review date creates an explicit manual follow-up; extensions require another dated review. Reactivation requires a positive supply or market-cap path, the normal active-admission checks, and a new lifecycle review. Missing price coverage alone is worked as a pricing issue while the asset remains active.
 
 Delist when the instrument itself fails scope, including account-only balances, private contractual-par notes, misleading provider artifacts, or assets without a meaningful transferable or redemption claim. A delisted record requires a dated reason and public source.

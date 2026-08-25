@@ -42,7 +42,7 @@ Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/ti
 `/timeline/` is a deliberate **wire-service / terminal stream** carve-out from the standard `pharos-card-shell` analytics aesthetic. It is the wire dispatch sibling to `/digest/`'s broadsheet editorial: both lean on mono typography, but `/timeline/` is syslog, not newsprint. The general design ground truth lives in [design-language.md](./design-language.md); this section is the canonical contract for this route, mirrored as `### Tape (Special)` in that doc.
 
 1. **No `pharos-card-shell`** on event rows, day groups, the currently-open band, the pinned linked-event block, or the empty state. The whole stream is a flat typographic surface.
-2. **Hairline dividers** (`border-b border-border/30`) between rows — no rounded card boxes.
+2. **Hairline dividers** (`border-b border-border/60` between event rows, `border-b border-border/30` between class-digest and quiet-day groups) — no rounded card boxes.
 3. **The core mono stack (JetBrains Mono) is dominant** on the stream. SummaryBand, day separators, event rows, severity tags, time prefixes — all mono. The retained `--font-geist-mono` name is a legacy token, not a Geist webfont. Sans is reserved for the filter row labels, which share control utilities with the rest of the site.
 4. **Severity is communicated by text color**, not by card border or background fill. The `severityToAccent` `border-l-[3px]` rail is intentionally dropped from `EventCard`.
 5. **Time prefix on every row** — desktop/tablet rows show `HH:MM` in mono `tabular-nums`, rendered in UTC to match the UTC day grouping (a single `All times UTC` label sits atop the feed); mobile rows show compact relative tokens (`5s`, `3m`, `2h`, `4d`) while the absolute time remains in the `<time>` metadata and hover title.
@@ -94,7 +94,7 @@ The feed is a materialized projection of existing producer tables. The `project-
 
 DEWS band projection requires durable publication proof. The forward sparse `stress_signals` scan and its prior-band seed join `surface_publication_generations` at `surface = "dews"` and `state = "published"`. Band changes always create a sparse-history row, while unchanged half-hourly samples may be omitted. A partially written generation that fails DEWS row-count validation therefore emits no Tape event and cannot advance either DEWS projector watermark; a later published generation diffs against the last published band rather than the failed intermediate row. The DEWS cache pointer and ledger row commit atomically, while migration `0182` plus runtime pointer reconciliation bootstrap the publication that predates this contract.
 
-Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project-tape.ts`):
+Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/lib/tape-projectors/registry.ts`, consumed by `worker/src/cron/project-tape.ts` and `worker/src/api/backfill-tape.ts`):
 
 | Projector                       | Source                                                  | Emits                                                                |
 | ------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -119,9 +119,9 @@ Retention policy: `tape_events` is a product timeline archive kept forever. The 
 
 ## Behavior
 
-- **Severity-floor default:** the page opens at `notice+`. Lower-priority chip ("All") drops the floor.
+- **Severity-floor default:** the page opens at `notice+`. The `Info+` chip drops the floor entirely.
 - **Summary band:** visible result sets render a summary band above filters and data-status notices. It reports loaded count, open-incident count, active window, severity floor, update recency, last-event timestamp, and the dark-mode-only CRT toggle.
-- **Day grouping:** events are bucketed by UTC day; today and yesterday get `Today` / `Yesterday` primary labels. The day separator carries a per-day counter (`N events · M classes`) so users can decide whether to scan a day before scrolling. Quiet days with `≤ 3` events render as a collapsed day-level `<details>` summary listing class/ticker tokens before the underlying class groups.
+- **Day grouping:** events are bucketed by UTC day; today and yesterday get `Today` / `Yesterday` primary labels. The day separator carries a per-day counter (`N EVT · M CLS · MAX <severity glyph>`, plus `· K OPEN` when that day has open incidents) so users can decide whether to scan a day before scrolling. Quiet days with `≤ 3` events render as a collapsed day-level `<details>` summary listing class/ticker tokens before the underlying class groups.
 - **Digest grouping:** within each day, events are partitioned by class by `digestPage(...)` and `mergeDigestedPages(...)` in `src/lib/tape-digest.ts`. Classes with `≥ 3` events render as a collapsible `<details>` recap row carrying a class background tint, count, top tickers, and class-specific aggregate stats (`worst N bps`, `$X frozen`, `N upgrades · M downgrades`, `max <severity>`). Classes with `< 3` events render inline unless the whole day is using the quiet-day wrapper. The recap line stays visible when closed; clicking reveals the underlying `EventCard` rows. Severity above the notice floor is communicated via the colored `max <severity>` chip in the recap and via the per-event severity text in the open state.
 - **Page-seam merging:** `digestPage(...)` digests each infinite-query page independently and `mergeDigestedPages(...)` re-merges adjacent pages that share a UTC day, preserving day grouping across pagination seams.
 - **Collapse-by-coin-class:** within an expanded digest, events sharing the same coin/chain attribution, full event type, severity, and transition further collapse (regardless of adjacency) into a single card with a count badge via `collapseByCoinClass(...)`; different types within one class (e.g. `depeg.opened` vs `depeg.resolved`) stay separate.
@@ -130,7 +130,7 @@ Retention policy: `tape_events` is a product timeline archive kept forever. The 
 - **`?event=<id>` permalink:** if the linked event isn't in the current filter window, a 200-row latest buffer (`useLatestEvents({ limit: 200 })`) is queried in parallel and the event is rendered as a pinned block inside `#tape-feed`, above the day groups. Resolved permalinks scroll into view and pulse-highlight for `HIGHLIGHT_DURATION_MS` (2000 ms).
 - **Infinite scroll:** the first `Load more` click flips a sentinel `IntersectionObserver` on, after which subsequent pages auto-load.
 - **End-of-feed footer:** when the cursor is exhausted, the page prints a mono terminal footer (`END OF TAPE · N EVT · WINDOW ... · CURSOR: NULL · LAST FILE: ...`) instead of a generic sentence.
-- **Empty state:** if filters return nothing, the CTA resets filters or widens the window to `alltime` (whichever applies).
+- **Empty state:** if filters return nothing, the CTA takes the smallest widening step that applies — reset active filters, else drop the severity floor to `info`, else widen the window to `alltime`.
 - **Stale data banner + retry:** the feed is wrapped by `QueryFreshnessNotices` (the shared freshness/error banner).
 
 ---
@@ -171,7 +171,7 @@ Update this doc when any of these contracts change:
 If a new projector class ships, also update:
 
 1. `TAPE_CLASSES` in `src/components/tape/tape-classes.ts`
-2. the projector roster in `worker/src/cron/project-tape.ts` (`TAPE_PROJECTOR_JOBS`)
+2. the projector roster in `worker/src/lib/tape-projectors/registry.ts` (`TAPE_PROJECTOR_JOBS`), plus the projector module under `worker/src/lib/tape-projectors/`
 3. this document
 4. the per-class deep-link footer on the source tracker page (`/depeg/`, `/freezewatch/`, `/flows/`, etc.)
 

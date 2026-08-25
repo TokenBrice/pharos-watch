@@ -38,4 +38,4 @@ Vigilant, precise, distinctive. Pharos is a lighthouse: it watches every peg so 
 
 ## Accessibility & Inclusion
 
-Skip links on every page, focus-visible rings everywhere, keyboard-ready interactive rows, color reinforced with structure/iconography. Contrast floor: informational text never below `text-muted-foreground/70` (WCAG 1.4.3/1.4.11 on the light theme). Reduced-motion gates on all keyframe animation.
+Skip links on every page, focus-visible rings everywhere, keyboard-ready interactive rows, color reinforced with structure/iconography. Contrast floor: informational text targets `text-muted-foreground/70`; lighter tints (`/40`–`/60`) are reserved for decorative separators, aria-hidden glyphs, and empty-value placeholders (WCAG 1.4.3/1.4.11 on the light theme). Reduced-motion gates on all keyframe animation.

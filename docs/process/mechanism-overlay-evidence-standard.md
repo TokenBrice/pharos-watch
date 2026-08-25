@@ -14,8 +14,10 @@ are now admissible only under the rules below.
   `assuranceAndReconciliation`), **tbill** components (`fundClaimAndSeniority`,
   `navValuation`, `durationAndLiquidity`, `lossRecoveryDesign`), and **commodity-claim**
   components (`titleAndAllocation`, `custodyContinuity`, `assuranceAndReconciliation`,
-  `physicalRedemption`). These components are
-  compiler-bounded by design; a curated overlay claim overrides that conservatism and is
+  `physicalRedemption`). These components are compiler-bounded by design, except
+  `assuranceAndReconciliation` (fiat-cash, commodity-claim) and `lossRecoveryDesign`
+  (tbill), which the compiler grades from `proofOfReserves.latestReport`. A curated
+  overlay claim overrides that conservatism — or that restated report quality — and is
   therefore held to the strictest sourcing bar in the scoring system.
 - For `commodity-claim`, the curated `physicalRedemption` component is also the single source
   of the asset's `physical-redemption` mechanism-exit fact: the Exit pillar reads a projection
@@ -24,8 +26,9 @@ are now admissible only under the rules below.
   `issuer-undisclosed` exit fact, and a `not-applicable` component projects nothing — a
   structurally absent redemption right is not evidence that an exit route exists.
 - The `not-applicable` / `unavailable` component-applicability states and the
-  corresponding metric-applicability states on synthetic-delta-neutral and
-  rwa-credit-fund overlays (wave-7 decision D2).
+  corresponding metric-applicability states on cdp (two-state: `measured` /
+  `not-applicable`), synthetic-delta-neutral, and rwa-credit-fund overlays; wave-7
+  decision D2 ratified the three-state sdn / rwa schema.
 
 ## Evidence classes
 
@@ -68,7 +71,7 @@ Wave-6 packet research produced the canonical negative examples; they remain the
   issuer-undisclosed. This is a sourced nondisclosure disposition, not a quality claim or an
   evidence closure.
 
-## Metric applicability states (sdn / rwa)
+## Metric applicability states (cdp / sdn / rwa)
 
 - `measured` — a numeric value with a pinned source. Default when applicability is absent.
 - `not-applicable` — the metric structurally does not apply to this mechanism (for example
@@ -91,6 +94,9 @@ Wave-6 packet research produced the canonical negative examples; they remain the
 - Date-only overlay claims become score-bearing only after the reviewed UTC day has elapsed.
   During that day the admission gap is method-owned; clocks before the review date receive
   neither the future overlay nor its disposition.
+- Curated overlay claims expire. An overlay stops being score-bearing 365 days after its
+  `reviewedAt` date (`evidenceExpiry.mechanismOverlayMaxAgeSec`); its components re-bound to
+  the conservative compiler path until the evidence is re-pinned.
 - Metric-applicability and non-measured component `sourceUrl`s must match an entry in the
   overlay's `sources` array (validator-enforced).
 - Overlays are identity-bound: every batch lands through a replay on the pinned production

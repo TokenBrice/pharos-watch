@@ -23,7 +23,7 @@ The repo now ships two related surfaces:
 
 - `/status/`: public, read-only health board backed by `/api/health` plus public browser probes
 - `/admin/`: Triage workspace
-- `/admin/pipeline/`: data-quality, market, reserve, yield, storage, integrity, and discovery workbench
+- `/admin/pipeline/`: data-quality, market, reserve, yield, storage, and integrity workbench
 - `/admin/reliability/`: endpoint, dependency, demand, and cache reliability workbench
 - `/admin/crons/`: grouped scheduler workbench
 - `/admin/actions/`: guarded operator action catalog and execution history
@@ -73,7 +73,7 @@ The active frontend operator mode is now:
     - a status narrative headline instead of the old single-word + four-card metric template
     - a warning line only when the public status is not healthy or warnings are present
     - four compact metric tiles for cache pressure, browser probes, mint/burn sync, and circuit breakers
-    - a compact footer for health sample time, public-query sync floor, and browser probe freshness
+    - a compact footer for health sample time, browser client-sync time, and the impacted-cache-lane count when non-zero
 - `src/components/status/uptime-bar.tsx`
   - Renders the fixed 30-day public `Status runway` with explicit labeling (`Last 30d`) so the hero summary keeps a stable scope even while the transition table is filtered
 - The public `Overview` lane uses flatter signal cards for mint/burn sync, blacklist ingestion, optional Telegram bot health, and impacted public surfaces
@@ -140,12 +140,8 @@ The active frontend operator mode is now:
 - `src/components/status/telegram-bot-stats.tsx`
   - Renders delivery health, shared backlog-policy evidence, permanent failures, retries, dispatch results, and per-alert delivery before a separate audience-coverage section. Missing optional telemetry remains `Unknown`, never zero.
 - Cron telemetry is grouped by trigger slot and rendered as a matrix:
-  - 15-minute core ingestion / score recompute
-  - 5-minute Telegram dispatch lane for subscriber alerts
-  - 30-minute on-chain intake jobs (`sync-mint-burn` on `4,34`, `sync-mint-burn-extended` on `18,48`) shown together in the half-hourly group but labeled as isolated triggers
-  - 30-minute charts / liquidity jobs plus the decoupled DEWS / PSI DB-only trigger
-  - hourly core yield publisher (`sync-yield-data`); `sync-blacklist` is on a dedicated 6-hourly trigger, and the reserve + redemption + Kinesis lane is on a dedicated 4-hourly trigger; `sync-dex-discovery` is on a dedicated 2-hourly trigger
-  - daily snapshot / digest / recap jobs
+  - One group per physical trigger, from the quarter-hourly core ingestion lane through the daily snapshot / digest / recap lane. Group membership, cadence, and offsets come from `shared/lib/cron-jobs.ts` and `shared/lib/cron-cadences.ts`; see [`docs/worker-infrastructure.md`](./worker-infrastructure.md#deployed-trigger-topology)
+  - Jobs that own a dedicated isolated trigger can render inside a shared cadence group but stay labeled as isolated triggers
   - The default attention filter does not mount healthy rows; operators can search and filter by state, impact, trigger group, and running status
   - Trigger boundaries remain visible, with severity ordering inside each group and stable registry order for ties
   - Rows show state, impact class, operator-friendly label, raw job id, trigger, last run, last good run, readable/exact duration, item count, and evidence markers
@@ -158,7 +154,7 @@ The active frontend operator mode is now:
   - Job-specific metadata summaries are resolved through `src/components/status/cron-metadata-summary.ts` and clamped in the row/details split
 - The operator UI uses fixed route workspaces instead of a single scrolling lane stack:
   - `Triage`: current incident state, blockers, watch count, recommended action, last transition, query freshness, raw diagnostics, and a counts-only credential lifecycle summary linking to API Management
-  - `Pipeline`: URL-backed tab inspection for `Quality`, `Markets`, `Reserves`, `Yield`, `Storage`, `Integrity`, and `Discovery`; inactive modes are not mounted
+  - `Pipeline`: URL-backed tab inspection for `Quality`, `Markets`, `Reserves`, `Yield`, `Storage`, and `Integrity`; inactive modes are not mounted
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
   - `Reliability`: URL-backed `Impact`, `Endpoints`, `Dependencies`, `Demand`, and `Cache` modes; manual mutation routes are excluded from default probe noise, and the Dependencies public-service breaker list uses the same public-impact filter as `/api/health` while retaining excluded breakers in provider diagnostics
   - `Crons`: grouped, filterable attention workbench with a sticky selected-row evidence panel and separately grouped budget-only surfaces
@@ -212,13 +208,17 @@ Related extracted loaders:
 - Last run status is `ok`, or
 - Last run status is `degraded` (warning-only fallback mode), or
 - Last run status is `skipped_neutral` (expected no-op) **and** the latest non-neutral required run in recent history is a fresh `ok` or `degraded`, or
-- Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window
+- Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window, or
+- The cron-history query itself failed, in which case every job is reported healthy with `crons[*].telemetryUnknown = true` and excluded from unhealthy/error counters rather than reported falsely unhealthy, or
+- The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence
+
+Otherwise the job is unhealthy, including stale history, non-fresh errors, or a neutral skip whose latest required run errored. A required degraded run remains counted in degraded diagnostics even though later neutral skips inherit its availability.
 
 Operational nuance: a fresh recovery attempt should not keep `/status` degraded purely because the most recent completed run failed. When a leased cron is actively running and its heartbeat is fresh, availability treats that lane as live again while still preserving the previous completed run in card history.
 
 The admin cron workbench resolves a neutral skip against the latest required non-neutral run before building its attention filter. A fresh `skipped_neutral` row with no inherited warning or failure renders as **Skipped**, not **Unhealthy**. Known V9 admission reasons replace the generic no-work label with the actual condition, such as `competing slot active` or `core slot not ready`. The row remains under `Needs attention` when backend availability still lacks required success evidence, so the neutral attempt outcome does not hide a starved producer. Inherited degraded outcomes retain warning treatment, inherited failures remain unhealthy, and stale neutral skips remain unhealthy.
 
-Scheduled-slot abandonment is surfaced separately from child job runtime failures. When a later trigger reconciles a stale `cron_slot_executions` row, `/api/status` can attach `crons[*].latestEvent` with `eventType = "scheduled-slot-abandoned"` to each child job in that slot; the marker includes the schedule key, slot owner, and abandoned child progress stage. Synthetic child rows with `metadata.reason = "stale-slot-reconciled"` remain in `recentRuns` for audit history, except legacy false `daily-digest` not-started rows from idle `digestTriggerPoll` slots, which are excluded before the per-job history limit. Genuine forced digest outcomes and abandoned started-progress rows remain visible. The duration watchdog excludes synthetic reconciliation rows from runtime averages and reports proven publication, not-started children, publication failures, terminal-accounting unknowns, and real child failures as separate lifecycle counters.
+Scheduled-slot abandonment is surfaced separately from child job runtime failures. When a later trigger reconciles a stale `cron_slot_executions` row, `/api/status` can attach `crons[*].latestEvent` with `eventType = "scheduled-slot-abandoned"` to each child job in that slot; the marker includes the schedule key, slot owner, and abandoned child progress stage. Synthetic child rows with `metadata.reason = "stale-slot-reconciled"` remain in `recentRuns` for audit history, except legacy false `daily-digest` not-started rows from idle `digestTriggerPoll` slots, which are excluded before the per-job history limit. Genuine forced digest outcomes and abandoned started-progress rows remain visible. The duration watchdog excludes synthetic reconciliation rows from runtime averages and reports proven publication, not-started children, publication failures, terminal-accounting unknowns, and real child failures as separate lifecycle counters. Remediation: [`docs/runbooks/cron-slot-abandonment.md`](./runbooks/cron-slot-abandonment.md).
 
 Synthetic timestamps preserve the evidence clock: started-child abandonment uses the original start and last durable progress heartbeat, while a proven not-started child uses the original slot invocation and last slot heartbeat. Reconciliation wall time remains metadata, so older synthetic evidence cannot outrank a newer real success or producer head. An idle conditional digest poll never synthesizes a `daily-digest` failure; durable started progress is still reconciled. The cron workbench labels the active child `Abandoned`, derives runtime from its last heartbeat, and displays reconciliation delay separately. Synthetic downstream children with `childDisposition = "not_started"` render as `Not started: upstream abandoned` with runtime `N/A`; explicit dependency markers with `skippedReason = "upstream-incomplete:<job>"`, `upstream-failure:<job>`, or `upstream-blocked:<job>` render as not started with the corresponding prerequisite state, also with runtime `N/A`, and expose the prerequisite job as table evidence. These rows retain their raw error or degraded audit status so availability accounting still records the missed required execution. High-ratio abandonment remains metadata-visible for the full 7-day lookback, but it only keeps the watchdog degraded while at least one matching abandoned slot is less than 24 hours old.
 
@@ -237,16 +237,18 @@ For the split DEX pipeline:
 
 ### Availability status
 
-Computed from public cache impact, public mint/burn impact, circuit health, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.
+Computed from public cache impact, public mint/burn impact, circuit health, D1 capacity pressure, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.
 
 - `stale` if any of:
   - any shared cache impact is `stale`
   - the public mint/burn lane is `stale`
+  - D1 capacity threshold state is `critical`
   - any availability-critical cron has two or more consecutive failed runs
   - `availabilityImpactingUnhealthyCrons >= 2`
 - `degraded` if any of:
   - any shared cache impact is `degraded`
   - the public mint/burn lane is `degraded` (once the lane has emitted real sync telemetry)
+  - D1 capacity threshold state is `warning`, or the D1 capacity assessment could not be read
   - `openCircuitGroups >= 3`
   - any availability-critical cron has a single failed run
   - `availabilityImpactingUnhealthyCrons > 0`
@@ -278,6 +280,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
   - `reserveComposition.status === "stale"`
 - `degraded` if any of:
   - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
+  - exact stablecoin publication coverage is not complete (`dataQuality.stablecoinPublication.status !== "complete"`, i.e. `incomplete` or `unknown`)
   - exact active-price coverage is unreadable (`activePriceCoverageImpactStatus === "degraded"` from `active_price_coverage_unknown`; incomplete coverage is warning-only)
   - `missingPriceRatio > 0.18`
   - `blacklistRecentMissingAmounts >= 5` (last 24h)
@@ -353,10 +356,10 @@ Additional response fields:
 
 Availability escalation on cron errors follows a transient-vs-sustained split:
 
-- A **single** transient failed run on an availability-critical cron (`sync-stablecoins`, `sync-fx-rates`, `sync-blacklist`, `sync-mint-burn`) surfaces as a `cron_error_runs` **warning** and sets `availabilityStatus` to `degraded`. This avoids flipping public state on rare upstream-caused single-sample flakes such as DefiLlama returning a truncated response body at the :30 slot.
+- A **single** transient failed run on an availability-critical cron (`sync-stablecoins`, `sync-fx-rates`, `sync-blacklist`, `sync-mint-burn`, `reserve-recovery`) surfaces as a `cron_error_runs` **warning** and sets `availabilityStatus` to `degraded`. This avoids flipping public state on rare upstream-caused single-sample flakes such as DefiLlama returning a truncated response body at the :30 slot.
 - **Two or more consecutive** failed runs on the same critical cron escalate to `stale` via `summary.availabilityImpactingConsecutiveCronErrors > 0`.
 - Multiple critical crons simultaneously unhealthy (`summary.availabilityImpactingUnhealthyCrons >= 2`) also escalate to `stale`.
-- Cache-age stale (`worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale`) and the `publicAvailabilityFloor` (circuit outages, mint/burn sync stale) paths remain unchanged.
+- Cache-age stale (any cache whose override-aware impact status is `stale`, per `getCacheImpactStatus` / `getCacheRatioThresholds`) and the `publicAvailabilityFloor` (circuit outages, mint/burn sync stale, D1 capacity pressure) paths remain unchanged.
 - `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `persistentlyStaleIndependentCoins`, `writeTimeoutUncertain`, `deferredCoins`, `runBudgetTruncated`, `deferredAt`, `nextCursorStablecoinId`, `cursorTailState`, `cursorTailError`, `cursorRecordedAt`, `cursorTailCompletedAt`, `cursorTailFailedAt`, `runBudgetTruncationCount`, `historyWriteGaps`, `lastSuccessAt`, `oldestFreshAgeSec`, `status`, `freshCoverageRatio`, `authoritativeFreshCoverageRatio`). Any persistent stale independent feed keeps the reserve composition status at least `degraded` even if aggregate fresh coverage remains high.
 - `yieldHealth`: admin-only yield health summary sourced from existing cache rows and cron metadata (`yield-rankings`, `yield:supplemental-sources:v1`, `yield-coverage-audit`, and `sync-yield-data`). It reports ranking count/update age, previous-vs-current ranking-count delta, live-safety hydration coverage, supplemental cache age, benchmark age/fallback mode, coverage-audit age, source-risk field coverage, comparison-anchor freshness, latest cron status, a field-level status, status-impact class, and the yield runbook link.
 - `publicationHealth`: admin-only read-only publication generation summary for `dex-liquidity`, `yield-rankings`, `stablecoins`, `dews`, `psi`, and `safety-score-v9`. The V9 surface is derived from the canonical `report-cards:v9` publication and matching publication-health row; it does not consult the retired V8 compact cache.
@@ -377,6 +380,7 @@ For event-backed domains, `datasetFreshness` follows the writer rather than the 
 
 - `stablecoinsCacheStatus`: `ok | degraded | error`
 - `stablecoinsCacheReason`: machine-readable reason when the stablecoins cache is unavailable or transitional
+- `stablecoinPublication`: active-stablecoin publication coverage (`complete | incomplete | unknown`) with expected/present/waived counts and missing active IDs
 - `blacklistGapStatus`: `ok | failed`
 - `activeDepegStatus`: `ok | failed`
 - `onchainSupplyQueryStatus`: `ok | failed | unavailable`
@@ -462,7 +466,7 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 
 ### Synthetic self-check
 
-The isolated `9,24,39,54 * * * *` status lane runs `cron-slot-sweeper` before `status-self-check`; the five-minute reserve-recovery lane additionally runs an unscoped stale-slot sweep so a killed slot is reconciled within minutes rather than waiting for the next status window. The sweeper claims stale `cron_slot_executions` across all slot keys, preserves real terminal child rows, and classifies incomplete children from durable progress, lease, cron-history, and producer-publication evidence. Proven published DEX work receives a synthetic degraded audit row; real child failure, not-started work, publication failure, and terminal-accounting unknown remain distinct error dispositions. Reconciliation uses idempotent inserts plus exact owner/fence comparisons and CAS-style deletes for stale progress and expired leases; these separately fenced operations do not claim cross-artifact transactional atomicity. The sweep writes `scheduled-slot-abandoned` event markers and sends a cooldown-gated alert, so a stopped heartbeat is visible before the next same schedule key fires without deleting a renewed or newer owner.
+The isolated `9,24,39,54 * * * *` status lane runs `cron-slot-sweeper` before `status-self-check`; the five-minute reserve-recovery lane additionally runs an unscoped stale-slot sweep so a killed slot is reconciled within minutes rather than waiting for the next status window. The sweeper claims stale `cron_slot_executions` across all slot keys, preserves real terminal child rows, and classifies incomplete children from durable progress, lease, cron-history, and producer-publication evidence. Proven published DEX work receives a synthetic degraded audit row; real child failure, not-started work, publication failure, and terminal-accounting unknown remain distinct error dispositions. Reconciliation uses idempotent inserts plus exact owner/fence comparisons and CAS-style deletes for stale progress and expired leases; these separately fenced operations do not claim cross-artifact transactional atomicity. The sweep writes `scheduled-slot-abandoned` event markers, so a stopped heartbeat is visible before the next same schedule key fires without deleting a renewed or newer owner.
 
 `status-self-check` then:
 
@@ -476,7 +480,7 @@ The isolated `9,24,39,54 * * * *` status lane runs `cron-slot-sweeper` before `s
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
 4. Tracks divergence streak and probe-failure streak in `status_discrepancy_state`.
-5. Sends alert on sustained divergence and independently alerts on sustained probe failures (3+ consecutive failing checks). Alert bodies include the internal/external comparison so operators can separate app/router regressions from custom-domain, Access, routing, cache, and edge-path regressions.
+5. Exposes the sustained-divergence and sustained-probe-failure streaks as `discrepancyStreak` / `probeFailureStreak` in the cron metadata, alongside the internal/external comparison so operators can separate app/router regressions from custom-domain, Access, routing, cache, and edge-path regressions. There is no outbound alert transport; escalation is operator-driven from the status surfaces.
 
 The cron metadata now includes:
 
@@ -502,9 +506,11 @@ LIMIT 3000;
 
 A path failed in a given run when the `failed` array inside `details_json` holds an entry whose `path` matches; that entry also carries the observed `status`, `error`, and `latencyMs`. Probes fire every 15 minutes, so a 30-day window is roughly 2,880 rows — the retired endpoint capped reads at 3,000 and 30 days.
 
-`status_discrepancy_state` persists both divergence and probe-failure alert state:
-`consecutive_divergent`, `last_divergent_at`, `last_alert_at`,
-`consecutive_probe_failures`, `last_probe_failure_at`, and `last_probe_alert_at`.
+Those rows are pruned by the daily `0 3 * * *` `prune-status-probe-runs` job (`worker/src/cron/prune-status-probe-runs.ts`): anything older than 90 days is deleted, so no probe-history query can reach further back than 90 days however wide its own window is. Each run deletes at most 10,000 rows through one subselect-capped `DELETE` that takes the oldest eligible ids first, keeping the statement inside D1's per-statement budget; at the 15-minute probe cadence steady state sits near 8,600 rows, so the cap only binds after a backlog and then drains it over successive daily runs instead of in a single pass. The job touches `status_probe_runs` only — `status_transitions` and `status_discrepancy_state` are not pruned by it, so the incident timeline and the divergence/probe-failure streaks outlive probe depth.
+
+`status_discrepancy_state` persists the divergence and probe-failure streaks:
+`consecutive_divergent`, `last_divergent_at`, `consecutive_probe_failures`, and `last_probe_failure_at`.
+The legacy `last_alert_at` / `last_probe_alert_at` columns remain in the baseline schema but are no longer written since the alert transport was removed.
 
 ### History endpoint (`GET /api/status-history`)
 
@@ -556,24 +562,7 @@ Manual actions are rendered from `getStatusPageActions()` and executed only on u
 
 ## Guarded Admin Actions
 
-Status-page manual actions are router-dispatched from shared endpoint metadata (`shared/lib/api-endpoints/`):
-
-- `POST /api/trigger-digest`
-- `POST /api/reset-blacklist-sync`
-- `GET /api/debug-sync-state`
-- `POST /api/remediate-blacklist-amount-gaps`
-- `POST /api/backfill-blacklist-current-balances`
-- `POST /api/backfill-depegs`
-- `POST /api/backfill-supply-history`
-- `POST /api/backfill-cg-prices`
-- `POST /api/backfill-yield-history`
-- `POST /api/backfill-stability-index`
-- `POST /api/backfill-mint-burn-prices`
-- `POST /api/backfill-mint-burn`
-- `POST /api/backfill-tape`
-- `POST /api/reclassify-atomic-roundtrips`
-- `GET /api/audit-depeg-history?dry-run=true`
-- `GET /api/backfill-dews`
+Status-page manual actions are router-dispatched from shared endpoint metadata (`shared/lib/api-endpoints/`). The catalog is every endpoint carrying `statusPageAction` in `shared/lib/api-endpoints/definitions.ts`; that registry is canonical for risk, scope, prerequisites, dry-run support, and audit ownership.
 
 The UI uses these actions in two ways:
 
@@ -594,7 +583,7 @@ Persisted audit coverage boundary (intentional):
 
 - Every catalog action (`statusPageAction` endpoints) is audited canonically at the router, success or failure, so the Actions workbench catalog has complete server-side coverage once a request reaches the Worker.
 - Executions that never reach the Worker (client network failure or abort before a response) can only exist as session-scoped entries; they are labeled `session` in the workbench and legitimately disappear on reload. Their idempotency key remains reusable for a safe retry that will produce the durable row.
-- The remaining non-catalog operator mutation, `POST /api/admin-telegram-broadcast`, emits handler-level `admin_action_audit` records; credential lifecycle mutations audit into `api_key_audit_log` instead and surface through the API Management and History workspaces. The other handler-audited operator routes (cron lease/kill controls, circuit-breaker reset, Telegram pending/resend/delivery-control) were retired on 2026-08-09, so no new rows appear for those actions; historical rows remain.
+- The remaining non-catalog operator mutations — `POST /api/admin-telegram-broadcast` and the self-serve API-key request decisions under `/api/api-key-requests-admin/` (`api_key_request_reject`, `api_key_request_release_claim`) — emit handler-level `admin_action_audit` records; credential lifecycle mutations audit into `api_key_audit_log` instead and surface through the API Management and History workspaces. The other handler-audited operator routes (cron lease/kill controls, circuit-breaker reset, Telegram pending/resend/delivery-control) were retired on 2026-08-09, so no new rows appear for those actions; historical rows remain.
 
 `POST /api/backfill-mint-burn` is operator-safe from the status page even without an explicit `configKey`: the worker auto-selects the most behind tracked mint/burn config with a critical-first / major-symbol-first policy and returns the selected config in the response payload.
 
@@ -647,7 +636,7 @@ Data is sourced from the admin-only `GET /api/status` payload. The worker supple
 Renders in the Admin Pipeline `Storage` tab beside pipeline freshness. It shows:
 
 - current D1 database size
-- current utilization state against the 10 GB ceiling
+- current utilization state, with boundaries and health impact owned by [`docs/runbooks/d1-capacity-and-runtime-experiments.md`](./runbooks/d1-capacity-and-runtime-experiments.md)
 - 24h, 72h, 7d, and 30d growth regressions with sample count and observed span
 - next-threshold and exhaustion forecast from the shortest valid regression
 - table count

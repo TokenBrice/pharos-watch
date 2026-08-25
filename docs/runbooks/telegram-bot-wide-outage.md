@@ -2,7 +2,7 @@
 
 Use this runbook when Telegram authentication fails, several distinct chats return systemic transport failures, or delivery is intentionally paused during an incident.
 
-`GET|POST /api/admin-telegram-delivery-control` was retired on 2026-08-09. The state it exposed is unchanged: `telegram_transport_circuit` and `telegram_delivery_pauses` still gate every send. Read-only inspection is available through D1, but there is currently no supported audited pause/resume mutation. Do not substitute an ad hoc direct write: the mutation must preserve generation fencing and write the keep-forever `admin_action_audit` row only when the state change succeeds.
+`GET|POST /api/admin-telegram-delivery-control` was retired on 2026-08-09. The state it exposed is unchanged: `telegram_transport_circuit` and `telegram_delivery_pauses` still gate every queued delivery path — fresh handoff, pending drain, digest, and admin broadcast. The cron freshness-watchdog operator alert sends outside these controls, so a pause does not silence it. Read-only inspection is available through D1, but there is currently no supported audited pause/resume mutation. Do not substitute an ad hoc direct write: the mutation must preserve generation fencing and write the keep-forever `admin_action_audit` row only when the state change succeeds.
 
 ## Inspect
 

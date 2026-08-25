@@ -8,6 +8,8 @@ Applies to `shared/**`.
 - `docs/classification.md` for stablecoin or taxonomy work
 - `docs/methodology-page.md` for scoring/versioned methodology work
 
+Per-change routing is owned by `docs/doc-ownership.json`; run `node --import tsx scripts/ci/pharos-change-contract.ts` for the docs, checks, and rules that match the exact files you touch. The list above is the offline starting point, not the full contract.
+
 ## Rules
 
 See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file only documents shared-specific items.
@@ -18,7 +20,6 @@ See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file onl
 
 ## Common Checks
 
-- `npm run check:worker-boundary`
-- `npm run check:shared-cycles`
+- `npm run lint` for the ADR-2 worker import boundary
 - `npm run check:stablecoin-data` when stablecoin metadata is affected
 - Focused `shared/lib/__tests__` suites for touched logic

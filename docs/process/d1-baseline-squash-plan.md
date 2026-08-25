@@ -22,9 +22,9 @@ Run `npm run check:migrations` for the current active/retired inventory. Crossin
 ## Procedure
 
 1. Apply the complete current migration tree to a fresh rehearsal D1 database.
-2. Export the resulting schema and required seed rows into a replacement `0000_baseline.sql`, following the existing idempotent baseline style.
+2. Export the resulting schema and required seed rows into a replacement `0000_baseline.sql`, following the existing idempotent baseline style, then remove the objects recorded under Completed Destructive Cleanup Operations and the Deferred Destructive Cleanup Queue in `worker/migrations/MANIFEST.md` and note each removal there.
 3. Apply the proposed squashed tree to a second fresh D1 database.
-4. Compare `sqlite_master`, index lists, trigger definitions, and seeded row counts between both scratch databases. Any difference blocks the squash.
+4. Compare `sqlite_master`, index lists, trigger definitions, and seeded row counts between both scratch databases. The only permitted differences are the recorded destructive-cleanup removals applied in step 2; any other difference blocks the squash.
 5. Point a preview Worker at the second database. Run the preview smoke set and one full cron tick; verify the cron ledgers and status probes show no migration-name coupling.
 6. Move every absorbed filename into a new squash block in `worker/migrations/MANIFEST.md`. Keep retired entries and historical filenames explicit, and leave only the new baseline plus the unsquashed tail on disk.
 7. Run `npm run check:migrations` and the normal focused Worker checks. Land the baseline, manifest, and file removals as one logical commit.
@@ -37,4 +37,4 @@ Run `npm run check:migrations` for the current active/retired inventory. Crossin
 - If production attempts to execute migration SQL, stop before the Worker deploy and investigate ledger/filename drift.
 - If only the Worker is faulty, redeploy the previous Worker version. Do not restore D1 for a code-only failure.
 - If production data or schema was unexpectedly mutated, use the pre-window Time Travel bookmark, restore the prior migration tree, and redeploy the previous Worker.
-- Do not renumber unsquashed migrations or reuse retired filenames. `worker/migrations/MANIFEST.md` and `npm run check:migrations` enforce that history.
+- Do not renumber unsquashed migrations or reuse retired filenames. `npm run check:migrations` rejects checked-in retired or squashed filenames, duplicate sequence prefixes, and any divergence between `worker/migrations/` and `worker/migrations/MANIFEST.md`; a renumbering mirrored into the manifest in the same commit passes the check and is caught only by review.

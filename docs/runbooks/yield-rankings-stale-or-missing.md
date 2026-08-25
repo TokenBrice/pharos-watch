@@ -129,12 +129,7 @@ Comparability requires equal `evaluationBuildDigest`, `policyId`, `policyDigest`
 ## Remediation
 
 - If `sync-yield-data` is stale but not leased, wait for the next `20 * * * *` run if the last failure was transient.
-- If the cron is repeatedly `skipped_locked`, confirm the lease is stale, then delete it directly. `POST /api/reset-cron-lease` was retired on 2026-08-09; the delete below is exactly what it ran.
-
-  ```bash
-  npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-    "DELETE FROM cron_leases WHERE job = 'sync-yield-data';"
-  ```
+- If the cron is repeatedly `skipped_locked`, confirm the lease is stale, then clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-data`.
 - If metadata shows `reason: "previous-yield-rankings-cache-invalid"` or publication guard failure, do not delete the cache blindly. Preserve the last good payload for rollback/debugging and identify whether the failure came from payload schema, severe shrink, duplicate ranking IDs, or a generation `failure_reason`.
 - If the degraded reason points to benchmarks, use [`yield-benchmark-fallback-stale.md`](./yield-benchmark-fallback-stale.md).
 - If the degraded reason points to deterministic on-chain cooldown or all-fail state, use [`yield-deterministic-cooldown.md`](./yield-deterministic-cooldown.md).
@@ -145,7 +140,7 @@ Comparability requires equal `evaluationBuildDigest`, `policyId`, `policyDigest`
 - Do not clear a `sync-yield-data` lease while `/api/status` shows an active, fresh `inFlight` progress row for the same job.
 - Do not mutate `yield_data`, `yield_history`, `yield_publication_generations`, `yield_source_decisions`, or `cache` by hand to force rankings publication.
 - Do not bypass schema/severe-shrink guards; they are the rollback boundary that protects public rankings.
-- Stop if another operator is running yield-history cleanup and `cache['yield-history-cleanup:writer-pause']` is armed.
+- Stop if another operator is running yield-history cleanup and `cache['yield-history-cleanup:writer-pause']` is armed; see [`yield-history-cleanup-writer-pause.md`](./yield-history-cleanup-writer-pause.md).
 
 ## Validation
 

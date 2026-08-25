@@ -52,7 +52,7 @@ Prefer the established utilities in `src/app/globals.css`:
 | Utility | Contract |
 | --- | --- |
 | `.pharos-card-shell` | Default framed analytics surface using shared background, border, and elevation tokens. |
-| `.pharos-interactive-card` | Clickable/focusable card behavior with consistent hover and focus treatment. |
+| `.pharos-interactive-card` | Clickable card hover and press motion; pair it with `.pharos-focus-ring` for the focus treatment. |
 | `.pharos-control-pill` | Dense option or mode control; pair the selected state with `.pharos-control-pill-active`. |
 | `.pharos-focus-ring` | Shared keyboard focus treatment for custom interactive elements. |
 | `.pharos-table-shell` / `.pharos-table-toolbar` | Shared framing and controls for tabular workspaces. |
@@ -91,8 +91,9 @@ Check the current declarations before depending on exact padding, radius, shadow
 ## Tables And Charts
 
 - Tables are the authoritative comparison surface when users must scan, sort, or export exact values.
+- Product tables compose the shared primitives in `src/components/table/`, plus `src/components/data-table-shell.tsx` for sortable workspaces. Nothing else under `src/` may emit raw `<table>` markup or import a shadcn table module directly; the only exceptions are those primitives themselves, the screen-reader data table in `src/components/chart-primitives/data-table.tsx`, and test fixtures. `npm run check:table-primitives` is a blocking PR gate for this, so reach for a primitive before hand-rolling a grid.
 - Sortable headers expose `aria-sort`; clickable rows must retain an explicit keyboard path and must not swallow nested links or buttons.
-- Preserve horizontal access on narrow screens rather than hiding important columns without an equivalent surface.
+- Preserve horizontal access on narrow screens rather than hiding important columns without an equivalent surface. The shared table viewport already renders a swipe hint under a horizontally scrollable table; disable it with `mobileScrollHint={false}` when the surface cannot overflow, and do not add your own swipe copy beside a table that still shows the default hint.
 - Charts need explicit loading, empty, stale, and error states. Freshness and methodology context belong near the data when misreading is plausible.
 - Follow [data-visualization.md](./data-visualization.md) for SVG roles, equivalent accessible data, reduced motion, view-model separation, and test invariants.
 

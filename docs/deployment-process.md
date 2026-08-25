@@ -54,9 +54,8 @@ git config core.hooksPath .githooks
 
 Hook behavior:
 
-1. The pre-commit hook regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. It aborts rather than staging a mismatched artifact when a selected artifact's sources have unstaged working-tree changes. Set `PHAROS_SKIP_ARTIFACT_HOOK=1` to bypass it.
-2. It is a no-op when the index is empty and during an in-progress merge, rebase, cherry-pick, or revert.
-3. The hook does not run a local test/build gate. GitHub branch protection and the aggregate PR gate are authoritative.
+1. The pre-commit hook regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. Its selection, abort, no-op, and bypass semantics are owned by [scripts.md](./scripts.md#operational-notes).
+2. The hook does not run a local test/build gate. GitHub branch protection and the aggregate PR gate are authoritative.
 
 ## Local Validation Commands
 
@@ -68,7 +67,7 @@ Use focused checks while iterating. Run `test:all`, full lint, typed lint, or `t
 
 ## Yield History Cleanup Windows
 
-Tracked ownership handoffs and source-attribution corrections use `worker/scripts/yield-history-cleanup.ts` as an operator-run maintenance tool. When that cleanup is part of a release:
+Tracked ownership handoffs and source-attribution corrections use `worker/scripts/yield-history-cleanup.ts` as an operator-run maintenance tool. Arming, clearing, and restoring the writer pause guard is documented in [`docs/runbooks/yield-history-cleanup-writer-pause.md`](./runbooks/yield-history-cleanup-writer-pause.md). When that cleanup is part of a release:
 
 1. Deploy the read-path and hourly-purge protections first.
 2. Arm the writer pause guard.
@@ -131,13 +130,13 @@ Workflow success proves activation identity, not every runtime behavior. The rea
 | Cron/scheduler/ingestion/memory | Worker activation                                      | First matching scheduled execution completes within its expected status, duration, memory, and publication contract      |
 | D1 migration plus runtime use   | Migration and Worker activation steps succeed          | First affected read/write or scheduled path succeeds; rollback notes acknowledge that Worker rollback does not revert D1 |
 
-The acceptance job reads the public Pages shell after a Pages release and the public Worker health endpoint after a Worker release. A Worker release also records its first matching scheduled execution as `pending`, because a short deploy job cannot safely wait for and correlate a future cron run. Use `npm run ops:watch-worker-cron` for that bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
+The acceptance job reads the public Pages shell after a Pages release and the public Worker health endpoint after a Worker release. The job records no cron probe at all, because a short deploy job cannot safely wait for and correlate a future scheduled run; observing the first matching scheduled execution stays a human step. Use `npm run ops:watch-worker-cron` for that bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
 
 ## GitHub Deploy Inputs
 
 Repository settings:
 
-- `main` requires pull requests and the aggregate `PR gate` status check, including administrators. That job accepts either the full reusable validation path or the focused docs-only path and always requires the PR secret scan.
+- `main` requires pull requests and the aggregate `PR gate` status check, including administrators. That job accepts either the full static-plus-test validation path or the focused docs-only path and always requires the PR secret scan.
 - The GitHub `production` environment is restricted to `main` and is attached only to the Worker and Pages mutating jobs.
 - Production-changing workflows share the `production-deploy` concurrency group and do not cancel an active release.
 
@@ -173,6 +172,12 @@ Repository variables used by the Pages build:
 
 - Optional: `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_PHAROS_*`
 
+Environment overrides for the release-marker proof in `scripts/maintenance/wait-pages-release-marker.ts`:
+
+- `PHAROS_RELEASE_MARKER_ATTEMPTS` (default 24) and `PHAROS_RELEASE_MARKER_DELAY_MS` (default 5000) bound the poll loop; `PHAROS_RELEASE_MARKER_TIMEOUT_MS` (default 8000) bounds each individual request.
+- `PHAROS_RELEASE_MARKER_PATH` (default `out/__pharos_release.json`) selects the local marker whose `commit` field the deployment must serve back.
+- Explicit CLI flags win over the environment. `.github/workflows/pages-release.yml` already passes `--attempts` and `--delay-ms`, so in that job only the timeout and marker-path variables take effect; widening the CI window means changing those flags, not exporting the variables. An unparseable or non-positive value falls back to the default without failing.
+
 Manual dispatch examples:
 
 ```bash
@@ -200,7 +205,6 @@ Use dependency maintenance as a dedicated routine, not as incidental churn insid
 Current explicitly deferred major cohort:
 
 - `eslint@10` — next review: 2026-08-15
-- `@types/node@25` — next review: 2026-08-15
 - `typescript@6` — next review: 2026-08-15
 
 Risk-accepted transitive advisories are machine-readable in `scripts/ci/dependency-audit-exceptions.json`; the verifier rejects malformed, expired, or widened entries. The registry is the weekly workflow's authority, while this section records the review rationale. There are currently no active exceptions.
@@ -259,7 +263,7 @@ The current origin split is:
 - public API: `api.pharos.watch`
 - operator API: `ops-api.pharos.watch`
 
-The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project. Every Pages host uses `SITE_API_SHARED_SECRET` only with the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`; invalid or foreign origins fail closed before the secret is attached. The lane gates inbound `Origin` / `Referer`, preserves upstream cache age without adding a Pages Cache API lifetime, and consumes bounded response bodies inside the proxy deadline. The selector-snapshot Pages Function uses those same bindings server-side to recompute share artifacts from schema-validated canonical sources; missing or failing source access makes snapshot creation fail closed. Binding `DB` enables proxy-outcome attribution and is required for selector daily quotas; `SELECTOR_SNAPSHOT_IP_HASH_SECRET` is also required for privacy-preserving selector rate keys. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
+The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project, and its runtime contract lives in [Worker Infrastructure: Site-Data Auth](./worker-infrastructure.md#site-data-auth). Every Pages host uses `SITE_API_SHARED_SECRET` only with the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`. The selector-snapshot Pages Function uses those same bindings server-side to recompute share artifacts from schema-validated canonical sources; missing or failing source access makes snapshot creation fail closed. Binding `DB` enables proxy-outcome attribution and is required for selector daily quotas; `SELECTOR_SNAPSHOT_IP_HASH_SECRET` is also required for privacy-preserving selector rate keys. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
 
 The public self-serve API-key form is not a production Pages proxy route. On `pharos.watch`, `/api/` is the static form page and its browser requests go cross-origin to `https://api.pharos.watch/api/api-key-requests` and `/api/api-key-requests/verify`; CORS must allow JSON `POST` from `https://pharos.watch`. Local static-export smoke uses a proxy for endpoint-like `/api/*` only so the built artifact can be rehearsed without a deployed Pages Function.
 
@@ -343,10 +347,10 @@ Production smoke for this surface should request a smoke key, receive the email,
 If an explicit local `check:release` rehearsal fails:
 
 1. Do not treat the local rehearsal as green.
-2. Confirm the exact `.nvmrc` runtime, target, snapshot cleanliness, environment profile, and local concurrency before changing code. A release-only failure is not disproved by a `pr` target, and a globally exported Pages flag does not reproduce job-scoped CI.
-3. For a small change, fix the failing command directly. For a large batch, run one full discovery for the intended target and read the final structured summary.
-4. Fix all blocking root failures and rerun their focused commands while editing. If local parallel load is suspect, run the focused shard alone or set `MERGE_GATE_DISCOVERY_MAX_PARALLEL=1`; do not loosen timeouts solely from a contended run.
-5. If producers left blocked or tainted nodes, use discovery `--resume` with the same target. Run another full discovery only when the changed snapshot broadly invalidates the original plan.
+2. Confirm the exact `.nvmrc` runtime, check lane, snapshot cleanliness, environment profile, and local concurrency before changing code. A release-only failure is not disproved by `npm run check:pr`, and a globally exported Pages flag does not reproduce job-scoped CI.
+3. For a small change, fix the failing command directly. For a large batch, run `npm run check:pr -- --base=<ref>` and read its final summary.
+4. Fix all blocking root failures and rerun their focused commands while editing. If local parallel load is suspect, run the focused command alone or set `PR_STATIC_MAX_PARALLEL=1`; do not loosen timeouts solely from a contended run.
+5. Once every focused command passes, rerun `npm run check:pr -- --base=<ref>` over the whole change set instead of trusting the earlier partial run.
 6. After the final source state, run the full generated-artifact freshness check. Regenerate stale artifacts with their owning generator and fold the output into the commit that moved their sources.
 7. Run `npm run check:release` only when an explicit local rehearsal is desired, then push to the protected PR gate. GitHub Actions remains authoritative.
 

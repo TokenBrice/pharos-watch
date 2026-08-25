@@ -37,7 +37,7 @@ Ordinary processed-update rows are retained for 7 days; `started` and `execution
      "SELECT chat_id, ambiguous_ticker, action_type, expires_at FROM telegram_pending_disambiguation WHERE chat_id = '<chatId>';"
    ```
 
-4. **Determine whether retry is safe.** `unstarted` and `planned` rows can be reclaimed after the five-minute stale window; planned work uses its stored normalized intent. Never force-retry a `started` or `execution_unknown` row. First reconcile Telegram/user-visible state and the exact intent/mutation marker.
+4. **Determine whether retry is safe.** A `failed` `unstarted`/`planned` row is reclaimed on the next redelivery; one still `processing` is reclaimed only after the five-minute stale window. Planned work uses its stored normalized intent. Never force-retry a `started` or `execution_unknown` row. First reconcile Telegram/user-visible state and the exact intent/mutation marker.
 
 ## Remediation
 

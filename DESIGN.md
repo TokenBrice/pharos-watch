@@ -101,7 +101,7 @@ components:
 
 Pharos is a lighthouse — it watches every peg so the user doesn't have to. The interface is a calm, dense instrument for crypto-native practitioners: a Bloomberg Terminal scoped to stablecoins. It earns trust through completeness and precision, not decoration. Color stays still by default; what moves is the **frost-blue beam** (`#4bc4de`, sampled from the Figma "Market Pulse" frame), which lights live data and the lighthouse metaphor. Everything else is neutral, flat, and tabular.
 
-This is the as-built system after the designer's Figma redesign. It is **light-default** with a full dark theme. The redesign delivered a global **top-nav** (the old left "watch column" sidebar is retired), ABC Whyte Inktrap as the licensed ink-trap display face (with Bricolage Grotesque as the tracked fallback), JetBrains Mono for every figure, flat cards, and a two-mode density (spacious default / compact). **Frost-blue and the drawn lighthouse/nautical identity were deliberately kept** — they are the brand, per PRODUCT.md's "Pharos is a lighthouse — _draw it_." Density is calibrated by surface tier: discovery breathes, the analytics core holds default, power-user tables compress.
+This is the as-built system after the designer's Figma redesign. It is **light-default** with a full dark theme. The redesign delivered a global **top-nav** (the old left "watch column" sidebar is retired), Bricolage Grotesque as the tracked display face (with licensed ABC Whyte Inktrap staged locally only), JetBrains Mono for every figure, flat cards, and a two-mode density (spacious default / compact). **Frost-blue and the drawn lighthouse/nautical identity were deliberately kept** — they are the brand, per PRODUCT.md's "Pharos is a lighthouse — _draw it_." Density is calibrated by surface tier: discovery breathes, the analytics core holds default, power-user tables compress.
 
 It explicitly rejects the Web3-marketing aesthetic (purple gradients, glassmorphism, buzzwords), corporate-fintech blandness, and the generic-SaaS dashboard of interchangeable KPI tiles. Cards are flat. Accents are semantic. The lighthouse is the only metaphor, and it is drawn, not decorated.
 
@@ -139,9 +139,9 @@ A near-monochrome neutral field with semantic accents that only fire on meaning.
 
 ### Tertiary (semantic state ramp)
 
-A single green→amber→orange→red ramp carries every risk vocabulary. The named band families — **Severity** (peg deviation), **PSI** (stability index), **DEWS** (early-warning), and **Score tiers** — all map onto these same hues; document once, reuse everywhere.
+A shared green→amber→orange→red ramp carries every risk vocabulary. **Severity** (peg deviation) uses that four-stop form; **PSI** (stability index) and **DEWS** (early-warning) insert a teal `steady`/`watch` stop between green and amber, and PSI adds a sixth dark-red `meltdown` stop; **Score tiers** substitute info-blue for B (below). Document once, reuse everywhere.
 
-One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue** (`blue-500` tint family in `shared/lib/report-card-core.ts`). Grades span five bands, and a green→amber jump would read B as already-degraded; blue marks "sound, not top-tier" without borrowing a warning hue. This blue belongs to grade badges only — never to state chips or controls.
+One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue** (`blue-500` tint family in `shared/lib/classification/grades.ts` — `REPORT_CARD_GRADE_COLORS` / `REPORT_CARD_GRADE_RANGE_METADATA`). Grades span five bands, and a green→amber jump would read B as already-degraded; blue marks "sound, not top-tier" without borrowing a warning hue. This blue belongs to grade badges only — never to state chips or controls.
 
 - **Healthy** (`#22c55e`), **Mild** (`#b45309` on light / `#f59e0b` on dark — light darkens to amber-700 for WCAG AA), **Moderate** (`#f97316`), **Severe** (`#ef4444`). Each ships a `-hex` twin for Recharts/canvas where CSS custom properties can't reach.
 
@@ -160,7 +160,7 @@ One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue
 
 ## 3. Typography
 
-**Display Font:** ABC Whyte Inktrap (licensed webfont; Bricolage Grotesque fallback) — the Figma display face. Drives `--font-display`, `.pharos-display`, `.pharos-page-title`, and the top-nav wordmark.
+**Display Font:** Bricolage Grotesque (self-hosted variable woff2 → `--font-bricolage`) — the tracked display face. Drives `--font-display`, `.pharos-display`, `.pharos-page-title`, and the top-nav wordmark. Licensed ABC Whyte Inktrap files can be staged locally (`npm run install:whyte-fonts`), but clean builds never reference them.
 **Body / UI Font:** system-ui stack (the `--font-geist-sans` token name is retained from a prior Geist iteration; no Geist webfont is loaded).
 **Data Font:** JetBrains Mono (variable; fallback `SFMono-Regular, ui-monospace`) — folded into `--font-geist-mono`, so every existing mono consumer (tables, `.pharos-numeric`, peg hero) inherits it.
 
@@ -168,8 +168,8 @@ One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue
 
 ### Hierarchy
 
-- **Display** (ABC Whyte Inktrap, 700/800 via Bold, 1.875rem→2.25rem, line-height 1.05, tracking −0.025em): Route/page titles (`.pharos-page-title`).
-- **Headline** (ABC Whyte Inktrap, 700, 1.5rem→1.875rem, tracking −0.01em): Section titles — "Market Pulse", "Stablecoin Overview" (`.pharos-display`).
+- **Display** (Bricolage Grotesque, 700/800, 1.875rem→2.25rem, line-height 1.05, tracking −0.025em): Route/page titles (`.pharos-page-title`).
+- **Headline** (Bricolage Grotesque, 700, 1.5rem→1.875rem, tracking −0.01em): Section titles — "Market Pulse", "Stablecoin Overview" (`.pharos-display`).
 - **Title** (Geist Sans, 600, 1.125rem): Card and sub-section headings.
 - **Body** (Geist Sans, 400, 0.875rem, line-height 1.5): UI text and prose. Cap prose at 65–75ch; dense tables may run denser.
 - **Numeric** (JetBrains Mono, 500, `tabular-nums slashed-zero`): Every digit-bearing cell — prices, percentages, basis points, market caps, scores (`.pharos-numeric`).
@@ -203,7 +203,7 @@ Lead with the character, then specify shape, color assignment, states, and disti
 
 A global top bar at `≥lg`; content runs full-width beneath it. The left "watch column" sidebar is retired.
 
-- **Contents:** brand mark — the circular star/beacon emblem (`PharosLogo`, theme-swapped between `pharos-mark-on-light.svg` and `pharos-mark-on-dark.svg`) beside the ABC Whyte Inktrap wordmark (Bricolage fallback) · six dropdown menus (Overview / Markets / Risk / Analyze / Learn / Reference, mapped from `nav-config.ts`) · global Search (⌘K, `openCommandPalette()`) · overflow menu (Telegram Bot / What's New / API Access / health status + dark·light·system theme controls), triggered by a lighthouse glyph.
+- **Contents:** brand mark — the circular star/beacon emblem (`PharosLogo`, theme-swapped between `pharos-mark-on-light.svg` and `pharos-mark-on-dark.svg`) beside the Bricolage Grotesque wordmark (`.pharos-display`) · six dropdown menus (Overview / Markets / Risk / Analyze / Learn / Reference, mapped from `nav-config.ts`) · global Search (⌘K, `openCommandPalette()`) · overflow menu (Alert Bot / What's New / API Access / health status + dark·light·system theme controls), triggered by a lighthouse glyph.
 - **Behavior:** sticky `h-14`, frosted (`bg-background/85 backdrop-blur-md`), hairline bottom border. Active menu = neutral `bg-muted/60 text-foreground` (**not** frost). A `CoreTopRail` tape (registry chips + event ticker) sticks below it.
 - **Mobile:** the `header.tsx` drawer (`<lg`), whose active group keeps a `border-l-frost-blue` accent. The desktop sidebar/`watch-column` lighthouse beam is gone. The stablecoin detail page uses the `LongformScrollspyNav` `pill-tabs` emphasis (Figma coin template): a rounded-full group on the neutral control fill with an elevated-neutral active pill (`.pharos-pill-tab-active`) — no frost. The frost-lit recipe (`.pharos-rail-tab-active` + `pharos-nav-beam`) survives on methodology-family longform pages.
 
@@ -227,7 +227,7 @@ The primary interactive control on data surfaces is the pill, not a heavy CTA. F
 
 - **Shell:** `rounded-xl`, hairline border, no shadow (`.pharos-table-shell`).
 - **Header/Toolbar:** `.pharos-table-toolbar` on the panel-header fill; search · density toggle · Columns · Export CSV. The Stablecoin Overview uses the `figmaOverview` toolbar variant.
-- **Rows:** subtle stripe, hover lift to `--interactive-hover`, sticky first column; right-aligned `.pharos-numeric` figures. Phone-layout boundary is `lg` (1024px) — tablets get the real workbench. From `lg` up the table **auto-fits**: low-priority columns shed to the measured container width instead of forcing horizontal scroll, and a quiet `+N columns` toolbar control reveals the full set (with scroll) on demand. Use the `src/components/table/` primitives, not raw `<table>`.
+- **Rows:** subtle stripe, hover lift to `--interactive-hover`, sticky first column; right-aligned `.pharos-numeric` figures. Phone-layout boundary is `lg` (1024px) for the default workbench and `md` (768px) for the `figmaOverview` Stablecoin Overview — tablets get the real workbench. Above that boundary the table **auto-fits**: low-priority columns shed to the measured container width instead of forcing horizontal scroll, and a quiet `+N columns` toolbar control reveals the full set (with scroll) on demand. Use the `src/components/table/` primitives, not raw `<table>`.
 
 ### Inputs
 
@@ -258,7 +258,7 @@ Vertical rhythm: `space-y-5`/`6` within bands, `mt-5`/`6`/`8`/`10` between them;
 
 ### Motion
 
-Fast/State `160ms`, base `220ms`; standard easing `cubic-bezier(0.22, 1, 0.36, 1)` (decelerating; no bounce/elastic). Motion conveys state — hover lift, selection, the detail-scrollspy beam sweep, chip enter/exit — never page-load choreography. Every keyframe has a `prefers-reduced-motion: reduce` alternative.
+Fast/State `160ms`, base `220ms`; standard easing `cubic-bezier(0.22, 1, 0.36, 1)` (decelerating, no overshoot) for everything except two entrance beats: `--motion-ease-spring` (`cubic-bezier(0.34, 1.56, 0.64, 1)`) is reserved for `.pharos-chip-animate-in` and `.pharos-grade-pop`. Motion conveys state — hover lift, selection, the detail-scrollspy beam sweep, chip enter/exit — never page-load choreography. Every keyframe has a `prefers-reduced-motion: reduce` alternative.
 
 ## 6. Do's and Don'ts
 

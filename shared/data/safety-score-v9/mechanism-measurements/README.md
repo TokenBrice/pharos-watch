@@ -8,7 +8,9 @@ renaming, reformatting, or "tidying" a file here silently breaks that citation.
 ## Layout
 
 ```
-mechanism-measurements/<assetId>/<YYYY-MM-DD>-block-<number>[-shock-coverage].json
+mechanism-measurements/<assetId>/<YYYY-MM-DD>-block-<number>[-shock-coverage].json     # CDP shock producers
+mechanism-measurements/<assetId>/<snapshotObservedAt>-<snapshotId12>-protocol-api.json  # protocol-API producer
+mechanism-measurements/<assetId>/<YYYY-MM-DD>-<label>.json                              # hand-taken captures
 ```
 
 - The directory name must equal the journal's `assetId`; the shock-coverage
@@ -18,7 +20,13 @@ mechanism-measurements/<assetId>/<YYYY-MM-DD>-block-<number>[-shock-coverage].js
   hashed, and projected into `../shock-coverage-measurements-v1.json` with a
   `journalSha256` pin. Editing a byte of one of these files changes its pin and
   requires regenerating the registry in the same commit.
-- Files without that suffix have **no programmatic reader**. They are still
+- Files ending in `-protocol-api.json` are **protocol-API evidence**. Inside the
+  producer's allowlisted asset directories they are discovered and byte-replayed
+  by `scripts/maintenance/measure-protocol-api-mechanism-metrics.ts` — on
+  `--replay-all` (which CI runs) and again on every live capture — so each must
+  stay canonical, and the pinned legacy USDe artifact is additionally checked
+  against an inlined sha256. Editing a byte of one fails the run.
+- Files with neither suffix have **no programmatic reader**. They are still
   load-bearing: many are cited by repo path in the `notes` / evidence fields of
   the V9 overlay files in the parent directory. Treat "no importer" as "no
   compiler will catch you", not as "unused".

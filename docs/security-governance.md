@@ -14,7 +14,7 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 
 ### Inline-script discipline in root layouts
 
-**Rule:** The root `src/app/layout.tsx` (and any nested layout that ships to multiple routes) MUST NOT contain inline executable `<script>` JSX, including `next/script` blocks with `strategy="beforeInteractive"`. Exceptions: GA / analytics inline snippets and theme bootstrapping that genuinely need to run before hydration, plus non-executable JSON-LD data scripts (`type="application/ld+json"`) whose content is deterministic structured metadata.
+**Rule:** The root `src/app/layout.tsx` (and any nested layout that ships to multiple routes) MUST NOT contain inline executable `<script>` JSX, including `next/script` blocks with `strategy="beforeInteractive"`. Sole exception: non-executable JSON-LD data scripts (`type="application/ld+json"`) whose content is deterministic structured metadata — the only shape the ESLint guard permits. Analytics and theme bootstrapping stay outside layout files: GA runs from the `GoogleAnalytics` client component (gtag stub installed in an effect, external `gtag/js` appended at idle) and theme bootstrapping comes from `next-themes` inside `src/components/providers.tsx`.
 
 **Why:** Inline scripts in the root layout ship verbatim to every static HTML page including the apex `pharos.watch/`. Token-handling or URL-rewriting patterns in those scripts pattern-match phishing kits regardless of intent. Safe Browsing's social-engineering classifier flagged pharos.watch on 2026-05-12 for exactly this — an `api-key-verify-url-sanitizer` script that read `location.hash`, parsed a `verify=` token, stored it in `window.__PHAROS_API_KEY_VERIFY_TOKEN__`, and called `history.replaceState`. Each pattern alone is benign; together they are the textbook phishing-kit shape.
 
@@ -58,13 +58,13 @@ The Pages middleware generates a random nonce per HTML request, rewrites inline 
 
 Keep `style-src 'unsafe-inline'` unless the Tailwind/Next style emission path is separately nonce- or hash-authorized. Do not add script `unsafe-inline` back for local convenience; fix the nonce transform or route-specific script instead.
 
-Route-specific exception: `/pharoswatchbot/app/` is the Telegram Mini App surface, so `shared/lib/site-csp.ts` extends that route's CSP with `https://telegram.org` in `script-src` and `frame-ancestors https://telegram.org https://*.telegram.org`. Do not broaden that exception to the root layout or other public pages.
+Route-specific exception: `/pharoswatchbot/app/` is the Telegram Mini App surface, so `shared/lib/site-csp.ts` sets that route's `script-src` to `'self' https://telegram.org` (dropping `googletagmanager`, and the Google Analytics `img-src` / `connect-src` origins with it) and relaxes `frame-ancestors` to `https://telegram.org https://*.telegram.org`. Do not broaden that exception to the root layout or other public pages.
 
 ## Positive trust signals (already shipped)
 
 These are already in the build; documented here so they aren't accidentally regressed.
 
-- JSON-LD `Organization` and `Person` (TokenBrice) nodes with `sameAs` references to GitHub, X, Farcaster — gives classifiers verifiable third-party identity backing.
+- JSON-LD `Organization` (`sameAs`: X, GitHub, Telegram) and `Person` (TokenBrice; `sameAs`: X, GitHub, Farcaster) nodes — gives classifiers verifiable third-party identity backing.
 - `MIT` license declaration in repo root + linked from the about page.
 - Strict CSP for non-script directives: `default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`.
 - Standard security headers: HSTS preload, X-Content-Type-Options nosniff, X-Frame-Options DENY, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy denying camera/mic/geo/payment/usb.

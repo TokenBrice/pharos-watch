@@ -61,7 +61,7 @@ If non-zero, the inline-script vector is the likely cause — see "Common trigge
 
 For the deceptive-content category specifically, build a mental model of what a classifier sees: rendered HTML + extracted text + form fields. Pages that mimic credential collection (even legitimately) are the highest-risk surface:
 
-- **/api/** — API key request form (collects email + organization)
+- **/api/** — API key request form (email, name, organization, project URL, use case, expected cadence/volume, terms checkbox, plus a hidden honeypot input)
 - **/funding/** — wallet addresses + "support" + chain logos
 - **/pharoswatchbot/** — Telegram bot integration page
 - Any page with `password`, `seed phrase`, `private key`, `wallet connect`, `claim`, `airdrop` keywords
@@ -80,7 +80,7 @@ For the deceptive-content category specifically, build a mental model of what a 
 
 **Signature:** A form with email + password inputs (or seed-phrase-like patterns) on a non-login page; a "verify your account" CTA without backend context; a "claim your tokens" button.
 
-**Fix:** Add a visible disclaimer at the top of the page explicitly stating what the form does and does not do (e.g., "We only collect email and organization name to issue an API key. We never request wallet credentials, seed phrases, or private keys."). Remove any visually-misleading button labels.
+**Fix:** Add a visible disclaimer at the top of the page stating what the form does and does not do — but word it positively. `npm run check:sensitive-page-copy` (chained into `npm run check:structural`) blocks the literal phrases `seed phrase`, `recovery phrase`, `private key`, `connect wallet`, `claim tokens`, `airdrop`, `sign message`, and browser-warning copy anywhere under `src/app/api`, `src/app/funding`, `src/app/pharoswatchbot`, or the `api-key-request-*` components, so a disclaimer that names those terms will fail the gate. Prefer e.g. "This form only collects contact and use-case details so we can issue a read-only API key. Pharos never asks for wallet credentials of any kind." Do not widen the guardrail's phrase list to make a disclaimer pass. Remove any visually-misleading button labels.
 
 #### C. Brand / system-warning impersonation
 
@@ -97,7 +97,7 @@ For the deceptive-content category specifically, build a mental model of what a 
 ### Step 5 — Harden, ship, verify
 
 1. Commit the hardening with a clear `refactor(security):` or `fix(security):` prefix referencing the incident date.
-2. Publish through the protected PR gate. The production Pages workflow builds once, then runs `check:phishing-signatures` against `out/` plus the SEO checks.
+2. Publish through the protected PR gate. The production Pages workflow builds once, then runs `npm run check:pages-release` over the exact `out/` artifact — feature-flag inlining, direct-upload build size, `check:phishing-signatures`, and the static SEO gates.
 3. Wait for the target-SHA Pages release to succeed and for the deployment-specific release-marker check to confirm that Cloudflare published that commit. A fixed sleep is not release evidence; see [Deployment Process](../deployment-process.md) for the standard release and post-publish gates.
 4. Verify the target-SHA HTML is live:
    ```bash

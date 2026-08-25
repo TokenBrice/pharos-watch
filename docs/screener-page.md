@@ -46,7 +46,7 @@ Legacy `mechanism=<slug>` links normalize once after hydration to `mechanisms=<s
 
 Rows are not built until the stablecoin list is available. Query freshness from all five live data sources is combined through `buildQueryFreshnessGroup()` and rendered by `QueryFreshnessNotices`, with a shared retry action.
 
-Score-based filters wait for the required score source instead of temporarily filtering against incomplete score data. During that state the table stays in its loading presentation, match counts do not claim a partial result, and export is disabled. Missing optional values remain unrated; an active threshold excludes rows that lack the required score.
+Filters that read DEWS or the V9 report cards (safety grades, pillar floors, evidence status, and the mint control score and band) wait for their source instead of temporarily filtering against incomplete score data. During that state the table stays in its loading presentation, match counts do not claim a partial result, and export is disabled. `pegScoreMin` and `liquidityScoreMin` are not gated: they filter against whatever peg-summary and DEX-liquidity data has arrived, so an active floor can narrow the table during the first fetch. Missing optional values remain unrated; an active threshold excludes rows that lack the required score.
 
 Retained data can remain visible with stale/error notices according to the shared hook metadata. This route does not invent local staleness windows.
 
@@ -54,7 +54,7 @@ Retained data can remain visible with stale/error notices according to the share
 
 The default sort is Safety Score descending. Sortable keys are name, supply, Peg Score, DEWS, Liquidity Score, Safety Score, and the mint control score (retained for programmatic/advanced use). The primary table replaces the old Mint Score column with a compact V9 profile (`Backing / Exit / Economic Control`), highlights the published weakest pillar, and shows Strong, Adequate, Limited, or NR evidence status. `useSort()` owns direction and `aria-sort`; unrated handling comes from the shared table comparator.
 
-`TableExportMenu` exports the currently filtered and sorted rows, not the unfiltered universe. The CSV includes identity, lifecycle/classification, custody, supply, V9 pillar/evidence/cap fields, blacklistability, and the mint route/score/band. Export stays disabled while an active score filter is waiting on source data and includes methodology labels for the score families.
+`TableExportMenu` exports the currently filtered and sorted rows, not the unfiltered universe. The CSV includes identity, lifecycle/classification, supply, the Peg/DEWS/Liquidity scores, the Safety grade and score, the V9 pillar/evidence/cap fields, custody, blacklistability, and the mint route/score/band. Export stays disabled while an active score filter is waiting on source data, and stamps a single methodology label: the safety-score identity, noting that the mint control columns are included.
 
 Since safety `9.1` the mint columns come from the published V9 mint component. The Screener CSV contract uses the literal headers `mint_authority`, `mint_authority_score`, and `mint_authority_score_band`; the shared directory-table export has a separate title-case header contract. Band keys, filter values, and saved Screener URLs are unchanged. The export provenance line stamps the safety-score identity rather than the retired mint-authority lane.
 

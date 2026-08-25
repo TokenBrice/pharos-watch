@@ -43,6 +43,8 @@ Purpose-driven aliases that map primitives to meaning. These switch between ligh
 | Chart               | `--chart-grid-opacity`, `--chart-fill-opacity`, `--chart-primary`, `--chart-stage-*`                   | Chart-specific theming and chart stages |
 | Motion              | `--motion-duration-fast`, `--motion-duration-base`, `--motion-duration-slow`, `--motion-duration-entrance`, `--motion-ease-standard`, `--motion-ease-spring`, `--motion-ease-decelerate`, `--theme-transition-duration` | Shared transition timing and theme swap |
 
+This table covers the categories referenced most often in product code, not the full set: `semantic.css` also defines brand (`--brand-accent`), featured and homepage-zone surfaces (`--surface-featured-*`, `--surface-zone-*`), risk alert states (`--risk-alert-*`), mechanism archetype accents (`--mechanism-*`), and the elevation system (`--elevation-rest`, `--elevation-raised`, `--elevation-featured`).
+
 #### Light-Mode Contrast Baseline (March 2026)
 
 - `--text-secondary` and `--text-tertiary` are intentionally darker in light mode than earlier revisions to keep metadata and helper text readable on pale surfaces.
@@ -63,7 +65,7 @@ DOM SVG and Recharts paths rendered by the browser can use CSS variables. Litera
 --psi-bedrock-hex: #22c55e; /* JS/Recharts usage */
 ```
 
-The JS-side token maps in `chart-colors.ts` and `severity-colors.ts` use those same hex values where CSS companions exist. `chart-colors.ts` also exports palette, risk, signal, and brand colors that are JS-only and do not have one CSS companion per export.
+The JS-side token map in `chart-colors.ts` uses those same hex values where CSS companions exist; the `--severity-*-hex` companions are read directly as `var()` from component styles rather than through `severity-colors.ts`, which emits Tailwind classes only. `chart-colors.ts` also exports palette, risk, signal, and brand colors that are JS-only and do not have one CSS companion per export.
 
 ### Layer 3: Component Tokens (in `semantic.css`)
 
@@ -71,6 +73,7 @@ Scoped to specific UI components. Optional — use when a component needs tokens
 
 - **Card** — `--card-bg`, `--card-border`, `--card-shadow`, `--card-shadow-hover`, `--card-shell-bg`, `--card-shell-highlight`, `--panel-header-bg`
 - **Table** — `--table-header-bg`, `--table-row-hover`, `--table-row-stripe`, `--table-border`, `--table-header-shadow`, `--table-sticky-column-*`
+- **Code surface** — `--code-surface-bg`, `--code-surface-fg`, `--code-surface-muted`, `--code-surface-border` (terminal code blocks stay deliberately dark in both themes)
 
 ## Bridge Layer (`src/app/globals.css`)
 
@@ -108,9 +111,9 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 | File                         | Exports                                                                     | Purpose                                                                  |
 | ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `src/lib/chart-colors.ts`    | `CHART_PALETTE`, `CHART_BLUE`, `CHART_GREEN`, `CHART_ORANGE`, `CHART_RED`, `CHART_SLATE`, `CHART_AMBER`, `CHART_TEAL`, `CHART_HEIGHT`, `RECHARTS_TOOLTIP_STYLES` | Shared chart fill/stroke colors, chart-height utility, and tooltip styles (also has module-private `TOKEN` map) |
-| `src/lib/severity-colors.ts` | `deviationColorHex()`, `deviationColorClass()`, tier helpers                | Peg-deviation and score-tier helpers (text classes are light/dark aware) |
+| `src/lib/severity-colors.ts` | `deviationColorClass()`, `deviationBorderClass()`, `deviationBgClass()`, `deviationIconName()`, `TIER_TEXT` / `TIER_PILL`, `getScoreTier()`, `getScoreColor()`, `pegScoreColor()`, `getDurabilityColor()` | Peg-deviation and score-tier Tailwind class helpers (text classes are light/dark aware) |
 
-These maps use the same hex values as the `--*-hex` CSS custom properties in `semantic.css` where CSS companions exist. Some runtime-only exports, such as signal colors and brand helpers, live only in the JS maps.
+`chart-colors.ts` uses the same hex values as the `--chart-*-hex` CSS custom properties in `semantic.css`; `severity-colors.ts` emits Tailwind class strings only. Some runtime-only exports, such as signal colors and brand helpers, live only in the JS maps.
 
 ## Usage Guidelines
 

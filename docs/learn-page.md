@@ -52,11 +52,10 @@ Case-study JSON-LD lives in `case-study-json-ld.tsx`: the hub emits an `ItemList
 
 Reverse lookup helpers in the content registry let other surfaces deep-link into case studies:
 
-- `CASE_STUDY_BY_COIN_ID`
 - `CASE_STUDY_BY_DEPEG_SLUG`
 - `caseStudySlugForEvent(coinId, tsMs)`
 
-Client surfaces must not import the full content registry. `src/hooks/use-chart-annotations.ts` reads the generated `client-index.ts`, which carries only the lookup maps and event-window resolver inputs needed for chart overlays.
+Client surfaces must not import the full content registry. `src/hooks/use-chart-annotations.ts` reads the generated `client-index.ts`, which carries only the lookup maps and event-window resolver inputs needed for chart overlays — including the coin-id and cemetery-id maps `CASE_STUDY_CLIENT_BY_COIN_ID` and `CASE_STUDY_CLIENT_BY_CEMETERY_ID`, which have no server-registry counterpart.
 
 ---
 

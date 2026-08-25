@@ -7,6 +7,15 @@ Triggered by synthetic `cron_runs` rows written by `worker/src/lib/scheduled-slo
 
 Both carry `metadata.reason = "stale-slot-reconciled"` and `metadata.failureCategory = "platform-abandoned"`.
 
+Also triggered by a `degraded` run of `cron-duration-watchdog` (`worker/src/cron/cron-duration-watchdog.ts`), which reads the last 7 days and names what tripped it in `metadata.breaching` — split into `runtimeBreaching` (job names) and `slotAbandonmentBreaching` (schedule keys). Any one of these is enough:
+
+- **Duration trend.** A job's 7-day average duration reaches 80% of its `CRON_TIMEOUT_MS` ceiling (`worker/src/lib/cron-timeouts.ts`), so the slot is near budget and the next provider added to it would tip it over. Suppressed below 20 runs in the window, where a 7-day average is noise rather than a trend.
+- **Cap hits.** 3 or more runs in the last 24 hours at or above that ceiling. Counted in absolute terms, with no minimum run count.
+- **Budget truncations.** 3 or more runs in the last 24 hours that set `metadata.runBudgetTruncated` **without** persisting a deferral cursor. A truncation that ends with `metadata.cursorTailState = "complete"` is the designed graceful-deferral path — the next run drains the tail — and never counts.
+- **Slot abandonment.** A schedule key with 3 or more abandoned slots that are also at least 10% of its 7-day slots, plus at least one abandonment in the last 24 hours so a healed lane stops alerting. Suppressed below 20 slots in the window.
+
+The watchdog only observes: it never pauses, throttles, or reschedules a lane, and it measures app-level timeout headroom, not Cloudflare's CPU-time class — a chain killed by the sub-hourly 30-second CPU cap surfaces as slot abandonment, never as a duration breach.
+
 ## Symptom
 
 Jobs report `status = 'error'` without a real child exception. The scheduled invocation died without writing a terminal row, so `cron-slot-sweeper` (or a stale takeover, or the five-minute unscoped reserve-recovery sweep) reconciled the slot after the fact. Public caches can stay healthy while this happens, because the next slot usually re-publishes; the durable harm is missed one-shot work and blind observability windows.
@@ -46,7 +55,7 @@ Loss concentrates on the **tail of a serial job chain**. Chains are defined in `
 
 ## Remediation
 
-- **Wrong CPU class (most common).** Deploy the lane in the paired-hourly form: keep the logical `schedule` string and `shared/lib/cron-cadences.ts` untouched, and add a `triggerSchedules` array of single-minute hourly expressions in `shared/lib/cron-jobs.ts`, mirrored into `worker/wrangler.toml`. Slot identity, cadence, and status freshness derive from the logical cadence, so they do not move. `quarterHourly`, `v9SupplyAttributionOffset`, `statusSelfCheckOffset`, `halfHourlyOffset`, and `halfHourlyChartsOffset` all use this form. See ADR-20 and `docs/process/cron-trigger-policy.md`; crossing the reviewed physical-trigger gate requires that policy's review.
+- **Wrong CPU class (most common).** Deploy the lane in the paired-hourly form: keep the logical `schedule` string and `shared/lib/cron-cadences.ts` untouched, and add a `triggerSchedules` array of single-minute hourly expressions in `shared/lib/cron-jobs.ts`, mirrored into `worker/wrangler.toml`. Slot identity, cadence, and status freshness derive from the logical cadence, so they do not move. `quarterHourly`, `v9SupplyAttributionOffset`, `v9PublicationOffset`, `statusSelfCheckOffset`, `halfHourlyOffset`, and `halfHourlyChartsOffset` all use this form. See ADR-20, ADR-21, and `docs/process/cron-trigger-policy.md`; crossing the reviewed physical-trigger gate requires that policy's review.
 - **Genuinely too much work for one invocation.** Reduce per-invocation CPU, or move the offending leg to its own logical schedule key and runner plan. Adding another alias to an existing key does not separate the jobs — every alias resolves to the same chain.
 - **Memory rather than CPU.** The isolate limit is 128 MB and is shared by every job in the chain. `worker/src/lib/v9-slot-window.ts` already serializes the Safety Score V9 heap lane for this reason. Reorder so a large graph is built after any capture that must survive it, and import heavy modules only at the point of use.
 - **Do not clear a lease to "fix" this.** Reconciliation already releases or expires the dead slot's lease. Clearing a live lease while `/api/status` shows a fresh `inFlight` progress row for the same job risks a concurrent second writer.

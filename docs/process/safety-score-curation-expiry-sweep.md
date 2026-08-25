@@ -58,6 +58,11 @@ npm run safety-score-v9:replay -- \
 Do not substitute the operator's wall clock. The capture's `clockSec` is the production
 publication clock and determines whether each review is admitted or expired.
 
+Add `--allow-registry-mismatch` when HEAD curation postdates the captured registry
+fingerprint, which is the sweep's normal condition; the replay otherwise hard-fails
+on the fingerprint check. The automated workflow always passes it, because this sweep
+reads worklist items rather than score equivalence.
+
 ## 3. Generate the worklist
 
 ```bash
@@ -100,7 +105,7 @@ the asset is in `fixedInput.liveToFallbackCoins`)
 `buildSafetyScoreV9ReviewedStandaloneReserveRows` when there is no live producer.
 It is re-evaluated at the capture clock plus the lookahead (`--days`, default 10),
 so it cannot drift from the 31-day window, the 7-day reporting grace, the
-one-year audited admission path, or the separate 365-day classification path.
+one-year audited admission path, or the D6 prudential path.
 Only compositions that are admitted today and stop being admitted within the
 lookahead are listed — currently-inadmissible compositions already surface in the
 worklist's `RESV` and `DEP` streams and are deliberately excluded here.
@@ -135,9 +140,11 @@ asset's live rows and provenance, adds the asset to `liveToFallbackCoins`, resea
 `baseInputGenerationId`, and runs the normal V9 compiler/evaluator. Isolation keeps
 dependency scores from changing because an unrelated producer was withheld. Rows
 are sorted by evaluated-set circulating USD and include live/fallback scores and
-grades, the admitting fallback tier, that tier's evidence ceiling, and the
-counterfactual binding-cap kind. A fallback with no admission is reported as the
-most severe outcome, not dropped.
+grades, the admitting fallback tier (`none` when no fallback is admitted), that
+tier's evidence ceiling, and the counterfactual binding-cap kind. Only assets
+whose counterfactual grade is strictly worse than their live grade are listed; an
+asset that holds its grade under producer silence is omitted, so an empty report
+means no live-backed asset would change grade.
 
 Assets already present in `liveToFallbackCoins` are excluded: their producer
 silence is already realized in this capture and is owned by the worklist/expiry
