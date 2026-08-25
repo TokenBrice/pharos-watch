@@ -290,7 +290,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/primitives.ts",
-      "sha256": "a325fe2008091c79687a6986ed3109e6303cb6865353fbdf6be547771c83c5d0"
+      "sha256": "0467766def87e5ef202e02ad7c3ff1e74a4ff38a556e055b4088b1a42b94ffe1"
     },
     {
       "path": "shared/lib/safety-score-v9/reasons.ts",
@@ -310,7 +310,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/trace.ts",
-      "sha256": "677f24181db0bac72af0cb76463469c0c277854b1c911b05c5b223db88141240"
+      "sha256": "bee76c1b7a9f52a39c9d906ba1e409b17043b39cd4329efc76da1a528a7fe44f"
     },
     {
       "path": "shared/lib/safety-score-v9/wrapper-risk.ts",
@@ -322,7 +322,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/stable-json.ts",
-      "sha256": "877d3b647bd1844004a25f51b1a5e23dedb4daf3b7acbc1bc0bf4c21477fdde8"
+      "sha256": "89fb1c042ee8786fdc74b7e472c8b86851284c6c0f07e8209d5f97d72a4914a8"
     },
     {
       "path": "shared/lib/supply.ts",
@@ -418,7 +418,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public.ts",
-      "sha256": "19addcd4b6f6a23144f85d61f87c67040693fa9ea26241d8c85a6c7a67f05f2e"
+      "sha256": "7ec601379f339248a749891a7bc7d893020585579aa020209d7a137f4eda1cb6"
     },
     {
       "path": "shared/types/safety-score-v9-transfer-overlays.ts",
@@ -577,7 +577,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "547fb0083d0b2058488c6707c76ca30c3f1c2b327547e709fd3c244663905ca6"
+  "digest": "346d8d60d8f81221acbf445e4f1c3f8e57e540e6403ad0a3328390d4d1d71676"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
