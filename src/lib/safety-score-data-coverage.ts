@@ -74,6 +74,7 @@ const REASON_CODE_LABELS = {
   "runtime-bridge-materiality-unavailable": "Live bridge exposure unavailable",
   "scoped-control-question": "Reviewer-scoped control question open",
   "selected-bridge-route-missing": "Selected bridge route not found",
+  "stale-audited-reserve-composition": "Audited reserve composition not current",
   "selected-bridge-route-unresolved": "Selected bridge route unresolved",
   "unknown-control-cap-authority": "Supply-cap authority unknown",
   "unknown-control-mint-ability": "Mint ability unknown",

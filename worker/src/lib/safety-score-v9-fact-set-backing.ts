@@ -541,17 +541,24 @@ export function buildReserves(context: AssetBuildContext): {
         gapIds: [gapId],
       });
     } else if (evidenceIds.some((evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale")) {
+      const auditedFallback = reviewedStatic?.provenance === "audited-fallback";
       const gapId = addGap(
         context,
         createV9FactGapV3({
           gapId: `${context.asset.assetId}:gap:reserve:${exposureKey}:stale`,
-          reasonCode: "partial-reserve-review",
+          // A composition that an independent attestor signed and reconciled is
+          // stronger evidence than a partial review, even once it is no longer
+          // current. It keeps a ceiling, but at the `adequate` rung the policy
+          // declares for it rather than the generic `limited` floor.
+          reasonCode: auditedFallback ? "stale-audited-reserve-composition" : "partial-reserve-review",
           ownerDomain: "backing",
           policyRuleId: "v9.backing.reserve-freshness",
           observationState: "stale",
           responsibility: "producer-failed",
           path: collateralExposureV9Path(exposureKey),
-          message: "The last-known reserve exposure is older than the v9 freshness bound.",
+          message: auditedFallback
+            ? "The independently audited reserve composition is older than the v9 freshness bound."
+            : "The last-known reserve exposure is older than the v9 freshness bound.",
           evidenceRefIds: evidenceIds,
           evidenceHistory: evidenceHistoryFor(context, evidenceIds),
         }),

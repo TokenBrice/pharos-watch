@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.41",
+  "releaseVersion": "9.42",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -2006,6 +2006,30 @@
       "defaultTreatment": "NR",
       "releaseSeverity": "release-blocker",
       "publicLabel": "Required parent chain contains a cycle",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "stale-audited-reserve-composition",
+      "ownerDomain": "backing",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "collateral-exposure"
+      ],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": [
+        "ceiling",
+        "NR"
+      ],
+      "defaultTreatment": "ceiling",
+      "ceilingRule": {
+        "source": "evidence-level",
+        "level": "adequate"
+      },
+      "releaseSeverity": "review-required",
+      "publicLabel": "Independently audited reserve composition is not current",
       "auditClassification": "missing-data"
     },
     {

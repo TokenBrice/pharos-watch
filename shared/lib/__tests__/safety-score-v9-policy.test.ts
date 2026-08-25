@@ -102,7 +102,7 @@ describe("Safety Score v9 methodology policy", () => {
     // dated five-gate registry and adds cardano, conflux, gnosis, hedera,
     // klaytn (Kaia), rootstock, and sui. The digest rotates with that set.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "c10342b0d35780de7f9d5fa571443db683505e5a4da1b54ee64b869623c0a1bc",
+      "12d6cb2a76f491612a19cff45f7a7280512f1a6aec1a3aecf5eb64399694e6ac",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,

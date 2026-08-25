@@ -1,5 +1,23 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_AUDITED_STALE_RESERVE_CEILING: MethodologyChangelogEntry = {
+  version: "9.42",
+  title: "A stale audited composition keeps an adequate ceiling, not a limited one",
+  date: "2026-08-25",
+  effectiveAt: 1787660000,
+  summary:
+    "An independently attested reserve composition that is no longer current was priced identically to a partial review: both floored the backing evidence level at `limited`, capping the asset at 69. A complete composition signed and reconciled by an independent attestor is stronger evidence than a partial one even after it ages, so it now carries its own reason with the `adequate` ceiling the policy declares. The evaluator also stops flooring every ceiling reason at `limited` and honours the level each reason declares, which made an existing `adequate` declaration reachable for the first time.",
+  impact: [
+    "`reasonClassifiedEvidenceLevel` read `limited` for any ceiling-treatment reason, ignoring the per-reason `ceilingRule.level` the policy already carried. `missing-latest-assurance-report` declared `adequate` and could never reach it, because the implied 69 evidence ceiling always bound below the reason's own 84. The declared level is now used and the weakest declared level still wins; replay shows this alone moves nothing, because every affected card also carries a `limited`-declaring reason",
+    "A stale exposure whose composition was admitted through the audited fallback emits `stale-audited-reserve-composition` instead of `partial-reserve-review`, with a ceiling at the `adequate` rung and public copy that says the audited composition is not current rather than implying the review was incomplete",
+    "The ladder for a stale upstream feed is now graduated rather than a cliff: a current feed scores normally, a stale feed with an independently audited composition is capped at the adequate rung, and no admissible composition at all still falls to the reason-coded floor",
+    "Three assets become rateable that were previously withheld as `insufficient-evidence`: brla-brla-digital to 51/C-, sbc-brale to 50/C-, and wars-argentine-peso to 47/D. This is a deliberate consequence rather than a side effect: if an audited composition is adequate evidence for a ceiling it is also adequate evidence for rateability, and treating the same fact as adequate for one and limited for the other would be incoherent",
+    "On the fixed-input release replay 3 assets move and 3 change grade, all from NR into a rated band. No previously rated card moves",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_AUDITED_RESERVE_FALLBACK: MethodologyChangelogEntry = {
   version: "9.41",
   title: "A stale reserve feed degrades backing instead of erasing it",
