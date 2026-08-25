@@ -65,6 +65,7 @@ export const V9_REASON_CODES = [
   "no-viable-exit-path",
   "parent-cycle",
   "partial-reserve-review",
+  "stale-audited-reserve-composition",
   "runtime-bridge-materiality-unavailable",
   "scoped-control-question",
   "selected-bridge-route-missing",

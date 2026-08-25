@@ -180,6 +180,7 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "no-viable-exit-path": "method-unsupported",
   "parent-cycle": "method-unsupported",
   "partial-reserve-review": "issuer-undisclosed",
+  "stale-audited-reserve-composition": "published-evidence-expired",
   "runtime-bridge-materiality-unavailable": "integration-missing",
   "scoped-control-question": "issuer-undisclosed",
   "selected-bridge-route-missing": "producer-failed",

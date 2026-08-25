@@ -351,10 +351,19 @@ function reasonClassifiedEvidenceLevel(
   fallback: V9EvidenceLevel,
 ): V9EvidenceLevel {
   if (score === null) return "insufficient";
-  const treatments = reasonCodes.map((code) => resolveV9ReasonPolicy(envelope, code).reason.defaultTreatment);
-  if (treatments.includes("NR")) return "insufficient";
-  if (treatments.includes("ceiling")) return "limited";
-  return fallback;
+  const reasons = reasonCodes.map((code) => resolveV9ReasonPolicy(envelope, code).reason);
+  if (reasons.some((reason) => reason.defaultTreatment === "NR")) return "insufficient";
+  const ceilings = reasons.filter((reason) => reason.defaultTreatment === "ceiling");
+  if (ceilings.length === 0) return fallback;
+  // Honour the level each reason declares rather than flooring every ceiling
+  // reason at `limited`. The policy already states a per-reason evidence level,
+  // and hardcoding `limited` made a declared `adequate` ceiling unreachable:
+  // the reason's own 84 could never bind because the evidence ceiling it
+  // implied was pinned to 69. The weakest declared level still wins.
+  const declared = ceilings.map((reason) =>
+    reason.ceilingRule?.source === "evidence-level" ? reason.ceilingRule.level : "limited",
+  );
+  return declared.includes("limited") ? "limited" : "adequate";
 }
 
 function backingPillar(

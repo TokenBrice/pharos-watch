@@ -1881,7 +1881,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
     );
   });
 
-  it("keeps ceiling reasons limited and NR conditions insufficient", () => {
+  it("honours each ceiling reason's declared level and keeps NR conditions insufficient", () => {
     const ceilingInput = coreFixture();
     const ceilingAsset = ceilingInput.assets[0]! as unknown as V9AssetFactsV2;
     const staleEvidence = createV9EvidenceReference(
@@ -1922,8 +1922,60 @@ describe("Safety Score v9 normalized fact protocol", () => {
     const ceilingEvaluated = evaluateV9FactSet(compileNativeV3FactSet(ceilingInput), V9_CANDIDATE_POLICY_V1).assets.find(
       (asset) => asset.assetId === "alpha",
     )!;
-    expect(ceilingEvaluated.scoreInput.pillars.backing.evidenceLevel).toBe("limited");
-    expect(ceilingEvaluated.trace.caps.map((cap) => cap.kind)).toContain("evidence:limited");
+    // `missing-latest-assurance-report` declares `ceilingRule.level: "adequate"`.
+    // Flooring every ceiling reason at `limited` made that declaration
+    // unreachable, because the implied evidence ceiling of 69 always bound
+    // below the reason's own 84. The declared level is now honoured.
+    expect(ceilingEvaluated.scoreInput.pillars.backing.evidenceLevel).toBe("adequate");
+    expect(ceilingEvaluated.trace.caps.map((cap) => cap.kind)).toContain("evidence:adequate");
+    expect(ceilingEvaluated.trace.caps.map((cap) => cap.kind)).not.toContain("evidence:limited");
+
+    // Weakest declared level wins: adding a `limited`-declaring ceiling reason
+    // beside the `adequate` one must pull the level back down, otherwise the
+    // generalization would silently promote every mixed card.
+    const mixedInput = coreFixture();
+    const mixedAsset = mixedInput.assets[0]! as unknown as V9AssetFactsV2;
+    mixedAsset.evidence.push(staleEvidence);
+    mixedAsset.gaps.push(ceilingGap);
+    const mixedReview = mixedAsset.mechanismRiskReview.review!;
+    if (mixedReview.archetype !== "fiat-cash") throw new Error("Expected fiat fixture");
+    mixedReview.assuranceAndReconciliation = {
+      ...mixedReview.assuranceAndReconciliation,
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("backing.assurance.current"),
+        observationState: "stale",
+        evidenceRefIds: [staleEvidence.evidenceId],
+        gapIds: [ceilingGap.gapId],
+      }),
+    };
+    // `unreviewed-dependency-relationships` declares `limited` and accepts a
+    // local-component path, so it can sit beside the `adequate` reason on the
+    // same fixture without inventing an exposure.
+    const limitedGap = createV9FactGap({
+      gapId: "gap:unreviewed-dependency-relationships",
+      reasonCode: "unreviewed-dependency-relationships",
+      ownerDomain: "dependency",
+      policyRuleId: "v9.dependency.relationships",
+      observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "assurance-and-reconciliation" },
+      message: "Dependency relationships are unreviewed.",
+      evidenceRefIds: [staleEvidence.evidenceId],
+    });
+    mixedAsset.gaps.push(limitedGap);
+    mixedReview.assuranceAndReconciliation = {
+      ...mixedReview.assuranceAndReconciliation,
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("backing.assurance.current"),
+        observationState: "stale",
+        evidenceRefIds: [staleEvidence.evidenceId],
+        gapIds: [ceilingGap.gapId, limitedGap.gapId],
+      }),
+    };
+    const mixedEvaluated = evaluateV9FactSet(compileNativeV3FactSet(mixedInput), V9_CANDIDATE_POLICY_V1).assets.find(
+      (asset) => asset.assetId === "alpha",
+    )!;
+    expect(mixedEvaluated.scoreInput.pillars.backing.evidenceLevel).toBe("limited");
+    expect(mixedEvaluated.trace.caps.map((cap) => cap.kind)).toContain("evidence:limited");
 
     const nrInput = coreFixture();
     const nrAsset = nrInput.assets[0]! as unknown as V9AssetFactsV2;

@@ -64,6 +64,7 @@ export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
   "missing-upgrade-control",
   "missing-upgradeability-review",
   "partial-reserve-review",
+  "stale-audited-reserve-composition",
   "peg-price-unavailable-adverse-history",
   "peg-supply-floor-withheld",
   "runtime-bridge-materiality-unavailable",
