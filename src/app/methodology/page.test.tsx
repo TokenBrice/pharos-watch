@@ -11,6 +11,7 @@ vi.mock("next/link", async () => {
 });
 
 import MethodologyPage from "@/app/methodology/page";
+import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 
 describe("MethodologyPage", () => {
@@ -42,5 +43,20 @@ describe("MethodologyPage", () => {
     expect(html).toContain("universal 15-minute onset confirmation window");
     expect(html).toContain("$1M");
     expect(html).toContain("March 9, 2026 trust-floor boundary");
+  });
+
+  it("renders every section anchor that methodology context deep-links to", () => {
+    const html = renderToStaticMarkup(<MethodologyPage />);
+    const anchors = new Set(
+      Object.values(METHODOLOGY_CONTEXT)
+        .map((item) => item.methodologyPath)
+        .filter((path) => path.startsWith("/methodology/#"))
+        .map((path) => path.slice("/methodology/#".length)),
+    );
+
+    expect(anchors.size).toBeGreaterThan(0);
+    for (const anchor of anchors) {
+      expect(html, `methodologyPath anchor #${anchor} is not rendered on /methodology/`).toContain(`id="${anchor}"`);
+    }
   });
 });
