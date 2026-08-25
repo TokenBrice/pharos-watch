@@ -13,6 +13,8 @@ The feedback pipeline has four layers:
 3. **`FeedbackModal`** — dialog with a type selector, context banner, and form fields
 4. **`POST /api/feedback`** — Cloudflare Worker endpoint that validates, rate-limits, and forwards to GitHub
 
+Two contextual triggers also mount `FeedbackModal` directly with `defaultType="data-correction"` and a `stablecoinId`: the stablecoin detail hero (`src/app/stablecoin/[id]/detail-content.tsx`) and the Show Your Work panel's "Discrepancy? Report it" link (`src/components/show-your-work-panel.tsx`). They are the only entry points that attach a stablecoin, so they are the only ones that reach auto-verification.
+
 Inside the worker route, the handler is intentionally split into focused modules:
 
 - `worker/src/api/feedback/request.ts` for JSON parsing, business-rule validation, canonical ID normalization, and rate-limit / env policy checks
@@ -68,7 +70,8 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 
 - Description: 10–2000 characters
 - Title: 3–100 characters (required for `bug` and `feature-request`)
-- Submit button is disabled until both pass
+- Contact handle (optional): empty, or 2–100 characters
+- Submit button is disabled until all three pass
 
 **Honeypot:** a hidden `website` input (off-screen, `tabIndex=-1`, `aria-hidden`) is sent as an empty string. If the worker receives a non-empty `website` value, the submission is silently accepted but discarded.
 
@@ -113,18 +116,21 @@ When `type === "data-correction"` and a valid `stablecoinId` is provided, the wo
 
 | Output | Source |
 |--------|--------|
-| Cached price | `coin.price` from the normalized stablecoins cache payload |
-| USD circulating market cap | `getCirculatingRaw(coin)` from the normalized cache payload; DefiLlama list values are already USD-denominated |
+| Cached price | `coin.price` from the normalized stablecoins cache payload (`N/A` when absent) |
+| USD circulating market cap | `getCirculatingRaw(coin)` from the normalized cache payload; DefiLlama list values are already USD-denominated. Emitted only when greater than 0 |
 | Peg deviation | `((price - pegReference) / pegReference) * 100` using the tracked peg currency |
+| Peg reference | `getPegReference()` on the tracked peg type, annotated with its rate source (`FX`, `median`, or `fallback`) |
+| Depeg threshold | `getDepegThresholdBps()` for the normalized peg type, in bps |
 | Cache age | `now - cache.updatedAt` in seconds |
+| Verification result | `⚠️ Confirmed` or `✅ Unconfirmed`, matching the label below |
 
 The verification result produces one of three GitHub labels:
 
 | Label | Meaning |
 |-------|---------|
 | `verified: confirmed` | A positive cached price is at or beyond the configured depeg threshold: 100 bps for USD pegs or 150 bps for non-USD pegs |
-| `verified: unconfirmed` | Price is absent/non-positive, or its absolute deviation is below the applicable threshold — the data is not confirmed wrong |
-| `verified: pending` | Cache unavailable at submission time |
+| `verified: unconfirmed` | Price is absent/non-positive, no peg reference could be derived for the tracked peg (deviation is then reported as `N/A`), or the absolute deviation is below the applicable threshold — the data is not confirmed wrong |
+| `verified: pending` | Verification did not run or could not complete — no stablecoin was attached to the submission, the coin is missing from the cache payload, or the cache was unavailable at submission time |
 
 The full snapshot block is embedded in the GitHub issue body as a `**--- Auto-Verification Snapshot (at time of submission) ---**` section.
 

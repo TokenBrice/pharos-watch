@@ -71,7 +71,7 @@ BotFather-owned release checklist:
 
 ## Public Pulse Privacy And Freshness
 
-The public pulse keeps the exact `activeWatchers` total visible by product decision, because it is the primary adoption signal on the public page. Low-cardinality supporting metrics are more sensitive while the bot is small: nonzero values below 5 are suppressed for daily new/churn/reactivation deltas, pending deliveries when available, quiet-hours chats, Mini App session/mutation totals, and lifecycle-history delta fields. Suppressed fields are listed in `privacy.suppressedFields`; consumers should omit those tiles instead of rendering zero. Mini App denied counters are an explicit exception: they are abuse/health counters, so they remain visible even below the threshold and are not listed in `privacy.suppressedFields`. Replay-class auth counters are reserved for future telemetry unless a producer is wired.
+The public pulse keeps the exact `activeWatchers` total visible by product decision, because it is the primary adoption signal on the public page. Low-cardinality supporting metrics are more sensitive while the bot is small: nonzero values below 5 are suppressed for daily new/churn/reactivation deltas, pending deliveries when available, Mini App session/mutation totals, and lifecycle-history delta fields. Suppressed fields are listed in `privacy.suppressedFields`; consumers should omit those tiles instead of rendering zero. Mini App denied counters are an explicit exception: they are abuse/health counters, so they remain visible even below the threshold and are not listed in `privacy.suppressedFields`. Replay-class auth counters are reserved for future telemetry unless a producer is wired.
 
 Pulse publication reuses heavy public sections on a 15-minute cadence, but only within the same UTC day. Mini App "today" counters reload after midnight UTC even when the previous heavy-section snapshot is still inside the reuse window.
 
@@ -159,7 +159,7 @@ Webhook registration is handled by `npx tsx scripts/maintenance/register-telegra
 - URL: `https://api.pharos.watch/api/telegram-webhook`
 - Secret token: `<TELEGRAM_WEBHOOK_SECRET>`
 
-The dedicated five-minute Telegram worker lane now also reconciles the webhook registration in production on a cache-backed cadence. That means the live Worker periodically re-applies the configured webhook URL, secret token, and `allowed_updates = ["message", "callback_query", "my_chat_member"]` via Telegram `setWebhook`, which self-heals webhook-secret or update-filter drift without requiring a separate manual script run. `web_app_data` does not need a separate `allowed_updates` value for the current Mini App launch MVP because it is not using `Telegram.WebApp.sendData`; if that later changes, `web_app_data` arrives inside a `message` update and must be treated as untrusted input.
+The dedicated five-minute Telegram worker lane now also reconciles the webhook registration in production on a cache-backed cadence. That means the live Worker periodically re-applies the configured webhook URL, secret token, and `allowed_updates = ["message", "callback_query", "my_chat_member", "inline_query", "chosen_inline_result"]` via Telegram `setWebhook`, which self-heals webhook-secret or update-filter drift without requiring a separate manual script run. `web_app_data` does not need a separate `allowed_updates` value for the current Mini App launch MVP because it is not using `Telegram.WebApp.sendData`; if that later changes, `web_app_data` arrives inside a `message` update and must be treated as untrusted input.
 
 The same lane also reconciles bot commands, profile metadata, and the default chat menu button. Menu reconciliation reads `getChatMenuButton`, compares it with the expected `MenuButtonWebApp`, and calls `setChatMenuButton` only when the current menu button drifts. The expected menu payload is:
 
@@ -226,7 +226,7 @@ Current actions:
 - `setup:*` for setup wizard steps
 - `tz:<IANA zone>` for timezone quick picks
 - `settings:home` / `settings:home:<page>` — re-render the chat-level settings view and page through per-coin settings buttons
-- `settings:gt:<type>` where `type ∈ dews | depeg | safety | launch | reserve` — toggle global alert flag
+- `settings:gt:<type>` where `type ∈ dews | depeg | safety | launch | reserve | freeze` — toggle global alert flag
 - `recap:on` / `recap:off` — enable or disable the private daily recap
 - `recap:h:<0-23>` — set the recap's local delivery hour (timezone is the subscriber's confirmed IANA zone)
 - `settings:q:<1|0>` — enable (22-07 in the chat's configured timezone, UTC when unset) or disable quiet hours
@@ -238,6 +238,7 @@ Current actions:
   - `ds:100|250|500|0` — Depeg severity gate and worsening step in bps, or off (also clears `alert_depeg` for the coin)
   - `lc:1|0` — Launch on/off
   - `rs:1|0` — Reserve drift on/off
+  - `fz:1|0` — Freeze alerts on/off
 
 Settings callbacks edit the message in place via `editMessageText`. The chat-level settings keyboard includes paginated `settings:o:<stablecoinId>` buttons for explicitly subscribed coins, so users can open per-coin settings without typing `/settings <ticker>`. If the edit fails (e.g. the message is too old or content is unchanged) the handler falls back to a fresh `sendMessage` so the user still sees the new state.
 
@@ -278,7 +279,7 @@ disambiguation cannot mask account deletion.
 
 ### Group Admin Gating
 
-`/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/pause`, `/unmutehours`, `/unsnooze`, and `/import` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. `/timezone <IANA-zone>` is also admin-gated when it mutates the chat's timezone; `/timezone` with no argument remains a read-only group status view and omits the common-zone keyboard. The gating mode is currently a code-level toggle in `worker/src/api/telegram-webhook-ingress-policy.ts` (re-exported from `telegram-webhook.ts`), not a production env binding. The `tz:<zone>` callback handler enforces the same admin check before persisting. Setup wizard callbacks gate mutating steps in groups, but `setup:cancel` and `setup:branch:skip` remain non-mutating exits and rely on the wizard initiator check instead.
+`/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/pause`, `/forget`, `/unmutehours`, `/unsnooze`, and `/import` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. `/timezone <IANA-zone>` is also admin-gated when it mutates the chat's timezone; `/timezone` with no argument remains a read-only group status view and omits the common-zone keyboard. The gating mode is currently a code-level toggle in `worker/src/api/telegram-webhook-ingress-policy.ts` (re-exported from `telegram-webhook.ts`), not a production env binding. The `tz:<zone>` callback handler enforces the same admin check before persisting. Setup wizard callbacks gate mutating steps in groups, but `setup:cancel` and `setup:branch:skip` remain non-mutating exits and rely on the wizard initiator check instead.
 
 - **Hard gate (current default):** non-admin invocations receive a short command-specific refusal reply ("Only group admins can /subscribe. Ask @Alice or Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, capped to three names plus an overflow phrase, and are already visible to every member through the Telegram group member list.
 - **Soft (emergency rollback):** changing the code-level toggle to `"soft"` and redeploying warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
@@ -334,9 +335,9 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 
 Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm ] [ Cancel ]` keyboard when the resolved coin set exceeds 10 coins or the literal `all` token is used. The deferred command is stored in `telegram_pending_disambiguation` with `action_type = 'confirm-bulk'` and inherits the standard 5-minute TTL. Tapping Confirm executes the original command; Cancel (or `/cancel`) clears the pending state without side effects. Confirmation is initiator-locked: only the user who started the bulk command may complete or cancel it.
 | `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, launch on/off, reserve-drift on/off, or depeg severity and worsening step. Private success replies include a per-coin Mini App tuning button. |
-| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`, `reserve`) or sets the global depeg severity and worsening-step threshold. Private success replies include a Mini App watchlist button. |
-| `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch / reserve. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
-| `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg severity and worsening step (`100/250/500/off`), launch on/off, and reserve-drift on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
+| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`, `reserve`, `freeze`) or sets the global depeg severity and worsening-step threshold. Private success replies include a Mini App watchlist button. |
+| `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch / reserve / freeze. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
+| `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg severity and worsening step (`100/250/500/off`), launch on/off, reserve-drift on/off, and freeze-alerts on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
 | `/mute <start>-<end>` | Enables quiet hours interpreted in the chat's `/timezone` (defaults to UTC; messages still deliver, notifications are silenced) |
 | `/pause` | Pauses **all** alert delivery indefinitely by writing the far-future sentinel `alert_snooze_until_ts = 4102444800` (2100-01-01 UTC) through the existing chat-level snooze path, so the dispatcher's snooze filter skips the chat with no routing change. `/pause off` (or `/pause resume`) clears it; `/unsnooze` and the `/settings` Clear-snooze button also resume. `/pause <duration>` (`1h`, `4h`, `24h`) sets an ordinary timed snooze, not the sentinel. A paused chat renders distinctly as "Paused" (not a multi-thousand-day countdown) in `/list`, `/health`, and `/settings`, and the Home keyboard shows a single Resume button. Private replies include a Mini App snooze button. |
 | `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone. Private no-argument replies also include common-zone buttons and a Mini App quiet-hours button; group no-argument replies are read-only and omit the keyboard. Unset chats use UTC, the historical behavior. |
@@ -362,6 +363,7 @@ Supported payload schemes (lowercase, no spaces, max 64 characters, characters `
 | `setup` | Opens the standard two-branch setup wizard. |
 | `sample` | Alias entrypoint for `/sample`: in a private chat it runs the synthetic USDC DEWS preview (same message as `/sample`); in a group it falls back to the read-only start reply and does not run the preview. Surfaced by the Mini App Home "Send me a sample alert" deep link. |
 | `app` / `home` | Sends a Mini App launch nudge. Private chats receive a Web App button for the home panel; groups receive a DM link because Telegram rejects `web_app` buttons outside private chats. |
+| `pw1_landing_<placement>` (adoption/CTA campaign tokens with a `setup` destination, e.g. `pw1_landing_hero`) | Opens the standard setup wizard and records the aggregate adoption attribution for that landing placement. Parsed by `parseTelegramAdoptionToken`; tokens whose destination is not `setup` are not matched here. |
 | Unknown or malformed | Falls back to the standard `/start` reply; the user never sees an error. |
 
 Telegram only delivers `?start=` deep links in private chats, but the dispatcher still defensively checks `chat.type === "private"` before running mutating `sub_*` payloads.
@@ -634,7 +636,7 @@ Every alert-intent mutation advances `telegram_subscribers.preference_generation
 For row-authoritative risk alerts, `telegram_alert_job_targets` is materialized before transport and remains `planned` until its exact pending insert commits. The pending lifecycle then projects one final state (`accepted`, `failed`, `cancelled`, `expired`, or `execution_unknown`) back to the target with source and dedupe guards. Job counters are rebuilt exclusively from those mutually exclusive target buckets while preserving valid job metadata. The older fresh-effect columns remain rolling-compatible audit evidence, but new source-event delivery does not bypass the pending effect fence. Telegram has no general message idempotency key, so the policy is reconciliable at-most-once, not exactly-once delivery.
 
 Depeg, DEWS, safety, reserve, freeze, and legacy risk pending alerts have a 2-hour TTL (`PENDING_TTL_SEC = 7200`). Launch alerts use 90 minutes, and admin
-broadcast rows use a 45-minute TTL because they are lower-priority during contention.
+broadcast rows use a 45-minute TTL because they are lower-priority during contention. Those source TTLs are owned by `shared/lib/telegram-delivery-policy.ts`; personalized-recap rows use the separate 6-hour `TELEGRAM_RECAP_TTL_SEC` in `shared/lib/telegram-recap-policy.ts`.
 The TTL — not a per-row attempts cap — bounds how long the queue keeps retrying.
 Each drain re-selects unexpired rows whose `not_before_at` has elapsed; rows that age
 past their TTL are copied into `telegram_alert_dead_letters` and then deleted in a
@@ -726,8 +728,9 @@ Before formatting subscriber alert HTML, the dispatcher builds a cheap newest-fi
 The simulated scenarios are:
 
 - single depeg
+- single immutable freeze event
 - market-wide depeg burst
-- DEWS plus safety-grade burst
+- DEWS, safety-grade, and reserve burst
 - admin broadcast to deliverable watchers
 - Telegram 429 storm with a 15-minute backoff window
 
@@ -821,8 +824,8 @@ The watchdog is wired through `runBestEffortScheduledJob` so its own failures ne
 
 ### Per-alert-type delivery breakdown
 
-The dispatch metadata also exposes a `perAlertType` map covering each of the five
-alert categories: `dews`, `depeg`, `safety`, `launch`, `reserve`. Each entry reports the
+The dispatch metadata also exposes a `perAlertType` map covering each of the six
+alert categories: `dews`, `depeg`, `safety`, `launch`, `reserve`, `freeze`. Each entry reports the
 delivery outcome for that category in the latest run so operators can spot
 "DEWS delivery fine but safety alerts stalled" at a glance:
 
@@ -836,7 +839,7 @@ delivery outcome for that category in the latest run so operators can spot
 
 A consolidated message can mix multiple alert categories for a single chat.
 Attribution uses the chat's "dominant" alert type with priority order
-`depeg > dews > safety > launch > reserve`, since depeg is the most time-sensitive
+`depeg > dews > safety > launch > reserve > freeze`, since depeg is the most time-sensitive
 event. Pending-queue replays are not attributed because the persisted row
 stores only the rendered HTML.
 
@@ -878,7 +881,7 @@ The reserve-drift family (C123) ships **glyph-less**: a `Reserve Drift` section 
 
 Subscriber alert messages end with a `View on Pharos` link. Telegram digest posts end with `Read on Pharos →`, even when cemetery or tracking appendices are present. A current daily Safety Score map adds a canonical dated `View today’s map →` link immediately before it and requests a large preview; the exact link remains part of the durable digest outbox payload.
 
-For single-coin alerts the first chunk is sent with `link_preview_options: { is_disabled: false, prefer_small_media: true, show_above_text: false }` so the "View on Pharos" link renders a compact preview card below the message body. Multi-coin alerts, overflow chunks, and pending-queue replays continue to use the batch-wide `disable_web_page_preview: true` default. Behavior requires Telegram Bot API 7.0+ (Mar 2024); older Bot API versions ignore the field and fall back to default link-preview rendering.
+For single-coin alerts the first chunk is sent with `link_preview_options: { is_disabled: false, url: "https://pharos.watch/stablecoin/<id>", prefer_small_media: true, show_above_text: false }` so the "View on Pharos" link renders a compact preview card below the message body. Multi-coin alerts, overflow chunks, and pending-queue replays continue to use the batch-wide `disable_web_page_preview: true` default. Behavior requires Telegram Bot API 7.0+ (Mar 2024); older Bot API versions ignore the field and fall back to default link-preview rendering.
 
 ## Digest vs Subscriber Alerts
 
@@ -894,7 +897,7 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 ## Operational Notes
 
 - The dedicated 5-minute Telegram trigger checks webhook, commands, profile, and menu reconciliation serially on every tick through `worker/src/lib/telegram-webhook-registration.ts`. Each unit may skip independently on its 15-minute fresh-cache/rate-limit marker. After deploying a command-list change, the production `/` menu should update on the next tick whose command unit is not skipped.
-- The command reconciliation issues two scoped `setMyCommands` calls: the full list under `scope: { type: "all_private_chats" }` and a group-safe list under `scope: { type: "all_group_chats" }`. The group menu includes read-only commands and group-valid subscription/settings controls, but intentionally omits `/start` and `/forget` because setup deep links and destructive data deletion stay private-chat only. Both scopes share a single cache key (`telegram:commands-reconciled`); a fresh cache hit skips both round trips, and bumping `TELEGRAM_COMMANDS_CACHE_VERSION` forces every deployment to reconcile once.
+- The command reconciliation issues two scoped `setMyCommands` calls: the full list under `scope: { type: "all_private_chats" }` and a group-safe list under `scope: { type: "all_group_chats" }`. The group menu includes read-only commands and group-valid subscription/settings controls, but intentionally omits `/start`, `/forget`, and `/recap` because setup deep links, destructive data deletion, and the private daily recap stay private-chat only. Both scopes share a single cache key (`telegram:commands-reconciled`); a fresh cache hit skips both round trips, and bumping `TELEGRAM_COMMANDS_CACHE_VERSION` forces every deployment to reconcile once.
 - The same trigger reconciles the bot profile metadata (display name, short description, long description) under cache key `telegram:profile-reconciled` on the same 15-minute cadence. The configured strings are exported constants in `shared/lib/telegram-bot-registration.ts` so changes flow through code review and are reused by manual recovery tooling. The description's alert-family list derives from the canonical manifest in `shared/lib/telegram-alert-families.ts` (shared with the landing page, its metadata, and JSON-LD), and the profile copy is intentionally count-free so a growing tracked universe cannot stale it. Telegram returns a 400 "is not modified" response when the submitted value already matches the live one; the reconcile treats that as success and still refreshes the cache marker so the next 15 minutes are a true no-op. Current Bot API versions expose `setMyProfilePhoto`, but Pharos does not yet reconcile it; until that path is reviewed, set the avatar manually through @BotFather using `public/pharos-mark.png`. The brand mark was refreshed on 2026-07-31 and the former pharos-icon asset was removed — re-upload the avatar so the bot matches the current identity.
 - The cron connection-budget check includes the four serial command/profile/menu/webhook reconciliation checks as one budget-only surface on the same chained five-minute Telegram group. It is not a separate status-tracked `cron_runs` job. `/api/status.budgetOnlySurfaces` records each unit as skipped, succeeded, or failed, including stable skip reasons; the serial Bot API call budget remains visible to `npm run check:cron-connections`.
 - `npx tsx scripts/maintenance/register-telegram.ts --action webhook`, `npx tsx scripts/maintenance/register-telegram.ts --action commands`, and `npx tsx scripts/maintenance/register-telegram.ts --action profile` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop. Command, profile, and allowed-update payloads are shared with Worker reconciliation through `shared/lib/telegram-bot-registration.ts`.

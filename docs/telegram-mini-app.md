@@ -56,7 +56,7 @@ The full inventory of launch entrypoints and their reconciliation paths is docum
 
 ## Payload Scheme
 
-Mini App launches accept a `?startapp=<payload>` parameter that selects the initial view. The frontend `?startapp=` surface uses the shared parser from `shared/lib/telegram-mini-app-payloads.ts`. The worker `/start <payload>` parser in `worker/src/api/telegram-webhook-parsing.ts` shares the same charset constant but intentionally supports only bot-command payload schemes: `sub_*`, `status_*`, `why_*`, `coverage_*`, `setup`, `sample`, and `app`/`home`.
+Mini App launches accept a `?startapp=<payload>` parameter that selects the initial view. The frontend `?startapp=` surface uses the shared parser from `shared/lib/telegram-mini-app-payloads.ts`. The worker `/start <payload>` parser in `worker/src/api/telegram-webhook-parsing.ts` shares the same charset constant but intentionally supports only bot-command payload schemes: `sub_*`, `status_*`, `why_*`, `coverage_*`, `setup`, `sample`, `app`/`home`, and adoption deep-link tokens (`pw1_*`) whose destination is `setup`, which carry their token into the wizard intro.
 
 Recognized payloads:
 
@@ -65,6 +65,8 @@ Recognized payloads:
 | `home` | Home panel | Default if no payload, or used by the `/start` skip branch. |
 | `settings` | Settings panel | Global alert toggles, depeg step, quiet hours, clear snooze; used by `/help` and `/settings`. |
 | `watchlist` | Watchlist panel | Per-coin subscriptions and tune controls; used by `/list` and all-stablecoin `/set` confirmations. |
+| `recap_settings` | Settings panel | Used by the `Recap settings` button on delivered daily recaps. |
+| `recap_watchlist` | Watchlist panel | Used by the `View watchlist` button on delivered daily recaps. |
 | `coin_<stablecoinId>` | Watchlist panel scrolled to coin row or launch-target card | Used by per-coin Web App buttons, `/status`, quick-subscribe confirmations, alert keyboards, and per-coin `/set` confirmations. If the coin is in the Mini App catalog but not already followed, the Watchlist tab renders a followable Launch target card. |
 | `why_<stablecoinId>` | Watchlist panel with an in-app why view | Used by `/why` launch contexts and Mini App coin cards. Shows available Mini App watch context and keeps the existing bot-DM `/why` deep link as the full explainer fallback. |
 | `coverage_<stablecoinId>` | Watchlist panel with an in-app coverage view | Used by `/coverage` launch contexts and Mini App coin cards. Shows available Mini App catalog/watch context and keeps the existing bot-DM `/coverage` deep link as the full coverage-card fallback. |
@@ -77,7 +79,7 @@ Recognized payloads:
 
 `sample` is intentionally **not** a Mini App view token. It is a bot-command `/start sample` payload only (private-chat-only; runs the `/sample` synthetic preview), like `sub_*`/`status_*`. The Home panel surfaces it via a "Send me a sample alert" button that calls `webApp.openTelegramLink("https://t.me/PharosWatchBot?start=sample")` rather than routing inside the app, because the Mini App cannot call the Bot API directly.
 
-Payload constraints: the frontend `?startapp=` parser accepts up to 512 characters (`TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH`); the worker `?start=` parser is capped at 64 (`TELEGRAM_START_PAYLOAD_MAX_LENGTH`). Both share the charset `[A-Za-z0-9_-]` (`TELEGRAM_MINI_APP_PAYLOAD_PATTERN`) but not the length constant. Emitted payloads are lowercase and contain no spaces; inbound parsing accepts either ASCII letter case and normalizes to lowercase. Unknown payloads fall through to the home panel. Parametric coin payloads whose id is in the Mini App catalog but not already followed render a launch-target card with Follow / Why / Coverage / View actions; ids no longer in the catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`. Signed `initData.start_param` values outside the Mini App payload envelope are ignored as `null` rather than rejecting the whole session.
+Payload constraints: the frontend `?startapp=` parser accepts up to 512 characters (`TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH`); the worker `?start=` parser is capped at 64 (`TELEGRAM_START_PAYLOAD_MAX_LENGTH`). Both share the charset `[A-Za-z0-9_-]` (`TELEGRAM_MINI_APP_PAYLOAD_PATTERN`) but not the length constant. Emitted payloads are lowercase and contain no spaces; inbound parsing accepts either ASCII letter case and normalizes to lowercase. Unknown payloads fall through to the home panel. Telegram adoption tokens (`pw1_*`) are also accepted on the `?startapp=` surface; those resolving to `miniapp_home` or `miniapp_watchlist` open the Home or Watchlist panel. Parametric coin payloads whose id is in the Mini App catalog but not already followed render a launch-target card with Follow / Why / Coverage / View actions; ids no longer in the catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`. Signed `initData.start_param` values outside the Mini App payload envelope are ignored as `null` rather than rejecting the whole session.
 
 The `recommended-setup` mutation is a single canonical, fail-closed preset: `usd-top25` with `dews` and `depeg`. Its operation schema and type live once in `shared/lib/telegram-mini-app-contract.ts`; broader preset follows use the separate `follow-preset` mutation.
 
@@ -103,7 +105,7 @@ Per-coin `set-coin` patches treat a non-null `depegStepBps` as an enabling opera
 
 The `subscriptions[]` state projection includes rows with at least one of the six enabled alert families or explicit override markers, plus snooze-only rows. All-disabled rows with no override or per-coin snooze are hidden so old clear/disable writes do not appear as active watchlist coins.
 
-Reserve drift (C123), launch, and freeze are untunable per-coin/global on/off families. `set-coin` patches carry optional `reserve` and `freeze` booleans, and global toggles use `set-global`. A coin whose only enabled families are untunable renders the C115 "on/off only. No tuning." line in `CoinCard`; neither reserve nor freeze has a per-coin threshold surface.
+Reserve drift (C123), launch, and freeze are untunable per-coin/global on/off families. `set-coin` patches carry optional `launch`, `reserve`, and `freeze` booleans, and global toggles use `set-global`. A coin whose only enabled families are untunable renders the C115 "on/off only. No tuning." line in `CoinCard`; neither reserve nor freeze has a per-coin threshold surface.
 
 ## Seam Rules
 
@@ -145,9 +147,9 @@ Each direct/local coin row's `CoinCard` renders a compact source chip derived pu
 
 - **Per-coin** — the coin has at least one explicit per-coin alert flag enabled; that lane wins over preset/global.
 - **Muted override** — at least one inherited family is off with its matching explicit override marker set, so that family suppresses the preset/global default.
-- **All-stablecoins** — fallback chip for displayed snooze-only/off rows that have no enabled per-coin flag and no preset/global coverage.
+- **All-stablecoins** — fallback chip for displayed snooze-only/off rows with no enabled per-coin flag and no marked-off override; those families simply inherit whatever preset/global coverage exists, including none.
 
-`computeEffectiveSource` returns the source per alert type; the chip shows the dominant display lane. An unmarked off flag inherits preset/global coverage and never renders as an opt-out. `PresetsPanel` labels preset coverage at the preset level only; it does not expand presets into member coins because preset-to-coin membership is dynamic, absent from the session payload, and authoritative only when resolved against the current cache. Following and unfollowing a preset changes only `telegram_preset_subscriptions`; direct/local coin rows remain unchanged.
+`computeEffectiveSource` returns the source per alert type; the chip shows the dominant display lane. An unmarked off flag inherits preset/global coverage and never renders as an opt-out. `PresetsPanel` labels preset coverage at the preset level only; it does not expand presets into member coins because preset-to-coin membership is dynamic, absent from the session payload, and authoritative only when resolved against the current cache. Following and unfollowing a preset changes `telegram_preset_subscriptions` plus the subscriber row's activity and preference-generation markers in `telegram_subscribers`; direct/local coin rows in `telegram_subscriptions` remain unchanged.
 
 ## Auth Model
 

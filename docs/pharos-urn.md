@@ -17,7 +17,7 @@ urn:pharos:<entity-class>:<id>[@<qualifier>]
 - **`urn:pharos:`** — fixed prefix. No other repo features may invent their own `pharos:foo:bar` strings.
 - **`<entity-class>`** — one of the closed enum below.
 - **`<id>`** — lowercase, hyphens not underscores, no leading or trailing hyphen.
-- **`@<qualifier>`** — optional version or ISO date, used only when the citation pins a mutable surface to a point in time. Lowercase letters, digits, hyphens, or dots allowed.
+- **`@<qualifier>`** — optional version or ISO date, used only when the citation pins a mutable surface to a point in time. Lowercase letters, digits, hyphens, or dots allowed; no leading or trailing hyphen or dot.
 
 The colon `:` separates the prefix and entity-class fields; `@` separates the id from the optional qualifier. Reader tooling splits on `:` first, then on `@`, to extract all components.
 
@@ -31,7 +31,7 @@ The colon `:` separates the prefix and entity-class fields; `@` separates the id
 | `depeg-event` | A confirmed depeg event | `urn:pharos:depeg-event:usdc-2023-03-11` |
 | `methodology` | A methodology document or changelog | `urn:pharos:methodology:dews@v4.2` |
 | `digest` | A daily or weekly digest issue | `urn:pharos:digest:2026-05-16` |
-| `cemetery` | A frozen-coin obituary entry | `urn:pharos:cemetery:basis-cash` |
+| `cemetery` | A frozen-coin obituary entry | `urn:pharos:cemetery:bac-basis-cash-2021-01` |
 | `dataset` | A static dataset export | `urn:pharos:dataset:stablecoin-cemetery` |
 | `snapshot` | A daily public-data snapshot row | `urn:pharos:snapshot:2026-05-16` |
 | `depeg-report` | A per-event depeg report (post-mortem) | `urn:pharos:depeg-report:usdc-2023-03` |
