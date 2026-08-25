@@ -24,7 +24,7 @@ An expired `sending` claim becomes `execution_unknown`. It is never returned to 
 
 ## Inspect
 
-Check `/api/status` and locate `budgetOnlySurfaces[]` where `surface == "telegram-digest-outbox-drain"`. `retainedExecutionUnknown` and `retainedFailedPermanent` represent operator backlog; they degrade that surface but do not repeatedly trip the shared Telegram provider circuit when no send was attempted.
+Check `/api/status` and locate `budgetOnlySurfaces[]` where `job == "telegram-digest-outbox-drain"`. `retainedExecutionUnknown` and `retainedFailedPermanent` represent operator backlog; they degrade that surface but do not repeatedly trip the shared Telegram provider circuit when no send was attempted.
 
 List unresolved editions:
 

@@ -151,7 +151,7 @@ WHERE state = 'running'
 ORDER BY updated_at, source_event_id;
 ```
 
-Do not manually advance a baseline while expiry debt remains or reset a plan generation. The `telegram_legacy_overflow_state` table was dropped from production on 2026-08-10. Any surviving `telegram-source:legacy-overflow:v1:*` cache rows are terminal evidence from the removed one-time importer; nothing writes them any more.
+Do not manually advance a baseline while expiry debt remains or reset a plan generation. The `telegram_legacy_overflow_state` table was dropped from production on 2026-08-10. Any surviving `telegram-source:legacy-overflow:v1:*` source rows — synthetic `source_event_id` values in `telegram_alert_source_events` and the plan, target, and pending rows that reference them — are terminal evidence from the removed one-time importer; nothing writes them any more.
 
 Targets that missed one alert:
 

@@ -6,10 +6,7 @@ This policy governs the addition of new cron trigger expressions to `worker/wran
 
 `worker/wrangler.toml` owns the deployed cron expressions. Each expression maps to one Cloudflare scheduled-trigger invocation, dispatched in `worker/src/handlers/scheduled.ts` to the jobs configured for that slot in `shared/lib/scheduled-runner-registry.ts`. Run `npm run check:cron-sync` and `npm run check:cron-connections` for the current inventory and capacity report.
 
-Cloudflare Workers enforce a limit of **6 simultaneous outbound requests waiting for response headers** per invocation. Pharos applies a conservative six-connection budget across every job dispatched within a trigger slot, even though Cloudflare releases the header-wait slot when headers arrive. The repo policy is documented in:
-
-- `docs/worker-and-api-limits.md` — see "Connection-budget operating assumption"
-- `docs/worker-infrastructure.md` — section "Cron Scheduling", subsection "Cron Slot Capacity and Connection Pool Budget"
+The platform header-wait limit and the stricter trigger-wide budget Pharos applies on top of it are stated once, in `docs/worker-and-api-limits.md` under "Connection-budget operating assumption". How that budget is measured and applied per slot is in `docs/worker-infrastructure.md`, section "Cron Scheduling", subsection "Cron Slot Capacity and Connection Pool Budget".
 
 ## Target
 
@@ -19,9 +16,9 @@ The growth gate and current counts are owned by `CRON_GROWTH_HEADROOM_POLICY` an
 
 ### Current growth gate
 
-The reviewed topology is fixed at **35 physical trigger expressions**, **32 fetch-capable scheduled entries**, and at most two headroom-full (`5/6`) slots. The current topology has one such slot, `halfHourlyOffset`; active measured execution remains `3/6`, and the bounded Solana shadow collector runs only after the EVM lane has released its connections, preserving that peak. Other shadow/native diagnostics remain daily. ADR-21 added the 35th expression by splitting the existing `v9PublicationOffset` lane into `22` and `52` hourly aliases; it added no logical work or connection pressure. `npm run check:cron-sync` rejects a 36th physical trigger, and `npm run check:cron-connections` rejects another fetch-capable entry or a third `5/6` slot until this gate is deliberately re-reviewed. These limits are owned by `CRON_GROWTH_HEADROOM_POLICY` in `shared/lib/cron-jobs.ts`; changing one is a policy change, not a routine schedule edit.
+The gate has three reviewed ceilings — physical trigger expressions, fetch-capable scheduled entries, and headroom-full (`5/6`) slots — and their current values live in `CRON_GROWTH_HEADROOM_POLICY` (`shared/lib/cron-jobs.ts`). Read them there rather than from prose; changing one is a policy change, not a routine schedule edit. The latest raise is recorded in ADR-21, which split the existing `v9PublicationOffset` lane into `22` and `52` hourly aliases without adding logical work or connection pressure. `npm run check:cron-sync` rejects a physical trigger past the reviewed count, and `npm run check:cron-connections` rejects another fetch-capable entry or one more `5/6` slot until this gate is deliberately re-reviewed.
 
-A sub-hourly logical cadence carrying heavy CPU work must use the paired-hourly physical form: one hourly `M * * * *` alias per logical offset, with the logical schedule and slot identity retained in `shared/lib/cron-jobs.ts`. Splitting an existing comma expression into hourly aliases is a topology rebalance of existing logical work, not new scheduled work. This qualifies the invocation for Cloudflare's hourly Cron CPU class without increasing logical cadence, fetch surface, or connection pressure; see the [Workers limits](https://developers.cloudflare.com/workers/platform/limits/).
+A sub-hourly logical cadence carrying heavy CPU work must use the paired-hourly physical form: one hourly `M * * * *` alias per logical offset, with the logical schedule and slot identity retained in `shared/lib/cron-jobs.ts`. Splitting an existing comma expression into hourly aliases is a topology rebalance of existing logical work, not new scheduled work. This qualifies the invocation for Cloudflare's hourly Cron CPU class without increasing logical cadence, fetch surface, or connection pressure; see the [Workers limits](https://developers.cloudflare.com/workers/platform/limits/). A lane killed by the sub-hourly 30-second CPU class surfaces as scheduled-slot abandonment; see [`docs/runbooks/cron-slot-abandonment.md`](../runbooks/cron-slot-abandonment.md).
 
 Before adding fetch-heavy scheduled work, the Worker operations owner is the required reviewer and must review the measured workload before one of these consolidation/rebalance paths is executed:
 
@@ -35,7 +32,7 @@ The same owner must explicitly consider Queues/Workflows when a proposed workloa
 
 When proposing a new cron job:
 
-1. **Audit existing slots.** Run `npm run check:cron-connections`. The checker derives each trigger's peak from `shared/lib/scheduled-runner-registry.ts`: serial chains use the max child budget, parallel chains are summed, and budget-only side work is modeled as a separate serial stage. Identify slots at or below `4/6`.
+1. **Audit existing slots.** Run `npm run check:cron-connections`. The checker derives each trigger's peak from `shared/lib/scheduled-runner-registry.ts`: serial chains use the max child budget, parallel chains are summed, and budget-only side work is modeled as a separate serial stage. The CLI prints only headroom-full (`5/6`) and failing triggers plus a summary count, so read `evaluateCronConnectionBudget()`'s `triggerReports` when you need each slot's individual peak and the slots at or below `4/6`.
 2. **Fit into an existing trigger.** Map the new job into a slot plan in `shared/lib/scheduled-runner-registry.ts` to share an existing trigger that has headroom. Jobs sharing a slot must consume or cancel any fetch response bodies before opening more fetches; see `docs/worker-and-api-limits.md`.
 3. **Only add a new cron expression after** the current growth gate has been re-reviewed and the consolidation/rebalance path above is complete. A fetch-isolated job still documents why it cannot share a slot (e.g. dedicated rate-limit budget for blacklist sync, mint-burn, dex-discovery, telegram dispatch).
 4. **Update `CRON_CONNECTION_BUDGET_ENTRIES`** in `shared/lib/cron-jobs.ts` to declare the new job's `maxConnections` and `connectionGroup`. `connectionGroup` documents serial sharing within a chain, but it does not reduce the peak across independent parallel chains. The CI guardrail `scripts/ci/check-cron-connection-budget.ts` (invoked via `npm run check:cron-connections`) blocks merges when any trigger is at or above `6/6`.
@@ -45,9 +42,9 @@ When proposing a new cron job:
 
 - Adding triggers without auditing inflates the Workers cron surface and increases the chance of one slot's failure mode interfering with another.
 - The platform limit is per invocation, not per Worker, so every scheduled tick needs its own bounded fetch plan. The repo's stricter trigger-wide model prevents nested phases from producing queued or failed `fetch()` calls at the platform ceiling.
-- Re-architecting batched dispatch (one trigger fanning out to many logical jobs via the slot plans in `shared/lib/scheduled-runner-registry.ts`) is the supported path past 20 cron expressions; bespoke new triggers should be the exception.
+- Re-architecting batched dispatch (one trigger fanning out to many logical jobs via the slot plans in `shared/lib/scheduled-runner-registry.ts`) is the supported path once any `CRON_GROWTH_HEADROOM_POLICY` gate is reached; bespoke new triggers should be the exception.
 
 ## Enforcement
 
 - `npm run check:cron-connections` (canonical path: `scripts/ci/check-cron-connection-budget.ts`) — runs for Worker-impacting PRs; fails when any trigger is at or above `6/6`, a third `5/6` slot is introduced, or the reviewed fetch-capable-entry count grows.
-- `npm run check:cron-sync` (canonical path: `scripts/ci/check-cron-schedule-sync.ts`) — keeps `worker/wrangler.toml` cron expressions aligned with `shared/lib/cron-jobs.ts` and `shared/lib/scheduled-runner-registry.ts`, and rejects growth beyond the reviewed 35 physical triggers.
+- `npm run check:cron-sync` (canonical path: `scripts/ci/check-cron-schedule-sync.ts`) — keeps `worker/wrangler.toml` cron expressions aligned with `shared/lib/cron-jobs.ts` and `shared/lib/scheduled-runner-registry.ts`, and rejects growth beyond the reviewed physical-trigger count in `CRON_GROWTH_HEADROOM_POLICY`.

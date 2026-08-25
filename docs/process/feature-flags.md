@@ -12,17 +12,19 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 
 ## Flags
 
-| Flag                                         | Gates                                                                               | Default                      | `expiresAt`                 |
-| -------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------- | --------------------------- |
-| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        | off                          | 2026-12-01                  |
-| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            | off                          | 2026-12-01                  |
-| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Idea 13b (recent blacklist banner, FE-only v1)                                      | off                          | 2026-12-01                  |
-| `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero `oneLiner` verdict + AI-summary TL;DR promotion)                       | on unless explicitly `false` | n/a (default-on, no expiry) |
-| `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`       | Idea 4 (curated + tape event-annotated charts)                                      | off                          | 2026-12-01                  |
-| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | Depeg Duration Resolver module on `/depeg/` (emergency rollback)                    | on unless explicitly `false` | 2026-12-01                  |
-| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) | on unless explicitly `false` | 2026-12-01                  |
+Each flag's default and `expiresAt` are owned by `src/lib/feature-flags.ts`; read them there rather than from this page.
 
-`expiresAt` is enforceable — each gated flag in code carries the same date in a comment, including the two default-on resolver flags (`DEPEG_RESOLVER` / `DEPEG_RESOLVER_REVIEWER`, both `2026-12-01`); only the default-on `HERO_VERDICT` has no expiry. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. The stale-flag check (`scripts/ci/check-stale-flags.ts`) is enforced by `check:structural` for affected PR paths and every nightly/manual validation run; it fails when any flag's `expiresAt` is today or earlier and warns 30 days ahead.
+| Flag                                         | Gates                                                                               |
+| -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        |
+| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            |
+| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Idea 13b (recent blacklist banner, FE-only v1)                                      |
+| `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype `VerdictPill`; the `oneLiner` and AI summary are not gated)  |
+| `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`       | Idea 4 (curated + tape event-annotated charts)                                      |
+| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR + Outlook Posture on `/depeg/`, detail DDR card; master-gates DDRR (rollback)   |
+| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) |
+
+`expiresAt` is enforceable: a gated flag carries its date in an `// expiresAt:` comment above the flag in `src/lib/feature-flags.ts`, and a flag with no such comment has no expiry. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. The stale-flag check (`scripts/ci/check-stale-flags.ts`) is enforced by `check:structural` for affected PR paths and every nightly/manual validation run; it fails when any flag's `expiresAt` is today or earlier and warns 30 days ahead.
 
 ## Flip readiness gates
 
@@ -30,7 +32,7 @@ What must be true before turning each flag on in production:
 
 ### `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`
 
-- [x] Magnitude-aware `getTrendClass` lands behind the flag (`src/lib/stablecoin-detail-view-model.ts`).
+- [x] Magnitude-aware `getTrendClass` lands behind the flag (`src/lib/stablecoin-detail-hero-view-model.ts`).
 - [x] WCAG AA contrast spot-check on the calm/warn/severe text tokens (light + dark themes): the 2026-07-29 CLI review of the flag-selected muted, green, amber, orange, and red tokens found a 4.78:1 minimum on light surfaces and 7.23:1 minimum on dark surfaces.
 - [ ] Visual review on USDC + USDe + a coin with an active depeg.
 
@@ -42,7 +44,7 @@ What must be true before turning each flag on in production:
 ### `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`
 
 - [x] Frozen-asset suppression in place.
-- [x] `useRecentBlacklist7d` aggregates client-side from the existing summary endpoint (no extra worker round-trips).
+- [x] `useRecentBlacklist7d` reads the worker's pre-aggregated `stats.perCoinRecentEventTypes` slice off the existing summary endpoint, sharing its query key (no extra worker round-trips).
 - [ ] iOS Safari sticky check on a coin with active freezes.
 
 ## 2026-07-29 lifecycle review
@@ -90,6 +92,12 @@ has been completed.
 pass them to the Next.js build; changing a Cloudflare Pages runtime variable
 does not change the static bundle.
 
+`.github/workflows/pages-release.yml` also passes non-flag `NEXT_PUBLIC_*`
+build inputs that this inventory does not govern. One of them,
+`NEXT_PUBLIC_FORCE_SITE_DATA_PROXY`, is hardcoded to `true` in that
+workflow rather than read from a Variable, so `gh variable set` cannot
+flip it; see [Architecture](../architecture.md) for what it switches.
+
 Set or roll back one flag at a time, then trigger the manual `Rebuild Pages`
 workflow so the new value is built, checked, and published:
 
@@ -107,12 +115,13 @@ build.
 After release, verify the relevant UI and the `Rebuild Pages` result. The
 release path runs `check:feature-flag-inlining` against the built bundle.
 Adding, renaming, or removing a flag also requires updating
-`src/lib/feature-flags.ts`, both build workflows, this inventory, and the
+`src/lib/feature-flags.ts`, the env block in
+`.github/workflows/pages-release.yml`, this inventory, and the
 inlining/stale-flag checks as applicable.
 
 ## Spec source
 
-The flag table above is the durable reference. Runtime defaults live in `src/lib/feature-flags.ts`; build-workflow propagation lives in `.github/workflows/pages-release.yml` (the production deploy workflow calls it for Pages builds).
+`src/lib/feature-flags.ts` is the source of truth for flag names, defaults, and `expiresAt` — it is the only file `scripts/ci/check-stale-flags.ts` reads. This page is the durable reference for what each flag gates, its flip-readiness gate, the rollout procedure, and the retention rationale. Build-workflow propagation lives in `.github/workflows/pages-release.yml` (the production deploy workflow calls it for Pages builds).
 
 ## 2026-08-23 lifecycle review
 

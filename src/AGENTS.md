@@ -8,6 +8,8 @@ Applies to `src/**`.
 - `docs/architecture.md`
 - Design work: `docs/design-context.md`, `docs/design-language.md`, `docs/design-tokens.md`
 
+Per-change routing is owned by `docs/doc-ownership.json`; run `node --import tsx scripts/ci/pharos-change-contract.ts` for the docs, checks, and rules that match the exact files you touch. The list above is the offline starting point, not the full contract.
+
 ## Rules
 
 See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file only documents src-specific items.

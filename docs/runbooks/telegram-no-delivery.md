@@ -2,14 +2,14 @@
 
 ## Symptom
 
-Users report missing alerts despite a recent DEWS/depeg/safety/launch event, or admin status shows `eventsDetected > 0` but `messagesSent == 0` across consecutive dispatch runs.
+Users report missing alerts despite a recent DEWS/depeg/safety/launch event, or admin status shows a non-zero `eventsDetected` family count (`dews`, `depeg`, `safety`, `launch`, `reserve`) but `messagesSent == 0` across consecutive dispatch runs.
 
 Detection signals:
 
-- Admin `/api/status` `crons["dispatch-telegram-alerts"].lastRun.metadata` shows zero `messagesSent` while `eventsDetected > 0` across consecutive runs. (These per-run counters are dispatch-cron metadata; the `telegramBot` block does not carry them.)
+- Admin `/api/status` `crons["dispatch-telegram-alerts"].lastRun.metadata` shows zero `messagesSent` while an `eventsDetected` family count is non-zero across consecutive runs. (These per-run counters are dispatch-cron metadata; the `telegramBot` block does not carry them.)
 - `crons["dispatch-telegram-alerts"].lastRun.metadata` reports `snapshotSeeded: true` repeatedly.
 - `crons["dispatch-telegram-alerts"].lastRun.metadata` includes capacity fields: `freshCandidateCount`, `freshOverflow`, `pendingAttempted`, `pendingSent`, `pendingRetryQueued`, `pendingExpired`, `oldestPendingAgeSec`, `estimatedDrainTimeSec`, `perAlertTypeTargets`, and fan-out timing (`fanoutQueryMs`, `fanoutBuildMs`, `fanoutTotalMs`). For source-event runs, `authoritativePlanning` splits source-preset, candidate-horizon, capture/fan-out loader, preference validation, routing, materialization, duplicate suppression, handoff, and pending-drain time and includes page/load/cache/target counts.
-- `retryErrorClassCounts` dominated by a single runtime class (`rate_limit`, `blocked`, `bad_request`, `auth_error`, `server_error`, `timeout`, `network`, or `unknown`).
+- `telegramBot.retryErrorClassCounts` dominated by a single value. Transport classes are `rate_limit`, `blocked`, `chat_not_found`, `chat_migrated`, `formatting_error`, `payload_too_large`, `bad_request`, `auth_error`, `server_error`, `timeout`, `network`, and `unknown`. Deferral reasons share the column (`preference_snoozed`, `preference_preset_unavailable`, `preference_generation_changed`, `recap_snoozed`) and point at preference/snooze state rather than Telegram transport.
 - A specific user reports silence: pull their per-chat state with the D1 queries below.
 
 ## Quick Diagnostic Checklist
@@ -28,24 +28,19 @@ Detection signals:
    ```
 
    Check for:
-   - `alert_snooze_until_ts` greater than the current Unix timestamp (user snoozed; that value is the expiry)
-   - `quiet_hours_enabled = 1` and the current UTC hour inside the returned start/end window
+   - `alert_snooze_until_ts` greater than the current Unix timestamp (user snoozed; that value is the expiry). The exact value `4102444800` is the `/pause` sentinel — alerts are paused indefinitely, not snoozed; the user resumes with `/pause off` or `/unsnooze`
+   - `quiet_hours_enabled = 1` and the current hour **in the row's `timezone`** inside the returned start/end window (the `*_utc` columns are hour-of-day integers interpreted in `timezone`; UTC only when `timezone` is NULL or the zone is unknown to the runtime)
    - `consecutive_block_count >= 2` (subscriber auto-disabled after repeated Telegram 403s)
    - no `telegram_subscriptions` / `telegram_preset_subscriptions` rows for the chat and every `global_alert_*` column 0
-   - no `telegram_subscribers` row at all while pending, dead-letter, or target rows still exist for that chat, which means registration was deleted but bounded operational evidence remains
+   - no `telegram_subscribers` row at all: deletion (`/forget`, mini-app forget-me, inactive-subscriber cleanup) removes that chat's pending, target, plan, and dead-letter rows in the same atomic batch, and chat migration re-points them. Leftover rows for a missing subscriber mean a partially applied delete or a concurrent drain — reconcile before acting
 
    Use [`telegram-operator-queries.md`](./telegram-operator-queries.md) for the pending-queue, dead-letter, and per-target history queries the retired endpoint bundled into one response.
 7. **Webhook secret valid?** Failed validations return `200 ok` silently. Check Cloudflare logs for `telegram-webhook` requests against the configured `TELEGRAM_WEBHOOK_SECRET`, especially if the secret was recently rotated.
 
 ## Remediation
 
-1. **Circuit breaker open.** `POST /api/reset-circuit-breaker` was retired on 2026-08-09. Delete the breaker row directly, which is exactly what the endpoint did and forces the next call to re-probe closed:
-
-   ```bash
-   npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-     "DELETE FROM cache WHERE key = 'circuit:telegram-api';"
-   ```
-2. **Snapshot stale loop.** Confirm the dispatch cron has run successfully at least once after the stale-snapshot reseed. If `snapshotSeeded: true` persists across three runs, inspect the snapshot cache keys (`alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`) for malformed values.
+1. **Circuit breaker open.** Clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), breaker key `circuit:telegram-api`.
+2. **Snapshot stale loop.** Confirm the dispatch cron has run successfully at least once after the stale-snapshot reseed. If `snapshotSeeded: true` persists across three runs, inspect the snapshot cache keys the seed gate reads (`alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`) for missing or malformed values. A malformed `alert:safety-snapshot` only suppresses safety changes; it never seeds the run.
 3. **Single user blocked.** If `consecutive_block_count >= 2`, the user must `/start` again. The flag resets on the next successful send. Confirm they have not blocked the bot in Telegram itself.
 4. **Single user snoozed/quiet-hours.** Advise `/unsnooze` or `/unmutehours`. No operator action.
 5. **Pending queue full / overflow.** Follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).

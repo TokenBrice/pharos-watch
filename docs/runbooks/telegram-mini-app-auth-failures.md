@@ -6,7 +6,7 @@
 
 Detection signals:
 
-- `telegram_usage_daily` shows authenticated `event_type = 'mini_app_session_invalid'` rows climbing relative to the prior day's baseline. Those rows come from the session-read endpoint; the `outcome` column distinguishes `stale-auth` (expired but signature-valid sessions) from `rate_limited` (per-user cooldown exceeded). A stale-but-signed **mutation** attempt is written as `mini_app_mutation_denied` with `failure_class = 'stale-auth'` and the operation kind in `action_detail`, keeping the TGB-022 stale-auth mutation-denial ratio separable from session-read expiry. Body-size (`413`) and schema (`400 validation-error`) failures return immediately without a D1 write and are visible only in Worker logs. Invalid signatures and malformed signed auth are intentionally not written to usage analytics because no trusted Telegram user or chat context exists yet.
+- `telegram_usage_daily` shows authenticated `event_type = 'mini_app_session_invalid'` rows climbing relative to the prior day's baseline. Those rows come from the session-read endpoint; the `outcome` column distinguishes `stale-auth` (expired but signature-valid sessions) from `rate_limited` (per-user cooldown exceeded). A stale-but-signed **mutation** attempt is written as `mini_app_mutation_denied` with `failure_class = 'stale-auth'` and a normalized operation label in `action_detail` (`coin`, `preset`, `quiet_hours`, `chat`, `recap`, …, not the raw operation kind), keeping the TGB-022 stale-auth mutation-denial ratio separable from session-read expiry. Repeat stale attempts inside the 5-second per-user auth-failure cooldown return `429 rate-limited` with no D1 write, so these counts undercount total stale attempts during a spike. Body-size (`413`) and schema (`400 validation-error`) failures return immediately without a D1 write and are visible only in Worker logs. Invalid signatures and malformed signed auth are intentionally not written to usage analytics because no trusted Telegram user or chat context exists yet.
 - The Mini App pulse strip (`/api/telegram-pulse`) shows `miniAppSessionsToday` flat or falling. Its `miniAppDeniedToday` counter tracks post-auth mutation denials (`mini_app_mutation_denied`, including the `stale-auth` failure class) and does not move for a session-read auth-failure spike; use the `event_type = 'mini_app_session_invalid'` query below for that signal.
 - A high share of `mini_app_mutation_denied` rows with `failure_class = 'rate_limited'` means authenticated users or scripts exhausted the Pharos mutation budget. The server allows 12 mutation attempts per Telegram user in a 30-second window anchored to the first admitted write; this signal is distinct from Telegram Bot API delivery rate limits.
 - Cloudflare logs for `POST /api/telegram-mini-app/mutate` return `401` with `code = "stale-auth"` across many distinct user IDs in a short window.
@@ -68,6 +68,7 @@ WITH mini_app_writes AS (
           'mini_app_coin_add',
           'mini_app_coin_remove',
           'mini_app_quiet_hours',
+          'mini_app_recap',
           'mini_app_snooze',
           'mini_app_coin_snooze',
           'mini_app_forget'

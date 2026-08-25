@@ -11,6 +11,8 @@ Research-heavy metadata can move independently from a coin's scalar identity and
 | Compliance     | `shared/data/stablecoins/domains/compliance/<id>.json`     | `mica`, `genius`                                                              |
 | Risk review    | `shared/data/stablecoins/domains/risk-review/<id>.json`    | `blacklistabilityReview`, `oracleRisk`, `bridgeRouteRisk`                     |
 
+The table mirrors `STABLECOIN_SOURCE_DOMAIN_FIELDS` in `shared/lib/stablecoins/schema.ts`, which is the enforced owner of the domain-to-field mapping; if the two disagree, the constant is right.
+
 Sidecars are selective. Fields such as identity, flags, contracts, links, jurisdiction, classification overrides, notices, launch metadata, and other scalar catalog metadata remain in `coins/<id>.json`.
 
 The layout migration is complete: no base coin file carries a domain-owned field. Every coin whose research a domain covers has that domain's sidecar, so a base file's absence of a domain directory entry now means the coin has no such research, not that the field is still awaiting migration. Author new research directly in the sidecar.
@@ -23,7 +25,7 @@ Reserve slices may carry a namespace-qualified stable `sourceKey` plus review-us
 
 `proofOfReserves.latestReport` remains inside the base `proofOfReserves` object because proof configuration was already base-owned. A latest report records period end, publication date, assurance method, assets-only versus assets-and-liabilities scope, liability reconciliation, and review provenance. An `independent-audit` label without a verifiable current report remains valid metadata but is surfaced in the audit backfill queue.
 
-`dependencyReview` remains base metadata. It is required only for authored `dependencies` relationships that are not already represented by a linked reserve slice. Its relationship list must exactly match those manual-only edges, including an explicit dependency type. Reserve-derived dependencies use the reserve composition and `reserveReview` provenance instead of duplicating evidence per edge.
+`dependencyReview` remains base metadata. It is required only for authored `dependencies` relationships that are not already represented by a linked reserve slice. When present, its relationship list must exactly cover those manual-only edges plus the implicit `variantOf` wrapper edge, including an explicit dependency type; a wrapper-only review that documents just the `variantOf` edge is valid. Reserve-derived dependencies use the reserve composition and `reserveReview` provenance instead of duplicating evidence per edge.
 
 Once a coin has a sidecar for a domain, all fields owned by that domain must stay out of its base file. This keeps the evidence and its coupled decision fields together. `blacklistabilityReview.reviewedStatus` is the sole authored freeze/blacklist verdict.
 
@@ -71,7 +73,7 @@ npx tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts
 node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts
 ```
 
-For a layout-only move, the full, client, compliance, and legacy-redirect artifacts must remain byte-identical. If they change, stop and inspect the projection before proceeding.
+For a layout-only move, the full, client, compliance, Telegram Mini App, report-card fingerprint, and legacy-redirect artifacts must remain byte-identical. If they change, stop and inspect the projection before proceeding.
 
 Validation:
 

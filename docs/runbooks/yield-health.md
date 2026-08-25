@@ -2,7 +2,7 @@
 
 Triggered by `/api/status` field:
 - `yieldHealth.statusImpact="public-critical"` when `yield-rankings` is missing or stale
-- `yieldHealth.status` is `"degraded"` (or `"stale"` once a supplemental, benchmark, or coverage-audit surface passes its stale threshold) while `statusImpact` stays `"admin-watch"` for admin-watch yield diagnostics such as sparse safety coverage, stale supplemental cache, benchmark fallback, old coverage audit, or low source-risk evidence coverage; stale comparison anchors are exposed as field-level watch signals, but do not by themselves change the aggregate `yieldHealth.status`
+- `yieldHealth.status` is `"degraded"` (or `"stale"` once a supplemental or coverage-audit surface passes its stale threshold; a stale benchmark key only degrades the aggregate, because the benchmark-registry rollup never reports `"stale"`) while `statusImpact` stays `"admin-watch"` for admin-watch yield diagnostics such as sparse safety coverage, stale supplemental cache, benchmark fallback, old coverage audit, or low source-risk evidence coverage; stale comparison anchors are exposed as field-level watch signals, but do not by themselves change the aggregate `yieldHealth.status`
 
 ## Symptom
 
@@ -23,7 +23,7 @@ The admin Pipeline lane shows stale or degraded Yield Health. Public impact is l
 5. **Benchmarks:** inspect `yieldHealth.benchmarkRegistry` first, then the legacy USD-only `yieldHealth.benchmark` field. The registry identifies every benchmark key used by published rows, its row count, fallback-selection count, age, source, and health. Any used fallback degrades the aggregate; age above 48h is stale and cannot support an exact current PYS.
 6. **Source-risk coverage:** inspect `yieldHealth.sourceRiskCoverage`; core fields below 75% coverage are admin-watch gaps. `venueRiskTier="unknown"` counts as missing evidence, not high risk.
 7. **Comparison anchors:** inspect `yieldHealth.comparisonAnchorFreshness`; any `staleAnchorCount > 0` is an admin-watch signal. `oldestAnchorAgeSeconds`, `oldestAnchorStablecoinId`, `oldestAnchorSourceKey`, and bounded `staleAnchorExamples` identify the affected derived-source rows.
-8. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late. `headlineGapCount`, `recommendationCandidateCount`, `staleAutoLendingOverrideCount`, `venueRiskConfigMissingCount`, `headlineGaps`, and `recommendationCandidates` are the read-only triage queue. Candidate kind `venue-risk-config-missing` means a covered high-TVL lending venue slug is missing a reviewed venue-risk registry entry or alias; candidate kind `quarantine-ready-to-restore` means a monthly quarantine re-probe succeeded and still requires manual source restoration; candidate kind `stale-venue-risk-score` means a reviewed venue's 5-category risk score is older than 90 days and should be re-verified (audits, governance, TVL); headline kind `stale-auto-lending-override` means a deterministic lending pin no longer clears current static gates and needs removal, repointing, or a written bypass review.
+8. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late. `headlineGapCount`, `recommendationCandidateCount`, `staleAutoLendingOverrideCount`, `venueRiskConfigMissingCount`, `headlineGaps`, and `recommendationCandidates` are the read-only triage queue. Candidate kind `venue-risk-config-missing` means a covered high-TVL venue slug (allowlisted lending protocol or curated exact covered pool) is missing a reviewed venue-risk registry entry or alias; candidate kind `quarantine-ready-to-restore` means a monthly quarantine re-probe succeeded and still requires manual source restoration; candidate kind `stale-venue-risk-score` means a reviewed venue's 5-category risk score is older than 90 days and should be re-verified (audits, governance, TVL); headline kind `stale-auto-lending-override` means a deterministic lending pin no longer clears current static gates and needs removal, repointing, or a written bypass review.
 
 Access-gated surfaces:
 
@@ -40,7 +40,7 @@ Access-gated surfaces:
 | Used benchmark registry | `sync-yield-data` ranking + benchmark provenance | Any used fallback/proxy selection | Missing or age above 48h | No | Every used key is reported independently; expired rows remain visible with PYS NR | [benchmark fallback](./yield-benchmark-fallback-stale.md) |
 | Coverage audit age | `yield-coverage-audit` -> `cache['yield-coverage-audit']` | Age above 45d or missing audit | Age above 540d | No | Late monthly review or unavailable queue stays watch-only | This runbook |
 | Source-risk coverage | `sync-yield-data` published `sourceRisk.*` rows and retained alternates | Any core field below 75% coverage: `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, or `sourceRiskScore` | No separate stale tier; zero coverage is degraded when ranking rows exist | No | Missing neutral-fallback evidence degrades Yield Health | This runbook |
-| Comparison-anchor freshness | `sync-yield-data` metadata `sourceCoverage.comparisonAnchorFreshness` | Any `staleAnchorCount > 0` | No separate stale tier | No | Stale comparison anchors degrade Yield Health as an operator-watch signal only | This runbook |
+| Comparison-anchor freshness | `sync-yield-data` metadata `sourceCoverage.comparisonAnchorFreshness` | Any `staleAnchorCount > 0` | No separate stale tier | No | Field-level watch signal only; excluded from the aggregate `yieldHealth.status` rollup | This runbook |
 
 Read-only JSON checks:
 
@@ -121,7 +121,7 @@ LIMIT 10;
 - Do not guess or manually backfill source-risk tiers. `venueRiskTier="unknown"` is intentionally treated as missing evidence.
 - Do not clear a `sync-yield-data` or `sync-yield-supplemental` lease while `/api/status` shows a fresh active in-flight progress row.
 - Do not treat supplemental staleness, safety sparsity, source-risk coverage gaps, comparison-anchor freshness, or coverage-audit age as public outages unless a later release explicitly changes the status-impact rule.
-- Stop if `cache['yield-history-cleanup:writer-pause']` is armed; use the writer-pause runbook before expecting post-V9 yield publication to advance.
+- Stop if `cache['yield-history-cleanup:writer-pause']` is armed; use [`yield-history-cleanup-writer-pause.md`](./yield-history-cleanup-writer-pause.md) before expecting post-V9 yield publication to advance.
 
 ## Validation
 

@@ -26,7 +26,7 @@ The producer measures collateralization, reserve excess, and the dedicated Reser
 
 USDf uses `https://api.falcon.finance/api/v1/transparency`, with a maximum source age of 36 hours and the common 5-minute future tolerance. Asset-allocation cells may arrive as quoted decimals or exact JSON number tokens; both forms normalize to nonnegative canonical decimal strings without `Number` coercion. The asset rows must reconcile to top-level TVL within `max($0.01, TVL * 1e-9)` using exact decimal arithmetic.
 
-The separately published `reserves` total has unresolved scope and is excluded from backing while it does not reconcile with asset TVL. The insurance fund is measured separately as dedicated loss absorption and is not added to collateral TVL. An empty `venues` object means venue evidence was not published; it does not establish zero exposure. Hedge coverage, exchange-margin headroom, funding stress, and executable unwind capacity remain unavailable, so direct score adoption is blocked.
+The separately published `reserves` total has unresolved scope, is never admitted as backing, and is reported only as the `publishedReservesToAssetRows` and `publishedReservesToSupply` reconciliations for scope diagnosis. The insurance fund is measured separately as dedicated loss absorption and is not added to collateral TVL. An empty `venues` object means venue evidence was not published; it does not establish zero exposure. Hedge coverage, exchange-margin headroom, funding stress, and executable unwind capacity remain unavailable, so direct score adoption is blocked.
 
 ## Automation
 

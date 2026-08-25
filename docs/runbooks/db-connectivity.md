@@ -22,5 +22,5 @@ Triggered by `StatusCause.code`:
 
 ## Prevention
 
-- `status-self-check` flags `db_unhealthy` on the first failure; the hysteresis policy holds `stale` for 180s minimum before recovery. Short blips are absorbed.
+- `status-self-check` flags `db_unhealthy` on the first failure: a single failed sentinel escalates straight to `stale` (`escalateToStale = 1`), so short blips are not absorbed on the way in. The hysteresis damps only recovery — leaving `stale` requires three consecutive healthy self-check readings (`recoverToHealthy = 3`) as well as the 180s minimum dwell (`staleMinDwellSec`), roughly 45 minutes at the 15-minute cadence rather than the 3 minutes the dwell alone implies.
 - Long-running migrations should be batched so each statement stays under D1's 30s per-statement limit.

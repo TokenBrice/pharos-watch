@@ -13,7 +13,7 @@ Yield rows still publish, but benchmark provenance shows a fallback or retained 
 
 ## Impact
 
-Rankings are usually available, but benchmark-relative interpretation is degraded. The post-V9 publisher degrades when the default USD benchmark is a true fallback, when retained fallback mode is active, or when the retained last-known-good USD benchmark is older than 48 hours (2 days). Beyond that scoring TTL, affected rows are benchmark-stale and PYS is NR.
+Rankings are usually available, but benchmark-relative interpretation is degraded. The post-V9 publisher degrades when the default USD benchmark is a true fallback, when retained fallback mode is active, or when the retained last-known-good USD benchmark is older than 48 hours (2 days). A non-USD benchmark that is itself fallback or stale also degrades the run on its own, reported as `risk-free-rate:<KEY>:<reason>`. Beyond that scoring TTL, affected rows are benchmark-stale and PYS is NR.
 
 ## First Checks
 
@@ -55,9 +55,9 @@ WHERE key = 'yield-rankings';
 ## Remediation
 
 - If the benchmark fetch failed once and the retained rate is recent, monitor until the next daily benchmark lane or manually trigger the established cron path if available to operators.
-- If the GBP SONIA retained-fallback alert or canary fired, inspect `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` for `consecutiveRetainedRuns`, `consecutiveFreshRuns`, `lastMarketSource`, `lastMarketRecordDate`, `lastFreshSource`, `lastFreshRecordDate`, and `lastAlertedAt`. Inspect the latest `fetch-tbill-rate` cron metadata `gbpResponseAttempts` to distinguish transport failure, HTTP status failure, empty body, and parse failure across FRED, ALFRED, and BoE. If FRED and ALFRED both return HTTP 520, verify their adapter still sends `Pharos/1.0 (+https://pharos.watch)` before treating the incident as an upstream outage. Response bodies and URLs are intentionally absent from diagnostics.
+- If the GBP SONIA retained-fallback alert or canary fired, inspect `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` for `consecutiveRetainedRuns`, `consecutiveFreshRuns`, `lastMarketSource`, `lastMarketRecordDate`, `lastFreshSource`, `lastFreshRecordDate`, and `lastFallbackMode`; repeat alerting is visible as the `gbp-retained-fallback-repeated` cron event, not as a cached timestamp. Inspect the latest `fetch-tbill-rate` cron metadata `gbpResponseAttempts` to distinguish transport failure, HTTP status failure, empty body, and parse failure across FRED, ALFRED, and BoE. If FRED and ALFRED both return HTTP 520, verify their adapter still sends `Pharos/1.0 (+https://pharos.watch)` before treating the incident as an upstream outage. Response bodies and URLs are intentionally absent from diagnostics.
 - If a provider-specific outage is visible, wait for upstream recovery rather than replacing rates manually.
-- If `fetch-tbill-rate` is stale because of a lease issue, first confirm `/api/status` has no fresh matching `inFlight` progress. `POST /api/reset-cron-lease` is retired; then delete only `cron_leases.job = 'fetch-tbill-rate'` with scoped remote D1 SQL and verify the next daily run.
+- If `fetch-tbill-rate` is stale because of a lease issue, clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `fetch-tbill-rate`, and verify the next daily run.
 - If only non-USD benchmarks are missing while USD is healthy, document the affected peg currencies in incident notes; USD rankings remain the primary availability path.
 
 ## Abort Conditions

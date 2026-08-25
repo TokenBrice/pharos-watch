@@ -34,7 +34,7 @@ The shared Pharos convention:
 - `.claude/skills/<name>/SKILL.md` is a relative symlink to `../../../.codex/skills/<name>/SKILL.md`.
 - Canonical shared skill bodies must use repo-relative paths such as `.codex/skills/<name>/references/...` or normal repo source paths. Do not use `$CODEX_HOME` paths in a skill that Claude symlinks.
 
-Every Pharos skill is canonical in `.codex/skills/` with matching `.claude/skills/<name>/` symlinks; there are no runtime-exclusive skills. The directory listing is the source of truth — do not maintain a name roster here. When a canonical skill has companion files the body reads (for example `reference.md`), symlink those alongside `SKILL.md`.
+Every Pharos skill is canonical in `.codex/skills/` with matching `.claude/skills/<name>/` symlinks; there are no runtime-exclusive skills. The directory listing is the source of truth — do not maintain a name roster here. When a canonical skill's body reads companion files by skill-relative path (for example `./reference.md` or `references/subagents.md`), symlink those alongside `SKILL.md`; a body that reads them by repo-relative `.codex/skills/<name>/...` path needs no mirror.
 
 Skill bodies must not hard-code snapshots of current repo state (counts, methodology versions, enum lists, skill rosters). State the rule and point at the owning source file instead; when an enumeration is embedded for reading convenience, mark it with "the source file wins" so agents re-verify before relying on it.
 
@@ -64,7 +64,7 @@ Pharos currently has no repository-owned plugin or MCP server. Keep it that way 
 
 ## Local Hook Setup
 
-Tracked hooks are intentionally limited to deterministic Git policy under `.githooks/` and stateless Claude hook configuration in `.claude/settings.json`. The pre-commit hook runs `npm run sync:staged-artifacts`, regenerating and staging the committed generated artifacts the staged sources affect; it aborts rather than staging an artifact whose sources have unstaged working-tree edits, and `PHAROS_SKIP_ARTIFACT_HOOK=1` bypasses it. Codex executable hooks remain an explicit local opt-in because they can run shell commands outside normal tool approval:
+Tracked hooks are intentionally limited to deterministic Git policy under `.githooks/` and stateless Claude hook configuration in `.claude/settings.json`. The pre-commit hook runs `npm run sync:staged-artifacts`, regenerating and staging the committed generated artifacts the staged sources affect; its selection, abort, and bypass semantics are owned by [Scripts](../scripts.md#operational-notes). Codex executable hooks remain an explicit local opt-in because they can run shell commands outside normal tool approval:
 
 ```bash
 PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup

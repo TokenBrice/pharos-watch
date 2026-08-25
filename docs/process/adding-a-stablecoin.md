@@ -12,16 +12,12 @@ Current source of truth is the per-coin JSON registry under `shared/data/stablec
 
 ## Source Of Truth
 
-| File                                                                                                            | Purpose                                                                                                          |
-| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `shared/data/stablecoins/coins/*.json`                                                                          | Editable source of truth for all catalog metadata and lifecycle state                                            |
-| `shared/data/stablecoins/domains/<domain>/*.json`                                                               | Optional strict sidecars for migrated reserves, mint-authority, compliance, and risk-review research             |
-| `shared/data/stablecoins/coins.generated.json`                                                                  | Generated/runtime aggregate; regenerate with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
-| `shared/data/stablecoins/canonical-order.json`                                                                  | Canonical tracked order used to build `TRACKED_STABLECOINS`                                                      |
-| `shared/data/stablecoins/listing-decisions.json`                                                                | Compact exhaustive catalog ID to listing-class map                                                              |
-| `shared/data/stablecoins/AGENTS.md`                                                                             | Agent notes pinned to the registry directory                                                                     |
-| `data/logos.json`                                                                                               | Static logo map used by the frontend                                                                             |
-| `data/ai-summaries.json`                                                                                        | Static editorial summaries used on detail and upcoming surfaces                                                  |
+[Stablecoin Data Registry](../stablecoin-data.md#source-files) owns the catalog source-file table, the generated projections, and the single supported regeneration entry point (`npm run bootstrap:generated`). Do not restate that table here. Two additional static files are addition-specific and are not part of it:
+
+| File                    | Purpose                                                        |
+| ----------------------- | -------------------------------------------------------------- |
+| `data/logos.json`       | Static logo map used by the frontend                           |
+| `data/ai-summaries.json`| Static editorial summaries used on detail and upcoming surfaces |
 
 Useful repo references before editing:
 
@@ -115,7 +111,7 @@ Record one accepted path in the research packet:
 | Path                        | Price requirement                                                                                                                                    | Market-cap / supply requirement                                                                                                            |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | DefiLlama stablecoins       | `llamaId` resolves to the intended asset and the list/detail data exposes a price                                                                    | DefiLlama list `circulating` is present; do not multiply list values by price                                                              |
-| CoinGecko supplemental fiat | `detailProvider: "coingecko"` plus verified `geckoId` returns a positive price through DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price` | CoinGecko `usd_market_cap` is positive, or exactly one supported `contracts[]` deployment can support on-chain total-supply fallback       |
+| CoinGecko supplemental fiat | `detailProvider: "coingecko"` plus verified `geckoId` returns a positive price through DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price` | CoinGecko `usd_market_cap` is positive, or `hasRuntimeOnchainSupplyPath()` in `shared/lib/onchain-supply-probe.ts` resolves an on-chain supply path (Zephyr Scanner, one supported deployment, a curated single-chain override, or a curated aggregate), as enforced by `npm run check:stablecoin-data` |
 | Commodity supplemental      | verified `geckoId` returns the commodity token price, with `commodityOunces` set when fractionalized                                                 | CoinGecko market cap is positive, or a gold asset uses the dedicated `tether-gold` or `paxos-gold` protocol slug whose DefiLlama data exposes usable `mcap` |
 | Explicit runtime exception  | documented source-specific path such as Zephyr Scanner or a maintained low-volume allowlist                                                          | same source exposes usable circulating supply or market-cap data                                                                           |
 
@@ -179,7 +175,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `pythFeedId`
 - `pegReferenceId`
 - `commodityOunces`
-- `proofOfReserves` (with optional `attestorTier`, `cadence`, `attestorJurisdiction`, `attestorLicense`)
+- `proofOfReserves` (with optional `attestorTier`, `cadence`, `attestorJurisdiction`, `attestorLicense`, and a structured `latestReport`)
 - `jurisdiction`
 - `tradedContracts`
 - `dependencies`
@@ -247,7 +243,7 @@ Use a nearby coin only as a structural example. The schemas and `npm run check:s
 - `mintAuthority` is curated metadata that feeds Safety Score V9 Economic Control facts and its published mint component. The separate Mint Authority scoring engine is retired. This metadata does not create selector exclusions. Do not add it from scanner output alone, and do not use it as a workaround for blacklistability/freezability review. Active variants require an explicit `mintAuthority` review, normally `wrapped-or-variant-inherited` with `inheritedFrom` set to `variantOf`, so inherited mint risk cannot silently become an unresolved V9 gap.
 - `bridgeRouteRisk` is curated metadata for cross-chain mint, lockbox, attestation, liquidity, intent, or canonical routes. Safety Score V9 combines the reviewed route identity and control evidence with bounded runtime materiality; missing required evidence becomes an explicit gap or cap. Use L2BEAT Interop candidate output only as review evidence; verify route docs, contracts, and source links before authoring a sourced profile.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
-- `variantOf` / `variantKind` are only for active wrapped, staked, strategy-vault, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`. Supported kinds and their dependency-risk ceilings relative to the parent overall: `savings-passthrough` = `parent - 3`, `strategy-vault` = `parent - 5`, `risk-absorption` = `parent - 5`, `bond-maturity` = `parent - 8`. Review the variant as `"inherited"` when its exposure comes only from the parent; use a direct verdict only when the wrapper has its own holder-control surface.
+- `variantOf` / `variantKind` are only for active wrapped, staked, strategy-vault, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `pegReferenceId === variantOf`. Supported kinds are `pure-wrapper`, `savings-passthrough`, `strategy-vault`, `risk-absorption`, and `bond-maturity`. `pure-wrapper` children keep `flags.navToken === false`; every other kind must keep `flags.navToken === true`, and `risk-absorption` additionally requires `wrapperOperator`. Safety Score V9 maps the kind to a wrapper strategy form (pure / staked / vault) that feeds the parent cap in `shared/lib/safety-score-v9/evaluate-asset.ts`; the old Selector `dependencyRisk` parent-minus-N ceilings are retired. Review the variant as `"inherited"` when its exposure comes only from the parent; use a direct verdict only when the wrapper has its own holder-control surface.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
 - `tags` is optional editorial metadata. Do not use it instead of a first-class field.
 
@@ -266,7 +262,7 @@ Use `infrastructures[]` only when the coin directly belongs to a supported techn
 Important M0 rules:
 
 - M0-built coins may or may not actually hold `m-m0` in reserves.
-- `m-m0` itself is not tagged with `["m0"]`; it is the base infrastructure asset.
+- `m-m0` is itself tagged `["m0"]` as the base infrastructure asset, so it appears in the M0 infrastructure cohort.
 - A wrapper or downstream derivative should not inherit `["m0"]` automatically just because the base asset depends on M0.
 
 Use `dependencies[]` separately to describe asset relationships:
@@ -307,15 +303,18 @@ Mapping cheatsheet:
 - `cdp`: crypto-backed + decentralized + overcollateralized vaults (DAI, LUSD, crvUSD)
 - `synthetic-delta-neutral`: crypto + hedging in `pegMechanism` (USDe, USR)
 - `algorithmic`: mechanism archetype for reflexive/programmatic peg mechanisms; it is not tied to `flags.backing`. Current active entries with this archetype remain classified by actual collateral base.
+- `rwa-credit-fund`: tokenized share of a managed credit/fund book whose value comes from NAV rather than a redeemable cash float; it is the sole trigger for the `stable-value-investment` listing class.
+- `commodity-claim`: redeemable claim on allocated physical commodity (PAXG, XAUT).
 
 Wrappers (with `variantOf` set) generally inherit the parent's archetype; omit on the child if uncertain.
 
-**`proofOfReserves` extensions** — four additive fields inside the existing `proofOfReserves` object, used for the attestor-tier badge.
+**`proofOfReserves` extensions** — four additive attestor fields inside the existing `proofOfReserves` object, used for the attestor-tier badge, plus an optional structured `latestReport` block that the badge does not read.
 
 - `attestorTier`: `"big4"` (Deloitte, EY, KPMG, PwC), `"regional"` (BDO, RSM, Grant Thornton, Crowe, Mazars, Moore Stephens, Baker Tilly, Withum), `"niche"` (smaller / jurisdictionally-thin firms; single-purpose attestors), `"self"` (self-reported, no third-party signoff), `"none"` (a reviewer established that no attestation exists — the issuer's materials were enumerated, or a claimed attestor was checked and refuted), or `"undisclosed"` (the issuer names no attestor, or a named artefact could not be retrieved). Prefer `"undisclosed"` over omitting the block: omitting loses the reviewed fact that we looked. Omit the field only when the asset has no attestor concept at all, such as on-chain-verifiable bridge reserves.
 - `cadence`: `"daily-nav"` (daily NAV publications, T-Bill funds, BUIDL-style), `"real-time"` (live on-chain feeds, Chainlink PoR, on-chain dashboards), `"daily"` (daily non-NAV reports or account checks), `"weekly"`, `"monthly"` (standard monthly attestations), `"semi-monthly"` (twice-monthly attestations), `"quarterly"`, `"semi-annual"`, `"annual"`, `"ad-hoc"` (irregular or one-off), `"none"` (established that nothing periodic is published), or `"undisclosed"` (a cadence is claimed but no artefact is retrievable, or nothing was reviewed).
 - `attestorJurisdiction`: free-text country/region (e.g. `"United States"`).
 - `attestorLicense`: free-text license/registration (e.g. `"PCAOB-registered"`).
+- `latestReport`: optional record of the most recent attestation — period end, publication date, assurance method, assets-only versus assets-and-liabilities scope, liability reconciliation, and review provenance. Two schema refinements reject a publication date earlier than the period end, and an `assets-and-liabilities` scope paired with `none`/`unknown` liability reconciliation. See [Stablecoin Research Sidecars](./stablecoin-research-sidecars.md) for how this block is researched and where it is projected.
 
 The durable schema lives in `shared/types/core.ts` and `shared/types/stablecoin-meta-schemas.ts`; refer to those schema files and the methodology page for the durable spec.
 
@@ -343,7 +342,7 @@ Required fields and their conditions:
 | Field                             | Required when                                                                                                                                       | Acceptable waiver                                                                                                 |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `oneLiner`                        | every active or pre-launch coin                                                                                                                     | none — frozen coins follow the past-tense rewrite path instead                                                    |
-| `mechanismArchetype`              | coin enters the editorial cohort (top-60 by canonical rank in `scripts/lib/curation-baseline-caps.json` or market cap ≥ $50M)                       | record an "intentional gap" line in Phase 5 coverage notes with reason (e.g. "wrapper inherits parent archetype") |
+| `mechanismArchetype`              | every active coin (a variant may inherit the parent archetype; a divergent variant archetype needs `archetypeOverride: true` plus a `resolved` review)                       | a sourced `mechanismArchetypeReview` with `disposition: "unresolved"` — verify with `npm run audit:coverage -- --domain=mechanism-archetype` |
 | `proofOfReserves.attestorTier`    | `proofOfReserves.type === "independent-audit"`                                                                                                      | none — if the attestor is genuinely unknown, set `attestorTier: "undisclosed"` and record the reason in `provider`                                    |
 | `mintAuthority` coverage decision | new high-value active additions or pre-launch promotions (top-60 by canonical rank, market cap ≥ $50M, or issuer/operator has obvious mint control) | record an "intentional gap" line in Phase 5 coverage notes with the unresolved control path or source gap         |
 | `data/ai-summaries.json` entry    | every active coin                                                                                                                                   | record skip reason in Phase 5 coverage notes                                                                      |
@@ -353,8 +352,8 @@ The orchestrator (`stablecoin-addition-orchestrator`) runs this gate in its Phas
 Automated backstops:
 
 - The ordinary noncritical test `scripts/__tests__/weekly-curation-digest.test.ts` fails if any active/pre-launch coin lacks a nonblank `oneLiner`.
-- The same test fails if more than 27% of the fixed `topByRank` cohort lacks an archetype after frozen coins and then variants are excluded, or if the baseline contains an unknown coin ID.
-- The same test fails if more than 20% of `independent-audit` coins lack an attestor tier.
+- The same test pins the archetype cohort snapshot exactly (currently 39/39 covered after frozen coins and then variants are excluded), so it fails if any cohort coin lacks an archetype, if the cohort size changes, or if the baseline contains an unknown coin ID.
+- The same test pins the attestor-tier snapshot exactly (currently 77/77), so it fails if any `independent-audit` coin lacks an attestor tier or if that count changes.
 - The ordinary noncritical runtime-parser test `src/lib/__tests__/term-markup.test.ts` fails if AI-summary term markup references unknown glossary slugs or leaves raw opening/closing markers.
 
 Mint Authority coverage is currently a manual reviewed-or-waived gate because absence can be intentional for direct, non-variant assets. `npm run check:stablecoin-data` validates authored `mintAuthority` profiles against the schema and requires active variants to carry an explicit inherited/wrapper review, but it does not require every high-value direct coin to have one yet.
@@ -367,7 +366,7 @@ The chart-annotation stream (`shared/data/annotations/curated-annotations.ts`) i
 
 Add the new object to the asset's per-coin JSON file using current field names and current enum values.
 
-### Minimal active-asset skeleton
+### Minimal active-asset skeleton (field shapes only — a real entry also needs the mandatory `blacklistabilityReview` from Phase 3 and a `listing-decisions.json` class)
 
 ```json
 {
@@ -416,6 +415,7 @@ When the Phase 3.5 / Phase 5f gate calls for a reviewed Mint Authority profile, 
 
 ```json
 {
+  "id": "ausd-acme",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
@@ -447,18 +447,18 @@ When the Phase 3.5 / Phase 5f gate calls for a reviewed Mint Authority profile, 
 }
 ```
 
-Use `sourceFreeRationale` instead of `review.sources` only when the review is intentionally source-free, for example a documented absence after exhaustive source review. Privileged mint paths require at least one `controls[]` entry unless confidence is `unknown`. Verified Safe/multisig controls require `threshold`, `signerCount`, and `modulesOrGuardsStatus`; verified or probable controls cannot use `modulesOrGuardsStatus: "unknown"` because unknown modules or guards cap confidence at `manual-review`. A verified Safe control with an on-chain or Safe API `safe.source` also needs `safe.observedBlock`. Wrapped or variant inherited profiles must use `mintPath: "wrapped-or-variant-inherited"` and provide `inheritedFrom` or `variantOf` (both must match when both are present).
+Use `sourceFreeRationale` instead of `review.sources` only when the review is intentionally source-free, for example a documented absence after exhaustive source review. Privileged mint paths require at least one `controls[]` entry unless confidence is `unknown`. Verified Safe/multisig controls require `threshold`, `signerCount`, and `modulesOrGuardsStatus`; verified or probable controls cannot use `modulesOrGuardsStatus: "unknown"` because unknown modules or guards cap confidence at `manual-review`. A verified Safe control with an on-chain or Safe API `safe.source` also needs `safe.observedBlock`. Wrapped or variant inherited profiles must use `mintPath: "wrapped-or-variant-inherited"` and must set `inheritedFrom`, which must match `variantOf` when the coin declares one.
 
 ### Current registry editing checklist
 
 - Add or update the asset's JSON object in `shared/data/stablecoins/coins/*.json`.
-- Regenerate `shared/data/stablecoins/coins.generated.json` with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`.
+- Regenerate the catalog aggregate and its dependent projections with `npm run bootstrap:generated`.
 - Add the ID to `shared/data/stablecoins/canonical-order.json`.
 - Add the ID and derived class to `shared/data/stablecoins/listing-decisions.json`.
 - Keep new keys canonical and consistent with the current schema.
 - For active assets, ensure there is a runtime cache admission path and a Phase 1a price + market-cap gate record:
   - DefiLlama-tracked assets need `llamaId`.
-  - Fiat assets not in DefiLlama need `detailProvider: "coingecko"` plus either `geckoId` or a supported on-chain total-supply contract.
+  - Fiat assets not in DefiLlama need `detailProvider: "coingecko"` plus either `geckoId` or a supply path accepted by `hasRuntimeOnchainSupplyPath()` in `shared/lib/onchain-supply-probe.ts`.
   - Gold/silver assets need a `geckoId` for the commodity supplemental path.
   - Do not rely on `canonical-order.json` alone; static routes can exist before the Worker `/api/stablecoins` cache has a row.
 - If `mintAuthority` is present, keep it sourced and schema-valid; if it is missing for a high-value active addition, record the intentional gap in Phase 5 coverage notes.
@@ -491,26 +491,24 @@ value; do not weaken the assertion.
 ### 4c. Registry-derived artifacts that are checked in
 
 These hash or enumerate the tracked catalog, so a coin addition moves them and
-`npm run check:generated-artifacts` fails until they are regenerated and committed.
+`npm run check:generated-artifacts` fails until they are regenerated and committed. The complete
+artifact inventory and each unit's command live in `GENERATED_ARTIFACT_REGISTRY`
+(`scripts/lib/automation-registry.mjs`); only the two units below normally move on an addition.
 
 | Artifact | Regenerate with | Notes |
 | --- | --- | --- |
 | `public/llms.txt` | `npx tsx scripts/maintenance/generate-llms-txt.ts` | Active-stablecoin count in the summary line plus one per-coin entry |
-| `public/datasets/stablecoin-cemetery.json` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Provenance pins the curated dead-stablecoin file and the frozen-row projection, so a live addition leaves it byte-identical; it moves only when a frozen or dead row changes |
+| `public/datasets/stablecoin-cemetery.json` + `.csv` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Provenance pins the curated dead-stablecoin file and the frozen-row projection, so a live addition leaves it byte-identical; it moves only when a frozen or dead row changes |
 
 Also regenerate the gitignored projections, which are not committed but which the build, the
-tests, and `check:stablecoin-data` all read:
-`coins.generated.json`, `coins.client.generated.json`, `coins.compliance.generated.json`,
-`coins.telegram-mini-app.generated.json`,
-`report-card-registry-fingerprint.generated.ts` and
-`legacy-llama-redirects.generated.json` (only moves when the coin has a `llamaId`).
-The gitignored `sitemap-dates` projection also picks the coin up automatically; it needs no
-settle step.
+tests, and `check:stablecoin-data` all read. Run `npm run bootstrap:generated` rather than an
+individual generator: it executes every bootstrap-safe unit in `GENERATED_ARTIFACT_REGISTRY`
+(`scripts/lib/automation-registry.mjs`), which owns the artifact inventory and each unit's
+command, so no downstream projection is left stale behind the catalog aggregate.
 
 Gotcha worth recognising: if the client projection is stale, a large number of unrelated test
 files fail at import with `[client-registry] canonical-order.json references unknown stablecoin
-ID: <id>` rather than with a catalog assertion. Run
-`node scripts/build-data/build-client-registry.mjs` and re-run.
+ID: <id>` rather than with a catalog assertion. Re-run `npm run bootstrap:generated`.
 
 ---
 
@@ -625,13 +623,13 @@ When authoring `mintAuthority`, verify:
 
 - `mintPath`, `authorityPosture`, `confidence`, `summary`, and `review` are present.
 - `review` includes `evidence`, `reviewer`, `reviewedAt`, and either `sources[]` or `sourceFreeRationale`.
-- privileged native paths such as `issuer-direct-mint`, `permissioned-minter`, `offchain-attested-minter`, `facilitator-bucket-mint`, `amo-or-custodian-hybrid`, and `m0-permissioned-minter` include at least one `controls[]` entry unless confidence is `unknown`.
+- privileged native paths — `user-collateralized-governed`, `issuer-direct-mint`, `permissioned-minter`, `offchain-attested-minter`, `facilitator-bucket-mint`, `amo-or-custodian-hybrid`, and `m0-permissioned-minter` — include at least one `controls[]` entry unless confidence is `unknown`.
 - each control identifies `label`, `role`, `authorityType`, and `directMintAbility`; addressed or mint-capable controls need control-level sources/evidence or profile-level sources.
 - Safe/multisig controls with `verified` confidence include `threshold`, `signerCount`, and `modulesOrGuardsStatus`; `modulesOrGuardsStatus: "unknown"` caps verified or probable confidence at `manual-review`.
 - EOA mint-capable controls should include `keyCustodyAttestation` when MPC/HSM custody is publicly evidenced; otherwise non-issuer-context EOA direct/can-authorize paths are capped by the score methodology.
 - Cap-limited controls should state `canRaiseCap` when known, and compromised or historically exploited mint paths should include `mintIncidents` entries with source links.
 - direct chain reads, proxy/admin reads, cap/facilitator registries, and Safe state include observed block or source notes when they are part of the evidence.
-- wrapper or variant rows use `mintPath: "wrapped-or-variant-inherited"` and set `inheritedFrom` or `variantOf`; if both are present they must match.
+- wrapper or variant rows use `mintPath: "wrapped-or-variant-inherited"` and must set `inheritedFrom`; when the coin also declares `variantOf`, the two must match.
 - `authorityPosture: "none-resolved"` is only for non-privileged user/protocol minting, or inherited wrappers whose reviewed parent is also `none-resolved`.
 - `authorityPosture: "none-resolved-mint"` is the mint-scoped alternative: use it when no control can mint or authorize minting on this asset but other control domains exist (upgrade or parameter authority, or an inherited parent mint authority). It requires the same non-privileged `mintPath` and places no condition on the parent. Prefer it over an adverse posture for share wrappers whose own token has no minter.
 - `reconciliation: "continuous" | "periodic"` and `supervision: "prudential"` are scored economic-control claims — between them they lift the V9 mint component from 25 to 55/70/80 — so each requires at least one `mintAuthority.review` source and a review evidence sentence stating what is reconciled against what, or which named regime supervises the issuer. `unknown`, `not-applicable`, and `none` record an absence and need no such sentence. Do not set a scored value from a homepage link alone.
@@ -783,7 +781,7 @@ Before running commands, confirm the addition-specific artifacts:
 For a normal stablecoin addition, generate the working-tree projections and run focused checks first:
 
 ```bash
-npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
+npm run bootstrap:generated
 npm run check:stablecoin-data
 npm test
 cd worker && npx tsc --noEmit
@@ -818,16 +816,18 @@ If you added or changed a new upstream/provider or methodology-affecting runtime
 
 ---
 
-## Phase 8 - Merge, Push, Deploy, Then Backfill
+## Phase 8 - Push, Merge, Deploy, Then Backfill
 
 This phase is post-validation and post-merge.
 
 Only do the backfill after all of these are true:
 
 - the local validation in Phase 7 passed
-- the change was merged
-- the merged change was pushed
+- the branch was pushed and passed the authoritative protected-main PR gate
+- the pull request was merged into `main` through GitHub
 - the production deploy completed
+
+The branch/PR sequence itself is owned by [deployment-process.md](../deployment-process.md).
 
 After the production deploy, backfill history for live assets:
 
@@ -859,7 +859,7 @@ Optional:
 
 - `backfill-supply-history` accepts `allow-constant-price-fallback=true` for specific sparse-history cases
 
-Do not hardcode branch or PR creation into the process. Follow the repo's current agent guidance: routine maintenance can land on `main`, while separate branches/worktrees/PRs are used only when the maintainer explicitly asks for that workflow.
+Do not hardcode branch or PR creation into the process, but note that `main` is protected: land the addition through a branch plus pull request, per [deployment-process.md](../deployment-process.md). `npm run check:pr -- --base=origin/main` mirrors the gate locally, and the GitHub PR gate remains authoritative.
 
 ## Phase 9 - Post-Deploy Verification
 

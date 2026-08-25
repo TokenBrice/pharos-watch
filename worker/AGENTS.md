@@ -8,6 +8,9 @@ Applies to `worker/**`.
 - `docs/worker-and-api-limits.md`
 - `docs/data-flow-map.md`
 - `docs/deployment-process.md` for migration or deploy-path work
+- `docs/process/cron-trigger-policy.md` for cron trigger, schedule, or slot work
+
+Per-change routing is owned by `docs/doc-ownership.json`; run `node --import tsx scripts/ci/pharos-change-contract.ts` for the docs, checks, and rules that match the exact files you touch. The list above is the offline starting point, not the full contract.
 
 ## Rules
 

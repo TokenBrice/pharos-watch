@@ -2,14 +2,14 @@
 
 ## Symptom
 
-The group admin gate is too aggressive in production: legitimate group admins are being refused on `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/pause`, `/unmutehours`, `/unsnooze`, `/import`, or `/timezone <tz>` (`/timezone` is only gated when given a timezone argument; bare `/timezone` reads are not) after a fresh `getChatMember` admin lookup fails closed across many groups. (Note: the soft toggle below only relaxes these gated commands. Mutating `/settings` inline callbacks are always hard-gated for non-admins regardless of the toggle, and require a separate code change to relax.)
+The group admin gate is too aggressive in production: legitimate group admins are being refused on `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/pause`, `/forget`, `/unmutehours`, `/unsnooze`, `/import`, or `/timezone <tz>` (`/timezone` is only gated when given a timezone argument; bare `/timezone` reads are not) after a fresh `getChatMember` admin lookup fails closed across many groups. (Note: the soft toggle below only relaxes these gated commands. Mutating inline callbacks are always hard-gated for non-admins regardless of the toggle — not just `/settings`, but every `requireAdmin` callback handler, including timezone, quick-subscribe, unsubscribe, bulk confirm, mutating setup steps, and the snooze/depeg/safety toggles — and require a separate code change to relax.)
 
-The gate's enforcement mode is currently a code-level toggle in `worker/src/api/telegram-webhook.ts`, not a production env binding. The two modes are documented in [`docs/telegram-alerts.md`](../telegram-alerts.md#group-admin-gating); summary:
+The gate's enforcement mode is currently a code-level toggle in `worker/src/api/telegram-webhook-ingress-policy.ts` (re-exported from `telegram-webhook.ts`), not a production env binding. The two modes are documented in [`docs/telegram-alerts.md`](../telegram-alerts.md#group-admin-gating); summary:
 
 - **Hard (current code default):** non-admin invocations are refused; the dispatch does not run.
 - **Soft (emergency rollback):** non-admin invocations get the same warning copy but the command still runs.
 
-For gated commands, hard mode emits a `group_admin_denial` usage event in `telegram_usage_daily` with `outcome = "denied"`, and soft mode emits the same event with `outcome = "warned"`, so the rollback toggle is observable from the audit log. (Settings-callback denials always emit `outcome = "denied"` regardless of the toggle.)
+For gated commands, hard mode emits a `group_admin_denial` usage event in `telegram_usage_daily` with `outcome = "denied"`, and soft mode emits the same event with `outcome = "warned"`, so the rollback toggle is observable from the audit log. (Mutating-callback denials always emit `outcome = "denied"` regardless of the toggle.)
 
 ## When to Flip to Soft
 
@@ -34,7 +34,7 @@ GROUP BY day, outcome
 ORDER BY day DESC, outcome ASC;
 ```
 
-Hard mode emits `outcome = "denied"`; soft mode emits `outcome = "warned"`. After the flip, expect the same rows to show the new outcome.
+Hard mode emits `outcome = "denied"`; soft mode emits `outcome = "warned"`. After the flip, expect the same rows to show the new outcome. A third outcome, `rate_limited`, is emitted when the per-chat `group-admin-diagnostics` cooldown suppresses the admin re-check; those rows block the command in both modes and do not change with the toggle, so ignore them when verifying the flip.
 
 Tail the Worker during the rollback window to confirm the new mode is taking effect:
 
@@ -45,7 +45,7 @@ npx wrangler tail stablecoin-api --format pretty
 
 ## Remediation
 
-1. **Flip to soft.** Patch the group-admin gating mode in `worker/src/api/telegram-webhook.ts`, then follow the standard protected release flow documented in [deployment-process.md](../deployment-process.md). That workflow applies migrations, deploys the Worker once with the checked-in configuration, and verifies full activation. A Wrangler secret change alone will not affect production because no `TELEGRAM_GROUP_ADMIN_GATING` env binding is read today.
+1. **Flip to soft.** Patch `TELEGRAM_GROUP_ADMIN_GATING.mode` in `worker/src/api/telegram-webhook-ingress-policy.ts` (re-exported from `telegram-webhook.ts`), then follow the standard protected release flow documented in [deployment-process.md](../deployment-process.md). That workflow applies migrations, deploys the Worker once with the checked-in configuration, and verifies full activation. A Wrangler secret change alone will not affect production because no `TELEGRAM_GROUP_ADMIN_GATING` env binding is read today.
 
    Verify the next gated command in a non-admin group produces a `warned` row in `telegram_usage_daily` and that the command actually ran (subscribe row written, settings panel rendered, etc.).
 

@@ -39,7 +39,7 @@ Source freshness is `MAX(last_seen_at)` from the daily table and `MAX(measured_a
 
 ## Interpretation Rules
 
-CTA clicks are best-effort browser events. Bot starts and Telegram milestones are independently idempotent aggregates. Pharos deliberately stores no identifier that joins those surfaces, so any start-per-click ratio you compute is directional rather than a user conversion rate. It may exceed 100% after shared links, delayed starts, blocked browser telemetry, or cross-day activity.
+CTA clicks are best-effort browser events. Bot starts are unjoined server-side aggregates counted per `/start`, so a repeat start counts again; only the Telegram milestones (`setup_complete`, `first_follow`) are idempotent per chat. Pharos deliberately stores no identifier that joins those surfaces, so any start-per-click ratio you compute is directional rather than a user conversion rate. It may exceed 100% after shared links, delayed starts, blocked browser telemetry, or cross-day activity.
 
 Counts from one through four are suppressed (`TELEGRAM_ADOPTION_LOW_COUNT_THRESHOLD = 5` in `shared/lib/telegram-adoption-analytics.ts`), as is any rate derived from them. The raw tables do not apply that rule, so enforce it before sharing or publishing a figure. A zero may be shown only when the relevant denominator/cohort is large enough to avoid disclosing a low-cardinality cell. Do not infer suppressed values from adjacent totals.
 
@@ -61,7 +61,7 @@ The recommended-setup CTA retains its preloaded Telegram subscription behavior a
 1. Confirm `stablecoin-db` contains `telegram_adoption_daily` and `telegram_adoption_retention_daily`, and that the deployed Worker includes the live adoption producer. Historical migration 0192 is squashed into the active baseline; use the manifest only for lineage.
 2. Confirm the Pages project has `SITE_API_ORIGIN`, `SITE_API_SHARED_SECRET`, and the `TELEGRAM_ADOPTION_IP_HASH_SECRET` pepper for the forwarding shim; the CTA quota and aggregate writes run on the Worker’s primary `DB` binding.
 3. Check `telegram-retention-cleanup` metadata for adoption table/cache pruning and caps.
-4. Check the Telegram pulse run for `[telegram-adoption] retention refresh failed` warnings.
+4. Check the Telegram pulse run for structured `Telegram adoption retention refresh failed` warnings (`scope` `api`, `level` `warn`).
 5. Verify a catalog link contains a `pw1_*` token no longer than 64 characters; arbitrary tokens are intentionally classified as organic/unknown or rejected.
 
 Do not add raw chat IDs, stable pseudonymous user keys, arbitrary URL/referrer strings, or IP-derived quota keys to improve attribution. Product decisions that require a joined funnel need a separate privacy review.

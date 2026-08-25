@@ -22,10 +22,10 @@ Every later task that says "verified against the harness runbook" means the proc
 
 Two properties make the replay equal to production:
 
-- The producer publishes with `publishedAt = fixedInput.clockSec` in `worker/src/cron/compute-safety-score-v9.ts`. Replaying with `--published-at <capture clockSec>` therefore reproduces the exact publication clock, not an approximation; use the symbol rather than a brittle source line as the maintenance anchor.
+- The producer compiles the publication with `publishedAtSec = fixedInput.clockSec` in `worker/src/lib/safety-score-v9-publication-runner.ts`, which `worker/src/cron/compute-safety-score-v9.ts` invokes. Replaying with `--published-at <capture clockSec>` therefore reproduces the exact publication clock, not an approximation; use the symbol rather than a brittle source line as the maintenance anchor.
 - `worker/scripts/replay-safety-score-v9.ts` compiles that input through the same pipeline with no network, D1, or wall-clock reads. The artifact is a pure function of (capture, `--published-at`, code) — two replays of one capture at one commit are byte-identical.
 
-`worker/scripts/diff-safety-score-v9-replays.ts` drops the volatile identity/timestamp key family (`VOLATILE_KEYS`) at every depth and matches per-asset cards by `id`, so a reordered or resized card array reports real drift instead of an index shift.
+`worker/scripts/diff-safety-score-v9-replays.ts` drops two separately-owned key families at every depth — `VOLATILE_KEYS` (per-run publication identity and capture timing) and `VERSION_ACTIVATION_KEYS` (pinned-build and methodology-identity digests plus `policyVersion`, which move only on a deliberate version activation) — and matches per-asset cards by `id`, so a reordered or resized card array reports real drift instead of an index shift.
 
 > **Any redemption row-shape change is a payload identity event and needs a baseline re-cut.**
 > The redemption payload fingerprint hashes the *whole* stored row, not a V9-relevant projection of it.
@@ -148,7 +148,7 @@ npm run safety-score-v9:diff -- \
 | `--assert-empty`        | Every field matches after volatile-key removal | `EMPTY DIFF — bit-identical`                   | 0    |
 | `--assert-empty`        | Anything moved                                 | `DIFF: N entries` plus up to 50 entries (stderr) | 1  |
 | `--assert-grade-stable` | No card changes grade                          | `drift entries: N; grade flips: 0`             | 0    |
-| `--assert-grade-stable` | A card changed grade or disappeared            | the same counts, plus one `FLIP <id>` line per card (stderr) | 1 |
+| `--assert-grade-stable` | A card changed grade, disappeared, or appeared | the same counts, plus one `FLIP <id>` line per card (stderr) | 1 |
 | neither flag            | always                                         | the full JSON diff                             | 0 / 1 |
 
 The two diff assertion flags are mutually exclusive. Use `--assert-empty` for score-neutral work and `--assert-grade-stable` when score drift is intentional but grade flips are not.
@@ -254,7 +254,7 @@ Work in this order:
 
 1. **Is it real drift?** Every entry names an `assetId` (or `null` for aggregates and the dependency graph) plus the exact field path. A handful of entries on one pillar is a scoring change; hundreds across every asset is usually an input or identity problem.
 2. **Is the diff pinned to one capture?** Re-run the same capture at the baseline commit twice. Two replays of one capture at one commit are byte-identical by construction — if they are not, the change introduced nondeterminism (a wall-clock read, an unstable sort, or map-iteration order), which is itself the bug.
-3. **Is a volatile field leaking?** If the entries are publication identity or capture timing rather than scores, the field belongs in `VOLATILE_KEYS` in `worker/scripts/diff-safety-score-v9-replays.ts`. Add the key there and to the exported-key list in `worker/scripts/__tests__/diff-safety-score-v9-replays.test.ts`, then re-run. Add keys only for values that legitimately differ between two replays of the same scored output — never to silence a score that moved.
+3. **Is a volatile field leaking?** If the entries are publication identity or capture timing rather than scores, the field belongs in `VOLATILE_KEYS` (per-run) or `VERSION_ACTIVATION_KEYS` (version activation) — whichever matches why it moved — in `worker/scripts/diff-safety-score-v9-replays.ts`. Add the key there and to the exported-key list in `worker/scripts/__tests__/diff-safety-score-v9-replays.test.ts`, then re-run. Add keys only for values that legitimately differ between two replays of the same scored output — never to silence a score that moved.
 
 ## Artifact hygiene
 
@@ -278,16 +278,18 @@ jq -r .clockSec agents/v9-captures/selftest-input.json
 ```
 
 ```
-1784505600
+1786233600
 ```
 
 Two independent replays of that input at one commit:
 
 ```sh
+# The fixture's clock is frozen while curation advances, so the future-review
+# gate must be waived here — for this self-test only, never for a production capture.
 npm run safety-score-v9:replay -- --input agents/v9-captures/selftest-input.json \
-  --output agents/v9-captures/selftest-a.json --published-at 1784505600
+  --output agents/v9-captures/selftest-a.json --published-at 1786233600 --allow-future-reviews
 npm run safety-score-v9:replay -- --input agents/v9-captures/selftest-input.json \
-  --output agents/v9-captures/selftest-b.json --published-at 1784505600
+  --output agents/v9-captures/selftest-b.json --published-at 1786233600 --allow-future-reviews
 jq '.pipeline.candidate.cards | length' agents/v9-captures/selftest-a.json
 ```
 

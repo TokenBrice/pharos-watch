@@ -25,18 +25,9 @@ Run after each Mini App deploy and after each BotFather UI change. Each test sho
 
 1. **Menu button** — Open Telegram → `@PharosWatchBot` → tap the persistent `Manage Alerts` menu button. Mini App loads on the **Home** panel.
 2. **Profile launch** — Open the bot's profile in Telegram → tap `Launch app`. Mini App loads on the **Home** panel.
-3. **Direct deep link: home** — Tap `https://t.me/PharosWatchBot?startapp=home`. Mini App loads on the **Home** panel.
-4. **Direct deep link: settings** — Tap `https://t.me/PharosWatchBot?startapp=settings`. Mini App loads on the **Settings** panel.
-5. **Direct deep link: watchlist** — Tap `https://t.me/PharosWatchBot?startapp=watchlist`. Mini App loads on the **Watchlist** panel.
-6. **Direct deep link: coin row** — Tap `https://t.me/PharosWatchBot?startapp=coin_usdc-circle`. Mini App loads the **Watchlist** panel scrolled to USDC's row.
-7. **Direct deep link: presets** — Tap `https://t.me/PharosWatchBot?startapp=presets`. Mini App loads on the **Presets** panel.
-8. **Direct deep link: quiet-hours** — Tap `https://t.me/PharosWatchBot?startapp=quiet-hours`. Mini App loads on the **Settings** panel, where the quiet-hours card lives.
-9. **Direct deep link: snooze** — Tap `https://t.me/PharosWatchBot?startapp=snooze`. Mini App loads on the **Home** panel, where the snooze controls are visible when a chat snooze is active.
-10. **Direct deep link: health** — Tap `https://t.me/PharosWatchBot?startapp=health`. Mini App loads on the **Home** panel with the delivery-health card visible.
-11. **Direct deep link: forget** — Tap `https://t.me/PharosWatchBot?startapp=forget`. Mini App loads on the **Settings** panel, where the data-deletion control lives.
-12. **Direct deep link: setup_recommended** — Tap `https://t.me/PharosWatchBot?startapp=setup_recommended`. Mini App loads on the **Watchlist** panel; the recommended setup alias is retained for older launch buttons.
-13. **Unknown payload fallback** — Tap `https://t.me/PharosWatchBot?startapp=zzz-unknown`. Mini App loads on the **Home** panel without mutating alert state.
-14. **Cross-platform render** — Repeat tests 1, 2, 4, and 6 on Telegram Desktop, iOS, and Android. The Telegram bridge script loads, `initData` is signed, and there are no frame-denial headers.
+3. **Deep-link spot check** — Exercise each payload in [`docs/telegram-mini-app.md`](../telegram-mini-app.md#payload-scheme) as `https://t.me/PharosWatchBot?startapp=<payload>` and confirm each lands on the panel that table names. Parametric payloads (`coin_`, `why_`, `coverage_`) take a tracked stablecoin id, for example `startapp=coin_usdc-circle`.
+4. **Unknown payload fallback** — Tap `https://t.me/PharosWatchBot?startapp=zzz-unknown`. Mini App loads on the **Home** panel without mutating alert state.
+5. **Cross-platform render** — Repeat tests 1, 2, and a parametric deep link such as `startapp=coin_usdc-circle` on Telegram Desktop, iOS, and Android. The Telegram bridge script loads, `initData` is signed, and there are no frame-denial headers.
 
 If any smoke test fails on a deploy, treat the failing payload as a Mini App release blocker and follow [`docs/telegram-mini-app.md`](../telegram-mini-app.md) section "Debugging Workflow" before re-running.
 

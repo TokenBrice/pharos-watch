@@ -35,10 +35,10 @@ Public and internal material can share a source file only when the public text r
 | Reserves and exits | [live-reserves.md](./live-reserves.md), [redemption-backstops.md](./redemption-backstops.md) |
 | Risk methodology | [report-cards.md](./report-cards.md), [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md), [dex-liquidity.md](./dex-liquidity.md) |
 | Flow and freeze monitoring | [mint-burn-flows.md](./mint-burn-flows.md), [blacklist-tracker.md](./blacklist-tracker.md) |
-| Safety Score V9 operations | [process/safety-score-equivalence-harness.md](./process/safety-score-equivalence-harness.md), [process/safety-score-curation-expiry-sweep.md](./process/safety-score-curation-expiry-sweep.md) |
+| Safety Score V9 operations | [process/safety-score-equivalence-harness.md](./process/safety-score-equivalence-harness.md), [process/safety-score-curation-expiry-sweep.md](./process/safety-score-curation-expiry-sweep.md), [process/protocol-api-mechanism-refresh.md](./process/protocol-api-mechanism-refresh.md) |
 | Yield | [yield-intelligence.md](./yield-intelligence.md), [yield-intelligence-operations.md](./yield-intelligence-operations.md) |
 | Telegram | [telegram-architecture.md](./telegram-architecture.md), [telegram-alerts.md](./telegram-alerts.md), [telegram-mini-app.md](./telegram-mini-app.md) |
-| Design and visualization | [design-context.md](./design-context.md), [design-language.md](./design-language.md), [design-tokens.md](./design-tokens.md), [data-visualization.md](./data-visualization.md) |
+| Design and visualization | [design-context.md](./design-context.md), [design-language.md](./design-language.md), [design-tokens.md](./design-tokens.md), [data-visualization.md](./data-visualization.md), [process/font-assets.md](./process/font-assets.md) |
 
 Route-specific contracts use descriptive filenames such as `homepage.md`, `*-page.md`, `stablecoin-detail-page.md`, and `status-dashboard.md`. Find the owning route doc from the task router or with:
 
@@ -48,12 +48,7 @@ rg -n '/route-name/|src/app/route-name' docs
 
 ## Methodology History
 
-Versioned methodology history is authored once under `shared/data/methodology-changelogs/`. The registry in `shared/lib/methodology-versions/registry.ts` powers public changelog routes and Markdown exports. Methodology changes update:
-
-1. the runtime methodology/version source
-2. the structured changelog entry
-3. the owning methodology document
-4. the relevant `/methodology` section when public explanation changes
+Versioned methodology history is authored once under `shared/data/methodology-changelogs/`. The registry in `shared/lib/methodology-versions/registry.ts` powers public changelog routes and Markdown exports. ADR-3 in [architecture.md](./architecture.md#architectural-decision-records) owns the list of what a methodology change must update, including the runtime version source.
 
 Historical Markdown timeline files are intentionally not maintained.
 

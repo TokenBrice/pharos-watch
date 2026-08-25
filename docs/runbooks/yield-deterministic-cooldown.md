@@ -55,7 +55,7 @@ LIMIT 30;
 - If cooldown is active and no coverage gap is reported, leave it in place. It exists to protect the post-V9 publisher from repeatedly burning time on a fully masked outage.
 - If metadata reports `onchain-rates:cooldown-coverage-gap`, wait for the next post-V9 run after the cooldown state is reset by the publisher, then confirm deterministic reads are attempted again.
 - If failures persist across providers, check Cloudflare/RPC/explorer provider status and `ETHERSCAN_API_KEY` availability through the normal secret/config process.
-- If a stale cron lease is preventing retries, first confirm `/api/status` has no fresh matching `inFlight` progress. `POST /api/reset-cron-lease` is retired; then delete only `cron_leases.job = 'sync-yield-data'` with scoped remote D1 SQL and verify the next post-V9 run.
+- If a stale cron lease is preventing retries, clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-data`, and verify the next post-V9 run.
 
 ## Abort Conditions
 

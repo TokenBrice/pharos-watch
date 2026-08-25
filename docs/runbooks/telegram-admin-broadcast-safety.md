@@ -4,7 +4,7 @@
 
 An operator needs to send a maintenance, recovery, or product notice through `POST /api/admin-telegram-broadcast`.
 
-Admin broadcasts are lower priority than risk alerts. They enqueue into `telegram_pending_alerts` as `source_type = 'admin_broadcast'` with low priority, use a 45-minute TTL, consume the same 1,800-pending-chunks-per-run drain path, and remain held while admin delivery is operator-paused or the bot-wide transport circuit is open.
+Admin broadcasts are lower priority than risk alerts. They enqueue into `telegram_pending_alerts` as `source_type = 'admin_broadcast'` with low priority, use a 45-minute TTL, consume the same bounded pending-drain path (`TELEGRAM_PENDING_DRAIN_BUDGET` in `shared/lib/telegram-delivery-policy.ts`), and remain held while admin delivery is operator-paused or the bot-wide transport circuit is open.
 
 ## Preflight Checklist
 
