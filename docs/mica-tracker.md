@@ -24,7 +24,7 @@ GENIUS is now tracked as a dedicated sibling `genius?: GeniusProfile`, not by mi
 
 ### Types — `shared/types/core.ts`
 
-MiCA metadata is implemented as `mica?: MicaProfile` on `StablecoinMeta`. Status/type/auth enums and the `MicaProfile` interface live in `shared/types/core.ts`, following the `as const` value-list + derived-type pattern used by `MECHANISM_ARCHETYPE_VALUES`, `CHAIN_TIER_VALUES`, etc.
+MiCA metadata is implemented as `mica?: MicaProfile` on `StablecoinMeta`. Status/type/auth enums live in `shared/types/core.ts`, following the `as const` value-list + derived-type pattern used by `MECHANISM_ARCHETYPE_VALUES`, `CHAIN_TIER_VALUES`, etc. The `MicaProfile` shape itself is Zod-derived (`z.output<typeof MicaProfileSchema>`) in `shared/types/stablecoin-meta-schemas.ts` and re-exported as a type alias from `core.ts`; the block below is the resulting shape, not a hand-written interface.
 
 ```ts
 export const MICA_STATUS_VALUES = [
@@ -145,12 +145,12 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 **Route shape:**
 
 - `src/app/compliance/page.tsx` — server shell via `createClientFeaturePage()`; metadata, breadcrumb, static intro + FAQ.
-- `src/app/compliance/client.tsx` — filters + table, reads the bundled registry through `@shared/lib/stablecoins/client-registry`.
+- `src/app/compliance/client.tsx` — client entry that re-exports `ComplianceClient` from `src/components/compliance/compliance-client.tsx`, which owns the filters and both regime tables.
 - `src/lib/compliance-model.ts` — `buildComplianceViewModel()` mapping registry rows → MiCA and GENIUS table rows. The main table contains active assets only; pre-launch GENIUS rows may enter Implementation Watch, while frozen, quarantined, and delisted rows are excluded.
 - `src/app/compliance/loading.tsx`, `error.tsx` — match the `/liquidity` skeleton/boundary pattern.
 - `public/_redirects` — legacy `/mica` traffic redirects to `/compliance/`.
 
-**Columns:** coin · regime (MiCA / GENIUS) · status badge · pathway / type (EMT/ART, authorizationType, `significant` badge) · authority · issuer entity · [reserve disclosure — GENIUS rows only] · sources.
+**Columns (each regime table):** coin · status badge · pathway / type (EMT/ART, authorizationType, `significant` badge) · authority · issuer entity · row-expand toggle. Regime is a filter, not a column — each regime renders its own table. Source links, and for GENIUS rows the review evidence and reserve-disclosure detail, live in the expandable full-width row fold rather than in columns. The `regime=all` Overview directory has its own columns: coin · peg · MiCA status · GENIUS status.
 
 **Filters (URL-encoded, via `useUrlFilters`):** `regime`, `status`, `type`, `peg`, and free-text search as `q`. Example: `/compliance/?regime=mica&status=authorized&peg=EUR`. The client also accepts legacy `tokenType` and `pegCurrency` query keys as read-only aliases.
 
@@ -158,7 +158,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 **Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in the `NAV_GROUPS` entry keyed `"risk"` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The mobile header, desktop top nav, and command palette auto-index from `NAV_GROUPS`.
 
-**Detail-page surfacing:** the hero passport strip (`src/lib/stablecoin-detail-passport.ts`) carries the MiCA/Historical MiCA field, and `RegulatoryStandingCard` renders the per-regime facts it links to (`#jurisdiction`). Coins without a curated regime profile show the status only in the strip; nothing is faked on-page.
+**Detail-page surfacing:** the hero passport strip (`src/lib/stablecoin-detail-passport.ts`) carries the MiCA/Historical MiCA field, and `RegulatoryStandingCard` renders the per-regime facts it links to (`#jurisdiction`). Coins without a curated regime profile render nothing — no passport field and no Regulatory standing card; nothing is faked on-page. GENIUS has no on-page module yet, so its passport field links off-page to `/compliance/?regime=genius` instead of `#jurisdiction`.
 
 **Static export / SEO:** route is statically pre-rendered and included in the sitemap; run `npm run seo:check` after crawlability changes. No `next.config.ts` change.
 

@@ -112,6 +112,48 @@ CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
 
 One row per coin maximum. Holds depeg candidates awaiting confirmation. The CREATE TABLE blocks above show the cumulative shape: the original `depeg_events` / `depeg_pending` schema and follow-on changes through migration 0227 were squashed into `0000_baseline.sql` on 2026-07-30, so their individual migration files no longer exist. The active migration tail starts at `0228_depeg_resolver_incident_closed_pre_lock.sql`; `0232_depeg_recovery_continuity.sql` adds the nullable recovery-continuity endpoint and `0233_ddr_lock_opportunity_attempt_key.sql` adds resolver audit idempotency. Use `worker/migrations/MANIFEST.md` for the full sequence and field ownership.
 
+### depeg_pending_outcomes (migration 0126)
+
+```sql
+CREATE TABLE IF NOT EXISTS depeg_pending_outcomes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pending_id INTEGER,                   -- source depeg_pending.id, already deleted by the time the row lands
+  stablecoin_id TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  peg_type TEXT NOT NULL,
+  direction TEXT NOT NULL,
+  reason TEXT NOT NULL,                 -- pending-row reason flags carried through
+  first_seen_bps INTEGER NOT NULL,
+  first_seen_at INTEGER NOT NULL,
+  first_price REAL NOT NULL,
+  last_seen_bps INTEGER,
+  last_seen_at INTEGER,
+  last_price REAL,
+  peak_seen_bps INTEGER,
+  peak_price REAL,
+  peg_reference REAL NOT NULL,
+  outcome TEXT NOT NULL CHECK (outcome IN ('promoted', 'rejected', 'expired', 'recovered', 'superseded', 'unconfirmed-severe')),
+  outcome_at INTEGER NOT NULL,
+  confirming_sources TEXT,              -- `+`-joined canonical confirmation keys, NULL when empty
+  opposing_sources TEXT,
+  unavailable_sources TEXT,
+  circuit_open_sources TEXT,
+  final_decision_reason TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_depeg_pending_outcomes_pending_id ON depeg_pending_outcomes(pending_id);
+CREATE INDEX idx_depeg_pending_outcomes_stablecoin_time ON depeg_pending_outcomes(stablecoin_id, outcome_at DESC);
+```
+
+Append-only terminal ledger for every candidate that leaves `depeg_pending`. Each row is written in the same batch that deletes the pending row (`buildOutcomeAndDeleteStmts()` in `worker/src/cron/pending-depeg-confirmation.ts`), so the candidate transition and its evidence land together. Because `depeg_pending` holds at most one row per coin and is deleted on every terminal path, this is the only record of candidates that never became events -- rejections, expiries, recoveries, and rows superseded by an already-open event leave no trace in `depeg_events`.
+
+The four source columns record which confirmation families agreed, opposed, were unavailable, or were skipped behind an open circuit at decision time, which is what distinguishes "no evidence was reachable" from "evidence disagreed" when auditing a REJECT or an `unconfirmed-severe` expiry after the fact.
+
+DDR depends on the `outcome = 'promoted'` rows: `loadPendingPromotionConfirmationTimes()` in `worker/src/cron/depeg-resolver/incident-state.ts` matches them to events on `(stablecoin_id, peg_type, direction, first_seen_at = started_at)` and uses the latest `outcome_at` as the incident `confirmedAt`. That timestamp decides `late_confirmation` lock timing, so deleting or rewriting promoted rows changes DDR lock verdicts for historical incidents.
+
+Retention policy: never pruned. `prune-cron-history` does not touch this table, and no other job deletes from it; only growth telemetry reads it (`worker/src/lib/status/d1-usage.ts`). Growth is bounded by candidate volume, not by a cutoff.
+
 ### depeg_event_provenance (migration 0127)
 
 Side-table provenance for depeg rows. Legacy `depeg_events` rows remain valid when no provenance row exists. The public API reads through `depeg_events_with_provenance`, which projects a compact `provenance` object without exposing raw diagnostics.
@@ -132,8 +174,8 @@ Cleaned up non-USD depeg events with `peak_deviation_bps < 150` when the non-USD
 
 Detection runs as part of the `*/15 * * * *` sync cycle. After `syncStablecoins()` enriches prices, it calls:
 
-1. `detectDepegEvents(db, peggedAssets, fxFallbackRates, signal, coingeckoApiKey)` -- detection
-2. `confirmPendingDepegs(db, peggedAssets, fxFallbackRates, signal, coingeckoApiKey)` -- confirmation
+1. `detectDepegEvents(db, peggedAssets, fxFallbackRates, signal, coingeckoApiKey, nativePegSession)` -- detection
+2. `confirmPendingDepegs(db, peggedAssets, fxFallbackRates, signal, coingeckoApiKey, binanceSession, nativePegSession)` -- confirmation
 
 Both calls are in `worker/src/cron/sync-stablecoins/post-enrichment.ts` (invoked from the parent `sync-stablecoins.ts` orchestrator). Errors from either are captured in the sync metadata as `depegErrors` array but do not fail the parent cron.
 
@@ -392,8 +434,17 @@ interface DepegEvent {
   recoveryPrice: number | null
   pegReference: number
   source: "live" | "backfill"
+  constituentEventCount?: number
   confirmationSources: string | null
   pendingReason: string | null
+  closeReason:
+    | "recovered-primary"
+    | "recovered-dex"
+    | "recovered-native"
+    | "coverage-lost-supply"
+    | "superseded-direction"
+    | "orphan-tracking-removed"
+    | null
   provenance?: {
     sourceKind?: string | null
     replayRunId?: string | null
@@ -494,7 +545,7 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 | `currentStreakDays` | Days since last event ended |
 | `depeggedNow` | Boolean (any ongoing event?) |
 
-**Window divergence (deliberate).** `computePegStability()` measures over the coin's *full* available chart/event history and does not call `coinTrackingStart()`, so it never applies PegScore's 4-year lookback clamp. Published PegScore, `/api/peg-summary`, and the detail-page hero (`trackingSpanDays`, `pegPct`) all use the clamped 4-year window. The two therefore disagree for coins with more than four years of history — display-side spans and time-at-peg can be longer than the scored ones, and neither number is wrong. Today only `currentStreakDays` and `depeggedNow` from this helper reach the UI (`src/components/depeg-history.tsx`), so the divergence is not currently visible side by side; keep it in mind before surfacing `pegPct` or `trackingSpan` next to a published PegScore.
+**Window divergence (deliberate).** `computePegStability()` measures over the coin's *full* available chart/event history and does not call `coinTrackingStart()`, so it never applies PegScore's 4-year lookback clamp. Published PegScore, `/api/peg-summary`, and the detail-page hero (`trackingSpanDays`, `pegPct`) all use the clamped 4-year window. The two therefore disagree for coins with more than four years of history — display-side spans and time-at-peg can be longer than the scored ones, and neither number is wrong. Today only `currentStreakDays`, `depeggedNow`, and `worstDeviationBps` from this helper reach the UI (`src/components/depeg-history.tsx`), so the `pegPct` / `trackingSpan` divergence is not currently visible side by side; keep it in mind before surfacing `pegPct` or `trackingSpan` next to a published PegScore.
 
 ## Peg Score (`peg-score.ts`)
 
@@ -515,9 +566,10 @@ pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPen
 v6.0 quality gate: events with provenance `auditVerdict` of `false_positive` or `disputed` are excluded from PegScore inputs. Included events with `confidenceTier = "low"` retain time-at-peg impact but receive a 0.5 severity/spread weight. The result includes quality counters so consumers can tell when provenance changed the score inputs.
 
 **Tracking window**: `coinTrackingStart()` first honors a reviewed `pegScoreCoverage.startDate` when an operator has
-verified replay plus continuous live coverage. Otherwise it prefers a curated launch date, then the coin's earliest
-`supply_history` snapshot, then the first durable Pharos valid-price observation persisted through
-`getFirstSeenDates()`. This gives priced assets without supply-history coverage a real age anchor instead of leaving
+verified replay plus continuous live coverage. Otherwise it prefers a curated launch date, then the
+earliest first-seen anchor from `getFirstSeenDates()`, which merges the coin's earliest `supply_history` snapshot
+with its first durable Pharos valid-price observation and keeps whichever is earlier. This gives priced assets
+without supply-history coverage a real age anchor instead of leaving
 them unrated indefinitely without claiming that unverified pre-observation time was incident-free. PegScore still
 requires at least 7 days of tracking. If none of those anchors exists, a coin with depeg events falls back to the
 earliest event; a coin with no anchor and no events returns `pegScore = null`.

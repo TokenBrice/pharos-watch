@@ -23,7 +23,7 @@ When DefiLlama publishes a tracked zero-supply row for an asset that also has po
 ## Algorithm
 
 1. Fetch, parse, and validate the object-shaped cached "stablecoins" payload via `loadStablecoinsCache(db, { mode: "strict" })`
-2. For the 08:00 UTC safety-net fallback, require the `stablecoins` cache row to have `updated_at >= slotStartedAt`; if it still reflects the previous 07:45 quarter-hourly run, return `status: "degraded"` with `reason: "stablecoins_cache_before_slot"` and do not consume the daily write marker
+2. For the 08:00 UTC safety-net fallback, require the `stablecoins` cache row to have `updated_at >= slotStartedAt`; if it still reflects the previous 07:45 quarter-hourly run, return `status: "degraded"` with `reason: "stablecoins_cache_before_slot"` and do not consume the daily write marker --- unless the UTC day is already complete under the current coverage identity, in which case the run returns healthy with `reason: "already_written_today_before_freshness_gate"`
 3. Verify cache freshness:
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 | `chain_id` | TEXT | Canonical chain identifier after shared resolver normalization (e.g. `ethereum`, `bsc`, `citrea`) |
 | `snapshot_date` | INTEGER | Unix seconds floored to UTC midnight |
 | `total_usd` | REAL | Total stablecoin supply on this chain in USD |
-| `stablecoin_count` | INTEGER | Number of distinct stablecoins contributing supply on this chain |
+| `stablecoin_count` | INTEGER | Number of core-aggregate active stablecoins (`CORE_AGGREGATE_ACTIVE_IDS`) with positive supply on this chain |
 
 - **Populated by:** `snapshot-chain-supply` cron stage (`worker/src/cron/snapshot-chain-supply.ts`) running in the `*/15 * * * *` quarter-hourly slot, chained after `snapshot-supply`.
 - **Normalization:** the cron canonicalizes raw DefiLlama chain labels through the shared chain resolver before writing, so display-name aliases and tracked metadata names collapse into the same `chain_id`.
@@ -126,14 +126,15 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 
 **Primary source:** DefiLlama list API (`stablecoins.llama.fi/stablecoins`), cached every 15 minutes by `syncStablecoins()`.
 
-**Tracked gap-fill exceptions:** `syncStablecoins()` now has two supply-reconciliation lanes for tracked DefiLlama-backed assets:
+**Tracked gap-fill exceptions:** `syncStablecoins()` now has three supply-reconciliation lanes for tracked DefiLlama-backed assets:
 
 - If exactly one known metadata deployment is missing from DefiLlama's `chainCirculating`, CoinGecko reports a materially higher total market cap, and the current CoinGecko history point is fresh, the worker attributes the positive remainder (`CoinGecko total - DefiLlama list total`, floored at zero) to that chain's `chainCirculating` buckets. It preserves the DefiLlama list totals and `supplySource = "defillama"`; stale current points and multiple missing deployments fail closed without attribution.
 - If the DefiLlama live list collapses a tracked asset to zero supply but recent DefiLlama chart history still has a fresh non-zero total, the worker repairs the current plus 1d/7d/30d total supply buckets from that chart history and tags the asset `supplySource = "defillama-history-gap-fill"`. This covers list-endpoint regressions such as TRYB where the per-chain live row zeroes out while DefiLlama history remains populated.
+- If a tracked asset collapses to zero supply and DefiLlama chart history is missing, stale, or below the $1M current-point floor, the worker falls back to the curated on-chain aggregate read (`applyCuratedOnChainSupplyGap`) and republishes the asset as `supplySource = "onchain-total-supply"`, rewriting `chainCirculating` and clearing the 1d/7d/30d buckets; an unreadable leg fails closed and leaves the zero row untouched.
 
 The snapshot cron records the canonical DefiLlama list totals as-is; only the single-chain CoinGecko remainder is retained in the cached per-chain map.
 
-**Supplemental on-chain exceptions:** `syncStablecoins()` can admit `detailProvider === "coingecko"` assets through a single-deployment on-chain supply fallback. The default label is `supplySource = "onchain-total-supply"`. For narrow protocol-inventory cases, the worker can subtract configured live holder balances from that same total-supply read and publish `supplySource = "onchain-circulating-supply"`; if any configured balance read fails, the fallback is skipped for that run. The snapshot cron records the cached USD total and does not repeat those RPC reads.
+**Supplemental on-chain exceptions:** `syncStablecoins()` can admit `detailProvider === "coingecko"` assets through an on-chain supply fallback: a curated multi-deployment aggregate read (`fetchCuratedAggregateOnChainMcap`, which fails closed when any configured leg is unreadable and can reallocate a canonical chain's supply across representation legs) where one is configured, otherwise a single-deployment `totalSupply()` read. The default label is `supplySource = "onchain-total-supply"`. For narrow protocol-inventory cases, the worker can subtract configured live holder balances from that same total-supply read and publish `supplySource = "onchain-circulating-supply"`; if any configured balance read fails, the fallback is skipped for that run. The snapshot cron records the cached USD total and does not repeat those RPC reads.
 
 Configured protocol-inventory exclusions also participate in admin historical repair. `POST /api/backfill-supply-history` can rebuild their daily `supply_history` rows from EVM `totalSupply()` minus the same holder `balanceOf()` exclusions at the closest block before each UTC day close. Every repaired row requires a replay-safe historical market price; the only explicit par-policy exception is the code-owned Base Dollar allowlist entry, which records price `1`. Tangent USG uses this path for PegKeeper balances and skips days without a historical price.
 
@@ -222,7 +223,7 @@ The handler explicitly supports `detailProvider === "coingecko"` and `detailProv
 - Fetches `/api/supply-history?stablecoin=<id>&days=<days>`
 - Returns the response typed as `SupplyHistoryPoint[]`; the runtime query registry used by this hook attaches `SupplyHistoryResponseSchema` (`z.array(SupplyHistoryPointSchema)`), so the payload is runtime-validated in strict mode
 - Returns normalized `{ date, circulatingUsd, price }` points directly; there is no detail-endpoint transform in the hook anymore
-- TanStack Query: `staleTime = 24 hours`, `refetchInterval = 48 hours` (derived from the daily `CRON_24H` producer interval)
+- TanStack Query: `staleTime = 24 hours`, `refetchInterval = 48 hours` (derived from the `CRON_SUPPLY_SNAPSHOT` producer interval, i.e. `CRON_INTERVALS["snapshot-supply"]` = one day)
 
 ### McapChart
 
@@ -234,7 +235,7 @@ Individual stablecoin market cap history. Area chart with time range filtering (
 
 **File:** `src/components/home-alt-hero.tsx`
 
-Aggregated homepage market-cap breakdown. The total series comes from `GET /api/stablecoin-charts`, whose cached historical backbone starts from DefiLlama aggregate chart data but is reconciled with structural supplemental tracked-asset daily history from D1 `supply_history` before publication. The endpoint then appends or replaces the trailing point with a live aggregate from the current `stablecoins` cache so the homepage chart headline matches the KPI card. The named buckets use per-coin `useSupplyHistory(...)` data and `buildTotalMcapChartRows(...)` in `src/lib/total-mcap-chart.ts` so the homepage breakdown has full-history coverage instead of the shorter `supply_history` window. Those per-coin histories are aligned to the latest point at or before each total-chart date before computing `Others`. The visible stacks are USDT, USDC, `USDS + DAI`, and `Others`.
+Aggregated homepage market-cap breakdown. The total series comes from `GET /api/stablecoin-charts`, whose cached historical backbone starts from DefiLlama aggregate chart data but is reconciled with structural supplemental tracked-asset daily history from D1 `supply_history` before publication. The endpoint serves that cached series as published and no longer splices a live trailing point from the `stablecoins` cache, so the chart's last point can trail the KPI card until the next `sync-stablecoin-charts` run. The named buckets use per-coin `useSupplyHistory(...)` data and `buildTotalMcapChartRows(...)` in `src/lib/total-mcap-chart.ts` so the homepage breakdown has full-history coverage instead of the shorter `supply_history` window. Those per-coin histories are aligned to the latest point at or before each total-chart date before computing `Others`. The chart fills a gray total-market-cap envelope with the USDT cohort area beneath it (both baselined at zero, not stacked) and overlays cohort lines for USDC, `USDS + DAI`, `Others`, and a dashed `Non-USD share`.
 
 ### Compare page
 
@@ -248,9 +249,10 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 
 | Condition | Behavior |
 |-----------|----------|
-| `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, `legacy-array-not-allowed`, or `filtered-malformed-entries`) |
+| `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, `filtered-malformed-entries`, `published-contract-invalid`, or `cache-read-failed`); a legacy array payload fails as `invalid-payload-shape` |
 | Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
-| Today's UTC snapshot has a version 2 marker matching the current exact ID/waiver digest | Skip write (`reason: "already_written_today"`) |
+| Today's UTC snapshot has a version 2 marker matching the current exact ID/waiver digest and no required ID recovered since that write | Skip the row write (`reason: "already_written_today"`, or `"repaired_missing_prices_today"` when the same-day pass filled null prices) |
+| Same-day null-price repair query fails | `recordCronFailure()`, then return degraded (`reason: "same_day_price_repair_failed"`) |
 | 0 prepared rows with a non-empty active set | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) via the exact-set guard |
 | 0 prepared rows after passing the exact-set guard | Return degraded (`reason: "all_coins_zero_supply"`); not normally reachable while the active set is non-empty |
 | Any active ID lacks cached supply entirely or has invalid supply without an owned unexpired waiver | Return degraded with named `missingActiveIds`, `missingCacheActiveIds`, and `invalidSupplyIds`; do not write the completion marker |

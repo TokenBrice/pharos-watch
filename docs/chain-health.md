@@ -18,7 +18,7 @@ The Chain Environment factor reads the static L2BEAT chain-risk snapshot in `sha
 
 The response reports the V9 dependency as degraded, stale, or unavailable as appropriate and switches to `no-store`; it never carries stale or held ratings into Chain Health.
 
-The frontend chain profile coordinates `GET /api/chains` with `GET /api/stablecoins`. It renders top-level summary data from the chain snapshot first, then shows composition, backing breakdown, and stablecoin tables only when both snapshots share the same `updatedAt` and the stablecoins snapshot includes authoritative freshness metadata.
+The frontend chain profile coordinates `GET /api/chains` with `GET /api/stablecoins`. It renders top-level summary data from the chain snapshot first, then shows composition, backing breakdown, and stablecoin tables only when the stablecoins snapshot includes authoritative freshness metadata, both snapshots share the same `updatedAt`, and the chain's summary total matches the per-chain stablecoin total exactly (within float tolerance).
 
 ## Formula
 
@@ -89,3 +89,4 @@ When Chain Health behavior changes, update these files together:
 5. `docs/chains-page.md`
 6. `docs/api-reference.md` (`GET /api/chains`)
 7. `/methodology` Chain Health copy and changelog route when user-facing methodology text changes
+8. `src/app/chains/page.tsx` and `src/app/chains/[chain]/client.tsx` if any user-facing factor labels or weights change

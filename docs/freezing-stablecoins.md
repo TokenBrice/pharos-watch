@@ -59,7 +59,7 @@ rg '"<coin-id>"' data/logos.json
 test -f "public/logos/<registered-logo-file>"
 ```
 
-If no canonical tracked logo is registered, add one or copy the active logo into the cemetery directory using the symbol-derived fallback filename that `frozenToDeadShape()` resolves. `frozenToDeadShape()` always resolves a non-empty logo path, and the tombstone renders it through `next/image` with no file-existence check — so a missing PNG shows a broken image, not a glyph. The `test -f` check above is load-bearing.
+If no canonical tracked logo is registered, add one — or place the file where `frozenToDeadShape()`'s fallback resolves: `public/logos/<llamaId>-<symbol>.png` when the coin has a `llamaId`, and `public/logos/cemetery/<symbol>.png` only when it does not (the cemetery renderers prefix `/logos/cemetery/` solely for non-absolute paths). `frozenToDeadShape()` always resolves a non-empty logo path, and the tombstone renders it through `next/image` with no file-existence check — so a missing PNG shows a broken image, not a glyph. The `test -f` check above is load-bearing.
 
 ### 4. Validate
 
@@ -92,14 +92,14 @@ Commit/push according to current repo guidance. Open a PR only when explicitly r
 - Visit `/cemetery/` — confirm the coin appears with a "View archived data →" link.
 - Visit `/stablecoin/<id>/` — confirm the frozen banner below the hero (within the identity zone), and the "Data frozen on YYYY-MM-DD" footer above each chart section.
 - Inspect Worker logs — confirm no INSERT/UPDATE for the coin's id from any cron.
-- Confirm the next daily Telegram digest fires a cemetery appendix line.
+- Confirm the next daily Telegram digest fires a **Newly Frozen Stablecoins** appendix section for the coin (`frozenDetected` in the digest appendix metadata). The cemetery appendix diffs `DEAD_STABLECOINS` only and stays silent on a freeze.
 - Test OG: `https://api.pharos.watch/api/og/stablecoin/<id>` returns 200.
 
 ## Known behaviors (not bugs)
 
 - **Pinned stablecoins drop the coin silently.** Users who pinned the coin lose it from their pinned list.
-- **Live-comparison URL** `/compare/?coins=<id>,...` keeps the coin (badged as frozen), but live metric cells render `—` with a tooltip explaining the freeze.
+- **Live-comparison URL** `/compare/?coins=<id>,...` keeps the coin (its column header carries a `Frozen` badge tooltipped `Frozen on <date>`), but live metric cells fall back to the shared `—` placeholder tooltipped `No comparable data available`; no cell-level tooltip explains the freeze.
 - **Rolling-window metrics** (24h flows, 7d depeg counts, etc.) gradually decay to zero or null past their window once ingestion stops.
-- **Stub F-card.** The report card for a frozen coin shows an all-F stub (`isDefunct: true`) matching the existing `DEAD_STABLECOINS` defunct-card pattern, rather than the coin's last-real grade. This is an intentional v1 simplification (decision F2=a in the plan); a future v2 could read the last-real card from D1 if richer history is wanted.
+- **No report card.** A frozen coin leaves `ACTIVE_STABLECOINS`, so the next V9 publication carries no card for it and the detail page renders without a grade. There is no all-F stub and no `isDefunct` flag — neither exists in the V9 card contract. This is an intentional v1 simplification; a future v2 could read the last-real card from D1 if richer history is wanted.
 - **AI editorial summary preserved as-is.** The pre-freeze summary in `data/ai-summaries.json` continues to render on the detail page. We do not regenerate it on freeze — preserving the pre-freeze editorial framing.
 - **Methodology versions unchanged.** Per-domain methodology version constants are NOT bumped on freeze. Frozen status is a lifecycle policy, not a scoring change; bump a methodology only when the freeze ships with a domain-specific scoring, ingestion, or API-contract change.

@@ -72,7 +72,7 @@ Graph construction lives in `src/lib/contagion-layout.ts` and is called through 
 - Sorts remaining coins by market cap descending.
 - Takes the top N coins where N comes from the runtime Limit toggle (50 / 100 / 200 / All; default `DEFAULT_NODE_LIMIT = 200`, and `All` uncaps to the full ranked set), then iteratively prunes coins that become isolated inside the displayed subset and backfills from lower-ranked candidates.
 - Node radius uses square-root scaling between `MIN_RADIUS = 10` and `MAX_RADIUS = 34`.
-- Node ring color comes from the canonical grade band via `gradeRange()` and `GRADE_RADAR_COLORS` in `shared/lib/classification`.
+- Node ring color comes from the canonical grade band via `gradeRange()` in `shared/lib/report-card-core.ts` and `GRADE_RADAR_COLORS` in `shared/lib/classification`.
 
 ## Dependency Hubs Model And Board
 
@@ -111,11 +111,11 @@ Layout anchors Tier 1 near center, Tier 2 on an inner ring, and remaining nodes 
 
 The graph header exposes a single wrapping control row — Focus, Type, Limit, and the trace-coin picker share one line so the controls cost at most two lines above the canvas:
 
-- **Focus mode**: `All` (full graph), `Hub dependencies` (only edges touching Tier 1/Tier 2 hubs), `Selected neighborhood` (only edges adjacent to the selected trace coin).
+- **Focus mode**: `All` (full graph), `Hubs` (only edges touching Tier 1/Tier 2 hubs; accessible name "Hub dependencies"), `Neighborhood` (only edges adjacent to the selected trace coin; accessible name "Selected neighborhood").
 - **Type filter**: `All`, `Collateral`, or `Wrapper`, filtering which edges are drawn while preserving the active focus mode.
 - **Node limit toggle**: `50`, `100`, `200` (default), or `All` top-mcap coins enter the map before isolated-node pruning.
-- **Trace coin picker**: always visible. Selecting a coin sets the neighborhood root and switches to `Selected neighborhood`. Clicking a node pins the same trace target without changing the active focus mode.
-- **Selection overlay**: renders only when a node is hovered or pinned, in the top-right of the SVG stage with the HUD chrome (`--graph-panel-bg`, hairline border in `--graph-grid-line`). It surfaces direct dependent count, upstream link count, summed visible dependent/upstream weights, examples, and a "Trace neighborhood" action. It does not list systemic hubs — that surface belongs to the Dependency Hubs Board.
+- **Trace coin picker**: always visible. Selecting a coin sets the neighborhood root and switches to `Neighborhood`. Clicking a node pins the same trace target without changing the active focus mode.
+- **Selection overlay**: renders only when a node is hovered or pinned, in the top-right of the SVG stage with the HUD chrome (`--graph-panel-bg`, hairline border in `--graph-grid-line`). It surfaces unique visible dependent and upstream counts, summed visible dependent/upstream weights, examples, and a "Trace neighborhood" action. It does not list systemic hubs — that surface belongs to the Dependency Hubs Board.
 
 Below `sm`, a "Fullscreen graph" control opens the same graph inside a dialog for a larger touch canvas, and a compact inspection panel replaces the desktop overlay.
 

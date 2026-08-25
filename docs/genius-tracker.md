@@ -1,6 +1,6 @@
 # GENIUS Compliance Tracker
 
-**Status: shipped as part of `/compliance/`.** U.S. GENIUS Act metadata is the `genius` metadata extension on each tracked stablecoin. It renders inside the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`. This doc is the **source of truth for the `genius` schema, the status criteria, sourcing requirements, and legal framing** — the companion to [mica-tracker.md](./mica-tracker.md). The `genius-research` skill encodes the workflow; this spec encodes the rules.
+**Status: shipped as part of `/compliance/`.** U.S. GENIUS Act metadata is the `genius` metadata extension on each tracked stablecoin. It renders in the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`, which keeps the exhaustive registry, and per coin on stablecoin detail pages through the Regulatory Standing card (`src/lib/regulatory-standing.ts`) and the hero passport item. This doc is the **source of truth for the `genius` schema, the status criteria, sourcing requirements, and legal framing** — the companion to [mica-tracker.md](./mica-tracker.md). The `genius-research` skill encodes the workflow; this spec encodes the rules.
 
 GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins Act** (Public Law, signed 18 Jul 2025), the U.S. federal payment-stablecoin regime. It is an **informational, source-backed tracking surface, not legal advice** — see [Legal framing](#legal-framing-non-goals).
 
@@ -10,7 +10,7 @@ GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins
 
 GENIUS status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, and projected at build into the slim global client registry for authorization-status labels and into `shared/data/stablecoins/coins.compliance.generated.json` for the `/compliance/` table's long-form evidence.
 
-**No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** Missing `genius` metadata means **"not assessed"** — not "out of scope" and not "non-compliant". This is deliberate: the page distinguishes an unassessed coin (no row) from an explicitly reviewed one.
+**No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** One field does leave the presentation surface: `genius.issuerEntity` seeds the Safety Score V9 issuer key (`worker/src/lib/safety-score-v9-extension.ts`, run by the `compute-safety-score-v9` cron), so edit it with that issuer join in mind; `authorizationStatus` and the rest stay presentation-only. Missing `genius` metadata means **"not assessed"** — not "out of scope" and not "non-compliant". This is deliberate: the page distinguishes an unassessed coin (no row) from an explicitly reviewed one.
 
 GENIUS is modeled as a set of **separate public dimensions**, not one broad "compliant" label, because the statute creates distinct questions: is the asset even a payment stablecoin? who is the issuer and on what pathway? what is the federal/state regulator posture? is there a foreign-issuer exception? has there been enforcement? are reserve/redemption disclosures present?
 
@@ -18,7 +18,7 @@ GENIUS is modeled as a set of **separate public dimensions**, not one broad "com
 
 ## Schema
 
-A dedicated `genius?: GeniusProfile` object on `StablecoinMeta`, sibling to `mica?: MicaProfile` and `jurisdiction?`. Enums + the `GeniusProfile` interface live in `shared/types/core.ts`; Zod validation (`.strict()`, with cross-field `superRefine` rules) lives in `shared/types/stablecoin-meta-schemas.ts` and is wired through `shared/lib/stablecoins/schema.ts`. Presentation labels/badges live in `shared/lib/genius.ts`. Regime effective-date state lives in `shared/lib/compliance-regime-state.ts`.
+A dedicated `genius?: GeniusProfile` object on `StablecoinMeta`, sibling to `mica?: MicaProfile` and `jurisdiction?`. Enums live in `shared/types/core.ts`, which re-exports the `GeniusProfile` type; the shape itself is inferred from `GeniusProfileSchema` in `shared/types/stablecoin-meta-schemas.ts` (`.strict()`, with cross-field `superRefine` rules) and is wired through `shared/lib/stablecoins/schema.ts`. Presentation labels/badges live in `shared/lib/genius.ts`. Regime effective-date state lives in `shared/lib/compliance-regime-state.ts`.
 
 ### Fields (`GeniusProfile`)
 
@@ -169,7 +169,7 @@ Always include `sourceDate` / `accessedAt` where available so the review is date
 
 GENIUS effective-date and rulemaking-phase state is centralized in `shared/lib/compliance-regime-state.ts` (`GENIUS_REGIME_STATE`), **not** per coin. Update that object when primary-regulator final rules are issued or the statutory fallback effective date changes. `rulemakingPhase` ∈ `pre-rulemaking` | `proposed-rules` | `final-rules-issued` | `effective`.
 
-The compliance page renders **Implementation Watch** (separate from the main authorization table) while `rulemakingPhase !== "effective"`, and for pre-launch coins even after the regime is live — those rows never graduate to the main authorization table. GENIUS rows are forward-looking until the regime is effective. `sourceReferences` lets the effective-date posture cite multiple regulator rulemaking sources (OCC, FDIC, FinCEN/OFAC, Treasury), not just one. Keep `reviewedAt` current when re-verified.
+The compliance page renders **Implementation Watch** (separate from the main authorization table) while `rulemakingPhase !== "effective"`, and for pre-launch coins even after the regime is live — those rows never graduate to the main authorization table. GENIUS rows are forward-looking until the regime is effective. `sourceReferences` lets the effective-date posture cite multiple regulator rulemaking sources (OCC, FDIC, NCUA, FinCEN/OFAC, Treasury), not just one. Keep `reviewedAt` current when re-verified.
 
 ---
 

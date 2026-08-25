@@ -13,7 +13,7 @@ Three registries have deliberately different jobs:
 
 - `CONTRACT_CONFIGS` in `worker/src/lib/blacklist-contracts.ts` is the cron-backed scan set. It owns tracker-specific chain, contract, start-block, event-family, topic, and decoding metadata.
 - `BLACKLIST_STABLECOINS` in `shared/types/market.ts` is the API and UI filter universe. It may retain archived identities after a live scan is retired.
-- `worker/src/lib/blacklist-coverage-manifest.ts` derives supported coverage and owns explicit deferred, waived, and out-of-scope deployment records.
+- `worker/src/lib/blacklist-coverage-manifest.ts` derives supported coverage and owns explicit deferred and out-of-scope deployment records.
 
 Do not copy any of those rosters into documentation. Contract addresses and decimals resolve from the shared stablecoin registry except for explicit traded-contract or tracker-specific overrides in `blacklist-contracts.ts`.
 
@@ -45,8 +45,10 @@ which reclassifies the access gap from `missing-access-review` to the measured
 **named**, either by `variantOf`/`mintAuthority.inheritedFrom` or by a curated reserve slice.
 
 The reserve-slice attribution path is deliberately strict: the slice must
-carry an explicit `coinId`, that id must be in the fact set's active asset set, and the named asset's
-own review must resolve to a direct holder freeze. A declared parent takes precedence and keeps its
+carry an explicit `coinId`, that id must be in the fact set's active asset set, and the named asset must
+be directly freeze-capable — either its own review resolves to a direct holder freeze, or it carries no
+blacklistability review at all and its governance flag is `centralized`, mirroring the report card's
+blacklistable seed set. A declared parent takes precedence and keeps its
 `mint-control` failure domain; a reserve-slice upstream carries `reserve-issuer` instead. Scoring is
 unchanged either way — the freeze facts stay `bounded-unknown`, and the disposition only changes how
 the gap is attributed.
@@ -85,7 +87,7 @@ The snapshot total is not a live balance guarantee and is distinct from the loca
 - **Producer:** `syncBlacklist()` in `worker/src/cron/sync-blacklist.ts`
 - **Runtime budget:** 10 minutes for scans, with a 60-second minimum window before starting another config; a separately capped maintenance tail ends at 10 minutes 45 seconds
 - **Subrequest budget:** 900 across scanning, enrichment, and maintenance
-- **Provider limiter:** Etherscan and TronGrid requests use the shared serial 3-requests-per-second limiter
+- **Provider limiter:** serial per-provider limiters — TronGrid at 3 requests per second, Etherscan at 4 requests per second injected by the scheduled slot (the producer's own 3/s default applies only when no external Etherscan limiter is supplied)
 
 The producer returns `itemCount` as rows actually inserted into `blacklist_events`. Its `eventsFetched` metadata counts parsed rows before `INSERT OR IGNORE` deduplication. The remaining bounded counters and failure samples are defined beside `SyncBlacklistResult` and its metadata assembly in `sync-blacklist.ts`; do not duplicate that key inventory here.
 
@@ -113,7 +115,7 @@ Missing or unhealthy providers reduce the paths available to the affected config
 
 - `worker/src/cron/blacklist/evm-source.ts`
 - `worker/src/cron/blacklist/tron-source.ts`
-- `worker/src/cron/blacklist/shared.ts`
+- `worker/src/lib/blacklist/shared.ts` for the shared row construction and suppression contract both sources use
 
 The durable rules are:
 
