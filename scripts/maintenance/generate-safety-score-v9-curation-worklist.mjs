@@ -59,6 +59,7 @@ const STREAMS = [
     title: "Backing — reserve envelope, composition, assurance",
     codes: [
       "missing-reserve-composition",
+      "stale-audited-reserve-composition",
       "unreviewed-reserve-envelope",
       "material-unknown-reserve-exposure",
       "material-reserve-slice-unstructured",
@@ -67,7 +68,7 @@ const STREAMS = [
       "missing-custody-profile",
     ],
     ceiling: "backing-unverified (60)",
-    fix: "Author the structured reserve envelope: reserves[] slices with assetClass, issuerOrObligor, liquidityHorizon, maturityDaysMax, plus reserveReview, custodyProfile, and proofOfReserves.latestReport (assurance method + scope drive the assurance component). Use the reserve-research skill; envelope refresh recipes are in the V9 topic memory.",
+    fix: "Author or refresh the structured reserve evidence. For a missing or incomplete envelope, populate reserves[] slices with assetClass, issuerOrObligor, liquidityHorizon, maturityDaysMax, plus reserveReview, custodyProfile, and proofOfReserves.latestReport. For stale-audited-reserve-composition, refresh reserves[] and compositionAsOf from the newest independent attestation; if the issuer has not published a newer composition, record the blocker and accept the audited-fallback adequate ceiling rather than restating expired evidence. Use the reserve-research skill; envelope refresh recipes are in the V9 topic memory.",
   },
   {
     key: "MECH",
@@ -114,6 +115,59 @@ const STREAMS = [
   },
 ];
 
+// Deliberately narrower than the policy reason vocabulary: only codes assigned
+// to these operator curation streams belong here. Ordinary scoring, structural,
+// and diagnostic reasons remain silently unmapped by design.
+const CURATION_OWNED_CODES = [
+  // CTRL
+  "unresolved-mint-authority",
+  "missing-mint-authority",
+  "unknown-upgrade-authority",
+  "missing-upgradeability-review",
+  "missing-upgrade-control",
+  "unresolved-control-identity",
+  "unknown-control-cap-authority",
+  "unknown-control-mint-ability",
+  "mint-control-question",
+  // ORCL
+  "missing-oracle-profile",
+  "unreviewed-oracle-profile",
+  "incomplete-oracle-liquidation-branch",
+  "unresolved-oracle-branch-applicability",
+  "missing-required-oracle-branches",
+  // BRDG
+  "missing-bridge-routes",
+  "missing-bridge-route-rows",
+  "selected-bridge-route-missing",
+  "selected-bridge-route-unresolved",
+  "runtime-bridge-materiality-unavailable",
+  "material-bridge-supply-unmatched",
+  // RESV
+  "missing-reserve-composition",
+  "stale-audited-reserve-composition",
+  "unreviewed-reserve-envelope",
+  "material-unknown-reserve-exposure",
+  "material-reserve-slice-unstructured",
+  "partial-reserve-review",
+  "missing-latest-assurance-report",
+  "missing-custody-profile",
+  // EXIT
+  "missing-same-notional-route",
+  "unsupported-same-notional-route",
+  "missing-runtime-route-evidence",
+  "incomplete-dex-route-coverage",
+  "unresolved-exit-output",
+  "incomparable-route-requests",
+  // PEG
+  "missing-applicable-peg",
+  "missing-peg-input",
+  // DEP
+  "unreviewed-dependency-relationships",
+  "material-dependency-unavailable",
+  // ARCH
+  "missing-archetype",
+];
+
 function arg(name) {
   const index = process.argv.indexOf(name);
   return index === -1 ? null : process.argv[index + 1];
@@ -127,6 +181,23 @@ if (!replayPath) {
 const replay = JSON.parse(readFileSync(replayPath, "utf8"));
 const cards = replay.pipeline.candidate.cards;
 const assets = new Map(replay.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
+
+const curationOwnedCodeSet = new Set(CURATION_OWNED_CODES);
+for (const code of CURATION_OWNED_CODES) {
+  const streamKeys = STREAMS.filter((stream) => stream.codes.includes(code)).map((stream) => stream.key);
+  if (streamKeys.length !== 1) {
+    throw new Error(
+      `Curation-owned reason code "${code}" must map to exactly one worklist stream; found ${streamKeys.length}.`,
+    );
+  }
+}
+for (const stream of STREAMS) {
+  for (const code of stream.codes) {
+    if (!curationOwnedCodeSet.has(code)) {
+      throw new Error(`Worklist stream ${stream.key} routes undeclared curation reason code "${code}".`);
+    }
+  }
+}
 
 const codeToStream = new Map();
 for (const stream of STREAMS) for (const code of stream.codes) codeToStream.set(code, stream.key);
