@@ -992,8 +992,20 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
+    // Measured 2026-08-25: 24 upstream publications in the retained 30-day
+    // window (last 2026-08-21T23:30:02Z; the breach was detected at
+    // 2026-08-25T00:11:34Z when warning_count rose from 1 to 2), with a
+    // median gap of 1.00 d and a maximum gap of 3.00 d. The recurring
+    // Friday-publish/weekend-skip lands exactly on the old 3-day bound with
+    // zero margin, and the 2026-08-16 shift from 01:00Z to 23:30Z consumed
+    // it. The 7-day tier accepts collateralizationRatio, totalAssetsUsd,
+    // totalLiabilitiesUsd, and chain details up to 7 days old; reserve-category
+    // percentages are curated in liveReservesConfig.params.slices and do not
+    // age with this feed. Those totals are currently unscored for a fiat-cash
+    // asset, so this bound protects strong backing evidence, not a scored
+    // number.
     validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },

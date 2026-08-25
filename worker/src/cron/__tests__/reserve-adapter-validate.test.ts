@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
+import {
+  DASHBOARD_SOURCE_MAX_AGE_SEC,
+  DISCLOSURE_SOURCE_MAX_AGE_SEC,
+} from "@shared/types/live-reserve-adapter-policy";
 import { validateAdapterOutput } from "../reserve-adapters/validate";
 
 type AdapterKey = keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS;
@@ -189,6 +193,30 @@ describe("validateAdapterOutput", () => {
 
     expect(result.valid).toBe(true);
     expect(result.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
+  });
+  it("keeps the measured tether publication inside its disclosure freshness bound", () => {
+    const sourceTimestamp = Math.floor(Date.parse("2026-08-21T23:30:02.000Z") / 1000);
+    const now = Math.floor(Date.parse("2026-08-25T08:17:07.000Z") / 1000);
+    const ageSec = now - sourceTimestamp;
+    const adapter = adapterContext("tether-transparency");
+    const output = {
+      slices: [...FULL_SLICE] as never,
+      metadata: { sourceTimestamp, freshnessMode: "verified" },
+    };
+
+    expect(adapter.validation).toMatchObject({ maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC });
+    expect(ageSec).toBeGreaterThan(DASHBOARD_SOURCE_MAX_AGE_SEC);
+    expect(ageSec).toBeLessThan(DISCLOSURE_SOURCE_MAX_AGE_SEC);
+
+    const disclosureResult = validateAdapterOutput(output, { adapter: adapter as never, now });
+    expect(disclosureResult.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
+
+    const dashboardResult = validateAdapterOutput(output, {
+      adapter: adapter as never,
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      now,
+    });
+    expect(dashboardResult.warnings.some((warning) => warning.code === "stale-source-data")).toBe(true);
   });
 
   it("allows source timestamps within the future skew window", () => {

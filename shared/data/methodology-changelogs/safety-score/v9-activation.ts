@@ -1,5 +1,21 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_TETHER_DISCLOSURE_FRESHNESS: MethodologyChangelogEntry = {
+  version: "9.43",
+  title: "Tether transparency uses the measured disclosure cadence",
+  date: "2026-08-25",
+  effectiveAt: 1787664000,
+  summary:
+    "The `tether-transparency` adapter now uses the existing 7-day disclosure source-age tier instead of the 3-day dashboard tier. The retained 30-day history contains 24 upstream publications with a 1.00-day median gap and a 3.00-day maximum from the recurring Friday-publish/weekend-skip pattern; that gap landed exactly on the old bound with zero margin, and the 2026-08-16 shift from 01:00Z to 23:30Z consumed the remaining margin. The last publication was 2026-08-21T23:30:02Z, and the first production breach was detected at 2026-08-25T00:11:34Z when warning_count rose from 1 to 2. This is a live-reserve admission policy change, not evaluator arithmetic.",
+  impact: [
+    "The seven-day tier accepts the adapter's `collateralizationRatio`, `totalAssetsUsd`, `totalLiabilitiesUsd`, and chain details up to seven days old. Reserve-category percentages remain curated in `liveReservesConfig.params.slices` and do not age with the feed, so the widened clock applies only to the upstream totals and chain details.",
+    "Those totals are currently unscored for a `fiat-cash` asset. The bound therefore protects whether the live snapshot retains `strong` backing evidence rather than assigning points to an otherwise unscored number; for `usdt-tether`, retaining the live path keeps the policy-declared market-anchor premium eligible instead of entering the adequate audited fallback ceiling.",
+    "The adapter declaration is shared by `usdt-tether` and `xaut-tether`. A fixed-input replay cannot observe this producer-admission change because `liveToFallbackCoins` is captured before evaluation: the 2026-08-25 production capture remains byte-identical with zero score or grade movers. The next live capture can retain a source aged 3.36 days instead of emitting `stale-source-data` and falling back.",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_AUDITED_STALE_RESERVE_CEILING: MethodologyChangelogEntry = {
   version: "9.42",
   title: "A stale audited composition keeps an adequate ceiling, not a limited one",
