@@ -65,13 +65,6 @@ export default createClientFeaturePage({
       changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
     },
     headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
-    headerSupplement: (
-      <p className="pharos-meta">
-        <Link href="/safety-scores/map/" className="pharos-prose-link">
-          See the whole graded universe on one poster &rarr;
-        </Link>
-      </p>
-    ),
     preface: (
       <script
         type="application/ld+json"

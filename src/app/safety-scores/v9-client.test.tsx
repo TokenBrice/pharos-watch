@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -66,6 +66,10 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getByText("Is there real value behind the token?")).toBeTruthy();
     expect(screen.getByText("Can I get my value out?")).toBeTruthy();
     expect(screen.getByText("Who can change or break the system?")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Find your coin" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Open the Safety Score Map" }).getAttribute("href")).toBe(
+      "/safety-scores/map/",
+    );
   });
 
   it("filters the card grid by the existing grade controls", () => {
@@ -94,26 +98,6 @@ describe("ReportCardsV9Client", () => {
 
     expect(screen.getByRole("alert").textContent).toContain(
       "V8 ratings are not used as a fallback",
-    );
-    expect(screen.getByRole("status").textContent).toContain("live Safety Score lookup is temporarily unavailable");
-  });
-
-  it("resolves a stable-ID deep link, focuses its card, and shows current lookup facts", async () => {
-    window.history.replaceState(null, "", "/safety-scores/?coin=usdt-tether");
-    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
-      cards: [makeV9Card({ id: "usdt-tether", grade: "A", score: 91 })],
-    })));
-    mocks.useStablecoins.mockReturnValue(query({ peggedAssets: [
-      { id: "usdt-tether", pegType: "peggedUSD", circulating: { peggedUSD: 123_000_000 } },
-    ] }));
-
-    render(<ReportCardsV9Client />);
-
-    await waitFor(() => expect(document.activeElement?.id).toBe("safety-score-card-usdt-tether"));
-    expect(screen.getByText("Tether")).toBeTruthy();
-    expect(screen.getByText("Current live V9 publication", { exact: false })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Open report card/i }).getAttribute("href")).toBe(
-      "/stablecoin/usdt-tether/",
     );
   });
 });

@@ -428,7 +428,14 @@ export function validateAnnotationScene(
       if (!finite([a.cx, a.cy, a.r, b.cx, b.cy, b.r])) continue;
       const bothBubbles = (a.role ?? "obstacle") === "bubble" && (b.role ?? "obstacle") === "bubble";
       const gap = bothBubbles ? bubbleGap : 0;
-      if (Math.hypot(a.cx - b.cx, a.cy - b.cy) < a.r + b.r + gap) {
+      // `gap` is the minimum *legal* separation, so a pair placed at exactly
+      // that distance must pass. The map's hero pair is constructed at precisely
+      // `r0 + r1 + bubbleGap` from two area-weighted divisions, which rounds 1-2
+      // ULP short for many radius pairs; a strict `<` then reported a collision
+      // the layout had built to spec. Tolerance is relative so it stays ~1e-7px
+      // at poster coordinates.
+      const minimumSeparation = a.r + b.r + gap;
+      if (Math.hypot(a.cx - b.cx, a.cy - b.cy) < minimumSeparation * (1 - 1e-9)) {
         const code = bothBubbles ? "bubble-bubble" : "circle-circle";
         violations.push(violation(code, [a.id, b.id], `${code}: ${a.id} / ${b.id}`));
       }
