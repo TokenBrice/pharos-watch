@@ -72,17 +72,16 @@ export async function buildRecomputeStabilityStatements(
     }
 
     const methodologyVersion = getPsiMethodologyVersionAt(day);
+    // stability_index has no UNIQUE constraint on `computed_at` (the table is
+    // keyed by a surrogate `id`), so an ON CONFLICT(computed_at) upsert has no
+    // conflict target and SQLite rejects it outright. The caller runs these
+    // statements in one atomic batch, so delete-then-insert replaces the day.
     statements.push(
+      db.prepare("DELETE FROM stability_index WHERE computed_at = ?").bind(day),
       db
         .prepare(
           `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(computed_at) DO UPDATE SET
-           score = excluded.score,
-           band = excluded.band,
-           components = excluded.components,
-           input_snapshot = excluded.input_snapshot,
-           methodology_version = excluded.methodology_version`,
+         VALUES (?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           day,

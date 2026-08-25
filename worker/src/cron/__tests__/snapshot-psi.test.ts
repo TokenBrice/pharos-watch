@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makePsiDailyDb, makePsiSnapshotDb, type MockD1Database } from "./snapshot-cron.test-support";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { snapshotPsiDaily } from "../snapshot-psi";
 
 const mockD1 = makePsiSnapshotDb;
@@ -13,7 +14,7 @@ function yesterdayMidnightFrom(nowMs: number): number {
 function getInsertBinds(db: MockD1Database): unknown[] | undefined {
   const write = db
     .getHistory()
-    .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index"));
+    .find((entry) => entry.sql.includes("INSERT INTO stability_index"));
   return write?.binds;
 }
 
@@ -100,7 +101,7 @@ describe("snapshotPsiDaily", () => {
     expect(result.metadata).toBe(JSON.stringify({ reason: "no-samples-for-yesterday", sampleCount: 0 }));
     const insert = db
       .getHistory()
-      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index"));
+      .find((entry) => entry.sql.includes("INSERT INTO stability_index"));
     expect(insert).toBeUndefined();
   });
 
@@ -133,5 +134,68 @@ describe("snapshotPsiDaily", () => {
       "psi-v4": 60,
       "psi-v3": 36,
     });
+  });
+});
+
+describe("snapshotPsiDaily re-run idempotency (real schema)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function seedSample(sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"], storedAt: number, score: number): void {
+    sqlite
+      .prepare(
+        `INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot, methodology_version)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        storedAt,
+        score,
+        "STEADY",
+        JSON.stringify({ severity: 5, breadth: 2, stressBreadth: 1, trend: 0.5 }),
+        "{}",
+        "psi-v3",
+      );
+  }
+
+  it("leaves exactly one row for the day when the daily aggregation re-runs", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const yesterdayMidnight = yesterdayMidnightFrom(Date.now());
+
+    seedSample(sqlite, yesterdayMidnight + 3_600, 90);
+    seedSample(sqlite, yesterdayMidnight + 7_200, 80);
+
+    await snapshotPsiDaily(db);
+    await snapshotPsiDaily(db);
+
+    const rows = sqlite
+      .prepare("SELECT computed_at, score FROM stability_index WHERE computed_at = ?")
+      .all(yesterdayMidnight) as { computed_at: number; score: number }[];
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].score).toBe(85);
+  });
+
+  it("replaces the stored row when a re-run produces a different score", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const yesterdayMidnight = yesterdayMidnightFrom(Date.now());
+
+    seedSample(sqlite, yesterdayMidnight + 3_600, 90);
+    await snapshotPsiDaily(db);
+
+    seedSample(sqlite, yesterdayMidnight + 7_200, 70);
+    await snapshotPsiDaily(db);
+
+    const rows = sqlite
+      .prepare("SELECT score FROM stability_index WHERE computed_at = ?")
+      .all(yesterdayMidnight) as { score: number }[];
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].score).toBe(80);
   });
 });

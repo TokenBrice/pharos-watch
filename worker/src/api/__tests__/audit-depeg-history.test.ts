@@ -173,6 +173,7 @@ describe("handleAuditDepegHistory method safety", () => {
         rows: [],
       },
       { match: "FROM supply_history", rows: supplyRows },
+      { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [] },
     ]);
     const req = makeApiRequest("/api/audit-depeg-history?delete=1", {
@@ -252,6 +253,7 @@ describe("handleAuditDepegHistory method safety", () => {
         match: "FROM supply_history",
         rows: [{ stablecoin_id: "usdt-tether", snapshot_date: 1_799_971_200, circulating_usd: 1_000_000_000 }],
       },
+      { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [], throwError: new Error("insert failed") },
     ]) as MockD1Database;
     const req = makeApiRequest("/api/audit-depeg-history?delete=1", {
@@ -314,6 +316,7 @@ describe("handleAuditDepegHistory method safety", () => {
         rows: [],
       },
       { match: "DELETE FROM depeg_events WHERE id = ?", rows: [] },
+      { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [] },
     ]) as MockD1Database;
     const req = makeApiRequest("/api/audit-depeg-history?repair=synthetic-splits", {
@@ -407,6 +410,7 @@ describe("handleAuditDepegHistory method safety", () => {
         rows: [],
       },
       { match: "DELETE FROM depeg_events WHERE id = ?", rows: [] },
+      { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [] },
     ]) as MockD1Database;
     const req = makeApiRequest("/api/audit-depeg-history?repair=synthetic-splits&symbol=SUSD", {

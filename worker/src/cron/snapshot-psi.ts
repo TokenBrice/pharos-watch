@@ -70,25 +70,31 @@ export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Pr
   );
 
   throwIfAborted(signal);
-  await db
-    .prepare(
-      `INSERT OR REPLACE INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .bind(
-      yesterdayMidnight,
-      score,
-      band,
-      JSON.stringify(components),
-      JSON.stringify({
-        source: "daily-avg",
-        sampleCount: row.cnt,
+  // stability_index is keyed by a surrogate `id`, so `computed_at` carries no
+  // UNIQUE constraint for INSERT OR REPLACE to resolve against; a plain upsert
+  // appends a second row for the day. Delete-then-insert in one batch keeps the
+  // midnight-keyed row single-valued and is idempotent across re-runs.
+  await db.batch([
+    db.prepare("DELETE FROM stability_index WHERE computed_at = ?").bind(yesterdayMidnight),
+    db
+      .prepare(
+        `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        yesterdayMidnight,
+        score,
+        band,
+        JSON.stringify(components),
+        JSON.stringify({
+          source: "daily-avg",
+          sampleCount: row.cnt,
+          methodologyVersion,
+          methodologyBreakdown,
+        }),
         methodologyVersion,
-        methodologyBreakdown,
-      }),
-      methodologyVersion,
-    )
-    .run();
+      ),
+  ]);
   throwIfAborted(signal);
 
   logWorkerEventArgs("handler", "info", `[snapshot-psi] yesterday avg=${score} band=${band} samples=${row.cnt}`);
