@@ -51,7 +51,7 @@ Unlike the homepage, `/start/` is a guided long-form route with the standard tit
 
 ## Content Registry Contract
 
-The goal/glossary/atlas/shortcut content lives in `src/lib/start-here-content.ts`. The route-local PharosVille companion block is authored directly in `src/components/start-here-page.tsx` because it is presentation-specific and not part of the reusable route registry.
+The goal/score/glossary/atlas/shortcut content lives in `src/lib/start-here-content.ts`. The walkthrough section instead reads `WALKTHROUGH_APPEARANCES` from `src/lib/media-appearances.ts`, the module the homepage `Seen on` strip shares. The route-local PharosVille companion block is authored directly in `src/components/start-here-page.tsx` because it is presentation-specific and not part of the reusable route registry.
 
 The page consumes five exported datasets:
 
@@ -71,11 +71,12 @@ These are the canonical source of truth for the route destinations, copy, and gr
 
 1. Hero route deck
 2. `How Pharos scores risk` scores section
-3. `How to read Pharos` glossary section
-4. `Feature atlas` section
-5. `Power moves` shortcuts section
-6. `Sister tool: PharosVille`
-7. Closing CTA with `Open the dashboard`, `Read the methodology`, and `browse the directory` links
+3. `Prefer to watch` walkthrough section
+4. `How to read Pharos` glossary section
+5. `Feature atlas` section
+6. `Power moves` shortcuts section
+7. `Sister tool: PharosVille`
+8. Closing CTA with `Open the dashboard`, `Read the methodology`, and `browse the directory` links
 
 ### Hero route deck
 
@@ -93,7 +94,7 @@ Goal-card rules:
 
 ### Glossary
 
-Built from `START_HERE_GLOSSARY`. This section is the only concept-first explainer on the page; everything else is route navigation.
+Built from `START_HERE_GLOSSARY`. Together with the scores section, it carries the page's concept-first explainer copy; the goal deck, atlas, and shortcut sections are route navigation.
 
 ### Feature atlas
 
@@ -112,7 +113,7 @@ Built from `START_HERE_SHORTCUTS`. These are workflow accelerators for repeat us
 
 ## Navigation Contract
 
-The route is curated around internal Pharos destinations only.
+The curated route registry is internal Pharos destinations only. The route's two off-origin destinations — the PharosVille companion and the recorded walkthroughs — are rendered outside that registry and open in a new tab.
 
 Current primary goal routes:
 

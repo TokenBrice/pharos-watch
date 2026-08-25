@@ -16,11 +16,12 @@ Route contract for `/`, the main Pharos dashboard.
 
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
-1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 core stablecoins and cash equivalents
-2. `HomepageBootstrapScript` for nonvisual first-paint query seeding
+1. `HomepageBootstrapScript` for nonvisual first-paint query seeding
+2. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 core stablecoins and cash equivalents
 3. conditional `HomeBlogBanner` while the latest post is fresh
 4. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
 5. `HomeAltClient`
+6. `HomeMediaStrip`, the static `Seen on` media strip linking to `/about/#media`
 
 Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the shared `/og-card.png` Open Graph image.
 
@@ -46,7 +47,7 @@ The homepage is intentionally decomposed into several cache-sharing clients inst
 
 ### `HomeAltClient`
 
-The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset as a fallback only. After hydration, `HomeAltHero` derives the same totals and cohorts from the cache-sharing `useStablecoins()` path. A static fallback at most 72 hours old remains visible with its as-of date; an older or undated fallback becomes unavailable when no live data exists. The historical chart remains live but does not compete with LCP: `HomeAltHeroChartGate` keeps the lightweight skeleton through first paint, then mounts `HomeAltHeroLiveChart` from an idle callback after the chart surface reaches the viewport. The chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The desktop Daily Digest promo inside `HomeAltMiniCardGrid` reads `useDailyDigest()` for the current issue title and short text, falling back to static non-placeholder archive copy only while live data is unavailable. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
+The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset as a fallback only. After hydration, `HomeAltHero` derives the same totals and cohorts from the cache-sharing `useStablecoins()` path. A static fallback at most 72 hours old remains visible with its as-of date; an older or undated fallback becomes unavailable when no live data exists. The historical chart remains live but does not compete with LCP: `HomeAltHeroChartGate` keeps the lightweight skeleton through first paint, then mounts `HomeAltHeroLiveChart` from an idle callback after the chart surface reaches the viewport. The chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The desktop Daily Digest promo inside `HomeAltMiniCardGrid` reads `useDailyDigest()` for the current issue title and short text, falling back to static non-placeholder archive copy only while live data is unavailable, and also reads `useDigestArchive()` for the two previous daily editions behind it, rendered as decorative `aria-hidden` fold previews that stay blank without that data. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
 
 `HomeAltRankingsSection` query inputs:
 
@@ -133,24 +134,26 @@ Under the fold (`HomeAltClient`):
 6. `HomeAltYieldOverview`
 7. `HomeAltStatusTelegram`
 
+`src/app/page.tsx` then closes the page with `HomeMediaStrip`, the static `Seen on` media credibility strip that links to `/about/#media`.
+
 The directory table is the product's workbench, so it sits directly after shortcuts and the signal-card band; Horizon and the overview modules follow it.
 
 `HomeAltYieldOverview` keeps the homepage yield teaser risk-adjusted-first: the headline stat is the best Pharos Yield Score row with APY and PYS, while the raw APY maximum is demoted to a muted `Highest raw APY (unadjusted)` note.
 
-### Key Stablecoin Data
+### Stablecoin Overview
 
 This section contains:
 
 - `StablecoinTable`
 - `PegBrowseStrip`
 
-The homepage table seeds a curated default column set (`HOME_ALT_DEFAULT_COLUMNS`, which omits Mint Authority and Flags), keeps its own capped vertical scroll viewport, and lets users persist column changes through Table settings.
+The homepage table seeds a curated default column set (`HOME_ALT_DEFAULT_COLUMNS`, which omits Mint Authority and Flags), paginates at `OVERVIEW_PAGE_SIZE` (20) rows per page behind a prev/next footer inside its own capped vertical scroll viewport, and lets users persist column changes through Table settings.
 
 When pinning is enabled from the homepage, each table row shows a locked star column to the left of the rank column. Starred rows are shown at the top of the table, ahead of unstarred rows; filters and search still decide which rows are eligible to appear in the table.
 
-The `Mint Score` column reads the published Safety Score V9 mint component off the report-card payload (`cards[].breakdowns.control.components`, `kind: "mint"`) and shows its score (`0-100`, or `NR`) and posture band with a methodology hint. Sorting uses the `mintAuthority` sort key and places unrated rows after scored rows. The row title still includes the curated review bucket used by `/coverage/` and `/screener/` (`No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`), which describes the curation route rather than the score. Since safety `9.1` this is the same number the Economic Control pillar uses, so the column and the grade can no longer disagree; a publication without breakdowns renders `NR`. The same release renamed the CSV export headers to `Mint Control Score` and `Mint Control Band` (from `Mint Authority Score` / `Mint Authority Band`), which is breaking for header-keyed consumers; the curated route column stays `Mint Authority Status`, and band keys are unchanged.
+The `Mint Score` column reads the published Safety Score V9 mint component off the report-card payload (`cards[].breakdowns.control.components`, `kind: "mint"`) and shows its score (`0-100`, or `NR`) in its posture-band colour, with the band named in the badge title; the homepage suppresses the header methodology hint (`showHeaderMethodologyHints={false}`), which `/screener/` keeps. Sorting uses the `mintAuthority` sort key and places unrated rows after scored rows. The row title still includes the curated review bucket used by `/coverage/` and `/screener/`, spelled out (`No privileged mint`, `Governed mint`, `Multisig mint`, `Issuer or backend mint`, `Bridge mint`, `Inherited authority`, or `Unknown mint authority`), which describes the curation route rather than the score. Since safety `9.1` this is the same number the Economic Control pillar uses, so the column and the grade can no longer disagree; a publication without breakdowns renders `NR`. The same release renamed the CSV export headers to `Mint Control Score` and `Mint Control Band` (from `Mint Authority Score` / `Mint Authority Band`), which is breaking for header-keyed consumers; the curated route column stays `Mint Authority Status`, and band keys are unchanged.
 
-`PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally. The collapsed homepage preview shows USD, EUR, GBP, and BRL first; remaining active fiat pegs sit behind the "more pegs" disclosure.
+`PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally. The collapsed homepage preview shows USD, EUR, GBP, and BRL first; remaining active fiat pegs sit behind the "View More" disclosure.
 
 ---
 

@@ -19,14 +19,11 @@ Feature ideas should usually start in [GitHub Discussions](https://github.com/To
 3. Keep the change narrow. Avoid unrelated refactors, generated churn, or formatting sweeps.
 4. Update the matching docs when behavior, API contracts, methodology, data sources, or pipeline ownership changes.
 
-Important project rules:
+Important project rules. The full cross-cutting set is the Hard Rules section of [CLAUDE.md](./CLAUDE.md); these are the ones an outside change trips on most often:
 
 - Tailwind classes must be static strings.
-- Runtime-shared imports should use `@shared/lib/...` and `@shared/types...`.
-- Use `getCirculatingRaw()` from `shared/lib/supply.ts`.
-- DefiLlama list-endpoint supply values are already USD-denominated; do not multiply them by price.
-- Do not add manual, on-chain, CoinMarketCap, or DEX supply overrides.
-- D1 migrations must be backward-compatible with the currently live Worker.
+- DefiLlama list-endpoint supply values are already USD-denominated; do not multiply them by price, and never replace DefiLlama list supply with manual, on-chain, CoinMarketCap, or DEX values. A supplemental supply path is allowed only through an existing explicit, documented, fail-closed, double-count-safe admission path; see [docs/stablecoin-data.md](./docs/stablecoin-data.md).
+- D1 migrations must be backward-compatible with the currently live Worker; see [docs/deployment-process.md](./docs/deployment-process.md).
 
 ## Local Setup
 

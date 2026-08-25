@@ -13,7 +13,7 @@ The route is statically rendered and does not fetch private data. Its copy descr
 
 ## Metadata
 
-`src/app/privacy/page.tsx` owns the title, description, canonical `/privacy/`, social image, and visible `Last updated` date. Keep the date in step with substantive policy changes.
+`src/app/privacy/page.tsx` owns the title, description, canonical `/privacy/`, and visible `Last updated` date; the social image falls back to the shared `buildPageMetadata` default. Keep the date in step with substantive policy changes.
 
 The page uses the longform shell with a constrained reading measure. It remains public, indexable, and linked from the footer.
 

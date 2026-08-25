@@ -44,7 +44,7 @@ The leaderboard is public and indexable. The profile routes are statically gener
 - hero summary: total tracked stablecoin supply (the frost-blue "One Beam" figure, `.pharos-numeric text-frost-blue`), optional global 7d trend, chain count, and a top-chain dominance breakdown bar/legend. The page keeps its existing sequential bands rather than the shared `FeatureHeroSplit`, and intentionally retains the frost-tinted "Top N chains hold X%" concentration badge
 - explicit `Unattributed` residual in the dominance breakdown when the stablecoins cache has supply that DefiLlama does not attribute to a concrete chain
 - `NauticalChart`, fed by the chain snapshot plus `stablecoinsQuery.data?.peggedAssets` so the visual can attach top-stablecoin cargo/logos to each chain; the route-level harbor summary plates (`Largest port`, `Avg health`, `Fragile ports`, and health bands) render before the SVG so the chart can finish with the map itself
-- `SelectedHarborPanel`, synchronized from the harbor chart and leaderboard hover/focus, showing the selected chain's exact supply, tracked share, health band, stablecoin count, dominant cargo, top cargo marks, and 7-day wake directly after the harbor map; the panel reads existing chain snapshot fields and does not change Chain Health semantics
+- `SelectedHarborPanel`, synchronized from the harbor chart and leaderboard hover/focus, showing the selected chain's compact supply, tracked share, health band, stablecoin count, dominant cargo, top cargo marks, and 7-day wake directly after the harbor map; the panel reads existing chain snapshot fields and does not change Chain Health semantics
 - sortable leaderboard table rendered through `DataTableShell`
 - `QueryFreshnessNotices` (preset `"chains"`, which wraps the stale-data banner) plus `QueryErrorNotice` with retry in the no-data error state
 - skeleton loading states (KPI grid + table rows)
@@ -74,7 +74,7 @@ Default sort is `totalUsd desc`.
 - sets canonical metadata at `/chains/[chain]/`
 - builds the title/description from the mapped deployment count and leading ticker symbols when they fit the search-snippet title budget
 - emits `CollectionPage` + `ItemList` JSON-LD for tracked deployments, with chain/deployment entities typed as `Thing` and no `Product` markup
-- renders the live client first, then a compact server-rendered deployment anchor hub linking each tracked stablecoin on the chain to its `/stablecoin/[id]/` page, followed by related taxonomy and research route hubs
+- renders the live client first, then a compact server-rendered deployment anchor hub linking each tracked stablecoin on the chain to its `/stablecoin/[id]/` page, a `Next Check` CTA (compare cohort + alerts), and finally related taxonomy and research route hubs
 
 `src/app/chains/[chain]/client.tsx` uses `useChainProfileData(chainId)` and renders, in order:
 
@@ -82,12 +82,12 @@ Default sort is `totalUsd desc`.
 2. `StaleDataBanner` when coordinated chain/stablecoin snapshots are stale or mismatched
 3. hero card (`ChainHero`) with supply, global share, 24h/7d/30d change (30d deltas and percentages use only chain rows with known previous-month anchors; all with dark-mode colors via `trendColor()`), health badge, `dark:invert` logo support, and the embedded Chain Health breakdown (the `HealthZone` factor grid) whose weight labels derive dynamically from exported constants in `shared/lib/chains/health.ts`
 4. `ShowYourWorkPanel` rendered immediately below the hero card, exposing the factor math
-5. stablecoin composition treemap — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
+5. stablecoin composition grid — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
 6. backing-type breakdown — rendered only when the route is on a coordinated snapshot; unclassified coins shown as "Other" (zinc-colored) bucket; filter buttons update the stablecoin table by backing type
 7. full stablecoin table with a screen-reader-only `<caption>` — rendered only when the route is on a coordinated snapshot
-8. skeleton loading states (hero + health + composition blocks)
+8. skeleton loading states inside the hero card only (market metrics + the Chain Health zone); the detailed sections render nothing or `DetailedSectionsNotice` until the coordinated-snapshot gate opens
 
-`useChainProfileData()` coordinates `GET /api/chains` and `GET /api/stablecoins` for the route. It renders the summary chain card as soon as the chain snapshot exists, but it keeps the composition/backing/table sections hidden until both snapshots share the same `updatedAt` value and the stablecoins snapshot has authoritative freshness metadata. The route surfaces explicit notices for the three non-happy states: missing detailed stablecoin data, mismatched snapshots, and missing freshness metadata.
+`useChainProfileData()` coordinates `GET /api/chains` and `GET /api/stablecoins` for the route. It renders the summary chain card as soon as the chain snapshot exists, but it keeps the composition/backing/table sections hidden until both snapshots share the same `updatedAt` value, the chain summary total and the stablecoin-derived chain total match within floating-point tolerance (`chainTotalsMatch`), and the stablecoins snapshot has authoritative freshness metadata. The route surfaces explicit notices for the three non-happy states: missing detailed stablecoin data, mismatched snapshots, and missing freshness metadata.
 
 `useChainStablecoins()` derives profile rows from `/api/stablecoins`, not `/api/chains`, by summing every `chainCirculating` entry that resolves to the selected canonical chain ID.
 
@@ -109,9 +109,9 @@ The page contract is limited to presentation: the leaderboard exposes the compos
 
 `worker/src/api/chains.ts`:
 
-- loads the strict stablecoins cache
+- loads the strict stablecoins cache and restricts it to active core-aggregate assets (`isActiveChainAggregateAsset`), which scopes every downstream peg rate, aggregate, and total
 - derives non-USD peg references from `fxFallbackRates`; missing commodity references are withheld rather than defaulted to `$1`
-- hydrates safety scores from the report-card cache when available
+- hydrates safety scores only from a fresh accepted report-card publication; a held, stale, or unavailable source leaves the score map empty
 - computes the response via `aggregateChains(...)`
 - computes `globalTotalUsd` from all tracked circulating supply, while preserving `chainAttributedTotalUsd` and `unattributedTotalUsd` for chain-specific residuals
 - overwrites `updatedAt` with the stablecoins-cache timestamp

@@ -35,7 +35,7 @@ The route renders through `FeaturePageShell` with:
 - a copyable global command: `/subscribe launch all`
 - copy that points users to individual upcoming coin pages for asset-specific exact commands
 
-Metadata is authored directly in `src/app/upcoming/page.tsx` with canonical `/upcoming/`, route-specific title/description, and the default shared page-metadata helper path.
+Metadata is authored directly in `src/app/upcoming/page.tsx` through the shared `buildPageMetadata` helper (`src/lib/page-metadata.ts`), with canonical `/upcoming/`, route-specific title/description, and the route-specific OG image `/og-upcoming.png` in place of the helper's default card.
 
 ---
 
@@ -111,7 +111,7 @@ The route now promotes the Telegram launch-alert workflow in two layers:
 - `src/app/upcoming/page.tsx` renders an `sr-only` nav containing links for every `PRE_LAUNCH_STABLECOIN`, so the page remains crawlable even though the visible card grid is client-rendered.
 - The page emits `CollectionPage` and `ItemList` JSON-LD for the current pre-launch detail routes.
 
-The visible route entrypoint is `/upcoming/`. The homepage renders only a compact `On the Horizon` logo constellation that links back to this route; `/upcoming/` remains the full filterable tracker and crawlable pre-launch surface.
+The visible route entrypoint is `/upcoming/`. The homepage renders only a compact `On The Horizon` logo constellation that links back to this route; `/upcoming/` remains the full filterable tracker and crawlable pre-launch surface.
 
 ---
 

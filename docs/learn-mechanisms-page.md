@@ -66,11 +66,11 @@ The hub at `/learn/mechanisms/` renders the same shell with its own headline, a 
 
 ## Metadata + SEO
 
-- Title: hand-tuned per archetype, all ending in `, Explained` (see `TITLE_BY_ARCHETYPE` in the route module); template `%s | Pharos` adds the suffix.
+- Title: hand-tuned per archetype, all ending in `, Explained` (see `MECHANISM_EXPLAINER_TITLES` in `src/lib/mechanism-explainer-registry.ts`, imported by the route module and reused by the OG-image script); template `%s | Pharos` adds the suffix.
 - Description: hand-tuned per archetype, ~150-165 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
 - OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) owns the manual staging, rasterization, and review workflow.
-- JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`, `DefinedTermSet` JSON-LD on the hub, Dataset JSON-LD for the public peg-mechanism distribution mirror, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
+- JSON-LD: `BreadcrumbJsonLd` rendered by `LearnPageShell`, `DefinedTermSet` JSON-LD on the hub, Dataset JSON-LD for the public peg-mechanism distribution mirror, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
 
 ---
 
@@ -90,22 +90,23 @@ These suites run in the ordinary noncritical lane. `scripts/maintenance/build-og
 
 - **Shared navigation:** `src/lib/nav-config.ts` LEARN group → `Mechanisms`, `Case Studies`, and `Glossary` in desktop/mobile navigation and the command palette
 - **Coin detail (`src/components/stablecoin-detail/peg-stability-card.tsx`):** "Learn how X stablecoins work" link directly below the per-coin mechanism diagram, plus the header info affordance, both gated on the resolved mechanism archetype.
+- **Mechanism review panel (`src/components/stablecoin-detail/mechanism-review-panel.tsx`):** "How <archetype> stablecoins work" link, rendered in both the compact rail card and the embedded risk-context fold, gated on a resolved mechanism review.
 - **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`PegStabilityCard` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>&lifecycle=active` deep-link instead.
 - **Methodology index (`src/app/methodology/page.tsx`):** single "Learn how each stablecoin design produces its peg" callout near the top.
 - **About (`src/app/about/page.tsx`):** inline link on the word "mechanisms" inside the Classification section.
 - **Start Here (`src/lib/start-here-content.ts`):** single tile under the Learn / Reference group.
 
-No footer entry. The hub is the only deep-link from `Mechanisms`-related surfaces; per-archetype pages are not surfaced anywhere in primary navigation.
+No footer entry. The hub is the only entry in the header/mobile nav rail; per-archetype pages are reachable from the command palette's `Mechanism archetypes` section (`PALETTE_MECHANISMS` in `src/components/command-palette-model.ts`) and from in-page links on methodology, cemetery, and coin-detail surfaces.
 
 ---
 
 ## How to Add a New Archetype
 
-1. Add the slug to `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts`.
-2. Add the label + one-liner entries to `MECHANISM_ARCHETYPE_LABELS` and `MECHANISM_ARCHETYPE_ONE_LINERS` in `shared/lib/classification/mechanism-archetypes.ts`. The typechecker enforces exhaustiveness.
+1. Add the slug to `MECHANISM_ARCHETYPE_VALUES` in `shared/types/stablecoin-taxonomy.ts` (re-exported through `shared/types/core.ts`, which is what route modules import).
+2. Add entries to `MECHANISM_ARCHETYPE_LABELS`, `MECHANISM_ARCHETYPE_SHORT_LABELS`, `MECHANISM_ARCHETYPE_CTA_NOUNS`, and `MECHANISM_ARCHETYPE_ONE_LINERS` in `shared/lib/classification/mechanism-archetypes.ts`. The typechecker enforces exhaustiveness.
 3. Add the corresponding `ARCHETYPE_VISUALS` entry in `src/lib/mechanism-explainers/types.ts`, preserving the route's neutral shared chrome unless the design contract changes.
 4. Author a new content module under `src/lib/mechanism-explainers/<slug>.ts` and register it in `src/lib/mechanism-explainers/index.ts`.
-5. Add a `TITLE_BY_ARCHETYPE` and `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
+5. Add a `MECHANISM_EXPLAINER_TITLES` entry in `src/lib/mechanism-explainer-registry.ts` (which also drives the OG-image roster) and a `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
 6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does). A variant that differs by a coin-level flag rather than by archetype adds a second config beside the first and a case in `resolveThreeStepConfig` — never a per-coin entry in `coin-overrides.ts`, which is sized for a handful of flagship coins.
 7. Run `tsx scripts/maintenance/build-og-learn-images.ts`, then follow the manual rasterize-and-review workflow in [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png).
 8. Run the mechanism content, exact static-param, and sitemap suites listed in Coverage Invariant; regenerate the OG asset before running `npm run check:generated-artifacts`.

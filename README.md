@@ -22,17 +22,17 @@ Pharos is research infrastructure, not financial advice. Data can be delayed, in
 - **Peg health:** 15-minute peg monitoring, Peg Score, depeg detection, direction tracking, and historical depeg timelines.
 - **Issuer controls:** FreezeWatch covers freeze, blacklist, and seize events for supported issuer-controlled assets across major chains.
 - **Liquidity quality:** DEX Liquidity Score combines pool TVL, volume, durability, pool quality, and pair diversity.
-- **DEX price corroboration:** Curve, Uniswap V3, Aerodrome, Velodrome, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener inputs help suppress false depeg alerts.
+- **DEX price corroboration:** on-chain and aggregator DEX inputs — Curve, Uniswap, and Raydium among others — help suppress false depeg alerts. The live venue roster is rendered at [pharos.watch/about](https://pharos.watch/about/) from `DATA_SOURCE_GROUPS` in `src/lib/about-content.ts`.
 - **Market structure:** USD, non-USD fiat, commodity, and CPI-linked stablecoin cohorts with chain and peg distribution views.
 - **Risk context:** safety report cards, Bluechip ratings, redemption backstops, dependency mapping, mint/burn flows, live reserves, and yield intelligence where coverage exists.
 - **Lifecycle coverage:** upcoming stablecoins, frozen archives, and the Stablecoin Cemetery for retired or failed assets.
-- **Public integration:** authenticated public API keys, OpenAPI/Postman artifacts, static dataset mirrors, and RSS/JSON feed routes.
+- **Public integration:** authenticated public API keys, OpenAPI/Postman artifacts, static dataset mirrors, and RSS feed routes.
 
 ## Data And Methodology
 
 Pharos combines market, oracle, exchange, on-chain, DEX, reserve, issuer, and editorial sources behind a Cloudflare Worker. The frontend never calls third-party providers directly.
 
-Key live source families include DefiLlama, CoinGecko, CoinMarketCap, Binance, Kraken, Coinbase Exchange, Bitstamp, Pyth, RedStone, Chainlink, Curve, The Graph, GeckoTerminal, DexScreener, Jupiter, Etherscan, TronGrid, dRPC, Alchemy, Frankfurter, Open Exchange Rates, gold-api.com, FRED/New York Fed/Treasury/ECB/SIX benchmark feeds, Bluechip, and protocol-specific reserve or redemption endpoints.
+The live source roster is rendered at [pharos.watch/about](https://pharos.watch/about/) from `DATA_SOURCE_GROUPS` in `src/lib/about-content.ts` rather than duplicated here. As anchor examples only, it spans market and aggregator data (DefiLlama, CoinGecko), exchange and oracle feeds (Kraken, Chainlink), on-chain, RPC, and DEX reads, FX and benchmark rate feeds, and protocol-specific reserve or redemption endpoints.
 
 Reliability guardrails include:
 
@@ -100,7 +100,7 @@ Use `npm install` instead of `npm ci` only when intentionally changing dependenc
 
 Good public contribution lanes are data corrections, source coverage improvements, docs/API examples, bug reports, accessibility fixes, and small UI quality improvements that preserve the existing Pharos design language.
 
-Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. Data corrections should include source links and timestamps. Feature ideas usually belong in [Discussions](https://github.com/TokenBrice/pharos-watch/discussions) before implementation.
+Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request; [ROADMAP.md](./ROADMAP.md) records the current directional priorities. Data corrections should include source links and timestamps. Feature ideas usually belong in [Discussions](https://github.com/TokenBrice/pharos-watch/discussions) before implementation.
 
 ## Security
 

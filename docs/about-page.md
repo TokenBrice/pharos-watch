@@ -12,17 +12,18 @@ The `/about/` route is the product overview for Pharos. It explains:
 
 Primary implementation file:
 
-- `src/app/about/page.tsx`
+- `src/app/about/page.tsx` for the route entry and `metadata`
+- `src/components/about/about-page-content.tsx` for the shell, hero, and section rendering
 - `src/lib/about-content.ts` for the visible source roster and reusable section copy
 
 ## Route Shell Contract
 
-The route shell is owned directly by `src/app/about/page.tsx`.
+The route shell is owned by `src/components/about/about-page-content.tsx`; `src/app/about/page.tsx` exports only the route `metadata` and renders `<AboutPageContent />`.
 
 - `metadata` sets the canonical path `/about/` plus route-specific title/description/Open Graph fields
 - the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and two lead paragraphs
-- the page opens on a modest signature hero: a frost-blue tracked-stablecoin figure, the editorial lede and byline, and a neutral stat strip for active, frozen, pre-launch, and source counts
-- the shell's `preface` injects `AboutPage` JSON-LD (its `mentions` cover the API/data catalog, coverage matrix, data pipeline, methodology, principles, and funding); the FAQ (`FAQPage`) JSON-LD is emitted separately by `FaqSection` (`includeJsonLd`)
+- the page opens on a modest signature hero: a frost-blue tracked-stablecoin figure, the editorial lede and byline, and a neutral stat strip for core, variant, pre-launch, and source counts (`Sources` is a static `50+` label, not a computed count)
+- the shell's `preface` injects `AboutPage` JSON-LD (its `mentions` cover the API/data catalog, coverage matrix, data pipeline, methodology, principles, editorial policy, and funding); the FAQ (`FAQPage`) JSON-LD is emitted separately by `FaqSection` (`includeJsonLd`)
 - the same FAQ items render visibly near the bottom of the page, before the disclaimer, so the `FAQPage` JSON-LD matches user-visible Q&A content
 - the public trust material lives inline on `/about/`: `#principles` states the editorial/product principles, `#editorial-ai-policy` states the AI-content policy, and `#corrections-policy` states the corrections path.
 
@@ -55,7 +56,7 @@ The page is organized into these sections, in order:
 ## Navigation Contract
 
 - `/about/` remains a top-level route in the `Reference` group (the `NAV_GROUPS` entry keyed `"reference"`).
-- `/about/` is the reference hub for low-frequency reference surfaces. `Funding`, `Methodology`, and `Coverage` sit beside it in the top-nav `Reference` group. Learn surfaces stay in the Learn group; API Access, Changelog, and System Status stay in the lighthouse menu.
+- `/about/` is the reference hub for low-frequency reference surfaces. `Funding`, `Methodology`, `Coverage`, and `Blog` sit beside it in the top-nav `Reference` group. Learn surfaces stay in the Learn group; API Access, Changelog, and System Status stay in the lighthouse menu.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route
@@ -74,8 +75,8 @@ The page is organized into these sections, in order:
 - Regulatory register copy should disclose both EU MiCA register/NCA sources and U.S. GENIUS implementation-watch sources when `/compliance/` surfaces them.
 - EUR stablecoin reference copy should disclose eurostablecoins.xyz when its coverage API is used for EUR-specific market-availability labels, chain-gap audits, or MiCA issuer cross-checks.
 - DEX/yield source copy should describe source families, explicitly label optional gated sources such as vaults.fyi when they are not default live ranking inputs, and describe runtime blocking of dead/deprecated venues; detailed protocol lists belong in `docs/dex-liquidity.md` and `docs/yield-intelligence.md`.
-- The DEX source roster includes pinned Uniswap V3 and PancakeSwap V3 QuoterV2/factory RPC reads as a shadow measured-depth producer. Listing the source does not imply score eligibility: deployment cohorts remain activation-pending until their replay, equivalence, drift, and shadow evidence is approved.
+- The DEX source roster includes reviewed Uniswap V3, PancakeSwap V3, and Aerodrome Slipstream QuoterV2/factory RPC reads as measured-depth producers. Listing the source does not imply score eligibility: unratified deployment cohorts, such as the BSC Uniswap V3 census, stay shadow-only until their replay, equivalence, drift, and shadow evidence is approved.
 - The DEX source roster includes Stellar Horizon only for classic-AMM pool discovery. Soroban contract-token deployments remain an explicit native-indexer limit rather than being presented as covered by Horizon.
-- The visible reference-source roster currently includes New York Fed EFFR, FRED DFF fallback, FRED and ALFRED `IUDZOS2` SONIA Compounded Index mirrors (with Bank of England IADB `IUDZOS2` fallback), CBR DailyInfo `KeyRateXML`, CBRT EVDS BIST TLREF `TP.BISTTLREF.ORAN`, and Midas NAV-oracle coverage for Yield Intelligence; keep those aligned with `docs/yield-intelligence.md` when benchmark or yield-oracle sources change.
+- A new benchmark, reference-rate, or NAV-oracle source used by Yield Intelligence must be disclosed in the visible roster and kept aligned with `docs/yield-intelligence.md`. The `Ratings & Reference` group in `src/lib/about-content.ts` is the current inventory; do not enumerate those feeds here.
 - L2BEAT is disclosed as a static Chain Health chain-risk snapshot and Safety Score bridge-route review source, not as a live worker fetch.
 - PSI copy should describe the current 30-minute cadence and the live formula inputs: active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend. It must also state that the monetary aggregate includes core stablecoins and cash equivalents while excluding tracked variants and stable-value investment products.

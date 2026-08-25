@@ -48,16 +48,17 @@ The reference page is presentation and navigation around the canonical contract,
 The route renders:
 
 1. Breadcrumb JSON-LD (structured data only, not a visible element): `Home / About / API Reference`
-2. Hero copy that makes the auth model explicit:
+2. Top-fold copy that makes the auth model explicit (hero paragraph plus the lane and `Quick Facts` cards):
    - external integrations use `https://api.pharos.watch`
    - protected public routes require `X-API-Key`
    - only a narrow no-key set remains on the public host (`health`, OG images, `feedback`, self-serve key request/verify, and `telegram-webhook` with Telegram secret auth); the Telegram Mini App session/mutation no-key exception (signed `initData`) is called out in the access FAQ
    - the website itself uses the internal `/_site-data/*` lane instead
    - operators use Cloudflare Access on the ops hosts, not public API keys
-3. Three top-fold lane cards:
-   - `External API`
+3. Four top-fold cards in one grid:
+   - `External API` lane
    - `Website lane`
    - `Ops lane`
+   - `Quick Facts` (public auth header, no-key public routes, admin auth on the ops hosts)
 4. A `Need A Key?` notice that links to `/api/` and summarizes the email-verified 30 rpm / 60 day default key
 5. Direct links to the static machine-readable integration artifacts:
    - `/openapi.json`
