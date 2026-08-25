@@ -14,6 +14,7 @@ export const SAFETY_SCORE_V9_AUDITED_RESERVE_FALLBACK: MethodologyChangelogEntry
     "Because the publisher is retained, a lapsed composition now resolves to `published-evidence-expired` rather than `issuer-undisclosed`. The public copy for that value stops stating that an issuer has not disclosed reserves it did in fact publish. Unknown provenance continues to fail closed",
     "On the fixed-input release replay, 8 assets move and 6 change grade, all upward: fdusd-first-digital, xagm-matrixdock, vnxau-vnx, tryb-bilira, wcop-ripio, and wmxn-ripio flip, with audx-aussie-dollar-token and wbrl-ripio moving inside their grade. Every mover has a live producer that was observed falling back",
   ],
+  commits: ["a1034c254"],
   reconstructed: false,
 };
 
