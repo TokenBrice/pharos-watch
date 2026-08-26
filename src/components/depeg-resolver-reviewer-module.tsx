@@ -13,15 +13,12 @@ import {
 } from "@/components/ui/tooltip";
 import { isDepegResolverReviewerEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
-import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
-import { DDR_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { formatElapsedSeconds } from "@shared/lib/format";
 import {
   DDRR_PUBLIC_WARNING,
-  type DdrrDurationReview,
   type DdrrResponse,
   type DdrrRow,
   type DdrrSummary,
-  type DdrrVerdictReview,
 } from "@shared/types/depeg-resolver-review";
 import {
   DDR_COVERAGE_LABELS,
@@ -30,10 +27,24 @@ import {
   DDR_OUTCOME_LABELS,
   DDR_VERDICT_LABELS,
   DDR_VERDICT_TONES,
-  ddrSourceEventStateToActualOutcome,
+  buildDdrReviewerRows,
+  buildDdrTimelineModel,
+  formatMetricPercent,
+  formatPercent,
   formatDdrSignedDuration,
-  isDdrScoredVerdict,
-  type DdrrCoverageState,
+  getActualOutcome,
+  getCoverageMetric,
+  getCoverageState,
+  getDurationReview,
+  getRowContextLabel,
+  getRowTime,
+  getSignedDurationError,
+  getVerdictReview,
+  isScored,
+  nodeKind,
+  summarizeAccuracyByMajor,
+  summarizePredictionRows,
+  type NodeKind,
 } from "@/lib/depeg-resolver-review-presentation";
 
 interface DepegResolverReviewerModuleProps {
@@ -42,133 +53,13 @@ interface DepegResolverReviewerModuleProps {
   logos?: Record<string, string>;
 }
 
-type DdrrHeadlineMetrics = DdrrSummary["headline"];
-type CoverageMetricKey =
-  | "scoreableCoveragePct"
-  | "predictionCoveragePct"
-  | "publicationSuccessPct"
-  | "noCallSharePct"
-  | "invalidationRatePct";
-
 /** Below this many scored verdicts, accuracy is presented as a raw fraction, not a percentage. */
 const CALIBRATION_THRESHOLD = 5;
 const ROW_DISPLAY_LIMIT = 8;
 /** Track-record timeline node cap — enough to read the streak without clutter. */
 const TIMELINE_NODE_LIMIT = 36;
 
-function isScored(row: DdrrRow): boolean {
-  return row.kind === "prediction_review" && isDdrScoredVerdict(row.verdictReview);
-}
-
-function isTrackRecordRow(row: DdrrRow): boolean {
-  return row.kind === "prediction_review";
-}
-
-function formatPercent(value: number | null): string {
-  if (value == null || !Number.isFinite(value)) return "N/A";
-  return formatPercentFromRatio(value, Number.isInteger(value * 100) ? 0 : 1);
-}
-
-function getCoverageState(row: DdrrRow): DdrrCoverageState | null {
-  return row.predictionState === "frozen" ? null : row.predictionState;
-}
-
-function formatMetricPercent(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "—";
-  return formatPercent(value);
-}
-
-function getVerdictReview(row: DdrrRow): DdrrVerdictReview {
-  if (row.kind === "prediction_review" || row.kind === "no_call_review") return row.verdictReview;
-  return "pending";
-}
-
-function getDurationReview(row: DdrrRow): DdrrDurationReview {
-  if (row.kind === "prediction_review" || row.kind === "no_call_review") return row.durationReview;
-  return "duration_unscored";
-}
-
-function getActualOutcome(row: DdrrRow) {
-  if (row.kind === "prediction_review" || row.kind === "no_call_review") {
-    return row.actual.kind;
-  }
-  return ddrSourceEventStateToActualOutcome(row.sourceEventState);
-}
-
-function getRowContextLabel(row: DdrrRow): string {
-  switch (row.kind) {
-    case "prediction_review":
-      return "Public prediction";
-    case "no_call_review":
-      return "No-call";
-    case "invalidated_prediction":
-      return row.originalKind === "no_call" ? "Invalidated no-call" : "Invalidated prediction";
-    case "coverage":
-      return "Coverage";
-  }
-}
-
-function getRowTime(row: DdrrRow): number {
-  switch (row.kind) {
-    case "prediction_review":
-    case "no_call_review":
-      return row.publishedAt;
-    case "invalidated_prediction":
-      return row.publishedAt ?? row.lockedAt;
-    case "coverage":
-      return row.actualEndedAt ?? row.terminalEvidenceAt ?? row.eligibleAt ?? row.startedAt;
-  }
-}
-
-function getSignedDurationError(row: DdrrRow): number | null {
-  return row.kind === "prediction_review" ? row.signedDurationErrorSec : null;
-}
-
-function summarizePredictionRows(rows: readonly DdrrRow[]) {
-  return rows.reduce(
-    (breakdown, row) => {
-      if (row.kind !== "prediction_review") return breakdown;
-      if (row.verdictReview === "correct_recoverable") breakdown.correctRecoverable += 1;
-      if (row.verdictReview === "correct_terminal") breakdown.correctTerminal += 1;
-      if (row.verdictReview === "false_terminal") breakdown.falseTerminal += 1;
-      if (row.verdictReview === "false_recoverable") breakdown.falseRecoverable += 1;
-      if (row.withinIqr != null) {
-        breakdown.iqrScoredCount += 1;
-        if (row.withinIqr) breakdown.withinIqrCount += 1;
-      }
-      return breakdown;
-    },
-    {
-      correctRecoverable: 0,
-      correctTerminal: 0,
-      falseTerminal: 0,
-      falseRecoverable: 0,
-      withinIqrCount: 0,
-      iqrScoredCount: 0,
-    },
-  );
-}
-
 // --- track-record timeline -------------------------------------------------
-
-type NodeKind = "correct" | "miss" | "risk" | "pending" | "muted";
-
-function nodeKind(verdict: DdrrVerdictReview): NodeKind {
-  switch (verdict) {
-    case "correct_recoverable":
-    case "correct_terminal":
-      return "correct";
-    case "false_terminal":
-    case "false_recoverable":
-      return "miss";
-    case "risk_noted_terminal":
-      return "risk";
-    case "pending":
-      return "pending";
-    default:
-      return "muted";
-  }
-}
 
 /**
  * Vertical seat encodes outcome: correct calls ride above the rail, misses drop
@@ -185,14 +76,8 @@ const NODE_TONE: Record<NodeKind, { dot: string; pos: string }> = {
 
 function TrackRecordTimeline({ rows }: { rows: DdrrRow[] }) {
   // Oldest call on the left, the most recent at "now" on the right.
-  const ordered = [...rows]
-    .sort((a, b) => getRowTime(a) - getRowTime(b))
-    .slice(-TIMELINE_NODE_LIMIT);
+  const { rows: ordered, correct, miss, pending } = buildDdrTimelineModel(rows, TIMELINE_NODE_LIMIT);
   if (ordered.length === 0) return null;
-
-  const correct = ordered.filter((r) => nodeKind(getVerdictReview(r)) === "correct").length;
-  const miss = ordered.filter((r) => nodeKind(getVerdictReview(r)) === "miss").length;
-  const pending = ordered.filter((r) => nodeKind(getVerdictReview(r)) === "pending").length;
 
   return (
     <div
@@ -289,61 +174,6 @@ function BreakdownStat({
       <span className="text-[11px] text-muted-foreground">{label}</span>
     </div>
   );
-}
-
-interface VersionAccuracySegment {
-  major: string;
-  scored: number;
-  correct: number;
-  accuracy: number | null;
-  durationScored: number;
-  meanSignedDurationErrorSec: number | null;
-  meanAbsoluteDurationErrorSec: number | null;
-}
-
-/**
- * Consolidates the summary's per-(methodology, policy) segments into
- * methodology majors (v2, v3, …) for the version track-record strip. The
- * current major always appears, even before any of its rows have matured.
- * Duration means are recombined weighted by each segment's scored count.
- */
-function summarizeAccuracyByMajor(summary: DdrrSummary): VersionAccuracySegment[] {
-  const majors = new Map<
-    string,
-    { scored: number; correct: number; durationScored: number; signedSum: number; absoluteSum: number }
-  >();
-  for (const segment of summary.byPredictionPolicy) {
-    if (segment.segmentKind !== "prediction_policy" || segment.predictionMethodologyVersion == null) {
-      continue;
-    }
-    const major = segment.predictionMethodologyVersion.split(".")[0];
-    const entry =
-      majors.get(major) ?? { scored: 0, correct: 0, durationScored: 0, signedSum: 0, absoluteSum: 0 };
-    entry.scored += segment.metrics.recoveryLikelihoodScoredCount;
-    entry.correct += segment.metrics.recoveryLikelihoodCorrectCount;
-    const durationScored = segment.metrics.durationScoredCount;
-    if (durationScored > 0 && segment.metrics.meanSignedDurationErrorSec != null) {
-      entry.durationScored += durationScored;
-      entry.signedSum += segment.metrics.meanSignedDurationErrorSec * durationScored;
-      entry.absoluteSum += (segment.metrics.meanAbsoluteDurationErrorSec ?? 0) * durationScored;
-    }
-    majors.set(major, entry);
-  }
-  const currentMajor = DDR_METHODOLOGY_VERSION.split(".")[0];
-  if (!majors.has(currentMajor)) {
-    majors.set(currentMajor, { scored: 0, correct: 0, durationScored: 0, signedSum: 0, absoluteSum: 0 });
-  }
-  return [...majors.entries()]
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([major, { scored, correct, durationScored, signedSum, absoluteSum }]) => ({
-      major: `v${major}`,
-      scored,
-      correct,
-      accuracy: scored > 0 ? correct / scored : null,
-      durationScored,
-      meanSignedDurationErrorSec: durationScored > 0 ? signedSum / durationScored : null,
-      meanAbsoluteDurationErrorSec: durationScored > 0 ? absoluteSum / durationScored : null,
-    }));
 }
 
 function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
@@ -490,34 +320,6 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
       </div>
     </div>
   );
-}
-
-function getCoverageMetric(
-  metrics: DdrrHeadlineMetrics,
-  key: CoverageMetricKey,
-): number | null {
-  if (key === "scoreableCoveragePct") {
-    const denominator = metrics.policyUniverseIncidentCount;
-    return denominator > 0 ? metrics.recoveryLikelihoodScoredCount / denominator : null;
-  }
-
-  if (key === "publicationSuccessPct") {
-    const published = metrics.lockedPredictionCount;
-    const retryPending = metrics.publicationRetryPendingCount;
-    const failed = metrics.publicationFailedCount;
-    const denominator = published + retryPending + failed;
-    return denominator > 0 ? published / denominator : null;
-  }
-
-  const v2Key =
-    key === "predictionCoveragePct"
-      ? "predictionRatePct"
-      : key === "noCallSharePct"
-        ? "noCallRatePct"
-        : key === "invalidationRatePct"
-          ? "invalidatedPct"
-          : null;
-  return v2Key ? metrics[v2Key] : null;
 }
 
 function CoverageAccountabilityLedger({
@@ -760,10 +562,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
   const calibrating = (summary?.headline.recoveryLikelihoodScoredCount ?? 0) < CALIBRATION_THRESHOLD;
 
   // Scored rows carry the signal; surface them first, then a capped run of maturing rows.
-  const orderedRows = [...rows].sort((a, b) => Number(isScored(b)) - Number(isScored(a)));
-  const shownRows = orderedRows.slice(0, ROW_DISPLAY_LIMIT);
-  const hiddenCount = orderedRows.length - shownRows.length;
-  const trackRecordRows = rows.filter(isTrackRecordRow);
+  const { shownRows, hiddenCount, trackRecordRows } = buildDdrReviewerRows(rows, ROW_DISPLAY_LIMIT);
 
   return (
     <section aria-label="Depeg Duration Resolver Reviewer" className="space-y-4">
