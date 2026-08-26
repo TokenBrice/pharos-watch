@@ -217,6 +217,7 @@ export const CRITICAL_TEST_FILES: string[] = [
   "functions/__tests__/ops-asset-host-gates.test.ts",
   "functions/__tests__/ops-admin-proxy.test.ts",
   "functions/__tests__/site-data-proxy.test.ts",
+  "functions/__tests__/upstream-proxy.test.ts",
 ];
 
 export const GLOBAL_INVARIANT_TEST_FILES: string[] = [
