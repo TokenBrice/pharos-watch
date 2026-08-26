@@ -88,6 +88,12 @@ const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
      * labels the fallback path when live metadata is unavailable.
      */
     liveCapacityConfidence: StaticCapacityConfidenceSchema.optional(),
+    /**
+     * Explicitly authorizes treating current supply as an eventual redemption
+     * ceiling. Live immediate-capacity telemetry alone does not prove that the
+     * whole liability has a bounded eventual holder route.
+     */
+    eventualCapacityModel: z.literal("supply-full").optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
   }),
 ]);
@@ -165,7 +171,9 @@ export const RedemptionBackstopConfigSchema = z
      */
     v9RouteCostTerms: RedemptionCostTermsSchema.optional(),
     /**
-     * Reviewed route constraints projected only by the Safety Score V9 adapter.
+     * Reviewed route constraints. Conservative settlement corrections also
+     * drive the standalone redemption row so public surfaces cannot disagree;
+     * exact SLAs and the remaining fields are projected by the V9 adapter.
      *
      * Conservative corrections need no citation because they can only lower a
      * score. Faster settlement semantics require an explicit cited SLA. A
@@ -224,6 +232,20 @@ export const RedemptionBackstopConfigSchema = z
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
+    if (
+      config.capacityModel.kind === "reserve-sync-metadata" &&
+      config.capacityModel.eventualCapacityModel === "supply-full" &&
+      (
+        config.reviewedAt === undefined ||
+        !config.docs?.some((doc) => doc.supports?.includes("capacity"))
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["capacityModel", "eventualCapacityModel"],
+        message: "Full-supply eventual capacity requires reviewedAt and a capacity-supporting source",
+      });
+    }
     const reviewedSettlement = config.v9RouteReviewTerms;
     if (reviewedSettlement?.scoringDisposition === "bounded-terms-gap") {
       if (reviewedSettlement.missingScoringFields === undefined) {

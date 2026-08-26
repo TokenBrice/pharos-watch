@@ -118,13 +118,16 @@ function resolveRedemptionCost(
     feeBps: number | null;
     costScenarioScores: ResolvedRedemptionCost["costScenarioScores"];
     notes: string[];
+    feeDescription?: string;
   }): ResolvedRedemptionCost => ({
     score: fields.score,
     feeBps: fields.feeBps,
     feeConfidence,
     feeModelKind,
     costScenarioScores: fields.costScenarioScores,
-    ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
+    ...(fields.feeDescription ?? costModel.feeDescription
+      ? { feeDescription: fields.feeDescription ?? costModel.feeDescription }
+      : {}),
     notes: fields.notes,
   });
   const resolvedLiveMetadata =
@@ -141,6 +144,7 @@ function resolveRedemptionCost(
       score: resolveBoundedFeeScore(feeBps),
       feeBps,
       costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
+      feeDescription: `Fresh live redemption fee telemetry: ${feeBps} bps.`,
       notes: [],
     });
   }
@@ -151,6 +155,7 @@ function resolveRedemptionCost(
       score: resolveBoundedFeeScore(feeBps),
       feeBps,
       costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
+      feeDescription: `Fresh live redemption fee telemetry: ${feeBps} bps.`,
       notes:
         feeBps !== Math.max(0, costModel.feeBps)
           ? ["Using fresh live redemption fee telemetry in place of the reviewed fallback bound"]

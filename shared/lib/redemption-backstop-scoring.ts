@@ -13,6 +13,7 @@ import {
   EXIT_ROUTE_SCORING_TABLES,
   blendExitCapacityComponent,
   composeExitComponentScore,
+  hasMaterialExitCapacity,
   interpolateExitBreakpointScore,
   resolveExitDelayBandMultiplier,
   resolveExitRequestSupplyNotionalUsd,
@@ -259,6 +260,8 @@ export function computeRedemptionBackstopScore(args: {
   outputAssetQualityScore: number;
   costScore: number;
   totalScoreCap?: number;
+  executableCapacityUsd?: number | null;
+  modeledExitSizeUsd?: number | null;
 }): { score: number | null; capsApplied: string[] } {
   if (args.capacityScore == null) {
     return {
@@ -280,6 +283,19 @@ export function computeRedemptionBackstopScore(args: {
   );
 
   const capsApplied: string[] = [];
+
+  if (args.executableCapacityUsd === 0) {
+    return { score: 0, capsApplied: ["zero-executable-capacity"] };
+  }
+  if (
+    args.executableCapacityUsd != null &&
+    !hasMaterialExitCapacity({
+      executableCapacityUsd: args.executableCapacityUsd,
+      requestedNotionalUsd: args.modeledExitSizeUsd,
+    })
+  ) {
+    return { score: 0, capsApplied: ["immaterial-executable-capacity"] };
+  }
 
   if (args.routeFamily === "queue-redeem" && score > REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem) {
     score = REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem;

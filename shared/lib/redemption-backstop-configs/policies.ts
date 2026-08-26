@@ -41,15 +41,6 @@ const SCOREABLE_REDEMPTION_FRESHNESS_KINDS = new Set<RedemptionLiveFreshnessKind
   "reviewed-static",
 ]);
 
-// TODO(redemption-backstop): live fee telemetry follow-ups. These are stale-risk
-// assumptions baked into per-coin cost models that are not yet enforced by a typed
-// policy kind above; tracked here so the risk is discoverable in the policy surface
-// rather than only in a per-coin note.
-//   - eearn-ember: costModel is fixedFee(0, ...) but the eEARN exit/withdrawal fee
-//     is admin-configurable on the proxy (verified zero on-chain at review time).
-//     If the admin sets a non-zero fee the static 0-bps assumption silently goes
-//     wrong. Wire the live proxy fee into telemetry so the cost model tracks it.
-//     See stablecoin-redeem/configs.ts.
 export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPolicyEntry[] = [
   {
     kind: "unverified-freshness",

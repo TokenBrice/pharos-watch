@@ -375,13 +375,10 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
       immediateCapacityRatio: 0.9,
       scoringCapacityUsd: 250_000,
       scoringCapacityRatio: 0.25,
-      eventualCapacityUsd: 1_000_000,
-      eventualCapacityRatio: 1,
       capacityProfile: {
         immediateUsd: 800_000,
         dailyLimitUsd: 250_000,
         queuedUsd: 50_000,
-        eventualUsd: 1_000_000,
         scoringUsd: 250_000,
         scoringHorizon: "daily",
         capacityProfileConfidence: "live-direct",
@@ -410,6 +407,30 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
         "Live redemption settlement delay is surfaced as a route constraint",
       ],
     });
+  });
+
+  it("publishes full-supply eventual capacity only when the route config explicitly authorizes it", async () => {
+    const result = await resolveRedemptionCapacity(
+      {} as D1Database,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata", eventualCapacityModel: "supply-full" },
+      1_000_000,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 800_000,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "same-run-onchain",
+          },
+        }),
+      },
+    );
+
+    expect(result.eventualCapacityUsd).toBe(1_000_000);
+    expect(result.eventualCapacityRatio).toBe(1);
+    expect(result.capacityProfile?.eventualUsd).toBe(1_000_000);
   });
 
   it("blocks unverified nested redemption freshness unless a route is explicitly allowlisted", async () => {

@@ -2367,12 +2367,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.43",
+    "methodologyVersion": "9.44",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.43",
+    "version": "9.44",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2464,14 +2464,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.38"
+      "methodologyVersion": "4.39"
     }
   },
   "methodology": {
-    "version": "4.38",
-    "versionLabel": "v4.37",
-    "currentVersion": "4.38",
-    "currentVersionLabel": "v4.37",
+    "version": "4.39",
+    "versionLabel": "v4.39",
+    "currentVersion": "4.39",
+    "currentVersionLabel": "v4.39",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -2654,7 +2654,7 @@ The envelope differs from v1: v2 returns an object, not a bare array.
       "safetyScoreIdentity": {
         "model": "v9",
         "schemaVersion": 1,
-        "methodologyVersion": "9.43",
+        "methodologyVersion": "9.44",
         "policyId": "safety-score-v9",
         "policyDigest": "<sha256>",
         "evaluationBuildDigest": "<sha256>",
@@ -2722,7 +2722,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.43",
+      "methodologyVersion": "9.44",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2733,7 +2733,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.43",
+      "methodologyVersion": "9.44",
       "publishedAt": 1772000700
     }
   },

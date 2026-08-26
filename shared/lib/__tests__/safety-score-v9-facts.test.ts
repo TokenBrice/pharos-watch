@@ -1881,6 +1881,58 @@ describe("Safety Score v9 normalized fact protocol", () => {
     );
   });
 
+  it("attributes a measured-zero discounted redemption instead of relabeling it as unsupported", () => {
+    const input = coreFixture();
+    const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
+    const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
+    const routeEvidence = alpha.evidence.find((evidence) => evidence.evidenceId === "evidence:route")!;
+    const redemptionRoute = structuredClone(
+      alpha.exitRoutes.find((route) => route.routeId === "issuer-main")!,
+    );
+    redemptionRoute.routeFamily = "protocol-redemption";
+    redemptionRoute.scoreEligible = false;
+    redemptionRoute.evidenceKind = "live-reserve-state";
+    redemptionRoute.coverageClass = "exact-lower-bound";
+    redemptionRoute.settlementModel = "queued";
+    redemptionRoute.settlementSlaSec = 86_400;
+    redemptionRoute.capacityCurve = redemptionRoute.capacityCurve.map((point) => ({
+      ...point,
+      executableUsd: 0,
+      completionRatio: 0,
+    }));
+    beta.evidence.push(routeEvidence);
+    beta.exitStatus = knownStatus(routeEvidence.evidenceId, "exit.portfolio.reviewed");
+    beta.exitRoutes = [redemptionRoute];
+
+    const evaluated = evaluateV9FactSet(
+      compileNativeV3FactSet(input),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets.find((asset) => asset.assetId === "beta")!;
+    const primaryRoute = evaluated.exit.routes.find(
+      (route) => route.routeKey === evaluated.exit.primaryRouteKey,
+    )!;
+
+    expect(primaryRoute).toMatchObject({
+      included: true,
+      score: 0,
+      capsApplied: expect.arrayContaining(["zero-executable-capacity"]),
+    });
+    expect(evaluated.exit.reasons).toContain("no-viable-exit-path");
+    expect(evaluated.scoreInput.pillars.exit).toMatchObject({
+      score: 0,
+      reasons: [expect.objectContaining({ responsibility: "measured-adverse" })],
+      adverseAttribution: [
+        expect.objectContaining({
+          source: "pillar-score",
+          path: `pillar:exit:route:${redemptionRoute.routeKey}:capacity`,
+          responsibility: "measured-adverse",
+        }),
+      ],
+    });
+    expect(evaluated.trace.finalGrade).toBe("F");
+    expect(evaluated.trace.finalScore).not.toBeNull();
+  });
+
   it("honours each ceiling reason's declared level and keeps NR conditions insufficient", () => {
     const ceilingInput = coreFixture();
     const ceilingAsset = ceilingInput.assets[0]! as unknown as V9AssetFactsV2;
