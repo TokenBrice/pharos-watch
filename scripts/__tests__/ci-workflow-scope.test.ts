@@ -32,10 +32,12 @@ describe("CI workflow scope", () => {
   it("preserves the Next compiler cache and consolidates Pages artifact checks", () => {
     const workflow = readRepoFile(".github/workflows/pages-release.yml");
 
+    expect(workflow).toContain('bootstrap-generated: "false"');
     expect(workflow).toContain('next-cache: "true"');
     expect(workflow).toContain('next-cache-save: "true"');
     expect(workflow).toContain('PHAROS_RELEASE_PR_TYPECHECKED: "1"');
     expect(workflow).toContain("npm run check:pages-release");
+    expect(workflow).toContain("npm run prebuild -- --build-lifecycle=compile-input,post-refresh");
     expect(workflow).not.toContain("rm -rf .next");
   });
 

@@ -35,8 +35,6 @@ const ToastContainer = dynamic(() => import("./toast-container").then((mod) => m
   ssr: false,
 });
 
-const HOMEPAGE_BOOTSTRAP_SCRIPT_ID = "pharos-homepage-bootstrap";
-
 interface ToastContextType {
   addToast: (message: string, type?: "success" | "info" | "warning" | "error", duration?: number) => void;
 }
@@ -161,21 +159,6 @@ function AppProviders({ children }: { children: React.ReactNode }) {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(createPharosQueryClient);
-
-  useEffect(() => {
-    if (!document.getElementById(HOMEPAGE_BOOTSTRAP_SCRIPT_ID)) {
-      return;
-    }
-
-    let cancelled = false;
-    void import("@/lib/homepage-bootstrap-runtime").then((mod) => {
-      if (cancelled) return;
-      mod.seedHomepageBootstrapQueries(queryClient, mod.readHomepageBootstrapPayloadFromDocument());
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

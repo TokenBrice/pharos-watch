@@ -132,7 +132,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/generate-depeg-event-search-data.ts", "build"),
     exempt("scripts/maintenance/generate-dependency-coverage-audit.ts", "build"),
     exempt("scripts/maintenance/generate-docs-metadata.ts", "build"),
-    exempt("scripts/maintenance/generate-homepage-bootstrap.ts", "build"),
     exempt("scripts/maintenance/generate-l2beat-snapshot-coverage-audit.ts", "build"),
     exempt("scripts/maintenance/generate-legacy-stablecoin-redirects.ts", "build"),
     exempt("scripts/maintenance/generate-llms-txt.ts", "build"),

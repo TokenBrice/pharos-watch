@@ -18,7 +18,7 @@ describe("auto-stage partition", () => {
   });
 
   it("never auto-stages a network-derived artifact", () => {
-    const { autoStage } = selectAutoStageArtifactIds(["homepage-bootstrap", "llms-txt", "public-datasets"]);
+    const { autoStage } = selectAutoStageArtifactIds(["llms-txt", "public-datasets"]);
     expect(autoStage).toEqual([]);
   });
 });

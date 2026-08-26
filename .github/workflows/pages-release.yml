@@ -47,6 +47,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
+          bootstrap-generated: "false"
           next-cache: "true"
           next-cache-save: "true"
       - name: Refresh API-backed release data
@@ -120,7 +121,6 @@ jobs:
             "${refresh_dir}/datasets-summary.md" >> "$GITHUB_STEP_SUMMARY"
       - name: Build clean production export
         env:
-          GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,case-study-client-index,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,report-card-registry-fingerprint,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
           PUBLIC_DATASETS_API_URL: ""
           PUBLIC_DATASETS_API_KEY: ""
           PUBLIC_DATASETS_REQUIRE_API: ""
@@ -128,7 +128,9 @@ jobs:
           API_BASE_URL: ""
           PHAROS_RELEASE_PR_TYPECHECKED: "1"
         run: |
-          npm run build
+          npm run prebuild -- --build-lifecycle=compile-input,post-refresh
+          npx --no-install next build --webpack
+          npm run postbuild
       - name: Validate static SEO and published archive continuity
         env:
           SEO_PREVIOUS_SITEMAP_URL: https://stablecoin-dashboard.pages.dev/sitemap.xml

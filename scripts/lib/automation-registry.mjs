@@ -10,7 +10,6 @@ const PAGES_EXTRA_EXACT_PATHS = [
   "postcss.config.mjs",
   "scripts/maintenance/build-world-map-svg.ts",
   "scripts/maintenance/generate-docs-metadata.ts",
-  "scripts/maintenance/generate-homepage-bootstrap.ts",
   "scripts/maintenance/generate-llms-txt.ts",
   "scripts/maintenance/generate-markdown-exports.ts",
   "scripts/maintenance/generate-openapi-spec.ts",
@@ -75,7 +74,14 @@ export const DEPLOY_IMPACT_REGISTRY = {
   },
 };
 
+export const GENERATED_ARTIFACT_BUILD_LIFECYCLES = ["compile-input", "post-refresh", "maintenance-only"];
+
 function generatedArtifact(definition) {
+  if (!GENERATED_ARTIFACT_BUILD_LIFECYCLES.includes(definition.buildLifecycle)) {
+    throw new Error(
+      `Generated artifact ${definition.id ?? "<unknown>"} must declare a valid buildLifecycle`,
+    );
+  }
   return {
     ...definition,
     autoStage: definition.autoStage ?? false,
@@ -89,6 +95,7 @@ function generatedArtifact(definition) {
 export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "stablecoin-catalog",
+    buildLifecycle: "compile-input",
     checkCommand: "tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts --check",
     command: "tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts",
     bootstrap: true,
@@ -100,6 +107,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "agents-doc",
+    buildLifecycle: "maintenance-only",
     autoStage: true,
     checkCommand: "node --import tsx scripts/maintenance/generate-agents-doc.ts --check",
     command: "node --import tsx scripts/maintenance/generate-agents-doc.ts",
@@ -112,6 +120,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "sitemap-dates",
+    buildLifecycle: "compile-input",
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",
     checkable: false,
@@ -124,6 +133,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "case-study-client-index",
+    buildLifecycle: "compile-input",
     checkCommand: "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
     command: "tsx scripts/maintenance/generate-case-study-client-index.ts",
     bootstrap: true,
@@ -135,6 +145,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "docs-metadata",
+    buildLifecycle: "compile-input",
     checkCommand: "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     command: "tsx scripts/maintenance/generate-docs-metadata.ts",
     checkable: false,
@@ -147,6 +158,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "depeg-event-search-data",
+    buildLifecycle: "post-refresh",
     // No autoStage: every output below is gitignored by `/src/generated/*`
     // since 0b76714f03 untracked them. Staging them aborts the commit.
     checkCommand: "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
@@ -164,17 +176,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: ["data/depeg-events.json", "src/lib/depeg-event-config.ts"],
   }),
   generatedArtifact({
-    id: "homepage-bootstrap",
-    checkCommand: "tsx scripts/maintenance/generate-homepage-bootstrap.ts --check",
-    command: "tsx scripts/maintenance/generate-homepage-bootstrap.ts",
-    outputPaths: ["src/generated/homepage-bootstrap.json"],
-    phase: 0,
-    reproducibility: "network-derived",
-    script: "scripts/maintenance/generate-homepage-bootstrap.ts",
-    sourcePaths: ["src/lib/api-query-descriptors.ts", "src/lib/homepage-bootstrap*.ts"],
-  }),
-  generatedArtifact({
     id: "postman",
+    buildLifecycle: "compile-input",
     checkCommand: "tsx scripts/maintenance/generate-postman-collection.ts --check",
     command: "tsx scripts/maintenance/generate-postman-collection.ts",
     bootstrap: true,
@@ -189,6 +192,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "openapi",
+    buildLifecycle: "compile-input",
     checkCommand: "tsx scripts/maintenance/generate-openapi-spec.ts --check",
     command: "tsx scripts/maintenance/generate-openapi-spec.ts",
     bootstrap: true,
@@ -200,6 +204,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "world-map",
+    buildLifecycle: "compile-input",
     checkCommand: "tsx scripts/maintenance/build-world-map-svg.ts --check",
     command: "tsx scripts/maintenance/build-world-map-svg.ts",
     bootstrap: true,
@@ -211,6 +216,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "safety-score-v9-shock-coverage-registry",
+    buildLifecycle: "maintenance-only",
     autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts",
@@ -226,6 +232,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "safety-score-v9-evaluation-build",
+    buildLifecycle: "maintenance-only",
     autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
@@ -242,6 +249,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "report-card-registry-fingerprint",
+    buildLifecycle: "compile-input",
     checkCommand: "tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts --check",
     command: "tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts",
     bootstrap: true,
@@ -263,6 +271,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "legacy-stablecoin-redirects",
+    buildLifecycle: "compile-input",
     checkCommand: "node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts --check",
     command: "node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts",
     bootstrap: true,
@@ -275,6 +284,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "stablecoin-client-registry",
+    buildLifecycle: "compile-input",
     checkCommand: "node scripts/build-data/build-client-registry.mjs --check",
     command: "node scripts/build-data/build-client-registry.mjs",
     bootstrap: true,
@@ -291,6 +301,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "cemetery-dataset",
+    buildLifecycle: "maintenance-only",
     autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
     command: "tsx scripts/maintenance/generate-cemetery-dataset.ts",
@@ -303,6 +314,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "public-datasets",
+    buildLifecycle: "maintenance-only",
     checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
     command: "tsx scripts/maintenance/generate-public-datasets.ts",
     dependsOn: ["report-card-registry-fingerprint"],
@@ -314,6 +326,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "llms-txt",
+    buildLifecycle: "post-refresh",
     checkCommand: "tsx scripts/maintenance/generate-llms-txt.ts --check",
     command: "tsx scripts/maintenance/generate-llms-txt.ts",
     dependsOn: ["report-card-registry-fingerprint"],
@@ -332,6 +345,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "api-reference",
+    buildLifecycle: "maintenance-only",
     checkCommand: "node --import tsx scripts/maintenance/generate-api-reference.ts --check",
     command: "node --import tsx scripts/maintenance/generate-api-reference.ts",
     dependsOn: ["openapi"],
@@ -343,6 +357,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "og-editorial",
+    buildLifecycle: "maintenance-only",
     checkCommand: "node scripts/maintenance/build-og-editorial.mjs --check",
     command: "node scripts/maintenance/build-og-editorial.mjs",
     outputPaths: ["public/og-*.png", "scripts/maintenance/state/og-editorial-signatures.json"],
@@ -353,6 +368,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "og-learn",
+    buildLifecycle: "maintenance-only",
     checkCommand: "tsx scripts/maintenance/build-og-learn-images.ts --check",
     command: "tsx scripts/maintenance/build-og-learn-images.ts",
     outputPaths: ["agents/og-learn-staging/og-learn-*.svg", "public/og-learn-*.png"],
@@ -366,6 +382,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "og-case-studies",
+    buildLifecycle: "maintenance-only",
     checkCommand: "tsx scripts/maintenance/build-og-case-studies.ts --check",
     command: "tsx scripts/maintenance/build-og-case-studies.ts",
     dependsOn: ["cemetery-dataset"],
@@ -397,14 +414,14 @@ function assertKnownGeneratedArtifactPhases(phases, registry = GENERATED_ARTIFAC
   }
 }
 
-/**
- * @param {{
- *   bootstrap?: boolean,
- *   only?: string[],
- *   phases?: number[],
- *   skip?: string[],
- * }} [options]
- */
+function assertKnownGeneratedArtifactBuildLifecycles(lifecycles) {
+  const knownLifecycles = new Set(GENERATED_ARTIFACT_BUILD_LIFECYCLES);
+  const unknownLifecycles = uniqueSorted(lifecycles.filter((lifecycle) => !knownLifecycles.has(lifecycle)));
+  if (unknownLifecycles.length > 0) {
+    throw new Error(`Unknown generated artifact build lifecycle(s): ${unknownLifecycles.join(", ")}`);
+  }
+}
+
 /**
  * Split selected artifact ids into those the pre-commit hook may regenerate and
  * stage on its own, and those a human must handle. Network-derived artifacts,
@@ -428,16 +445,33 @@ export function selectAutoStageArtifactIds(ids) {
   return { autoStage, manual };
 }
 
-export function selectGeneratedArtifacts({ bootstrap = false, check = false, only = [], phases = [], skip = [] } = {}) {
-  assertKnownGeneratedArtifactIds([...only, ...skip]);
+/**
+ * @param {{
+ *   bootstrap?: boolean,
+ *   buildLifecycles?: string[],
+ *   check?: boolean,
+ *   only?: string[],
+ *   phases?: number[],
+ * }} [options]
+ */
+export function selectGeneratedArtifacts({
+  bootstrap = false,
+  buildLifecycles = [],
+  check = false,
+  only = [],
+  phases = [],
+} = {}) {
+  assertKnownGeneratedArtifactIds(only);
   assertKnownGeneratedArtifactPhases(phases);
+  assertKnownGeneratedArtifactBuildLifecycles(buildLifecycles);
 
   const artifactById = generatedArtifactById();
+  const buildLifecycleSet = new Set(buildLifecycles);
   const onlyIds = new Set(only);
   const phaseSet = new Set(phases);
-  const skipIds = new Set(skip);
   const selectedIds = new Set();
   const usesExplicitIdSelection = onlyIds.size > 0;
+  const usesLifecycleSelection = buildLifecycleSet.size > 0;
 
   // `checkable: false` artifacts are gitignored build-time projections. They
   // are regenerated moments before any check would run, so verifying them
@@ -449,18 +483,22 @@ export function selectGeneratedArtifacts({ bootstrap = false, check = false, onl
 
   function isEligibleBaseArtifact(artifact) {
     return (
-      !skipIds.has(artifact.id) &&
       isCheckEligible(artifact) &&
       (!bootstrap || artifact.bootstrap === true) &&
+      (buildLifecycleSet.size === 0 || buildLifecycleSet.has(artifact.buildLifecycle)) &&
       (!usesExplicitIdSelection || onlyIds.has(artifact.id)) &&
       (phaseSet.size === 0 || phaseSet.has(artifact.phase))
     );
   }
 
   function includeWithDependencies(id) {
-    if (skipIds.has(id) || selectedIds.has(id)) return;
+    if (selectedIds.has(id)) return;
     const artifact = artifactById.get(id);
-    if (!artifact || (bootstrap && artifact.bootstrap !== true) || !isCheckEligible(artifact)) return;
+    if (
+      !artifact ||
+      (bootstrap && artifact.bootstrap !== true) ||
+      !isCheckEligible(artifact)
+    ) return;
 
     for (const dependency of artifact.dependsOn ?? []) {
       includeWithDependencies(dependency);
@@ -471,7 +509,7 @@ export function selectGeneratedArtifacts({ bootstrap = false, check = false, onl
   for (const artifact of GENERATED_ARTIFACT_REGISTRY) {
     if (!isEligibleBaseArtifact(artifact)) continue;
 
-    if (usesExplicitIdSelection) {
+    if (usesExplicitIdSelection || usesLifecycleSelection) {
       includeWithDependencies(artifact.id);
       continue;
     }
@@ -481,18 +519,17 @@ export function selectGeneratedArtifacts({ bootstrap = false, check = false, onl
   return GENERATED_ARTIFACT_REGISTRY.filter((artifact) => selectedIds.has(artifact.id));
 }
 
-/** @param {{ bootstrap?: boolean, check?: boolean, only?: string[], phases?: number[], skip?: string[] }} [options] */
-/** @param {{ bootstrap?: boolean, check?: boolean, only?: string[], phases?: number[], skip?: string[] }} [options] */
+/** @param {{ bootstrap?: boolean, buildLifecycles?: string[], check?: boolean, only?: string[], phases?: number[] }} [options] */
 export function buildGeneratedArtifactPhases({
   bootstrap = false,
+  buildLifecycles = [],
   check = false,
   only = [],
   phases: phaseFilters = [],
-  skip = [],
 } = {}) {
   const phaseGroups = new Map();
 
-  for (const artifact of selectGeneratedArtifacts({ bootstrap, check, only, phases: phaseFilters, skip })) {
+  for (const artifact of selectGeneratedArtifacts({ bootstrap, buildLifecycles, check, only, phases: phaseFilters })) {
     const command = check && artifact.checkCommand ? artifact.checkCommand : artifact.command;
     const phaseArtifacts = phaseGroups.get(artifact.phase) ?? [];
     phaseArtifacts.push({ ...artifact, command });

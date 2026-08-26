@@ -22,7 +22,7 @@
     "dev:proxy": "node --import tsx scripts/maintenance/dev-api-proxy.ts",
     "bootstrap:generated": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --bootstrap",
     "bootstrap:generated:history": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=sitemap-dates,docs-metadata",
-    "prebuild": "node --import tsx scripts/maintenance/run-generated-artifacts.ts",
+    "prebuild": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input",
     "build": "next build --webpack",
     "build:world-map": "tsx scripts/maintenance/build-world-map-svg.ts",
     "postbuild": "tsx scripts/maintenance/generate-markdown-exports.ts && node --import tsx scripts/maintenance/inline-homepage-critical-css.ts",

@@ -53,13 +53,6 @@ const DEFAULT_BUDGETS = {
   // about 15 KB of headroom while keeping future docs-heavy App Router payload
   // growth reviewable.
   largestHtmlBytes: 2_770_000,
-  // Keep the homepage bootstrap/RSC payload from silently growing into the
-  // mobile critical path again without constraining long-form docs pages.
-  // The homepage table moved directly under the KPI band (1f76d3c36), which
-  // grew the above-the-fold critical-CSS block and table shell to ~319 KiB
-  // optimized. The June 2026 Mini App/Telegram release stack pushed the
-  // optimized homepage to ~342 KiB; keep roughly 2% headroom without losing signal.
-  homepageHtmlBytes: 350_000,
   // Docs/API reference RSC helpers are the largest legitimate TXT payloads.
   // Safety Score v8.12 exposed bridge-route and oracle-risk report-card fields;
   // Yield source-role / alternate-summary contracts then pushed the generated
@@ -102,7 +95,6 @@ const BUDGET_ENV = {
   largestCssGzipBytes: "PHAROS_SIZE_BUDGET_LARGEST_CSS_GZIP_BYTES",
   totalStaticMediaBytes: "PHAROS_SIZE_BUDGET_TOTAL_STATIC_MEDIA_BYTES",
   largestHtmlBytes: "PHAROS_SIZE_BUDGET_LARGEST_HTML_BYTES",
-  homepageHtmlBytes: "PHAROS_SIZE_BUDGET_HOMEPAGE_HTML_BYTES",
   largestTxtBytes: "PHAROS_SIZE_BUDGET_LARGEST_TXT_BYTES",
   representativeDetailHtmlBytes: "PHAROS_SIZE_BUDGET_DETAIL_HTML_BYTES",
   representativeDetailPageTxtBytes: "PHAROS_SIZE_BUDGET_DETAIL_PAGE_TXT_BYTES",
@@ -265,8 +257,6 @@ const cssFilesWithGzip = withGzipSize(cssFiles);
 const mediaFiles = collectFiles(mediaDir);
 const htmlFiles = collectFiles(outDir, (file) => file.endsWith(".html"));
 const txtFiles = collectFiles(outDir, (file) => file.endsWith(".txt"));
-const homepageHtmlPath = path.join(outDir, "index.html");
-const homepageHtmlSize = existsSync(homepageHtmlPath) ? statSync(homepageHtmlPath).size : 0;
 const routeFamilySummaries = summarizeStaticRouteFamilies(allOutFiles);
 const classicZodChunkNames = jsFiles
   .filter((file) => readFileSync(file.path, "utf8").includes(CLASSIC_ZOD_CHUNK_MARKER))
@@ -397,7 +387,6 @@ if (check) {
     referenceDelta("largest CSS chunk gzip", cssFilesWithGzip[0]?.gzipSize ?? 0, budgets.largestCssGzipBytes),
     referenceDelta("total static media", sum(mediaFiles), budgets.totalStaticMediaBytes),
     referenceDelta("largest HTML file", htmlFiles[0]?.size ?? 0, budgets.largestHtmlBytes),
-    referenceDelta("homepage HTML file", homepageHtmlSize, budgets.homepageHtmlBytes),
     referenceDelta("largest TXT/RSC helper", txtFiles[0]?.size ?? 0, budgets.largestTxtBytes),
     ...representativeDetails.map((detail) =>
       referenceDelta(
