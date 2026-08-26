@@ -61,7 +61,7 @@ Hook behavior:
 
 `npm run check:pr -- --base=<ref>` is the local counterpart to a normal code PR. It reads the committed `base...HEAD` diff, runs changed-file lint and source typing, adds Pages/Worker/Telegram guardrails only when relevant, checks affected generated artifacts, and runs the critical plus dependency-selected Vitest files.
 
-`npm run check:release` is the optional deeper rehearsal. It performs the Pages build, static feature/SEO checks, and a credential-free Worker bundle proof. It does not mutate Cloudflare, D1, or production state and does not replace the protected GitHub gate.
+`npm run check:release` is the optional deeper rehearsal. It performs the Pages build, the shared Pages release artifact checks, and a credential-free Worker bundle proof. It does not mutate Cloudflare, D1, or production state and does not replace the protected GitHub gate.
 
 Use focused checks while iterating. Run `test:all`, full lint, typed lint, or `typecheck:tests` directly when a change affects those broad contracts; they also run in nightly/manual validation.
 

@@ -181,7 +181,7 @@ function addBlogDates(dates: Record<string, string>): void {
   const sharedLastModified = latestIso(...BLOG_DETAIL_SHARED_SOURCES.map(getLastModified));
 
   for (const post of BLOG_POSTS) {
-    const contentPath = join(BLOG_POSTS_DIR, post.source);
+    const contentPath = join(BLOG_POSTS_DIR, `${post.slug}.md`);
     dates[`/blog/${post.slug}/`] = latestIso(getLastModified(contentPath), sharedLastModified);
   }
 }

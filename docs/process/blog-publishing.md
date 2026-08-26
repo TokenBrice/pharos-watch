@@ -31,8 +31,9 @@ what shipped, what's next, and why.
 2. **Register it** — add a `BlogPost` at the **top** of `BLOG_POSTS` in
    `src/data/blog/index.ts`:
    - `slug`: kebab-case, no date prefix (URL is `/blog/<slug>/`).
-   - `title`, `description` (≤160 chars — meta + hub blurb + RSS), `datePublished`
-     (`YYYY-MM-DD`, the day it goes live), `source` (the `.md` filename).
+   - `title`, `description` (≤160 chars — meta + hub blurb + RSS), and
+     `datePublished` (`YYYY-MM-DD`, the day it goes live). The post body lives at
+     `src/data/blog/posts/<slug>.md`.
    - **Cover image (optional):** drop the file in `public/blog/` and set
      `coverImage: "/blog/<slug>-cover.png"` + `coverAlt`. Author it **1200×630**
      — it renders atop the post and the hub card in a `1200/630` frame and
@@ -59,7 +60,7 @@ what shipped, what's next, and why.
   Cover images are authored assets; Pharos does not generate per-post cards.
 - **llms.txt (optional):** `scripts/maintenance/generate-llms-txt.ts` can list
   the `/blog/` hub and `/feed/blog.xml`; if you add them, regenerate and run
-  `npm run check:llms-txt`. Keep it to the hub — do not add per-post entries, so
+  `npm run check:generated-artifacts -- --only=llms-txt`. Keep it to the hub — do not add per-post entries, so
   publishing never forces an llms.txt regen.
 - **Discovery** is wired once and needs no per-post work: the sitemap, the
   sitemap-tree page, and the RSS feed enumerate posts straight from the

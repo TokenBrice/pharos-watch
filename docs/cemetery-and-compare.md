@@ -45,7 +45,7 @@ Cause metadata (labels + colors) is centralized in `CAUSE_META` / `CAUSE_HEX`.
 - `/datasets/stablecoin-cemetery.json`
 - `/datasets/stablecoin-cemetery.csv`
 
-The JSON export includes schema metadata, field descriptions, source-data path, canonical cemetery URL, source labels/URLs per row, and known historical token contracts when available. The CSV export mirrors the same row set with contracts flattened as `chain:address` pairs. Both exports are deterministic and sorted newest-failure first for citation/research reuse. `npm run prebuild` regenerates them, and `npm run check:cemetery-dataset` fails when checked-in public exports drift from either `shared/data/dead-stablecoins.json` or the frozen tracked rows (the combined `CEMETERY_ENTRIES` merge source). Provenance pins the curated dead-stablecoin file and the `buildFrozenCemeteryProjection()` frozen-row projection — not the whole generated catalog — so live-coin curation cannot rotate a published cemetery checksum while no cemetery row moves.
+The JSON export includes schema metadata, field descriptions, source-data path, canonical cemetery URL, source labels/URLs per row, and known historical token contracts when available. The CSV export mirrors the same row set with contracts flattened as `chain:address` pairs. Both exports are deterministic and sorted newest-failure first for citation/research reuse. `npm run prebuild` regenerates them, and `npm run check:generated-artifacts -- --only=cemetery-dataset` fails when checked-in public exports drift from either `shared/data/dead-stablecoins.json` or the frozen tracked rows (the combined `CEMETERY_ENTRIES` merge source). Provenance pins the curated dead-stablecoin file and the `buildFrozenCemeteryProjection()` frozen-row projection — not the whole generated catalog — so live-coin curation cannot rotate a published cemetery checksum while no cemetery row moves.
 
 The stable `id` field is the primary dead-coin identifier across the cemetery UI, public dataset export, report-card defunct rows, and Telegram cemetery snapshots. `llamaId` remains optional provider metadata only.
 
@@ -66,7 +66,7 @@ The static cemetery dataset export reflects the same merge:
 - `scripts/maintenance/generate-cemetery-dataset.ts` consumes `CEMETERY_ENTRIES` and writes one combined row set to `public/datasets/stablecoin-cemetery.json` and `public/datasets/stablecoin-cemetery.csv`.
 - The JSON export records `shared/lib/cemetery-merged.ts` as the merge source plus per-source paths and checksums for `shared/data/dead-stablecoins.json` and `shared/lib/cemetery-merged.ts#frozenCemeteryProjection` (the `buildFrozenCemeteryProjection()` output, not the whole generated catalog).
 - `archivedDataAvailable` is exposed as a row field, with a schema description, and `pharosUrl` resolves to `/stablecoin/<id>/` when archived data is available and to the cemetery anchor otherwise.
-- `npm run check:cemetery-dataset` continues to guard drift across both sources.
+- `npm run check:generated-artifacts -- --only=cemetery-dataset` continues to guard drift across both sources.
 
 ### Telegram channel notifications
 
