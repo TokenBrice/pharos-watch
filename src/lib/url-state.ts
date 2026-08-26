@@ -51,17 +51,6 @@ export type UrlStateField<V> =
 
 export type UrlStateSchema<T> = { [K in keyof T]: UrlStateField<T[K]> };
 
-/**
- * Infer the typed values object from a schema constant.
- *
- * Schemas authored as plain objects (`{ paramA: { kind: "enum", ... }, ... }`)
- * carry their value types in each field's `defaultValue`. `InferUrlStateValues`
- * recovers the values record without forcing each surface to declare a
- * standalone `interface XFilters { ... }` next to its schema — though both
- * patterns are supported (the screener declares both for clarity).
- */
-type InferUrlStateValues<S> = S extends UrlStateSchema<infer V> ? V : never;
-
 function decodeField<V>(
   params: URLSearchParams,
   key: string,

@@ -352,7 +352,6 @@ const V9SyntheticVenueShareSchema = z
     failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict();
-type V9SyntheticVenueShare = z.infer<typeof V9SyntheticVenueShareSchema>;
 
 const V9SyntheticDeltaNeutralMechanismRiskReviewSchema = z
   .object({

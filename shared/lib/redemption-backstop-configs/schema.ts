@@ -131,9 +131,7 @@ const RedemptionV9ComposedDexExitSchema = z.strictObject({
   docs: z.array(RedemptionDocSourceSchema).min(1),
 });
 
-type RedemptionCostTerms = z.infer<typeof RedemptionCostTermsSchema>;
 export type RedemptionV9RouteReviewTerms = z.infer<typeof RedemptionV9RouteReviewTermsSchema>;
-type RedemptionV9ComposedDexExit = z.infer<typeof RedemptionV9ComposedDexExitSchema>;
 
 const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({

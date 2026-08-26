@@ -105,7 +105,6 @@ const V9FailureDomainKindSchema = z.enum([
   "chain",
   "dex-protocol",
 ]);
-export type V9FailureDomainKind = z.infer<typeof V9FailureDomainKindSchema>;
 
 export const V9FailureDomainRefSchema = z
   .object({ kind: V9FailureDomainKindSchema, key: CanonicalTextSchema })

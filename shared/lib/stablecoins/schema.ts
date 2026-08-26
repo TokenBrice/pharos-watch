@@ -305,7 +305,6 @@ export const STABLECOIN_SOURCE_DOMAIN_SCHEMAS = Object.fromEntries(
   [TDomain in StablecoinSourceDomain]: (typeof STABLECOIN_SOURCE_DOMAIN_DESCRIPTORS)[TDomain]["schema"];
 };
 
-const StablecoinReservesSidecarSchema = STABLECOIN_SOURCE_DOMAIN_SCHEMAS.reserves;
 export const StablecoinMintAuthoritySidecarSchema = STABLECOIN_SOURCE_DOMAIN_SCHEMAS["mint-authority"];
 export const StablecoinComplianceSidecarSchema = STABLECOIN_SOURCE_DOMAIN_SCHEMAS.compliance;
 export const StablecoinRiskReviewSidecarSchema = STABLECOIN_SOURCE_DOMAIN_SCHEMAS["risk-review"];

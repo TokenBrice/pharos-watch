@@ -57,15 +57,6 @@ export interface ActiveDepegRow {
   peg_reference: number;
 }
 
-interface ClosedDepegRow {
-  stablecoin_id: string;
-  symbol: string;
-  peak_deviation_bps: number;
-  started_at: number;
-  ended_at: number;
-  recovery_price: number | null;
-}
-
 // ---------- Snapshot Parsing ----------
 
 export function parseSnapshotMap<T extends Record<string, unknown>>(

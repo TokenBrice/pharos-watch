@@ -9,5 +9,3 @@ export const MethodologyEnvelopeSchema = z.object({
   asOf: z.number(),
   isCurrent: z.boolean(),
 });
-
-export type MethodologyEnvelope = z.infer<typeof MethodologyEnvelopeSchema>;

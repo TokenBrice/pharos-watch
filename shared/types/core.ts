@@ -80,7 +80,6 @@ export type PegCurrency = (typeof PEG_CURRENCY_VALUES)[number];
 export type StablecoinFlags = import("./stablecoin-meta-schemas").StablecoinFlags;
 
 export const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
-type ProofOfReservesType = (typeof PROOF_OF_RESERVES_TYPE_VALUES)[number];
 
 /**
  * Attestor quality ladder. `none` is a *reviewed* negative — a reviewer
@@ -227,7 +226,6 @@ export const MINT_AUTHORITY_CONTROL_ROLE_VALUES = [
   "other",
   "unknown",
 ] as const;
-type MintAuthorityControlRole = (typeof MINT_AUTHORITY_CONTROL_ROLE_VALUES)[number];
 
 export const MINT_AUTHORITY_TYPE_VALUES = [
   "safe",
@@ -242,7 +240,6 @@ export const MINT_AUTHORITY_TYPE_VALUES = [
   "none",
   "unknown",
 ] as const;
-type MintAuthorityType = (typeof MINT_AUTHORITY_TYPE_VALUES)[number];
 
 export const MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES = [
   "direct",
@@ -576,7 +573,6 @@ export const OracleRiskTierSchema = z.enum(ORACLE_RISK_TIER_VALUES);
 export const BridgeRouteRiskTierSchema = z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES);
 
 export const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
-type CoinNoticeType = (typeof COIN_NOTICE_TYPE_VALUES)[number];
 export type CoinNotice = import("./stablecoin-meta-schemas").CoinNotice;
 
 export const YIELD_TYPE_VALUES = [
@@ -788,4 +784,4 @@ export const BLUECHIP_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C
 export type BluechipGrade = (typeof BLUECHIP_GRADE_VALUES)[number];
 export const BluechipGradeSchema = z.enum(BLUECHIP_GRADE_VALUES);
 
-export { MethodologyEnvelopeSchema, type MethodologyEnvelope } from "./methodology-envelope";
+export { MethodologyEnvelopeSchema } from "./methodology-envelope";

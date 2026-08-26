@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { MethodologyEnvelope } from "./core";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
 import {
   DepegPrimaryTrustSchema,

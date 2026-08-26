@@ -269,5 +269,3 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     }),
   };
 }
-
-type CoverageMatrixModel = ReturnType<typeof buildCoverageMatrixModel>;

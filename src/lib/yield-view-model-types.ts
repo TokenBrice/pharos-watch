@@ -9,7 +9,6 @@ import type {
   YieldSourceChangedFilter,
   YieldSourceConfidenceFilter,
   YieldSourcePostureFilter,
-  YieldTrendingFilter,
   YieldViewModelFilters,
   YieldViewModelUrlParams,
   YieldWarningsFilter,

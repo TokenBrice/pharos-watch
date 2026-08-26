@@ -155,7 +155,6 @@ export const SafetyScoreV9PillarSchema = z
       ctx.addIssue({ code: "custom", path: ["components"], message: "V9 pillar components must be unique and sorted" });
     }
   });
-type SafetyScoreV9Pillar = z.infer<typeof SafetyScoreV9PillarSchema>;
 
 export const SafetyScoreV9CapSchema = z
   .object({
@@ -201,4 +200,3 @@ export const SafetyScoreV9AccessPostureSchema = z
       ctx.addIssue({ code: "custom", path: ["signals"], message: "V9 access signals must be unique and sorted" });
     }
   });
-type SafetyScoreV9AccessPosture = z.infer<typeof SafetyScoreV9AccessPostureSchema>;

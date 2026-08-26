@@ -90,21 +90,6 @@ export function createDexMeasuredExecutionRpcBudget(input: {
   };
 }
 
-interface DexMeasuredExecutionAdapter {
-  readonly profileId: string;
-  quotePoints(input: {
-    target: DexMeasuredExecutionTarget;
-    inputNotionalsUsd: readonly number[];
-    blockNumber: number;
-    endpointAddress: `0x${string}`;
-    chainRpcs: Map<string, import("../../lib/chain-registry").ChainRpcConfig>;
-    signal?: AbortSignal;
-  }): Promise<{
-    points: DexMeasuredRawQuotePoint[];
-    failures: Array<{ inputUsd: number; reason: string }>;
-  }>;
-}
-
 export function buildDexMeasuredExecutionProfile(input: {
   target: DexMeasuredExecutionTarget;
   targetGenerationId: string;

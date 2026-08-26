@@ -54,7 +54,6 @@ const SELECTOR_VENUES_BY_PROFILE: Record<SelectorProfile, readonly SelectorVenue
   trading: ["cex", "perps", "spot", "all"],
 };
 
-type SelectorStepRaw = "1" | "2" | "3" | "4" | "5" | "6" | "result";
 export type SelectorStep = 1 | 2 | 3 | 4 | 5 | 6 | "result";
 
 // ---------------------------------------------------------------------------

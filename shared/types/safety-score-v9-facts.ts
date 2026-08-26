@@ -20,7 +20,6 @@ import {
   type V9EvidenceResponsibility,
   type V9FactApplicability,
   type V9FactStatusV2,
-  type V9FailureDomainKind,
   type V9FailureDomainRef,
   type V9ObservationState,
 } from "./safety-score-v9-fact-primitives";

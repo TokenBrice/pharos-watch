@@ -35,8 +35,4 @@ export const OPERATIONAL_CACHE_KEYS = {
   }),
 } as const satisfies Record<string, OperationalCacheKeyDefinition>;
 
-export type RegisteredOperationalCacheKeyDefinition =
-  (typeof OPERATIONAL_CACHE_KEYS)[keyof typeof OPERATIONAL_CACHE_KEYS];
-type RegisteredOperationalCacheKey = RegisteredOperationalCacheKeyDefinition["key"];
-
 export const LIVE_RESERVE_RUN_CURSOR_CACHE_KEY = OPERATIONAL_CACHE_KEYS.liveReserveRunCursor.key;

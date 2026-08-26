@@ -1,36 +1,4 @@
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
-
-export interface PriceSourceDiagnostics {
-  allPrices?: Record<string, number>;
-  disagreeSources?: string[];
-  observedAtBySource?: Record<string, number | null>;
-  observedAtModeBySource?: Record<string, PriceObservedAtMode | null>;
-}
-
-interface SelectedPrice {
-  price: number;
-  source: string;
-  selectedSource: string;
-  confidence: PriceConfidence;
-  observedAt: number | null;
-  observedAtMode: PriceObservedAtMode | null;
-  syncedAt: number | null;
-  consensusSources?: string[];
-  agreeSources?: string[];
-  diagnostics?: PriceSourceDiagnostics;
-}
-
-interface PriceMetadata {
-  source: string;
-  selectedSource?: string | null;
-  confidence: PriceConfidence | null;
-  observedAt: number | null;
-  observedAtMode: PriceObservedAtMode | null;
-  syncedAt: number | null;
-  consensusSources?: string[];
-  agreeSources?: string[];
-  diagnostics?: PriceSourceDiagnostics;
-}
+import type { PriceObservedAtMode } from "@shared/types/core";
 
 export function pickConservativeObservedAt(
   sourceKeys: string[] | undefined,
