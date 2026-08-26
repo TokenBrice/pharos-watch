@@ -194,12 +194,8 @@ export interface DigestDataQuality {
   };
 }
 
-export type DigestRiskTapeTone = "critical" | "warning" | "neutral" | "positive";
 
-export type DigestNextTriggerMetric =
-  "depeg-bps" | "supply-1d-usd" | "supply-7d-usd" | "bank-run-gauge" | "dews-band" | "psi-score" | "yield-apy" | "liquidity-score";
 
-export type DigestNextTriggerComparator = "abs-gte" | "gte" | "lte" | "band-gte";
 
 export interface DigestCalmNarrativeFrame {
   label: string;
@@ -549,7 +545,7 @@ export const DailyDigestResponseSchema = z
   }));
 export type DailyDigestResponse = z.infer<typeof DailyDigestResponseSchema>;
 
-const DigestArchiveEntrySchema = z.object({
+export const DigestArchiveEntrySchema = z.object({
   digestText: z.string(),
   digestTitle: z.string().nullable(),
   digestExtended: z.string().nullable(),
@@ -570,6 +566,24 @@ export const DigestArchiveResponseSchema = z.object({
   digests: z.array(DigestArchiveEntrySchema),
 });
 export type DigestArchiveResponse = z.infer<typeof DigestArchiveResponseSchema>;
+
+/**
+ * Build-time digest archive written to data/digests.json. Older snapshots may
+ * omit edition metadata, so parsing deliberately normalizes those fields to
+ * the same defaults used by the sync producer.
+ */
+export const DigestStoredSnapshotSchema = z.array(
+  z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}(?:-weekly)?$/),
+    title: DigestArchiveEntrySchema.shape.digestTitle.unwrap(),
+    text: DigestArchiveEntrySchema.shape.digestText,
+    extended: DigestArchiveEntrySchema.shape.digestExtended.unwrap(),
+    generatedAt: DigestArchiveEntrySchema.shape.generatedAt,
+    digestType: DigestArchiveEntrySchema.shape.digestType.default("daily"),
+    editionNumber: DigestArchiveEntrySchema.shape.editionNumber.default(0),
+  }),
+);
+export type DigestContentEntry = z.infer<typeof DigestStoredSnapshotSchema>[number];
 
 const DigestV8SafetyProvenanceSchema = SafetyScoreV8PublicationIdentitySchema.extend({
   publishedAt: z.number().int().nonnegative(),

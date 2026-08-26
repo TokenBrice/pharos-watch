@@ -1,5 +1,8 @@
 import digests from "../../data/digests.json";
-import type { DigestContentEntry } from "@shared/types";
+import {
+  DigestStoredSnapshotSchema,
+  type DigestContentEntry,
+} from "@shared/types";
 
 function compareDigestEntries(left: DigestContentEntry, right: DigestContentEntry): number {
   return right.generatedAt - left.generatedAt || right.date.localeCompare(left.date);
@@ -7,7 +10,7 @@ function compareDigestEntries(left: DigestContentEntry, right: DigestContentEntr
 
 /** Checked-in digest artifacts, normalized once into deterministic newest-first order. */
 export const DIGEST_ENTRIES: readonly DigestContentEntry[] = Object.freeze(
-  (digests as DigestContentEntry[]).slice().sort(compareDigestEntries),
+  DigestStoredSnapshotSchema.parse(digests).sort(compareDigestEntries),
 );
 
 export const DIGEST_BY_DATE: ReadonlyMap<string, DigestContentEntry> = new Map(

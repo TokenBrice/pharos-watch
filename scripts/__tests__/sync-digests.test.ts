@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
+import type { DigestContentEntry } from "@shared/types/digest";
 
 import {
   assertDigestArchivePreserved,
   deduplicateDigestEntries,
   findMissingDigestArchiveDates,
-  type DigestEntry,
 } from "../maintenance/sync-digests";
 
-function digest(date: string): DigestEntry {
+function digest(date: string): DigestContentEntry {
   return {
     date,
     title: `Digest ${date}`,

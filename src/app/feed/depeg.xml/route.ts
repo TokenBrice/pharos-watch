@@ -7,8 +7,10 @@ import {
 } from "@/lib/depeg-event-config";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { DepegEventSchema } from "@shared/types/market";
-import { z } from "zod";
+import {
+  DepegEventStoredSnapshotSchema,
+  type DepegEventEntry,
+} from "@shared/types/market";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -18,17 +20,11 @@ const MAX_ITEMS = 100;
 /** W3-D will populate this file during prebuild. Until then, treat absence as zero events. */
 const DEPEG_EVENTS_PATH = path.join(process.cwd(), "data/depeg-events.json");
 
-const DepegFeedEventSchema = DepegEventSchema.extend({
-  slug: z.string().min(1),
-});
-const DepegFeedEventsSchema = z.array(DepegFeedEventSchema);
-type DepegFeedEvent = z.infer<typeof DepegFeedEventSchema>;
-
 function isEnoent(error: unknown): boolean {
   return error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT";
 }
 
-function parseEvents(raw: string): DepegFeedEvent[] {
+function parseEvents(raw: string): DepegEventEntry[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -40,7 +36,7 @@ function parseEvents(raw: string): DepegFeedEvent[] {
     throw new Error(`Expected ${DEPEG_EVENTS_PATH} to contain an array of depeg events.`);
   }
 
-  const result = DepegFeedEventsSchema.safeParse(parsed);
+  const result = DepegEventStoredSnapshotSchema.safeParse(parsed);
   if (!result.success) {
     const firstIssue = result.error.issues[0];
     const issuePath = firstIssue?.path.length ? firstIssue.path.join(".") : "<root>";
@@ -51,7 +47,7 @@ function parseEvents(raw: string): DepegFeedEvent[] {
   return result.data;
 }
 
-function loadEvents(): DepegFeedEvent[] {
+function loadEvents(): DepegEventEntry[] {
   let raw: string;
   try {
     raw = readFileSync(DEPEG_EVENTS_PATH, "utf-8");
@@ -62,7 +58,7 @@ function loadEvents(): DepegFeedEvent[] {
   return parseEvents(raw);
 }
 
-function depegItems(events: readonly DepegFeedEvent[]): RssItem[] {
+function depegItems(events: readonly DepegEventEntry[]): RssItem[] {
   const staticPageSlugs = new Set(selectStaticDepegEventPages(events).map((event) => event.slug));
   return events
     .slice()

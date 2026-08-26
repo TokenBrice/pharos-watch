@@ -22,6 +22,7 @@ import type {
   DigestContentEntry,
   StablecoinAiSummariesById,
 } from "@shared/types";
+import { DigestStoredSnapshotSchema } from "@shared/types/digest";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -33,6 +34,7 @@ export interface MarkdownRoute {
 }
 
 const summaries = aiSummaries as StablecoinAiSummariesById;
+const digests = DigestStoredSnapshotSchema.parse(digestsData);
 
 export function frontMatterBlock(attrs: Record<string, string>): string {
   return (
@@ -166,7 +168,7 @@ export function renderDigestDetail(digest: DigestContentEntry): string {
 }
 
 export function* iterateDigestRoutes(): Generator<MarkdownRoute> {
-  for (const digest of digestsData as DigestContentEntry[]) {
+  for (const digest of digests) {
     yield { path: `/digest/${digest.date}/`, body: renderDigestDetail(digest) };
   }
 }
