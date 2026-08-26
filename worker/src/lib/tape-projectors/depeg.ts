@@ -16,7 +16,6 @@ import {
   severityForDepegOpened,
 } from "../tape-event-helpers";
 import { getCache, setCache } from "../db-cache";
-import { isMissingColumnError } from "../db";
 import {
   insertTapeEvents,
 } from "../tape-event-store";
@@ -81,34 +80,17 @@ async function fetchDepegRows(
     ? " AND source = 'live'"
     : " AND source = 'live' AND ended_at IS NOT NULL";
 
-  try {
-    return await fetchRowsWithTieExpansion<DepegSourceRow>(db, {
-      selectSql,
-      fromSql: "depeg_events",
-      timeColumn,
-      trailingWhereSql,
-      orderBySql: `${timeColumn} ASC, id ASC`,
-      since,
-      until,
-      limit,
-      getTime: (row) => variant === "opened" ? row.started_at : row.ended_at,
-    });
-  } catch (err) {
-    // The depeg_events.methodology_version column was added later; tolerate
-    // its absence on older databases the same way other readers do.
-    if (!isMissingColumnError(err)) throw err;
-    return await fetchRowsWithTieExpansion<DepegSourceRow>(db, {
-      selectSql: selectSql.replace(", close_reason", "").replace(", methodology_version", ""),
-      fromSql: "depeg_events",
-      timeColumn,
-      trailingWhereSql,
-      orderBySql: `${timeColumn} ASC, id ASC`,
-      since,
-      until,
-      limit,
-      getTime: (row) => variant === "opened" ? row.started_at : row.ended_at,
-    });
-  }
+  return fetchRowsWithTieExpansion<DepegSourceRow>(db, {
+    selectSql,
+    fromSql: "depeg_events",
+    timeColumn,
+    trailingWhereSql,
+    orderBySql: `${timeColumn} ASC, id ASC`,
+    since,
+    until,
+    limit,
+    getTime: (row) => variant === "opened" ? row.started_at : row.ended_at,
+  });
 }
 
 function isRecoveryClosure(row: DepegSourceRow): boolean {
@@ -233,20 +215,13 @@ export async function projectDepegPeakWorsened(
   const seenMap = await loadPeakSeenMap(db);
   const nextMap: PeakWorsenedSeenMap = {};
 
-  let rowsResult: D1Result<DepegSourceRow>;
   const sql = `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
                       started_at, ended_at, start_price, peg_reference, source, methodology_version
                  FROM depeg_events
                  WHERE source = 'live' AND ended_at IS NULL
                  ORDER BY id ASC
                  LIMIT ?`;
-  try {
-    rowsResult = await db.prepare(sql).bind(limit).all<DepegSourceRow>();
-  } catch (err) {
-    if (!isMissingColumnError(err)) throw err;
-    const fallbackSql = sql.replace(", methodology_version", "");
-    rowsResult = await db.prepare(fallbackSql).bind(limit).all<DepegSourceRow>();
-  }
+  const rowsResult = await db.prepare(sql).bind(limit).all<DepegSourceRow>();
 
   const rows = rowsResult.results ?? [];
   const events: TapeEventInsert[] = [];

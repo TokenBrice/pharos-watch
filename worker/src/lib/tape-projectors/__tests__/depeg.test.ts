@@ -52,6 +52,21 @@ function extractCacheWriteBinds(db: MockD1Database, cursorKey: string): unknown[
 }
 
 describe("depeg projector", () => {
+  it("surfaces a missing mandatory depeg methodology column", async () => {
+    const db = mockTapeD1([
+      { match: "SELECT value, updated_at FROM cache", rows: [], first: null },
+      {
+        match: MATCH_DEPEG_EVENTS,
+        rows: [],
+        throwError: new Error("D1_ERROR: no such column: methodology_version"),
+      },
+    ]);
+
+    await expect(projectDepegOpened(db, { since: 0 })).rejects.toThrow(
+      "D1_ERROR: no such column: methodology_version",
+    );
+  });
+
   it("expands a full opened batch through same-started_at rows before advancing the watermark", async () => {
     const limitedRows = [
       depegRow({ id: 1, stablecoin_id: "usdt-tether" }),

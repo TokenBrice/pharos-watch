@@ -221,36 +221,21 @@ async function loadTapeTerminalEvidenceToken(
   signal?: AbortSignal,
 ): Promise<TapeTerminalEvidenceCacheToken | null> {
   abortIf(signal, "compute-depeg-resolver-review");
-  try {
-    const row = await db
-      .prepare(
-        `SELECT COUNT(*) as row_count, MAX(ts) as max_ts, MAX(id) as max_id
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) as row_count, MAX(ts) as max_ts, MAX(id) as max_id
          FROM tape_events
          WHERE type IN ('lifecycle.tracked.frozen', 'cemetery.entry.added')`,
-      )
-      .first<{ row_count: number | null; max_ts: number | null; max_id: number | null }>();
-    abortIf(signal, "compute-depeg-resolver-review");
-    const rowCount = nullableNonnegativeInteger(row?.row_count);
-    if (rowCount == null) return null;
-    return {
-      rowCount,
-      maxTs: nullableNonnegativeInteger(row?.max_ts),
-      maxId: nullableNonnegativeInteger(row?.max_id),
-    };
-  } catch (err) {
-    const message = toErrorMessage(err);
-    if (message.includes("no such table")) return null;
-    logWorkerEvent({
-      scope: "lib",
-      level: "error",
-      job: "compute-depeg-resolver-review",
-      event: "tape_terminal_evidence_token_failed",
-      source: "tape_events",
-      message: "Failed to load tape terminal evidence cache token",
-      error: err,
-    });
-    throw err;
-  }
+    )
+    .first<{ row_count: number | null; max_ts: number | null; max_id: number | null }>();
+  abortIf(signal, "compute-depeg-resolver-review");
+  const rowCount = nullableNonnegativeInteger(row?.row_count);
+  if (rowCount == null) return null;
+  return {
+    rowCount,
+    maxTs: nullableNonnegativeInteger(row?.max_ts),
+    maxId: nullableNonnegativeInteger(row?.max_id),
+  };
 }
 
 async function readTapeTerminalEvidenceCache(
@@ -269,8 +254,6 @@ async function readTapeTerminalEvidenceCache(
     if (!payload || !sameTapeTerminalEvidenceToken(payload.token, token)) return null;
     return payload;
   } catch (err) {
-    const message = toErrorMessage(err);
-    if (message.includes("no such table")) return null;
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -307,8 +290,6 @@ async function writeTapeTerminalEvidenceCache(
       .run();
     abortIf(signal, "compute-depeg-resolver-review");
   } catch (err) {
-    const message = toErrorMessage(err);
-    if (message.includes("no such table")) return;
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -333,42 +314,22 @@ async function queryTapeTerminalEvidenceByStablecoinId(
     throwIfAborted(signal);
     if (ids.length === 0) continue;
     const inClause = buildInClause(ids);
-    try {
-      const result = await db
-        .prepare(
-          `SELECT coin_id, type, ts, payload_json
+    const result = await db
+      .prepare(
+        `SELECT coin_id, type, ts, payload_json
            FROM tape_events
            WHERE coin_id IN (${inClause.sql})
              AND type IN ('lifecycle.tracked.frozen', 'cemetery.entry.added')
            ORDER BY ts ASC, id ASC`,
-        )
-        .bind(...inClause.binds)
-        .all<TapeTerminalEvidenceRow>();
+      )
+      .bind(...inClause.binds)
+      .all<TapeTerminalEvidenceRow>();
 
-      abortIf(signal, "compute-depeg-resolver-review");
-      for (const row of result.results ?? []) {
-        if (!row.coin_id || evidenceByStablecoinId.has(row.coin_id)) continue;
-        const evidence = tapeTerminalEvidence(row);
-        if (evidence) evidenceByStablecoinId.set(row.coin_id, evidence);
-      }
-    } catch (err) {
-      // Older local/test databases may not have tape_events. Registry and
-      // cemetery metadata remain the authoritative terminal evidence sources.
-      const message = toErrorMessage(err);
-      if (message.includes("no such table")) continue;
-      // Any other failure (transient D1 overload, malformed query, binding
-      // fault) would silently drop terminal evidence and misclassify incidents
-      // as non-terminal - surface it instead of failing open.
-      logWorkerEvent({
-        scope: "lib",
-        level: "error",
-        job: "compute-depeg-resolver-review",
-        event: "tape_terminal_evidence_query_failed",
-        source: "tape_events",
-        message: "Failed to load tape terminal evidence",
-        error: err,
-      });
-      throw err;
+    abortIf(signal, "compute-depeg-resolver-review");
+    for (const row of result.results ?? []) {
+      if (!row.coin_id || evidenceByStablecoinId.has(row.coin_id)) continue;
+      const evidence = tapeTerminalEvidence(row);
+      if (evidence) evidenceByStablecoinId.set(row.coin_id, evidence);
     }
   }
 

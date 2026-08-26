@@ -76,10 +76,9 @@ async function loadDexAvailability(
     ]));
   } catch (err) {
     const msg = toErrorMessage(err);
-    if (!isMissingTableError(err)) {
-      logWorkerEventArgs("api", "error", "[depeg-events] Unexpected error loading DEX availability:", msg);
-    }
-    return new Map();
+    if (isMissingTableError(err)) return new Map();
+    logWorkerEventArgs("api", "error", "[depeg-events] Unexpected error loading DEX availability:", msg);
+    throw err;
   }
 }
 
@@ -104,10 +103,9 @@ async function loadPoolAvailability(
     ]));
   } catch (err) {
     const msg = toErrorMessage(err);
-    if (!isMissingTableError(err)) {
-      logWorkerEventArgs("api", "error", "[depeg-events] Unexpected error loading pool availability:", msg);
-    }
-    return new Map();
+    if (isMissingTableError(err)) return new Map();
+    logWorkerEventArgs("api", "error", "[depeg-events] Unexpected error loading pool availability:", msg);
+    throw err;
   }
 }
 
@@ -197,17 +195,16 @@ async function loadThresholdCrossingCount(db: D1Database, stablecoinId: string):
       .first<{ total: number }>();
     return typeof row?.total === "number" && Number.isFinite(row.total) ? Math.max(0, row.total) : null;
   } catch (err) {
-    if (!isMissingTableError(err)) {
-      logWorkerEvent({
-        scope: "api",
-        level: "error",
-        event: "threshold_crossing_count_failed",
-        route: "depeg-events",
-        message: "Unexpected error loading threshold-crossing count",
-        error: toErrorMessage(err),
-      });
-    }
-    return null;
+    if (isMissingTableError(err)) return null;
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "threshold_crossing_count_failed",
+      route: "depeg-events",
+      message: "Unexpected error loading threshold-crossing count",
+      error: toErrorMessage(err),
+    });
+    throw err;
   }
 }
 

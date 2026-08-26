@@ -1343,7 +1343,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     ).rejects.toThrow("D1_ERROR: database is locked");
   });
 
-  it("tolerates a missing tape_events table by falling back to other evidence", async () => {
+  it("surfaces a missing mandatory tape_events table", async () => {
     const incident = {
       incidentKey: "ddr2:tape-missing-table",
       eventId: 95,
@@ -1366,10 +1366,9 @@ describe("buildDepegResolverReviewSnapshot", () => {
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
-      storeContracts: stores,
-    });
-    expect(snapshot.rows).toHaveLength(1);
+    await expect(
+      buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores }),
+    ).rejects.toThrow("D1_ERROR: no such table: tape_events");
   });
 
   it("does not backdate overlapping day-precision terminal evidence before lock", async () => {
