@@ -19,6 +19,7 @@ const NOW = 1_775_900_000;
 const EXPECTED_CANARY_CHECK_IDS = [
   "dex-liquidity-current-publication",
   "dex-liquidity-global-row",
+  "blacklist-null-identity",
   "stablecoins-cache-active-count",
   "psi-latest-sample",
   "dews-latest-signal",
@@ -154,6 +155,8 @@ function healthyD1(
     unpublishedRows?: number;
     generationCount?: number;
     stablecoinsActiveCount?: number;
+    blacklistEventNullIdentityRows?: number;
+    blacklistBalanceNullIdentityRows?: number;
     gbpFreshRuns?: number;
     gbpFallback?: boolean;
   } = {},
@@ -190,6 +193,14 @@ function healthyD1(
     {
       match: "stablecoin_id = '__global__'",
       first: { current_rows: rowCount, global_rows: 1 },
+      rows: [],
+    },
+    {
+      match: "blacklist-null-identity-canary",
+      first: {
+        event_rows: dex.blacklistEventNullIdentityRows ?? 0,
+        balance_rows: dex.blacklistBalanceNullIdentityRows ?? 0,
+      },
       rows: [],
     },
     {
@@ -252,8 +263,8 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 7,
-      okCount: 7,
+      totalChecks: 8,
+      okCount: 8,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
@@ -263,6 +274,28 @@ describe("worker data invariant canaries", () => {
     expect(
       summary.results.find((result) => result.checkId === "safety-score-v9-publication")?.metadata,
     ).toMatchObject({ safetyScoreIdentity: { model: "v9" } });
+  });
+
+  it("flags a seeded null-identity blacklist row", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const summary = await runCanaryChecks(healthyD1({ blacklistEventNullIdentityRows: 1 }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    const check = summary.results.find((result) => result.checkId === "blacklist-null-identity");
+
+    expect(check).toMatchObject({
+      status: "error",
+      severity: "error",
+      error: "blacklist identity invariant failed: 1 blacklist_events and 0 blacklist_current_balances rows have null config_key and contract_address",
+      metadata: {
+        eventRows: 1,
+        balanceRows: 0,
+        totalRows: 1,
+      },
+    });
+    expect(summary.errorCount).toBe(1);
   });
 
   it("degrades while the canonical V9 publication is held", async () => {
@@ -522,7 +555,7 @@ describe("worker data invariant canaries", () => {
     await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
     await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
     const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO worker_canary_runs"));
-    expect(inserts).toHaveLength(14);
+    expect(inserts).toHaveLength(16);
 
     const status = await loadCanaryStatus(
       mockD1([
@@ -736,7 +769,7 @@ describe("worker data invariant canaries", () => {
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
-    expect(summary.skippedCount).toBe(3);
+    expect(summary.skippedCount).toBe(4);
     expect(summary.degradedCount).toBe(1);
     expect(summary.okCount).toBe(3);
     expect(summary.worstStatus).toBe("degraded");

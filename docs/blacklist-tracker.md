@@ -162,7 +162,9 @@ Active ingestion uses these amount-source meanings:
 - `current_balance_snapshot`: Tron freeze-ledger reconciliation, clearly distinguished from historical attribution.
 - `unavailable`: no defensible amount.
 
-`derived` and `legacy_migration` are compatibility artifacts, not current ingestion modes. Eligible unresolved rows enter the durable repair queue. Legacy derived-zero rows receive bounded recovery attempts before becoming permanently unavailable.
+`derived` and `legacy_migration` are compatibility artifacts, not current ingestion modes. Eligible unresolved rows enter the durable repair queue. Legacy derived-zero rows receive bounded recovery attempts before becoming permanently unavailable. `legacy_migration` records historical amount provenance only; it does not indicate a remaining identity repair.
+
+The one-time legacy identity repair was completed and verified in production on 2026-08-26: `blacklist_events` and `blacklist_current_balances` contain no rows where both `config_key` and `contract_address` are `NULL`. The repair's Time Travel bookmark is retained by the operator. `syncBlacklist()` no longer scans or rewrites those rows; the `data-invariant-canary` now counts both tables and reports an error if either count becomes non-zero.
 
 ### Freeze Ledger
 
