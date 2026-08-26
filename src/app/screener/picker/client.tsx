@@ -35,6 +35,7 @@ import {
 } from "./session-storage";
 import { useSelector } from "@/hooks/use-selector";
 import { RequestSequence, requestJson } from "@/lib/request";
+import { copyText } from "@/lib/clipboard";
 import type { SchemaLike } from "@shared/lib/schema-like";
 
 interface SnapshotWriteResponse {
@@ -169,13 +170,10 @@ export function SelectorClient() {
     params.set("sid", payload.sid);
     if (payload.ev) params.set("ev", payload.ev);
     const shareUrl = `${window.location.origin}/screener/picker/?${params.toString()}`;
-    try {
-      await copyToClipboard(shareUrl);
-    } catch (error) {
+    const copyResult = await copyText(shareUrl);
+    if (!copyResult.ok) {
       setShareFallbackUrl(shareUrl);
-      const message =
-        error instanceof Error ? error.message : "Clipboard blocked. Select and copy the share URL below.";
-      throw new Error(message);
+      throw new Error("Clipboard blocked. Select and copy the share URL below.");
     }
   }, [output]);
 
@@ -326,31 +324,6 @@ function SessionRestorePanel({
       </div>
     </div>
   );
-}
-
-async function copyToClipboard(text: string): Promise<void> {
-  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return;
-    } catch {
-      // fall through to legacy path
-    }
-  }
-  if (typeof document === "undefined") return;
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  try {
-    const copied = document.execCommand("copy");
-    if (!copied) throw new Error("Clipboard blocked. Select and copy the share URL below.");
-  } finally {
-    document.body.removeChild(textarea);
-  }
 }
 
 function isTradingDataStale(output: SelectorOutput | null): boolean {

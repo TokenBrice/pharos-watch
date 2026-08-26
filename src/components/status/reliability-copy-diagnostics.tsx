@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { copyText } from "@/lib/clipboard";
 
 export function ReliabilityCopyDiagnostics({ text }: { text: string }) {
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
+    const result = await copyText(text);
+    if (result.ok) {
       setStatus("copied");
-    } catch {
+    } else {
       setStatus("failed");
     }
   };

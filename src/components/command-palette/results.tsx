@@ -28,6 +28,7 @@ import {
   type CommandPaletteHistoryItem,
 } from "@/components/command-palette-model";
 import { buildCompareHrefFromCoinIds } from "@/lib/command-palette-verbs";
+import { copyText } from "@/lib/clipboard";
 import type { CommandPaletteVerbPreview } from "@/components/command-palette-actions";
 
 export interface CommandPaletteSearchResult {
@@ -139,9 +140,7 @@ function buildSearchResult(
         closePalette();
         return;
       case "copy-url":
-        if (typeof window !== "undefined" && navigator.clipboard) {
-          void navigator.clipboard.writeText(window.location.href);
-        }
+        if (typeof window !== "undefined") void copyText(window.location.href);
         closePalette();
         return;
       case "open-digest":

@@ -2,24 +2,22 @@
 
 import { useState } from "react";
 import { Check, Link2 } from "lucide-react";
+import { copyText } from "@/lib/clipboard";
 
 /**
  * Small copy-link control for a case study article. Copies the current page URL
  * to the clipboard and flips to a confirmed state for a moment. Client-only:
- * reads `window.location` and uses the async Clipboard API, both unavailable at
- * static-export build time.
+ * reads `window.location`, which is unavailable at static-export build time.
  */
 export function CaseStudyShare() {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
     if (typeof window === "undefined") return;
-    try {
-      await navigator.clipboard.writeText(window.location.href);
+    const result = await copyText(window.location.href);
+    if (result.ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard blocked (permissions / insecure context) — fail silently.
     }
   }
 

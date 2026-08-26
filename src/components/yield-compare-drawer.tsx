@@ -15,6 +15,7 @@ import {
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { getYieldDecisionReasonLine } from "@/lib/yield-workbench-row";
 import { trackEvent } from "@/lib/analytics";
+import { copyText } from "@/lib/clipboard";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import { getLogoSrc, type LogoMap } from "@/lib/logos";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -230,15 +231,15 @@ export function YieldCompareDrawer({
       }
     }
 
-    try {
-      await navigator.clipboard.writeText(url);
+    const result = await copyText(url);
+    if (result.ok) {
       setShareStatus("copied");
       trackEvent("yield_comparison_shared", {
         method: "clipboard",
         coin_count: ids.length,
         success: true,
       });
-    } catch {
+    } else {
       setShareStatus("failed");
       trackEvent("yield_comparison_shared", {
         method: "clipboard",

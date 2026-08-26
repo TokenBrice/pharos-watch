@@ -14,6 +14,7 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import { trackEvent } from "@/lib/analytics";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { CHAIN_META } from "@shared/lib/chains";
 import { buildExplorerUrl } from "@shared/lib/explorer";
@@ -76,7 +77,7 @@ export function ContractDeployments({
   const quickCopyContract = openContract ?? contracts[0] ?? null;
 
   function copyContractAddress(chain: string, address: string) {
-    void navigator.clipboard?.writeText(address);
+    void copyText(address);
     trackEvent("contract_copied", { coin_id: coinId, chain });
     setCopiedContract(`${chain}:${address}`);
     if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
