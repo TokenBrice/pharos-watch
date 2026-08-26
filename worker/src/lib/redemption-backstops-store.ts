@@ -55,7 +55,6 @@ import {
 } from "@shared/lib/redemption-backstop-providers";
 import { buildMethodologyEnvelope } from "./api-utils";
 import { decodeJsonString } from "./cache-json";
-import { isMissingTableError } from "./db";
 import { SNAPSHOT_ROW_COLUMNS } from "./redemption-backstops-store-write";
 export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-write";
 
@@ -397,9 +396,8 @@ async function getRecentCompletedRedemptionBackstopRuns(
   db: D1Database,
   limit = 5,
 ): Promise<RedemptionBackstopRunRow[]> {
-  try {
-    const rows = await db
-      .prepare(
+  const rows = await db
+    .prepare(
         `SELECT run_id, completed_at, expected_count, written_count, min_updated_at,
                 max_updated_at, methodology_version, status, metadata_json
            FROM redemption_backstop_runs
@@ -408,17 +406,13 @@ async function getRecentCompletedRedemptionBackstopRuns(
           LIMIT ?`,
       )
       .bind(limit)
-      .all<RedemptionBackstopRunRow>();
-    return (rows.results ?? [])
-      .filter((row) => typeof row.run_id === "string" && row.run_id.length > 0)
-      .map((row) => ({
-        ...row,
-        metadata: normalizeRedemptionBackstopRunMetadata(row.metadata_json),
-      }));
-  } catch (error) {
-    if (isMissingTableError(error)) return [];
-    throw error;
-  }
+    .all<RedemptionBackstopRunRow>();
+  return (rows.results ?? [])
+    .filter((row) => typeof row.run_id === "string" && row.run_id.length > 0)
+    .map((row) => ({
+      ...row,
+      metadata: normalizeRedemptionBackstopRunMetadata(row.metadata_json),
+    }));
 }
 
 async function queryRedemptionBackstopMapFromRunRows(
@@ -436,9 +430,6 @@ async function queryRedemptionBackstopMapFromRunRows(
       .bind(runId)
       .all<RedemptionBackstopRow>();
   } catch (error) {
-    if (isMissingTableError(error)) {
-      throw error;
-    }
     throw new RedemptionBackstopSnapshotUnavailableError("Failed to load immutable redemption backstop run rows", {
       cause: error,
     });

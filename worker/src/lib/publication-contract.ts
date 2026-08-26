@@ -297,57 +297,47 @@ async function loadGenericPublicationSurface(
       'previousGenerationId', previous_generation_id
     ) AS metadata_json`;
 
-  let latestAttempted: PublicationGenerationRow | null;
-  let latestPublished: PublicationGenerationRow | null;
-  let latestFailed: PublicationGenerationRow | null;
-  try {
-    const [attemptedRow, publishedRow, failedRow, rejectedRow] = await Promise.all([
-      firstBoundRow(
-        db,
-        `SELECT ${selectColumns}
+  const [latestAttempted, latestPublished, failedRow, rejectedRow] = await Promise.all([
+    firstBoundRow(
+      db,
+      `SELECT ${selectColumns}
            FROM surface_publication_generations
           WHERE surface = ?
           ORDER BY started_at DESC
           LIMIT 1`,
-        definition.surface,
-      ),
-      firstBoundRow(
-        db,
-        `SELECT ${selectColumns}
+      definition.surface,
+    ),
+    firstBoundRow(
+      db,
+      `SELECT ${selectColumns}
            FROM surface_publication_generations
           WHERE surface = ? AND state = 'published'
           ORDER BY published_at DESC, started_at DESC
           LIMIT 1`,
-        definition.surface,
-      ),
-      firstBoundRow(
-        db,
-        `SELECT ${selectColumns}
+      definition.surface,
+    ),
+    firstBoundRow(
+      db,
+      `SELECT ${selectColumns}
            FROM surface_publication_generations
           WHERE surface = ? AND state = 'failed'
           ORDER BY started_at DESC
           LIMIT 1`,
-        definition.surface,
-      ),
-      firstBoundRow(
-        db,
-        `SELECT ${selectColumns}
+      definition.surface,
+    ),
+    firstBoundRow(
+      db,
+      `SELECT ${selectColumns}
            FROM surface_publication_generations
           WHERE surface = ? AND state = 'rejected'
           ORDER BY started_at DESC
           LIMIT 1`,
-        definition.surface,
-      ),
-    ]);
-    latestAttempted = attemptedRow;
-    latestPublished = publishedRow;
-    latestFailed = [failedRow, rejectedRow]
-      .filter((row): row is PublicationGenerationRow => row != null)
-      .sort((a, b) => b.started_at - a.started_at)[0] ?? null;
-  } catch (error) {
-    if (isMissingTableError(error)) return null;
-    throw error;
-  }
+      definition.surface,
+    ),
+  ]);
+  const latestFailed = [failedRow, rejectedRow]
+    .filter((row): row is PublicationGenerationRow => row != null)
+    .sort((a, b) => b.started_at - a.started_at)[0] ?? null;
 
   if (latestAttempted == null && latestPublished == null && latestFailed == null) {
     return null;
@@ -524,32 +514,21 @@ async function loadPsiFallbackPublicationSurface(
   db: D1Database,
   now: number,
 ): Promise<PublicationSurfaceHealth> {
-  let row: {
-    stored_at: number | null;
-    score: number | null;
-    band: string | null;
-    methodology_version: string | null;
-  } | null = null;
-  try {
-    row = await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `SELECT stored_at, score, band, methodology_version
-             FROM stability_index_samples
-            ORDER BY stored_at DESC
-            LIMIT 1`,
-        )
-        .first<{
-          stored_at: number | null;
-          score: number | null;
-          band: string | null;
-          methodology_version: string | null;
-        }>(),
-    2);
-  } catch (error) {
-    if (!isMissingTableError(error)) throw error;
-  }
-
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT stored_at, score, band, methodology_version
+           FROM stability_index_samples
+          ORDER BY stored_at DESC
+          LIMIT 1`,
+      )
+      .first<{
+        stored_at: number | null;
+        score: number | null;
+        band: string | null;
+        methodology_version: string | null;
+      }>(),
+  2);
   if (row?.stored_at != null) {
     const publishedRow = publishedFallbackRow(
       `psi:${row.stored_at}`,

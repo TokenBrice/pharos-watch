@@ -34,11 +34,6 @@ export function isMissingTableError(error: unknown): boolean {
   return d1ErrorMessage(error).toLowerCase().includes("no such table");
 }
 
-export function isMissingColumnError(error: unknown): boolean {
-  const message = d1ErrorMessage(error).toLowerCase();
-  return message.includes("no such column") || message.includes("has no column named");
-}
-
 /** Execute D1 prepared statements in chunks to stay within the batch limit */
 export async function batchExecute(
   db: D1Database,

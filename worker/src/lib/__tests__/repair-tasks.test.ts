@@ -9,6 +9,7 @@ import {
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
   DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
   loadRepairDebtSummary,
+  pruneRepairTasks,
   runWorkerRepairTaskRunner,
   syncDdrRepairDebtTasks,
 } from "../repair-tasks";
@@ -125,6 +126,34 @@ function seedNaturalPredecessorFixture(
 }
 
 describe("repair tasks", () => {
+  it("surfaces a missing mandatory repair-task table during pruning", async () => {
+    const db = mockRepairD1([
+      {
+        match: "DELETE FROM worker_repair_tasks",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such table: worker_repair_tasks"),
+      },
+    ]);
+
+    await expect(pruneRepairTasks(db, NOW - 1)).rejects.toThrow(
+      "D1_ERROR: no such table: worker_repair_tasks",
+    );
+  });
+
+  it("surfaces a missing mandatory repair-task table from the runner", async () => {
+    const db = mockRepairD1([
+      {
+        match: "COUNT(*) AS due_count",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such table: worker_repair_tasks"),
+      },
+    ]);
+
+    await expect(
+      runWorkerRepairTaskRunner(db, { nowSec: NOW }),
+    ).rejects.toThrow("D1_ERROR: no such table: worker_repair_tasks");
+  });
+
   it("builds deterministic repair task ids", () => {
     expect(buildDdrRepairTaskId("42")).toBe("repair:ddr-repair-required-event:42");
   });
