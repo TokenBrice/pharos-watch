@@ -2,7 +2,11 @@
 
 import { useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import { trackSearch } from "@/lib/analytics";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+
+interface UrlSearchController {
+  getParam: (key: string, defaultValue?: string) => string;
+  setParam: (key: string, value: string) => void;
+}
 
 /**
  * Shared debounced URL-search pattern used by compliance and liquidity clients.
@@ -16,9 +20,9 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
  */
 export function useUrlSearchSync(
   pageName: string,
+  { getParam, setParam }: UrlSearchController,
   delayMs = 300,
 ): { searchInput: string; setSearchInput: (v: string) => void; deferredSearch: string } {
-  const { getParam, setParam } = useUrlFilters();
   const urlSearch = getParam("q");
   const [searchDraft, setSearchDraft] = useState(() => ({ value: urlSearch, baseUrlSearch: urlSearch }));
   const searchInput = searchDraft.baseUrlSearch === urlSearch ? searchDraft.value : urlSearch;

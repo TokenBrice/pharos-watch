@@ -45,7 +45,7 @@ export const LIQUIDITY_URL_SCHEMA: UrlStateSchema<LiquidityUrlState> = {
 export function LiquidityClient() {
   const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch, meta } = useDexLiquidity();
   const logos = logosById;
-  const { searchParams, replaceParams } = useUrlFilters();
+  const { searchParams, getParam, setParam, replaceParams } = useUrlFilters();
   const { peg: pegFilter } = useMemo(
     () => decodeState(searchParams, LIQUIDITY_URL_SCHEMA),
     [searchParams],
@@ -65,7 +65,10 @@ export function LiquidityClient() {
 
   // Search: local state for instant input, deferred value for filtering,
   // debounced sync to URL + analytics to avoid per-keystroke overhead
-  const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync("liquidity");
+  const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync(
+    "liquidity",
+    { getParam, setParam },
+  );
 
   const { scoredRows, unratedRows, summaryStats } = useMemo(
     () => buildLiquidityViewModel(liquidityMap, pegFilter, deferredSearch),
