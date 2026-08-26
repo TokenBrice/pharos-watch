@@ -160,12 +160,20 @@ export async function loadDexPoolChallengers(
   maxAgeSec: number,
   nowSec: number,
 ): Promise<Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number; sourceFamily?: string }>>> {
-  const { challengersByStablecoin, diagnostics } = await loadPublishedDexPoolChallengers(
-    db,
-    minPoolTvlUsd,
-    maxAgeSec,
-    nowSec,
-  );
+  let loaded;
+  try {
+    loaded = await loadPublishedDexPoolChallengers(db, minPoolTvlUsd, maxAgeSec, nowSec);
+  } catch (err) {
+    // Pool challengers are optional corroboration for depeg confirmation and
+    // price hardening; exactly a missing challenger/dex table yields no
+    // challengers, while every other D1 failure propagates.
+    if (isMissingTableError(err)) {
+      return new Map();
+    }
+    logWorkerEventArgs("lib", "error", "[depeg-helpers] Unexpected error loading pool challengers:", toErrorMessage(err));
+    throw err;
+  }
+  const { challengersByStablecoin, diagnostics } = loaded;
 
   if (diagnostics.mode !== "absent") {
     if (diagnostics.incompletePublishedCoins.length > 0) {
