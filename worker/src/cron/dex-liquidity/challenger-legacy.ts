@@ -1,10 +1,7 @@
-import { logWorkerEventArgs } from "../../lib/structured-log";
 import { decodeJsonString } from "../../lib/cache-json";
-import { isMissingTableError } from "../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import type { DexPriceChallengerLoadRow } from "./challenger-types";
-import { toErrorMessage } from "../../lib/error-utils";
 
 interface LegacyDexPoolSource {
   protocol: string;
@@ -61,35 +58,34 @@ export async function loadLegacyDexPoolChallengers(
   const topPoolCoins = new Set<string>();
   const fallbackCoins = new Set<string>();
 
-  try {
-    const rows = await db
-      .prepare(
-        `SELECT stablecoin_id, top_pools_json, updated_at
+  const rows = await db
+    .prepare(
+      `SELECT stablecoin_id, top_pools_json, updated_at
          FROM dex_liquidity
          WHERE stablecoin_id != '__global__'
            AND top_pools_json IS NOT NULL
            AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
-      )
-      .all<{ stablecoin_id: string; top_pools_json: string; updated_at: number }>();
+    )
+    .all<{ stablecoin_id: string; top_pools_json: string; updated_at: number }>();
 
-    for (const row of rows.results ?? []) {
-      if (nowSec - row.updated_at > maxAgeSec) continue;
-      const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>[number]>(
-        row.top_pools_json,
-        {
-          stablecoinId: row.stablecoin_id,
-          source: "dex_liquidity",
-          context: "dex_liquidity.top_pools_json",
-          updatedAt: row.updated_at,
-        },
-      );
-      if (pools == null) {
-        continue;
-      }
-      if (!Array.isArray(pools) || pools.length === 0) continue;
+  for (const row of rows.results ?? []) {
+    if (nowSec - row.updated_at > maxAgeSec) continue;
+    const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>[number]>(
+      row.top_pools_json,
+      {
+        stablecoinId: row.stablecoin_id,
+        source: "dex_liquidity",
+        context: "dex_liquidity.top_pools_json",
+        updatedAt: row.updated_at,
+      },
+    );
+    if (pools == null) {
+      continue;
+    }
+    if (!Array.isArray(pools) || pools.length === 0) continue;
 
-      const qualifying: DexPriceChallengerLoadRow[] = [];
-      for (const pool of pools) {
+    const qualifying: DexPriceChallengerLoadRow[] = [];
+    for (const pool of pools) {
         const price = typeof pool.price === "number" ? pool.price : Number(pool.price);
         const tvlUsd = typeof pool.tvlUsd === "number" ? pool.tvlUsd : Number(pool.tvlUsd);
         if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
@@ -104,40 +100,33 @@ export async function loadLegacyDexPoolChallengers(
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
         });
-      }
-      if (qualifying.length > 0) {
-        challengersByStablecoin.set(row.stablecoin_id, qualifying);
-        topPoolCoins.add(row.stablecoin_id);
-      }
     }
-  } catch (err) {
-    const msg = toErrorMessage(err);
-    if (!isMissingTableError(err)) {
-      logWorkerEventArgs("handler", "error", "[challenger-persistence] Unexpected error loading legacy challengers:", msg);
+    if (qualifying.length > 0) {
+      challengersByStablecoin.set(row.stablecoin_id, qualifying);
+      topPoolCoins.add(row.stablecoin_id);
     }
   }
 
-  try {
-    const rows = await db
-      .prepare("SELECT stablecoin_id, price_sources_json, updated_at FROM dex_prices WHERE price_sources_json IS NOT NULL")
-      .all<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>();
+  const priceRows = await db
+    .prepare("SELECT stablecoin_id, price_sources_json, updated_at FROM dex_prices WHERE price_sources_json IS NOT NULL")
+    .all<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>();
 
-    for (const row of rows.results ?? []) {
-      if (nowSec - row.updated_at > maxAgeSec) continue;
-      if (challengersByStablecoin.has(row.stablecoin_id)) continue;
-      const sources = decodeLegacyJsonArray<LegacyDexPoolSource>(row.price_sources_json, {
+  for (const row of priceRows.results ?? []) {
+    if (nowSec - row.updated_at > maxAgeSec) continue;
+    if (challengersByStablecoin.has(row.stablecoin_id)) continue;
+    const sources = decodeLegacyJsonArray<LegacyDexPoolSource>(row.price_sources_json, {
         stablecoinId: row.stablecoin_id,
         source: "dex_prices",
         context: "dex_prices.price_sources_json",
         updatedAt: row.updated_at,
-      });
-      if (sources == null) {
-        continue;
-      }
-      if (!Array.isArray(sources) || sources.length === 0) continue;
+    });
+    if (sources == null) {
+      continue;
+    }
+    if (!Array.isArray(sources) || sources.length === 0) continue;
 
-      const qualifying: DexPriceChallengerLoadRow[] = [];
-      for (const source of sources) {
+    const qualifying: DexPriceChallengerLoadRow[] = [];
+    for (const source of sources) {
         if (source.tvl < minPoolTvlUsd || !Number.isFinite(source.price) || source.price <= 0) continue;
         qualifying.push({
           stablecoinId: row.stablecoin_id,
@@ -150,16 +139,10 @@ export async function loadLegacyDexPoolChallengers(
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
         });
-      }
-      if (qualifying.length > 0) {
-        challengersByStablecoin.set(row.stablecoin_id, qualifying);
-        fallbackCoins.add(row.stablecoin_id);
-      }
     }
-  } catch (err) {
-    const msg = toErrorMessage(err);
-    if (!isMissingTableError(err)) {
-      logWorkerEventArgs("handler", "error", "[challenger-persistence] Unexpected error loading legacy price-source challengers:", msg);
+    if (qualifying.length > 0) {
+      challengersByStablecoin.set(row.stablecoin_id, qualifying);
+      fallbackCoins.add(row.stablecoin_id);
     }
   }
 

@@ -856,7 +856,7 @@ async function syncDexMeasuredExecutionLane(
         generationId: quoteGenerationId,
         signal,
       }));
-  let cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed" = "not-needed";
+  let cursorWriteStatus: "not-needed" | "written" | "write-failed" = "not-needed";
   if (budgetDeferredCount > 0 && nextCursor) {
     const cursorWrite = await writeDexSourcePaginationState({
       db,

@@ -1,14 +1,20 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 
 describe("challenger legacy fallback", () => {
-  it("falls back safely when the challenger tables are absent", async () => {
+  it("surfaces a missing mandatory challenger snapshot table", async () => {
     const db = mockD1(
       [
         {
           match: "FROM dex_price_challenger_snapshots",
-          rows: [],
+          rows: [{
+            stablecoin_id: "coin-z",
+            snapshot_at: 100,
+            published_at: 100,
+            has_rows: 0,
+            source_coverage_complete: 0,
+          }],
           throwError: new Error("no such table: dex_price_challenger_snapshots"),
         },
         {
@@ -55,38 +61,21 @@ describe("challenger legacy fallback", () => {
       { requireMatch: true },
     );
 
-    const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120);
-
-    expect(result.diagnostics.missingTables).toBe(true);
-    expect(result.diagnostics.mode).toBe("legacy");
-    expect(result.challengersByStablecoin.get("coin-z")).toEqual([
-      expect.objectContaining({
-        stablecoinId: "coin-z",
-        poolId: "coin-z:legacy-top",
-        sourceFamily: "legacy-top-pools",
-        priceUsd: 0.993,
-        tvlUsd: 30_000,
-      }),
-    ]);
-    expect(result.challengersByStablecoin.get("coin-y")).toEqual([
-      expect.objectContaining({
-        stablecoinId: "coin-y",
-        poolId: "coin-y:legacy-source:Base",
-        sourceFamily: "legacy-price-sources",
-        priceUsd: 0.989,
-        tvlUsd: 40_000,
-      }),
-    ]);
+    await expect(
+      loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120),
+    ).rejects.toThrow("no such table: dex_price_challenger_snapshots");
   });
 
-  it("logs and skips malformed legacy challenger JSON payloads", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("skips malformed legacy challenger JSON payloads", async () => {
     const db = mockD1(
       [
         {
           match: "FROM dex_price_challenger_snapshots",
           rows: [],
-          throwError: new Error("no such table: dex_price_challenger_snapshots"),
+        },
+        {
+          match: "FROM dex_price_challengers",
+          rows: [],
         },
         {
           match: "FROM dex_liquidity",
@@ -116,19 +105,7 @@ describe("challenger legacy fallback", () => {
 
     expect(result.diagnostics.mode).toBe("absent");
     expect(result.challengersByStablecoin.size).toBe(0);
-    expect(
-      warnSpy.mock.calls.some(([message]) =>
-        String(message).includes("owner=challenger-persistence")
-        && String(message).includes("context=dex_liquidity.top_pools_json"),
-      ),
-    ).toBe(true);
-    expect(
-      warnSpy.mock.calls.some(([message]) =>
-        String(message).includes("owner=challenger-persistence")
-        && String(message).includes("context=dex_prices.price_sources_json"),
-      ),
-    ).toBe(true);
-
-    warnSpy.mockRestore();
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM dex_liquidity"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM dex_prices"))).toBe(true);
   });
 });

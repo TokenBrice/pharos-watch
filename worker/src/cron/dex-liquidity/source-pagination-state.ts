@@ -51,26 +51,21 @@ export function describeDexPaginationWriteFailure(
   outcome: DexSourcePaginationWriteOutcome,
 ): string | null {
   if (outcome.written || outcome.errorClass === "not-configured") return null;
-  if (outcome.errorClass === "missing-table") {
-    return `${label}: pagination cursor persistence unavailable (missing-table rollout compatibility)`;
-  }
   return `${label}: pagination cursor persistence failed (write-failed); stored cursor remains retryable`;
 }
 
 function warnStateFailure(error: unknown, operation: "read" | "write", job = "sync-dex-liquidity"): void {
-  if (!isMissingTableError(error)) {
-    logWorkerEvent({
-      scope: "lib",
-      level: "warn",
-      event: "dex_liquidity.pagination_state_unavailable",
-      job,
-      message: operation === "read"
-        ? "Durable DEX pagination cursor unavailable; using head fallback"
-        : "Durable DEX pagination cursor write failed; stored cursor remains retryable",
-      metadata: { operation },
-      error,
-    });
-  }
+  logWorkerEvent({
+    scope: "lib",
+    level: "warn",
+    event: "dex_liquidity.pagination_state_unavailable",
+    job,
+    message: operation === "read"
+      ? "Durable DEX pagination cursor unavailable; using head fallback"
+      : "Durable DEX pagination cursor write failed; stored cursor remains retryable",
+    metadata: { operation },
+    error,
+  });
 }
 
 export async function readDexSourcePaginationState(
@@ -101,6 +96,7 @@ export async function readDexSourcePaginationState(
       pagesFetched: row?.pages_fetched ?? 0,
     };
   } catch (error) {
+    if (isMissingTableError(error)) throw error;
     warnStateFailure(error, "read", job);
     return { cursor: null, cycleStartedAt: null, updatedAt: null, completedAt: null, pagesFetched: 0 };
   }
@@ -145,7 +141,7 @@ export async function writeDexSourcePaginationState(params: {
     warnStateFailure(error, "write", params.job);
     return {
       written: false,
-      errorClass: isMissingTableError(error) ? "missing-table" : "write-failed",
+      errorClass: "write-failed",
     };
   }
 }

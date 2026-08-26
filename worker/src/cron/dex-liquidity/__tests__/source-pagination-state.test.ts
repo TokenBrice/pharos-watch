@@ -71,7 +71,7 @@ describe("DEX source pagination state", () => {
     expect(bind.mock.calls[1]?.[1]).toBe("retryable-tail");
   });
 
-  it("reports missing-table rollout compatibility explicitly", async () => {
+  it("reports a missing mandatory table as a degrading write failure", async () => {
     const run = vi.fn(async () => {
       throw new Error("D1_ERROR: no such table: dex_source_pagination_state");
     });
@@ -87,7 +87,20 @@ describe("DEX source pagination state", () => {
       nowSec: 110,
       completed: false,
       pagesFetched: 3,
-    })).resolves.toEqual({ written: false, errorClass: "missing-table" });
+    })).resolves.toEqual({ written: false, errorClass: "write-failed" });
+  });
+
+  it("surfaces a missing mandatory table on reads", async () => {
+    const first = vi.fn(async () => {
+      throw new Error("D1_ERROR: no such table: dex_source_pagination_state");
+    });
+    const db = {
+      prepare: vi.fn(() => ({ bind: vi.fn(() => ({ first })) })),
+    } as unknown as D1Database;
+
+    await expect(
+      readDexSourcePaginationState(db, "orca:solana"),
+    ).rejects.toThrow("no such table: dex_source_pagination_state");
   });
 
   it("marks optional no-database usage without throwing", async () => {

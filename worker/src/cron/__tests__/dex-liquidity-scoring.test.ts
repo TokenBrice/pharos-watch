@@ -1224,7 +1224,7 @@ describe("dex-liquidity scoring", () => {
     );
   });
 
-  it("treats missing stability and volume-history tables as first-run state", async () => {
+  it("surfaces a missing mandatory liquidity-history table", async () => {
     const db = makeQueryDb([
       { match: "depth_stability", throwError: new Error("no such table: dex_liquidity") },
       { match: "FROM dex_liquidity_history", throwError: new Error("no such table: dex_liquidity_history") },
@@ -1246,14 +1246,9 @@ describe("dex-liquidity scoring", () => {
       },
     ];
 
-    const result = await computeStablecoinScores(
-      db,
-      new Map([["usdt-tether", metrics]]),
-      new Map(),
-    );
-
-    expect(result.scores.get("usdt-tether")?.tvl).toBe(25_000);
-    expect(result.globalAgg.totalTvl).toBe(25_000);
+    await expect(
+      computeStablecoinScores(db, new Map([["usdt-tether", metrics]]), new Map()),
+    ).rejects.toThrow("no such table: dex_liquidity_history");
   });
 
   it("treats direct_api-only coverage as primary but not maximum-confidence coverage", async () => {

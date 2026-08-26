@@ -567,22 +567,6 @@ describe("measured execution overflow admission", () => {
     expect(
       resolveMeasuredExecutionCronStatus({
         attemptedFailureCount: 0,
-        deferredCount: 0,
-        admissionRotationCycles: 1,
-        cursorWriteStatus: "missing-table",
-      }),
-    ).toBe("ok");
-    expect(
-      resolveMeasuredExecutionCronStatus({
-        attemptedFailureCount: 0,
-        deferredCount: 2,
-        admissionRotationCycles: 2,
-        cursorWriteStatus: "missing-table",
-      }),
-    ).toBe("degraded");
-    expect(
-      resolveMeasuredExecutionCronStatus({
-        attemptedFailureCount: 0,
         deferredCount: 2,
         admissionRotationCycles: 2,
         cursorWriteStatus: "write-failed",

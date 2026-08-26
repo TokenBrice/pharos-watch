@@ -61,7 +61,6 @@ export interface DexApiPool {
 
 export type DexPaginationPersistenceErrorClass =
   | "not-configured"
-  | "missing-table"
   | "write-failed";
 
 export interface DexPaginationPersistenceSummary {

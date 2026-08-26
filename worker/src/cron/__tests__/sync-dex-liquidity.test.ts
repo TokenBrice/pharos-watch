@@ -330,6 +330,26 @@ describe("dex liquidity scoring stage cycle", () => {
     await expect(runDexLiquidityScoringCycle(db, "graph-key")).rejects.toThrow("catastrophic source failure");
   });
 
+  it("surfaces a missing mandatory staging table from the producer", async () => {
+    vi.mocked(mergeStagedPools).mockRejectedValueOnce(
+      new Error("D1_ERROR: no such table: dex_pool_staging"),
+    );
+
+    await expect(runDexLiquidityScoringCycle(db, "graph-key")).rejects.toThrow(
+      "D1_ERROR: no such table: dex_pool_staging",
+    );
+  });
+
+  it("surfaces a missing mandatory history table from the scoring producer", async () => {
+    vi.mocked(computeStablecoinScores).mockRejectedValueOnce(
+      new Error("D1_ERROR: no such table: dex_liquidity_history"),
+    );
+
+    await expect(runDexLiquidityScoringCycle(db, "graph-key")).rejects.toThrow(
+      "D1_ERROR: no such table: dex_liquidity_history",
+    );
+  });
+
   it("returns degraded when non-catastrophic critical source family fails", async () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [],

@@ -105,13 +105,7 @@ export async function computeStablecoinScores(
   tvlStabilityMap: Map<string, number>;
   diagnostics: ScoreDiagnostics;
 }> {
-  let tvlStabilityMap = new Map<string, number>();
-  let volumeStabilityMap = new Map<string, number>();
-  try {
-    ({ tvlStabilityMap, volumeStabilityMap } = await loadConfidentHistoryStability(db));
-  } catch {
-    /* non-blocking: history stability table may not exist yet (first run / pre-migration); fall back to neutral defaults */
-  }
+  const { tvlStabilityMap, volumeStabilityMap } = await loadConfidentHistoryStability(db);
 
   const results = new Map<string, FullScoreResult>();
   const retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
