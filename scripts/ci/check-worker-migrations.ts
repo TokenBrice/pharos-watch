@@ -49,7 +49,9 @@ interface MigrationExecutor {
 interface ValidateWorkerMigrationsOptions {
   migrationsDir?: string;
   manifestPath?: string;
+  expectedSchemaPath?: string;
   includeSchemaFingerprint?: boolean;
+  writeSchemaManifest?: boolean;
 }
 
 interface WorkerMigrationResult {
@@ -57,6 +59,7 @@ interface WorkerMigrationResult {
   migrationCount: number;
   manifestParity: ManifestParity;
   rolloutSafetyCheckedCount: number;
+  schemaObjectCount: number;
   schemaFingerprint: SchemaFingerprint | null;
   uniqueDuplicates: string[];
 }
@@ -387,6 +390,33 @@ export function createSchemaFingerprint(schemaRows: readonly SchemaRow[]): Schem
   };
 }
 
+export function createSchemaObjectManifest(schemaRows: readonly SchemaRow[]): string {
+  return `${schemaRows
+    .map((row) => `${row.type}\t${row.name}`)
+    .sort()
+    .join("\n")}\n`;
+}
+
+export function validateSchemaObjectManifest(actual: string, expected: string): void {
+  if (actual === expected) {
+    return;
+  }
+
+  const actualObjects = new Set(actual.trim().split("\n").filter(Boolean));
+  const expectedObjects = new Set(expected.trim().split("\n").filter(Boolean));
+  const unexpected = [...actualObjects].filter((object) => !expectedObjects.has(object));
+  const missing = [...expectedObjects].filter((object) => !actualObjects.has(object));
+  const details = [
+    unexpected.length > 0 ? `unexpected fresh-replay objects: ${unexpected.join(", ")}` : null,
+    missing.length > 0 ? `expected objects missing from fresh replay: ${missing.join(", ")}` : null,
+  ].filter(Boolean);
+  if (details.length === 0) {
+    details.push("object ordering, duplication, or file formatting differs");
+  }
+
+  throw new Error(`Fresh-replay schema object manifest drifted:\n- ${details.join("\n- ")}`);
+}
+
 async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
   try {
     const { DatabaseSync } = await import("node:sqlite");
@@ -489,7 +519,9 @@ async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
 export async function validateWorkerMigrations({
   migrationsDir = resolve("worker/migrations"),
   manifestPath = resolve("worker/migrations/MANIFEST.md"),
+  expectedSchemaPath = resolve("worker/migrations/EXPECTED_SCHEMA.txt"),
   includeSchemaFingerprint = false,
+  writeSchemaManifest = false,
 }: ValidateWorkerMigrationsOptions = {}): Promise<WorkerMigrationResult> {
   const migrationFiles = getMigrationFiles(migrationsDir);
   if (migrationFiles.length === 0) {
@@ -507,6 +539,7 @@ export async function validateWorkerMigrations({
   const executor = await createExecutor(dbPath);
   let rolloutSafetyCheckedCount = 0;
   let schemaFingerprint: SchemaFingerprint | null = null;
+  let schemaObjectCount = 0;
 
   try {
     for (const file of migrationFiles) {
@@ -523,8 +556,18 @@ export async function validateWorkerMigrations({
       }
     }
 
+    const schemaRows = executor.getSchemaRows();
+    const schemaObjectManifest = createSchemaObjectManifest(schemaRows);
+    schemaObjectCount = schemaRows.length;
+    if (writeSchemaManifest) {
+      mkdirSync(dirname(expectedSchemaPath), { recursive: true });
+      writeFileSync(expectedSchemaPath, schemaObjectManifest);
+    } else {
+      validateSchemaObjectManifest(schemaObjectManifest, readFileSync(expectedSchemaPath, "utf8"));
+    }
+
     if (includeSchemaFingerprint) {
-      schemaFingerprint = createSchemaFingerprint(executor.getSchemaRows());
+      schemaFingerprint = createSchemaFingerprint(schemaRows);
     }
   } finally {
     executor.close();
@@ -536,6 +579,7 @@ export async function validateWorkerMigrations({
     migrationCount: migrationFiles.length,
     manifestParity,
     rolloutSafetyCheckedCount,
+    schemaObjectCount,
     schemaFingerprint,
     uniqueDuplicates,
   };
@@ -544,6 +588,7 @@ export async function validateWorkerMigrations({
 function parseCliArgs(argv: readonly string[]) {
   let includeSchemaFingerprint = false;
   let schemaFingerprintOutput = process.env.PHAROS_MIGRATION_SCHEMA_FINGERPRINT_PATH ?? null;
+  let writeSchemaManifest = false;
 
   for (const arg of argv) {
     if (arg === "--schema-fingerprint") {
@@ -557,6 +602,11 @@ function parseCliArgs(argv: readonly string[]) {
       continue;
     }
 
+    if (arg === "--write-schema-manifest") {
+      writeSchemaManifest = true;
+      continue;
+    }
+
     throw new Error(`Unknown argument: ${arg}`);
   }
 
@@ -564,7 +614,7 @@ function parseCliArgs(argv: readonly string[]) {
     includeSchemaFingerprint = true;
   }
 
-  return { includeSchemaFingerprint, schemaFingerprintOutput };
+  return { includeSchemaFingerprint, schemaFingerprintOutput, writeSchemaManifest };
 }
 
 function writeSchemaFingerprint(path: string, result: WorkerMigrationResult): void {
@@ -592,9 +642,13 @@ async function main() {
     const options = parseCliArgs(process.argv.slice(2));
     const result = await validateWorkerMigrations({
       includeSchemaFingerprint: options.includeSchemaFingerprint,
+      writeSchemaManifest: options.writeSchemaManifest,
     });
     console.log(
       `Validated ${result.migrationCount} worker migrations with ${result.backend} (manifest rows: ${result.manifestParity.activeManifestCount} active, ${result.manifestParity.retiredManifestCount} retired; rollout safety checked: ${result.rolloutSafetyCheckedCount}).`,
+    );
+    console.log(
+      `${options.writeSchemaManifest ? "Regenerated" : "Validated"} fresh-replay schema manifest (${result.schemaObjectCount} objects).`,
     );
     if (result.schemaFingerprint) {
       console.log(

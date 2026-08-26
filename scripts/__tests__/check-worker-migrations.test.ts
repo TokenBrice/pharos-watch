@@ -6,6 +6,7 @@ import {
   UNSAFE_ROLLOUT_ADD_COLUMN_LABEL,
   DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE,
   createSchemaFingerprint,
+  createSchemaObjectManifest,
   parseManifestMigrationRows,
   parseRolloutSafetyPolicy,
   validateManifestMigrationParity,
@@ -13,6 +14,7 @@ import {
   validateDuplicatePrefixes,
   validateRolloutSafetyAnnotation,
   validateRolloutSafetyPolicy,
+  validateSchemaObjectManifest,
 } from "../ci/check-worker-migrations.ts";
 
 describe("parseRolloutSafetyPolicy", () => {
@@ -186,6 +188,35 @@ describe("createSchemaFingerprint", () => {
       algorithm: "sha256",
       schemaRowCount: 2,
     });
+  });
+});
+
+describe("schema object manifest", () => {
+  const rows = [
+    {
+      type: "table",
+      name: "example",
+      tblName: "example",
+      sql: "CREATE TABLE example (id INTEGER PRIMARY KEY, value TEXT)",
+    },
+    {
+      type: "index",
+      name: "idx_example_value",
+      tblName: "example",
+      sql: "CREATE INDEX idx_example_value ON example(value)",
+    },
+  ];
+
+  it("serializes replayed objects deterministically by type and name", () => {
+    expect(createSchemaObjectManifest(rows)).toBe("index\tidx_example_value\ntable\texample\n");
+  });
+
+  it("rejects checked-in manifest drift with both sides of the diff", () => {
+    expect(() =>
+      validateSchemaObjectManifest("table\tnew_table\n", "table\texpected_table\n"),
+    ).toThrow(
+      "unexpected fresh-replay objects: table\tnew_table\n- expected objects missing from fresh replay: table\texpected_table",
+    );
   });
 });
 

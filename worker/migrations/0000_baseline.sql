@@ -24,56 +24,6 @@ CREATE TABLE IF NOT EXISTS admin_idempotency_keys (
   PRIMARY KEY (action, idempotency_key)
 );
 
-CREATE TABLE IF NOT EXISTS alert_broker_conditions (
-  condition_key TEXT PRIMARY KEY,
-  fingerprint TEXT NOT NULL,
-  state TEXT NOT NULL CHECK (state IN ('pending', 'active', 'recovered')),
-  mode TEXT NOT NULL CHECK (mode IN ('shadow', 'status', 'alert')),
-  severity TEXT NOT NULL CHECK (severity IN ('warning', 'critical')),
-  generation INTEGER NOT NULL DEFAULT 1,
-  episode INTEGER NOT NULL DEFAULT 0,
-  streak INTEGER NOT NULL DEFAULT 0,
-  first_observed_at INTEGER NOT NULL,
-  last_observed_at INTEGER NOT NULL,
-  activated_at INTEGER,
-  recovered_at INTEGER,
-  cooldown_until INTEGER,
-  title TEXT NOT NULL,
-  message TEXT NOT NULL,
-  recovery_title TEXT,
-  recovery_message TEXT,
-  metadata_json TEXT,
-  last_transition TEXT CHECK (last_transition IS NULL OR last_transition IN ('incident', 'recovery')),
-  updated_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS alert_broker_deliveries (
-  delivery_id TEXT PRIMARY KEY,
-  condition_key TEXT NOT NULL,
-  fingerprint TEXT NOT NULL,
-  episode INTEGER NOT NULL,
-  transition TEXT NOT NULL CHECK (transition IN ('incident', 'recovery')),
-  state TEXT NOT NULL CHECK (
-    state IN ('pending', 'delivering', 'delivered', 'failed', 'missing_target', 'shadow', 'status_only')
-  ),
-  mode TEXT NOT NULL CHECK (mode IN ('shadow', 'status', 'alert')),
-  target_class TEXT NOT NULL,
-  title TEXT NOT NULL,
-  message TEXT NOT NULL,
-  metadata_json TEXT,
-  attempts INTEGER NOT NULL DEFAULT 0,
-  next_attempt_at INTEGER,
-  delivery_owner TEXT,
-  delivery_lease_until INTEGER,
-  created_at INTEGER NOT NULL,
-  last_attempt_at INTEGER,
-  delivered_at INTEGER,
-  last_error TEXT,
-  updated_at INTEGER NOT NULL,
-  UNIQUE(condition_key, episode, transition),
-  FOREIGN KEY (condition_key) REFERENCES alert_broker_conditions(condition_key)
-);
-
 CREATE TABLE IF NOT EXISTS api_key_audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   api_key_id INTEGER NOT NULL,
@@ -89,15 +39,6 @@ CREATE TABLE IF NOT EXISTS api_key_rate_limit (
   count INTEGER NOT NULL DEFAULT 0,
   last_seen_at INTEGER NOT NULL,
   PRIMARY KEY (api_key_id, bucket_start)
-);
-
-CREATE TABLE IF NOT EXISTS api_key_request_rate_limit (
-  scope TEXT NOT NULL CHECK (scope IN ('ip', 'email', 'token')),
-  subject_hash TEXT NOT NULL,
-  bucket_start INTEGER NOT NULL,
-  count INTEGER NOT NULL DEFAULT 0,
-  last_seen_at INTEGER NOT NULL,
-  PRIMARY KEY (scope, subject_hash, bucket_start)
 );
 
 CREATE TABLE IF NOT EXISTS api_key_request_rate_limit_v2 (
@@ -148,8 +89,6 @@ CREATE TABLE IF NOT EXISTS api_key_requests (
   ip_hash TEXT NOT NULL,
   user_agent_hash TEXT,
   honeypot_triggered INTEGER NOT NULL DEFAULT 0,
-  risk_score INTEGER NOT NULL DEFAULT 0,
-  risk_reasons_json TEXT,
   verification_token_hash TEXT,
   verification_sent_at INTEGER,
   verification_expires_at INTEGER,
@@ -214,15 +153,6 @@ CREATE TABLE IF NOT EXISTS api_request_consumer_stats (
   PRIMARY KEY (bucket_start, route_key, lane, consumer_class)
 );
 
-CREATE TABLE IF NOT EXISTS api_request_source_stats (
-  bucket_start INTEGER NOT NULL,
-  route_key TEXT NOT NULL,
-  route_path TEXT NOT NULL,
-  source TEXT NOT NULL,
-  request_count INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (bucket_start, route_key, source)
-);
-
 CREATE TABLE IF NOT EXISTS authoritative_vault_rates (
   stablecoin_id TEXT PRIMARY KEY,
   rate REAL NOT NULL,
@@ -277,23 +207,6 @@ CREATE TABLE IF NOT EXISTS blacklist_events (
   explorer_address_url TEXT NOT NULL,
   methodology_version TEXT NOT NULL DEFAULT '3.1'
 , amount_native REAL, amount_usd_at_event REAL, amount_source TEXT NOT NULL DEFAULT 'unavailable', amount_status TEXT NOT NULL DEFAULT 'recoverable_pending', contract_address TEXT, config_key TEXT, event_signature TEXT, event_topic0 TEXT, amount_attempt_count INTEGER NOT NULL DEFAULT 0, amount_last_attempted_at INTEGER, amount_last_error_class TEXT, amount_last_provider TEXT, suppression_reason TEXT, reconciliation_manifest_id TEXT, reconciliation_run_id TEXT, provenance_source TEXT, provenance_observed_at INTEGER, source_event_index INTEGER);
-
-CREATE TABLE IF NOT EXISTS blacklist_provider_scan_telemetry (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  config_key TEXT NOT NULL,
-  chain_id TEXT NOT NULL,
-  provider_mode TEXT NOT NULL,
-  coverage_outcome TEXT NOT NULL,
-  from_cursor INTEGER NOT NULL,
-  scanned_to_cursor INTEGER,
-  safe_head INTEGER,
-  fetched_row_count INTEGER NOT NULL DEFAULT 0,
-  inserted_row_count INTEGER NOT NULL DEFAULT 0,
-  provider_call_count INTEGER NOT NULL DEFAULT 0,
-  max_split_depth INTEGER NOT NULL DEFAULT 0,
-  failure_samples_json TEXT NOT NULL DEFAULT '[]',
-  observed_at INTEGER NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS blacklist_reconciliation_runs (
   run_id TEXT PRIMARY KEY,
@@ -879,83 +792,6 @@ CREATE TABLE IF NOT EXISTS detail_cache_write_generations (
   updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS dex_archive_family_state (
-  family TEXT PRIMARY KEY CHECK (family IN ('measured-execution', 'liquidity')),
-  configured_mode TEXT NOT NULL DEFAULT 'off',
-  effective_mode TEXT NOT NULL DEFAULT 'off' CHECK (effective_mode IN ('off', 'shadow', 'delete')),
-  config_error TEXT,
-  eligible_generation_count INTEGER NOT NULL DEFAULT 0 CHECK (eligible_generation_count >= 0),
-  eligible_row_count INTEGER NOT NULL DEFAULT 0 CHECK (eligible_row_count >= 0),
-  eligible_logical_bytes INTEGER NOT NULL DEFAULT 0 CHECK (eligible_logical_bytes >= 0),
-  verified_pending_delete_count INTEGER NOT NULL DEFAULT 0 CHECK (verified_pending_delete_count >= 0),
-  oldest_eligible_at INTEGER,
-  oldest_verified_pending_delete_at INTEGER,
-  uploaded_object_count INTEGER NOT NULL DEFAULT 0 CHECK (uploaded_object_count >= 0),
-  verified_object_count INTEGER NOT NULL DEFAULT 0 CHECK (verified_object_count >= 0),
-  deleted_generation_count INTEGER NOT NULL DEFAULT 0 CHECK (deleted_generation_count >= 0),
-  archived_uncompressed_bytes INTEGER NOT NULL DEFAULT 0 CHECK (archived_uncompressed_bytes >= 0),
-  archived_stored_bytes INTEGER NOT NULL DEFAULT 0 CHECK (archived_stored_bytes >= 0),
-  deleted_source_row_count INTEGER NOT NULL DEFAULT 0 CHECK (deleted_source_row_count >= 0),
-  deleted_source_bytes INTEGER NOT NULL DEFAULT 0 CHECK (deleted_source_bytes >= 0),
-  objects_written_24h INTEGER NOT NULL DEFAULT 0 CHECK (objects_written_24h >= 0),
-  source_rows_deleted_24h INTEGER NOT NULL DEFAULT 0 CHECK (source_rows_deleted_24h >= 0),
-  source_bytes_deleted_24h INTEGER NOT NULL DEFAULT 0 CHECK (source_bytes_deleted_24h >= 0),
-  orphan_object_count INTEGER NOT NULL DEFAULT 0 CHECK (orphan_object_count >= 0),
-  missing_object_count INTEGER NOT NULL DEFAULT 0 CHECK (missing_object_count >= 0),
-  lifecycle_drift_count INTEGER NOT NULL DEFAULT 0 CHECK (lifecycle_drift_count >= 0),
-  last_upload_at INTEGER,
-  last_verified_at INTEGER,
-  last_delete_at INTEGER,
-  last_success_at INTEGER,
-  last_error_at INTEGER,
-  last_error TEXT,
-  last_run_at INTEGER,
-  updated_at INTEGER NOT NULL CHECK (updated_at >= 0)
-);
-
-CREATE TABLE IF NOT EXISTS dex_archive_manifest_dependencies (
-  family TEXT NOT NULL,
-  generation_id TEXT NOT NULL,
-  dependency_generation_id TEXT NOT NULL,
-  row_count INTEGER NOT NULL CHECK (row_count >= 0),
-  source_deleted_at INTEGER,
-  PRIMARY KEY (family, generation_id, dependency_generation_id),
-  FOREIGN KEY (family, generation_id)
-    REFERENCES dex_archive_manifests(family, generation_id)
-    ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS dex_archive_manifests (
-  family TEXT NOT NULL CHECK (
-    family IN (
-      'measured-quote-generation',
-      'measured-target-generation',
-      'liquidity-generation'
-    )
-  ),
-  generation_id TEXT NOT NULL,
-  source_slot_started_at INTEGER NOT NULL CHECK (source_slot_started_at >= 0),
-  schema_version INTEGER NOT NULL CHECK (schema_version = 1),
-  object_key TEXT NOT NULL,
-  sha256 TEXT CHECK (sha256 IS NULL OR length(sha256) = 64),
-  object_etag TEXT,
-  row_count INTEGER CHECK (row_count IS NULL OR row_count >= 0),
-  dependency_row_count INTEGER CHECK (dependency_row_count IS NULL OR dependency_row_count >= 0),
-  uncompressed_bytes INTEGER CHECK (uncompressed_bytes IS NULL OR uncompressed_bytes >= 0),
-  stored_bytes INTEGER CHECK (stored_bytes IS NULL OR stored_bytes >= 0),
-  uploaded_at INTEGER,
-  verified_at INTEGER,
-  source_deleted_at INTEGER,
-  expires_at INTEGER,
-  attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
-  last_attempt_at INTEGER,
-  last_error TEXT,
-  PRIMARY KEY (family, generation_id),
-  UNIQUE (object_key),
-  CHECK (verified_at IS NULL OR uploaded_at IS NOT NULL),
-  CHECK (source_deleted_at IS NULL OR verified_at IS NOT NULL)
-);
-
 CREATE TABLE IF NOT EXISTS dex_deployment_outcomes (
   stablecoin_id TEXT NOT NULL,
   chain TEXT NOT NULL,
@@ -1218,33 +1054,6 @@ CREATE TABLE IF NOT EXISTS feedback_rate_limit (
   submitted_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS feedback_submissions (
-  submission_id TEXT PRIMARY KEY,
-  created_at INTEGER NOT NULL,
-  submitted_at INTEGER,
-  status TEXT NOT NULL,
-  feedback_type TEXT NOT NULL,
-  title TEXT,
-  description TEXT NOT NULL,
-  expected_value TEXT,
-  stablecoin_id TEXT,
-  stablecoin_name TEXT,
-  page_url TEXT NOT NULL,
-  peg_value TEXT,
-  contact_consent INTEGER NOT NULL DEFAULT 0,
-  contact_channel TEXT,
-  contact_handle TEXT,
-  github_target_kind TEXT,
-  github_target_number INTEGER,
-  github_target_url TEXT,
-  last_error TEXT,
-  CHECK (status IN ('pending', 'submitted', 'failed')),
-  CHECK (feedback_type IN ('bug', 'data-correction', 'feature-request')),
-  CHECK (contact_consent IN (0, 1)),
-  CHECK (contact_channel IS NULL OR contact_channel IN ('telegram', 'x')),
-  CHECK (github_target_kind IS NULL OR github_target_kind IN ('issue', 'discussion'))
-);
-
 CREATE TABLE IF NOT EXISTS kv_config (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -1339,14 +1148,6 @@ CREATE TABLE IF NOT EXISTS pricing_provider_runtime_state (
   consecutive_blocked INTEGER NOT NULL DEFAULT 0,
   target_cursor INTEGER NOT NULL DEFAULT 0,
   updated_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public_api_rate_limit (
-  ip_hash TEXT NOT NULL,
-  bucket_start INTEGER NOT NULL,
-  count INTEGER NOT NULL DEFAULT 0,
-  last_seen_at INTEGER NOT NULL,
-  PRIMARY KEY (ip_hash, bucket_start)
 );
 
 CREATE TABLE IF NOT EXISTS public_snapshots (
@@ -1588,151 +1389,6 @@ CREATE TABLE IF NOT EXISTS safety_score_history_v2 (
   CHECK (
     legacy_recorded_at IS NULL
     OR transition_kind IN ('initial-baseline', 'organic-grade-change')
-  )
-);
-
-CREATE TABLE IF NOT EXISTS safety_score_v9_artifacts (
-  artifact_key TEXT PRIMARY KEY,
-  artifact_kind TEXT NOT NULL CHECK (
-    artifact_kind IN ('base-input', 'fact-set', 'policy', 'evaluation-build', 'result')
-  ),
-  identity TEXT NOT NULL,
-  content_sha256 TEXT NOT NULL CHECK (length(content_sha256) = 64),
-  encoding TEXT NOT NULL CHECK (encoding = 'gzip-base64'),
-  uncompressed_bytes INTEGER NOT NULL CHECK (uncompressed_bytes > 0),
-  stored_bytes INTEGER NOT NULL CHECK (stored_bytes > 0),
-  payload TEXT NOT NULL,
-  created_at_sec INTEGER NOT NULL CHECK (created_at_sec >= 0),
-  verified_at_sec INTEGER NOT NULL CHECK (verified_at_sec >= created_at_sec),
-  UNIQUE (artifact_kind, identity),
-  CHECK (artifact_key = artifact_kind || ':' || content_sha256)
-);
-
-CREATE TABLE IF NOT EXISTS safety_score_v9_movement_reviews (
-  review_key TEXT PRIMARY KEY CHECK (length(review_key) = 64),
-  asset_id TEXT NOT NULL,
-  source_diff_report_digest TEXT NOT NULL CHECK (length(source_diff_report_digest) = 64),
-  candidate_id TEXT NOT NULL,
-  source_publication_generation_id TEXT NOT NULL,
-  policy_digest TEXT NOT NULL CHECK (length(policy_digest) = 64),
-  evaluation_build_digest TEXT NOT NULL CHECK (length(evaluation_build_digest) = 64),
-  v8_methodology_version TEXT NOT NULL,
-  disposition TEXT NOT NULL CHECK (
-    disposition IN ('intended-methodology-change', 'evidence-correction', 'producer-data-gap', 'defect')
-  ),
-  reviewer_id TEXT NOT NULL,
-  rationale TEXT NOT NULL,
-  reviewed_at_sec INTEGER NOT NULL CHECK (reviewed_at_sec >= 0),
-  review_digest TEXT NOT NULL CHECK (length(review_digest) = 64),
-  review_json TEXT NOT NULL, review_class_key TEXT NOT NULL DEFAULT '' CHECK (length(review_class_key) IN (0, 64)), reviewed_v8_score REAL, reviewed_v9_score REAL,
-  UNIQUE (source_diff_report_digest, asset_id)
-);
-
-CREATE TABLE IF NOT EXISTS safety_score_v9_release_cohorts (
-  release_candidate_id TEXT PRIMARY KEY,
-  cohort_id TEXT NOT NULL,
-  policy_digest TEXT NOT NULL CHECK (length(policy_digest) = 64),
-  evaluation_build_digest TEXT NOT NULL CHECK (length(evaluation_build_digest) = 64),
-  continuing_active_v8_rateable_count INTEGER NOT NULL CHECK (continuing_active_v8_rateable_count >= 0),
-  active_asset_count INTEGER NOT NULL CHECK (active_asset_count > 0),
-  ratified_by TEXT NOT NULL,
-  rationale TEXT NOT NULL,
-  ratified_at_sec INTEGER NOT NULL CHECK (ratified_at_sec >= 0),
-  cohort_digest TEXT NOT NULL CHECK (length(cohort_digest) = 64),
-  cohort_json TEXT NOT NULL,
-  UNIQUE (cohort_digest)
-);
-
-CREATE TABLE IF NOT EXISTS safety_score_v9_shadow_daily (
-  utc_day TEXT PRIMARY KEY,
-  updated_at_sec INTEGER NOT NULL CHECK (updated_at_sec >= 0),
-  successful_attempt_count INTEGER NOT NULL CHECK (successful_attempt_count >= 0),
-  failed_attempt_count INTEGER NOT NULL CHECK (failed_attempt_count >= 0),
-  selected_run_at_sec INTEGER CHECK (selected_run_at_sec >= 0),
-  publication_generation_id TEXT,
-  base_input_generation_id TEXT,
-  fact_set_digest TEXT CHECK (fact_set_digest IS NULL OR length(fact_set_digest) = 64),
-  policy_digest TEXT CHECK (policy_digest IS NULL OR length(policy_digest) = 64),
-  evaluation_build_digest TEXT CHECK (
-    evaluation_build_digest IS NULL OR length(evaluation_build_digest) = 64
-  ),
-  producer_capability_digest TEXT CHECK (
-    producer_capability_digest IS NULL OR length(producer_capability_digest) = 64
-  ),
-  release_coverage_policy_digest TEXT CHECK (
-    release_coverage_policy_digest IS NULL OR length(release_coverage_policy_digest) = 64
-  ),
-  consumer_threshold_registry_digest TEXT CHECK (
-    consumer_threshold_registry_digest IS NULL OR length(consumer_threshold_registry_digest) = 64
-  ),
-  result_digest TEXT CHECK (result_digest IS NULL OR length(result_digest) = 64),
-  diff_report_digest TEXT CHECK (diff_report_digest IS NULL OR length(diff_report_digest) = 64),
-  active_asset_count INTEGER CHECK (active_asset_count IS NULL OR active_asset_count >= 0),
-  rateable_count INTEGER CHECK (rateable_count IS NULL OR rateable_count >= 0),
-  nr_count INTEGER CHECK (nr_count IS NULL OR nr_count >= 0),
-  present_active_count INTEGER CHECK (present_active_count IS NULL OR present_active_count >= 0),
-  missing_active_count INTEGER CHECK (missing_active_count IS NULL OR missing_active_count >= 0),
-  unexpected_active_count INTEGER CHECK (unexpected_active_count IS NULL OR unexpected_active_count >= 0),
-  duplicate_active_count INTEGER CHECK (duplicate_active_count IS NULL OR duplicate_active_count >= 0),
-  grade_nr_transition_count INTEGER CHECK (
-    grade_nr_transition_count IS NULL OR grade_nr_transition_count >= 0
-  ),
-  large_score_movement_count INTEGER CHECK (
-    large_score_movement_count IS NULL OR large_score_movement_count >= 0
-  ),
-  top_cutoff_movement_count INTEGER CHECK (
-    top_cutoff_movement_count IS NULL OR top_cutoff_movement_count >= 0
-  ),
-  binding_cap_change_count INTEGER CHECK (
-    binding_cap_change_count IS NULL OR binding_cap_change_count >= 0
-  ),
-  downstream_crossing_count INTEGER CHECK (
-    downstream_crossing_count IS NULL OR downstream_crossing_count >= 0
-  ),
-  unresolved_review_count INTEGER CHECK (
-    unresolved_review_count IS NULL OR unresolved_review_count >= 0
-  ),
-  qualifying INTEGER NOT NULL DEFAULT 0 CHECK (qualifying IN (0, 1)),
-  blockers_json TEXT NOT NULL DEFAULT '[]',
-  archive_selection_reasons_json TEXT NOT NULL DEFAULT '[]',
-  latest_error_code TEXT CHECK (latest_error_code IS NULL OR length(latest_error_code) <= 160),
-  latest_error_message TEXT CHECK (latest_error_message IS NULL OR length(latest_error_message) <= 500),
-  daily_json TEXT NOT NULL,
-  CHECK (successful_attempt_count + failed_attempt_count > 0),
-  CHECK (
-    (successful_attempt_count = 0 AND selected_run_at_sec IS NULL) OR
-    (successful_attempt_count > 0 AND selected_run_at_sec IS NOT NULL)
-  ),
-  CHECK (
-    selected_run_at_sec IS NULL OR (
-      publication_generation_id IS NOT NULL AND
-      base_input_generation_id IS NOT NULL AND
-      fact_set_digest IS NOT NULL AND
-      policy_digest IS NOT NULL AND
-      evaluation_build_digest IS NOT NULL AND
-      producer_capability_digest IS NOT NULL AND
-      release_coverage_policy_digest IS NOT NULL AND
-      consumer_threshold_registry_digest IS NOT NULL AND
-      result_digest IS NOT NULL AND
-      diff_report_digest IS NOT NULL AND
-      active_asset_count IS NOT NULL AND
-      rateable_count IS NOT NULL AND
-      nr_count IS NOT NULL AND
-      present_active_count IS NOT NULL AND
-      missing_active_count IS NOT NULL AND
-      unexpected_active_count IS NOT NULL AND
-      duplicate_active_count IS NOT NULL AND
-      grade_nr_transition_count IS NOT NULL AND
-      large_score_movement_count IS NOT NULL AND
-      top_cutoff_movement_count IS NOT NULL AND
-      binding_cap_change_count IS NOT NULL AND
-      downstream_crossing_count IS NOT NULL AND
-      unresolved_review_count IS NOT NULL
-    )
-  ),
-  CHECK (
-    (latest_error_code IS NULL AND latest_error_message IS NULL) OR
-    (latest_error_code IS NOT NULL AND latest_error_message IS NOT NULL)
   )
 );
 
@@ -2341,31 +1997,6 @@ CREATE TABLE IF NOT EXISTS telegram_freeze_alert_targets (
   FOREIGN KEY (source_event_id) REFERENCES telegram_freeze_alert_events(source_event_id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS telegram_legacy_overflow_state (
-  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-  state TEXT NOT NULL
-    CHECK (state IN ('absent', 'importing', 'imported', 'corrupt', 'oversized', 'degraded')),
-  blob_digest TEXT
-    CHECK (blob_digest IS NULL OR length(blob_digest) = 64),
-  observed_bytes INTEGER NOT NULL DEFAULT 0
-    CHECK (observed_bytes >= 0),
-  observed_plan_count INTEGER
-    CHECK (observed_plan_count IS NULL OR observed_plan_count >= 0),
-  expected_item_count INTEGER
-    CHECK (expected_item_count IS NULL OR expected_item_count >= 0),
-  synthetic_source_event_id TEXT
-    CHECK (synthetic_source_event_id IS NULL OR length(synthetic_source_event_id) <= 200),
-  import_cursor INTEGER NOT NULL DEFAULT 0
-    CHECK (import_cursor >= 0),
-  imported_target_count INTEGER NOT NULL DEFAULT 0
-    CHECK (imported_target_count >= 0),
-  last_error_class TEXT
-    CHECK (last_error_class IS NULL OR length(last_error_class) <= 80),
-  observed_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL,
-  imported_at INTEGER
-);
-
 CREATE TABLE IF NOT EXISTS telegram_pending_alerts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   chat_id TEXT NOT NULL,
@@ -2581,58 +2212,6 @@ CREATE TABLE IF NOT EXISTS worker_canary_runs (
   metadata_json TEXT,
   error TEXT
 , mode TEXT NOT NULL DEFAULT 'shadow');
-
-CREATE TABLE IF NOT EXISTS worker_job_attempts (
-  attempt_id TEXT PRIMARY KEY,
-  idempotency_key TEXT NOT NULL UNIQUE,
-  schedule_key TEXT NOT NULL,
-  job TEXT NOT NULL,
-  slot_started_at INTEGER,
-  producer_kind TEXT NOT NULL DEFAULT 'scheduled-slot',
-  state TEXT NOT NULL CHECK (
-    state IN (
-      'queued',
-      'claimed',
-      'running',
-      'completed',
-      'deferred',
-      'abandoned',
-      'failed',
-      'skipped_locked',
-      'cancelled'
-    )
-  ),
-  status_class TEXT CHECK (
-    status_class IS NULL OR status_class IN (
-      'ok',
-      'degraded',
-      'controlled_error',
-      'thrown_error',
-      'abandoned',
-      'deferred',
-      'skipped_duplicate',
-      'skipped_running',
-      'skipped_locked'
-    )
-  ),
-  attempt_no INTEGER NOT NULL DEFAULT 1,
-  owner TEXT,
-  lease_until INTEGER,
-  queued_at INTEGER NOT NULL,
-  claimed_at INTEGER,
-  started_at INTEGER,
-  last_heartbeat_at INTEGER,
-  finished_at INTEGER,
-  duration_ms INTEGER,
-  item_count INTEGER,
-  dependency_snapshot_json TEXT,
-  cursor_json TEXT,
-  result_metadata_json TEXT,
-  error TEXT,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL, producer_path TEXT, invocation_id TEXT, worker_version TEXT,
-  UNIQUE(schedule_key, slot_started_at, job, producer_kind, attempt_no)
-);
 
 CREATE TABLE IF NOT EXISTS worker_producer_heads (
   schedule_key TEXT NOT NULL,
@@ -2863,18 +2442,6 @@ CREATE INDEX IF NOT EXISTS idx_admin_action_audit_created_at
 
 CREATE INDEX IF NOT EXISTS idx_admin_idempotency_created_at ON admin_idempotency_keys(created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_alert_broker_conditions_mode_state
-  ON alert_broker_conditions(mode, state, severity);
-
-CREATE INDEX IF NOT EXISTS idx_alert_broker_conditions_state_updated
-  ON alert_broker_conditions(state, updated_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_alert_broker_deliveries_condition_created
-  ON alert_broker_deliveries(condition_key, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_alert_broker_deliveries_retry
-  ON alert_broker_deliveries(state, next_attempt_at, delivery_lease_until, created_at);
-
 CREATE INDEX IF NOT EXISTS idx_api_key_audit_log_key
   ON api_key_audit_log(api_key_id, created_at DESC);
 
@@ -2882,9 +2449,6 @@ CREATE INDEX IF NOT EXISTS idx_api_key_audit_log_recent
   ON api_key_audit_log(created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_api_key_rate_limit_bucket ON api_key_rate_limit(bucket_start);
-
-CREATE INDEX IF NOT EXISTS idx_api_key_request_rate_limit_bucket
-  ON api_key_request_rate_limit(bucket_start);
 
 CREATE INDEX IF NOT EXISTS idx_api_key_request_rate_limit_v2_bucket
   ON api_key_request_rate_limit_v2(bucket_start);
@@ -2938,12 +2502,6 @@ CREATE INDEX IF NOT EXISTS idx_api_request_consumer_stats_lane
 
 CREATE INDEX IF NOT EXISTS idx_api_request_consumer_stats_route
   ON api_request_consumer_stats(route_key, bucket_start);
-
-CREATE INDEX IF NOT EXISTS idx_api_request_source_stats_bucket
-  ON api_request_source_stats(bucket_start);
-
-CREATE INDEX IF NOT EXISTS idx_api_request_source_stats_route
-  ON api_request_source_stats(route_key, bucket_start);
 
 CREATE INDEX IF NOT EXISTS idx_be_chain_name ON blacklist_events(chain_name);
 
@@ -3038,12 +2596,6 @@ CREATE INDEX IF NOT EXISTS idx_blacklist_events_reconciliation_manifest
 
 CREATE INDEX IF NOT EXISTS idx_blacklist_events_suppression_reason
   ON blacklist_events(suppression_reason);
-
-CREATE INDEX IF NOT EXISTS idx_blacklist_provider_scan_telemetry_config
-  ON blacklist_provider_scan_telemetry(config_key, observed_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_blacklist_provider_scan_telemetry_latest
-  ON blacklist_provider_scan_telemetry(observed_at DESC, id DESC);
 
 CREATE INDEX IF NOT EXISTS idx_blacklist_reconciliation_runs_latest
   ON blacklist_reconciliation_runs(started_at DESC, run_id DESC);
@@ -3208,30 +2760,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_depeg_unique ON depeg_events(stablecoin_id
 CREATE INDEX IF NOT EXISTS idx_detail_cache_write_generations_updated
   ON detail_cache_write_generations(updated_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_dex_archive_dependencies_source
-  ON dex_archive_manifest_dependencies (
-    dependency_generation_id,
-    source_deleted_at,
-    family,
-    generation_id
-  );
-
-CREATE INDEX IF NOT EXISTS idx_dex_archive_manifests_backlog
-  ON dex_archive_manifests (
-    family,
-    verified_at,
-    source_deleted_at,
-    source_slot_started_at,
-    generation_id
-  );
-
-CREATE INDEX IF NOT EXISTS idx_dex_archive_manifests_prune
-  ON dex_archive_manifests (source_deleted_at, family, generation_id)
-  WHERE source_deleted_at IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS idx_dex_archive_manifests_verification
-  ON dex_archive_manifests (family, uploaded_at, verified_at, last_attempt_at);
-
 CREATE INDEX IF NOT EXISTS idx_dex_deployment_outcomes_outcome
   ON dex_deployment_outcomes(outcome, observed_at DESC);
 
@@ -3275,12 +2803,6 @@ CREATE INDEX IF NOT EXISTS idx_dex_prices_updated ON dex_prices(updated_at DESC)
 
 CREATE INDEX IF NOT EXISTS idx_feedback_rate_limit_ip ON feedback_rate_limit(ip_hash, submitted_at);
 
-CREATE INDEX IF NOT EXISTS idx_feedback_submissions_created_at
-  ON feedback_submissions(created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_feedback_submissions_status_created_at
-  ON feedback_submissions(status, created_at DESC);
-
 CREATE INDEX IF NOT EXISTS idx_mbcd_until ON mint_burn_config_deferral(deferred_until);
 
 CREATE INDEX IF NOT EXISTS idx_mbe_coin_chain_ts ON mint_burn_events(stablecoin_id, chain_id, timestamp DESC);
@@ -3319,8 +2841,6 @@ CREATE INDEX IF NOT EXISTS idx_onchain_supply_updated ON onchain_supply(updated_
 
 CREATE INDEX IF NOT EXISTS idx_pricing_provider_negative_cache_expiry
   ON pricing_provider_negative_cache(provider_id, expires_at);
-
-CREATE INDEX IF NOT EXISTS idx_public_api_rate_limit_bucket_start ON public_api_rate_limit(bucket_start);
 
 CREATE INDEX IF NOT EXISTS idx_redemption_backstop_history_date ON redemption_backstop_history(snapshot_date DESC);
 
@@ -3384,28 +2904,6 @@ CREATE INDEX IF NOT EXISTS idx_safety_score_history_v2_model_generation
 
 CREATE INDEX IF NOT EXISTS idx_safety_score_history_v2_recorded_at
   ON safety_score_history_v2(recorded_at DESC, history_id DESC);
-
-CREATE INDEX IF NOT EXISTS idx_safety_score_v9_artifacts_created
-  ON safety_score_v9_artifacts(created_at_sec DESC);
-
-CREATE INDEX IF NOT EXISTS idx_safety_score_v9_movement_reviews_candidate
-  ON safety_score_v9_movement_reviews(candidate_id, policy_digest, evaluation_build_digest, reviewed_at_sec DESC);
-
-CREATE INDEX IF NOT EXISTS idx_safety_score_v9_movement_reviews_class
-  ON safety_score_v9_movement_reviews(review_class_key, reviewed_at_sec DESC);
-
-CREATE INDEX IF NOT EXISTS idx_safety_score_v9_movement_reviews_source
-  ON safety_score_v9_movement_reviews(source_diff_report_digest, asset_id);
-
-CREATE INDEX IF NOT EXISTS idx_safety_score_v9_shadow_daily_identity
-  ON safety_score_v9_shadow_daily(
-    policy_digest,
-    evaluation_build_digest,
-    producer_capability_digest,
-    release_coverage_policy_digest,
-    consumer_threshold_registry_digest,
-    utc_day
-  );
 
 CREATE INDEX IF NOT EXISTS idx_safety_score_v9_supply_attribution_journal_asset_latest
   ON safety_score_v9_supply_attribution_journal (
@@ -3734,36 +3232,6 @@ CREATE INDEX IF NOT EXISTS idx_worker_canary_runs_observed_at
 
 CREATE INDEX IF NOT EXISTS idx_worker_canary_runs_status_observed
   ON worker_canary_runs(status, severity, observed_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_job_queued
-  ON worker_job_attempts(job, queued_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_job_state_updated
-  ON worker_job_attempts(job, state, updated_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_job_updated
-  ON worker_job_attempts(job, updated_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_job_updated_queued
-  ON worker_job_attempts(job, updated_at DESC, queued_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_schedule_path_updated
-  ON worker_job_attempts(schedule_key, producer_path, job, updated_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_slot
-  ON worker_job_attempts(schedule_key, slot_started_at);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_slot_job
-  ON worker_job_attempts(schedule_key, slot_started_at, job);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_state_lease
-  ON worker_job_attempts(state, lease_until);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_state_queued
-  ON worker_job_attempts(state, queued_at);
-
-CREATE INDEX IF NOT EXISTS idx_worker_job_attempts_state_updated
-  ON worker_job_attempts(state, updated_at);
 
 CREATE INDEX IF NOT EXISTS idx_worker_producer_heads_job
   ON worker_producer_heads(job, producer_kind, last_completed_at DESC);
@@ -5174,6 +4642,4 @@ LEFT JOIN depeg_event_provenance p ON p.event_id = e.id;
 
 -- Required fresh-database seed rows from the original replay.
 INSERT OR IGNORE INTO blacklist_sync_state VALUES('gnosis-0x0a06c8354a6cc1a07549a38701eac205942e3ac6',33257602,'evm_block',33257602,0,NULL,NULL,NULL,NULL,0,0,NULL,NULL,NULL);
-INSERT OR IGNORE INTO dex_archive_family_state VALUES('liquidity','off','off',NULL,0,0,0,0,NULL,NULL,0,0,0,0,0,0,0,0,0,0,0,0,0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0);
-INSERT OR IGNORE INTO dex_archive_family_state VALUES('measured-execution','off','off',NULL,0,0,0,0,NULL,NULL,0,0,0,0,0,0,0,0,0,0,0,0,0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0);
 INSERT OR IGNORE INTO telegram_transport_circuit VALUES(1,'closed',0,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0);
