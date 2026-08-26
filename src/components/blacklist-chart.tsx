@@ -1,13 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import { ComposedChart, Bar, Line, Tooltip } from "recharts";
+import { Line } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency } from "@shared/lib/format";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { CategoricalXAxis, ChartLegendChip, TimeGrid, MonoYAxis } from "@/components/chart-primitives/axes";
+import { ChartLegendChip } from "@/components/chart-primitives/axes";
+import {
+  QuarterlyStackedBarChart,
+  type QuarterlyStackedBarSeries,
+} from "@/components/chart-primitives/quarterly-stacked-bar-chart";
 import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
@@ -38,7 +41,6 @@ export function getBlacklistChartCoins(
 }
 
 export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
-  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const chartData = useMemo(() => chart ?? [], [chart]);
 
   const peakQuarters = useMemo(() => {
@@ -48,6 +50,12 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
       .slice(0, 2);
   }, [chartData]);
   const chartCoins = useMemo(() => getBlacklistChartCoins(chartData), [chartData]);
+  const chartSeries: QuarterlyStackedBarSeries[] = chartCoins.map((coin, i) => ({
+    dataKey: coin,
+    color: BLACKLIST_CHART_COLORS[coin],
+    fillOpacity: i === 0 ? 0.75 : 0.62,
+    radius: i === chartCoins.length - 1 ? [3, 3, 0, 0] : undefined,
+  }));
 
   if (isLoading) {
     return (
@@ -110,66 +118,24 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
               </ChartLegendChip>
             </div>
             <div className="pharos-chart-stage">
-              <div
-                ref={chartContainerRef}
-                className={CHART_HEIGHT}
-                role="figure"
-                aria-label={`Tracked frozen total stacked bar chart showing ${chartData.length} quarters of freeze-ledger balances by stablecoin issuer`}
+              <QuarterlyStackedBarChart
+                data={chartData}
+                series={chartSeries}
+                yAxis={{ tickFormatter: (val: number) => formatCurrency(val, 0), width: 62 }}
+                tooltipContent={<BlacklistTooltip />}
+                ariaLabel={`Tracked frozen total stacked bar chart showing ${chartData.length} quarters of freeze-ledger balances by stablecoin issuer`}
+                height={CHART_HEIGHT}
               >
-                {isChartReady ? (
-                <ComposedChart
-                  width={width}
-                  height={height}
-                  data={chartData}
-                  margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-                >
-                  <TimeGrid strokeDasharray="3 3" />
-                  <CategoricalXAxis
-                    dataKey="quarter"
-                    tick={{
-                      fontSize: 11,
-                      fontFamily: "var(--font-mono, monospace)",
-                      fill: "var(--color-muted-foreground)",
-                    }}
-                    angle={-35}
-                    textAnchor="end"
-                    height={52}
-                    interval={Math.max(0, Math.floor(chartData.length / 8) - 1)}
-                  />
-                  <MonoYAxis
-                    tick={{
-                      fontSize: 11,
-                      fontFamily: "var(--font-mono, monospace)",
-                      fill: "var(--color-muted-foreground)",
-                    }}
-                    tickFormatter={(val: number) => formatCurrency(val, 0)}
-                    width={62}
-                  />
-                  <Tooltip content={<BlacklistTooltip />} cursor={{ fill: "currentColor", opacity: 0.05 }} />
-                  {chartCoins.map((coin, i) => (
-                    <Bar
-                      key={coin}
-                      dataKey={coin}
-                      stackId="a"
-                      fill={BLACKLIST_CHART_COLORS[coin]}
-                      fillOpacity={i === 0 ? 0.75 : 0.62}
-                      radius={i === chartCoins.length - 1 ? [3, 3, 0, 0] : undefined}
-                    />
-                  ))}
-                  <Line
-                    type="monotone"
-                    dataKey="total"
-                    stroke="var(--color-foreground)"
-                    strokeOpacity={0.45}
-                    strokeWidth={1.5}
-                    dot={false}
-                    activeDot={{ r: 3, strokeWidth: 0 }}
-                  />
-                </ComposedChart>
-                ) : (
-                  <Skeleton className="h-full w-full" />
-                )}
-              </div>
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke="var(--color-foreground)"
+                  strokeOpacity={0.45}
+                  strokeWidth={1.5}
+                  dot={false}
+                  activeDot={{ r: 3, strokeWidth: 0 }}
+                />
+              </QuarterlyStackedBarChart>
             </div>
           </>
         ) : (

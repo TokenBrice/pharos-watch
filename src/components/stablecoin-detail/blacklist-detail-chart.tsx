@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { ComposedChart, Bar, Tooltip } from "recharts";
 import { CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { CategoricalXAxis, TimeGrid, MonoYAxis } from "@/components/chart-primitives/axes";
+import {
+  QuarterlyStackedBarChart,
+  type QuarterlyStackedBarSeries,
+} from "@/components/chart-primitives/quarterly-stacked-bar-chart";
 import type { BlacklistQuarterlyEventTypePoint } from "@shared/types";
 
 const CHART_HEIGHT = "h-[220px] sm:h-[260px]";
@@ -20,6 +21,12 @@ const EVENT_TYPE_COLORS = {
   unblacklist: "#10b981",
 } as const;
 
+const EVENT_TYPE_SERIES: QuarterlyStackedBarSeries[] = [
+  { dataKey: "blacklist", color: EVENT_TYPE_COLORS.blacklist, fillOpacity: 0.8 },
+  { dataKey: "unblacklist", color: EVENT_TYPE_COLORS.unblacklist, fillOpacity: 0.7 },
+  { dataKey: "destroy", color: EVENT_TYPE_COLORS.destroy, fillOpacity: 0.75, radius: [3, 3, 0, 0] },
+];
+
 interface BlacklistDetailChartProps {
   data: BlacklistQuarterlyEventTypePoint[] | undefined;
   isLoading: boolean;
@@ -28,7 +35,6 @@ interface BlacklistDetailChartProps {
 type Entry = { dataKey: string; value: number; color: string };
 
 export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartProps) {
-  const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
   const chartData = useMemo(() => data ?? [], [data]);
 
   if (isLoading) {
@@ -70,50 +76,14 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
             </div>
           ))}
         </div>
-        <div
-          ref={ref}
-          className={CHART_HEIGHT}
-          role="figure"
-          aria-label={`Quarterly blacklist events chart showing ${chartData.length} quarters`}
-        >
-          {ready ? (
-            <ComposedChart
-              width={width}
-              height={height}
-              data={chartData}
-              margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-            >
-              <TimeGrid strokeDasharray="3 3" />
-              <CategoricalXAxis
-                dataKey="quarter"
-                tick={{
-                  fontSize: 11,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                angle={-35}
-                textAnchor="end"
-                height={52}
-                interval={Math.max(0, Math.floor(chartData.length / 8) - 1)}
-              />
-              <MonoYAxis
-                tick={{
-                  fontSize: 11,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                allowDecimals={false}
-                width={48}
-              />
-              <Tooltip content={<EventTypeTooltip />} cursor={{ fill: "currentColor", opacity: 0.05 }} />
-              <Bar dataKey="blacklist" stackId="a" fill={EVENT_TYPE_COLORS.blacklist} fillOpacity={0.8} />
-              <Bar dataKey="unblacklist" stackId="a" fill={EVENT_TYPE_COLORS.unblacklist} fillOpacity={0.7} />
-              <Bar dataKey="destroy" stackId="a" fill={EVENT_TYPE_COLORS.destroy} fillOpacity={0.75} radius={[3, 3, 0, 0]} />
-            </ComposedChart>
-          ) : (
-            <Skeleton className="h-full w-full" />
-          )}
-        </div>
+        <QuarterlyStackedBarChart
+          data={chartData}
+          series={EVENT_TYPE_SERIES}
+          yAxis={{ allowDecimals: false, width: 48 }}
+          tooltipContent={<EventTypeTooltip />}
+          ariaLabel={`Quarterly blacklist events chart showing ${chartData.length} quarters`}
+          height={CHART_HEIGHT}
+        />
       </div>
     </section>
   );

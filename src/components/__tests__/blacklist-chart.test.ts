@@ -1,5 +1,23 @@
-import { describe, expect, it } from "vitest";
-import { getBlacklistChartCoins, getBlacklistTooltipSummary } from "@/components/blacklist-chart";
+// @vitest-environment jsdom
+
+import { createElement, isValidElement } from "react";
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { getBlacklistChartCoins, getBlacklistTooltipSummary, BlacklistChart } from "@/components/blacklist-chart";
+import type { BlacklistSummaryResponse } from "@shared/types";
+
+const { quarterlyChartMock } = vi.hoisted(() => ({
+  quarterlyChartMock: vi.fn(() => null),
+}));
+
+vi.mock("@/components/chart-primitives/quarterly-stacked-bar-chart", () => ({
+  QuarterlyStackedBarChart: quarterlyChartMock,
+}));
+
+afterEach(() => {
+  cleanup();
+  quarterlyChartMock.mockClear();
+});
 
 describe("getBlacklistTooltipSummary", () => {
   it("excludes the total series from issuer rows and uses it for the summary total", () => {
@@ -55,5 +73,29 @@ describe("getBlacklistTooltipSummary", () => {
     ]);
 
     expect(coins).toEqual(["BRZ", "BUIDL"]);
+  });
+
+  it("configures the shared quarterly frame without changing the issuer series or total overlay", () => {
+    const chart = [
+      { quarter: "Q1 '26", USDT: 10, USDC: 5, total: 15 },
+      { quarter: "Q2 '26", USDT: 20, USDC: 0, total: 20 },
+    ] as unknown as BlacklistSummaryResponse["chart"];
+
+    render(createElement(BlacklistChart, { chart, isLoading: false }));
+
+    expect(quarterlyChartMock).toHaveBeenCalledOnce();
+    const props = quarterlyChartMock.mock.calls[0]![0];
+    expect(props.data).toBe(chart);
+    expect(props.series).toEqual([
+      { dataKey: "USDC", color: expect.any(String), fillOpacity: 0.75, radius: undefined },
+      { dataKey: "USDT", color: expect.any(String), fillOpacity: 0.62, radius: [3, 3, 0, 0] },
+    ]);
+    expect(props.yAxis.width).toBe(62);
+    expect(props.yAxis.tickFormatter(1_000)).toBe("$1K");
+    expect(props.ariaLabel).toContain("showing 2 quarters");
+    expect(props.height).toBe("h-[220px] sm:h-[280px]");
+    expect(isValidElement(props.tooltipContent)).toBe(true);
+    expect(isValidElement(props.children)).toBe(true);
+    expect(props.children.props.dataKey).toBe("total");
   });
 });
