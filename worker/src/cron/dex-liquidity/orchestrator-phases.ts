@@ -1,15 +1,10 @@
-export type {
-  DirectApiFetcher,
-  DirectApiFetchPhaseResult,
-  DirectApiIntegrationResult,
-} from "./orchestrator-phases/direct-api";
+export type { DirectApiFetchPhaseResult, DirectApiIntegrationResult } from "./orchestrator-phases/direct-api";
 export {
   buildDexDirectApiFetchers,
   runDirectApiFetchPhase,
   integrateDirectApiLiquidityPhase,
 } from "./orchestrator-phases/direct-api";
 
-export type { SubgraphEnrichmentPhaseResult } from "./orchestrator-phases/subgraph-enrichment";
 export { fetchSubgraphEnrichmentPhase } from "./orchestrator-phases/subgraph-enrichment";
 
 export type { FallbackCrawlerPhaseResult } from "./orchestrator-phases/fallback";

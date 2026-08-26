@@ -57,7 +57,7 @@ export interface ActiveDepegRow {
   peg_reference: number;
 }
 
-export interface ClosedDepegRow {
+interface ClosedDepegRow {
   stablecoin_id: string;
   symbol: string;
   peak_deviation_bps: number;

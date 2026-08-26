@@ -12,6 +12,10 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import {
+  DigestStoredSnapshotSchema,
+  type DigestContentEntry,
+} from "@shared/types/digest";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { GLOSSARY_ENTRIES } from "../../src/lib/glossary-content";
@@ -24,13 +28,6 @@ const DIGESTS_PATH = join(__dirname, "../../data/digests.json");
 const OUTPUT_PATH = join(__dirname, "../../public/llms.txt");
 const DIGEST_LIMIT = 20;
 const CHECK_MODE = process.argv.includes("--check");
-
-interface DigestEntry {
-  date: string;
-  title: string;
-  text: string;
-  generatedAt?: number;
-}
 
 function absolute(path: string): string {
   return `${SITE_ORIGIN}${path.startsWith("/") ? path : `/${path}`}`;
@@ -48,13 +45,12 @@ function stablecoinDescription(coin: StablecoinMeta): string {
   return `${governance} stablecoin ${backing} pegged to ${peg}.`;
 }
 
-function loadDigests(): DigestEntry[] {
+function loadDigests(): DigestContentEntry[] {
   const raw = readFileSync(DIGESTS_PATH, "utf8");
-  const parsed = JSON.parse(raw) as DigestEntry[];
+  const parsed = DigestStoredSnapshotSchema.parse(JSON.parse(raw));
 
   return parsed
-    .filter((entry) => entry.date && entry.title && entry.text)
-    .sort((left, right) => (right.generatedAt ?? 0) - (left.generatedAt ?? 0))
+    .sort((left, right) => right.generatedAt - left.generatedAt)
     .slice(0, DIGEST_LIMIT);
 }
 

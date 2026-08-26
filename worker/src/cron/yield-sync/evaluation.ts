@@ -49,7 +49,7 @@ import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../
 
 export { buildHistoryKey } from "./evaluation-history";
 export { buildSelectionReason } from "./evaluation-arbitration";
-export type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";
+export type { EvaluatedYieldSource } from "./evaluation-types";
 
 const LOW_SOURCE_TVL_USD = 250_000;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;

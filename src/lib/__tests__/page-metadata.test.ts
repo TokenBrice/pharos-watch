@@ -7,6 +7,7 @@ import {
   getMarkdownAlternateForCanonical,
 } from "@/lib/page-metadata";
 import digests from "../../../data/digests.json";
+import { DigestStoredSnapshotSchema } from "@shared/types/digest";
 
 const fixtures = vi.hoisted(() => {
   const active = {
@@ -100,7 +101,7 @@ describe("buildPageMetadata", () => {
   });
 
   it("advertises digest archive markdown alternates for known dates only", () => {
-    const knownDigestDate = (digests as readonly { date: string }[])[0].date;
+    const knownDigestDate = DigestStoredSnapshotSchema.parse(digests)[0]!.date;
 
     expect(getMarkdownAlternateForCanonical(`/digest/${knownDigestDate}/`)).toBe(
       `/digest/${knownDigestDate}/index.md`,

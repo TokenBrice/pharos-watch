@@ -110,7 +110,6 @@ const V9CdpMetricApplicabilitySchema = z.discriminatedUnion("state", [
     })
     .strict(),
 ]);
-export type V9CdpMetricApplicability = z.infer<typeof V9CdpMetricApplicabilitySchema>;
 
 /**
  * Metric applicability for the sdn/rwa archetypes (owner ruling 2026-07-27,
@@ -353,7 +352,7 @@ const V9SyntheticVenueShareSchema = z
     failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict();
-export type V9SyntheticVenueShare = z.infer<typeof V9SyntheticVenueShareSchema>;
+type V9SyntheticVenueShare = z.infer<typeof V9SyntheticVenueShareSchema>;
 
 const V9SyntheticDeltaNeutralMechanismRiskReviewSchema = z
   .object({

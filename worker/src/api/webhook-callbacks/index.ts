@@ -16,13 +16,7 @@ import { handleSettingsCallbackEntry } from "./settings";
 import { handleRecapCallback } from "./recap";
 import type { CallbackAction, CallbackHandler } from "./_shared";
 
-export type {
-  CallbackAction,
-  CallbackContext,
-  CallbackHandler,
-  ParsedCallbackData,
-  TelegramCallbackQuery,
-} from "./_shared";
+export type { CallbackAction, CallbackHandler, ParsedCallbackData, TelegramCallbackQuery } from "./_shared";
 
 /**
  * Dispatch table mapping each `CallbackAction` to its handler. The webhook

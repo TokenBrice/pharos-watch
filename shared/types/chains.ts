@@ -84,13 +84,11 @@ export const ChainDominantStablecoinSchema = z.object({
   share: z.number(),
 });
 
-export type ChainDominantStablecoin = z.infer<typeof ChainDominantStablecoinSchema>;
 
 export const ChainTopStablecoinSchema = ChainDominantStablecoinSchema.extend({
   supplyUsd: z.number(),
 });
 
-export type ChainTopStablecoin = z.infer<typeof ChainTopStablecoinSchema>;
 
 export const ChainSummarySchema = z.object({
   id: z.string(),

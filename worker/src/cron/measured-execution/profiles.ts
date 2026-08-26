@@ -90,7 +90,7 @@ export function createDexMeasuredExecutionRpcBudget(input: {
   };
 }
 
-export interface DexMeasuredExecutionAdapter {
+interface DexMeasuredExecutionAdapter {
   readonly profileId: string;
   quotePoints(input: {
     target: DexMeasuredExecutionTarget;

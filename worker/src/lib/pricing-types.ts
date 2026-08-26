@@ -7,7 +7,7 @@ export interface PriceSourceDiagnostics {
   observedAtModeBySource?: Record<string, PriceObservedAtMode | null>;
 }
 
-export interface SelectedPrice {
+interface SelectedPrice {
   price: number;
   source: string;
   selectedSource: string;
@@ -20,7 +20,7 @@ export interface SelectedPrice {
   diagnostics?: PriceSourceDiagnostics;
 }
 
-export interface PriceMetadata {
+interface PriceMetadata {
   source: string;
   selectedSource?: string | null;
   confidence: PriceConfidence | null;

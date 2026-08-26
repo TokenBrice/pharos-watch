@@ -4,22 +4,7 @@
  * The implementation is split by responsibility under `lib/status/`; keeping
  * these exports here avoids coupling the 25 callers to that internal layout.
  */
-export type {
-  BrowserProbeSummary,
-  DashboardCronGroup,
-  DashboardDecision,
-  DashboardEvidence,
-  DashboardEvidenceState,
-  DashboardIssue,
-  DashboardIssueGroups,
-  DashboardIssueKind,
-  DashboardNotice,
-  DashboardOperatorNextStep,
-  DashboardQueryEvidenceState,
-  DashboardQuerySync,
-  DashboardSection,
-  DashboardSectionId,
-} from "@/lib/status/dashboard-types";
+export type { BrowserProbeSummary, DashboardDecision, DashboardEvidence, DashboardIssueGroups, DashboardNotice, DashboardQuerySync, DashboardSection, DashboardSectionId } from "@/lib/status/dashboard-types";
 export {
   buildBrowserProbeSummary,
   buildDashboardCronGroups,

@@ -54,7 +54,7 @@ export interface CapacityResolverContext {
   options: RedemptionBackstopBuildOptions;
 }
 
-export type CapacityResolver<M extends RedemptionCapacityModel = RedemptionCapacityModel> = (
+type CapacityResolver<M extends RedemptionCapacityModel = RedemptionCapacityModel> = (
   model: M,
   context: CapacityResolverContext,
 ) => Promise<CapacityResolution>;

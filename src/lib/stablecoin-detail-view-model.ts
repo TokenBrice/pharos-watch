@@ -26,32 +26,8 @@ import { deriveStablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 export {
   buildStablecoinDetailHeroViewModel,
 } from "@/lib/stablecoin-detail-hero-view-model";
-export type {
-  BuildHeroCardViewModelParams,
-  HeroCardViewModel,
-  HeroCaseStudyCalloutViewModel,
-  HeroSignalRailItemViewModel,
-  HeroTertiaryMetricViewModel,
-} from "@/lib/stablecoin-detail-hero-view-model";
-export type {
-  BuildStablecoinDetailViewModelParams,
-  DetailBlacklistInput,
-  DetailFlowsInput,
-  DetailQueryResource,
-  DetailReservesInput,
-  DetailStablecoinListInput,
-  DetailSupplyHistoryInput,
-  StablecoinDetailFeatureState,
-  StablecoinDetailFeatureStates,
-  StablecoinDetailFeatureStatus,
-  StablecoinDetailReadyViewModel,
-  StablecoinDetailStaleQuery,
-  StablecoinDetailSummary,
-  StablecoinDetailViewModel,
-  StablecoinDetailViewModelCoreInputs,
-  StablecoinDetailViewModelQueryInputs,
-  StablecoinDetailViewModelSupplementalInputs,
-} from "@/lib/stablecoin-detail-view-model-types";
+export type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-hero-view-model";
+export type { BuildStablecoinDetailViewModelParams, StablecoinDetailSummary, StablecoinDetailViewModel } from "@/lib/stablecoin-detail-view-model-types";
 
 export function buildStablecoinDetailViewModel({
   core: { id, coin, summary, logoSrc, handleRetryAll },

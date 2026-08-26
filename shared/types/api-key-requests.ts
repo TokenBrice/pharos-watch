@@ -34,9 +34,6 @@ export interface ApiKeySelfServeRequest {
   website?: string;
 }
 
-export interface ApiKeySelfServeVerifyRequest {
-  token: string;
-}
 
 const ApiKeySelfServeNonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0);
 

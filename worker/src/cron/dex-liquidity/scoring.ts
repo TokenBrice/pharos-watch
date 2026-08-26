@@ -29,7 +29,7 @@ export {
   selectDexRouteObservationPools,
   selectDexRouteObservations,
 };
-export type { DexPricePersistenceDiagnostics, DexPriceStageRetentionResult };
+export type { DexPricePersistenceDiagnostics };
 
 function isP4OnlyPausedBalancerPool(pool: LiquidityMetrics["topPools"][number]): boolean {
   const gate = pool.extra?.executionCapabilityGate;

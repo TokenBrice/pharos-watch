@@ -37,20 +37,7 @@ import type {
 
 // Re-export the split-out types and scoring helpers retained on this module's
 // public surface. [audit Q-130]
-export type {
-  CommandPaletteSection,
-  CommandPaletteActionId,
-  CommandPaletteActionIcon,
-  CommandPaletteActionDefinition,
-  CommandPaletteGroup,
-  CommandPaletteSectionedItem,
-  CommandPaletteHistoryItem,
-  CommandPaletteResultKind,
-  CommandPalettePegStatus,
-  CommandPaletteStablecoinHealth,
-  CommandPaletteStablecoinLiveMetadata,
-  CommandPaletteResultDescriptor,
-} from "./command-palette-types";
+export type { CommandPaletteSection, CommandPaletteActionId, CommandPaletteActionIcon, CommandPaletteActionDefinition, CommandPaletteGroup, CommandPaletteSectionedItem, CommandPaletteHistoryItem, CommandPalettePegStatus, CommandPaletteStablecoinHealth, CommandPaletteStablecoinLiveMetadata, CommandPaletteResultDescriptor } from "./command-palette-types";
 export {
   fuzzyMatch,
   rankCommandPaletteResults,

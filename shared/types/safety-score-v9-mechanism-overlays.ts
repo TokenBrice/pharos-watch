@@ -142,6 +142,3 @@ export const SafetyScoreV9MechanismReviewOverlayFileSchema = z
 export type SafetyScoreV9MechanismReviewOverlay = z.infer<
   typeof SafetyScoreV9MechanismReviewOverlaySchema
 >;
-export type SafetyScoreV9MechanismReviewOverlayFile = z.infer<
-  typeof SafetyScoreV9MechanismReviewOverlayFileSchema
->;

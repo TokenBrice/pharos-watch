@@ -4,7 +4,7 @@ import { renderArchetype } from "./render-archetype";
 import { WrapperDiagram } from "./wrapper-diagram";
 import type { MechanismDiagramOptions } from "./types";
 
-export type { CoinOverride, MechanismDiagramOptions } from "./types";
+export type { MechanismDiagramOptions } from "./types";
 
 export function mechanismDiagramFor(
   archetype: MechanismArchetype,

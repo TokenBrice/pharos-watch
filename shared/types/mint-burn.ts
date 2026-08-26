@@ -117,7 +117,6 @@ const MintBurnAggregateChainSchema = z.object({
   chainId: z.string(),
   netFlow24hUsd: z.number().finite(),
 });
-export type MintBurnAggregateChain = z.infer<typeof MintBurnAggregateChainSchema>;
 
 export const MintBurnFlowsResponseSchema = z.object({
   gauge: MintBurnGaugeSchema,

@@ -21,12 +21,6 @@ export interface CostLineItem {
   note?: string;
 }
 
-export interface CostsFile {
-  /** UTC unix seconds of the last review. Surfaced in the Monthly costs card details. */
-  last_reviewed_at: number;
-  items: CostLineItem[];
-}
-
 /**
  * One donation row. Written by the funding-update skill or by hand.
  *
@@ -54,10 +48,4 @@ export interface Donation {
   amount_decimal: number;
   usd_at_receipt: number;
   price_note: string; // 'stablecoin-1-to-1' | 'coingecko-historical-YYYY-MM-DD' | 'manual-<source>'
-}
-
-export interface DonationsFile {
-  /** UTC unix seconds of the last run of the funding-update skill. */
-  last_updated_at: number;
-  donations: Donation[];
 }

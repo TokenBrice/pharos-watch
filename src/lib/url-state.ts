@@ -60,7 +60,7 @@ export type UrlStateSchema<T> = { [K in keyof T]: UrlStateField<T[K]> };
  * standalone `interface XFilters { ... }` next to its schema — though both
  * patterns are supported (the screener declares both for clarity).
  */
-export type InferUrlStateValues<S> = S extends UrlStateSchema<infer V> ? V : never;
+type InferUrlStateValues<S> = S extends UrlStateSchema<infer V> ? V : never;
 
 function decodeField<V>(
   params: URLSearchParams,

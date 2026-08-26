@@ -35,7 +35,6 @@ interface PrimaryPriceTrustInput {
 // the detection engine's peg-reference gate; re-exported below for existing
 // worker call sites.
 export { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
-export type { PegReferenceTrustInput } from "@shared/lib/peg-reference-trust";
 
 export type OffchainDepegConfirmerKey = "coingecko-confirm";
 

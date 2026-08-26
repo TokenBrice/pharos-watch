@@ -101,7 +101,6 @@ export const LegacyPublicSnapshotEnvelopeV1Schema = z
     liquidity: z.array(z.object({ stablecoinId: z.string().min(1) }).passthrough()).optional(),
   })
   .passthrough();
-export type LegacyPublicSnapshotEnvelopeV1 = z.infer<typeof LegacyPublicSnapshotEnvelopeV1Schema>;
 
 /** Reader/parser contract for both current v2 envelopes and immutable v1 rows. */
 export const PublicSnapshotEnvelopeSchema = z.union([

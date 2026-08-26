@@ -1,9 +1,4 @@
-export type {
-  PricingSourceCapabilities,
-  PricingSourceFreshnessKind,
-  PricingSourceRegistryEntry,
-  PricingSourceTrustTier,
-} from "./pricing-source-registry-types";
+export type { PricingSourceRegistryEntry } from "./pricing-source-registry-types";
 
 import type { PricingSourceRegistryEntry } from "./pricing-source-registry-types";
 import { PRICING_SOURCE_REGISTRY_AGGREGATORS } from "./pricing-source-registry-aggregators";

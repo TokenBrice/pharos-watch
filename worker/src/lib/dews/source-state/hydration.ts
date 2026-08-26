@@ -679,4 +679,4 @@ export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<numb
 }
 
 // Re-export the source-coverage type alias for the orchestrator.
-export type DewsSourceCoverage = DewsSourceState["sourceCoverage"];
+type DewsSourceCoverage = DewsSourceState["sourceCoverage"];

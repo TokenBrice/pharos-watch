@@ -50,7 +50,6 @@ const ApiRequestAttributionScopeSchema = z.object({
   countsWorkerLoad: z.boolean(),
   includesPagesProxyCacheHits: z.boolean(),
 });
-export type ApiRequestAttributionScope = z.output<typeof ApiRequestAttributionScopeSchema>;
 
 const ApiRequestAttributionKeyedPublicApiSummarySchema = z.object({
   keyedRequests: z.number(),

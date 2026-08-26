@@ -36,5 +36,5 @@ export const DefiLlamaCoinsPriceSchema = z.object({
     .optional(),
 });
 
-export type CoinGeckoSimplePriceResponse = z.infer<typeof CoinGeckoSimplePriceSchema>;
+type CoinGeckoSimplePriceResponse = z.infer<typeof CoinGeckoSimplePriceSchema>;
 export type DefiLlamaCoinsPriceResponse = z.infer<typeof DefiLlamaCoinsPriceSchema>;

@@ -39,6 +39,10 @@ export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
     "Generated artifact: the export name is emitted as text by generate-safety-score-v9-evaluation-build-manifest.ts, never imported.",
   "src/components/chart-primitives/data-table.tsx::ChartDataTable":
     "scripts/ci/check-table-primitives.ts matches the exported component name as a string, not through an import.",
+  "shared/lib/telegram-mini-app-contract.ts::TelegramDewsBand":
+    "The src/app Mini App type barrel re-exports this public typing surface from a root entrypoint that the static graph does not use as a consumer.",
+  "shared/lib/telegram-mini-app-contract.ts::TelegramSafetyMode":
+    "The src/app Mini App type barrel re-exports this public typing surface from a root entrypoint that the static graph does not use as a consumer.",
 };
 
 /** Unreferenced modules kept on purpose; deletion is a separate pass. */

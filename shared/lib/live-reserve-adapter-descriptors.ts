@@ -9,11 +9,7 @@ import {
 import { LIVE_RESERVE_PARAM_SCHEMAS } from "./live-reserve-adapter-param-schemas";
 
 export { LIVE_RESERVE_ADAPTER_STATUS_VALUES } from "../types/live-reserve-adapter-declarations";
-export type {
-  LiveReserveAdapterKey,
-  LiveReserveAdapterProvenance,
-  LiveReserveAdapterStatus,
-} from "../types/live-reserve-adapter-declarations";
+export type { LiveReserveAdapterKey, LiveReserveAdapterProvenance } from "../types/live-reserve-adapter-declarations";
 
 const ACTIVE_PROVENANCE = {
   status: "active",

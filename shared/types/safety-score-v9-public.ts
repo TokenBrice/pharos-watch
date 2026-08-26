@@ -45,23 +45,13 @@ import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-publ
 export {
   findSafetyScoreV9ParentAttributionIssues,
 } from "./safety-score-v9-public-attribution";
-export type {
-  SafetyScoreV9ParentAttributionIssue,
-} from "./safety-score-v9-public-attribution";
 
 export {
   SafetyScoreV9AccessPostureSchema,
   SafetyScoreV9PillarSchema,
   V9_BOUNDED_ATTRIBUTION_REASON_CODES,
 } from "./safety-score-v9-public-facts";
-export type {
-  SafetyScoreV9AccessPosture,
-  SafetyScoreV9Cap,
-  SafetyScoreV9EvidenceFreshness,
-  SafetyScoreV9NrReason,
-  SafetyScoreV9Pillar,
-  SafetyScoreV9PublicReason,
-} from "./safety-score-v9-public-facts";
+export type { SafetyScoreV9Cap, SafetyScoreV9EvidenceFreshness, SafetyScoreV9NrReason, SafetyScoreV9PublicReason } from "./safety-score-v9-public-facts";
 
 const SafetyScoreV9SerialDependencySchema = z
   .object({
@@ -185,7 +175,6 @@ const SafetyScoreV9DependencySummarySchema = z
       });
     }
   });
-export type SafetyScoreV9DependencySummary = z.infer<typeof SafetyScoreV9DependencySummarySchema>;
 
 export const SafetyScoreV9EvidenceSummarySchema = z
   .object({
@@ -194,7 +183,6 @@ export const SafetyScoreV9EvidenceSummarySchema = z
     reasons: SafetyScoreV9PublicReasonListSchema,
   })
   .strict();
-export type SafetyScoreV9EvidenceSummary = z.infer<typeof SafetyScoreV9EvidenceSummarySchema>;
 
 const SafetyScoreV9AggregationTraceSchema = z
   .object({
@@ -219,7 +207,6 @@ const SafetyScoreV9AggregationTraceSchema = z
       });
     }
   });
-export type SafetyScoreV9AggregationTrace = z.infer<typeof SafetyScoreV9AggregationTraceSchema>;
 
 const SafetyScoreV9DeploymentAdjustmentSchema = z
   .object({
@@ -262,7 +249,6 @@ const SafetyScoreV9DeploymentAdjustmentSchema = z
       });
     }
   });
-export type SafetyScoreV9DeploymentAdjustment = z.infer<typeof SafetyScoreV9DeploymentAdjustmentSchema>;
 
 const SafetyScoreV9UnresolvedDeploymentExposureSchema = z
   .object({
@@ -285,9 +271,6 @@ const SafetyScoreV9UnresolvedDeploymentExposureSchema = z
       });
     }
   });
-export type SafetyScoreV9UnresolvedDeploymentExposure = z.infer<
-  typeof SafetyScoreV9UnresolvedDeploymentExposureSchema
->;
 
 const SafetyScoreV9DeploymentRiskTraceSchema = z
   .object({
@@ -346,7 +329,6 @@ const SafetyScoreV9DeploymentRiskTraceSchema = z
       });
     }
   });
-export type SafetyScoreV9DeploymentRiskTrace = z.infer<typeof SafetyScoreV9DeploymentRiskTraceSchema>;
 
 const SafetyScoreV9AdverseAttributionItemSchema = z
   .object({
@@ -365,7 +347,6 @@ const SafetyScoreV9AdverseAttributionItemSchema = z
     responsibility: z.literal("measured-adverse"),
   })
   .strict();
-export type SafetyScoreV9AdverseAttributionItem = z.infer<typeof SafetyScoreV9AdverseAttributionItemSchema>;
 
 const SafetyScoreV9AdverseAttributionTraceSchema = z
   .object({
@@ -383,7 +364,6 @@ const SafetyScoreV9AdverseAttributionTraceSchema = z
       });
     }
   });
-export type SafetyScoreV9AdverseAttributionTrace = z.infer<typeof SafetyScoreV9AdverseAttributionTraceSchema>;
 
 const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
   .object({
@@ -423,9 +403,6 @@ const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
       });
     }
   });
-export type SafetyScoreV9BoundedUncertaintyAttributionItem = z.infer<
-  typeof SafetyScoreV9BoundedUncertaintyAttributionItemSchema
->;
 
 const SafetyScoreV9BoundedUncertaintyAttributionTraceSchema = z
   .object({
@@ -451,9 +428,6 @@ const SafetyScoreV9BoundedUncertaintyAttributionTraceSchema = z
       });
     }
   });
-export type SafetyScoreV9BoundedUncertaintyAttributionTrace = z.infer<
-  typeof SafetyScoreV9BoundedUncertaintyAttributionTraceSchema
->;
 
 const SafetyScoreV9EvidenceResponsibilityItemSchema = z
   .object({
@@ -479,9 +453,6 @@ const SafetyScoreV9EvidenceResponsibilityItemSchema = z
       });
     }
   });
-export type SafetyScoreV9EvidenceResponsibilityItem = z.infer<
-  typeof SafetyScoreV9EvidenceResponsibilityItemSchema
->;
 
 const SafetyScoreV9EvidenceResponsibilityFactSchema = z
   .object({
@@ -539,9 +510,6 @@ const SafetyScoreV9EvidenceResponsibilityTraceSchema = z
       });
     }
   });
-export type SafetyScoreV9EvidenceResponsibilityTrace = z.infer<
-  typeof SafetyScoreV9EvidenceResponsibilityTraceSchema
->;
 
 const SafetyScoreV9WrapperMissingFactClassSchema = z.union([
   V9WrapperLocalFactKeySchema,
@@ -657,7 +625,6 @@ const SafetyScoreV9WrapperParentLimitSchema = z
       });
     }
   });
-export type SafetyScoreV9WrapperParentLimit = z.infer<typeof SafetyScoreV9WrapperParentLimitSchema>;
 
 const SafetyScoreV9ScoreAdjustmentSchema = z
   .object({
@@ -898,7 +865,6 @@ const SafetyScoreV9ScoreTraceSchema =
       refineAdjustedScoreTrace(trace, ctx);
       refineBoundedUncertaintyTrace(trace, ctx);
     });
-export type SafetyScoreV9ScoreTrace = z.infer<typeof SafetyScoreV9ScoreTraceSchema>;
 
 const SafetyScoreV9PillarAdjustmentSchema = z
   .object({
@@ -1540,4 +1506,3 @@ export type SafetyScoreV9CurrentResponse = z.infer<typeof SafetyScoreV9CurrentRe
 // only v5 publications and component breakdowns on every V9 snapshot; see
 // agents/legacy-cleanup-wave3/gate-evidence.md (G4–G5).
 export const SafetyScoreV9ResponseSchema = SafetyScoreV9CurrentResponseSchema;
-export type SafetyScoreV9Response = SafetyScoreV9CurrentResponse;

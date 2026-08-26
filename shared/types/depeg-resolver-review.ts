@@ -30,7 +30,6 @@ export const DDRR_PUBLIC_WARNING =
 // DDRR and DDR checkpoints are semantically distinct domains (review vs.
 // assessment) but currently share the same 7-member tuple.
 export const DDRR_CHECKPOINT_VALUES = DDR_ASSESSMENT_CHECKPOINT_VALUES;
-export type DdrrCheckpoint = (typeof DDRR_CHECKPOINT_VALUES)[number];
 
 export const DDRR_SOURCE_EVENT_STATE_VALUES = [
   "active",
@@ -82,7 +81,6 @@ export const DDRR_MEDIAN_REVIEW_VALUES = ["median_late_by", "median_early_by", "
 export type DdrrMedianReview = (typeof DDRR_MEDIAN_REVIEW_VALUES)[number];
 
 export const DDRR_HORIZON_REVIEW_VALUES = ["hit", "miss", "pending", "unscored"] as const;
-export type DdrrHorizonReviewResult = (typeof DDRR_HORIZON_REVIEW_VALUES)[number];
 
 export const DDRR_COVERAGE_PREDICTION_STATE_VALUES = [
   "pending_lock",
@@ -124,7 +122,6 @@ export const DDRR_TERMINAL_EVIDENCE_PRECISION_VALUES = ["day", "month", "unknown
 export type DdrrTerminalEvidencePrecision = (typeof DDRR_TERMINAL_EVIDENCE_PRECISION_VALUES)[number];
 
 export const DdrrIqrRemainingSecSchema = z.tuple([z.number().nonnegative(), z.number().nonnegative()]);
-export type DdrrIqrRemainingSec = z.infer<typeof DdrrIqrRemainingSecSchema>;
 
 export const DdrrTerminalEvidenceIntervalSchema = z.object({
   start: z.number().int().nonnegative(),
@@ -240,7 +237,6 @@ export const DdrrFrozenPredictionReviewSchema = z.object({
   stratum: z.string().nullable(),
   factors: z.array(DdrFactorSchema),
 });
-export type DdrrFrozenPredictionReview = z.infer<typeof DdrrFrozenPredictionReviewSchema>;
 
 const DdrrPublicationCoreSchema = z.object({
   publicPredictionId: z.number().int().nonnegative(),
@@ -404,7 +400,6 @@ export const DdrrV2SummarySegmentSchema = z.object({
   predictionPolicyVersion: z.string().nullable(),
   metrics: DdrrV2SummaryMetricsSchema,
 });
-export type DdrrV2SummarySegment = z.infer<typeof DdrrV2SummarySegmentSchema>;
 
 /**
  * Public DDRR summary contract.
@@ -441,7 +436,6 @@ export const DdrrMetaSchema = z.object({
   publicRowsTruncated: z.boolean(),
   methodologyVersions: z.array(z.string()),
 });
-export type DdrrMeta = z.infer<typeof DdrrMetaSchema>;
 
 export const DdrrResponseSchema = z.object({
   _meta: DdrrMetaSchema,

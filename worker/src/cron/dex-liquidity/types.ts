@@ -359,7 +359,7 @@ export interface AerodromeLookups {
 }
 
 /** Result of GT pool crawl: new pools to merge into metrics + price observations */
-export interface GtCrawlResult {
+interface GtCrawlResult {
   /** New pools not found in existing sources, keyed by stablecoinId */
   newPools: Map<string, GtNewPool[]>;
   /** Price observations from fallback pools after native-source overlap guards. */

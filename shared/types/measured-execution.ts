@@ -69,7 +69,6 @@ const DexMeasuredExecutionTokenSchema = z.object({
   referencePriceUsd: z.number().finite().positive(),
   trackedAssetId: z.string().min(1).optional(),
 });
-export type DexMeasuredExecutionToken = z.infer<typeof DexMeasuredExecutionTokenSchema>;
 
 /**
  * Adapter-neutral description of one retained-pool execution direction. The

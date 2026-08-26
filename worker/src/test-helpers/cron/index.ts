@@ -8,13 +8,9 @@
  */
 
 export { mockRegistry } from "./mock-registry";
-export type { MockRegistryOptions, MockRegistryExports, MockRegistryStablecoin } from "./mock-registry";
 
 export { mockDbCache } from "./mock-db-cache";
-export type { MockDbCacheOptions, MockDbCacheExports } from "./mock-db-cache";
 
 export { mockCircuitBreaker, mockCircuitOutcomeRecord } from "./mock-circuit-breaker";
-export type { MockCircuitBreakerOptions, MockCircuitBreakerExports } from "./mock-circuit-breaker";
 
 export { mockFetchRetry } from "./mock-fetch-retry";
-export type { MockFetchRetryOptions } from "./mock-fetch-retry";

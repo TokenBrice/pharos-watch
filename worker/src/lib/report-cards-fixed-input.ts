@@ -42,12 +42,7 @@ export {
 
 const BlacklistStatusSchema = z.union([z.boolean(), z.literal("possible"), z.literal("inherited")]);
 
-export {
-  computeDexLiquidityPayloadFingerprint,
-  computeRedemptionPayloadFingerprint,
-  computeReportCardsRegistryFingerprint,
-  type FixedDexLiquidityRow,
-} from "@shared/lib/report-cards-fixed-input-identity";
+export { computeDexLiquidityPayloadFingerprint, computeRedemptionPayloadFingerprint, computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 
 const FixedInputPayloadFields = createFixedInputPayloadFields({
   publicationHealthSchema: V9PublicationInputHealthSchema.default({

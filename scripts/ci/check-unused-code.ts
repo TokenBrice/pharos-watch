@@ -25,6 +25,7 @@ interface Dependency {
 interface ModuleInfo {
   exports: Set<string>;
   typeExports: Set<string>;
+  localTypeUsage: Set<string>;
   declaredExports: Set<string>;
   declaredTypeExports: Set<string>;
   dependencies: Dependency[];
@@ -180,9 +181,9 @@ for (const file of files) {
   if (!isUnusedExportReportable(rel) || ambiguousUsage.has(file) || info.hasWildcardExports) continue;
 
   const usedNames = namedExportUsage.get(file) ?? new Set();
-  for (const name of info.exports) {
+  for (const name of new Set([...info.exports, ...info.typeExports])) {
     const exportKey = `${rel}::${name}`;
-    if (usedNames.has(name)) continue;
+    if (usedNames.has(name) || info.localTypeUsage.has(name)) continue;
     unusedExportKeys.add(exportKey);
     if (EXPORT_ALLOWLIST.has(exportKey)) continue;
     unusedExports.push({ file: rel, name });
@@ -303,6 +304,7 @@ function analyzeModule(file: string): ModuleInfo {
   const typeExports = new Set<string>();
   const declaredExports = new Set<string>();
   const declaredTypeExports = new Set<string>();
+  const localTypeUsage = new Set<string>();
   const dependencies: Dependency[] = [];
   let hasWildcardExports = false;
   let hasSideEffectsOnly = true;
@@ -323,6 +325,21 @@ function analyzeModule(file: string): ModuleInfo {
       const resolved = resolveModule(file, node.moduleSpecifier.text);
       if (resolved) {
         dependencies.push(...collectImportDependencies(node, resolved));
+      }
+    }
+
+    if (
+      ts.isImportTypeNode(node) &&
+      ts.isLiteralTypeNode(node.argument) &&
+      ts.isStringLiteral(node.argument.literal)
+    ) {
+      const resolved = resolveModule(file, node.argument.literal.text);
+      if (resolved) {
+        dependencies.push(
+          node.qualifier
+            ? { resolved, kind: "named", names: [getRightmostEntityName(node.qualifier)] }
+            : { resolved, kind: "namespace", names: [] },
+        );
       }
     }
 
@@ -381,7 +398,9 @@ function analyzeModule(file: string): ModuleInfo {
 
     if (hasExportModifier(node)) {
       collectExportedNames(node, exports);
+      collectExportedTypeNames(node, typeExports);
       collectExportedNames(node, declaredExports);
+      collectExportedTypeNames(node, declaredTypeExports);
     }
 
     if (
@@ -397,11 +416,20 @@ function analyzeModule(file: string): ModuleInfo {
     }
   });
 
+  // A type export used inside its defining module is an implementation detail,
+  // not a declaration-only public surface. Only unreferenced exported types
+  // should reach the unused-export gate.
+  visit(sourceFile, (node) => {
+    if (!ts.isIdentifier(node) || !typeExports.has(node.text) || isTypeExportDeclarationName(node)) return;
+    localTypeUsage.add(node.text);
+  });
+
   exports.delete("default");
   declaredExports.delete("default");
   return {
     exports,
     typeExports,
+    localTypeUsage,
     declaredExports,
     declaredTypeExports,
     dependencies,
@@ -471,6 +499,23 @@ function collectExportedNames(node: ts.Node, exports: Set<string>): void {
       collectBindingNames(declaration.name, exports);
     }
   }
+}
+
+function collectExportedTypeNames(node: ts.Node, typeExports: Set<string>): void {
+  if (ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)) {
+    if (node.name) typeExports.add(node.name.text);
+  }
+}
+
+function isTypeExportDeclarationName(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  if (ts.isTypeAliasDeclaration(parent) || ts.isInterfaceDeclaration(parent)) return parent.name === node;
+  if (ts.isImportSpecifier(parent) || ts.isExportSpecifier(parent)) return true;
+  return false;
+}
+
+function getRightmostEntityName(name: ts.EntityName): string {
+  return ts.isIdentifier(name) ? name.text : name.right.text;
 }
 
 function collectBindingNames(name: ts.BindingName, exports: Set<string>): void {
