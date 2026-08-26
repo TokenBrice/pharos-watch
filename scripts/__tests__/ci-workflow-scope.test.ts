@@ -28,7 +28,12 @@ describe("CI workflow scope", () => {
     expect(workflow).toContain('next-cache-save: "true"');
     expect(workflow).toContain('PHAROS_RELEASE_PR_TYPECHECKED: "1"');
     expect(workflow).toContain("npm run check:pages-release");
-    expect(workflow).toContain("npm run prebuild -- --build-lifecycle=compile-input,post-refresh");
+    const compileInputAt = workflow.indexOf("npm run prebuild -- --build-lifecycle=compile-input");
+    const refreshAt = workflow.indexOf("refresh-pages-release-data.ts");
+    const postRefreshAt = workflow.indexOf("npm run prebuild -- --build-lifecycle=post-refresh");
+    expect(compileInputAt).toBeGreaterThan(-1);
+    expect(refreshAt).toBeGreaterThan(compileInputAt);
+    expect(postRefreshAt).toBeGreaterThan(refreshAt);
     expect(workflow).not.toContain("rm -rf .next");
   });
 

@@ -1,5 +1,7 @@
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./sitemap-source-paths.mts";
-import { PUBLIC_DOC_SOURCE_FILES } from "../../shared/lib/public-doc-manifest.mts";
+import { createRequire } from "node:module";
+
+const PUBLIC_DOC_SOURCE_FILES = createRequire(import.meta.url)("../../shared/lib/public-doc-manifest.json");
 
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
@@ -49,7 +51,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     sharedExcludedPaths: [
       "shared/lib/pharosville-api-contract.ts",
       "shared/lib/public-docs.ts",
-      "shared/lib/public-doc-manifest.mts",
+      "shared/lib/public-doc-manifest.json",
       "shared/types/pharosville.ts",
     ],
     sharedExcludedPrefixes: ["shared/data/funding/", "shared/lib/selector/"],
@@ -67,7 +69,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     sharedExcludedPaths: [
       "shared/lib/pharosville-api-contract.ts",
       "shared/lib/public-docs.ts",
-      "shared/lib/public-doc-manifest.mts",
+      "shared/lib/public-doc-manifest.json",
       "shared/types/pharosville.ts",
     ],
     sharedExcludedPrefixes: ["shared/data/funding/", "shared/lib/selector/"],
@@ -154,7 +156,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "git-history-derived",
     script: "scripts/maintenance/generate-docs-metadata.ts",
-    sourcePaths: [...PUBLIC_DOC_SOURCE_PATHS, "shared/lib/public-doc-manifest.mts", "shared/lib/public-docs.ts"],
+    sourcePaths: [...PUBLIC_DOC_SOURCE_PATHS, "shared/lib/public-doc-manifest.json", "shared/lib/public-docs.ts"],
   }),
   generatedArtifact({
     id: "depeg-event-search-data",
