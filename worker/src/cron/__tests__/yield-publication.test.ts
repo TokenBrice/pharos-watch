@@ -733,6 +733,46 @@ describe("publishYieldCoordinatorResults", () => {
 });
 
 describe("pruneYieldTables", () => {
+  it("surfaces a missing mandatory daily-history table during materialization", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.exec("DROP TABLE yield_history_daily");
+      await expect(
+        materializeYieldHistoryDaily(db, Math.floor(FIXED_NOW.getTime() / 1000)),
+      ).rejects.toThrow("no such table: yield_history_daily");
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("surfaces a missing mandatory decision column during cleanup", async () => {
+    const db = mockD1([
+      {
+        match: "ranked_linked_generations",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such column: retention_reason"),
+      },
+    ]);
+
+    await expect(cleanupFalseLinkedVariantSourceSwitches(db)).rejects.toThrow(
+      "D1_ERROR: no such column: retention_reason",
+    );
+  });
+
+  it("surfaces a missing mandatory daily-history table during retention", async () => {
+    const db = mockD1([
+      {
+        match: "pharos:yield-sync:daily-history-retention-delete",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such table: yield_history_daily"),
+      },
+    ]);
+
+    await expect(
+      pruneYieldTables(db, Math.floor(FIXED_NOW.getTime() / 1000), { allowDestructiveCleanup: false }),
+    ).rejects.toThrow("D1_ERROR: no such table: yield_history_daily");
+  });
+
   it("materializes the last published source point for the daily history tier", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
@@ -826,42 +866,17 @@ describe("pruneYieldTables", () => {
   });
 
   it("deletes old null rollout audit rows while retaining inferable trend rows", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const { sqlite, db } = createLatestSchemaSqlite();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const oldSec = startSec - 31 * 24 * 60 * 60;
     const recentSec = startSec - 5 * 24 * 60 * 60;
     try {
-      sqlite.exec(`
-        CREATE TABLE yield_data (
-          stablecoin_id TEXT NOT NULL,
-          updated_at INTEGER NOT NULL
-        );
-        CREATE TABLE yield_history (
-          stablecoin_id TEXT NOT NULL,
-          source_key TEXT,
-          recorded_at INTEGER NOT NULL
-        );
-        CREATE TABLE yield_source_decisions (
-          generation_id TEXT NOT NULL,
-          stablecoin_id TEXT NOT NULL,
-          selected_confidence_tier TEXT NOT NULL,
-          source_switch INTEGER NOT NULL DEFAULT 0,
-          alternatives_json TEXT NOT NULL,
-          created_at INTEGER NOT NULL,
-          retention_reason TEXT
-        );
-        CREATE TABLE yield_source_decision_alternatives (
-          generation_id TEXT NOT NULL,
-          stablecoin_id TEXT NOT NULL,
-          recorded_at INTEGER NOT NULL
-        );
-      `);
       const insertDecision = sqlite.prepare(
         `INSERT INTO yield_source_decisions (
-          generation_id, stablecoin_id, selected_confidence_tier, source_switch,
+          generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+          selected_data_source, selected_apy_30d, selected_reason, source_switch,
           alternatives_json, created_at, retention_reason
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, 'source', ?, 'test', 4.2, 'test', ?, ?, ?, ?)`,
       );
       insertDecision.run("g-null-audit", "coin-a", "curated", 0, "[]", oldSec, null);
       insertDecision.run("g-null-switch", "coin-b", "curated", 1, "[]", oldSec, null);
@@ -888,13 +903,14 @@ describe("pruneYieldTables", () => {
       insertDecision.run("g-recent-null", "coin-g", "curated", 0, "[]", recentSec, null);
       const insertAlternative = sqlite.prepare(
         `INSERT INTO yield_source_decision_alternatives (
-          generation_id, stablecoin_id, recorded_at
-        ) VALUES (?, ?, ?)`,
+          generation_id, stablecoin_id, alt_source_key, alt_yield_source,
+          rejection_reason_code, recorded_at
+        ) VALUES (?, ?, 'alt', 'test', 'lower-confidence', ?)`,
       );
       insertAlternative.run("g-null-audit", "coin-a", oldSec);
       insertAlternative.run("g-null-switch", "coin-b", oldSec);
 
-      await pruneYieldTables(createSqliteD1(sqlite), startSec);
+      await pruneYieldTables(db, startSec);
 
       const generations = sqlite
         .prepare("SELECT generation_id FROM yield_source_decisions ORDER BY generation_id ASC")
@@ -963,7 +979,7 @@ describe("yield publication migration compatibility", () => {
     }
   });
 
-  it("retries atomic publication with legacy statements when new yield schema is absent", async () => {
+  it("surfaces a missing mandatory atomic-publication column", async () => {
     const db = mockD1([
       {
         match: "pys_at_publish, safety_at_publish",
@@ -972,24 +988,17 @@ describe("yield publication migration compatibility", () => {
       },
     ]);
 
-    const result = await publishYieldRowsAtomically(db, {
-      rankingsPayload: { stablecoins: [] },
-      startSec: 1_774_526_400,
-      generationId: "yield-1774526400",
-      yieldDataRows: [],
-      historyRows: [],
-      decisionRows: [],
-      decisionAlternativeRows: [],
-    });
-
-    expect(result).toEqual({ written: true, skippedBecauseNewer: false });
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("pys_at_publish"))).toBe(true);
-    expect(
-      history.some(
-        (entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history") && !entry.sql.includes("pys_at_publish"),
-      ),
-    ).toBe(true);
+    await expect(
+      publishYieldRowsAtomically(db, {
+        rankingsPayload: { stablecoins: [] },
+        startSec: 1_774_526_400,
+        generationId: "yield-1774526400",
+        yieldDataRows: [],
+        historyRows: [],
+        decisionRows: [],
+        decisionAlternativeRows: [],
+      }),
+    ).rejects.toThrow("D1_ERROR: table yield_history has no column named pys_at_publish");
   });
 
   it("keeps old-worker yield_data and yield_history inserts valid after the additive migration", async () => {

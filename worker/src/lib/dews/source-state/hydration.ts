@@ -11,7 +11,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { decodeJsonString } from "../../cache-json";
 import type { BlacklistPersistedRow } from "../../blacklist/shared";
-import { isMissingTableError } from "../../db";
 import { toErrorMessage } from "../../error-utils";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
 import {
@@ -38,7 +37,6 @@ import {
   normalizeYieldRankChangeAttribution,
   normalizeYieldSourceRisk,
 } from "./legacy-bridge";
-import { resolveBootstrapAllowed } from "./fallback";
 import {
   loadPreviousStressSignalCurrentRows,
   type PreviousStressSignalCurrentRow,
@@ -77,9 +75,7 @@ async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<Prev
   return loadPreviousStressSignalCurrentRows(ctx.db, ctx.nowSec, {
     staleAfterSec: DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC,
     onLatestReadError: (error) => {
-      if (!isMissingTableError(error)) {
-        ctx.registerSourceFailure("stress-signals-latest", error);
-      }
+      ctx.registerSourceFailure("stress-signals-latest", error);
     },
   });
 }
@@ -256,9 +252,7 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
     }
     succeeded = true;
   } catch (error) {
-    ctx.registerSourceFailure("dex-prices", error, {
-      bootstrapAllowed: resolveBootstrapAllowed("dex-prices", error, ctx.bootstrapPending),
-    });
+    ctx.registerSourceFailure("dex-prices", error);
   }
   return {
     dexPriceMap,
@@ -308,9 +302,7 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
       }
     }
   } catch (error) {
-    ctx.registerSourceFailure("dex-liquidity-history", error, {
-      bootstrapAllowed: resolveBootstrapAllowed("dex-liquidity-history", error, ctx.bootstrapPending),
-    });
+    ctx.registerSourceFailure("dex-liquidity-history", error);
   }
   return { liqHist7dMap, liqHistRowsRead };
 }
@@ -377,9 +369,7 @@ export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<Bla
       blacklistCounts.set(stablecoinId, counts);
     }
   } catch (error) {
-    ctx.registerSourceFailure("blacklist-events", error, {
-      bootstrapAllowed: resolveBootstrapAllowed("blacklist-events", error, ctx.bootstrapPending),
-    });
+    ctx.registerSourceFailure("blacklist-events", error);
   }
   return { blacklistCounts, rowsRead: blacklistRowsRead };
 }
@@ -539,9 +529,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       );
     }
   } catch (error) {
-    ctx.registerSourceFailure("mint-burn-hourly", error, {
-      bootstrapAllowed: resolveBootstrapAllowed("mint-burn-hourly", error, ctx.bootstrapPending),
-    });
+    ctx.registerSourceFailure("mint-burn-hourly", error);
   }
   return {
     mintBurnMap,
@@ -599,9 +587,7 @@ export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<Yield
       yieldWarnings.set(row.stablecoin_id, decoded.payload);
     }
   } catch (error) {
-    ctx.registerSourceFailure("yield-data", error, {
-      bootstrapAllowed: resolveBootstrapAllowed("yield-data", error, ctx.bootstrapPending),
-    });
+    ctx.registerSourceFailure("yield-data", error);
   }
   return { yieldWarnings, rowsRead: yieldWarningRowsRead };
 }
@@ -653,9 +639,7 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
       });
     }
   } catch (error) {
-    ctx.registerSourceFailure("yield-rankings", error, {
-      bootstrapAllowed: resolveBootstrapAllowed("yield-rankings", error, ctx.bootstrapPending),
-    });
+    ctx.registerSourceFailure("yield-rankings", error);
   }
   return { yieldSourceRisk, yieldRankChangeAttribution };
 }
@@ -670,9 +654,7 @@ export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<numb
       .first<{ score: number }>();
     return psiRow ? psiRow.score : null;
   } catch (error) {
-    ctx.registerSourceFailure("stability-index-samples", error, {
-      bootstrapAllowed: resolveBootstrapAllowed("stability-index-samples", error, ctx.bootstrapPending),
-    });
+    ctx.registerSourceFailure("stability-index-samples", error);
     return null;
   }
 }

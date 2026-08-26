@@ -78,6 +78,21 @@ const LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW = {
 };
 
 describe("loadRedemptionBackstopSnapshot", () => {
+  it("surfaces a missing mandatory run-manifest table", async () => {
+    const db = mockD1Strict([
+      {
+        ...completedRunsQuery([]),
+        throwError: new Error("D1_ERROR: no such table: redemption_backstop_runs"),
+      },
+    ]);
+
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toMatchObject({
+      message: "Failed to load redemption backstop snapshot",
+      cause: expect.objectContaining({ message: "D1_ERROR: no such table: redemption_backstop_runs" }),
+    });
+    assertAllD1MatchesUsed(db);
+  });
+
   it("prefers the latest completed run when loading a snapshot", async () => {
     const db = mockD1Strict([
       completedRunsQuery([completedRunRow({ run_id: "run-new", methodology_version: "1.1" })]),

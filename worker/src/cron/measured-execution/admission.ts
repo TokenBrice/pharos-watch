@@ -730,7 +730,7 @@ export function resolveMeasuredExecutionCronStatus(input: {
   attemptedFailureCount: number;
   deferredCount: number;
   admissionRotationCycles: number | null;
-  cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed";
+  cursorWriteStatus: "not-needed" | "written" | "write-failed";
 }): "ok" | "degraded" {
   return (
     input.attemptedFailureCount > 0 ||

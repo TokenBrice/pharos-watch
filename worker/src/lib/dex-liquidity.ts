@@ -9,7 +9,6 @@ import {
 import { classifyLiquidityEvidence } from "@shared/lib/dex-liquidity-evidence";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { isMissingTableError } from "./db";
 import { parseJsonObject } from "./json-parse";
 
 interface DexLiquidityRow {
@@ -139,8 +138,7 @@ function parseExitRouteDetails(
 }
 
 async function loadDexLiquidityRows(db: D1Database): Promise<DexLiquidityRow[]> {
-  try {
-    const rows = await db
+  const rows = await db
       .prepare(
         `SELECT dl.stablecoin_id, dl.liquidity_score, dl.concentration_hhi,
                 dl.pool_count, dl.chain_count, dl.total_tvl_usd, dl.effective_tvl_usd,
@@ -154,24 +152,7 @@ async function loadDexLiquidityRows(db: D1Database): Promise<DexLiquidityRow[]> 
          WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER.replaceAll("publication_generation_id", "dl.publication_generation_id")}`,
       )
       .all<DexLiquidityRow>();
-    return rows.results ?? [];
-  } catch (error) {
-    if (!isMissingTableError(error)) throw error;
-    const rows = await db
-      .prepare(
-        `SELECT dl.stablecoin_id, dl.liquidity_score, dl.concentration_hhi,
-                dl.pool_count, dl.chain_count, dl.total_tvl_usd, dl.effective_tvl_usd,
-                dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
-                dl.organic_measured_tvl_usd, dl.score_components_json, dl.methodology_version, dl.updated_at,
-                NULL AS deployment_chain,
-                NULL AS deployment_contract_address,
-                NULL AS deployment_outcome
-         FROM dex_liquidity dl
-         WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER.replaceAll("publication_generation_id", "dl.publication_generation_id")}`,
-      )
-      .all<DexLiquidityRow>();
-    return rows.results ?? [];
-  }
+  return rows.results ?? [];
 }
 
 export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiquidityLoadResult> {

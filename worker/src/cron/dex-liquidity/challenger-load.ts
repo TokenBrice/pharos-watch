@@ -1,6 +1,4 @@
-import { logWorkerEventArgs } from "../../lib/structured-log";
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
-import { isMissingTableError } from "../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { recordRuntimeFallbackUsage } from "../../lib/runtime-fallback-telemetry";
 import type {
@@ -8,7 +6,6 @@ import type {
   DexPriceChallengerLoadDiagnostics,
   DexPriceChallengerLoadResult,
 } from "./challenger-types";
-import { toErrorMessage } from "../../lib/error-utils";
 
 export type {
   DexPriceChallengerLoadRow,
@@ -50,12 +47,8 @@ async function hasLegacyCandidatesWithoutSnapshots(
   ];
 
   for (const sql of sources) {
-    try {
-      const rows = await db.prepare(sql).bind(minUpdatedAt).all<{ stablecoin_id: string }>();
-      if ((rows.results ?? []).length > 0) return true;
-    } catch (err) {
-      if (!isMissingTableError(err)) return true;
-    }
+    const rows = await db.prepare(sql).bind(minUpdatedAt).all<{ stablecoin_id: string }>();
+    if ((rows.results ?? []).length > 0) return true;
   }
 
   return false;
@@ -72,30 +65,6 @@ export async function loadPublishedDexPoolChallengers(
     legacy ??= await loadLegacyDexPoolChallengers(db, minPoolTvlUsd, maxAgeSec, nowSec);
     return legacy;
   };
-  const legacyFallbackResult = (loadedLegacy: LegacyDexPoolChallengerLoadResult): DexPriceChallengerLoadResult => ({
-    challengersByStablecoin: loadedLegacy.challengersByStablecoin,
-    diagnostics: {
-      mode: loadedLegacy.challengersByStablecoin.size > 0 ? "legacy" : "absent",
-      missingTables: true,
-      emptyPublishedCoins: [],
-      incompletePublishedCoins: [],
-      legacyFallbackCoins: [...new Set([...loadedLegacy.topPoolCoins, ...loadedLegacy.fallbackCoins])],
-      staleSnapshotCoins: [],
-    },
-  });
-
-  const legacyQueryFallbackResult = async (
-    reason: "snapshot-query-failed" | "challenger-query-failed",
-  ): Promise<DexPriceChallengerLoadResult> => {
-    const loadedLegacy = await loadLegacy();
-    recordRuntimeFallbackUsage("dex-challenger-legacy", {
-      reason,
-      topPoolCoins: loadedLegacy.topPoolCoins.size,
-      fallbackCoins: loadedLegacy.fallbackCoins.size,
-    });
-    return legacyFallbackResult(loadedLegacy);
-  };
-
   const challengersByStablecoin = new Map<string, DexPriceChallengerLoadRow[]>();
   const emptyPublishedCoins: string[] = [];
   const incompletePublishedCoins: string[] = [];
@@ -111,28 +80,20 @@ export async function loadPublishedDexPoolChallengers(
     has_rows: number;
     source_coverage_complete: number;
   }> = [];
-  try {
-    const snapshots = await db
-      .prepare(
-        `SELECT stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete
+  const snapshots = await db
+    .prepare(
+      `SELECT stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete
          FROM dex_price_challenger_snapshots
          WHERE stablecoin_id != '__global__'`,
-      )
-      .all<{
-        stablecoin_id: string;
-        snapshot_at: number;
-        published_at: number;
-        has_rows: number;
-        source_coverage_complete: number;
-      }>();
-    snapshotRows = snapshots.results ?? [];
-  } catch (err) {
-    const msg = toErrorMessage(err);
-    if (!isMissingTableError(err)) {
-      logWorkerEventArgs("handler", "error", "[challenger-persistence] Unexpected error loading challenger snapshots:", msg);
-    }
-    return legacyQueryFallbackResult("snapshot-query-failed");
-  }
+    )
+    .all<{
+      stablecoin_id: string;
+      snapshot_at: number;
+      published_at: number;
+      has_rows: number;
+      source_coverage_complete: number;
+    }>();
+  snapshotRows = snapshots.results ?? [];
 
   const snapshotByCoin = new Map(snapshotRows.map((row) => [row.stablecoin_id, row]));
 
@@ -146,31 +107,23 @@ export async function loadPublishedDexPoolChallengers(
     price_usd: number;
     tvl_usd: number;
   }> = [];
-  try {
-    const challengers = await db
-      .prepare(
-        `SELECT stablecoin_id, snapshot_at, pool_id, chain, protocol, source_family, price_usd, tvl_usd
+  const challengers = await db
+    .prepare(
+      `SELECT stablecoin_id, snapshot_at, pool_id, chain, protocol, source_family, price_usd, tvl_usd
          FROM dex_price_challengers
          WHERE stablecoin_id != '__global__'`,
-      )
-      .all<{
-        stablecoin_id: string;
-        snapshot_at: number;
-        pool_id: string;
-        chain: string;
-        protocol: string;
-        source_family: string;
-        price_usd: number;
-        tvl_usd: number;
-      }>();
-    challengerRows = challengers.results ?? [];
-  } catch (err) {
-    const msg = toErrorMessage(err);
-    if (!isMissingTableError(err)) {
-      logWorkerEventArgs("handler", "error", "[challenger-persistence] Unexpected error loading challenger rows:", msg);
-    }
-    return legacyQueryFallbackResult("challenger-query-failed");
-  }
+    )
+    .all<{
+      stablecoin_id: string;
+      snapshot_at: number;
+      pool_id: string;
+      chain: string;
+      protocol: string;
+      source_family: string;
+      price_usd: number;
+      tvl_usd: number;
+    }>();
+  challengerRows = challengers.results ?? [];
 
   const rowsByCoinAndSnapshot = new Map<string, DexPriceChallengerLoadRow[]>();
   for (const row of challengerRows) {

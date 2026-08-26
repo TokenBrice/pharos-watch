@@ -380,8 +380,6 @@ function incrementSkipDimension(
  * convert to pool entries with confidence decay and defaults,
  * and merge into existing metrics.
  *
- * If the staging table doesn't exist yet (pre-migration), catches the D1 error
- * and returns zero counts gracefully.
  */
 export async function mergeStagedPools(
   db: D1Database,
@@ -402,37 +400,22 @@ export async function mergeStagedPools(
   priceObservations: Map<string, DexPriceObs[]>;
 }> {
   registerRetainedPoolExactStablecoins(knownPoolIndex, metrics);
-  let rows: Array<StagedPoolRow | undefined>;
-  try {
-    const result = await db
-      .prepare(
-        `SELECT pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol,
+  const result = await db
+    .prepare(
+      `SELECT pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol,
                        tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio, is_stable,
                        base_token, quote_token, quote_symbol, price_usd, locked_liq_pct,
                        raw_json, discovered_at, refreshed_at
                 FROM dex_pool_staging WHERE refreshed_at >= ?`,
-      )
-      // Fetch a 60s grace beyond the 24h confidence horizon so rows that have
-      // just crossed it surface as stagedPoolConfidence === 0 and are recorded
-      // under the stale_confidence_zero skip reason instead of silently never
-      // appearing. Without the grace the read window and the zero gate align
-      // exactly and the guard below is unreachable.
-      .bind(nowSec - DAY_SECONDS - 60)
-      .all<StagedPoolRow>();
-    rows = result.results ?? [];
-  } catch (err) {
-    logWorkerEventArgs("handler", "warn", "[dex-liquidity] staging table read failed (pre-migration?):", err);
-    return {
-      mergedCount: 0,
-      skippedCount: 0,
-      skippedByExactIdentityCount: 0,
-      skippedByUniqueDerivedIdentityCount: 0,
-      skippedByOptionalWildcardIdentityCount: 0,
-      skippedByAuthoritativeProtocolCount: 0,
-      skipDimensions: [],
-      priceObservations: new Map(),
-    };
-  }
+    )
+    // Fetch a 60s grace beyond the 24h confidence horizon so rows that have
+    // just crossed it surface as stagedPoolConfidence === 0 and are recorded
+    // under the stale_confidence_zero skip reason instead of silently never
+    // appearing. Without the grace the read window and the zero gate align
+    // exactly and the guard below is unreachable.
+    .bind(nowSec - DAY_SECONDS - 60)
+    .all<StagedPoolRow>();
+  const rows: Array<StagedPoolRow | undefined> = result.results ?? [];
 
   const cgPoolMap = new Map<string, CgNewPool[]>();
   const gtPoolMap = new Map<string, GtNewPool[]>();

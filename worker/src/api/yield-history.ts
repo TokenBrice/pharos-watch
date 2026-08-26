@@ -7,7 +7,6 @@ import {
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
-import { isMissingColumnError, isMissingTableError } from "../lib/db";
 import { buildOnChainSourceKey, isOnChainBootstrapYieldSeed, parseYieldWarningSignals } from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -256,63 +255,34 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
                 )
            ) ORDER BY recorded_at ASC`;
 
-    let result: D1Result<YieldHistoryRow>;
-    try {
-      result =
-        mode === "source"
-          ? await db
-              .prepare(sql)
-              .bind(
-                parsed.stablecoinId,
-                parsed.cutoff,
-                rawCutoff,
-                sourceKey,
-                parsed.stablecoinId,
-                parsed.cutoff,
-                publishedCutoff,
-                sourceKey,
-                rawCutoff,
-              )
-              .all<YieldHistoryRow>()
-          : await db
-              .prepare(sql)
-              .bind(
-                parsed.stablecoinId,
-                parsed.cutoff,
-                rawCutoff,
-                parsed.stablecoinId,
-                parsed.cutoff,
-                publishedCutoff,
-                rawCutoff,
-              )
-              .all<YieldHistoryRow>();
-    } catch (error) {
-      if (!isMissingColumnError(error) && !isMissingTableError(error)) throw error;
-      const legacySql =
-        mode === "source"
-          ? `SELECT /* pharos:yield-history:source-window:legacy-schema */
-         recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, NULL AS pys_at_publish, NULL AS safety_at_publish, NULL AS variance_at_publish, NULL AS pys_inputs_at_publish
-       FROM yield_history
-       WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND source_key = ?
-       ${publicationFilter}
-       ORDER BY recorded_at ASC`
-          : `SELECT /* pharos:yield-history:best-window:legacy-schema */
-         recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, NULL AS pys_at_publish, NULL AS safety_at_publish, NULL AS variance_at_publish, NULL AS pys_inputs_at_publish
-       FROM yield_history
-       WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND is_best = 1
-       ${publicationFilter}
-       ORDER BY recorded_at ASC`;
-      result =
-        mode === "source"
-          ? await db
-              .prepare(legacySql)
-              .bind(parsed.stablecoinId, parsed.cutoff, publishedCutoff, sourceKey)
-              .all<YieldHistoryRow>()
-          : await db
-              .prepare(legacySql)
-              .bind(parsed.stablecoinId, parsed.cutoff, publishedCutoff)
-              .all<YieldHistoryRow>();
-    }
+    const result =
+      mode === "source"
+        ? await db
+            .prepare(sql)
+            .bind(
+              parsed.stablecoinId,
+              parsed.cutoff,
+              rawCutoff,
+              sourceKey,
+              parsed.stablecoinId,
+              parsed.cutoff,
+              publishedCutoff,
+              sourceKey,
+              rawCutoff,
+            )
+            .all<YieldHistoryRow>()
+        : await db
+            .prepare(sql)
+            .bind(
+              parsed.stablecoinId,
+              parsed.cutoff,
+              rawCutoff,
+              parsed.stablecoinId,
+              parsed.cutoff,
+              publishedCutoff,
+              rawCutoff,
+            )
+            .all<YieldHistoryRow>();
 
     let previousSourceKey: string | null = null;
     const history = (result.results ?? [])

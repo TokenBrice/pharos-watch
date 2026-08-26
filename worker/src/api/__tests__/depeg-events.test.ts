@@ -388,6 +388,9 @@ describe("handleDepegEvents", () => {
           },
         ],
       },
+      { match: "pharos:depeg-events:dex-availability", rows: [] },
+      { match: "pharos:depeg-events:pool-availability", rows: [] },
+      { match: "pharos:depeg-events:threshold-crossing-count", rows: [], first: { total: 0 } },
     ]) as MockD1Database;
 
     const res = await handleDepegEvents(

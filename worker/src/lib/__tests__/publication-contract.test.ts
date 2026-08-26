@@ -66,6 +66,25 @@ function mockPublicationD1(tables: MockTableConfig[] = []): MockD1Database {
 }
 
 describe("loadPublicationHealth", () => {
+  it("reports a missing mandatory PSI fallback table", async () => {
+    const db = mockPublicationD1([
+      {
+        match: "FROM stability_index_samples",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such table: stability_index_samples"),
+      },
+    ]);
+
+    const health = await loadPublicationHealth(db, NOW);
+
+    expect(health.surfaces.psi).toBeUndefined();
+    expect(health.failedSurfaces).toContainEqual({
+      surface: "psi",
+      code: "publication_surface_table_missing",
+      message: "Publication surface storage is not available in this environment.",
+    });
+  });
+
   it("maps existing DEX and yield publication ledgers into shared surface health", async () => {
     const db = mockPublicationD1([
       {
@@ -366,7 +385,7 @@ describe("loadPublicationHealth", () => {
     ]);
   });
 
-  it("falls back to the canonical stablecoins cache when the generic surface table is absent", async () => {
+  it("reports a missing mandatory generic publication table", async () => {
     const updatedAt = NOW - 180;
     const db = mockPublicationD1([
       {
@@ -393,22 +412,15 @@ describe("loadPublicationHealth", () => {
 
     const health = await loadPublicationHealth(db, NOW);
 
-    expect(health.surfaces["dex-liquidity"]).toBeDefined();
-    expect(health.surfaces["yield-rankings"]).toBeDefined();
-    expect(health.surfaces.stablecoins).toMatchObject({
-      sourceOfTruth: "cache[stablecoins]",
-      lastFailureReason: null,
-      dependencyWatermarks: {
-        stablecoinsCache: updatedAt,
-        responseReadyCache: updatedAt,
-      },
-      lastPublishedGeneration: {
-        generationId: `stablecoins-cache:${updatedAt}`,
-        state: "published",
-        publishedRows: 2,
-      },
-    });
-    expect(health.failedSurfaces).toBeUndefined();
+    expect(health.surfaces.stablecoins).toBeUndefined();
+    expect(health.failedSurfaces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surface: "stablecoins",
+          code: "publication_surface_table_missing",
+        }),
+      ]),
+    );
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM surface_publication_generations"))).toBe(true);
   });
 

@@ -5,7 +5,6 @@ import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9-consumer
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
 import { evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { isMissingColumnError, isMissingTableError } from "./db";
 import { toErrorMessage } from "./error-utils";
 import { throwIfAborted } from "./abort";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
@@ -72,6 +71,11 @@ interface DexPublishedGenerationRow {
 interface DexGlobalRow {
   current_rows: number | null;
   global_rows: number | null;
+}
+
+interface BlacklistNullIdentitySummaryRow {
+  event_rows: number | null;
+  balance_rows: number | null;
 }
 
 interface PsiLatestRow {
@@ -143,10 +147,7 @@ function skippedResult(reason: string, metadata?: Record<string, unknown>) {
 }
 
 function unavailableResult(error: unknown) {
-  const reason = isMissingTableError(error) || isMissingColumnError(error)
-    ? "canary source unavailable; migration/table not present"
-    : "canary source unavailable";
-  return skippedResult(reason, { error: boundedText(toErrorMessage(error)) });
+  return errorResult("canary source unavailable", { error: boundedText(toErrorMessage(error)) });
 }
 
 function isFiniteScore(value: unknown): value is number {
@@ -331,6 +332,41 @@ async function checkDexGlobalRow(db: D1Database) {
   }
 }
 
+async function checkBlacklistNullIdentity(db: D1Database) {
+  try {
+    const row = (await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `/* blacklist-null-identity-canary */
+           SELECT
+             (SELECT COUNT(*)
+                FROM blacklist_events
+               WHERE config_key IS NULL AND contract_address IS NULL) AS event_rows,
+             (SELECT COUNT(*)
+                FROM blacklist_current_balances
+               WHERE config_key IS NULL AND contract_address IS NULL) AS balance_rows`,
+        )
+        .first<BlacklistNullIdentitySummaryRow>(),
+    )) ?? { event_rows: 0, balance_rows: 0 };
+    const eventRows = Number(row.event_rows ?? 0);
+    const balanceRows = Number(row.balance_rows ?? 0);
+    const metadata = {
+      eventRows,
+      balanceRows,
+      totalRows: eventRows + balanceRows,
+    };
+    if (metadata.totalRows > 0) {
+      return errorResult(
+        `blacklist identity invariant failed: ${eventRows} blacklist_events and ${balanceRows} blacklist_current_balances rows have null config_key and contract_address`,
+        metadata,
+      );
+    }
+    return okResult(metadata);
+  } catch (error) {
+    return unavailableResult(error);
+  }
+}
+
 async function checkPsiLatestSample(db: D1Database, observedAt: number) {
   try {
     const row = await runWithOverloadRetry(() =>
@@ -505,6 +541,12 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     label: "DEX liquidity global row",
     description: "The published DEX current table has exactly one __global__ aggregate row when data exists.",
     run: checkDexGlobalRow,
+  },
+  {
+    checkId: "blacklist-null-identity",
+    label: "Blacklist identity completeness",
+    description: "No blacklist event or current-balance row is missing both contract/config identity fields.",
+    run: checkBlacklistNullIdentity,
   },
   {
     checkId: "stablecoins-cache-active-count",

@@ -102,17 +102,14 @@ describe("handleYieldHistory", () => {
     expect(body.methodology).toHaveProperty("version");
   });
 
-  it("falls back to legacy yield_history schema when publish snapshot columns are absent", async () => {
+  it("surfaces a missing mandatory yield-history snapshot column", async () => {
     const db = mockD1([
       { match: "best-window-tiered */", rows: [], throwError: new Error("D1_ERROR: no such column: pys_at_publish") },
-      { match: "legacy-schema", rows: [row] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
-    const body = (await readJsonResponse(res, 200)) as { history: Array<Record<string, unknown>> };
-
-    expect(body.history).toHaveLength(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-schema"))).toBe(true);
+    await expect(
+      handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether")),
+    ).rejects.toThrow("D1_ERROR: no such column: pys_at_publish");
   });
 
   it("parses a production-shaped v7.48 old history payload through the schema and handler", async () => {

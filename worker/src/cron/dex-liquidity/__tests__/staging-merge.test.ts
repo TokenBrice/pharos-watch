@@ -643,21 +643,15 @@ describe("mergeStagedPools", () => {
     expect(metrics.get("bold-liquity")?.topPools).toHaveLength(2);
   });
 
-  it("gracefully handles missing staging table", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("surfaces a missing mandatory staging table", async () => {
     const mockDb = createMockDb(async () => {
       throw new Error("no such table: dex_pool_staging");
     });
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex();
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
-
-    expect(result.mergedCount).toBe(0);
-    expect(result.skippedCount).toBe(0);
-    expect(result.skippedByExactIdentityCount).toBe(0);
-    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
-    expect(result.skipDimensions).toEqual([]);
-    expect(warnSpy).toHaveBeenCalledOnce();
+    await expect(
+      mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000),
+    ).rejects.toThrow("no such table: dex_pool_staging");
   });
 
   it("merges GT-style staged pools with confidence decay and GT dex quality", async () => {

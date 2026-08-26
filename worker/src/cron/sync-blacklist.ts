@@ -15,7 +15,6 @@ import {
 import { applyTronLedgerMirrorPass, deriveSyncBlacklistStatus } from "./blacklist/sync-support";
 import { toErrorMessage } from "../lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
-import { migrateLegacyBlacklistIdentities, type BlacklistLegacyIdentityMigrationResult } from "./blacklist/legacy-identity-migration";
 import { scanBlacklistConfigs } from "./blacklist/config-scan";
 
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
@@ -104,12 +103,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let producerSummarySnapshot = false;
   let producerSnapshotSkipped = false;
   let producerSnapshotError: string | null = null;
-  let legacyIdentityMigration: BlacklistLegacyIdentityMigrationResult = {
-    eventMigrated: 0,
-    balanceMigrated: 0,
-    ambiguousSkipped: 0,
-  };
-  let legacyIdentityMigrationError: string | null = null;
   let amountBackfill: BlacklistAmountBackfillResult = {
     runtimeBudgetReached: false,
     attempted: 0,
@@ -142,14 +135,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   } else if (!etherscanCircuitAllowed) {
     etherscanCircuitSkips++;
     logWorkerEventArgs("handler", "warn", "[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
-  }
-  if (!blacklistRuntimeBudgetReached(maintenanceRunBudget)) {
-    try {
-      legacyIdentityMigration = await migrateLegacyBlacklistIdentities(db, signal);
-    } catch (error) {
-      legacyIdentityMigrationError = error instanceof Error ? error.name : "UnknownError";
-      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Legacy identity migration failed:", error);
-    }
   }
   tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "post-sync", {
     runBudget: maintenanceRunBudget,
@@ -254,10 +239,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         providerLimiterLiveConcurrency: BLACKLIST_PROVIDER_LIVE_CONCURRENCY,
         etherscanLimiterRequestsPerSecond: etherscanLimiter.requestsPerSecond ?? null,
         tronLimiterRequestsPerSecond: tronLimiter.requestsPerSecond ?? null,
-        legacyIdentityEventMigrated: legacyIdentityMigration.eventMigrated,
-        legacyIdentityBalanceMigrated: legacyIdentityMigration.balanceMigrated,
-        legacyIdentityAmbiguousSkipped: legacyIdentityMigration.ambiguousSkipped,
-        legacyIdentityMigrationError,
         amountRepairAttempted: amountBackfill.attempted,
         amountRepairResolved: amountBackfill.resolved,
         amountRepairRetried: amountBackfill.retried,

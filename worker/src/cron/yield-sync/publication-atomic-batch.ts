@@ -1,5 +1,4 @@
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { isMissingColumnError, isMissingTableError } from "../../lib/db";
 import type { CacheWriteResult } from "../../lib/db-cache";
 
 export async function publishYieldRowsAtomically(
@@ -17,7 +16,7 @@ export async function publishYieldRowsAtomically(
 ): Promise<CacheWriteResult> {
   const cacheValue = JSON.stringify(input.rankingsPayload);
   const cacheFreshGuard = "(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?";
-  const buildStatements = (legacySchema: boolean, reproducibleHistory: boolean): D1PreparedStatement[] => [
+  const buildStatements = (): D1PreparedStatement[] => [
     db
       .prepare(
         `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
@@ -70,33 +69,10 @@ export async function publishYieldRowsAtomically(
       .bind(JSON.stringify(input.yieldDataRows), input.startSec),
     db
       .prepare(
-        legacySchema
-          ? `INSERT OR IGNORE INTO yield_history (
-              stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
-              data_source, warning_signals, yield_source, yield_type, publication_generation_id, publication_state
-            )
-            SELECT
-              json_extract(value, '$.stablecoin_id'),
-              json_extract(value, '$.source_key'),
-              json_extract(value, '$.recorded_at'),
-              json_extract(value, '$.is_best'),
-              json_extract(value, '$.apy'),
-              json_extract(value, '$.apy_base'),
-              json_extract(value, '$.apy_reward'),
-              json_extract(value, '$.exchange_rate'),
-              json_extract(value, '$.source_tvl_usd'),
-              json_extract(value, '$.data_source'),
-              json_extract(value, '$.warning_signals'),
-              json_extract(value, '$.yield_source'),
-              json_extract(value, '$.yield_type'),
-              json_extract(value, '$.publication_generation_id'),
-              json_extract(value, '$.publication_state')
-            FROM json_each(?)
-            WHERE ${cacheFreshGuard}`
-          : `INSERT OR IGNORE INTO yield_history (
+        `INSERT OR IGNORE INTO yield_history (
               stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
               data_source, warning_signals, yield_source, yield_type, publication_generation_id, publication_state,
-              pys_at_publish, safety_at_publish, variance_at_publish${reproducibleHistory ? ", pys_inputs_at_publish" : ""}
+              pys_at_publish, safety_at_publish, variance_at_publish, pys_inputs_at_publish
             )
             SELECT
               json_extract(value, '$.stablecoin_id'),
@@ -116,36 +92,15 @@ export async function publishYieldRowsAtomically(
               json_extract(value, '$.publication_state'),
               json_extract(value, '$.pys_at_publish'),
               json_extract(value, '$.safety_at_publish'),
-              json_extract(value, '$.variance_at_publish')${reproducibleHistory ? ",\n              json_extract(value, '$.pys_inputs_at_publish')" : ""}
+              json_extract(value, '$.variance_at_publish'),
+              json_extract(value, '$.pys_inputs_at_publish')
             FROM json_each(?)
             WHERE ${cacheFreshGuard}`,
       )
       .bind(JSON.stringify(input.historyRows), input.startSec),
     db
       .prepare(
-        legacySchema
-          ? `INSERT OR REPLACE INTO yield_source_decisions (
-              generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
-              selected_data_source, selected_apy_30d, selected_score, selected_reason,
-              previous_best_source_key, source_switch, rejected_count, alternatives_json, created_at
-            )
-            SELECT
-              json_extract(value, '$.generation_id'),
-              json_extract(value, '$.stablecoin_id'),
-              json_extract(value, '$.selected_source_key'),
-              json_extract(value, '$.selected_confidence_tier'),
-              json_extract(value, '$.selected_data_source'),
-              json_extract(value, '$.selected_apy_30d'),
-              json_extract(value, '$.selected_score'),
-              json_extract(value, '$.selected_reason'),
-              json_extract(value, '$.previous_best_source_key'),
-              json_extract(value, '$.source_switch'),
-              json_extract(value, '$.rejected_count'),
-              json_extract(value, '$.alternatives_json'),
-              json_extract(value, '$.created_at')
-            FROM json_each(?)
-            WHERE ${cacheFreshGuard}`
-          : `INSERT OR REPLACE INTO yield_source_decisions (
+        `INSERT OR REPLACE INTO yield_source_decisions (
               generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
               selected_data_source, selected_apy_30d, selected_score, selected_reason,
               previous_best_source_key, source_switch, rejected_count, alternatives_json, created_at,
@@ -184,11 +139,8 @@ export async function publishYieldRowsAtomically(
             WHERE ${cacheFreshGuard}`,
       )
       .bind(JSON.stringify(input.decisionRows), input.startSec),
-    ...(legacySchema
-      ? []
-      : [
-          db
-            .prepare(
+    db
+      .prepare(
               `INSERT OR REPLACE INTO yield_source_decision_alternatives (
                 generation_id, stablecoin_id, alt_source_key, alt_yield_source,
                 alt_apy30d_delta, rejection_reason_code, recorded_at
@@ -203,9 +155,8 @@ export async function publishYieldRowsAtomically(
                 json_extract(value, '$.recorded_at')
               FROM json_each(?)
               WHERE ${cacheFreshGuard}`,
-            )
-            .bind(JSON.stringify(input.decisionAlternativeRows), input.startSec),
-        ]),
+      )
+      .bind(JSON.stringify(input.decisionAlternativeRows), input.startSec),
     db
       .prepare(
         `UPDATE yield_publication_generations
@@ -216,18 +167,7 @@ export async function publishYieldRowsAtomically(
       .bind(input.startSec, input.generationId, input.startSec),
   ];
 
-  let results: D1Result<unknown>[];
-  try {
-    results = await runWithOverloadRetry(() => db.batch(buildStatements(false, true)), 3, input.signal);
-  } catch (error) {
-    if (!isMissingColumnError(error) && !isMissingTableError(error)) throw error;
-    try {
-      results = await runWithOverloadRetry(() => db.batch(buildStatements(false, false)), 3, input.signal);
-    } catch (fallbackError) {
-      if (!isMissingColumnError(fallbackError) && !isMissingTableError(fallbackError)) throw fallbackError;
-      results = await runWithOverloadRetry(() => db.batch(buildStatements(true, false)), 3, input.signal);
-    }
-  }
+  const results = await runWithOverloadRetry(() => db.batch(buildStatements()), 3, input.signal);
 
   return Number(results[0]?.meta?.changes ?? 0) > 0
     ? { written: true, skippedBecauseNewer: false }

@@ -73,7 +73,6 @@ type RepairRunnerMetadata = {
   skipped?: "kill-switch";
   dueCount?: number;
   staleClaimCount?: number;
-  tableMissing?: boolean;
 };
 
 interface RepairRunnerTaskRow {
@@ -336,67 +335,56 @@ export async function pruneRepairTasks(
   cutoffSec: number,
   signal?: AbortSignal,
 ): Promise<number> {
-  try {
-    const result = await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `DELETE FROM worker_repair_tasks
-           WHERE updated_at < ?
-             AND state IN (${terminalStateSql()})`,
-        )
-        .bind(cutoffSec, ...TERMINAL_REPAIR_TASK_STATES)
-        .run(),
-      3,
-      signal,
-    );
-    return result.meta.changes ?? 0;
-  } catch (err) {
-    if (isMissingTableError(err)) return 0;
-    throw err;
-  }
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `DELETE FROM worker_repair_tasks
+         WHERE updated_at < ?
+           AND state IN (${terminalStateSql()})`,
+      )
+      .bind(cutoffSec, ...TERMINAL_REPAIR_TASK_STATES)
+      .run(),
+    3,
+    signal,
+  );
+  return result.meta.changes ?? 0;
 }
 
 async function inspectRepairRunnerBacklog(
   db: D1Database,
   input: { nowSec: number; signal?: AbortSignal },
-): Promise<{ dueCount: number; staleClaimCount: number; tableMissing: boolean }> {
+): Promise<{ dueCount: number; staleClaimCount: number }> {
   throwIfAborted(input.signal);
-  try {
-    const [dueRow, staleClaimRow] = await Promise.all([
-      db
-        .prepare(
-          `SELECT COUNT(*) AS due_count
+  const [dueRow, staleClaimRow] = await Promise.all([
+    db
+      .prepare(
+        `SELECT COUNT(*) AS due_count
              FROM worker_repair_tasks
             WHERE ${dueOpenOrDeferredWhereSql()}`,
-        )
-        .bind("open", "deferred", "failed", input.nowSec)
-        .first<RepairRunnerInspectRow>(),
-      db
-        .prepare(
-          `SELECT COUNT(*) AS stale_claim_count
+      )
+      .bind("open", "deferred", "failed", input.nowSec)
+      .first<RepairRunnerInspectRow>(),
+    db
+      .prepare(
+        `SELECT COUNT(*) AS stale_claim_count
              FROM worker_repair_tasks
             WHERE ${staleClaimWhereSql()}`,
-        )
-        .bind(input.nowSec)
-        .first<RepairRunnerInspectRow>(),
-    ]);
+      )
+      .bind(input.nowSec)
+      .first<RepairRunnerInspectRow>(),
+  ]);
 
-    return {
-      dueCount: Math.max(0, Math.floor(Number(dueRow?.due_count ?? 0))),
-      staleClaimCount: Math.max(0, Math.floor(Number(staleClaimRow?.stale_claim_count ?? 0))),
-      tableMissing: false,
-    };
-  } catch (err) {
-    if (isMissingTableError(err)) return { dueCount: 0, staleClaimCount: 0, tableMissing: true };
-    throw err;
-  }
+  return {
+    dueCount: Math.max(0, Math.floor(Number(dueRow?.due_count ?? 0))),
+    staleClaimCount: Math.max(0, Math.floor(Number(staleClaimRow?.stale_claim_count ?? 0))),
+  };
 }
 
 function buildRepairRunnerResult(
   metadata: RepairRunnerMetadata,
 ): StructuredCronResult<RepairRunnerMetadata> {
   return {
-    status: metadata.tableMissing ? "degraded" : "ok",
+    status: "ok",
     itemCount: metadata.autoRepairCount,
     metadata,
   };
@@ -1103,19 +1091,6 @@ export async function runWorkerRepairTaskRunner(
     dueCount: backlog.dueCount,
     staleClaimCount: backlog.staleClaimCount,
   } satisfies Pick<RepairRunnerMetadata, "batchLimit" | "dueCount" | "staleClaimCount">;
-  if (backlog.tableMissing) {
-    return createCronResult(buildRepairRunnerResult({
-      mode: "execute",
-      enabled: options.enabled ?? true,
-      claimed: 0,
-      autoRepairCount: 0,
-      closed: 0,
-      deferred: 0,
-      failed: 0,
-      tableMissing: true,
-      ...baseMetadata,
-    }));
-  }
   if (options.enabled === false) {
     return createCronResult(buildRepairRunnerResult({
       mode: "disabled",
@@ -1140,45 +1115,35 @@ export async function runWorkerRepairTaskRunner(
     failed: 0,
     ...baseMetadata,
   };
-  try {
-    const tasks = await listDueRepairRunnerTasks(db, timestamp);
-    for (const task of tasks) {
-      throwIfAborted(options.signal);
-      if (!(await claimRepairRunnerTask(db, task.task_id, timestamp))) continue;
-      metadata.claimed++;
-      try {
-        const outcome = await executeDdrRepair(db, task, timestamp);
-        if (outcome === "closed") {
-          metadata.closed++;
-          metadata.autoRepairCount++;
-        } else {
-          await setRepairRunnerTaskState(db, {
-            taskId: task.task_id,
-            state: "deferred",
-            timestamp,
-            error: "safe-class-not-proven",
-          });
-          metadata.deferred++;
-        }
-      } catch (error) {
-        if (isMissingTableError(error)) throw error;
+  const tasks = await listDueRepairRunnerTasks(db, timestamp);
+  for (const task of tasks) {
+    throwIfAborted(options.signal);
+    if (!(await claimRepairRunnerTask(db, task.task_id, timestamp))) continue;
+    metadata.claimed++;
+    try {
+      const outcome = await executeDdrRepair(db, task, timestamp);
+      if (outcome === "closed") {
+        metadata.closed++;
+        metadata.autoRepairCount++;
+      } else {
         await setRepairRunnerTaskState(db, {
           taskId: task.task_id,
-          state: "failed",
+          state: "deferred",
           timestamp,
-          error: "repair-execution-failed",
+          error: "safe-class-not-proven",
         });
-        metadata.failed++;
+        metadata.deferred++;
       }
+    } catch (error) {
+      if (isMissingTableError(error)) throw error;
+      await setRepairRunnerTaskState(db, {
+        taskId: task.task_id,
+        state: "failed",
+        timestamp,
+        error: "repair-execution-failed",
+      });
+      metadata.failed++;
     }
-  } catch (error) {
-    if (isMissingTableError(error)) {
-      return createCronResult(buildRepairRunnerResult({
-        ...metadata,
-        tableMissing: true,
-      }));
-    }
-    throw error;
   }
   return createCronResult(buildRepairRunnerResult(metadata));
 }

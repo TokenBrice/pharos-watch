@@ -42,7 +42,6 @@ export const CRITICAL_FILES = [
   "worker/src/lib/dews/persistence.ts",
   "worker/src/lib/dews/scoring.ts",
   "worker/src/lib/dews/source-state.ts",
-  "worker/src/lib/dews/source-state/fallback.ts",
   "worker/src/lib/dews/source-state/hydration.ts",
   "worker/src/lib/dews/source-state/legacy-bridge.ts",
   "worker/src/cron/compute-depeg-resolver.ts",
