@@ -36,6 +36,8 @@ Exit selects the strongest exact same-notional route and may add independent bac
 
 Since methodology 9.44, a fully observed issuer or protocol route with zero or immaterial executable capacity remains the attributable primary evidence and scores zero instead of being discarded as unsupported. Its capacity, completion, confidence, and binding cap remain visible, and a zero Exit pillar states that no viable exit path was measured. Atomic protocol routes follow their reviewed settlement fact rather than being treated as inherently delayed.
 
+Since methodology 9.45, an open request/settle route whose settlement completion bound is unproven is a bounded evidence gap, not a measured zero: Exit floors at the bounded-unknown score under the exit-unverified ceiling with a visible warning.
+
 Since methodology 9.4, a favorable faster-settlement term receives credit only when the exact delay has a review date and source; a conservative correction can still lower credit without asserting a favorable promise. Curated settlement and cost terms can therefore move Exit in either direction. A route whose same-notional capacity, settlement, or cost is not established publishes a bounded terms gap: supported partial evidence remains visible, but generated fallback values receive no primary or backup credit, and ordinary uncertainty does not become measured danger.
 
 V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an unbounded required fact remains NR, and F is reserved for causally attributed measured danger.
@@ -103,6 +105,8 @@ The standalone Redemption Backstop score rates an issuer or protocol redemption 
 Its modeled capacity request is 5% of supply, floored at $100,000 and capped at $25 million. Capacity blends percent-of-supply coverage with absolute executable dollars so a small percentage can still receive bounded credit without pretending it satisfies the full holder request.
 
 Since v4.39, a measured route scores zero when executable capacity is zero or below both the 1% completion and $100,000 absolute breakpoints; missing capacity remains unrated, and the same materiality gate applies to the eventual-redeemability headline. Reviewed settlement overrides are shared by the standalone row and V9, with favorable corrections subject to the 365-day evidence window. Reserve-sync routes publish full-supply eventual capacity only when dated route evidence explicitly opts into that claim.
+
+Since v4.4, an open route with an unproven settlement completion bound publishes unestablished capacity and remains unrated rather than being scored zero.
 
 This route score is separate from Safety Score V9 Exit. The two share reviewed route-scoring primitives, but V9 re-evaluates exact same-notional evidence under its own stress request, evidence ceilings, danger interlocks, and independent-backup policy.
 
