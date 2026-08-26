@@ -7,6 +7,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   buildDexMeasuredExecutionTargetId,
   getDexMeasuredExecutionFreshnessMaxSec,
   type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
@@ -206,7 +207,7 @@ function target(
 describe("reviewed Curve StableSwap-NG policy", () => {
   it("admits only reviewed factory deployments and directions", () => {
     expect(CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID).toBe(
-      "curve-stableswap-ng-factory-get-dy-v2",
+      DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
     );
     expect(CURVE_USDG_USDC_STABLESWAP_NG_POLICY).toMatchObject({
       chain: "ethereum",

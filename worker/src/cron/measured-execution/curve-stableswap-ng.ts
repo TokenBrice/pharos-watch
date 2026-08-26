@@ -8,6 +8,7 @@ import {
 
 import {
   DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
@@ -57,7 +58,7 @@ const CURVE_STABLESWAP_NG_MULTICALL_BATCH_SIZE = 8;
 const CURVE_STABLESWAP_NG_MULTICALL_GAS = "0x1c9c380";
 
 export const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID =
-  "curve-stableswap-ng-factory-get-dy-v2" as const;
+  DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg;
 export const CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES = 3;
 export const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 

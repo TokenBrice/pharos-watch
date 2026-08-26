@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ExitRouteObservationCoverageSchema } from "@shared/types/market";
 import {
   DEX_MEASURED_CAPACITY_NOTIONALS_USD,
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   DEX_MEASURED_MAX_COST_BPS,
   type DexMeasuredExecutionPublicProfile,
 } from "@shared/types/measured-execution";
@@ -139,7 +140,7 @@ describe("P4 DEX exit route observations", () => {
         targetId: `curve-3pool-usdt-${outputToken.symbol.toLowerCase()}`,
         targetGenerationId: "curve-target-generation",
         quoteGenerationId: "curve-quote-generation",
-        adapterProfileId: "curve-stableswap-main-registry-get-dy-v1",
+        adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap,
         protocol: "curve",
         poolId: `ethereum:${poolAddress}`,
         poolTokenAddresses: tokens.map((token) => token.address),
@@ -251,7 +252,7 @@ describe("P4 DEX exit route observations", () => {
       targetId: "curve-stableswap-ng-usdg-usdc",
       targetGenerationId: "curve-ng-target-generation",
       quoteGenerationId: "curve-ng-quote-generation",
-      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
+      adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
       protocol: "curve",
       poolId: `ethereum:${poolAddress}`,
       poolTokenAddresses: [usdg, usdc],
@@ -796,7 +797,7 @@ describe("P4 DEX exit route observations", () => {
     expect(mature.observations.every(
       (observation) =>
         observation.confidence === "high" &&
-        observation.adapterProfileId === "curve-stableswap-main-registry-get-dy-v1",
+        observation.adapterProfileId === DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap,
     )).toBe(true);
     const matureCapacityCurve = mature.observations[1]?.capacityCurve ?? [];
     expect(matureCapacityCurve[matureCapacityCurve.length - 1]).toMatchObject({
@@ -916,7 +917,7 @@ describe("P4 DEX exit route observations", () => {
     });
     expect(mature.observations[0]).toMatchObject({
       evidenceKind: "measured-executable-depth",
-      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
+      adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
       confidence: "high",
       scope: { kind: "chain-contract", contractOrPoolId: physicalPoolId },
     });
@@ -997,7 +998,7 @@ describe("P4 DEX exit route observations", () => {
     });
     expect(result.observations[0]).toMatchObject({
       evidenceKind: "measured-executable-depth",
-      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
+      adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
       confidence: "high",
       executableUsd: 24_900,
       output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },

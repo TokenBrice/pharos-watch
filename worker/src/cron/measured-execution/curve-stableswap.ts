@@ -7,6 +7,7 @@ import {
 } from "viem/utils";
 
 import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   DEX_MEASURED_FRESHNESS_MAX_SEC,
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionProfile,
@@ -56,7 +57,7 @@ const CURVE_MULTICALL_BATCH_SIZE = 8;
 const CURVE_MULTICALL_GAS = "0x1c9c380";
 
 export const CURVE_STABLESWAP_ADAPTER_PROFILE_ID =
-  "curve-stableswap-main-registry-get-dy-v1" as const;
+  DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap;
 export const CURVE_STABLESWAP_MIN_COMPLETE_CYCLES = 3;
 export const CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 

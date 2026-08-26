@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
+  type DexMeasuredExecutionTarget,
+} from "@shared/types/measured-execution";
 import { decodeMeasuredLedgerRecord, encodeMeasuredLedgerRecord } from "@shared/lib/measured-execution-ledger";
 import type { DexMeasuredRawQuotePoint } from "../profiles";
 import { buildMeasuredShadowQuoteLedgerRecord } from "../admission";
@@ -10,7 +13,7 @@ function target(overrides: Partial<DexMeasuredExecutionTarget> = {}): DexMeasure
     schemaVersion: "dex-measured-target-v1",
     targetId: `target-${overrides.poolId ?? "default"}-${overrides.stablecoinId ?? "usdt-tether"}`,
     stablecoinId: "usdt-tether",
-    adapterProfileId: "curve-stableswap-ng-metapool-underlying-v1",
+    adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveMetapool,
     protocol: "curve",
     chain: "ethereum",
     poolId: "ethereum:0x1111111111111111111111111111111111111111",

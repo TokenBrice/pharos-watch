@@ -28,16 +28,19 @@ const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
 const CanonicalBytes32Schema = z.string().regex(/^0x[a-f0-9]{64}$/);
-const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
-const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v2";
-const CURVE_RATE_BEARING_ADAPTER_PROFILE_ID = "curve-stableswap-ng-rate-bearing-get-dy-v1";
-const CURVE_METAPOOL_ADAPTER_PROFILE_ID = "curve-stableswap-ng-metapool-underlying-v1";
+export const DEX_MEASURED_ADAPTER_PROFILE_IDS = {
+  curveStableSwap: "curve-stableswap-main-registry-get-dy-v1",
+  curveStableSwapNg: "curve-stableswap-ng-factory-get-dy-v2",
+  curveRateBearing: "curve-stableswap-ng-rate-bearing-get-dy-v1",
+  curveMetapool: "curve-stableswap-ng-metapool-underlying-v1",
+} as const;
+
+const DEX_CURVE_STABLESWAP_ADAPTER_PROFILE_IDS = new Set<string>(
+  Object.values(DEX_MEASURED_ADAPTER_PROFILE_IDS),
+);
 
 export function getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId: string): number {
-  return adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID ||
-    adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID ||
-    adapterProfileId === CURVE_RATE_BEARING_ADAPTER_PROFILE_ID ||
-    adapterProfileId === CURVE_METAPOOL_ADAPTER_PROFILE_ID
+  return DEX_CURVE_STABLESWAP_ADAPTER_PROFILE_IDS.has(adapterProfileId)
     ? DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC
     : DEX_MEASURED_FRESHNESS_MAX_SEC;
 }

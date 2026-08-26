@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
+  type DexMeasuredExecutionTarget,
+} from "@shared/types/measured-execution";
 import type { DexExitRouteObservation } from "@shared/types/market";
 import {
   MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
@@ -69,7 +72,7 @@ function curveStableSwapTarget(outputIndex: 0 | 1): DexMeasuredExecutionTarget {
     "0xdac17f958d2ee523a2206206994597c13d831ec7",
   ];
   return target("usdt-tether", 160_000_000, `curve-3pool-${outputIndex}`, {
-    adapterProfileId: "curve-stableswap-main-registry-get-dy-v1",
+    adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap,
     protocol: "curve",
     chain: "ethereum",
     poolId: "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
@@ -97,7 +100,7 @@ function curveStableSwapNgTarget(): DexMeasuredExecutionTarget {
     "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
   ];
   return target("usdg-paxos", 20_501_133, "curve-usdg-ng", {
-    adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
+    adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
     protocol: "curve",
     chain: "ethereum",
     poolId: "ethereum:0xc061caa073f3d95f80f8e5428d32d2d76f5e1622",
