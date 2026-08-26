@@ -6,7 +6,6 @@ import {
   isDailyDexShadowTargetPublicationSlot,
   isDexLiquidityPublicationSlot,
   isHourlyDexPriceSlot,
-  isHourlyDexSourceSlot,
 } from "../cron-cadences";
 import { CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES } from "../cron-jobs";
 
@@ -34,8 +33,7 @@ describe("cron cadence split", () => {
   it("runs DEX sources and prices hourly, full scoring every two hours, and shadow targets daily", () => {
     const sec = (iso: string) => Date.parse(iso) / 1_000;
 
-    expect(isHourlyDexSourceSlot(sec("2026-08-10T06:10:00Z"))).toBe(true);
-    expect(isHourlyDexSourceSlot(sec("2026-08-10T06:40:00Z"))).toBe(false);
+    expect(CRON_SCHEDULE_CADENCES.halfHourlyOffset).toEqual({ intervalSec: 3600, offsetSec: 10 * 60 });
     expect(isHourlyDexPriceSlot(sec("2026-08-10T06:16:00Z"))).toBe(true);
     expect(isHourlyDexPriceSlot(sec("2026-08-10T06:46:00Z"))).toBe(false);
     expect(isDexLiquidityPublicationSlot(sec("2026-08-10T06:16:00Z"))).toBe(true);

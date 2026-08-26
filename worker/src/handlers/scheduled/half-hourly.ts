@@ -1,5 +1,5 @@
 /**
- * Half-hourly trigger (10,40 * * * *):
+ * Hourly trigger (10 * * * *):
  *   sync-dex-liquidity-stage (5)
  *
  * Dedicated DEX source and pool-construction lane. The exact scoring input is
@@ -7,23 +7,14 @@
  * Connection budget: 5/6 peak (nested direct-API phase; still within the repo policy)
  */
 import { stageDexLiquidityScoring } from "../../cron/dex-liquidity/orchestrator";
-import { isHourlyDexSourceSlot } from "@shared/lib/cron-cadences";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
 export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext) {
   return runSingleScheduledJob(runtime, "half-hour dex slot", {
     job: "sync-dex-liquidity-stage",
-    run: (signal, reportProgress) => {
-      if (!isHourlyDexSourceSlot(runtime.slotStartedAt)) {
-        return Promise.resolve({
-          status: "skipped_neutral" as const,
-          itemCount: 0,
-          metadata: JSON.stringify({ reason: "hourly-source-stage-not-due" }),
-          productivity: { productive: false, reason: "hourly-source-stage-not-due" },
-        });
-      }
-      return stageDexLiquidityScoring(
+    run: (signal, reportProgress) =>
+      stageDexLiquidityScoring(
         runtime.db,
         runtime.env.GRAPH_API_KEY ?? null,
         signal,
@@ -31,7 +22,6 @@ export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext) {
         runtime.chainRpcs,
         reportProgress,
         runtime.slotStartedAt,
-      );
-    },
+      ),
   });
 }

@@ -118,7 +118,7 @@ function v9Freshness(observedAtSec: number, fixedInputClockSec: number) {
 describe("DEX route chronology across scheduled consumers", () => {
   it("keeps the production schedule phases explicit", () => {
     expect(getCronJobMeta("sync-cl-exit-depth")?.schedule).toBe("0,30 * * * *");
-    expect(getCronJobMeta("sync-dex-liquidity-stage")?.schedule).toBe("10,40 * * * *");
+    expect(getCronJobMeta("sync-dex-liquidity-stage")?.schedule).toBe("10 * * * *");
     expect(getCronJobMeta("sync-dex-liquidity")?.schedule).toBe("16,46 * * * *");
     expect(getCronJobMeta("prepare-safety-score-v9-input")?.schedule).toBe("16,46 * * * *");
     expect(getCronJobMeta("compute-safety-score-v9")?.schedule).toBe(

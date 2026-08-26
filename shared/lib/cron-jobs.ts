@@ -91,8 +91,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
     ...CRON_SCHEDULE_CADENCES.halfHourlyMeasuredExecution,
   },
   halfHourlyOffset: {
-    schedule: "10,40 * * * *",
-    triggerSchedules: ["10 * * * *", "40 * * * *"],
+    schedule: "10 * * * *",
     ...CRON_SCHEDULE_CADENCES.halfHourlyOffset,
   },
   halfHourlyChartsOffset: {
@@ -107,7 +106,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // publication graph needs ~150-175s of runtime, so a twice-hourly expression
   // (":28,:58" or ":24,:54") gets the invocation killed mid `source-resolution`.
   // Recombining this into a sub-hourly expression requires the paired-trigger
-  // form used by halfHourlyOffset/halfHourlyChartsOffset, which needs a physical
+  // form used by halfHourlyChartsOffset, which needs a physical
   // trigger beyond the reviewed budget. See docs/dex-liquidity.md.
   hourlyYieldSync: { schedule: "20 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
   fourHourlyYieldSupplemental: {
@@ -148,13 +147,14 @@ export const CRON_CONNECTION_BUDGET = {
  * surface: it only moves those invocations from Cloudflare's 30-second
  * sub-hourly Cron CPU class into the 15-minute hourly class. ADR-20 raised the
  * gate from 25 to 34 for quarterHourly, v9SupplyAttributionOffset, and
- * statusSelfCheckOffset; ADR-21 raises it to 35 for the missed one-shot
- * v9PublicationOffset writer. The binding constraints remain the
+ * statusSelfCheckOffset; ADR-21 raised it to 35 for the missed one-shot
+ * v9PublicationOffset writer. Removing the neutral DEX `:40` trigger lowers
+ * the reviewed topology to 34. The binding constraints remain the
  * fetch-capable-entry and per-trigger connection limits below, plus Cloudflare's
  * 250-Cron-Triggers-per-account platform ceiling.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
-  maxPhysicalTriggersBeforeRebalance: 35,
+  maxPhysicalTriggersBeforeRebalance: 34,
   maxFetchCapableEntriesBeforeRebalance: 32,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {

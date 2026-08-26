@@ -10,12 +10,9 @@ import {
 } from "../cron-jobs";
 
 describe("cron job schedule metadata", () => {
-  it("preserves half-hourly DEX slot identity across hourly physical triggers", () => {
-    expect(CRON_SCHEDULES.halfHourlyOffset).toBe("10,40 * * * *");
-    expect(CRON_TRIGGER_SCHEDULES.halfHourlyOffset).toEqual([
-      "10 * * * *",
-      "40 * * * *",
-    ]);
+  it("keeps the DEX source lane hourly while preserving the half-hourly consumer aliases", () => {
+    expect(CRON_SCHEDULES.halfHourlyOffset).toBe("10 * * * *");
+    expect(CRON_TRIGGER_SCHEDULES.halfHourlyOffset).toEqual(["10 * * * *"]);
     expect(CRON_SCHEDULES.halfHourlyChartsOffset).toBe("16,46 * * * *");
     expect(CRON_TRIGGER_SCHEDULES.halfHourlyChartsOffset).toEqual([
       "16 * * * *",
@@ -81,8 +78,8 @@ describe("cron job schedule metadata", () => {
     ).toBe(Math.floor(Date.parse("2026-08-21T19:24:00Z") / 1000));
 
     const physicalTriggers = Object.values(CRON_TRIGGER_SCHEDULES).flat();
-    expect(physicalTriggers).toHaveLength(35);
-    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(35);
+    expect(physicalTriggers).toHaveLength(34);
+    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(34);
   });
 
   it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {
@@ -195,7 +192,7 @@ describe("cron job schedule metadata", () => {
     // expression gets the invocation killed mid `source-resolution` (production
     // outage 2026-08-18, 11:20-15:00 UTC). Each physical trigger must therefore
     // carry a single minute value, either directly or via the paired-trigger
-    // form used by halfHourlyOffset/halfHourlyChartsOffset.
+    // form used by halfHourlyChartsOffset.
     const minutesOf = (schedule: string): number[] =>
       schedule.split(" ")[0]!.split(",").map(Number);
 
