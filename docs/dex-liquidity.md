@@ -1,5 +1,7 @@
 # DEX Liquidity Score & Price Cross-Validation
 
+> **Agent navigation** — Grep the heading you need: Methodology Versioning · DEX Liquidity Score · Discovery Cron · DEX Price Cross-Validation.
+
 ## Methodology Versioning
 
 - **Current methodology version:** `v6.1`

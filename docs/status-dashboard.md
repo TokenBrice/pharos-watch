@@ -2,6 +2,8 @@
 
 Operational reference for the split status surfaces: public `/status/` read-only health monitoring and Access-gated route-based operator workspaces under `/admin/` and `/admin-api/`, including backend status computation, hysteresis, discrepancy detection, endpoint probing, guarded actions, credential operations, and durable audit history.
 
+> **Agent navigation** — Grep the heading you need: Scope · Frontend Flow · Backend Contract (`GET /api/status`) · Endpoint Probing · Guarded Admin Actions · Price Source Health Card · CoinGecko Price Drift Card · D1 Usage Card · Mint/Burn Reconciliation Card · Rendering And Refresh Contract · Source Owners.
+
 ---
 
 ## Scope
@@ -85,7 +87,7 @@ The active frontend operator mode is now:
 
 ### Data hooks
 
-- `src/hooks/use-status.ts`
+- `src/hooks/admin-api-hooks.ts` — `useStatus()`
   - `useStatus()` — calls `GET /api/status` through same-origin `/api/admin/status` on `ops.pharos.watch` via `useAdminPollingQuery`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
   - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0` (via `CRON_1MIN` cadence)
@@ -104,11 +106,11 @@ The active frontend operator mode is now:
   - Uses the endpoint's explicit `window=24h|7d|30d` filter instead of approximating windows with row-count-only limits
   - The public page binds one fixed `30d` query for the runway and a separate user-selected query for the transition log, so the hero summary and history table no longer fight over the same state
   - **Public-impact filter (2026-04-13, active-price coverage adjusted 2026-07-19):** `/api/public-status-history` filters the state-machine transitions down to public-impact incidents whose causes include at least one public-facing impact code (`cache_ratio_*`, `cache_freshness_query_failed`, `cache_warning`, `fx_cached_fallback`, `mint_burn_public_*`, `mint_burn_health_query_failed`, `active_price_coverage_unknown`, `open_circuit_groups`, `circuit_query_failed`, `cron_error_runs`, `multiple_unhealthy_crons`, `unhealthy_crons_present`, `db_unhealthy`). Producer-only source freshness causes such as `fx_source_*`, active-price coverage misses (`active_price_coverage_incomplete`), aggregate/admin missing-price ratio causes (`missing_prices_*`), and other admin-only data-quality causes (`blacklist_gaps_*`, `reserve_sync_*`, `onchain_*`, `watch_*`) remain excluded from opening a public incident. Exact active-price coverage is still recorded for operator diagnostics: unreadable coverage evidence writes a public-impacting `active_price_coverage_unknown` cause, while incomplete coverage writes a warning-only `active_price_coverage_incomplete` cause. Coverage reads use the newest `sync-stablecoins` run that actually persisted both exact coverage reports; synthetic abandoned or no-write rows remain visible to cron health but do not replace the last publication evidence with `unknown`. The capped persisted cause list reserves capacity for both exact active-price cause codes so concurrent diagnostics cannot hide the active-price triage row. Once a public-impact incident is retained, the endpoint also retains the recovery path needed to return that incident to `healthy`, even when the recovery rows only carry info-level causes. The endpoint sources its `currentStatus` field from `assessPublicHealth` (matching `/api/health`) instead of the hysteresis-smoothed admin `status_state.current_status`. `lastChangedAt` comes only from the newest retained public transition when that transition ends in the live public status; otherwise it is `null`. The public uptime rail overlays live health onto today, and without retained transitions it leaves earlier days unknown rather than backfilling the entire window with the current state.
-- `src/hooks/use-status-history.ts`
+- `src/hooks/admin-api-hooks.ts` — `useStatusHistory()`
   - Calls `GET /api/status-history` through same-origin `/api/admin/status-history` on `ops.pharos.watch`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
   - Adds rolling windows (`6h`, `24h`, `7d`, `30d`) for timeline drilldown
-- `src/hooks/use-request-source-stats.ts`
+- `src/hooks/admin-api-hooks.ts` — `useRequestSourceStats()`
   - Calls `GET /api/request-source-stats` through same-origin `/api/admin/request-source-stats` on `ops.pharos.watch`
   - Polls the default `24h` window with `1h` buckets, a top-5 route breakdown, and a top-25 keyed public-API breakdown
   - Measures total site-vs-external demand across same-origin `/_site-data/*` plus `api.pharos.watch`
@@ -689,7 +691,7 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | Public status surface | `src/app/status/client.tsx`, `src/lib/status/public-status.ts` |
 | Private workspace shell and routes | `src/app/admin/`, `src/components/ops-shell.tsx`, `src/lib/admin-workspaces.ts` |
 | Status components | `src/components/status/` |
-| Frontend polling | `src/hooks/use-status.ts`, `src/hooks/use-endpoint-probes.ts`, `src/hooks/use-status-history.ts` |
+| Frontend polling | `src/hooks/admin-api-hooks.ts`, `src/hooks/use-endpoint-probes.ts` |
 | Same-origin operator proxy | `functions/api/admin/[[path]].ts` |
 | Thresholds, cron metadata, endpoint registry | `shared/lib/status-thresholds.ts`, `shared/lib/cron-jobs.ts`, `shared/lib/api-endpoints/` |
 | Status APIs and persistence | `worker/src/api/status.ts`, `worker/src/api/status-history.ts`, `worker/src/lib/status/`, `worker/src/lib/status-state-store.ts` |

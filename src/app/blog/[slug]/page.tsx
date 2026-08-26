@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- source paths come from the BLOG_POSTS registry and are guarded by blog-registry.test.ts. */
+/* eslint-disable security/detect-non-literal-fs-filename -- source paths are derived from BLOG_POSTS slugs and guarded by blog-registry.test.ts. */
 
 import fs from "node:fs";
 import path from "node:path";
@@ -77,7 +77,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const post = BLOG_POST_BY_SLUG.get(slug);
   if (!post) notFound();
 
-  const source = fs.readFileSync(path.join(POSTS_DIR, post.source), "utf-8");
+  const source = fs.readFileSync(path.join(POSTS_DIR, `${post.slug}.md`), "utf-8");
   const canonical = `${SITE_URL}/blog/${slug}/`;
   const dateModified = (sitemapDates as Record<string, string>)[`/blog/${slug}/`] ?? post.datePublished;
   const socialImage = post.coverImage ?? OG_BLOG;

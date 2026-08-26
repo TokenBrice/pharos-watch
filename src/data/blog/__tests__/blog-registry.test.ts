@@ -30,13 +30,14 @@ describe("blog registry", () => {
 
   it("points every post at an existing Markdown source with no H1", () => {
     for (const post of BLOG_POSTS) {
-      const path = join(POSTS_DIR, post.source);
-      expect(existsSync(path), `missing source for ${post.slug}: ${post.source}`).toBe(true);
+      const fileName = `${post.slug}.md`;
+      const path = join(POSTS_DIR, fileName);
+      expect(existsSync(path), `missing source for ${post.slug}: ${fileName}`).toBe(true);
       const body = readFileSync(path, "utf8");
       // The title lives in the registry and renders as the page's single <h1>;
       // an H1 in the body would create a duplicate and fail the SEO gate.
-      expect(/^# /m.test(body), `${post.source} must not contain an H1`).toBe(false);
-      expect(body.trim().length, `${post.source} must not be empty`).toBeGreaterThan(0);
+      expect(/^# /m.test(body), `${fileName} must not contain an H1`).toBe(false);
+      expect(body.trim().length, `${fileName} must not be empty`).toBeGreaterThan(0);
     }
   });
 
