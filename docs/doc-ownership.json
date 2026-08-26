@@ -55,7 +55,7 @@
       "risk": "medium",
       "docsToRead": ["docs/feedback-pipeline.md", "affected docs/api-reference.md feedback section"],
       "docsLikelyRequired": ["docs/feedback-pipeline.md", "docs/api-reference.md when the HTTP contract changes"],
-      "checks": ["focused feedback API and verification tests", "npm run check:docs-api-reference when the HTTP contract changes"],
+      "checks": ["focused feedback API and verification tests", "npm run check:generated-artifacts -- --only=api-reference when the HTTP contract changes"],
       "hardRules": ["Use getCirculatingRaw(); cached DefiLlama circulating values are already USD-denominated.", "Feedback verification thresholds follow the shared peg-type depeg policy."],
       "prefixes": ["worker/src/api/feedback/"],
       "exactPaths": ["worker/src/api/feedback.ts"]
@@ -157,7 +157,7 @@
       "checks": ["npx vitest run functions/__tests__/safety-map-png.test.ts", "npm run seo:check when the route changes", "npm run check:verified-doc-links"],
       "hardRules": ["The KV manifest is written last and is the publication commit marker.", "A missing binding or object is a 404 with no-store; that behavior is the kill switch.", "Archive keys use the UTC run date; the visible stamp uses asOfSec.", "The digest embeds the dated image URL, never latest.png, and never blocks on the map."],
       "prefixes": ["src/app/safety-scores/map/", "functions/safety-scores/"],
-      "exactPaths": ["scripts/maintenance/build-safety-score-map.ts", ".github/workflows/safety-map-refresh.yml", "functions/__tests__/safety-map-png.test.ts"]
+      "exactPaths": ["scripts/maintenance/build-safety-score-map.ts", "scripts/maintenance/publish-safety-score-map.ts", ".github/workflows/safety-map-refresh.yml", "functions/__tests__/safety-map-png.test.ts"]
     },
     {
       "id": "agent-hooks-process",

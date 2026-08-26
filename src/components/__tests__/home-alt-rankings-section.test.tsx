@@ -9,7 +9,6 @@ const {
   stablecoinTablePropsMock,
   togglePinnedMock,
   useStablecoinsMock,
-  useLogosMock,
   usePegSummaryMock,
   useDexLiquidityMock,
   useReportCardsV9Mock,
@@ -21,7 +20,6 @@ const {
   stablecoinTablePropsMock: vi.fn(),
   togglePinnedMock: vi.fn(),
   useStablecoinsMock: vi.fn(),
-  useLogosMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
   useDexLiquidityMock: vi.fn(),
   useReportCardsV9Mock: vi.fn(),
@@ -49,10 +47,6 @@ vi.mock("next/dynamic", () => ({
 
 vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: useStablecoinsMock,
-}));
-
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: useLogosMock,
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
@@ -95,7 +89,6 @@ describe("HomeAltRankingsSection", () => {
       data: { peggedAssets: [{ id: "usdt-tether" }] },
       isLoading: false,
     });
-    useLogosMock.mockReturnValue({ data: {} });
     usePegSummaryMock.mockReturnValue({ data: { coins: [], summary: {} } });
     useDexLiquidityMock.mockReturnValue({ data: {} });
     useReportCardsV9Mock.mockReturnValue({ data: { cards: [], dependencyGraph: { edges: [] } } });

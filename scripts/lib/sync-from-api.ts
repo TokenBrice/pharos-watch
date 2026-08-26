@@ -133,14 +133,8 @@ export async function syncJson<T>(
   return { entries, outputFile, written: write };
 }
 
-/**
- * Unified env-var priority order for the static-export generator scripts that
- * fetch from a Pharos API base (generate-homepage-bootstrap, generate-public-
- * datasets). Both consult the same ordered list so a configured DIGEST_API_URL
- * (or any shared fallback) is honoured regardless of which generator runs.
- */
+/** API base priority for the public-dataset generator. */
 export const GENERATOR_API_URL_ENV_NAMES = [
-  "HOMEPAGE_BOOTSTRAP_API_URL",
   "DIGEST_API_URL",
   "PUBLIC_DATASETS_API_URL",
   "SMOKE_API_BASE",
@@ -148,7 +142,6 @@ export const GENERATOR_API_URL_ENV_NAMES = [
 ] as const;
 
 export const GENERATOR_API_KEY_ENV_NAMES = [
-  "HOMEPAGE_BOOTSTRAP_API_KEY",
   "DIGEST_API_KEY",
   "PUBLIC_DATASETS_API_KEY",
   "SMOKE_API_KEY",
@@ -247,18 +240,12 @@ export function apiFetchHeaders(envNames: readonly string[], options: { url?: st
   };
 }
 
-/**
- * Convenience wrapper used by both generator scripts (generate-public-datasets
- * and generate-homepage-bootstrap). Resolves from GENERATOR_API_URL_ENV_NAMES.
- */
+/** Resolve the public-dataset generator base from GENERATOR_API_URL_ENV_NAMES. */
 export function resolveGeneratorApiBase(): string | null {
   return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
 }
 
-/**
- * Convenience wrapper used by both generator scripts. Builds fetch headers
- * from GENERATOR_API_KEY_ENV_NAMES.
- */
+/** Build public-dataset generator fetch headers from GENERATOR_API_KEY_ENV_NAMES. */
 export function generatorFetchHeaders(url?: string): Record<string, string> {
   return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES, { url });
 }

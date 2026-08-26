@@ -6,7 +6,7 @@ import { LazySection } from "@/components/lazy-section";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ReportCardMiniV9 } from "@/components/report-card-mini-v9";
 import { useReportCardsV9 } from "@/hooks/api-hooks";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
@@ -247,7 +247,7 @@ function GradeSectionHeader({ grade, count }: { grade: string; count: number }) 
 export function ReportCardsV9Client() {
   const reportCardsQuery = useReportCardsV9();
   const stablecoinsQuery = useStablecoins();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
   const [pegFilter, setPegFilter] = useState<PegFilter>("all");
   const [sortKey, setSortKey] = useState<V9SortKey>("overall");

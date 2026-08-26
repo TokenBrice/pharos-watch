@@ -15,10 +15,10 @@ export const GENERATED_ARTIFACTS_MAX_PARALLEL = 4;
 
 interface GeneratedArtifactOptions {
   bootstrap?: boolean;
+  buildLifecycles?: readonly string[];
   check?: boolean;
   only?: readonly string[];
   phases?: readonly number[];
-  skip?: readonly string[];
 }
 
 interface GeneratedArtifactDefinition {
@@ -69,27 +69,29 @@ interface GeneratedArtifactsResult {
 
 export function buildGeneratedArtifactExecutionUnits({
   bootstrap = false,
+  buildLifecycles = [],
   check = false,
   only = [],
   phases = [],
-  skip = [],
 }: GeneratedArtifactOptions = {}): ArtifactExecutionUnit[] {
-  return buildGeneratedArtifactExecutionPhases({ bootstrap, check, only, phases, skip }).flatMap(({ units }) => units);
+  return buildGeneratedArtifactExecutionPhases({ bootstrap, buildLifecycles, check, only, phases }).flatMap(
+    ({ units }) => units,
+  );
 }
 
 export function buildGeneratedArtifactExecutionPhases({
   bootstrap = false,
+  buildLifecycles = [],
   check = false,
   only = [],
   phases = [],
-  skip = [],
 }: GeneratedArtifactOptions = {}): ArtifactExecutionPhase[] {
   const registryPhases: GeneratedArtifactPhase[] = buildGeneratedArtifactPhases({
     bootstrap,
+    buildLifecycles: [...buildLifecycles],
     check,
     only: [...only],
     phases: [...phases],
-    skip: [...skip],
   });
   return registryPhases.map(({ phase, artifacts }) => ({
     phase,
@@ -120,6 +122,7 @@ function parsePhaseList(value: string): number[] {
 
 export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
   bootstrap: boolean;
+  buildLifecycles: string[];
   check: boolean;
   continueOnError: boolean;
   dryRun: boolean;
@@ -129,6 +132,7 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
 } {
   const options: {
     bootstrap: boolean;
+    buildLifecycles: string[];
     check: boolean;
     continueOnError: boolean;
     dryRun: boolean;
@@ -137,6 +141,7 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
     phases: number[];
   } = {
     bootstrap: false,
+    buildLifecycles: [],
     check: false,
     continueOnError: false,
     dryRun: false,
@@ -153,6 +158,17 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
     }
     if (arg === "--check") {
       options.check = true;
+      continue;
+    }
+    if (arg === "--build-lifecycle") {
+      const value = argv[index + 1];
+      if (!value) throw new Error("Missing value for --build-lifecycle");
+      options.buildLifecycles.push(...parseListValue(value));
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith("--build-lifecycle=")) {
+      options.buildLifecycles.push(...parseListValue(arg.slice("--build-lifecycle=".length)));
       continue;
     }
     if (arg === "--continue-on-error") {
@@ -200,38 +216,25 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
   }
 
   options.only = [...new Set(options.only)];
+  options.buildLifecycles = [...new Set(options.buildLifecycles)];
   options.phases = [...new Set(options.phases)].sort((left, right) => left - right);
   return options;
 }
 
 export function printGeneratedArtifactsHelp(log = console.log) {
   log(
-    "Usage: npm run prebuild -- [--bootstrap|--check] [--continue-on-error] [--only id[,id]] [--phase n[,n]] [--dry-run|--help]",
+    "Usage: npm run prebuild -- [--bootstrap|--check] [--build-lifecycle name[,name]] [--continue-on-error] [--only id[,id]] [--phase n[,n]] [--dry-run|--help]",
   );
   log("");
   log("Options:");
   log("  --bootstrap       Run only bootstrap-safe generators (ignored in --check mode).");
   log("  --check           Verify generated artifacts instead of writing them.");
+  log("  --build-lifecycle <names>  Run artifacts in one or more declared build lifecycle groups.");
   log("  --continue-on-error  Diagnostic mode: retain all failures and continue through dependency phases.");
   log("  --only <ids>      Run one or more artifact ids and their declared dependencies.");
   log("  --phase <phases>  Run artifacts in one or more numeric dependency phases.");
   log("  --dry-run         Print the resolved command plan without executing commands.");
   log("  --help, -h        Print this help text.");
-}
-
-export function parseGeneratedArtifactsSkip(env: Readonly<Record<string, string | undefined>> = process.env): string[] {
-  return (env.GENERATED_ARTIFACTS_SKIP ?? "")
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean);
-}
-
-export function resolveGeneratedArtifactsSkip({
-  check = false,
-  env = process.env,
-}: { check?: boolean; env?: Readonly<Record<string, string | undefined>> } = {}): string[] {
-  // Freshness validation must inspect the full artifact registry.
-  return check ? [] : parseGeneratedArtifactsSkip(env);
 }
 
 export async function runGeneratedArtifacts({
@@ -245,7 +248,7 @@ export async function runGeneratedArtifacts({
   log?: (message: string) => unknown;
   runCommandImpl?: CommandImplementation;
 } = {}): Promise<GeneratedArtifactsResult> {
-  const { bootstrap, check, continueOnError: cliContinueOnError, dryRun, help, only, phases } =
+  const { bootstrap, buildLifecycles, check, continueOnError: cliContinueOnError, dryRun, help, only, phases } =
     parseGeneratedArtifactsArgs(argv);
   const continueOnError = cliContinueOnError || env.GENERATED_ARTIFACTS_CONTINUE_ON_ERROR === "1";
   if (help) {
@@ -253,17 +256,18 @@ export async function runGeneratedArtifacts({
     return { status: 0, failedCmd: null, aborted: false, failures: [], results: [] };
   }
 
-  const skip = resolveGeneratedArtifactsSkip({ check, env });
-  if (skip.length > 0) {
-    log(`[generated-artifacts] Skipping (verified separately by check:generated-artifacts): ${skip.join(", ")}`);
-  }
-
   const label = check
     ? "generated-artifacts:check"
     : bootstrap
       ? "generated-artifacts:bootstrap"
       : "generated-artifacts";
-  const executionPhases = buildGeneratedArtifactExecutionPhases({ bootstrap, check, only, phases, skip });
+  const executionPhases = buildGeneratedArtifactExecutionPhases({
+    bootstrap,
+    buildLifecycles,
+    check,
+    only,
+    phases,
+  });
 
   if (dryRun) {
     const commandCount = executionPhases.reduce((sum, phase) => sum + phase.units.length, 0);

@@ -57,7 +57,6 @@ const V9WrapperIncidentPostureSchema = z
     evidenceRefIds: canonicalTextArray(1),
   })
   .strict();
-export type V9WrapperIncidentPosture = z.infer<typeof V9WrapperIncidentPostureSchema>;
 
 export const V9_WRAPPER_LOCAL_FACT_KEYS = [
   "contractMutability",
@@ -132,7 +131,6 @@ const V9WrapperLocalDimensionsSchema = z
     lossAbsorptionEmergencyControls: V9WrapperLocalDimensionFactSchema,
   })
   .strict();
-export type V9WrapperLocalDimensions = z.infer<typeof V9WrapperLocalDimensionsSchema>;
 
 export const V9WrapperRiskTransferMechanismSchema = z.enum([
   "none",
@@ -142,7 +140,6 @@ export const V9WrapperRiskTransferMechanismSchema = z.enum([
   "other",
   "unknown",
 ]);
-export type V9WrapperRiskTransferMechanism = z.infer<typeof V9WrapperRiskTransferMechanismSchema>;
 
 const V9WrapperRiskTransferFactSchema = z
   .object({
@@ -183,7 +180,6 @@ const V9WrapperRiskTransferFactSchema = z
       });
     }
   });
-export type V9WrapperRiskTransferFact = z.infer<typeof V9WrapperRiskTransferFactSchema>;
 
 const V9NotWrapperLocalFactsSchema = z
   .object({

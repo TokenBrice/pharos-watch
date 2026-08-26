@@ -3,12 +3,18 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 
 vi.mock("@/lib/analytics", () => ({ trackSearch: vi.fn() }));
 
 function SearchProbe() {
-  const { searchInput, deferredSearch } = useUrlSearchSync("test", 60_000);
+  const { getParam, setParam } = useUrlFilters();
+  const { searchInput, deferredSearch } = useUrlSearchSync(
+    "test",
+    { getParam, setParam },
+    60_000,
+  );
   return createElement(
     "div",
     null,

@@ -7,7 +7,7 @@ import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
@@ -55,7 +55,7 @@ function formatPct(pct: number): string {
 export function SupplyMovesCard(): React.JSX.Element {
   const query = useStablecoins();
   const { data, isLoading } = query;
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const logoMap = logos ?? {};
 
   const { ups, downs } = useMemo(() => compute(data?.peggedAssets ?? []), [data]);

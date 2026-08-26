@@ -18,6 +18,7 @@ function isGitIgnored(path: string): boolean {
 // `automation-registry.mjs` is untyped JS, so give its shapes local names here.
 interface RegistryArtifact {
   id: string;
+  buildLifecycle: "compile-input" | "post-refresh" | "maintenance-only";
   bootstrap?: boolean;
   checkable?: boolean;
   inputState?: string;
@@ -51,6 +52,34 @@ function isFullyGitIgnored(artifact: RegistryArtifact): boolean {
 }
 
 describe("generated artifact lifecycle", () => {
+  it("declares one positive build lifecycle for every artifact", () => {
+    expect(new Set(registry.map((artifact) => artifact.buildLifecycle))).toEqual(
+      new Set(["compile-input", "post-refresh", "maintenance-only"]),
+    );
+    expect(registry.every((artifact) => artifact.buildLifecycle != null)).toBe(true);
+  });
+
+  it("selects only compile inputs for plain prebuild", () => {
+    expect(selectedIds({ buildLifecycles: ["compile-input"] })).toEqual([
+      "stablecoin-catalog",
+      "sitemap-dates",
+      "case-study-client-index",
+      "docs-metadata",
+      "postman",
+      "openapi",
+      "world-map",
+      "report-card-registry-fingerprint",
+      "legacy-stablecoin-redirects",
+      "stablecoin-client-registry",
+    ]);
+  });
+
+  it("classifies refresh-sensitive projections separately", () => {
+    expect(
+      registry.filter((artifact) => artifact.buildLifecycle === "post-refresh").map((artifact) => artifact.id),
+    ).toEqual(["depeg-event-search-data", "llms-txt"]);
+  });
+
   it("materializes every gitignored artifact from one of the two bootstrap paths", () => {
     // A gitignored output only exists because a bootstrap wrote it. An ignored
     // artifact reachable from neither path is missing on a fresh clone and in
@@ -75,6 +104,11 @@ describe("generated artifact lifecycle", () => {
       .map((artifact) => artifact.id);
 
     expect([...historyBootstrapIds()].sort()).toEqual([...buildTimeIds].sort());
+    expect(
+      registry
+        .filter((artifact) => historyBootstrapIds().includes(artifact.id))
+        .every((artifact) => artifact.buildLifecycle === "compile-input"),
+    ).toBe(true);
   });
 
   it("excludes build-time artifacts from the ordinary bootstrap", () => {

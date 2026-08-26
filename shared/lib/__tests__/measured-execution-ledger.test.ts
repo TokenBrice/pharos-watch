@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 
 import {
   MEASURED_LEDGER_CHUNK_CHARS,
@@ -77,7 +78,7 @@ describe("measured ledger cohort keys", () => {
 
   it("keys reviewed per-pool policies on chain, pool tail, and stablecoin", () => {
     const key = buildMeasuredLedgerCohortKey({
-      adapterProfileId: "curve-stableswap-ng-metapool-underlying-v1",
+      adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveMetapool,
       chain: "ethereum",
       poolId: "ethereum:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
       stablecoinId: "usd1-world-liberty-financial",
@@ -87,7 +88,7 @@ describe("measured ledger cohort keys", () => {
 
   it("distinguishes sibling policies sharing one adapter profile and chain", () => {
     const shared = {
-      adapterProfileId: "curve-stableswap-ng-metapool-underlying-v1",
+      adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveMetapool,
       chain: "ethereum",
     };
     const first = buildMeasuredLedgerCohortKey({

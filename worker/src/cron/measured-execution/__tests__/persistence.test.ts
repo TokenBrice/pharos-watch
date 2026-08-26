@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
+  type DexMeasuredExecutionTarget,
+} from "@shared/types/measured-execution";
 import {
   DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE,
   getDexMeasuredHistoryFreshnessSec,
@@ -189,8 +192,8 @@ function evidenceDb(input: {
 
 describe("measured execution publication", () => {
   it("retains a three-hour history window for every measured adapter", () => {
-    expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-main-registry-get-dy-v1")).toBe(10_800);
-    expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(10_800);
+    expect(getDexMeasuredHistoryFreshnessSec(DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap)).toBe(10_800);
+    expect(getDexMeasuredHistoryFreshnessSec(DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg)).toBe(10_800);
     expect(getDexMeasuredHistoryFreshnessSec("uniswap-v3-quoter-v2")).toBe(10_800);
   });
 

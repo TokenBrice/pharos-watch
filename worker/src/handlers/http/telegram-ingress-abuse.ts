@@ -1,4 +1,9 @@
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import {
+  BoundedStreamOverflowError,
+  bufferReadableStream,
+  parseDeclaredLength,
+} from "@shared/lib/bounded-stream";
 import { API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { jsonResponse } from "../../lib/api-response";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -147,44 +152,28 @@ function parseDeclaredContentLength(request: Request): number | null | "invalid"
   const raw = request.headers.get("content-length");
   if (raw == null) return null;
   if (!/^(0|[1-9]\d*)$/.test(raw)) return "invalid";
-  const parsed = Number(raw);
-  return Number.isSafeInteger(parsed) ? parsed : "invalid";
-}
-
-async function cancelReader(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
-  try {
-    await reader.cancel();
-  } catch {
-    // The rejection response is authoritative even when the client stream has already failed.
-  }
+  const declared = parseDeclaredLength(raw);
+  return declared.status === "valid" ? declared.value : "invalid";
 }
 
 async function readBoundedBody(request: Request, policy: TelegramIngressPolicy): Promise<Uint8Array | Response> {
   if (!request.body) return new Uint8Array();
 
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value) continue;
-      totalBytes += value.byteLength;
-      if (totalBytes > policy.bodyLimitBytes) {
-        await cancelReader(reader);
-        logRejection({
-          policy,
-          stage: "body_stream",
-          status: 413,
-          reason: "body_too_large",
-        });
-        return rejectionResponse(413, "Request body too large", "body-too-large");
-      }
-      chunks.push(value);
+    const { bytes } = await bufferReadableStream(request.body, {
+      maxBytes: policy.bodyLimitBytes,
+    });
+    return bytes;
+  } catch (error) {
+    if (error instanceof BoundedStreamOverflowError) {
+      logRejection({
+        policy,
+        stage: "body_stream",
+        status: 413,
+        reason: "body_too_large",
+      });
+      return rejectionResponse(413, "Request body too large", "body-too-large");
     }
-  } catch {
-    await cancelReader(reader);
     logRejection({
       policy,
       stage: "body_stream",
@@ -193,14 +182,6 @@ async function readBoundedBody(request: Request, policy: TelegramIngressPolicy):
     });
     return rejectionResponse(400, "Invalid request body", "validation-error");
   }
-
-  const body = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    body.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return body;
 }
 
 function rebuildBoundedRequest(request: Request, body: Uint8Array): Request {

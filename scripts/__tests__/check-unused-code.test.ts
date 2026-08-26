@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const CHECKER = resolve(process.cwd(), "scripts/ci/check-unused-code.ts");
-const TSX = resolve(process.cwd(), "node_modules/tsx/dist/cli.mjs");
+const TSX_LOADER = resolve(process.cwd(), "node_modules/tsx/dist/loader.mjs");
 
 let workspace: string | undefined;
 
@@ -32,16 +32,20 @@ const SCAFFOLD: Record<string, string> = {
   "src/components/chart-primitives/data-table.tsx": "export const ChartDataTable = 1;\n",
 };
 
-function runChecker(files: Record<string, string>): { status: number; output: string } {
+function runChecker(
+  files: Record<string, string>,
+  args: string[] = [],
+  scaffold: Record<string, string> = SCAFFOLD,
+): { status: number; output: string } {
   workspace = mkdtempSync(join(tmpdir(), "pharos-unused-code-"));
-  for (const [relativePath, contents] of Object.entries({ ...SCAFFOLD, ...files })) {
+  for (const [relativePath, contents] of Object.entries({ ...scaffold, ...files })) {
     const absolute = join(workspace, relativePath);
     mkdirSync(resolve(absolute, ".."), { recursive: true });
     writeFileSync(absolute, contents);
   }
 
   try {
-    const output = execFileSync(process.execPath, [TSX, CHECKER], {
+    const output = execFileSync(process.execPath, ["--import", TSX_LOADER, CHECKER, ...args], {
       cwd: workspace,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
@@ -74,24 +78,63 @@ describe("check-unused-code export resolution", () => {
     expect(status).toBe(1);
   });
 
-  it("does not report a type-only specifier in a mixed export clause as runtime-dead", () => {
-    // `export { fn, type Shape }` marks only `Shape` type-only. Type exports are
-    // never runtime-dead, so honouring the declaration flag alone -- and not the
-    // per-specifier flag -- produced false positives here.
+  it("credits a used type-only specifier in a mixed export clause", () => {
+    // `export { fn, type Shape }` marks only `Shape` type-only. The type export
+    // is used by the entrypoint, so it should be credited without becoming a
+    // runtime export finding.
     const { output } = runChecker({
       "shared/decls.ts":
         "export type Shape = { a: number };\n" +
         "export const unusedConst = 1;\n" +
         "export function fn(): number {\n  return 1;\n}\n",
       "shared/mixed.ts": 'export { fn, type Shape } from "./decls";\n',
-      "src/entry.ts": 'import { fn } from "../shared/mixed";\nexport const entry = fn();\n',
+      "src/entry.ts":
+        'import { fn } from "../shared/mixed";\n' +
+        'import type { Shape } from "../shared/mixed";\n' +
+        "const shape: Shape = { a: 1 };\n" +
+        "export const entry = fn() + shape.a;\n",
     });
 
     // Positive control: a genuinely unused runtime export in the same module is
-    // reported, so the absence of `Shape` is the type-only rule and not a scan
-    // that failed to run.
+    // reported, so the absence of `Shape` confirms the type-use edge was seen.
     expect(output).toContain("shared/decls.ts :: unusedConst");
     expect(output).not.toContain("Shape");
     expect(output).not.toContain(":: fn");
+  });
+
+  it("reports unused direct type aliases and interfaces", () => {
+    const { status, output } = runChecker({
+      "shared/types.ts":
+        "export type UsedShape = { a: number };\n" +
+        "export interface NeverUsed { b: string }\n" +
+        "export type LocalShape = { c: boolean };\n" +
+        "const localShape: LocalShape = { c: true };\n",
+      "src/entry.ts":
+        'import type { UsedShape } from "../shared/types";\n' +
+        "const shape: UsedShape = { a: 1 };\n" +
+        "export const entry = shape.a;\n",
+    });
+
+    expect(output).toContain("shared/types.ts :: NeverUsed");
+    expect(output).not.toContain("shared/types.ts :: UsedShape");
+    expect(output).not.toContain("shared/types.ts :: LocalShape");
+    expect(status).toBe(1);
+  });
+
+  it("follows typed import queries to their named exports", () => {
+    const minimalScaffold = { "vitest.config.ts": SCAFFOLD["vitest.config.ts"] };
+    const { status, output } = runChecker({
+      "shared/type-owner.ts": "export interface UsedThroughQuery { value: number }\n",
+      "shared/type-query.ts":
+        'export type QueryResult = import("./type-owner").UsedThroughQuery;\n',
+      "src/app/entry.ts":
+        'import type { QueryResult } from "../../shared/type-query";\n' +
+        "const result: QueryResult = { value: 1 };\n" +
+        "export const entry = result.value;\n",
+    }, ["--skip-allowlist-audit"], minimalScaffold);
+
+    expect(output).not.toContain("shared/type-owner.ts :: UsedThroughQuery");
+    expect(output).not.toContain("shared/type-query.ts :: QueryResult");
+    expect(status).toBe(0);
   });
 });

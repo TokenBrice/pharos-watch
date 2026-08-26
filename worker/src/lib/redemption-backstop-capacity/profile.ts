@@ -1,7 +1,6 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { resolveCapacityBasis } from "@shared/lib/redemption-backstop-capacity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopProviderId } from "@shared/lib/redemption-backstop-providers";
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
@@ -53,11 +52,6 @@ export interface CapacityResolverContext {
   now: number;
   options: RedemptionBackstopBuildOptions;
 }
-
-export type CapacityResolver<M extends RedemptionCapacityModel = RedemptionCapacityModel> = (
-  model: M,
-  context: CapacityResolverContext,
-) => Promise<CapacityResolution>;
 
 export function resolveReserveSyncCapacityConfidence(
   stablecoinId: string,

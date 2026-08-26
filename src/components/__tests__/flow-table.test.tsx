@@ -6,8 +6,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: () => ({ data: {} }),
+vi.mock("@/lib/logos", () => ({
+  logosById: {},
 }));
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({

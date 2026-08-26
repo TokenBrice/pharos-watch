@@ -5,9 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
 import type { DepegEvent } from "@shared/types";
 
-const { useActiveDepegEventsMock, useLogosMock, usePegSummaryMock } = vi.hoisted(() => ({
+const { useActiveDepegEventsMock, usePegSummaryMock } = vi.hoisted(() => ({
   useActiveDepegEventsMock: vi.fn(),
-  useLogosMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
 }));
 
@@ -17,10 +16,6 @@ vi.mock("@/hooks/api-hooks", () => ({
 
 vi.mock("@/hooks/use-depeg-events", () => ({
   useActiveDepegEvents: useActiveDepegEventsMock,
-}));
-
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: useLogosMock,
 }));
 
 vi.mock("@/lib/stablecoin-static-data", () => ({
@@ -75,8 +70,6 @@ describe("ActiveDepegsCard", () => {
       refetch: vi.fn(),
       dataUpdatedAt: 0,
     });
-    useLogosMock.mockReturnValue({ data: {} });
-
     render(<ActiveDepegsCard />);
 
     expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
@@ -104,8 +97,6 @@ describe("ActiveDepegsCard", () => {
       },
       isLoading: false,
     });
-    useLogosMock.mockReturnValue({ data: {} });
-
     render(<ActiveDepegsCard />);
 
     expect(screen.getByText("Total Active Depegs")).toBeTruthy();

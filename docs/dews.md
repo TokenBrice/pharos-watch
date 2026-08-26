@@ -184,7 +184,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 ### Cron Schedule
 
-**Trigger:** `26,56 * * * *` — DB-only DEWS/PSI lane. It runs after the `10,40 * * * *` DEX source stage and `16,46 * * * *` scoring consumer, but it is a separate scheduled invocation so a DEX invocation overrun cannot prevent DEWS publication.
+**Trigger:** `26,56 * * * *` — DB-only DEWS/PSI lane. It runs after the hourly `10 * * * *` DEX source stage and `16,46 * * * *` scoring consumer, but it is a separate scheduled invocation so a DEX invocation overrun cannot prevent DEWS publication.
 
 **Cron name:** `compute-dews`
 

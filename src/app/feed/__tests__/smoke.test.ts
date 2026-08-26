@@ -113,11 +113,10 @@ describe("feed routes smoke", () => {
     // data/depeg-events.json carries a committed seed (newest window + the
     // grow-only archive set); CI sync refreshes it at build. The route
     // empty-channel branch still exists for the case where the file becomes [].
-    const seeded = (await import("../../../../data/depeg-events.json")).default as Array<{
-      slug: string;
-      startedAt: number;
-      peakDeviationBps: number;
-    }>;
+    const { DepegEventStoredSnapshotSchema } = await import("@shared/types/market");
+    const seeded = DepegEventStoredSnapshotSchema.parse(
+      (await import("../../../../data/depeg-events.json")).default,
+    );
     const { selectStaticDepegEventPages } = await import("@/lib/depeg-event-config");
     const newest = selectStaticDepegEventPages(seeded)[0];
     expect(newest).toBeDefined();

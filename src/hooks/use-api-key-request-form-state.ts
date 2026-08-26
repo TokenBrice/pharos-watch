@@ -9,6 +9,7 @@ import {
   stripVerificationTokenFromUrl,
 } from "@/lib/api-key-verification-url";
 import { submitApiKeyRequest, verifyApiKeyRequestToken } from "@/lib/api-key-self-serve";
+import { copyText as writeClipboardText } from "@/lib/clipboard";
 import {
   apiKeyRequestWorkflowReducer,
   buildApiKeySelfServeRequestPayload,
@@ -18,10 +19,6 @@ import {
   isProjectUrlValid,
 } from "@/lib/api-key-request-form-view-model";
 
-export type {
-  RequestStatus,
-  VerificationStatus,
-} from "@/lib/api-key-request-form-view-model";
 
 function useVerificationTokenEffect(verifyToken: (token: string) => Promise<void>) {
   const consumedVerificationTokenRef = useRef<string | null>(null);
@@ -79,14 +76,11 @@ export function useApiKeyRequestFormState() {
   const canSubmit = canSubmitApiKeyRequest(state);
 
   const copyText = useCallback(async (kind: "token" | "curl", value: string) => {
-    try {
-      if (!navigator.clipboard?.writeText) {
-        throw new Error("Clipboard API unavailable");
-      }
-      await navigator.clipboard.writeText(value);
+    const result = await writeClipboardText(value);
+    if (result.ok) {
       dispatch({ type: "copySucceeded", kind });
       window.setTimeout(() => dispatch({ type: "clearCopied" }), 1800);
-    } catch {
+    } else {
       dispatch({
         type: "copyFailed",
         error: "Copy failed. Select the text and copy it manually before leaving this page.",

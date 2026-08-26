@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from "react";
 import Link from "next/link";
 import { useReportCardsV9 } from "@/hooks/api-hooks";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { trackEvent } from "@/lib/analytics";
+import { copyText } from "@/lib/clipboard";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -38,7 +39,7 @@ export function PortfolioClient() {
     refetch: refetchReportCards,
     meta: reportCardsMeta,
   } = useReportCardsV9();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -74,13 +75,13 @@ export function PortfolioClient() {
   const handleShare = useCallback(async () => {
     const url = portfolio.shareUrl();
     if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
+    const result = await copyText(url);
+    if (result.ok) {
       trackEvent("portfolio_shared", { coin_count: portfolio.holdings.length });
       setToast("Link copied to clipboard");
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       toastTimerRef.current = setTimeout(() => setToast(null), 2500);
-    } catch {
+    } else {
       window.prompt("Copy this link:", url);
     }
   }, [portfolio]);

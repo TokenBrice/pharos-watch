@@ -12,7 +12,7 @@ This runbook covers the three unauthenticated public POST entrypoints that authe
 
 The Worker ceilings are native Cloudflare Workers [Rate Limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/). They are permissive, eventually consistent, and local to the Cloudflare location serving the request. They bound work; they are not exact accounting. Noncanonical hosts share a separate key per route, so preview, site-data, or ops-origin traffic cannot consume the canonical public API budget while still remaining pre-auth rate limited.
 
-There are no active Telegram-specific WAF rules. The account-state source of truth, `scripts/ci/cloudflare-account-state-manifest.json`, records one deliberately disabled broad API rule because the zone's free plan has one rate-limiting slot. `worker/config/telegram-ingress-abuse-policy.json` retains a proposed exact-path policy and its tests, but it is not deployed-state evidence and does not override the account manifest. `wrangler deploy` installs only the Worker bindings.
+There are no active Telegram-specific WAF rules. The account-state source of truth, `scripts/ci/cloudflare-account-state-manifest.json`, records one deliberately disabled broad API rule because the zone's free plan has one rate-limiting slot. `wrangler deploy` installs only the Worker bindings.
 
 ## Request Cost Order
 
@@ -29,7 +29,7 @@ An over-budget request therefore does not read its body, execute Telegram HMAC w
 
 ## Edge WAF posture
 
-The three Worker bindings are the live pre-auth budget. If an edge rule is proposed later, first verify current Cloudflare plan capacity, then reconcile the proposed policy artifact with the account-state manifest and drift fixtures in one review. An exact-path rule cannot be treated as active until the manifest records it and the read-only account-state check passes.
+The three Worker bindings are the live pre-auth budget. Planning note (non-authoritative): if an edge rule is proposed later, first verify current Cloudflare plan capacity, then reconcile the proposal with the account-state manifest and drift fixtures in one review. An exact-path rule cannot be treated as active until the manifest records it and the read-only account-state check passes.
 
 ## Telemetry
 
@@ -63,7 +63,7 @@ npx tsc -p worker/tsconfig.json --noEmit
 npx wrangler deploy --dry-run --config worker/wrangler.toml --outdir /tmp/pharos-worker-dry-run
 ```
 
-The tests enforce exact host/path/method matching, request cost order, streamed body caps, fail-closed binding behavior, the launch-burst fixture, route isolation, telemetry fields, Wrangler binding budgets, and internal consistency of the undeployed WAF proposal. The account-state drift tests separately own deployed edge posture.
+The tests enforce exact host/path/method matching, request cost order, streamed body caps, fail-closed binding behavior, the launch-burst fixture, route isolation, telemetry fields, and Wrangler binding budgets. The account-state drift tests separately own deployed edge posture.
 
 After production rollout, verify one ordinary Mini App launch and mutation, then confirm no unexpected `429` or `503` increase. Do not generate enough requests to trip production limits merely to test the rule.
 
@@ -73,8 +73,7 @@ Preserve the reviewed launch and mutation headroom when changing budgets, and up
 
 - `worker/src/handlers/http/telegram-ingress-abuse.ts`
 - `worker/wrangler.toml`
-- `worker/config/telegram-ingress-abuse-policy.json`
 - this runbook
 - focused policy tests
 
-To roll back the Worker gate, deploy the prior Worker version with its matching Wrangler configuration. A runtime binding failure should be handled as an incident or Worker rollback, not by adding an isolate-local fallback map. If edge rules are introduced later, document their rollback against the then-current manifest rather than relying on the undeployed proposal.
+To roll back the Worker gate, deploy the prior Worker version with its matching Wrangler configuration. A runtime binding failure should be handled as an incident or Worker rollback, not by adding an isolate-local fallback map. If edge rules are introduced later, document their rollback against the then-current manifest and update this runbook's planning note.

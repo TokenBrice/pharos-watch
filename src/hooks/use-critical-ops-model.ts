@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHealth } from "@/hooks/api-hooks";
 import { useQuerySlices } from "@/hooks/use-query-slice";
 import { useEndpointProbes } from "@/hooks/use-endpoint-probes";
-import { useStatus } from "@/hooks/use-status";
+import { useStatus } from "@/hooks/admin-api-hooks";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildStatusDashboardData, STATUS_DASHBOARD_FRESHNESS_POLICY } from "@/lib/status-dashboard-model";
 

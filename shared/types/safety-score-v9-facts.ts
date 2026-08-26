@@ -20,7 +20,6 @@ import {
   type V9EvidenceResponsibility,
   type V9FactApplicability,
   type V9FactStatusV2,
-  type V9FailureDomainKind,
   type V9FailureDomainRef,
   type V9ObservationState,
 } from "./safety-score-v9-fact-primitives";
@@ -62,7 +61,6 @@ export const V9ResolvedMechanismArchetypeSchema = z.union([
   z.enum(MECHANISM_ARCHETYPE_VALUES),
   z.literal("unresolved"),
 ]);
-export type V9ResolvedMechanismArchetype = z.infer<typeof V9ResolvedMechanismArchetypeSchema>;
 
 /** Product taxonomy for a tracked parent-linked asset. Wrapper ownership and
  * parent-cap form are compiled separately into `wrapperLocalFacts.form`.
@@ -70,14 +68,7 @@ export type V9ResolvedMechanismArchetype = z.infer<typeof V9ResolvedMechanismArc
 export const V9VariantKindSchema = z.enum(VARIANT_KIND_VALUES).nullable().optional();
 
 export { V9FactStatusV2Schema };
-export type {
-  V9EvidenceResponsibility,
-  V9FactApplicability,
-  V9FactStatusV2,
-  V9FailureDomainKind,
-  V9FailureDomainRef,
-  V9ObservationState,
-};
+export type { V9EvidenceResponsibility, V9FactApplicability, V9FactStatusV2, V9FailureDomainRef, V9ObservationState };
 
 
 const V9EvidenceFreshnessSchema = z
@@ -101,7 +92,6 @@ const V9EvidenceFreshnessSchema = z
       ctx.addIssue({ code: "custom", path: ["state"], message: "Stale evidence has not exceeded its maximum age" });
     }
   });
-export type V9EvidenceFreshness = z.infer<typeof V9EvidenceFreshnessSchema>;
 
 export const V9EvidenceReferenceV2Schema = z
   .object({
@@ -227,7 +217,6 @@ const V9EffectiveDependencyEdgeV2Schema = z
       ctx.addIssue({ code: "custom", path: ["weight"], message: "Serial dependencies must have weight 1" });
     }
   });
-export type V9EffectiveDependencyEdgeV2 = z.infer<typeof V9EffectiveDependencyEdgeV2Schema>;
 
 const V9EffectiveDependenciesBaseFields = {
   status: V9FactStatusV2Schema,
@@ -361,7 +350,6 @@ const V9EffectiveDependencyEdgeV3Schema = z
       ctx.addIssue({ code: "custom", path: ["evidenceRefIds"], message: "Role dependencies require evidence" });
     }
   });
-export type V9EffectiveDependencyEdgeV3 = z.infer<typeof V9EffectiveDependencyEdgeV3Schema>;
 
 export const V9EffectiveDependenciesV3Schema = z
   .object({
@@ -1040,7 +1028,6 @@ const V9PegFactV2Schema = z
       ctx.addIssue({ code: "custom", path: ["activeDepegBps"], message: "Active depeg requires peak basis points" });
     }
   });
-export type V9PegFactV2 = z.infer<typeof V9PegFactV2Schema>;
 
 const V9BridgeSupplyRouteV2Schema = z
   .object({
@@ -1207,7 +1194,6 @@ const V9SupplyFactV2Schema = z
       ctx.addIssue({ code: "custom", message: "Bridge supply shares cannot exceed 1" });
     }
   });
-export type V9SupplyFactV2 = z.infer<typeof V9SupplyFactV2Schema>;
 
 const V9ImplementationFactV2Schema = z
   .object({
@@ -1452,7 +1438,6 @@ const V9FactSourceFingerprintsV2Schema = z
     shockCoverage: V9FactSourceIdentityV2Schema.optional(),
   })
   .strict();
-export type V9FactSourceFingerprintsV2 = z.infer<typeof V9FactSourceFingerprintsV2Schema>;
 
 const V9FactSetCoreBaseFields = {
   baseInputGenerationId: BaseInputGenerationIdSchema,

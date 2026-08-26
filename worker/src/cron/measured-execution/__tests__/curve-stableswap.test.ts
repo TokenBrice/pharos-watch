@@ -7,6 +7,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionRegistryBindingProof,
   type DexMeasuredExecutionTarget,
@@ -164,7 +165,7 @@ function target(inputIndex: number, outputIndex: number): DexMeasuredExecutionTa
 
 describe("Curve legacy StableSwap 3pool policy", () => {
   it("is exact to the reviewed main-registry pool and distinct from CryptoSwap", () => {
-    expect(CURVE_STABLESWAP_ADAPTER_PROFILE_ID).toBe("curve-stableswap-main-registry-get-dy-v1");
+    expect(CURVE_STABLESWAP_ADAPTER_PROFILE_ID).toBe(DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap);
     expect(CURVE_3POOL_STABLESWAP_POLICY).toMatchObject({
       chain: "ethereum",
       poolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",

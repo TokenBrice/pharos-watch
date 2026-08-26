@@ -1,9 +1,17 @@
 #!/usr/bin/env node
 
-import { spawn } from "node:child_process";
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
+import {
+  createExecutionUnit,
+  createNpmScriptCommand,
+  runExecutionUnit,
+  runParallelExecutionUnits,
+  runSpawnCommand,
+  type ExecutionResult,
+  type NpmScriptCommand,
+} from "../lib/command-runner.mts";
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
@@ -35,28 +43,6 @@ function hasStructuralCheckImpact(changedFiles: readonly string[]): boolean {
   );
 }
 
-function runNpmScript(
-  name: string,
-  args: readonly string[] = [],
-  env: NodeJS.ProcessEnv = process.env,
-): Promise<void> {
-  console.log(`[check:pr:static] npm run ${name}${args.length > 0 ? ` -- ${args.join(" ")}` : ""}`);
-  return new Promise((resolve, reject) => {
-    const child = spawn("npm", ["run", name, ...(args.length > 0 ? ["--", ...args] : [])], {
-      env,
-      stdio: "inherit",
-    });
-    child.once("error", reject);
-    child.once("exit", (code, signal) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(`npm run ${name} failed (${signal ? `signal ${signal}` : `exit ${code ?? 1}`}).`));
-    });
-  });
-}
-
 export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckCommand[]) {
   return {
     sequential: commands.filter((command) => !PARALLEL_STATIC_CHECKS.has(command.name)),
@@ -64,21 +50,9 @@ export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckComma
   };
 }
 
-async function runBounded(
-  commands: readonly PrStaticCheckCommand[],
-  maxParallel: number,
-  env: NodeJS.ProcessEnv,
-): Promise<void> {
-  let cursor = 0;
-  async function worker(): Promise<void> {
-    while (cursor < commands.length) {
-      const command = commands[cursor++];
-      await runNpmScript(command.name, command.args ?? [], env);
-    }
-  }
-  await Promise.all(
-    Array.from({ length: Math.min(maxParallel, commands.length) }, () => worker()),
-  );
+function formatNpmFailure(result: ExecutionResult): string {
+  const name = result.failedCmd?.match(/^npm run (\S+)/)?.[1] ?? "unknown";
+  return `npm run ${name} failed (${result.signal ? `signal ${result.signal}` : `exit ${result.status}`}).`;
 }
 
 export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
@@ -162,14 +136,38 @@ export async function runPrStaticChecks({
   const { sequential, parallel } = partitionPrStaticCheckPlan(runnableCommands);
   const configuredParallel = Number.parseInt(env.PR_STATIC_MAX_PARALLEL ?? "3", 10);
   const maxParallel = Number.isFinite(configuredParallel) && configuredParallel > 0 ? configuredParallel : 3;
-  await Promise.all([
-    (async () => {
-      for (const command of sequential) {
-        await runNpmScript(command.name, command.args ?? [], env);
-      }
-    })(),
-    runBounded(parallel, maxParallel, env),
+  const reporter = {
+    start: (cmd: string) => console.log(`[check:pr:static] ${cmd}`),
+  };
+  const getCommandEnv = () => env as Record<string, string>;
+  const sequentialUnit = createExecutionUnit(
+    sequential.map((command) => createNpmScriptCommand(command.name, command.args ?? [])),
+  );
+  const parallelUnits = parallel.map((command) => createExecutionUnit([
+    createNpmScriptCommand(command.name, command.args ?? []),
+  ]));
+  const controller = new AbortController();
+  const stopOnFailure = <T extends ExecutionResult>(promise: Promise<T>): Promise<T> => promise.then((result) => {
+    if (result.status !== 0) controller.abort();
+    return result;
+  });
+  const [sequentialResult, parallelResult] = await Promise.all([
+    stopOnFailure(runExecutionUnit<NpmScriptCommand>(sequentialUnit, {
+      getCommandEnv,
+      reporter,
+      runCommandImpl: runSpawnCommand,
+      signal: controller.signal,
+    })),
+    stopOnFailure(runParallelExecutionUnits(parallelUnits, {
+      getCommandEnv,
+      maxParallel,
+      reporter,
+      runCommandImpl: runSpawnCommand,
+      signal: controller.signal,
+    })),
   ]);
+  const failure = [sequentialResult, parallelResult].find((result) => result.status !== 0 && !result.aborted);
+  if (failure) throw new Error(formatNpmFailure(failure));
   return 0;
 }
 

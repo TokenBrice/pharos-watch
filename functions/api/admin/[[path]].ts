@@ -1,5 +1,6 @@
 import { getEndpointOpsProxyTimeoutMs, isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
+import { createCappedReadableStream, parseDeclaredLength } from "@shared/lib/bounded-stream";
 import { verifyAccessJwtUserIdentity } from "@shared/lib/cloudflare-access-jwt";
 import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
 import { NOINDEX_HEADER_VALUE } from "../../lib/noindex";
@@ -159,10 +160,11 @@ function requireSameOriginForMutatingRequest(request: Request, env: OpsAdminProx
 }
 
 function contentLengthExceedsRequestCap(request: Request): boolean {
-  const contentLength = request.headers.get("Content-Length");
-  if (contentLength == null) return false;
-  const parsed = Number(contentLength);
-  return Number.isFinite(parsed) && parsed > MAX_OPS_ADMIN_REQUEST_BODY_BYTES;
+  const declared = parseDeclaredLength(request.headers.get("Content-Length"));
+  return (
+    (declared.status === "valid" && declared.value > MAX_OPS_ADMIN_REQUEST_BODY_BYTES) ||
+    (declared.status === "invalid" && declared.reason === "unsafe")
+  );
 }
 
 function createCappedRequestBody(request: Request, onTooLarge: () => void): BodyInit | Response | undefined {
@@ -173,34 +175,11 @@ function createCappedRequestBody(request: Request, onTooLarge: () => void): Body
     return jsonError(413, "Request body too large");
   }
 
-  const reader = request.body.getReader();
-  let totalBytes = 0;
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      try {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.close();
-          return;
-        }
-        if (!value) return;
-
-        totalBytes += value.byteLength;
-        if (totalBytes > MAX_OPS_ADMIN_REQUEST_BODY_BYTES) {
-          onTooLarge();
-          const error = new OpsAdminRequestBodyTooLargeError();
-          await reader.cancel(error).catch(() => undefined);
-          controller.error(error);
-          return;
-        }
-        controller.enqueue(value);
-      } catch (error) {
-        controller.error(error);
-      }
-    },
-    cancel(reason) {
-      return reader.cancel(reason);
-    },
+  return createCappedReadableStream(request.body, {
+    maxBytes: MAX_OPS_ADMIN_REQUEST_BODY_BYTES,
+    createOverflowError: () => new OpsAdminRequestBodyTooLargeError(),
+    onOverflow: onTooLarge,
+    overflowCancelReason: (error) => error,
   });
 }
 

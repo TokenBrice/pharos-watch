@@ -7,13 +7,12 @@ import {
 } from "viem/utils";
 
 import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   DEX_MEASURED_FRESHNESS_MAX_SEC,
-  buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionRegistryBindingProof,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
-import { throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockTimestamp,
@@ -30,33 +29,29 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
-import { usdToRawAmount } from "./fixed-point";
-import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
 import {
   canonicalEvmAddress,
   canonicalEvmHash,
   decodeAddressResult as decodeEvmAddressResult,
 } from "./evm-codecs";
 import {
-  createCurveGetDyQuoteAdapter,
-  makeCurveGetDyPlan,
-  type CurveGetDyPlan,
-} from "./curve-get-dy-quote-engine";
+  CURVE_STABLESWAP_MULTICALL_BATCH_SIZE,
+  CURVE_STABLESWAP_MULTICALL_GAS,
+  createCurveStableSwapExecutionPipeline,
+  createCurveStableSwapPinnedReaders,
+  decodeCurveStableSwapGetDyResult,
+  encodeCurveStableSwapGetDyCall,
+  validateCurveStableSwapExecutionProfile,
+  verifyCurveStableSwapPoolTokens,
+} from "./curve-stableswap-execution-pipeline";
 
-const CURVE_STABLESWAP_ABI = parseAbi([
-  "function coins(uint256) view returns (address)",
-  "function get_dy(int128 i,int128 j,uint256 dx) view returns (uint256)",
-]);
 const CURVE_MAIN_REGISTRY_ABI = parseAbi([
   "function get_lp_token(address pool) view returns (address)",
   "function get_coins(address pool) view returns (address[8])",
 ]);
-const ERC20_METADATA_ABI = parseAbi(["function decimals() view returns (uint8)"]);
-const CURVE_MULTICALL_BATCH_SIZE = 8;
-const CURVE_MULTICALL_GAS = "0x1c9c380";
 
 export const CURVE_STABLESWAP_ADAPTER_PROFILE_ID =
-  "curve-stableswap-main-registry-get-dy-v1" as const;
+  DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap;
 export const CURVE_STABLESWAP_MIN_COMPLETE_CYCLES = 3;
 export const CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 
@@ -256,34 +251,11 @@ export function createCurveStableSwapDeploymentVerifier(
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
       ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
     };
-    const readCode = async (address: `0x${string}`): Promise<EvmCodeAtBlockResult> => {
-      if (input.rpcBudget && !input.rpcBudget.canRequestChain(policy.chain)) {
-        return { status: "unavailable" };
-      }
-      const result = await dependencies.fetchCodeStatus(
-        policy.chain,
-        address,
-        input.blockNumber,
-        requestOptions,
-      );
-      input.rpcBudget?.recordChainResult(policy.chain, result.status !== "unavailable");
-      return result;
-    };
-    const readCall = async (
-      address: `0x${string}`,
-      callData: `0x${string}`,
-    ): Promise<`0x${string}` | null> => {
-      if (input.rpcBudget && !input.rpcBudget.canRequestChain(policy.chain)) return null;
-      const result = await dependencies.fetchCall(
-        policy.chain,
-        address,
-        callData,
-        input.blockNumber,
-        requestOptions,
-      );
-      input.rpcBudget?.recordChainResult(policy.chain, result != null);
-      return result;
-    };
+    const { readCode, readCall } = createCurveStableSwapPinnedReaders(
+      { policy, blockNumber: input.blockNumber, rpcBudget: input.rpcBudget },
+      dependencies,
+      requestOptions,
+    );
 
     const blockTimestamp = await dependencies.fetchBlockTimestamp(
       policy.chain,
@@ -367,55 +339,18 @@ export function createCurveStableSwapDeploymentVerifier(
       return { ok: false, reason: "registry-membership-mismatch" };
     }
 
-    const poolCoinsProof: DexMeasuredExecutionRegistryBindingProof["poolCoinsProof"] = [];
-    const tokenDecimalsProof: DexMeasuredExecutionRegistryBindingProof["tokenDecimalsProof"] = [];
-    for (let index = 0; index < policy.poolTokens.length; index += 1) {
-      throwIfAborted(input.signal);
-      const token = policy.poolTokens[index]!;
-      const coinCallData = encodeFunctionData({
-        abi: CURVE_STABLESWAP_ABI,
-        functionName: "coins",
-        args: [BigInt(index)],
-      }).toLowerCase() as `0x${string}`;
-      const coinReturnData = await readCall(policy.poolAddress, coinCallData);
-      if (coinReturnData == null) return { ok: false, reason: "rpc-failure" };
-      let poolCoinAddress: `0x${string}` | null = null;
-      try {
-        poolCoinAddress = canonicalEvmAddress(decodeFunctionResult({
-          abi: CURVE_STABLESWAP_ABI,
-          functionName: "coins",
-          data: coinReturnData,
-        }));
-      } catch {
-        return { ok: false, reason: "pool-token-order-mismatch" };
-      }
-      if (poolCoinAddress !== token.address) return { ok: false, reason: "pool-token-order-mismatch" };
-      poolCoinsProof.push({ index, callData: coinCallData, returnData: coinReturnData.toLowerCase() as `0x${string}` });
-
-      const decimalsCallData = encodeFunctionData({
-        abi: ERC20_METADATA_ABI,
-        functionName: "decimals",
-      }).toLowerCase() as `0x${string}`;
-      const decimalsReturnData = await readCall(token.address, decimalsCallData);
-      if (decimalsReturnData == null) return { ok: false, reason: "rpc-failure" };
-      let decimals: number;
-      try {
-        decimals = Number(decodeFunctionResult({
-          abi: ERC20_METADATA_ABI,
-          functionName: "decimals",
-          data: decimalsReturnData,
-        }));
-      } catch {
-        return { ok: false, reason: "token-decimals-mismatch" };
-      }
-      if (decimals !== token.decimals) return { ok: false, reason: "token-decimals-mismatch" };
-      tokenDecimalsProof.push({
-        tokenAddress: token.address,
-        decimals,
-        callData: decimalsCallData,
-        returnData: decimalsReturnData.toLowerCase() as `0x${string}`,
-      });
-    }
+    const tokenProof = await verifyCurveStableSwapPoolTokens({
+      policy,
+      signal: input.signal,
+      readCall,
+      failures: {
+        poolTokenUnavailable: "rpc-failure",
+        poolTokenMismatch: "pool-token-order-mismatch",
+        tokenDecimalsUnavailable: "rpc-failure",
+        tokenDecimalsMismatch: "token-decimals-mismatch",
+      },
+    });
+    if (!tokenProof.ok) return tokenProof;
 
     const registryBindingProof: DexMeasuredExecutionRegistryBindingProof = {
       registryAddress: policy.registryAddress,
@@ -427,8 +362,8 @@ export function createCurveStableSwapDeploymentVerifier(
       lpTokenReturnData: lpTokenReturnData.toLowerCase() as `0x${string}`,
       registryCoinsCallData,
       registryCoinsReturnData: registryCoinsReturnData.toLowerCase() as `0x${string}`,
-      poolCoinsProof,
-      tokenDecimalsProof,
+      poolCoinsProof: tokenProof.poolCoinsProof,
+      tokenDecimalsProof: tokenProof.tokenDecimalsProof,
     };
     const runtimeEvidence: CurveStableSwapRuntimeEvidence = {
       blockTimestamp,
@@ -473,17 +408,6 @@ export interface CurveStableSwapRequest {
   blockObservedAt: number;
   endpointAddress: `0x${string}`;
   runtimeEvidence?: CurveStableSwapRuntimeEvidence;
-}
-
-interface EncodedCurveStableSwapRequest extends CurveStableSwapRequest {
-  index: number;
-  label: string;
-  amountInRaw: bigint;
-  inputIndex: number;
-  outputIndex: number;
-  callData: `0x${string}`;
-  policy: CurveStableSwapPoolPolicy;
-  eligibility: CurveStableSwapEligibility;
 }
 
 export interface CurveStableSwapBatchOutcome {
@@ -532,121 +456,22 @@ export function encodeCurveStableSwapGetDy(input: {
   outputIndex: number;
   amountInRaw: bigint;
 }): `0x${string}` {
-  if (
-    !Number.isInteger(input.inputIndex) ||
-    input.inputIndex < 0 ||
-    input.inputIndex > 7 ||
-    !Number.isInteger(input.outputIndex) ||
-    input.outputIndex < 0 ||
-    input.outputIndex > 7 ||
-    input.inputIndex === input.outputIndex ||
-    input.amountInRaw <= 0n
-  ) throw new Error("Curve StableSwap quote indices or amount are invalid");
-  return encodeFunctionData({
-    abi: CURVE_STABLESWAP_ABI,
-    functionName: "get_dy",
-    args: [BigInt(input.inputIndex), BigInt(input.outputIndex), input.amountInRaw],
-  }).toLowerCase() as `0x${string}`;
+  return encodeCurveStableSwapGetDyCall(
+    input,
+    (inputIndex, outputIndex) =>
+      Number.isInteger(inputIndex) &&
+      inputIndex >= 0 &&
+      inputIndex <= 7 &&
+      Number.isInteger(outputIndex) &&
+      outputIndex >= 0 &&
+      outputIndex <= 7 &&
+      inputIndex !== outputIndex,
+    "Curve StableSwap quote indices or amount are invalid",
+  );
 }
 
 export function decodeCurveStableSwapGetDy(returnData: `0x${string}`): bigint | null {
-  if (!/^0x[0-9a-fA-F]{64}$/.test(returnData)) return null;
-  try {
-    return decodeFunctionResult({
-      abi: CURVE_STABLESWAP_ABI,
-      functionName: "get_dy",
-      data: returnData,
-    }) as bigint;
-  } catch {
-    return null;
-  }
-}
-
-function prepareRequest(
-  request: CurveStableSwapRequest,
-  index: number,
-): {
-  encoded?: EncodedCurveStableSwapRequest;
-  failureReason?: CurveStableSwapQuoteFailure;
-  eligibility: CurveStableSwapEligibility;
-} {
-  const policy = getCurveStableSwapPolicy(request.target.chain, request.endpointAddress);
-  const eligibility = evaluateCurveStableSwapEligibility({
-    chain: request.target.chain,
-    endpointAddress: request.endpointAddress,
-    blockNumber: request.blockNumber,
-    nowSec: request.blockObservedAt,
-    evidence: request.runtimeEvidence,
-  });
-  if (!policy) return { failureReason: "unsupported-chain-or-pool", eligibility };
-  if (!Number.isSafeInteger(request.blockNumber) || request.blockNumber < 0) {
-    return { failureReason: "invalid-pinned-block", eligibility };
-  }
-  if (!eligibility.ok) return { failureReason: eligibility.reason === "block-timestamp-unavailable" ? "runtime-evidence-missing" : "invalid-curve-stableswap-target", eligibility };
-  const indices = resolveCurveStableSwapTokenIndices(request.target);
-  if (!indices.ok) return { failureReason: indices.reason, eligibility };
-  const expectedTargetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId: request.target.adapterProfileId,
-    stablecoinId: request.target.stablecoinId,
-    chain: request.target.chain,
-    protocol: request.target.protocol,
-    poolId: request.target.poolId,
-    tokenInAddress: request.target.tokenIn.address,
-    tokenOutAddress: request.target.tokenOut.address,
-    poolTokenAddresses: request.target.poolTokenAddresses,
-  });
-  if (request.target.targetId !== expectedTargetId) {
-    return { failureReason: "invalid-curve-stableswap-target", eligibility };
-  }
-  const amountInRaw = usdToRawAmount(
-    request.inputUsd,
-    request.target.tokenIn.decimals,
-    request.target.tokenIn.referencePriceUsd,
-  );
-  if (amountInRaw == null) return { failureReason: "invalid-quote-input", eligibility };
-  return {
-    eligibility,
-    encoded: {
-      ...request,
-      index,
-      label: `${index}:${request.target.targetId}`,
-      amountInRaw,
-      inputIndex: indices.inputIndex,
-      outputIndex: indices.outputIndex,
-      callData: encodeCurveStableSwapGetDy({
-        inputIndex: indices.inputIndex,
-        outputIndex: indices.outputIndex,
-        amountInRaw,
-      }),
-      policy,
-      eligibility,
-    },
-  };
-}
-
-function decodeCurveStableSwapQuotePoint(
-  request: Pick<
-    EncodedCurveStableSwapRequest,
-    "amountInRaw" | "callData" | "inputIndex" | "outputIndex" | "blockNumber" | "endpointAddress" | "target"
-  >,
-  result: EvmMulticall3Result,
-): { point?: DexMeasuredRawQuotePoint; failureReason?: CurveStableSwapQuoteFailure } {
-  return decodeCurveMeasuredRawQuotePoint({
-    request,
-    result,
-    decodeAmountOutRaw: decodeCurveStableSwapGetDy,
-    adapterMetadata: {
-      executionPool: request.endpointAddress,
-      blockNumber: request.blockNumber,
-      inputIndex: request.inputIndex,
-      outputIndex: request.outputIndex,
-      registry: CURVE_3POOL_STABLESWAP_POLICY.registryAddress,
-    },
-    failureReasons: {
-      poolRevert: "pool-revert",
-      malformedPoolReturn: "malformed-pool-return",
-    },
-  });
+  return decodeCurveStableSwapGetDyResult(returnData);
 }
 
 interface CurveStableSwapQuoteDependencies {
@@ -661,49 +486,26 @@ interface CurveStableSwapQuoteDependencies {
 }
 
 export function createCurveStableSwapQuoteExecutor(dependencies: CurveStableSwapQuoteDependencies) {
-  return createCurveGetDyQuoteAdapter<
-    CurveStableSwapRequest,
-    CurveGetDyPlan<EncodedCurveStableSwapRequest>,
+  return createCurveStableSwapExecutionPipeline<
+    CurveStableSwapPoolPolicy,
+    CurveStableSwapRuntimeEvidence,
     CurveStableSwapEligibility,
-    CurveStableSwapBatchOutcome,
     CurveStableSwapQuoteFailure
   >({
-    batchSize: CURVE_MULTICALL_BATCH_SIZE,
-    prepare: (request, index) => {
-      const prepared = prepareRequest(request, index);
-      return {
-        eligibility: prepared.eligibility,
-        ...(prepared.failureReason ? { failureReason: prepared.failureReason } : {}),
-        ...(prepared.encoded
-          ? {
-              plan: makeCurveGetDyPlan(prepared.encoded),
-            }
-          : {}),
-      };
-    },
-    makeOutcome: (request, eligibility, failureReason) => ({
-      targetId: request.target.targetId,
-      inputUsd: request.inputUsd,
+    invalidTargetFailure: "invalid-curve-stableswap-target",
+    runtimeEvidenceUnavailableReason: "block-timestamp-unavailable",
+    getPolicy: getCurveStableSwapPolicy,
+    evaluateEligibility: evaluateCurveStableSwapEligibility,
+    resolveTokenIndices: resolveCurveStableSwapTokenIndices,
+    encodeGetDy: encodeCurveStableSwapGetDy,
+    quoteMetadata: (request) => ({
+      executionPool: request.endpointAddress,
       blockNumber: request.blockNumber,
-      eligibility,
-      ...(failureReason ? { failureReason } : {}),
+      inputIndex: request.inputIndex,
+      outputIndex: request.outputIndex,
+      registry: CURVE_3POOL_STABLESWAP_POLICY.registryAddress,
     }),
-    executeMulticall: dependencies.executeMulticall,
-    resolveResult: (request, result) => ({
-      targetId: request.target.targetId,
-      inputUsd: request.inputUsd,
-      blockNumber: request.blockNumber,
-      eligibility: request.eligibility,
-      ...decodeCurveStableSwapQuotePoint(request, result),
-    }),
-    materializeTransportFailure: (request, reason) => ({
-      targetId: request.target.targetId,
-      inputUsd: request.inputUsd,
-      blockNumber: request.blockNumber,
-      eligibility: request.eligibility,
-      failureReason: reason ?? "rpc-failure",
-    }),
-  });
+  }, dependencies);
 }
 
 export const quoteCurveStableSwapRequests = createCurveStableSwapQuoteExecutor({
@@ -715,150 +517,76 @@ export const quoteCurveStableSwapRequests = createCurveStableSwapQuoteExecutor({
       maxRetries: 1,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
       ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
-      gas: CURVE_MULTICALL_GAS,
-      multicallBatchSize: Math.min(CURVE_MULTICALL_BATCH_SIZE, input.calls.length),
+      gas: CURVE_STABLESWAP_MULTICALL_GAS,
+      multicallBatchSize: Math.min(CURVE_STABLESWAP_MULTICALL_BATCH_SIZE, input.calls.length),
     }),
 });
 
 /** Exact ABI and reviewed registry-binding validation at the consumer boundary. */
 export function validateCurveStableSwapProfileProof(profile: DexMeasuredExecutionProfile): string[] {
-  const issues = new Set<string>();
-  if (profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID) issues.add("wrong-adapter-profile");
-  const policy = getCurveStableSwapPolicy(profile.chain, profile.executionEndpoint.address);
-  if (!policy) issues.add("execution-pool-not-reviewed");
-  if (profile.executionEndpoint.codeHash !== policy?.expectedPoolCodeHash) issues.add("endpoint-code-hash-mismatch");
-  const indices = resolveCurveStableSwapTokenIndices(profile);
-  if (!indices.ok) issues.add(indices.reason);
-
-  const proof = profile.registryBindingProof;
-  if (!proof) {
-    issues.add("registry-binding-proof-missing");
-  } else if (policy) {
-    if (
-      proof.registryAddress !== policy.registryAddress ||
-      proof.registryCodeHash !== policy.expectedRegistryCodeHash ||
-      proof.registeredPoolAddress !== policy.poolAddress
-    ) issues.add("registry-binding-mismatch");
-    if (proof.lpTokenAddress !== policy.lpTokenAddress) issues.add("lp-token-mismatch");
-    if (
-      proof.poolTokenAddresses.length !== policy.poolTokens.length ||
-      proof.poolTokenAddresses.some((address, index) => address !== policy.poolTokens[index]!.address)
-    ) issues.add("pool-token-order-mismatch");
-
-    try {
-      const decodedCall = decodeFunctionData({
-        abi: CURVE_MAIN_REGISTRY_ABI,
-        data: proof.lpTokenCallData as `0x${string}`,
-      });
+  return validateCurveStableSwapExecutionProfile<
+    CurveStableSwapPoolPolicy,
+    CurveStableSwapQuoteFailure,
+    DexMeasuredExecutionRegistryBindingProof
+  >({
+    profile,
+    adapterProfileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+    getPolicy: getCurveStableSwapPolicy,
+    resolveTokenIndices: resolveCurveStableSwapTokenIndices,
+    getProof: (candidate) => candidate.registryBindingProof,
+    missingProofIssue: "registry-binding-proof-missing",
+    validateDeploymentProof: (issues, proof, policy) => {
       if (
-        decodedCall.functionName !== "get_lp_token" ||
-        canonicalEvmAddress(decodedCall.args[0]) !== policy.poolAddress ||
-        decodeEvmAddressResult({
-          decode: () => decodeFunctionResult({
-            abi: CURVE_MAIN_REGISTRY_ABI,
-            functionName: "get_lp_token",
-            data: proof.lpTokenReturnData as `0x${string}`,
-          } as never),
-        }) !== policy.lpTokenAddress
-      ) issues.add("lp-token-proof-mismatch");
-    } catch {
-      issues.add("lp-token-proof-mismatch");
-    }
-    try {
-      const decodedCall = decodeFunctionData({
-        abi: CURVE_MAIN_REGISTRY_ABI,
-        data: proof.registryCoinsCallData as `0x${string}`,
-      });
-      const decodedCoins = decodeFunctionResult({
-        abi: CURVE_MAIN_REGISTRY_ABI,
-        functionName: "get_coins",
-        data: proof.registryCoinsReturnData as `0x${string}`,
-      }) as readonly string[];
+        proof.registryAddress !== policy.registryAddress ||
+        proof.registryCodeHash !== policy.expectedRegistryCodeHash ||
+        proof.registeredPoolAddress !== policy.poolAddress
+      ) issues.add("registry-binding-mismatch");
+      if (proof.lpTokenAddress !== policy.lpTokenAddress) issues.add("lp-token-mismatch");
       if (
-        decodedCall.functionName !== "get_coins" ||
-        canonicalEvmAddress(decodedCall.args[0]) !== policy.poolAddress ||
-        policy.poolTokens.some((token, index) => canonicalEvmAddress(decodedCoins[index]) !== token.address) ||
-        decodedCoins.slice(policy.poolTokens.length).some((coin) =>
-          canonicalEvmAddress(coin) !== "0x0000000000000000000000000000000000000000"
-        )
-      ) issues.add("registry-coins-proof-mismatch");
-    } catch {
-      issues.add("registry-coins-proof-mismatch");
-    }
-    if (
-      proof.poolCoinsProof.length !== policy.poolTokens.length ||
-      proof.poolCoinsProof.some((entry, index) => {
-        try {
-          const call = decodeFunctionData({
-            abi: CURVE_STABLESWAP_ABI,
-            data: entry.callData as `0x${string}`,
-          });
-          return (
-            entry.index !== index ||
-            call.functionName !== "coins" ||
-            call.args[0] !== BigInt(index) ||
-            decodeEvmAddressResult({
-              decode: () => decodeFunctionResult({
-                abi: CURVE_STABLESWAP_ABI,
-                functionName: "coins",
-                data: entry.returnData as `0x${string}`,
-              } as never),
-            }) !== policy.poolTokens[index]!.address
-          );
-        } catch {
-          return true;
-        }
-      })
-    ) issues.add("pool-coins-proof-mismatch");
-    if (
-      proof.tokenDecimalsProof.length !== policy.poolTokens.length ||
-      proof.tokenDecimalsProof.some((entry, index) => {
-        try {
-          const call = decodeFunctionData({
-            abi: ERC20_METADATA_ABI,
-            data: entry.callData as `0x${string}`,
-          });
-          const decimals = Number(decodeFunctionResult({
-            abi: ERC20_METADATA_ABI,
-            functionName: "decimals",
-            data: entry.returnData as `0x${string}`,
-          }));
-          return (
-            call.functionName !== "decimals" ||
-            entry.tokenAddress !== policy.poolTokens[index]!.address ||
-            entry.decimals !== policy.poolTokens[index]!.decimals ||
-            decimals !== policy.poolTokens[index]!.decimals
-          );
-        } catch {
-          return true;
-        }
-      })
-    ) issues.add("token-decimals-proof-mismatch");
-  }
+        proof.poolTokenAddresses.length !== policy.poolTokens.length ||
+        proof.poolTokenAddresses.some((address, index) => address !== policy.poolTokens[index]!.address)
+      ) issues.add("pool-token-order-mismatch");
 
-  for (const point of profile.quoteProof) {
-    if (point.reverted) {
-      issues.add("quote-revert-not-publishable");
-      continue;
-    }
-    try {
-      const call = decodeFunctionData({
-        abi: CURVE_STABLESWAP_ABI,
-        data: point.callData as `0x${string}`,
-      });
-      if (
-        !indices.ok ||
-        call.functionName !== "get_dy" ||
-        call.args[0] !== BigInt(indices.inputIndex) ||
-        call.args[1] !== BigInt(indices.outputIndex) ||
-        call.args[2].toString() !== point.amountInRaw
-      ) issues.add("call-data-mismatch");
-      const amountOutRaw = decodeCurveStableSwapGetDy(point.returnData as `0x${string}`);
-      if (amountOutRaw == null) issues.add("abi-decode-failed");
-      else if (amountOutRaw.toString() !== point.amountOutRaw) issues.add("return-data-mismatch");
-    } catch {
-      issues.add("abi-decode-failed");
-    }
-  }
-  return [...issues];
+      try {
+        const decodedCall = decodeFunctionData({
+          abi: CURVE_MAIN_REGISTRY_ABI,
+          data: proof.lpTokenCallData as `0x${string}`,
+        });
+        if (
+          decodedCall.functionName !== "get_lp_token" ||
+          canonicalEvmAddress(decodedCall.args[0]) !== policy.poolAddress ||
+          decodeEvmAddressResult({
+            decode: () => decodeFunctionResult({
+              abi: CURVE_MAIN_REGISTRY_ABI,
+              functionName: "get_lp_token",
+              data: proof.lpTokenReturnData as `0x${string}`,
+            } as never),
+          }) !== policy.lpTokenAddress
+        ) issues.add("lp-token-proof-mismatch");
+      } catch {
+        issues.add("lp-token-proof-mismatch");
+      }
+      try {
+        const decodedCall = decodeFunctionData({
+          abi: CURVE_MAIN_REGISTRY_ABI,
+          data: proof.registryCoinsCallData as `0x${string}`,
+        });
+        const decodedCoins = decodeFunctionResult({
+          abi: CURVE_MAIN_REGISTRY_ABI,
+          functionName: "get_coins",
+          data: proof.registryCoinsReturnData as `0x${string}`,
+        }) as readonly string[];
+        if (
+          decodedCall.functionName !== "get_coins" ||
+          canonicalEvmAddress(decodedCall.args[0]) !== policy.poolAddress ||
+          policy.poolTokens.some((token, index) => canonicalEvmAddress(decodedCoins[index]) !== token.address) ||
+          decodedCoins.slice(policy.poolTokens.length).some((coin) =>
+            canonicalEvmAddress(coin) !== "0x0000000000000000000000000000000000000000"
+          )
+        ) issues.add("registry-coins-proof-mismatch");
+      } catch {
+        issues.add("registry-coins-proof-mismatch");
+      }
+    },
+  });
 }

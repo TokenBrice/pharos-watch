@@ -2,12 +2,12 @@
 
 import { useMemo } from "react";
 import { useCoverageMatrixModel } from "@/hooks/use-coverage-matrix-model";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";
 import { useCoverageFilters } from "@/hooks/use-coverage-filters";
 
 export function useCoveragePageModel() {
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const {
     rows,
     safetyScoreResponse,

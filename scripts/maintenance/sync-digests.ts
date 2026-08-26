@@ -5,6 +5,10 @@
  */
 
 import { formatIsoDate } from "@shared/lib/format";
+import {
+  DigestStoredSnapshotSchema,
+  type DigestContentEntry,
+} from "@shared/types/digest";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
@@ -40,16 +44,6 @@ interface ApiDigest {
   editionNumber?: number;
 }
 
-export interface DigestEntry {
-  date: string;
-  title: string;
-  text: string;
-  extended: string;
-  generatedAt: number;
-  digestType: "daily" | "weekly";
-  editionNumber: number;
-}
-
 export interface DigestSyncCliOptions {
   allowArchiveShrink: boolean;
   allowExistingOnFetchFailure: boolean;
@@ -83,27 +77,23 @@ export function parseDigestSyncArgs(argv: string[]): DigestSyncCliOptions {
   };
 }
 
-function readExistingDigestEntries(outputPath: URL): readonly DigestEntry[] {
+function readExistingDigestEntries(outputPath: URL): readonly DigestContentEntry[] {
   const outputFile = fileURLToPath(outputPath);
   if (!existsSync(outputFile)) return [];
-  const parsed: unknown = JSON.parse(readFileSync(outputFile, "utf8"));
-  if (!Array.isArray(parsed)) {
-    throw new Error(`Existing digest snapshot is not an array: ${outputFile}`);
-  }
-  return parsed as DigestEntry[];
+  return DigestStoredSnapshotSchema.parse(JSON.parse(readFileSync(outputFile, "utf8")));
 }
 
 export function findMissingDigestArchiveDates(
-  previous: readonly DigestEntry[],
-  current: readonly DigestEntry[],
+  previous: readonly DigestContentEntry[],
+  current: readonly DigestContentEntry[],
 ): string[] {
   const currentDates = new Set(current.map((entry) => entry.date));
   return previous.map((entry) => entry.date).filter((date) => !currentDates.has(date));
 }
 
 export function assertDigestArchivePreserved(
-  previous: readonly DigestEntry[],
-  current: readonly DigestEntry[],
+  previous: readonly DigestContentEntry[],
+  current: readonly DigestContentEntry[],
   allowShrink = false,
 ): void {
   const missing = findMissingDigestArchiveDates(previous, current);
@@ -120,8 +110,8 @@ export function assertDigestArchivePreserved(
 /** Keep one published route per digest date. A same-day editorial rerun can
  * leave multiple archive rows upstream, but the static route and sitemap have
  * only one canonical URL for that date. */
-export function deduplicateDigestEntries(entries: readonly DigestEntry[]): DigestEntry[] {
-  const latestByDate = new Map<string, DigestEntry>();
+export function deduplicateDigestEntries(entries: readonly DigestContentEntry[]): DigestContentEntry[] {
+  const latestByDate = new Map<string, DigestContentEntry>();
   for (const entry of entries) {
     const existing = latestByDate.get(entry.date);
     if (
@@ -178,7 +168,7 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
   headers.set("Pragma", "no-cache");
 
   try {
-    const { entries, outputFile, written } = await syncJson<DigestEntry>({
+    const { entries, outputFile, written } = await syncJson<DigestContentEntry>({
       writeTo: outputPath,
       parse: async () => {
         const res = await fetchWithRetry(

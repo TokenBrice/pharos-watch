@@ -1,8 +1,9 @@
 /**
  * Blog post registry — the single source of truth for /blog.
  *
- * Each post is a Markdown file under `posts/` plus one entry here. Keep the
- * array sorted newest-first (enforced by `__tests__/blog-registry.test.ts`).
+ * Each post is a Markdown file under `posts/` named after its slug plus one
+ * entry here. Keep the array sorted newest-first (enforced by
+ * `__tests__/blog-registry.test.ts`).
  * The Markdown body must NOT contain an H1 — the title below renders as the
  * page's single `<h1>` via FeaturePageShell.
  */
@@ -15,8 +16,6 @@ export interface BlogPost {
   description: string;
   /** Publication date, YYYY-MM-DD. Drives sort order, RSS pubDate, and JSON-LD. */
   datePublished: string;
-  /** Filename within posts/. */
-  source: string;
   /**
    * Optional cover image, an absolute path under public/ (e.g.
    * "/blog/my-post-cover.png"). Renders atop the post and the hub card, and
@@ -34,7 +33,6 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     description:
       "Rebuilt around the three questions holders actually ask: is it backed, who controls it, can you get out? And why that finally puts USDT and USDC at the top.",
     datePublished: "2026-07-30",
-    source: "safety-score-v9.md",
     coverImage: "/blog/safety-score-v9-cover.png",
     coverAlt:
       "The Pharos lighthouse casting three separate beams, each lighting one word of the headline “Backing. Control. Exit.” beneath the label “Safety Score V9”.",
@@ -45,7 +43,6 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     description:
       "Six months ago, Pharos was a one-person side project. Now it forecasts how long a stablecoin depeg lasts at ~90% accuracy, and bids to run Curve's risk.",
     datePublished: "2026-07-21",
-    source: "pharos-at-six-months.md",
     coverImage: "/blog/pharos-at-six-months-cover.png",
     coverAlt:
       "The Pharos lighthouse, lit, casting a bright beam across the words “The Lighthouse Is Lit” beneath the label “Six Months of Pharos”.",

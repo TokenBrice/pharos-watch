@@ -4,7 +4,7 @@ import { OperationalActivity, type OperationalActivityProps } from "@/components
 import { TransitionTimeline } from "@/components/status/transition-timeline";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import type { ReleaseMetadataState } from "@/hooks/use-release-metadata";
-import type { StatusHistoryWindow } from "@/hooks/use-status-history";
+import type { StatusHistoryWindow } from "@/hooks/admin-api-hooks";
 import {
   INCIDENT_FLAPPING_TRANSITION_THRESHOLD,
   findFirstDegradationAfter,

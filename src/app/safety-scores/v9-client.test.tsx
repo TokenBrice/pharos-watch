@@ -8,12 +8,10 @@ import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-sc
 const mocks = vi.hoisted(() => ({
   useReportCardsV9: vi.fn(),
   useStablecoins: vi.fn(),
-  useLogos: vi.fn(),
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({ useReportCardsV9: mocks.useReportCardsV9 }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: mocks.useStablecoins }));
-vi.mock("@/hooks/use-logos", () => ({ useLogos: mocks.useLogos }));
 vi.mock("next/link", async () => createNextLinkMock());
 vi.mock("@/components/report-card-mini-v9", () => ({
   ReportCardMiniV9: ({ card }: { card: { id: string } }) => <div data-testid="v9-card">{card.id}</div>,
@@ -48,7 +46,6 @@ describe("ReportCardsV9Client", () => {
       { id: "asset-a", pegType: "peggedUSD" },
       { id: "asset-b", pegType: "peggedEUR" },
     ] }));
-    mocks.useLogos.mockReturnValue({ data: {} });
   });
 
   afterEach(cleanupFrontendTest);

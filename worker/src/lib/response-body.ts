@@ -1,7 +1,8 @@
+import { bufferReadableStream, parseDeclaredLength } from "@shared/lib/bounded-stream";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { abortReason } from "./abort";
 import { rethrowIfAborted } from "./abort";
 import { parseJson } from "./json-parse";
-import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 
 export async function drainResponseBody(response: Response): Promise<void> {
   if (response.bodyUsed || !response.body) {
@@ -66,9 +67,8 @@ function declaredResponseLength(response: Response): number | null {
   const raw = typeof getHeader === "function"
     ? getHeader.call(response.headers, "Content-Length")
     : null;
-  if (raw == null || !/^\d+$/.test(raw.trim())) return null;
-  const parsed = Number(raw);
-  return Number.isSafeInteger(parsed) ? parsed : null;
+  const declared = parseDeclaredLength(raw);
+  return declared.status === "valid" ? declared.value : null;
 }
 
 function assertTextWithinLimit(text: string, maxBytes: number): void {
@@ -86,69 +86,14 @@ async function readResponseTextStreamWithSignal(
 ): Promise<string> {
   if (!response.body) return "";
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let totalBytes = 0;
-  let text = "";
-  let onAbort: (() => void) | null = null;
-  let abortPromise: Promise<never> | null = null;
-
-  if (signal) {
-    if (signal.aborted) {
-      await reader.cancel(responseBodyAbortReason(signal)).catch(() => undefined);
-      throw responseBodyAbortReason(signal);
-    }
-    abortPromise = new Promise<never>((_resolve, reject) => {
-      onAbort = () => {
-        void reader.cancel(responseBodyAbortReason(signal)).catch(() => undefined);
-        reject(responseBodyAbortReason(signal));
-      };
-      signal.addEventListener("abort", onAbort, { once: true });
-    });
-  }
-
-  try {
-    for (;;) {
-      if (signal?.aborted) {
-        await reader.cancel(responseBodyAbortReason(signal)).catch(() => undefined);
-        throw responseBodyAbortReason(signal);
-      }
-      const result = abortPromise
-        ? await Promise.race([reader.read(), abortPromise])
-        : await reader.read();
-      if (result.done) break;
-
-      const chunk = result.value instanceof Uint8Array ? result.value : new Uint8Array(result.value);
-      if (overflowMode === "throw") {
-        totalBytes += chunk.byteLength;
-        if (totalBytes > maxBytes) {
-          await reader.cancel().catch(() => undefined);
-          throw new ResponseBodyTooLargeError(maxBytes, totalBytes);
-        }
-        text += decoder.decode(chunk, { stream: true });
-        continue;
-      }
-
-      const remaining = maxBytes - totalBytes;
-      if (remaining <= 0) {
-        await reader.cancel().catch(() => undefined);
-        break;
-      }
-      const slice = chunk.byteLength > remaining ? chunk.slice(0, remaining) : chunk;
-      totalBytes += slice.byteLength;
-      text += decoder.decode(slice, { stream: totalBytes < maxBytes });
-      if (chunk.byteLength > remaining || totalBytes >= maxBytes) {
-        await reader.cancel().catch(() => undefined);
-        break;
-      }
-    }
-
-    if (signal?.aborted) throw responseBodyAbortReason(signal);
-    text += decoder.decode();
-    return text;
-  } finally {
-    if (signal && onAbort) signal.removeEventListener("abort", onAbort);
-  }
+  const { bytes } = await bufferReadableStream(response.body, {
+    maxBytes,
+    signal,
+    overflowMode,
+    abortReason: responseBodyAbortReason,
+    createOverflowError: (limit, observedBytes) => new ResponseBodyTooLargeError(limit, observedBytes),
+  });
+  return new TextDecoder().decode(bytes);
 }
 
 export async function readResponseTextWithinLimitWithSignal(

@@ -38,7 +38,6 @@ export type V9BridgeTier = BridgeRouteRiskTier;
 
 export type V9OracleBranchKind = V9EconomicControlReviewV2["oracle"]["branches"][number]["branch"];
 
-export type V9UpgradeControlReview = V9EconomicControlReviewV2["mint"]["upgrade"];
 
 export type V9MintMechanismReview = Omit<
   V9EconomicControlReviewV2["mint"],

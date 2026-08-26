@@ -11,7 +11,7 @@ const { useApiKeyRequestsMock } = vi.hoisted(() => ({
   useApiKeyRequestsMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-api-key-requests", () => ({
+vi.mock("@/hooks/admin-api-hooks", () => ({
   useApiKeyRequests: useApiKeyRequestsMock,
 }));
 

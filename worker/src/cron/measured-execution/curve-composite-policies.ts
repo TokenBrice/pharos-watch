@@ -1,4 +1,5 @@
 import { canonicalEvmAddress } from "./evm-codecs";
+import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 import {
   CURVE_ALUSD_3CRV_METAPOOL_ADDRESS, CURVE_DOLA_FRAXBP_METAPOOL_ADDRESS,
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS, CURVE_EUSD_FRAXBP_METAPOOL_ADDRESS,
@@ -9,9 +10,9 @@ import {
 } from "./curve-composite-identities";
 
 export const CURVE_RATE_BEARING_ADAPTER_PROFILE_ID =
-  "curve-stableswap-ng-rate-bearing-get-dy-v1" as const;
+  DEX_MEASURED_ADAPTER_PROFILE_IDS.curveRateBearing;
 export const CURVE_METAPOOL_ADAPTER_PROFILE_ID =
-  "curve-stableswap-ng-metapool-underlying-v1" as const;
+  DEX_MEASURED_ADAPTER_PROFILE_IDS.curveMetapool;
 
 export interface CurveCompositeToken {
   address: `0x${string}`;

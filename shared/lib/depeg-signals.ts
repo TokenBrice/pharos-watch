@@ -1,4 +1,6 @@
-export type DepegDirection = "above" | "below";
+import type { DepegDirection } from "../types/market";
+
+export type { DepegDirection } from "../types/market";
 
 export interface DepegSignal {
   bps: number;

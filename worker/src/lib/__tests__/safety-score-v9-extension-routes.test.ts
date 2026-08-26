@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 import {
   getRedemptionBackstopConfig,
   resolveReviewedRedemptionSettlement,
@@ -1274,7 +1275,7 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     const observation = dexObservation(
       "measured-executable-depth",
       true,
-      "curve-stableswap-main-registry-get-dy-v1",
+      DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap,
     );
     observation.observationHistory = {
       ...observation.observationHistory!,

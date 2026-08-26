@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 import { DexAmmExecutionModelSchema } from "@shared/types/market";
 import {
   buildCurveStableSwapNgMeasuredExecutionTarget,
@@ -400,7 +401,7 @@ describe("buildCurveStableswapExecutionModel", () => {
     ]);
     expect(usdtTargets).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        adapterProfileId: "curve-stableswap-main-registry-get-dy-v1",
+        adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap,
         poolId: `ethereum:${THREEPOOL}`,
         tokenIn: expect.objectContaining({
           trackedAssetId: "usdt-tether",
@@ -515,7 +516,7 @@ describe("buildCurveStableswapExecutionModel", () => {
       chain: "ethereum",
     })).toBe(`ethereum:${USDG_NG_POOL}`);
     expect(build()).toMatchObject({
-      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
+      adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
       stablecoinId: "usdg-paxos",
       poolId: `ethereum:${USDG_NG_POOL}`,
       retainedPoolPriceUsd: 0.9999,
@@ -577,7 +578,7 @@ describe("buildCurveStableswapExecutionModel", () => {
       chain: "ethereum",
     })).toBe(`ethereum:${DUSD_NG_POOL}`);
     expect(dusdTarget).toMatchObject({
-      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
+      adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
       stablecoinId: "dusd-dialectic",
       poolId: `ethereum:${DUSD_NG_POOL}`,
       tokenIn: {

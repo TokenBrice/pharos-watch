@@ -1,7 +1,6 @@
 import { getListingClass, isCoreAggregateListingClass, type ListingClass } from "./listing-governance";
 
 export const CORE_STABLECOIN_AGGREGATE_UNIVERSE = "core-stablecoins-v1" as const;
-export type CoreStablecoinAggregateUniverse = typeof CORE_STABLECOIN_AGGREGATE_UNIVERSE;
 
 interface StablecoinIdentity {
   id: string;

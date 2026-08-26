@@ -31,7 +31,6 @@ const RedemptionExitEvidenceKindSchema = z.enum([
   "onchain-contract-state",
   "manual-review",
 ]);
-export type RedemptionExitEvidenceKind = z.infer<typeof RedemptionExitEvidenceKindSchema>;
 
 export const ExitRouteConfidenceSchema = z.enum(["high", "medium", "low", "unknown"]);
 export type ExitRouteConfidence = z.infer<typeof ExitRouteConfidenceSchema>;
@@ -379,7 +378,6 @@ export type DexExitRouteObservation = z.infer<typeof DexExitRouteObservationSche
 export const RedemptionExitRouteObservationSchema = ExitRouteObservationBaseSchema.superRefine((observation, ctx) => {
   enforceRedemptionExitRouteLane(observation, ctx);
 });
-export type RedemptionExitRouteObservation = z.infer<typeof RedemptionExitRouteObservationSchema>;
 
 export const ExitRouteObservationSchema = ExitRouteObservationBaseSchema.superRefine((observation, ctx) => {
   if (DEX_EXIT_ROUTE_FAMILIES.has(observation.routeFamily)) enforceDexExitRouteLane(observation, ctx);

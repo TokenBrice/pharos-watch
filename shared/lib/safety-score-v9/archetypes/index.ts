@@ -14,13 +14,6 @@ import { evaluateV9RwaCreditFundBacking } from "./rwa-credit-fund";
 import { evaluateV9SyntheticDeltaNeutralBacking } from "./synthetic-delta-neutral";
 import { evaluateV9TbillBacking } from "./tbill";
 
-export type { V9AlgorithmicMechanismRiskReview } from "./algorithmic";
-export type { V9CdpMechanismRiskReview } from "./cdp";
-export type { V9CommodityClaimMechanismRiskReview } from "./commodity-claim";
-export type { V9FiatCashMechanismRiskReview } from "./fiat-cash";
-export type { V9RwaCreditFundMechanismRiskReview } from "./rwa-credit-fund";
-export type { V9SyntheticDeltaNeutralMechanismRiskReview, V9SyntheticVenueShare } from "./synthetic-delta-neutral";
-export type { V9TbillMechanismRiskReview } from "./tbill";
 
 export type { V9MechanismRiskReview } from "../../../types/safety-score-v9-backing";
 

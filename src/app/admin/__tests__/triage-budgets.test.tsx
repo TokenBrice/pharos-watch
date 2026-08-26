@@ -18,7 +18,7 @@ vi.mock("@/hooks/use-critical-ops-model", () => ({
   useCriticalOpsModel: useCriticalOpsModelMock,
 }));
 
-vi.mock("@/hooks/use-credential-lifecycle-summary", () => ({
+vi.mock("@/hooks/admin-api-hooks", () => ({
   useCredentialLifecycleSummary: useCredentialLifecycleSummaryMock,
 }));
 

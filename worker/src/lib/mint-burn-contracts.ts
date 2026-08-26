@@ -1,19 +1,6 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import { MINT_BURN_CONFIG_SPECS } from "./mint-burn-contracts-data";
-export type {
-  MintBurnAdapterKind,
-  MintBurnBridgeDetectionConfig,
-  MintBurnCcipBridgeDetectionConfig,
-  MintBurnCctpBridgeDetectionConfig,
-  MintBurnContractConfig,
-  MintBurnContractConfigSpec,
-  MintBurnDirection,
-  MintBurnEventDef,
-  MintBurnLayerZeroOftBridgeDetectionConfig,
-  MintBurnStartBlockConfidence,
-  MintBurnTier,
-  MintBurnType,
-} from "./mint-burn-contracts-types";
+export type { MintBurnBridgeDetectionConfig, MintBurnCcipBridgeDetectionConfig, MintBurnCctpBridgeDetectionConfig, MintBurnContractConfig, MintBurnEventDef, MintBurnLayerZeroOftBridgeDetectionConfig, MintBurnTier, MintBurnType } from "./mint-burn-contracts-types";
 import type {
   MintBurnBridgeDetectionConfig,
   MintBurnContractConfig,

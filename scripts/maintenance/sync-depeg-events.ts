@@ -11,7 +11,11 @@
  *   tsx scripts/maintenance/sync-depeg-events.ts --api-url https://api.pharos.watch
  */
 
-import type { DepegEvent } from "@shared/types/market";
+import {
+  DepegEventStoredSnapshotSchema,
+  type DepegEvent,
+  type DepegEventEntry,
+} from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -45,10 +49,6 @@ interface DepegEventsResponse {
   events: DepegEvent[];
   total?: number;
   nextCursor?: string | null;
-}
-
-export interface DepegEventEntry extends DepegEvent {
-  slug: string;
 }
 
 export interface DepegSyncCliOptions {
@@ -86,11 +86,7 @@ export function parseDepegSyncArgs(argv: string[]): DepegSyncCliOptions {
 function readExistingDepegEntries(outputPath: URL): readonly DepegEventEntry[] {
   const outputFile = fileURLToPath(outputPath);
   if (!existsSync(outputFile)) return [];
-  const parsed: unknown = JSON.parse(readFileSync(outputFile, "utf8"));
-  if (!Array.isArray(parsed)) {
-    throw new Error(`Existing depeg snapshot is not an array: ${outputFile}`);
-  }
-  return parsed as DepegEventEntry[];
+  return DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(outputFile, "utf8")));
 }
 
 export function findMissingStaticDepegArchiveSlugs(

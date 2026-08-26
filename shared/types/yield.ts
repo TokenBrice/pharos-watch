@@ -260,7 +260,6 @@ export const YieldPysInputsAtPublishSchema = z.object({
   benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES),
   evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES),
 });
-export type YieldPysInputsAtPublish = z.infer<typeof YieldPysInputsAtPublishSchema>;
 
 const YieldHistoryPointSchema = z.object({
   date: z.union([z.number(), z.string()]),

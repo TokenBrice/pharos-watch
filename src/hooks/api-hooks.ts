@@ -45,7 +45,6 @@ import type { FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor } fro
 import type { ApiMeta } from "@/lib/api";
 
 export type { StabilityContributor };
-export type { NonUsdSharePoint } from "@/lib/api-query-descriptors";
 
 export type QueryControlOverrides = PollingQueryControlOptions & Pick<ApiQueryOptions<unknown>, "fetchInit">;
 export type V9QueryControlOverrides = Omit<QueryControlOverrides, "keepPreviousData">;

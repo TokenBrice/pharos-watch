@@ -6,7 +6,7 @@ import type { StatusCause, StatusTransition } from "@shared/types";
 import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Button } from "@/components/ui/button";
-import type { StatusHistoryWindow } from "@/hooks/use-status-history";
+import type { StatusHistoryWindow } from "@/hooks/admin-api-hooks";
 import {
   DEFAULT_INCIDENT_HISTORY_QUERY,
   INCIDENT_FLAPPING_TRANSITION_THRESHOLD,

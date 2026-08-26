@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { DepegEvent, DepegEventSearchEntry } from "@shared/types/market";
+import {
+  DepegEventStoredSnapshotSchema,
+  type DepegEventEntry,
+  type DepegEventSearchEntry,
+} from "@shared/types/market";
 import { selectStaticDepegEventPages } from "../../src/lib/depeg-event-config";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
@@ -16,12 +20,8 @@ const CHECK_MODE = process.argv.includes("--check");
 // generated search entry and does not apply a second depeg-event result cap.
 const SEARCH_EVENT_LIMIT = 10;
 
-interface DepegEventEntry extends DepegEvent {
-  slug: string;
-}
-
 function readDepegEvents(): readonly DepegEventEntry[] {
-  return JSON.parse(readFileSync(SOURCE, "utf8")) as DepegEventEntry[];
+  return DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(SOURCE, "utf8")));
 }
 
 function buildClientEntries(events: readonly DepegEventEntry[]): DepegEventSearchEntry[] {

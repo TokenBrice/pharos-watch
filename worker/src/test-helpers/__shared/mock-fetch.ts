@@ -5,8 +5,4 @@ export {
   mockFetch,
   mockFetchStrict,
 } from "@shared/test-utils/mock-fetch";
-export type {
-  MockFetchOutcome,
-  MockFetchSpy,
-  MockRoute,
-} from "@shared/test-utils/mock-fetch";
+export type { MockRoute } from "@shared/test-utils/mock-fetch";

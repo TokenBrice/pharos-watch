@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
   DEX_MEASURED_MAX_COST_BPS,
   buildDexMeasuredCapacityCurve,
@@ -430,7 +431,7 @@ describe("DEX measured execution contract", () => {
 
   it("gives every measured adapter the shared three-hour profile ceiling", () => {
     const nowSec = 20_000;
-    const adapterProfileId = "curve-stableswap-main-registry-get-dy-v1";
+    const adapterProfileId = DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap;
     const targetId = buildDexMeasuredExecutionTargetId({
       adapterProfileId,
       stablecoinId: "usd1",
@@ -458,7 +459,7 @@ describe("DEX measured execution contract", () => {
     // cadence, so a single missed even-hour `:16` publication cannot expire
     // every measured profile at once.
     expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(10_800);
-    expect(getDexMeasuredExecutionFreshnessMaxSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(10_800);
+    expect(getDexMeasuredExecutionFreshnessMaxSec(DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg)).toBe(10_800);
     expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(10_800);
     expect(validateDexMeasuredExecutionProfile({
       profile: retainedProfile,

@@ -22,6 +22,7 @@ import {
   normalizeExitRouteCorrelationKey,
 } from "./exit-route-identity";
 import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   getDexMeasuredExecutionFreshnessMaxSec,
   DexMeasuredExecutionPublicProfileSchema,
   isDexMeasuredExecutionObservationHistoryMature,
@@ -33,8 +34,8 @@ const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
 
 const REFERENCE_NOTIONAL_USD = EXIT_ROUTE_SCORING_TABLES.request.referenceNotionalUsd;
 const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;
-const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
-const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v2";
+const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap;
+const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg;
 const CURVE_3POOL_ADDRESS = "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
 const CURVE_MAIN_REGISTRY_ADDRESS = "0x90e00ace148ca3b23ac1bc8c240c2a7dd9c2d7f5";
 const CURVE_MAIN_REGISTRY_CODE_HASH =

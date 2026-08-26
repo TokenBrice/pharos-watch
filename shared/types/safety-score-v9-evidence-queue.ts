@@ -58,7 +58,6 @@ const V9EvidenceGapMaterialityBasisSchema = z.enum([
   "serial-claim",
   "unresolved",
 ]);
-export type V9EvidenceGapMaterialityBasis = z.infer<typeof V9EvidenceGapMaterialityBasisSchema>;
 
 const V9EvidenceGapMaterialityV1Schema = z
   .object({
@@ -197,7 +196,6 @@ const V9EvidenceGapQueueEntryV1Schema = z
   .object(V9EvidenceGapQueueEntryV1Fields)
   .strict()
   .superRefine(addEntryConsistencyIssues);
-export type V9EvidenceGapQueueEntryV1 = z.infer<typeof V9EvidenceGapQueueEntryV1Schema>;
 
 const V9EvidenceGapQueueEntryV2Schema = z
   .object({

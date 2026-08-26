@@ -764,8 +764,6 @@ export const ENV_BINDINGS = [
   },
 ] satisfies readonly EnvBindingDefinition[];
 
-export type EnvBindingKey = (typeof ENV_BINDINGS)[number]["key"];
-
 function getBindingsForRuntime(
   runtime: EnvRuntimeName,
   status: EnvRuntimeStatus,

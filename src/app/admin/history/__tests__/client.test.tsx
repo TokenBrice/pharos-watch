@@ -22,11 +22,13 @@ const {
   historySectionPropsMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-status", () => ({ useStatus: useStatusMock }));
-vi.mock("@/hooks/use-status-history", () => ({ useStatusHistory: useStatusHistoryMock }));
+vi.mock("@/hooks/admin-api-hooks", () => ({
+  useStatus: useStatusMock,
+  useStatusHistory: useStatusHistoryMock,
+  useAdminActionLog: useAdminActionLogMock,
+  useApiKeyAuditLog: useApiKeyAuditLogMock,
+}));
 vi.mock("@/hooks/use-release-metadata", () => ({ useReleaseMetadata: useReleaseMetadataMock }));
-vi.mock("@/hooks/use-admin-action-log", () => ({ useAdminActionLog: useAdminActionLogMock }));
-vi.mock("@/hooks/use-api-key-audit-log", () => ({ useApiKeyAuditLog: useApiKeyAuditLogMock }));
 vi.mock("../../workspace-status-boundary", () => ({
   WorkspaceStatusBoundary: ({ data, children }: { data: unknown; children: (data: unknown) => ReactNode }) =>
     data ? children(data) : null,

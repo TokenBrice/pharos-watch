@@ -95,7 +95,6 @@ export const RedemptionCapacityBasisSchema = z.enum([
   "live-direct-telemetry",
   "live-proxy-buffer",
 ]);
-export type RedemptionCapacityBasis = z.infer<typeof RedemptionCapacityBasisSchema>;
 
 export const RedemptionCapacitySemanticsSchema = z.enum(["immediate-bounded", "eventual-only"]);
 export type RedemptionCapacitySemantics = z.infer<typeof RedemptionCapacitySemanticsSchema>;
@@ -123,10 +122,8 @@ export const RedemptionRouteExitCorrelationSchema = z.enum([
   "wrapper-to-parent-dependency",
   "unknown",
 ]);
-export type RedemptionRouteExitCorrelation = z.infer<typeof RedemptionRouteExitCorrelationSchema>;
 
 export const RedemptionFeeScenarioSchema = z.enum(["normal", "stress"]);
-export type RedemptionFeeScenario = z.infer<typeof RedemptionFeeScenarioSchema>;
 
 export const RedemptionDocSourceSupportSchema = z.enum(["route", "capacity", "fees", "access", "settlement"]);
 export type RedemptionDocSourceSupport = z.infer<typeof RedemptionDocSourceSupportSchema>;

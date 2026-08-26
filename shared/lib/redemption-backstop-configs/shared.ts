@@ -16,14 +16,7 @@ import type {
  * to TypeScript there. These re-exports keep the historical import site working
  * and stay type-only so `zod` never enters a runtime bundle through this module.
  */
-export type {
-  RedemptionBackstopConfig,
-  RedemptionCapacityModel,
-  RedemptionCostModel,
-  RedemptionCostTerms,
-  RedemptionV9ComposedDexExit,
-  RedemptionV9RouteReviewTerms,
-} from "./schema";
+export type { RedemptionBackstopConfig, RedemptionCapacityModel, RedemptionCostModel, RedemptionV9RouteReviewTerms } from "./schema";
 
 export {
   resolveMoreConservativeRedemptionSettlement,

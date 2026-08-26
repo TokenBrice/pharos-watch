@@ -61,7 +61,7 @@ Hook behavior:
 
 `npm run check:pr -- --base=<ref>` is the local counterpart to a normal code PR. It reads the committed `base...HEAD` diff, runs changed-file lint and source typing, adds Pages/Worker/Telegram guardrails only when relevant, checks affected generated artifacts, and runs the critical plus dependency-selected Vitest files.
 
-`npm run check:release` is the optional deeper rehearsal. It performs the Pages build, static feature/SEO checks, and a credential-free Worker bundle proof. It does not mutate Cloudflare, D1, or production state and does not replace the protected GitHub gate.
+`npm run check:release` is the optional deeper rehearsal. It performs the Pages build, the shared Pages release artifact checks, and a credential-free Worker bundle proof. It does not mutate Cloudflare, D1, or production state and does not replace the protected GitHub gate.
 
 Use focused checks while iterating. Run `test:all`, full lint, typed lint, or `typecheck:tests` directly when a change affects those broad contracts; they also run in nightly/manual validation.
 
@@ -111,8 +111,8 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 Reusable Pages sequence in `.github/workflows/pages-release.yml`:
 
 1. Check out full history, install the workspace without a browser, and restore the dedicated `.next/cache` compiler cache. Full history remains required for per-route and per-doc generated timestamps.
-2. When `refresh_data=true`, refresh digests, confirmed depeg events, and public dataset mirrors concurrently through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`. Digest and depeg refreshes write isolated temporary snapshots and move only successful results into place; public datasets keep their scoped git fallback. The digest sync rejects archive shrink; the depeg sync carries previously published static rows forward when live reclassification would make them sub-threshold, and rejects any remaining published-slug loss. A failed fetch, invalid input, or archive shrink retains only that surface's committed snapshot and continues to the build with a job-summary warning.
-3. Build once with the production feature-flag environment, preserving the restored Next compiler cache and the selected committed or freshly refreshed data through the prebuild hook. The protected PR gate has already run `next typegen` plus the root TypeScript project, so this post-merge build skips only Next's duplicate typecheck; direct local builds still typecheck by default.
+2. When `refresh_data=true`, `scripts/maintenance/refresh-pages-release-data.ts` refreshes digests, confirmed depeg events, and public dataset mirrors concurrently through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`. Digest and depeg refreshes write isolated temporary snapshots and move only successful results into place; public datasets keep their scoped git fallback. The digest sync rejects archive shrink; the depeg sync carries previously published static rows forward when live reclassification would make them sub-threshold, and rejects any remaining published-slug loss. A failed fetch, invalid input, or archive shrink retains only that surface's committed snapshot and continues to the build with a job-summary warning. The orchestration command also writes a machine-readable result JSON under its refresh directory.
+3. Select the `compile-input` and `post-refresh` generated-artifact lifecycles once, then build with the production feature-flag environment and restored Next compiler cache. The protected PR gate has already run `next typegen` plus the root TypeScript project, so this post-merge build skips only Next's duplicate typecheck; direct local builds still typecheck by default.
 4. Run feature-flag inlining, build-size, and phishing-signature checks concurrently, then run the static SEO and published-archive continuity gate over the same exact artifact. The SEO command extracts per-page metadata in bounded worker threads but retains all prior assertions. It also fetches the currently deployed `pages.dev` sitemap and requires every previously published digest/depeg detail URL to remain submitted or have a direct permanent redirect to a submitted canonical. This final continuity gate covers refresh-only routes that are newer than the checked-in snapshots; a fallback build that would regress one of those routes fails before deployment.
 5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, resolve the latest production deployment through `wrangler pages deployment list --json`, and require one cache-busted target-SHA marker match from that immutable `pages.dev` deployment URL within the bounded polling window.
 6. Record the commit, run URL, artifact size/file count, refresh mode, immutable deployment URL, marker result, and the manual Cloudflare Pages deployment-history rollback pointer in the job summary.
@@ -195,7 +195,7 @@ Use dependency maintenance as a dedicated routine, not as incidental churn insid
    - land one bounded patch/minor refresh tranche from the root lockfile
    - keep root testing/tooling and worker infrastructure cohorts separate so rollback stays targeted
 2. Weekly:
-   - review `.github/workflows/dependency-audit.yml` output
+   - review `.github/workflows/weekly-validation.yml` output
    - treat high/critical vulnerabilities as blocking until fixed, pinned away, or explicitly risk-accepted
    - treat non-blocking staleness as advisory input for the next monthly patch/minor tranche
 3. Once per quarter, or earlier when upstream support windows force it:
@@ -209,7 +209,7 @@ Current explicitly deferred major cohort:
 
 Risk-accepted transitive advisories are machine-readable in `scripts/ci/dependency-audit-exceptions.json`; the verifier rejects malformed, expired, or widened entries. The registry is the weekly workflow's authority, while this section records the review rationale. There are currently no active exceptions.
 
-The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Root manifest or lockfile PRs run it through `check:pr:static`. The weekly `dependency-audit.yml` job runs the broader full-lockfile audit through `scripts/ci/verify-dependency-audit.ts`; it passes only when every high/critical finding is the exact, unexpired reviewed exception.
+The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Root manifest or lockfile PRs run it through `check:pr:static`. The `audit` job in `weekly-validation.yml` runs the broader full-lockfile audit through `scripts/ci/verify-dependency-audit.ts`; it passes only when every high/critical finding is the exact, unexpired reviewed exception.
 
 When the weekly job finds a new high/critical full-lockfile advisory, fix it, pin it away, or add a narrowly scoped, expiring registry entry with the reviewed unreachable/dev-only rationale here. Do not run `npm audit fix --force` outside a dedicated dependency tranche; forced fixes can downgrade or cross major lines.
 

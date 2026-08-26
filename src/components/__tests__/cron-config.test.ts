@@ -13,7 +13,7 @@ describe("status cron config", () => {
     expect(getStatusCronDisplay("sync-dex-liquidity-stage")).toEqual({
       group: "hourly",
       label: "DEX liquidity source stage",
-      schedule: "10,40 * * * *",
+      schedule: "10 * * * *",
       triggerMode: "isolated",
     });
     expect(getStatusCronDisplay("sync-dex-liquidity")).toEqual({

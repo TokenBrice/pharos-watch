@@ -6,8 +6,13 @@ import {
   DepegResolverReviewerModule,
   DepegResolverReviewerSkeleton,
 } from "@/components/depeg-resolver-reviewer-module";
+import {
+  coverageRow,
+  makePredictionPolicySegment,
+  predictionRow as row,
+} from "@/components/depeg-resolver-review-test-support";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
-import type { DdrrResponse, DdrrRow, DdrrSummary } from "@shared/types";
+import type { DdrrResponse, DdrrSummary } from "@shared/types";
 
 vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverReviewerEnabled: () => true,
@@ -41,86 +46,6 @@ const summary: DdrrSummary = makeSummary({
   meanAbsoluteDurationErrorSec: 5400,
   pendingLockCount: 1,
 });
-
-const row: DdrrRow = {
-  kind: "prediction_review",
-  eventId: 42,
-  currentEventId: 42,
-  incidentKey: "lusd-liquity:below:1",
-  stablecoinId: "lusd-liquity",
-  symbol: "LUSD",
-  name: "Liquity USD",
-  pegCurrency: "USD",
-  governance: "decentralized",
-  direction: "below",
-  startedAt: 1,
-  eligibleAt: 1,
-  sourceEventState: "recovered",
-  terminalEvidenceAt: null,
-  terminalEvidenceInterval: null,
-  terminalEvidencePrecision: null,
-  publicPredictionId: 7,
-  assessmentId: 9,
-  predictionState: "frozen",
-  predictionMethodologyVersion: "1.0",
-  predictionPolicyVersion: "sticky-24h-v1",
-  lockedAt: 2,
-  publishedAt: 3,
-  publicationSnapshotToken: "snapshot-1",
-  frozen: {
-    resolutionTier: "recovery_likely",
-    predictedRemainingSec: 3600,
-    iqrRemainingSec: [1800, 7200],
-    horizonCells: [],
-    stratum: "below - moderate - robust - USD",
-    factors: [],
-  },
-  actual: {
-    kind: "recovered",
-    actualEndedAt: 7202,
-    actualRemainingSec: 7200,
-    terminalEvidenceAt: null,
-    terminalEvidenceInterval: null,
-    terminalEvidencePrecision: null,
-    reviewedAt: 7202,
-  },
-  verdictReview: "correct_recoverable",
-  durationReview: "inside_band",
-  horizonReviews: [],
-  predictedRemainingSec: 3600,
-  actualRemainingSec: 7200,
-  medianReview: "median_late_by",
-  signedDurationErrorSec: 3600,
-  absoluteDurationErrorSec: 3600,
-  withinIqr: true,
-};
-
-const coverageRow: DdrrRow = {
-  kind: "coverage",
-  eventId: 43,
-  currentEventId: 43,
-  incidentKey: "lusd-liquity:below:2",
-  stablecoinId: "lusd-liquity",
-  symbol: "LUSD",
-  name: "Liquity USD",
-  pegCurrency: "USD",
-  governance: "decentralized",
-  direction: "below",
-  startedAt: 1,
-  eligibleAt: 1,
-  sourceEventState: "recovered",
-  terminalEvidenceAt: null,
-  terminalEvidenceInterval: null,
-  terminalEvidencePrecision: null,
-  predictionState: "missed_lock_recovered",
-  actualEndedAt: 7202,
-  terminalEvidenceSourceDate: null,
-  coverageCause: "lock_missed",
-  operationalCoverageCause: "lock_missed",
-  outcomeQualityState: "classified",
-  reason: null,
-  failedPublication: null,
-};
 
 function response(overrides: Partial<DdrrResponse> = {}): DdrrResponse {
   return {
@@ -187,35 +112,15 @@ describe("DepegResolverReviewerModule", () => {
     const template = summarizeDdrrRows([]).byPredictionPolicy.find(
       (candidate) => candidate.segmentKind === "all",
     )!.metrics;
-    const segment = (
-      version: string,
-      scored: number,
-      correct: number,
-      durationScored = 0,
-      meanSignedDurationErrorSec: number | null = null,
-      meanAbsoluteDurationErrorSec: number | null = null,
-    ) => ({
-      segmentKind: "prediction_policy" as const,
-      predictionMethodologyVersion: version,
-      predictionPolicyVersion: "sticky-24h-v1",
-      metrics: {
-        ...template,
-        recoveryLikelihoodScoredCount: scored,
-        recoveryLikelihoodCorrectCount: correct,
-        durationScoredCount: durationScored,
-        meanSignedDurationErrorSec,
-        meanAbsoluteDurationErrorSec,
-      },
-    });
     render(
       <DepegResolverReviewerModule
         data={response({
           summary: {
             ...summary,
             byPredictionPolicy: [
-              segment("2.0", 6, 5, 5, 3600, 5400),
-              segment("3.02", 13, 11, 10, 7200, 10800),
-              segment("3.04", 21, 20, 20, -3600, 7200),
+              makePredictionPolicySegment(template, "2.0", 6, 5, 5, 3600, 5400),
+              makePredictionPolicySegment(template, "3.02", 13, 11, 10, 7200, 10800),
+              makePredictionPolicySegment(template, "3.04", 21, 20, 20, -3600, 7200),
               ...summary.byPredictionPolicy,
             ],
           },

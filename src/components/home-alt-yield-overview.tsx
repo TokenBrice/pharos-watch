@@ -7,7 +7,7 @@ import { SquareArrowRight } from "lucide-react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useYieldRankings } from "@/hooks/api-hooks";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatPercent, formatScore } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
@@ -187,7 +187,7 @@ function LeaderRow({
 
 export function HomeAltYieldOverview(): React.JSX.Element | null {
   const { data, isLoading } = useYieldRankings();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const logoMap = logos ?? {};
 
   const overview = useMemo<OverviewData | null>(() => {

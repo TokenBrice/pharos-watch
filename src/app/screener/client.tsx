@@ -8,7 +8,7 @@ import { TableExportMenu } from "@/components/table-export-menu";
 import { ScreenerToolbar } from "@/components/screener/screener-toolbar";
 import { ScreenerTable } from "@/components/screener/screener-table";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { usePegSummary, useReportCardsV9, useStressSignals, useDexLiquidity } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useSort } from "@/hooks/use-sort";
@@ -98,7 +98,7 @@ function buildPegDeviationSeries(pegCoin: PegSummaryCoin | undefined): ReadonlyA
 
 export function ScreenerClient() {
   const hasHydrated = useHydrated();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const {
     data: stablecoinsData,
     isLoading: isStablecoinsLoading,

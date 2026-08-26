@@ -6,16 +6,14 @@ import { MintBurnCard } from "@/components/home-alt-mini-cards/mint-burn-card";
 import { PegHealthCard } from "@/components/home-alt-mini-cards/peg-health-card";
 import { RecentFreezesCard } from "@/components/home-alt-mini-cards/recent-freezes-card";
 
-const { useBlacklistEventsPageMock, useLogosMock, useMintBurnFlowsMock, usePegSummaryMock } = vi.hoisted(() => ({
+const { useBlacklistEventsPageMock, useMintBurnFlowsMock, usePegSummaryMock } = vi.hoisted(() => ({
   useBlacklistEventsPageMock: vi.fn(),
-  useLogosMock: vi.fn(),
   useMintBurnFlowsMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({ usePegSummary: usePegSummaryMock }));
 vi.mock("@/hooks/use-blacklist-events", () => ({ useBlacklistEventsPage: useBlacklistEventsPageMock }));
-vi.mock("@/hooks/use-logos", () => ({ useLogos: useLogosMock }));
 vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: useMintBurnFlowsMock }));
 
 afterEach(() => {
@@ -46,8 +44,6 @@ describe("homepage monitoring failure states", () => {
       refetch: vi.fn(),
       dataUpdatedAt: 0,
     });
-    useLogosMock.mockReturnValue({ data: {} });
-
     render(<MintBurnCard />);
 
     expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
@@ -62,8 +58,6 @@ describe("homepage monitoring failure states", () => {
       refetch: vi.fn(),
       dataUpdatedAt: 0,
     });
-    useLogosMock.mockReturnValue({ data: {} });
-
     const view = render(<RecentFreezesCard />);
     expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
     view.unmount();

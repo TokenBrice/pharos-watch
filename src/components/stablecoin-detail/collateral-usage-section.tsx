@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
@@ -49,7 +49,7 @@ interface CollateralUsageSectionProps {
 
 export function CollateralUsageSection({ entries }: CollateralUsageSectionProps) {
   const usage = useMemo(() => [...entries].sort((a, b) => b.weight - a.weight), [entries]);
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const [showAll, setShowAll] = useState(false);
 
   if (usage.length === 0) return null;

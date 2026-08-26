@@ -1,9 +1,7 @@
 import type { SupplyHistoryPoint } from "@shared/types";
 import type { ApiMeta } from "@/lib/api";
-import type {
-  MintAuthorityDetailViewModel,
-  StablecoinDetailCoinMeta,
-} from "@/lib/stablecoin-detail-mint-authority-view-model";
+import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { GatedQueryViewState } from "@/lib/query-view-state";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { ReserveResult } from "@shared/lib/reserve-templates";

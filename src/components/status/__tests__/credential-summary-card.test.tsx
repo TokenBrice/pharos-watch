@@ -9,7 +9,7 @@ const { useCredentialLifecycleSummaryMock } = vi.hoisted(() => ({
   useCredentialLifecycleSummaryMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-credential-lifecycle-summary", () => ({
+vi.mock("@/hooks/admin-api-hooks", () => ({
   useCredentialLifecycleSummary: useCredentialLifecycleSummaryMock,
 }));
 

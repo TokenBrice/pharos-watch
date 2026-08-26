@@ -6,7 +6,7 @@ import { ShieldCheck, SquareArrowRight } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { cn } from "@/lib/utils";
@@ -379,7 +379,7 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
     [resolverData],
   );
 
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const logoMap = logos ?? {};
 
   if (!resolverEnabled && !resolverReviewerEnabled) return null;

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   parseStablecoinMetaAssets,
+  STABLECOIN_SOURCE_DOMAIN_VALUES,
   StablecoinComplianceSidecarSchema,
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
@@ -1362,8 +1363,6 @@ describe("StablecoinMeta schema — real fixture smoke tests", () => {
   // validated against a reserves slice that now sits in the reserves sidecar), so the
   // fixture has to be composed before parsing or it fails closed on its own absent
   // fields. Sidecars carry exactly their domain's fields plus `id`.
-  const SIDECAR_DOMAINS = ["compliance", "reserves", "mint-authority", "risk-review"] as const;
-
   function composeSourceAsset(fixture: string): unknown {
     const dataDir = join(__dirname, "../../../../shared/data/stablecoins");
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads fixed fixture IDs from the local whitelist.
@@ -1371,7 +1370,7 @@ describe("StablecoinMeta schema — real fixture smoke tests", () => {
       string,
       unknown
     >;
-    for (const domain of SIDECAR_DOMAINS) {
+    for (const domain of STABLECOIN_SOURCE_DOMAIN_VALUES) {
       const sidecarPath = join(dataDir, "domains", domain, `${fixture}.json`);
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads fixed fixture IDs from the local whitelist.
       if (!existsSync(sidecarPath)) continue;

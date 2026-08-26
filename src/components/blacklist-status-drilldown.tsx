@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { X } from "lucide-react";
 import { useDexLiquidity, usePegSummary } from "@/hooks/api-hooks";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { Button } from "@/components/ui/button";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
@@ -31,7 +31,7 @@ export function BlacklistStatusDrilldown({
   reportCards,
   onClear,
 }: BlacklistStatusDrilldownProps) {
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const { data: pegSummaryData } = usePegSummary();
   const { data: dexLiquidity } = useDexLiquidity();
   const tableInputs = useMemo(

@@ -10,10 +10,7 @@ import {
   type V9BackingStructuralReason,
 } from "../backing";
 
-export type {
-  V9SyntheticDeltaNeutralMechanismRiskReview,
-  V9SyntheticVenueShare,
-} from "../../../types/safety-score-v9-backing";
+export type { V9SyntheticDeltaNeutralMechanismRiskReview } from "../../../types/safety-score-v9-backing";
 
 export function evaluateV9SyntheticDeltaNeutralBacking(
   asset: V9BackingAssetInput,

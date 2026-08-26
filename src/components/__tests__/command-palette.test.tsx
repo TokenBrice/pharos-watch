@@ -35,8 +35,8 @@ vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => <img {...props} alt={props.alt ?? ""} />,
 }));
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: () => ({ data: {} }),
+vi.mock("@/lib/logos", () => ({
+  logosById: {},
 }));
 
 vi.mock("@/hooks/use-command-palette-history", () => ({

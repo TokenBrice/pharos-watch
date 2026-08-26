@@ -7,7 +7,7 @@ import { usePegSummary, useStressSignals } from "@/hooks/api-hooks";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { useQuerySlices } from "@/hooks/use-query-slice";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import type { StaleQuery } from "@/components/stale-data-banner";
@@ -101,7 +101,7 @@ export function DepegClient() {
   });
   const resolverData = resolverSlice.data;
   const resolverReviewData = resolverReviewSlice.data;
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const router = useRouter();
 
   // Unified filter state (shared by table + heatmap)

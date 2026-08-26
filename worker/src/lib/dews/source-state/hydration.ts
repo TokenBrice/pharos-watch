@@ -23,7 +23,6 @@ import { getDexTrustPolicy, isTrustedDexPriceRow } from "../../depeg-trust-polic
 import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
 import type {
   BlacklistCountByStablecoinId,
-  DewsSourceState,
   DexLiquidityDependencyDiagnostics,
   DexLiquidityRow,
   DexPriceSnapshot,
@@ -677,6 +676,3 @@ export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<numb
     return null;
   }
 }
-
-// Re-export the source-coverage type alias for the orchestrator.
-export type DewsSourceCoverage = DewsSourceState["sourceCoverage"];

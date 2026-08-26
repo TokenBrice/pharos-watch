@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useReleaseMetadata } from "@/hooks/use-release-metadata";
-import { useAdminActionLog } from "@/hooks/use-admin-action-log";
-import { useApiKeyAuditLog } from "@/hooks/use-api-key-audit-log";
-import { useStatusHistory, type StatusHistoryWindow } from "@/hooks/use-status-history";
-import { useStatus } from "@/hooks/use-status";
+import {
+  useAdminActionLog,
+  useApiKeyAuditLog,
+  useStatus,
+  useStatusHistory,
+  type StatusHistoryWindow,
+} from "@/hooks/admin-api-hooks";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import {
   DEFAULT_INCIDENT_HISTORY_QUERY,

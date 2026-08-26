@@ -21,7 +21,7 @@ import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import { buildStablecoinFaqItems, StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
 import { FaqSection } from "@/components/faq-section";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
-import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
 import { buildMechanismBackingView } from "@/lib/mechanism-backing";
 import { buildMechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import { buildMechanismReviewView } from "@/lib/mechanism-review";

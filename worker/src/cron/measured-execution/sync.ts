@@ -1,4 +1,5 @@
 import {
+  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   getDexMeasuredExecutionProbeNotionals,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionPoolBindingProof,
@@ -271,8 +272,8 @@ const MEASURED_QUOTE_ADAPTER_REGISTRY: Readonly<
   },
   "curve-composite": {
     profileIds: [
-      "curve-stableswap-ng-rate-bearing-get-dy-v1",
-      "curve-stableswap-ng-metapool-underlying-v1",
+      DEX_MEASURED_ADAPTER_PROFILE_IDS.curveRateBearing,
+      DEX_MEASURED_ADAPTER_PROFILE_IDS.curveMetapool,
     ],
     validate: validateCurveCompositeProfileProof,
     quote: async (input) => {

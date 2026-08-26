@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { useStatus } from "@/hooks/use-status";
+import { useStatus } from "@/hooks/admin-api-hooks";
 import type { StatusResponse } from "@shared/types";
 import { WorkspaceStatusBoundary } from "./workspace-status-boundary";
 

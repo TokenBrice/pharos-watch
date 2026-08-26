@@ -10,15 +10,7 @@ import {
   type StablecoinStatus,
 } from "./stablecoin-taxonomy";
 export type { DependencyType } from "./dependency-types";
-export type { V9DependencyEconomicRole } from "./dependency-types";
-export type {
-  ReserveAssetClass,
-  ReserveBlacklistabilityExposure,
-  ReserveLiquidityHorizon,
-  ReserveRisk,
-  ReserveRiskFactor,
-  ReserveSlice,
-} from "./reserves";
+export type { ReserveAssetClass, ReserveLiquidityHorizon, ReserveRisk, ReserveRiskFactor, ReserveSlice } from "./reserves";
 export {
   GOVERNANCE_TYPE_VALUES,
   MECHANISM_ARCHETYPE_VALUES,
@@ -88,7 +80,6 @@ export type PegCurrency = (typeof PEG_CURRENCY_VALUES)[number];
 export type StablecoinFlags = import("./stablecoin-meta-schemas").StablecoinFlags;
 
 export const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
-export type ProofOfReservesType = (typeof PROOF_OF_RESERVES_TYPE_VALUES)[number];
 
 /**
  * Attestor quality ladder. `none` is a *reviewed* negative — a reviewer
@@ -116,8 +107,6 @@ export const PROOF_OF_RESERVES_CADENCE_VALUES = [
   /** Absence of evidence: no cadence is published, or the artefact is unreachable. */
   "undisclosed",
 ] as const;
-export type ProofOfReservesCadence = (typeof PROOF_OF_RESERVES_CADENCE_VALUES)[number];
-
 export const PROOF_ASSURANCE_METHOD_VALUES = [
   "audit",
   "examination",
@@ -127,14 +116,8 @@ export const PROOF_ASSURANCE_METHOD_VALUES = [
   "onchain-proof",
   "self-verification",
 ] as const;
-export type ProofAssuranceMethod = (typeof PROOF_ASSURANCE_METHOD_VALUES)[number];
-
 export const PROOF_ASSURANCE_SCOPE_VALUES = ["assets-only", "assets-and-liabilities"] as const;
-export type ProofAssuranceScope = (typeof PROOF_ASSURANCE_SCOPE_VALUES)[number];
-
 export const LIABILITY_RECONCILIATION_VALUES = ["full", "partial", "none", "unknown"] as const;
-export type LiabilityReconciliation = (typeof LIABILITY_RECONCILIATION_VALUES)[number];
-
 export type ProofOfReservesLatestReport = import("./stablecoin-meta-schemas").ProofOfReservesLatestReport;
 export type ProofOfReserves = import("./stablecoin-meta-schemas").ProofOfReserves;
 export type StablecoinLink = import("./stablecoin-meta-schemas").StablecoinLink;
@@ -143,14 +126,10 @@ export const RESEARCH_REVIEW_CONFIDENCE_VALUES = ["verified", "probable", "manua
 export type ResearchReviewConfidence = (typeof RESEARCH_REVIEW_CONFIDENCE_VALUES)[number];
 
 export const MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES = ["resolved", "unresolved"] as const;
-export type MechanismArchetypeReviewDisposition = (typeof MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES)[number];
-
 /** Review record for a direct mechanism classification or a reason-coded unresolved design. */
 export type MechanismArchetypeReview = import("./stablecoin-meta-schemas").MechanismArchetypeReview;
 
 export const RESERVE_REVIEW_SCOPE_VALUES = ["full-composition", "dependency-relationships", "selected-slices"] as const;
-export type ReserveReviewScope = (typeof RESERVE_REVIEW_SCOPE_VALUES)[number];
-
 export const RESERVE_NON_LINK_DISPOSITION_VALUES = [
   "untracked-exogenous-asset",
   "self-reserve",
@@ -231,8 +210,6 @@ export const MINT_AUTHORITY_NO_LOCAL_ISSUANCE_KIND_VALUES = [
   "inherited-parent-issuance",
   "external-only-representation",
 ] as const;
-export type MintAuthorityNoLocalIssuanceKind = (typeof MINT_AUTHORITY_NO_LOCAL_ISSUANCE_KIND_VALUES)[number];
-
 export const MINT_AUTHORITY_CONTROL_ROLE_VALUES = [
   "direct-minter",
   "minter-admin",
@@ -249,7 +226,6 @@ export const MINT_AUTHORITY_CONTROL_ROLE_VALUES = [
   "other",
   "unknown",
 ] as const;
-export type MintAuthorityControlRole = (typeof MINT_AUTHORITY_CONTROL_ROLE_VALUES)[number];
 
 export const MINT_AUTHORITY_TYPE_VALUES = [
   "safe",
@@ -264,7 +240,6 @@ export const MINT_AUTHORITY_TYPE_VALUES = [
   "none",
   "unknown",
 ] as const;
-export type MintAuthorityType = (typeof MINT_AUTHORITY_TYPE_VALUES)[number];
 
 export const MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES = [
   "direct",
@@ -278,8 +253,6 @@ export const MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES = [
 export type MintAuthorityDirectMintAbility = (typeof MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES)[number];
 
 export const MINT_AUTHORITY_SAFE_SOURCE_VALUES = ["onchain", "safe-api", "manual"] as const;
-export type MintAuthoritySafeSource = (typeof MINT_AUTHORITY_SAFE_SOURCE_VALUES)[number];
-
 // Reviewed economic-control facts the Safety Score v9 engine consumes. They are
 // optional on the profile; when absent the engine keeps its inferred/encoding
 // behavior (fail-closed inertness). Evidence lives in the profile's existing
@@ -319,7 +292,6 @@ export const MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES = [
   "unknown",
   "not-applicable",
 ] as const;
-export type MintAuthorityModulesOrGuardsStatus = (typeof MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES)[number];
 export type MintAuthoritySafeState = import("./stablecoin-meta-schemas").MintAuthoritySafeState;
 
 export const MINT_AUTHORITY_UPGRADE_MODEL_VALUES = [
@@ -331,13 +303,10 @@ export const MINT_AUTHORITY_UPGRADE_MODEL_VALUES = [
   "custom",
   "unknown",
 ] as const;
-export type MintAuthorityUpgradeModel = (typeof MINT_AUTHORITY_UPGRADE_MODEL_VALUES)[number];
 export type MintAuthorityUpgradeability = import("./stablecoin-meta-schemas").MintAuthorityUpgradeability;
 export type MintAuthorityRouteChecks = import("./stablecoin-meta-schemas").MintAuthorityRouteChecks;
 
 export const MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES = ["mpc", "hsm"] as const;
-export type MintAuthorityKeyCustodyAttestationKind =
-  (typeof MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES)[number];
 export type MintAuthorityKeyCustodyAttestation = import("./stablecoin-meta-schemas").MintAuthorityKeyCustodyAttestation;
 export type MintAuthorityControl = import("./stablecoin-meta-schemas").MintAuthorityControl;
 export type MintAuthorityReview = import("./stablecoin-meta-schemas").MintAuthorityReview;
@@ -363,8 +332,6 @@ export interface MintAuthorityProfile {
   supervision?: MintAuthoritySupervision;
   review: MintAuthorityReview;
 }
-
-export type BlacklistabilityReviewStatus = boolean | "possible" | "inherited";
 export type BlacklistabilityReview = import("./stablecoin-meta-schemas").BlacklistabilityReview;
 export type Jurisdiction = import("./stablecoin-meta-schemas").Jurisdiction;
 
@@ -421,8 +388,6 @@ export const GENIUS_SOURCE_KIND_VALUES = [
   "auditor-report",
   "news",
 ] as const;
-export type GeniusSourceKind = (typeof GENIUS_SOURCE_KIND_VALUES)[number];
-
 export const GENIUS_PRIMARY_FEDERAL_REGULATOR_VALUES = ["OCC", "Federal Reserve", "FDIC", "NCUA", "Unknown"] as const;
 export type GeniusPrimaryFederalRegulator = (typeof GENIUS_PRIMARY_FEDERAL_REGULATOR_VALUES)[number];
 
@@ -511,16 +476,13 @@ export type OracleRiskRole = (typeof ORACLE_RISK_ROLE_VALUES)[number];
 export const ORACLE_RISK_CONFIDENCE_VALUES = ["verified", "probable", "limited", "unknown"] as const;
 export type OracleRiskConfidence = (typeof ORACLE_RISK_CONFIDENCE_VALUES)[number];
 export const ORACLE_RISK_BRANCH_MODEL_VALUES = ["single-path", "multi-branch"] as const;
-export type OracleRiskBranchModel = (typeof ORACLE_RISK_BRANCH_MODEL_VALUES)[number];
 export const ORACLE_RISK_BRANCH_APPLICABILITY_VALUES = [
   "branches-required",
   "top-level-only",
   "not-applicable",
   "unresolved",
 ] as const;
-export type OracleRiskBranchApplicability = (typeof ORACLE_RISK_BRANCH_APPLICABILITY_VALUES)[number];
 export const ORACLE_RISK_LIQUIDATION_STATE_VALUES = ["callable", "uncallable", "unknown"] as const;
-export type OracleRiskLiquidationState = (typeof ORACLE_RISK_LIQUIDATION_STATE_VALUES)[number];
 export type OracleRiskBranchApplicabilityReview = import("./stablecoin-meta-schemas").OracleRiskBranchApplicabilityReview;
 export type OracleRiskFeed = import("./stablecoin-meta-schemas").OracleRiskFeed;
 export type OracleRiskCollateralParameter = import("./stablecoin-meta-schemas").OracleRiskCollateralParameter;
@@ -544,15 +506,10 @@ export const BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES = ["verified", "probable", "man
 export type BridgeRouteRiskConfidence = (typeof BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES)[number];
 
 export const BRIDGE_ROUTE_RISK_SOURCE_VALUES = ["l2beat", "issuer", "docs", "explorer", "manual"] as const;
-export type BridgeRouteRiskSource = (typeof BRIDGE_ROUTE_RISK_SOURCE_VALUES)[number];
 export type BridgeRouteProtocolEvidence = import("./stablecoin-meta-schemas").BridgeRouteProtocolEvidence;
 
 export const BRIDGE_ROUTE_CLASS_VALUES = ["native", "canonical", "third-party", "unknown"] as const;
-export type BridgeRouteClass = (typeof BRIDGE_ROUTE_CLASS_VALUES)[number];
-
 export const BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES = ["reviewed", "unresolved"] as const;
-export type BridgeRouteReviewDisposition = (typeof BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES)[number];
-
 export const BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES = [
   "native-issuance",
   "bridge-representation",
@@ -560,8 +517,6 @@ export const BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES = [
   "liquidity-settlement",
   "unknown",
 ] as const;
-export type BridgeRouteIssuanceModel = (typeof BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES)[number];
-
 export const BRIDGE_ROUTE_SEMANTICS_VALUES = [
   "native-mint",
   "burn-mint",
@@ -571,8 +526,6 @@ export const BRIDGE_ROUTE_SEMANTICS_VALUES = [
   "other",
   "unknown",
 ] as const;
-export type BridgeRouteSemantics = (typeof BRIDGE_ROUTE_SEMANTICS_VALUES)[number];
-
 export const BRIDGE_ROUTE_SCOPE_VALUES = ["global", "canonical", "peripheral", "unknown"] as const;
 export type BridgeRouteScope = (typeof BRIDGE_ROUTE_SCOPE_VALUES)[number];
 
@@ -620,7 +573,6 @@ export const OracleRiskTierSchema = z.enum(ORACLE_RISK_TIER_VALUES);
 export const BridgeRouteRiskTierSchema = z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES);
 
 export const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
-export type CoinNoticeType = (typeof COIN_NOTICE_TYPE_VALUES)[number];
 export type CoinNotice = import("./stablecoin-meta-schemas").CoinNotice;
 
 export const YIELD_TYPE_VALUES = [
@@ -657,7 +609,6 @@ export type LaunchMilestone = import("./stablecoin-meta-schemas").LaunchMileston
 export type DateHistoryEntry = import("./stablecoin-meta-schemas").DateHistoryEntry;
 
 export const FEATURED_CONTENT_TYPE_VALUES = ["tweet", "blog", "video", "article"] as const;
-export type FeaturedContentType = (typeof FEATURED_CONTENT_TYPE_VALUES)[number];
 export type FeaturedContent = import("./stablecoin-meta-schemas").FeaturedContent;
 
 export const MARKET_AVAILABILITY_VALUES = [
@@ -833,4 +784,4 @@ export const BLUECHIP_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C
 export type BluechipGrade = (typeof BLUECHIP_GRADE_VALUES)[number];
 export const BluechipGradeSchema = z.enum(BLUECHIP_GRADE_VALUES);
 
-export { MethodologyEnvelopeSchema, type MethodologyEnvelope } from "./methodology-envelope";
+export { MethodologyEnvelopeSchema } from "./methodology-envelope";

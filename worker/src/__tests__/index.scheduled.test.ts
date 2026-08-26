@@ -857,20 +857,11 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
   });
 
-  it("keeps :40 source staging neutral and reuses the current DEX generation at :46", async () => {
+  it("reuses the current DEX generation at :46 without rerunning source staging", async () => {
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
     });
-    const source = makeCtx();
-    await worker.scheduled(
-      { cron: "40 * * * *", scheduledTime: Date.parse("2026-08-10T12:40:00Z") } as ScheduledEvent,
-      env,
-      source.ctx,
-    );
-    await Promise.all(source.waits);
-    expect(cronMocks.stageDexLiquidityScoring).not.toHaveBeenCalled();
-
     const consumer = makeCtx();
     await worker.scheduled(
       { cron: "46 * * * *", scheduledTime: Date.parse("2026-08-10T12:46:00Z") } as ScheduledEvent,
@@ -878,6 +869,7 @@ describe("worker.scheduled", () => {
       consumer.ctx,
     );
     await Promise.all(consumer.waits);
+    expect(cronMocks.stageDexLiquidityScoring).not.toHaveBeenCalled();
     expect(cronMocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
     expect(cronMocks.reuseCurrentDexLiquidityScoringGeneration).toHaveBeenCalledTimes(1);
     expect(cronMocks.prepareSafetyScoreV9Input).toHaveBeenCalledTimes(1);

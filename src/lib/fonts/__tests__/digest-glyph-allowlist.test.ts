@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { DigestStoredSnapshotSchema } from "@shared/types/digest";
 
 /**
  * Guard the Newsreader subset: every glyph that the digest surface can mount
@@ -17,10 +18,6 @@ import { join } from "node:path";
  */
 
 const ROOT = process.cwd();
-
-interface DigestEntry {
-  title: string;
-}
 
 function parseAllowlist(path: string): Array<[number, number]> {
   const raw = readFileSync(path, "utf8");
@@ -63,7 +60,7 @@ describe("Newsreader subset allowlist", () => {
   it("covers every digest title glyph", () => {
     const ranges = parseAllowlist(join(ROOT, "data/fonts/glyphs-allowlist.txt"));
     const raw = readFileSync(join(ROOT, "data/digests.json"), "utf8");
-    const digests = JSON.parse(raw) as DigestEntry[];
+    const digests = DigestStoredSnapshotSchema.parse(JSON.parse(raw));
 
     const offenders: Array<{ title: string; missing: string[] }> = [];
     for (const entry of digests) {

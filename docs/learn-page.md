@@ -96,6 +96,6 @@ Primary inbound surfaces:
 - `src/app/learn/mechanisms/__tests__/content.test.ts`, the existing archetype route static-param test, and `src/app/__tests__/sitemap-frozen.test.ts` cover mechanism explainer content and routing completeness.
 - `src/lib/__tests__/term-markup.test.ts` parses every string `data/ai-summaries.json` entry through the runtime term-markup parser, rejects unknown glossary slugs and leftover raw markers, and ignores non-string text.
 - `src/app/learn/case-studies/__tests__/content.test.ts` checks case-study content invariants and internal links.
-- `npm run check:case-study-client-index` verifies the generated client-safe case-study registry.
-- `npm run check:generated-artifacts` verifies mechanism-explainer OG images through `scripts/maintenance/build-og-learn-images.ts --check`, case-study OG PNGs through `scripts/maintenance/build-og-case-studies.ts --check`, and editorial OG cards through `scripts/maintenance/build-og-editorial.mjs --check`.
+- `npm run check:generated-artifacts -- --only=case-study-client-index` verifies the generated client-safe case-study registry.
+- `npm run check:generated-artifacts -- --only=og-learn`, `npm run check:generated-artifacts -- --only=og-case-studies`, and `npm run check:generated-artifacts -- --only=og-editorial` verify the mechanism-explainer, case-study, and editorial OG artifacts; the full `npm run check:generated-artifacts` run covers all registered artifacts.
 - `npm run seo:check` verifies sitemap coverage, OG references, and crawlability after a Pages build.

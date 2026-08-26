@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { MethodologyEnvelope } from "./core";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
 import {
   DepegPrimaryTrustSchema,
@@ -369,7 +368,6 @@ export const LiquidityEvidenceClassSchema = z.enum([
   "partial_measured",
   "observed_unmeasured",
 ]);
-export type LiquidityEvidenceClass = z.infer<typeof LiquidityEvidenceClassSchema>;
 
 export const DexDeploymentOutcomeSchema = z.enum(["observed_pools", "verified_no_pools", "provider_inaccessible"]);
 export type DexDeploymentOutcome = z.infer<typeof DexDeploymentOutcomeSchema>;
@@ -549,6 +547,14 @@ export const DepegEventSchema = z.object({
 });
 export type DepegEvent = z.infer<typeof DepegEventSchema>;
 
+/** Build-time depeg archive written to data/depeg-events.json. */
+export const DepegEventStoredSnapshotSchema = z.array(
+  DepegEventSchema.extend({
+    slug: z.string().min(1),
+  }),
+);
+export type DepegEventEntry = z.infer<typeof DepegEventStoredSnapshotSchema>[number];
+
 export const DepegPendingIncidentSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -582,7 +588,6 @@ export const DepegEventsResponseSchema = z.object({
 });
 export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
 
-export type DepegDewsMethodology = MethodologyEnvelope;
 
 export const PegSummaryCoinSchema = z.object({
   id: z.string(),
@@ -1032,5 +1037,4 @@ export const StablecoinChartResponseSchema = z.array(
     aggregateUniverse: StablecoinChartAggregateUniverseSchema.optional(),
   }),
 );
-export type StablecoinChartAggregateUniverse = z.infer<typeof StablecoinChartAggregateUniverseSchema>;
 export type StablecoinChartPoint = z.infer<typeof StablecoinChartResponseSchema>[number];

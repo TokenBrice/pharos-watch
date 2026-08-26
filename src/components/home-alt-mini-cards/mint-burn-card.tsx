@@ -6,7 +6,7 @@ import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCompactUsd } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -21,7 +21,7 @@ interface Mover {
 export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}): React.JSX.Element {
   const query = useMintBurnFlows();
   const { data, isLoading } = query;
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const logoMap = logos ?? {};
 
   const { topMovers, totalNet } = useMemo(() => {

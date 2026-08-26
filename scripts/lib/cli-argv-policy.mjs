@@ -22,6 +22,7 @@ export const CLI_ARGV_EXEMPTION_CATEGORIES = Object.freeze({
 export const CLI_ARGV_POLICY = Object.freeze({
   strict: Object.freeze([
     strict("scripts/ci/guard-worker-deploy.ts"),
+    strict("scripts/ci/open-automated-refresh-pr.ts"),
     strict("scripts/maintenance/diff-safety-score-v9-movers.ts"),
     strict("scripts/maintenance/freeze-stablecoin.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-evidence-gap-queue.ts"),
@@ -33,7 +34,9 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/measure-cdp-shock-coverage.ts"),
     strict("scripts/maintenance/measure-protocol-api-mechanism-metrics.ts"),
     strict("scripts/maintenance/migrate-stablecoin-sidecar.ts"),
+    strict("scripts/maintenance/publish-safety-score-map.ts"),
     strict("scripts/maintenance/purge-cloudflare-zone-cache.mjs"),
+    strict("scripts/maintenance/refresh-pages-release-data.ts"),
     strict("scripts/maintenance/register-telegram.ts"),
     strict("scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts"),
     strict("scripts/maintenance/sync-depeg-events.ts"),
@@ -130,7 +133,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/generate-depeg-event-search-data.ts", "build"),
     exempt("scripts/maintenance/generate-dependency-coverage-audit.ts", "build"),
     exempt("scripts/maintenance/generate-docs-metadata.ts", "build"),
-    exempt("scripts/maintenance/generate-homepage-bootstrap.ts", "build"),
     exempt("scripts/maintenance/generate-l2beat-snapshot-coverage-audit.ts", "build"),
     exempt("scripts/maintenance/generate-legacy-stablecoin-redirects.ts", "build"),
     exempt("scripts/maintenance/generate-llms-txt.ts", "build"),
@@ -183,6 +185,5 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/summarize-safety-score-v9-replay.ts", "read-only"),
     exempt("scripts/maintenance/watch-worker-cron.mjs", "read-only"),
     exempt("scripts/maintenance/weekly-curation-digest.mjs", "build"),
-    exempt("scripts/maintenance/yield-pys-v8-calibration.ts", "build"),
   ]),
 });

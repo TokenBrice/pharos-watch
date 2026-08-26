@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { canvasToBlob, loadImage, renderCompareShareImage } from "@/lib/compare-share-image";
+import { copyText } from "@/lib/clipboard";
 import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -176,10 +177,10 @@ export function useCompareShareActions({
           await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
           showToast("Image copied to clipboard", 3000);
         } catch {
-          try {
-            await navigator.clipboard.writeText(window.location.href);
+          const result = await copyText(window.location.href);
+          if (result.ok) {
             showToast("Link copied to clipboard", 3000);
-          } catch {
+          } else {
             showToast("Could not copy to clipboard", 3000);
           }
         }

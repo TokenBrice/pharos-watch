@@ -34,7 +34,7 @@ import {
   buildGovernanceTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy-urls";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 import { VerdictPill } from "@/components/stablecoin-detail/verdict-pill";
 
@@ -272,7 +272,7 @@ function HeroVariantChip({
   variantChipClass?: string | null;
   mobile?: boolean;
 }) {
-  const { data: logos } = useLogos();
+  const logos = logosById;
   if (!variantParent || !variantChipClass) return null;
   return (
     <Link

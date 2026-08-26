@@ -11,17 +11,15 @@ Route contract for `/`, the main Pharos dashboard.
 - **Core top rail:** `src/components/core-top-rail.tsx` + `src/components/homepage-tape.tsx`
 - **Main dashboard client:** `src/components/home-alt-client.tsx`
 - **Upcoming horizon module:** `src/components/home-alt-upcoming-horizon-constellation.tsx`
-- **First-paint query bootstrap:** `src/components/homepage-bootstrap-script.tsx`
 - **Fresh-post banner:** `src/components/home-blog-banner.tsx`, rendered only while the latest post is within its 14-day window
 
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
-1. `HomepageBootstrapScript` for nonvisual first-paint query seeding
-2. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 core stablecoins and cash equivalents
-3. conditional `HomeBlogBanner` while the latest post is fresh
-4. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
-5. `HomeAltClient`
-6. `HomeMediaStrip`, the static `Seen on` media strip linking to `/about/#media`
+1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 core stablecoins and cash equivalents
+2. conditional `HomeBlogBanner` while the latest post is fresh
+3. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
+4. `HomeAltClient`
+5. `HomeMediaStrip`, the static `Seen on` media strip linking to `/about/#media`
 
 Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the shared `/og-card.png` Open Graph image.
 

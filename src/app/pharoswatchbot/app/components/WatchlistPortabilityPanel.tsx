@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Copy, Download, Upload } from "lucide-react";
+import { copyText } from "@/lib/clipboard";
 import type {
   TelegramMiniAppOperation,
   TelegramMiniAppPortabilityResponse,
@@ -88,10 +89,10 @@ export function WatchlistPortabilityPanel({
   };
   const handleCopy = async () => {
     if (!exportToken) return;
-    try {
-      await navigator.clipboard.writeText(exportToken);
+    const result = await copyText(exportToken);
+    if (result.ok) {
       setCopyStatus("Copied.");
-    } catch {
+    } else {
       setCopyStatus("Select and copy the token above.");
     }
   };

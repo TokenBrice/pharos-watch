@@ -1,18 +1,38 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { localBin } from "./local-bin.mts";
+import { withCiVitestArgs } from "./vitest-ci-args.mts";
+
+export interface SpawnCommand {
+  args: readonly string[];
+  captureOutput?: boolean;
+  cmd: string;
+  executable: string;
+}
+
+export interface NpmScriptCommand extends SpawnCommand {
+  scriptName: string;
+}
+
+export interface VitestCommand extends SpawnCommand {
+  executable: string;
+}
 
 export type RunnerCommand = string | { cmd: string };
 
 export interface CommandResult {
   status: number;
   aborted: boolean;
+  error?: Error;
+  signal?: NodeJS.Signals;
+  output?: string;
 }
 
 export interface ExecutionResult extends CommandResult {
   failedCmd: string | null;
 }
 
-export type CommandImplementation = (
-  cmd: string,
+export type CommandImplementation<TCommand extends RunnerCommand = string> = (
+  command: TCommand,
   extraEnv?: Record<string, string>,
   options?: { signal?: AbortSignal },
 ) => number | CommandResult | Promise<number | CommandResult>;
@@ -21,13 +41,20 @@ interface ExecutionOptions<TCommand extends RunnerCommand> {
   getCommandEnv?: (command: TCommand) => Record<string, string>;
   getCommandText?: (command: TCommand) => string;
   label?: string;
-  runCommandImpl?: CommandImplementation;
+  reporter?: CommandReporter;
+  runCommandImpl?: CommandImplementation<TCommand>;
   signal?: AbortSignal;
 }
 
-interface ParallelExecutionOptions<TCommand extends RunnerCommand> extends Omit<ExecutionOptions<TCommand>, "signal"> {
+interface ParallelExecutionOptions<TCommand extends RunnerCommand> extends ExecutionOptions<TCommand> {
   continueOnError?: boolean;
   maxParallel?: number;
+}
+
+export interface CommandReporter {
+  failure?: (result: ExecutionResult) => void;
+  start?: (cmd: string) => void;
+  success?: (cmd: string, durationMs: number) => void;
 }
 
 type ExecutionUnit<TCommand extends RunnerCommand = RunnerCommand> = {
@@ -70,7 +97,32 @@ function normalizeCommandResult(result: number | CommandResult): CommandResult {
   return {
     status: result?.status ?? 1,
     aborted: result?.aborted === true,
+    ...(result?.error ? { error: result.error } : {}),
+    ...(result?.signal ? { signal: result.signal } : {}),
+    ...(result?.output != null ? { output: result.output } : {}),
   };
+}
+
+
+function formatCommand(executable: string, args: readonly string[]): string {
+  return [executable, ...args].join(" ");
+}
+
+export function createSpawnCommand(executable: string, args: readonly string[]): SpawnCommand {
+  return { executable, args: [...args], cmd: formatCommand(executable, args) };
+}
+
+export function createNpmScriptCommand(name: string, args: readonly string[] = []): NpmScriptCommand {
+  const npmArgs = ["run", name, ...(args.length > 0 ? ["--", ...args] : [])];
+  return { ...createSpawnCommand("npm", npmArgs), scriptName: name };
+}
+
+export function createLocalVitestCommand(
+  args: readonly string[],
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): VitestCommand {
+  const vitestArgs = withCiVitestArgs(args, env);
+  return createSpawnCommand(localBin("vitest"), vitestArgs);
 }
 
 function killProcessGroup(child: ChildProcess, signal: NodeJS.Signals): void {
@@ -89,10 +141,11 @@ function killProcessGroup(child: ChildProcess, signal: NodeJS.Signals): void {
   }
 }
 
-export function runShellCommand(
-  cmd: string,
+function runChildProcess(
+  executable: string,
+  args: readonly string[],
   extraEnv: Record<string, string> = {},
-  { signal }: { signal?: AbortSignal } = {},
+  { captureOutput = false, signal }: { captureOutput?: boolean; signal?: AbortSignal } = {},
 ): Promise<CommandResult> {
   return new Promise<CommandResult>((resolve) => {
     if (signal?.aborted) {
@@ -100,15 +153,14 @@ export function runShellCommand(
       return;
     }
 
-    const child = spawn("bash", ["-lc", cmd], {
+    const child = spawn(executable, [...args], {
       detached: process.platform !== "win32",
-      env: {
-        ...process.env,
-        ...extraEnv,
-      },
-      stdio: "inherit",
+      env: { ...process.env, ...extraEnv },
+      stdio: captureOutput ? ["inherit", "pipe", "pipe"] : "inherit",
     });
-
+    let output = "";
+    child.stdout?.on("data", (chunk) => { output += String(chunk); });
+    child.stderr?.on("data", (chunk) => { output += String(chunk); });
     let aborted = false;
     let killTimer: NodeJS.Timeout | undefined;
     const abort = () => {
@@ -119,20 +171,46 @@ export function runShellCommand(
     };
     signal?.addEventListener("abort", abort, { once: true });
 
-    child.on("error", () => {
+    child.once("error", (error) => {
       signal?.removeEventListener("abort", abort);
-      if (killTimer) {
-        clearTimeout(killTimer);
-      }
-      resolve({ status: aborted ? 130 : 1, aborted });
+      if (killTimer) clearTimeout(killTimer);
+      resolve({
+        status: aborted ? 130 : 1,
+        aborted,
+        error,
+        ...(captureOutput ? { output } : {}),
+      });
     });
-    child.on("close", (code) => {
+    child.once("close", (code, closeSignal) => {
       signal?.removeEventListener("abort", abort);
-      if (killTimer) {
-        clearTimeout(killTimer);
-      }
-      resolve({ status: aborted ? 130 : (code ?? 1), aborted });
+      if (killTimer) clearTimeout(killTimer);
+      resolve({
+        status: aborted ? 130 : (code ?? 1),
+        aborted,
+        ...(closeSignal ? { signal: closeSignal } : {}),
+        ...(captureOutput ? { output } : {}),
+      });
     });
+  });
+}
+
+export async function runShellCommand(
+  cmd: string,
+  extraEnv: Record<string, string> = {},
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<CommandResult> {
+  const { error: _error, ...result } = await runChildProcess("bash", ["-lc", cmd], extraEnv, { signal });
+  return result;
+}
+
+export function runSpawnCommand(
+  command: SpawnCommand,
+  extraEnv: Record<string, string> = {},
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<CommandResult> {
+  return runChildProcess(command.executable, command.args, extraEnv, {
+    captureOutput: command.captureOutput,
+    signal,
   });
 }
 
@@ -142,33 +220,45 @@ export async function runExecutionUnit<TCommand extends RunnerCommand>(
     getCommandEnv = () => ({}),
     getCommandText: getUnitCommandText = getCommandText,
     label,
-    runCommandImpl = runShellCommand,
+    reporter,
+    runCommandImpl,
     signal,
   }: ExecutionOptions<TCommand> = {},
 ): Promise<ExecutionResult> {
+  const run = runCommandImpl ?? (runShellCommand as CommandImplementation<TCommand>);
   for (const command of unit.commands) {
     const cmd = getUnitCommandText(command);
     if (signal?.aborted) {
       return { status: 130, failedCmd: cmd, aborted: true };
     }
 
-    console.log(`[${label}] Running: ${cmd}`);
+    if (reporter) reporter.start?.(cmd);
+    else console.log(`[${label}] Running: ${cmd}`);
     const startedAt = Date.now();
-    const result = normalizeCommandResult(await runCommandImpl(cmd, getCommandEnv(command), { signal }));
+    const result = normalizeCommandResult(await run(command, getCommandEnv(command), { signal }));
+    if (result.error) throw result.error;
     if (result.status !== 0) {
-      return { status: result.status, failedCmd: cmd, aborted: result.aborted };
+      return {
+        status: result.status,
+        failedCmd: cmd,
+        aborted: result.aborted,
+        ...(result.signal ? { signal: result.signal } : {}),
+      };
     }
-    console.log(`[${label}] Finished: ${cmd} (${((Date.now() - startedAt) / 1000).toFixed(1)}s)`);
+    const durationMs = Date.now() - startedAt;
+    if (reporter) reporter.success?.(cmd, durationMs);
+    else console.log(`[${label}] Finished: ${cmd} (${(durationMs / 1000).toFixed(1)}s)`);
   }
 
   return { status: 0, failedCmd: null, aborted: false };
 }
 
-function reportFailedCommand(result: ExecutionResult, label?: string): void {
+function reportFailedCommand(result: ExecutionResult, label?: string, reporter?: CommandReporter): void {
   if (result.aborted) {
     return;
   }
-  console.error(`[${label}] FAILED: ${result.failedCmd} exited with status ${result.status}`);
+  if (reporter) reporter.failure?.(result);
+  else console.error(`[${label}] FAILED: ${result.failedCmd} exited with status ${result.status}`);
 }
 
 export async function runCommandBatches<TCommand extends RunnerCommand>(
@@ -177,7 +267,8 @@ export async function runCommandBatches<TCommand extends RunnerCommand>(
     getCommandEnv = () => ({}),
     getCommandText: getBatchCommandText = getCommandText,
     label,
-    runCommandImpl = runShellCommand,
+    reporter,
+    runCommandImpl,
   }: Omit<ExecutionOptions<TCommand>, "signal"> = {},
 ): Promise<ExecutionResult> {
   for (const batch of batches) {
@@ -186,16 +277,17 @@ export async function runCommandBatches<TCommand extends RunnerCommand>(
         getCommandEnv,
         getCommandText: getBatchCommandText,
         label,
+        reporter,
         runCommandImpl,
       });
       if (result.status !== 0) {
-        reportFailedCommand(result, label);
+        reportFailedCommand(result, label, reporter);
         return result;
       }
       continue;
     }
 
-    console.log(`[${label}] Running ${batch.length} independent command groups in parallel.`);
+    if (!reporter) console.log(`[${label}] Running ${batch.length} independent command groups in parallel.`);
     const controllers = batch.map(() => new AbortController());
     const pending = new Map(
       batch.map((unit, index) => [
@@ -204,6 +296,7 @@ export async function runCommandBatches<TCommand extends RunnerCommand>(
           getCommandEnv,
           getCommandText: getBatchCommandText,
           label,
+          reporter,
           runCommandImpl,
           signal: controllers[index].signal,
         }).then((result) => ({ index, result })),
@@ -215,7 +308,7 @@ export async function runCommandBatches<TCommand extends RunnerCommand>(
       pending.delete(settled.index);
 
       if (settled.result.status !== 0) {
-        reportFailedCommand(settled.result, label);
+        reportFailedCommand(settled.result, label, reporter);
         for (const [index] of pending) {
           controllers[index].abort();
         }
@@ -239,7 +332,9 @@ export async function runParallelExecutionUnits<
     getCommandText: getUnitCommandText = getCommandText,
     label,
     maxParallel = units.length,
-    runCommandImpl = runShellCommand,
+    reporter,
+    runCommandImpl,
+    signal,
   }: ParallelExecutionOptions<TCommand> = {},
 ): Promise<ParallelExecutionResult<TUnit>> {
   if (units.length === 0) {
@@ -252,9 +347,14 @@ export async function runParallelExecutionUnits<
   const results: Array<ExecutionUnitResult<TUnit> | undefined> = new Array(units.length);
   let nextIndex = 0;
   let aborting = false;
+  const abortActive = () => {
+    aborting = true;
+    for (const activeController of controllers) activeController.abort();
+  };
+  signal?.addEventListener("abort", abortActive, { once: true });
 
   async function runNext(): Promise<void> {
-    while (nextIndex < units.length && (continueOnError || !aborting)) {
+    while (nextIndex < units.length && !signal?.aborted && (continueOnError || !aborting)) {
       const index = nextIndex;
       const unit = units[index];
       nextIndex += 1;
@@ -265,6 +365,7 @@ export async function runParallelExecutionUnits<
         getCommandEnv,
         getCommandText: getUnitCommandText,
         label,
+        reporter,
         runCommandImpl,
         signal: controller.signal,
       });
@@ -281,20 +382,18 @@ export async function runParallelExecutionUnits<
         if (!result.aborted) {
           failures.push(unitResult);
         }
-        reportFailedCommand(result, label);
+        reportFailedCommand(result, label, reporter);
         if (!continueOnError) {
-          aborting = true;
-          for (const activeController of controllers) {
-            activeController.abort();
-          }
+          abortActive();
           break;
         }
       }
     }
   }
 
-  console.log(`[${label}] Running ${units.length} command groups with max parallel ${concurrency}.`);
+  if (!reporter) console.log(`[${label}] Running ${units.length} command groups with max parallel ${concurrency}.`);
   await Promise.all(Array.from({ length: concurrency }, () => runNext()));
+  signal?.removeEventListener("abort", abortActive);
 
   if (failures.length > 0) {
     const first = failures[0];

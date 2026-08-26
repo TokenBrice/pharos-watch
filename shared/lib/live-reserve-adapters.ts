@@ -81,7 +81,6 @@ export function createLiveReserveInputsSchema(adapterKey: LiveReserveAdapterKey)
 export type LiveReserveAdapterParamsByKey = {
   [K in LiveReserveAdapterKey]: z.infer<(typeof adapterParamsSchemas)[K]>;
 };
-export type LiveReserveAdapterParams = LiveReserveAdapterParamsByKey[LiveReserveAdapterKey];
 
 function validateAdapterConfigPolicy(
   adapterKey: LiveReserveAdapterKey,
@@ -121,8 +120,6 @@ export const LiveReservesConfigSchema: z.ZodType<LiveReservesConfig> = z.union(
   liveReserveConfigVariants as unknown as [z.ZodType<LiveReservesConfig>, ...z.ZodType<LiveReservesConfig>[]],
 );
 
-export type LiveReserveRedemptionCapacityTelemetry = "direct" | "proxy" | "none";
-export type LiveReserveRedemptionFeeTelemetry = "current-bps" | "none";
 
 export {
   adapterParamsSchemas,

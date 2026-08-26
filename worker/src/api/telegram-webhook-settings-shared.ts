@@ -38,7 +38,6 @@ export type SafetyModeCode = keyof typeof SAFETY_MODE_CODES;
 export type SafetyModeValue = (typeof SAFETY_MODE_CODES)[SafetyModeCode];
 
 export const DEPEG_STEPS = [100, 250, 500] as const;
-export type DepegStep = 100 | 250 | 500;
 
 export function isGlobalAlertType(value: string): value is GlobalAlertType {
   return isTelegramAlertType(value);

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidity } from "@/hooks/api-hooks";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterSearchInput } from "@/components/filter-search-input";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
@@ -44,8 +44,8 @@ export const LIQUIDITY_URL_SCHEMA: UrlStateSchema<LiquidityUrlState> = {
 
 export function LiquidityClient() {
   const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch, meta } = useDexLiquidity();
-  const { data: logos } = useLogos();
-  const { searchParams, replaceParams } = useUrlFilters();
+  const logos = logosById;
+  const { searchParams, getParam, setParam, replaceParams } = useUrlFilters();
   const { peg: pegFilter } = useMemo(
     () => decodeState(searchParams, LIQUIDITY_URL_SCHEMA),
     [searchParams],
@@ -65,7 +65,10 @@ export function LiquidityClient() {
 
   // Search: local state for instant input, deferred value for filtering,
   // debounced sync to URL + analytics to avoid per-keystroke overhead
-  const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync("liquidity");
+  const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync(
+    "liquidity",
+    { getParam, setParam },
+  );
 
   const { scoredRows, unratedRows, summaryStats } = useMemo(
     () => buildLiquidityViewModel(liquidityMap, pegFilter, deferredSearch),

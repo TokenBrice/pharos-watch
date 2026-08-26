@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FileText, Coins, Clock, Trash2, Search, X } from "lucide-react";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
@@ -41,7 +41,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { isDark, toggleTheme } = useThemeToggle();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const stablecoinsData = queryClient.getQueryData<{
     data: StablecoinListResponse;
     meta: unknown;

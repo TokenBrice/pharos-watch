@@ -15,6 +15,8 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 
 Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intentionally allow one missed 30-minute critical-lane slot before warning. User-facing freshness is `fresh <= 60m`, `degraded <= 90m`, `stale > 90m`, which keeps the public warning surface aligned with `/status` cron-health grace windows instead of flagging a single late slot as an incident.
 
+> **Agent navigation** — Grep the heading you need: Methodology Versioning · Cron Schedule · Constants & Thresholds · Contract Configurations · Sync Algorithm · Shared Ingestion Pipeline Boundaries · Scoring · Retention · Database Schema · API Endpoints · Cron Metadata Fields · Frontend · Error Handling & Edge Cases · Testing · Future Work.
+
 ---
 
 ## Methodology Versioning

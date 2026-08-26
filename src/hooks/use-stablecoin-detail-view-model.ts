@@ -21,7 +21,7 @@ import {
   type StablecoinDetailSummary,
   type StablecoinDetailViewModel as BaseStablecoinDetailViewModel,
 } from "@/lib/stablecoin-detail-view-model";
-import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 
 export interface StablecoinDetailSupplementalQueryControls {
   flows?: boolean;

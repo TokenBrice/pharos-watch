@@ -23,5 +23,3 @@ export function scoreToGrade(score: number | null): ReportCardGrade {
     : Math.max(0, Math.min(100, score));
   return V9_GRADE_THRESHOLDS.find((threshold) => clampedScore >= threshold.min)?.grade ?? "F";
 }
-
-export type { ReportCardGradeRange } from "./report-card-grade";

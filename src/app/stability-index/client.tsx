@@ -5,7 +5,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { ScoreChart } from "@/components/psi-history-chart";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useStabilityIndexDetail } from "@/hooks/api-hooks";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import {
   buildPsiChartData,
@@ -32,7 +32,7 @@ import {
 
 export function StabilityIndexClient() {
   const { data, isLoading, isError, error, dataUpdatedAt, refetch, meta } = useStabilityIndexDetail();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const history = data?.history;
   const current = data?.current ?? null;
   const methodology = data?.methodology ?? null;

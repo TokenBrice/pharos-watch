@@ -16,12 +16,6 @@ export {
   type PrimaryPriceResult,
 } from "./enrich-prices-primary";
 
-export interface DefiLlamaCoinPrice {
-  price: number;
-  symbol: string;
-  timestamp: number;
-  confidence: number;
-}
 export type { PeggedAsset } from "./enrich-prices-shared";
 export { applyResolvedPrice, hasMissingPrice } from "./enrich-prices-shared";
 

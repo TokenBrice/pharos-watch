@@ -16,11 +16,3 @@ export { TableFrame } from "./table-frame";
 export { TableSkeletonRows, type TableSkeletonColumn } from "./table-skeleton";
 export { TableToolbarFrame } from "./table-toolbar-frame";
 export { VirtualTableFrame } from "./virtual-table-frame";
-export type {
-  TableChrome,
-  TableDensity,
-  TableId,
-  TableIdentityProps,
-  TableRowIntent,
-  TableStriping,
-} from "./types";

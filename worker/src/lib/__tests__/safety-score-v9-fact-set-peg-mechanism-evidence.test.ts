@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
+import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 import usdtMetaSource from "@shared/data/stablecoins/coins/usdt-tether.json";
 import usdtComplianceSource from "@shared/data/stablecoins/domains/compliance/usdt-tether.json";
 import usdtMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/usdt-tether.json";
@@ -2141,7 +2142,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       return compiled.evidence.find((candidate) => candidate.evidenceId.includes(":route:dex:"))!;
     };
 
-    expect(compileMeasured("curve-stableswap-main-registry-get-dy-v1")).toMatchObject({
+    expect(compileMeasured(DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap)).toMatchObject({
       freshness: { state: "current", maxAgeSec: 10_800, ageSec: 4_000 },
     });
     expect(compileMeasured("uniswap-v3-quoter-v2")).toMatchObject({

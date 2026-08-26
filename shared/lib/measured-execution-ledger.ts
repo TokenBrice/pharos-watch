@@ -22,7 +22,6 @@ export const MEASURED_LEDGER_CHUNK_CHARS = 240;
 /** Default chunk budget; 6 chunks ≈ 1,440 body chars, comfortably over the 14-cohort shape. */
 const MEASURED_LEDGER_DEFAULT_MAX_PARTS = 6;
 
-export type MeasuredLedgerKind = "A" | "B";
 
 /** Record A (06:16 scoring run): shadow target-admission outcome per policy cohort. */
 export interface MeasuredLedgerAdmissionCohort {

@@ -1,6 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 interface SectionBannerProps {
@@ -19,19 +20,8 @@ export function SectionBanner({
   className,
 }: SectionBannerProps) {
   const handleCopy = () => {
-    if (
-      typeof window === "undefined" ||
-      typeof navigator === "undefined" ||
-      !navigator.clipboard
-    ) {
-      return;
-    }
-    navigator.clipboard
-      .writeText(`${window.location.origin}${window.location.pathname}#${id}`)
-      .catch(() => {
-        // Clipboard write can reject (denied permission / insecure context);
-        // the anchor still navigates to #id, so the user can copy the URL bar.
-      });
+    if (typeof window === "undefined") return;
+    void copyText(`${window.location.origin}${window.location.pathname}#${id}`);
   };
   return (
     <div

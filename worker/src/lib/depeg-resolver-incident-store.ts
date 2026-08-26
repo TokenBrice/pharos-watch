@@ -11,7 +11,7 @@ import type { DdrLockState, DdrLockTrigger } from "./depeg-resolver-lock-opportu
 import { sha256Hex } from "./hash";
 
 export { recordLockDeferral, recordLockOpportunity } from "./depeg-resolver-lock-opportunity-store";
-export type { DdrLockAuditAction, DdrLockHealthStatus, DdrLockState, DdrLockTrigger, RecordLockDeferralInput } from "./depeg-resolver-lock-opportunity-store";
+export type { DdrLockHealthStatus, DdrLockState, DdrLockTrigger } from "./depeg-resolver-lock-opportunity-store";
 
 export type DdrIncidentDirection = "above" | "below";
 export type DdrIncidentRelation = "observed" | "superseded" | "merged" | "split_from" | "repair_replacement";

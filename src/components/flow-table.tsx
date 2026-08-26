@@ -14,7 +14,7 @@ import {
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedTableRows } from "@/hooks/use-sorted-table-rows";
 import {
@@ -105,7 +105,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
     { defaultKey: "net24h", defaultDirection: "desc" },
     compareFlowRows,
   );
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const prefetch = usePrefetchStablecoin();
 
   const toolbar = (

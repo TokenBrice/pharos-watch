@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useCompareSelection } from "@/hooks/use-compare-selection";
 import { useCompareDataModel } from "@/hooks/use-compare-data-model";
 import { useCompareShareActions } from "@/hooks/use-compare-share-actions";
@@ -249,7 +249,7 @@ function CompareScopeHero({
 }
 
 export function CompareClient() {
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const [nowSeconds, setNowSeconds] = useState<number | null>(null);
   const {
     applyPreset,

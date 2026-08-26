@@ -37,7 +37,6 @@ export const ScoreTapeEventPayloadSchema = z.object({
   newScore: z.number().nullable(),
   safetyScore: SafetyScoreTapeProvenanceSchema,
 });
-export type ScoreTapeEventPayload = z.infer<typeof ScoreTapeEventPayloadSchema>;
 
 export const TapeEventSchema = z
   .object({

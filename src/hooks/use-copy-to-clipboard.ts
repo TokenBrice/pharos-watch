@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { copyText } from "@/lib/clipboard";
 
 /**
  * Clipboard copy with auto-reset.  Returns `copied` (boolean) and a `copy`
@@ -22,15 +23,11 @@ export function useCopyToClipboard(resetDelayMs = 1500) {
 
   const copy = useCallback(
     async (text: string) => {
-      if (typeof window === "undefined" || !navigator?.clipboard?.writeText) return;
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => setCopied(false), resetDelayMs);
-      } catch {
-        // Clipboard API can throw in non-secure contexts; degrade silently.
-      }
+      const result = await copyText(text);
+      if (!result.ok) return;
+      setCopied(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), resetDelayMs);
     },
     [resetDelayMs],
   );

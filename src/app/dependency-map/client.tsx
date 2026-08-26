@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { DependencyMapMobileSummary } from "@/components/dependency-map-mobile-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,7 +30,7 @@ export function DependencyMapClient() {
     error: stablecoinsError,
     refetch: refetchStablecoins,
   } = stablecoinsQuery;
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const primaryError = reportCardsError ?? stablecoinsError;
 
   const mcapMap = useMemo(() => {

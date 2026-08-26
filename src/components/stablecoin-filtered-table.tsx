@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useDexLiquidity, usePegSummary, useReportCardsV9 } from "@/hooks/api-hooks";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StablecoinTable } from "@/components/stablecoin-table";
@@ -18,7 +18,7 @@ interface StablecoinFilteredTableProps {
 
 export function StablecoinFilteredTable({ activeFilters, renderNotice }: StablecoinFilteredTableProps) {
   const { data, isLoading, dataUpdatedAt, error, refetch, meta } = useStablecoins();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const { data: pegSummaryData } = usePegSummary();
   const { data: dexLiquidity } = useDexLiquidity();
   const { data: reportCardsData } = useReportCardsV9();

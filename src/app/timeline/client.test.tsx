@@ -37,8 +37,8 @@ vi.mock("@/hooks/use-events", async () => {
   };
 });
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: () => ({ data: {} }),
+vi.mock("@/lib/logos", () => ({
+  logosById: {},
 }));
 
 import {

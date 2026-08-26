@@ -5,16 +5,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 
 import { HomeAltDdrOverview } from "@/components/home-alt-ddr-overview";
 
-const { useDepegResolverSurfacesMock, useLogosMock } = vi.hoisted(() => ({
+const { useDepegResolverSurfacesMock } = vi.hoisted(() => ({
   useDepegResolverSurfacesMock: vi.fn(),
-  useLogosMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({
   useDepegResolverSurfaces: useDepegResolverSurfacesMock,
 }));
-
-vi.mock("@/hooks/use-logos", () => ({ useLogos: useLogosMock }));
 
 afterEach(() => {
   cleanup();
@@ -51,8 +48,6 @@ describe("HomeAltDdrOverview", () => {
       },
       resolverReview: { data: undefined, error: null },
     });
-    useLogosMock.mockReturnValue({ data: {} });
-
     render(<HomeAltDdrOverview />);
 
     expect(screen.getByText("-45 bps")).toBeTruthy();

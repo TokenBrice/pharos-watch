@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { API_BASE } from "@/lib/api";
+import { copyText } from "@/lib/clipboard";
 import { RequestSequence, isRequestCancellation, requestBlob } from "@/lib/request";
 
 type Status = "idle" | "loading" | "copied" | "error";
@@ -51,11 +52,11 @@ export function ShareButton({ ogPath, label = "Share", iconOnly = false }: Share
   }, []);
 
   const copyLink = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
+    const result = await copyText(window.location.href);
+    if (result.ok) {
       setStatus("copied");
-    } catch (err) {
-      console.warn("[share] clipboard write failed:", err instanceof Error ? err.message : String(err));
+    } else {
+      console.warn("[share] clipboard write failed:", result.reason);
       setStatus("error");
     }
     resetStatus();

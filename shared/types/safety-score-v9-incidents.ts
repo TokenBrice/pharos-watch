@@ -24,7 +24,6 @@ const V9IncidentSourceSchema = z
     publishedAt: StrictIsoDateSchema,
   })
   .strict();
-export type V9IncidentSource = z.infer<typeof V9IncidentSourceSchema>;
 
 const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("root-claim") }).strict(),
@@ -43,7 +42,6 @@ const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
     .strict(),
   z.object({ kind: z.literal("holder-exit") }).strict(),
 ]);
-export type V9IncidentScope = z.infer<typeof V9IncidentScopeSchema>;
 
 const V9IncidentRemediationEvidenceSchema = z
   .object({
@@ -222,11 +220,9 @@ export const V9ReviewedIncidentSchema = z
     }
   });
 export type V9ReviewedIncident = z.infer<typeof V9ReviewedIncidentSchema>;
-export type V9IncidentDomain = V9ReviewedIncident["domain"];
 export type V9ControlIncident = Extract<V9ReviewedIncident, { domain: "control" }>;
 export type V9WrapperLocalIncident = Extract<V9ReviewedIncident, { domain: "wrapper-local" }>;
 export type V9OperationalIncident = Extract<V9ReviewedIncident, { domain: "operational" }>;
-export type V9PegIncident = Extract<V9ReviewedIncident, { domain: "peg" }>;
 
 export const V9ReviewedIncidentRegistrySchema = z
   .object({
@@ -249,4 +245,3 @@ export const V9ReviewedIncidentRegistrySchema = z
       });
     }
   });
-export type V9ReviewedIncidentRegistry = z.infer<typeof V9ReviewedIncidentRegistrySchema>;

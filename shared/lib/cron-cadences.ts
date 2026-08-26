@@ -24,7 +24,7 @@ export const CRON_SCHEDULE_CADENCES = {
   twoHourlyDexDiscovery: { intervalSec: 2 * 3600, offsetSec: 6 * 60 },
   halfHourlyMintBurnExtended: { intervalSec: 1800, offsetSec: 18 * 60 },
   halfHourlyMeasuredExecution: { intervalSec: 1800, offsetSec: 0 },
-  halfHourlyOffset: { intervalSec: 1800, offsetSec: 10 * 60 },
+  halfHourlyOffset: { intervalSec: 3600, offsetSec: 10 * 60 },
   halfHourlyChartsOffset: { intervalSec: 1800, offsetSec: 16 * 60 },
   dewsPsiOffset: { intervalSec: 1800, offsetSec: 26 * 60 },
   fourHourlyReserveSync: { intervalSec: 4 * 3600, offsetSec: 11 * 60 },
@@ -39,12 +39,6 @@ export const CRON_SCHEDULE_CADENCES = {
   daily0810Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 10 * 60 },
   monthlyYieldAudit: { intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
 } as const;
-
-export type CronScheduleKey = keyof typeof CRON_SCHEDULE_CADENCES;
-
-export function isHourlyDexSourceSlot(slotStartedAtSec: number): boolean {
-  return new Date(slotStartedAtSec * 1_000).getUTCMinutes() === 10;
-}
 
 export function isHourlyDexPriceSlot(slotStartedAtSec: number): boolean {
   return new Date(slotStartedAtSec * 1_000).getUTCMinutes() === 16;

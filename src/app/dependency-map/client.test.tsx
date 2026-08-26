@@ -5,8 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useLogos } from "@/hooks/use-logos";
-import { logosById } from "@/lib/logos";
 
 vi.mock("@/hooks/api-hooks", () => ({
   useReportCardsV9: vi.fn(),
@@ -14,10 +12,6 @@ vi.mock("@/hooks/api-hooks", () => ({
 
 vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: vi.fn(),
-}));
-
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: vi.fn(),
 }));
 
 vi.mock("@/components/dependency-map-mobile-summary", () => ({
@@ -36,7 +30,6 @@ const { DependencyMapClient } = await import("@/app/dependency-map/client");
 
 const mockUseReportCardsV9 = vi.mocked(useReportCardsV9);
 const mockUseStablecoins = vi.mocked(useStablecoins);
-const mockUseLogos = vi.mocked(useLogos);
 
 function makeQueryResult(data: unknown) {
   return {
@@ -51,7 +44,6 @@ describe("DependencyMapClient", () => {
   beforeEach(() => {
     mockUseReportCardsV9.mockReset();
     mockUseStablecoins.mockReset();
-    mockUseLogos.mockReset();
 
     mockUseReportCardsV9.mockReturnValue(
       makeQueryResult(makeReportCardsV9Response({
@@ -81,7 +73,6 @@ describe("DependencyMapClient", () => {
         ],
       }) as unknown as ReturnType<typeof useStablecoins>,
     );
-    mockUseLogos.mockReturnValue({ data: logosById });
   });
 
   it("renders the dependency graph alongside the V9 hub summaries", () => {

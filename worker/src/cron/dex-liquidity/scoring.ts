@@ -17,7 +17,7 @@ import { buildDexMeasuredTargetFingerprintIndex, resolveDexMeasuredTargetForReta
 import { computeDurabilityScore, computeLiquidityScore, initLiquidityFallbackCounters } from "./pool-helpers";
 import { accumulateGlobalAggregate, applyProtocolCaps, applyRebuiltMetrics, classifyCoverage, filterRetainedPools, rebuildMetricsFromPools } from "./scoring-helpers";
 import { applyDexRouteObservationBounds, selectDexRouteObservationPoolSet, selectDexRouteObservationPools, selectDexRouteObservations, type DexRouteSelectionDiagnostic } from "./dex-route-observation-selection";
-import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN, computeDepthStability, computeSeriesStability, loadConfidentHistoryStability, loadCurrentDexScoringGenerationId, pruneExpiredDexPriceStages, type DexPriceStageRetentionResult } from "./dex-scoring-stage-store";
+import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN, computeDepthStability, computeSeriesStability, loadConfidentHistoryStability, loadCurrentDexScoringGenerationId, pruneExpiredDexPriceStages } from "./dex-scoring-stage-store";
 import { computeDexPrices, type DexPricePersistenceDiagnostics } from "./dex-price-publisher";
 
 export {
@@ -29,7 +29,7 @@ export {
   selectDexRouteObservationPools,
   selectDexRouteObservations,
 };
-export type { DexPricePersistenceDiagnostics, DexPriceStageRetentionResult };
+export type { DexPricePersistenceDiagnostics };
 
 function isP4OnlyPausedBalancerPool(pool: LiquidityMetrics["topPools"][number]): boolean {
   const gate = pool.extra?.executionCapabilityGate;

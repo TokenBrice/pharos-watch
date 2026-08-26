@@ -76,7 +76,7 @@ Write mode renders each PNG into ignored staging first and replaces the checked-
 
 ```bash
 npm run build:og-editorial
-npm run check:og-editorial
+npm run check:generated-artifacts -- --only=og-editorial
 ```
 
 ### When to renew
@@ -125,7 +125,7 @@ Like the editorial generator, write mode promotes staged PNGs only when their pi
 
 ```bash
 npm run build:og-case-studies
-npm run check:og-case-studies
+npm run check:generated-artifacts -- --only=og-case-studies
 ```
 
 ### When to renew

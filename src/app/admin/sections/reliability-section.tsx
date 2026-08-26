@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { ApiRequestAttributionResponse, EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
 import { ApiKeyLoadTable } from "@/components/status/api-key-load-table";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
@@ -9,18 +9,13 @@ import { ReliabilityDependenciesPanel } from "@/components/status/reliability-de
 import { ReliabilityEndpointsPanel } from "@/components/status/reliability-endpoints-panel";
 import { ReliabilityEvidenceSummary } from "@/components/status/reliability-evidence-summary";
 import { ReliabilityImpactPanel } from "@/components/status/reliability-impact-panel";
-import {
-  getReliabilityPanelId,
-  getReliabilityTabId,
-  ReliabilityModeTabs,
-} from "@/components/status/reliability-mode-tabs";
 import { RequestSourceAttributionCard } from "@/components/status/request-source-attribution-card";
+import { createWorkspaceModeIds, WorkspaceModeTabs } from "@/components/status/workspace-mode-tabs";
+import { useWorkspaceMode } from "@/hooks/use-workspace-mode";
 import {
-  buildReliabilityModeUrl,
   buildReliabilityWorkspaceModel,
   deriveInitialReliabilityMode,
-  parseReliabilityMode,
-  type ReliabilityMode,
+  RELIABILITY_MODES,
 } from "@/lib/reliability-workspace-model";
 import { getStatusTone, type BrowserProbeSummary } from "@/lib/status-dashboard-model";
 
@@ -37,6 +32,8 @@ export interface ReliabilitySectionProps {
   probesError?: string | null;
   probesLoading: boolean;
 }
+
+const RELIABILITY_MODE_IDS = createWorkspaceModeIds("reliability");
 
 export function ReliabilitySection({
   data,
@@ -81,28 +78,7 @@ export function ReliabilitySection({
     ],
   );
   const defaultMode = useMemo(() => deriveInitialReliabilityMode(model), [model]);
-  const [activeMode, setActiveMode] = useState<ReliabilityMode>(defaultMode);
-
-  useEffect(() => {
-    const syncModeFromUrl = () => {
-      const urlMode = parseReliabilityMode(window.location.search);
-      if (urlMode) {
-        setActiveMode(urlMode);
-        return;
-      }
-      window.history.replaceState(window.history.state, "", buildReliabilityModeUrl(window.location, defaultMode));
-      setActiveMode(defaultMode);
-    };
-
-    syncModeFromUrl();
-    window.addEventListener("popstate", syncModeFromUrl);
-    return () => window.removeEventListener("popstate", syncModeFromUrl);
-  }, [defaultMode]);
-
-  const selectMode = useCallback((mode: ReliabilityMode) => {
-    setActiveMode(mode);
-    window.history.replaceState(window.history.state, "", buildReliabilityModeUrl(window.location, mode));
-  }, []);
+  const { activeMode, selectMode } = useWorkspaceMode({ modes: RELIABILITY_MODES, defaultMode });
 
   const renderActiveMode = () => {
     switch (activeMode) {
@@ -190,14 +166,21 @@ export function ReliabilitySection({
       </div>
 
       <ReliabilityEvidenceSummary gaps={model.evidenceGaps} />
-      <ReliabilityModeTabs activeMode={activeMode} modes={model.modeSummaries} onModeChange={selectMode} />
+      <WorkspaceModeTabs
+        activeMode={activeMode}
+        modes={model.modeSummaries}
+        onModeChange={selectMode}
+        ariaLabel="Reliability views"
+        tabClassName="min-w-[7.5rem]"
+        {...RELIABILITY_MODE_IDS}
+      />
       <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         Reliability view: {model.modeSummaries.find((mode) => mode.id === activeMode)?.label ?? "Impact"}
       </p>
       <div
-        id={getReliabilityPanelId(activeMode)}
+        id={RELIABILITY_MODE_IDS.getPanelId(activeMode)}
         role="tabpanel"
-        aria-labelledby={getReliabilityTabId(activeMode)}
+        aria-labelledby={RELIABILITY_MODE_IDS.getTabId(activeMode)}
         tabIndex={0}
         className="min-w-0"
       >

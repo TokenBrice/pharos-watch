@@ -1,3 +1,4 @@
+import { copyText } from "@/lib/clipboard";
 import type { CsvColumn } from "./csv";
 import type { ExportPreamble } from "./preamble";
 import { formatPreambleMarkdown } from "./preamble";
@@ -31,8 +32,7 @@ export function buildMarkdownWithPreamble<T>(
 
 /**
  * Copy a markdown table to the clipboard. Returns a promise that resolves
- * to `true` on success and `false` if the Clipboard API is unavailable or
- * rejects.
+ * to `true` on success and `false` if clipboard copying fails.
  */
 export async function copyMarkdownWithPreamble<T>(
   data: T[],
@@ -40,13 +40,6 @@ export async function copyMarkdownWithPreamble<T>(
   preamble: ExportPreamble,
 ): Promise<boolean> {
   const text = buildMarkdownWithPreamble(data, columns, preamble);
-  if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-    return false;
-  }
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
+  const result = await copyText(text);
+  return result.ok;
 }

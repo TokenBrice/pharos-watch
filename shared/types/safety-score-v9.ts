@@ -120,7 +120,6 @@ const V9EvidenceReferenceSchema = z
     note: z.string().min(1).optional(),
   })
   .strict();
-export type V9EvidenceReference = z.infer<typeof V9EvidenceReferenceSchema>;
 
 const V9PillarEvidenceSchema = z
   .object({
@@ -147,7 +146,6 @@ const V9PillarEvidenceSchema = z
       });
     }
   });
-export type V9PillarEvidence = z.infer<typeof V9PillarEvidenceSchema>;
 
 export const V9StructuralSignalKindSchema = z.enum([
   "unsafe-backing",
@@ -475,7 +473,6 @@ export const HistoricalV9FixtureSchema = HistoricalV9FixtureBaseSchema.superRefi
     });
   }
 });
-export type HistoricalV9Fixture = z.infer<typeof HistoricalV9FixtureSchema>;
 
 
 export const HistoricalV9FixtureCorpusSchema = z
@@ -498,7 +495,6 @@ export const HistoricalV9FixtureCorpusSchema = z
       ctx.addIssue({ code: "custom", path: ["fixtures"], message: "Corpus requires at least 12 resilient fixtures" });
     }
   });
-export type HistoricalV9FixtureCorpus = z.infer<typeof HistoricalV9FixtureCorpusSchema>;
 
 export const V9CapSourceSchema = z.enum([
   "active-depeg",
@@ -511,7 +507,6 @@ export const V9CapSourceSchema = z.enum([
 export type V9CapSource = z.infer<typeof V9CapSourceSchema>;
 
 export const V9PolicyTreatmentSchema = z.enum(["pillar", "ceiling", "NR", "diagnostic"]);
-export type V9PolicyTreatment = z.infer<typeof V9PolicyTreatmentSchema>;
 
 const V9FactClassSchema = z.enum([
   "not-applicable",
@@ -525,10 +520,8 @@ const V9FactClassSchema = z.enum([
   "stale-bounded",
   "stale-material",
 ]);
-export type V9FactClass = z.infer<typeof V9FactClassSchema>;
 
 const V9BoundednessSchema = z.enum(["not-applicable", "exposure-bounded", "globally-bounded", "unbounded"]);
-export type V9Boundedness = z.infer<typeof V9BoundednessSchema>;
 
 export const V9PathKindSchema = z.enum([
   "serial-dependency",
@@ -539,7 +532,6 @@ export const V9PathKindSchema = z.enum([
   "peg",
   "methodology",
 ]);
-export type V9PathKind = z.infer<typeof V9PathKindSchema>;
 
 export const V9ReasonOwnerDomainSchema = z.enum([
   "backing",
@@ -553,7 +545,6 @@ export const V9ReasonOwnerDomainSchema = z.enum([
 export type V9ReasonOwnerDomain = z.infer<typeof V9ReasonOwnerDomainSchema>;
 
 export const V9ReasonReleaseSeveritySchema = z.enum(["diagnostic", "review-required", "release-blocker"]);
-export type V9ReasonReleaseSeverity = z.infer<typeof V9ReasonReleaseSeveritySchema>;
 
 export const V9ManualInputClassificationSchema = z.enum([
   "missing-data",
@@ -564,7 +555,6 @@ export const V9ManualInputClassificationSchema = z.enum([
   "unresolved-methodology",
   "unsupported-design",
 ]);
-export type V9ManualInputClassification = z.infer<typeof V9ManualInputClassificationSchema>;
 
 const V9ReasonArchetypeSchema = z.union([z.literal("*"), z.enum(MECHANISM_ARCHETYPE_VALUES)]);
 const V9ReasonPathKindSchema = z.union([z.literal("*"), V9PathKindSchema]);
@@ -577,14 +567,12 @@ const V9NamedReasonCeilingKeySchema = z.enum([
   "exit-unverified",
   "peg-unverified",
 ]);
-export type V9NamedReasonCeilingKey = z.infer<typeof V9NamedReasonCeilingKeySchema>;
 
 const V9ReasonCeilingRuleSchema = z.discriminatedUnion("source", [
   z.object({ source: z.literal("evidence-level"), level: V9EvidenceLevelSchema }).strict(),
   z.object({ source: z.literal("minimum-track-record") }).strict(),
   z.object({ source: z.literal("named-ceiling"), key: V9NamedReasonCeilingKeySchema }).strict(),
 ]);
-export type V9ReasonCeilingRule = z.infer<typeof V9ReasonCeilingRuleSchema>;
 
 const V9ReasonRegistryEntrySchema = z
   .object({
@@ -681,9 +669,6 @@ const V9OperationalResilienceComponentSchema = z.enum([
   "stress-recovery",
   "reserve-reconciliation",
 ]);
-export type V9OperationalResilienceComponent = z.infer<
-  typeof V9OperationalResilienceComponentSchema
->;
 
 const V9AssetPremiumPolicySchema = z
   .object({

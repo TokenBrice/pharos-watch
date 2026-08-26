@@ -9,14 +9,7 @@ import type {
 } from "./core";
 import type { ListingClass } from "./stablecoin-taxonomy";
 
-export type {
-  MintAuthorityConfidence,
-  MintAuthorityControlRole,
-  MintAuthorityDirectMintAbility,
-  MintAuthorityMintPath,
-  MintAuthorityPosture,
-  MintAuthorityType,
-} from "./core";
+export type { MintAuthorityConfidence, MintAuthorityMintPath, MintAuthorityPosture } from "./core";
 
 export type MintAuthorityClientControlSummary = Pick<
   MintAuthorityControl,

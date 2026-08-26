@@ -13,22 +13,16 @@ const {
   usePegSummaryMock,
   useDexLiquidityMock,
   useReportCardsV9Mock,
-  useLogosMock,
 } = vi.hoisted(() => ({
   useStablecoinsMock: vi.fn(),
   useNonUsdShareMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
   useDexLiquidityMock: vi.fn(),
   useReportCardsV9Mock: vi.fn(),
-  useLogosMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: useStablecoinsMock,
-}));
-
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: useLogosMock,
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
@@ -169,7 +163,6 @@ describe("AltPegsClient", () => {
       error: null,
       dataUpdatedAt: 0,
     });
-    useLogosMock.mockReturnValue({ data: undefined });
     useNonUsdShareMock.mockReturnValue({
       data: [
         {

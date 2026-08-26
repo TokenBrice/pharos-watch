@@ -17,25 +17,18 @@ describe("CI workflow scope", () => {
     );
     const run = refreshStep?.run ?? "";
 
-    expect(run).toContain('cp data/digests.json "${refresh_dir}/digests.json"');
-    expect(run).toContain('cp data/depeg-events.json "${refresh_dir}/depeg-events.json"');
-    expect(run).toContain('mv "${refresh_dir}/digests.json" data/digests.json');
-    expect(run).toContain('mv "${refresh_dir}/depeg-events.json" data/depeg-events.json');
-    expect(run).toContain('refresh_digests > "${refresh_dir}/digest.log" 2>&1 & digest_pid=$!');
-    expect(run).toContain('refresh_depegs > "${refresh_dir}/depeg.log" 2>&1 & depeg_pid=$!');
-    expect(run).toContain('refresh_public_datasets > "${refresh_dir}/datasets.log" 2>&1 & datasets_pid=$!');
-    expect(run).toContain("git checkout -- public/datasets");
-    expect(run).not.toContain("git checkout -- data/digests.json");
-    expect(run).not.toContain("git checkout -- data/depeg-events.json");
+    expect(run).toBe("node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
   });
 
   it("preserves the Next compiler cache and consolidates Pages artifact checks", () => {
     const workflow = readRepoFile(".github/workflows/pages-release.yml");
 
+    expect(workflow).toContain('bootstrap-generated: "false"');
     expect(workflow).toContain('next-cache: "true"');
     expect(workflow).toContain('next-cache-save: "true"');
     expect(workflow).toContain('PHAROS_RELEASE_PR_TYPECHECKED: "1"');
     expect(workflow).toContain("npm run check:pages-release");
+    expect(workflow).toContain("npm run prebuild -- --build-lifecycle=compile-input,post-refresh");
     expect(workflow).not.toContain("rm -rf .next");
   });
 

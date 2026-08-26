@@ -80,10 +80,4 @@ export const SafetyScoreV9ReviewedTransferFileSchema = z
     }
   });
 
-export type SafetyScoreV9TransferPosture = z.infer<typeof SafetyScoreV9TransferPostureSchema>;
-export type SafetyScoreV9TransferScope = z.infer<typeof SafetyScoreV9TransferScopeSchema>;
-export type SafetyScoreV9ReviewedTransferDeployment = z.infer<
-  typeof SafetyScoreV9ReviewedTransferDeploymentSchema
->;
 export type SafetyScoreV9ReviewedTransferFact = z.infer<typeof SafetyScoreV9ReviewedTransferFactSchema>;
-export type SafetyScoreV9ReviewedTransferFile = z.infer<typeof SafetyScoreV9ReviewedTransferFileSchema>;

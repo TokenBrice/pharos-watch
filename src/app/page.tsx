@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { HomeAltClient } from "@/components/home-alt-client";
 import { HomeBlogBanner } from "@/components/home-blog-banner";
-import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
 import { HomeAltHero } from "@/components/home-alt-hero";
 import { HomeMediaStrip } from "@/components/home-media-strip";
 import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
@@ -43,7 +42,6 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <HomepageBootstrapScript />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

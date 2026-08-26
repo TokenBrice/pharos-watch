@@ -54,7 +54,6 @@ export const StabilityIndexResponseSchema = z.object({
 
 export type StabilityContributor = z.infer<typeof StabilityContributorSchema>;
 export type StabilityIndexCurrent = z.infer<typeof StabilityIndexCurrentSchema>;
-export type StabilityIndexHistoryPoint = z.infer<typeof StabilityIndexHistoryPointSchema>;
 export type StabilityIndexResponse = z.infer<typeof StabilityIndexResponseSchema>;
 
 const UsdsImplementationAddressSchema = z

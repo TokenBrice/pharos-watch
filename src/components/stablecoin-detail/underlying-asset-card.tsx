@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
@@ -16,7 +16,7 @@ interface UnderlyingAssetCardProps {
 }
 
 export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetCardProps) {
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const display = getVariantDisplay(kind);
 
   return (

@@ -34,36 +34,14 @@ jobs:
             echo "has_diff=true" >> "$GITHUB_OUTPUT"
             git status --short -- public/og-*.png
           fi
-      - name: Require automation token for checked PRs
-        if: steps.diff.outputs.has_diff == 'true'
-        env:
-          OG_REFRESH_GITHUB_TOKEN: ${{ secrets.OG_REFRESH_GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${OG_REFRESH_GITHUB_TOKEN:-}" ]; then
-            echo "::error title=Missing OG refresh token::Configure the OG_REFRESH_GITHUB_TOKEN repository secret with a bot or PAT token so automated OG refresh PRs trigger normal pull_request checks."
-            exit 1
-          fi
       - name: Open or update refresh PR
         if: steps.diff.outputs.has_diff == 'true'
         env:
-          GH_TOKEN: ${{ secrets.OG_REFRESH_GITHUB_TOKEN }}
+          AUTOMATION_GITHUB_TOKEN: ${{ secrets.OG_REFRESH_GITHUB_TOKEN }}
+          PR_BODY: Automated weekly refresh of static OG screenshots via `npm run og:capture` against the production Pages deployment at `https://stablecoin-dashboard.pages.dev`. See [docs/og-images.md](../blob/main/docs/og-images.md).
         run: |
-          set -euo pipefail
-          BRANCH=automated/og-refresh
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$BRANCH"
-          git add public/og-*.png
-          git commit -m "chore(og): refresh static OG screenshots"
-          gh auth setup-git
-          git push --force-with-lease -u origin "$BRANCH"
-          if gh pr view "$BRANCH" --json state --jq '.state' 2>/dev/null | grep -qx OPEN; then
-            echo "Existing open PR for $BRANCH updated by force-push."
-          else
-            gh pr create \
-              --base main \
-              --head "$BRANCH" \
-              --title "chore(og): refresh static OG screenshots" \
-              --body "Automated weekly refresh of static OG screenshots via \`npm run og:capture\` against the production Pages deployment at \`https://stablecoin-dashboard.pages.dev\`. See [docs/og-images.md](../blob/main/docs/og-images.md)."
-          fi
+          node --import tsx scripts/ci/open-automated-refresh-pr.ts \
+            --branch automated/og-refresh \
+            --path 'public/og-*.png' \
+            --title "chore(og): refresh static OG screenshots" \
+            --body "$PR_BODY"
