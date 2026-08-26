@@ -223,41 +223,43 @@ const StablecoinMetaAssetRawSchema = z.object(StablecoinMetaAssetSchemaShape).st
  */
 export const StablecoinMetaSourceAssetSchema: z.ZodType<StablecoinMeta, unknown> = StablecoinMetaAssetRawSchema;
 
-export const STABLECOIN_SOURCE_DOMAIN_VALUES = ["reserves", "mint-authority", "compliance", "risk-review"] as const;
-export type StablecoinSourceDomain = (typeof STABLECOIN_SOURCE_DOMAIN_VALUES)[number];
+type StablecoinSourceDomainField = Exclude<keyof StablecoinMeta, "id">;
+type StablecoinSourceDomainFieldSchemas = Partial<Record<StablecoinSourceDomainField, z.ZodTypeAny>>;
 
-const StablecoinReservesSidecarSchema = z
-  .object({
-    id: StablecoinIdSchema,
+function defineStablecoinSourceDomain<const TFieldSchemas extends StablecoinSourceDomainFieldSchemas>(
+  fieldSchemas: TFieldSchemas,
+  superRefine?: (
+    sidecar: z.output<z.ZodObject<{ id: typeof StablecoinIdSchema } & TFieldSchemas>>,
+    ctx: z.RefinementCtx,
+  ) => void,
+) {
+  const baseSchema = z.object({ id: StablecoinIdSchema, ...fieldSchemas }).strict();
+  return {
+    fields: Object.freeze(Object.keys(fieldSchemas)) as readonly (keyof TFieldSchemas & StablecoinSourceDomainField)[],
+    schema: superRefine == null ? baseSchema : baseSchema.superRefine(superRefine),
+  } as const;
+}
+
+const STABLECOIN_SOURCE_DOMAIN_DESCRIPTORS = {
+  reserves: defineStablecoinSourceDomain({
     reserves: FullReserveCompositionSchema.optional(),
     reserveReview: ReserveReviewSchema.optional(),
     custodyProfile: CustodyProfileSchema.optional(),
-  })
-  .strict()
-  .superRefine((sidecar, ctx) => {
+  }, (sidecar, ctx) => {
     if (sidecar.reserves != null || sidecar.reserveReview != null || sidecar.custodyProfile != null) return;
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "reserves sidecars require reserves, reserveReview, or custodyProfile",
       path: ["reserves"],
     });
-  });
-
-export const StablecoinMintAuthoritySidecarSchema = z
-  .object({
-    id: StablecoinIdSchema,
+  }),
+  "mint-authority": defineStablecoinSourceDomain({
     mintAuthority: MintAuthorityProfileSchema,
-  })
-  .strict();
-
-export const StablecoinComplianceSidecarSchema = z
-  .object({
-    id: StablecoinIdSchema,
+  }),
+  compliance: defineStablecoinSourceDomain({
     mica: MicaProfileSchema.optional(),
     genius: GeniusProfileSchema.optional(),
-  })
-  .strict()
-  .superRefine((sidecar, ctx) => {
+  }, (sidecar, ctx) => {
     if (sidecar.mica == null && sidecar.genius == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -265,17 +267,12 @@ export const StablecoinComplianceSidecarSchema = z
         path: ["mica"],
       });
     }
-  });
-
-export const StablecoinRiskReviewSidecarSchema = z
-  .object({
-    id: StablecoinIdSchema,
+  }),
+  "risk-review": defineStablecoinSourceDomain({
     blacklistabilityReview: BlacklistabilityReviewSchema.optional(),
     oracleRisk: OracleRiskProfileSchema.optional(),
     bridgeRouteRisk: BridgeRouteRiskProfileSchema.optional(),
-  })
-  .strict()
-  .superRefine((sidecar, ctx) => {
+  }, (sidecar, ctx) => {
     if (
       sidecar.blacklistabilityReview == null &&
       sidecar.oracleRisk == null &&
@@ -287,22 +284,31 @@ export const StablecoinRiskReviewSidecarSchema = z
         path: ["blacklistabilityReview"],
       });
     }
+  }),
+} as const;
 
-  });
+export type StablecoinSourceDomain = keyof typeof STABLECOIN_SOURCE_DOMAIN_DESCRIPTORS;
 
-export const STABLECOIN_SOURCE_DOMAIN_FIELDS = {
-  reserves: ["reserves", "reserveReview", "custodyProfile"],
-  "mint-authority": ["mintAuthority"],
-  compliance: ["mica", "genius"],
-  "risk-review": ["blacklistabilityReview", "oracleRisk", "bridgeRouteRisk"],
-} as const satisfies Record<StablecoinSourceDomain, readonly (keyof StablecoinMeta)[]>;
+export const STABLECOIN_SOURCE_DOMAIN_VALUES = Object.freeze(
+  Object.keys(STABLECOIN_SOURCE_DOMAIN_DESCRIPTORS) as StablecoinSourceDomain[],
+);
 
-export const STABLECOIN_SOURCE_DOMAIN_SCHEMAS = {
-  reserves: StablecoinReservesSidecarSchema,
-  "mint-authority": StablecoinMintAuthoritySidecarSchema,
-  compliance: StablecoinComplianceSidecarSchema,
-  "risk-review": StablecoinRiskReviewSidecarSchema,
-} as const satisfies Record<StablecoinSourceDomain, z.ZodTypeAny>;
+export const STABLECOIN_SOURCE_DOMAIN_FIELDS = Object.fromEntries(
+  STABLECOIN_SOURCE_DOMAIN_VALUES.map((domain) => [domain, STABLECOIN_SOURCE_DOMAIN_DESCRIPTORS[domain].fields]),
+) as {
+  [TDomain in StablecoinSourceDomain]: (typeof STABLECOIN_SOURCE_DOMAIN_DESCRIPTORS)[TDomain]["fields"];
+};
+
+export const STABLECOIN_SOURCE_DOMAIN_SCHEMAS = Object.fromEntries(
+  STABLECOIN_SOURCE_DOMAIN_VALUES.map((domain) => [domain, STABLECOIN_SOURCE_DOMAIN_DESCRIPTORS[domain].schema]),
+) as {
+  [TDomain in StablecoinSourceDomain]: (typeof STABLECOIN_SOURCE_DOMAIN_DESCRIPTORS)[TDomain]["schema"];
+};
+
+const StablecoinReservesSidecarSchema = STABLECOIN_SOURCE_DOMAIN_SCHEMAS.reserves;
+export const StablecoinMintAuthoritySidecarSchema = STABLECOIN_SOURCE_DOMAIN_SCHEMAS["mint-authority"];
+export const StablecoinComplianceSidecarSchema = STABLECOIN_SOURCE_DOMAIN_SCHEMAS.compliance;
+export const StablecoinRiskReviewSidecarSchema = STABLECOIN_SOURCE_DOMAIN_SCHEMAS["risk-review"];
 
 const ORACLE_RISK_PROVENANCE_FIELDS = ["reviewedAt", "reviewer", "confidence"] as const;
 
