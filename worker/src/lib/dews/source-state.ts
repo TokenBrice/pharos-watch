@@ -5,8 +5,6 @@
  * consumed by downstream scoring. Each slice's loader lives in
  * `source-state/hydration.ts`. Two narrower concerns live in companion modules:
  *
- *   - `source-state/fallback.ts`     — migration-aware "missing table"
- *                                       bootstrap allowance policy.
  *   - `source-state/legacy-bridge.ts` — pre-envelope stress-signals shape
  *                                       compatibility + yield-rankings cache
  *                                       coercion.

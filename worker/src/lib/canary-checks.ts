@@ -5,7 +5,6 @@ import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9-consumer
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
 import { evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { isMissingColumnError, isMissingTableError } from "./db";
 import { toErrorMessage } from "./error-utils";
 import { throwIfAborted } from "./abort";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
@@ -148,10 +147,7 @@ function skippedResult(reason: string, metadata?: Record<string, unknown>) {
 }
 
 function unavailableResult(error: unknown) {
-  const reason = isMissingTableError(error) || isMissingColumnError(error)
-    ? "canary source unavailable; migration/table not present"
-    : "canary source unavailable";
-  return skippedResult(reason, { error: boundedText(toErrorMessage(error)) });
+  return errorResult("canary source unavailable", { error: boundedText(toErrorMessage(error)) });
 }
 
 function isFiniteScore(value: unknown): value is number {

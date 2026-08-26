@@ -107,6 +107,24 @@ async function observeDewsPublication(sqlite: DatabaseSync, db: D1Database, nowS
 }
 
 describe("persistDewsResults", () => {
+  it("surfaces a missing mandatory latest-signal table", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.exec("DROP TABLE stress_signals_latest");
+      await expect(
+        persistDewsResults({
+          db,
+          results: [buildDewsRow("usdt-tether")],
+          eligibleIds: new Set(["usdt-tether"]),
+          publishFreshnessSentinel: true,
+          nowSec: Math.floor(Date.now() / 1000),
+        }),
+      ).rejects.toThrow("no such table: stress_signals_latest");
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("replaces count-equal swaps and shrinkage with the exact daily identity set", async () => {
     const { sqlite, db } = openDailyHistoryDb();
     const snapshotDate = 1_800_000_000;

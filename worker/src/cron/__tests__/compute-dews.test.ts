@@ -879,13 +879,10 @@ describe("computeAndStoreDEWS", () => {
     );
   });
 
-  it("stops bootstrap-allowing missing optional tables after the DEWS bootstrap sentinel exists", async () => {
+  it("degrades on a missing mandatory source table during initial bootstrap", async () => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") {
-        return {
-          value: JSON.stringify({ completedAt: Math.floor(Date.now() / 1000) - 3600 }),
-          updatedAt: Math.floor(Date.now() / 1000) - 3600,
-        } as never;
+        return null;
       }
       return {
         value: JSON.stringify({
@@ -915,7 +912,7 @@ describe("computeAndStoreDEWS", () => {
       bootstrapPending: boolean;
       sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
     };
-    expect(metadata.bootstrapPending).toBe(false);
+    expect(metadata.bootstrapPending).toBe(true);
     expect(metadata.sourceFailures.find((failure) => failure.source === "dex-prices")?.bootstrapAllowed).toBe(false);
   });
 

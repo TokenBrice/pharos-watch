@@ -539,7 +539,7 @@ describe("worker data invariant canaries", () => {
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "shadow" });
 
     expect(summary.worstStatus).toBe("error");
-    expect(summary.errorCount).toBe(2);
+    expect(summary.errorCount).toBe(3);
     expect(summary.degradedCount).toBe(3);
     expect(summary.results.map((result) => [result.checkId, result.status])).toContainEqual([
       "dex-liquidity-current-publication",
@@ -729,7 +729,7 @@ describe("worker data invariant canaries", () => {
     ]);
   });
 
-  it("skips rollout-missing tables without throwing the whole canary run", async () => {
+  it("reports missing mandatory tables as canary errors without aborting sibling checks", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
     const db = mockD1([
@@ -769,9 +769,10 @@ describe("worker data invariant canaries", () => {
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
-    expect(summary.skippedCount).toBe(4);
+    expect(summary.errorCount).toBe(4);
+    expect(summary.skippedCount).toBe(0);
     expect(summary.degradedCount).toBe(1);
     expect(summary.okCount).toBe(3);
-    expect(summary.worstStatus).toBe("degraded");
+    expect(summary.worstStatus).toBe("error");
   });
 });
