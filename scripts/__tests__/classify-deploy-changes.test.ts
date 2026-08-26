@@ -13,7 +13,6 @@ import {
   normalizeChangedFiles,
 } from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
-import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 
 describe("normalizeChangedFiles", () => {
   it("normalizes separators and removes blank entries", () => {
@@ -96,13 +95,6 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesUiImpact(files)).toBe(false);
   });
 
-  it("publishes every Markdown source rendered by the public docs route", () => {
-    for (const doc of PUBLIC_DOCS) {
-      const file = `docs/${doc.source}`;
-      expect(hasPagesDeployImpact([file]), file).toBe(true);
-      expect(hasPagesPublishImpact([file]), file).toBe(true);
-    }
-  });
 });
 
 describe("hasOnlyInternalDocsImpact", () => {

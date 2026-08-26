@@ -1,3 +1,5 @@
+import { PUBLIC_DOC_SOURCE_FILES } from "./public-doc-manifest.mts";
+
 export const DOC_GROUPS = ["system", "methodology", "design"] as const;
 export type DocGroup = (typeof DOC_GROUPS)[number];
 
@@ -14,9 +16,8 @@ export interface PublicDoc {
   group: DocGroup;
 }
 
-export const PUBLIC_DOCS: readonly PublicDoc[] = [
+const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
   {
-    source: "api-reference.md",
     slug: "api-reference",
     title: "API Reference",
     summary:
@@ -24,7 +25,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "system",
   },
   {
-    source: "architecture.md",
     slug: "architecture",
     title: "Architecture",
     summary:
@@ -32,7 +32,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "system",
   },
   {
-    source: "data-flow-map.md",
     slug: "data-flow-map",
     title: "Data Flow Map",
     summary:
@@ -40,7 +39,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "system",
   },
   {
-    source: "data-pipeline.md",
     slug: "data-pipeline",
     title: "Data Pipeline",
     summary:
@@ -48,7 +46,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "system",
   },
   {
-    source: "worker-and-api-limits.md",
     slug: "worker-and-api-limits",
     title: "Worker and API Limits",
     summary:
@@ -56,7 +53,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "system",
   },
   {
-    source: "classification.md",
     slug: "classification",
     title: "Classification",
     summary:
@@ -64,7 +60,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "listing-policy.md",
     slug: "listing-policy",
     title: "Stablecoin Listing Policy",
     summary:
@@ -72,7 +67,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "pricing-pipeline.md",
     slug: "pricing-pipeline",
     title: "Pricing Pipeline",
     summary:
@@ -80,7 +74,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "depeg-detection.md",
     slug: "depeg-detection",
     title: "Depeg Detection",
     summary:
@@ -88,7 +81,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "dews.md",
     slug: "dews",
     title: "DEWS",
     summary:
@@ -96,7 +88,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "dex-liquidity.md",
     slug: "dex-liquidity",
     title: "DEX Liquidity",
     summary:
@@ -104,7 +95,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "stability-index.md",
     slug: "stability-index",
     title: "Pharos Stability Index",
     summary:
@@ -112,7 +102,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "report-cards.md",
     slug: "report-cards",
     title: "Report Cards",
     summary:
@@ -120,7 +109,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "redemption-backstops.md",
     slug: "redemption-backstops",
     title: "Redemption Backstops",
     summary:
@@ -128,7 +116,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "chain-health.md",
     slug: "chain-health",
     title: "Chain Health",
     summary:
@@ -136,7 +123,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "mint-burn-flows.md",
     slug: "mint-burn-flows",
     title: "Mint Burn Flows",
     summary:
@@ -144,7 +130,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "yield-intelligence.md",
     slug: "yield-intelligence",
     title: "Yield Intelligence",
     summary:
@@ -152,7 +137,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "shadow-stablecoins.md",
     slug: "shadow-stablecoins",
     title: "Shadow Stablecoins",
     summary:
@@ -160,7 +144,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
-    source: "design-context.md",
     slug: "design-context",
     title: "Design Context",
     summary:
@@ -168,7 +151,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "design",
   },
   {
-    source: "design-language.md",
     slug: "design-language",
     title: "Design Language",
     summary:
@@ -176,7 +158,6 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "design",
   },
   {
-    source: "design-tokens.md",
     slug: "design-tokens",
     title: "Design Tokens",
     summary:
@@ -184,6 +165,15 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "design",
   },
 ] as const;
+
+if (PUBLIC_DOC_SOURCE_FILES.length !== PUBLIC_DOC_METADATA.length) {
+  throw new Error("Public doc source and metadata manifests must have the same length");
+}
+
+export const PUBLIC_DOCS: readonly PublicDoc[] = PUBLIC_DOC_SOURCE_FILES.map((source, index) => ({
+  source,
+  ...PUBLIC_DOC_METADATA[index],
+}));
 
 export const PUBLIC_DOC_BY_SLUG = new Map(PUBLIC_DOCS.map((doc) => [doc.slug, doc]));
 const PUBLIC_DOC_BY_SOURCE = new Map(PUBLIC_DOCS.map((doc) => [doc.source, doc]));

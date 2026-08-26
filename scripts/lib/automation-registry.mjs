@@ -1,4 +1,5 @@
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./sitemap-source-paths.mts";
+import { PUBLIC_DOC_SOURCE_FILES } from "../../shared/lib/public-doc-manifest.mts";
 
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
@@ -21,31 +22,7 @@ const PAGES_EXTRA_EXACT_PATHS = [
   "tsconfig.json",
 ];
 
-// These Markdown sources are compiled into public /docs/* routes. Keep this
-// list aligned with PUBLIC_DOCS; the classifier test fails on drift.
-const PUBLIC_DOC_SOURCE_PATHS = [
-  "docs/api-reference.md",
-  "docs/architecture.md",
-  "docs/chain-health.md",
-  "docs/classification.md",
-  "docs/data-flow-map.md",
-  "docs/data-pipeline.md",
-  "docs/depeg-detection.md",
-  "docs/design-context.md",
-  "docs/design-language.md",
-  "docs/design-tokens.md",
-  "docs/dews.md",
-  "docs/dex-liquidity.md",
-  "docs/listing-policy.md",
-  "docs/mint-burn-flows.md",
-  "docs/pricing-pipeline.md",
-  "docs/redemption-backstops.md",
-  "docs/report-cards.md",
-  "docs/shadow-stablecoins.md",
-  "docs/stability-index.md",
-  "docs/worker-and-api-limits.md",
-  "docs/yield-intelligence.md",
-];
+const PUBLIC_DOC_SOURCE_PATHS = PUBLIC_DOC_SOURCE_FILES.map((source) => `docs/${source}`);
 
 export const DEPLOY_IMPACT_REGISTRY = {
   fullDeployInfra: {
@@ -73,6 +50,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     sharedExcludedPaths: [
       "shared/lib/pharosville-api-contract.ts",
       "shared/lib/public-docs.ts",
+      "shared/lib/public-doc-manifest.mts",
       "shared/types/pharosville.ts",
     ],
     sharedExcludedPrefixes: ["shared/data/funding/", "shared/lib/selector/"],
@@ -90,6 +68,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     sharedExcludedPaths: [
       "shared/lib/pharosville-api-contract.ts",
       "shared/lib/public-docs.ts",
+      "shared/lib/public-doc-manifest.mts",
       "shared/types/pharosville.ts",
     ],
     sharedExcludedPrefixes: ["shared/data/funding/", "shared/lib/selector/"],
@@ -164,7 +143,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "git-history-derived",
     script: "scripts/maintenance/generate-docs-metadata.ts",
-    sourcePaths: [...PUBLIC_DOC_SOURCE_PATHS, "shared/lib/public-docs.ts"],
+    sourcePaths: [...PUBLIC_DOC_SOURCE_PATHS, "shared/lib/public-doc-manifest.mts", "shared/lib/public-docs.ts"],
   }),
   generatedArtifact({
     id: "depeg-event-search-data",
