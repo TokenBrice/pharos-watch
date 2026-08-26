@@ -17,7 +17,7 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
     id: "guard-contract",
     reason: "load model, trigger registry, workflow, and their regression tests",
     paths: [
-      ".github/workflows/telegram-load.yml",
+      ".github/workflows/weekly-validation.yml",
       "scripts/ci/check-telegram-load.ts",
       "scripts/lib/telegram-load-scenarios.ts",
       "scripts/lib/telegram-load-guard.mts",

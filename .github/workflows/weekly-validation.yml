@@ -1,0 +1,96 @@
+name: Weekly Validation
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      # Full-lockfile scope includes dev/build dependencies. The verifier is
+      # fail-closed and accepts only an unexpired, exact registry entry.
+      - run: node --import tsx scripts/ci/verify-dependency-audit.ts
+      - name: Verify package signatures
+        if: always()
+        run: npm audit signatures
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          bootstrap-generated: "false"
+
+      # The gitleaks version + tarball SHA-256 pin lives only in
+      # scripts/ci/run-gitleaks.ts, which downloads and checksum-verifies the
+      # pinned binary before scanning.
+      - name: Scan git history for secrets
+        env:
+          GITLEAKS_FULL_HISTORY: "1"
+        run: node --import tsx scripts/ci/run-gitleaks.ts --range
+
+  all-critical-ratchet:
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      CRITICAL_COVERAGE_RATCHET_ALL: "1"
+      CRITICAL_COVERAGE_THRESHOLD: "40"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      - run: npm run coverage:critical
+
+  telegram-load:
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    concurrency:
+      group: telegram-load
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      - run: npm run check:telegram-load
+
+  compare-account-state:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    concurrency:
+      group: cloudflare-account-state-drift
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: ./.github/actions/setup-workspace
+      - name: Compare Cloudflare account state
+        env:
+          CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: ${{ secrets.CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN }}
+        run: npm run check:cloudflare-account-state
