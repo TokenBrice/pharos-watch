@@ -57,68 +57,7 @@ jobs:
           DEPEG_EVENTS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           PUBLIC_DATASETS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           PUBLIC_DATASETS_REQUIRE_API: "1"
-        run: |
-          # The three refreshers have disjoint outputs. Run them concurrently,
-          # retaining the existing per-surface fail-open fallback contract.
-          refresh_dir="${RUNNER_TEMP}/pages-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          mkdir -p "${refresh_dir}"
-          cp data/digests.json "${refresh_dir}/digests.json"
-          cp data/depeg-events.json "${refresh_dir}/depeg-events.json"
-
-          refresh_digests() {
-            local committed_count refreshed_count refresh_ok
-            committed_count="$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync("data/digests.json","utf8")).length)')"
-            refresh_ok=true
-            npx tsx scripts/maintenance/sync-digests.ts --output "${refresh_dir}/digests.json" \
-              || refresh_ok=false
-            refreshed_count="$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")).length)' "${refresh_dir}/digests.json" 2>/dev/null || echo 0)"
-            if [ "${refresh_ok}" = "true" ] && [ "${refreshed_count}" -lt "${committed_count}" ]; then
-              echo "::warning::digest archive shrank (${refreshed_count} < ${committed_count}); using committed snapshot"
-              refresh_ok=false
-            fi
-            if [ "${refresh_ok}" = "true" ]; then
-              mv "${refresh_dir}/digests.json" data/digests.json
-            else
-              echo "::warning::digest refresh failed; using committed digest snapshot"
-            fi
-            echo "- Digest refresh: ${refresh_ok} (${refreshed_count:-${committed_count}} entries)" > "${refresh_dir}/digest-summary.md"
-            return 0
-          }
-
-          refresh_depegs() {
-            local refresh_ok=true
-            npx tsx scripts/maintenance/sync-depeg-events.ts --output "${refresh_dir}/depeg-events.json" \
-              || refresh_ok=false
-            if [ "${refresh_ok}" = "true" ]; then
-              mv "${refresh_dir}/depeg-events.json" data/depeg-events.json
-            else
-              echo "::warning::depeg-event refresh failed; using committed depeg snapshot"
-            fi
-            echo "- Depeg-event refresh: ${refresh_ok}" > "${refresh_dir}/depeg-summary.md"
-            return 0
-          }
-
-          refresh_public_datasets() {
-            local refresh_ok=true
-            npm run generate:public-datasets || refresh_ok=false
-            if [ "${refresh_ok}" != "true" ]; then
-              echo "::warning::public-dataset refresh failed; using committed public datasets"
-              git checkout -- public/datasets
-              git clean -fd -- public/datasets
-            fi
-            echo "- Public-dataset refresh: ${refresh_ok}" > "${refresh_dir}/datasets-summary.md"
-            return 0
-          }
-
-          refresh_digests > "${refresh_dir}/digest.log" 2>&1 & digest_pid=$!
-          refresh_depegs > "${refresh_dir}/depeg.log" 2>&1 & depeg_pid=$!
-          refresh_public_datasets > "${refresh_dir}/datasets.log" 2>&1 & datasets_pid=$!
-          wait "${digest_pid}"
-          wait "${depeg_pid}"
-          wait "${datasets_pid}"
-          cat "${refresh_dir}/digest.log" "${refresh_dir}/depeg.log" "${refresh_dir}/datasets.log"
-          cat "${refresh_dir}/digest-summary.md" "${refresh_dir}/depeg-summary.md" \
-            "${refresh_dir}/datasets-summary.md" >> "$GITHUB_STEP_SUMMARY"
+        run: node --import tsx scripts/maintenance/refresh-pages-release-data.ts
       - name: Build clean production export
         env:
           PUBLIC_DATASETS_API_URL: ""

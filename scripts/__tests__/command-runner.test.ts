@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createExecutionUnit,
+  createLocalVitestCommand,
+  createNpmScriptCommand,
+  createSpawnCommand,
   runCommandBatches,
   runExecutionUnit,
   runParallelExecutionUnits,
   runShellCommand,
+  runSpawnCommand,
 } from "../lib/command-runner.mts";
 
 afterEach(() => {
@@ -148,5 +152,31 @@ describe("command runner", () => {
 
   it("returns real shell command failure statuses", async () => {
     await expect(runShellCommand("node -e 'process.exit(6)'")).resolves.toEqual({ status: 6, aborted: false });
+  });
+
+  it("builds npm script commands without an argument separator when no args are present", () => {
+    expect(createNpmScriptCommand("seo:check")).toMatchObject({
+      executable: "npm",
+      args: ["run", "seo:check"],
+      cmd: "npm run seo:check",
+      scriptName: "seo:check",
+    });
+    expect(createNpmScriptCommand("test:pr", ["--base=main"])).toMatchObject({
+      args: ["run", "test:pr", "--", "--base=main"],
+      cmd: "npm run test:pr -- --base=main",
+    });
+  });
+
+  it("builds local Vitest commands with the shared CI argument policy", () => {
+    const command = createLocalVitestCommand(["run", "example.test.ts"], {
+      CI: "true",
+    });
+    expect(command.executable).toMatch(/node_modules[/\\]\.bin[/\\]vitest(?:\.cmd)?$/);
+    expect(command.args).toEqual(["run", "example.test.ts", "--silent=passed-only"]);
+  });
+
+  it("runs structured commands directly and can capture their output", async () => {
+    const command = { ...createSpawnCommand(process.execPath, ["-e", "process.stdout.write('ok')"]), captureOutput: true };
+    await expect(runSpawnCommand(command)).resolves.toEqual({ status: 0, aborted: false, output: "ok" });
   });
 });

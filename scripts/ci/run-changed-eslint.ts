@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
+import { createExecutionUnit, createSpawnCommand, runExecutionUnit, runSpawnCommand, type CommandImplementation, type SpawnCommand } from "../lib/command-runner.mts";
 import { localBin } from "../lib/local-bin.mts";
 
 const LINTABLE_EXTENSION = /\.(?:[cm]?[jt]sx?)$/;
@@ -14,7 +14,7 @@ interface SelectLintableFilesOptions {
 interface RunChangedEslintOptions {
   argv?: readonly string[];
   env?: NodeJS.ProcessEnv;
-  spawn?: typeof spawnSync;
+  runCommand?: CommandImplementation<SpawnCommand>;
 }
 
 export function selectLintableFiles(
@@ -24,11 +24,11 @@ export function selectLintableFiles(
   return changedFiles.filter((file) => LINTABLE_EXTENSION.test(file) && exists(file));
 }
 
-export function runChangedEslint({
+export async function runChangedEslint({
   argv = process.argv.slice(2),
   env = process.env,
-  spawn = spawnSync,
-}: RunChangedEslintOptions = {}): number {
+  runCommand = runSpawnCommand,
+}: RunChangedEslintOptions = {}): Promise<number> {
   const { base, head, rest } = parseChangedFileArgs(argv, env);
   const files = selectLintableFiles(collectChangedFiles({ base, head }));
 
@@ -38,9 +38,7 @@ export function runChangedEslint({
   }
 
   console.log(`[lint:changed] Checking ${files.length} file(s) changed in ${base}...${head}.`);
-  const result = spawn(
-    localBin("eslint"),
-    [
+  const command = createSpawnCommand(localBin("eslint"), [
       ...files,
       "--cache",
       "--cache-strategy",
@@ -53,13 +51,15 @@ export function runChangedEslint({
       // are deliberately unlinted, and the warning would fail --max-warnings=0.
       "--no-warn-ignored",
       ...rest,
-    ],
-    { env, stdio: "inherit" },
-  );
-  if (result.error) throw result.error;
-  return result.status ?? 1;
+  ]);
+  const result = await runExecutionUnit(createExecutionUnit([command]), {
+    getCommandEnv: () => env as Record<string, string>,
+    reporter: {},
+    runCommandImpl: runCommand,
+  });
+  return result.status;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  process.exit(runChangedEslint());
+  process.exit(await runChangedEslint());
 }

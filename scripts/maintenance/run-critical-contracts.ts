@@ -1,16 +1,12 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { buildCriticalContractTestArgs } from "../lib/critical-test-files.mts";
-import { localBin } from "../lib/local-bin.mts";
-import { withCiVitestArgs } from "../lib/vitest-ci-args.mts";
+import { createExecutionUnit, createLocalVitestCommand, runExecutionUnit, runSpawnCommand } from "../lib/command-runner.mts";
 
-const result = spawnSync(localBin("vitest"), withCiVitestArgs(buildCriticalContractTestArgs(process.argv.slice(2))), {
-  stdio: "inherit",
+const result = await runExecutionUnit(createExecutionUnit([
+  createLocalVitestCommand(buildCriticalContractTestArgs(process.argv.slice(2))),
+]), {
+  reporter: {},
+  runCommandImpl: runSpawnCommand,
 });
-
-if (result.error) {
-  throw result.error;
-}
-
-process.exit(result.status ?? 1);
+process.exit(result.status);
