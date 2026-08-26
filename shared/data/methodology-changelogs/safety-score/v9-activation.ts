@@ -1,5 +1,22 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_UNPROVEN_SETTLEMENT_BOUND: MethodologyChangelogEntry = {
+  version: "9.45",
+  title: "Unproven settlement bounds become bounded exit evidence gaps",
+  date: "2026-08-26",
+  effectiveAt: 1787702400,
+  summary:
+    "An open operator-batched redemption request queue whose settlement completion bound is unproven is a bounded exit evidence gap, not a measured zero. Exit floors at the bounded-unknown score, the final score remains subject to the exit-unverified ceiling, and the public card carries an explicit warning; the standalone redemption route is unrated because its capacity is missing.",
+  impact: [
+    "The new `unproven-settlement-bound` reason code is owned by Exit and globally bounded: the Exit pillar floors at the policy bounded-unknown score, the existing exit-unverified ceiling applies, and the public label is `Redemption is an operator-batched request queue with no proven settlement bound`.",
+    "The v9.44 measured-zero ruling is unchanged. This corrects its input: an observer-synthesized zero standing in for an unproven completion bound is bounded uncertainty, not a measurement.",
+    "The eearn-ember operator-batched queue observer now publishes `unproven-settlement-bound` instead of a synthesized measured zero.",
+    "The standalone redemption route score for this shape is unrated (missing capacity) rather than zero.",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_EXIT_CAPACITY_TRUTH: MethodologyChangelogEntry = {
   version: "9.44",
   title: "Measured zero-capacity exits remain attributable",

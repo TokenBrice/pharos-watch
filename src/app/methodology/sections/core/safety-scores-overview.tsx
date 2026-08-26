@@ -25,7 +25,8 @@ export function SafetyScoresOverview() {
         promise. Curated settlement and cost terms can therefore move Exit in either direction. A route whose
         same-notional capacity, settlement, or cost is not established publishes a bounded terms gap: supported
         partial evidence remains visible, but generated fallback values receive no primary or backup credit, and
-        ordinary uncertainty does not become measured danger.
+        ordinary uncertainty does not become measured danger. Since methodology v9.45, an open route with an
+        unproven settlement bound takes the bounded floor and exit-unverified ceiling instead of Exit 0.
       </p>
       <p>
         Equal-score route ties and every other canonical V9 array use locale-independent JavaScript code-unit order.

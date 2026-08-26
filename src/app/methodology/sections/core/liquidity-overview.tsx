@@ -41,7 +41,7 @@ export function LiquidityPreconditions() {
             {
               label: "Failure behavior",
               value:
-                "Standalone DEX rows can be unavailable. In V9 Exit, missing or unsupported comparable-route evidence receives the bounded floor and exit-unverified ceiling; a reviewed-complete portfolio with no viable route scores Exit 0.",
+                "Standalone DEX rows can be unavailable. In V9 Exit, missing or unsupported comparable-route evidence receives the bounded floor and exit-unverified ceiling; a reviewed-complete portfolio with no viable route scores Exit 0, except that an open route with an unproven settlement bound takes the bounded floor and exit-unverified ceiling.",
             },
           ]}
         />

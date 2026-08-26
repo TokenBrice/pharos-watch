@@ -6,12 +6,12 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.39`
+- **Current methodology version:** `v4.4`
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.39` update: a redemption headline now scores zero when its measured executable capacity is zero or below both material-capacity breakpoints, while missing capacity remains unrated; the same gate applies to the eventual-redeemability headline. Reviewed settlement terms are canonical across the standalone row and V9, with favorable corrections subject to the 365-day evidence window, and reserve-sync routes assert full-supply eventual capacity only through an explicit reviewed opt-in. This removes positive headlines built from access, settlement, output, and cost when the route cannot execute a material redemption.
+Latest `v4.4` update: an open route whose settlement completion bound is unproven publishes unestablished capacity and remains unrated (`null`, `missing-capacity`) instead of being treated as a measured zero; the marker is withheld for paused routes, which keep their measured impairment. The public `capacityProfile` and exit route observations expose `settlementBoundUnproven`, while scoring weights and formulas remain unchanged.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 

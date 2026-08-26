@@ -84,6 +84,7 @@ const REASON_CODE_LABELS = {
   "unresolved-mint-authority": "Mint authority unresolved",
   "unresolved-oracle-branch-applicability": "Oracle path applicability unresolved",
   "unsupported-same-notional-route": "Exit route cannot be tested at size",
+  "unproven-settlement-bound": "Settlement bound unproven",
   // The collateral identities are reviewed; what is absent is their
   // reconciliation against a measured reserve envelope, which for an asset with
   // no live-reserve adapter no method can produce at all.

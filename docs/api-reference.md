@@ -2464,14 +2464,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.39"
+      "methodologyVersion": "4.4"
     }
   },
   "methodology": {
-    "version": "4.39",
-    "versionLabel": "v4.39",
-    "currentVersion": "4.39",
-    "currentVersionLabel": "v4.39",
+    "version": "4.4",
+    "versionLabel": "v4.4",
+    "currentVersion": "4.4",
+    "currentVersionLabel": "v4.4",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -2544,7 +2544,7 @@ Top-level fields:
 | `capacityConfidence`         | `string`                                                                                                                                                   | `live-direct`, `live-proxy`, `documented-bound`, `heuristic`, or legacy `dynamic` fidelity tag for the capacity model                                                                                                         |
 | `capacityBasis`              | `string \| undefined`                                                                                                                                      | Typed basis for the modeled capacity, such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`          |
 | `capacitySemantics`          | `string`                                                                                                                                                   | `immediate-bounded` or `eventual-only`, distinguishing current redeemable buffer from eventual redeemability                                                                                                                  |
-| `capacityProfile`            | `object \| undefined`                                                                                                                                      | Optional v4 capacity profile separating immediate, daily, queued, eventual, and scoring capacity with a `scoringHorizon` and `capacityProfileConfidence`                                                                      |
+| `capacityProfile`            | `object \| undefined`                                                                                                                                      | Optional v4 capacity profile separating immediate, daily, queued, eventual, and scoring capacity with a `scoringHorizon`, `capacityProfileConfidence`, and optional `settlementBoundUnproven` boolean for an open route whose settlement completion bound is unproven |
 | `capacityKind`               | `string \| undefined`                                                                                                                                      | Optional adapter-declared live evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`. Context only; not Safety eligibility by itself |
 | `freshnessKind`              | `string \| undefined`                                                                                                                                      | Optional adapter-declared redemption freshness evidence, such as `verified-source-timestamp`, `same-run-onchain`, `same-run-api`, `reviewed-static`, or `unverified`                                                          |
 | `confidenceDetails`          | `object \| undefined`                                                                                                                                      | Optional v4 confidence rollup dimensions for capacity evidence, fee evidence, route-status freshness, holder-cohort breadth, and source quality                                                                               |
