@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.44",
+  "releaseVersion": "9.45",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -1879,6 +1879,29 @@
       "defaultTreatment": "ceiling",
       "releaseSeverity": "review-required",
       "publicLabel": "Comparable exit route is missing",
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "exit-unverified"
+      }
+    },
+    {
+      "code": "unproven-settlement-bound",
+      "ownerDomain": "exit",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "optional-exit"
+      ],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": [
+        "ceiling"
+      ],
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Redemption is an operator-batched request queue with no proven settlement bound",
       "auditClassification": "missing-data",
       "ceilingRule": {
         "source": "named-ceiling",

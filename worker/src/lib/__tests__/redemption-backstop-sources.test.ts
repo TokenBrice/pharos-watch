@@ -361,6 +361,88 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacityProfile?.exitRouteObservations?.[0]?.settlementHorizonSec).toBe(2_592_000);
   });
 
+  it("leaves eEARN-style unproven settlement capacity unrated while retaining the queued trace", async () => {
+    const entry = await buildEntry(
+      "lusd-liquity",
+      route({
+        settlementModel: "atomic",
+        executionModel: "rules-based-nav",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        v9RouteReviewTerms: { settlementModel: "queued" },
+      }),
+      20_000_000,
+      null,
+      {
+        reserveSnapshotMetadata: snapshot("lusd-liquity", {
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 0,
+            capacityKind: "live-queue",
+            freshnessKind: "same-run-onchain",
+            settlementBoundUnproven: true,
+            settlementDelaySec: 2_592_000,
+            routeStatus: "open",
+            routeStatusSource: "onchain",
+          },
+        }, { fetchedAt: now - 120 }),
+      },
+    );
+
+    expect(entry.resolutionState).toBe("missing-capacity");
+    expect(entry.score).toBeNull();
+    expect(entry.capacityScore).toBeNull();
+    expect(entry.capsApplied).not.toContain("zero-executable-capacity");
+    expect(entry.eventualRedeemabilityScore).toBeNull();
+    expect(entry.capacityProfile).toMatchObject({
+      scoringUsd: null,
+      settlementBoundUnproven: true,
+      exitRouteObservations: [
+        {
+          settlementBoundUnproven: true,
+          scoreEligible: false,
+          settlementHorizonSec: 2_592_000,
+        },
+      ],
+    });
+    expect(entry.capacityProfile?.exitRouteObservations?.[0]).not.toHaveProperty("capacityCurve");
+  });
+
+  it("keeps a paused flagged queue on the measured-zero path instead of the bounded gap", async () => {
+    const entry = await buildEntry(
+      "lusd-liquity",
+      route({
+        settlementModel: "atomic",
+        executionModel: "rules-based-nav",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        v9RouteReviewTerms: { settlementModel: "queued" },
+      }),
+      20_000_000,
+      null,
+      {
+        reserveSnapshotMetadata: snapshot("lusd-liquity", {
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 0,
+            capacityKind: "live-queue",
+            freshnessKind: "same-run-onchain",
+            settlementBoundUnproven: true,
+            settlementDelaySec: 2_592_000,
+            routeStatus: "paused",
+            routeStatusSource: "onchain",
+            routeStatusReason: "Withdrawals are paused onchain",
+          },
+        }, { fetchedAt: now - 120 }),
+      },
+    );
+
+    // A paused route's zero is the measured pause, not an evidence gap: the
+    // bounded-gap lane must not swallow a live impairment.
+    expect(entry.routeStatus).toBe("paused");
+    expect(entry.capacityProfile?.settlementBoundUnproven).not.toBe(true);
+    expect(entry.score).toBeNull();
+    expect(entry.capsApplied).toContain("live-route-status-impairment");
+  });
+
   it("reuses pre-parsed live redemption metadata for capacity and fees", async () => {
     const entry = await buildEntry(
       "usdo-openeden",
@@ -388,6 +470,7 @@ describe("buildRedemptionBackstopEntry", () => {
           hasBlockingWarnings: false,
           capacityNotes: [],
           capacityConfidence: "live-direct",
+          settlementBoundUnproven: false,
           canUseCapacity: true,
           canUseFee: true,
           capacityReason: null,

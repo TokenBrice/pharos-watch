@@ -53,6 +53,7 @@ export interface V9ExitEvaluationRoute {
   lane: "dex" | "redemption";
   routeFamily: "dex-amm" | "dex-orderbook" | "issuer-redemption" | "protocol-redemption" | "eventual-redemption";
   applicability: "required" | "not-applicable" | "unresolved";
+  settlementBoundUnproven: boolean;
   observationState: "known" | "missing" | "stale" | "unsupported" | "bounded-unknown";
   scoreEligible: boolean;
   coverageClass: "exact-complete" | "exact-lower-bound" | "diagnostic";
@@ -354,11 +355,12 @@ export interface V9CreditableNonAtomicRedemptionInput {
  * live-reserve, or on-chain redemption evidence kind. This gate decides only
  * *eligibility* for the discounted credit; whether the route actually clears
  * notional is settled downstream by its measured capacity curve. An impaired,
- * frozen, or discretionary route does not survive as a viable exit because a
- * redemption that cannot clear reports a zero (or immaterial) capacity curve, so
- * the zero-capacity floor removes its credit while preserving the measured
- * adverse trace — the pin safety here is that data invariant, not family
- * membership.
+ * frozen, or discretionary route with a proven settlement bound does not
+ * survive as a viable exit when its redemption cannot clear: its zero (or
+ * immaterial) capacity curve removes its credit while preserving the measured
+ * adverse trace. An open route whose settlement completion bound is unproven
+ * is different: it is a bounded evidence gap, so it is excluded from scoring
+ * and retained as a diagnostic rather than treated as measured zero.
  */
 /**
  * A route output is resolved when it is both observed and valued. Two surfaces
@@ -412,6 +414,7 @@ function isCreditableNonAtomicRedemption(
 function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9ValidatedPolicyEnvelope): V9ReasonCode | null {
   if (route.applicability === "not-applicable") return null;
   if (route.applicability === "unresolved") return "missing-same-notional-route";
+  if (route.settlementBoundUnproven) return "unproven-settlement-bound";
   if (route.outputResolved === false) return "unresolved-exit-output";
   // `missing` means no retained observation at all and still excludes. `stale`
   // does not: a retained observation that aged past its lane freshness bound is
@@ -852,6 +855,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     lane: route.lane,
     routeFamily: route.routeFamily,
     applicability: statusApplicability(route),
+    settlementBoundUnproven: route.settlementBoundUnproven ?? false,
     observationState: route.status.observationState,
     scoreEligible: route.scoreEligible,
     coverageClass: route.coverageClass,
@@ -941,6 +945,9 @@ export function evaluateV9Exit(
   const boundedFloor = resolveV9ReasonPolicy(envelope, "missing-same-notional-route").critical
     ? null
     : envelope.policy.semantic.exit.boundedUnknownScore;
+  const unprovenSettlementBoundedFloor = resolveV9ReasonPolicy(envelope, "unproven-settlement-bound").critical
+    ? null
+    : envelope.policy.semantic.exit.boundedUnknownScore;
   const stressRequest = selectV9ExitStressRequest(args.circulatingUsd, envelope);
   if (stressRequest === null) {
     return {
@@ -988,6 +995,7 @@ export function evaluateV9Exit(
   if (evaluated.length === 0) {
     const portfolioReviewed = args.portfolioStatus === "reviewed-complete";
     const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route");
+    const hasUnprovenSettlementBound = diagnosticReasons.includes("unproven-settlement-bound");
     const onlyUnsupportedDiagnostics =
       diagnosticReasons.length > 0 &&
       diagnosticReasons.every((reason) => reason === "unsupported-same-notional-route");
@@ -995,17 +1003,28 @@ export function evaluateV9Exit(
     // route facts themselves are complete. A diagnostic route carrying
     // `missing-same-notional-route` is explicit bounded uncertainty (for example,
     // a known issuer mechanism whose stress capacity/SLA/cost is not established),
-    // not measured zero exit. Preserve the policy's bounded-unknown floor so
-    // ordinary uncertainty cannot manufacture an F grade.
+    // not measured zero exit. An open route carrying
+    // `unproven-settlement-bound` is the same bounded gap even when the portfolio
+    // status is reviewed-complete: review establishes the route, but not that
+    // its operator queue settles within the scoring horizon. Only a genuinely
+    // measured zero reaches `no-viable-exit-path`.
     const defaultReason = hasBoundedMissingRoute
       ? "missing-same-notional-route"
-      : portfolioReviewed
-        ? "no-viable-exit-path"
-        : onlyUnsupportedDiagnostics
-          ? null
-          : "missing-same-notional-route";
+      : hasUnprovenSettlementBound
+        ? "unproven-settlement-bound"
+        : portfolioReviewed
+          ? "no-viable-exit-path"
+          : onlyUnsupportedDiagnostics
+            ? null
+            : "missing-same-notional-route";
     return {
-      score: hasBoundedMissingRoute ? boundedFloor : portfolioReviewed ? 0 : boundedFloor,
+      score: hasBoundedMissingRoute
+        ? boundedFloor
+        : hasUnprovenSettlementBound
+          ? unprovenSettlementBoundedFloor
+          : portfolioReviewed
+            ? 0
+            : boundedFloor,
       stressRequest,
       primaryRouteKey: null,
       diversificationRouteKey: null,
@@ -1045,13 +1064,23 @@ export function evaluateV9Exit(
       ? redundancyHeadroom * (independent.score / 100)
       : 0;
   const hasOtherIncludedRoute = evaluated.length > 1;
+  const boundedGapReason =
+    boundedFloor !== null && diagnosticReasons.includes("missing-same-notional-route")
+      ? "missing-same-notional-route"
+      : unprovenSettlementBoundedFloor !== null && diagnosticReasons.includes("unproven-settlement-bound")
+        ? "unproven-settlement-bound"
+        : null;
+  const boundedGapFloor =
+    boundedGapReason === "missing-same-notional-route"
+      ? boundedFloor
+      : boundedGapReason === "unproven-settlement-bound"
+        ? unprovenSettlementBoundedFloor
+        : null;
   const boundedGapFloorApplies =
-    boundedFloor !== null &&
-    diagnosticReasons.includes("missing-same-notional-route") &&
-    primary.score + diversificationBonus < boundedFloor;
+    boundedGapFloor !== null && primary.score + diversificationBonus < boundedGapFloor;
   return {
     score: boundedGapFloorApplies
-      ? boundedFloor
+      ? boundedGapFloor
       : roundTraceScore(primary.score + diversificationBonus),
     stressRequest,
     primaryRouteKey: boundedGapFloorApplies ? null : primary.route.routeKey,
@@ -1062,7 +1091,7 @@ export function evaluateV9Exit(
     // or unreviewed alternative cannot impose a critical reason once a
     // score-eligible route carries the exit claim.
     reasons: sortedUnique([
-      ...(boundedGapFloorApplies ? ["missing-same-notional-route"] : []),
+      ...(boundedGapFloorApplies && boundedGapReason ? [boundedGapReason] : []),
       ...(!boundedGapFloorApplies && primary.score === 0 ? ["no-viable-exit-path"] : []),
       ...(hasOtherIncludedRoute && !independent ? ["correlated-exit-routes"] : []),
     ]) as V9ReasonCode[],

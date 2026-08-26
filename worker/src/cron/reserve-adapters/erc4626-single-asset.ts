@@ -110,6 +110,7 @@ interface RedemptionCapacityTelemetry {
     | SboldSpWithdrawableLiquiditySource
     | SfrxusdCrosschainWithdrawableLiquiditySource
     | ExecutableRedemptionObservation["capacitySource"];
+  settlementBoundUnproven?: true;
   freshnessKind: "same-run-onchain" | "same-run-api";
   routeStatusSource: "onchain" | "protocol-api";
   idleUnderlyingBalanceRaw?: string;
@@ -154,6 +155,7 @@ function buildExecutableRedemptionCapacityTelemetry(
     capacityUsd,
     capacityRaw: capacityRaw.toString(),
     capacitySource: observation.capacitySource,
+    ...(observation.settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
     freshnessKind: observation.freshnessKind,
     routeStatusSource: observation.routeStatusSource,
     underlyingDecimals: observation.underlyingDecimals,
@@ -1264,6 +1266,9 @@ export async function fetchErc4626SingleAssetReserves(
                 ? { capacityRatioOfSupply: redemptionCapacity.capacityRatioOfSupply }
                 : {}),
               capacityKind: redemptionCapacity.capacityKind ?? "live-direct" as const,
+              ...(redemptionCapacity.settlementBoundUnproven
+                ? { settlementBoundUnproven: true }
+                : {}),
               ...(redemptionCapacity.settlementDelaySec != null
                 ? { settlementDelaySec: redemptionCapacity.settlementDelaySec }
                 : {}),

@@ -155,6 +155,53 @@ export async function resolveReserveSyncCapacity(
   const liveMetadata =
     options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, snapshotMetadata, now);
 
+  // The bounded-gap lane is reserved for OPEN routes: a paused route's zero is
+  // the measured pause, not an evidence gap, so it falls through to the
+  // measured capacity path below regardless of the producer flag.
+  if (liveMetadata.settlementBoundUnproven && liveMetadata.routeStatus === "open") {
+    const flaggedCapacityConfidence =
+      liveMetadata.capacityKind === "documented-bound"
+        ? ("documented-bound" as const)
+        : (model.liveCapacityConfidence ?? liveMetadata.capacityConfidence ?? liveCapacityConfidence);
+    return {
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      scoringCapacityUsd: null,
+      scoringCapacityRatio: null,
+      capacityProfile: {
+        immediateUsd: null,
+        scoringUsd: null,
+        scoringHorizon: "unknown",
+        capacityProfileConfidence: flaggedCapacityConfidence,
+        settlementBoundUnproven: true,
+      },
+      provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
+      sourceMode:
+        REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA]
+          .defaultSourceMode,
+      resolutionState: "missing-capacity",
+      capacityConfidence: flaggedCapacityConfidence,
+      // routeFamily=null: recomputed with the real routeFamily in redemption-backstop-sources.ts; not read downstream here.
+      capacityBasis: resolveCapacityBasis(null, model, flaggedCapacityConfidence),
+      capacitySemantics,
+      settlementBoundUnproven: true,
+      ...(liveMetadata.capacityKind ? { capacityKind: liveMetadata.capacityKind } : {}),
+      ...(liveMetadata.freshnessKind ? { freshnessKind: liveMetadata.freshnessKind } : {}),
+      ...(liveMetadata.sourceTimestamp != null ? { sourceTimestamp: liveMetadata.sourceTimestamp } : {}),
+      ...(liveMetadata.sourceUrls.length > 0 ? { sourceUrls: liveMetadata.sourceUrls } : {}),
+      ...(liveMetadata.settlementDelaySec != null ? { settlementDelaySec: liveMetadata.settlementDelaySec } : {}),
+      ...(liveMetadata.queueDepthUsd != null ? { queueDepthUsd: liveMetadata.queueDepthUsd } : {}),
+      ...(liveMetadata.dailyLimitUsd != null ? { dailyLimitUsd: liveMetadata.dailyLimitUsd } : {}),
+      ...(liveMetadata.minRedeemUsd != null ? { minRedeemUsd: liveMetadata.minRedeemUsd } : {}),
+      ...(liveMetadata.liveHolderEligibility ? { liveHolderEligibility: liveMetadata.liveHolderEligibility } : {}),
+      ...pickRouteStatusFields(liveMetadata),
+      notes: [
+        ...liveMetadata.capacityNotes,
+        "Live redemption settlement completion bound is unproven; capacity is not established",
+      ],
+    };
+  }
+
   if (
     liveMetadata.canUseCapacity &&
     liveMetadata.capacityConfidence != null &&

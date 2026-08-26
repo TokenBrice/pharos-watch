@@ -188,6 +188,7 @@ export interface ExecutableRedemptionObservation {
   capacitySource:
     | "eearn-operator-batched-no-immediate-capacity"
     | "dtrinity-dlend-max-withdraw";
+  settlementBoundUnproven?: true;
   underlyingDecimals: number;
   capacityKind: "live-direct-bounded";
   freshnessKind: "same-run-onchain";
@@ -545,18 +546,22 @@ async function observeEarn(
     !pauseStatus[2] &&
     protocolPaused === false;
   return {
-    // Ember's holder action only enters an operator-processed queue. No
-    // contract view or bounded SLA proves delivery inside the shared
-    // 300-second same-notional horizon, so idle USDC is diagnostic only.
+    // The zero below is not a measured capacity: requests open an
+    // operator-processed queue, but no contract view or bounded SLA proves
+    // completion inside the shared 300-second same-notional horizon. Downstream
+    // therefore classifies an OPEN queue as an unproven-settlement-bound
+    // evidence gap. A paused queue is measured adverse — the pause is the
+    // fact — so the marker is withheld and the zero stays a measured zero.
     capacityRaw: 0n,
     capacitySource: "eearn-operator-batched-no-immediate-capacity",
+    ...(queueOpen ? { settlementBoundUnproven: true as const } : {}),
     underlyingDecimals: EARN.assetDecimals,
     capacityKind: "live-direct-bounded",
     freshnessKind: "same-run-onchain",
     routeStatusSource: "onchain",
     routeStatus: queueOpen ? "open" : "paused",
     routeStatusReason: queueOpen
-      ? "Ember withdrawal requests are open onchain, but settlement is operator-batched with no proven <=300-second completion bound"
+      ? "Ember withdrawal requests are open onchain and redeem to USDC at the vault's NAV share price, but settlement is operator-batched with no proven <=300-second completion bound"
       : "Ember withdrawal requests or privileged processing are paused onchain",
     feeBps,
     holderEligibility: "any-holder",

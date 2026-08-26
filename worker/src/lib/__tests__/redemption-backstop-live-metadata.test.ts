@@ -139,6 +139,28 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.routeStatusSource).toBe("onchain");
   });
 
+  it("preserves an unproven settlement bound alongside the observed zero", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "eearn-ember",
+      snapshot("eearn-ember", decodedRowMetadata({
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 0,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          settlementBoundUnproven: true,
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+        },
+      })),
+      now,
+    );
+
+    expect(metadata.settlementBoundUnproven).toBe(true);
+    expect(metadata.immediateRedeemableUsd).toBe(0);
+    expect(metadata.canUseCapacity).toBe(true);
+  });
+
   it("drops malformed Cap output weights without discarding valid capacity", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "cusd-cap",

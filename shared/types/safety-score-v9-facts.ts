@@ -573,6 +573,12 @@ const V9ExitRouteFactV2Schema = z
     coverageClass: V9RouteCoverageClassSchema,
     /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
     feeEvidence: z.literal("undisclosed-reviewed").optional(),
+    /**
+     * Carried from the route observation: the route is open but no evidence
+     * bounds settlement completion, so capacity is a bounded evidence gap
+     * rather than a measurement. Retained schema-v2 facts predate this field.
+     */
+    settlementBoundUnproven: z.boolean().optional(),
     capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]).optional(),
     settlementModel: V9RouteSettlementModelSchema,
     settlementSlaSec: z.number().int().nonnegative().nullable(),

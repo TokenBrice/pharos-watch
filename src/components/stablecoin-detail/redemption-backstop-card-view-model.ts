@@ -85,6 +85,15 @@ function getResolutionSummary(entry: RedemptionBackstopEntry): string | null {
     return "This route is configured, but the current stablecoins snapshot did not contain the asset, so no usable redemption score could be computed.";
   }
   if (entry.resolutionState === "missing-capacity") {
+    if (entry.capacityProfile?.settlementBoundUnproven) {
+      // The producer's on-chain route-status reason carries the exact
+      // modality (for eEARN: requests are open, settlement is
+      // operator-batched with no proven completion bound).
+      const modality =
+        entry.routeStatusReason ??
+        "Redemption requests are open, but settlement is operator-batched with no proven completion bound.";
+      return `${modality} No executable capacity can be established for scoring, so the route is unrated rather than scored zero.`;
+    }
     return "This route is configured, but the current snapshot could not resolve enough capacity data to produce a usable redemption score.";
   }
   if (entry.resolutionState === "impaired") {

@@ -48,6 +48,7 @@ export interface RedemptionBackstopLiveMetadata {
   feeReason: string | null;
   immediateRedeemableUsd: number | null;
   immediateRedeemableRatio: number | null;
+  settlementBoundUnproven: boolean;
   capacityKind: RedemptionLiveCapacityKind | null;
   freshnessKind: RedemptionLiveFreshnessKind | null;
   sourceTimestamp: number | null;
@@ -370,6 +371,7 @@ interface TelemetryBundle {
   queueDepthUsd: ParsedTelemetryNumber;
   dailyLimitUsd: ParsedTelemetryNumber;
   minRedeemUsd: ParsedTelemetryNumber;
+  settlementBoundUnproven: boolean;
   capacityKind: RedemptionLiveCapacityKind | null;
   freshnessKind: RedemptionLiveFreshnessKind | null;
 }
@@ -431,6 +433,7 @@ function parseTelemetryFields(
     minRedeemUsd: parseTelemetryNumber(redemptionTelemetry, "minRedeemUsd", "Live redemption minimum redeem", {
       min: 0,
     }),
+    settlementBoundUnproven: redemptionTelemetry.settlementBoundUnproven === true,
     capacityKind: coerceSchemaValue(RedemptionLiveCapacityKindSchema, redemptionTelemetry.capacityKind),
     freshnessKind: coerceSchemaValue(RedemptionLiveFreshnessKindSchema, redemptionTelemetry.freshnessKind),
   };
@@ -505,6 +508,7 @@ export function readRedemptionBackstopLiveMetadata(
     queueDepthUsd,
     dailyLimitUsd,
     minRedeemUsd,
+    settlementBoundUnproven,
     capacityKind,
     freshnessKind,
   } = parseTelemetryFields(redemptionTelemetry, metadata);
@@ -646,6 +650,7 @@ export function readRedemptionBackstopLiveMetadata(
       : hasNestedCapacityTelemetry
         ? (nestedCapacityRatio.value ?? (nestedCapacityUsd.value != null ? null : legacyCapacityRatio.value))
         : legacyCapacityRatio.value,
+    settlementBoundUnproven,
     capacityKind,
     freshnessKind,
     sourceTimestamp: validSourceTimestamp,

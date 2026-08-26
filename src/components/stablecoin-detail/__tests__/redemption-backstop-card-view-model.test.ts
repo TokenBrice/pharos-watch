@@ -356,4 +356,35 @@ describe("buildRedemptionBackstopCardViewModel", () => {
       resolutionSummary: "Issuer paused primary redemption while reserves are reconciled.",
     });
   });
+
+  it("states the operator-queue modality for an unproven settlement bound instead of a generic capacity gap", () => {
+    const flagged = buildRedemptionBackstopCardViewModel(
+      entry({
+        score: null,
+        capacityScore: null,
+        resolutionState: "missing-capacity",
+        settlementModel: "queued",
+        routeStatus: "open",
+        routeStatusReason:
+          "Ember withdrawal requests are open onchain and redeem to USDC at the vault's NAV share price, but settlement is operator-batched with no proven <=300-second completion bound",
+        capacityProfile: {
+          immediateUsd: null,
+          scoringUsd: null,
+          settlementBoundUnproven: true,
+          scoringHorizon: "unknown",
+          capacityProfileConfidence: "live-direct",
+        },
+      }),
+    );
+
+    expect(flagged.heroScoreLabel).toBe("NR");
+    expect(flagged.resolutionSummary).toContain("redeem to USDC");
+    expect(flagged.resolutionSummary).toContain("operator-batched with no proven <=300-second completion bound");
+    expect(flagged.resolutionSummary).toContain("unrated rather than scored zero");
+
+    // Without the marker, the generic missing-capacity copy is unchanged.
+    expect(
+      buildRedemptionBackstopCardViewModel(entry({ resolutionState: "missing-capacity" })).resolutionSummary,
+    ).toContain("could not resolve enough capacity data");
+  });
 });

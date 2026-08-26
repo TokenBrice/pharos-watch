@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.4",
+    title: "Unproven open-route settlement bounds remain unrated",
+    date: "2026-08-26",
+    effectiveAt: 1787702400,
+    summary:
+      "Open redemption routes whose settlement completion bound is unproven now publish unestablished capacity rather than a measured zero, keeping the standalone route and eventual-redeemability headlines unrated while paused routes retain their measured impairment; scoring weights and formulas are unchanged.",
+    impact: [
+      "An open route carrying `settlementBoundUnproven` now resolves as `missing-capacity` with null immediate and scoring capacity, so its standalone route score is null rather than zero and `eventualRedeemabilityScore` remains null.",
+      "The marker is withheld for paused routes, which continue through the measured-zero impairment path so a paused route's observed impairment is not recast as an evidence gap.",
+      "The public `capacityProfile` and exit route observations expose optional `settlementBoundUnproven`, allowing consumers to distinguish unestablished capacity from measured zero.",
+      "Scoring component weights, formulas, ladders, caps, and the eventual-redeemability calculation are unchanged.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.39",
     title: "Headline redemption credit requires material executable capacity",
     date: "2026-08-26",

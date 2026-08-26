@@ -58,6 +58,7 @@ export const V9_REASON_CODES = [
   "missing-reserve-composition",
   "missing-runtime-route-evidence",
   "missing-same-notional-route",
+  "unproven-settlement-bound",
   "missing-upgrade-control",
   "missing-upgradeability-review",
   "nonmaterial-bridge-supply-unmatched",

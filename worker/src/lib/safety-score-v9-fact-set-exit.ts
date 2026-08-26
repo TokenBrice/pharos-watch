@@ -244,6 +244,7 @@ function buildRoute(
       physicalResourceKeys: [],
       status,
       scoreEligible: false,
+      settlementBoundUnproven: args.observation.settlementBoundUnproven === true,
       request: null,
       capacityCurve: [],
       output: {
@@ -426,6 +427,7 @@ function buildRoute(
     physicalResourceKeys: args.review.physicalResourceKeys,
     status: routeStatus,
     scoreEligible,
+    settlementBoundUnproven: args.observation.settlementBoundUnproven === true,
     request: {
       requestedNotionalUsd: args.observation.requestedNotionalUsd,
       maxCostBps: args.observation.maxCostBps,

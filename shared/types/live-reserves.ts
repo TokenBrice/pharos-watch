@@ -167,6 +167,7 @@ export const LiveReserveRedemptionTelemetrySchema = z
   .object({
     capacityUsd: z.number().finite().optional(),
     capacityRatioOfSupply: z.number().finite().optional(),
+    settlementBoundUnproven: z.literal(true).optional(),
     capacityKind: z.enum(LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES).optional(),
     freshnessKind: z.enum(LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES).optional(),
     sourceTimestamp: z.number().finite().optional(),

@@ -59,6 +59,8 @@ The generator exits non-zero rather than publishing something wrong. All of thes
 
 One guard is skippable: the **day-over-day delta guard**, armed by `--previous-snapshot <path>`. It fails the run when the graded count falls more than 2% or the not-rated count moves more than 5 against the prior snapshot, and also checks per-tier counts, per-coin grade transitions, tier and leader supply, join identity, and missing-logo count. A missing path or no supplied baseline skips it with a warning, so a first run can bootstrap; a present but malformed baseline fails closed rather than being treated as absent.
 
+The join-identity check applies only to coins present in both snapshots, and tolerates immaterial flips: a coin whose joined state changes in either direction (supply crossing zero, or its list row appearing/disappearing) is warned about and published from the current supply state — a coin that lost its join draws at the size floor, one that regained it draws at its real size — rather than failing the run, as long as at most 3 coins flip and their combined supply stays under 0.1% of the previous snapshot's mapped supply. Beyond either bound the run still fails closed. Census additions and removals are deliberately not join flips — they are bounded by the graded-count, tier-count, tier-supply and leader checks instead. The original check counted them, which failed the run the day after any coin entered the census (2026-08-26: `hollar-hydrated` moving NR → graded under methodology 9.44 blocked that day's publication and digest map) — and, because a failed run never advances `safety-map:snapshot:latest`, every later run kept failing against the same stale baseline until the census change was accommodated in code.
+
 ## Publication
 
 `.github/workflows/safety-map-refresh.yml`. See the header block in that file for the full step-by-step rationale.
@@ -84,7 +86,7 @@ Failure surfaces as a red run and a GitHub notification. It does **not** page an
 
 `vars.SAFETY_MAP_KV_NAMESPACE_ID` and `secrets.SAFETY_MAP_KV_TOKEN` are provisioned. The token is scoped to *Workers KV Storage: Edit* on that one namespace and is deliberately **not** `CLOUDFLARE_API_TOKEN`, which deploys production Pages and is used only from workflows running under the `production` environment protection that this unattended job does not have.
 
-The workflow runs daily at 06:20 UTC and also supports `workflow_dispatch`. That leaves roughly 105 minutes of headroom before the 08:05 UTC digest cron. The original 07:20 slot left only 45 minutes and missed the 2026-08-24 digest when GitHub did not start the job until 08:07; the earlier slot absorbs that observed scheduler delay while still rendering from the current day's half-hourly Safety Score publication.
+The workflow runs on two daily schedules, 04:20 and 06:20 UTC, and also supports `workflow_dispatch`. GitHub delays scheduled runs by up to about an hour under load (observed: 47 minutes on 2026-08-24, which made the original single 07:20 slot miss that day's digest; 53 minutes on 2026-08-26), so a single slot leaves exactly one attempt before the 08:05 UTC digest cron. The 04:20 attempt normally publishes; the 06:20 attempt retries after a failed or delayed first run and exits early — rendering and writing nothing — when the live manifest already carries today's date with data fresh enough (`asOfSec` under 6 hours) to clear the digest's own 24-hour staleness gate. Manual dispatches never take that early exit, so an operator can always supersede a bad same-day poster.
 
 ## Serving
 

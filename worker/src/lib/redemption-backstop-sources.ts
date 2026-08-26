@@ -143,8 +143,8 @@ export async function buildRedemptionBackstopEntry(
     modeledExitSizeUsd,
   });
   const eventualCapacityScoring = computeCapacityScore({
-    immediateCapacityUsd: capacity.eventualCapacityUsd ?? null,
-    immediateCapacityRatio: capacity.eventualCapacityRatio ?? null,
+    immediateCapacityUsd: capacity.settlementBoundUnproven ? null : capacity.eventualCapacityUsd ?? null,
+    immediateCapacityRatio: capacity.settlementBoundUnproven ? null : capacity.eventualCapacityRatio ?? null,
   });
   const eventualRedeemabilityScore =
     eventualCapacityScoring.score == null
@@ -253,6 +253,7 @@ export async function buildRedemptionBackstopEntry(
         ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
         ...(capacity.sourceTimestamp != null ? { sourceTimestamp: capacity.sourceTimestamp } : {}),
         ...(capacity.settlementDelaySec != null ? { settlementDelaySec: capacity.settlementDelaySec } : {}),
+        ...(capacity.settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
         ...(liveMetadata.v9OutputValuation ? { outputValuation: liveMetadata.v9OutputValuation } : {}),
         resolvedFeeBps: staticFields.feeBps,
         now,

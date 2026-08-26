@@ -16,6 +16,7 @@ import {
 import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
+import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
@@ -68,6 +69,50 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       settlementDelaySec: 30 * 86_400,
       capsApplied: expect.arrayContaining(["queue-backlog:0.65", "minimum-redeem:0.75"]),
     });
+  });
+
+  it("carries an unproven settlement bound from the queued observation into the route fact", () => {
+    // eEARN's real shape: the flagged operator queue is the only exit route
+    // (zero DEX pools), so the bounded gap is the pillar's score-bearing
+    // evidence rather than an auxiliary diagnostic beside a scored route.
+    const fixed = queuedRedemptionFixedInput();
+    fixed.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!.settlementBoundUnproven = true;
+    fixed.dexLiqMap.alpha = {
+      ...fixed.dexLiqMap.alpha!,
+      exitRouteObservations: [],
+      exitRouteObservationCoverage: {
+        ...fixed.dexLiqMap.alpha!.exitRouteObservationCoverage!,
+        observationCount: 0,
+        scoreEligibleObservationCount: 0,
+        scoreEligiblePoolCount: 0,
+        evidenceCounts: {},
+      },
+    };
+    fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    const redemption = compiled.assets[0]!.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(redemption).toMatchObject({
+      settlementBoundUnproven: true,
+      scoreEligible: false,
+      settlementModel: "queued",
+    });
+
+    // The full production compiler-to-evaluator path, not just the unit
+    // layers: the flagged route floors Exit at the policy bounded-unknown
+    // score, emits the bounded reason, and the exit-unverified named ceiling
+    // bounds the final score.
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(evaluated.exit.reasons).toContain("unproven-settlement-bound");
+    expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
+    const trace = scoreV9EvaluatedAsset(evaluated.scoreInput, V9_CANDIDATE_POLICY_V1);
+    const exitCeiling = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.namedReasonCeilings["exit-unverified"];
+    expect(trace.finalScore).not.toBeNull();
+    expect(trace.finalScore!).toBeLessThanOrEqual(exitCeiling);
   });
 
   it("withdraws producer eligibility when the v9 review has an unbounded settlement queue", () => {

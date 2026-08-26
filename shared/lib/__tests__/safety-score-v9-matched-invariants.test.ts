@@ -34,6 +34,7 @@ function evaluationRoute(observation: ExitRouteObservation): V9ExitEvaluationRou
     lane,
     routeFamily: observation.routeFamily as V9ExitEvaluationRoute["routeFamily"],
     applicability: "required",
+    settlementBoundUnproven: false,
     observationState: "known",
     scoreEligible: observation.scoreEligible,
     coverageClass: "exact-complete",
