@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import type { CredentialLifecycleSummaryResponse } from "@shared/types";
 import { Button } from "@/components/ui/button";
-import { useCredentialLifecycleSummary } from "@/hooks/use-credential-lifecycle-summary";
+import { useCredentialLifecycleSummary } from "@/hooks/admin-api-hooks";
 import { cn } from "@/lib/utils";
 import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 

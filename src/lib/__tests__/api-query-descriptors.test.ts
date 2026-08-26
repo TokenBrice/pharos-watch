@@ -189,11 +189,9 @@ describe("frontend API query descriptors", () => {
     });
   });
 
-  it("keeps the root PSI hook outside umbrella registries and full-schema loaders", () => {
-    const hookSource = readFileSync("src/hooks/use-stability-index-light.ts", "utf8");
+  it("keeps the lightweight PSI contract free of full-schema loaders", () => {
     const lightContractSource = readFileSync("src/lib/api-query-domains/stability-light.ts", "utf8");
 
-    expect(hookSource).not.toMatch(/api-hooks|api-query-(?:runtime-)?registry/);
     expect(lightContractSource).not.toMatch(/from ["']zod|import\(["']@shared\/types\/stability["']\)/);
   });
 });

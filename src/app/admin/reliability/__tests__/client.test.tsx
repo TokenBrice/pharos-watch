@@ -14,10 +14,12 @@ const { useStatusMock, useHealthMock, useEndpointProbesMock, useRequestSourceSta
   }),
 );
 
-vi.mock("@/hooks/use-status", () => ({ useStatus: useStatusMock }));
+vi.mock("@/hooks/admin-api-hooks", () => ({
+  useStatus: useStatusMock,
+  useRequestSourceStats: useRequestSourceStatsMock,
+}));
 vi.mock("@/hooks/api-hooks", () => ({ useHealth: useHealthMock }));
 vi.mock("@/hooks/use-endpoint-probes", () => ({ useEndpointProbes: useEndpointProbesMock }));
-vi.mock("@/hooks/use-request-source-stats", () => ({ useRequestSourceStats: useRequestSourceStatsMock }));
 vi.mock("../../sections/reliability-section", () => ({
   ReliabilitySection: (props: unknown) => {
     sectionProps(props);

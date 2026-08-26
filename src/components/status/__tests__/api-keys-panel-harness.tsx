@@ -7,8 +7,7 @@ const { useApiKeysMock, useApiKeyAuditLogMock } = vi.hoisted(() => ({
   useApiKeyAuditLogMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-api-keys", () => ({ useApiKeys: useApiKeysMock }));
-vi.mock("@/hooks/use-api-key-audit-log", () => ({ useApiKeyAuditLog: useApiKeyAuditLogMock }));
+vi.mock("@/hooks/admin-api-hooks", () => ({ useApiKeys: useApiKeysMock, useApiKeyAuditLog: useApiKeyAuditLogMock }));
 
 export const { ApiKeysPanel } = await import("../api-keys-panel");
 export const GENERATED_AT = 1_700_000_000;

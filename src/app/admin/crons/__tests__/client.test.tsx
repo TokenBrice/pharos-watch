@@ -10,7 +10,7 @@ const { useStatusMock, sectionPropsMock } = vi.hoisted(() => ({
   sectionPropsMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-status", () => ({ useStatus: useStatusMock }));
+vi.mock("@/hooks/admin-api-hooks", () => ({ useStatus: useStatusMock }));
 vi.mock("../../workspace-status-boundary", () => ({
   WorkspaceStatusBoundary: ({ data, children }: { data: unknown; children: (data: unknown) => ReactNode }) =>
     data ? children(data) : null,

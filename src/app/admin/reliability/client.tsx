@@ -2,8 +2,7 @@
 
 import { useEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { useHealth } from "@/hooks/api-hooks";
-import { useRequestSourceStats } from "@/hooks/use-request-source-stats";
-import { useStatus } from "@/hooks/use-status";
+import { useRequestSourceStats, useStatus } from "@/hooks/admin-api-hooks";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildBrowserProbeSummary } from "@/lib/status-dashboard-model";
 import { ReliabilitySection } from "../sections/reliability-section";

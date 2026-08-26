@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { ApiReferenceSidebar, type SidebarSection } from "@/components/api-reference-sidebar";
 import { ApiReferenceMobileNav } from "@/components/api-reference-mobile-nav";
-import { useJoinedKey } from "@/hooks/use-joined-key";
 
 const SCROLL_OFFSET = 96;
 
@@ -18,7 +17,7 @@ export function ApiReferenceLayout({ sections, children }: ApiReferenceLayoutPro
     () => sections.flatMap((s) => [s.id, ...s.subsections.map((sub) => sub.id)]),
     [sections],
   );
-  const idSignature = useJoinedKey(allIds);
+  const idSignature = allIds.join("|");
   const [activeId, setActiveId] = useState(allIds[0] ?? "");
   const sidebarRef = useRef<HTMLDivElement>(null);
   const initialHashHandled = useRef(false);

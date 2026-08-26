@@ -21,7 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { focusElement } from "@/lib/focus-element";
-import { useApiKeyRequests } from "@/hooks/use-api-key-requests";
+import { useApiKeyRequests } from "@/hooks/admin-api-hooks";
 import {
   API_KEY_REQUEST_ACTION_LABELS,
   API_KEY_REQUEST_STATUS_FILTERS,

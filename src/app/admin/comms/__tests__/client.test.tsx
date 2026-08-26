@@ -11,7 +11,7 @@ const { useStatusMock, commsSectionPropsMock } = vi.hoisted(() => ({
   commsSectionPropsMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-status", () => ({ useStatus: useStatusMock }));
+vi.mock("@/hooks/admin-api-hooks", () => ({ useStatus: useStatusMock }));
 vi.mock("../../workspace-status-boundary", () => ({
   WorkspaceStatusBoundary: ({
     data,

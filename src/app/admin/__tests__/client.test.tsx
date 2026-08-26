@@ -22,15 +22,9 @@ vi.mock("@/hooks/use-critical-ops-model", () => ({
   useCriticalOpsModel: useCriticalOpsModelMock,
 }));
 
-vi.mock("@/hooks/use-credential-lifecycle-summary", () => ({
+vi.mock("@/hooks/admin-api-hooks", () => ({
   useCredentialLifecycleSummary: useCredentialLifecycleSummaryMock,
-}));
-
-vi.mock("@/hooks/use-status-history", () => ({
   useStatusHistory: useStatusHistoryMock,
-}));
-
-vi.mock("@/hooks/use-request-source-stats", () => ({
   useRequestSourceStats: useRequestSourceStatsMock,
 }));
 

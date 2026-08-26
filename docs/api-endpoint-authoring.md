@@ -19,7 +19,7 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 | Public contract | `docs/api-reference.md` affected endpoint section |
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
 
-The root `RegimeBar` is a deliberate global-shell exception: `useStabilityIndexLight()` imports the stability domain descriptor directly and validates only the PSI fields it renders with a small pass-through contract. This keeps the classic Zod stability schema out of the all-route client graph while preserving the full payload in the shared TanStack cache. The `/stability-index/` detail query retains the full lazy schema.
+The root `RegimeBar` uses the registered `useStabilityIndex()` query, whose descriptor points to the small stability-domain contract that validates only the PSI fields it renders. This keeps the classic Zod stability schema out of the all-route client graph while preserving the full payload in the shared TanStack cache. The `/stability-index/` detail query retains the full lazy schema.
 
 ## Implementation Checklist
 

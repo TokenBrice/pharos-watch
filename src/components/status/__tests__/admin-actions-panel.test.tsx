@@ -12,7 +12,7 @@ const { useAdminActionLogMock } = vi.hoisted(() => ({
   useAdminActionLogMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-admin-action-log", () => ({
+vi.mock("@/hooks/admin-api-hooks", () => ({
   useAdminActionLog: useAdminActionLogMock,
 }));
 

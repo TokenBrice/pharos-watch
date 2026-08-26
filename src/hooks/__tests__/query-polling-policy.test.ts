@@ -23,11 +23,9 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 import { createApiPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
 import { CRON_1MIN, CRON_STABILITY_INDEX, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
-import { useHealth } from "../api-hooks";
-import { useRequestSourceStats } from "../use-request-source-stats";
-import { useStatus } from "../use-status";
+import { useHealth, useStabilityIndex } from "../api-hooks";
+import { useRequestSourceStats, useStatus } from "../admin-api-hooks";
 import { useEndpointProbes } from "../use-endpoint-probes";
-import { useStabilityIndexLight } from "../use-stability-index-light";
 import { useTelegramPulse } from "../use-telegram-pulse";
 
 function mockQueryReturn() {
@@ -220,8 +218,8 @@ describe("query polling policy", () => {
     expect(options.retry).toBe(1);
   });
 
-  it("useStabilityIndexLight reuses registered meta polling", () => {
-    useStabilityIndexLight();
+  it("useStabilityIndex reuses registered meta polling", () => {
+    useStabilityIndex();
     const options = useQueryMock.mock.calls[0][0] as {
       staleTime: number;
       refetchInterval: number;

@@ -7,7 +7,7 @@ const { useRegisteredAdminQueryMock } = vi.hoisted(() => ({ useRegisteredAdminQu
 
 vi.mock("../use-admin-polling-query", () => ({ useRegisteredAdminQuery: useRegisteredAdminQueryMock }));
 
-import { useApiKeyAuditLog } from "../use-api-key-audit-log";
+import { useApiKeyAuditLog } from "../admin-api-hooks";
 
 beforeEach(() => {
   useRegisteredAdminQueryMock.mockReturnValue({});

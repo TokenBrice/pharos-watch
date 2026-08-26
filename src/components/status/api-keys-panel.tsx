@@ -15,8 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { focusElement } from "@/lib/focus-element";
-import { useApiKeys } from "@/hooks/use-api-keys";
-import { useApiKeyAuditLog } from "@/hooks/use-api-key-audit-log";
+import { useApiKeyAuditLog, useApiKeys } from "@/hooks/admin-api-hooks";
 import {
   buildApiKeyExpiryWindow,
   buildApiKeyInventoryView,

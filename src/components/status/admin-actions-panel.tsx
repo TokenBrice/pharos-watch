@@ -9,7 +9,7 @@ import { AdminActionButton } from "@/components/status/admin-action-button";
 import { useAdminActionExecutions } from "@/components/status/admin-action-execution-provider";
 import { SeverityPill, StatusPill } from "@/components/status/severity-pill";
 import { Button } from "@/components/ui/button";
-import { useAdminActionLog } from "@/hooks/use-admin-action-log";
+import { useAdminActionLog } from "@/hooks/admin-api-hooks";
 import {
   ACTION_INTENT_COPY,
   ACTION_INTENT_ORDER,

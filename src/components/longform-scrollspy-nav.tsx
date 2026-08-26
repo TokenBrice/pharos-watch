@@ -4,7 +4,6 @@ import type { MutableRefObject, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { useJoinedKey } from "@/hooks/use-joined-key";
 import { revealAnchorId } from "@/lib/anchor-reveal";
 
 interface LongformSection {
@@ -148,7 +147,7 @@ export function LongformScrollspyNav({
   const initialHashHandledRef = useRef(false);
   const activePillSyncedRef = useRef(false);
   const effectiveActiveId = sections.some((section) => section.id === activeId) ? activeId : (sections[0]?.id ?? "");
-  const sectionSignature = useJoinedKey(sections.map((section) => section.id));
+  const sectionSignature = sections.map((section) => section.id).join("|");
 
   useEffect(() => {
     onActiveChange?.(effectiveActiveId);
