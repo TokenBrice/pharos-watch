@@ -2,7 +2,7 @@ import digests from "../../data/digests.json";
 import {
   DigestStoredSnapshotSchema,
   type DigestContentEntry,
-} from "@shared/types";
+} from "@shared/types/digest";
 
 function compareDigestEntries(left: DigestContentEntry, right: DigestContentEntry): number {
   return right.generatedAt - left.generatedAt || right.date.localeCompare(left.date);
