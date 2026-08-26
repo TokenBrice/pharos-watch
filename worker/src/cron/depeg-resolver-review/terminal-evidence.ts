@@ -6,7 +6,6 @@ import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import { abortIf } from "../depeg-resolver/utils";
 import { buildInClause, chunkArray } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
-import { toErrorMessage } from "../../lib/error-utils";
 import { tryParseJson } from "../../lib/json-parse";
 import { logWorkerEvent } from "../../lib/structured-log";
 

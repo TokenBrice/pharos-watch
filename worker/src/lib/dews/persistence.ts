@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import { rethrowIfAborted, throwIfAborted } from "../abort";
+import { throwIfAborted } from "../abort";
 import {
   batchExecute,
   buildInClause,
