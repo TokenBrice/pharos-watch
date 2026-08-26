@@ -1,93 +1,27 @@
 # Safety Score Map — daily refresh
 #
-# Renders the daily edition of the Safety Score map and publishes it to the KV
-# namespace already bound to the Pages project, so the image cadence is
-# decoupled from site deploys. `/safety-scores/map.png` is served by a Pages
-# Function reading these keys. See the plan §11.2/§11.2b for the design.
+# The workflow owns scheduling, credentials, runner setup, and artifact upload.
+# scripts/maintenance/publish-safety-score-map.ts owns the publication state
+# machine. Its load-bearing KV order is:
+#   safety-map:snapshot:YYYY-MM-DD
+#   safety-map:snapshot:latest
+#   safety-map:alt:latest
+#   safety-map:YYYY-MM-DD.png (then immediate byte readback verification)
+#   safety-map:latest.png
+#   safety-map:latest.json (manifest commit marker, always last)
 #
-# ─── PROVISIONED OWNER INPUTS ─────────────────────────────────────────────────
-# 1. `vars.SAFETY_MAP_KV_NAMESPACE_ID` — repository *variable* holding the id of
-#    the KV namespace bound to the Pages project (the `SELECTOR_SNAPSHOTS`
-#    namespace; all keys here live under the single-purpose `safety-map:`
-#    prefix). The id is in no committed config, so it must be read off the
-#    Cloudflare dashboard. A namespace id is not a secret; a variable keeps it
-#    greppable and diffable.
-# 2. `secrets.SAFETY_MAP_KV_TOKEN` — a Cloudflare API token scoped to
-#    *Workers KV Storage: Edit* on that namespace and nothing else. Deliberately
-#    NOT `CLOUDFLARE_API_TOKEN`: that token deploys production Pages and is used
-#    only from workflows running under the `production` environment protection,
-#    which this unattended daily npm-install-and-render job does not have.
-#    Precedent for a purpose-scoped token: `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`
-#    in cloudflare-account-state-drift.yml.
-# Both are provisioned and the schedule is enabled.
-#
-# `secrets.CLOUDFLARE_ACCOUNT_ID` and `secrets.PHAROS_API_KEY` already exist as
-# repository secrets and need no owner action.
-#
-# ─── GENERATOR CONTRACT ───────────────────────────────────────────────────────
-# `npm run build:safety-score-map -- --edition=daily --out <dir>/latest.png
-#    [--previous-snapshot <path>]`
-# must produce, beside the PNG:
-#   latest.alt.json       alt text + per-tier table
-#   latest.snapshot.json  the movers baseline, carrying top-level render
-#                         metadata: date (UTC run date), asOfSec, renderedAtSec
-#                         (render START wall-clock — one clock read feeds both
-#                         it and `date`, so they cannot disagree across a
-#                         midnight straddle), edition, methodologyVersion,
-#                         counts { graded, notRated, ... }.
-# The generator also writes `latest.svg`, `latest.html` and its own local
-# `latest.manifest.json`. This workflow ignores all three — the KV manifest is
-# built here, from the snapshot header, as `kv-manifest.json`.
-#
-# The generator owns the §11.2b data guards and exits non-zero when they trip:
-# freshness (asOfSec < 48h), NaN/finite, join coverage, unknown grade, font
-# load, and the 3200x1800 raster assertion are all unconditional. The delta
-# guard is the only one that can skip.
-#
-# That delta guard needs yesterday's snapshot, which only lives in KV, so this
-# workflow fetches `safety-map:snapshot:latest` before the render and passes it
-# as `--previous-snapshot`. The rolling `:latest` pointer is read instead of a
-# dated key deliberately: no date arithmetic, and a missed run does not leave a
-# gap day that breaks the next one. The flag is passed unconditionally — the
-# generator treats a missing file as a clean skip — so an absent or unreadable
-# pointer downgrades to a `::warning::` and the run proceeds. The guard must
-# never block a first-run bootstrap.
-#
-# ─── KEYS WRITTEN ─────────────────────────────────────────────────────────────
-#   safety-map:snapshot:YYYY-MM-DD   dated, archival (monthly edition diffs these)
-#   safety-map:snapshot:latest       rolling pointer, read by the next run
-#   safety-map:alt:latest            alt text
-#   safety-map:YYYY-MM-DD.png        dated image — what the digest embeds
-#   safety-map:latest.png            same bytes, stable URL for the site
-#   safety-map:latest.json           manifest — written LAST, the commit marker
-#
-# Both dated keys use the **UTC run date**, never a date derived from `asOfSec`
-# (plan §11.2b rule 7: archive key = run date, visible stamp = asOfSec). A run
-# on Sep 1 over Aug 31 data must not file itself under August. The metadata step
-# asserts the generator's `date` equals the UTC date of its own `renderedAtSec`.
-#
-# The digest embeds `safety-map:YYYY-MM-DD.png`, never `latest.png` (§11.5):
-# Telegram and X cache by URL, so a stable URL lets their CDNs keep serving a
-# superseded image and makes a bad one unrecallable. With dated URLs, rollback
-# is just "the next post uses a new URL".
-#
-# ─── ALERTING ─────────────────────────────────────────────────────────────────
-# Every failure below is a non-zero exit, which surfaces as a red run and a
-# GitHub notification. It does NOT page anyone through `sendAlert()`:
-# `ALERT_WEBHOOK_URL` is unset in production, so that helper silently no-ops.
-# The reliable human-visible path is the 08:05 UTC daily digest reading
-# `safety-map:latest.json` and emitting an ops line when the manifest is not
-# today's (plan §11.2c).
+# Provisioned inputs:
+# - vars.SAFETY_MAP_KV_NAMESPACE_ID is the SELECTOR_SNAPSHOTS namespace id.
+# - secrets.SAFETY_MAP_KV_TOKEN has Workers KV Storage: Edit on that namespace.
+# - secrets.CLOUDFLARE_ACCOUNT_ID and secrets.PHAROS_API_KEY are shared inputs.
+# The purpose-scoped KV token is deliberately not CLOUDFLARE_API_TOKEN.
+# Account-state drift coverage lives in weekly-validation.yml.
 
 name: Safety Map Refresh
 
 on:
-  # Two scheduled attempts, both well before the 08:05 UTC digest cron. GitHub
-  # delays scheduled runs by up to ~an hour under load (observed: 47 min on
-  # 2026-08-24, 53 min on 2026-08-26), so a single slot leaves one shot at the
-  # digest. The 04:20 attempt normally publishes; the 06:20 attempt is the
-  # retry that absorbs a transient data gap or a failed first run, and exits
-  # early when today is already live (see the freshness step below).
+  # Two attempts absorb GitHub schedule delays before the 08:05 UTC digest.
+  # The second scheduled run exits during plan when today's fresh map is live.
   schedule:
     - cron: "20 4 * * *"
     - cron: "20 6 * * *"
@@ -96,8 +30,7 @@ on:
 permissions:
   contents: read
 
-# Never cancel: a delayed cron and a manual dispatch must serialize rather than
-# race, so a half-published key set can never be produced by two writers.
+# Writers serialize and never cancel so two runs cannot interleave KV writes.
 concurrency:
   group: safety-map-refresh
   cancel-in-progress: false
@@ -108,9 +41,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # Gitignored scratch tree, inside the workspace so upload-artifact can
-      # take a workspace-relative path.
       MAP_OUT_DIR: agents/safety-score-map/ci
+      WRANGLER_SEND_METRICS: "false"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -122,482 +54,65 @@ jobs:
           browser-cache: "true"
           install-playwright-firefox: "true"
 
-      # ── Preflight: everything that can fail before a single byte is written ──
-
-      - name: Verify publication credentials
+      - name: Verify render credentials
         env:
           PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
         run: |
           set -euo pipefail
-          missing=()
-          [ -n "${PHAROS_API_KEY:-}" ] || missing+=("secrets.PHAROS_API_KEY")
-          if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::error title=Safety map refresh is not provisioned::Missing ${missing[*]}. See the owner-actions block at the top of .github/workflows/safety-map-refresh.yml."
+          if [ -z "${PHAROS_API_KEY:-}" ]; then
+            echo "::error title=Safety map refresh is not provisioned::Missing secrets.PHAROS_API_KEY."
             exit 1
           fi
 
-      # Doubles as the credential probe: a token without KV access, or a wrong
-      # namespace id, fails here rather than mid-publish.
-      - name: Probe namespace for the live manifest and snapshot pointer
-        id: probe
+      # KV listing doubles as the namespace/token probe. It also fetches the
+      # previous snapshot best-effort so the renderer can arm its delta guard.
+      - name: Plan publication from live KV state
+        id: plan
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
           KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/wrangler kv key list \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            --prefix="safety-map:latest.json" > kv-probe-manifest.raw
-          ./node_modules/.bin/wrangler kv key list \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            --prefix="safety-map:snapshot:latest" > kv-probe-snapshot.raw
-          # A malformed listing must fail hard, never read as "no manifest yet" —
-          # that would silently skip the backwards-publish guard below.
-          node -e '
-            const { readFileSync, appendFileSync } = require("node:fs");
-            const has = (file, key) => {
-              const raw = readFileSync(file, "utf8");
-              const start = raw.indexOf("[");
-              const end = raw.lastIndexOf("]");
-              if (start < 0 || end < start) {
-                console.error(`::error title=Unreadable KV listing::wrangler kv key list did not return a JSON array for ${key}. Refusing to guess what is live.`);
-                process.exit(1);
-              }
-              return JSON.parse(raw.slice(start, end + 1)).some((entry) => entry.name === key);
-            };
-            const manifest = has("kv-probe-manifest.raw", "safety-map:latest.json");
-            const snapshot = has("kv-probe-snapshot.raw", "safety-map:snapshot:latest");
-            appendFileSync(process.env.GITHUB_OUTPUT, `has_manifest=${manifest}\n`);
-            appendFileSync(process.env.GITHUB_OUTPUT, `has_prev_snapshot=${snapshot}\n`);
-            if (!manifest) console.log("No existing safety-map:latest.json — treating this as the first publication.");
-          '
+        run: >-
+          npx tsx scripts/maintenance/publish-safety-score-map.ts plan
+          --event-name=${{ github.event_name }}
+          --out-dir="${MAP_OUT_DIR}"
 
-      - name: Read the existing manifest
-        if: steps.probe.outputs.has_manifest == 'true'
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/wrangler kv key get \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            --text "safety-map:latest.json" > prior-manifest.raw
-          # Tolerate any CLI chrome around the value by slicing to the JSON body.
-          node -e '
-            const { readFileSync, writeFileSync } = require("node:fs");
-            const raw = readFileSync("prior-manifest.raw", "utf8");
-            const start = raw.indexOf("{");
-            const end = raw.lastIndexOf("}");
-            if (start < 0 || end < start) {
-              console.error("::error title=Unreadable manifest::safety-map:latest.json exists but did not read back as JSON. Refusing to publish over an unknown state.");
-              process.exit(1);
-            }
-            const prior = JSON.parse(raw.slice(start, end + 1));
-            writeFileSync("prior-manifest.json", JSON.stringify(prior));
-            console.log(`Existing manifest: date=${prior.date} renderedAtSec=${prior.renderedAtSec} asOfSec=${prior.asOfSec}`);
-          '
-
-      # A scheduled retry slot must not re-render a day that is already live.
-      # The check requires fresh data (asOfSec under 6h), not just a same-day
-      # date: the digest gate rejects manifests whose data is older than 24h,
-      # so a same-day manifest over old data must be re-rendered, not kept.
-      # Manual dispatches always re-render — an operator recovering from a bad
-      # poster must be able to supersede same-day keys.
-      - name: Decide whether today is already published
-        id: freshness
-        if: steps.probe.outputs.has_manifest == 'true'
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          node -e '
-            const { readFileSync, appendFileSync } = require("node:fs");
-            const prior = JSON.parse(readFileSync("prior-manifest.json", "utf8"));
-            const nowSec = Math.floor(Date.now() / 1000);
-            const today = new Date(nowSec * 1000).toISOString().slice(0, 10);
-            const ageSec = nowSec - Number(prior.asOfSec);
-            const fresh = Number.isFinite(ageSec) && ageSec >= 0 && ageSec < 6 * 3600;
-            const skip = process.env.EVENT_NAME === "schedule" && prior.date === today && fresh;
-            appendFileSync(process.env.GITHUB_OUTPUT, `already_published=${skip}\n`);
-            console.log(skip
-              ? `Manifest for ${today} is live with data ${Math.round(ageSec / 60)}m old — skipping the re-render.`
-              : `Proceeding: manifest date=${prior.date}, today=${today}, event=${process.env.EVENT_NAME}, data age=${Math.round(ageSec / 60)}m`);
-          '
-
-      # Best-effort by design: an absent or unreadable pointer downgrades to a
-      # skipped delta guard, never a failed run. A first run has nothing to
-      # compare against and must still be able to bootstrap.
-      - name: Fetch the previous snapshot
-        if: steps.probe.outputs.has_prev_snapshot == 'true' && steps.freshness.outputs.already_published != 'true'
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-        run: |
-          set -euo pipefail
-          if ! ./node_modules/.bin/wrangler kv key get \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            --text "safety-map:snapshot:latest" > previous-snapshot.raw; then
-            echo "::warning title=Previous snapshot unreadable::safety-map:snapshot:latest is listed but could not be read. The delta guard will be skipped."
-            rm -f previous-snapshot.raw
-            exit 0
-          fi
-          node -e '
-            const { readFileSync, writeFileSync } = require("node:fs");
-            const raw = readFileSync("previous-snapshot.raw", "utf8");
-            const start = raw.indexOf("{");
-            const end = raw.lastIndexOf("}");
-            if (start < 0 || end < start) {
-              console.log("::warning title=Previous snapshot unparseable::safety-map:snapshot:latest did not read back as JSON. The delta guard will be skipped.");
-              process.exit(0);
-            }
-            const prev = JSON.parse(raw.slice(start, end + 1));
-            if (typeof prev === "object" && prev !== null && !("publicationStatus" in prev)) {
-              console.log("::warning title=Legacy previous snapshot::safety-map:snapshot:latest predates the current publication-status contract. The delta guard will be skipped once while a current-schema snapshot is published.");
-              process.exit(0);
-            }
-            writeFileSync("previous-snapshot.json", JSON.stringify(prev));
-            console.log(`Previous snapshot: date=${prev.date} graded=${prev.counts?.graded} notRated=${prev.counts?.notRated}`);
-          '
-
-      # ── Render ────────────────────────────────────────────────────────────────
-
-      - name: Render the daily map
+      - name: Render and validate publication files
         id: render
-        if: steps.freshness.outputs.already_published != 'true'
+        if: steps.plan.outputs.already_published != 'true'
         env:
           PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
-        run: |
-          set -euo pipefail
-          # The flag is passed unconditionally: the generator treats a missing
-          # file as a clean skip. This step only records which way it went, for
-          # the summary.
-          if [ -s previous-snapshot.json ]; then
-            echo "delta_guard=ran" >> "$GITHUB_OUTPUT"
-          else
-            echo "delta_guard=skipped" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Delta guard skipped::No readable safety-map:snapshot:latest, so the day-over-day graded/not-rated delta guard did not run. The freshness assert and the NaN guards still applied."
-          fi
-          started=$(date -u +%s)
-          npm run build:safety-score-map -- \
-            --edition=daily \
-            --out "${MAP_OUT_DIR}/latest.png" \
-            --previous-snapshot previous-snapshot.json
-          echo "render_seconds=$(( $(date -u +%s) - started ))" >> "$GITHUB_OUTPUT"
+        run: >-
+          npx tsx scripts/maintenance/publish-safety-score-map.ts render
+          --out-dir="${MAP_OUT_DIR}"
 
-      - name: Read render metadata
-        id: meta
-        if: steps.freshness.outputs.already_published != 'true'
-        run: |
-          set -euo pipefail
-          node -e '
-            const { readFileSync, statSync, appendFileSync } = require("node:fs");
-            const dir = process.env.MAP_OUT_DIR;
-            const png = `${dir}/latest.png`;
-            const alt = `${dir}/latest.alt.json`;
-            const snapshot = `${dir}/latest.snapshot.json`;
-
-            const meta = JSON.parse(readFileSync(snapshot, "utf8"));
-            const required = ["date", "asOfSec", "renderedAtSec", "edition", "counts"];
-            const absent = required.filter((key) => meta[key] === undefined || meta[key] === null);
-            if (absent.length > 0) {
-              console.error(`::error title=Incomplete render metadata::latest.snapshot.json is missing ${absent.join(", ")}. The generator output contract changed; see the header of this workflow.`);
-              process.exit(1);
-            }
-            if (meta.edition !== "daily") {
-              console.error(`::error title=Wrong edition::Rendered edition is "${meta.edition}", expected "daily". The daily keys must never carry a month-stamped poster.`);
-              process.exit(1);
-            }
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(meta.date)) {
-              console.error(`::error title=Bad archive date::"${meta.date}" is not YYYY-MM-DD.`);
-              process.exit(1);
-            }
-            // §11.2b rule 7. Both dated keys are filed under the UTC *run* date.
-            // A `date` derived from asOfSec instead would file a Sep 1 run over
-            // Aug 31 data under August, colliding with the monthly archive.
-            const runDate = new Date(Number(meta.renderedAtSec) * 1000).toISOString().slice(0, 10);
-            if (meta.date !== runDate) {
-              console.error(`::error title=Archive date is not the run date::latest.snapshot.json says date="${meta.date}" but renderedAtSec resolves to ${runDate} (UTC). The archive key must be the UTC run date, never derived from asOfSec.`);
-              process.exit(1);
-            }
-
-            const manifest = {
-              date: meta.date,
-              asOfSec: meta.asOfSec,
-              renderedAtSec: meta.renderedAtSec,
-              edition: meta.edition,
-              methodologyVersion: meta.methodologyVersion ?? null,
-              counts: meta.counts,
-              ...(meta.mapSummary === undefined ? {} : { mapSummary: meta.mapSummary }),
-              bytes: {
-                png: statSync(png).size,
-                alt: statSync(alt).size,
-                snapshot: statSync(snapshot).size,
-              },
-            };
-            // Named kv-manifest.json so it cannot be confused with the
-            // local latest.manifest.json sidecar the generator emits.
-            // NOTE: no apostrophes anywhere in this node -e block. It is
-            // wrapped in single quotes by the shell, so one would end the
-            // string and the rest would be parsed as shell.
-            const manifestText = `${JSON.stringify(manifest, null, 2)}\n`;
-            const manifestBytes = Buffer.byteLength(manifestText, "utf8");
-            if (manifestBytes >= 16384) {
-              console.error(`::error title=Manifest too large::kv-manifest.json is ${manifestBytes} bytes; it must stay under 16384 bytes.`);
-              process.exit(1);
-            }
-            require("node:fs").writeFileSync("kv-manifest.json", manifestText);
-
-            const out = process.env.GITHUB_OUTPUT;
-            appendFileSync(out, `date=${manifest.date}\n`);
-            appendFileSync(out, `as_of_sec=${manifest.asOfSec}\n`);
-            appendFileSync(out, `rendered_at_sec=${manifest.renderedAtSec}\n`);
-            appendFileSync(out, `graded=${manifest.counts.graded}\n`);
-            appendFileSync(out, `not_rated=${manifest.counts.notRated}\n`);
-            appendFileSync(out, `png_bytes=${manifest.bytes.png}\n`);
-            appendFileSync(out, `alt_bytes=${manifest.bytes.alt}\n`);
-            appendFileSync(out, `snapshot_bytes=${manifest.bytes.snapshot}\n`);
-          '
-
-      # Uploaded before publication so a run that aborts at any guard below
-      # still leaves the rendered image inspectable.
+      # Keep a rejected render inspectable even when the publish phase fails.
       - name: Upload the rendered map
-        if: steps.freshness.outputs.already_published != 'true'
+        if: steps.plan.outputs.already_published != 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: safety-map-${{ steps.meta.outputs.date }}
+          name: safety-map-${{ steps.render.outputs.date }}
           path: |
             ${{ env.MAP_OUT_DIR }}/latest.png
             ${{ env.MAP_OUT_DIR }}/latest.alt.json
             ${{ env.MAP_OUT_DIR }}/latest.snapshot.json
-            kv-manifest.json
+            ${{ env.MAP_OUT_DIR }}/kv-manifest.json
           if-no-files-found: error
           retention-days: 14
 
-      # Last guard before the first write. Protects against a re-run of an old
-      # commit, and against a delayed cron landing behind a manual dispatch
-      # that already published newer output (plan §11.2b rule 5).
-      - name: Refuse to publish backwards
-        if: steps.probe.outputs.has_manifest == 'true' && steps.freshness.outputs.already_published != 'true'
-        run: |
-          set -euo pipefail
-          node -e '
-            const { readFileSync } = require("node:fs");
-            const prior = JSON.parse(readFileSync("prior-manifest.json", "utf8"));
-            const next = JSON.parse(readFileSync("kv-manifest.json", "utf8"));
-            const priorAt = Number(prior.renderedAtSec ?? prior.asOfSec ?? 0);
-            if (!Number.isFinite(priorAt)) {
-              console.error("::error title=Unusable manifest timestamp::The live manifest has no comparable timestamp. Refusing to publish over it.");
-              process.exit(1);
-            }
-            if (priorAt > Number(next.renderedAtSec)) {
-              console.error(`::error title=Backwards publish refused::The live manifest reports a render start of ${priorAt} (${new Date(priorAt * 1000).toISOString()}), later than this run at ${next.renderedAtSec}. Nothing was published; the live keys are untouched.`);
-              process.exit(1);
-            }
-            console.log(`Ordering OK: live=${priorAt} < this run=${next.renderedAtSec}`);
-          '
-
-      # ── Publish. Order is load-bearing: the manifest is the commit marker and
-      #    therefore goes LAST. The dated PNG is read back before the stable
-      #    image pointer is touched.
-      # This is a narrowing guard, not an atomic publication: KV has no
-      # cross-key transaction and the image route deliberately ignores the
-      # manifest so kill-switch lever 2 remains available. The brief window in
-      # which latest.png is new while the manifest is old is accepted.
-
-      - name: Publish the snapshot
-        if: steps.freshness.outputs.already_published != 'true'
+      - name: Publish in commit-marker order and verify readback
+        if: steps.plan.outputs.already_published != 'true'
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
           KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-          ARCHIVE_DATE: ${{ steps.meta.outputs.date }}
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/wrangler kv key put \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            "safety-map:snapshot:${ARCHIVE_DATE}" \
-            --path="${MAP_OUT_DIR}/latest.snapshot.json"
-
-      # The rolling pointer the next run reads. Written after the dated key so
-      # the archive entry always exists before anything points at that day.
-      - name: Publish the snapshot pointer
-        if: steps.freshness.outputs.already_published != 'true'
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/wrangler kv key put \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            "safety-map:snapshot:latest" \
-            --path="${MAP_OUT_DIR}/latest.snapshot.json"
-
-      - name: Publish the alt text
-        if: steps.freshness.outputs.already_published != 'true'
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/wrangler kv key put \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            "safety-map:alt:latest" \
-            --path="${MAP_OUT_DIR}/latest.alt.json"
-
-      # The dated image goes before the stable one, mirroring the snapshot pair:
-      # `latest.png` must never be newer than the dated key it corresponds to.
-      # This is the key the digest embeds — see the §11.5 note in the header.
-      - name: Publish the dated PNG
-        if: steps.freshness.outputs.already_published != 'true'
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-          ARCHIVE_DATE: ${{ steps.meta.outputs.date }}
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/wrangler kv key put \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            "safety-map:${ARCHIVE_DATE}.png" \
-            --path="${MAP_OUT_DIR}/latest.png"
-
-      - name: Verify the dated PNG readback
-        if: steps.freshness.outputs.already_published != 'true'
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-          ARCHIVE_DATE: ${{ steps.meta.outputs.date }}
-        run: |
-          set -euo pipefail
-          key="safety-map:${ARCHIVE_DATE}.png"
-          expected=$(sha256sum "${MAP_OUT_DIR}/latest.png" | awk '{print $1}')
-          ./node_modules/.bin/wrangler kv key get \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            "${key}" > readback.png
-          actual=$(sha256sum readback.png | awk '{print $1}')
-          if [ "${actual}" != "${expected}" ]; then
-            echo "::error title=PNG readback mismatch::${key} failed SHA-256 comparison with the locally rendered PNG. The stable latest image remains untouched and the manifest was NOT written. Re-run; if it repeats, check whether the wrangler CLI is prefixing stdout."
-            exit 1
-          fi
-          echo "Readback OK: ${key} = sha256:${actual}."
-
-      - name: Publish the PNG
-        if: steps.freshness.outputs.already_published != 'true'
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/wrangler kv key put \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            "safety-map:latest.png" \
-            --path="${MAP_OUT_DIR}/latest.png"
-
-      # The commit marker. After this succeeds, the manifest points at the
-      # edition whose intended keys have all been written.
-      - name: Publish the manifest
-        if: steps.freshness.outputs.already_published != 'true'
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-          WRANGLER_SEND_METRICS: "false"
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/wrangler kv key put \
-            --remote \
-            --namespace-id="${KV_NAMESPACE_ID}" \
-            "safety-map:latest.json" \
-            --path=kv-manifest.json
+        run: >-
+          npx tsx scripts/maintenance/publish-safety-score-map.ts publish
+          --out-dir="${MAP_OUT_DIR}"
 
       - name: Summarize
         if: always()
-        env:
-          ARCHIVE_DATE: ${{ steps.meta.outputs.date }}
-          AS_OF_SEC: ${{ steps.meta.outputs.as_of_sec }}
-          RENDERED_AT_SEC: ${{ steps.meta.outputs.rendered_at_sec }}
-          RENDER_SECONDS: ${{ steps.render.outputs.render_seconds }}
-          GRADED: ${{ steps.meta.outputs.graded }}
-          NOT_RATED: ${{ steps.meta.outputs.not_rated }}
-          PNG_BYTES: ${{ steps.meta.outputs.png_bytes }}
-          ALT_BYTES: ${{ steps.meta.outputs.alt_bytes }}
-          SNAPSHOT_BYTES: ${{ steps.meta.outputs.snapshot_bytes }}
-          HAD_MANIFEST: ${{ steps.probe.outputs.has_manifest }}
-          DELTA_GUARD: ${{ steps.render.outputs.delta_guard }}
-          JOB_STATUS: ${{ job.status }}
-          ALREADY_PUBLISHED: ${{ steps.freshness.outputs.already_published }}
-        run: |
-          set -euo pipefail
-          {
-            echo "## Safety Map refresh — ${JOB_STATUS}"
-            echo
-            echo "| | |"
-            echo "|---|---|"
-            echo "| Archive date (UTC) | \`${ARCHIVE_DATE:-—}\` |"
-            echo "| Data \`asOfSec\` | \`${AS_OF_SEC:-—}\` |"
-            echo "| Render started | \`${RENDERED_AT_SEC:-—}\` |"
-            echo "| Render wall-clock | ${RENDER_SECONDS:-—}s |"
-            echo "| Graded coins | ${GRADED:-—} |"
-            echo "| Not rated | ${NOT_RATED:-—} |"
-            echo "| PNG | ${PNG_BYTES:-—} bytes |"
-            echo "| Alt text | ${ALT_BYTES:-—} bytes |"
-            echo "| Snapshot | ${SNAPSHOT_BYTES:-—} bytes |"
-            echo "| Prior manifest existed | ${HAD_MANIFEST:-unknown} |"
-            echo "| Day-over-day delta guard | ${DELTA_GUARD:-not reached} |"
-            echo
-            if [ "${DELTA_GUARD:-}" = "skipped" ]; then
-              echo "> **Warning:** no readable \`safety-map:snapshot:latest\`, so the delta guard did"
-              echo "> not run this time. Expected on a first run; investigate if it repeats."
-              echo
-            fi
-            if [ "${ALREADY_PUBLISHED:-}" = "true" ]; then
-              echo "### Skipped — today is already published"
-              echo
-              echo "The live \`safety-map:latest.json\` already carries today's date with fresh"
-              echo "data, so this scheduled retry slot exited without rendering or writing."
-            elif [ "${JOB_STATUS}" = "success" ]; then
-              echo "### Published keys"
-              echo
-              echo "- \`safety-map:snapshot:${ARCHIVE_DATE}\`"
-              echo "- \`safety-map:snapshot:latest\`"
-              echo "- \`safety-map:alt:latest\`"
-              echo "- \`safety-map:${ARCHIVE_DATE}.png\` — the URL the digest embeds"
-              echo "- \`safety-map:latest.png\`"
-              echo "- \`safety-map:latest.json\` — manifest, written last"
-            else
-              echo "### Nothing was committed"
-              echo
-              echo "The run did not reach the manifest write, so \`safety-map:latest.json\` still"
-              echo "points at the previous complete key set and consumers are unaffected."
-              echo
-              echo "The 08:05 UTC digest will omit the map section and emit one ops line if this"
-              echo "keeps failing. There is no webhook alert: \`ALERT_WEBHOOK_URL\` is unset in"
-              echo "production, so \`sendAlert()\` no-ops."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: >-
+          npx tsx scripts/maintenance/publish-safety-score-map.ts summary
+          --job-status=${{ job.status }}
+          --out-dir="${MAP_OUT_DIR}"

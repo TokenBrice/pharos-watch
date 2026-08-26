@@ -63,7 +63,7 @@ The join-identity check applies only to coins present in both snapshots, and tol
 
 ## Publication
 
-`.github/workflows/safety-map-refresh.yml`. See the header block in that file for the full step-by-step rationale.
+`.github/workflows/safety-map-refresh.yml` owns checkout, credentials, scheduling, and artifact upload. `scripts/maintenance/publish-safety-score-map.ts` owns the tested operational state machine through explicit `plan`, `render`, `publish`, and `summary` phases. `plan --dry-run` inspects live KV state and prints the same-day decision without rendering or writing KV; it still requires the purpose-scoped KV credentials because a useful plan cannot guess at live state.
 
 The workflow reads `safety-map:snapshot:latest` to arm the delta guard, renders the daily edition, builds a KV manifest from the snapshot header, and publishes. Key order is load-bearing:
 
