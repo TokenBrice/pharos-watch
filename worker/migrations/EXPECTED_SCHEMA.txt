@@ -130,6 +130,7 @@ index	idx_mbe2_ts
 index	idx_mbe_coin_chain_ts
 index	idx_mbe_counted_coin_chain_ts
 index	idx_mbe_flow_type_ts
+index	idx_mbe_historical_price_repair_backlog
 index	idx_mbe_null_price_ts
 index	idx_mbe_symbol_ts
 index	idx_mbh_chain_coin_hour

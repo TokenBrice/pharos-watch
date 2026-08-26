@@ -80,7 +80,6 @@ CREATE TABLE IF NOT EXISTS api_key_requests (
   organization TEXT,
   project_url TEXT,
   use_case TEXT NOT NULL,
-  intended_endpoints_json TEXT,
   expected_cadence TEXT,
   expected_volume TEXT,
   accepted_terms INTEGER NOT NULL DEFAULT 0,

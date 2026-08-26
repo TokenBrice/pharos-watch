@@ -20,6 +20,7 @@
 | 0231     | `0231_dex_liquidity_7d_volume_measurement.sql`               | Add nullable DEX liquidity 7d-volume measurement markers for null-safe public API presentation.           |
 | 0232     | `0232_depeg_recovery_continuity.sql`                         | Add nullable last-qualified recovery observation time for continuity-safe recovery confirmation.          |
 | 0233     | `0233_ddr_lock_opportunity_attempt_key.sql`                  | Add nullable retry-attempt identity and a partial unique index for idempotent DDR lock audit writes.       |
+| 0234     | `0234_mint_burn_price_repair_backlog_index.sql`              | Backfill the production-created historical-price-repair backlog index into migration lineage (no-op on production). |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -198,14 +199,13 @@ These were operated against production D1 outside the normal migration path. His
 | 2026-07-29 | `public_api_rate_limit`, `api_request_source_stats`, `api_key_request_rate_limit`, `feedback_submissions` tables and indexes | Fresh source search found no runtime readers/writers outside historical migrations/docs/tests; pre-drop counts were 3, 31,158, 5, and 0 rows; post-drop `sqlite_master` verification returned zero target objects. | Time Travel bookmark `00001e39-0000074e-000050b7-227204d71952000124c9eef0e34631f2` captured before apply. |
 | 2026-07-29 | `alert_broker_deliveries`, `alert_broker_conditions` tables and indexes | Fresh source search found no runtime readers/writers outside historical migration/docs/tests after the direct webhook transport was removed; pre-drop counts were 38 shadow deliveries and 65 shadow conditions last updated 2026-07-12; post-drop `sqlite_master` verification returned zero `alert_broker_%` objects. | Time Travel bookmark `00001e39-0000acd1-000050b7-2d4691f057c19d4a4ac56ee25f123a8e` captured before apply. |
 | 2026-08-10 | `alert_broker_conditions`, `alert_broker_deliveries`, `api_key_request_rate_limit` (v1), `api_request_source_stats`, `blacklist_provider_scan_telemetry`, `dex_archive_family_state`, `dex_archive_manifest_dependencies`, `dex_archive_manifests`, `feedback_submissions`, `public_api_rate_limit`, `safety_score_v9_artifacts`, `safety_score_v9_movement_reviews`, `safety_score_v9_release_cohorts`, `safety_score_v9_shadow_daily`, `telegram_legacy_overflow_state`, `worker_job_attempts` tables; `api_key_requests.risk_score` and `api_key_requests.risk_reasons_json` columns | Owner-executed direct production drops via `wrangler d1 execute --remote` using staged SQL kept outside `worker/migrations/` (`agents/cleanup-2026-08/0229-staged.sql`); post-drop verification found 0 target tables in the live schema, `/api/health` healthy, and cron ok. The accepted 2026-08-26 baseline cleanup removed their table/index DDL, the two dropped columns, and obsolete archive seed rows from fresh replay. | Worker rollback does not recreate dropped schema; recovery requires operator-directed D1 Time Travel restore from a pre-drop bookmark. |
+| 2026-08-26 | `discovery_candidates` (39 rows; indexes `idx_disc_gecko`, `idx_disc_llama`, `idx_disc_name`), `stablecoin_id_map_applied` (227 rows), duplicate index `idx_dex_hist_unique` (uniqueness remains enforced by the migration-defined `idx_dex_hist_coin_date_unique`); `api_key_requests.intended_endpoints_json` column (105 non-null values, 120 rows preserved) | Owner-authorized window executed via `wrangler d1 execute --remote`. Fresh source search found zero references for every dropped object; post-drop `sqlite_master` verification returned zero targets and `api_key_requests` row count was unchanged. `idx_mbe_historical_price_repair_backlog` was found load-bearing for the mint-burn repair backlog scan and was backfilled into lineage as migration `0234` instead of dropped. | Time Travel bookmark `00001f19-00001503-000050d3-d631b62420e69bdef2535cc4d81619d8` captured before apply. |
 
 ## Deferred Destructive Cleanup Queue
 
 These are not active migration rows. They record stale tables with no current runtime readers or writers where the cleanup action is a dedicated destructive D1 rollout, not a standard deploy migration. `npm run check:migrations` enforces `rollout-safety: backward-compatible` for active migrations and rejects table drops in the normal deploy path.
 
-`api_key_requests.intended_endpoints_json` is queued for the next destructive window; it remains outside the normal deploy migration path until a coordinated cleanup is scheduled.
-
-The 2026-08-26 production parity capture (`agents/be4-baseline-parity-prod-schema-2026-08-26.txt`) found seven production-only orphans with zero source references and no migration lineage: tables `discovery_candidates` and `stablecoin_id_map_applied`, plus indexes `idx_dex_hist_unique`, `idx_disc_gecko`, `idx_disc_llama`, `idx_disc_name`, and `idx_mbe_historical_price_repair_backlog`. They are queued for the same coordinated destructive window. `d1_migrations` is wrangler-owned bookkeeping and is expected to exist only in production.
+The queue is currently empty. The 2026-08-26 destructive window cleared the previously queued `api_key_requests.intended_endpoints_json` column and the production-only orphans from the 2026-08-26 parity capture (`agents/be4-baseline-parity-prod-schema-2026-08-26.txt`); the load-bearing repair backlog index from that capture was backfilled as migration `0234`. `d1_migrations` is wrangler-owned bookkeeping and is expected to exist only in production.
 
 ## Append-only Retention Policy
 
@@ -306,6 +306,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0231_dex_liquidity_7d_volume_measurement.sql`: Worker rollback ignores the additive nullable columns. Retain them so forward Workers can distinguish measured 7d volume from unknown source coverage after redeploy.
 - `0232_depeg_recovery_continuity.sql`: Worker rollback ignores the additive nullable column. Retain it; prior Workers continue using `recovery_first_seen_at`, while forward Workers reset incomplete legacy recovery episodes safely.
 - `0233_ddr_lock_opportunity_attempt_key.sql`: Worker rollback ignores the additive nullable column and partial unique index. Retain both; historical null-key audit rows remain append-only and prior Workers continue writing null keys.
+- `0234_mint_burn_price_repair_backlog_index.sql`: additive IF NOT EXISTS index backfill; production already carries the index, so both apply and rollback are no-ops for existing databases.
 
 ## Rollback Procedure
 
