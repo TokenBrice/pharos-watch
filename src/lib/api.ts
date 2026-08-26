@@ -138,7 +138,7 @@ function normalizeApiDependencyMeta(value: unknown): ApiDependencyMeta | null {
   };
 }
 
-export function normalizeApiMeta(value: unknown): ApiMetaWithAge | null {
+function normalizeApiMeta(value: unknown): ApiMetaWithAge | null {
   if (!isRecord(value)) return null;
   const status = value.status;
   if (status !== "fresh" && status !== "degraded" && status !== "stale") {
