@@ -40,7 +40,6 @@
     "worker/src/lib/dews/persistence.ts": 82.2,
     "worker/src/lib/dews/scoring.ts": 87.1,
     "worker/src/lib/dews/source-state.ts": 100,
-    "worker/src/lib/dews/source-state/fallback.ts": 100,
     "worker/src/lib/dews/source-state/hydration.ts": 91.7,
     "worker/src/lib/dews/source-state/legacy-bridge.ts": 91.3,
     "worker/src/cron/compute-depeg-resolver.ts": 98.2,
