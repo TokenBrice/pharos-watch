@@ -33,6 +33,13 @@ interface WorkspaceModeTabsProps<TMode extends string> {
   getPanelId: (mode: TMode) => string;
 }
 
+export function createWorkspaceModeIds(prefix: string) {
+  return {
+    getTabId: (mode: string) => `${prefix}-tab-${mode}`,
+    getPanelId: (mode: string) => `${prefix}-panel-${mode}`,
+  };
+}
+
 export function WorkspaceModeTabs<TMode extends string>({
   activeMode,
   modes,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { StatusResponse } from "@shared/types";
 import { CoinGeckoPriceDiffCard } from "@/components/status/coingecko-price-diff";
 import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
@@ -10,22 +10,21 @@ import { MetadataIntegrityCard } from "@/components/status/metadata-integrity-ca
 import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
 import { PipelineIntegrityPanel } from "@/components/status/pipeline-integrity-panel";
 import { PipelineLoaderSummary } from "@/components/status/pipeline-loader-summary";
-import { getPipelinePanelId, getPipelineTabId, PipelineModeTabs } from "@/components/status/pipeline-mode-tabs";
 import { PipelineQualityTable } from "@/components/status/pipeline-quality-table";
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
 import { ScoreImpactPanel } from "@/components/status/score-impact-panel";
 import { SummaryBadge } from "@/components/status/page-primitives";
 import { YieldHealthCard } from "@/components/status/yield-health";
+import { createWorkspaceModeIds, WorkspaceModeTabs } from "@/components/status/workspace-mode-tabs";
+import { useWorkspaceMode } from "@/hooks/use-workspace-mode";
 import {
   buildPipelineIntegrityModel,
   buildPipelineModeSummaries,
-  buildPipelineModeUrl,
   buildPipelineQualityModel,
   collectPipelineLoaderErrors,
   deriveInitialPipelineMode,
-  parsePipelineMode,
-  type PipelineMode,
+  PIPELINE_MODES,
 } from "@/lib/pipeline-workspace-model";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 
@@ -33,34 +32,15 @@ export interface PipelineSectionProps {
   data: StatusResponse;
 }
 
+const PIPELINE_MODE_IDS = createWorkspaceModeIds("pipeline");
+
 export function PipelineSection({ data }: PipelineSectionProps) {
   const defaultMode = useMemo(() => deriveInitialPipelineMode(data), [data]);
-  const [activeMode, setActiveMode] = useState<PipelineMode>(defaultMode);
+  const { activeMode, selectMode } = useWorkspaceMode({ modes: PIPELINE_MODES, defaultMode });
   const modeSummaries = useMemo(() => buildPipelineModeSummaries(data), [data]);
   const loaderErrors = useMemo(() => collectPipelineLoaderErrors(data), [data]);
   const qualityModel = useMemo(() => buildPipelineQualityModel(data), [data]);
   const integrityModel = useMemo(() => buildPipelineIntegrityModel(data), [data]);
-
-  useEffect(() => {
-    const syncModeFromUrl = () => {
-      const urlMode = parsePipelineMode(window.location.search);
-      if (urlMode) {
-        setActiveMode(urlMode);
-        return;
-      }
-      window.history.replaceState(window.history.state, "", buildPipelineModeUrl(window.location, defaultMode));
-      setActiveMode(defaultMode);
-    };
-
-    syncModeFromUrl();
-    window.addEventListener("popstate", syncModeFromUrl);
-    return () => window.removeEventListener("popstate", syncModeFromUrl);
-  }, [defaultMode]);
-
-  const selectMode = useCallback((mode: PipelineMode) => {
-    setActiveMode(mode);
-    window.history.replaceState(window.history.state, "", buildPipelineModeUrl(window.location, mode));
-  }, []);
 
   const renderActiveMode = () => {
     switch (activeMode) {
@@ -152,15 +132,23 @@ export function PipelineSection({ data }: PipelineSectionProps) {
       </div>
 
       <PipelineLoaderSummary errors={loaderErrors} />
-      <PipelineModeTabs activeMode={activeMode} modes={modeSummaries} onModeChange={selectMode} />
+      <WorkspaceModeTabs
+        activeMode={activeMode}
+        modes={modeSummaries}
+        onModeChange={selectMode}
+        ariaLabel="Pipeline views"
+        className="w-full"
+        tabClassName="min-w-[6.5rem]"
+        {...PIPELINE_MODE_IDS}
+      />
       <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         Pipeline view: {modeSummaries.find((mode) => mode.id === activeMode)?.label ?? "Quality"}
       </p>
 
       <div
-        id={getPipelinePanelId(activeMode)}
+        id={PIPELINE_MODE_IDS.getPanelId(activeMode)}
         role="tabpanel"
-        aria-labelledby={getPipelineTabId(activeMode)}
+        aria-labelledby={PIPELINE_MODE_IDS.getTabId(activeMode)}
         tabIndex={0}
         className="min-w-0"
       >
