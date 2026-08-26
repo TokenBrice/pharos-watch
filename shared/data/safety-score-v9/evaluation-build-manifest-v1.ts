@@ -34,7 +34,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-cadences.ts",
-      "sha256": "946d24e9cf87aa40184c11a66ca16d74870c05461c622d893f95de119b63a3c7"
+      "sha256": "d74859383a57a9679f4d9de1c7890d7bf9cc2e5bea602d24924a25c3a09381ec"
     },
     {
       "path": "shared/lib/dependency-derivation.ts",
@@ -278,7 +278,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/mechanism-profiles.ts",
-      "sha256": "2852a1a972d15a5eec298d731a2e5ec3e26e17c32aaa695cdbad3424b1d09a78"
+      "sha256": "0167f0fa95aa99919ebe21d5a6c8c291d8f1b3571275837e8703b65bde1018dd"
     },
     {
       "path": "shared/lib/safety-score-v9/operational-resilience.ts",
@@ -577,7 +577,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "2bd29ef89e8072ce8914902f9e46496b21de3006515691a1b76d98ee95d819f8"
+  "digest": "4a394430e509d9f809d72cccf0c792c5f8ffa21e35d42e44e98494934ec22b13"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

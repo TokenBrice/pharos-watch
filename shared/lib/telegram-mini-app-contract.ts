@@ -1,8 +1,11 @@
 import { z } from "zod";
+import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "../types/status/telegram";
 import { fnv1a32Hex } from "./fnv1a";
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "./telegram-mini-app-catalog";
 import { TELEGRAM_PRESET_IDS } from "./telegram-presets";
 import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "./telegram-recap-policy";
+
+export type { TelegramAlertType };
 
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "4";
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
@@ -43,7 +46,7 @@ export function isTelegramMiniAppErrorCode(value: unknown): value is TelegramMin
   return typeof value === "string" && MINI_APP_ERROR_CODE_SET.has(value);
 }
 
-const TelegramAlertTypeSchema = z.enum(["dews", "depeg", "safety", "launch", "reserve", "freeze"]);
+const TelegramAlertTypeSchema = z.enum(TELEGRAM_ALERT_TYPES);
 const TelegramDewsBandSchema = z.enum(["ALERT", "WARNING", "DANGER"]);
 const TelegramDepegStepBpsSchema = z.union([z.literal(100), z.literal(250), z.literal(500)]);
 const TelegramSafetyModeSchema = z.enum(["all", "downgrade-only", "upgrade-only"]);
@@ -289,7 +292,6 @@ export type TelegramMiniAppBulkWatchlistOperation = Extract<
   TelegramMiniAppOperation,
   { kind: "preview-bulk-watchlist" | "confirm-bulk-watchlist" | "undo-bulk-watchlist" }
 >;
-export type TelegramAlertType = z.infer<typeof TelegramAlertTypeSchema>;
 export type TelegramDewsBand = z.infer<typeof TelegramDewsBandSchema>;
 export type TelegramDepegStepBps = z.infer<typeof TelegramDepegStepBpsSchema>;
 export type TelegramSafetyMode = z.infer<typeof TelegramSafetyModeSchema>;

@@ -40,8 +40,6 @@ export const CRON_SCHEDULE_CADENCES = {
   monthlyYieldAudit: { intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
 } as const;
 
-export type CronScheduleKey = keyof typeof CRON_SCHEDULE_CADENCES;
-
 export function isHourlyDexSourceSlot(slotStartedAtSec: number): boolean {
   return new Date(slotStartedAtSec * 1_000).getUTCMinutes() === 10;
 }
