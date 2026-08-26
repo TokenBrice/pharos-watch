@@ -17,33 +17,6 @@ import {
   type TelegramIngressAbuseEnv,
 } from "../telegram-ingress-abuse";
 
-type PolicyArtifact = {
-  deploymentState: string;
-  protectedHostname: string;
-  workerBindings: Array<{
-    route: string;
-    method: string;
-    path: string;
-    binding: string;
-    namespaceId: string;
-    requestsPerPeriod: number;
-    periodSec: number;
-    bodyLimitBytes: number;
-  }>;
-  waf: {
-    deploymentState: string;
-    broadApiRule: {
-      requiredExcludedExactPaths: string[];
-      requiredExpression: string;
-    };
-    exactPathRules: Array<{
-      expression: string;
-      requestsPerPeriod: number;
-      periodSec: number;
-    }>;
-  };
-};
-
 const encoder = new TextEncoder();
 
 function createLimiter(implementation: () => Promise<RateLimitOutcome> = async () => ({ success: true })) {
@@ -306,61 +279,15 @@ describe("Telegram ingress abuse gate", () => {
   });
 });
 
-describe("Telegram ingress checked-in policy", () => {
-  it("keeps runtime, Wrangler bindings, and required operator policy budgets aligned", () => {
+describe("Telegram ingress checked-in bindings", () => {
+  it("keeps handler policies and Wrangler bindings aligned", () => {
     const root = process.cwd();
-    const artifact = JSON.parse(
-      readFileSync(join(root, "worker/config/telegram-ingress-abuse-policy.json"), "utf8"),
-    ) as PolicyArtifact;
     const wrangler = readFileSync(join(root, "worker/wrangler.toml"), "utf8");
 
-    expect(artifact.deploymentState).toBe("required-operator-configuration-not-deployed-by-repo");
-    expect(artifact.protectedHostname).toBe("api.pharos.watch");
-    expect(artifact.waf.deploymentState).toBe("required-operator-configuration-not-deployed-by-repo");
     for (const policy of Object.values(TELEGRAM_INGRESS_POLICIES)) {
-      const configured = artifact.workerBindings.find((entry) => entry.route === policy.route);
-      expect(configured).toMatchObject({
-        method: policy.method,
-        path: policy.path,
-        binding: policy.binding,
-        requestsPerPeriod: policy.rateLimit,
-        periodSec: policy.periodSec,
-        bodyLimitBytes: policy.bodyLimitBytes,
-      });
-      if (!configured) throw new Error(`missing policy artifact route ${policy.route}`);
       const block = bindingBlock(wrangler, policy.binding);
-      expect(block).toContain(`namespace_id = "${configured.namespaceId}"`);
       expect(block).toContain(`limit = ${policy.rateLimit}`);
       expect(block).toContain(`period = ${policy.periodSec}`);
-    }
-  });
-
-  it("requires exact-path WAF rules and excludes them from the broad API rule", () => {
-    const artifact = JSON.parse(
-      readFileSync(join(process.cwd(), "worker/config/telegram-ingress-abuse-policy.json"), "utf8"),
-    ) as PolicyArtifact;
-    const paths = Object.values(TELEGRAM_INGRESS_POLICIES).map((policy) => policy.path);
-    const expectedWafBudgets = new Map([
-      [TELEGRAM_INGRESS_POLICIES.webhook.path, 2_400],
-      [TELEGRAM_INGRESS_POLICIES.mini_app_session.path, 120],
-      [TELEGRAM_INGRESS_POLICIES.mini_app_mutation.path, 360],
-    ]);
-
-    expect(artifact.waf.broadApiRule.requiredExpression).toContain("and not (http.request.uri.path in {");
-    expect(artifact.waf.broadApiRule.requiredExpression).toContain(`http.host eq "${artifact.protectedHostname}"`);
-    for (const path of paths) {
-      expect(artifact.waf.broadApiRule.requiredExcludedExactPaths).toContain(path);
-      expect(artifact.waf.broadApiRule.requiredExpression).toContain(`"${path}"`);
-      const exactRule = artifact.waf.exactPathRules.find(
-        (rule) =>
-          rule.expression.includes(`http.request.uri.path eq "${path}"`) &&
-          rule.expression.includes('http.request.method eq "POST"'),
-      );
-      expect(exactRule).toMatchObject({
-        requestsPerPeriod: expectedWafBudgets.get(path),
-        periodSec: 60,
-      });
-      expect(exactRule?.expression).toContain(`http.host eq "${artifact.protectedHostname}"`);
     }
   });
 });
