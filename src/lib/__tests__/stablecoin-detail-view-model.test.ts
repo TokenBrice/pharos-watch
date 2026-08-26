@@ -7,8 +7,8 @@ import { buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model"
 import { makeBuildStablecoinDetailViewModelParams } from "./fixtures/stablecoin-detail-view-model";
 import {
   buildMintAuthorityDetailViewModel,
-  buildStablecoinDetailClientCoin,
 } from "../stablecoin-detail-mint-authority-view-model";
+import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
 
 function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
   return makeStablecoin({

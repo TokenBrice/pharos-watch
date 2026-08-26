@@ -19,7 +19,7 @@ import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
-import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { DetailContent } from "./detail-content";
 

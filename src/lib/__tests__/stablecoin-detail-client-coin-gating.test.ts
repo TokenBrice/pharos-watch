@@ -1,7 +1,7 @@
 // src/lib/__tests__/stablecoin-detail-client-coin-gating.test.ts
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
-import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-mint-authority-view-model";
+import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
 
 const CUSTODY_PROFILE = {
   providers: [{ name: "Example Custodian", role: "custodian", sharePct: 100 }],
