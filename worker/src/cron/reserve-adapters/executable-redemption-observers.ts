@@ -561,7 +561,7 @@ async function observeEarn(
     routeStatusSource: "onchain",
     routeStatus: queueOpen ? "open" : "paused",
     routeStatusReason: queueOpen
-      ? "Ember withdrawal requests are open onchain, but settlement is operator-batched with no proven <=300-second completion bound"
+      ? "Ember withdrawal requests are open onchain and redeem to USDC at the vault's NAV share price, but settlement is operator-batched with no proven <=300-second completion bound"
       : "Ember withdrawal requests or privileged processing are paused onchain",
     feeBps,
     holderEligibility: "any-holder",

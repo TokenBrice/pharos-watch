@@ -366,7 +366,7 @@ describe("buildRedemptionBackstopCardViewModel", () => {
         settlementModel: "queued",
         routeStatus: "open",
         routeStatusReason:
-          "Ember withdrawal requests are open onchain, but settlement is operator-batched with no proven <=300-second completion bound",
+          "Ember withdrawal requests are open onchain and redeem to USDC at the vault's NAV share price, but settlement is operator-batched with no proven <=300-second completion bound",
         capacityProfile: {
           immediateUsd: null,
           scoringUsd: null,
@@ -378,6 +378,7 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     );
 
     expect(flagged.heroScoreLabel).toBe("NR");
+    expect(flagged.resolutionSummary).toContain("redeem to USDC");
     expect(flagged.resolutionSummary).toContain("operator-batched with no proven <=300-second completion bound");
     expect(flagged.resolutionSummary).toContain("unrated rather than scored zero");
 
