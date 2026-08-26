@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
   evaluateV9Exit,
+  isV9CreditableNonAtomicRedemption,
   projectV9ExitEvaluationRoute,
   selectV9ExitStressRequest,
   type V9ExitEvaluationRoute,
@@ -215,10 +216,12 @@ describe("evaluateV9Exit", () => {
     expect(result.horizons.queued.primaryRouteKey).toBe("redemption:30-day-queue");
   });
 
-  it("does not promote a zero-capacity issuer-discretionary queued route as a positive exit path", () => {
+  it("retains an eEARN-like zero-capacity queued live-reserve route as the selected adverse trace", () => {
     const zeroQueue = route({
-      routeKey: "redemption:dusd-async-redeemer",
+      routeKey: "redemption:eearn-operator-queue",
       routeFamily: "protocol-redemption",
+      scoreEligible: false,
+      evidenceKind: "live-reserve-state",
       access: "whitelisted-onchain",
       holderEligibility: "issuer-discretionary",
       settlement: "queued",
@@ -232,10 +235,62 @@ describe("evaluateV9Exit", () => {
       ],
     });
 
-    const result = evaluateV9Exit({ circulatingUsd: 5_800_000, routes: [zeroQueue] }, V9_CANDIDATE_POLICY_V1);
+    const result = evaluateV9Exit(
+      { circulatingUsd: 5_800_000, portfolioStatus: "reviewed-complete", routes: [zeroQueue] },
+      V9_CANDIDATE_POLICY_V1,
+    );
 
-    expect(result.primaryRouteKey).toBeNull();
-    expect(result.horizons.queued.primaryRouteKey).toBeNull();
+    expect(result.score).toBe(0);
+    expect(result.primaryRouteKey).toBe("redemption:eearn-operator-queue");
+    expect(result.horizons.queued).toEqual({ primaryRouteKey: "redemption:eearn-operator-queue", score: 0 });
+    expect(result.reasons).toContain("no-viable-exit-path");
+    expect(result.routes[0]).toMatchObject({
+      included: true,
+      exclusionReason: null,
+      score: 0,
+      observationConfidence: "high",
+      modelConfidence: "high",
+      confidenceFactor: 1,
+      capacityPoint: { executableUsd: 0, completionRatio: 0 },
+      components: { capacity: 0 },
+      capsApplied: expect.arrayContaining(["zero-executable-capacity"]),
+    });
+  });
+
+  it("retains an autoUSD-like immaterial live-reserve observation instead of calling the method unsupported", () => {
+    const immaterialQueue = route({
+      routeKey: "redemption:autousd-operator-queue",
+      routeFamily: "protocol-redemption",
+      scoreEligible: false,
+      evidenceKind: "live-reserve-state",
+      settlement: "queued",
+      settlementDelaySec: 30 * 86_400,
+      capacityScoringHorizon: "queued",
+      routeScoreCap: "queue-redeem",
+      capacityCurve: [
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000, completionRatio: 0.001, executionCostBps: 5 },
+      ],
+    });
+
+    const result = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete", routes: [immaterialQueue] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.score).toBe(0);
+    expect(result.primaryRouteKey).toBe("redemption:autousd-operator-queue");
+    expect(result.reasons).toContain("no-viable-exit-path");
+    expect(result.reasons).not.toContain("unsupported-same-notional-route");
+    expect(result.routes[0]).toMatchObject({
+      included: true,
+      exclusionReason: null,
+      score: 0,
+      observationConfidence: "high",
+      modelConfidence: "high",
+      confidenceFactor: 1,
+      capacityPoint: { executableUsd: 1_000, completionRatio: 0 },
+      capsApplied: expect.arrayContaining(["immaterial-executable-capacity"]),
+    });
   });
 
   it("keeps daily capacity in the bounded near-term lane even when transfers settle atomically", () => {
@@ -526,9 +581,8 @@ describe("evaluateV9Exit", () => {
     // of the ladder, so access/settlement/execution/output plus a
     // boundedCostScore awarded *because* the cost is undisclosed used to carry
     // a route that provably clears $0 at the stress cost. A DEX route exercises
-    // this general zero-capacity floor without being intercepted by the
-    // non-atomic redemption credit gate (a documented issuer/protocol redemption
-    // with zero capacity is now excluded upstream instead — see Lever 3 below).
+    // this general zero-capacity floor independently of the discounted
+    // redemption-credit path.
     const zeroCapacity = route({
       routeKey: "dex:undisclosed-cost",
       lane: "dex",
@@ -841,15 +895,24 @@ describe("reliable non-atomic redemption credit", () => {
     expect(days.score!).toBeGreaterThan(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
   });
 
-  it("keeps a zero-clearing (unbounded-cost) documented redemption excluded at the bounded floor", () => {
+  it("keeps a zero-clearing documented redemption as measured adverse evidence", () => {
     const zeroCost = redemptionRoute({
       capacityCurve: [
         { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: 200 },
       ],
     });
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [zeroCost] }, V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
-    expect(result.reasons).toContain("unsupported-same-notional-route");
+    expect(result.score).toBe(0);
+    expect(result.primaryRouteKey).toBe("redemption:eventual");
+    expect(result.reasons).toContain("no-viable-exit-path");
+    expect(result.routes[0]).toMatchObject({
+      included: true,
+      exclusionReason: null,
+      score: 0,
+      capacityPoint: { executableUsd: 0, completionRatio: 0 },
+      confidenceFactor: 1,
+      capsApplied: expect.arrayContaining(["zero-executable-capacity"]),
+    });
   });
 
   it("keeps an unresolved-output documented redemption excluded", () => {
@@ -865,8 +928,8 @@ describe("reliable non-atomic redemption credit", () => {
 // Lever 3 (V9 scoring reshape): the exit pillar now credits documented,
 // reliable issuer- and protocol-redemption channels — not only the derived
 // eventual-redemption family — while every reliability gate and the
-// all-zero-capacity floor stay in force. Impaired/frozen routes are excluded by
-// reporting zero capacity, so relaxing the family gate cannot lift them.
+// all-zero-capacity floor stay in force. Impaired/frozen routes remain included
+// as adverse observations and receive zero credit.
 describe("Lever 3 issuer/protocol redemption credit", () => {
   const floor = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore;
 
@@ -972,19 +1035,62 @@ describe("Lever 3 issuer/protocol redemption credit", () => {
     expect(sameDayTrace?.capsApplied).not.toContain("evidence-kind:documented-terms");
   });
 
-  it("keeps a zero-capacity issuer redemption floored — the pin-safe data invariant, not the family gate", () => {
+  it("scores a zero-capacity issuer redemption as a measured adverse route", () => {
     // TUSD / u-united-stables pass every reliability gate but report an
-    // all-zero-capacity curve (frozen/impaired), so they must stay excluded even
-    // now that the issuer family is admitted.
+    // all-zero-capacity curve (frozen/impaired), so the adverse observation must
+    // stay visible while earning no exit credit.
     const zeroCapacity = documentedRedemption({
       capacityCurve: [
         { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: 200 },
       ],
     });
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [zeroCapacity] }, V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBe(floor);
-    expect(result.primaryRouteKey).toBeNull();
-    expect(result.reasons).toContain("unsupported-same-notional-route");
+    expect(result.score).toBe(0);
+    expect(result.primaryRouteKey).toBe("redemption:issuer-documented");
+    expect(result.reasons).toContain("no-viable-exit-path");
+    expect(result.reasons).not.toContain("unsupported-same-notional-route");
+    expect(result.routes[0]).toMatchObject({
+      included: true,
+      score: 0,
+      confidenceFactor: 1,
+      capacityPoint: { executableUsd: 0 },
+      capsApplied: expect.arrayContaining(["zero-executable-capacity"]),
+    });
+  });
+
+  it("does not classify an explicitly score-eligible protocol redemption as non-atomic", () => {
+    const atomicProtocol = documentedRedemption({
+      routeKey: "redemption:protocol-atomic",
+      routeFamily: "protocol-redemption",
+      scoreEligible: true,
+      evidenceKind: "onchain-contract-state",
+      settlement: "atomic",
+      settlementDelaySec: 0,
+    });
+
+    expect(
+      isV9CreditableNonAtomicRedemption(
+        {
+          lane: atomicProtocol.lane,
+          routeFamily: atomicProtocol.routeFamily,
+          scoreEligible: atomicProtocol.scoreEligible,
+          observationState: atomicProtocol.observationState,
+          outputResolved: atomicProtocol.outputResolved,
+          coverageClass: atomicProtocol.coverageClass,
+          evidenceKind: atomicProtocol.evidenceKind,
+          failureDomainCount: atomicProtocol.failureDomains.length,
+        },
+        V9_CANDIDATE_POLICY_V1,
+      ),
+    ).toBe(false);
+
+    const result = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [atomicProtocol] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.primaryRouteKey).toBe("redemption:protocol-atomic");
+    expect(result.score).toBeGreaterThan(floor);
+    expect(result.routes[0]?.included).toBe(true);
   });
 });
 

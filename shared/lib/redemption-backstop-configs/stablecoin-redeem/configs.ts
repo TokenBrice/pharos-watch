@@ -1589,7 +1589,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Royco Dawn eEARN market", "https://dawn.royco.org/", ["route", "capacity"]),
     ],
     notes: [
-      "The holder path submits a request to an operator-processed queue. The V9 route overlay therefore uses queued settlement; no positive capacity is eligible for the shared 300-second horizon without a bounded completion path.",
+      "The holder path submits a request to an operator-processed queue. The reviewed route therefore publishes queued settlement; no positive capacity is eligible for the shared 300-second horizon without a bounded completion path.",
       "Fresh specialized telemetry pins the vault, validator, protocol-config proxies and implementations, reads pause/queue state and the current admin-configurable fee, and keeps idle USDC diagnostic-only. Identity or state-read drift fails closed with no static capacity fallback.",
     ],
   }),

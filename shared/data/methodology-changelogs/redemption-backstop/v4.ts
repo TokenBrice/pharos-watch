@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.39",
+    title: "Headline redemption credit requires material executable capacity",
+    date: "2026-08-26",
+    effectiveAt: 1787702400,
+    summary:
+      "The standalone redemption headline now fails closed at zero when the scored route has zero or immaterial executable capacity, uses the same reviewed settlement fact as Safety Score V9, and stops presenting full supply as eventual capacity unless a reviewed route explicitly authorizes that claim.",
+    impact: [
+      "A resolved capacity observation at zero receives a zero route score with zero-executable-capacity; a positive observation below both the 1% completion and $100,000 absolute breakpoints receives zero with immaterial-executable-capacity. Missing capacity remains unrated rather than being converted to zero.",
+      "The public settlement model and score now use the reviewed settlement override whenever one exists. eEARN therefore publishes its operator-batched queued settlement and queue posture instead of the stale atomic default that inflated its standalone component mix.",
+      "Fresh live fee telemetry can replace a static fee description, so the displayed explanation identifies the measured current fee rather than repeating obsolete reviewed copy.",
+      "Reserve-sync routes no longer inherit full-supply eventual capacity automatically. A config may opt into eventualCapacityModel: supply-full only with a review date and supporting route sources; no existing route is grandfathered into that assertion.",
+      "Before the correction, nine positive redemption headlines had a zero capacity component, thirteen routes exposed a standalone settlement model different from their reviewed V9 term, and ninety-six reserve-sync rows automatically asserted eventual full-supply capacity. All three classes now share fail-closed semantics.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.38",
     title: "Redeemability-gated Liquity capacity and Base Dollar coverage",
     date: "2026-08-21",

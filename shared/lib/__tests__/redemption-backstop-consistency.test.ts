@@ -5,7 +5,10 @@ import { REDEMPTION_BACKSTOP_CONFIG_MANIFEST } from "@shared/lib/redemption-back
 import { buildRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/manifest";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
+import {
+  REDEMPTION_BACKSTOP_CONFIGS,
+  resolveReviewedRedemptionSettlement,
+} from "@shared/lib/redemption-backstops";
 import type {
   RedemptionAccessModel,
   RedemptionExecutionModel,
@@ -51,6 +54,36 @@ describe("redemption backstop config consistency", () => {
       RedemptionBackstopConfigSchema.safeParse(
         settlementReviewConfig("same-day", { settlementModel: "days" }),
       ).success,
+    ).toBe(true);
+  });
+
+  it("uses every reviewed settlement override as the canonical public model", () => {
+    const reviewed = entries.filter(([, config]) => config.v9RouteReviewTerms?.settlementModel != null);
+    expect(reviewed.length).toBeGreaterThan(0);
+    for (const [id, config] of reviewed) {
+      expect(resolveReviewedRedemptionSettlement(config), id).toBe(
+        config.v9RouteReviewTerms?.settlementModel,
+      );
+    }
+  });
+
+  it("requires route-specific evidence before reserve sync can assert full-supply eventual capacity", () => {
+    const base = {
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "reserve-sync-metadata", eventualCapacityModel: "supply-full" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+    } as const;
+    expect(RedemptionBackstopConfigSchema.safeParse(base).success).toBe(false);
+    expect(
+      RedemptionBackstopConfigSchema.safeParse({
+        ...base,
+        reviewedAt: "2026-07-29",
+        docs: [{ label: "Route terms", url: "https://example.com/terms", supports: ["capacity"] }],
+      }).success,
     ).toBe(true);
   });
 

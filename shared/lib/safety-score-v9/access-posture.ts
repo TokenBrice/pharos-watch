@@ -131,6 +131,7 @@ function isCreditedRoute(
     {
       lane: route.lane,
       routeFamily: route.routeFamily,
+      scoreEligible: route.scoreEligible,
       observationState: route.status.observationState,
       outputResolved: isV9ExitRouteOutputResolved(route.output),
       coverageClass: route.coverageClass,

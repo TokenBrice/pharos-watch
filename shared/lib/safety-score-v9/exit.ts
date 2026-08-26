@@ -303,13 +303,12 @@ function queueServiceCapacityUsd(
 }
 
 /**
- * The non-atomic redemption families eligible for discounted exit credit. Atomic
- * same-notional DEX/redemption keeps its top tier through the ordinary scoring
- * path; these are the reviewed issuer-, protocol-, and eventual-redemption
- * channels that used to floor to the bounded-unknown score regardless of how
- * redeemable the asset actually is.
+ * Redemption families that may be eligible for discounted credit when the
+ * route is not already score-eligible through the ordinary same-notional path.
+ * Route family does not determine atomicity: protocol redemptions in particular
+ * may be atomic and score-eligible, in which case they bypass this relaxation.
  */
-const CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute["routeFamily"][] = [
+const CREDITABLE_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute["routeFamily"][] = [
   "issuer-redemption",
   "protocol-redemption",
   "eventual-redemption",
@@ -329,6 +328,7 @@ const CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute[
 export interface V9CreditableNonAtomicRedemptionInput {
   lane: "dex" | "redemption";
   routeFamily: V9ExitEvaluationRoute["routeFamily"];
+  scoreEligible: boolean;
   observationState: V9ExitEvaluationRoute["observationState"];
   outputResolved: boolean;
   coverageClass: V9ExitEvaluationRoute["coverageClass"];
@@ -356,8 +356,9 @@ export interface V9CreditableNonAtomicRedemptionInput {
  * notional is settled downstream by its measured capacity curve. An impaired,
  * frozen, or discretionary route does not survive as a viable exit because a
  * redemption that cannot clear reports a zero (or immaterial) capacity curve, so
- * the zero-capacity floor drops it exactly as before this relaxation — the pin
- * safety here is that data invariant, not the family membership.
+ * the zero-capacity floor removes its credit while preserving the measured
+ * adverse trace — the pin safety here is that data invariant, not family
+ * membership.
  */
 /**
  * A route output is resolved when it is both observed and valued. Two surfaces
@@ -378,7 +379,10 @@ export function isV9CreditableNonAtomicRedemption(
   envelope: V9ValidatedPolicyEnvelope,
 ): boolean {
   if (route.lane !== "redemption") return false;
-  if (!CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES.includes(route.routeFamily)) return false;
+  // This helper owns only the discounted-credit relaxation. Atomic and other
+  // explicitly score-eligible protocol routes remain on the ordinary path.
+  if (route.scoreEligible) return false;
+  if (!CREDITABLE_REDEMPTION_FAMILIES.includes(route.routeFamily)) return false;
   if (route.observationState !== "known") return false;
   if (route.outputResolved !== true) return false;
   if (route.coverageClass === "diagnostic") return false;
@@ -394,6 +398,7 @@ function isCreditableNonAtomicRedemption(
     {
       lane: route.lane,
       routeFamily: route.routeFamily,
+      scoreEligible: route.scoreEligible,
       observationState: route.observationState,
       outputResolved: route.outputResolved,
       coverageClass: route.coverageClass,
@@ -435,9 +440,6 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
   }
   const creditableNonAtomic = isCreditableNonAtomicRedemption(route, envelope);
   if ((!route.scoreEligible || route.coverageClass === "diagnostic") && !creditableNonAtomic) {
-    return "unsupported-same-notional-route";
-  }
-  if (CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES.includes(route.routeFamily) && !creditableNonAtomic) {
     return "unsupported-same-notional-route";
   }
   const scoreable =
@@ -623,30 +625,10 @@ function evaluateRoute(
   const { capacityPoint, valuedExecutableUsd } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
-  // A relaxed non-atomic redemption earns exit credit only when it clears
-  // material notional at the stress request. A documented route whose cost is
-  // unbounded — or that otherwise clears nothing meaningful — is not a reliable
-  // exit and must not stand in for a viable path: it stays excluded so the
-  // bounded-exit floor and its diagnostic reason hold exactly as before this
-  // recalibration. This never touches an atomic/DEX route, which reaches here
-  // only through the scoreEligible gate and keeps its existing zero-capacity
-  // floor behavior below.
-  if (
-    isCreditableNonAtomicRedemption(route, envelope) &&
-    !hasMaterialExecutableCapacity(completionRatio, valuedExecutableUsd, policy)
-  ) {
-    return {
-      routeKey: route.routeKey,
-      ...attribution,
-      score: null,
-      included: false,
-      exclusionReason: "unsupported-same-notional-route",
-      capacityPoint: null,
-      components: null,
-      confidenceFactor: null,
-      capsApplied: [],
-    };
-  }
+  // Once a route has passed the evidence and comparability gates, measured
+  // zero or immaterial capacity is an adverse observation, not unsupported
+  // methodology. Keep it included so the trace retains its capacity point,
+  // components, confidence, and the explicit zero/immaterial capacity cap.
   const coverageScore = interpolateExitBreakpointScore(completionRatio, policy.coverageRatioBreakpoints);
   const absoluteScore = interpolateExitBreakpointScore(valuedExecutableUsd, policy.absoluteCapacityBreakpoints);
   const delayMultiplier = settlementDelayMultiplier(route.settlementDelaySec, policy.settlementDelayBands);
@@ -1050,6 +1032,7 @@ export function evaluateV9Exit(
     // score-eligible route carries the exit claim.
     reasons: sortedUnique([
       ...(boundedGapFloorApplies ? ["missing-same-notional-route"] : []),
+      ...(!boundedGapFloorApplies && primary.score === 0 ? ["no-viable-exit-path"] : []),
       ...(hasOtherIncludedRoute && !independent ? ["correlated-exit-routes"] : []),
     ]) as V9ReasonCode[],
     routes: traces,

@@ -1,5 +1,23 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_EXIT_CAPACITY_TRUTH: MethodologyChangelogEntry = {
+  version: "9.44",
+  title: "Measured zero-capacity exits remain attributable",
+  date: "2026-08-26",
+  effectiveAt: 1787702400,
+  summary:
+    "Exit no longer discards a fully observed issuer or protocol redemption route merely because its executable capacity is zero or below the first material breakpoint. The route remains the attributable primary evidence with a zero route score, its measured capacity and confidence stay public, and a zero pillar emits the explicit no-viable-exit-path reason. Atomic protocol redemptions are no longer misclassified as inherently delayed when deciding whether discounted evidence can receive credit.",
+  impact: [
+    "A known zero or immaterial redemption route is retained as measured evidence instead of being relabeled unsupported-same-notional-route. Its score remains zero, so the change repairs attribution and explanation rather than granting exit credit.",
+    "The public trace preserves executable capacity, modeled-request completion, confidence, and the binding zero-capacity cap for both the primary route and alternatives. Zero completion is displayed as 0% rather than being omitted.",
+    "A zero Exit pillar publishes no-viable-exit-path even when an older producer omitted the reason, preventing cards with a numeric zero and F grade from presenting a blank explanation.",
+    "Protocol redemption timing now follows the route's reviewed settlement model. Atomic protocol routes remain eligible for atomic treatment; queued or delayed routes retain the existing discount and horizon rules.",
+    "On the pre-release production snapshot, nine cards had Exit 0 and four of those paired it with a standalone redemption headline of at least 50. This release removes that semantic contradiction through the paired redemption-backstop v4.39 capacity and settlement correction; it does not infer capacity where none was observed.",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_TETHER_DISCLOSURE_FRESHNESS: MethodologyChangelogEntry = {
   version: "9.43",
   title: "Tether transparency uses the measured disclosure cadence",

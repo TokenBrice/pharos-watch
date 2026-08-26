@@ -283,6 +283,79 @@ describe("computeRedemptionBackstopScore", () => {
     expect(result.score).toBe(100);
   });
 
+  it("floors a measured zero-capacity route at zero", () => {
+    const result = computeRedemptionBackstopScore({
+      routeFamily: "stablecoin-redeem",
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 0,
+      outputAssetQualityScore: 100,
+      costScore: 100,
+      executableCapacityUsd: 0,
+      modeledExitSizeUsd: 1_000_000,
+    });
+    expect(result).toEqual({ score: 0, capsApplied: ["zero-executable-capacity"] });
+  });
+
+  it("floors capacity below both shared materiality bands at zero", () => {
+    const result = computeRedemptionBackstopScore({
+      routeFamily: "stablecoin-redeem",
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 10,
+      outputAssetQualityScore: 100,
+      costScore: 100,
+      executableCapacityUsd: 9_999,
+      modeledExitSizeUsd: 1_000_000,
+    });
+    expect(result).toEqual({ score: 0, capsApplied: ["immaterial-executable-capacity"] });
+  });
+
+  it("admits capacity reaching the shared relative materiality band", () => {
+    const result = computeRedemptionBackstopScore({
+      routeFamily: "stablecoin-redeem",
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 20,
+      outputAssetQualityScore: 100,
+      costScore: 100,
+      executableCapacityUsd: 10_000,
+      modeledExitSizeUsd: 1_000_000,
+    });
+    expect(result.score).toBeGreaterThan(0);
+    expect(result.capsApplied).not.toContain("immaterial-executable-capacity");
+  });
+
+  it("uses the absolute materiality band when supply cannot define a modeled request", () => {
+    const below = computeRedemptionBackstopScore({
+      routeFamily: "stablecoin-redeem",
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 10,
+      outputAssetQualityScore: 100,
+      costScore: 100,
+      executableCapacityUsd: 99_999,
+      modeledExitSizeUsd: null,
+    });
+    const atFloor = computeRedemptionBackstopScore({
+      routeFamily: "stablecoin-redeem",
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: 20,
+      outputAssetQualityScore: 100,
+      costScore: 100,
+      executableCapacityUsd: 100_000,
+      modeledExitSizeUsd: null,
+    });
+    expect(below).toEqual({ score: 0, capsApplied: ["immaterial-executable-capacity"] });
+    expect(atFloor.score).toBeGreaterThan(0);
+  });
+
   it("applies queue-redeem cap at 70", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "queue-redeem",

@@ -305,6 +305,43 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.immediateCapacityRatio).toBe(0.15);
     expect(entry.capacityConfidence).toBe("live-direct");
     expect(entry.capacitySemantics).toBe("immediate-bounded");
+    expect(entry.eventualRedeemabilityScore).toBeNull();
+    expect(entry.capacityProfile?.eventualUsd).toBeUndefined();
+  });
+
+  it("publishes reviewed queued settlement and a zero headline for eEARN-style measured incapacity", async () => {
+    const entry = await buildEntry(
+      "lusd-liquity",
+      route({
+        settlementModel: "atomic",
+        executionModel: "rules-based-nav",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        v9RouteReviewTerms: { settlementModel: "queued" },
+      }),
+      20_000_000,
+      null,
+      {
+        reserveSnapshotMetadata: snapshot("lusd-liquity", {
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 0,
+            capacityKind: "live-queue",
+            freshnessKind: "same-run-onchain",
+            settlementDelaySec: 2_592_000,
+          },
+        }, { fetchedAt: now - 120 }),
+      },
+    );
+
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.score).toBe(0);
+    expect(entry.capacityScore).toBe(0);
+    expect(entry.capsApplied).toContain("zero-executable-capacity");
+    expect(entry.settlementModel).toBe("queued");
+    expect(entry.settlementScore).toBe(20);
+    expect(entry.queueEnabled).toBe(true);
+    expect(entry.eventualRedeemabilityScore).toBeNull();
+    expect(entry.capacityProfile?.exitRouteObservations?.[0]?.settlementHorizonSec).toBe(2_592_000);
   });
 
   it("reuses pre-parsed live redemption metadata for capacity and fees", async () => {
@@ -1214,6 +1251,7 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.feeBps).toBe(7);
     expect(entry.costScore).toBe(100);
+    expect(entry.feeDescription).toBe("Fresh live redemption fee telemetry: 7 bps.");
     expect(entry.notes).toContain("Using fresh live redemption fee telemetry in place of the reviewed fallback bound");
   });
 

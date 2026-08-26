@@ -25,7 +25,10 @@ export type {
   RedemptionV9RouteReviewTerms,
 } from "./schema";
 
-export { resolveMoreConservativeRedemptionSettlement } from "./settlement";
+export {
+  resolveMoreConservativeRedemptionSettlement,
+  resolveReviewedRedemptionSettlement,
+} from "./settlement";
 
 export function resolveDefaultHolderEligibility(
   config: Pick<RedemptionBackstopConfig, "accessModel">,

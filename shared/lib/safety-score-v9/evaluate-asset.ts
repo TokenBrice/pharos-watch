@@ -484,9 +484,11 @@ function exitPillar(
   envelope: V9ValidatedPolicyEnvelope,
 ): V9PillarEvaluation {
   const mechanismExitFacts = asset.mechanismExitFacts ?? [];
-  const hasKnownRuntimeRoute = asset.exitRoutes.some(
-    (route) => route.status.observationState === "known" && route.scoreEligible,
-  );
+  const hasKnownRuntimeRoute = result.routes.some((trace) => {
+    if (!trace.included) return false;
+    const route = asset.exitRoutes.find((candidate) => candidate.routeKey === trace.routeKey);
+    return route?.status.observationState === "known";
+  });
   const profileExplainsMissingRuntime =
     !hasKnownRuntimeRoute &&
     mechanismExitFacts.length > 0;
@@ -526,10 +528,7 @@ function exitPillar(
     primaryTrace?.included === true &&
     primaryTrace.capacityPoint !== null &&
     primary.status.observationState === "known" &&
-    primary.scoreEligible &&
-    primary.lane === "dex" &&
     primary.coverageClass !== "diagnostic" &&
-    envelope.policy.semantic.exit.scoreableEvidenceKinds.dex.includes(primary.evidenceKind) &&
     capacityFloor !== undefined
       ? [{
           source: "pillar-score",
@@ -587,6 +586,14 @@ function exitPillar(
           result.primaryRouteKey === null &&
           causalGaps.length === 0 &&
           profileFactKeys.length === 0;
+        const nativeMeasuredCapacityFloor =
+          code === "no-viable-exit-path" &&
+          primary !== null &&
+          primaryTrace?.included === true &&
+          primary.status.observationState === "known" &&
+          capacityFloor !== undefined &&
+          causalGaps.length === 0 &&
+          profileFactKeys.length === 0;
         return responsibility !== null
           ? [
               pillarReason(
@@ -602,7 +609,7 @@ function exitPillar(
               code,
               path,
               causalGaps,
-              nativeMeasuredCompleteEmpty
+              nativeMeasuredCompleteEmpty || nativeMeasuredCapacityFloor
                 ? "measured-adverse"
                 : V9_LEGACY_RESPONSIBILITY_BY_REASON[code],
             );

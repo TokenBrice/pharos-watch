@@ -16,7 +16,11 @@ import {
   REDEMPTION_OUTPUT_ASSET_SCORES,
   REDEMPTION_SETTLEMENT_SCORES,
 } from "@shared/lib/redemption-backstop-scoring";
-import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import {
+  getRedemptionBackstopConfig,
+  resolveReviewedRedemptionSettlement,
+  type RedemptionBackstopConfig,
+} from "@shared/lib/redemption-backstops";
 import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/redemption-backstop";
@@ -49,13 +53,14 @@ function resolveStaticFields(
   now = Math.floor(Date.now() / 1000),
   liveMetadata?: RedemptionBackstopLiveMetadata,
 ) {
+  const settlementModel = resolveReviewedRedemptionSettlement(config);
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
-  const settlementScore = REDEMPTION_SETTLEMENT_SCORES[config.settlementModel];
+  const settlementScore = REDEMPTION_SETTLEMENT_SCORES[settlementModel];
   const executionCertaintyScore = REDEMPTION_EXECUTION_SCORES[config.executionModel];
   const outputAssetQualityScore = REDEMPTION_OUTPUT_ASSET_SCORES[config.outputAssetType];
   return resolveRedemptionStaticFields(
     stablecoinId,
-    config,
+    { ...config, settlementModel },
     {
       accessScore,
       settlementScore,
@@ -122,7 +127,9 @@ export async function buildRedemptionBackstopEntry(
     minRedeemUsd: capacity.minRedeemUsd,
     liveHolderEligibility: capacity.liveHolderEligibility,
   });
+  const modeledExitSizeUsd = computeModeledExitSizeUsd(supplyUsd);
   const staticFields = resolveStaticFields(stablecoinId, config, reserveSnapshotMetadata, now, liveMetadata);
+  const settlementModel = resolveReviewedRedemptionSettlement(config);
   const scored = computeRedemptionBackstopScore({
     routeFamily: config.routeFamily,
     accessScore: staticFields.accessScore,
@@ -132,6 +139,8 @@ export async function buildRedemptionBackstopEntry(
     outputAssetQualityScore: staticFields.outputAssetQualityScore,
     costScore: staticFields.costScore,
     totalScoreCap: config.totalScoreCap,
+    executableCapacityUsd: capacity.scoringCapacityUsd,
+    modeledExitSizeUsd,
   });
   const eventualCapacityScoring = computeCapacityScore({
     immediateCapacityUsd: capacity.eventualCapacityUsd ?? null,
@@ -164,7 +173,7 @@ export async function buildRedemptionBackstopEntry(
     capacityKind: capacity.capacityKind,
     sourceMode: capacity.sourceMode,
     accessModel: config.accessModel,
-    settlementModel: config.settlementModel,
+    settlementModel,
   });
   const staticRouteStatus: RedemptionRouteStatusEvidence = {
     routeStatus:
@@ -205,7 +214,6 @@ export async function buildRedemptionBackstopEntry(
   }
 
   const routeExitCorrelation = config.routeExitCorrelation ?? inferDefaultRouteExitCorrelation(config);
-  const modeledExitSizeUsd = computeModeledExitSizeUsd(supplyUsd);
   const baseCapacityProfile = capacity.capacityProfile
     ? {
         ...capacity.capacityProfile,
@@ -231,7 +239,7 @@ export async function buildRedemptionBackstopEntry(
         : null) ??
       buildRedemptionExitRouteObservation({
         stablecoinId,
-        config,
+        config: { ...config, settlementModel },
         capacityProfile: baseCapacityProfile,
         scoringCapacityUsd: capacity.scoringCapacityUsd,
         supplyUsd,
@@ -286,7 +294,7 @@ export async function buildRedemptionBackstopEntry(
     costScore: staticFields.costScore,
     routeFamily: config.routeFamily,
     accessModel: config.accessModel,
-    settlementModel: config.settlementModel,
+    settlementModel,
     executionModel: config.executionModel,
     outputAssetType: config.outputAssetType,
     provider: capacity.provider,
@@ -368,6 +376,7 @@ export function buildFailedRedemptionBackstopEntry(
   now = Math.floor(Date.now() / 1000),
 ): RedemptionBackstopEntry {
   const staticFields = resolveStaticFields(stablecoinId, config);
+  const settlementModel = resolveReviewedRedemptionSettlement(config);
   const capacityConfidence =
     config.capacityModel.kind === "reserve-sync-metadata"
       ? resolveReserveSyncCapacityConfidence(stablecoinId)
@@ -389,7 +398,7 @@ export function buildFailedRedemptionBackstopEntry(
     costScore: staticFields.costScore,
     routeFamily: config.routeFamily,
     accessModel: config.accessModel,
-    settlementModel: config.settlementModel,
+    settlementModel,
     executionModel: config.executionModel,
     outputAssetType: config.outputAssetType,
     provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.SYNC_ERROR,

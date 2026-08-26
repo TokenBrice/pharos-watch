@@ -190,7 +190,7 @@ export async function resolveReserveSyncCapacity(
       queueDepthUsd: liveMetadata.queueDepthUsd,
       capacityProfileConfidence: liveCapacityConfidence,
       applyDailyLimit: true,
-      includeEventualSupplyInProfile: true,
+      includeEventualSupplyInProfile: model.eventualCapacityModel === "supply-full",
     });
     const clampNote = capacityExceedsSupply
       ? "Live reserve redemption capacity exceeds current supply; clamped to supply for scoring"
@@ -205,8 +205,10 @@ export async function resolveReserveSyncCapacity(
 
     return {
       ...capacityFields,
-      eventualCapacityUsd: hasSupplyCeiling ? supplyUsd : undefined,
-      eventualCapacityRatio: hasPositiveSupply ? 1 : undefined,
+      eventualCapacityUsd:
+        model.eventualCapacityModel === "supply-full" && hasSupplyCeiling ? supplyUsd : undefined,
+      eventualCapacityRatio:
+        model.eventualCapacityModel === "supply-full" && hasPositiveSupply ? 1 : undefined,
       provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
       sourceMode:
         REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA]

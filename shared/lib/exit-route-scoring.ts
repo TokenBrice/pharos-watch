@@ -80,6 +80,45 @@ export interface ExitComponentScores {
   cost: number;
 }
 
+function firstPositiveExitBreakpointValue(
+  points: readonly { value: number; score: number }[],
+): number {
+  return points.find((point) => point.value > 0 && point.score > 0)?.value ?? 0;
+}
+
+/**
+ * Shared economic-materiality test for an executable exit amount.
+ *
+ * A route is material once it reaches either the first positive coverage band
+ * or the first positive absolute-capacity band. This is the same policy shape
+ * used by the V9 Exit pillar and keeps the standalone redemption headline from
+ * being carried by non-capacity components when the route moves no meaningful
+ * value.
+ */
+export function hasMaterialExitCapacity(args: {
+  executableCapacityUsd: number;
+  requestedNotionalUsd: number | null | undefined;
+}): boolean {
+  if (
+    !Number.isFinite(args.executableCapacityUsd) ||
+    args.executableCapacityUsd <= 0
+  ) {
+    return false;
+  }
+  const coverageFloor = firstPositiveExitBreakpointValue(EXIT_ROUTE_SCORING_TABLES.coverageRatioBreakpoints);
+  const absoluteFloor = firstPositiveExitBreakpointValue(EXIT_ROUTE_SCORING_TABLES.absoluteCapacityBreakpoints);
+  if (absoluteFloor > 0 && args.executableCapacityUsd >= absoluteFloor) return true;
+  if (
+    args.requestedNotionalUsd == null ||
+    !Number.isFinite(args.requestedNotionalUsd) ||
+    args.requestedNotionalUsd <= 0
+  ) {
+    return false;
+  }
+  const completionRatio = args.executableCapacityUsd / args.requestedNotionalUsd;
+  return coverageFloor > 0 && completionRatio >= coverageFloor;
+}
+
 /**
  * The reviewed exit scoring tables. Every value here is mirrored into
  * `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
