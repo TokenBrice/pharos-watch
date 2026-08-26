@@ -3,7 +3,6 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { deleteOrphanYieldRows, deleteStaleYieldRows, purgeYieldHistoryOwnershipHandoffs } from "./history";
-import { isMissingColumnError, isMissingTableError } from "../../lib/db";
 
 export {
   readPreviousYieldRankingsCount,
@@ -29,9 +28,8 @@ export async function materializeYieldHistoryDaily(
   startSec: number,
 ): Promise<number> {
   const snapshotDate = bucketUnixSecondsToUtcDay(startSec - (YIELD_HISTORY_RAW_DAYS + 1) * DAY_SECONDS);
-  try {
-    const result = await db
-      .prepare(
+  const result = await db
+    .prepare(
       `/* pharos:yield-sync:daily-history-materialize */
        INSERT INTO yield_history_daily (
          stablecoin_id, source_key, snapshot_date, recorded_at, is_best,
@@ -77,13 +75,9 @@ export async function materializeYieldHistoryDaily(
          pys_inputs_at_publish = excluded.pys_inputs_at_publish
        WHERE excluded.recorded_at > yield_history_daily.recorded_at`,
     )
-      .bind(snapshotDate, snapshotDate, snapshotDate + DAY_SECONDS)
-      .run();
-    return result.meta?.changes ?? 0;
-  } catch (error) {
-    if (isMissingTableError(error) || isMissingColumnError(error)) return 0;
-    throw error;
-  }
+    .bind(snapshotDate, snapshotDate, snapshotDate + DAY_SECONDS)
+    .run();
+  return result.meta?.changes ?? 0;
 }
 
 /**
@@ -92,9 +86,8 @@ export async function materializeYieldHistoryDaily(
  * generations. This prevents a one-off winner change from rewriting evidence.
  */
 export async function cleanupFalseLinkedVariantSourceSwitches(db: D1Database): Promise<number> {
-  try {
-    const result = await db
-      .prepare(
+  const result = await db
+    .prepare(
         `WITH ranked_linked_generations AS (
            SELECT d.stablecoin_id, d.generation_id, d.source_switch,
                   ROW_NUMBER() OVER (
@@ -121,13 +114,9 @@ export async function cleanupFalseLinkedVariantSourceSwitches(db: D1Database): P
             AND selected_source_key LIKE 'linked-variant:%'
             AND previous_best_source_key = 'onchain:' || stablecoin_id
             AND stablecoin_id IN (SELECT stablecoin_id FROM verified_clean_identities)`,
-      )
-      .run();
-    return result.meta?.changes ?? 0;
-  } catch (error) {
-    if (isMissingTableError(error) || isMissingColumnError(error)) return 0;
-    throw error;
-  }
+    )
+    .run();
+  return result.meta?.changes ?? 0;
 }
 
 export async function pruneYieldTables(
@@ -157,14 +146,10 @@ export async function pruneYieldTables(
     .bind(pruneCutoff, ...frozenIdsList)
     .run();
 
-  try {
-    await db
-      .prepare(`/* pharos:yield-sync:daily-history-retention-delete */ DELETE FROM yield_history_daily WHERE snapshot_date < ? ${frozenClause}`)
-      .bind(pruneCutoff, ...frozenIdsList)
-      .run();
-  } catch (error) {
-    if (!isMissingTableError(error)) throw error;
-  }
+  await db
+    .prepare(`/* pharos:yield-sync:daily-history-retention-delete */ DELETE FROM yield_history_daily WHERE snapshot_date < ? ${frozenClause}`)
+    .bind(pruneCutoff, ...frozenIdsList)
+    .run();
 
   if (allowDestructiveCleanup) {
     await cleanupFalseLinkedVariantSourceSwitches(db);
