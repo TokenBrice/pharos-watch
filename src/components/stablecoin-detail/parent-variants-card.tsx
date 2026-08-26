@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
@@ -19,7 +19,7 @@ interface ParentVariantsCardProps {
 }
 
 export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const [showAll, setShowAll] = useState(false);
 
   if (variants.length === 0) return null;

@@ -6,7 +6,7 @@ import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-hea
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { formatCurrency } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -113,7 +113,7 @@ export function RecentFreezesCard(): React.JSX.Element {
     limit: 200,
     offset: 0,
   });
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const logoMap = useMemo(() => logos ?? {}, [logos]);
   const [windowKey, setWindowKey] = useState<WindowKey>("24h");
 

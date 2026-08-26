@@ -20,7 +20,6 @@ const {
   useBlacklistEventsPageMock,
   useDexLiquidityMock,
   useHomeAltFiltersMock,
-  useLogosMock,
   useMintBurnFlowsMock,
   usePegSummaryMock,
   usePinnedStablecoinsMock,
@@ -34,7 +33,6 @@ const {
   useBlacklistEventsPageMock: vi.fn(),
   useDexLiquidityMock: vi.fn(),
   useHomeAltFiltersMock: vi.fn(),
-  useLogosMock: vi.fn(),
   useMintBurnFlowsMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
   usePinnedStablecoinsMock: vi.fn(),
@@ -68,7 +66,6 @@ vi.mock("@/hooks/api-hooks", () => ({
 vi.mock("@/hooks/use-blacklist-events", () => ({ useBlacklistEventsPage: useBlacklistEventsPageMock }));
 vi.mock("@/hooks/use-depeg-events", () => ({ useActiveDepegEvents: useActiveDepegEventsMock }));
 vi.mock("@/hooks/use-home-alt-filters", () => ({ useHomeAltFilters: useHomeAltFiltersMock }));
-vi.mock("@/hooks/use-logos", () => ({ useLogos: useLogosMock }));
 vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: useMintBurnFlowsMock }));
 vi.mock("@/hooks/use-pinned-stablecoins", () => ({ usePinnedStablecoins: usePinnedStablecoinsMock }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
@@ -239,7 +236,6 @@ afterEach(() => {
 
 describe.each(SURFACES)("$Component.name semantic query states", ({ Component, configure, emptyText, readyText }) => {
   function renderState(state: MonitoringState) {
-    useLogosMock.mockReturnValue({ data: {} });
     useHomeAltFiltersMock.mockReturnValue({ activeFilters: [] });
     usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
     configure(state);

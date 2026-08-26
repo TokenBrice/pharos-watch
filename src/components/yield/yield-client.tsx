@@ -7,7 +7,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
@@ -199,7 +199,7 @@ function YieldEmptyStateNotice({
 
 export function YieldClient() {
   const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankingsSummary();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const { searchParams, setParam, replaceParams } = useUrlFilters();
   const arrivedFromSelector = searchParams.get("from") === "selector";
   const workbenchFallbackId = parseYieldWorkbenchFallbackId(searchParams.get(YIELD_WORKBENCH_FALLBACK_PARAM));

@@ -10,7 +10,6 @@ const mocks = vi.hoisted(() => ({
   QueryFreshnessNotices: vi.fn(),
   useDexLiquidity: vi.fn(),
   useHydrated: vi.fn(),
-  useLogos: vi.fn(),
   usePegSummary: vi.fn(),
   useReportCardsV9: vi.fn(),
   useSort: vi.fn(),
@@ -48,10 +47,6 @@ vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: mocks.useStablecoins,
 }));
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: mocks.useLogos,
-}));
-
 vi.mock("@/hooks/api-hooks", () => ({
   useDexLiquidity: mocks.useDexLiquidity,
   usePegSummary: mocks.usePegSummary,
@@ -77,7 +72,6 @@ function refetch() {
 
 function setDefaultMocks() {
   mocks.useHydrated.mockReturnValue(true);
-  mocks.useLogos.mockReturnValue({ data: {} });
   mocks.useUrlFilters.mockReturnValue({
     searchParams: new URLSearchParams(),
     replaceParams: vi.fn(),

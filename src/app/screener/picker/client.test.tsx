@@ -228,8 +228,8 @@ vi.mock("@/hooks/api-hooks", () => {
   };
 });
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: () => ({ data: {} }),
+vi.mock("@/lib/logos", () => ({
+  logosById: {},
 }));
 
 vi.mock("next/link", async () => {

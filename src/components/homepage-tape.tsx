@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { collapseForHomepageStrip, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
@@ -168,7 +168,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
   // pass below then merges flapping coins (e.g. USDXL repeating depeg cycles)
   // into a single cell with a count badge.
   const { data, isLoading, error } = useLatestEvents({ limit: 100, severityFloor: "notice" });
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const events = data?.events ?? EMPTY_EVENTS;
   const collapsed = useMemo(
     () => collapseForHomepageStrip(events.filter((event) => eventClassSlug(event.type) !== "score")),

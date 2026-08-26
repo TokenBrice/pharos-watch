@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
 import { useFlashOnChange } from "@/hooks/use-flash-on-change";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
@@ -34,7 +34,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
   const pegSummaryQuery = usePegSummary();
   const { data, isLoading } = activeQuery;
   const { data: pegSummaryData, isLoading: isPegSummaryLoading } = pegSummaryQuery;
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const logoMap = logos ?? {};
 
   const pegSummaryById = useMemo(

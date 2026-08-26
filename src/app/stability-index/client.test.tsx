@@ -43,8 +43,8 @@ vi.mock("@/hooks/use-time-range-filter", () => ({
   }),
 }));
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: () => ({ data: { "usdc-circle": "/usdc.svg" } }),
+vi.mock("@/lib/logos", () => ({
+  logosById: { "usdc-circle": "/usdc.svg" },
 }));
 
 vi.mock("@/components/chart-primitives/axes", () => ({

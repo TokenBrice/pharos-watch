@@ -13,7 +13,7 @@ import { useDexLiquidity, useNonUsdShare, usePegSummary, useReportCardsV9 } from
 import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { AltPegCohortHistoryChart } from "./alt-peg-cohort-history-chart";
 import { AltPegStablecoinTable } from "./alt-peg-stablecoin-table";
 import { FiatWorldAtlas } from "./fiat-world-atlas/world-atlas";
@@ -189,7 +189,7 @@ export function AltPegsClient() {
   const pegSummaryQuery = usePegSummary();
   const dexLiquidityQuery = useDexLiquidity();
   const reportCardsQuery = useReportCardsV9();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const { searchParams, pushSearchParams, replaceParams } = useUrlFilters();
 
   const snapshot = useMemo(

@@ -4,7 +4,7 @@ import { useMemo, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CollateralUsageSection } from "./collateral-usage-section";
@@ -48,7 +48,7 @@ export function ContagionSnapshot({
   const stablecoinsQuery = useStablecoins();
   const { data: rc } = reportCardsQuery;
   const { data: list } = stablecoinsQuery;
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const hasVariantCard = Boolean(variantRelationshipCard);
   const hasRightColumn = hasVariantCard || Boolean(hasCollateralUsage);
   const cards = useMemo(

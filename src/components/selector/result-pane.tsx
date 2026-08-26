@@ -12,7 +12,7 @@ import { formatScoreTrimmed as formatScore } from "@shared/lib/format";
 import { Bot, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CopyButton } from "@/components/copy-button";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { SelectorResultSummary } from "@/components/selector/selector-result-summary";
 import { SelectorShortlistCard } from "@/components/selector/selector-shortlist-card";
@@ -71,7 +71,7 @@ export function ResultPane({
   shareFallbackUrl,
   sessionRecovered,
 }: ResultPaneProps) {
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const yieldRankings = useYieldRankings();
   const yieldSourceUrls = useMemo(() => {
     const map = new Map<string, string>();

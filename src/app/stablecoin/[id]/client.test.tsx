@@ -101,8 +101,8 @@ vi.mock("@/hooks/use-depeg-events", () => ({
   useInfiniteDepegEvents: () => ({ data: { total: 0 } }),
 }));
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: () => ({ data: {} }),
+vi.mock("@/lib/logos", () => ({
+  logosById: {},
 }));
 
 vi.mock("@/components/stablecoin-logo", () => ({

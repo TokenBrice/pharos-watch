@@ -16,7 +16,7 @@ import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import type { PegCurrency } from "@shared/types";
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { decodeState, encodeState, type UrlStateSchema } from "@/lib/url-state";
 import { SummaryBand } from "./timeline-feed-sections";
@@ -122,7 +122,7 @@ export function TimelineClient() {
     },
     [replaceParams, setParam, urlState],
   );
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const [nowMs] = useState(() => Date.now());
 
   // Pass `nowMs` (frozen at mount) so the queryKey stays stable across

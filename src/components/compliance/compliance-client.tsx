@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/table";
 import { TableSourceLink } from "@/components/table/client";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 import { trackEvent } from "@/lib/analytics";
@@ -212,7 +212,7 @@ function inferRegimeFromLegacyParams({
 }
 
 export function ComplianceClient() {
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const { searchParams, replaceParams } = useUrlFilters();
   const urlState = useMemo(
     () => decodeState(searchParams, COMPLIANCE_URL_SCHEMA),

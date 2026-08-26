@@ -10,7 +10,6 @@ const mocks = vi.hoisted(() => ({
   useStressSignals: vi.fn(),
   useDepegResolverSurfaces: vi.fn(),
   useInfiniteDepegEvents: vi.fn(),
-  useLogos: vi.fn(),
   useUrlFilters: vi.fn(),
   QueryFreshnessNotices: vi.fn(),
 }));
@@ -30,10 +29,6 @@ vi.mock("@/hooks/use-depeg-events", () => ({
 
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({
   useDepegResolverSurfaces: mocks.useDepegResolverSurfaces,
-}));
-
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: mocks.useLogos,
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
@@ -210,7 +205,6 @@ describe("DepegClient", () => {
         refetch: vi.fn(),
       },
     });
-    mocks.useLogos.mockReturnValue({ data: {} });
     mocks.useUrlFilters.mockReturnValue({
       getParam: (_key: string, fallback = "") => fallback,
       setParam: vi.fn(),
@@ -284,7 +278,6 @@ describe("DepegClient", () => {
         refetch: refetchResolverReview,
       },
     });
-    mocks.useLogos.mockReturnValue({ data: {} });
     mocks.useUrlFilters.mockReturnValue({
       getParam: (_key: string, fallback = "") => fallback,
       setParam: vi.fn(),

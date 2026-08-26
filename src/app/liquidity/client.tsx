@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidity } from "@/hooks/api-hooks";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterSearchInput } from "@/components/filter-search-input";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
@@ -44,7 +44,7 @@ export const LIQUIDITY_URL_SCHEMA: UrlStateSchema<LiquidityUrlState> = {
 
 export function LiquidityClient() {
   const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch, meta } = useDexLiquidity();
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const { searchParams, replaceParams } = useUrlFilters();
   const { peg: pegFilter } = useMemo(
     () => decodeState(searchParams, LIQUIDITY_URL_SCHEMA),

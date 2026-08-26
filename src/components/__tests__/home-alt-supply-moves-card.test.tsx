@@ -6,13 +6,13 @@ import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-c
 import { makeStablecoin as makeStablecoinFixture } from "@shared/test-utils/stablecoin";
 import type { StablecoinData } from "@shared/types";
 
-const { useLogosMock, useStablecoinsMock } = vi.hoisted(() => ({
-  useLogosMock: vi.fn(),
+const { logosByIdMock, useStablecoinsMock } = vi.hoisted(() => ({
+  logosByIdMock: {} as Record<string, string>,
   useStablecoinsMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: useLogosMock,
+vi.mock("@/lib/logos", () => ({
+  logosById: logosByIdMock,
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
@@ -30,6 +30,7 @@ vi.mock("next/image", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  for (const key of Object.keys(logosByIdMock)) delete logosByIdMock[key];
 });
 
 describe("SupplyMovesCard", () => {
@@ -41,8 +42,6 @@ describe("SupplyMovesCard", () => {
       refetch: vi.fn(),
       dataUpdatedAt: 0,
     });
-    useLogosMock.mockReturnValue({ data: {} });
-
     render(<SupplyMovesCard />);
 
     expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
@@ -57,8 +56,6 @@ describe("SupplyMovesCard", () => {
       refetch: vi.fn(),
       dataUpdatedAt: 1,
     });
-    useLogosMock.mockReturnValue({ data: {} });
-
     render(<SupplyMovesCard />);
 
     expect(screen.getByText("No qualifying 7-day supply moves")).toBeTruthy();
@@ -90,7 +87,7 @@ describe("SupplyMovesCard", () => {
       },
       isLoading: false,
     });
-    useLogosMock.mockReturnValue({ data: { "usdr-real": "/logos/usdr.png" } });
+    logosByIdMock["usdr-real"] = "/logos/usdr.png";
 
     render(<SupplyMovesCard />);
 

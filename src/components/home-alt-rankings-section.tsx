@@ -5,7 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 import { useDexLiquidity, usePegSummary, useReportCardsV9, useStressSignals } from "@/hooks/api-hooks";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { useHomeAltFilters } from "@/hooks/use-home-alt-filters";
@@ -70,7 +70,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
   const reportCardsQuery = useReportCardsV9();
   const stressSignalsQuery = useStressSignals();
   const { data: stablecoinsData, isLoading } = stablecoinsQuery;
-  const { data: logos } = useLogos();
+  const logos = logosById;
   const { data: pegSummaryData } = pegSummaryQuery;
   const { data: dexLiquidity } = dexLiquidityQuery;
   const { data: reportCardsData } = reportCardsQuery;

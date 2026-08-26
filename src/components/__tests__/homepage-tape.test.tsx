@@ -17,8 +17,8 @@ vi.mock("@/hooks/use-events", () => ({
   useLatestEvents: () => useLatestEventsMock(),
 }));
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: () => ({ data: {} }),
+vi.mock("@/lib/logos", () => ({
+  logosById: {},
 }));
 
 import { HomepageTape } from "@/components/homepage-tape";

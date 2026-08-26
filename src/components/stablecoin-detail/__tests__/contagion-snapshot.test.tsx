@@ -15,8 +15,8 @@ vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: useStablecoinsMock,
 }));
 
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: () => ({ data: {} }),
+vi.mock("@/lib/logos", () => ({
+  logosById: {},
 }));
 
 // The focused map is exercised in src/components/__tests__/contagion-graph.test.tsx;
