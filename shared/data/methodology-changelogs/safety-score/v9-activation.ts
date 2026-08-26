@@ -11,7 +11,7 @@ export const SAFETY_SCORE_V9_EXIT_CAPACITY_TRUTH: MethodologyChangelogEntry = {
     "A known zero or immaterial redemption route is retained as measured evidence instead of being relabeled unsupported-same-notional-route. Its score remains zero, so the change repairs attribution and explanation rather than granting exit credit.",
     "The public trace preserves executable capacity, modeled-request completion, confidence, and the binding zero-capacity cap for both the primary route and alternatives. Zero completion is displayed as 0% rather than being omitted.",
     "A zero Exit pillar publishes no-viable-exit-path even when an older producer omitted the reason, preventing cards with a numeric zero and F grade from presenting a blank explanation.",
-    "Protocol redemption timing now follows the route's reviewed settlement model. Atomic protocol routes remain eligible for atomic treatment; queued or delayed routes retain the existing discount and horizon rules.",
+    "Protocol redemption timing now follows the route's admissible reviewed settlement model. Favorable terms retain the existing 365-day evidence expiry; conservative corrections remain durable. Atomic protocol routes remain eligible for atomic treatment, while queued or delayed routes retain the existing discount and horizon rules.",
     "On the pre-release production snapshot, nine cards had Exit 0 and four of those paired it with a standalone redemption headline of at least 50. This release removes that semantic contradiction through the paired redemption-backstop v4.39 capacity and settlement correction; it does not infer capacity where none was observed.",
   ],
   commits: [],

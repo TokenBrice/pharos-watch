@@ -47,8 +47,9 @@ export function RedemptionBackstopMethodologySection() {
           modeled request is {request.supplyRatio * 100}% of supply, floored at ${request.floorUsd.toLocaleString()}
           and capped at ${request.capUsd.toLocaleString()}. A measured zero-capacity route, or a positive route below
           both the 1% completion and $100,000 absolute breakpoints, receives a zero headline; missing capacity remains
-          unrated. Reviewed settlement terms are shared with V9, and reserve-sync full-supply eventual capacity requires
-          an explicit dated evidence opt-in. Route-family ceilings, holder eligibility, delay, queue,
+          unrated; the same gate applies to the eventual-redeemability headline. Reviewed settlement terms are shared
+          with V9, favorable corrections retain the 365-day evidence expiry, and reserve-sync full-supply eventual
+          capacity requires an explicit dated evidence opt-in. Route-family ceilings, holder eligibility, delay, queue,
           minimum-redemption, severe-depeg, freshness, and evidence rules can only reduce or withhold the result.
         </p>
         <MethodologyFacts

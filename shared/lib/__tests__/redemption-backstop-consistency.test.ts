@@ -58,13 +58,32 @@ describe("redemption backstop config consistency", () => {
   });
 
   it("uses every reviewed settlement override as the canonical public model", () => {
+    const clockSec = Date.UTC(2026, 7, 26) / 1_000;
     const reviewed = entries.filter(([, config]) => config.v9RouteReviewTerms?.settlementModel != null);
     expect(reviewed.length).toBeGreaterThan(0);
     for (const [id, config] of reviewed) {
-      expect(resolveReviewedRedemptionSettlement(config), id).toBe(
+      expect(resolveReviewedRedemptionSettlement(config, clockSec), id).toBe(
         config.v9RouteReviewTerms?.settlementModel,
       );
     }
+  });
+
+  it("expires a favorable reviewed settlement while retaining conservative corrections", () => {
+    const favorable = RedemptionBackstopConfigSchema.parse(
+      settlementReviewConfig("days", {
+        settlementModel: "atomic",
+        settlementDelaySec: 0,
+        reviewedAt: "2026-08-24",
+        docs: [{ label: "Settlement SLA", url: "https://example.com/settlement" }],
+      }),
+    );
+    expect(resolveReviewedRedemptionSettlement(favorable, Date.UTC(2026, 7, 26) / 1_000)).toBe("atomic");
+    expect(resolveReviewedRedemptionSettlement(favorable, Date.UTC(2027, 7, 26) / 1_000)).toBe("days");
+
+    const conservative = RedemptionBackstopConfigSchema.parse(
+      settlementReviewConfig("same-day", { settlementModel: "queued" }),
+    );
+    expect(resolveReviewedRedemptionSettlement(conservative, Date.UTC(2035, 0, 1) / 1_000)).toBe("queued");
   });
 
   it("requires route-specific evidence before reserve sync can assert full-supply eventual capacity", () => {

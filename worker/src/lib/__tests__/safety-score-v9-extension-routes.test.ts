@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import {
   getRedemptionBackstopConfig,
+  resolveReviewedRedemptionSettlement,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
@@ -440,6 +441,30 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         settlementSlaSec: null,
         settlementHorizonSec: 14 * 86_400,
       });
+    });
+  });
+
+  it("expires a favorable settlement after the producer persisted its current reviewed model", () => {
+    const stablecoinId = "usdy-ondo-finance";
+    const config = getRedemptionBackstopConfig(stablecoinId)!;
+    const currentClock = Date.UTC(2026, 7, 26) / 1_000;
+    const staleClock = Date.UTC(2027, 7, 26) / 1_000;
+    const producerSettlement = resolveReviewedRedemptionSettlement(config, currentClock);
+    const row = supplyFullRow({
+      stablecoinId,
+      settlementModel: producerSettlement,
+      settlementDelaySec: 0,
+    });
+
+    expect(producerSettlement).toBe("atomic");
+    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row, currentClock), stablecoinId)[0]).toMatchObject({
+      settlementModel: "atomic",
+      settlementSlaSec: 0,
+    });
+    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row, staleClock), stablecoinId)[0]).toMatchObject({
+      settlementModel: "bounded-delay",
+      settlementSlaSec: null,
+      settlementHorizonSec: 14 * 86_400,
     });
   });
 

@@ -53,7 +53,7 @@ function resolveStaticFields(
   now = Math.floor(Date.now() / 1000),
   liveMetadata?: RedemptionBackstopLiveMetadata,
 ) {
-  const settlementModel = resolveReviewedRedemptionSettlement(config);
+  const settlementModel = resolveReviewedRedemptionSettlement(config, now);
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
   const settlementScore = REDEMPTION_SETTLEMENT_SCORES[settlementModel];
   const executionCertaintyScore = REDEMPTION_EXECUTION_SCORES[config.executionModel];
@@ -129,7 +129,7 @@ export async function buildRedemptionBackstopEntry(
   });
   const modeledExitSizeUsd = computeModeledExitSizeUsd(supplyUsd);
   const staticFields = resolveStaticFields(stablecoinId, config, reserveSnapshotMetadata, now, liveMetadata);
-  const settlementModel = resolveReviewedRedemptionSettlement(config);
+  const settlementModel = resolveReviewedRedemptionSettlement(config, now);
   const scored = computeRedemptionBackstopScore({
     routeFamily: config.routeFamily,
     accessScore: staticFields.accessScore,
@@ -158,6 +158,8 @@ export async function buildRedemptionBackstopEntry(
           outputAssetQualityScore: staticFields.outputAssetQualityScore,
           costScore: staticFields.costScore,
           totalScoreCap: config.totalScoreCap,
+          executableCapacityUsd: capacity.eventualCapacityUsd,
+          modeledExitSizeUsd,
         }).score;
   let resolutionState: RedemptionBackstopEntry["resolutionState"] =
     scored.score != null
@@ -376,7 +378,7 @@ export function buildFailedRedemptionBackstopEntry(
   now = Math.floor(Date.now() / 1000),
 ): RedemptionBackstopEntry {
   const staticFields = resolveStaticFields(stablecoinId, config);
-  const settlementModel = resolveReviewedRedemptionSettlement(config);
+  const settlementModel = resolveReviewedRedemptionSettlement(config, now);
   const capacityConfidence =
     config.capacityModel.kind === "reserve-sync-metadata"
       ? resolveReserveSyncCapacityConfidence(stablecoinId)

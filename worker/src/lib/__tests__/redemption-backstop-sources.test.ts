@@ -93,6 +93,23 @@ describe("buildRedemptionBackstopEntry", () => {
     });
   });
 
+  it("floors zero eventual supply at a zero eventual redemption score", async () => {
+    const entry = await buildEntry(
+      "test-coin",
+      route({
+        routeFamily: "offchain-issuer",
+        accessModel: "issuer-api",
+        settlementModel: "same-day",
+        executionModel: "rules-based-nav",
+      }),
+      0,
+      null,
+    );
+
+    expect(entry.eventualRedeemabilityScore).toBe(0);
+    expect(entry.capacityProfile?.eventualUsd).toBe(0);
+  });
+
   it("returns missing-cache when supply is null for supply-full model", async () => {
     const entry = await buildEntry("test-coin", route(), null, 50);
 

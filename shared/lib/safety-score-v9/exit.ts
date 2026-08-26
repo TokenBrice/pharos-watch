@@ -559,6 +559,7 @@ function evaluateRoute(
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
   preExitDangerHeld: boolean,
+  portfolioReviewed: boolean,
 ): V9ExitRouteTrace {
   const horizon = routeCapacityHorizon(route, request);
   const attribution = {
@@ -625,6 +626,29 @@ function evaluateRoute(
   const { capacityPoint, valuedExecutableUsd } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
+  // A discounted, score-ineligible redemption can turn zero capacity into a
+  // measured adverse fact only when the route inventory itself is reviewed
+  // complete. If the surrounding surface is still incomplete, preserve the
+  // bounded-unknown outcome rather than manufacturing a measured F from one
+  // weak route observation.
+  if (
+    !route.scoreEligible &&
+    isCreditableNonAtomicRedemption(route, envelope) &&
+    !portfolioReviewed &&
+    !hasMaterialExecutableCapacity(completionRatio, valuedExecutableUsd, policy)
+  ) {
+    return {
+      routeKey: route.routeKey,
+      ...attribution,
+      score: null,
+      included: false,
+      exclusionReason: "unsupported-same-notional-route",
+      capacityPoint: null,
+      components: null,
+      confidenceFactor: null,
+      capsApplied: [],
+    };
+  }
   // Once a route has passed the evidence and comparability gates, measured
   // zero or immaterial capacity is an adverse observation, not unsupported
   // methodology. Keep it included so the trace retains its capacity point,
@@ -931,7 +955,14 @@ export function evaluateV9Exit(
     };
   }
   const routes = [...args.routes].sort((left, right) => compareText(left.routeKey, right.routeKey));
-  const traces = routes.map((route) => evaluateRoute(route, stressRequest, envelope, args.preExitDangerHeld ?? false));
+  const traces = routes.map((route) =>
+    evaluateRoute(
+      route,
+      stressRequest,
+      envelope,
+      args.preExitDangerHeld ?? false,
+      args.portfolioStatus !== "incomplete",
+    ));
   const evaluated = traces
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
     .sort((left, right) => right.score - left.score || compareText(left.route.routeKey, right.route.routeKey));

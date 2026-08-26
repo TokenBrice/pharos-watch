@@ -63,7 +63,7 @@ export type V9ScoreBearingGatesPolicy = z.infer<typeof V9ScoreBearingGatesPolicy
  * renaming, or changing a score-bearing gate rotates the digest.
  */
 export const V9_SCORE_BEARING_GATES_POLICY_V923 = V9ScoreBearingGatesPolicySchema.parse({
-  methodologyVersion: "9.43",
+  methodologyVersion: "9.44",
   withhold: {
     maxScoreExclusive: 55,
     minimumLimitedPillarCount: 2,

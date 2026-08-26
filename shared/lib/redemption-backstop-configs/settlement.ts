@@ -1,4 +1,5 @@
 import type { RedemptionSettlementModel } from "../../types";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../safety-score-v9/evidence";
 import type { RedemptionBackstopConfig } from "./schema";
 
 const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
@@ -41,6 +42,22 @@ export function resolveMoreConservativeRedemptionSettlement(
  */
 export function resolveReviewedRedemptionSettlement(
   config: Pick<RedemptionBackstopConfig, "settlementModel" | "v9RouteReviewTerms">,
+  clockSec = Math.floor(Date.now() / 1_000),
 ): RedemptionSettlementModel {
-  return config.v9RouteReviewTerms?.settlementModel ?? config.settlementModel;
+  const reviewed = config.v9RouteReviewTerms;
+  const reviewedModel = reviewed?.settlementModel;
+  if (reviewed === undefined || reviewedModel === undefined) return config.settlementModel;
+  if (!isRedemptionSettlementFaster(reviewedModel, config.settlementModel)) {
+    return reviewedModel;
+  }
+  const reviewedAtSec = reviewed.reviewedAt
+    ? Date.parse(`${reviewed.reviewedAt}T00:00:00.000Z`) / 1_000
+    : Number.NaN;
+  const current =
+    reviewed.settlementDelaySec !== undefined &&
+    (reviewed.docs?.length ?? 0) > 0 &&
+    Number.isFinite(reviewedAtSec) &&
+    reviewedAtSec <= clockSec &&
+    clockSec - reviewedAtSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC;
+  return current ? reviewedModel : config.settlementModel;
 }

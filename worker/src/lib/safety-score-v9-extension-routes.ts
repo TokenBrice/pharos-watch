@@ -484,18 +484,25 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number)
   overridesCapturedSettlementHorizon: boolean;
   minRedeemUsd: number | null;
 } {
-  const reviewed = getRedemptionBackstopConfig(entry.stablecoinId)?.v9RouteReviewTerms;
+  const config = getRedemptionBackstopConfig(entry.stablecoinId);
+  const reviewed = config?.v9RouteReviewTerms;
+  const capturedBaseSettlementModel = reviewed?.settlementModel !== undefined
+    ? config?.settlementModel ?? entry.settlementModel
+    : entry.settlementModel;
+  const capturedBaseSettlementDelaySec = entry.settlementModel === capturedBaseSettlementModel
+    ? entry.settlementDelaySec
+    : undefined;
   const reviewedSettlementDelaySec = reviewed?.settlementDelaySec;
   const reviewedSettlementModel = reviewed?.settlementModel ?? entry.settlementModel;
   const capturedSettlementHorizonSec = Math.max(
-    REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[entry.settlementModel],
-    entry.settlementDelaySec ?? 0,
+    REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[capturedBaseSettlementModel],
+    capturedBaseSettlementDelaySec ?? 0,
   );
   // A numeric SLA can improve the score even when the coarse model label is
   // unchanged, so direction is checked against both the model and the exact
   // captured horizon.
   const reviewedSettlementIsFaster =
-    isRedemptionSettlementFaster(reviewedSettlementModel, entry.settlementModel) ||
+    isRedemptionSettlementFaster(reviewedSettlementModel, capturedBaseSettlementModel) ||
     (reviewedSettlementDelaySec !== undefined &&
       reviewedSettlementDelaySec < capturedSettlementHorizonSec);
   const reviewedAtSec = reviewed?.reviewedAt
@@ -518,8 +525,8 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number)
     ? admitsReviewedFasterSettlement
       ? reviewedSettlementModel
       : reviewed?.settlementModel
-        ? resolveMoreConservativeRedemptionSettlement(entry.settlementModel, reviewed.settlementModel)
-        : entry.settlementModel
+        ? resolveMoreConservativeRedemptionSettlement(capturedBaseSettlementModel, reviewed.settlementModel)
+        : capturedBaseSettlementModel
     : reviewedSettlementModel;
   // An expired or uncited faster SLA must not survive here: the reviewed model
   // can equal the captured model (e.g. `days` 14d -> a cited `days` 2d), so
@@ -531,9 +538,11 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number)
         settlementModel === reviewedSettlementModel &&
         reviewedSettlementDelaySec !== undefined
       ? reviewedSettlementDelaySec
-      : settlementModel === entry.settlementModel
-        ? entry.settlementDelaySec
-        : undefined;
+      : settlementModel === capturedBaseSettlementModel
+        ? capturedBaseSettlementDelaySec
+        : settlementModel === entry.settlementModel
+          ? entry.settlementDelaySec
+          : undefined;
   const minimums = [entry.minRedeemUsd, reviewed?.minRedeemUsd].filter(
     (value): value is number => value != null,
   );

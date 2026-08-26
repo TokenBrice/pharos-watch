@@ -11,7 +11,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.39` update: a redemption headline now scores zero when its measured executable capacity is zero or below both material-capacity breakpoints, while missing capacity remains unrated. Reviewed settlement terms are canonical across the standalone row and V9, and reserve-sync routes assert full-supply eventual capacity only through an explicit reviewed opt-in. This removes positive headlines built from access, settlement, output, and cost when the route cannot execute a material redemption.
+Latest `v4.39` update: a redemption headline now scores zero when its measured executable capacity is zero or below both material-capacity breakpoints, while missing capacity remains unrated; the same gate applies to the eventual-redeemability headline. Reviewed settlement terms are canonical across the standalone row and V9, with favorable corrections subject to the 365-day evidence window, and reserve-sync routes assert full-supply eventual capacity only through an explicit reviewed opt-in. This removes positive headlines built from access, settlement, output, and cost when the route cannot execute a material redemption.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
@@ -116,7 +116,7 @@ Each configured coin declares:
 - optional `unresolvedOutputAssetKeys` and `unresolvedOutputDisposition`
 - optional `docs` and `reviewedAt`
 - optional `notes`
-- optional reviewed overlays `v9RouteCostTerms`, `v9RouteReviewTerms`, and `v9ComposedDexExit`. A `v9RouteReviewTerms.settlementModel` is the canonical reviewed settlement fact for both the standalone producer and V9; the remaining V9 projections stay consumer-specific.
+- optional reviewed overlays `v9RouteCostTerms`, `v9RouteReviewTerms`, and `v9ComposedDexExit`. A `v9RouteReviewTerms.settlementModel` is the canonical reviewed settlement fact for both the standalone producer and V9: conservative corrections remain admissible, while a favorable correction requires its cited review to remain inside the 365-day evidence window. The remaining V9 projections stay consumer-specific.
 
 The public registry import lives in `shared/lib/redemption-backstops.ts`. The actual config inventory is split by route family under `shared/lib/redemption-backstop-configs/` to keep review and change scopes small.
 
