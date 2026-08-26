@@ -372,7 +372,7 @@ describe("stablecoin V9 safety presentation", () => {
         score: 77,
         included: true,
         redundancyCredit: null,
-        detail: "$24,580,000 of $25,000,000 executable · confidence 0.75x",
+        detail: "$24,580,000 of $25,000,000 executable · route confidence 0.75x",
       }],
     });
     // Exit keeps one unlabelled group in producer order.
@@ -409,6 +409,122 @@ describe("stablecoin V9 safety presentation", () => {
     expect(presentation.pillars[2].breakdown?.groups[0].rows[0]).toMatchObject({
       label: "Mint authority",
     });
+  });
+
+  it("keeps measured zero capacity, confidence, and its binding cap visible", () => {
+    const card = makeV9Card({
+      pillars: makeV9Pillars({ backing: 88, exit: 0, control: 86 }),
+    });
+    card.breakdowns = {
+      ...breakdownsFixture(),
+      exit: {
+        evaluatedScore: 0,
+        publishedScore: 0,
+        aggregationWeight: 0.35,
+        stressRequest: {
+          requestedNotionalUsd: 1_000_000,
+          maxCostBps: 200,
+          comparisonWindowSec: 300,
+        },
+        primaryRoute: {
+          key: "redemption:earn-queued",
+          label: "Queued USDC redemption",
+          routeFamily: "protocol-redemption",
+          score: 0,
+          components: [
+            { key: "access", label: "Access", score: 100, weight: 0.2, weightedContribution: 20 },
+            { key: "settlement", label: "Settlement", score: 100, weight: 0.15, weightedContribution: 15 },
+            { key: "executionCertainty", label: "Execution certainty", score: 60, weight: 0.15, weightedContribution: 9 },
+            { key: "capacity", label: "Capacity", score: 0, weight: 0.25, weightedContribution: 0 },
+            { key: "outputAssetQuality", label: "Output asset quality", score: 100, weight: 0.15, weightedContribution: 15 },
+            { key: "cost", label: "Cost", score: 100, weight: 0.1, weightedContribution: 10 },
+          ],
+          confidenceFactor: 1,
+          eligibilityMultiplier: 1,
+          capsApplied: ["zero-executable-capacity"],
+          capacity: {
+            executableUsd: 0,
+            requestedNotionalUsd: 1_000_000,
+            completionRatio: 0,
+            maxCostBps: 200,
+            executionCostBps: 5,
+            settlementDelaySec: 2_592_000,
+            capacityScoringHorizon: "queued",
+            chain: "ethereum",
+            protocol: "eEARN",
+            poolId: null,
+            evidenceKind: "onchain-redeemable-liquidity",
+            observedAtSec: 1_752_537_600,
+          },
+        },
+        diversification: null,
+        alternatives: [],
+        adjustments: [],
+      },
+    };
+
+    const presentation = buildStablecoinSafetyScoreV9Presentation(
+      SafetyScoreV9CurrentCardSchema.parse(card),
+    );
+    const exit = presentation.pillars[1];
+
+    expect(exit.breakdown?.context).toEqual(expect.arrayContaining([
+      {
+        key: "confidence",
+        label: "Confidence",
+        value: "1x",
+      },
+      {
+        key: "selected-route-capacity",
+        label: "Selected route capacity",
+        value: "$0 of $1,000,000 executable on selected eEARN route",
+      },
+      {
+        key: "cap-0",
+        label: "Applied cap",
+        value: "Zero executable capacity",
+      },
+    ]));
+    expect(exit.breakdown?.exitHighlight).toMatchObject({
+      primaryRouteLabel: "Queued USDC redemption",
+      primaryRouteScore: 0,
+      capacityLine: "0% of $1.0m executable within 30d · 5 bps",
+    });
+    expect(exit.reasons).toEqual([
+      "The selected Queued USDC redemption route had zero executable capacity for the $1,000,000 stress request.",
+    ]);
+    expect(JSON.stringify(exit)).not.toContain("no confidence");
+  });
+
+  it("gives an unexplained zero Exit score a concrete presentation reason", () => {
+    const card = makeV9Card({
+      pillars: makeV9Pillars({ backing: 88, exit: 0, control: 86 }),
+    });
+    card.breakdowns = {
+      ...breakdownsFixture(),
+      exit: {
+        evaluatedScore: 0,
+        publishedScore: 0,
+        aggregationWeight: 0.35,
+        stressRequest: {
+          requestedNotionalUsd: 1_000_000,
+          maxCostBps: 200,
+          comparisonWindowSec: 300,
+        },
+        primaryRoute: null,
+        diversification: null,
+        alternatives: [],
+        adjustments: [],
+      },
+    };
+
+    const exit = buildStablecoinSafetyScoreV9Presentation(
+      SafetyScoreV9CurrentCardSchema.parse(card),
+    ).pillars[1];
+
+    expect(exit.reasons).toEqual([
+      "No evaluated route qualified as an executable exit for the published stress request.",
+    ]);
   });
 
   it("rolls loose bridges into one composite carrying the cohort's worst score", () => {

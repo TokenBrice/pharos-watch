@@ -329,8 +329,84 @@ function fullUsd(value: number): string {
 
 function completionLabel(ratio: number): string {
   const percent = ratio * 100;
+  if (percent === 0) return "0%";
   if (percent > 0 && percent < 1) return "<1%";
   return `${percent.toFixed(percent < 10 ? 1 : 0)}%`;
+}
+
+function excludedRouteReason(
+  alternative: SafetyScoreV9ExitBreakdown["alternatives"][number],
+): string | null {
+  if (alternative.exclusionReason === null) return null;
+  if (alternative.capacity === null || alternative.capacity === undefined) {
+    return humanizeSafetyScoreV9Value(alternative.exclusionReason);
+  }
+  if (alternative.capacity.executableUsd === 0) {
+    return "Measured zero executable capacity for the stress request";
+  }
+  if (alternative.exclusionReason === "unsupported-same-notional-route") {
+    return "Measured capacity did not qualify as a same-notional exit route";
+  }
+  return humanizeSafetyScoreV9Value(alternative.exclusionReason);
+}
+
+function alternativeRouteDetail(
+  alternative: SafetyScoreV9ExitBreakdown["alternatives"][number],
+): string | null {
+  const isRedemption =
+    alternative.routeFamily === "issuer-redemption" ||
+    alternative.routeFamily === "eventual-redemption";
+  const redemptionHorizon = !isRedemption
+    ? null
+    : alternative.capacityScoringHorizon === "eventual"
+      ? "eventual redemption horizon"
+      : alternative.settlementDelaySec === undefined
+        ? "24h/eventual redemption horizon"
+        : `${formatWholeUnitDurationSeconds(alternative.settlementDelaySec, { minUnit: "minute" })} redemption horizon`;
+  const parts: string[] = [];
+  if (alternative.capacity) {
+    parts.push(
+      `${fullUsd(alternative.capacity.executableUsd)} of ${fullUsd(alternative.capacity.requestedNotionalUsd)} executable`,
+    );
+  }
+  if (redemptionHorizon) parts.push(redemptionHorizon);
+  // A complete-confidence observation is still evidence. Show it for excluded
+  // routes instead of silently dropping the factor and making a measured zero
+  // look like an unobserved route.
+  if (
+    alternative.confidenceFactor != null &&
+    (!alternative.included || Math.abs(alternative.confidenceFactor - 1) >= 0.005)
+  ) {
+    parts.push(`route confidence ${multiplierLabel(alternative.confidenceFactor)}x`);
+  }
+  const reason = excludedRouteReason(alternative);
+  if (reason) parts.push(reason);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+function exitReasonFallback(
+  score: number | null,
+  breakdown: SafetyScoreV9ExitBreakdown,
+): string | null {
+  if (score !== 0) return null;
+  const primary = breakdown.primaryRoute;
+  if (primary?.capsApplied.includes("zero-executable-capacity")) {
+    return primary.capacity
+      ? `The selected ${primary.label} route had zero executable capacity for the ${fullUsd(primary.capacity.requestedNotionalUsd)} stress request.`
+      : `The selected ${primary.label} route had zero executable capacity.`;
+  }
+  if (primary?.capsApplied.includes("immaterial-executable-capacity")) {
+    return primary.capacity
+      ? `The selected ${primary.label} route cleared only ${fullUsd(primary.capacity.executableUsd)} of the ${fullUsd(primary.capacity.requestedNotionalUsd)} stress request, below the material-capacity floor.`
+      : `The selected ${primary.label} route remained below the material-capacity floor.`;
+  }
+  const measured = breakdown.alternatives.find((route) => route.capacity != null);
+  if (measured?.capacity?.executableUsd === 0) {
+    return `The reviewed ${measured.label} route had zero executable capacity for the ${fullUsd(measured.capacity.requestedNotionalUsd)} stress request and did not qualify as a viable Exit route.`;
+  }
+  return breakdown.primaryRoute === null
+    ? "No evaluated route qualified as an executable exit for the published stress request."
+    : null;
 }
 
 function parseExitBreakdown(
@@ -340,7 +416,38 @@ function parseExitBreakdown(
   const context: StablecoinSafetyScoreV9BreakdownMeta[] = primaryRoute === null
     ? [{ key: "primary-route", label: "Primary route", value: "No eligible route" }]
     : [];
-  if (primaryRoute !== null && Math.abs(primaryRoute.confidenceFactor - 1) >= 0.005) {
+  const bestObservedAlternative = primaryRoute === null
+    ? breakdown.alternatives.find((route) => route.capacity != null)
+    : undefined;
+  if (bestObservedAlternative?.capacity) {
+    context.push({
+      key: "observed-route-capacity",
+      label: `Observed capacity — ${bestObservedAlternative.label}`,
+      value: `${fullUsd(bestObservedAlternative.capacity.executableUsd)} of ${fullUsd(bestObservedAlternative.capacity.requestedNotionalUsd)} executable`,
+    });
+    if (bestObservedAlternative.confidenceFactor != null) {
+      context.push({
+        key: "observed-route-confidence",
+        label: "Route confidence factor",
+        value: `${multiplierLabel(bestObservedAlternative.confidenceFactor)}x`,
+      });
+    }
+    const exclusion = excludedRouteReason(bestObservedAlternative);
+    if (exclusion) {
+      context.push({
+        key: "observed-route-exclusion",
+        label: "Why not selected",
+        value: exclusion,
+      });
+    }
+  }
+  const capacityFloorApplied = primaryRoute?.capsApplied.some(
+    (cap) => cap === "zero-executable-capacity" || cap === "immaterial-executable-capacity",
+  ) ?? false;
+  if (
+    primaryRoute !== null &&
+    (capacityFloorApplied || Math.abs(primaryRoute.confidenceFactor - 1) >= 0.005)
+  ) {
     context.push({
       key: "confidence",
       label: "Confidence",
@@ -445,21 +552,6 @@ function parseExitBreakdown(
       tail: null,
     }],
     alternatives: breakdown.alternatives.map((alternative) => {
-      const confidence =
-        alternative.confidenceFactor != null &&
-        Math.abs(alternative.confidenceFactor - 1) >= 0.005
-          ? ` · confidence ${multiplierLabel(alternative.confidenceFactor)}x`
-          : "";
-      const isRedemption =
-        alternative.routeFamily === "issuer-redemption" ||
-        alternative.routeFamily === "eventual-redemption";
-      const redemptionHorizon = !isRedemption
-        ? ""
-        : alternative.capacityScoringHorizon === "eventual"
-          ? "eventual redemption horizon"
-          : alternative.settlementDelaySec === undefined
-            ? "24h/eventual redemption horizon"
-            : `${formatWholeUnitDurationSeconds(alternative.settlementDelaySec, { minUnit: "minute" })} redemption horizon`;
       return {
         key: alternative.key,
         label: alternative.label,
@@ -469,15 +561,7 @@ function parseExitBreakdown(
           breakdown.diversification?.routeKey === alternative.key
             ? breakdown.diversification.bonus
             : null,
-        detail: alternative.exclusionReason === null
-          ? alternative.capacity
-            ? `${fullUsd(alternative.capacity.executableUsd)} of ${fullUsd(alternative.capacity.requestedNotionalUsd)} executable${
-                redemptionHorizon ? ` · ${redemptionHorizon}` : ""
-              }${confidence}`
-            : isRedemption
-            ? `${redemptionHorizon}${confidence}`
-            : confidence.slice(3) || null
-          : humanizeSafetyScoreV9Value(alternative.exclusionReason),
+        detail: alternativeRouteDetail(alternative),
       };
     }),
   };
@@ -755,7 +839,14 @@ export function buildStablecoinSafetyScoreV9Presentation(
         componentCount: pillar.components.length,
         components: describeSafetyScoreV9Components(pillar.components),
         breakdown: pillarBreakdown(card, key),
-        reasons: uniqueMessages(pillar.reasons.map((reason) => reason.message)),
+        reasons: (() => {
+          const producerReasons = uniqueMessages(pillar.reasons.map((reason) => reason.message));
+          if (producerReasons.length > 0 || key !== "exit" || card.breakdowns === null) {
+            return producerReasons;
+          }
+          const fallback = exitReasonFallback(pillar.score, card.breakdowns.exit);
+          return fallback === null ? [] : [fallback];
+        })(),
         isWeakest: card.weakestPillar?.pillar === key,
       };
     }),
