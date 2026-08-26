@@ -409,6 +409,50 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     });
   });
 
+  it("treats an unproven settlement bound as unestablished capacity", async () => {
+    const result = await resolveRedemptionCapacity(
+      {} as D1Database,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata" },
+      1_000_000,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 0,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "same-run-onchain",
+            settlementBoundUnproven: true,
+            settlementDelaySec: 2_592_000,
+            routeStatus: "open",
+            routeStatusSource: "onchain",
+          },
+        }),
+      },
+    );
+
+    expect(result).toMatchObject({
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      scoringCapacityUsd: null,
+      scoringCapacityRatio: null,
+      resolutionState: "missing-capacity",
+      settlementBoundUnproven: true,
+      capacityProfile: {
+        immediateUsd: null,
+        scoringUsd: null,
+        scoringHorizon: "unknown",
+        settlementBoundUnproven: true,
+      },
+      settlementDelaySec: 2_592_000,
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+    });
+    expect(result.eventualCapacityUsd).toBeUndefined();
+    expect(result.eventualCapacityRatio).toBeUndefined();
+  });
+
   it("publishes full-supply eventual capacity only when the route config explicitly authorizes it", async () => {
     const result = await resolveRedemptionCapacity(
       {} as D1Database,

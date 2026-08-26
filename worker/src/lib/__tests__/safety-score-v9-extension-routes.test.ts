@@ -573,7 +573,8 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
           scope: { kind: "protocol", protocol: "eearn-ember", chain: "ethereum" },
           output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
           settlementHorizonSec: 300,
-          scoreEligible: true,
+          settlementBoundUnproven: true,
+          scoreEligible: false,
         },
       ],
     };
@@ -586,6 +587,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       settlementHorizonSec: 30 * 86_400,
       coverageClass: "exact-lower-bound",
     });
+    expect(row.capacityProfile?.exitRouteObservations?.[0]?.settlementBoundUnproven).toBe(true);
   });
 
   it("values a resolved stable-basket output at the weakest component's price", () => {

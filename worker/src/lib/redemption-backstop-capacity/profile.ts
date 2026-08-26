@@ -16,6 +16,7 @@ export interface CapacityResolution {
   eventualCapacityUsd?: number | null;
   eventualCapacityRatio?: number | null;
   capacityProfile?: RedemptionCapacityProfile;
+  settlementBoundUnproven?: true;
   capacityScoreMode?: "interpolated" | "tier-floor";
   provider: RedemptionBackstopProviderId;
   sourceMode: RedemptionBackstopEntry["sourceMode"];

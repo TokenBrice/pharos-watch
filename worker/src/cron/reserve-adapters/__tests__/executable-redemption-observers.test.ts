@@ -107,7 +107,11 @@ function storageWord(address: string): Hex {
   return `0x${address.slice(2).padStart(64, "0")}`;
 }
 
-function earnResults(calls: readonly EvmMulticall3Call[]): EvmMulticall3Result[] {
+interface EarnOverrides {
+  withdrawalsPaused?: boolean;
+}
+
+function earnResults(calls: readonly EvmMulticall3Call[], overrides: EarnOverrides = {}): EvmMulticall3Result[] {
   const values: Record<string, Hex> = {
     "earn-asset": encodeFunctionResult({ abi: ERC4626_ABI, functionName: "asset", result: USDC }),
     "earn-total-assets": encodeFunctionResult({
@@ -128,7 +132,7 @@ function earnResults(calls: readonly EvmMulticall3Call[]): EvmMulticall3Result[]
     "earn-pause-status": encodeFunctionResult({
       abi: EARN_VAULT_ABI,
       functionName: "pauseStatus",
-      result: [false, false, false],
+      result: [false, overrides.withdrawalsPaused ?? false, false],
     }),
     "earn-pending-withdrawals": encodeFunctionResult({
       abi: EARN_VAULT_ABI,
@@ -308,6 +312,7 @@ function client(
   options: {
     driftAddress?: string;
     dStakeOverrides?: DStakeOverrides;
+    earnOverrides?: EarnOverrides;
   } = {},
 ): ExecutableRedemptionReadClient {
   return {
@@ -324,7 +329,7 @@ function client(
     }),
     multicall: vi.fn().mockImplementation(async (calls: readonly EvmMulticall3Call[]) =>
       coin === "earn"
-        ? earnResults(calls)
+        ? earnResults(calls, options.earnOverrides)
         : dStakeResults(calls, options.dStakeOverrides),
     ),
   };
@@ -371,6 +376,7 @@ describe("specialized executable redemption observers", () => {
     expect(observation).toMatchObject({
       capacityRaw: 0n,
       capacitySource: "eearn-operator-batched-no-immediate-capacity",
+      settlementBoundUnproven: true,
       routeStatus: "open",
       feeBps: 0,
       blockNumber: BLOCK,
@@ -381,6 +387,21 @@ describe("specialized executable redemption observers", () => {
         minWithdrawableSharesRaw: "100000",
       },
     });
+  });
+
+  it("withholds the unproven-settlement-bound marker when eEARN withdrawals are paused", async () => {
+    const observation = await observeExecutableRedemptionRoute(
+      "eearn-ember",
+      EARN_VAULT,
+      new AbortController().signal,
+      undefined,
+      { client: client("earn", { earnOverrides: { withdrawalsPaused: true } }), nowSec: NOW },
+    );
+
+    // A paused queue is a measured pause, not an evidence gap: the zero stays
+    // a measured zero and V9 keeps the no-viable-exit-path treatment.
+    expect(observation).toMatchObject({ capacityRaw: 0n, routeStatus: "paused" });
+    expect(observation).not.toHaveProperty("settlementBoundUnproven");
   });
 
   it("fails eEARN closed on pinned implementation-code drift", async () => {

@@ -101,8 +101,11 @@ describe("Safety Score v9 methodology policy", () => {
     // 2026-08-24 chain-maturity adjudication: matureChains is derived from the
     // dated five-gate registry and adds cardano, conflux, gnosis, hedera,
     // klaytn (Kaia), rootstock, and sui. The digest rotates with that set.
+    // 9.45 (2026-08-26): the reason registry gains `unproven-settlement-bound`
+    // (bounded exit evidence gap under the exit-unverified ceiling), rotating
+    // the digest with the added registry entry.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "12d6cb2a76f491612a19cff45f7a7280512f1a6aec1a3aecf5eb64399694e6ac",
+      "fa4af0387d3be293f6d6f3882900f0b5a567ed80bd4afa0a7e80563e8a11b455",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,

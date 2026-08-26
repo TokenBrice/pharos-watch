@@ -70,6 +70,23 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     });
   });
 
+  it("carries an unproven settlement bound from the queued observation into the route fact", () => {
+    const fixed = queuedRedemptionFixedInput();
+    fixed.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!.settlementBoundUnproven = true;
+    fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    const redemption = compiled.assets[0]!.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(redemption).toMatchObject({
+      settlementBoundUnproven: true,
+      scoreEligible: false,
+      settlementModel: "queued",
+    });
+  });
+
   it("withdraws producer eligibility when the v9 review has an unbounded settlement queue", () => {
     const fixed = queuedRedemptionFixedInput(300, true);
     const reviewed = structuredClone(extension());

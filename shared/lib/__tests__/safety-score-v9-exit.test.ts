@@ -14,6 +14,7 @@ function route(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluation
     lane: "redemption",
     routeFamily: "issuer-redemption",
     applicability: "required",
+    settlementBoundUnproven: false,
     observationState: "known",
     scoreEligible: true,
     coverageClass: "exact-complete",
@@ -216,7 +217,49 @@ describe("evaluateV9Exit", () => {
     expect(result.horizons.queued.primaryRouteKey).toBe("redemption:30-day-queue");
   });
 
-  it("retains an eEARN-like zero-capacity queued live-reserve route as the selected adverse trace", () => {
+  it("treats an eEARN-like route with an unproven settlement bound as a bounded gap", () => {
+    const zeroQueue = route({
+      routeKey: "redemption:eearn-operator-queue",
+      routeFamily: "protocol-redemption",
+      scoreEligible: false,
+      settlementBoundUnproven: true,
+      evidenceKind: "live-reserve-state",
+      access: "whitelisted-onchain",
+      holderEligibility: "issuer-discretionary",
+      settlement: "queued",
+      queueDepthUsd: 3_104.889979,
+      execution: "opaque",
+      capacityScoringHorizon: "queued",
+      routeScoreCap: "queue-redeem",
+      capacityCurve: [
+        { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: 0 },
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: 0 },
+      ],
+    });
+
+    const result = evaluateV9Exit(
+      { circulatingUsd: 5_800_000, portfolioStatus: "reviewed-complete", routes: [zeroQueue] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.horizons.queued).toEqual({ primaryRouteKey: null, score: null });
+    expect(result.reasons).toContain("unproven-settlement-bound");
+    expect(result.reasons).not.toContain("no-viable-exit-path");
+    expect(result.routes[0]).toMatchObject({
+      included: false,
+      exclusionReason: "unproven-settlement-bound",
+      score: null,
+      observationConfidence: "high",
+      modelConfidence: "high",
+      confidenceFactor: null,
+      capacityPoint: null,
+      components: null,
+    });
+  });
+
+  it("keeps a measured-zero queued route on the v9.44 no-viable-exit path", () => {
     const zeroQueue = route({
       routeKey: "redemption:eearn-operator-queue",
       routeFamily: "protocol-redemption",

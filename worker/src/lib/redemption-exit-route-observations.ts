@@ -42,6 +42,7 @@ interface BuildRedemptionExitRouteObservationInput {
   freshnessKind?: RedemptionLiveFreshnessKind;
   sourceTimestamp?: number;
   settlementDelaySec?: number;
+  settlementBoundUnproven?: true;
   resolvedFeeBps: number | null;
   outputValuation?: LiveReserveRedemptionOutputValuation | null;
   now: number;
@@ -211,9 +212,9 @@ export function buildRedemptionExitRouteObservation(
     modeledExitSizeUsd == null ||
     !Number.isFinite(modeledExitSizeUsd) ||
     modeledExitSizeUsd <= 0 ||
-    input.scoringCapacityUsd == null ||
-    !Number.isFinite(input.scoringCapacityUsd) ||
-    input.scoringCapacityUsd < 0
+    (input.scoringCapacityUsd == null && !input.settlementBoundUnproven) ||
+    (input.scoringCapacityUsd != null &&
+      (!Number.isFinite(input.scoringCapacityUsd) || input.scoringCapacityUsd < 0))
   ) {
     return null;
   }
@@ -246,6 +247,7 @@ export function buildRedemptionExitRouteObservation(
     evidence.supportsScoring &&
     input.config.costModel.kind === "dynamic-or-unclear";
   const scoreEligible =
+    !input.settlementBoundUnproven &&
     input.resolutionState === "resolved" &&
     input.routeStatus === "open" &&
     routeIsImmediate &&
@@ -257,17 +259,26 @@ export function buildRedemptionExitRouteObservation(
   const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
     .filter((request) => request <= Math.max(modeledExitSizeUsd, maxCurveRequest))
     .sort((left, right) => left - right);
-  const capacityCurve = requests.map((request) => {
-    const costBps = resolveCostBps(input.config, input.resolvedFeeBps, request);
-    return buildExitRouteCapacityPoint({
-      requestedNotionalUsd: request,
-      maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
-      capacityUsd: input.scoringCapacityUsd!,
-      admitted: (costBps != null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps)
-        || boundedUnknownFee,
-    }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null });
-  });
-  const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
+  const scoringCapacityUsd = input.scoringCapacityUsd;
+  const capacityCurve =
+    scoringCapacityUsd == null
+      ? undefined
+      : requests.map((request) => {
+          const costBps = resolveCostBps(input.config, input.resolvedFeeBps, request);
+          return buildExitRouteCapacityPoint({
+            requestedNotionalUsd: request,
+            maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
+            capacityUsd: scoringCapacityUsd,
+            admitted: (costBps != null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps)
+              || boundedUnknownFee,
+          }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null });
+        });
+  const point = capacityCurve?.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd) ?? {
+    requestedNotionalUsd: modeledExitSizeUsd,
+    maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
+    executableUsd: 0,
+    completionRatio: 0,
+  };
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.stablecoinId, input.config.routeFamily);
   const settlementHorizonSec = Math.max(
     REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[input.config.settlementModel],
@@ -279,6 +290,7 @@ export function buildRedemptionExitRouteObservation(
     routeFamily: input.config.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
     scope,
     ...point,
+    ...(input.settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
     settlementHorizonSec,
     output: resolveOutput(input.stablecoinId, input.config, outputValuation),
     evidenceKind: evidence.evidenceKind,
@@ -297,7 +309,7 @@ export function buildRedemptionExitRouteObservation(
     observedAt: evidence.observedAt,
     freshnessSeconds: Math.max(0, (floorTimestampSec(input.now) ?? 0) - evidence.observedAt),
     commonModeKeys,
-    capacityCurve,
+    ...(capacityCurve ? { capacityCurve } : {}),
   };
 }
 

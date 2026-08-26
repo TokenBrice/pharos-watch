@@ -183,6 +183,11 @@ const ExitRouteObservationBaseSchema = z.object({
   scope: ExitRouteScopeSchema,
   requestedNotionalUsd: z.number().finite().positive(),
   settlementHorizonSec: z.number().int().positive(),
+  /**
+   * Open route whose settlement completion bound is unproven; capacity is a
+   * bounded evidence gap, not a measurement.
+   */
+  settlementBoundUnproven: z.literal(true).optional(),
   maxCostBps: z.number().finite().nonnegative(),
   executableUsd: z.number().finite().nonnegative(),
   completionRatio: z.number().finite().min(0).max(1),

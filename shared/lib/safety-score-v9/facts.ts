@@ -171,6 +171,7 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "missing-reserve-composition": "issuer-undisclosed",
   "missing-runtime-route-evidence": "producer-failed",
   "missing-same-notional-route": "producer-failed",
+  "unproven-settlement-bound": "producer-failed",
   "missing-upgrade-control": "issuer-undisclosed",
   "missing-upgradeability-review": "integration-missing",
   "nonmaterial-bridge-supply-unmatched": "producer-failed",

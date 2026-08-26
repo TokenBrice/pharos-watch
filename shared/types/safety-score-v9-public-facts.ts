@@ -61,6 +61,7 @@ export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
   "missing-reserve-composition",
   "missing-runtime-route-evidence",
   "missing-same-notional-route",
+  "unproven-settlement-bound",
   "missing-upgrade-control",
   "missing-upgradeability-review",
   "partial-reserve-review",

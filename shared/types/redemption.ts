@@ -196,6 +196,7 @@ export const RedemptionCapacityProfileSchema = z.object({
   queuedUsd: NonNegativeNumberSchema.nullable().optional(),
   eventualUsd: NonNegativeNumberSchema.nullable().optional(),
   scoringUsd: NonNegativeNumberSchema.nullable().optional(),
+  settlementBoundUnproven: z.literal(true).optional(),
   scoringHorizon: RedemptionCapacityScoringHorizonSchema,
   capacityProfileConfidence: RedemptionCapacityConfidenceSchema,
   modeledExitSizeUsd: PositiveNumberSchema.optional(),

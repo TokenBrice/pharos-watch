@@ -87,6 +87,23 @@ describe("redemption same-notional route observations", () => {
     expect(expensive).toMatchObject({ scoreEligible: false, executableUsd: 0, completionRatio: 0 });
   });
 
+  it("emits unproven settlement-bound evidence without synthesizing a zero capacity curve", () => {
+    const observation = build({
+      capacityProfile: { ...profile, scoringUsd: null, scoringHorizon: "unknown" },
+      scoringCapacityUsd: null,
+      resolutionState: "missing-capacity",
+      settlementBoundUnproven: true,
+    });
+
+    expect(observation).toMatchObject({
+      settlementBoundUnproven: true,
+      executableUsd: 0,
+      completionRatio: 0,
+      scoreEligible: false,
+    });
+    expect(observation).not.toHaveProperty("capacityCurve");
+  });
+
   it("preserves reviewed capacity when only the variable fee bound is unknown", () => {
     const observation = build({
       config: {
