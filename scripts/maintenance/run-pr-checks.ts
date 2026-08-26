@@ -17,5 +17,7 @@ export async function runPrChecks(argv: readonly string[] = process.argv.slice(2
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  process.exit(await runPrChecks());
+  runPrChecks().then((status) => {
+    process.exit(status);
+  });
 }

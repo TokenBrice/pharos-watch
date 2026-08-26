@@ -61,5 +61,7 @@ export async function runChangedEslint({
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  process.exit(await runChangedEslint());
+  runChangedEslint().then((status) => {
+    process.exit(status);
+  });
 }

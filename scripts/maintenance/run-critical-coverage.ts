@@ -9,11 +9,12 @@ import {
   runSpawnCommand,
 } from "../lib/command-runner.mts";
 
-const result = await runExecutionUnit(createExecutionUnit([
+runExecutionUnit(createExecutionUnit([
   createLocalVitestCommand(buildCriticalCoverageArgs(process.argv.slice(2))),
   createSpawnCommand(process.execPath, ["--import", "tsx", "scripts/ci/check-critical-coverage.ts"]),
 ]), {
   reporter: {},
   runCommandImpl: runSpawnCommand,
+}).then((result) => {
+  process.exit(result.status);
 });
-process.exit(result.status);
