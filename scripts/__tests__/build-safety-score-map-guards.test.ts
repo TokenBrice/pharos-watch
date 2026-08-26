@@ -454,6 +454,48 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     expect(run.status).toBe(1);
     expect(run.stderr).toMatch(/Tier A count moved/);
   });
+
+  it("tolerates a single immaterial join flip and draws the coin at the size floor", async () => {
+    const path = snapshot(scratch, validSnapshot(universe({ count: 20 })));
+    const run = await runGenerator(universe({ count: 20, unjoined: 1 }), {
+      args: ["--previous-snapshot", path],
+      stopBeforeRender: true,
+    });
+    expect(run.stderr).toMatch(/Supply join identity changed for 1 coin\(s\) since the previous snapshot \(coin-19; \$[\d,]+ affected\) — within tolerance/);
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it("refuses when more than three coins flip join identity overnight", async () => {
+    const path = snapshot(scratch, validSnapshot(universe({ count: 100 })));
+    const run = await runGenerator(universe({ count: 100, unjoined: 4 }), { args: ["--previous-snapshot", path] });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Supply join identity changed for 4 coin\(s\)/);
+    expect(run.stderr).toMatch(/beyond the tolerance .* refusing to publish an ambiguous census/);
+  });
+
+  it("refuses a single join flip that carries material supply", async () => {
+    const prior = universe({ count: 20 });
+    const path = snapshot(scratch, validSnapshot(prior));
+    const current = {
+      cards: prior.cards,
+      assets: prior.assets.map((row) => (row.id === "coin-06" ? { ...row, circulating: { peggedUSD: 0 } } : row)),
+    };
+    const run = await runGenerator(current, { args: ["--previous-snapshot", path] });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Supply join identity changed for 1 coin\(s\) since the previous snapshot \(coin-06;/);
+    expect(run.stderr).toMatch(/beyond the tolerance/);
+  });
+
+  it("does not treat a census addition as a join flip", async () => {
+    const path = snapshot(scratch, validSnapshot(universe({ count: 20 })));
+    // The all-logoless fixture universe makes the addition trip the separate
+    // missing-logo guard (20 -> 21), which runs after the delta guard — so the
+    // join-identity check demonstrably let the addition through.
+    const run = await runGenerator(universe({ count: 21 }), { args: ["--previous-snapshot", path] });
+    expect(run.stderr).not.toMatch(/Supply join identity changed/);
+    expect(run.stdout).toMatch(/Delta guard OK vs previous snapshot \(graded 20 -> 21/);
+    expect(run.stderr).toMatch(/Missing-logo count moved from 20 to 21/);
+  });
 });
 
 describe("safety-score map — delta guard skips are never fatal (bootstrap path)", () => {

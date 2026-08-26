@@ -1899,6 +1899,13 @@ function buildTierTable(tiers: readonly TierSummary[]): string {
 // snapshot — a first run has nothing to compare against and must still boot.
 const MAX_GRADED_DROP = 0.02;
 const MAX_NOT_RATED_MOVE = 5;
+// A joined<->unjoined flip for a coin present on both days is usually a
+// transient upstream supply gap on one small coin, not a join-pipeline break.
+// Tolerate a few immaterial flips with a warning; refuse when flips are
+// numerous or carry real supply. Materiality is measured against the previous
+// snapshot's mapped supply.
+const MAX_JOIN_FLIPS = 3;
+const MAX_JOIN_FLIP_MCAP_SHARE = 0.001;
 
 interface SnapshotCoin {
   id: string;
@@ -2107,13 +2114,33 @@ function assertSaneDeltas(path: string | null, current: CurrentDeltaState): void
   const priorById = new Map(previous.coins.map((coin) => [coin.id, coin]));
   const currentById = new Map(current.coins.map((coin) => [coin.id, coin]));
   const allIds = new Set([...priorById.keys(), ...currentById.keys()]);
+  // Census additions/removals are deliberately not join flips — they are
+  // already bounded by the graded-count, tier-count, tier-supply and leader
+  // guards above. Counting them here failed the run the day after any coin
+  // entered the census (2026-08-26: hollar-hydrated moving NR -> graded under
+  // methodology 9.44 blocked the daily publication and the digest map, and a
+  // failed run never advances the snapshot baseline, so every later run kept
+  // failing against the same stale census).
   const joinChanges = [...allIds].filter((id) => {
-    const priorJoined = (priorById.get(id)?.mcap ?? 0) > 0;
-    const currentJoined = (currentById.get(id)?.mcap ?? 0) > 0;
-    return priorJoined !== currentJoined;
+    const prior = priorById.get(id);
+    const next = currentById.get(id);
+    return prior != null && next != null && (prior.mcap > 0) !== (next.mcap > 0);
   });
   if (joinChanges.length > 0) {
-    throw new Error(`Supply join identity changed for ${joinChanges.length} coin(s) since the previous snapshot (${joinChanges.slice(0, 5).join(", ")}) — refusing to publish an ambiguous census`);
+    const flippedMcap = joinChanges.reduce(
+      (sum, id) => sum + Math.max(priorById.get(id)!.mcap, currentById.get(id)!.mcap),
+      0,
+    );
+    const maxFlippedMcap = previous.mapSummary.totalMcapUsd * MAX_JOIN_FLIP_MCAP_SHARE;
+    const detail = `${joinChanges.length} coin(s) since the previous snapshot (${joinChanges.slice(0, 5).join(", ")}; $${Math.round(flippedMcap).toLocaleString("en-US")} affected)`;
+    if (joinChanges.length > MAX_JOIN_FLIPS || flippedMcap > maxFlippedMcap) {
+      throw new Error(
+        `Supply join identity changed for ${detail} — beyond the tolerance of ${MAX_JOIN_FLIPS} coins and ${MAX_JOIN_FLIP_MCAP_SHARE * 100}% of mapped supply ($${Math.round(maxFlippedMcap).toLocaleString("en-US")}), refusing to publish an ambiguous census`,
+      );
+    }
+    console.warn(
+      `[safety-score-map] Supply join identity changed for ${detail} — within tolerance, publishing from the current supply state (a coin that lost its join draws at the size floor)`,
+    );
   }
   const gradeTransitions = [...allIds].filter((id) => {
     const prior = priorById.get(id);
