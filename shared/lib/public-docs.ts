@@ -1,4 +1,4 @@
-import { PUBLIC_DOC_SOURCE_FILES } from "./public-doc-manifest.mts";
+import PUBLIC_DOC_SOURCE_FILES from "./public-doc-manifest.json";
 
 export const DOC_GROUPS = ["system", "methodology", "design"] as const;
 export type DocGroup = (typeof DOC_GROUPS)[number];

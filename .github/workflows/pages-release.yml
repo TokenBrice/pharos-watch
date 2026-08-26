@@ -50,6 +50,10 @@ jobs:
           bootstrap-generated: "false"
           next-cache: "true"
           next-cache-save: "true"
+      - name: Materialize compile-input artifacts
+        # The dataset refresh consumes the generated stablecoin catalog, so
+        # compile inputs must exist before the refresh runs.
+        run: npm run prebuild -- --build-lifecycle=compile-input
       - name: Refresh API-backed release data
         if: ${{ inputs.refresh_data }}
         env:
@@ -67,7 +71,7 @@ jobs:
           API_BASE_URL: ""
           PHAROS_RELEASE_PR_TYPECHECKED: "1"
         run: |
-          npm run prebuild -- --build-lifecycle=compile-input,post-refresh
+          npm run prebuild -- --build-lifecycle=post-refresh
           npx --no-install next build --webpack
           npm run postbuild
       - name: Validate static SEO and published archive continuity
