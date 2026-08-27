@@ -940,6 +940,9 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         trackedAssetIds: ["usdf-falcon"],
         assetKeys: ["ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2"],
       },
+      outputUnitValueUsd: 0.95,
+      outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
+      outputUnitValueObservedAt: NOW,
       evidenceKind: "reserve-based-amm-simulation",
       confidence: "high",
       scoreEligible: true,
@@ -970,7 +973,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       },
     };
     (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "usdf-falcon": { currentDeviationBps: -12, priceObservedAt: NOW },
+      "usdf-falcon": { pegCurrency: "USD", currentDeviationBps: -12, priceObservedAt: NOW },
     };
 
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")).toEqual([
@@ -985,10 +988,107 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
           valuation: expect.objectContaining({
             referenceAssetKey: "usdf-falcon",
             unitValueUsd: 0.9988,
+            expectedUnitValueUsd: 1,
+            sourceId: "report-cards-peg-summary",
           }),
         }),
       }),
     ]);
+  });
+
+  it("uses a source-bound exact DEX output reference when peg and NAV valuation are unavailable", () => {
+    const fixedInput = fixedInputStub(undefined);
+    const route: ExitRouteObservation = {
+      routeId: "dex:scrvusd-curve:dl:ethereum%3Ausdaf-output",
+      routeFamily: "dex-amm",
+      scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: "pool", protocol: "curve" },
+      requestedNotionalUsd: 1_000_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 200,
+      executableUsd: 31_206.39,
+      completionRatio: 0.03120639,
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdaf-asymmetry"] },
+      outputUnitValueUsd: 0.9975,
+      outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
+      outputUnitValueObservedAt: NOW - 30,
+      evidenceKind: "reserve-based-amm-simulation",
+      confidence: "high",
+      scoreEligible: true,
+      observedAt: NOW,
+      freshnessSeconds: 0,
+      commonModeKeys: ["chain:ethereum", "protocol:curve"],
+    };
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "scrvusd-curve": {
+        exitRouteObservations: [route],
+        exitRouteObservationCoverage: {
+          status: "populated",
+          capabilityMatrixVersion: "p4a.9",
+          retainedPoolCount: 1,
+          observationCount: 1,
+          scoreEligibleObservationCount: 1,
+          scoreEligiblePoolCount: 1,
+          scoreEligibleCapabilityPoolCount: 1,
+          unsupportedPoolCount: 0,
+          evidenceCounts: { "reserve-based-amm-simulation": 1 },
+          unsupportedReasons: {},
+        },
+      },
+    };
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "usdaf-asymmetry": {
+        pegCurrency: "USD",
+        currentDeviationBps: null,
+        pegScore: 75,
+        activeDepeg: false,
+        eventCount: 103,
+        worstDeviationBps: -223,
+      },
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "scrvusd-curve")[0]?.output?.valuation).toMatchObject({
+      basis: "price",
+      referenceAssetKey: "usdaf-asymmetry",
+      unitValueUsd: 0.9975,
+      expectedUnitValueUsd: 1,
+      sourceId: "dex-amm-output-reference:curve:tracked-market",
+      observedAtSec: NOW - 30,
+      confidence: "high",
+    });
+
+    (route as { outputUnitValueObservedAt: number }).outputUnitValueObservedAt = NOW + 61;
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "scrvusd-curve")[0]?.output?.valuation).toBeNull();
+    (route as { outputUnitValueObservedAt: number }).outputUnitValueObservedAt = NOW - 30;
+
+    // The raw DEX price alone cannot establish the expected value of a non-USD
+    // peg. Without an authoritative reference the output remains unvalued.
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "usdaf-asymmetry": {
+        pegCurrency: "EUR",
+        currentDeviationBps: null,
+        pegReference: null,
+      },
+    };
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "scrvusd-curve")[0]?.output?.valuation).toBeNull();
+
+    (route as { outputUnitValueUsd: number }).outputUnitValueUsd = 1.1583;
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "usdaf-asymmetry": {
+        pegCurrency: "EUR",
+        currentDeviationBps: null,
+        pegReference: {
+          valueUsd: 1.17,
+          source: "fx",
+          contributorCount: 1,
+          asOf: NOW - 60,
+        },
+      },
+    };
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "scrvusd-curve")[0]?.output?.valuation).toMatchObject({
+      unitValueUsd: 1.1583,
+      expectedUnitValueUsd: 1.17,
+      sourceId: "dex-amm-output-reference:curve:tracked-market",
+    });
   });
 
   it("values a NAV output from the captured NAV price without creating a peg valuation", () => {

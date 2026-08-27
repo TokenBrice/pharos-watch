@@ -132,6 +132,48 @@ function trackedStablecoinValuation(
   };
 }
 
+function pinnedDexTrackedStablecoinValuation(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  observation: ExitRouteObservation,
+  trackedAssetId: string,
+  observedAtSec: number,
+): ReturnType<typeof trackedStablecoinValuation> {
+  if (
+    observation.outputUnitValueUsd === undefined ||
+    observation.outputUnitValueSourceId === undefined ||
+    observation.outputUnitValueObservedAt === undefined ||
+    observation.outputUnitValueObservedAt > observedAtSec + 60
+  ) {
+    return null;
+  }
+
+  // Exact DEX models carry a raw USD output price. Compare it with the asset's
+  // own expected USD value; treating every tracked stablecoin as a $1 asset
+  // would misvalue non-USD pegs. NAV products retain their observed NAV basis.
+  const navPrice = fixedInput.navPriceById?.[trackedAssetId];
+  const peg = fixedInput.pegDataById[trackedAssetId];
+  const expectedUnitValueUsd =
+    navPrice?.priceUsd ??
+    (peg?.pegCurrency === "USD" ? 1 : peg?.pegReference?.valueUsd ?? null);
+  if (
+    expectedUnitValueUsd === null ||
+    !Number.isFinite(expectedUnitValueUsd) ||
+    expectedUnitValueUsd <= 0 ||
+    observation.outputUnitValueUsd / expectedUnitValueUsd > 2
+  ) {
+    return null;
+  }
+
+  return {
+    basis: navPrice ? "nav" : "price",
+    unitValueUsd: observation.outputUnitValueUsd,
+    expectedUnitValueUsd,
+    confidence: observation.confidence,
+    observedAtSec: Math.min(observation.outputUnitValueObservedAt, observedAtSec),
+    sourceId: observation.outputUnitValueSourceId,
+  };
+}
+
 /**
  * Values one enumerated output identity. Untracked identities resolve only
  * through a reviewed fixed-rate receipt conversion; everything else stays
@@ -227,17 +269,27 @@ function buildOutputReview(
       ...shared,
     };
   } else if (output.kind === "tracked-stablecoin" && assetKeys.length === 1) {
+    const capturedValuation = trackedStablecoinValuation(fixedInput, assetKeys[0]!, observedAtSec);
+    const carriesPinnedDexValuation =
+      observation.outputUnitValueUsd !== undefined ||
+      observation.outputUnitValueSourceId !== undefined ||
+      observation.outputUnitValueObservedAt !== undefined;
     const tracked =
-      observation.outputUnitValueUsd !== undefined
-        ? {
-            basis: "price" as const,
-            unitValueUsd: observation.outputUnitValueUsd,
-            expectedUnitValueUsd: 1,
-            confidence: "high" as const,
-            observedAtSec,
-            sourceId: "redemption-route-pinned-output-value",
-          }
-        : trackedStablecoinValuation(fixedInput, assetKeys[0]!, observedAtSec);
+      observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook"
+        ? capturedValuation ??
+          (carriesPinnedDexValuation
+            ? pinnedDexTrackedStablecoinValuation(fixedInput, observation, assetKeys[0]!, observedAtSec)
+            : null)
+        : observation.outputUnitValueUsd !== undefined
+          ? {
+              basis: "price" as const,
+              unitValueUsd: observation.outputUnitValueUsd,
+              expectedUnitValueUsd: 1,
+              confidence: "high" as const,
+              observedAtSec,
+              sourceId: "redemption-route-pinned-output-value",
+            }
+          : capturedValuation;
     if (tracked) {
       valuation = {
         referenceAssetKey: assetKeys[0]!,
