@@ -243,6 +243,27 @@ describe("mento adapter", () => {
     });
   });
 
+  it("maps EUROP as a tracked stablecoin reserve without degrading", () => {
+    const result = adaptMentoReserveComposition({
+      collateral: {
+        assets: [
+          { symbol: "USDC", percentage: 50 },
+          { symbol: "EUROP", percentage: 25 },
+          { symbol: "WETH", percentage: 25 },
+        ],
+      },
+    });
+
+    expect(result.slices).toContainEqual({
+      name: "EUROP (Schuman euro stablecoin)",
+      pct: 25,
+      risk: "low",
+      coinId: "europ-schuman",
+    });
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({ stableReservePct: 75 });
+  });
+
   it("extracts the historical dashboard reserve payload timestamp", () => {
     expect(extractMentoDashboardTimestamp(
       String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`,
