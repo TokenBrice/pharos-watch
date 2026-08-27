@@ -64,6 +64,11 @@
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "usdxl-last",
+    "suspended": {
+      "reason": "The branch-balance feed measures HypurrFi pool cash liquidity rather than gross aToken collateral and omits the separate USDT0 PSM facilitator, so it is not a full-composition USDXL reserve input.",
+      "since": "2026-08-27",
+      "reviewBy": "2026-09-10"
+    },
     "display": {
       "url": "https://docs.hypurrfi.com/products/usdxl",
       "label": "HypurrFi USDXL pool collateral"
