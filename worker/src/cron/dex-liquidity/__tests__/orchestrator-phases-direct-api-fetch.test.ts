@@ -363,6 +363,7 @@ describe("runDirectApiFetchPhase", () => {
     ]);
     expect(result.results[0]?.result.errors).toEqual(["page 2 returned 503"]);
     expect(result.results[0]?.result.warnings).toEqual(["page 1 skipped 1 malformed pool rows"]);
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(expect.anything(), "mixed-circuit", true);
   });
 
   it("marks an unavailable direct API result as failed", async () => {

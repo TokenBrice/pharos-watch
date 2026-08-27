@@ -165,6 +165,13 @@ describe("runDexScreenerPass", () => {
         }),
       ],
     });
+
+    const circuitWrites = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const exactWrite = circuitWrites.find((entry) => entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
+    expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 1,
+    });
   });
 
   it("does not wait indefinitely when an exact lookup never settles", async () => {
