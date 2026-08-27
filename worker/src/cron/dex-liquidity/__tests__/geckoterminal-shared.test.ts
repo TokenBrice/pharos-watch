@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { getGtPoolType, parseGtPool } from "../geckoterminal-shared";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
+import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../geckoterminal-shared";
 import type { GtPool } from "../types";
 
 const GT_POOL_FIXTURE: GtPool = {
@@ -22,6 +23,25 @@ const GT_POOL_FIXTURE: GtPool = {
 };
 
 describe("geckoterminal shared helpers", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("encodes provider-native token identities exactly once in the request path", async () => {
+    const tokenAddress =
+      "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j";
+    const expectedUrl =
+      "https://api.geckoterminal.com/api/v2/networks/injective/tokens/factory%2Finj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk%2Finj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j/pools?page=1";
+    const fetchMock = mockFetch([{ match: expectedUrl, body: { data: [] } }], {
+      requireMatch: true,
+      strictUrl: true,
+    });
+
+    await expect(fetchGtTokenPools(tokenAddress, "injective")).resolves.toEqual([]);
+    expect(fetchMock.getHistory().map((entry) => entry.url)).toEqual([expectedUrl]);
+  });
+
   it("normalizes raw GT pools into crawl-helper shape", () => {
     expect(parseGtPool(GT_POOL_FIXTURE, "ethereum")).toEqual({
       dexId: "uniswap-v3",

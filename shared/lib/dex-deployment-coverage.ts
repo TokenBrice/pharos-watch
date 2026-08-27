@@ -1,5 +1,6 @@
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "./chains";
 import { canonicalExitRouteScopedId } from "./exit-route-identity";
+import { getAddress } from "viem/utils";
 
 export type DexDeploymentOutcome = "observed_pools" | "verified_no_pools" | "provider_inaccessible";
 export type DexDiscoveryProvider = "coingecko" | "geckoterminal" | "dexscreener" | "curve" | "horizon";
@@ -28,7 +29,7 @@ export const CURVE_NATIVE_DISCOVERY_CHAINS: ReadonlySet<string> = new Set([
   "kava",
 ]);
 
-/** Native Horizon liquidity-pool discovery is currently scoped to Stellar. */
+/** Native Horizon liquidity-pool discovery is currently scoped to classic Stellar assets. */
 export const HORIZON_DISCOVERY_CHAINS: ReadonlySet<string> = new Set(["stellar"]);
 
 /**
@@ -38,12 +39,81 @@ export const HORIZON_DISCOVERY_CHAINS: ReadonlySet<string> = new Set(["stellar"]
  * GeckoTerminal's network is MANTRA EVM only.
  */
 const SUPPLEMENTAL_GECKOTERMINAL_DISCOVERY_NETWORKS: Readonly<Record<string, string>> = {
+  hedera: "hedera-hashgraph",
+  injective: "injective",
   starknet: "starknet-alpha",
   stacks: "stacks",
 };
 
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const STARKNET_ADDRESS_RE = /^0x[0-9a-fA-F]{1,64}$/;
+const HEDERA_ENTITY_ID_RE = /^0\.0\.(\d+)$/;
+const INJECTIVE_ERC20_RE = /^(?:erc20:)?(0x[0-9a-fA-F]{40})$/i;
+const INJECTIVE_PEGGY_RE = /^peggy(0x[0-9a-fA-F]{40})$/i;
+const INJECTIVE_IBC_RE = /^ibc\/([0-9a-fA-F]{64})$/;
+const INJECTIVE_FACTORY_RE = /^factory\/[^/\s]+\/[^\s]+$/;
+const STELLAR_CLASSIC_ASSET_RE = /^[A-Za-z0-9]{1,12}-G[A-Z2-7]{55}$/;
+const STELLAR_ISSUER_RE = /^G[A-Z2-7]{55}$/;
+const STELLAR_ASSET_CODE_RE = /^[A-Za-z0-9]{1,12}$/;
+
+function isHederaDiscoveryAddress(address: string): boolean {
+  return toHederaSolidityAddress(address) !== null;
+}
+
+function isInjectiveDiscoveryAddress(address: string): boolean {
+  return (
+    address === "inj" ||
+    INJECTIVE_ERC20_RE.test(address) ||
+    INJECTIVE_PEGGY_RE.test(address) ||
+    INJECTIVE_IBC_RE.test(address) ||
+    INJECTIVE_FACTORY_RE.test(address)
+  );
+}
+
+function toHederaSolidityAddress(address: string): string | null {
+  if (EVM_ADDRESS_RE.test(address)) return address.toLowerCase();
+  const match = HEDERA_ENTITY_ID_RE.exec(address);
+  if (!match) return null;
+  if (match[1].length > 20) return null;
+  const entityNumber = BigInt(match[1]);
+  if (entityNumber > 0xffffffffffffffffn) return null;
+  return `0x${entityNumber.toString(16).padStart(40, "0")}`;
+}
+
+function toInjectiveDiscoveryAddress(address: string): string | null {
+  if (address === "inj" || INJECTIVE_FACTORY_RE.test(address)) return address;
+  const ibcMatch = INJECTIVE_IBC_RE.exec(address);
+  if (ibcMatch) return `ibc/${ibcMatch[1].toUpperCase()}`;
+  const peggyMatch = INJECTIVE_PEGGY_RE.exec(address);
+  if (peggyMatch) return `peggy${getAddress(peggyMatch[1].toLowerCase())}`;
+  const erc20Match = INJECTIVE_ERC20_RE.exec(address);
+  if (erc20Match) return `erc20:${getAddress(erc20Match[1].toLowerCase())}`;
+  return null;
+}
+
+/** Whether one Stellar deployment can be queried through Horizon's classic AMM index. */
+export function isHorizonDiscoveryDeployment(chain: string, address?: string): boolean {
+  if (!HORIZON_DISCOVERY_CHAINS.has(chain)) return false;
+  if (address == null) return true;
+  const trimmed = address.trim();
+  return STELLAR_CLASSIC_ASSET_RE.test(trimmed) || STELLAR_ISSUER_RE.test(trimmed);
+}
+
+/** Translate one eligible registry identity to Horizon's `CODE:ISSUER` filter. */
+export function getHorizonDiscoveryAsset(address: string, symbol?: string): string | null {
+  const trimmed = address.trim();
+  const separator = trimmed.indexOf("-");
+  if (separator > 0) {
+    const code = trimmed.slice(0, separator);
+    const issuer = trimmed.slice(separator + 1);
+    if (STELLAR_ASSET_CODE_RE.test(code) && STELLAR_ISSUER_RE.test(issuer)) {
+      return `${code}:${issuer}`;
+    }
+  }
+  return STELLAR_ISSUER_RE.test(trimmed) && symbol && STELLAR_ASSET_CODE_RE.test(symbol)
+    ? `${symbol}:${trimmed}`
+    : null;
+}
 
 /** Resolve the exact GeckoTerminal network that can query one deployment. */
 export function getGeckoTerminalDiscoveryNetwork(chain: string, address?: string): string | null {
@@ -55,8 +125,11 @@ export function getGeckoTerminalDiscoveryNetwork(chain: string, address?: string
   const supplemental = SUPPLEMENTAL_GECKOTERMINAL_DISCOVERY_NETWORKS[chain];
   if (!supplemental) return null;
   if (address == null) return supplemental;
-  if (chain === "starknet" && !STARKNET_ADDRESS_RE.test(address.trim())) return null;
-  return address.trim().length > 0 ? supplemental : null;
+  const trimmed = address.trim();
+  if (chain === "starknet" && !STARKNET_ADDRESS_RE.test(trimmed)) return null;
+  if (chain === "hedera" && !isHederaDiscoveryAddress(trimmed)) return null;
+  if (chain === "injective" && !isInjectiveDiscoveryAddress(trimmed)) return null;
+  return trimmed.length > 0 ? supplemental : null;
 }
 
 /**
@@ -71,14 +144,20 @@ export function getGeckoTerminalDiscoveryTarget(
   const network = getGeckoTerminalDiscoveryNetwork(chain, address);
   if (!network) return null;
   const canonicalAddress = canonicalExitRouteScopedId(chain, address);
+  const providerAddress =
+    chain === "starknet"
+      ? `0x${canonicalAddress.slice(2).padStart(64, "0").toLowerCase()}`
+      : chain === "hedera"
+        ? toHederaSolidityAddress(canonicalAddress)
+        : chain === "injective"
+          ? toInjectiveDiscoveryAddress(canonicalAddress)
+          : chain === "mantra"
+            ? canonicalAddress.toLowerCase()
+            : canonicalAddress;
+  if (!providerAddress) return null;
   return {
     network,
-    address:
-      chain === "starknet"
-        ? `0x${canonicalAddress.slice(2).padStart(64, "0").toLowerCase()}`
-        : chain === "mantra"
-          ? canonicalAddress.toLowerCase()
-          : canonicalAddress,
+    address: providerAddress,
   };
 }
 
@@ -95,7 +174,6 @@ const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [
   ["uusd-youves", "tezos"],
   ["usdx-kava", "osmosis"],
   ["silk-shade-protocol", "secret"],
-  ["hchf-hedera-swiss-franc", "hedera"],
 ] as const;
 
 const COVERAGE_WAIVER_EXPIRY_SEC = Date.UTC(2026, 9, 31) / 1000;
@@ -122,7 +200,7 @@ export function getDexDiscoveryProviders(chain: string, address?: string): DexDi
   if (getGeckoTerminalDiscoveryNetwork(chain, address)) providers.push("geckoterminal");
   if (DS_CHAIN_MAP[chain]) providers.push("dexscreener");
   if (CURVE_NATIVE_DISCOVERY_CHAINS.has(chain)) providers.push("curve");
-  if (HORIZON_DISCOVERY_CHAINS.has(chain)) providers.push("horizon");
+  if (isHorizonDiscoveryDeployment(chain, address)) providers.push("horizon");
   return providers;
 }
 

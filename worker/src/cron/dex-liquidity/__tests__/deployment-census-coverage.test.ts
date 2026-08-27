@@ -355,6 +355,30 @@ describe("DEX placeholder deployment-census coverage", () => {
     });
   });
 
+  it("treats a Stellar Soroban identity as unsupported method rather than provider outage", () => {
+    const address = "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A";
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: [deployment("stellar", address)],
+      outcomeRows: [],
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification).toMatchObject({
+      state: "unsupported-method",
+      coverage: {
+        status: "unknown",
+        unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
+      },
+      census: {
+        expectedDeploymentCount: 1,
+        reviewedDeploymentCount: 1,
+        providerInaccessibleCount: 1,
+        unsupportedChainDeploymentCount: 1,
+        unsupportedChains: ["stellar"],
+      },
+    });
+  });
+
   it("keeps an entirely unsupported footprint poisoned under the same reason key", () => {
     const classification = classifyDexPlaceholderCoverage({
       deployments: [deployment("secret", "secret1unsupported")],

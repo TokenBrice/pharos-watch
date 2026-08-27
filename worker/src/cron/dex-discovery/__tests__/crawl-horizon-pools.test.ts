@@ -159,25 +159,23 @@ describe("Horizon pool discovery", () => {
     ]);
   });
 
-  it("keeps contract-token ids explicit and outside invalid Horizon queries", async () => {
+  it("keeps Soroban contract-token ids outside Horizon's registered crawl scope", async () => {
     const fetchMock = mockFetch([], { requireMatch: true });
     const stageContext = context();
     const contractToken = "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A";
+    const codeContractToken = "EUTBL-CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF";
 
     const result = await crawlHorizonPoolsStage({
-      coinTargets: [target("stellar", contractToken), target("ethereum", "0xabc")],
+      coinTargets: [
+        target("stellar", contractToken),
+        target("stellar", codeContractToken),
+        target("ethereum", "0xabc"),
+      ],
       context: stageContext.value,
     });
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(result.providerChecks).toEqual([
-      {
-        chain: "stellar",
-        address: contractToken,
-        provider: "horizon",
-        status: "degraded",
-      },
-    ]);
+    expect(result.providerChecks).toEqual([]);
   });
 
   it("combines a bare issuer deployment with the tracked Stellar asset symbol", async () => {

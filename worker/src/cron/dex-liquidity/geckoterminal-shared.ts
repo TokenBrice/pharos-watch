@@ -21,7 +21,8 @@ export function fetchGtTokenPools(
     pageSize: GT_TOKEN_POOLS_PAGE_SIZE,
     fetchPage: async (page) => {
       try {
-        const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${tokenAddress}/pools?page=${page}`;
+        const encodedTokenAddress = encodeURIComponent(tokenAddress);
+        const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${encodedTokenAddress}/pools?page=${page}`;
         const result = await fetchJsonWithRetry<{ data?: unknown }>(
           url,
           {
