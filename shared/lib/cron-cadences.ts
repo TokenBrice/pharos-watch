@@ -17,6 +17,7 @@ import { DAY_SECONDS } from "./time-constants";
 export const CRON_SCHEDULE_CADENCES = {
   quarterHourly: { intervalSec: 900, offsetSec: 0 },
   v9SupplyAttributionOffset: { intervalSec: 900, offsetSec: 8 * 60 },
+  depegResolverOffset: { intervalSec: 900, offsetSec: 13 * 60 },
   v9PublicationOffset: { intervalSec: 1800, offsetSec: 22 * 60 },
   statusSelfCheckOffset: { intervalSec: 900, offsetSec: 9 * 60 },
   sixHourlyBlacklist: { intervalSec: 6 * 3600, offsetSec: 3 * 60 },

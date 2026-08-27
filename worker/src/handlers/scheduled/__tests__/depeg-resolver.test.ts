@@ -2,27 +2,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 
 const mocks = vi.hoisted(() => ({
-  syncSafetyScoreV9SupplyAttribution: vi.fn(),
+  computeDepegResolver: vi.fn(),
 }));
 const leaseMocks = vi.hoisted(() => ({
   runCronWithLease: vi.fn(),
 }));
 
+vi.mock("../../../cron/compute-depeg-resolver", () => ({
+  computeDepegResolver: mocks.computeDepegResolver,
+}));
 vi.mock("../../../lib/cron-lease-primitives", () => ({
   runCronWithLease: leaseMocks.runCronWithLease,
 }));
-vi.mock("../../../cron/sync-v9-supply-attribution", () => ({
-  syncSafetyScoreV9SupplyAttribution:
-    mocks.syncSafetyScoreV9SupplyAttribution,
-}));
 
-import { runV9SupplyAttributionSlot } from "../v9-supply-attribution";
+import { runDepegResolverSlot } from "../depeg-resolver";
 
-const SCHEDULED_TIME_MS = 1_800_000;
+const SLOT_STARTED_AT = 2_580;
 
-function dbWithReadyCoreSlot(): D1Database {
-  return {
+function runtime(): ScheduledRuntimeContext {
+  const db = {
     prepare: vi.fn((sql: string) => {
+      if (sql.includes("FROM cron_runs")) {
+        return {
+          first: vi.fn(async () => ({
+            started_at: SLOT_STARTED_AT - 60,
+            metadata: JSON.stringify({
+              capabilities: {
+                stablecoinsCache: true,
+                depegPipeline: true,
+              },
+            }),
+          })),
+        };
+      }
       const first = vi.fn(async () =>
         sql.includes("FROM cron_slot_executions") &&
         sql.includes("slot_key = 'quarterHourly'")
@@ -33,22 +45,18 @@ function dbWithReadyCoreSlot(): D1Database {
             }
           : null,
       );
-      return {
-        bind: vi.fn(() => ({ first })),
-      };
+      return { bind: vi.fn(() => ({ first })) };
     }),
   } as unknown as D1Database;
-}
 
-function runtime(): ScheduledRuntimeContext {
   return {
-    db: dbWithReadyCoreSlot(),
+    db,
     env: {} as ScheduledRuntimeContext["env"],
     ctx: {} as ExecutionContext,
-    cron: "8 * * * *",
-    scheduleKey: "v9SupplyAttributionOffset",
-    scheduledTimeMs: SCHEDULED_TIME_MS,
-    slotStartedAt: SCHEDULED_TIME_MS / 1_000,
+    cron: "13 * * * *",
+    scheduleKey: "depegResolverOffset",
+    scheduledTimeMs: SLOT_STARTED_AT * 1_000,
+    slotStartedAt: SLOT_STARTED_AT,
     workerVersion: "worker-v1",
     mintBurnDisabledIds: [],
     mintBurnDisabledSymbols: [],
@@ -62,10 +70,10 @@ function runtime(): ScheduledRuntimeContext {
   };
 }
 
-describe("V9 supply-attribution scheduling", () => {
+describe("depeg-resolver scheduling", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(SCHEDULED_TIME_MS);
+    vi.setSystemTime(SLOT_STARTED_AT * 1_000);
     vi.clearAllMocks();
     leaseMocks.runCronWithLease.mockImplementation(async (
       _db: D1Database,
@@ -79,9 +87,9 @@ describe("V9 supply-attribution scheduling", () => {
           leaseOptions?.abortSignal ?? new AbortController().signal,
       }),
     }));
-    mocks.syncSafetyScoreV9SupplyAttribution.mockResolvedValue({
+    mocks.computeDepegResolver.mockResolvedValue({
       status: "ok",
-      itemCount: 1,
+      itemCount: 21,
     });
   });
 
@@ -89,19 +97,30 @@ describe("V9 supply-attribution scheduling", () => {
     vi.useRealTimers();
   });
 
-  it("runs only supply attribution in the memory-isolated slot", async () => {
+  it("runs DDR alone from fresh stablecoin capability evidence", async () => {
     const scheduledRuntime = runtime();
-    const summary = await runV9SupplyAttributionSlot(scheduledRuntime);
+    const summary = await runDepegResolverSlot(scheduledRuntime);
 
     expect(scheduledRuntime.runLeasedCron).toHaveBeenCalledOnce();
     expect(scheduledRuntime.runLeasedCron).toHaveBeenCalledWith(
-      "sync-v9-supply-attribution",
+      "compute-depeg-resolver",
       expect.any(Function),
     );
-    expect(mocks.syncSafetyScoreV9SupplyAttribution).toHaveBeenCalledOnce();
+    expect(mocks.computeDepegResolver).toHaveBeenCalledWith(expect.objectContaining({
+      db: scheduledRuntime.db,
+      slot: "scheduled-quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      syncCapabilities: expect.objectContaining({
+        stablecoinsCache: true,
+        depegPipeline: true,
+        latestSyncStartedAt: SLOT_STARTED_AT - 60,
+        stale: false,
+      }),
+    }));
     expect(summary.jobs).toEqual([
       expect.objectContaining({
-        job: "sync-v9-supply-attribution",
+        job: "compute-depeg-resolver",
         outcome: "ok",
       }),
     ]);

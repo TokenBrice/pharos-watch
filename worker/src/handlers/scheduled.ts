@@ -20,6 +20,8 @@ export const SLOT_RUNNER_LOADER_BY_KEY = {
   quarterHourly: () => import("./scheduled/quarter-hourly").then((mod) => mod.runQuarterHourlySlot),
   v9SupplyAttributionOffset: () =>
     import("./scheduled/v9-supply-attribution").then((mod) => mod.runV9SupplyAttributionSlot),
+  depegResolverOffset: () =>
+    import("./scheduled/depeg-resolver").then((mod) => mod.runDepegResolverSlot),
   v9PublicationOffset: () =>
     import("./scheduled/v9-publication").then((mod) => mod.runV9PublicationSlot),
   statusSelfCheckOffset: () => import("./scheduled/status-self-check").then((mod) => mod.runStatusSelfCheckSlot),
@@ -96,6 +98,7 @@ const SLOT_FENCE_POLICY_BY_RUNNER_KEY: Partial<Record<ScheduledRunnerKey, SlotFe
   fiveMinuteReserveRecovery: LONG_SLOT_FENCE_POLICY,
   quarterHourly: MEDIUM_SLOT_FENCE_POLICY,
   v9SupplyAttributionOffset: MEDIUM_SLOT_FENCE_POLICY,
+  depegResolverOffset: MEDIUM_SLOT_FENCE_POLICY,
   v9PublicationOffset: SHORT_SLOT_FENCE_POLICY,
   halfHourlyMeasuredExecution: MEDIUM_SLOT_FENCE_POLICY,
   halfHourlyOffset: MEDIUM_SLOT_FENCE_POLICY,

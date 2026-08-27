@@ -4,6 +4,7 @@
     "daily0800Utc",
     "daily0805Utc",
     "daily0810Utc",
+    "depegResolverOffset",
     "dewsPsiOffset",
     "digestTriggerPoll",
     "fiveMinuteReserveRecovery",

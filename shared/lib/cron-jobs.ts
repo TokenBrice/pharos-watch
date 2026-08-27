@@ -48,13 +48,23 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // Paired hourly physical triggers preserve the :08/:23/:38/:53 grid above while
   // qualifying each invocation for the 15-minute hourly Cron CPU class. Under the
   // single sub-hourly expression the 30-second class killed the isolate on ~29% of
-  // slots (measured 2026-08-21), and because compute-depeg-resolver is second in
-  // this serial chain it absorbed the loss: 25.5% of its runs never started, with
-  // runs of six consecutive slots leaving depeg resolution blind for 90 minutes.
+  // slots (measured 2026-08-21).
   v9SupplyAttributionOffset: {
     schedule: "8,23,38,53 * * * *",
     triggerSchedules: ["8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *"],
     ...CRON_SCHEDULE_CADENCES.v9SupplyAttributionOffset,
+  },
+  // DDR used to follow supply attribution in the same isolate. After the CPU-class
+  // fix, 43/45 post-rebalance V9-slot losses occurred when DDR loaded its large
+  // review graph after capture. A separate zero-fetch invocation is the smallest
+  // way to prevent those run-scoped heaps from overlapping; hourly aliases keep
+  // its 15-minute cadence out of the sub-hourly 30-second CPU class. The same
+  // Worker service may still reuse a warm isolate, so production observation is
+  // required.
+  depegResolverOffset: {
+    schedule: "13,28,43,58 * * * *",
+    triggerSchedules: ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"],
+    ...CRON_SCHEDULE_CADENCES.depegResolverOffset,
   },
   // The one-shot V9 publication writer needs the same hourly Cron CPU class as
   // the other CPU-heavy sub-hourly lanes. Keeping the logical comma expression
@@ -78,6 +88,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
   sixHourlyBlacklist: { schedule: "3 */6 * * *", ...CRON_SCHEDULE_CADENCES.sixHourlyBlacklist },
   halfHourlyMintBurnCritical: {
     schedule: "4,34 * * * *",
+    triggerSchedules: ["4 * * * *", "34 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMintBurnCritical,
   },
   twoHourlyDexDiscovery: { schedule: "6 */2 * * *", ...CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery },
@@ -148,13 +159,15 @@ export const CRON_CONNECTION_BUDGET = {
  * sub-hourly Cron CPU class into the 15-minute hourly class. ADR-20 raised the
  * gate from 25 to 34 for quarterHourly, v9SupplyAttributionOffset, and
  * statusSelfCheckOffset; ADR-21 raised it to 35 for the missed one-shot
- * v9PublicationOffset writer. Removing the neutral DEX `:40` trigger lowers
- * the reviewed topology to 34. The binding constraints remain the
+ * v9PublicationOffset writer. Removing the neutral DEX `:40` trigger lowered
+ * the reviewed topology to 34; ADR-22 raises it to 38 to isolate the zero-fetch
+ * DDR heap from supply attribution; the same review pairs the existing mint/
+ * burn cadence for one net expression, bringing the topology to 39. The binding constraints remain the
  * fetch-capable-entry and per-trigger connection limits below, plus Cloudflare's
  * 250-Cron-Triggers-per-account platform ceiling.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
-  maxPhysicalTriggersBeforeRebalance: 34,
+  maxPhysicalTriggersBeforeRebalance: 39,
   maxFetchCapableEntriesBeforeRebalance: 32,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {
@@ -579,10 +592,10 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     job: "compute-depeg-resolver",
     label: "Depeg Duration Resolver",
     group: "quarter-hourly",
-    scheduleKey: "v9SupplyAttributionOffset",
+    scheduleKey: "depegResolverOffset",
     triggerMode: "isolated",
     maxConnections: 0,
-    connectionGroup: "v9-supply-attribution-chain",
+    connectionGroup: "depeg-resolver-chain",
   },
   {
     job: "snapshot-safety-grade-history",
