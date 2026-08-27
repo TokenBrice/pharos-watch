@@ -81,6 +81,7 @@
     "worker/src/lib/address-price-providers/dexpaprika.ts": 89.6,
     "worker/src/lib/address-price-providers/dexscreener.ts": 98.4,
     "worker/src/lib/address-price-providers/index.ts": 78.2,
+    "worker/src/lib/address-price-providers/reviewed-target-overrides.ts": 100,
     "worker/src/lib/address-price-providers/shared.ts": 89.5,
     "worker/src/lib/authoritative-price-sources/aznd-curve-pool.ts": 98.4,
     "worker/src/lib/authoritative-price-sources/cap-cusd.ts": 92.6,
