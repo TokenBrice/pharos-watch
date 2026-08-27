@@ -295,6 +295,7 @@ describe("computeDepegResolver", () => {
     });
     const metadata = JSON.parse(result.metadata ?? "{}");
 
+    expect(result.status).toBe("degraded");
     expect(metadata.ddrRunId).toMatch(/^ddr:quarter-hour:1779984600:[0-9a-f]{12}$/);
     expect(metadata.v2PreLockIncidentsClosed).toBe(30);
     expect(stores.closeRecoveredPreLockIncidents).toHaveBeenCalledWith(db, { nowSec: NOW_SEC });
@@ -408,6 +409,7 @@ describe("computeDepegResolver", () => {
     });
     const metadata = JSON.parse(result.metadata ?? "{}");
 
+    expect(result.status).toBe("degraded");
     expect(metadata.degraded).toBe(true);
     expect(metadata.degradedReason).toBe("stablecoins-cache-missing-cache");
     expect(metadata.v2FreezeSkipped).toBe(true);
