@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.212",
+    title: "Reviewed exact-address request-cap reservation",
+    date: "2026-08-27",
+    effectiveAt: 1787856601,
+    summary:
+      "CoinGecko Onchain now reserves a network request for an eligible reviewed exact-address override before applying its five-request cap.",
+    impact: [
+      "The verified VUSD IOTA-EVM target remains inside the bounded request set even when the durable fairness cursor places five other networks ahead of it",
+      "Reservation is limited to exact entries in the reviewed override table; ordinary missing-price and source-depth targets retain their existing cohort order and cursor fairness",
+      "The five-request cap, 30-address batch size, metadata identity gate, $50K liquidity floor, soft-source trust, and fail-closed publication policy are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.211",
     title: "Reviewed VUSD IOTA-EVM exact-address recovery",
     date: "2026-08-27",
