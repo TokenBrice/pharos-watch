@@ -73,7 +73,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Reviewed 2026-08-28: Avalanche is the only native savUSD issuance route. Every listed representation now has a reviewed bridge path: the EVM representations use CCIP burn/mint pools, and Movement uses a LayerZero OFT whose sole configured peer is Avant's documented Avalanche adapter. These external bridge controls remain Bridge Risk rather than independent native issuance.",
+    "summary": "Reviewed 2026-08-28: CTRL/BRDG remain blocked. Avalanche is the only native savUSD issuance route; the listed EVM representations use CCIP burn/mint pools and Movement uses a LayerZero OFT whose sole configured peer is Avant's documented Avalanche adapter. Delivery contracts and the recorded admin EOAs are known, but complete admin authority and the CCIP/RMN or LayerZero DVN/executor validation authorities remain unresolved. These external bridge controls remain Bridge Risk rather than independent native issuance.",
     "reviewedAt": "2026-08-28",
     "reviewer": "Codex",
     "confidence": "manual-review",
@@ -635,11 +635,11 @@
       },
       {
         "id": "base-ccip-burn-mint-pool",
-        "label": "Base savUSD CCIP BurnMintTokenPool",
+        "label": "Base savUSD CCIP BurnMintTokenPool delivery",
         "routeRefs": [
           "base:0xa6ef20fe18cd529ca15a8a53a29d1832b1f848ff"
         ],
-        "capabilities": ["bridge-mint", "bridge-burn", "admin"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
         "controllerChain": "base",
         "controllerAddress": "0x82d6818d933da2657d011433ea32cf4d23368258",
         "failureDomainKeys": [
@@ -651,7 +651,7 @@
         "routeChecks": {
           "trustedPeerOrRemote": "At Base block 50539437, the pool reported two supported remote chains and used the official Base CCIP router 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd.",
           "rateLimits": "The verified pool's rate-limit admin was the zero address. The token maxSupply() was 0, so this bridge-mint route is conservatively treated as unbounded rather than capped.",
-          "pausersAdminsUpgraders": "At Base block 50539437, pool owner(), token owner(), and token CCIP admin all returned 0xd4d23209aaE8630bf386b7393763a5b7865e57cb; the pool was the token's only minter and burner."
+          "pausersAdminsUpgraders": "At Base block 50539437, pool owner(), token owner(), and token CCIP admin all returned 0xd4d23209aaE8630bf386b7393763a5b7865e57cb; the pool was the token's only minter and burner. The admin EOA is modeled in the separate Base CCIP admin control; this delivery control does not treat the pool contract as the controlling authority."
         },
         "observedAt": "2026-08-28",
         "observedBlock": 50539437,
@@ -669,27 +669,101 @@
             "url": "https://docs.chain.link/ccip"
           }
         ],
-        "evidence": "At Base block 50539437, 0x82d6818D933DA2657D011433EA32Cf4D23368258 returned getToken() = savUSD 0xa6EF20FE18CD529cA15A8a53A29D1832B1F848ff and typeAndVersion() = BurnMintTokenPool 1.5.1. The token's only minter and burner was this pool; pool and token administration resolved to 0xd4d23209aaE8630bf386b7393763a5b7865e57cb."
+        "evidence": "At Base block 50539437, 0x82d6818D933DA2657D011433EA32Cf4D23368258 returned getToken() = savUSD 0xa6EF20FE18CD529cA15A8a53A29D1832B1F848ff and typeAndVersion() = BurnMintTokenPool 1.5.1. The token's only minter and burner was this pool, so the pool is the known delivery identity. Pool and token administration resolved to the recorded EOA 0xd4d23209aaE8630bf386b7393763a5b7865e57cb and is modeled separately; complete admin and CCIP validator authority remain unresolved."
+      },
+      {
+        "id": "base-ccip-admin",
+        "label": "Base savUSD CCIP pool and token admin EOA",
+        "routeRefs": [
+          "base:0xa6ef20fe18cd529ca15a8a53a29d1832b1f848ff"
+        ],
+        "capabilities": ["admin"],
+        "controllerChain": "base",
+        "controllerAddress": "0xd4d23209aaE8630bf386b7393763a5b7865e57cb",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x82d6818d933da2657d011433ea32cf4d23368258",
+          "router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd",
+          "eoa:evm:0xd4d23209aae8630bf386b7393763a5b7865e57cb"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50539437, the CCIP pool reported two supported remote chains and used the official Base CCIP router 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd; that pool remains the separate delivery identity.",
+          "pausersAdminsUpgraders": "At Base block 50539437, pool owner(), token owner(), and token CCIP admin all returned the recorded EOA 0xd4d23209aaE8630bf386b7393763a5b7865e57cb. This identifies the pool/token admin account, but complete administrative scope, custody, and external CCIP validation authority remain unresolved."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 50539437,
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "Base CCIP BurnMintTokenPool",
+            "url": "https://basescan.org/address/0x82d6818D933DA2657D011433EA32Cf4D23368258"
+          },
+          {
+            "label": "Chainlink CCIP docs",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Base block 50539437, the verified CCIP pool 0x82d6818D933DA2657D011433EA32Cf4D23368258 was the savUSD representation's only minter and burner, while pool owner(), token owner(), and token CCIP admin all returned EOA 0xd4d23209aaE8630bf386b7393763a5b7865e57cb. The EOA is the known admin identity and the pool remains the delivery identity; complete admin scope and CCIP validation authority remain unresolved."
+      },
+      {
+        "id": "base-ccip-validation-domain",
+        "label": "Base savUSD Chainlink CCIP validation domain",
+        "routeRefs": [
+          "base:0xa6ef20fe18cd529ca15a8a53a29d1832b1f848ff"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd",
+          "contract:base:0x82d6818d933da2657d011433ea32cf4d23368258"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "Chainlink CCIP router/off-ramp and Risk Management Network validation are external route failure domains. The current savUSD-specific DON/RMN validator membership, quorum, and emergency override roster were not independently read; no threshold or custody claim is made.",
+          "trustedPeerOrRemote": "The reviewed Base pool and router identify the savUSD delivery contract and supported remote-chain configuration, but those delivery identities do not establish the independent CCIP validator authority.",
+          "unsupportedReason": "The configured CCIP pool, router, and recorded admin EOA identify delivery and application administration only; they do not identify the current CCIP validator controller or validator roster."
+        },
+        "observedAt": "2026-08-28",
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "Base CCIP BurnMintTokenPool",
+            "url": "https://basescan.org/address/0x82d6818D933DA2657D011433EA32Cf4D23368258"
+          },
+          {
+            "label": "Chainlink CCIP docs",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "The Base savUSD representation and CCIP pool/router delivery path are known from the reviewed contract and route records. The 2026-08-28 review did not resolve the savUSD-specific CCIP DON/RMN validator membership, quorum, emergency override roster, or controlling authority. The pool and recorded admin EOA are delivery/application identities, not validator identities; this validation control therefore remains unknown."
       },
       {
         "id": "movement-layerzero-oft",
-        "label": "Movement savUSD LayerZero OFT controller",
+        "label": "Movement savUSD LayerZero OFT delivery module",
         "routeRefs": [
           "movement:0xde6eb2598d91fd43c432ba7f0bca56158525a74ac0841b749ce17bf984cf5642"
         ],
-        "capabilities": ["bridge-mint", "bridge-burn", "peer-config", "admin", "rate-limit"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
         "controllerChain": "movement",
         "controllerAddress": "0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c",
         "failureDomainKeys": [
           "protocol:layerzero",
-          "contract:movement:0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c",
-          "eoa:movement:0x18fa1c57de0dbb2c3991fded86c58b4635e3b5f27a94261b887c5983ddf13e05"
+          "contract:movement:0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c"
         ],
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "routeChecks": {
           "trustedPeerOrRemote": "The official Movement indexer's current_table_items query returned exactly one row for the live peer-table handle: EID 30106. At ledger version 201950024, get_peer(30106) returned Avant's documented Avalanche OFT adapter 0x3524609C4D8111d45aFC912bf1e1270Cd5A1bd85.",
           "rateLimits": "For Avalanche EID 30106, rate_limit_config returned 0/0 and rate_limit_capacity returned the u64 maximum, so the route has no effective on-chain mint cap.",
-          "pausersAdminsUpgraders": "get_admin() and get_delegate() both returned 0x18fa1c57de0dbb2c3991fded86c58b4635e3b5f27a94261b887c5983ddf13e05. That account published no modules or multisig resource, while package registry upgrade policy 1 leaves a compatible package-upgrade path."
+          "pausersAdminsUpgraders": "get_admin() and get_delegate() both returned 0x18fa1c57de0dbb2c3991fded86c58b4635e3b5f27a94261b887c5983ddf13e05. That EOA is modeled in the separate Movement LayerZero admin control; the module remains a delivery identity, and its package-upgrade path remains unresolved."
         },
         "observedAt": "2026-08-28",
         "observedBlock": 88220686,
@@ -707,15 +781,89 @@
             "url": "https://docs.movementnetwork.xyz/devs/networkEndpoints"
           }
         ],
-        "evidence": "The live Movement OFT owns mint and burn references for the documented savUSD Fungible Asset. Its current peer table contains only Avant's Avalanche OFT adapter, and the same externally owned account controls admin and delegate state."
+        "evidence": "The live Movement OFT module owns mint and burn references for the documented savUSD Fungible Asset, and its peer table contains only Avant's documented Avalanche OFT adapter. The recorded EOA 0x18fa1c57de0dbb2c3991fded86c58b4635e3b5f27a94261b887c5983ddf13e05 controls admin and delegate state and is modeled separately; the module is only the delivery identity, while complete admin and LayerZero validation authority remain unresolved."
+      },
+      {
+        "id": "movement-layerzero-admin",
+        "label": "Movement savUSD LayerZero OFT admin EOA",
+        "routeRefs": [
+          "movement:0xde6eb2598d91fd43c432ba7f0bca56158525a74ac0841b749ce17bf984cf5642"
+        ],
+        "capabilities": ["admin", "peer-config", "rate-limit"],
+        "controllerChain": "movement",
+        "controllerAddress": "0x18fa1c57de0dbb2c3991fded86c58b4635e3b5f27a94261b887c5983ddf13e05",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:movement:0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c",
+          "eoa:movement:0x18fa1c57de0dbb2c3991fded86c58b4635e3b5f27a94261b887c5983ddf13e05"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At ledger version 201950024, the live Movement peer-table handle returned exactly one row: EID 30106 mapped to Avant's documented Avalanche OFT adapter 0x3524609C4D8111d45aFC912bf1e1270Cd5A1bd85. The OFT module remains the separate delivery identity.",
+          "rateLimits": "For Avalanche EID 30106, rate_limit_config returned 0/0 and rate_limit_capacity returned the u64 maximum; the recorded admin EOA is the route's known configuration authority, while the effective cap remains unbounded.",
+          "pausersAdminsUpgraders": "get_admin() and get_delegate() both returned EOA 0x18fa1c57de0dbb2c3991fded86c58b4635e3b5f27a94261b887c5983ddf13e05. That account published no modules or multisig resource, while package registry upgrade policy 1 leaves a compatible package-upgrade path; complete admin scope and LayerZero validation authority remain unresolved."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 88220686,
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "Movement node API: OFT modules and resources at ledger version 201950024",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c/resources?ledger_version=201950024"
+          },
+          {
+            "label": "Movement official mainnet RPC and indexer endpoint directory",
+            "url": "https://docs.movementnetwork.xyz/devs/networkEndpoints"
+          }
+        ],
+        "evidence": "At Movement ledger version 201950024, get_admin() and get_delegate() on the documented OFT module both returned EOA 0x18fa1c57de0dbb2c3991fded86c58b4635e3b5f27a94261b887c5983ddf13e05. The EOA is the known admin identity and the module remains the delivery identity; the complete administrative/upgrade scope and LayerZero validator authority remain unresolved."
+      },
+      {
+        "id": "movement-layerzero-validation-domain",
+        "label": "Movement savUSD LayerZero validation domain",
+        "routeRefs": [
+          "movement:0xde6eb2598d91fd43c432ba7f0bca56158525a74ac0841b749ce17bf984cf5642"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:movement:0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "LayerZero Endpoint/DVN/executor validation is an external route failure domain. The current savUSD-specific DVN and executor configuration, validator membership, quorum, and emergency override roster were not independently read; no threshold or custody claim is made.",
+          "trustedPeerOrRemote": "The Movement peer table at ledger version 201950024 returned EID 30106 mapped to Avant's documented Avalanche OFT adapter 0x3524609C4D8111d45aFC912bf1e1270Cd5A1bd85. This known module and peer delivery path does not establish LayerZero validator authority.",
+          "unsupportedReason": "The Movement OFT module, peer row, and recorded admin EOA identify delivery and application administration only; they do not identify the current LayerZero DVN/executor roster, quorum, or validator controller."
+        },
+        "observedAt": "2026-08-28",
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "Movement node API: OFT modules and resources at ledger version 201950024",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c/resources?ledger_version=201950024"
+          }
+        ],
+        "evidence": "The Movement OFT module and its sole configured EID 30106 peer establish the known delivery path. The 2026-08-28 review did not resolve the savUSD-specific LayerZero DVN/executor roster, validator membership, quorum, emergency override roster, or controlling authority. The module and recorded admin EOA are delivery/application identities, not validator identities; this validation control therefore remains unknown."
       },
       {
         "id": "arbitrum-ccip-burn-mint-pool",
-        "label": "Arbitrum savUSD CCIP BurnMintTokenPool",
+        "label": "Arbitrum savUSD CCIP BurnMintTokenPool delivery",
         "routeRefs": [
           "arbitrum:0xa322e23a357cb7c596a7a834102b9d6d5b15da3e"
         ],
-        "capabilities": ["bridge-mint", "bridge-burn", "admin"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
         "controllerChain": "arbitrum",
         "controllerAddress": "0xC164b8232ca67D2f8dDA43CF75CbE8161E6861D8",
         "failureDomainKeys": [
@@ -727,7 +875,7 @@
         "routeChecks": {
           "trustedPeerOrRemote": "At Arbitrum block 499054642, the verified pool reported eight supported remote chains and used the official Arbitrum CCIP router 0x141fa059441e0ca23ce184b6a78bafd2a517dde8.",
           "rateLimits": "The pool's separate rate-limit admin was the zero address. The token maxSupply() was 0, so this bridge-mint route is conservatively treated as unbounded rather than capped.",
-          "pausersAdminsUpgraders": "Pool owner(), token owner(), and token CCIP admin all returned 0xd4d23209aaE8630bf386b7393763a5b7865e57cb; the pool was the token's only minter and burner."
+          "pausersAdminsUpgraders": "Pool owner(), token owner(), and token CCIP admin all returned 0xd4d23209aaE8630bf386b7393763a5b7865e57cb; the pool was the token's only minter and burner. The admin EOA is modeled in the separate Arbitrum CCIP admin control; this delivery control does not treat the pool contract as the controlling authority."
         },
         "observedAt": "2026-08-28",
         "observedBlock": 499054642,
@@ -739,9 +887,88 @@
           {
             "label": "Arbitrum Blockscout verified CCIP BurnMintTokenPool source",
             "url": "https://arbitrum.blockscout.com/address/0xC164b8232ca67D2f8dDA43CF75CbE8161E6861D8?tab=contract"
+          },
+          {
+            "label": "Chainlink CCIP docs",
+            "url": "https://docs.chain.link/ccip"
           }
         ],
-        "evidence": "The verified Arbitrum representation can only be minted and burned by the verified CCIP pool. The pool points to that token, uses the official Arbitrum router, and exposes its owner and supported-chain set on-chain."
+        "evidence": "At Arbitrum block 499054642, the verified representation can only be minted and burned by CCIP pool 0xC164b8232ca67D2f8dDA43CF75CbE8161E6861D8, which points to the authored token and uses the official Arbitrum router. The pool is the known delivery identity; pool/token administration resolved to recorded EOA 0xd4d23209aaE8630bf386b7393763a5b7865e57cb and is modeled separately, while complete admin and CCIP validator authority remain unresolved."
+      },
+      {
+        "id": "arbitrum-ccip-admin",
+        "label": "Arbitrum savUSD CCIP pool and token admin EOA",
+        "routeRefs": [
+          "arbitrum:0xa322e23a357cb7c596a7a834102b9d6d5b15da3e"
+        ],
+        "capabilities": ["admin"],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd4d23209aaE8630bf386b7393763a5b7865e57cb",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0xc164b8232ca67d2f8dda43cf75cbe8161e6861d8",
+          "router:arbitrum:0x141fa059441e0ca23ce184b6a78bafd2a517dde8",
+          "eoa:evm:0xd4d23209aae8630bf386b7393763a5b7865e57cb"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 499054642, the CCIP pool reported eight supported remote chains and used the official Arbitrum CCIP router 0x141fa059441e0ca23ce184b6a78bafd2a517dde8; that pool remains the separate delivery identity.",
+          "pausersAdminsUpgraders": "At Arbitrum block 499054642, pool owner(), token owner(), and token CCIP admin all returned the recorded EOA 0xd4d23209aaE8630bf386b7393763a5b7865e57cb. This identifies the pool/token admin account, but complete administrative scope, custody, and external CCIP validation authority remain unresolved."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 499054642,
+        "sources": [
+          {
+            "label": "Arbitrum Blockscout verified savUSD representation source",
+            "url": "https://arbitrum.blockscout.com/address/0xa322e23a357cb7c596a7a834102b9d6d5b15da3e?tab=contract"
+          },
+          {
+            "label": "Arbitrum Blockscout verified CCIP BurnMintTokenPool source",
+            "url": "https://arbitrum.blockscout.com/address/0xC164b8232ca67D2f8dDA43CF75CbE8161E6861D8?tab=contract"
+          },
+          {
+            "label": "Chainlink CCIP docs",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Arbitrum block 499054642, pool owner(), token owner(), and token CCIP admin all returned EOA 0xd4d23209aaE8630bf386b7393763a5b7865e57cb, while the pool remained the representation's only minter and burner. The EOA is the known admin identity and the pool remains the delivery identity; complete admin scope and CCIP validation authority remain unresolved."
+      },
+      {
+        "id": "arbitrum-ccip-validation-domain",
+        "label": "Arbitrum savUSD Chainlink CCIP validation domain",
+        "routeRefs": [
+          "arbitrum:0xa322e23a357cb7c596a7a834102b9d6d5b15da3e"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "router:arbitrum:0x141fa059441e0ca23ce184b6a78bafd2a517dde8",
+          "contract:arbitrum:0xc164b8232ca67d2f8dda43cf75cbe8161e6861d8"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "Chainlink CCIP router/off-ramp and Risk Management Network validation are external route failure domains. The current savUSD-specific DON/RMN validator membership, quorum, and emergency override roster were not independently read; no threshold or custody claim is made.",
+          "trustedPeerOrRemote": "The reviewed Arbitrum pool and router identify the savUSD delivery contract and supported remote-chain configuration, but those delivery identities do not establish the independent CCIP validator authority.",
+          "unsupportedReason": "The configured CCIP pool, router, and recorded admin EOA identify delivery and application administration only; they do not identify the current CCIP validator controller or validator roster."
+        },
+        "observedAt": "2026-08-28",
+        "sources": [
+          {
+            "label": "Arbitrum Blockscout verified savUSD representation source",
+            "url": "https://arbitrum.blockscout.com/address/0xa322e23a357cb7c596a7a834102b9d6d5b15da3e?tab=contract"
+          },
+          {
+            "label": "Arbitrum Blockscout verified CCIP BurnMintTokenPool source",
+            "url": "https://arbitrum.blockscout.com/address/0xC164b8232ca67D2f8dDA43CF75CbE8161E6861D8?tab=contract"
+          },
+          {
+            "label": "Chainlink CCIP docs",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "The Arbitrum savUSD representation and CCIP pool/router delivery path are known from the reviewed contract and route records. The 2026-08-28 review did not resolve the savUSD-specific CCIP DON/RMN validator membership, quorum, emergency override roster, or controlling authority. The pool and recorded admin EOA are delivery/application identities, not validator identities; this validation control therefore remains unknown."
       }
     ]
   }

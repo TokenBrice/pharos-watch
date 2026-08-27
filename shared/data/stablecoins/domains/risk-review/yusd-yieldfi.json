@@ -795,7 +795,7 @@
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
           "contract:avalanche:0xf6aebdeb2add0ab53a0090dc8714719604a9f9df",
-          "router:avalanche:0xf4c7e640eda248ef95972845a62bdc74237805db3"
+          "router:avalanche:0xf4c7e640eda248ef95972845a62bdc74237805db"
         ],
         "authorityType": "contract",
         "routeChecks": {

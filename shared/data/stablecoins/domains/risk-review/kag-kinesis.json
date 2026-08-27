@@ -88,7 +88,7 @@
     "controls": [
       {
         "id": "kag-ethereum-erc20f-minter",
-        "label": "KMS Labs Ethereum KAG ERC20F minter EOA",
+        "label": "Observed Ethereum KAG ERC20F minter EOA (legal attribution unproven)",
         "routeRefs": [
           "ethereum:0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
         ],
