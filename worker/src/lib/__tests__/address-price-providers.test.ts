@@ -13,6 +13,7 @@ import { runBirdeyeAddressProvider } from "../address-price-providers/birdeye";
 import { runCoingeckoOnchainAddressProvider } from "../address-price-providers/coingecko-onchain";
 import { runDexPaprikaAddressProvider } from "../address-price-providers/dexpaprika";
 import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
+import { applyReviewedAddressPriceTargetOverride } from "../address-price-providers/reviewed-target-overrides";
 import { emptyProviderResult } from "../address-price-providers/shared";
 import type { AddressPriceTarget } from "../address-price-providers";
 
@@ -130,6 +131,64 @@ describe("address price providers", () => {
 
     expect(targets.get("dexpaprika-address")).toEqual([]);
     expect(targets.get("moralis-address")).toEqual([]);
+  });
+
+  it("narrows CoinGecko Onchain VUSD targeting to the reviewed IOTA EVM deployment", () => {
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: ["coingecko-onchain-address"],
+      assets: [{
+        id: "vusd-virtue",
+        symbol: "VUSD",
+        price: null,
+      }],
+    });
+
+    expect(targets.get("coingecko-onchain-address")).toEqual([expect.objectContaining({
+      stablecoinId: "vusd-virtue",
+      chain: "iota-evm",
+      providerChainId: "iota-evm",
+      address: "0x10740259a1860af3327dd0642ee35d6e8e7143ff",
+      origin: "contracts",
+    })]);
+  });
+
+  it("fails a reviewed target override closed when metadata or provider support drifts", () => {
+    const deployment = {
+      chain: "iota-evm",
+      address: "0x10740259a1860af3327dd0642ee35d6e8e7143ff",
+      origin: "contracts" as const,
+    };
+
+    expect(applyReviewedAddressPriceTargetOverride({
+      provider: "coingecko-onchain-address",
+      stablecoinId: "vusd-virtue",
+      deployments: [deployment],
+      metadataDeployments: [{ chain: "iota", address: "0xstale::vusd::VUSD" }],
+      providerChainMap: { "iota-evm": "iota-evm" },
+    })).toEqual([]);
+
+    expect(applyReviewedAddressPriceTargetOverride({
+      provider: "coingecko-onchain-address",
+      stablecoinId: "vusd-virtue",
+      deployments: [deployment],
+      metadataDeployments: [deployment],
+      providerChainMap: {},
+    })).toEqual([]);
+  });
+
+  it("leaves unrelated address-provider deployments unchanged", () => {
+    const deployments = [
+      { chain: "ethereum", address: "0x0000000000000000000000000000000000000001" },
+      { chain: "base", address: "0x0000000000000000000000000000000000000002" },
+    ];
+
+    expect(applyReviewedAddressPriceTargetOverride({
+      provider: "coingecko-onchain-address",
+      stablecoinId: "fixture-usd",
+      deployments,
+      metadataDeployments: deployments,
+      providerChainMap: { eth: "eth", base: "base" },
+    })).toEqual(deployments);
   });
 
   it("prioritizes missing prices before low-depth priced rows, then material source-depth gaps", () => {
@@ -744,6 +803,42 @@ describe("address price providers", () => {
         return match?.[1];
       });
       expect(requestedNetworks).toEqual(["eth", "celo", "cardano", "citrea", "eth"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("spends a capped CoinGecko network slot on reviewed VUSD IOTA EVM instead of native IOTA", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = mockFetch([{ match: () => true, body: { data: [] } }]);
+      const vusdTargets = buildAddressPriceTargetsByProvider({
+        providers: ["coingecko-onchain-address"],
+        assets: [{ id: "vusd-virtue", symbol: "VUSD", price: null }],
+      }).get("coingecko-onchain-address") ?? [];
+      const precedingNetworks = [
+        makeDexScreenerTarget(1_100, { chain: "ethereum", providerChainId: "eth" }),
+        makeDexScreenerTarget(1_101, { chain: "celo", providerChainId: "celo" }),
+        makeDexScreenerTarget(1_102, { chain: "cardano", providerChainId: "cardano" }),
+        makeDexScreenerTarget(1_103, { chain: "citrea", providerChainId: "citrea" }),
+      ];
+
+      const resultPromise = runCoingeckoOnchainAddressProvider(
+        [...precedingNetworks, ...vusdTargets],
+        null,
+        undefined,
+        1_700_000_000,
+        Number.MAX_SAFE_INTEGER,
+      );
+      await vi.runAllTimersAsync();
+      await resultPromise;
+
+      const requestedNetworks = fetchMock.mock.calls.map(([input]) => {
+        const match = String(input).match(/\/onchain\/networks\/([^/]+)\/tokens\/multi\//);
+        return match?.[1];
+      });
+      expect(requestedNetworks).toEqual(["eth", "celo", "cardano", "citrea", "iota-evm"]);
+      expect(requestedNetworks).not.toContain("iota");
     } finally {
       vi.useRealTimers();
     }

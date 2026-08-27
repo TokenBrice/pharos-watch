@@ -25,6 +25,7 @@ import {
   type LivePriceContext,
   type PriceSourceProvider,
   getRegistryLivePriceDiagnosticTarget,
+  isValidatedLivePriceNoQuote,
 } from "./helpers";
 import { idleCdoTrancheProvider } from "./idle-cdo-tranche";
 import { inheritedTrackedPriceProvider } from "./inherited-tracked";
@@ -361,7 +362,8 @@ export async function fetchAuthoritativeLivePriceOverrides(
 
     liveContext.lastUntrustedParent = null;
     try {
-      const override = await provider.fetchLivePrice(asset, liveContext, candidateSignal);
+      const liveResult = await provider.fetchLivePrice(asset, liveContext, candidateSignal);
+      const override = isValidatedLivePriceNoQuote(liveResult) ? null : liveResult;
       if (override) {
         results.set(asset.id, override);
         applyOverrideToLiveContext(liveContext, asset.id, override);
@@ -391,7 +393,13 @@ export async function fetchAuthoritativeLivePriceOverrides(
             : "missing-quote",
           candidateAt,
         });
-        if (
+        const explicitCircuitOutcome = isValidatedLivePriceNoQuote(liveResult)
+          ? liveResult.circuitOutcome
+          : null;
+        if (circuitSource && options?.db && explicitCircuitOutcome === "success") {
+          await recordOutcomeSafe(options.db, circuitSource, true);
+          circuitAttempts.delete(circuitSource);
+        } else if (
           circuitSource &&
           options?.db &&
           provider.recordNullLiveResultAsCircuitFailure &&

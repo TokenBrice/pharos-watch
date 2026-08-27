@@ -116,7 +116,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   cardano:   { name: "Cardano", explorerUrl: "https://cardanoscan.io",           evmChainId: null,  type: "other", logoPath: "/chains/cardano.png",   providers: { coingecko: "cardano", dexscreener: "cardano", geckoTerminal: "cardano" } },
   icp:       { name: "Internet Computer", explorerUrl: "https://dashboard.internetcomputer.org", evmChainId: null, type: "other", logoPath: "/chains/icp.png", providers: { coingecko: "icp", dexscreener: "icp", geckoTerminal: "icp" } },
   iota:      { name: "IOTA",    explorerUrl: "https://iotascan.com",             evmChainId: null,  type: "other", logoPath: "/chains/iota.svg",      providers: { coingecko: "iota", geckoTerminal: "iota" } },
-  "iota-evm":{ name: "IOTA EVM", explorerUrl: "https://explorer.evm.iota.org",   evmChainId: 8822,  type: "evm",   logoPath: "/chains/iota.svg",      providers: { geckoTerminal: "iota-evm" } },
+  "iota-evm":{ name: "IOTA EVM", explorerUrl: "https://explorer.evm.iota.org",   evmChainId: 8822,  type: "evm",   logoPath: "/chains/iota.svg",      providers: { coingecko: "iota-evm", geckoTerminal: "iota-evm" } },
   noble:     { name: "Noble",   explorerUrl: "https://www.mintscan.io/noble",    evmChainId: null,  type: "other", logoPath: "/chains/noble.png"     },
   osmosis:   { name: "Osmosis", explorerUrl: "https://www.mintscan.io/osmosis",  evmChainId: null,  type: "other", logoPath: "/chains/osmosis.png"   },
   mantra:    { name: "MANTRA",  explorerUrl: "https://www.mintscan.io/mantra",   evmChainId: null,  type: "other", logoPath: "/chains/mantra.png"    },

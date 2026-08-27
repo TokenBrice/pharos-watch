@@ -84,6 +84,10 @@ describe("resolveChainId", () => {
     expect(resolveChainId("Pharos")).toBe("pharos");
   });
 
+  it("maps IOTA EVM to CoinGecko Onchain's verified network id", () => {
+    expect(CG_CHAIN_MAP["iota-evm"]).toBe("iota-evm");
+  });
+
   it("resolves DefiLlama chain names that differ from local metadata names", () => {
     expect(resolveChainId("XDC")).toBe("xdc");
     expect(resolveChainId("ZKsync Era")).toBe("zksync");
