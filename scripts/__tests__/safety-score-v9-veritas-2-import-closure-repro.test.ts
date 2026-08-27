@@ -40,6 +40,11 @@ const OMITTED_SCORE_BEARING_IMPORTS = [
     importSpecifier: "./safety-score-v9-wm-supply-observer",
   },
   {
+    path: "worker/src/lib/safety-score-v9-supply-observation-primitives.ts",
+    importedBy: "worker/src/lib/safety-score-v9-wm-supply-observer.ts",
+    importSpecifier: "./safety-score-v9-supply-observation-primitives",
+  },
+  {
     path: "worker/src/lib/safety-score-v9-xaut-supply-attribution-contract.ts",
     importedBy: "worker/src/lib/safety-score-v9-supply-attribution.ts",
     importSpecifier:

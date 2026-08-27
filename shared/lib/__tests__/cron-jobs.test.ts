@@ -247,7 +247,7 @@ describe("cron job schedule metadata", () => {
 
   it("keeps every physical yield trigger in the hourly Cron CPU class", () => {
     // Cloudflare caps Cron expressions with intervals below one hour at 30s of
-    // CPU time. sync-yield-data needs ~150-175s of runtime, so a twice-hourly
+    // CPU time. sync-yield-data needs several minutes of runtime, so a twice-hourly
     // expression gets the invocation killed mid `source-resolution` (production
     // outage 2026-08-18, 11:20-15:00 UTC). Each physical trigger must therefore
     // carry a single minute value, either directly or via the paired-trigger
@@ -258,5 +258,28 @@ describe("cron job schedule metadata", () => {
     for (const trigger of CRON_TRIGGER_SCHEDULES.hourlyYieldSync) {
       expect(minutesOf(trigger)).toHaveLength(1);
     }
+  });
+
+  it("starts yield publication only after the active V9 identity has settled", () => {
+    const minuteOf = (schedule: string): number => Number(schedule.split(" ")[0]);
+    const minutesOf = (schedule: string): number[] =>
+      schedule.split(" ")[0]!.split(",").map(Number);
+    const yieldMinute = minuteOf(CRON_SCHEDULES.hourlyYieldSync);
+    const v9Minutes = minutesOf(CRON_SCHEDULES.v9PublicationOffset);
+    const previousV9Minute = Math.max(...v9Minutes.filter((minute) => minute < yieldMinute));
+    const nextV9Minute = Math.min(...v9Minutes.map((minute) =>
+      minute > yieldMinute ? minute : minute + 60
+    ));
+
+    // Recent production V9 publications took at most 56s. Keep two additional
+    // full minutes for scheduler/visibility skew before loading yield inputs.
+    expect(yieldMinute - previousV9Minute).toBeGreaterThanOrEqual(3);
+
+    // A deliberately conservative ten-minute yield budget must finish well
+    // before the next V9 writer can rotate the active safety identity.
+    expect(nextV9Minute - yieldMinute).toBeGreaterThan(10);
+    expect(CRON_SCHEDULES.hourlyYieldSync).toBe("55 * * * *");
+    expect(CRON_TRIGGER_SCHEDULES.hourlyYieldSync).toEqual(["55 * * * *"]);
+    expect(minuteOf(CRON_SCHEDULES.fourHourlyYieldSupplemental)).not.toBe(yieldMinute);
   });
 });

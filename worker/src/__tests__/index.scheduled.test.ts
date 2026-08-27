@@ -897,7 +897,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "20 * * * *" } as ScheduledEvent,
+      { cron: "55 * * * *" } as ScheduledEvent,
       env,
       ctx,
     );

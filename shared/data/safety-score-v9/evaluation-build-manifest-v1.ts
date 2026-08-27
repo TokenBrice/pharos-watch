@@ -34,7 +34,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-cadences.ts",
-      "sha256": "f0ed4273ac08eb8ef7474835454ff803b88de438edf2dd7d53cbc5da7076b0fd"
+      "sha256": "638355a6bdad1587fe8dbb6abb41b1ad15eb75ff8f6951ea0924fbdec75abb64"
     },
     {
       "path": "shared/lib/dependency-derivation.ts",
@@ -458,7 +458,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-centrifuge-supply-observer.ts",
-      "sha256": "86c10a2ce437cd162371162bce0db413dda9cb3d8bc3ee3b84b1d7e0c09b245a"
+      "sha256": "997d1e7b482d6a21292e6b053da98b1976632f14fd8418230569006b224bc9a7"
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-bridge.ts",
@@ -565,8 +565,12 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "32c3e1f867cc6d3868655eacc5cb59e14bd730ad34c9c65a0c3813860cec189d"
     },
     {
+      "path": "worker/src/lib/safety-score-v9-supply-observation-primitives.ts",
+      "sha256": "e1fc3d20f07ecbb62e2b6626252322d7b030a181c10c53be87fe2ce61066341e"
+    },
+    {
       "path": "worker/src/lib/safety-score-v9-wm-supply-observer.ts",
-      "sha256": "57eb7ddab875d4a58adac779b550bb77466097b7c5d2d3bb7e22e52ad7a59b8c"
+      "sha256": "7a147ce41884989ebd0c0f39fe55a4e8661d5471124d3fd257c1e6cd5914517f"
     },
     {
       "path": "worker/src/lib/safety-score-v9-xaut-supply-attribution-contract.ts",
@@ -577,7 +581,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "d43c25fd1a096a349c1524d27a0678b50174390ceb755007d932d72042375d0e"
+  "digest": "014a21ce6981ba8af112af9b309658e267a06a35812ad2a3af24d0384918d7c1"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

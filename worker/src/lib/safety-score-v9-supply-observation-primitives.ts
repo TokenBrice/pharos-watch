@@ -1,5 +1,8 @@
 import { throwIfAborted } from "./abort";
-import type { ChainRpcConfig } from "./chain-registry";
+import {
+  getAlchemyAuthHeaders,
+  type ChainRpcConfig,
+} from "./chain-registry";
 import type { EvmBlockHeader, EvmMulticall3Result } from "./evm-rpc";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import {
@@ -273,14 +276,26 @@ export async function fetchSafetyScoreV9SolanaRpc<T>(
   method: string,
   params: unknown[],
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<T | null> {
-  for (const rpcUrl of SOLANA_RPC_URLS) {
+  const configured = chainRpcs?.get("solana");
+  const rpcUrls = [
+    configured?.rpcUrl,
+    configured?.fallbackRpcUrl,
+    ...SOLANA_RPC_URLS,
+  ].filter((rpcUrl, index, values): rpcUrl is string =>
+    typeof rpcUrl === "string" && values.indexOf(rpcUrl) === index,
+  );
+  for (const rpcUrl of rpcUrls) {
     throwIfAborted(signal);
     const result = await fetchJsonWithRetry<SolanaRpcEnvelope<T>>(
       rpcUrl,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAlchemyAuthHeaders(rpcUrl),
+        },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
         signal,
       },
@@ -303,11 +318,16 @@ export async function fetchReviewedDeploymentSolanaObservation(
     routeId: string;
     contractAddress: string;
     identity: ReviewedDeploymentSolanaIdentity;
+    chainRpcs?: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
   },
-  rpc: SafetyScoreV9SolanaRpcFetcher = fetchSafetyScoreV9SolanaRpc,
+  rpc?: SafetyScoreV9SolanaRpcFetcher,
 ): Promise<ReviewedDeploymentSupplyObservation | null> {
-  const accounts = await rpc<SolanaMultipleAccountsResult>(
+  const fetchRpc: SafetyScoreV9SolanaRpcFetcher = rpc ?? (
+    (method, params, signal) =>
+      fetchSafetyScoreV9SolanaRpc(method, params, signal, input.chainRpcs)
+  );
+  const accounts = await fetchRpc<SolanaMultipleAccountsResult>(
     "getMultipleAccounts",
     [
       [input.contractAddress, input.identity.controllerAddress],
@@ -344,7 +364,7 @@ export async function fetchReviewedDeploymentSolanaObservation(
     0,
     slot - REVIEWED_DEPLOYMENT_SOLANA_BLOCK_ANCHOR_LOOKBACK_SLOTS,
   );
-  const blockSlots = await rpc<number[]>(
+  const blockSlots = await fetchRpc<number[]>(
     "getBlocks",
     [
       blockAnchorStartSlot,
@@ -360,7 +380,7 @@ export async function fetchReviewedDeploymentSolanaObservation(
     .reduce<number | null>((latest, candidate) => latest === null || candidate > latest ? candidate : latest, null);
   if (blockSlot === null) return null;
 
-  const block = await rpc<SolanaBlockResult>(
+  const block = await fetchRpc<SolanaBlockResult>(
     "getBlock",
     [
       blockSlot,

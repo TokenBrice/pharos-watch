@@ -212,6 +212,13 @@ describe("wM reviewed deployment observer", () => {
     });
     expect(deps.fetchEvmBlockNumber).toHaveBeenCalledTimes(4);
     expect(deps.fetchSolanaObservation).toHaveBeenCalledTimes(1);
+    expect(deps.fetchSolanaObservation).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      undefined,
+      undefined,
+      expect.any(Map),
+    );
   });
 
   it("accepts a finalized Solana observation just after the fixed clock", async () => {

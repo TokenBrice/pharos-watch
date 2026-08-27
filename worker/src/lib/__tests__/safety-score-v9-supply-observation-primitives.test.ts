@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
-import type { ChainRpcConfig } from "../chain-registry";
+import {
+  buildAlchemyRpcUrl,
+  type ChainRpcConfig,
+} from "../chain-registry";
 import {
   decodeEvmAddress,
   decodeEvmAddressHex,
   decodeEvmHexBytes,
   decodeEvmUint256,
+  fetchReviewedDeploymentSolanaObservation,
   fetchSafetyScoreV9SolanaRpc,
   safetyScoreV9EvmObservationOptions,
 } from "../safety-score-v9-supply-observation-primitives";
@@ -132,6 +136,71 @@ describe("Safety Score V9 supply observation primitives", () => {
       method: "getSlot",
       params: [{ commitment: "finalized" }],
     });
+  });
+
+  it("prefers the configured Solana RPC and preserves header auth", async () => {
+    const configuredUrl = buildAlchemyRpcUrl("solana-mainnet", "test-key");
+    const fetchMock = mockFetch([{
+      match: configuredUrl,
+      outcomes: [{ body: { result: { slot: 42 } } }],
+    }]);
+    const configured = new Map<string, ChainRpcConfig>([[
+      "solana",
+      {
+        chainId: "solana",
+        chainName: "Solana",
+        type: "other",
+        rpcUrl: configuredUrl,
+        explorerUrl: "https://solscan.io",
+      },
+    ]]);
+
+    await expect(
+      fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
+        "getSlot",
+        [{ commitment: "finalized" }],
+        undefined,
+        configured,
+      ),
+    ).resolves.toEqual({ slot: 42 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![0]).toBe(configuredUrl);
+    expect(fetchMock.mock.calls[0]![1]!.headers).toMatchObject({
+      Authorization: "Bearer test-key",
+    });
+  });
+
+  it("uses the configured RPC through the default reviewed-deployment wrapper", async () => {
+    const configuredUrl = "https://solana.example";
+    const fetchMock = mockFetch([{
+      match: configuredUrl,
+      outcomes: [{ body: { result: {} } }],
+    }]);
+    const configured = new Map<string, ChainRpcConfig>([[
+      "solana",
+      {
+        chainId: "solana",
+        chainName: "Solana",
+        type: "other",
+        rpcUrl: configuredUrl,
+        explorerUrl: "https://solscan.io",
+      },
+    ]]);
+
+    await expect(fetchReviewedDeploymentSolanaObservation({
+      routeId: "solana:mint",
+      contractAddress: "mint",
+      identity: {
+        programOwner: "program",
+        mintAuthority: "authority",
+        controllerAddress: "controller",
+        controllerProgramOwner: "controller-program",
+        controllerExecutable: false,
+      },
+      chainRpcs: configured,
+    })).resolves.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![0]).toBe(configuredUrl);
   });
 
   it("retries a single Solana endpoint once before rotating to the next endpoint", async () => {
