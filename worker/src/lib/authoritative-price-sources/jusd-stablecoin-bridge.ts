@@ -11,10 +11,11 @@ import {
   decodeUint256WordBigInt,
   PROTOCOL_REDEEM_SOURCE,
   resolveTrustedOverrideParent,
-  type CurrentPriceOverride,
   type LivePriceContext,
+  type LivePriceFetchResult,
   type PriceSourceProvider,
   type TrustedOverrideParent,
+  VALIDATED_LIVE_PRICE_NO_QUOTE,
 } from "./helpers";
 
 const CITREA_RPC_URL = "https://rpc.mainnet.citrea.xyz";
@@ -347,7 +348,7 @@ export const jusdStablecoinBridgeProvider: PriceSourceProvider = {
     asset: PeggedAsset,
     context: LivePriceContext,
     signal?: AbortSignal,
-  ): Promise<CurrentPriceOverride | null> {
+  ): Promise<LivePriceFetchResult> {
     const trustedRoutes: Array<{ route: JuiceDollarBridgeRoute; parent: TrustedOverrideParent }> = [];
     for (const route of JUSD_BRIDGE_ROUTES) {
       const parent = resolveTrustedOverrideParent(
@@ -386,6 +387,6 @@ export const jusdStablecoinBridgeProvider: PriceSourceProvider = {
       };
     }
 
-    return null;
+    return VALIDATED_LIVE_PRICE_NO_QUOTE;
   },
 };

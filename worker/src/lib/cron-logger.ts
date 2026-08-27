@@ -355,14 +355,15 @@ async function clearCronProgress(
   job: string,
   startedAt: number,
   slotStartedAt: number | null,
+  leaseOwner: string | null,
 ): Promise<void> {
   await runWithOverloadRetry(() =>
     db
       .prepare(
         `DELETE FROM cron_run_progress
-          WHERE job = ? AND started_at = ? AND slot_started_at IS ?`,
+          WHERE job = ? AND started_at = ? AND slot_started_at IS ? AND lease_owner IS ?`,
       )
-      .bind(job, startedAt, slotStartedAt)
+      .bind(job, startedAt, slotStartedAt, leaseOwner)
       .run(),
   );
 }
@@ -630,7 +631,7 @@ export async function logCronRun(
     await progressWriteTail;
     if (progressActivated) {
       try {
-        await clearCronProgress(db, job, startSec, slotStartedAt);
+        await clearCronProgress(db, job, startSec, slotStartedAt, progressState.leaseOwner);
       } catch (err) {
         console.warn(`[db] Failed to clear cron progress for ${job}:`, err);
       }

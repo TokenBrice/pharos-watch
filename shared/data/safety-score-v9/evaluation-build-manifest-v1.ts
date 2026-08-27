@@ -26,7 +26,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chains/index.ts",
-      "sha256": "87b38813e9bf6cbf319d1dea3b42239cd286e4e9cb4641d9966620540c476bf9"
+      "sha256": "4fa834b08e38036e5ef4568fcc3171400203419725f217d3e4395f475f1ecc3d"
     },
     {
       "path": "shared/lib/classification/resolve-mechanism-archetype.ts",
@@ -34,7 +34,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-cadences.ts",
-      "sha256": "d5ed837092a783d50650652908b7b1f4a227ae877988e2e49e4e0ed39d6fca77"
+      "sha256": "f0ed4273ac08eb8ef7474835454ff803b88de438edf2dd7d53cbc5da7076b0fd"
     },
     {
       "path": "shared/lib/dependency-derivation.ts",
@@ -70,7 +70,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "add65338256e1782ab8a4097cc9214284a151bc9021f4486dc1afcae04191f84"
+      "sha256": "9892c0738c731bbcea1d82319d762088364c118792c523c408f057cfb1acde97"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -577,7 +577,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "3f45493cee0180ccc04161fd05fe5c35791c314a6a823908fb49bc02d9b10744"
+  "digest": "8d779bd51ac7e008c49df9fe8d23113850cc8cd3908db8e036624b779ada64cb"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

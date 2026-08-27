@@ -83,6 +83,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/address-price-providers/dexpaprika.ts",
   "worker/src/lib/address-price-providers/dexscreener.ts",
   "worker/src/lib/address-price-providers/index.ts",
+  "worker/src/lib/address-price-providers/reviewed-target-overrides.ts",
   "worker/src/lib/address-price-providers/shared.ts",
   "worker/src/lib/authoritative-price-sources/aznd-curve-pool.ts",
   "worker/src/lib/authoritative-price-sources/cap-cusd.ts",

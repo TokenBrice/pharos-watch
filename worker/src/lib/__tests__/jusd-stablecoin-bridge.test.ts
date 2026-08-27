@@ -140,12 +140,12 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
   });
 
   it("prices JUSD from a fresh, fully funded, executable USDT.e bridge", async () => {
+    const db = {} as D1Database;
     installRpcFixture();
     const assets = makeAssets();
 
-    const override = await jusdStablecoinBridgeProvider.fetchLivePrice?.(assets[0]!, {
-      assetsById: new Map(assets.map((asset) => [asset.id, asset])),
-    });
+    const overrides = await fetchAuthoritativeLivePriceOverrides(assets, undefined, undefined, { db });
+    const override = overrides.get("jusd-juicedollar");
 
     expect(jusdStablecoinBridgeProvider).toMatchObject({
       source: "protocol-redeem",
@@ -169,6 +169,7 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
       },
     });
     expect(override?.metadata?.juiceDollarBridge?.redeemableJusd).toBeCloseTo(57_375.94899182, 8);
+    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.JUSD_CITREA_BRIDGE, true);
     expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(2);
   });
 
@@ -209,12 +210,17 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     }
   });
 
-  it("keeps an all-zero-capacity route circuit-neutral but records provider failures", async () => {
+  it("heals the circuit after a validated all-zero-capacity route without publishing a price", async () => {
     const db = {} as D1Database;
     installRpcFixture({ minted: "0x0" });
     await expect(fetchAuthoritativeLivePriceOverrides(makeAssets(), undefined, undefined, { db })).resolves.toEqual(new Map());
-    expect(recordOutcomeSafeMock).not.toHaveBeenCalled();
+    expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(2);
+    expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(1);
+    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.JUSD_CITREA_BRIDGE, true);
+  });
 
+  it("records provider failures after a Citrea transport error", async () => {
+    const db = {} as D1Database;
     fetchJsonWithRetryMock.mockReset().mockResolvedValueOnce(null);
     await expect(fetchAuthoritativeLivePriceOverrides(makeAssets(), undefined, undefined, { db })).resolves.toEqual(new Map());
     expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.JUSD_CITREA_BRIDGE, false);
@@ -274,7 +280,7 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     }
   });
 
-  it("returns neutral unavailability for underfunded routes without sentinel-account preconditions", async () => {
+  it("returns validated no-quote outcomes for underfunded routes without sentinel-account preconditions", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     for (const overrides of [
       { quoteBalance: "0x1" },
@@ -287,7 +293,7 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
         jusdStablecoinBridgeProvider.fetchLivePrice?.(assets[0]!, {
           assetsById: new Map(assets.map((asset) => [asset.id, asset])),
         }),
-      ).resolves.toBeNull();
+      ).resolves.toEqual({ kind: "validated-no-quote", circuitOutcome: "success" });
     }
   });
 
@@ -303,17 +309,7 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(1);
   });
 
-  it("throws a provider failure for RPC transport failure without probing an untrusted parent", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    fetchJsonWithRetryMock.mockResolvedValueOnce(null);
-    const failedAssets = makeAssets();
-    await expect(
-      jusdStablecoinBridgeProvider.fetchLivePrice?.(failedAssets[0]!, {
-        assetsById: new Map(failedAssets.map((asset) => [asset.id, asset])),
-      }),
-    ).rejects.toThrow(/Citrea RPC returned no response/);
-
-    fetchJsonWithRetryMock.mockReset();
+  it("keeps an untrusted-parent pre-RPC null circuit-neutral", async () => {
     const staleObservedAt = Math.floor(Date.now() / 1_000) - 60 * 60;
     const assets = makeAssets({
       priceSource: "cached+coingecko",
@@ -321,11 +317,9 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
       priceObservedAt: staleObservedAt,
     });
 
-    await expect(
-      jusdStablecoinBridgeProvider.fetchLivePrice?.(assets[0]!, {
-        assetsById: new Map(assets.map((asset) => [asset.id, asset])),
-      }),
-    ).resolves.toBeNull();
+    const db = {} as D1Database;
+    await expect(fetchAuthoritativeLivePriceOverrides(assets, undefined, undefined, { db })).resolves.toEqual(new Map());
     expect(fetchJsonWithRetryMock).not.toHaveBeenCalled();
+    expect(recordOutcomeSafeMock).not.toHaveBeenCalled();
   });
 });

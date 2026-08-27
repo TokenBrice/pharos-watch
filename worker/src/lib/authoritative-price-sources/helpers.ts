@@ -263,8 +263,26 @@ export interface PriceSourceProvider {
     asset: PeggedAsset,
     context: LivePriceContext,
     signal?: AbortSignal,
-  ): Promise<CurrentPriceOverride | null>;
+  ): Promise<LivePriceFetchResult>;
   fetchHistoricalPrices?(meta: StablecoinMeta, context: HistoricalPriceContext): Promise<HistoricalPricePoint[] | null>;
+}
+
+export interface ValidatedLivePriceNoQuote {
+  kind: "validated-no-quote";
+  circuitOutcome: "success";
+}
+
+export type LivePriceFetchResult = CurrentPriceOverride | ValidatedLivePriceNoQuote | null;
+
+export const VALIDATED_LIVE_PRICE_NO_QUOTE: ValidatedLivePriceNoQuote = {
+  kind: "validated-no-quote",
+  circuitOutcome: "success",
+};
+
+export function isValidatedLivePriceNoQuote(
+  result: LivePriceFetchResult,
+): result is ValidatedLivePriceNoQuote {
+  return result != null && "kind" in result && result.kind === "validated-no-quote";
 }
 
 export type HistoricalBlockPriceResolver = (

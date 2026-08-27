@@ -32,6 +32,7 @@ import {
   hasValue,
   normalizeAddressForKey,
 } from "./shared";
+import { applyReviewedAddressPriceTargetOverride } from "./reviewed-target-overrides";
 import type {
   AddressPriceAssetLike,
   AddressPriceProviderCollectionResult,
@@ -369,7 +370,20 @@ export function buildAddressPriceTargetsByProvider(params: {
       );
       if (!targeting.include) continue;
 
-      for (const deployment of buildAssetDeployments(asset)) {
+      const meta = ACTIVE_META_BY_ID.get(asset.id);
+      const metadataDeployments = [
+        ...(meta?.contracts ?? []),
+        ...(meta?.tradedContracts ?? []),
+      ];
+      const deployments = applyReviewedAddressPriceTargetOverride({
+        provider,
+        stablecoinId: asset.id,
+        deployments: buildAssetDeployments(asset),
+        metadataDeployments,
+        providerChainMap: chainMap,
+      });
+
+      for (const deployment of deployments) {
         const chain = resolveChainId(deployment.chain);
         if (!chain) continue;
         if (provider === "birdeye-address" && chain !== "solana") continue;

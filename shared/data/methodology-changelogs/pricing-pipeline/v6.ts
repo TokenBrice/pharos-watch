@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.211",
+    title: "Reviewed VUSD IOTA-EVM exact-address recovery",
+    date: "2026-08-27",
+    effectiveAt: 1787853581,
+    summary:
+      "VUSD exact-address recovery now uses its verified, liquid IOTA-EVM deployment without spending that asset's CoinGecko Onchain target on the non-traded native IOTA coin type.",
+    impact: [
+      "IOTA EVM maps to CoinGecko Onchain's verified `iota-evm` network identifier, making exact token-address requests eligible on the production provider",
+      "A provider-specific reviewed override narrows `vusd-virtue` to `0x10740259a1860af3327dd0642ee35d6e8e7143ff` only while that exact deployment remains in current stablecoin metadata and the provider still supports its chain",
+      "A stale or mismatched override emits no target rather than synthesizing an address; request caps, the $50K liquidity floor, soft-source trust, depeg authority, contracts metadata, and supply calculation remain unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.21",
     title: "Reviewed HCHF low-volume price recovery",
     date: "2026-08-27",

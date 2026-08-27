@@ -237,6 +237,7 @@ export function createScheduledRuntimeContext(
           await reportProgress({
             stage: "started",
             message: `Starting ${job}`,
+            leaseOwner,
             metadata: slotMeta,
           });
           const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};

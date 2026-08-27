@@ -101,6 +101,48 @@ describe("cron job schedule metadata", () => {
     );
   });
 
+  it("normalizes monthly audits to the current UTC calendar month", () => {
+    expect(
+      getCronSlotStartedAtForSchedule("monthlyYieldAudit", Date.parse("2026-09-01T06:00:03Z")),
+    ).toBe(Math.floor(Date.parse("2026-09-01T06:00:00Z") / 1000));
+  });
+
+  it("keeps the January monthly audit in January across the year boundary", () => {
+    expect(
+      getCronSlotStartedAtForSchedule("monthlyYieldAudit", Date.parse("2027-01-01T06:00:03Z")),
+    ).toBe(Math.floor(Date.parse("2027-01-01T06:00:00Z") / 1000));
+  });
+
+  it("does not collapse the short February 2027 month into the March slot", () => {
+    const februarySlot = getCronSlotStartedAtForSchedule(
+      "monthlyYieldAudit",
+      Date.parse("2027-02-01T06:00:03Z"),
+    );
+    const marchSlot = getCronSlotStartedAtForSchedule(
+      "monthlyYieldAudit",
+      Date.parse("2027-03-01T06:00:03Z"),
+    );
+
+    expect(februarySlot).toBe(Math.floor(Date.parse("2027-02-01T06:00:00Z") / 1000));
+    expect(marchSlot).toBe(Math.floor(Date.parse("2027-03-01T06:00:00Z") / 1000));
+    expect(marchSlot).not.toBe(februarySlot);
+  });
+
+  it("normalizes the monthly audit across leap-year February", () => {
+    const februarySlot = getCronSlotStartedAtForSchedule(
+      "monthlyYieldAudit",
+      Date.parse("2028-02-01T06:00:03Z"),
+    );
+    const marchSlot = getCronSlotStartedAtForSchedule(
+      "monthlyYieldAudit",
+      Date.parse("2028-03-01T06:00:03Z"),
+    );
+
+    expect(februarySlot).toBe(Math.floor(Date.parse("2028-02-01T06:00:00Z") / 1000));
+    expect(marchSlot).toBe(Math.floor(Date.parse("2028-03-01T06:00:00Z") / 1000));
+    expect(marchSlot - februarySlot).toBe(29 * 86400);
+  });
+
   // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
   // captureClockSec <= fixedInput.clockSec: a publication must not depend on an
   // observation taken after its own input snapshot. prepare-safety-score-v9-input
