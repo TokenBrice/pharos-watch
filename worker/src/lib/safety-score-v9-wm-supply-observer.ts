@@ -58,6 +58,8 @@ interface WmObserverDependencies {
     routeId: string,
     contractAddress: string,
     signal?: AbortSignal,
+    rpc?: SolanaRpcFetcher,
+    chainRpcs?: Map<string, ChainRpcConfig>,
   ) => Promise<ReviewedDeploymentSupplyObservation | null>;
 }
 
@@ -236,6 +238,7 @@ export async function fetchSolanaWmDeploymentObservation(
   contractAddress: string,
   signal?: AbortSignal,
   rpc?: SolanaRpcFetcher,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<ReviewedDeploymentSupplyObservation | null> {
   const identity = expectedWmDeploymentIdentity(routeId);
   if (!identity || identity.runtime !== "solana") return null;
@@ -248,6 +251,7 @@ export async function fetchSolanaWmDeploymentObservation(
         ...identity,
         controllerExecutable: true,
       },
+      chainRpcs,
       signal,
     },
     rpc,
@@ -285,6 +289,8 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
       route.routeId,
       route.contractAddress,
       input.signal,
+      undefined,
+      input.chainRpcs,
     ),
     identityValidationError: reviewedDeploymentIdentityValidationError,
   });

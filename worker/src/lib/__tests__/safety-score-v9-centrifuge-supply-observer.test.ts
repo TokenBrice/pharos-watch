@@ -215,6 +215,14 @@ describe("Centrifuge reviewed deployment observer", () => {
     ]);
     expect(deps.fetchEvmBlockNumber).toHaveBeenCalledTimes(7);
     expect(deps.fetchSolanaObservation).toHaveBeenCalledTimes(1);
+    expect(deps.fetchSolanaObservation).toHaveBeenCalledWith(
+      ASSET_ID,
+      expect.any(String),
+      expect.any(String),
+      undefined,
+      undefined,
+      expect.any(Map),
+    );
   });
 
   it("rejects the whole packet when Spoke authorization or Solana is unavailable", async () => {

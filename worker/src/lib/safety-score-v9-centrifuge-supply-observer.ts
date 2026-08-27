@@ -52,6 +52,8 @@ interface CentrifugeObserverDependencies {
     routeId: string,
     contractAddress: string,
     signal?: AbortSignal,
+    rpc?: CentrifugeSolanaRpcFetcher,
+    chainRpcs?: Map<string, ChainRpcConfig>,
   ) => Promise<ReviewedDeploymentSupplyObservation | null>;
 }
 
@@ -217,6 +219,7 @@ export async function fetchSolanaCentrifugeDeploymentObservation(
   contractAddress: string,
   signal?: AbortSignal,
   rpc?: CentrifugeSolanaRpcFetcher,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<ReviewedDeploymentSupplyObservation | null> {
   const identity = expectedCentrifugeDeploymentIdentity(assetId, routeId);
   if (!identity || identity.runtime !== "solana") return null;
@@ -229,6 +232,7 @@ export async function fetchSolanaCentrifugeDeploymentObservation(
         ...identity,
         controllerExecutable: false,
       },
+      chainRpcs,
       signal,
     },
     rpc,
@@ -274,6 +278,8 @@ export async function observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
       route.routeId,
       route.contractAddress,
       input.signal,
+      undefined,
+      input.chainRpcs,
     ),
     identityValidationError: (observation) => reviewedDeploymentIdentityValidationError(observation, input.assetId),
   });

@@ -128,7 +128,7 @@ Comparability requires equal `evaluationBuildDigest`, `policyId`, `policyDigest`
 
 ## Remediation
 
-- If `sync-yield-data` is stale but not leased, wait for the next `20 * * * *` run if the last failure was transient.
+- If `sync-yield-data` is stale but not leased, wait for the next `55 * * * *` run if the last failure was transient.
 - If the cron is repeatedly `skipped_locked`, confirm the lease is stale, then clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-data`.
 - If metadata shows `reason: "previous-yield-rankings-cache-invalid"` or publication guard failure, do not delete the cache blindly. Preserve the last good payload for rollback/debugging and identify whether the failure came from payload schema, severe shrink, duplicate ranking IDs, or a generation `failure_reason`.
 - If the degraded reason points to benchmarks, use [`yield-benchmark-fallback-stale.md`](./yield-benchmark-fallback-stale.md).

@@ -114,12 +114,15 @@ const CRON_SCHEDULE_DEFINITIONS = {
   fourHourlyReserveSync: { schedule: "11 */4 * * *", ...CRON_SCHEDULE_CADENCES.fourHourlyReserveSync },
   // Single hourly expression on purpose. Cloudflare caps Cron expressions with
   // intervals below one hour at 30 seconds of CPU time, and the yield source and
-  // publication graph needs ~150-175s of runtime, so a twice-hourly expression
+  // publication graph needs several minutes of runtime, so a twice-hourly expression
   // (":28,:58" or ":24,:54") gets the invocation killed mid `source-resolution`.
   // Recombining this into a sub-hourly expression requires the paired-trigger
   // form used by halfHourlyChartsOffset, which needs a physical
-  // trigger beyond the reviewed budget. See docs/dex-liquidity.md.
-  hourlyYieldSync: { schedule: "20 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
+  // trigger beyond the reviewed budget. :55 also leaves two full settling
+  // minutes after the :52 V9 publication (recent production maximum: 56s), so
+  // normal yield runs finish before the active safety identity rolls over.
+  // See docs/yield-intelligence-operations.md.
+  hourlyYieldSync: { schedule: "55 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
   fourHourlyYieldSupplemental: {
     schedule: "25 */4 * * *",
     ...CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental,

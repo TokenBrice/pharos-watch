@@ -185,6 +185,7 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "worker/src/lib/evm-selectors.ts",
   "worker/src/lib/fetch-retry.ts",
   "worker/src/lib/safety-score-v9-centrifuge-supply-observer.ts",
+  "worker/src/lib/safety-score-v9-supply-observation-primitives.ts",
   "worker/src/lib/safety-score-v9-supply-attribution.ts",
   "worker/src/lib/safety-score-v9-supply-attribution-source.ts",
   "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
