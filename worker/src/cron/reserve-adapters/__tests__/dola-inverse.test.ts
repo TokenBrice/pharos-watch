@@ -111,6 +111,10 @@ describe("resolveBaseSymbol", () => {
     expect(resolveBaseSymbol(makeMarket("yv-sDOLA-scrvUSD"))).toBe("scrvUSD");
   });
 
+  it("extracts asset from Yearn reUSD/staked-DOLA vault: yv-reUSD-sDOLA → reUSD", () => {
+    expect(resolveBaseSymbol(makeMarket("yv-reUSD-sDOLA"))).toBe("reUSD");
+  });
+
   it("handles Yearn non-DOLA vault: yv-WETH → WETH", () => {
     expect(resolveBaseSymbol(makeMarket("yv-WETH"))).toBe("WETH");
   });
@@ -121,6 +125,14 @@ describe("resolveBaseSymbol", () => {
 
   it("extracts asset from Curve LP: DOLA-wstUSR lp → wstUSR", () => {
     expect(resolveBaseSymbol(makeMarket("DOLA-wstUSR lp"))).toBe("wstUSR");
+  });
+
+  it("extracts asset from staked-DOLA Curve CLP: sDOLA-scrvUSD clp → scrvUSD", () => {
+    expect(resolveBaseSymbol(makeMarket("sDOLA-scrvUSD clp"))).toBe("scrvUSD");
+  });
+
+  it("extracts asset from reUSD/staked-DOLA Curve CLP: reUSD-sDOLA clp → reUSD", () => {
+    expect(resolveBaseSymbol(makeMarket("reUSD-sDOLA clp"))).toBe("reUSD");
   });
 
   it("handles Yearn FraxPyUSD LP: yv-DOLA-FraxPyUSD lp → FraxPyUSD lp", () => {
@@ -188,6 +200,36 @@ describe("adaptFirmMarkets", () => {
       depType: "collateral",
     });
     expect(btcSlice?.pct).toBe(20);
+  });
+
+  it("maps reUSD-paired markets to the tracked Resupply dependency", () => {
+    const result = adaptFirmMarkets({
+      markets: [
+        makeMarket("reUSD-sDOLA clp", 1_500_000),
+        makeMarket("yv-reUSD-sDOLA", 500_000),
+        makeMarket("sDOLA-scrvUSD clp", 2_000_000),
+      ],
+      timestamp: 1000,
+    });
+
+    const reusdSlice = result.slices.find((s) => s.name === "reUSD collateral");
+    expect(reusdSlice).toMatchObject({
+      pct: 50,
+      coinId: "reusd-resupply",
+      depType: "collateral",
+      risk: "high",
+    });
+    const scrvusdSlice = result.slices.find((s) => s.name === "scrvUSD collateral");
+    expect(scrvusdSlice).toMatchObject({ pct: 50, coinId: "scrvusd-curve" });
+    expect(result.metadata?.unknownExposurePct).toBe(0);
+    expect(listUnexpectedDolaAssets({
+      markets: [
+        makeMarket("reUSD-sDOLA clp", 1_500_000),
+        makeMarket("yv-reUSD-sDOLA", 500_000),
+        makeMarket("sDOLA-scrvUSD clp", 2_000_000),
+      ],
+      timestamp: 1000,
+    })).toEqual([]);
   });
 
   it("filters out zero-debt markets", () => {

@@ -106,6 +106,14 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "pendle-v3-PT-apxUSD-18JUN2026": { risk: "high", coinId: "apxusd-apyx", depType: "collateral" },
   "pendle-v3-PT-apyUSD-18JUN2026": { risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
   "new-silver-junior":       { risk: "high", ...cefiPositionMeta() },
+  // Senior tranche of the same New Silver private residential-credit facility
+  // as new-silver-junior; less loss-absorbing but the same off-chain lender.
+  "new-silver-senior":       { risk: "high", ...cefiPositionMeta() },
+  // "BASE Liquidity Farm" (Outland): USDC-denominated managed liquidity on
+  // Base with no published strategy identity — reviewed 2026-08-27 at $3 of
+  // exposure; stays high risk with no dependency link until the strategy is
+  // publicly documented.
+  "base-outland-farm":       { risk: "high" },
   "morpho-v2-sentora-prime": { risk: "high", coinId: "pyusd-paypal", depType: "collateral" },
   // STRCx is Backed Assets' tokenized wrapper of Strategy's STRC perpetual
   // preferred stock — an off-chain security held in centralized custody whose

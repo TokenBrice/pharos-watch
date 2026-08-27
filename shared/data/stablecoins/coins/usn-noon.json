@@ -83,10 +83,15 @@
       "riskMap": {
         "Private Credit (Fasanara FTAC)": "high",
         "DeFi Lending": "medium",
+        "DeFi Lending (Euler)": "medium",
+        "DeFi Lending (Morpho)": "medium",
         "CLOs (JAAA)": "high",
         "US Treasury Bills": "very-low",
         "Principal Tokens (PTs)": "high",
         "Funding Rate (BTC)": "high",
+        "Funding Rate Arb (BTC)": "high",
+        "Funding Rate Arb (HYPE)": "high",
+        "Undeployed": "high",
         "Other": "high"
       },
       "renameMap": {
@@ -95,10 +100,15 @@
       "sourceKeyMap": {
         "Private Credit (Fasanara FTAC)": "accountable:noon:deployment:private-credit-ftac",
         "DeFi Lending": "accountable:noon:deployment:defi-lending",
+        "DeFi Lending (Euler)": "accountable:noon:deployment:defi-lending-euler",
+        "DeFi Lending (Morpho)": "accountable:noon:deployment:defi-lending-morpho",
         "CLOs (JAAA)": "accountable:noon:deployment:clos-jaaa",
         "US Treasury Bills": "accountable:noon:deployment:us-treasury-bills",
         "Other": "accountable:noon:deployment:other",
-        "Funding Rate (BTC)": "accountable:noon:deployment:funding-rate-btc"
+        "Funding Rate (BTC)": "accountable:noon:deployment:funding-rate-btc",
+        "Funding Rate Arb (BTC)": "accountable:noon:deployment:funding-rate-arb-btc",
+        "Funding Rate Arb (HYPE)": "accountable:noon:deployment:funding-rate-arb-hype",
+        "Undeployed": "accountable:noon:deployment:undeployed"
       },
       "coinIdMap": {
         "CLOs (JAAA)": "jaaa-janus-henderson-anemoy"
