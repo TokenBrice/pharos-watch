@@ -95,14 +95,14 @@ Supported input kinds:
 | `http-json`      | JSON API endpoint                                                    |
 | `http-html`      | HTML page parsed by the adapter                                      |
 | `indexer`        | Indexed external data feed                                           |
-| `onchain-solana` | On-chain Solana mint-supply reads via the public mainnet RPCs        |
+| `onchain-solana` | On-chain Solana mint-supply reads via keyed RPCs when configured, then public mainnet RPCs |
 | `onchain-evm`    | On-chain EVM reads via `etherscan-proxy`, `alchemy`, or `public-rpc` |
 
 The shared live-reserve config schema enforces adapter-specific primary and fallback input kinds. For example, `curated-validated` can use `onchain-evm` or `onchain-solana`, `single-asset` can use `http-json` or `onchain-evm`, and HTML scrapers such as `circle-transparency` cannot accidentally be configured with an on-chain input that would pass metadata validation but fail during cron execution.
 
 `curated-validated` can now use `onchain-solana` when a tracked coin publishes its canonical Solana mint in `coin.contracts`, allowing the adapter to validate non-zero supply without downgrading the reserve mix to a weak single-bucket feed.
 
-`onchain-solana` now tries three public RPCs in order before failing the adapter: `https://api.mainnet-beta.solana.com`, `https://api.mainnet.solana.com`, and `https://solana-rpc.publicnode.com`. This reduces false reserve incidents caused by single-endpoint Solana RPC reachability failures inside the Worker runtime.
+`onchain-solana` now tries configured keyed RPCs first — Alchemy, then dRPC when each credential is available — followed by any explicit adapter RPCs and the three public RPCs: `https://api.mainnet-beta.solana.com`, `https://api.mainnet.solana.com`, and `https://solana-rpc.publicnode.com`. Duplicate URLs are removed, and keyed provider URLs are redacted from terminal errors. This reduces false reserve incidents caused by single-endpoint Solana RPC reachability failures inside the Worker runtime.
 
 Branch-balance adapters (`evm-branch-balances`, `liquity-v2-branches`, and `lista`) can set a per-branch `priceToken` when the measured collateral balance is a protocol receipt token whose live price should be sourced from a separate underlying token address. The balance still comes from the configured branch token; only the DefiLlama price lookup address changes. Branch-balance configs can also attach reviewed `sourceUrls` so redemption telemetry emitted from same-run on-chain reads carries source provenance into the Redemption Backstop API.
 

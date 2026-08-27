@@ -102,6 +102,7 @@
         "[Fluid]_Gho": "medium",
         "[Fluent]_fUSDnr": "medium",
         "[GlobalDollar]_USDG": "low",
+        "[Global_Dollar]_USDG_Loop": "low",
         "[Ripple]_Sentora_RLUSD": "medium",
         "[Securitize]_VBILL_Loop": "high",
         "[Sky]_Sky_Savings_Vault": "low",
@@ -144,6 +145,7 @@
         "[Aave]_RLUSD": "rlusd-ripple",
         "[Cap]_stcUSD": "stcusd-cap",
         "[GlobalDollar]_USDG": "usdg-paxos",
+        "[Global_Dollar]_USDG_Loop": "usdg-paxos",
         "[Ripple]_Sentora_RLUSD": "rlusd-ripple",
         "[Securitize]_VBILL_Loop": "vbill-vaneck",
         "[Sky]_Sky_Savings_Vault": "susds-sky",
@@ -182,6 +184,7 @@
         "[Aave]_RLUSD": "collateral",
         "[Cap]_stcUSD": "collateral",
         "[GlobalDollar]_USDG": "collateral",
+        "[Global_Dollar]_USDG_Loop": "collateral",
         "[Ripple]_Sentora_RLUSD": "collateral",
         "[Securitize]_VBILL_Loop": "collateral",
         "[Sky]_Sky_Savings_Vault": "collateral",
@@ -222,6 +225,7 @@
         "[Fluid]_Gho": "Fluid GHO",
         "[Fluent]_fUSDnr": "Fluent fUSDnr",
         "[GlobalDollar]_USDG": "Global Dollar USDG",
+        "[Global_Dollar]_USDG_Loop": "Global Dollar USDG loop",
         "[Ripple]_Sentora_RLUSD": "Ripple RLUSD Sentora",
         "[Securitize]_VBILL_Loop": "Securitize VBILL loop",
         "[Sky]_Sky_Savings_Vault": "Sky Savings Vault",
@@ -255,7 +259,8 @@
         "[Curvance]_AUSD": "Curvance AUSD"
       },
       "allowNegativeBuckets": [
-        "[Strata]_srUSDe_Pendle_PT_Loop"
+        "[Strata]_srUSDe_Pendle_PT_Loop",
+        "[Global_Dollar]_USDG_Loop"
       ]
     }
   },

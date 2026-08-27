@@ -2,6 +2,9 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { throwIfAborted } from "../../lib/abort";
+import { redactProviderUrls } from "../../lib/safe-error-message";
+import { toErrorMessage } from "../../lib/error-utils";
+import { getAlchemyAuthHeaders } from "../../lib/chain-registry";
 import { fetchErc20TotalSupply } from "./onchain";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";
 import { requireOnchainInput } from "./input-guards";
@@ -91,10 +94,20 @@ export async function fetchSolanaTokenSupply(
   mintAddress: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
+  rpcUrl?: string,
+  fallbackRpcUrl?: string,
 ): Promise<bigint | null> {
   let lastError: unknown = null;
+  const configuredRpc = ctx?.chainRpcs?.get("solana");
+  const rpcUrls = [...new Set([
+    configuredRpc?.rpcUrl,
+    configuredRpc?.fallbackRpcUrl,
+    rpcUrl,
+    fallbackRpcUrl,
+    ...SOLANA_RPC_URLS,
+  ].filter((url): url is string => typeof url === "string" && url.length > 0))];
 
-  for (const rpcUrl of SOLANA_RPC_URLS) {
+  for (const rpcUrl of rpcUrls) {
     throwIfAborted(signal);
     try {
       const body = await fetchJsonPostWithRetry<SolanaTokenSupplyResponse>(
@@ -108,6 +121,7 @@ export async function fetchSolanaTokenSupply(
         signal,
         10_000,
         ctx,
+        { headers: getAlchemyAuthHeaders(rpcUrl) },
       );
 
       const amount = body.result?.value?.amount;
@@ -121,7 +135,7 @@ export async function fetchSolanaTokenSupply(
         continue;
       }
     } catch (error) {
-      lastError = error;
+      lastError = new Error(redactProviderUrls(toErrorMessage(error)));
       continue;
     }
   }
@@ -189,7 +203,7 @@ export async function probeTrackedTokenSupply(
     throw new Error(`${adapterName} could not find a solana contract for ${coin.id}`);
   }
 
-  const supply = await fetchSolanaTokenSupply(mintAddress, signal, ctx);
+  const supply = await fetchSolanaTokenSupply(mintAddress, signal, ctx, rpcUrl, fallbackRpcUrl);
   if (supply == null || supply <= 0n) {
     throw new Error(`${adapterName} totalSupply probe failed for ${coin.id}`);
   }

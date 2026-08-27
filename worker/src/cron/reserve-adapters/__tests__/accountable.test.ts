@@ -698,6 +698,41 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
+  it("omits the current signed Yuzu USDG loop bucket without inflating reserve composition", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.083117,
+      ts: "2026-08-27T00:00:00.000Z",
+      reserves: {
+        exposure_split: {
+          "[Global_Dollar]_USDG_Loop": { "": -15725261.164036 },
+          Liquidity_Buffer: { "": 100_000_000 },
+        },
+      },
+    });
+
+    expect(result.slices).toEqual([
+      { name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+    ]);
+    expect(result.slices).not.toContainEqual(expect.objectContaining({
+      name: "Global Dollar USDG loop",
+    }));
+    expect(result.warnings?.map((warning) => warning.code)).toEqual([
+      "signed-negative-bucket",
+    ]);
+    expect(result.metadata).toMatchObject({
+      bucket: "exposure_split",
+      breakdownCount: 2,
+      mappedBucketCount: 1,
+      collateralization: 1.083117,
+      collateralizationRatio: 1.083117,
+      signedBucketCount: 1,
+      signedBucketNames: ["[Global_Dollar]_USDG_Loop"],
+      signedBucketValue: -15725261.164036,
+    });
+  });
+
   it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 

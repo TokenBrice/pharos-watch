@@ -73,6 +73,19 @@ describe("FDUSD signed reserve reports", () => {
     });
   });
 
+  it("extracts a day-first report-period date with a timezone suffix", () => {
+    const dayFirstReport = REPORT_TEXT.replace(
+      "June 30, 2026 at 9:00PM ET",
+      "as of 31 July 2026 at 9:00pm Eastern Time",
+    );
+    const result = adaptFdusdReserveReport(dayFirstReport);
+
+    expect(result.metadata).toMatchObject({
+      asOf: "31 July 2026",
+      sourceTimestamp: Date.parse("31 July 2026") / 1000,
+    });
+  });
+
   it("fails without emitting a row when the newest report cannot be parsed", async () => {
     vi.mocked(fetchPrimaryHtmlInput).mockResolvedValue(INDEX_HTML);
     vi.mocked(fetchWithRetry).mockResolvedValue(new Response("not a reserve report", {

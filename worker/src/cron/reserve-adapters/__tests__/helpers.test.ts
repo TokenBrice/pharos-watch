@@ -7,6 +7,7 @@ const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 vi.mock("../../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
 
 import { fetchWithRetry } from "../../../lib/fetch-retry";
+import { buildAlchemyRpcUrl } from "../../../lib/chain-registry";
 import {
   ADAPTER_USER_AGENT,
   accumulateBucketedExposure,
@@ -591,6 +592,8 @@ describe("fetchJsonWithRetry", () => {
 
   it("falls back across secondary Solana RPC endpoints when earlier endpoints fail", async () => {
     vi.mocked(fetchWithRetry)
+      .mockRejectedValueOnce(new Error("POST fetch failed for https://solana-mainnet.g.alchemy.com/v2/alchemy-key"))
+      .mockRejectedValueOnce(new Error("POST fetch failed for https://lb.drpc.org/ogrpc?network=solana&dkey=drpc-key"))
       .mockRejectedValueOnce(new Error("POST fetch failed for https://api.mainnet-beta.solana.com"))
       .mockRejectedValueOnce(new Error("POST fetch failed for https://api.mainnet.solana.com"))
       .mockResolvedValueOnce(
@@ -616,29 +619,172 @@ describe("fetchJsonWithRetry", () => {
       { kind: "onchain-solana" },
       signal,
       "curated-validated",
+      { chainRpcs: new Map([[
+        "solana",
+        {
+          chainId: "solana",
+          chainName: "Solana",
+          type: "other",
+          rpcUrl: "https://solana-mainnet.g.alchemy.com/v2/alchemy-key",
+          fallbackRpcUrl: "https://lb.drpc.org/ogrpc?network=solana&dkey=drpc-key",
+          explorerUrl: "https://solscan.io",
+        },
+      ]]) },
     )).resolves.toBe(42n);
 
     expect(fetchWithRetry).toHaveBeenNthCalledWith(
       1,
-      "https://api.mainnet-beta.solana.com",
+      "https://solana-mainnet.g.alchemy.com/v2/alchemy-key",
       expect.objectContaining({ method: "POST", signal }),
       2,
       { timeoutMs: 10_000, returnFinalResponse: true },
     );
     expect(fetchWithRetry).toHaveBeenNthCalledWith(
       2,
-      "https://api.mainnet.solana.com",
+      "https://lb.drpc.org/ogrpc?network=solana&dkey=drpc-key",
       expect.objectContaining({ method: "POST", signal }),
       2,
       { timeoutMs: 10_000, returnFinalResponse: true },
     );
     expect(fetchWithRetry).toHaveBeenNthCalledWith(
       3,
+      "https://api.mainnet-beta.solana.com",
+      expect.objectContaining({ method: "POST", signal }),
+      2,
+      { timeoutMs: 10_000, returnFinalResponse: true },
+    );
+    expect(fetchWithRetry).toHaveBeenNthCalledWith(
+      4,
+      "https://api.mainnet.solana.com",
+      expect.objectContaining({ method: "POST", signal }),
+      2,
+      { timeoutMs: 10_000, returnFinalResponse: true },
+    );
+    expect(fetchWithRetry).toHaveBeenNthCalledWith(
+      5,
       "https://solana-rpc.publicnode.com",
       expect.objectContaining({ method: "POST", signal }),
       2,
       { timeoutMs: 10_000, returnFinalResponse: true },
     );
+  });
+
+  it("attaches the registered Alchemy auth header to keyed Solana RPC POSTs", async () => {
+    const rpcUrl = buildAlchemyRpcUrl("solana-mainnet", "alchemy-secret");
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        result: { value: { amount: "9" } },
+      }), { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+
+    await expect(probeTrackedTokenSupply(
+      {
+        id: "test-solana",
+        contracts: [{ chain: "solana", address: "Mint1111111111111111111111111111111111" }],
+      } as StablecoinMeta,
+      { kind: "onchain-solana" },
+      signal,
+      "curated-validated",
+      { chainRpcs: new Map([[
+        "solana",
+        {
+          chainId: "solana",
+          chainName: "Solana",
+          type: "other",
+          rpcUrl,
+          explorerUrl: "https://solscan.io",
+        },
+      ]]) },
+    )).resolves.toBe(9n);
+
+    expect(rpcUrl).toBe("https://solana-mainnet.g.alchemy.com/v2/");
+    const [calledUrl, init] = vi.mocked(fetchWithRetry).mock.calls[0]!;
+    expect(calledUrl).toBe(rpcUrl);
+    expect((init as RequestInit).headers).toMatchObject({ Authorization: "Bearer alchemy-secret" });
+  });
+
+  it("redacts keyed Solana RPC URLs from the final supply error", async () => {
+    vi.mocked(fetchWithRetry)
+      .mockRejectedValueOnce(new Error("HTTP 403 for POST https://solana-mainnet.g.alchemy.com/v2/alchemy-secret"))
+      .mockRejectedValueOnce(new Error("HTTP 403 for POST https://lb.drpc.org/ogrpc?network=solana&dkey=drpc-secret"))
+      .mockImplementation(
+        () => Promise.resolve(new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { value: {} } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })),
+      );
+
+    const error = await probeTrackedTokenSupply(
+      {
+        id: "test-solana",
+        contracts: [{ chain: "solana", address: "Mint1111111111111111111111111111111111" }],
+      } as StablecoinMeta,
+      { kind: "onchain-solana" },
+      signal,
+      "curated-validated",
+      { chainRpcs: new Map([[
+        "solana",
+        {
+          chainId: "solana",
+          chainName: "Solana",
+          type: "other",
+          rpcUrl: "https://solana-mainnet.g.alchemy.com/v2/alchemy-secret",
+          fallbackRpcUrl: "https://lb.drpc.org/ogrpc?network=solana&dkey=drpc-secret",
+          explorerUrl: "https://solscan.io",
+        },
+      ]]) },
+    ).then(
+      () => new Error("expected supply probe to reject"),
+      (err: unknown) => err,
+    );
+
+    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) throw new Error("expected an Error");
+    expect(error.message).toContain("https://lb.drpc.org/[redacted]");
+    expect(error.message).not.toContain("alchemy-secret");
+    expect(error.message).not.toContain("drpc-secret");
+  });
+
+  it("keeps explicit Solana RPCs behind runtime keyed RPCs and ahead of public fallbacks", async () => {
+    vi.mocked(fetchWithRetry)
+      .mockRejectedValueOnce(new Error("POST fetch failed"))
+      .mockRejectedValueOnce(new Error("POST fetch failed"))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: { value: { amount: "7" } },
+        }), { status: 200 }),
+      );
+
+    await expect(probeTrackedTokenSupply(
+      {
+        id: "test-solana",
+        contracts: [{ chain: "solana", address: "Mint1111111111111111111111111111111111" }],
+      } as StablecoinMeta,
+      { kind: "onchain-solana" },
+      signal,
+      "curated-validated",
+      { chainRpcs: new Map([[
+        "solana",
+        {
+          chainId: "solana",
+          chainName: "Solana",
+          type: "other",
+          rpcUrl: "https://runtime.example/solana",
+          fallbackRpcUrl: "https://runtime-fallback.example/solana",
+          explorerUrl: "https://solscan.io",
+        },
+      ]]) },
+      "https://explicit.example/solana",
+      "https://explicit-fallback.example/solana",
+    )).resolves.toBe(7n);
+
+    expect(fetchWithRetry).toHaveBeenNthCalledWith(1, "https://runtime.example/solana", expect.any(Object), 2, expect.any(Object));
+    expect(fetchWithRetry).toHaveBeenNthCalledWith(2, "https://runtime-fallback.example/solana", expect.any(Object), 2, expect.any(Object));
+    expect(fetchWithRetry).toHaveBeenNthCalledWith(3, "https://explicit.example/solana", expect.any(Object), 2, expect.any(Object));
   });
 });
 
