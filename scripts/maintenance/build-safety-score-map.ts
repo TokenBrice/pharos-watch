@@ -34,6 +34,8 @@
  *     the day-over-day delta guard. Optional; absent or unreadable skips that
  *     guard with a warning so a first run can bootstrap. Freshness, finite
  *     geometry, and join coverage are asserted unconditionally.
+ *   - --accept-snapshot-transition: with a readable previous snapshot, validate
+ *     its full contract but accept its day-over-day comparison as reviewed.
  *
  * Outputs (alongside the PNG, sharing its basename):
  *   - .svg / .html   the rendered scene and its screenshot host
@@ -252,6 +254,7 @@ function parseCliArgs(argv: readonly string[]): {
   edition: Edition;
   issue: number | null;
   previousSnapshot: string | null;
+  acceptSnapshotTransition: boolean;
 } {
   const { values } = parseArgs({
     args: [...argv],
@@ -260,6 +263,7 @@ function parseCliArgs(argv: readonly string[]): {
       edition: { type: "string" },
       issue: { type: "string" },
       "previous-snapshot": { type: "string" },
+      "accept-snapshot-transition": { type: "boolean" },
     },
   });
   const edition = values.edition ?? "daily";
@@ -271,7 +275,12 @@ function parseCliArgs(argv: readonly string[]): {
     issue = Number(values.issue);
     if (!Number.isInteger(issue) || issue < 1) throw new Error(`--issue must be a positive integer (got "${values.issue}")`);
   }
-  return { out: values.out ?? null, edition, issue, previousSnapshot: values["previous-snapshot"] ?? null };
+  const previousSnapshot = values["previous-snapshot"] ?? null;
+  const acceptSnapshotTransition = values["accept-snapshot-transition"] === true;
+  if (acceptSnapshotTransition && !previousSnapshot) {
+    throw new Error("--accept-snapshot-transition requires --previous-snapshot");
+  }
+  return { out: values.out ?? null, edition, issue, previousSnapshot, acceptSnapshotTransition };
 }
 
 function loadApiKey(): string {
@@ -2066,13 +2075,26 @@ function readPreviousSnapshot(path: string): PreviousSnapshot | null {
   return { publicationStatus: "current", counts: { graded, notRated, unjoined, missingLogos, byTier }, mapSummary, coins };
 }
 
-function assertSaneDeltas(path: string | null, current: CurrentDeltaState): void {
+function assertSaneDeltas(
+  path: string | null,
+  current: CurrentDeltaState,
+  acceptSnapshotTransition = false,
+): void {
   if (!path) {
     console.warn("[safety-score-map] No --previous-snapshot supplied — day-over-day delta guard skipped");
     return;
   }
   const previous = readPreviousSnapshot(path);
-  if (!previous) return;
+  if (!previous) {
+    if (acceptSnapshotTransition) {
+      throw new Error("--accept-snapshot-transition requires a readable --previous-snapshot");
+    }
+    return;
+  }
+  if (acceptSnapshotTransition) {
+    console.warn("[safety-score-map] Operator accepted the validated previous snapshot transition — day-over-day comparisons skipped");
+    return;
+  }
   const priorGraded = previous.counts.graded;
   const priorNotRated = previous.counts.notRated;
   if (current.gradedCount < priorGraded * (1 - MAX_GRADED_DROP)) {
@@ -2157,8 +2179,12 @@ function assertSaneDeltas(path: string | null, current: CurrentDeltaState): void
   console.log(`[safety-score-map] Delta guard OK vs previous snapshot (graded ${priorGraded} -> ${current.gradedCount}, not rated ${priorNotRated} -> ${current.notRatedCount})`);
 }
 
-function assertMissingLogoDelta(path: string | null, missingLogoCount: number): void {
-  if (!path) return;
+function assertMissingLogoDelta(
+  path: string | null,
+  missingLogoCount: number,
+  acceptSnapshotTransition = false,
+): void {
+  if (!path || acceptSnapshotTransition) return;
   const previous = readPreviousSnapshot(path);
   if (!previous) return;
   if (previous.counts.missingLogos !== missingLogoCount) {
@@ -2205,7 +2231,7 @@ function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k: number
 }
 
 async function main(): Promise<void> {
-  const { out, edition, issue, previousSnapshot } = parseCliArgs(process.argv.slice(2));
+  const { out, edition, issue, previousSnapshot, acceptSnapshotTransition } = parseCliArgs(process.argv.slice(2));
   unsupportedGlyphs.clear();
   const apiKey = loadApiKey();
   const baseUrl = process.env.PHAROS_API_BASE?.trim() || DEFAULT_MAINTENANCE_API_BASE_URL;
@@ -2288,7 +2314,7 @@ async function main(): Promise<void> {
     missingLogoCount: null,
     coins: graded,
     tiers,
-  });
+  }, acceptSnapshotTransition);
 
   const { bands, k, gravelFloor } = fitLayout(graded);
   const floorMcapByTier: FloorMcapByTier = {
@@ -2337,7 +2363,7 @@ async function main(): Promise<void> {
   if (missingLogos.length > 0) {
     console.warn(`[safety-score-map] No logo for ${missingLogos.length} coins: ${missingLogos.slice(0, 12).map((b) => b.coin.id).join(", ")}${missingLogos.length > 12 ? ", …" : ""}`);
   }
-  assertMissingLogoDelta(previousSnapshot, missingLogos.length);
+  assertMissingLogoDelta(previousSnapshot, missingLogos.length, acceptSnapshotTransition);
 
   const asOf = new Date(reportCards.asOfSec * 1000);
   const dateLabel = asOf.toISOString().slice(0, 10);
