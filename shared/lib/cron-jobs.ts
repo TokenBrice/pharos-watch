@@ -874,5 +874,16 @@ export function getCronSlotStartedAtForSchedule(
     return rawTimestampSec;
   }
 
+  if (scheduleKey === "monthlyYieldAudit") {
+    const shiftedTimestampSec = rawTimestampSec - offsetSec;
+    const shiftedDate = new Date(shiftedTimestampSec * 1000);
+    const shiftedMonthStartSec = Math.floor(Date.UTC(
+      shiftedDate.getUTCFullYear(),
+      shiftedDate.getUTCMonth(),
+      1,
+    ) / 1000);
+    return shiftedMonthStartSec + offsetSec;
+  }
+
   return normalizeCronSlotStartedAt(rawTimestampSec, intervalSec, offsetSec);
 }

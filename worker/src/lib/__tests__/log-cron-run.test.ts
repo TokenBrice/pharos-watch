@@ -127,9 +127,10 @@ describe("logCronRun", () => {
   it("keeps active leased progress across an overlapping invocation", async () => {
     const { sqlite, db: sqliteDb } = createLatestSchemaSqlite();
     const nowSec = Math.floor(Date.now() / 1000);
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     const activeProgress = {
       job: "dispatch-telegram-alerts",
-      started_at: nowSec - 120,
+      started_at: nowSec,
       slot_started_at: nowSec - 300,
       updated_at: nowSec - 1,
       stage: "source-loading",
@@ -167,7 +168,7 @@ describe("logCronRun", () => {
           });
           return { status: "skipped_locked" };
         },
-        { slotStartedAt: nowSec },
+        { slotStartedAt: activeProgress.slot_started_at },
       );
 
       expect(
@@ -179,7 +180,27 @@ describe("logCronRun", () => {
           )
           .get(activeProgress.job),
       ).toEqual(activeProgress);
+
+      await logCronRun(
+        sqliteDb,
+        activeProgress.job,
+        async (_signal, reportProgress) => {
+          await reportProgress({
+            stage: "completed",
+            leaseOwner: activeProgress.lease_owner,
+          });
+          return { itemCount: 1 };
+        },
+        { slotStartedAt: activeProgress.slot_started_at },
+      );
+
+      expect(
+        sqlite
+          .prepare("SELECT job FROM cron_run_progress WHERE job = ?")
+          .get(activeProgress.job),
+      ).toBeUndefined();
     } finally {
+      dateNowSpy.mockRestore();
       sqlite.close();
     }
   });
