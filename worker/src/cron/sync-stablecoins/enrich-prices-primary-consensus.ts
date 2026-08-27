@@ -58,7 +58,6 @@ export function buildPrimaryConsensusResults(params: {
       cgTickerPrice: params.quoteMaps.cgTickerPrices.get(asset.id) ?? null,
       cgTickerObservedAt: params.quoteMaps.cgTickerObservedAt,
       dlListQuote: params.resolveDlListQuote(asset.id),
-      pythQuote: params.quoteMaps.pythPrices.get(asset.id),
       binancePrice: params.quoteMaps.binancePrices.get(asset.symbol.toUpperCase()) ?? null,
       binanceObservedAt: params.quoteMaps.binanceObservedAt,
       krakenPrice: params.quoteMaps.krakenPrices.get(asset.symbol.toUpperCase()) ?? null,

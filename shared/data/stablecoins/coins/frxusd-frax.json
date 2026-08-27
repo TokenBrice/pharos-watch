@@ -15,7 +15,6 @@
   "detailProvider": "defillama",
   "geckoId": "frax-usd",
   "cmcSlug": "frax-usd",
-  "pythFeedId": "0x7c53208632935ba5122c3cf65a0f4b3e72ba4955b49ad6ba0acf3d9ba405aef3",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://frax.com/transparency",

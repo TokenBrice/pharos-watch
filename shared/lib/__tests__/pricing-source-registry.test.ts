@@ -91,6 +91,7 @@ describe("pricing source registry", () => {
       requiresObservedAt: true,
       depegSourceFamily: "oracle:pyth",
       defaultObservedAtMode: "upstream",
+      isRetired: true,
     });
 
     expect(getPricingSourceRegistryEntry("protocol-redeem")).toMatchObject({

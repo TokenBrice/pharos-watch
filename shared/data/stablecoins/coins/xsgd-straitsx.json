@@ -14,7 +14,6 @@
   "llamaId": "289",
   "detailProvider": "defillama",
   "geckoId": "xsgd",
-  "pythFeedId": "0xc6e12cd46d605b3762d21373d04f3a3ca81c321a48329a5e6e1c27c26f743c8d",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.straitsx.com/xsgd",

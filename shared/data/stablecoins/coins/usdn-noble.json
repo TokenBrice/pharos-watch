@@ -40,7 +40,6 @@
   },
   "llamaId": "282",
   "detailProvider": "defillama",
-  "pythFeedId": "0xee8e0a7de474035b5cbc1a5f762a74d654e5006b25bfe18f390cc5a3915b88ac",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://dashboard.m0.org/",

@@ -183,7 +183,6 @@ export const CIRCUIT_SOURCE = {
   ALCHEMY: "alchemy",
   TWITTER_API: "twitter-api",
   TELEGRAM_API: "telegram-api",
-  PYTH_PRICES: "pyth-prices",
   BINANCE_PRICES: "binance-prices",
   KRAKEN_PRICES: "kraken-prices",
   BITSTAMP_PRICES: "bitstamp-prices",

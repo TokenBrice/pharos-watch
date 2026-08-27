@@ -15,7 +15,6 @@
   "pegMechanism": "NAV-accreting fund share token (not pegged to $1); price launched at ~$10/share and appreciates continuously as Treasury income accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services each NYSE/Federal Reserve business day",
   "detailProvider": "coingecko",
   "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
-  "pythFeedId": "0xdea78edd10cd7ae4524cc1744216788746306623bc3553014eeab6062860795d",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://superstate.com/assets/ustb",

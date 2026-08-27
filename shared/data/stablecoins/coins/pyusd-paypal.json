@@ -13,7 +13,6 @@
   "llamaId": "120",
   "detailProvider": "defillama",
   "geckoId": "paypal-usd",
-  "pythFeedId": "0xc1da1b73d7f01e7ddd54b3766cf7fcd644395ad14f70aa706ec5384c59e76692",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.paxos.com/pyusd-transparency",

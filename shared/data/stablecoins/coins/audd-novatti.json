@@ -26,7 +26,6 @@
   "llamaId": "165",
   "detailProvider": "defillama",
   "geckoId": "novatti-australian-digital-dollar",
-  "pythFeedId": "0xab7fce8eccc9b1ab1e1050efd235bbe53c61936698de3c4ad6f9ebd7814cfd8d",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.audd.digital/transparency/",

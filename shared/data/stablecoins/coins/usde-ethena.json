@@ -13,7 +13,6 @@
   "llamaId": "146",
   "detailProvider": "defillama",
   "geckoId": "ethena-usde",
-  "pythFeedId": "0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.ethena.fi/dashboards/transparency",

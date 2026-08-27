@@ -33,7 +33,6 @@
   "llamaId": "119",
   "detailProvider": "defillama",
   "geckoId": "first-digital-usd",
-  "pythFeedId": "0xccdc1a08923e2e4f4b1e6ea89de6acbc5fe1948e9706f5604b8cb50bc1ed3979",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.firstdigitallabs.com/transparency",

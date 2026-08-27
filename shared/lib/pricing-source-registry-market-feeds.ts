@@ -32,6 +32,7 @@ export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
     depegSourceFamily: "oracle:pyth",
     maxTrustedAgeSec: 5 * 60,
     defaultWeight: 2,
+    isRetired: true,
     capabilities: {
       hasUpstreamTimestamp: true,
     },

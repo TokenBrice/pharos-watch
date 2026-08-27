@@ -17,7 +17,6 @@
   "pegMechanism": "Stake USDe to receive sUSDe; the exchange rate versus USDe rises as rewards are transferred into the staking contract, while unstaking burns sUSDe immediately and releases USDe after Ethena's documented 7-day cooldown",
   "detailProvider": "coingecko",
   "geckoId": "ethena-staked-usde",
-  "pythFeedId": "0xca3ba9a619a4b3755c10ac7d5e760275aa95e9823d38a84fedd416856cdba37c",
   "links": [
     {
       "label": "Website",

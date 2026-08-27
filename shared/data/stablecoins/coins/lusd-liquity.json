@@ -13,7 +13,6 @@
   "llamaId": "8",
   "detailProvider": "defillama",
   "geckoId": "liquity-usd",
-  "pythFeedId": "0xc9dc99720306ef43fd301396a6f8522c8be89c6c77e8c27d87966918a943fd20",
   "links": [
     {
       "label": "Website",

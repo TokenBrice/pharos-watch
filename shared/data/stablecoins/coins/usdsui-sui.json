@@ -21,7 +21,6 @@
   "llamaId": "373",
   "detailProvider": "defillama",
   "geckoId": "usdsui",
-  "pythFeedId": "0xd510fcdb3a63f35d3bb118d5db3afc5815a3f13bc55d48abb893b63f0315902a",
   "links": [
     {
       "label": "Sui Launch",

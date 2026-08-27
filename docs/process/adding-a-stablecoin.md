@@ -172,7 +172,6 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `geckoId`
 - `cmcSlug`
 - `protocolSlug`
-- `pythFeedId`
 - `pegReferenceId`
 - `commodityOunces`
 - `proofOfReserves` (with optional `attestorTier`, `cadence`, `attestorJurisdiction`, `attestorLicense`, and a structured `latestReport`)
@@ -198,7 +197,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - Does it have a stablecoin-specific CMC slug worth keeping as a fallback?
 - Which Phase 1a runtime data path admits it, and what are the expected initial `priceSource` and `supplySource` / market-cap source?
 - If relying on on-chain total-supply fallback, is there exactly one supported deployment (or a documented curated exception), and are decimals verified?
-- Does it have a Pyth feed?
+- Does it have a reviewed hard-price or oracle source that should be documented?
 - Does it have a public reserves/transparency API or on-chain reserve proof?
 - Is there a meaningful redemption route worth modeling?
 - Is the token itself yield-bearing, or is yield only available through a separate wrapper?
@@ -663,7 +662,6 @@ Important: the map is `bluechip-slug -> pharos-id`, not the other way around.
 
 Evaluate whether the asset needs any of these metadata fields:
 
-- `pythFeedId` for oracle corroboration
 - `cmcSlug` when CMC fallback matters
 - `protocolSlug` for commodity/protocol-backed historical TVL paths
 - `tradedContracts` for market-traded variants the runtime should recognize separately

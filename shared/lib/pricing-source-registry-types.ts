@@ -36,6 +36,8 @@ export interface PricingSourceRegistryEntry {
   supportsUpstreamObservedAt: boolean;
   requiresObservedAt: boolean;
   isSearchDerived: boolean;
+  /** Historical provenance mapping only; retired sources are not active provider lanes. */
+  isRetired?: boolean;
   isProtocolOverride?: boolean;
   bypassesSoftValidationGuardrails?: boolean;
   /**

@@ -12,7 +12,6 @@
   "llamaId": "310",
   "detailProvider": "defillama",
   "geckoId": "usx",
-  "pythFeedId": "0x80950327494d0e7f29bdddb061ed7d1def1d712cec73bc167af02f0664137a16",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://attestation.solstice.finance/",

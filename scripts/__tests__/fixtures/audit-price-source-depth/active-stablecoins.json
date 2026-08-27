@@ -27,8 +27,7 @@
   {
     "id": "two-source",
     "name": "Two Source",
-    "symbol": "TWO",
-    "pythFeedId": "0xfeed"
+    "symbol": "TWO"
   },
   {
     "id": "three-source",

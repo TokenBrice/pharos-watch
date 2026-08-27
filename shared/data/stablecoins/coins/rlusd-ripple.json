@@ -13,7 +13,6 @@
   "llamaId": "250",
   "detailProvider": "defillama",
   "geckoId": "ripple-usd",
-  "pythFeedId": "0x65652029e7acde632e80192dcaa6ea88e61d84a4c78a982a63e98f4bbcb288d5",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://ripple.com/solutions/stablecoin/transparency/",

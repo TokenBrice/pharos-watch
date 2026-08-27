@@ -15,7 +15,6 @@
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "tether-gold",
-  "pythFeedId": "0x44465e17d2e9d390e70c999d5a11fda4f092847fcd2e3e5aa089d96c98a30e67",
   "protocolSlug": "tether-gold",
   "proofOfReserves": {
     "type": "independent-audit",

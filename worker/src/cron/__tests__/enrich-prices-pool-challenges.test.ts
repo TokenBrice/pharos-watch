@@ -125,40 +125,6 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     expect(result.source).not.toBe("pool-tvl-weighted");
   });
 
-  it("does NOT downgrade when consensus includes a hard source", async () => {
-    // CG + Pyth agree → hard source present → no pool challenge
-    const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
-    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
-
-    installFetch({
-      coingecko: { body: { tether: { usd: 1.0001 } } },
-      "hermes.pyth.network": {
-        body: {
-          parsed: [{
-            id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
-            price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
-          }],
-        },
-      },
-    });
-
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makePoolChallengeDb([
-      {
-        stablecoin_id: "usdt-tether",
-        price_sources_json: JSON.stringify([{ protocol: "uniswap-v3", chain: "ethereum", price: 0.8, tvl: 5_000_000 }]),
-        updated_at: nowSec - 60,
-      },
-    ]);
-
-    const { results } = await fixtureFetchPrimaryPrices(assets, db);
-
-    expect(results.size).toBe(1);
-    const result = results.get("usdt-tether")!;
-    // Pyth is a hard source, so pool challenge doesn't apply
-    expect(result.confidence).toBe("high");
-  });
-
   it("does NOT downgrade via pool challenge when pool divergence is <500bps", async () => {
     const assets = [makePeggedAsset({
       id: "dusd-dtrinity",

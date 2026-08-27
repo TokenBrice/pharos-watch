@@ -457,59 +457,6 @@ describe("fetchPrimaryPrices", () => {
     expect(stats.singleSource).toBe(2);
   });
 
-  it("uses Pyth as a single source when Hermes returns an unprefixed feed id", async () => {
-    const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
-    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
-
-    installFetch({
-      coingecko: { body: {} },
-      "hermes.pyth.network": {
-        body: {
-          parsed: [{
-            id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
-            price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
-          }],
-        },
-      },
-    });
-
-    const db = makeTestDb();
-    const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
-
-    expect(results.size).toBe(1);
-    const result = results.get("usdt-tether")!;
-    expect(result.source).toBe("pyth");
-    expect(result.confidence).toBe("single-source");
-    expect(result.price).toBeCloseTo(1.0001, 4);
-    expect(stats.singleSource).toBe(1);
-  });
-
-  it("can price tracked assets without a geckoId when another primary source exists", async () => {
-    const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
-    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT" })];
-
-    installFetch({
-      "hermes.pyth.network": {
-        body: {
-          parsed: [{
-            id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
-            price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
-          }],
-        },
-      },
-      "": { body: {} },
-    });
-
-    const db = makeTestDb();
-    const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
-
-    expect(results.get("usdt-tether")).toMatchObject({
-      source: "pyth",
-      confidence: "single-source",
-    });
-    expect(stats.singleSource).toBe(1);
-  });
-
   it("uses exact-case RedStone symbols and recovers batch-dropped results with solo retry", async () => {
     const assets = [
       makePeggedAsset({ id: "usde-ethena", name: "Ethena USDe", symbol: "USDe", geckoId: "ethena-usde" }),
@@ -519,7 +466,6 @@ describe("fetchPrimaryPrices", () => {
     const fetchMock = installFetch({
       "coins.llama.fi": { body: { coins: {} } },
       coingecko: { body: {} },
-      "hermes.pyth.network": { body: { parsed: [] } },
       "api.redstone.finance": (url) => url.includes("symbols=USDe%2CfxUSD")
         ? {
             body: {
@@ -562,7 +508,6 @@ describe("fetchPrimaryPrices", () => {
 
     installFetch({
       coingecko: { body: {} },
-      "hermes.pyth.network": { body: { parsed: [] } },
       "api.redstone.finance": {
         body: { USDe: { value: 1.0003, source: { curve: 1.0003 }, timestamp: Date.now() } },
       },

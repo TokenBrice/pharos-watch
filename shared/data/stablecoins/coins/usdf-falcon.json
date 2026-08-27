@@ -14,7 +14,6 @@
   "detailProvider": "defillama",
   "geckoId": "falcon-finance",
   "cmcSlug": "falcon-finance",
-  "pythFeedId": "0xfeb26a319cfbb09cfa85b382e4d97f48e6b8727a2b5e7e2fff0692ff676d5239",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.falcon.finance/transparency",

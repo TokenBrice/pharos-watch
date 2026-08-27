@@ -61,7 +61,6 @@ export type AuditStablecoinMeta = Pick<
   | "status"
   | "geckoId"
   | "llamaId"
-  | "pythFeedId"
   | "cmcSlug"
   | "contracts"
   | "tradedContracts"
@@ -71,7 +70,6 @@ export type AuditStablecoinMeta = Pick<
 export interface PriceSourceMetadataSnapshot {
   geckoId: boolean;
   llamaId: boolean;
-  pythFeedId: boolean;
   cmcSlug: boolean;
   contracts: number;
   tradedContracts: number;
@@ -105,6 +103,7 @@ export interface SourceClassification {
   canSingleSourceDepegAuthoritative: boolean;
   isSoftSource: boolean;
   isProtocolOverride: boolean;
+  isRetired: boolean;
   circuit: string;
   circuitEnforced: boolean;
   confirmationFamily: string;
@@ -249,7 +248,6 @@ function normalizeActiveStablecoins(payload: unknown): AuditStablecoinMeta[] {
       status: "active",
       geckoId: stringValue(row.geckoId) ?? undefined,
       llamaId: stringValue(row.llamaId) ?? undefined,
-      pythFeedId: stringValue(row.pythFeedId) ?? undefined,
       cmcSlug: stringValue(row.cmcSlug) ?? undefined,
       contracts: Array.isArray(row.contracts) ? row.contracts as AuditStablecoinMeta["contracts"] : undefined,
       tradedContracts: Array.isArray(row.tradedContracts)
@@ -273,7 +271,6 @@ function metadataSnapshot(meta: AuditStablecoinMeta): PriceSourceMetadataSnapsho
   return {
     geckoId: Boolean(meta.geckoId),
     llamaId: Boolean(meta.llamaId),
-    pythFeedId: Boolean(meta.pythFeedId),
     cmcSlug: Boolean(meta.cmcSlug),
     contracts: meta.contracts?.length ?? 0,
     tradedContracts: meta.tradedContracts?.length ?? 0,
@@ -312,7 +309,7 @@ function confirmationFamilyForSource(source: string, family: SourceFamily): stri
 }
 
 function circuitForSource(source: string, family: SourceFamily): string {
-  if (source === "pyth") return "pyth-prices";
+  if (getPricingSourceRegistryEntry(source)?.isRetired) return "retired";
   if (source === "redstone") return "redstone-prices";
   if (family === "dex") return "dex-discovery";
   if (family === "fallback-search") return "fallback-search";
@@ -342,8 +339,9 @@ export function classifySource(source: string): SourceClassification {
     canSingleSourceDepegAuthoritative: entry?.canSingleSourceDepegAuthoritative ?? false,
     isSoftSource: entry?.isSoftSource ?? false,
     isProtocolOverride: entry?.isProtocolOverride ?? false,
+    isRetired: entry?.isRetired ?? false,
     circuit: circuitForSource(source, family),
-    circuitEnforced: entry != null && family !== "fallback-search" && family !== "cached",
+    circuitEnforced: entry != null && !entry.isRetired && family !== "fallback-search" && family !== "cached",
     confirmationFamily: confirmationFamilyForSource(source, family),
   };
 }
@@ -374,7 +372,6 @@ function fieldLists(snapshot: PriceSourceMetadataSnapshot): {
   const checks = [
     ["geckoId", snapshot.geckoId],
     ["llamaId", snapshot.llamaId],
-    ["pythFeedId", snapshot.pythFeedId],
     ["cmcSlug", snapshot.cmcSlug],
     ["contracts", snapshot.contracts > 0],
     ["tradedContracts", snapshot.tradedContracts > 0],
@@ -399,7 +396,6 @@ function impactForPotentialSource(
   if (candidateSourceCount >= 3) return "no-count-impact";
   if (candidateSourceCount !== 2) return "needs-runtime-provider-change";
   if (missingOrUnusablePrice || lane !== "primary") return "needs-runtime-provider-change";
-  if (source === "pyth") return snapshot.pythFeedId ? "moves-to-3" : "needs-runtime-provider-change";
   if (source === "coingecko") return snapshot.geckoId ? "moves-to-3" : "needs-runtime-provider-change";
   if (source === "defillama-list") return snapshot.llamaId ? "moves-to-3" : "needs-runtime-provider-change";
   return "needs-runtime-provider-change";
@@ -437,14 +433,6 @@ function buildCandidateTriage(
       potentialNewSource = "coingecko";
       pipelineLane = "fallback";
       blocker = "Price is missing or unusable; first restore a current non-fallback price lane.";
-    } else if (!sourceSet.has("pyth") && snapshot.pythFeedId) {
-      potentialNewSource = "pyth";
-      pipelineLane = "primary";
-      blocker = "Pyth feed metadata exists but is not currently emitted as a candidate source.";
-    } else if (!sourceSet.has("pyth") && !snapshot.pythFeedId) {
-      potentialNewSource = "pyth";
-      pipelineLane = "primary";
-      blocker = "Requires verified Pyth feed metadata before a primary-source lift can be claimed.";
     } else if (!sourceSet.has("coingecko") && snapshot.geckoId) {
       potentialNewSource = "coingecko";
       pipelineLane = "primary";
@@ -611,7 +599,6 @@ export function buildPriceSourceDepthAudit(input: AuditInput): PriceSourceDepthA
   const providerPresentButNull = sortByMarketCap(rows.filter((row) => {
     const sourceSet = new Set(row.consensusSources);
     return row.candidateSourceCount === 2 && (
-      (row.metadata.pythFeedId && !sourceSet.has("pyth")) ||
       (row.metadata.geckoId && !sourceSet.has("coingecko") && !sourceSet.has("coingecko-low-volume")) ||
       (row.metadata.llamaId && !sourceSet.has("defillama-list") && !sourceSet.has("defillama"))
     );

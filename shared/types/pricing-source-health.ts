@@ -8,7 +8,6 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "coingecko-mirror",
   "cg-ticker",
   "geckoterminal",
-  "pyth",
   "binance",
   "kraken",
   "bitstamp",

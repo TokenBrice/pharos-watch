@@ -16,7 +16,6 @@ function createEmptyQuoteMaps(): PrimaryConsensusQuoteMaps {
     cgObservedAt: null,
     cgTickerPrices: new Map(),
     cgTickerObservedAt: null,
-    pythPrices: new Map(),
     binancePrices: new Map(),
     binanceObservedAt: null,
     krakenPrices: new Map(),

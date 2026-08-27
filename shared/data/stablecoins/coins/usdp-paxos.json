@@ -14,7 +14,6 @@
   "detailProvider": "defillama",
   "geckoId": "paxos-standard",
   "cmcSlug": "pax-dollar",
-  "pythFeedId": "0xa6c8eca9aea31d6bb81fd6576638f30692d4afaa73237c097c193477aa5003b3",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.paxos.com/usdp-transparency",

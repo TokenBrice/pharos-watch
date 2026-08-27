@@ -150,7 +150,6 @@ const StablecoinMetaAssetSchemaShape = {
   commodityOunces: CommodityOuncesSchema.optional(),
   geckoId: z.string().optional(),
   cmcSlug: z.string().optional(),
-  pythFeedId: z.string().optional(),
   protocolSlug: z.string().optional(),
   proofOfReserves: ProofOfReservesSchema.optional(),
   links: z.array(StablecoinLinkSchema).optional(),

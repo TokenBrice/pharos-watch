@@ -33,7 +33,6 @@ function makeAudit(): Pick<PriceSourceDepthAudit, "rows"> {
         metadata: {
           geckoId: true,
           llamaId: false,
-          pythFeedId: true,
           cmcSlug: false,
           contracts: 1,
           tradedContracts: 0,
@@ -74,7 +73,6 @@ function makeAudit(): Pick<PriceSourceDepthAudit, "rows"> {
         metadata: {
           geckoId: true,
           llamaId: false,
-          pythFeedId: true,
           cmcSlug: false,
           contracts: 1,
           tradedContracts: 0,

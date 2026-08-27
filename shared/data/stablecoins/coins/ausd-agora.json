@@ -13,7 +13,6 @@
   "llamaId": "205",
   "detailProvider": "defillama",
   "geckoId": "agora-dollar",
-  "pythFeedId": "0xd9912df360b5b7f21a122f15bdd5e27f62ce5e72bd316c291f7c86620e07fb2a",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://docs.agora.finance/developer/transparency",

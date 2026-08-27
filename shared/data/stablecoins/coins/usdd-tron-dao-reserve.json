@@ -13,7 +13,6 @@
   "llamaId": "14",
   "detailProvider": "defillama",
   "geckoId": "usdd",
-  "pythFeedId": "0x6d20210495d6518787b72e4ad06bc4df21e68d89a802cf6bced2fca6c29652a6",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://usdd.io/data",

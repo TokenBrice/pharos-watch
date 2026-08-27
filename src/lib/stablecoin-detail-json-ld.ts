@@ -10,7 +10,6 @@ const STABLECOIN_IDENTIFIER_FIELD_KEYS = [
   "llamaId",
   "geckoId",
   "cmcSlug",
-  "pythFeedId",
   "variantOf",
   "variantKind",
 ] as const;
@@ -35,7 +34,6 @@ function buildStablecoinIdentifierProperties(coin: StablecoinMeta): Array<Record
     llamaId: coin.llamaId,
     geckoId: coin.geckoId,
     cmcSlug: coin.cmcSlug,
-    pythFeedId: coin.pythFeedId,
     variantOf: coin.variantOf,
     variantKind: coin.variantKind,
   };
@@ -141,7 +139,7 @@ export function buildStablecoinDatasetJsonLd(
             { "@type": "PropertyValue", name: "redemptionBackstopCoverage" },
           ],
           measurementTechnique:
-            "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Pyth, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
+            "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
         };
   const stablecoinThing = buildStablecoinThingJsonLd({
     coin,

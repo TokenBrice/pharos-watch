@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.209",
+    title: "Retired Pyth lane and partial-success DEX breaker healing",
+    date: "2026-08-26",
+    effectiveAt: 1787702400,
+    summary:
+      "The Pyth Hermes hard-oracle lane is retired after Pyth's 2026-08-26 API-key mandate, while DexScreener discovery now heals its aggregate breaker after a partially successful crawl despite a later WAF refusal.",
+    impact: [
+      "Pyth's free tier no longer provides API access, so primary consensus runs without the Pyth weight-2 oracle lane and new stablecoin metadata no longer carries `pythFeedId` values",
+      "The retired Pyth registry key remains available only for historical provenance, so prior `pyth` price-source rows remain renderable without reactivating the provider",
+      "DexScreener discovery records a successful aggregate `dexscreener-liquidity` breaker outcome when at least one request in the crawl succeeds; a later HTTP 429 or WAF 1015 still stops subsequent requests but no longer converts that partial-success run into a failure",
+      "A DexScreener crawl with zero successful requests still records a breaker failure, preserving hard-refusal protection when the provider is unreachable for the full run",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.208",
     title: "Protocol-diverse DEX challenger retention",
     date: "2026-08-14",

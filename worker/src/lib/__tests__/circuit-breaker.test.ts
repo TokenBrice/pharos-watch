@@ -7,6 +7,7 @@ import {
   recordOutcome,
   recoverBreakerOnNoCandidate,
   getCircuitStates,
+  listActiveCircuitSources,
   filterInactiveCircuitStates,
   mapCronStatusToCircuitOutcome,
   resetCircuitBreakerStateForTests,
@@ -356,12 +357,18 @@ describe("circuit-breaker", () => {
     it("drops retired circuit cache rows that are not configured sources", () => {
       const states = filterInactiveCircuitStates({
         [CIRCUIT_SOURCE.DEXSCREENER_PRICES]: makeRecord({ state: "open", consecutiveFailures: 3 }),
+        "pyth-prices": makeRecord({ state: "open", consecutiveFailures: 30 }),
         "geckoterminal-address-prices": makeRecord({ state: "open", consecutiveFailures: 13 }),
       });
 
       expect(states[CIRCUIT_SOURCE.DEXSCREENER_PRICES]?.state).toBe("open");
+      expect(states["pyth-prices"]).toBeUndefined();
       expect(states["geckoterminal-address-prices"]).toBeUndefined();
     });
+  });
+
+  it("does not list the retired Pyth provider circuit", () => {
+    expect(listActiveCircuitSources()).not.toContain("pyth-prices");
   });
 
   // --- Etherscan circuit source ---

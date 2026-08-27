@@ -26,7 +26,6 @@
   "llamaId": "10",
   "detailProvider": "defillama",
   "geckoId": "magic-internet-money",
-  "pythFeedId": "0x7aa41f6ee464616f3cbc469fddfd7e63d8db319b7bd585cc95b24c29c9172916",
   "links": [
     {
       "label": "Website",

@@ -30,7 +30,6 @@
   "llamaId": "195",
   "detailProvider": "defillama",
   "geckoId": "usual-usd",
-  "pythFeedId": "0x5e8c65917af89ed66d03d082b1ae5ac93b8ed8e32363a61842c33f7d66cb2e00",
   "links": [
     {
       "label": "Website",
