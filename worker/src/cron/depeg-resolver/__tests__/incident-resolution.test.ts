@@ -337,7 +337,7 @@ describe("allocateDdrRunId", () => {
 });
 
 describe("loadDdrContext", () => {
-  it("leaves resolver deviation null for a thin non-USD peg reference", async () => {
+  it("accepts a producer-cadence-old cache and leaves thin non-USD peg references null", async () => {
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -362,7 +362,7 @@ describe("loadDdrContext", () => {
                 },
               ],
             }),
-            updated_at: NOW_SEC,
+            updated_at: NOW_SEC - 15 * 60,
           },
         ],
       },
@@ -375,7 +375,8 @@ describe("loadDdrContext", () => {
     expect(result.byCoin.get("wbrl-ripio")).toBeNull();
   });
 
-  it("degrades when the stablecoins cache is stale", async () => {
+  it("degrades when the stablecoins cache is older than the producer cadence", async () => {
+    const staleAt = NOW_SEC - 15 * 60 - 1;
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -394,7 +395,7 @@ describe("loadDdrContext", () => {
                 },
               ],
             }),
-            updated_at: NOW_SEC - 3 * 3600,
+            updated_at: staleAt,
           },
         ],
       },
@@ -402,7 +403,7 @@ describe("loadDdrContext", () => {
 
     const result = await loadDdrContext(db, [activeRow()], NOW_SEC);
 
-    expect(result).toEqual({ kind: "degraded", reason: "stablecoins-cache-stale", dataAsOf: NOW_SEC - 3 * 3600 });
+    expect(result).toEqual({ kind: "degraded", reason: "stablecoins-cache-stale", dataAsOf: staleAt });
   });
 
   it("hydrates live DDR inputs from DEWS signals, DEX TVL history, and Safety Score history", async () => {

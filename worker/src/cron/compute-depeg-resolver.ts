@@ -245,6 +245,7 @@ export async function computeDepegResolver(
       storeContracts,
     });
     return {
+      status: "degraded",
       itemCount: 0,
       metadata: JSON.stringify({
         ddrRunId: options.ddrRunId,
