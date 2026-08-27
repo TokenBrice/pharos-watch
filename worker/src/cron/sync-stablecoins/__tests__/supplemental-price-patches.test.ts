@@ -141,7 +141,7 @@ describe("runCoingeckoLowVolumePass", () => {
     });
   });
 
-  it("recovers the audited July production cohort with fresh peg-valid rows", async () => {
+  it("recovers the audited low-volume production cohort with fresh peg-valid rows", async () => {
     const observedAt = Math.floor(Date.now() / 1000) - 3600;
     const quotes = {
       "bitcoin-usd-btcfi": 0.9727,
@@ -150,6 +150,7 @@ describe("runCoingeckoLowVolumePass", () => {
       "celo-australian-dollar": 0.695,
       ccop: 0.00029996,
       cchf: 1.24,
+      "hedera-swiss-franc": 1.3888961972270923,
     } as const;
     stubCoingeckoResponse(Object.fromEntries(
       Object.entries(quotes).map(([id, usd]) => [id, { usd, last_updated_at: observedAt }]),
@@ -162,6 +163,7 @@ describe("runCoingeckoLowVolumePass", () => {
       asset({ id: "audm-mento", symbol: "AUDm", price: null, pegType: "peggedAUD" }),
       asset({ id: "copm-mento", symbol: "COPm", price: null, pegType: "peggedCOP" }),
       asset({ id: "chfm-mento", symbol: "CHFm", price: null, pegType: "peggedCHF" }),
+      asset({ id: "hchf-hedera-swiss-franc", symbol: "HCHF", price: null, pegType: "peggedCHF" }),
     ];
 
     const result = await runCoingeckoLowVolumePass(assets, null, {
@@ -171,7 +173,7 @@ describe("runCoingeckoLowVolumePass", () => {
       peggedCHF: quotes.cchf,
     });
 
-    expect(result).toEqual({ resolved: 6, failures: [] });
+    expect(result).toEqual({ resolved: 7, failures: [] });
     expect(assets.map(({ price }) => price)).toEqual(Object.values(quotes));
     expect(assets.every(({ priceSource }) => priceSource === "coingecko-low-volume")).toBe(true);
   });
