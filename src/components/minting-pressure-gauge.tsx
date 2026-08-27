@@ -16,12 +16,14 @@ const ARC_ZONES = [
   { from: 45, to: 65, hex: "#6b7280", dimOpacity: 0.4 },
   { from: 65, to: 100, hex: "#22c55e", dimOpacity: 0.45 },
 ] as const;
-const ARC_GAP = 1.6; // gap between zone segments, in position units
 const ARC_CX = 80;
 const ARC_CY = 78;
 const ARC_R = 60;
+const ARC_STROKE_WIDTH = 13;
 
 function arcPoint(pos: number): { x: number; y: number } {
+  if (pos === 0) return { x: ARC_CX - ARC_R, y: ARC_CY };
+  if (pos === 100) return { x: ARC_CX + ARC_R, y: ARC_CY };
   const theta = Math.PI * (1 - pos / 100); // 0 -> 180deg (left), 100 -> 0deg (right)
   return { x: ARC_CX + ARC_R * Math.cos(theta), y: ARC_CY - ARC_R * Math.sin(theta) };
 }
@@ -61,37 +63,60 @@ export function MintingPressureArcGauge({
         }
       >
         {ARC_ZONES.map((zone) => {
-          const from = zone.from === 0 ? zone.from : zone.from + ARC_GAP;
-          const to = zone.to === 100 ? zone.to : zone.to - ARC_GAP;
+          const capPosition = zone.from === 0 ? 0 : zone.to === 100 ? 100 : null;
+          const cap = capPosition == null ? null : arcPoint(capPosition);
           return (
-            <path
-              key={`dim-${zone.from}`}
-              d={arcPath(from, to)}
-              fill="none"
-              stroke={zone.hex}
-              strokeOpacity={zone.dimOpacity}
-              strokeWidth={13}
-              strokeLinecap="round"
-            />
+            <g key={`dim-${zone.from}`} opacity={zone.dimOpacity}>
+              <path
+                d={arcPath(zone.from, zone.to)}
+                fill="none"
+                stroke={zone.hex}
+                strokeWidth={ARC_STROKE_WIDTH}
+                strokeLinecap="butt"
+              />
+              {/* Keep only the gauge's outer ends rounded; internal zone joins stay flush. */}
+              {cap ? (
+                <circle
+                  cx={cap.x}
+                  cy={cap.y}
+                  r={ARC_STROKE_WIDTH / 2}
+                  fill={zone.hex}
+                />
+              ) : null}
+            </g>
           );
         })}
         {pos != null
           ? ARC_ZONES.filter((zone) => zone.from < pos).map((zone) => {
-              const from = zone.from === 0 ? zone.from : zone.from + ARC_GAP;
-              const to = Math.min(pos, zone.to === 100 ? zone.to : zone.to - ARC_GAP);
-              if (to <= from) return null;
+              const to = Math.min(pos, zone.to);
               return (
                 <path
                   key={`lit-${zone.from}`}
-                  d={arcPath(from, to)}
+                  d={arcPath(zone.from, to)}
                   fill="none"
                   stroke={zone.hex}
-                  strokeWidth={13}
-                  strokeLinecap="round"
+                  strokeWidth={ARC_STROKE_WIDTH}
+                  strokeLinecap="butt"
                 />
               );
             })
           : null}
+        {pos != null && pos > 0 ? (
+          <circle
+            cx={arcPoint(0).x}
+            cy={arcPoint(0).y}
+            r={ARC_STROKE_WIDTH / 2}
+            fill={ARC_ZONES[0].hex}
+          />
+        ) : null}
+        {pos === 100 ? (
+          <circle
+            cx={arcPoint(100).x}
+            cy={arcPoint(100).y}
+            r={ARC_STROKE_WIDTH / 2}
+            fill={ARC_ZONES[ARC_ZONES.length - 1].hex}
+          />
+        ) : null}
         {notch ? (
           <line
             x1={ARC_CX + (ARC_R - 9) * Math.cos(Math.PI * (1 - pos! / 100))}

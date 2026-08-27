@@ -11,6 +11,7 @@ vi.mock("../helpers", async (importOriginal) => {
     ...actual,
     fetchErc20TotalSupply: vi.fn(),
     fetchTronErc20TotalSupply: vi.fn(),
+    fetchJsonPostWithRetry: vi.fn(),
     fetchOnchainUint256,
     fetchOnchainRawCall,
     makeOnchainCallers: makeOnchainCallersMock({
@@ -20,9 +21,16 @@ vi.mock("../helpers", async (importOriginal) => {
   };
 });
 
-import { adaptChainlinkPorResponse, fetchChainlinkPorReserves, type ChainlinkPorParams } from "../chainlink-por";
+import {
+  adaptBackedCirculationResponse,
+  adaptChainlinkPorResponse,
+  fetchChainlinkPorReserves,
+  type ChainlinkPorIssuerCirculationProbe,
+  type ChainlinkPorParams,
+} from "../chainlink-por";
 import {
   fetchErc20TotalSupply,
+  fetchJsonPostWithRetry,
   fetchOnchainRawCall,
   fetchOnchainUint256,
   fetchTronErc20TotalSupply,
@@ -236,6 +244,186 @@ describe("adaptChainlinkPorResponse", () => {
     expect(() =>
       adaptChainlinkPorResponse({ reserves: 0n, decimals: 8, roundId: 1n, updatedAt: 1710000000 }, params),
     ).toThrow();
+  });
+});
+
+describe("adaptBackedCirculationResponse", () => {
+  const probe: ChainlinkPorIssuerCirculationProbe = {
+    kind: "backed-graphql",
+    url: "https://api.backed.fi/graphql",
+    reserveSymbol: "IB01.L",
+  };
+  const contracts = [
+    { chain: "ethereum", address: "0xCA30c93B02514f86d5C86a6e375E3A330B435Fb5", decimals: 18 },
+    { chain: "polygon", address: "0xca30c93b02514f86d5c86a6e375e3a330b435fb5", decimals: 18 },
+  ];
+
+  function payload(deployments: Array<Record<string, unknown>>) {
+    return {
+      data: {
+        assetReserves: [
+          { symbol: "IB01.L", token: [{ symbol: "bIB01", deployments }] },
+          { symbol: "OTHER", token: [] },
+        ],
+      },
+    };
+  }
+
+  it("sums circulating supply across matched canonical deployments", () => {
+    const outcome = adaptBackedCirculationResponse(
+      payload([
+        { chainId: "1", network: "Ethereum", address: "0xca30c93b02514f86d5c86a6e375e3a330b435fb5", totalSupply: "4.5e+22", circulatingSupply: "6.117e+19" },
+        { chainId: "137", network: "Polygon", address: "0xCA30c93B02514f86d5C86a6e375E3A330B435Fb5", totalSupply: "4.4e+21", circulatingSupply: "8.73e+18" },
+      ]),
+      probe,
+      contracts,
+    );
+    expect(outcome.failure).toBeUndefined();
+    expect(outcome.aggregate?.circulatingTokens).toBeCloseTo(61.17 + 8.73, 6);
+    expect(outcome.aggregate?.contributions).toHaveLength(2);
+  });
+
+  it("skips zero-circulation deployments without requiring a contract match", () => {
+    const outcome = adaptBackedCirculationResponse(
+      payload([
+        { chainId: "1", address: "0xca30c93b02514f86d5c86a6e375e3a330b435fb5", totalSupply: "1e+22", circulatingSupply: "1e+18" },
+        { chainId: "8453", network: "Base", address: "0x0000000000000000000000000000000000000009", totalSupply: "1e+22", circulatingSupply: "0" },
+      ]),
+      probe,
+      contracts,
+    );
+    expect(outcome.aggregate?.circulatingTokens).toBeCloseTo(1, 6);
+  });
+
+  it("fails closed when a nonzero deployment does not match a configured contract", () => {
+    const outcome = adaptBackedCirculationResponse(
+      payload([
+        { chainId: "1", address: "0xca30c93b02514f86d5c86a6e375e3a330b435fb5", totalSupply: "1e+22", circulatingSupply: "1e+18" },
+        { chainId: "43114", network: "Avalanche", address: "0x0000000000000000000000000000000000000009", totalSupply: "1e+22", circulatingSupply: "5e+18" },
+      ]),
+      probe,
+      contracts,
+    );
+    expect(outcome.aggregate).toBeUndefined();
+    expect(outcome.failure?.unmatchedDeployments).toEqual([
+      { chainId: "43114", network: "Avalanche", address: "0x0000000000000000000000000000000000000009" },
+    ]);
+  });
+
+  it("fails closed when a deployment with nonzero total supply has no parseable circulating supply", () => {
+    const outcome = adaptBackedCirculationResponse(
+      payload([
+        { chainId: "1", address: "0xca30c93b02514f86d5c86a6e375e3a330b435fb5", totalSupply: "1e+22", circulatingSupply: null },
+      ]),
+      probe,
+      contracts,
+    );
+    expect(outcome.failure?.reason).toContain("no parseable circulatingSupply");
+  });
+
+  it("fails closed when the reserve symbol row is missing", () => {
+    const outcome = adaptBackedCirculationResponse({ data: { assetReserves: [] } }, probe, contracts);
+    expect(outcome.failure?.reason).toContain("IB01.L");
+  });
+});
+
+describe("adaptChainlinkPorResponse with issuer circulation", () => {
+  const params: ChainlinkPorParams = {
+    porFeedAddress: "0xad4395fc414fc1575a7a38c20b0bfdbdb09ee41a",
+    assetLabel: "iShares IB01 shares",
+    assetRisk: "very-low",
+    reserveUnit: "SHARES",
+    issuerCirculationProbe: {
+      kind: "backed-graphql",
+      url: "https://api.backed.fi/graphql",
+      reserveSymbol: "IB01.L",
+    },
+  };
+  const grossSupply = {
+    contributions: [
+      {
+        chain: "ethereum",
+        tokenAddress: "0x0000000000000000000000000000000000000001",
+        raw: 155_000_000000000000000000n,
+        decimals: 18,
+      },
+    ],
+    omittedNonEvmChains: [],
+    omittedReadFailureChains: [],
+  };
+
+  it("compares reserves against issuer circulation and keeps the surplus informational", () => {
+    // Backed-style: 1,018 reserve shares, 155k gross pre-minted, 80 circulating.
+    const result = adaptChainlinkPorResponse(
+      { reserves: 1018_00000000n, decimals: 8, roundId: 7n, updatedAt: 1710000000 },
+      params,
+      grossSupply,
+      { aggregate: { circulatingTokens: 80, contributions: [] } },
+    );
+
+    expect(result.metadata).toMatchObject({
+      liabilityBasis: "issuer-circulating",
+      circulatingSupplyTokens: 80,
+      supplyTokens: 155_000,
+      reserveUnit: "SHARES",
+      reserveUnitLabel: "underlying fund shares",
+      totalReserveQuantity: 1018,
+    });
+    expect(result.metadata?.supplyUsd).toBeUndefined();
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1018 / 80, 5);
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
+    const over = result.warnings?.find((w) => w.code === "por-reserve-over-supply");
+    expect(over?.effect).toBe("info");
+    expect(over?.message).toContain("issuer-held inventory");
+  });
+
+  it("degrades when reserves undercover issuer circulation", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 70_00000000n, decimals: 8, roundId: 7n, updatedAt: 1710000000 },
+      params,
+      grossSupply,
+      { aggregate: { circulatingTokens: 80, contributions: [] } },
+    );
+
+    const under = result.warnings?.find((w) => w.code === "por-reserve-under-supply");
+    expect(under?.effect).toBe("degraded");
+    expect(under?.message).toContain("issuer-reported circulating supply");
+  });
+
+  it("fails closed with a degraded warning and no coverage ratio when the probe fails", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 1018_00000000n, decimals: 8, roundId: 7n, updatedAt: 1710000000 },
+      params,
+      grossSupply,
+      { failure: { reason: "HTTP 503 for POST https://api.backed.fi/graphql" } },
+    );
+
+    // Gross supply is proven non-authoritative for probe-configured coins, so
+    // an outage must not publish any coverage verdict on the gross basis.
+    expect(result.metadata?.liabilityBasis).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.supplyTokens).toBe(155_000);
+    expect(result.metadata).toMatchObject({
+      circulationProbeFailure: { reason: "HTTP 503 for POST https://api.backed.fi/graphql" },
+    });
+    expect(result.warnings?.find((w) => w.code === "por-circulation-probe-failed")?.effect).toBe("degraded");
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
+    expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
+  });
+
+  it("withholds the coverage verdict when circulation exceeds the on-chain supply envelope", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 1018_00000000n, decimals: 8, roundId: 7n, updatedAt: 1710000000 },
+      params,
+      grossSupply,
+      { aggregate: { circulatingTokens: 200_000, contributions: [] } },
+    );
+
+    expect(result.metadata?.liabilityBasis).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.warnings?.find((w) => w.code === "por-circulation-implausible")?.effect).toBe("degraded");
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
   });
 });
 
@@ -509,5 +697,146 @@ describe("fetchChainlinkPorReserves", () => {
     });
     expect(result.metadata?.supplyUsd).toBeUndefined();
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
+  });
+
+  it("omits registry-typed non-EVM chains like NEAR instead of firing EVM reads at them", async () => {
+    const coin: StablecoinMeta = {
+      id: "tusd-test",
+      name: "TUSD Test",
+      symbol: "TUSDT",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      contracts: [
+        { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
+        { chain: "near", address: "tusd.near", decimals: 18 },
+      ],
+    };
+
+    const now = 1_700_000_000;
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(150_00000000n, now - 60));
+    vi.mocked(fetchErc20TotalSupply).mockResolvedValueOnce(150_000000000000000000n);
+
+    const result = await fetchChainlinkPorReserves(coin, config, signal, { nowSec: now });
+
+    expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(1);
+    const omitted = result.warnings?.find((w) => w.code === "por-supply-chain-omitted");
+    expect(omitted?.severity).toBe("info");
+    expect(omitted?.message).toContain("near");
+    expect(result.warnings?.some((w) => w.code === "partial-supply-read-failure")).not.toBe(true);
+    expect(result.metadata?.supplyReadComplete).toBe(true);
+  });
+
+  it("treats a zero totalSupply read as a valid empty deployment, not a read failure", async () => {
+    const coin: StablecoinMeta = {
+      id: "bib01-test",
+      name: "BIB01 Test",
+      symbol: "BIB01T",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      contracts: [
+        { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
+        { chain: "bsc", address: "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9", decimals: 18 },
+      ],
+    };
+
+    const now = 1_700_000_000;
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(150_00000000n, now - 60));
+    vi.mocked(fetchErc20TotalSupply)
+      .mockResolvedValueOnce(150_000000000000000000n) // ethereum
+      .mockResolvedValueOnce(0n); // bsc: genuinely zero supply
+
+    const result = await fetchChainlinkPorReserves(coin, config, signal, { nowSec: now });
+
+    expect(result.warnings?.some((w) => w.code === "partial-supply-read-failure")).not.toBe(true);
+    expect(result.metadata?.supplyReadComplete).toBe(true);
+    expect(result.metadata?.supplyUsd).toBe(150);
+  });
+
+  it("wires the issuer circulation probe through the fetch path", async () => {
+    const tokenAddress = "0xca30c93b02514f86d5c86a6e375e3a330b435fb5";
+    const coin: StablecoinMeta = {
+      id: "bib01-test",
+      name: "BIB01 Test",
+      symbol: "BIB01T",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      contracts: [{ chain: "ethereum", address: tokenAddress, decimals: 18 }],
+    };
+
+    const now = 1_700_000_000;
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(1018_00000000n, now - 60));
+    vi.mocked(fetchErc20TotalSupply).mockResolvedValueOnce(155_000_000000000000000000n);
+    vi.mocked(fetchJsonPostWithRetry).mockResolvedValueOnce({
+      data: {
+        assetReserves: [
+          {
+            symbol: "IB01.L",
+            token: [
+              {
+                symbol: "bIB01",
+                deployments: [
+                  { chainId: "1", network: "Ethereum", address: tokenAddress, totalSupply: "1.55e+23", circulatingSupply: "8e+19" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const result = await fetchChainlinkPorReserves(
+      coin,
+      {
+        ...config,
+        params: {
+          ...baseParams,
+          reserveUnit: "SHARES",
+          issuerCirculationProbe: {
+            kind: "backed-graphql",
+            url: "https://api.backed.fi/graphql",
+            reserveSymbol: "IB01.L",
+          },
+        },
+      },
+      signal,
+      { nowSec: now },
+    );
+
+    expect(fetchJsonPostWithRetry).toHaveBeenCalledWith(
+      "https://api.backed.fi/graphql",
+      expect.objectContaining({ query: expect.stringContaining("assetReserves") }),
+      signal,
+      10_000,
+      expect.anything(),
+    );
+    expect(result.metadata).toMatchObject({
+      liabilityBasis: "issuer-circulating",
+      circulatingSupplyTokens: 80,
+      supplyTokens: 155_000,
+    });
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1018 / 80, 5);
+    expect(result.warnings?.find((w) => w.code === "por-reserve-over-supply")?.effect).toBe("info");
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
   });
 });

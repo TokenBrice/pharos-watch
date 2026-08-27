@@ -31,7 +31,7 @@ interface FirmMarketsResponse {
 
 type DolaBucket = "stablecoin" | "eth-lst" | "btc" | "governance" | "other";
 
-const STABLECOIN_ASSETS = new Set(["sUSDe", "sUSDS", "DAI", "USDC", "USDT", "crvUSD", "scrvUSD", "FRAX", "PYUSD", "USR", "wstUSR", "FraxPyUSD lp", "DOLA-FRAXBP"]);
+const STABLECOIN_ASSETS = new Set(["sUSDe", "sUSDS", "DAI", "USDC", "USDT", "crvUSD", "scrvUSD", "FRAX", "PYUSD", "USR", "wstUSR", "reUSD", "FraxPyUSD lp", "DOLA-FRAXBP"]);
 const ETH_LST_ASSETS = new Set(["WETH", "wstETH", "stETH", "rETH", "weETH", "cbETH"]);
 const BTC_ASSETS = new Set(["WBTC", "cbBTC", "tBTC"]);
 const GOVERNANCE_ASSETS = new Set(["INV", "CRV", "CVX", "cvxCRV", "st-yCRV", "cvxFXS"]);
@@ -46,6 +46,7 @@ const TRACKED_STABLECOIN_ASSETS: Partial<Record<string, { coinId: string; risk: 
   FRAX: { coinId: "frax-frax", risk: "low" },
   PYUSD: { coinId: "pyusd-paypal", risk: "low" },
   USR: { coinId: "usr-resolv", risk: "high" },
+  reUSD: { coinId: "reusd-resupply", risk: "high" },
 };
 
 function getTrackedStablecoinAsset(symbol: string): { coinId: string; risk: ReserveSlice["risk"] } | undefined {
@@ -67,17 +68,27 @@ export function bucketForAsset(symbol: string): DolaBucket {
 export function resolveBaseSymbol(market: FirmMarket): string {
   const sym = market.underlying.symbol;
 
-  // Yearn vault wrappers: "yv-DOLA-sUSDe" → "sUSDe", "yv-sDOLA-scrvUSD" → "scrvUSD"
+  // Yearn vault wrappers: "yv-DOLA-sUSDe" → "sUSDe", "yv-sDOLA-scrvUSD" → "scrvUSD",
+  // "yv-reUSD-sDOLA" → "reUSD"
   if (sym.startsWith("yv-")) {
     const rest = sym.slice(3);
     if (rest.startsWith("DOLA-")) return rest.slice(5);
     if (rest.startsWith("sDOLA-")) return rest.slice(6);
+    if (rest.endsWith("-sDOLA")) return rest.slice(0, -6);
     return rest;
   }
 
-  // Curve LP tokens: "DOLA-sUSDe clp" → "sUSDe", "DOLA-wstUSR clp" → "wstUSR"
-  if (sym.startsWith("DOLA-") && (sym.endsWith(" clp") || sym.endsWith(" lp"))) {
-    const inner = sym.slice(5, sym.lastIndexOf(" "));
+  // Curve LP tokens where DOLA or sDOLA is the self-referential leg:
+  // "DOLA-sUSDe clp" → "sUSDe", "sDOLA-scrvUSD clp" → "scrvUSD", "reUSD-sDOLA clp" → "reUSD"
+  if (sym.endsWith(" clp") || sym.endsWith(" lp")) {
+    const base = sym.slice(0, sym.lastIndexOf(" "));
+    const inner = base.startsWith("DOLA-")
+      ? base.slice(5)
+      : base.startsWith("sDOLA-")
+        ? base.slice(6)
+        : base.endsWith("-sDOLA")
+          ? base.slice(0, -6)
+          : "";
     if (inner) return inner;
   }
 
