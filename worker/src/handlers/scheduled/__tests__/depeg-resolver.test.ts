@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import {
+  makeScheduledRuntime,
+  mockSuccessfulCronLease,
+} from "../../../test-helpers/scheduled-runtime.test-support";
 
 const mocks = vi.hoisted(() => ({
   computeDepegResolver: vi.fn(),
@@ -49,25 +53,14 @@ function runtime(): ScheduledRuntimeContext {
     }),
   } as unknown as D1Database;
 
-  return {
+  return makeScheduledRuntime({
     db,
-    env: {} as ScheduledRuntimeContext["env"],
-    ctx: {} as ExecutionContext,
     cron: "13 * * * *",
     scheduleKey: "depegResolverOffset",
     scheduledTimeMs: SLOT_STARTED_AT * 1_000,
     slotStartedAt: SLOT_STARTED_AT,
     workerVersion: "worker-v1",
-    mintBurnDisabledIds: [],
-    mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig:
-      {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-    coingeckoApiKey: null,
-    chainRpcs: new Map(),
-    runLeasedCron: vi.fn(async (_job, fn) =>
-      fn(new AbortController().signal, vi.fn()),
-    ),
-  };
+  });
 }
 
 describe("depeg-resolver scheduling", () => {
@@ -75,18 +68,7 @@ describe("depeg-resolver scheduling", () => {
     vi.useFakeTimers();
     vi.setSystemTime(SLOT_STARTED_AT * 1_000);
     vi.clearAllMocks();
-    leaseMocks.runCronWithLease.mockImplementation(async (
-      _db: D1Database,
-      _job: string,
-      run: (input: { signal: AbortSignal }) => Promise<unknown>,
-      leaseOptions?: { abortSignal?: AbortSignal },
-    ) => ({
-      status: "ok",
-      result: await run({
-        signal:
-          leaseOptions?.abortSignal ?? new AbortController().signal,
-      }),
-    }));
+    mockSuccessfulCronLease(leaseMocks.runCronWithLease);
     mocks.computeDepegResolver.mockResolvedValue({
       status: "ok",
       itemCount: 21,

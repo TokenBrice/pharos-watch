@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import {
+  makeScheduledRuntime,
+  mockSuccessfulCronLease,
+} from "../../../test-helpers/scheduled-runtime.test-support";
 
 const mocks = vi.hoisted(() => ({
   syncSafetyScoreV9SupplyAttribution: vi.fn(),
@@ -41,25 +45,14 @@ function dbWithReadyCoreSlot(): D1Database {
 }
 
 function runtime(): ScheduledRuntimeContext {
-  return {
+  return makeScheduledRuntime({
     db: dbWithReadyCoreSlot(),
-    env: {} as ScheduledRuntimeContext["env"],
-    ctx: {} as ExecutionContext,
     cron: "8 * * * *",
     scheduleKey: "v9SupplyAttributionOffset",
     scheduledTimeMs: SCHEDULED_TIME_MS,
     slotStartedAt: SCHEDULED_TIME_MS / 1_000,
     workerVersion: "worker-v1",
-    mintBurnDisabledIds: [],
-    mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig:
-      {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-    coingeckoApiKey: null,
-    chainRpcs: new Map(),
-    runLeasedCron: vi.fn(async (_job, fn) =>
-      fn(new AbortController().signal, vi.fn()),
-    ),
-  };
+  });
 }
 
 describe("V9 supply-attribution scheduling", () => {
@@ -67,18 +60,7 @@ describe("V9 supply-attribution scheduling", () => {
     vi.useFakeTimers();
     vi.setSystemTime(SCHEDULED_TIME_MS);
     vi.clearAllMocks();
-    leaseMocks.runCronWithLease.mockImplementation(async (
-      _db: D1Database,
-      _job: string,
-      run: (input: { signal: AbortSignal }) => Promise<unknown>,
-      leaseOptions?: { abortSignal?: AbortSignal },
-    ) => ({
-      status: "ok",
-      result: await run({
-        signal:
-          leaseOptions?.abortSignal ?? new AbortController().signal,
-      }),
-    }));
+    mockSuccessfulCronLease(leaseMocks.runCronWithLease);
     mocks.syncSafetyScoreV9SupplyAttribution.mockResolvedValue({
       status: "ok",
       itemCount: 1,
