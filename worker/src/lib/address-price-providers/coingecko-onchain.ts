@@ -2,6 +2,7 @@ import { cgUrl, cgHeaders } from "../coingecko";
 import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal, throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
+import { isReviewedAddressPriceTargetOverride } from "./reviewed-target-overrides";
 import type { AddressPriceProviderRunResult, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
@@ -21,7 +22,17 @@ const CG_ONCHAIN_ADDRESS_BATCH_SIZE = 30;
 function buildRoundRobinNetworkBatches(
   targets: AddressPriceTarget[],
 ): Array<{ providerChainId: string; targets: AddressPriceTarget[] }> {
-  const networks = [...groupTargetsByProviderChain(targets)].map(
+  const reviewedTargets: AddressPriceTarget[] = [];
+  const remainingTargets: AddressPriceTarget[] = [];
+  for (const target of targets) {
+    (isReviewedAddressPriceTargetOverride({
+      provider: "coingecko-onchain-address",
+      stablecoinId: target.stablecoinId,
+      chain: target.chain,
+      address: target.address,
+    }) ? reviewedTargets : remainingTargets).push(target);
+  }
+  const networks = [...groupTargetsByProviderChain([...reviewedTargets, ...remainingTargets])].map(
     ([providerChainId, networkTargets]) => ({
       providerChainId,
       batches: chunk(networkTargets, CG_ONCHAIN_ADDRESS_BATCH_SIZE),

@@ -30,6 +30,19 @@ function matchesDeployment(
     normalizeAddressForKey(deployment.address) === address;
 }
 
+export function isReviewedAddressPriceTargetOverride(
+  target: ReviewedAddressPriceTargetOverride,
+): boolean {
+  const chain = resolveChainId(target.chain);
+  const address = normalizeAddressForKey(target.address);
+  if (!chain || !address) return false;
+  return REVIEWED_ADDRESS_PRICE_TARGET_OVERRIDES.some(
+    (entry) => entry.provider === target.provider &&
+      entry.stablecoinId === target.stablecoinId &&
+      matchesDeployment(entry, chain, address),
+  );
+}
+
 /**
  * A reviewed override may narrow one asset/provider to a known deployment, but
  * it may never introduce a target. Stale metadata or provider support fails

@@ -45,7 +45,8 @@ export function PricingPipelineMethodologySection() {
           below-target source depth or weak confidence. DEX bridge and address-provider identity are canonical-only at runtime, so
           addressed unknown tokens are dropped instead of being reinterpreted by symbol. Reviewed provider-specific
           deployment narrowing applies only while the exact address remains in current metadata; stale configuration
-          produces no target. Promoted protocol DEX prices only enter consensus when they are corroborated or no non-DEX
+          produces no target, and eligible exact reviewed CoinGecko Onchain overrides reserve one bounded network request
+          before ordinary network round-robin. Promoted protocol DEX prices only enter consensus when they are corroborated or no non-DEX
           voices exist, rejected protocol lanes no longer suppress a valid aggregate DEX fallback, and direct-API quote legs prefer
           tracked live stablecoin prices instead of unconditional{" "}
           <code className="mx-1 text-xs">$1</code> symbol assumptions.

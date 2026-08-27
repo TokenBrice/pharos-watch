@@ -13,7 +13,10 @@ import { runBirdeyeAddressProvider } from "../address-price-providers/birdeye";
 import { runCoingeckoOnchainAddressProvider } from "../address-price-providers/coingecko-onchain";
 import { runDexPaprikaAddressProvider } from "../address-price-providers/dexpaprika";
 import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
-import { applyReviewedAddressPriceTargetOverride } from "../address-price-providers/reviewed-target-overrides";
+import {
+  applyReviewedAddressPriceTargetOverride,
+  isReviewedAddressPriceTargetOverride,
+} from "../address-price-providers/reviewed-target-overrides";
 import { emptyProviderResult } from "../address-price-providers/shared";
 import type { AddressPriceTarget } from "../address-price-providers";
 
@@ -174,6 +177,19 @@ describe("address price providers", () => {
       metadataDeployments: [deployment],
       providerChainMap: {},
     })).toEqual([]);
+
+    expect(isReviewedAddressPriceTargetOverride({
+      provider: "coingecko-onchain-address",
+      stablecoinId: "vusd-virtue",
+      chain: "unknown-chain",
+      address: deployment.address,
+    })).toBe(false);
+    expect(isReviewedAddressPriceTargetOverride({
+      provider: "coingecko-onchain-address",
+      stablecoinId: "vusd-virtue",
+      chain: deployment.chain,
+      address: "",
+    })).toBe(false);
   });
 
   it("leaves unrelated address-provider deployments unchanged", () => {
@@ -808,7 +824,7 @@ describe("address price providers", () => {
     }
   });
 
-  it("spends a capped CoinGecko network slot on reviewed VUSD IOTA EVM instead of native IOTA", async () => {
+  it("reserves a capped CoinGecko network slot for reviewed VUSD after production-shaped target rotation", async () => {
     vi.useFakeTimers();
     try {
       const fetchMock = mockFetch([{ match: () => true, body: { data: [] } }]);
@@ -817,28 +833,35 @@ describe("address price providers", () => {
         assets: [{ id: "vusd-virtue", symbol: "VUSD", price: null }],
       }).get("coingecko-onchain-address") ?? [];
       const precedingNetworks = [
-        makeDexScreenerTarget(1_100, { chain: "ethereum", providerChainId: "eth" }),
-        makeDexScreenerTarget(1_101, { chain: "celo", providerChainId: "celo" }),
-        makeDexScreenerTarget(1_102, { chain: "cardano", providerChainId: "cardano" }),
-        makeDexScreenerTarget(1_103, { chain: "citrea", providerChainId: "citrea" }),
+        makeDexScreenerTarget(1_100, { chain: "ethereum", providerChainId: "eth", missingPrice: true }),
+        makeDexScreenerTarget(1_101, { chain: "celo", providerChainId: "celo", missingPrice: true }),
+        makeDexScreenerTarget(1_102, { chain: "cardano", providerChainId: "cardano", missingPrice: true }),
+        makeDexScreenerTarget(1_103, { chain: "citrea", providerChainId: "citrea", missingPrice: true }),
+        makeDexScreenerTarget(1_104, { chain: "arbitrum", providerChainId: "arbitrum", missingPrice: true }),
       ];
+      const productionShapedTargets = rotateAddressPriceTargets(
+        [...precedingNetworks, ...vusdTargets],
+        0,
+      );
+      expect(productionShapedTargets.findIndex((target) => target.stablecoinId === "vusd-virtue")).toBe(5);
 
       const resultPromise = runCoingeckoOnchainAddressProvider(
-        [...precedingNetworks, ...vusdTargets],
+        productionShapedTargets,
         null,
         undefined,
         1_700_000_000,
         Number.MAX_SAFE_INTEGER,
       );
       await vi.runAllTimersAsync();
-      await resultPromise;
+      const result = await resultPromise;
 
       const requestedNetworks = fetchMock.mock.calls.map(([input]) => {
         const match = String(input).match(/\/onchain\/networks\/([^/]+)\/tokens\/multi\//);
         return match?.[1];
       });
-      expect(requestedNetworks).toEqual(["eth", "celo", "cardano", "citrea", "iota-evm"]);
+      expect(requestedNetworks).toEqual(["iota-evm", "eth", "celo", "cardano", "citrea"]);
       expect(requestedNetworks).not.toContain("iota");
+      expect(result.processedTargets).toContain(vusdTargets[0]);
     } finally {
       vi.useRealTimers();
     }
