@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.21",
+    title: "Reviewed HCHF low-volume price recovery",
+    date: "2026-08-27",
+    effectiveAt: 1787852541,
+    summary:
+      "HCHF can recover a missing live price from its verified CoinGecko identity when the upstream quote remains inside the existing low-volume freshness and peg-validation guards.",
+    impact: [
+      "`hchf-hedera-swiss-franc` joins the scoped `coingecko-low-volume` allowlist after Pharos and DefiLlama both resolved the asset to CoinGecko id `hedera-swiss-franc`",
+      "The fallback still runs only after earlier recovery passes fail, fills only a missing price, and publishes with fallback confidence",
+      "The existing seven-day source-age ceiling, CHF peg-aware bounds, non-replay-safe treatment, and confirm-required depeg trust remain unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.209",
     title: "Retired Pyth lane and partial-success DEX breaker healing",
     date: "2026-08-26",

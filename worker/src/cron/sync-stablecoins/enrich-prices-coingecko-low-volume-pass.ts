@@ -30,6 +30,7 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   "audm-mento",
   "copm-mento",
   "chfm-mento",
+  "hchf-hedera-swiss-franc",
 ]);
 
 export async function runCoingeckoLowVolumePass(
