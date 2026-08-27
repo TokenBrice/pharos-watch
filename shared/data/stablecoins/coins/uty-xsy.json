@@ -102,18 +102,19 @@
       "bucket": "reserves_split",
       "riskMap": {
         "Avalanche": "high",
-        "Copper": "medium",
+        "Copper": "high",
         "Katana": "high",
-        "Ethereum": "medium",
-        "Base": "medium",
-        "Plasma": "medium",
-        "Arbitrum": "medium",
+        "Ethereum": "high",
+        "Base": "high",
+        "Plasma": "high",
+        "Arbitrum": "high",
         "Monad": "high",
-        "Bybit": "medium",
-        "Bnb_smartchain": "medium",
+        "Bybit": "high",
+        "Bnb_smartchain": "high",
         "Hyperevm": "high",
         "Hyperliquid": "high",
-        "Megaeth": "high"
+        "Megaeth": "high",
+        "Sei": "high"
       },
       "allowNegativeBuckets": [
         "Ethereum"

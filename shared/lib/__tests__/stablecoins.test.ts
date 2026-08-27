@@ -3,6 +3,7 @@ import { DETAIL_PROVIDER_VALUES } from "../../types/core";
 import deadStablecoinAsset from "../../data/dead-stablecoins.json";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
+import usdxlSource from "../../data/stablecoins/coins/usdxl-last.json";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
 import { hasReserveDisplayBadgeForAdapter } from "../live-reserve-display";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
@@ -1221,5 +1222,18 @@ describe("suspended live reserve feeds", () => {
     for (const coin of TRACKED_STABLECOINS) {
       expect(coin.liveReservesConfig?.suspended, coin.id).toBeUndefined();
     }
+  });
+
+  it("keeps the partial USDXL pool feed out of score-grade runtime metadata", () => {
+    expect(usdxlSource.liveReservesConfig.suspended).toMatchObject({
+      since: "2026-08-27",
+      reviewBy: "2026-09-10",
+    });
+
+    const runtime = TRACKED_META_BY_ID.get("usdxl-last");
+    expect(runtime?.liveReservesConfig).toBeUndefined();
+    expect(runtime?.reserves).toMatchObject([
+      { pct: 100, risk: "very-high" },
+    ]);
   });
 });

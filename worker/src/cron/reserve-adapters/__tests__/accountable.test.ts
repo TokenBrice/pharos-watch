@@ -1000,7 +1000,7 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
-  it("maps XSY Accountable chain-name buckets including the new Bnb_smartchain/Hyperevm/Hyperliquid/Megaeth deployments without unknown exposure warnings", async () => {
+  it("keeps XSY location-only buckets conservative and fully mapped", async () => {
     const config = utyxsy.liveReservesConfig as LiveReservesConfig;
 
     const result = await runAccountablePayload(config, {
@@ -1021,6 +1021,7 @@ describe("adaptAccountableDashboard", () => {
           { name: "Hyperevm", value: 8.2 },
           { name: "Hyperliquid", value: 4.1 },
           { name: "Megaeth", value: 1.9 },
+          { name: "Sei", value: 0.1 },
         ],
       },
     });
@@ -1028,11 +1029,12 @@ describe("adaptAccountableDashboard", () => {
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
       bucket: "reserves_split",
-      breakdownCount: 13,
-      mappedBucketCount: 13,
+      breakdownCount: 14,
+      mappedBucketCount: 14,
     });
     expect(result.metadata?.unknownBucketCount).toBeUndefined();
     expect(result.metadata?.unknownExposurePct).toBeUndefined();
+    expect(result.slices.every((slice) => slice.risk === "high")).toBe(true);
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 5, 20, 10) / 1000,

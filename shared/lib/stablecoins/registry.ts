@@ -18,8 +18,8 @@ const CANONICAL_ORDER = canonicalOrderAsset as readonly string[];
 const PER_COIN_SOURCE_COINS = coinsGeneratedAsset as unknown as readonly StablecoinMeta[];
 
 // A `liveReservesConfig.suspended` marker is an operator kill switch for a dead
-// upstream feed (e.g. the provider moved to keyed access). Stripping the config
-// here — the single ingestion point — makes every consumer (sync queue, V9
+// or semantically unusable upstream feed. Stripping the config here — the
+// single ingestion point — makes every consumer (sync queue, V9
 // backing evidence, presentation, breakers) treat the coin as having no live
 // feed, which is the supported curated-fallback state. The source file keeps
 // the adapter config so re-enabling is a one-line revert.
