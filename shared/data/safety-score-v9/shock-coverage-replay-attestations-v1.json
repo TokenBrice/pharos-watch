@@ -6,7 +6,7 @@
     "version": "1",
     "mode": "offline-byte-identical"
   },
-  "attestedAt": "2026-08-25",
+  "attestedAt": "2026-08-27",
   "attestations": [
     {
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336-shock-coverage.json",
@@ -30,6 +30,14 @@
       "attestedAt": "2026-08-25",
       "exactReplayPassed": true,
       "callsConsumed": 230,
+      "codePinsConsumed": 92
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-27-block-50525351-shock-coverage.json",
+      "journalSha256": "200435925f00405faff2964fba625d728041cf82eb682a3c7cfead525389699f",
+      "attestedAt": "2026-08-27",
+      "exactReplayPassed": true,
+      "callsConsumed": 236,
       "codePinsConsumed": 92
     },
     {
@@ -198,6 +206,14 @@
       "attestedAt": "2026-08-25",
       "exactReplayPassed": true,
       "callsConsumed": 740,
+      "codePinsConsumed": 56
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-08-27-block-25847123-shock-coverage.json",
+      "journalSha256": "655ceedcab06bde612786fa886b71ae6da12e601d90de7e23f94104fb1108973",
+      "attestedAt": "2026-08-27",
+      "exactReplayPassed": true,
+      "callsConsumed": 737,
       "codePinsConsumed": 56
     },
     {
@@ -388,6 +404,14 @@
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-08-25-block-25829713-shock-coverage.json",
       "journalSha256": "7549966c7f72eed7a909742c20641c1e4157ce5a0b32285681e64b61f8097c77",
       "attestedAt": "2026-08-25",
+      "exactReplayPassed": true,
+      "callsConsumed": 250,
+      "codePinsConsumed": 14
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-08-27-block-25847123-shock-coverage.json",
+      "journalSha256": "a13077feec5501547c8bc1233fa0cf770fce5c43b76d0fda24c29232264c6808",
+      "attestedAt": "2026-08-27",
       "exactReplayPassed": true,
       "callsConsumed": 250,
       "codePinsConsumed": 14
