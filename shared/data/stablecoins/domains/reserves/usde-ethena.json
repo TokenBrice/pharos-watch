@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Liquid Cash strategy basket",
-      "pct": 99.1,
+      "pct": 86.9,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Ethena Liquid Cash strategy counterparties: stablecoin issuers, Aave and Morpho markets, tokenized-fund issuers, and institutional borrowers",
@@ -11,8 +11,17 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "name": "ETH / liquid staking collateral",
+      "pct": 7.2,
+      "risk": "medium",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Ethena off-exchange custodians, liquid-staking protocols, and derivatives venues for delta-hedged ETH positions",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
+      "liquidityHorizon": "one-day"
+    },
+    {
       "name": "BTC collateral",
-      "pct": 0.5,
+      "pct": 5.3,
       "risk": "medium",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for delta-hedged BTC positions",
@@ -20,18 +29,18 @@
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "ETH / liquid staking collateral",
-      "pct": 0.4,
-      "risk": "medium",
+      "name": "Other crypto collateral",
+      "pct": 0.6,
+      "risk": "high",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Ethena off-exchange custodians, liquid-staking protocols, and derivatives venues for delta-hedged ETH positions",
+      "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for delta-hedged SOL and BNB positions",
       "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
       "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex reserve refresh (Ethena live telemetry)",
     "confidence": "verified",
     "sources": [
       {
@@ -51,34 +60,41 @@
         "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
       }
     ],
-    "rationale": "Matched the three exact live exposure identities captured by the Ethena adapter: Liquid Cash strategy basket (99.1%), BTC collateral (0.5%), and ETH / liquid staking collateral (0.4%). Ethena's current collateral API independently remained within the registry match tolerance on 2026-07-22 (approximately 99.0%, 0.55%, and 0.42%, respectively). As non-additive detail behind those adapter rows, the issuer's 2026-07-22 strategy endpoint reports Liquid Stables 43.96595722265396% (USDT, USDC, USDtb, PYUSD), DeFi Lending 33.07074999530534% (Aave, Morpho), RWA 12.4211048850423% (JAAA, STAC), Institutional Lending 9.541543996740788% (BTC), and Crypto Basis 1.0006439002576117% (BTC, ETH, SOL, XRP, BNB). The live reserve adapter collapses those categories into three exposure identities, so the structured rows preserve the required live fingerprint while this review retains the more granular issuer evidence without double-counting it.",
-    "compositionBasis": "Exact live Ethena collateral-adapter exposure names and registry-captured weights, re-verified against the issuer collateral positions API on 2026-07-22; no constituent weights inferred",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "Refresh 2026-08-27: the frozen 2026-08-27T20:11:23Z capture of Ethena's current collateral API reduced live USD positions to the repository adapter's four exact exposure identities: Liquid Cash strategy basket 86.9%, ETH / liquid staking collateral 7.2%, BTC collateral 5.3%, and Other crypto collateral 0.6%. The current strategy-breakdown endpoint describes the Liquid Cash constituents at category level (Liquid Stables, DeFi Lending, RWA, Institutional Lending, and Crypto Basis) but does not publish constituent or failure-domain weights inside those categories. This review retains the adapter identities and weights without inventing constituent allocations.",
+    "compositionBasis": "Exact live Ethena collateral-adapter exposure names and rounded weights from the issuer collateral positions API captured at 2026-08-27T20:11:23Z; no constituent weights inferred",
+    "compositionAsOf": "2026-08-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 99.1% Liquid Cash live exposure aggregates disclosed strategy categories with current category weights, but the issuer does not publish within-category constituent weights or failure-domain allocations for the named stablecoins, lending markets, tokenized funds, and institutional borrowers. The full adapter row therefore remains a reviewed mixed basket even though its non-additive category breakdown is preserved in the rationale.",
-    "knownUnknownExposurePct": 99.1,
+    "knownUnknownExposure": "The 86.9% Liquid Cash live exposure aggregates disclosed strategy categories with current category weights, but the issuer does not publish within-category constituent weights or failure-domain allocations for the named stablecoins, lending markets, tokenized funds, and institutional borrowers. The full adapter row therefore remains a reviewed mixed basket even though its non-additive category breakdown is preserved in the rationale.",
+    "knownUnknownExposurePct": 86.9,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Liquid Cash strategy basket",
-        "pct": 99.1,
+        "pct": 86.9,
         "disposition": "basket-needs-split",
         "rationale": "The live row combines several stablecoins, protocol positions, tokenized funds, and institutional loans without current constituent weights, so it cannot be linked to any single tracked asset.",
         "candidateCoinIds": ["usdt-tether", "usdc-circle", "usdtb-ethena", "pyusd-paypal", "jaaa-janus-henderson-anemoy", "stac-securitize"]
       },
       {
         "reserveIndex": 1,
+        "reserveName": "ETH / liquid staking collateral",
+        "pct": 7.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Delta-hedged ETH and liquid-staking-token backing is an external crypto, staking, and derivatives exposure, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
         "reserveName": "BTC collateral",
-        "pct": 0.5,
+        "pct": 5.3,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Delta-hedged BTC backing is an external crypto and derivatives exposure, not a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 2,
-        "reserveName": "ETH / liquid staking collateral",
-        "pct": 0.4,
+        "reserveIndex": 3,
+        "reserveName": "Other crypto collateral",
+        "pct": 0.6,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Delta-hedged ETH and liquid-staking-token backing is an external crypto, staking, and derivatives exposure, not a tracked stablecoin dependency."
+        "rationale": "The live adapter's SOL and BNB bucket is an external crypto and derivatives exposure, not a tracked stablecoin dependency."
       }
     ]
   },

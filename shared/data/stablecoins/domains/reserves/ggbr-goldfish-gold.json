@@ -18,26 +18,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-EVD-A wave6",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex Goldfish designated-wallet verification",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Goldfish collateral model and designated collateral wallet (accessed 2026-07-22)",
+        "label": "Goldfish collateral model and designated collateral wallet (accessed 2026-08-27)",
         "url": "https://goldfishgold.com/collateral"
       },
       {
-        "label": "ION.au balance in the designated Goldfish collateral wallet (block 25590329 on 2026-07-22)",
+        "label": "ION.au balance in the designated Goldfish collateral wallet (block 25849423 on 2026-08-27)",
         "url": "https://etherscan.io/token/0xd051c326c9aef673428e6f01eb65d2c52de95d30?a=0x2F371Ba19F89874689a91bA322194F9967Cb640D"
       },
       {
-        "label": "GGBR Ethereum supply (block 25590329 on 2026-07-22)",
+        "label": "GGBR Ethereum supply (block 25849423 on 2026-08-27)",
         "url": "https://etherscan.io/token/0x7e2ac793f3E692f388e66c7DC28F739d13B0B71A"
       }
     ],
-    "rationale": "Goldfish identifies ION.au as GGBR's direct reserve instrument and designates Ethereum wallet 0x2F371Ba19F89874689a91bA322194F9967Cb640D as the collateral wallet. Pinned Ethereum RPC reads at block 25590329 on 2026-07-22 returned 25,000 ION.au in that wallet and 25,000,000 GGBR total supply, exactly one ION.au per 1,000 GGBR and consistent with the disclosed direct-backing ratio.",
-    "compositionBasis": "Official Goldfish collateral model reconciled to exact Ethereum balances at block 25590329",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "Refresh 2026-08-28: Goldfish identifies ION.au as GGBR's direct reserve instrument and designates Ethereum wallet 0x2F371Ba19F89874689a91bA322194F9967Cb640D as the collateral wallet. Pinned Ethereum RPC reads at block 25849423 on 2026-08-27T22:02:23Z returned 25,000 ION.au in that wallet and 25,000,000 GGBR total supply, exactly one ION.au per 1,000 GGBR and consistent with the disclosed direct-backing ratio. The evidence remains assets-only: it does not independently attest the underlying gold quantity or reconcile contractual liabilities.",
+    "compositionBasis": "Official Goldfish collateral model reconciled to exact Ethereum balances at block 25849423",
+    "compositionAsOf": "2026-08-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve instrument and its on-chain quantity are resolved. ION.au's underlying in-situ gold claims, legal enforceability, and off-chain custody remain upstream instrument-quality risks rather than an unidentified GGBR reserve slice.",
     "knownUnknownExposurePct": 0,

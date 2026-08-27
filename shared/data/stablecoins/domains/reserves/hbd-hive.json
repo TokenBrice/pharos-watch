@@ -2,7 +2,7 @@
   "id": "hbd-hive",
   "reserves": [
     {
-      "name": "Hive protocol conversion capacity",
+      "name": "Hive protocol HIVE conversion mechanism (endogenous HIVE value)",
       "pct": 100,
       "risk": "high",
       "assetClass": "other",
@@ -16,8 +16,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-A wave6",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex Hive live conversion review",
     "confidence": "verified",
     "sources": [
       {
@@ -37,20 +37,20 @@
         "url": "https://github.com/openhive-network/hive/blob/dab219074fd146d07305bccd4a9f869c9d94d301/libraries/chain/database.cpp"
       },
       {
-        "label": "Hive blockchain API",
+        "label": "Hive blockchain API (two-node verification at irreversible block 109401364 on 2026-08-27)",
         "url": "https://api.hive.blog"
       }
     ],
-    "rationale": "HBD is a native Hive protocol liability, not a claim on a segregated reserve portfolio: there are no asset reserves, only the protocol's conversion rule paying up to $1 of HIVE per HBD at the 3.5-day median witness price, bounded by debt controls. At irreversible block 108364554, total supply was 32,394,046.860 HBD and the treasury held 23,179,590.895 HBD; consensus code excludes that treasury balance, leaving 9,214,455.965 HBD in the debt calculation. Against 568,196,982.317 HIVE at 0.048 HBD per HIVE, the resulting debt ratio was 25.25345%: above the 20% print-stop threshold but below the 30% haircut threshold.",
+    "rationale": "HBD is a native Hive protocol liability, not a claim on a segregated reserve portfolio: there are no asset reserves, only the protocol's conversion rule paying up to $1 of HIVE per HBD at the 3.5-day median witness price, bounded by debt controls. Two Hive nodes agreed at irreversible block 109401364 on 2026-08-27T22:01:24Z that the debt ratio was 26.31%: above the 20% print-stop threshold but below the 30% haircut threshold. The reviewed slice therefore uses the exact current live-adapter identity for the endogenous HIVE conversion mechanism rather than implying a third-party reserve portfolio.",
     "compositionBasis": "Hive protocol conversion and haircut mechanism confirmed against live chain properties",
-    "compositionAsOf": "2026-07-22",
+    "compositionAsOf": "2026-08-27",
     "scope": "full-composition",
     "knownUnknownExposure": "There is no external reserve custodian, asset allocation, or legally segregated collateral pool. HBD holders instead depend on HIVE market value and liquidity, witness price-feed integrity, the 3.5-day conversion delay, and protocol debt controls. Consensus code explicitly excludes the treasury HBD balance from the debt calculation; realized USD value after conversion remains market-dependent.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Hive protocol conversion capacity",
+        "reserveName": "Hive protocol HIVE conversion mechanism (endogenous HIVE value)",
         "pct": 100,
         "disposition": "self-reserve",
         "rationale": "Backing is the Hive protocol's own conversion capacity denominated in HIVE market value — a self-referential protocol reserve rather than an exogenous asset or tracked stablecoin."
