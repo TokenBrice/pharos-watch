@@ -6,6 +6,7 @@ import {
   buildSafetyMapSummary,
   planSafetyMapPublication,
   publishSafetyMapPublication,
+  renderSafetyMapPublication,
   type PublicationIo,
   type SafetyMapKvAdapter,
   type SafetyMapPublishState,
@@ -32,6 +33,41 @@ function createIo(): PublicationIo & { output: string[]; text: string[] } {
     stdout: { write: (value) => text.push(value) },
     warning: (title, message) => text.push(`${title}: ${message}`),
     writeOutput: (name, value) => output.push(`${name}=${value}`),
+  };
+}
+
+function validPreviousSnapshot(): Record<string, unknown> {
+  const tiers = ["A", "B", "C", "D", "F"].map((tier) => ({
+    tier,
+    range: "0-100",
+    count: tier === "A" ? 1 : 0,
+    mcapUsd: tier === "A" ? 100 : 0,
+    sharePct: tier === "A" ? 100 : 0,
+    leaders: tier === "A"
+      ? [{ symbol: "USD", score: 90, mcapUsd: 100 }]
+      : [],
+  }));
+  return {
+    date: "2026-07-26",
+    publicationStatus: "current",
+    counts: {
+      graded: 1,
+      notRated: 0,
+      unjoined: 0,
+      missingLogos: 0,
+      byTier: { A: 1, B: 0, C: 0, D: 0, F: 0 },
+    },
+    mapSummary: {
+      date: "2026-07-26",
+      asOfSec: Date.UTC(2026, 6, 26, 8, 0, 0) / 1000,
+      methodologyVersion: "9.43",
+      gradedCount: 1,
+      notRatedCount: 0,
+      totalMcapUsd: 100,
+      floorMcapByTier: { a: 1, other: 1 },
+      tiers,
+    },
+    coins: [{ id: "usd", symbol: "USD", score: 90, grade: "A+", mcap: 100 }],
   };
 }
 
@@ -138,6 +174,57 @@ describe("Safety Map publication CLI", () => {
     const boundary = await planSafetyMapPublication({ adapter, dryRun: true, eventName: "schedule", io, nowSec, statePath: dryRunStatePath });
     expect(boundary.alreadyPublished).toBe(false);
     expect(existsSync(dryRunStatePath)).toBe(false);
+  });
+
+  it("accepts an audited snapshot transition only on a manual run", async () => {
+    const directory = temporaryDirectory();
+    const statePath = join(directory, "publish-state.json");
+    const adapter = new MockKvAdapter();
+    const nowSec = Date.UTC(2026, 6, 27, 8, 0, 0) / 1000;
+    adapter.listings.set("safety-map:snapshot:latest", ["safety-map:snapshot:latest"]);
+    adapter.values.set("safety-map:snapshot:latest", Buffer.from(JSON.stringify(validPreviousSnapshot())));
+
+    await expect(planSafetyMapPublication({
+      acceptSnapshotTransition: true,
+      adapter,
+      eventName: "schedule",
+      nowSec,
+      statePath,
+    })).rejects.toThrow("restricted to workflow_dispatch");
+
+    const planned = await planSafetyMapPublication({
+      acceptSnapshotTransition: true,
+      adapter,
+      eventName: "workflow_dispatch",
+      nowSec,
+      statePath,
+    });
+    expect(planned.acceptedSnapshotTransition).toBe(true);
+    expect(planned.previousSnapshotPath).toBe(join(directory, "previous-snapshot.json"));
+
+    let renderCommand = "";
+    const rendered = await renderSafetyMapPublication({
+      commandRunner: (command) => {
+        renderCommand = command;
+        writeFileSync(join(directory, "latest.png"), "png bytes");
+        writeFileSync(join(directory, "latest.alt.json"), "alt bytes");
+        writeFileSync(join(directory, "latest.snapshot.json"), JSON.stringify({
+          date: "2026-07-27",
+          asOfSec: nowSec - 60,
+          renderedAtSec: nowSec,
+          edition: "daily",
+          methodologyVersion: "9.44",
+          counts: { graded: 43, notRated: 2 },
+        }));
+        return 0;
+      },
+      outDir: directory,
+      statePath,
+    });
+
+    expect(rendered.deltaGuard).toBe("accepted");
+    expect(renderCommand).toContain(`--previous-snapshot '${join(directory, "previous-snapshot.json")}'`);
+    expect(renderCommand).toContain("--accept-snapshot-transition");
   });
 
   it("refuses to publish behind the live manifest before the first write", async () => {

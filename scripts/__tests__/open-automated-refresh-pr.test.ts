@@ -15,7 +15,7 @@ describe("open automated refresh PR", () => {
 
     expect(() =>
       openAutomatedRefreshPr(options, {
-        env: { GITHUB_TOKEN: "default-actions-token" },
+        env: { GITHUB_TOKEN: "default-actions-token", NODE_ENV: "test" },
         exec,
       }),
     ).toThrow(/AUTOMATION_GITHUB_TOKEN is required/);

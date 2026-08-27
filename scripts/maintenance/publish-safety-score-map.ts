@@ -35,6 +35,8 @@ Options:
   --state <path>         Run-state JSON (default: agents/safety-score-map/ci/publish-state.json)
   --out-dir <path>       Render output directory (default: agents/safety-score-map/ci)
   --event-name <name>    GitHub event name (plan; default: GITHUB_EVENT_NAME or workflow_dispatch)
+  --accept-snapshot-transition
+                         Manual plan only: accept the current live snapshot as an audited transition
   --job-status <status>  GitHub job status (summary; default: unknown)
   --dry-run              Plan only: inspect and print the decision without KV writes
   -h, --help             Show this help`;
@@ -62,7 +64,8 @@ export interface SafetyMapPublishState {
   plannedAtSec: number;
   alreadyPublished: boolean;
   hadManifest: boolean;
-  deltaGuard: "ran" | "skipped" | "not reached";
+  acceptedSnapshotTransition?: boolean;
+  deltaGuard: "ran" | "accepted" | "skipped" | "not reached";
   previousSnapshotPath?: string;
   priorManifest?: Record<string, unknown>;
   manifest?: SafetyMapManifest;
@@ -175,6 +178,7 @@ function parseManifest(raw: Buffer): Record<string, unknown> {
 export async function planSafetyMapPublication({
   adapter,
   dryRun = false,
+  acceptSnapshotTransition = false,
   eventName,
   io = DEFAULT_IO,
   nowSec = Math.floor(Date.now() / 1000),
@@ -182,11 +186,15 @@ export async function planSafetyMapPublication({
 }: {
   adapter: SafetyMapKvAdapter;
   dryRun?: boolean;
+  acceptSnapshotTransition?: boolean;
   eventName: string;
   io?: PublicationIo;
   nowSec?: number;
   statePath: string;
 }): Promise<SafetyMapPublishState> {
+  if (acceptSnapshotTransition && eventName !== "workflow_dispatch") {
+    throw new Error("--accept-snapshot-transition is restricted to workflow_dispatch runs");
+  }
   const [manifestNames, snapshotNames] = await Promise.all([
     adapter.list(MANIFEST_KEY),
     adapter.list(SNAPSHOT_LATEST_KEY),
@@ -205,6 +213,7 @@ export async function planSafetyMapPublication({
     plannedAtSec: nowSec,
     alreadyPublished,
     hadManifest,
+    ...(acceptSnapshotTransition ? { acceptedSnapshotTransition: true } : {}),
     deltaGuard: "not reached",
     ...(priorManifest ? { priorManifest } : {}),
   };
@@ -214,6 +223,10 @@ export async function planSafetyMapPublication({
     ? `Manifest for ${today} is live with data ${Math.round(ageSec / 60)}m old — skipping the re-render.\n`
     : `Proceeding: manifest date=${priorManifest?.date ?? "none"}, today=${today}, event=${eventName}, data age=${Math.round(ageSec / 60)}m.\n`);
 
+  if (acceptSnapshotTransition && !hasPreviousSnapshot) {
+    throw new Error(`Cannot accept a snapshot transition without a live ${SNAPSHOT_LATEST_KEY} baseline`);
+  }
+
   if (!alreadyPublished && hasPreviousSnapshot) {
     const previousSnapshotPath = join(dirname(statePath), "previous-snapshot.json");
     if (!dryRun) rmSync(previousSnapshotPath, { force: true });
@@ -221,6 +234,7 @@ export async function planSafetyMapPublication({
       const raw = await adapter.get(SNAPSHOT_LATEST_KEY, { text: true });
       const previous = asObject(extractJson(raw, "{"), "previous snapshot is not a JSON object");
       if (!("publicationStatus" in previous)) {
+        if (acceptSnapshotTransition) throw new Error(`${SNAPSHOT_LATEST_KEY} predates the current publication-status contract`);
         io.warning("Legacy previous snapshot", `${SNAPSHOT_LATEST_KEY} predates the current publication-status contract. The delta guard will be skipped once.`);
       } else if (!dryRun) {
         mkdirSync(dirname(previousSnapshotPath), { recursive: true });
@@ -229,6 +243,9 @@ export async function planSafetyMapPublication({
         io.stdout.write(`Previous snapshot: date=${previous.date} graded=${(previous.counts as Record<string, unknown> | undefined)?.graded} notRated=${(previous.counts as Record<string, unknown> | undefined)?.notRated}\n`);
       }
     } catch (error) {
+      if (acceptSnapshotTransition) {
+        throw new Error(`Cannot accept a snapshot transition without a readable current ${SNAPSHOT_LATEST_KEY} baseline`, { cause: error });
+      }
       io.warning("Previous snapshot unreadable", `${SNAPSHOT_LATEST_KEY} could not be read as current JSON. The delta guard will be skipped. ${error instanceof Error ? error.message : String(error)}`);
     }
   } else if (!dryRun) {
@@ -284,10 +301,13 @@ export async function renderSafetyMapPublication({
   const state = readState(statePath);
   if (state.alreadyPublished) return state;
   const previousSnapshotPath = state.previousSnapshotPath ?? join(dirname(statePath), "previous-snapshot.json");
-  state.deltaGuard = existsSync(previousSnapshotPath) && statSync(previousSnapshotPath).size > 0 ? "ran" : "skipped";
+  state.deltaGuard = state.acceptedSnapshotTransition
+    ? "accepted"
+    : existsSync(previousSnapshotPath) && statSync(previousSnapshotPath).size > 0 ? "ran" : "skipped";
   if (state.deltaGuard === "skipped") io.warning("Delta guard skipped", `No readable ${SNAPSHOT_LATEST_KEY}; unconditional render guards still apply.`);
+  if (state.deltaGuard === "accepted") io.warning("Snapshot transition accepted", `The operator accepted the current live ${SNAPSHOT_LATEST_KEY} baseline transition; unconditional render guards still apply.`);
   const started = Date.now();
-  const command = `npm run build:safety-score-map -- --out ${shellQuote(join(outDir, "latest.png"))} --previous-snapshot ${shellQuote(previousSnapshotPath)}`;
+  const command = `npm run build:safety-score-map -- --out ${shellQuote(join(outDir, "latest.png"))} --previous-snapshot ${shellQuote(previousSnapshotPath)}${state.deltaGuard === "accepted" ? " --accept-snapshot-transition" : ""}`;
   const result = await commandRunner(command, {}, {});
   const status = typeof result === "number" ? result : result.status;
   if (status !== 0) throw new Error(`Safety Map render failed with status ${status}`);
@@ -369,6 +389,7 @@ export function buildSafetyMapSummary(state: SafetyMapPublishState | null, jobSt
     `| Day-over-day delta guard | ${value(state?.deltaGuard ?? "not reached")} |`, "",
   ];
   if (state?.deltaGuard === "skipped") lines.push("> **Warning:** no readable `safety-map:snapshot:latest`, so the delta guard did", "> not run this time. Expected on a first run; investigate if it repeats.", "");
+  if (state?.deltaGuard === "accepted") lines.push("> **Operator acceptance:** this manual run accepted the current live snapshot transition.", "> Unconditional freshness, geometry, composition, font, and raster guards still ran.", "");
   if (state?.alreadyPublished) {
     lines.push("### Skipped — today is already published", "", "The live `safety-map:latest.json` already carries today's date with fresh", "data, so this scheduled retry slot exited without rendering or writing.");
   } else if (jobStatus === "success" && state?.phase === "published" && manifest) {
@@ -390,6 +411,7 @@ export async function runSafetyMapPublicationCli(argv: readonly string[], io: Pu
       state: { type: "string" },
       "out-dir": { type: "string" },
       "event-name": { type: "string" },
+      "accept-snapshot-transition": { type: "boolean" },
       "job-status": { type: "string" },
       "dry-run": { type: "boolean" },
     },
@@ -399,10 +421,11 @@ export async function runSafetyMapPublicationCli(argv: readonly string[], io: Pu
   const phase = positionals[0];
   assertCliUsage(["plan", "render", "publish", "summary"].includes(phase), `unknown phase: ${phase}`);
   assertCliUsage(values["dry-run"] !== true || phase === "plan", "--dry-run is only valid with plan");
+  assertCliUsage(values["accept-snapshot-transition"] !== true || phase === "plan", "--accept-snapshot-transition is only valid with plan");
   const outDir = resolve(typeof values["out-dir"] === "string" ? values["out-dir"] : "agents/safety-score-map/ci");
   const statePath = resolve(typeof values.state === "string" ? values.state : join(outDir, "publish-state.json"));
   if (phase === "plan") {
-    await planSafetyMapPublication({ adapter: defaultAdapter(), dryRun: values["dry-run"] === true, eventName: typeof values["event-name"] === "string" ? values["event-name"] : process.env.GITHUB_EVENT_NAME ?? "workflow_dispatch", io, statePath });
+    await planSafetyMapPublication({ adapter: defaultAdapter(), dryRun: values["dry-run"] === true, acceptSnapshotTransition: values["accept-snapshot-transition"] === true, eventName: typeof values["event-name"] === "string" ? values["event-name"] : process.env.GITHUB_EVENT_NAME ?? "workflow_dispatch", io, statePath });
   } else if (phase === "render") {
     await renderSafetyMapPublication({ io, outDir, statePath });
   } else if (phase === "publish") {

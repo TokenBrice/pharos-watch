@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import {
+  makeScheduledRuntime,
+  mockSuccessfulCronLease,
+} from "../../../test-helpers/scheduled-runtime.test-support";
 
 const mocks = vi.hoisted(() => ({
-  computeDepegResolver: vi.fn(),
   syncSafetyScoreV9SupplyAttribution: vi.fn(),
 }));
 const leaseMocks = vi.hoisted(() => ({
   runCronWithLease: vi.fn(),
 }));
 
-vi.mock("../../../cron/compute-depeg-resolver", () => ({
-  computeDepegResolver: mocks.computeDepegResolver,
-}));
 vi.mock("../../../lib/cron-lease-primitives", () => ({
   runCronWithLease: leaseMocks.runCronWithLease,
 }));
@@ -21,23 +21,12 @@ vi.mock("../../../cron/sync-v9-supply-attribution", () => ({
 }));
 
 import { runV9SupplyAttributionSlot } from "../v9-supply-attribution";
-import { runV9AfterCoreWithinWindow } from "../../../lib/v9-slot-window";
 
 const SCHEDULED_TIME_MS = 1_800_000;
-const V9_SUPPLY_WINDOW_MS = 3 * 60_000;
-const V9_SUPPLY_MINIMUM_REMAINING_MS = 60_000;
-const DDR_HANDOFF_MARGIN_MS = 10_000;
-const HANDOFF_DELAY_MS = 5_000;
-const DDR_BUDGET_MS =
-  V9_SUPPLY_WINDOW_MS - V9_SUPPLY_MINIMUM_REMAINING_MS -
-  DDR_HANDOFF_MARGIN_MS;
 
 function dbWithReadyCoreSlot(): D1Database {
   return {
     prepare: vi.fn((sql: string) => {
-      if (sql.includes("FROM cron_runs")) {
-        return { first: vi.fn(async () => null) };
-      }
       const first = vi.fn(async () =>
         sql.includes("FROM cron_slot_executions") &&
         sql.includes("slot_key = 'quarterHourly'")
@@ -56,34 +45,14 @@ function dbWithReadyCoreSlot(): D1Database {
 }
 
 function runtime(): ScheduledRuntimeContext {
-  return {
+  return makeScheduledRuntime({
     db: dbWithReadyCoreSlot(),
-    env: {} as ScheduledRuntimeContext["env"],
-    ctx: {} as ExecutionContext,
-    cron: "8,38 * * * *",
+    cron: "8 * * * *",
     scheduleKey: "v9SupplyAttributionOffset",
     scheduledTimeMs: SCHEDULED_TIME_MS,
     slotStartedAt: SCHEDULED_TIME_MS / 1_000,
     workerVersion: "worker-v1",
-    mintBurnDisabledIds: [],
-    mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig:
-      {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-    coingeckoApiKey: null,
-    chainRpcs: new Map(),
-    runLeasedCron: vi.fn(async (job, fn) => {
-      try {
-        return await fn(new AbortController().signal, vi.fn());
-      } catch (error) {
-        if (job === "compute-depeg-resolver") {
-          await new Promise<void>((resolve) =>
-            setTimeout(resolve, HANDOFF_DELAY_MS),
-          );
-        }
-        throw error;
-      }
-    }),
-  };
+  });
 }
 
 describe("V9 supply-attribution scheduling", () => {
@@ -91,18 +60,7 @@ describe("V9 supply-attribution scheduling", () => {
     vi.useFakeTimers();
     vi.setSystemTime(SCHEDULED_TIME_MS);
     vi.clearAllMocks();
-    leaseMocks.runCronWithLease.mockImplementation(async (
-      _db: D1Database,
-      _job: string,
-      run: (input: { signal: AbortSignal }) => Promise<unknown>,
-      leaseOptions?: { abortSignal?: AbortSignal },
-    ) => ({
-      status: "ok",
-      result: await run({
-        signal:
-          leaseOptions?.abortSignal ?? new AbortController().signal,
-      }),
-    }));
+    mockSuccessfulCronLease(leaseMocks.runCronWithLease);
     mocks.syncSafetyScoreV9SupplyAttribution.mockResolvedValue({
       status: "ok",
       itemCount: 1,
@@ -113,89 +71,21 @@ describe("V9 supply-attribution scheduling", () => {
     vi.useRealTimers();
   });
 
-  it("captures attribution before DDR heap work and aborts hung DDR at its derived deadline", async () => {
-    let ddrSignal: AbortSignal | undefined;
-    mocks.computeDepegResolver.mockImplementation(({
-      signal,
-    }: { signal: AbortSignal }) => {
-      ddrSignal = signal;
-      return new Promise((_resolve, reject) => {
-        signal.addEventListener("abort", () => reject(signal.reason), {
-          once: true,
-        });
-      });
-    });
-
-    const run = runV9SupplyAttributionSlot(runtime());
-    await vi.advanceTimersByTimeAsync(0);
-
-    expect(mocks.syncSafetyScoreV9SupplyAttribution).toHaveBeenCalledOnce();
-    expect(mocks.computeDepegResolver).toHaveBeenCalledOnce();
-    expect(
-      mocks.syncSafetyScoreV9SupplyAttribution.mock.invocationCallOrder[0],
-    ).toBeLessThan(mocks.computeDepegResolver.mock.invocationCallOrder[0]!);
-    expect(ddrSignal?.aborted).toBe(false);
-
-    await vi.advanceTimersByTimeAsync(DDR_BUDGET_MS);
-    expect(ddrSignal?.aborted).toBe(true);
-
-    await vi.advanceTimersByTimeAsync(HANDOFF_DELAY_MS);
-    await run;
-
-    expect(ddrSignal?.reason).toMatchObject({ name: "TimeoutError" });
-
-    vi.setSystemTime(
-      SCHEDULED_TIME_MS +
-      V9_SUPPLY_WINDOW_MS - V9_SUPPLY_MINIMUM_REMAINING_MS +
-      HANDOFF_DELAY_MS,
-    );
-    const withoutMarginRun = vi.fn(async () => ({
-      status: "ok" as const,
-      itemCount: 1,
-    }));
-    const withoutMarginResult = await runV9AfterCoreWithinWindow(
-      {
-        db: dbWithReadyCoreSlot(),
-        scheduledTimeMs: SCHEDULED_TIME_MS,
-        slotStartedAt: SCHEDULED_TIME_MS / 1_000,
-        workerVersion: "worker-v1",
-        deadlineOffsetMs: V9_SUPPLY_WINDOW_MS,
-        minimumRemainingMs: V9_SUPPLY_MINIMUM_REMAINING_MS,
-        lane: "sync-v9-supply-attribution",
-        currentSlotKey: "v9-offset",
-      },
-      withoutMarginRun,
-    );
-    expect(withoutMarginResult.productivity?.reason).toBe(
-      "v9-slot-window-too-short",
-    );
-    expect(withoutMarginRun).not.toHaveBeenCalled();
-  });
-
-  it("skips DDR neutrally when its derived budget is already exhausted", async () => {
-    vi.setSystemTime(SCHEDULED_TIME_MS + DDR_BUDGET_MS);
+  it("runs only supply attribution in the memory-isolated slot", async () => {
     const scheduledRuntime = runtime();
-
     const summary = await runV9SupplyAttributionSlot(scheduledRuntime);
-    const ddrResult = await vi.mocked(scheduledRuntime.runLeasedCron)
-      .mock.results[1]?.value;
 
-    expect(mocks.computeDepegResolver).not.toHaveBeenCalled();
-    expect(ddrResult).toEqual({
-      status: "skipped_neutral",
-      itemCount: 0,
-      metadata: JSON.stringify({ reason: "ddr-budget-exhausted" }),
-      productivity: {
-        productive: false,
-        reason: "ddr-budget-exhausted",
-      },
-    });
-    expect(summary.jobs[1]).toMatchObject({
-      job: "compute-depeg-resolver",
-      outcome: "skipped",
-      reason: "ddr-budget-exhausted",
-      neutral: true,
-    });
+    expect(scheduledRuntime.runLeasedCron).toHaveBeenCalledOnce();
+    expect(scheduledRuntime.runLeasedCron).toHaveBeenCalledWith(
+      "sync-v9-supply-attribution",
+      expect.any(Function),
+    );
     expect(mocks.syncSafetyScoreV9SupplyAttribution).toHaveBeenCalledOnce();
+    expect(summary.jobs).toEqual([
+      expect.objectContaining({
+        job: "sync-v9-supply-attribution",
+        outcome: "ok",
+      }),
+    ]);
   });
 });

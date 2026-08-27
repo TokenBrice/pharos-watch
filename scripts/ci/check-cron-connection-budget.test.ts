@@ -29,6 +29,7 @@ describe("check-cron-connection-budget", () => {
   it("models the V9 supply and publication lanes without adding publication connection pressure", () => {
     const report = evaluateCronConnectionBudget();
     const v9Supply = report.triggerReports.find((trigger) => trigger.scheduleKey === "v9SupplyAttributionOffset");
+    const depegResolver = report.triggerReports.find((trigger) => trigger.scheduleKey === "depegResolverOffset");
     const v9Publication = report.triggerReports.find((trigger) => trigger.scheduleKey === "v9PublicationOffset");
     const ddr = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "compute-depeg-resolver");
     const compiler = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "compute-safety-score-v9");
@@ -37,11 +38,19 @@ describe("check-cron-connection-budget", () => {
     expect(v9Supply?.chains).toEqual([
       {
         chainKey: "chain-1",
-        jobs: ["sync-v9-supply-attribution", "compute-depeg-resolver"],
+        jobs: ["sync-v9-supply-attribution"],
         peak: 3,
       },
     ]);
     expect(v9Supply?.totalConnections).toBe(3);
+    expect(depegResolver?.chains).toEqual([
+      {
+        chainKey: "chain-1",
+        jobs: ["compute-depeg-resolver"],
+        peak: 0,
+      },
+    ]);
+    expect(depegResolver?.totalConnections).toBe(0);
     expect(compiler?.maxConnections).toBe(0);
     expect(v9Publication?.chains).toEqual([
       {
@@ -51,7 +60,7 @@ describe("check-cron-connection-budget", () => {
       },
     ]);
     expect(v9Publication?.totalConnections).toBe(0);
-    expect(report.triggerReports).toHaveLength(23);
+    expect(report.triggerReports).toHaveLength(24);
     expect(report.failed).toBe(false);
   });
 

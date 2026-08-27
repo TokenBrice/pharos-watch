@@ -148,6 +148,13 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
     coinId: "eurc-circle",
     stableLike: true,
   },
+  EUROP: {
+    key: "EUROP",
+    name: "EUROP (Schuman euro stablecoin)",
+    risk: "low",
+    coinId: "europ-schuman",
+    stableLike: true,
+  },
   axlEUROC: {
     key: "EURC",
     name: "EURC (Circle euro stablecoin)",

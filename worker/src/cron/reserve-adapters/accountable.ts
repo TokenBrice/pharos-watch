@@ -33,9 +33,16 @@ interface AccountableDashboardResponse {
       type_split?: Record<string, unknown>;
       stablecoin_split?: Record<string, unknown>;
       exposure_split?: Record<string, unknown>;
+      exposure_split_ts?: unknown;
       protocol_split?: Record<string, unknown>;
+      timeline?: AccountableTimelinePoint[];
     };
   };
+}
+
+interface AccountableTimelinePoint {
+  ts?: unknown;
+  reserves?: unknown;
 }
 
 interface AccountableParams {
@@ -296,6 +303,27 @@ function validateBucketTotalAgainstReserves(
   }
 }
 
+function findNearestExposureSplitReserveTotal(
+  reserves: NonNullable<NonNullable<AccountableDashboardResponse["data"]>["reserves"]>,
+  sourceTimestamp: number,
+): { totalReserves: number; timestamp: number } {
+  const timeline = Array.isArray(reserves.timeline) ? reserves.timeline : [];
+  const candidates = timeline.flatMap((point) => {
+    const timestamp = parseTimestampLikeToUnixSeconds(point?.ts);
+    const totalReserves = extractAccountableBucketValue(point?.reserves);
+    return timestamp != null && totalReserves != null && totalReserves > 0
+      ? [{ totalReserves, timestamp }]
+      : [];
+  });
+  candidates.sort((left, right) =>
+    Math.abs(left.timestamp - sourceTimestamp) - Math.abs(right.timestamp - sourceTimestamp));
+  const nearest = candidates[0];
+  if (!nearest) {
+    throw new Error("Accountable exposure_split has no valid timeline reserve total for reconciliation");
+  }
+  return nearest;
+}
+
 function buildSignedBucketWarning(
   signedBuckets: Array<{ name: string; value: number }>,
   totalValue: number,
@@ -359,7 +387,16 @@ export function adaptAccountableDashboard(
     requirePositive: true,
   });
   const protocolOwnedUsd = extractProtocolOwnedUsd(payload.data.reserves);
-  validateBucketTotalAgainstReserves(breakdown, totalReserves, bucket, {
+  const exposureSplitSourceTimestamp = bucket === "exposure_split" && payload.data.reserves.exposure_split_ts != null
+    ? parseTimestampLikeToUnixSeconds(payload.data.reserves.exposure_split_ts)
+    : null;
+  if (bucket === "exposure_split" && payload.data.reserves.exposure_split_ts != null && exposureSplitSourceTimestamp == null) {
+    throw new Error(`Accountable exposure_split_ts is invalid: ${String(payload.data.reserves.exposure_split_ts)}`);
+  }
+  const exposureSplitTimelineTotal = exposureSplitSourceTimestamp != null
+    ? findNearestExposureSplitReserveTotal(payload.data.reserves, exposureSplitSourceTimestamp)
+    : null;
+  validateBucketTotalAgainstReserves(breakdown, exposureSplitTimelineTotal?.totalReserves ?? totalReserves, bucket, {
     excludeBuckets: totalReservesExcludeBuckets,
   });
   const unknown = positiveBreakdown.filter(({ name }) => !(name in riskMap));
@@ -426,7 +463,7 @@ export function adaptAccountableDashboard(
     })),
   );
 
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.data.ts);
+  const sourceTimestamp = exposureSplitSourceTimestamp ?? parseTimestampLikeToUnixSeconds(payload.data.ts);
 
   return {
     slices,
@@ -465,6 +502,13 @@ export function adaptAccountableDashboard(
       interval: payload.data.reserves.interval,
       verifiability: payload.data.reserves.verifiability,
       totalReserves,
+      ...(exposureSplitSourceTimestamp != null
+        ? {
+            exposureSplitTimestamp: payload.data.reserves.exposure_split_ts,
+            exposureSplitTimelineTimestamp: exposureSplitTimelineTotal!.timestamp,
+            exposureSplitTimelineTotalReserves: exposureSplitTimelineTotal!.totalReserves,
+          }
+        : {}),
       ...(totalSupply != null ? { supplyUsd: totalSupply } : {}),
       ...(protocolOwnedUsd != null
         ? { protocolOwnedUsd, protocolOwnedPctOfReserves: protocolOwnedPct }

@@ -32,7 +32,10 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ]],
   },
   v9SupplyAttributionOffset: {
-    jobChains: [["sync-v9-supply-attribution", "compute-depeg-resolver"]],
+    jobChains: [["sync-v9-supply-attribution"]],
+  },
+  depegResolverOffset: {
+    jobChains: [["compute-depeg-resolver"]],
   },
   v9PublicationOffset: {
     jobChains: [["compute-safety-score-v9"]],

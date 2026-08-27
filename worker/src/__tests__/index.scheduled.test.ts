@@ -507,9 +507,9 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
   });
 
-  it("runs V9 attribution and compilation only on their dedicated triggers", async () => {
+  it("runs V9 attribution, DDR, and compilation only on their dedicated triggers", async () => {
     const env = createWorkerEnv({
-      DB: {} as D1Database,
+      DB: mockD1([], { allowUnmatched: true }),
       CORS_ORIGIN: "https://pharos.watch",
     });
     const supply = makeCtx();
@@ -528,6 +528,19 @@ describe("worker.scheduled", () => {
       cronMocks.syncSafetyScoreV9SupplyAttribution,
     ).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeSafetyScoreV9).not.toHaveBeenCalled();
+
+    const resolver = makeCtx();
+    await worker.scheduled(
+      {
+        cron: "13 * * * *",
+        scheduledTime: Date.parse("2026-07-26T12:13:00Z"),
+      } as ScheduledEvent,
+      env,
+      resolver.ctx,
+    );
+    await Promise.all(resolver.waits);
+
+    expect(cronMocks.computeDepegResolver).toHaveBeenCalledTimes(1);
 
     for (const [cron, scheduledTime] of [
       ["22 * * * *", "2026-07-26T12:22:00Z"],
@@ -550,7 +563,7 @@ describe("worker.scheduled", () => {
       cronMocks.syncSafetyScoreV9SupplyAttribution,
     ).toHaveBeenCalledTimes(1);
     expect(cronMocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
-    expect(cronMocks.computeDepegResolver).not.toHaveBeenCalled();
+    expect(cronMocks.computeDepegResolver).toHaveBeenCalledTimes(1);
   });
 
   it("runs status-self-check on the isolated offset trigger", async () => {
@@ -1061,7 +1074,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
   });
 
-  it("runs only critical mint/burn on the dedicated :04/:24/:44 trigger", async () => {
+  it("runs only critical mint/burn on the dedicated :04/:34 triggers", async () => {
     const { ctx, waits } = makeCtx();
     const db = mockD1([], { requireMatch: true });
     const env = createWorkerEnv({
@@ -1071,7 +1084,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "4,34 * * * *" } as ScheduledEvent,
+      { cron: "4 * * * *" } as ScheduledEvent,
       env,
       ctx,
     );

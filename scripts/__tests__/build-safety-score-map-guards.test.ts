@@ -446,6 +446,34 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     expect(run.stderr).toMatch(/is malformed/);
   });
 
+  it("accepts reviewed deltas only after validating the full previous-snapshot contract", async () => {
+    const prior = universe({ count: 20 });
+    let moved = 0;
+    const nextCards = prior.cards.map((card) => {
+      if (moved >= 3 || !card.grade.startsWith("B")) return card;
+      moved += 1;
+      return { ...card, grade: "C+", score: 62 };
+    });
+    const path = snapshot(scratch, validSnapshot(prior));
+    const run = await runGenerator({ cards: nextCards, assets: prior.assets }, {
+      args: ["--previous-snapshot", path, "--accept-snapshot-transition"],
+      stopBeforeRender: true,
+    });
+
+    expect(run.stderr).toMatch(/Operator accepted the validated previous snapshot transition/);
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it("rejects a malformed baseline even when snapshot-transition acceptance is requested", async () => {
+    const path = snapshot(scratch, { publicationStatus: "current" });
+    const run = await runGenerator(universe({ count: 20 }), {
+      args: ["--previous-snapshot", path, "--accept-snapshot-transition"],
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/is malformed/);
+  });
+
   it("rejects a large per-tier reclassification even when the total census is unchanged", async () => {
     const prior = universe({ count: 20 });
     const nextCards = prior.cards.map((card) => card.grade.startsWith("A") ? { ...card, grade: "B+", score: 77 } : card);
@@ -557,5 +585,11 @@ describe("safety-score map — CLI contract", () => {
     const run = await runGenerator(universe(), { args: ["--issue", "0"] });
     expect(run.status).toBe(1);
     expect(run.stderr).toMatch(/--issue must be a positive integer/);
+  });
+
+  it("requires a previous snapshot when accepting a snapshot transition", async () => {
+    const run = await runGenerator(universe(), { args: ["--accept-snapshot-transition"] });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/--accept-snapshot-transition requires --previous-snapshot/);
   });
 });

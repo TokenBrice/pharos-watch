@@ -733,6 +733,130 @@ describe("adaptAccountableDashboard", () => {
     });
   });
 
+  it("reconciles a timestamped Yuzu exposure split against the nearest contemporaneous timeline total", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.088759,
+      ts: "1787848065315",
+      reserves: {
+        total_reserves: { value: 65_497_754.94, name: "Total Backing Assets" },
+        total_supply: { value: 60_158_172.36, name: "Total TVL" },
+        exposure_split_ts: "2026.08.24 07:31:16 UTC",
+        exposure_split: {
+          "[Global_Dollar]_USDG_Loop": { "": -15_725_261.164036 },
+          Liquidity_Buffer: { "": 79_252_583.394036 },
+        },
+        timeline: [
+          { ts: "not-a-timestamp", reserves: 1 },
+          { ts: "1787503607271", reserves: 65_611_285.55 },
+          { ts: "1787600794262", reserves: 63_527_322.23 },
+          { ts: "1787633192787", reserves: 63_507_487.14 },
+        ],
+      },
+    });
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1_787_556_676,
+      dashboardTimestamp: "1787848065315",
+      totalReserves: 65_497_754.94,
+      supplyUsd: 60_158_172.36,
+      collateralizationBasis: "gross",
+      exposureSplitTimestamp: "2026.08.24 07:31:16 UTC",
+      exposureSplitTimelineTimestamp: 1_787_600_794,
+      exposureSplitTimelineTotalReserves: 63_527_322.23,
+    });
+    expect(result.slices).toEqual([
+      { name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+    ]);
+    expect(result.warnings?.map((warning) => warning.code)).toEqual(["signed-negative-bucket"]);
+  });
+
+  it("uses exposure_split_ts, not the newer dashboard envelope timestamp, for Yuzu freshness", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    const result = await runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "1787848065315",
+      reserves: {
+        total_reserves: 1_000,
+        total_supply: 1_000,
+        exposure_split_ts: "2026.08.24 07:31:16 UTC",
+        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
+        timeline: [{ ts: "1787600794262", reserves: 1_000 }],
+      },
+    });
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1_787_556_676,
+      freshnessMode: "verified",
+      dashboardTimestamp: "1787848065315",
+    });
+  });
+
+  it("keeps an approximately 81-hour-old truthful Yuzu exposure timestamp stale under the 3-day policy", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    const result = await runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "1787848065315",
+      reserves: {
+        total_reserves: 1_000,
+        total_supply: 1_000,
+        exposure_split_ts: "2026.08.24 07:31:16 UTC",
+        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
+        timeline: [{ ts: "1787600794262", reserves: 1_000 }],
+      },
+    });
+
+    const validation = validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 7, 27, 16, 31, 16) / 1000,
+    });
+    expect(validation.warnings).toContainEqual(expect.objectContaining({
+      code: "stale-source-data",
+      effect: "degraded",
+    }));
+  });
+
+  it("rejects a timestamped Yuzu exposure split that misses the nearest timeline reserve total by more than 1%", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    await expect(runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "1787848065315",
+      reserves: {
+        total_reserves: 63_527_322.23,
+        total_supply: 63_527_322.23,
+        exposure_split_ts: "2026.08.24 07:31:16 UTC",
+        exposure_split: {
+          "[Global_Dollar]_USDG_Loop": { "": -15_725_261.164036 },
+          Liquidity_Buffer: { "": 79_252_583.394036 },
+        },
+        timeline: [{ ts: "1787600794262", reserves: 65_000_000 }],
+      },
+    })).rejects.toThrow(
+      /Accountable exposure_split bucket total 63527322\.23 does not match total_reserves 65000000/,
+    );
+  });
+
+  it("fails closed when a timestamped Yuzu exposure split has no valid timeline reserve total", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    await expect(runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "1787848065315",
+      reserves: {
+        total_reserves: 1_000,
+        total_supply: 1_000,
+        exposure_split_ts: "2026.08.24 07:31:16 UTC",
+        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
+        timeline: [
+          { ts: "not-a-timestamp", reserves: 1_000 },
+          { ts: "1787600794262", reserves: 0 },
+        ],
+      },
+    })).rejects.toThrow(/no valid timeline reserve total/);
+  });
+
   it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 

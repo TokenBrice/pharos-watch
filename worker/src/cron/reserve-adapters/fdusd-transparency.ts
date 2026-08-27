@@ -50,10 +50,14 @@ export function selectNewestFdusdSignedReport(html: string): FdusdReportLink {
       continue;
     }
     const sortTimestamp = monthTimestamp(reportPeriod);
+    const isLegacySignedReport =
+      /FDUSD[ _]+Reserve[ _]+accounts?[ _]+Report/i.test(decodedHref)
+      && /(?:signed|final)/i.test(decodedHref);
+    const isIsae3000ReserveReport =
+      /ISAE[ _-]*3000[\s\S]*Attestation[ _]+Report[\s\S]*Reserve(?:s)?[ _]+Accounts?/i.test(decodedHref);
     if (
       sortTimestamp != null
-      && /FDUSD[ _]+Reserve[ _]+accounts?[ _]+Report/i.test(decodedHref)
-      && /(?:signed|final)/i.test(decodedHref)
+      && (isLegacySignedReport || isIsae3000ReserveReport)
     ) {
       reports.push({ href, reportPeriod, sortTimestamp });
     }
@@ -74,13 +78,48 @@ function parseUsdAmount(raw: string): number {
   return value;
 }
 
+function parseCompactIsae3000Composition(normalized: string): {
+  entries: Array<{ name: string; value: number }>;
+  totalReserveUsd: number;
+} | null {
+  const compact = normalized.replace(/\s+/g, "");
+  // eslint-disable-next-line security/detect-unsafe-regex -- fixed ISAE3000 aggregate label followed by one bounded-format monetary token in the compact report view.
+  const treasuryMatch = compact.match(/\(A\)Sub-total:(?:US)?\$?([\d,]+(?:\.\d{2})?)/i);
+  // eslint-disable-next-line security/detect-unsafe-regex -- fixed ISAE3000 aggregate label followed by one bounded-format monetary token in the compact report view.
+  const fixedDepositMatch = compact.match(/\(B\)Sub-total:(?:US)?\$?([\d,]+(?:\.\d{2})?)/i);
+  // eslint-disable-next-line security/detect-unsafe-regex -- fixed ISAE3000 custody label followed by one bounded-format monetary token in the compact report view.
+  const cashMatch = compact.match(/\(C\)(?:US)?\$heldincustodyaccounts:(?:US)?\$?([\d,]+(?:\.\d{2})?)/i);
+  const totalMatch = compact.match(
+    // eslint-disable-next-line security/detect-unsafe-regex -- fixed ISAE3000 total label followed by one bounded-format monetary token in the compact report view.
+    /\(A\)\+\(B\)\+\(C\)TotalassetsheldinReserveAccounts:(?:US)?\$?([\d,]+(?:\.\d{2})?)/i,
+  );
+  if (!treasuryMatch?.[1] || !fixedDepositMatch?.[1] || !cashMatch?.[1] || !totalMatch?.[1]) {
+    return null;
+  }
+
+  return {
+    entries: [
+      { name: "U.S. Treasury Bills", value: parseUsdAmount(treasuryMatch[1]) },
+      { name: "Cash", value: parseUsdAmount(cashMatch[1]) },
+      { name: "Fixed Deposit", value: parseUsdAmount(fixedDepositMatch[1]) },
+    ],
+    totalReserveUsd: parseUsdAmount(totalMatch[1]),
+  };
+}
+
 export function adaptFdusdReserveReport(reportText: string, reportUrl?: string): AdapterResult {
   const normalized = reportText.replace(/\s+/g, " ").trim();
-  const dateMatch = normalized.match(
+  const legacyDateMatch = normalized.match(
     // eslint-disable-next-line security/detect-unsafe-regex -- runs on whitespace-collapsed report text, so the single-space word matcher cannot backtrack ambiguously.
     /((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})\s+at\s+\d{1,2}:\d{2}\s*(?:am|pm)?(?:\s[A-Za-z]+)*/i,
   );
-  const asOf = dateMatch?.[1] ?? null;
+  const compactDateMatch = normalized.replace(/\s+/g, "").match(
+    /(?:As)?of(\d{1,2})(January|February|March|April|May|June|July|August|September|October|November|December)(\d{4})at\d{1,2}:\d{2}(?:am|pm)/i,
+  );
+  const asOf = legacyDateMatch?.[1]
+    ?? (compactDateMatch
+      ? `${compactDateMatch[2]} ${compactDateMatch[1]}, ${compactDateMatch[3]}`
+      : null);
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(asOf);
   if (!asOf || sourceTimestamp == null) {
     throw htmlLayoutChangedError(ADAPTER_NAME, "signed reserve report did not expose a parseable report-period date");
@@ -89,34 +128,40 @@ export function adaptFdusdReserveReport(reportText: string, reportUrl?: string):
   const holdingsStart = normalized.search(/comprised of the following asset holdings/i);
   // eslint-disable-next-line security/detect-unsafe-regex -- runs on whitespace-collapsed report text, so the adjacent \s quantifiers cannot backtrack ambiguously.
   const totalMatch = normalized.match(/Total Reserve Accounts\s+(?:US)?\$?\s*([\d,]+(?:\.\d{2})?)/i);
-  if (holdingsStart < 0 || !totalMatch?.[1]) {
-    throw htmlLayoutChangedError(ADAPTER_NAME, "signed reserve report did not expose its holdings table and total");
-  }
-  const totalOffset = totalMatch.index ?? -1;
-  if (totalOffset <= holdingsStart) {
-    throw htmlLayoutChangedError(ADAPTER_NAME, "signed reserve report holdings table was incomplete");
-  }
-
-  const holdings = normalized.slice(holdingsStart, totalOffset);
   const entries: Array<{ name: string; value: number }> = [];
-  const entryRegex =
-    // eslint-disable-next-line security/detect-unsafe-regex -- fixed label alternation plus a lazy 180-char bounded gap over the adapter's own report text; no unbounded backtracking path.
-    /(US Treasury Bills|Treasury Bills|Cash|Bank Deposits|Fixed Deposits?|Reverse Repos)[\s\S]{0,180}?(?:US)?\$\s*([\d,]+(?:\.\d{2})?)/gi;
-  for (const match of holdings.matchAll(entryRegex)) {
-    const rawName = match[1];
-    const rawValue = match[2];
-    if (!rawName || !rawValue) continue;
-    const name = FDUSD_LABEL_MAP[rawName] ?? rawName;
-    const value = parseUsdAmount(rawValue);
-    const existing = entries.find((entry) => entry.name === name);
-    if (existing) existing.value += value;
-    else entries.push({ name, value });
-  }
-  if (entries.length === 0) {
-    throw htmlLayoutChangedError(ADAPTER_NAME, "signed reserve report did not expose reserve composition rows");
+  let totalReserveUsd: number | null = null;
+  if (holdingsStart >= 0 && totalMatch?.[1]) {
+    const totalOffset = totalMatch.index ?? -1;
+    if (totalOffset <= holdingsStart) {
+      throw htmlLayoutChangedError(ADAPTER_NAME, "signed reserve report holdings table was incomplete");
+    }
+
+    const holdings = normalized.slice(holdingsStart, totalOffset);
+    const entryRegex =
+      // eslint-disable-next-line security/detect-unsafe-regex -- fixed label alternation plus a lazy 180-char bounded gap over the adapter's own report text; no unbounded backtracking path.
+      /(US Treasury Bills|Treasury Bills|Cash|Bank Deposits|Fixed Deposits?|Reverse Repos)[\s\S]{0,180}?(?:US)?\$\s*([\d,]+(?:\.\d{2})?)/gi;
+    for (const match of holdings.matchAll(entryRegex)) {
+      const rawName = match[1];
+      const rawValue = match[2];
+      if (!rawName || !rawValue) continue;
+      const name = FDUSD_LABEL_MAP[rawName] ?? rawName;
+      const value = parseUsdAmount(rawValue);
+      const existing = entries.find((entry) => entry.name === name);
+      if (existing) existing.value += value;
+      else entries.push({ name, value });
+    }
+    totalReserveUsd = parseUsdAmount(totalMatch[1]);
   }
 
-  const totalReserveUsd = parseUsdAmount(totalMatch[1]);
+  if (entries.length === 0 || totalReserveUsd == null) {
+    const compactComposition = parseCompactIsae3000Composition(normalized);
+    if (!compactComposition) {
+      throw htmlLayoutChangedError(ADAPTER_NAME, "signed reserve report did not expose its holdings table and total");
+    }
+    entries.push(...compactComposition.entries);
+    totalReserveUsd = compactComposition.totalReserveUsd;
+  }
+
   const compositionTotal = entries.reduce((sum, entry) => sum + entry.value, 0);
   if (Math.abs(compositionTotal - totalReserveUsd) > 0.01) {
     throw htmlLayoutChangedError(

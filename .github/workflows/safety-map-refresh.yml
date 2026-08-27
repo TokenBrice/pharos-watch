@@ -26,6 +26,12 @@ on:
     - cron: "20 4 * * *"
     - cron: "20 6 * * *"
   workflow_dispatch:
+    inputs:
+      accept_snapshot_transition:
+        description: Accept the current live snapshot as an audited methodology/census transition
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -69,13 +75,21 @@ jobs:
       - name: Plan publication from live KV state
         id: plan
         env:
+          ACCEPT_SNAPSHOT_TRANSITION: ${{ inputs.accept_snapshot_transition || false }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
           KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-        run: >-
-          npx tsx scripts/maintenance/publish-safety-score-map.ts plan
-          --event-name=${{ github.event_name }}
-          --out-dir="${MAP_OUT_DIR}"
+        run: |
+          set -euo pipefail
+          args=(
+            plan
+            "--event-name=${{ github.event_name }}"
+            "--out-dir=${MAP_OUT_DIR}"
+          )
+          if [ "${ACCEPT_SNAPSHOT_TRANSITION}" = "true" ]; then
+            args+=(--accept-snapshot-transition)
+          fi
+          npx tsx scripts/maintenance/publish-safety-score-map.ts "${args[@]}"
 
       - name: Render and validate publication files
         id: render
