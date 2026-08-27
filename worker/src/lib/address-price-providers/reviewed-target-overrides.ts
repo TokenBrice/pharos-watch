@@ -12,7 +12,7 @@ interface ReviewedAddressPriceTargetOverride extends AddressPriceDeploymentLike 
   stablecoinId: string;
 }
 
-export const REVIEWED_ADDRESS_PRICE_TARGET_OVERRIDES = [
+const REVIEWED_ADDRESS_PRICE_TARGET_OVERRIDES = [
   {
     provider: "coingecko-onchain-address",
     stablecoinId: "vusd-virtue",
