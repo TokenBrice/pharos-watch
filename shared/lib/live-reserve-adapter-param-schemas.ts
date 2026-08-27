@@ -391,15 +391,24 @@ const capVaultParamsSchema = z
   })
   .strict();
 
+const chainlinkPorIssuerCirculationProbeSchema = z
+  .object({
+    kind: z.literal("backed-graphql"),
+    url: AbsoluteUrlSchema,
+    reserveSymbol: z.string().trim().min(1),
+  })
+  .strict();
+
 const chainlinkPorParamsSchema = z
   .object({
     porFeedAddress: z.string(),
     assetLabel: z.string(),
     assetRisk: LiveReserveRiskSchema,
-    reserveUnit: z.enum(["USD", "XAU", "XAG"]).optional(),
+    reserveUnit: z.enum(["USD", "XAU", "XAG", "SHARES"]).optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
     maxOracleAgeSec: z.number().positive().optional(),
+    issuerCirculationProbe: chainlinkPorIssuerCirculationProbeSchema.optional(),
   })
   .strict();
 

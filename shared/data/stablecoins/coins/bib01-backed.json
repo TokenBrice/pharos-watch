@@ -124,7 +124,6 @@
     "scoring": {
       "maxSourceAgeSec": 4000000,
       "allowedDegradedWarningCodes": [
-        "por-reserve-under-supply",
         "partial-supply-read-failure"
       ]
     },
@@ -143,7 +142,13 @@
     "params": {
       "porFeedAddress": "0xad4395fc414fc1575a7a38c20b0bfdbdb09ee41a",
       "assetLabel": "iShares IB01 0-1 year U.S. Treasury bond ETF shares",
-      "assetRisk": "very-low"
+      "assetRisk": "very-low",
+      "reserveUnit": "SHARES",
+      "issuerCirculationProbe": {
+        "kind": "backed-graphql",
+        "url": "https://api.backed.fi/graphql",
+        "reserveSymbol": "IB01.L"
+      }
     }
   },
   "yieldConfig": {
