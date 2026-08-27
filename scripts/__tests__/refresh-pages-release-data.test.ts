@@ -44,7 +44,7 @@ describe("Pages release data refresh", () => {
 
     const result = await refreshPagesReleaseData({
       dependencies,
-      env: { GITHUB_STEP_SUMMARY: paths.summaryPath },
+      env: { GITHUB_STEP_SUMMARY: paths.summaryPath, NODE_ENV: "test" },
       refreshDir: paths.refreshDir,
       repoRoot: paths.repoRoot,
     });
@@ -69,7 +69,7 @@ describe("Pages release data refresh", () => {
         depegEvents: () => ok(),
         publicDatasets: () => ok(),
       },
-      env: {},
+      env: { NODE_ENV: "test" },
       refreshDir: paths.refreshDir,
       repoRoot: paths.repoRoot,
     });
@@ -102,7 +102,7 @@ describe("Pages release data refresh", () => {
         },
         rollbackPublicDatasets: rollback,
       },
-      env: {},
+      env: { NODE_ENV: "test" },
       refreshDir: paths.refreshDir,
       repoRoot: paths.repoRoot,
     });

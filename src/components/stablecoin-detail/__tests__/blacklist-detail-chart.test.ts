@@ -3,10 +3,11 @@
 import { createElement, isValidElement } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { QuarterlyStackedBarChart } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
 import { BlacklistDetailChart } from "@/components/stablecoin-detail/blacklist-detail-chart";
 
 const { quarterlyChartMock } = vi.hoisted(() => ({
-  quarterlyChartMock: vi.fn(() => null),
+  quarterlyChartMock: vi.fn((_: Parameters<typeof QuarterlyStackedBarChart>[0]) => null),
 }));
 
 vi.mock("@/components/chart-primitives/quarterly-stacked-bar-chart", () => ({

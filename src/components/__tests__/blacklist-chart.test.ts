@@ -4,10 +4,11 @@ import { createElement, isValidElement } from "react";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getBlacklistChartCoins, getBlacklistTooltipSummary, BlacklistChart } from "@/components/blacklist-chart";
+import type { QuarterlyStackedBarChart } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
 import type { BlacklistSummaryResponse } from "@shared/types";
 
 const { quarterlyChartMock } = vi.hoisted(() => ({
-  quarterlyChartMock: vi.fn(() => null),
+  quarterlyChartMock: vi.fn((_: Parameters<typeof QuarterlyStackedBarChart>[0]) => null),
 }));
 
 vi.mock("@/components/chart-primitives/quarterly-stacked-bar-chart", () => ({
@@ -91,11 +92,12 @@ describe("getBlacklistTooltipSummary", () => {
       { dataKey: "USDT", color: expect.any(String), fillOpacity: 0.62, radius: [3, 3, 0, 0] },
     ]);
     expect(props.yAxis.width).toBe(62);
-    expect(props.yAxis.tickFormatter(1_000)).toBe("$1K");
+    expect(props.yAxis.tickFormatter!(1_000, 0)).toBe("$1K");
     expect(props.ariaLabel).toContain("showing 2 quarters");
     expect(props.height).toBe("h-[220px] sm:h-[280px]");
     expect(isValidElement(props.tooltipContent)).toBe(true);
     expect(isValidElement(props.children)).toBe(true);
+    if (!isValidElement<{ dataKey: string }>(props.children)) throw new Error("Expected total overlay element");
     expect(props.children.props.dataKey).toBe("total");
   });
 });
