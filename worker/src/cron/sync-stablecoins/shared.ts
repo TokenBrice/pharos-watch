@@ -2,6 +2,8 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CHAIN_META } from "@shared/lib/chains";
+import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import { toErrorMessage } from "../../lib/error-utils";
@@ -21,6 +23,16 @@ const SUPPLEMENTAL_TRACKED_IDS = new Set(
       (meta.flags.pegCurrency === "SILVER" && !!meta.geckoId) ||
       meta.detailProvider === "coingecko",
   ).map((meta) => meta.id),
+);
+const CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID = new Map(
+  ACTIVE_STABLECOINS.flatMap((meta) => {
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    if (selected === null) return [];
+    return [[
+      meta.id,
+      [...new Set(selected.map(({ contract }) => CHAIN_META[contract.chain]?.name ?? contract.chain))].sort(),
+    ] as const];
+  }),
 );
 
 export type StablecoinsPayload = {
@@ -317,6 +329,7 @@ export async function loadReplayPriceCacheForTrustedContinuity(db: D1Database): 
  * publishes with its real (empty) supply and the expiry is reported.
  */
 export const SUPPLEMENTAL_RESTORE_MAX_AGE_SEC = 7 * 86400;
+export const SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC = 60;
 
 export function replaceZeroSupplyPrimaryAssets(
   primaryAssets: readonly PeggedAsset[],
@@ -344,7 +357,98 @@ function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean 
   // Rows without provenance get one restore; the cache read path stamps
   // supplyObservedAt from the cache row, so age accrues from there.
   if (observedAt == null) return true;
-  return nowSec - observedAt <= SUPPLEMENTAL_RESTORE_MAX_AGE_SEC;
+  return (
+    Number.isSafeInteger(observedAt) &&
+    observedAt >= 0 &&
+    observedAt <= nowSec + SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC &&
+    nowSec - observedAt <= SUPPLEMENTAL_RESTORE_MAX_AGE_SEC
+  );
+}
+
+function getSinglePositiveCirculatingBucket(asset: PeggedAsset): string | null {
+  const buckets = Object.entries(asset.circulating ?? {});
+  if (buckets.length !== 1) return null;
+  const [label, value] = buckets[0];
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? label : null;
+}
+
+function hasReconciledCuratedAggregateSupplyPacket(
+  asset: PeggedAsset,
+  expectedChainLabels: readonly string[],
+  expectedCirculatingBucket: string,
+): boolean {
+  if (asset.supplySource !== "onchain-total-supply") return false;
+  const aggregateSupply = getCirculatingRaw(asset);
+  const chainCirculating = asset.chainCirculating;
+  const observedChainLabels = Object.keys(chainCirculating ?? {}).sort();
+  if (
+    !Number.isFinite(aggregateSupply) ||
+    aggregateSupply <= 0 ||
+    getSinglePositiveCirculatingBucket(asset) !== expectedCirculatingBucket ||
+    !chainCirculating ||
+    expectedChainLabels.length === 0 ||
+    observedChainLabels.length !== expectedChainLabels.length ||
+    expectedChainLabels.some((chain, index) => observedChainLabels[index] !== chain)
+  ) {
+    return false;
+  }
+
+  let chainSupply = 0;
+  for (const row of Object.values(chainCirculating)) {
+    const requiredValues = [
+      row?.current,
+      row?.circulatingPrevDay,
+      row?.circulatingPrevWeek,
+      row?.circulatingPrevMonth,
+    ];
+    if (
+      requiredValues.some(
+        (value) => typeof value !== "number" || !Number.isFinite(value) || value < 0,
+      )
+    ) {
+      return false;
+    }
+    const current = row.current as number;
+    chainSupply += current;
+  }
+  if (!Number.isFinite(chainSupply)) return false;
+  const tolerance = Math.max(0.01, aggregateSupply * 1e-9);
+  return chainSupply > 0 && Math.abs(chainSupply - aggregateSupply) <= tolerance;
+}
+
+function restoreCuratedAggregateSupplyPacket(
+  current: PeggedAsset,
+  previous: PeggedAsset | undefined,
+  nowSec: number,
+): { asset: PeggedAsset; expired: boolean } | null {
+  const expectedChainLabels = CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID.get(String(current.id));
+  const expectedCirculatingBucket = getSinglePositiveCirculatingBucket(current);
+  if (
+    !expectedChainLabels ||
+    expectedCirculatingBucket === null ||
+    current.supplySource !== "coingecko-fallback" ||
+    Object.keys(current.chainCirculating ?? {}).length > 0 ||
+    !previous ||
+    normalizeOptionalTimestamp(previous.supplyObservedAt) === null ||
+    !hasReconciledCuratedAggregateSupplyPacket(previous, expectedChainLabels, expectedCirculatingBucket)
+  ) {
+    return null;
+  }
+  if (!isWithinRestoreCeiling(previous, nowSec)) return { asset: current, expired: true };
+
+  return {
+    asset: {
+      ...current,
+      circulating: { ...(previous.circulating ?? {}) },
+      chainCirculating: Object.fromEntries(
+        Object.entries(previous.chainCirculating ?? {}).map(([chain, row]) => [chain, { ...row }]),
+      ),
+      supplySource: previous.supplySource,
+      supplyObservedAt: previous.supplyObservedAt,
+      supplyRestored: true,
+    },
+    expired: false,
+  };
 }
 
 export function mergeSupplementalLastKnownGood(
@@ -365,12 +469,20 @@ export function mergeSupplementalLastKnownGood(
       continue;
     }
 
+    const previous = previousAssetsById.get(id);
+    const curatedAggregateRestore = restoreCuratedAggregateSupplyPacket(asset, previous, nowSec);
+    if (curatedAggregateRestore) {
+      if (curatedAggregateRestore.expired) expiredRestoreIds.push(id);
+      else restoredCount++;
+      resolved.set(id, curatedAggregateRestore.asset);
+      continue;
+    }
+
     if (getCirculatingRaw(asset) > 0) {
       resolved.set(id, asset);
       continue;
     }
 
-    const previous = previousAssetsById.get(id);
     if (previous && getCirculatingRaw(previous) > 0) {
       if (!isWithinRestoreCeiling(previous, nowSec)) {
         expiredRestoreIds.push(id);
