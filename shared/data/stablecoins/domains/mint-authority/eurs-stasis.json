@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "EURS native issuance is reviewed on Ethereum, Algorand, Stellar, and XDC. Ethereum mint, freeze, and delegate administration is controlled by the STASIS 3-of-7 Safe; the Ethereum slot-3 address is retained only as an unresolved storage observation because current mint and freeze calls reverted from it. Algorand uses the issuer ASA manager/reserve/freeze account, XDC uses a 2-of-5 issuer controller, and Stellar uses a 3-of-5 issuer account. Polygon, Arbitrum, and Gnosis are external representations whose bridge controls are assessed only in Bridge Risk.",
+    "summary": "EURS native issuance is reviewed on Ethereum, Algorand, Stellar, and XDC. Ethereum mint, freeze, and delegate administration is controlled by the STASIS 3-of-7 Safe; verified source resolves storage slot 3 as the fee collector, not a control. Algorand uses a fixed 3-of-5 issuer multisig as the ASA manager/reserve/freeze account, XDC uses a 2-of-5 issuer controller, and Stellar uses a 3-of-5 issuer account. Polygon, Arbitrum, and Gnosis are external representations whose bridge controls are assessed only in Bridge Risk.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -43,35 +43,6 @@
       ]
     },
     "controls": [
-      {
-        "label": "STASIS Ethereum slot-3 address (role unresolved)",
-        "role": "unknown",
-        "authorityType": "unknown",
-        "directMintAbility": "unknown",
-        "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25770442, EURSToken storage slot 3 still held this code-empty EOA. Current eth_call simulations of createTokens(0), createTokens(1), freezeTransfers(), and unfreezeTransfers() reverted from this address, while they succeeded from the STASIS owner Safe. The exact semantic field and role of slot 3 remain unresolved, so this row is retained as an unknown address-role observation and is not evidence of direct native mint or freeze authority.",
-        "sources": [
-          {
-            "label": "EURS contract on Etherscan",
-            "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8"
-          },
-          {
-            "label": "STASIS EURS GitHub",
-            "url": "https://github.com/STASISNET/STASIS-EURS-token-smart-contract"
-          }
-        ],
-        "chain": "ethereum",
-        "address": "0x70250fcfef983c9b912c8eefb7021b4b7bae836e",
-        "deploymentRefs": [
-          "ethereum:0xdb25f211ab05b1c97d595516f45794528a807ad8"
-        ],
-        "failureDomainKeys": [
-          "eoa:ethereum:0x70250fcfef983c9b912c8eefb7021b4b7bae836e"
-        ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770442,
-        "modulesOrGuardsStatus": "not-applicable"
-      },
       {
         "label": "STASIS owner Safe (native mint, freeze, and delegate authority)",
         "role": "minter-admin",
@@ -127,10 +98,12 @@
       {
         "label": "Algorand EURS ASA manager/reserve/freeze account",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "threshold": 3,
+        "signerCount": 5,
         "capDescription": "ASA 227855942 has the uint64 maximum total. The issuer-controlled account is simultaneously manager, reserve, and freeze authority; the manager can change ASA management fields and the reserve account can issue units up to that maximum.",
         "chain": "algorand",
         "address": "KJIKORX3CEQWN4VBI3A2MILSLZ7ITYWY7JRUYN4TK33KXCZSFOGSO2WIH4",
@@ -140,8 +113,8 @@
         "failureDomainKeys": [
           "account:algorand:KJIKORX3CEQWN4VBI3A2MILSLZ7ITYWY7JRUYN4TK33KXCZSFOGSO2WIH4"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 64135657,
+        "observedAt": "2026-08-27",
+        "observedBlock": 64481636,
         "sources": [
           {
             "label": "Algorand EURS ASA",
@@ -153,10 +126,18 @@
           },
           {
             "label": "Algorand current block",
-            "url": "https://mainnet-api.algonode.cloud/v2/blocks/64135657"
+            "url": "https://mainnet-api.algonode.cloud/v2/blocks/64481636"
+          },
+          {
+            "label": "Algorand EURS manager account",
+            "url": "https://mainnet-api.algonode.cloud/v2/accounts/KJIKORX3CEQWN4VBI3A2MILSLZ7ITYWY7JRUYN4TK33KXCZSFOGSO2WIH4"
+          },
+          {
+            "label": "Algorand EURS manager multisig transaction",
+            "url": "https://mainnet-idx.algonode.cloud/v2/transactions/N7TEJ4JBNH2ATKCGYHGNVDLHA4NOPDAYT66QR5ZNAWO6NBCXXDUA"
           }
         ],
-        "evidence": "At Algorand round 64135657, ASA 227855942 reported STASIS EURO/EURS, six decimals, a maximum uint64 total, and this same issuer account as manager, reserve, and freeze authority; clawback was the zero address. The manager/reserve account is therefore a native issuer control path. The queried Algod account endpoint does not expose whether it is a multisig or its underlying signer threshold and keys, so that signer-set evidence remains unknown."
+        "evidence": "At Algorand round 64481636 on 2026-08-27, ASA 227855942 still reported STASIS EURO/EURS, six decimals, a maximum uint64 total, and this same issuer account as manager, reserve, and freeze authority; clawback remained the zero address. The current account record had no auth-addr, so it had not been rekeyed. Its outgoing asset-transfer transaction N7TEJ4JBNH2ATKCGYHGNVDLHA4NOPDAYT66QR5ZNAWO6NBCXXDUA carries an Algorand multisig envelope with version 1, threshold 3, and five fixed public keys, three of which signed. The manager/reserve account is therefore a native 3-of-5 issuer control path."
       },
       {
         "label": "XDC EURS issuer MultiSigWallet controller",
@@ -221,9 +202,9 @@
     "reconciliation": "periodic",
     "supervision": "none",
     "review": {
-      "evidence": "The corrected native review covers Ethereum, Algorand, Stellar, and XDC only. At Ethereum block 25770442, Safe 0x1bee4f735062cd00841d6997964f187f5f5f5ac9 remained the 3-of-7 owner/delegate authority: current createTokens and freeze/unfreeze call simulations succeeded from the Safe, while they reverted from the slot-3 EOA, whose exact role remains unresolved. The Safe-gated setDelegate surface controls the current native delegate/implementation address 0x25d772b21b0e5197f2dc8169e3aa976b16be04ac. At Algorand round 64135657, ASA 227855942 used the issuer account as manager, reserve, and freeze authority with a maximum uint64 total; its signer set is not exposed by the queried account endpoint. At Stellar ledger 63986038, the issuer account retained five weight-one signers and 3-of-5 thresholds. At XDC block 106140914, the 2-of-5 controller 0x527e5b61bc8806059aef098c97fb36db3bc4cc63 passed createTokens(1) and unrelated senders reverted. Polygon, Arbitrum, and Gnosis representation minting and upgrade/admin machinery are excluded from Mint Authority and retained under Bridge Risk. The native set remains economically unbounded, with periodic issuer-operated reconciliation and no verified prudential supervision; STASIS's live transparency page published an assets-and-liabilities statement for 2026-08-07 on 2026-08-08, while current independent assurance was not established.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-      "reviewedAt": "2026-08-16",
+      "evidence": "The corrected native review covers Ethereum, Algorand, Stellar, and XDC only. At Ethereum block 25770442, Safe 0x1bee4f735062cd00841d6997964f187f5f5f5ac9 remained the 3-of-7 owner/delegate authority: current createTokens and freeze/unfreeze call simulations succeeded from the Safe. The verified EURSToken storage layout places owner after the two inherited mappings at slot 2, feeCollector at slot 3, and delegate later in storage; source gates createTokens, freezeTransfers, and setDelegate on owner. The code-empty slot-3 address is therefore a fee recipient, not a control, and has been removed from the authority inventory. At Algorand round 64481636, ASA 227855942 used the unrekeyed issuer account as manager, reserve, and freeze authority with a maximum uint64 total; an outgoing transaction from that account exposes a fixed 3-of-5 Algorand multisig envelope. At Stellar ledger 63986038, the issuer account retained five weight-one signers and 3-of-5 thresholds. At XDC block 106140914, the 2-of-5 controller 0x527e5b61bc8806059aef098c97fb36db3bc4cc63 passed createTokens(1) and unrelated senders reverted. Polygon, Arbitrum, and Gnosis representation minting and upgrade/admin machinery are excluded from Mint Authority and retained under Bridge Risk. The native set remains economically unbounded, with periodic issuer-operated reconciliation and no verified prudential supervision; STASIS's live transparency page published an assets-and-liabilities statement for 2026-08-07 on 2026-08-08, while current independent assurance was not established.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Codex lane 1 control-plane identity resolution",
+      "reviewedAt": "2026-08-27",
       "disposition": "scoreable",
       "sources": [
         {
@@ -235,8 +216,16 @@
           "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8"
         },
         {
+          "label": "EURS verified source on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xdb25f211ab05b1c97d595516f45794528a807ad8?tab=contract"
+        },
+        {
           "label": "Algorand EURS ASA",
           "url": "https://mainnet-idx.algonode.cloud/v2/assets/227855942"
+        },
+        {
+          "label": "Algorand EURS manager multisig transaction",
+          "url": "https://mainnet-idx.algonode.cloud/v2/transactions/N7TEJ4JBNH2ATKCGYHGNVDLHA4NOPDAYT66QR5ZNAWO6NBCXXDUA"
         },
         {
           "label": "XDC EURS contract record",
