@@ -53,6 +53,7 @@ function erc4626ReserveTelemetryQueueConfig(options: {
   settlementModel?: RedemptionBackstopConfig["settlementModel"];
   executionModel?: RedemptionBackstopConfig["executionModel"];
   outputAssetType?: RedemptionBackstopConfig["outputAssetType"];
+  outputAssets?: RedemptionBackstopConfig["outputAssets"];
   totalScoreCap?: number;
   costModel: RedemptionBackstopConfig["costModel"];
   docs: NonNullable<RedemptionBackstopConfig["docs"]>;
@@ -66,6 +67,7 @@ function erc4626ReserveTelemetryQueueConfig(options: {
     settlementModel,
     executionModel,
     outputAssetType,
+    outputAssets,
     totalScoreCap,
     costModel,
     docs,
@@ -82,6 +84,7 @@ function erc4626ReserveTelemetryQueueConfig(options: {
     ...(settlementModel ? { settlementModel } : {}),
     ...(executionModel ? { executionModel } : {}),
     ...(outputAssetType ? { outputAssetType } : {}),
+    ...(outputAssets ? { outputAssets: [...outputAssets] } : {}),
     ...(totalScoreCap ? { totalScoreCap } : {}),
     costModel,
     docs,
@@ -508,18 +511,23 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "uty-xsy": {
     ...queueRedeemBase,
-    outputAssets: ["usdc-circle"],
+    unresolvedOutputDisposition: "issuer-undisclosed",
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.3, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: undisclosedReviewedFee(),
-    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
+    reviewedAt: "2026-08-27",
     docs: [
-      sourceRef("XSY documentation", "https://xsy-1.gitbook.io/xsy-main", ["route", "capacity"]),
-      sourceRef("XSY website", "https://xsy.fi/about", ["route", "settlement"]),
+      sourceRef(
+        "XSY UTY peg-arbitrage docs",
+        "https://xsy-1.gitbook.io/xsy-main/open-market-peg-arbitrage.md",
+        ["route"],
+      ),
+      sourceRef("XSY UTY overview", "https://xsy-1.gitbook.io/xsy-main/unity-uty-overview.md", ["route"]),
       sourceRef("XSY Accountable dashboard", "https://accountable.xsy.fi/", ["capacity"]),
     ],
     notes: [
-      "XSY documents a 7-day unbonding redemption path for UTY back into USDC; current model scores the reviewed queued exit rather than a separately measured live liquid buffer",
+      "Output re-reviewed 2026-08-27: current XSY docs say users can redeem UTY through the issuance smart contract for approximately $1 in value, but do not name a payout asset. The UTY overview also states that holders have no ownership rights over specific underlying assets, so outputAssets is intentionally unset.",
+      "Current public XSY materials do not establish a fixed holder fee, executable capacity, or settlement SLA for the issuance-contract route. The prior 7-day USDC assertion is not retained as current output evidence.",
       "The 30% ratio is a reviewed heuristic reflecting delta-neutral AVAX hedge composition rather than a published instant-liquidity floor",
     ],
   },
@@ -829,21 +837,24 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     },
   },
   "srusde-strata": erc4626ReserveTelemetryQueueConfig({
-    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    reviewedAt: "2026-08-27",
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
+    outputAssetType: "stable-basket",
+    outputAssets: ["usde-ethena", "susde-ethena"],
     totalScoreCap: 65,
     costModel: fixedFee(2.5, "Strata docs list a 2.5 bps senior redemption fee"),
     docs: [
-      sourceRef("Strata srUSDe docs", "https://docs.strata.money/using-strata/srusde", [
+      sourceRef("Strata srUSDe market", "https://docs.strata.markets/markets/ethena-usde/srusde", [
         "route",
-        "capacity",
         "fees",
-        "access",
         "settlement",
       ]),
-      sourceRef("Strata FAQ", "https://docs.strata.markets/resources/faqs", ["settlement"]),
+      sourceRef("Strata FAQ", "https://docs.strata.markets/resources/faqs", ["route", "fees", "settlement"]),
+    ],
+    notes: [
+      "Output re-reviewed 2026-08-27: Strata's current FAQ states srUSDe can be redeemed for USDe and sUSDe. It documents instant sUSDe redemptions and a seven-day cooldown for USDe, so both tracked outputs are declared as the complete current set.",
     ],
     telemetrySubject: "the tranche vault's idle underlying balance",
     settlementConstraint: "the documented redemption window",

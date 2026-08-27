@@ -581,8 +581,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
       capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
-      outputAssets: ["asset:btc", "asset:eth", "asset:bnb"],
+      reviewedAt: "2026-08-27",
+      unresolvedOutputDisposition: "issuer-undisclosed",
       costModel: documentedVariableFee(
         "Redemption fee = redemptionFeeFloor (50 bps) + baseRate, where baseRate rises with redeemed supply and decays over time",
         "formula",
@@ -601,7 +601,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         ),
       ],
       notes: [
-        "Output declared 2026-07-19: River docs state holders can exchange 1 satUSD for $1 worth of collateral from the least-collateralized positions, and the FAQ names the collateral classes as BTC, ETH, BNB, and other liquid staking tokens; the declared set covers the three named bluechip classes while individual LSTs (e.g. solvBTC, LBTC) are not exhaustively enumerated in public docs.",
+        "Output re-reviewed 2026-08-27: River docs state holders can exchange 1 satUSD for $1 worth of collateral from the least-collateralized positions, and the FAQ names BTC, ETH, BNB, and other liquid staking tokens as redemption collateral. The public materials do not enumerate the complete eligible LST inventory, so outputAssets is intentionally unset rather than publishing the three named assets as a complete payout composition.",
         "Fee model corrected 2026-08-12: the schedule is disclosed, not undisclosed. River documents the fee as `baseRate + 0.5%`, and the deployed TroveManager exposes it through `getRedemptionRate()`/`getRedemptionRateWithDecay()` as `min(redemptionFeeFloor + baseRate, maxRedemptionFee)`.",
         "No static fee bound is declared: `maxRedemptionFee` is a per-branch governance parameter constrained only by `maxRedemptionFee <= DECIMAL_PRECISION` (100%), so the documented ceiling is two orders of magnitude above the 200 bps admissible bound. The live adapter instead reads each branch's `getRedemptionRateWithDecay()` in the same run, so the current cost comes from telemetry rather than from a reviewed ceiling.",
         "Fresh reserve telemetry reads per-chain trove debt through the Satoshi app's `getGlobalSystemBalances()` as the executable exit bound, after checking that `debtToken()` still round-trips to this coin's own satUSD deployment and that the global TCR clears each branch MCR. The prior documented-bound full-supply model is dropped with no fallback: satUSD is largely bridged or Smart-Vault-minted rather than trove-backed, so total supply never described what the redemption engine could honor, and an unavailable read now leaves the route unrated instead of restoring that figure.",

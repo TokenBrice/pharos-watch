@@ -554,19 +554,19 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "u-united-stables": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
-    reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
+    reviewedAt: "2026-08-27",
     accessModel: "whitelisted-onchain",
     outputAssetType: "stable-basket",
-    outputAssets: ["usdc-circle", "usdt-tether", "usd1-world-liberty-financial"],
+    unresolvedOutputDisposition: "issuer-undisclosed",
     costModel: documentedVariableFee(
-      "Smart contract mint/burn 1:1 against whitelisted stablecoins (USDC, USDT, USD1); on-chain oracles enforce collateral backing",
+      "United Stables terms state that redemption fees are disclosed before the transaction and may change; the terms publish no fixed fee schedule",
     ),
     docs: [
       sourceRef("United Stables", "https://www.u.tech/", ["capacity"]),
       sourceRef("United Stables terms", "https://www.u.tech/terms/", ["route", "fees", "access"]),
     ],
     notes: [
-      "Output declared 2026-07-19: United Stables documents 1:1 smart-contract mint/burn against the whitelisted stablecoins USDC, USDT, and USD1, all of which are tracked and priced; the terms reserve the issuer's right to satisfy redemptions with any eligible reserve asset including cash, so the declared basket is the documented onchain stablecoin set rather than a guaranteed payout composition.",
+      "Output re-reviewed 2026-08-27: the terms define Eligible Assets as issuer-approved assets that may include USD, certain stablecoins, and other assets designated over time. They permit United Stables to satisfy a redemption with any eligible reserve asset, including cash, at its sole discretion. The terms do not name a complete guaranteed output set, so outputAssets is intentionally unset.",
     ],
   }),
   "usx-solstice": defineStablecoinRedeemConfig({

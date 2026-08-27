@@ -448,7 +448,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
     outputAssetType: "mixed-collateral",
-    outputAssets: ["asset:sscrt", "asset:wbtc", "asset:usdc"],
+    unresolvedOutputDisposition: "issuer-undisclosed",
+    reviewedAt: "2026-08-27",
     costModel: undisclosedReviewedFee(
       "Shade Protocol documents Silk redemption pools plus ShadeDAO bond-assisted arbitrage; public docs reviewed do not publish a single fixed bps redemption fee",
     ),
@@ -463,7 +464,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "Silk tracks a basket of GDP-weighted currencies; redemption pools combined with ShadeLend overcollateralization provide a reviewed basket-exit rail rather than a single-stable PSM",
       "Output asset type is mixed-collateral because the redeemed basket is not guaranteed to be all-stablecoin; it can include native Shade collateral assets",
-      "Output declared 2026-07-19: Shade Lend docs state a holder may redeem SILK for the collateral of their chosen vault, repaying a pro-rata share of the vault's debt; the declared assets are the vault collateral documented in official sources (sSCRT in the Lend docs, USDC.axl and wBTC vaults in Shade DAO forum redemption reports). The vault whitelist is governance-mutable and no canonical current list is published.",
+      "Output re-reviewed 2026-08-27: Shade Lend docs state a holder may redeem SILK for collateral from a chosen vault, repaying and receiving pro-rata shares of that vault. The public documentation does not publish a canonical current vault whitelist; its membership is governance-mutable, and the earlier wBTC/USDC evidence was not current issuer-primary documentation. outputAssets is intentionally unset rather than publishing a partial payout composition.",
     ],
   },
   "eusd-electronic-usd": {
