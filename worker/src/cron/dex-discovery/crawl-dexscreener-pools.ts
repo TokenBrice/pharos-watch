@@ -81,7 +81,7 @@ export async function finalizeDexScreenerDiscoveryRun(
   await dependencies.recordOutcome(
     db,
     DEXSCREENER_LIQUIDITY_CIRCUIT,
-    runState.hardRefusal == null && runState.successfulRequests > 0,
+    runState.successfulRequests > 0,
   );
   runState.outcomeRecorded = true;
 }
@@ -176,9 +176,9 @@ export async function crawlDexScreenerPoolsStage({
             },
           });
           try {
-            // Persist the shared circuit immediately: discovery overlaps the
-            // scoring fallback, so waiting until the run ends would leave that
-            // lane free to repeat the same provider refusal.
+            // Finalize immediately so a zero-success refusal protects the
+            // overlapping scoring fallback. Earlier successful requests still
+            // prove provider reachability and heal the aggregate circuit.
             await finalizeDexScreenerDiscoveryRun(db, runState, dependencies);
           } catch (err) {
             logWorkerEvent({

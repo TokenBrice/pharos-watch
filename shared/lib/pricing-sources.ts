@@ -7,13 +7,14 @@ import { PRICE_SOURCE_HEALTH_BUCKET_KEYS, type PriceSourceHealthBucketKey } from
 
 export { PRICE_SOURCE_HEALTH_BUCKET_KEYS } from "../types/pricing-source-health";
 
+// Keep retired registry keys here so historical provenance rows remain renderable.
 export const PRICE_TRANSPARENCY_SOURCE_KEYS = [
   ...PRICING_SOURCE_REGISTRY.map((entry) => entry.key),
 ] as const satisfies readonly PricingSourceKey[];
 
 const PRICE_SOURCE_HEALTH_BUCKET_DEFS = [
   { key: "coingecko+defillama-list", label: "CoinGecko + DefiLlama (list)", shortLabel: "CG+DL-list" },
-  ...PRICING_SOURCE_REGISTRY.map((entry) => ({
+  ...PRICING_SOURCE_REGISTRY.filter((entry) => !entry.isRetired).map((entry) => ({
     key: entry.key as PriceSourceHealthBucketKey,
     label: entry.label,
     shortLabel: entry.shortLabel,

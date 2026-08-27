@@ -105,11 +105,8 @@ describe("buildPrimarySourceCandidates", () => {
 
   it("admits mapped Uniswap DEX protocol lanes and withholds the aggregate", () => {
     const collected = makeCollected({
-      pythQuote: {
-        price: 1.0,
-        confidenceBps: 5,
-        publishTime: 1_700_000_000,
-      },
+      binancePrice: 1.0,
+      binanceObservedAt: 1_700_000_000,
       protocolSources: [
         {
           protocol: "uniswap-v4",
@@ -133,7 +130,7 @@ describe("buildPrimarySourceCandidates", () => {
       { nowSec: 1_700_000_030 },
     );
 
-    expect(sources.map((source) => source.source)).toEqual(["pyth", "uniswap-v4-dex"]);
+    expect(sources.map((source) => source.source)).toEqual(["binance", "uniswap-v4-dex"]);
     expect(dexCandidateTelemetry).toMatchObject([
       {
         sourceKey: "uniswap-v4-dex",
@@ -193,11 +190,8 @@ describe("buildPrimarySourceCandidates", () => {
 
   it("accepts Curve as a promoted DEX protocol when a hard source agrees", () => {
     const collected = makeCollected({
-      pythQuote: {
-        price: 1.096,
-        confidenceBps: 8,
-        publishTime: 1_700_000_000,
-      },
+      binancePrice: 1.096,
+      binanceObservedAt: 1_700_000_000,
       protocolSources: [
         {
           protocol: "curve",
@@ -522,16 +516,11 @@ describe("buildPrimarySourceCandidates", () => {
     ]);
   });
 
-  it("rejects future-skewed oracle, CEX, aggregator, and DEX observations", () => {
+  it("rejects future-skewed CEX, aggregator, and DEX observations", () => {
     const collected = makeCollected({
       cgPrice: 1.0,
       cgObservedAt: 1_700_001_000,
       cgObservedAtMode: "upstream",
-      pythQuote: {
-        price: 1.0,
-        confidenceBps: 5,
-        publishTime: 1_700_001_000,
-      },
       coinbasePrice: 1.0,
       coinbaseObservedAt: 1_700_001_000,
       protocolSources: [

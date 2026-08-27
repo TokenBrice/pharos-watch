@@ -15,7 +15,6 @@
   "llamaId": "321",
   "detailProvider": "defillama",
   "geckoId": "usdh-2",
-  "pythFeedId": "0xf364e785775b4cb2f159ea823f8b5b9b669a4c221a3f845e518ba0e09611c553",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://usdh.com/reserves",

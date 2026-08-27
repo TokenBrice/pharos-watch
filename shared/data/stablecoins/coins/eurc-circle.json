@@ -15,7 +15,6 @@
   "llamaId": "50",
   "detailProvider": "defillama",
   "geckoId": "euro-coin",
-  "pythFeedId": "0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.circle.com/transparency",

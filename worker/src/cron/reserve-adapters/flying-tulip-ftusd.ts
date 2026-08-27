@@ -103,7 +103,9 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
     throw new Error("flying-tulip-ftusd lastUpdated is missing or invalid");
   }
 
-  const chains = payload.chains ?? [];
+  const chains = (payload.chains ?? []).filter((chain) =>
+    chain.tvlUsd !== 0 || chain.metrics?.totalSupplyUsd !== 0
+  );
   if (chains.length !== EXPECTED_CHAINS.size) {
     throw new Error(`flying-tulip-ftusd expected ${EXPECTED_CHAINS.size} chains, received ${chains.length}`);
   }

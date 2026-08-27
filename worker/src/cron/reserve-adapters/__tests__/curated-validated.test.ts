@@ -63,6 +63,28 @@ describe("fetchCuratedValidatedReserves", () => {
     expect(result.metadata?.totalSupplyRaw).toBe("1000000");
   });
 
+  it("passes scheduled chain RPC context through to the supply probe", async () => {
+    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1000000n);
+    const adapterContext = { chainRpcs: new Map() };
+    const config: LiveReservesConfig = {
+      ...BASE_CONFIG,
+      inputs: { primary: { kind: "onchain-solana" } },
+    };
+    const coin = makeCoin(MULTI_SLICE_RESERVES, [{ chain: "solana", address: "Mint123" }]);
+
+    await fetchCuratedValidatedReserves(coin, config, signal, adapterContext);
+
+    expect(probeTrackedTokenSupply).toHaveBeenCalledWith(
+      coin,
+      config.inputs.primary,
+      signal,
+      "curated-validated",
+      adapterContext,
+      undefined,
+      undefined,
+    );
+  });
+
   it("preserves coinId and depType from curated reserves", async () => {
     vi.mocked(probeTrackedTokenSupply).mockResolvedValue(500n);
 

@@ -17,7 +17,6 @@
   "pegMechanism": "Deposit USDS to mint sUSDS and withdraw USDS directly from the vault with no protocol fee; sUSDS and sDAI are both savings wrappers but are not exchangeable 1:1 because they have accrued different amounts of yield",
   "detailProvider": "coingecko",
   "geckoId": "susds",
-  "pythFeedId": "0x6968a8641208463d17ae3b9cfa0e4841a7aa7a5d54122b9f692b84fe9ce3409f",
   "links": [
     {
       "label": "Website",

@@ -16,7 +16,6 @@
   "llamaId": "129",
   "detailProvider": "defillama",
   "geckoId": "ondo-us-dollar-yield",
-  "pythFeedId": "0xe393449f6aff8a4b6d3e1165a7c9ebec103685f3b41e60db4277b5b6d10e7326",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://ondo.finance/usdy",

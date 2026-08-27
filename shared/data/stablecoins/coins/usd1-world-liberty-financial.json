@@ -13,7 +13,6 @@
   "llamaId": "262",
   "detailProvider": "defillama",
   "geckoId": "usd1-wlfi",
-  "pythFeedId": "0x0a2425d43486780990d8b63543029e20556be51fd756cca584212f4d539611d4",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://por.worldlibertyfinancial.com",

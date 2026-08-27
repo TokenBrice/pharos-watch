@@ -13,7 +13,6 @@
   "llamaId": "7",
   "detailProvider": "defillama",
   "geckoId": "true-usd",
-  "pythFeedId": "0x433faaa801ecdb6618e3897177a118b273a8e18cc3ff545aadfc207d58d028f7",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://tusd.io/transparency",

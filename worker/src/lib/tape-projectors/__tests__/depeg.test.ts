@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { projectDepegOpened, projectDepegResolved } from "../depeg";
 
@@ -28,7 +29,6 @@ function depegRow(overrides: Record<string, unknown> = {}): Record<string, unkno
     peg_reference: 1,
     source: "live",
     close_reason: null,
-    methodology_version: "depeg-v1",
     ...overrides,
   };
 }
@@ -52,21 +52,6 @@ function extractCacheWriteBinds(db: MockD1Database, cursorKey: string): unknown[
 }
 
 describe("depeg projector", () => {
-  it("surfaces a missing mandatory depeg methodology column", async () => {
-    const db = mockTapeD1([
-      { match: "SELECT value, updated_at FROM cache", rows: [], first: null },
-      {
-        match: MATCH_DEPEG_EVENTS,
-        rows: [],
-        throwError: new Error("D1_ERROR: no such column: methodology_version"),
-      },
-    ]);
-
-    await expect(projectDepegOpened(db, { since: 0 })).rejects.toThrow(
-      "D1_ERROR: no such column: methodology_version",
-    );
-  });
-
   it("expands a full opened batch through same-started_at rows before advancing the watermark", async () => {
     const limitedRows = [
       depegRow({ id: 1, stablecoin_id: "usdt-tether" }),
@@ -86,6 +71,11 @@ describe("depeg projector", () => {
 
     expect(result).toEqual({ projected: 3, advanced: SEC });
     expect(extractInsertBinds(db).map((binds) => binds[13])).toEqual(["1", "2", "3"]);
+    expect(extractInsertBinds(db).map((binds) => binds[16])).toEqual([
+      getDepegDewsMethodologyVersionAt(SEC),
+      getDepegDewsMethodologyVersionAt(SEC),
+      getDepegDewsMethodologyVersionAt(SEC),
+    ]);
     expect(extractCacheWriteBinds(db, "depeg.opened")[0]?.[1]).toBe(String(SEC));
   });
 
@@ -108,6 +98,11 @@ describe("depeg projector", () => {
 
     expect(result).toEqual({ projected: 3, advanced: SEC + 900 });
     expect(extractInsertBinds(db).map((binds) => binds[13])).toEqual(["10", "11", "12"]);
+    expect(extractInsertBinds(db).map((binds) => binds[16])).toEqual([
+      getDepegDewsMethodologyVersionAt(SEC + 900),
+      getDepegDewsMethodologyVersionAt(SEC + 900),
+      getDepegDewsMethodologyVersionAt(SEC + 900),
+    ]);
     expect(extractCacheWriteBinds(db, "depeg.resolved")[0]?.[1]).toBe(String(SEC + 900));
   });
 });

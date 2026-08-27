@@ -64,6 +64,7 @@ const DRPC_CHAINS: Record<string, string> = {
 
 const PUBLIC_ONLY_EVM_CHAINS = ["tempo"] as const;
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
+const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 
 export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map<string, ChainRpcConfig> {
   const configs: ChainRpcConfig[] = [];
@@ -142,6 +143,21 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map
       type: "other",
       rpcUrl: publicRpc,
       explorerUrl: meta.explorerUrl,
+    });
+  }
+
+  const keyedSolanaRpcUrls = [
+    alchemyApiKey ? buildAlchemyRpcUrl("solana-mainnet", alchemyApiKey) : undefined,
+    drpcApiKey ? `https://lb.drpc.org/ogrpc?network=solana&dkey=${drpcApiKey}` : undefined,
+  ].filter((url): url is string => typeof url === "string" && url.length > 0);
+  if (keyedSolanaRpcUrls.length > 0) {
+    configs.push({
+      chainId: SOLANA_PUBLIC_RPC_CHAIN_ID,
+      chainName: CHAIN_META[SOLANA_PUBLIC_RPC_CHAIN_ID].name,
+      type: "other",
+      rpcUrl: keyedSolanaRpcUrls[0]!,
+      ...(keyedSolanaRpcUrls[1] ? { fallbackRpcUrl: keyedSolanaRpcUrls[1] } : {}),
+      explorerUrl: CHAIN_META[SOLANA_PUBLIC_RPC_CHAIN_ID].explorerUrl,
     });
   }
 

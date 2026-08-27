@@ -38,7 +38,6 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "syrupusdc",
-  "pythFeedId": "0xe616297dab48626eaacf6d030717b25823b13ae6520b83f4735bf8deec8e2c9a",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://maple.finance/transparency",

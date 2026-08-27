@@ -25,7 +25,6 @@
   "detailProvider": "defillama",
   "launchDate": "2024-06-02",
   "geckoId": "resolv-usr",
-  "pythFeedId": "0x10b013adec14c0fe839ca0fe54cec9e4d0b6c1585ac6d7e70010dac015e57f9c",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://info.apostro.xyz/resolv-reserves",

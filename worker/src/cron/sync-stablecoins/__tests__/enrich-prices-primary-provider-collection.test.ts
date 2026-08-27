@@ -85,7 +85,6 @@ describe("collectPrimaryProviderQuotes", () => {
         malformedRows: [],
       },
       geckoIds: [],
-      pythFeedIds: new Map(),
       coinbaseSymbols: [],
       krakenSymbols: [],
       shouldFetchBitstamp: false,
@@ -96,7 +95,6 @@ describe("collectPrimaryProviderQuotes", () => {
       sourceAllowed: {
         cg: false,
         cgTicker: false,
-        pyth: false,
         binance: false,
         kraken: false,
         bitstamp: false,

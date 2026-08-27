@@ -13,7 +13,6 @@
   "llamaId": "286",
   "detailProvider": "defillama",
   "geckoId": "global-dollar",
-  "pythFeedId": "0xdaa58c6a3ce7d4b9c46c32a6e646012c17c4a2b24c08dd8c5e476118b855a7da",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.paxos.com/usdg-transparency",

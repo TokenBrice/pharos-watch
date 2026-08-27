@@ -15,7 +15,6 @@
   "llamaId": "254",
   "detailProvider": "defillama",
   "geckoId": "societe-generale-forge-eurcv",
-  "pythFeedId": "0x61162fa272ef591637241b80887bad05a3aac7590424541707171cc1dbea6e74",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.sgforge.com/product/coinvertible/",

@@ -121,7 +121,13 @@ async function readContractSupplyRaw(input: {
 
   if (input.allowZeroSupply) {
     return input.family === "solana"
-      ? fetchSolanaTokenSupply(supplyContract.address, input.signal)
+      ? fetchSolanaTokenSupply(
+        supplyContract.address,
+        input.signal,
+        undefined,
+        input.rpcUrl,
+        input.fallbackRpcUrl,
+      )
       : fetchErc20TotalSupply(
         buildEvmProbeInput(supplyContract.chain),
         supplyContract.address,

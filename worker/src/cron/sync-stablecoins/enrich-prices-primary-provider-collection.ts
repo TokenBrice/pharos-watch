@@ -8,7 +8,6 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcome, recordOutcomeDecision, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { throwIfAborted } from "../../lib/abort";
-import { fetchPythPrices } from "../../lib/pyth";
 import {
   BITSTAMP_KNOWN_SYMBOLS,
   COINBASE_KNOWN_SYMBOLS,
@@ -80,7 +79,6 @@ export interface PrimaryPricePlan {
   dexPriceSources: PrimaryDexPriceSources;
   dexPriceSourceTelemetry: DexPriceSourceLoadTelemetry;
   geckoIds: string[];
-  pythFeedIds: Map<string, string>;
   coinbaseSymbols: string[];
   krakenSymbols: string[];
   shouldFetchBitstamp: boolean;
@@ -92,7 +90,6 @@ export interface PrimaryPricePlan {
   sourceAllowed: {
     cg: boolean;
     cgTicker: boolean;
-    pyth: boolean;
     binance: boolean;
     kraken: boolean;
     bitstamp: boolean;
@@ -111,7 +108,6 @@ export interface PrimaryConsensusQuoteMaps {
   cgObservedAt: number | null;
   cgTickerPrices: Map<string, number>;
   cgTickerObservedAt: number | null;
-  pythPrices: Map<string, { price: number; confidenceBps: number; publishTime: number }>;
   binancePrices: Map<string, number>;
   binanceObservedAt: number | null;
   krakenPrices: Map<string, number>;
@@ -298,13 +294,11 @@ export async function buildPrimaryPricePlan(
   curveEligibleIds.add("crvusd-curve");
 
   const candidates = assets.filter((asset) => {
-    const meta = metaById.get(asset.id);
     const symbolUpper = asset.symbol.toUpperCase();
     const hasValidGeckoId = isUsableGeckoId(asset.geckoId);
     return (
       hasValidGeckoId ||
       (dlListPrices?.has(asset.id) ?? false) ||
-      !!meta?.pythFeedId ||
       coinbaseKnownSet.has(symbolUpper) ||
       krakenKnownSet.has(symbolUpper) ||
       bitstampKnownSet.has(symbolUpper) ||
@@ -325,7 +319,6 @@ export async function buildPrimaryPricePlan(
       dexPriceSources,
       dexPriceSourceTelemetry,
       geckoIds: [],
-      pythFeedIds: new Map(),
       coinbaseSymbols: [],
       krakenSymbols: [],
       shouldFetchBitstamp: false,
@@ -337,7 +330,6 @@ export async function buildPrimaryPricePlan(
       sourceAllowed: {
         cg: false,
         cgTicker: false,
-        pyth: false,
         binance: false,
         kraken: false,
         bitstamp: false,
@@ -353,7 +345,6 @@ export async function buildPrimaryPricePlan(
   const [
     cgAllowed,
     cgTickerAllowed,
-    pythAllowed,
     binanceAllowed,
     krakenAllowed,
     bitstampAllowed,
@@ -365,7 +356,6 @@ export async function buildPrimaryPricePlan(
   ] = await Promise.all([
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_TICKER),
-    shouldAttemptFetch(db, CIRCUIT_SOURCE.PYTH_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.KRAKEN_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.BITSTAMP_PRICES),
@@ -382,7 +372,6 @@ export async function buildPrimaryPricePlan(
   if (
     !cgAllowed &&
     !cgTickerAllowed &&
-    !pythAllowed &&
     !binanceAllowed &&
     !krakenAllowed &&
     !bitstampAllowed &&
@@ -396,14 +385,6 @@ export async function buildPrimaryPricePlan(
   }
 
   const geckoIds = [...new Set(candidates.map((asset) => asset.geckoId).filter(isUsableGeckoId))];
-
-  const pythFeedIds = new Map<string, string>();
-  for (const asset of candidates) {
-    const meta = metaById.get(asset.id);
-    if (meta?.pythFeedId) {
-      pythFeedIds.set(asset.id, meta.pythFeedId);
-    }
-  }
 
   const candidateSymbolsUpper = [...new Set(candidates.map((asset) => asset.symbol.toUpperCase()))];
   const coinbaseSymbols = candidateSymbolsUpper.filter((symbol) => coinbaseKnownSet.has(symbol));
@@ -424,7 +405,6 @@ export async function buildPrimaryPricePlan(
     dexPriceSources,
     dexPriceSourceTelemetry,
     geckoIds,
-    pythFeedIds,
     coinbaseSymbols,
     krakenSymbols,
     shouldFetchBitstamp,
@@ -436,7 +416,6 @@ export async function buildPrimaryPricePlan(
     sourceAllowed: {
       cg: cgAllowed,
       cgTicker: cgTickerAllowed,
-      pyth: pythAllowed,
       binance: binanceAllowed,
       kraken: krakenAllowed,
       bitstamp: bitstampAllowed,
@@ -467,7 +446,6 @@ export async function collectPrimaryProviderQuotes(params: {
     geckoIds,
     krakenSymbols,
     nowSec,
-    pythFeedIds,
     redstoneSymbols,
     navPriceIds,
     shouldFetchBitstamp,
@@ -477,7 +455,6 @@ export async function collectPrimaryProviderQuotes(params: {
   const cgPrices = new Map<string, number>();
   const cgObservedAtByGeckoId = new Map<string, number>();
   const cgObservedAtModeByGeckoId = new Map<string, PriceObservedAtMode>();
-  const pythPrices = new Map<string, { price: number; confidenceBps: number; publishTime: number }>();
   const binancePrices = new Map<string, number>();
   const krakenPrices = new Map<string, number>();
   const bitstampPrices = new Map<string, number>();
@@ -554,22 +531,6 @@ export async function collectPrimaryProviderQuotes(params: {
           cgTickerObservedAt = Math.floor(Date.now() / 1000);
         }
         return successfulResponses > 0;
-      }),
-    );
-  }
-
-  if (sourceAllowed.pyth && pythFeedIds.size > 0) {
-    fetches.push(() =>
-      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.PYTH_PRICES, "Pyth Hermes API", async () => {
-        const outcome = await fetchPythPrices(pythFeedIds, signal);
-        for (const [coinId, result] of outcome.value) {
-          pythPrices.set(coinId, {
-            price: result.price,
-            confidenceBps: result.confidenceBps,
-            publishTime: result.publishTime,
-          });
-        }
-        return isSuccessfulOutcome(outcome);
       }),
     );
   }
@@ -741,7 +702,6 @@ export async function collectPrimaryProviderQuotes(params: {
       cgObservedAt,
       cgTickerPrices,
       cgTickerObservedAt,
-      pythPrices,
       binancePrices,
       binanceObservedAt,
       krakenPrices,

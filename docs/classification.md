@@ -80,7 +80,6 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `reserveReview?: ReserveReview` — sourced, dated review of the reserve composition and its known unknown exposure; optional per-slice non-link dispositions are fingerprinted by current index and name and remain non-scoring until a real `coinId` is authored
 - `custodyProfile?: CustodyProfile` — reviewed providers, optional sourced shares, legal safeguards, reuse posture, provenance, and uncertainty behind the current `custodyModel`; Safety Score V9 compiles applicable wrapper-custody evidence, while consistency checks remain advisory rather than auto-deriving a tier
 - `yieldConfig?: YieldConfig` — yield intelligence configuration
-- `pythFeedId?: string` — Pyth Network oracle feed ID (used for gold/commodity stablecoins)
 - `tradedContracts?: ContractDeployment[]` — traded contract addresses separate from `contracts`
 - `liveReservesConfig?: LiveReservesConfig` — live reserve sync configuration (see `docs/live-reserves.md`)
 - `notices?: CoinNotice[]` — per-coin alert notices shown on detail pages

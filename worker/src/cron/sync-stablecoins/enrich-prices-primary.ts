@@ -21,7 +21,7 @@ export type { PrimaryPriceResult, PriceValidationStats };
 export { applyListAggregatorDowngrade, applyPoolChallenge };
 
 /**
- * Fetch prices from CG, Pyth, CEX tickers, Curve on-chain, and DEX sources in parallel,
+ * Fetch prices from CG, CEX tickers, Curve on-chain, and DEX sources in parallel,
  * cross-validate within 50bps, and return a confidence-tagged result per asset.
  * Optionally accepts DL stablecoins list prices as an independent voice.
  */

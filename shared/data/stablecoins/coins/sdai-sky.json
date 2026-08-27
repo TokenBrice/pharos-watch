@@ -17,7 +17,6 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "savings-dai",
-  "pythFeedId": "0x710659c5a68e2416ce4264ca8d50d34acc20041d91289110eea152c52ff3dc39",
   "links": [
     {
       "label": "Website",

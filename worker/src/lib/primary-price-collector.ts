@@ -12,12 +12,6 @@ interface PrimaryPriceAssetLike {
   geckoId?: string | null;
 }
 
-interface PythQuote {
-  price: number;
-  confidenceBps: number;
-  publishTime: number;
-}
-
 interface RedstoneQuote {
   price: number;
   venueCount: number;
@@ -107,7 +101,6 @@ export interface PrimaryCollectedQuotes {
   cgTickerPrice: number | null;
   cgTickerObservedAt: number | null;
   dlListQuote?: DlListQuote;
-  pythQuote?: PythQuote;
   binancePrice: number | null;
   binanceObservedAt: number | null;
   krakenPrice: number | null;
@@ -166,19 +159,6 @@ function buildSourcePrice(input: {
     observedAtMode: freshness.observedAtMode,
     metadata: input.metadata,
   };
-}
-
-function getAdjustedPythWeight(confidenceBps: number, baseWeight: number): number {
-  if (!Number.isFinite(confidenceBps) || confidenceBps < 0) {
-    return baseWeight;
-  }
-  if (confidenceBps >= 250) {
-    return 0;
-  }
-
-  const confidencePenalty = Math.min(0.85, confidenceBps / 250);
-  const adjustedWeight = baseWeight * (1 - confidencePenalty);
-  return Math.max(0.25, Number(adjustedWeight.toFixed(3)));
 }
 
 const DEX_PROTOCOL_SOURCE_MIN_TVL_USD = 50_000;
@@ -313,25 +293,6 @@ export function buildPrimarySourceCandidates(
     }),
   ].filter((source): source is SourcePrice => source != null);
   sources.push(...baseSources);
-
-  const pythQuote = collected.pythQuote;
-  if (pythQuote) {
-    const pythWeight = getAdjustedPythWeight(
-      pythQuote.confidenceBps,
-      getPricingSourceRegistryEntry("pyth")?.defaultWeight ?? 2,
-    );
-    const pythSource = buildSourcePrice({
-      source: "pyth",
-      price: pythQuote.price,
-      weight: pythWeight,
-      observedAt: pythQuote.publishTime,
-      nowSec,
-      metadata: { confidenceBps: pythQuote.confidenceBps },
-    });
-    if (pythSource && pythSource.weight > 0) {
-      sources.push(pythSource);
-    }
-  }
 
   const redstoneQuote = collected.redstoneQuote;
   if (redstoneQuote && redstoneQuote.venueCount >= 2 && redstoneQuote.venueAgreementPct >= 60) {

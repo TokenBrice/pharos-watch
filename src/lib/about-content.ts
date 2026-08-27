@@ -67,7 +67,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "Supply & Price",
     sources:
-      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, DexPaprika, Alchemy Prices API, Moralis Token Prices, Birdeye, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Kava Pricefeed, Curve on-chain, Chainlink NAV reserve telemetry, Superstate NAV/liquidity telemetry, Flying Tulip's on-chain ftUSD reserve index, Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome, Velodrome, Mento Broker, Citrea StablecoinBridge, Zephyr Scanner, Movement REST, direct protocol redemption or FX-par quotes, curated fail-closed on-chain supply-gap repairs, and V9 lockbox attribution reads",
+      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, DexPaprika, Alchemy Prices API, Moralis Token Prices, Birdeye, Jupiter Price API, Binance, Kraken, Bitstamp, Coinbase, RedStone, Kava Pricefeed, Curve on-chain, Chainlink NAV reserve telemetry, Superstate NAV/liquidity telemetry, Flying Tulip's on-chain ftUSD reserve index, Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome, Velodrome, Mento Broker, Citrea StablecoinBridge, Zephyr Scanner, Movement REST, direct protocol redemption or FX-par quotes, curated fail-closed on-chain supply-gap repairs, and V9 lockbox attribution reads",
   },
   {
     label: "Reserve Transparency",

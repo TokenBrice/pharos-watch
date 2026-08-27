@@ -15,7 +15,6 @@
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "pax-gold",
-  "pythFeedId": "0x273717b49430906f4b0c230e99aa1007f83758e3199edbc887c0d06c3e332494",
   "protocolSlug": "paxos-gold",
   "proofOfReserves": {
     "type": "independent-audit",

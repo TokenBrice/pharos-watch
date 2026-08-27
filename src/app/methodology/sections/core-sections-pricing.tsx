@@ -163,13 +163,13 @@ export function PricingPipelineMethodologySection() {
             ]}
           />
         </div>
-        <WorkedExample summary="Worked example: USDC price consensus across 7 sources">
+        <WorkedExample summary="Worked example: USDC price consensus across 6 sources">
           <p className="pharos-numeric">
-            Sources: CoinGecko=1.0001 (w2), DL-list=0.9999 (w1), Pyth=1.0002 (w2), Binance=1.0001 (w2),
+            Sources: CoinGecko=1.0001 (w2), DL-list=0.9999 (w1), Binance=1.0001 (w2),
             Kraken=1.0000 (w2), Coinbase=0.9998 (w2), Curve=1.0003 (w3)
           </p>
           <p className="pharos-numeric">
-            Peg ref=1.0, threshold=50 bps. All 7 within 50 bps of each other &rarr; single cluster of 7.
+            Peg ref=1.0, threshold=50 bps. All 6 within 50 bps of each other &rarr; single cluster of 6.
           </p>
           <p className="pharos-numeric">
             Published price = cluster median = 1.0001. Internal selected source for provenance = Curve (highest-weight member).
@@ -208,8 +208,8 @@ export function PricingPipelineMethodologySection() {
                 title: "Oracles",
                 subtitle: (
                   <>
-                    <span className="md:hidden">Pyth (w2), RS (w1)</span>
-                    <span className="hidden md:inline"><span>Pyth (w2)</span><br /><span>RedStone (w1)</span></span>
+                    <span className="md:hidden">RS (w1)</span>
+                    <span className="hidden md:inline"><span>RedStone (w1)</span></span>
                   </>
                 ),
               },
@@ -270,7 +270,6 @@ export function PricingPipelineMethodologySection() {
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">CoinGecko</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">Aggregator</TableCell><TableCell className="py-2 whitespace-normal">Primary market data via <code className="text-xs">/simple/price</code></TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">CoinGecko ticker</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">Exchange ticker</TableCell><TableCell className="py-2 whitespace-normal">Curated ticker corroboration path for tracked exchange pairs</TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">DefiLlama (list)</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">Aggregator</TableCell><TableCell className="py-2 whitespace-normal">Independent stablecoins list price via <code className="text-xs">stablecoins.llama.fi</code></TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">Pyth Network</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">Oracle</TableCell><TableCell className="py-2 whitespace-normal">Hermes endpoint with confidence intervals</TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">Binance</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Single batch call for all spot tickers</TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">Kraken</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Explicit pair mapping with alias-safe response handling</TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">Bitstamp</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Lower-weight corroboration via the all-tickers endpoint</TableCell></TableRow>

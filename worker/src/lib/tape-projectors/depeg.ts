@@ -29,6 +29,7 @@ import {
   type ProjectorResult,
 } from "./types";
 import { formatDuration, formatPrice } from "@shared/lib/format";
+import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
 import type { DepegEventCloseReason } from "@shared/types/market";
 
 const PEAK_WORSENED_CACHE_KEY = "tape-projector:peak-worsened-seen";
@@ -52,7 +53,6 @@ interface DepegSourceRow {
   peg_reference: number;
   source: string;
   close_reason?: string | null;
-  methodology_version: string | null;
 }
 
 function coinSourceUrl(coinId: string): string {
@@ -73,9 +73,9 @@ async function fetchDepegRows(
   const timeColumn = variant === "opened" ? "started_at" : "ended_at";
   const selectSql = variant === "opened"
     ? `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-              started_at, ended_at, start_price, peg_reference, source, methodology_version`
+              started_at, ended_at, start_price, peg_reference, source`
     : `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-              started_at, ended_at, start_price, recovery_price, peg_reference, source, close_reason, methodology_version`;
+              started_at, ended_at, start_price, recovery_price, peg_reference, source, close_reason`;
   const trailingWhereSql = variant === "opened"
     ? " AND source = 'live'"
     : " AND source = 'live' AND ended_at IS NOT NULL";
@@ -163,7 +163,7 @@ async function projectDepegByVariant(
       sourceRowId,
       transition,
       sourceUrl: coinSourceUrl(row.stablecoin_id),
-      methodologyVersion: row.methodology_version ?? null,
+      methodologyVersion: getDepegDewsMethodologyVersionAt(tsSec),
     });
   }
 
@@ -216,7 +216,7 @@ export async function projectDepegPeakWorsened(
   const nextMap: PeakWorsenedSeenMap = {};
 
   const sql = `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-                      started_at, ended_at, start_price, peg_reference, source, methodology_version
+                      started_at, ended_at, start_price, peg_reference, source
                  FROM depeg_events
                  WHERE source = 'live' AND ended_at IS NULL
                  ORDER BY id ASC
@@ -272,7 +272,7 @@ export async function projectDepegPeakWorsened(
       sourceRowId,
       transition,
       sourceUrl: coinSourceUrl(row.stablecoin_id),
-      methodologyVersion: row.methodology_version ?? null,
+      methodologyVersion: getDepegDewsMethodologyVersionAt(row.started_at),
     });
   }
 

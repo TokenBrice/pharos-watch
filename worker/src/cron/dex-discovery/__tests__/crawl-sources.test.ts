@@ -336,6 +336,56 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
+  it("records DexScreener discovery success when a hard refusal follows a successful request", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(fetchDsTokenPairsWithStatus)
+      .mockResolvedValueOnce({ ok: true, pairs: [] })
+      .mockResolvedValueOnce({
+        ok: false,
+        pairs: [],
+        status: 429,
+        contentType: "text/plain",
+        error: "HTTP 429; body starts with: error code: 1015",
+        hardRefusal: true,
+      });
+    const db = createMockDb();
+    const runState = createDexScreenerDiscoveryRunState();
+
+    await crawlCoin(
+      db,
+      "first-test-coin",
+      [{ chain: "ethereum", address: "0xabc", decimals: 18 }],
+      null,
+      new Set(),
+      undefined,
+      undefined,
+      undefined,
+      runState,
+    );
+    await crawlCoin(
+      db,
+      "second-test-coin",
+      [{ chain: "bsc", address: "0xdef", decimals: 18 }],
+      null,
+      new Set(),
+      undefined,
+      undefined,
+      undefined,
+      runState,
+    );
+    await finalizeDexScreenerDiscoveryRun(db, runState);
+
+    expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(2);
+    expect(recordOutcome).toHaveBeenCalledTimes(1);
+    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, true);
+    expect(runState).toMatchObject({
+      attemptedRequests: 2,
+      successfulRequests: 1,
+      hardRefusal: { status: 429 },
+      outcomeRecorded: true,
+    });
+  });
+
   it("keeps CoinGecko onchain staging output aligned with current discovery rows", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,

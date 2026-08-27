@@ -13,7 +13,6 @@
   "llamaId": "1",
   "detailProvider": "defillama",
   "geckoId": "tether",
-  "pythFeedId": "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://tether.to/en/transparency",

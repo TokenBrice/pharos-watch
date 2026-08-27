@@ -77,7 +77,8 @@ function parseUsdAmount(raw: string): number {
 export function adaptFdusdReserveReport(reportText: string, reportUrl?: string): AdapterResult {
   const normalized = reportText.replace(/\s+/g, " ").trim();
   const dateMatch = normalized.match(
-    /((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4})\s+at\s+\d{1,2}:\d{2}/i,
+    // eslint-disable-next-line security/detect-unsafe-regex -- runs on whitespace-collapsed report text, so the single-space word matcher cannot backtrack ambiguously.
+    /((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})\s+at\s+\d{1,2}:\d{2}\s*(?:am|pm)?(?:\s[A-Za-z]+)*/i,
   );
   const asOf = dateMatch?.[1] ?? null;
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(asOf);

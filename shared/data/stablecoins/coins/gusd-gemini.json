@@ -14,7 +14,6 @@
   "detailProvider": "defillama",
   "geckoId": "gemini-dollar",
   "cmcSlug": "gemini-dollar",
-  "pythFeedId": "0xe186e116f2c7642d0d8aa89c32345d83ebeb350242b2274c46a19ea82e04fb8d",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.gemini.com/dollar",

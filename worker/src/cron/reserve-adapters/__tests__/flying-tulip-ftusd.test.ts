@@ -80,4 +80,33 @@ describe("adaptFlyingTulipFtUsd", () => {
     changed.chains[0].strategies = [];
     expect(() => adaptFlyingTulipFtUsd(changed)).toThrow("Ethereum borrow/stake strategy disappeared");
   });
+
+  it("ignores an inactive zero-TVL, zero-supply chain placeholder", () => {
+    const withPlaceholder = payload();
+    withPlaceholder.chains.push({
+      chainId: 56,
+      chainName: "Binance Smart Chain",
+      tvlUsd: 0,
+      metrics: { totalSupplyUsd: 0 },
+    } as (typeof withPlaceholder.chains)[number]);
+
+    expect(adaptFlyingTulipFtUsd(withPlaceholder).metadata).toMatchObject({
+      totalReserveUsd: expect.closeTo(4_686_811.9099, 0.0001),
+      supplyUsd: 4_685_378.1711,
+    });
+  });
+
+  it("fails closed when an unexpected chain is active", () => {
+    const withActiveUnexpectedChain = payload();
+    withActiveUnexpectedChain.chains.push({
+      chainId: 56,
+      chainName: "Binance Smart Chain",
+      tvlUsd: 1,
+      metrics: { totalSupplyUsd: 1 },
+    } as (typeof withActiveUnexpectedChain.chains)[number]);
+
+    expect(() => adaptFlyingTulipFtUsd(withActiveUnexpectedChain)).toThrow(
+      "flying-tulip-ftusd expected 2 chains, received 3",
+    );
+  });
 });

@@ -14,7 +14,6 @@
   "llamaId": "221",
   "detailProvider": "defillama",
   "geckoId": "usdtb",
-  "pythFeedId": "0xe4731214382d8ed70a766930a7722c68064fc7ed4e6d70dbce3c84d4be81bc92",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
