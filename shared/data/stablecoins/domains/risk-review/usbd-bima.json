@@ -230,8 +230,8 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USBD has one reviewed canonical native Bima CDP issuance deployment on Ethereum and five LayerZero OFT bridge-representation routes to Hemi, Plume, Sonic, BSC, and Nibiru. The official Bima registry/source and fixed-block reads confirm local BorrowerOperations, Factory, DebtToken, and collateral-market wiring on the destination chains, but the same byte-identical regular OFT mints destination balances through authenticated LayerZero delivery and no per-chain reserve/liability reconciliation isolates those balances from incoming OFT supply. Under the conservative mint/bridge boundary, Ethereum remains the only Mint Authority deployment; the five destination routes remain Bridge Risk representations. The code-empty EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 administers the OFT owner/delegate and peer/application configuration, while each LayerZero Endpoint delivery path is separately authored as the bridge-mint holder. Fixed 2026-08-16 peer reads found Ethereum peers for Hemi, Sonic, and Plume, while BSC and Nibiru's Ethereum peers were zero; current 2026-08-17 checks also found zero supply and zero local Trove debt on BSC and Nibiru. Per-application DVN/ULN, executor, endpoint-admin, and numeric route-limit settings remain evidence gaps, so the route tier remains external-validated-network.",
-    "reviewedAt": "2026-08-17",
-    "reviewer": "Pharos mint/bridge boundary migration; Codex canonicality re-open",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "verified",
     "protocols": [
       {
@@ -491,7 +491,7 @@
           "pausersAdminsUpgraders": "The same EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 was read as owner() on the six USBD DebtToken/OFT deployments. Ethereum and BSC use endpoint 0x1a44076050125825900e736c501f859c50fe728c; Hemi and Sonic use 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; Plume uses 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36; Nibiru uses 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd. This control is scoped to the canonical Ethereum route so peer administration is not misattributed as the representation minter. Per-application DVN/ULN, executor, endpoint-admin, and numeric route-limit settings were not independently replayed."
         },
         "canRaiseCap": false,
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-08-28",
         "sources": [
           {
             "label": "Ethereum USBD token owner and peer reads",
@@ -522,7 +522,7 @@
             "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
           }
         ],
-        "evidence": "At Ethereum block 25,770,566 (2026-08-16), owner() on the USBD DebtToken/OFT returned code-empty EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. It controls the OFT peer/delegate and application configuration; the destination route rows retain the same owner and failure-domain evidence, while the direct LayerZero Endpoint delivery paths below own bridge-mint attribution. This is bridge administration over the OFT overlay, not the native BimaCore owner-only authorizedMint path."
+        "evidence": "At Ethereum block 25,770,566 (2026-08-16), owner() on the USBD DebtToken/OFT returned code-empty EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. It controls the OFT peer/delegate and application configuration; the destination route rows retain the same owner and failure-domain evidence, while the direct LayerZero Endpoint delivery paths below own bridge-mint attribution. This is bridge administration over the OFT overlay, not the native BimaCore owner-only authorizedMint path. Current 2026-08-28 RPC reads on all six deployments returned the same owner."
       },
       {
         "id": "usbd-ethereum-layerzero-endpoint",
@@ -541,7 +541,7 @@
           "contract:ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
           "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "trustedPeerOrRemote": "The canonical Ethereum OFT endpoint() is 0x1a44076050125825900e736c501f859c50fe728c; its authenticated delivery path accepts LayerZero messages for the configured Hemi, Sonic, and Plume peers. EIDs 30329, 30332, and 30370 were nonzero peers on the Ethereum token at block 25770566; EIDs 30102 and 30369 were zero.",
           "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
@@ -550,8 +550,8 @@
         },
         "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770566,
+        "observedAt": "2026-08-28",
+        "observedBlock": 25849498,
         "sources": [
           {
             "label": "USBD ethereum DebtToken endpoint/peer reads (2026-08-16)",
@@ -566,7 +566,7 @@
             "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
           }
         ],
-        "evidence": "At Ethereum fixed observation block 25770566 (2026-08-16), 0x1a44076050125825900e736c501f859c50fe728c was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+        "evidence": "At Ethereum fixed observation block 25770566 (2026-08-16), 0x1a44076050125825900e736c501f859c50fe728c was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder. A current Ethereum RPC read at block 25849498 on 2026-08-28 returned the same endpoint from endpoint() and 24,005 bytes of deployed endpoint code, resolving its authority type as contract rather than the generic bridge placeholder."
       },
       {
         "id": "usbd-hemi-layerzero-endpoint",
@@ -585,7 +585,7 @@
           "contract:hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
           "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "trustedPeerOrRemote": "The Hemi OFT endpoint() is 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (EID 30329), and the verified lzReceive delivery path accepts the endpoint as caller for the configured Ethereum peer. At Hemi block 5087665, peers(30101) returned the Ethereum USBD token; the Ethereum token's peers(30329) was nonzero at block 25770566.",
           "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
@@ -594,8 +594,8 @@
         },
         "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 5087665,
+        "observedAt": "2026-08-28",
+        "observedBlock": 5166861,
         "sources": [
           {
             "label": "USBD hemi DebtToken endpoint/peer reads (2026-08-16)",
@@ -610,7 +610,7 @@
             "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
           }
         ],
-        "evidence": "At Hemi fixed observation block 5087665 (2026-08-16), 0x6f475642a6e85809b1c36fa62763669b1b48dd5b was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+        "evidence": "At Hemi fixed observation block 5087665 (2026-08-16), 0x6f475642a6e85809b1c36fa62763669b1b48dd5b was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder. A current Hemi RPC read at block 5166861 on 2026-08-28 returned the same endpoint from endpoint() and 24,005 bytes of deployed endpoint code, resolving its authority type as contract rather than the generic bridge placeholder."
       },
       {
         "id": "usbd-plume-layerzero-endpoint",
@@ -629,7 +629,7 @@
           "contract:plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
           "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "trustedPeerOrRemote": "The Plume OFT endpoint() is 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 (EID 30370), and the verified lzReceive delivery path accepts the endpoint as caller for the configured Ethereum peer. At Plume block 87682632, peers(30101) returned the Ethereum USBD token; the Ethereum token's peers(30370) was nonzero at block 25770566.",
           "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
@@ -638,8 +638,8 @@
         },
         "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 87682632,
+        "observedAt": "2026-08-28",
+        "observedBlock": 89917862,
         "sources": [
           {
             "label": "USBD plume DebtToken endpoint/peer reads (2026-08-16)",
@@ -654,7 +654,7 @@
             "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
           }
         ],
-        "evidence": "At Plume fixed observation block 87682632 (2026-08-16), 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+        "evidence": "At Plume fixed observation block 87682632 (2026-08-16), 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder. A current Plume RPC read at block 89917862 on 2026-08-28 returned the same endpoint from endpoint() and 24,005 bytes of deployed endpoint code, resolving its authority type as contract rather than the generic bridge placeholder."
       },
       {
         "id": "usbd-sonic-layerzero-endpoint",
@@ -673,7 +673,7 @@
           "contract:sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
           "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "trustedPeerOrRemote": "The Sonic OFT endpoint() is 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (EID 30332), and the verified lzReceive delivery path accepts the endpoint as caller for the configured Ethereum peer. At Sonic block 77632147, peers(30101) returned the Ethereum USBD token; the Ethereum token's peers(30332) was nonzero at block 25770566.",
           "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
@@ -682,8 +682,8 @@
         },
         "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 77632147,
+        "observedAt": "2026-08-28",
+        "observedBlock": 78291595,
         "sources": [
           {
             "label": "USBD sonic DebtToken endpoint/peer reads (2026-08-16)",
@@ -698,7 +698,7 @@
             "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
           }
         ],
-        "evidence": "At Sonic fixed observation block 77632147 (2026-08-16), 0x6f475642a6e85809b1c36fa62763669b1b48dd5b was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+        "evidence": "At Sonic fixed observation block 77632147 (2026-08-16), 0x6f475642a6e85809b1c36fa62763669b1b48dd5b was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder. A current Sonic RPC read at block 78291595 on 2026-08-28 returned the same endpoint from endpoint() and 24,005 bytes of deployed endpoint code, resolving its authority type as contract rather than the generic bridge placeholder."
       },
       {
         "id": "usbd-bsc-layerzero-endpoint",
@@ -717,7 +717,7 @@
           "contract:bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
           "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "trustedPeerOrRemote": "The BSC OFT endpoint() is 0x1a44076050125825900e736c501f859c50fe728c (EID 30102). The route is a deployed regular OFT endpoint even though the reviewed Ethereum peer was zero at the fixed observation. At BSC block 116351071, peers(30101) returned zero; the Ethereum token's peers(30102) was zero at block 25770566.",
           "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
@@ -726,8 +726,8 @@
         },
         "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 116351071,
+        "observedAt": "2026-08-28",
+        "observedBlock": 118462178,
         "sources": [
           {
             "label": "USBD bsc DebtToken endpoint/peer reads (2026-08-16)",
@@ -742,7 +742,7 @@
             "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
           }
         ],
-        "evidence": "At Bsc fixed observation block 116351071 (2026-08-16), 0x1a44076050125825900e736c501f859c50fe728c was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+        "evidence": "At BSC fixed observation block 116351071 (2026-08-16), 0x1a44076050125825900e736c501f859c50fe728c was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder. A current BSC RPC read at block 118462178 on 2026-08-28 returned the same endpoint from endpoint() and 24,005 bytes of deployed endpoint code, resolving its authority type as contract rather than the generic bridge placeholder."
       },
       {
         "id": "usbd-nibiru-layerzero-endpoint",
@@ -761,7 +761,7 @@
           "contract:nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
           "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "trustedPeerOrRemote": "The Nibiru OFT endpoint() is 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd (EID 30369). The route is a deployed regular OFT endpoint even though the reviewed Ethereum peer was zero at the fixed observation. At Nibiru block 44572793, peers(30101) returned zero; the Ethereum token's peers(30369) was zero at block 25770566.",
           "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
@@ -770,8 +770,8 @@
         },
         "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 44572793,
+        "observedAt": "2026-08-28",
+        "observedBlock": 45161602,
         "sources": [
           {
             "label": "USBD nibiru DebtToken endpoint/peer reads (2026-08-16)",
@@ -786,7 +786,39 @@
             "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
           }
         ],
-        "evidence": "At Nibiru fixed observation block 44572793 (2026-08-16), 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+        "evidence": "At Nibiru fixed observation block 44572793 (2026-08-16), 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder. A current Nibiru RPC read at block 45161602 on 2026-08-28 returned the same endpoint from endpoint() and 24,005 bytes of deployed endpoint code, resolving its authority type as contract rather than the generic bridge placeholder."
+      },
+      {
+        "id": "usbd-layerzero-dvn-validation",
+        "label": "USBD LayerZero DVN/ULN validator authority",
+        "routeRefs": [
+          "ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "The exact per-OApp send and receive ULN libraries, required and optional DVNs, confirmation thresholds, executor settings, and validator operating authorities were not independently read for the reviewed USBD routes.",
+          "trustedPeerOrRemote": "The exact OFT delivery Endpoints and common owner/delegate EOA are recorded in separate controls. Those delivery and application-admin identities do not establish the independent LayerZero validator authority."
+        },
+        "observedAt": "2026-08-28",
+        "sources": [
+          {
+            "label": "LayerZero OFT standard",
+            "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+          }
+        ],
+        "evidence": "Current endpoint code and owner reads resolve the exact USBD delivery and peer-admin contracts separately. The reviewed evidence does not resolve the weakest external DVN/ULN validator authority for these routes, so this control remains unknown rather than inheriting an Endpoint contract identity."
       }
     ]
   }

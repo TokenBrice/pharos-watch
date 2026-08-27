@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "IAUon's Ethereum and BSC native deployments have OndoOFT bridge overlays and HyperEVM is a LayerZero OFT bridge representation. Ondo documents LayerZero V2, Canary DVN, LayerZero Labs DVN, Ondo DVN, custom rate limiting, and emergency pause as bridge controls; the current IAUon-specific peers, DVN path configuration, and numeric limits remain evidence gaps. Native GMTokenManager and Solana issuance stay in Mint Authority.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration; verified finding 2026-08-16",
+    "summary": "IAUon's Ethereum and BSC native deployments have OndoOFT bridge overlays and HyperEVM is a LayerZero OFT bridge representation. The local OndoOFT delivery contracts and their OndoOwner and rate-limit controllers are identified. Ondo's generic bridge documentation names LayerZero V2 and three DVN families, but it does not establish IAUon's current per-path peers, DVN roster, quorum, or validator controller; that validation authority therefore remains unresolved. Native GMTokenManager and Solana issuance stay in Mint Authority.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "verified",
     "protocols": [
       {
@@ -169,12 +169,12 @@
           "protocol:layerzero-oft-v2",
           "protocol:layerzero-dvns"
         ],
-        "authorityType": "bridge",
+        "authorityType": "unknown",
         "routeChecks": {
           "attestorQuorum": "Ondo's current bridge documentation names Canary DVN, LayerZero Labs DVN, and Ondo DVN for the LayerZero V2 rail; the current IAUon-specific DVN quorum and path configuration were not published.",
           "unsupportedReason": "Generic documentation establishes the validator families but not the live IAUon-specific peer, DVN, or per-path configuration."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-08-28",
         "sources": [
           {
             "label": "Ondo Token Bridge docs",
@@ -185,7 +185,7 @@
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
         ],
-        "evidence": "Ondo documents LayerZero V2 for Ondo Stocks with Canary DVN, LayerZero Labs DVN, and Ondo DVN validation. This protocol-level validator control applies to the Ethereum and BSC OFT overlays and the HyperEVM representation; Solana is a native issuance route and is excluded."
+        "evidence": "Ondo's generic bridge documentation names LayerZero V2, Canary DVN, LayerZero Labs DVN, and Ondo DVN. The 2026-08-28 review found no primary source in the record that binds a current IAUon path to an exact peer, DVN roster, quorum, or validator controller. The known OFT delivery contracts cannot substitute for that missing validator authority, so this shared validation control remains unknown; Solana is a native issuance route and is excluded."
       },
       {
         "id": "iauon-ethereum-oft-bridge-minter",
@@ -203,7 +203,7 @@
           "protocol:layerzero-oft-v2",
           "contract:ethereum:0x8ffe0da486a4075e7bbb5763fad4732d41f9667c"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "capDescription": "The Ethereum OndoOFT is the token-level bridge minter/burner; route-specific custom limits are administered separately and were not published for IAUon.",
         "canRaiseCap": false,
         "routeChecks": {
@@ -242,7 +242,7 @@
           "protocol:layerzero-oft-v2",
           "contract:bsc:0xeb8ceb319463fdc97f7860211042e2e1abc81f88"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "capDescription": "The BSC OndoOFT is the token-level bridge minter/burner; route-specific custom limits are administered separately and were not published for IAUon.",
         "canRaiseCap": false,
         "routeChecks": {
@@ -281,7 +281,7 @@
           "protocol:layerzero-oft-v2",
           "contract:hyperevm:0xce61f9246755cc399fd7f37d6b3478590b75aace"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "capDescription": "The HyperEVM OndoOFT is the sole local token minter for the bridge representation; route-specific custom limits are administered separately and were not published for IAUon.",
         "canRaiseCap": false,
         "routeChecks": {
@@ -444,29 +444,29 @@
       },
       {
         "id": "iauon-shared-rate-limiter-admin",
-        "label": "IAUon shared Ondo bridge rate-limiter administrator",
+        "label": "IAUon Ethereum Ondo bridge rate-limiter administrator",
         "routeRefs": [
-          "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
-          "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
-          "hyperevm:0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+          "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
         ],
         "capabilities": [
           "rate-limit"
         ],
+        "controllerChain": "ethereum",
         "controllerAddress": "0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "eoa:0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+          "eoa:ethereum:0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
         ],
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The same EOA holds RATE_LIMITER_ADMIN_ROLE on the Ethereum, BSC, and HyperEVM OndoOwner contracts; current numeric per-path limits were not published.",
+        "capDescription": "This EOA holds RATE_LIMITER_ADMIN_ROLE on the Ethereum OndoOwner contract; current numeric IAUon path limits were not published.",
         "canRaiseCap": true,
         "routeChecks": {
-          "rateLimits": "Live role inventories at Ethereum block 25,770,668, BSC block 116,353,763, and HyperEVM block 43,374,894 identify 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as the RATE_LIMITER_ADMIN_ROLE member on each OndoOwner. Ondo documents custom bridge rate limiting, but current IAUon values were not published.",
+          "rateLimits": "The live role inventory at Ethereum block 25,770,668 identifies 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE on the Ethereum OndoOwner. Ondo documents custom bridge rate limiting, but current IAUon values were not published.",
           "unsupportedReason": "No route-specific inbound/outbound capacity or aggregate limit was independently decoded in this review."
         },
         "observedAt": "2026-08-16",
+        "observedBlock": 25770668,
         "sources": [
           {
             "label": "Ondo Token Bridge docs",
@@ -475,17 +475,83 @@
           {
             "label": "Ethereum OndoOwner",
             "url": "https://eth.blockscout.com/address/0xbc6d5c103a3f586e68bd475942a49d041b171c3e"
+          }
+        ],
+        "evidence": "The Ethereum OndoOwner role inventory identifies EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE. This chain-qualified control avoids treating the same-address BSC and HyperEVM deployments as Ethereum authority and does not govern native GMTokenManager issuance."
+      },
+      {
+        "id": "iauon-bsc-rate-limiter-admin",
+        "label": "IAUon BSC Ondo bridge rate-limiter administrator",
+        "routeRefs": [
+          "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+        ],
+        "capabilities": [
+          "rate-limit"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "eoa:bsc:0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This EOA holds RATE_LIMITER_ADMIN_ROLE on the BSC OndoOwner contract; current numeric IAUon path limits were not published.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "rateLimits": "The live role inventory at BSC block 116,353,763 identifies 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE on the BSC OndoOwner. Ondo documents custom bridge rate limiting, but current IAUon values were not published.",
+          "unsupportedReason": "No route-specific inbound/outbound capacity or aggregate limit was independently decoded in this review."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116353763,
+        "sources": [
+          {
+            "label": "Ondo Token Bridge docs",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
           },
           {
             "label": "BSC OndoOwner",
             "url": "https://bscscan.com/address/0x4d4e562d6882dc523b8d629d2e9df9230b699933"
+          }
+        ],
+        "evidence": "The BSC OndoOwner role inventory identifies EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE. This chain-qualified control records the known controller without implying that the current IAUon validator or DVN authority is known."
+      },
+      {
+        "id": "iauon-hyperevm-rate-limiter-admin",
+        "label": "IAUon HyperEVM Ondo bridge rate-limiter administrator",
+        "routeRefs": [
+          "hyperevm:0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+        ],
+        "capabilities": [
+          "rate-limit"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "eoa:hyperevm:0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This EOA holds RATE_LIMITER_ADMIN_ROLE on the HyperEVM OndoOwner contract; current numeric IAUon path limits were not published.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "rateLimits": "The live role inventory at HyperEVM block 43,374,894 identifies 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE on the HyperEVM OndoOwner. Ondo documents custom bridge rate limiting, but current IAUon values were not published.",
+          "unsupportedReason": "No route-specific inbound/outbound capacity or aggregate limit was independently decoded in this review."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 43374894,
+        "sources": [
+          {
+            "label": "Ondo Token Bridge docs",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
           },
           {
             "label": "HyperEVM OndoOwner",
             "url": "https://www.hyperscan.com/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d"
           }
         ],
-        "evidence": "The current Ethereum, BSC, and HyperEVM OndoOwner role inventories all identify the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE. This is a bridge route control and does not govern native GMTokenManager issuance."
+        "evidence": "The HyperEVM OndoOwner role inventory identifies EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE. This chain-qualified control records the known controller without implying that the current IAUon validator or DVN authority is known."
       },
       {
         "id": "iauon-ethereum-beacon-bridge-upgrade",

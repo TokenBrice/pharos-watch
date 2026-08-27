@@ -21,15 +21,15 @@
     "reviewedAt": "2026-07-22"
   },
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "YieldFi token terms specify Chainlink or equivalent pricing for on-chain assets and a reasonable execution-based fallback during market disruption; yUSD has no borrower-owned collateral or liquidation branches.",
+    "tier": "single-source-or-laggy",
+    "summary": "YieldFi calculates yUSD NAV as Series Assets minus Series Liabilities divided by tokens outstanding. Its terms require valuation at least twice weekly, use Chainlink or an equivalent source for on-chain assets, and permit an issuer-selected market-practice or execution-based fallback when pricing is unavailable; the cadence and discretionary fallback make this a laggy top-level NAV process.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex external-b oracle applicability review",
-      "rationale": "YieldFi's yUSD terms define NAV from Series Assets less Series Liabilities, require on-chain assets to be valued with Chainlink or equivalent pricing, and use the resulting series value for tokenholder redemption. That NAV is a price-sensitive top-level authority. Tokenholders do not open borrower positions and the terms mark collateral and liquidation policies inapplicable, so no collateral-liquidation branch rows apply.",
+      "reviewedAt": "2026-08-28",
+      "reviewer": "Codex",
+      "rationale": "The token terms define one series-level NAV and redemption process. They expressly mark collateral requirements and liquidation policy not applicable, and holders do not open borrower positions, so there are no collateral-liquidation branches beyond this top-level valuation path.",
       "sources": [
         {
           "label": "YieldFi yUSD token terms (document last updated 2026-03-18)",
@@ -37,9 +37,9 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 data research",
-    "confidence": "limited",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
+    "confidence": "verified",
     "sources": [
       {
         "label": "YieldFi yUSD token terms",
@@ -49,9 +49,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "YieldFi yUSD has ten local native YToken/YTokenL2 issuance routes and a separate YieldFi BridgeCCIP transfer rail using Chainlink CCIP. BridgeCCIP burns local L2 shares before sending and mints them on a validated return message; Ethereum locks and unlocks yUSD through the verified LockBox. The shared Administrator controls BRIDGE and LOCKBOX role assignment, each BridgeCCIP enforces an allowed peer and processed-message check, and Chainlink CCIP supplies the external validation layer. This route-level accounting is supply-conserving when its peer and message checks hold, but it does not erase the independent local liability boundary of any YToken/YTokenL2 deployment. The current allowed-peer matrix and a complete per-chain consolidated NAV reconciliation were not independently enumerated.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge boundary migration 2026-08-16",
+    "summary": "YieldFi yUSD has ten local native YToken/YTokenL2 issuance routes and a separate YieldFi BridgeCCIP transfer rail using Chainlink CCIP. BridgeCCIP burns local L2 shares before sending and mints them only after Router-delivered CCIP validation; Ethereum locks and unlocks yUSD through the verified LockBox. Per-chain controls preserve the shared CCIP/DON failure domain alongside each exact BridgeCCIP or LockBox controller. This transfer accounting is supply-conserving when peer and message checks hold and remains separate from each deployment's local native issuance.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "verified",
     "protocols": [
       {
@@ -891,7 +891,7 @@
       },
       {
         "id": "yusd-chainlink-ccip-validation",
-        "label": "Chainlink CCIP Router and DON message validation",
+        "label": "Chainlink CCIP DON/RMN validator authority",
         "routeRefs": [
           "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
           "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
@@ -913,10 +913,10 @@
         ],
         "authorityType": "unknown",
         "routeChecks": {
-          "attestorQuorum": "Chainlink CCIP's Router and decentralized oracle network provide the external message-validation layer used by BridgeCCIP. A yUSD-specific DON quorum and route-level validator set were not independently enumerated.",
-          "unsupportedReason": "The external CCIP validation layer is protocol-level evidence rather than a single issuer-controlled address; exact yUSD route configuration remains an evidence gap."
+          "attestorQuorum": "Chainlink's architecture documentation describes commit-DON consensus and independent Risk Management Network blessing, but the exact production DON/RMN validator membership, authority, and controlling contract set for these selected routes were not independently verified.",
+          "trustedPeerOrRemote": "The exact per-chain Chainlink Router and YieldFi BridgeCCIP delivery contracts remain identified in the route-specific controls. This protocol-level control models only the external DON/RMN authority and therefore does not inherit those contract identities."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-08-28",
         "sources": [
           {
             "label": "Chainlink official CCIP documentation",
@@ -927,7 +927,7 @@
             "url": "https://docs.yield.fi/resources/contract-addresses"
           }
         ],
-        "evidence": "The reviewed BridgeCCIP contracts use Chainlink CCIP Router message delivery and external DON validation rather than LayerZero OFT endpoints. The control preserves the external validator failure domain and does not infer a yUSD-specific quorum or peer matrix that was not independently reviewed."
+        "evidence": "The verified route-specific BridgeCCIP implementations identify the exact delivery controller and configured Chainlink Router, then enforce allowed-peer and replay checks. Chainlink's documentation establishes a separate DON/RMN validation layer, but the reviewed evidence does not establish an exact validator authority or one controllerAddress for that layer, so its authority remains unresolved."
       }
     ]
   }

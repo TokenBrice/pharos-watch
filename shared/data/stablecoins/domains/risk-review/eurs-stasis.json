@@ -10,8 +10,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "EURS is issuer-minted natively by STASIS on Ethereum, Algorand, Stellar, and XDC. Polygon EURS is a Polygon PoS lock/mint representation, Arbitrum EURS is a Multichain lock/mint representation, and Gnosis EURS is a Gnosis OmniBridge lock/unlock-and-mint representation; their controllers and upgrade, validator, and limit domains are assessed in structured Bridge Risk controls rather than Mint Authority. DefiLlama additionally reports EURS supply under the raw chain label Everscale, which does not canonicalize to any CHAIN_META entry — a policy-maintainer-routed label pool, not fixable from coin data (verified 2026-07-30: Everscale is the only uncanonicalized label and its €1,587.58 equals the full unmatched-chain-label pool).",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex FIX2-12 mint/bridge boundary review; Kimi T57 wave-2 label-pool verification",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "verified",
     "sources": [
       {
@@ -25,6 +25,10 @@
       {
         "label": "DefiLlama EURS chain balances (Everscale label pool)",
         "url": "https://stablecoins.llama.fi/stablecoin/51"
+      },
+      {
+        "label": "Gnosis Bridge Management",
+        "url": "https://docs.gnosischain.com/bridges/management/"
       }
     ],
     "routes": [
@@ -436,30 +440,39 @@
       },
       {
         "id": "gnosis-omnibridge-mediator",
-        "label": "Gnosis EURS OmniBridge mediator",
+        "label": "Gnosis OmniBridge 8-of-15 governor Safe",
         "routeRefs": [
           "gnosis:0x9ee40742182707467f78344f6b287be8704f27e2"
         ],
         "capabilities": [
           "bridge-mint",
           "bridge-burn",
-          "rate-limit"
+          "rate-limit",
+          "admin",
+          "upgrade",
+          "validator"
         ],
         "controllerChain": "gnosis",
-        "controllerAddress": "0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d",
+        "controllerAddress": "0x7a48dac683da91e4faa5ab13d91ab5fd170875bd",
         "failureDomainKeys": [
           "protocol:gnosis-omnibridge",
-          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+          "protocol:gnosis-amb-validators",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d",
+          "safe:gnosis:0x7a48dac683da91e4faa5ab13d91ab5fd170875bd"
         ],
-        "authorityType": "contract",
+        "authorityType": "safe",
+        "threshold": 8,
+        "signerCount": 15,
+        "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
           "lockboxOrEscrow": "Ethereum-to-Gnosis flow locks the source EURS and mints the representation; Gnosis-to-Ethereum burns the representation and unlocks the source token.",
-          "attestorQuorum": "Gnosis OmniBridge documentation describes AMB validation by a 4-of-7 validator multisig and 8-of-15 governance.",
-          "rateLimits": "The Gnosis OmniBridge documentation identifies daily transfer limits for the route."
+          "attestorQuorum": "OmniBridge shares the AMB validator set. Current Gnosis documentation lists the AMB/OmniBridge validators separately from governance; the 8-of-15 governor Safe can add or remove validators and change the required-signature threshold.",
+          "rateLimits": "The current Bridge Management documentation assigns directional daily-limit and per-transaction-limit changes to the 8-of-15 Gnosis governor Safe.",
+          "pausersAdminsUpgraders": "The 8-of-15 Gnosis governor Safe manages the Gnosis-side bridge contracts and may upgrade bridge or validator contracts, update bridge parameters, and change validator membership or signature thresholds."
         },
-        "capDescription": "The mediator is the representation token owner and route-level lock/unlock-and-mint controller; validator quorum, governance, and daily-limit domains constrain the bridge path rather than native STASIS issuance.",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
+        "capDescription": "The mediator is the representation token owner and route-level lock/unlock-and-mint contract, while the exact 8-of-15 Gnosis governor Safe controls its limits, upgrades, and validator settings. The route limit is therefore governance-raiseable.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-28",
         "observedBlock": 47761362,
         "sources": [
           {
@@ -473,9 +486,17 @@
           {
             "label": "Gnosis JSON-RPC",
             "url": "https://gnosis.publicnode.com"
+          },
+          {
+            "label": "Gnosis Bridge Management",
+            "url": "https://docs.gnosischain.com/bridges/management/"
+          },
+          {
+            "label": "Gnosis AMB and OmniBridge validators",
+            "url": "https://docs.gnosischain.com/bridges/management/validators"
           }
         ],
-        "evidence": "At Gnosis block 47761362, the EURS representation owner() returned this Gnosis OmniBridge mediator. The primary Gnosis documentation describes the mediator's lock/unlock-and-mint path, AMB validation by a 4-of-7 validator multisig, 8-of-15 governance, and daily limits. These bridge controls remain in Bridge Risk and are not counted as native Mint Authority."
+        "evidence": "At Gnosis block 47761362, the EURS representation owner() returned OmniBridge mediator 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d. Primary Gnosis documentation reviewed on 2026-08-28 identifies the Gnosis-side governor as Safe 0x7a48Dac683DA91e4faa5aB13D91AB5fd170875bd with an 8-of-15 threshold. That Safe manages bridge limits, bridge and validator contract upgrades, validator membership, and the validator signature threshold. The mediator remains the delivery contract and failure domain; the governor Safe is the route authority."
       }
     ]
   }

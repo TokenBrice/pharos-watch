@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDX has three independent native issuance chains: Ethereum, Flare, and Songbird. The Ethereum and Flare V2 deployments also expose a LayerZero OFT burn/mint route with reciprocal peers; their bridge mint/burn, peer/configuration, upgrade, and external validation domains are assessed here, while direct MINTER_ROLE issuance and native UUPS mint-logic controls remain in Mint Authority. Songbird V1 has no callable OFT surface and remains native-only.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge boundary migration; verified finding 2026-08-16",
+    "summary": "USDX has three independent native issuance chains: Ethereum, Flare, and Songbird. The Ethereum and Flare V2 deployments also expose a LayerZero OFT burn/mint route with reciprocal peers. Their local delivery contracts, peers, Endpoint addresses, and issuer EOA configuration/upgrade controllers are identified, while direct MINTER_ROLE issuance and native UUPS mint-logic controls remain in Mint Authority. The exact current per-OApp DVN/executor roster, quorum, and validator controller are not established by the reviewed sources, so external validation authority remains unresolved. Songbird V1 has no callable OFT surface and remains native-only.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "verified",
     "protocols": [
       {
@@ -378,9 +378,10 @@
         "authorityType": "unknown",
         "routeChecks": {
           "attestorQuorum": "LayerZero V2 endpoint/DVN/executor validation is an external route failure domain. The exact per-OApp DVN and executor configuration, validator membership, quorum, and emergency override roster were not read; no threshold or custody claim is made.",
-          "trustedPeerOrRemote": "LayerZero's reviewed Ethereum and Flare deployment records identify EIDs 30101 and 30295, while fixed-block reads confirmed reciprocal USDX peers between those EIDs."
+          "trustedPeerOrRemote": "LayerZero's reviewed Ethereum and Flare deployment records identify EIDs 30101 and 30295, while fixed-block reads confirmed reciprocal USDX peers between those EIDs.",
+          "unsupportedReason": "Endpoint deployment addresses and reciprocal OApp peers do not identify the current USDX-specific DVN/executor roster, quorum, or validator controller."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-08-28",
         "sources": [
           {
             "label": "LayerZero Ethereum Mainnet deployment",
@@ -395,7 +396,7 @@
             "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
           }
         ],
-        "evidence": "The Ethereum and Flare USDX V2 deployments use the LayerZero V2 OFT burn/mint route with reciprocal peers, so external message validation remains a material bridge failure domain. The reviewed evidence does not resolve the exact DVN/executor roster or custody threshold; this control records the unresolved validator dependency without inventing a favorable configuration."
+        "evidence": "The Ethereum and Flare USDX V2 deployments use the identified LayerZero V2 Endpoint contracts and reciprocal OFT peers, so their delivery path is known. The 2026-08-28 review found no primary source in the record that resolves the current USDX-specific DVN/executor roster, quorum, emergency override roster, or controlling authority. A generic Endpoint contract type cannot stand in for those missing validator facts; this validation control therefore remains unknown."
       }
     ]
   }

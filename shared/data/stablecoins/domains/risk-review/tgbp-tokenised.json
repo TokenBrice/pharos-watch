@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "tGBP has issuer-native StableTokenV1OFT deployments on Ethereum, Base, BSC, Polygon, Avalanche, Arbitrum, and Gnosis plus an issuer-native Solana SPL mint. LayerZero V2 supplies a separate direct OFT burn/mint mesh: EVM owners configure peers and bridge options, while the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb is one signer of the 1-of-2 mint multisig for inbound bridge credits. Recent LayerZero Scan observations show V302, ten confirmations, three required DVNs, and route-specific executors; the OFT route is therefore externally validated, while direct native minting remains independently scored under Mint Authority.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration",
+    "summary": "tGBP has issuer-native StableTokenV1OFT deployments on Ethereum, Base, BSC, Polygon, Avalanche, Arbitrum, and Gnosis plus an issuer-native Solana SPL mint. LayerZero V2 supplies a separate direct OFT burn/mint mesh: EVM owners configure peers and bridge options, while the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb is one signer of the 1-of-2 mint multisig for inbound bridge credits. The shared EVM owner can mint, pause, configure OFT peers, and authorize upgrades without a verified immutable numeric ceiling, so its bridge cap semantics are conservatively raiseable. Recent LayerZero Scan observations show V302, ten confirmations, three required DVNs, and route-specific executors; the OFT route is therefore externally validated, while direct native minting remains independently scored under Mint Authority.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex mint-bridge-boundary migration; BRDG cap-semantics review 2026-08-28",
     "confidence": "verified",
     "protocols": [
       {
@@ -338,7 +338,7 @@
           "signingModel": "The EVM bridge controller is the issuer EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0; no Safe, timelock, module, guard, or delay was verified."
         },
         "capDescription": "No aggregate bridge mint cap was verified; OFT route-level conservation is supplied by source debit/burn and destination credit/mint, not by a native issuance cap.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "sources": [
           {

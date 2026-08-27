@@ -54,9 +54,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "infiniFi's Ethereum ReceiptToken is the only canonical native-issuance route. BNB's InfiniFiOFT is a LayerZero burn/mint representation, while Tempo's TIP-20 IUSD and OFT Adapter are a lock/mint representation; their bridge contracts, issuer Safe administration, DVN/peer configuration, and Outland portal reconciliation are assessed here rather than in Mint Authority. The Tempo route remains the weakest documented durable route, so the profile uses external-lock-mint. The issuer-listed Plasma address is excluded because pinned on-chain metadata identifies it as iUSDT rather than iUSD.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; RELOC-07 mint/bridge boundary migration",
+    "summary": "infiniFi's Ethereum ReceiptToken is the only canonical native-issuance route. BNB's InfiniFiOFT is a LayerZero burn/mint representation, while Tempo's TIP-20 IUSD and OFT Adapter are a lock/mint representation; their bridge contracts, issuer Safe administration, DVN/peer configuration, and Outland portal reconciliation are assessed here rather than in Mint Authority. The Ethereum adapter and Outland portal mint paths have no verified immutable numeric ceiling, so their bridge-mint cap semantics are conservatively raiseable. The Tempo route remains the weakest documented durable route, so the profile uses external-lock-mint. The issuer-listed Plasma address is excluded because pinned on-chain metadata identifies it as iUSDT rather than iUSD.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex bridge route review; RELOC-07 mint/bridge boundary migration; BRDG cap-semantics review 2026-08-28",
     "confidence": "verified",
     "protocols": [
       {
@@ -259,7 +259,7 @@
           "pausersAdminsUpgraders": "At Ethereum block 25771089, the adapter owner and endpoint delegate were the infiniFi Safe. The owner-controlled peer and delegate configuration is bridge administration; no adapter upgrade authority was separately evidenced. Token policy and pause powers remain owned by their other risk modules."
         },
         "capDescription": "The Safe administers the canonical-side lock/unlock adapter and its LayerZero peer/delegate path; the route's representation mint/burn remains dependent on LayerZero validation and canonical ReceiptToken escrow accounting.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 25771089,
         "sources": [
@@ -531,7 +531,7 @@
           "pausersAdminsUpgraders": "At Ethereum block 25771089, OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3 was the fifth current RECEIPT_TOKEN_MINTER. Its verified cross-chain portal reconciliation capability is retained here and excluded from native Mint Authority posture."
         },
         "capDescription": "OutlandVault can mint/burn canonical IUSD through portal reconciliation to mirror remote supply; destination authentication, outpost inventory, and a complete conservation bound remain unresolved.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 25771089,
         "sources": [
@@ -576,7 +576,7 @@
           "pausersAdminsUpgraders": "The PortalHub OUTLAND_PORTAL relationship is bridge administration and cross-chain authorization, not an additional ordinary native minter. It is recorded separately so the Outland bridge controller is not lost from scoring."
         },
         "capDescription": "PortalHub is the reviewed portal authorization domain for OutlandVault's canonical-side bridge mint/burn reconciliation; route authentication and destination conservation remain unresolved.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 25771089,
         "sources": [

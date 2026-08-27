@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "bIB01 remains independently issuer-native and mintable on all seven authored token deployments; those native issuance rows stay canonical and outside Bridge Risk's bridge-control inventory. A separate six-chain BackedCCIPReceiver rail uses custody lock/release and Chainlink CCIP messaging against the native token addresses, with receiver owners, proxy upgrades, shared custody, router configuration, allowlists, and external message validation scored here. The receiver source contains no bIB01 mint or burn path, and BSC has no current receiver deployment.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration; bib01-backed verified finding",
+    "summary": "bIB01 remains independently issuer-native and mintable on all seven authored token deployments; those native issuance rows stay canonical and outside Bridge Risk's bridge-control inventory. A separate six-chain BackedCCIPReceiver rail uses custody lock/release and Chainlink CCIP messaging against the native token addresses, with receiver owners, proxy upgrades, shared custody, router configuration, allowlists, and external message validation scored here. The shared custody address is a verified EOA, and each configured CCIP router is a contract authority for its route. The receiver source contains no bIB01 mint or burn path, and BSC has no current receiver deployment.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex mint-bridge-boundary migration; bib01-backed verified finding; BRDG authority-model review 2026-08-28",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -426,7 +426,7 @@
           "contract:gnosis:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
           "contract:avalanche:0xbccb121bcc240def73c111211f18c23b81ff8b2e"
         ],
-        "authorityType": "custodian",
+        "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "lockboxOrEscrow": "custodyWallet() returned the same EOA 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad on all six receiver routes. The verified source transfers source bIB01 into this wallet and transfers the equivalent native token out on the destination receive path.",
@@ -469,7 +469,7 @@
           "contract:ethereum:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
           "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "getRouter() returned 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d at Ethereum block 25771145; source/destination allowlist values were not fully enumerated.",
@@ -514,7 +514,7 @@
           "contract:base:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
           "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "getRouter() returned 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd at Base block 50068162; source/destination allowlist values were not fully enumerated.",
@@ -559,7 +559,7 @@
           "contract:polygon:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
           "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "getRouter() returned 0x849c5ed5a80f5b408dd4969b78c2c8fdf0565bfe at Polygon block 92147098; source/destination allowlist values were not fully enumerated.",
@@ -604,7 +604,7 @@
           "contract:arbitrum:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
           "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "getRouter() returned 0x141fa059441e0ca23ce184b6a78bafd2a517dde8 at Arbitrum block 495307116; source/destination allowlist values were not fully enumerated.",
@@ -649,7 +649,7 @@
           "contract:gnosis:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
           "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "getRouter() returned 0x4aad6071085df840abd9baf1697d5d5992bdadce at Gnosis block 47762958; source/destination allowlist values were not fully enumerated.",
@@ -694,7 +694,7 @@
           "contract:avalanche:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
           "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "getRouter() returned 0xf4c7e640eda248ef95972845a62bdc74237805db at Avalanche block 92985493; source/destination allowlist values were not fully enumerated.",
