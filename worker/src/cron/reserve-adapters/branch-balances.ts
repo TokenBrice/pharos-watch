@@ -287,11 +287,15 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
   const totalValue = values.reduce((sum, value) => sum + value.value, 0);
   // The normal one-decimal display precision would drop a real sub-0.05%
   // branch to 0.0%, which can erase a reviewed dependency edge. Preserve such
-  // measured branches at three decimals without inflating their value.
+  // measured branches at three decimals, or six decimals when three would
+  // round a branch out, without inflating its value.
   const hasSubTenthPercentBranch = values.some(({ value }) =>
     Number.isFinite(value) && value > 0 && totalValue > 0 && (value / totalValue) * 100 < 0.05,
   );
-  const slices = slicesFromValues(values, hasSubTenthPercentBranch ? 3 : 1);
+  const hasSubSixDecimalPercentBranch = values.some(({ value }) =>
+    Number.isFinite(value) && value > 0 && totalValue > 0 && (value / totalValue) * 100 < 0.0005,
+  );
+  const slices = slicesFromValues(values, hasSubSixDecimalPercentBranch ? 6 : hasSubTenthPercentBranch ? 3 : 1);
 
   return {
     slices,
