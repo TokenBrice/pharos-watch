@@ -21,15 +21,15 @@
     "reviewedAt": "2026-07-14"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Falcon determines collateral spot prices through its internal offchain system using major-exchange market data and retains discretion over innovative-mint liquidation decisions.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Falcon's terms make its internally calculated Spot Price authoritative for USDf minting, collateral-specific innovative-mint liquidation, and maturity settlement. Falcon says it may use market sources it selects and retains sole discretion over price calculation and immediate liquidation; no independent production feed, heartbeat, fallback, or circuit breaker is published.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "Falcon's internal spot price is unquestionably price-sensitive: it determines USDf mint amounts, innovative-mint liquidation triggers, and maturity payouts. However, the reviewed terms establish user-selected, collateral-specific liquidation and strike parameters without publishing the complete supported-collateral and production pricing-branch inventory, so neither a single top-level path nor a complete multi-branch model can be verified from public sources.",
+      "reviewedAt": "2026-08-28",
+      "reviewer": "Codex",
+      "rationale": "Falcon's internal Spot Price is price-sensitive and governs USDf mint amounts, collateral-specific innovative-mint liquidation triggers, and maturity payouts. The current terms and mechanism pages establish user-selected strike and liquidation parameters but do not publish the complete supported-collateral inventory or map each live collateral to its production price source, collateral parameters, liquidation behavior, backstop, and shutdown/shortfall treatment. A complete top-level or branch model therefore cannot be established from public evidence.",
       "sources": [
         {
           "label": "Falcon Finance terms: internal spot pricing and collateral-specific liquidation (last updated 2026-08-12)",
@@ -41,17 +41,17 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 data research",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Falcon Finance terms of use",
+        "label": "Falcon Finance terms: internal Spot Price and liquidation discretion",
         "url": "https://docs.falcon.finance/resources/terms-of-use"
       },
       {
-        "label": "Falcon classic mint documentation",
-        "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-minting-mechanisms/classic-mint"
+        "label": "Falcon innovative mint: collateral-specific strike and liquidation parameters",
+        "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-minting-mechanisms/innovative-mint"
       },
       {
         "label": "Falcon overcollateralization ratio",

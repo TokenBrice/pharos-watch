@@ -26,14 +26,14 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Freedom Dollar documents one shared, publicly auditable ZANO reserve and decentralized market-making bots around the one-dollar target, but it does not identify an oracle, liquidation engine, or reserve-shortfall procedure.",
+    "summary": "Freedom Dollar documents one shared ZANO reserve and permissionless market-making bots that place orders near one dollar's worth of ZANO. The published whitepaper does not identify the bots' ZANO/USD input, update cadence, stale-price handling, fallback, liquidation engine, or reserve-shortfall procedure, so the system-wide pricing path is reviewed as opaque.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "FUSD has no borrower-specific liquidation markets, but its protocol-level market-making path values ZANO in USD to place buy and sell orders near the one-dollar target, introduce supply, and support redemption against the shared reserve. That price-sensitive system-wide path remains scoreable without branch rows.",
+      "reviewedAt": "2026-08-28",
+      "reviewer": "Codex",
+      "rationale": "FUSD has one shared ZANO reserve and no borrower-specific collateral positions or liquidation markets. Its market-making path values ZANO in USD to place buy and sell orders near the one-dollar target and introduce supply, so the complete disclosed price-sensitive mechanism belongs at top level even though its implementation is not published.",
       "sources": [
         {
           "label": "Freedom Dollar white paper (publisher HTTP Last-Modified 2026-08-24)",
@@ -45,13 +45,17 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
-    "confidence": "limited",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Freedom Dollar white paper",
         "url": "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf"
+      },
+      {
+        "label": "Zano: Freedom Dollar market making and ZANO reserves",
+        "url": "https://blog.zano.org/zano-confidential-assets-in-action-real-world-private-defi/"
       }
     ]
   }

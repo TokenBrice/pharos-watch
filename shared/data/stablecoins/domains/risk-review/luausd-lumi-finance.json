@@ -26,36 +26,44 @@
   },
   "oracleRisk": {
     "tier": "oracleless",
-    "summary": "LUAUSD is minted by users staking LUA against Lumi's internal floor-price mechanism; the reviewed material does not establish the position-level collateral checks or liquidation path.",
+    "summary": "Lumi's current documentation defines LUAUSD as redeemable 1:1 for USDT, and the verified Arbitrum token is an owner-mintable ERC-20 with no oracle or liquidation logic. The older LUA floor-price staking and AMO materials are explicitly filed under Lumi's legacy documentation rather than the current LUAUSD path.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracleless-a review",
-      "rationale": "Lumi's own documentation says LUAUSD is minted against an internal LUA floor price and that the AMO rebalances its Curve pool. That internal floor and AMO rebalance are price-sensitive top-level authorities; the reviewed staking path has no borrower-specific collateral-health or liquidation branches, so no branch inventory is required.",
+      "reviewedAt": "2026-08-28",
+      "reviewer": "Codex",
+      "rationale": "The current LUAUSD page defines one fixed USDT redemption claim and no borrower-specific collateral or liquidation market. The verified token itself has no price-feed branch, while the floor-price staking and AMO pages are explicitly legacy, so the current oracleless claim is complete at top level.",
       "sources": [
         {
-          "label": "Lumi LUA minting documentation (updated 2024-10-09)",
-          "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
+          "label": "Lumi current LUAUSD documentation",
+          "url": "https://lumi-finance.gitbook.io/docs/tokens/luausd"
+        },
+        {
+          "label": "Sourcify verified Arbitrum LUAUSD contract",
+          "url": "https://sourcify.dev/server/v2/contract/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c?fields=all"
         }
       ]
     },
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T20 wave-2 unknown reduction",
-    "confidence": "limited",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "Lumi staking and stablecoin documentation",
+        "label": "Lumi current LUAUSD documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/tokens/luausd"
+      },
+      {
+        "label": "Sourcify verified Arbitrum LUAUSD contract",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c?fields=all"
+      },
+      {
+        "label": "Lumi legacy staking and stablecoin documentation",
         "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
       },
       {
-        "label": "Lumi reserve-backed AMM documentation",
-        "url": "https://lumi-finance.gitbook.io/docs/legacy/lua-minting-secondary-market/reserve-back-amm-mechanism"
-      },
-      {
-        "label": "Lumi LUA minting documentation",
-        "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
+        "label": "Lumi legacy AMO documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/legacy/lua-minting-secondary-market/amo-protocol"
       }
     ]
   },

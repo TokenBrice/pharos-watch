@@ -13,37 +13,45 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Sui describes suiUSDe as an Ethena-powered synthetic dollar backed by digital assets and corresponding short futures positions, but the reviewed public material does not disclose a suiUSDe-specific oracle implementation or failover path.",
+    "tier": "single-source-or-laggy",
+    "summary": "Ethena's official mainnet SDK config enables USDC as the sole suiUSDe mint and redemption collateral and commits a Pyth USDC/USD price into the aggregated-oracle object before either operation. The oracle stores age and price bounds, but the published deployment config identifies no provider other than Pyth and no alternate-feed failover.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "suiUSDe has no issuer-side borrower liquidation markets, but Ethena Whitelabel manages a value-sensitive backing allocation for the token, and the announced design values a portfolio of digital assets and corresponding short futures positions. That system-wide valuation and rebalancing authority is scoreable; DeepBook borrower liquidations are third-party consumption, not suiUSDe issuance branches.",
+      "reviewedAt": "2026-08-28",
+      "reviewer": "Codex",
+      "rationale": "The official mainnet SDK exposes one enabled collateral path, USDC, for suiUSDe minting and redemption. suiUSDe has no issuer-side borrower liquidation market, while DeepBook borrower liquidations are third-party consumption, so the single USDC/Pyth valuation path is complete at top level.",
       "sources": [
         {
-          "label": "Sui suiUSDe design announcement (published 2025-10-01)",
-          "url": "https://blog.sui.io/suig-ethena-suiusde-stablecoin/"
+          "label": "Ethena suiUSDe SDK mainnet constants at commit 23693d91",
+          "url": "https://github.com/ethena-labs/suiusde-sdk/blob/23693d91a218ba2757f7a3837b6a7da24da20b3b/src/utils/constants.ts"
         },
         {
-          "label": "Ethena Whitelabel: suiUSDe backing allocation and reserves (last updated 2026-02)",
-          "url": "https://whitelabel.ethena.fi/"
+          "label": "Ethena suiUSDe SDK mint path at commit 23693d91",
+          "url": "https://github.com/ethena-labs/suiusde-sdk/blob/23693d91a218ba2757f7a3837b6a7da24da20b3b/src/mint.ts"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
-    "confidence": "limited",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Sui suiUSDe launch announcement",
-        "url": "https://blog.sui.io/suig-ethena-suiusde-stablecoin/"
+        "label": "Ethena suiUSDe SDK mainnet constants at commit 23693d91",
+        "url": "https://github.com/ethena-labs/suiusde-sdk/blob/23693d91a218ba2757f7a3837b6a7da24da20b3b/src/utils/constants.ts"
       },
       {
-        "label": "eSui Dollar mainnet launch",
-        "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"
+        "label": "Ethena suiUSDe SDK mint path at commit 23693d91",
+        "url": "https://github.com/ethena-labs/suiusde-sdk/blob/23693d91a218ba2757f7a3837b6a7da24da20b3b/src/mint.ts"
+      },
+      {
+        "label": "Ethena suiUSDe SDK redemption path at commit 23693d91",
+        "url": "https://github.com/ethena-labs/suiusde-sdk/blob/23693d91a218ba2757f7a3837b6a7da24da20b3b/src/redeem.ts"
+      },
+      {
+        "label": "Ethena suiUSDe generated oracle-limit types at commit 23693d91",
+        "url": "https://github.com/ethena-labs/suiusde-sdk/blob/23693d91a218ba2757f7a3837b6a7da24da20b3b/src/generated/suiusde/oracle_limits.ts"
       }
     ]
   }

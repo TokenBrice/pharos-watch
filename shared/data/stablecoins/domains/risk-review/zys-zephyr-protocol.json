@@ -29,33 +29,53 @@
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "ZYS is a share of Zephyr's ZSD yield reserve rather than a borrower debt market; it inherits the underlying ZSD reserve-pricing risk, whose production oracle provider and failure handling remain unpublished.",
+    "tier": "single-source-or-laggy",
+    "summary": "ZYS mint and redemption prices are consensus-derived from the on-chain ZSD yield-reserve tally and ZYS supply. Yield-reserve accrual converts a ZEPH block-reward allocation into ZSD using Zephyr's signed pricing record; three delivery endpoints share one hard-coded RSA signing key, and nodes may reuse the last acceptable record for up to ten blocks.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "ZYS has no borrower-specific collateral or liquidation branches, but Zephyr mints ZYS against deposited ZSD and redeems it at its changing share value in the ZSD Yield Reserve. The reserve also mints yield ZSD by the USD value of a ZEPH block-reward allocation, so ZYS has price-sensitive top-level share valuation and inherited reserve-pricing authority that is scoreable without branch rows.",
+      "reviewedAt": "2026-08-28",
+      "reviewer": "Codex",
+      "rationale": "ZYS is a protocol-wide share of the ZSD Yield Reserve, not a borrower debt market. Its share price is derived from the single yield-reserve tally, while ZEPH-denominated yield accrual uses Zephyr's signed pricing record. There are no collateral-specific liquidation branches, so the complete exposure belongs at top level.",
       "sources": [
         {
-          "label": "Zephyr Protocol v2.0.0 ZSD Yield hardfork announcement (2024-09-30)",
-          "url": "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
+          "label": "Zephyr ten-block pricing-record validity at commit 67c5f53b",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h#L208-L209"
+        },
+        {
+          "label": "Zephyr consensus-derived ZYS share price at commit 67c5f53b",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L1090-L1114"
+        },
+        {
+          "label": "Zephyr oracle-priced yield-reserve accrual at commit 67c5f53b",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/blockchain.cpp#L4866-L4876"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 data research",
-    "confidence": "limited",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Zephyr documentation",
-        "url": "https://zephyrprotocol.com/documentation"
+        "label": "Zephyr oracle endpoints and public key at commit 67c5f53b",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h#L270-L275"
       },
       {
-        "label": "Zephyr repository",
-        "url": "https://github.com/ZephyrProtocol/zephyr"
+        "label": "Zephyr pricing-record signature and timestamp validation at commit 67c5f53b",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/oracle/pricing_record.cpp#L177-L234"
+      },
+      {
+        "label": "Zephyr last-valid pricing-record selection at commit 67c5f53b",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/blockchain.cpp#L281-L303"
+      },
+      {
+        "label": "Zephyr consensus-derived ZYS share price at commit 67c5f53b",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L1090-L1114"
+      },
+      {
+        "label": "Zephyr oracle-priced yield-reserve accrual at commit 67c5f53b",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/blockchain.cpp#L4866-L4876"
       }
     ]
   }
