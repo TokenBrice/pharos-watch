@@ -213,7 +213,9 @@ describe("parseStartPayload", () => {
 });
 
 describe("parsePendingDisambiguation", () => {
-  it("parses an unversioned old-production row through the legacy columns", () => {
+  it("rejects an unversioned row now that the activation-boundary fallback is retired", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     const parsed = parsePendingDisambiguation(
       makePendingRow({
         action_payload: JSON.stringify({ presetIds: ["usd-top25"] }),
@@ -221,18 +223,9 @@ describe("parsePendingDisambiguation", () => {
       }),
     );
 
-    expect(parsed).toMatchObject({
-      actionType: "subscribe",
-      presetIds: ["usd-top25"],
-      resolvedCoins: [{ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }],
-      ambiguousTicker: "USDF",
-      candidates: [
-        { id: "usdf-falcon", symbol: "USDF", name: "Falcon USD" },
-        { id: "usdf-tradfi", symbol: "USDF", name: "TradFi USD" },
-      ],
-      remainingTickers: ["USDC"],
-    });
-    expect(parsed?.actionType === "subscribe" && [...parsed.alertTypes]).toEqual(["safety"]);
+    expect(parsed).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("unsupported canonical schemaVersion=undefined"));
+    warnSpy.mockRestore();
   });
 
   it("fails loudly for an explicit unsupported canonical payload version", () => {

@@ -145,25 +145,6 @@ function parsePendingActionPayload(pending: PendingDisambiguationRow): Record<st
   }
 }
 
-function parsePendingJsonField<T>(
-  pending: PendingDisambiguationRow,
-  field: keyof Pick<
-    PendingDisambiguationRow,
-    "alert_types" | "resolved_ids" | "candidates" | "remaining_tickers"
-  >,
-  fallback: T,
-  transform: (value: unknown) => T,
-): T {
-  const rawValue = pending[field];
-  if (!rawValue) return fallback;
-  try {
-    return transform(JSON.parse(rawValue));
-  } catch (error) {
-    logPendingParseWarning(pending, field, error);
-    return fallback;
-  }
-}
-
 export function parseCommand(text: string): { command: string; args: string; botMention: string | null } {
   const spaceIdx = text.indexOf(" ");
   const commandToken = spaceIdx === -1 ? text : text.slice(0, spaceIdx);
@@ -293,8 +274,7 @@ export function parsePendingDisambiguation(
     };
   }
 
-  const usesLegacyColumns = payload.schemaVersion === undefined;
-  if (!usesLegacyColumns && payload.schemaVersion !== 1) {
+  if (payload.schemaVersion !== 1) {
     logPendingParseWarning(
       pending,
       "action_payload",
@@ -303,28 +283,12 @@ export function parsePendingDisambiguation(
     return null;
   }
 
-  // Activation-boundary compatibility only: an old Worker can write an
-  // unversioned row immediately before this Worker activates. Delete this
-  // branch in the first release deployed at least one DISAMBIGUATION_TTL_SEC
-  // after this Worker activates, alongside the deferred legacy-column drop.
-  const legacyAlertTypes = usesLegacyColumns
-    ? new Set(parsePendingJsonField(pending, "alert_types", [], parseStringArray))
-    : null;
-  const resolvedIds = usesLegacyColumns
-    ? parsePendingJsonField(pending, "resolved_ids", [], parseStringArray)
-    : parseStringArray(payload.resolvedIds);
-  const candidates = usesLegacyColumns
-    ? parsePendingJsonField(pending, "candidates", [], parseResolvedCoins)
-    : parseResolvedCoins(payload.candidates);
-  const remainingTickers = usesLegacyColumns
-    ? parsePendingJsonField(pending, "remaining_tickers", [], parseStringArray)
-    : parseStringArray(payload.remainingTickers);
-  const ambiguousTicker = usesLegacyColumns
-    ? pending.ambiguous_ticker
-    : typeof payload.ambiguousTicker === "string" ? payload.ambiguousTicker : "";
+  const resolvedIds = parseStringArray(payload.resolvedIds);
+  const candidates = parseResolvedCoins(payload.candidates);
+  const remainingTickers = parseStringArray(payload.remainingTickers);
+  const ambiguousTicker = typeof payload.ambiguousTicker === "string" ? payload.ambiguousTicker : "";
 
   if (candidates.length === 0) {
-    if (usesLegacyColumns) return null;
     logPendingParseWarning(
       pending,
       "action_payload",
@@ -337,7 +301,7 @@ export function parsePendingDisambiguation(
 
   if (actionType === "subscribe") {
     const actionAlertTypes = new Set(
-      Array.isArray(payload.alertTypes) ? parseStringArray(payload.alertTypes) : Array.from(legacyAlertTypes ?? []),
+      Array.isArray(payload.alertTypes) ? parseStringArray(payload.alertTypes) : [],
     );
     const depegWorseningBpsStep =
       isDepegStepValue(payload.depegWorseningBpsStep) ||

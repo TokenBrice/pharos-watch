@@ -165,6 +165,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     ),
     exempt("scripts/maintenance/report-build-size.mjs", "read-only"),
     exempt("scripts/maintenance/run-all-tests.ts", "test"),
+    exempt("scripts/maintenance/run-bootstrap-rehearsal.ts", "test"),
     exempt("scripts/maintenance/run-coverage-audit.ts", "read-only"),
     exempt("scripts/maintenance/run-critical-contracts.ts", "test"),
     exempt("scripts/maintenance/run-critical-coverage-shard.ts", "test"),

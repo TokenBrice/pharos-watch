@@ -97,7 +97,6 @@ Primary files:
 
 - `src/app/compare/page.tsx`
 - `src/app/compare/[slug]/page.tsx`
-- `src/app/compare/client.tsx` — client re-export shim
 - `src/components/compare/compare-client.tsx` — `CompareClient` + mobile selection controls
 - `src/components/comparison-table.tsx`
 - `src/components/comparison-chart.tsx`

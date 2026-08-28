@@ -145,7 +145,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 **Route shape:**
 
 - `src/app/compliance/page.tsx` — server shell via `createClientFeaturePage()`; metadata, breadcrumb, static intro + FAQ.
-- `src/app/compliance/client.tsx` — client entry that re-exports `ComplianceClient` from `src/components/compliance/compliance-client.tsx`, which owns the filters and both regime tables.
+- `src/components/compliance/compliance-client.tsx` — `ComplianceClient`, lazily loaded by the page shell; owns the filters and both regime tables.
 - `src/lib/compliance-model.ts` — `buildComplianceViewModel()` mapping registry rows → MiCA and GENIUS table rows. The main table contains active assets only; pre-launch GENIUS rows may enter Implementation Watch, while frozen, quarantined, and delisted rows are excluded.
 - `src/app/compliance/loading.tsx`, `error.tsx` — match the `/liquidity` skeleton/boundary pattern.
 - `public/_redirects` — legacy `/mica` traffic redirects to `/compliance/`.

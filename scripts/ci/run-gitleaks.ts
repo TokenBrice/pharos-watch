@@ -17,7 +17,24 @@ import { dirname, join, resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export const GITLEAKS_VERSION = "8.30.0";
-export const GITLEAKS_LINUX_X64_TARBALL_SHA256 = "79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e";
+const GITLEAKS_PINS = {
+  "linux-x64": {
+    assetSuffix: "linux_x64.tar.gz",
+    sha256: "79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e",
+  },
+  "linux-arm64": {
+    assetSuffix: "linux_arm64.tar.gz",
+    sha256: "b4cbbb6ddf7d1b2a603088cd03a4e3f7ce48ee7fd449b51f7de6ee2906f5fa2f",
+  },
+  "darwin-arm64": {
+    assetSuffix: "darwin_arm64.tar.gz",
+    sha256: "b251ab2bcd4cd8ba9e56ff37698c033ebf38582b477d21ebd86586d927cf87e7",
+  },
+  "darwin-x64": {
+    assetSuffix: "darwin_x64.tar.gz",
+    sha256: "ca221d012d247080c2f6f61f4b7a83bffa2453806b0c195c795bbe9a8c775ed5",
+  },
+} as const;
 const ZERO_SHA = /^0+$/;
 const FALCON_SELF_TEST_PATH =
   "shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2099-01-01T00-00-00.000Z-a1b2c3d4e5f6-protocol-api.json";
@@ -37,6 +54,7 @@ interface GitleaksOptions {
   baseRef: string;
   fullHistory: boolean;
   headRef: string;
+  lenientPlatform: boolean;
   mode: "worktree" | "range";
 }
 
@@ -44,7 +62,17 @@ function parseOptions(argv: readonly string[], env: NodeJS.ProcessEnv): Gitleaks
   const mode = argv.includes("--worktree") ? "worktree" : "range";
   const baseRef = env.GITLEAKS_BASE_REF ?? "origin/main";
   const headRef = env.GITLEAKS_HEAD_REF ?? "HEAD";
-  return { baseRef, fullHistory: env.GITLEAKS_FULL_HISTORY === "1" || ZERO_SHA.test(baseRef), headRef, mode };
+  return {
+    baseRef,
+    fullHistory: env.GITLEAKS_FULL_HISTORY === "1" || ZERO_SHA.test(baseRef),
+    headRef,
+    lenientPlatform: argv.includes("--lenient-platform"),
+    mode,
+  };
+}
+
+export function resolveGitleaksPin(platformKey: string): (typeof GITLEAKS_PINS)[keyof typeof GITLEAKS_PINS] | undefined {
+  return GITLEAKS_PINS[platformKey as keyof typeof GITLEAKS_PINS];
 }
 
 export function buildGitleaksWorktreeInput({
@@ -74,23 +102,24 @@ export async function ensurePinnedGitleaks({
   cacheRoot = resolve(process.cwd(), ".cache/gitleaks"),
   fetchImpl = fetch,
   execFile = execFileSync,
+  platformKey = `${platform()}-${arch()}`,
 }: {
   cacheRoot?: string;
   fetchImpl?: typeof fetch;
   execFile?: (file: string, args: string[], options: { stdio: "ignore" }) => unknown;
+  platformKey?: string;
 } = {}): Promise<string> {
-  if (platform() !== "linux" || arch() !== "x64") {
-    throw new Error(`Pinned Gitleaks bootstrap supports linux/x64, received ${platform()}/${arch()}`);
-  }
+  const pin = resolveGitleaksPin(platformKey);
+  if (!pin) throw new Error(`No pinned Gitleaks binary for ${platformKey.replace("-", "/")}`);
 
-  const versionDir = resolve(cacheRoot, GITLEAKS_VERSION);
+  const versionDir = resolve(cacheRoot, `${GITLEAKS_VERSION}-${platformKey}`);
   const binaryPath = resolve(versionDir, "gitleaks");
   const markerPath = resolve(versionDir, "verified.json");
   if (existsSync(binaryPath) && existsSync(markerPath)) {
     try {
       const marker = JSON.parse(readFileSync(markerPath, "utf8"));
       if (
-        marker.tarballSha256 === GITLEAKS_LINUX_X64_TARBALL_SHA256 &&
+        marker.tarballSha256 === pin.sha256 &&
         marker.binarySha256 === sha256File(binaryPath)
       ) {
         return binaryPath;
@@ -105,13 +134,13 @@ export async function ensurePinnedGitleaks({
   const tarballPath = resolve(tempDir, "gitleaks.tar.gz");
   mkdirSync(tempDir, { recursive: true });
   try {
-    const url = `https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz`;
+    const url = `https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_${pin.assetSuffix}`;
     const response = await fetchImpl(url);
     if (!response.ok) throw new Error(`download returned HTTP ${response.status}`);
     writeFileSync(tarballPath, Buffer.from(await response.arrayBuffer()));
     const actualSha = sha256File(tarballPath);
-    if (actualSha !== GITLEAKS_LINUX_X64_TARBALL_SHA256) {
-      throw new Error(`tarball checksum mismatch: expected ${GITLEAKS_LINUX_X64_TARBALL_SHA256}, received ${actualSha}`);
+    if (actualSha !== pin.sha256) {
+      throw new Error(`tarball checksum mismatch: expected ${pin.sha256}, received ${actualSha}`);
     }
 
     execFile("tar", ["-xzf", tarballPath, "-C", tempDir, "gitleaks"], { stdio: "ignore" });
@@ -123,7 +152,7 @@ export async function ensurePinnedGitleaks({
       `${JSON.stringify(
         {
           binarySha256: sha256File(binaryPath),
-          tarballSha256: GITLEAKS_LINUX_X64_TARBALL_SHA256,
+          tarballSha256: pin.sha256,
           version: GITLEAKS_VERSION,
         },
         null,
@@ -190,15 +219,25 @@ export async function runGitleaks({
   buildWorktreeInput = buildGitleaksWorktreeInput,
   env = process.env,
   ensureBinary = ensurePinnedGitleaks,
+  platformKey = `${platform()}-${arch()}`,
   runBinary = spawnSync,
 }: {
   argv?: string[];
   env?: NodeJS.ProcessEnv;
   ensureBinary?: () => Promise<string>;
   buildWorktreeInput?: () => Buffer;
+  platformKey?: string;
   runBinary?: GitleaksRunner;
 } = {}): Promise<{ status: number }> {
   const options = parseOptions(argv, env);
+  if (!resolveGitleaksPin(platformKey)) {
+    const displayPlatform = platformKey.replace("-", "/");
+    if (options.lenientPlatform) {
+      console.warn(`[gitleaks] SKIPPED: no pinned binary for ${displayPlatform}`);
+      return { status: 0 };
+    }
+    throw new Error(`No pinned Gitleaks binary for ${displayPlatform}`);
+  }
   const binaryPath = await ensureBinary();
   runGitleaksConfigSelfTest(binaryPath, { runBinary });
   const worktreeMode = options.mode === "worktree";

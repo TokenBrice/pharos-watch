@@ -20,13 +20,14 @@ npm run typecheck
 npm run typecheck:tests
 npm run typecheck:worker
 npm run check:pr -- --base=origin/main
+npm run check:bootstrap
 npm run check:structural
 npm run check:release
 npm run test:a11y
 npm run test:a11y:hydrated
 ```
 
-`check:pr` mirrors the normal non-doc PR path: changed-file ESLint, source typing (including generated Next route types), baseline repository checks, high-stakes coverage-waiver completeness, Pages/Worker guardrails selected from the diff, structural guardrails for affected production or validation paths, critical plus Vitest-affected tests, and generated artifacts selected from their registered sources. `test:all`, full lint, typed lint, test-file typechecking, the structural guardrails, and the Node 26 compatibility proof run nightly or on manual dispatch. `check:release` is the optional local production-build and Worker-bundle rehearsal; the protected GitHub gate and production workflows remain authoritative.
+`check:pr` is the adaptive local PR contract. It refreshes `origin/main` before classification by default (`--no-fetch` or `PHAROS_PR_NO_FETCH=1` skips the fetch), warns when the resolved base commit is more than 24 hours old, runs the pinned Gitleaks scanner over `base..head`, and executes the deploy classifier with bare Node exactly as CI does. Docs-only diffs run the CI docs lane instead of static checks and tests; mixed diffs that touch `docs/` add that lane. Other diffs run changed-file ESLint, source typing (including generated Next route types), baseline repository checks, high-stakes coverage-waiver completeness, Pages/Worker guardrails selected from the diff, structural guardrails for affected production or validation paths, critical plus Vitest-affected tests, and generated artifacts selected from their registered sources. When an enrolled critical source changes, `check:pr` also runs `coverage:critical` against the base SHA; `--skip-coverage` suppresses only that local rehearsal and prints a reminder that the remote gate still applies. Pages-surface changes print a reminder to consider `SEO_PREVIOUS_SITEMAP_URL=https://stablecoin-dashboard.pages.dev/sitemap.xml npm run check:release` before a release batch. GitHub Actions still invokes `check:pr:static` and `test:pr` directly rather than the local orchestrator. `check:bootstrap` rehearses a clean CI bootstrap from committed state, verifies every `@/generated/*` import resolves, and always restores the set-aside bootstrap-owned outputs afterwards, so the rehearsal leaves the working tree unchanged. `test:all`, full lint, typed lint, test-file typechecking, the structural guardrails, and the Node 26 compatibility proof run nightly or on manual dispatch. `check:release` is the optional local production-build and Worker-bundle rehearsal; the protected GitHub gate and production workflows remain authoritative.
 
 Use `package.json` for the full live npm-script list. `scripts/lib/automation-registry.mjs` owns generated artifacts and deploy-impact classification; `scripts/lib/critical-test-files.mts` and `scripts/lib/critical-coverage.mjs` own critical-suite membership.
 
@@ -441,7 +442,7 @@ CI does **not** run a full-suite coverage gate. The PR workflow runs `coverage:c
 - Fails non-doc PR static validation when a high-stakes candidate is missing enrollment, a waiver is invalid, or a waiver no longer maps to a candidate file; a passed `reviewAfter` date is reported as an advisory review queue and does not fail the gate
 - Fails closed when an explicit `CRITICAL_COVERAGE_COMPARE_REF` cannot be diffed, so a bad ref cannot silently disable the touched-file ratchet
 - The weekly `Critical Coverage Ratchet` workflow sets `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked regularly, while PRs pay the coverage cost only for touched enrolled source.
-- Local rehearsals that need coverage ratchet behavior should run `npm run coverage:critical` directly with the relevant `CRITICAL_COVERAGE_*` env controls.
+- `npm run check:pr -- --base=<ref>` runs this lane automatically when the diff touches an enrolled critical source, setting `CRITICAL_COVERAGE_COMPARE_REF` to the resolved base SHA. Use `npm run coverage:critical` directly only for custom `CRITICAL_COVERAGE_*` controls; `--skip-coverage` skips the local lane but not the remote gate.
 
 Gate scripts and ownership:
 

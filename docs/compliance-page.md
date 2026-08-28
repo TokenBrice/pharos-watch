@@ -7,8 +7,7 @@ The tracker is informational and source-backed, not legal advice. Missing regime
 ## Ownership
 
 - Route shell and metadata: `src/app/compliance/page.tsx`
-- Client entry shim (client boundary only): `src/app/compliance/client.tsx`
-- Client filter/search/table behavior: `src/components/compliance/compliance-client.tsx`
+- Client filter/search/table behavior (lazily loaded by the page shell): `src/components/compliance/compliance-client.tsx`
 - Row projection, sorting, regime state, and summary: `src/lib/compliance-model.ts`
 - MiCA labels/presentation: `shared/lib/mica.ts`
 - GENIUS labels/presentation: `shared/lib/genius.ts`
