@@ -1,5 +1,3 @@
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildPageMetadata,
@@ -8,6 +6,7 @@ import {
 } from "@/lib/page-metadata";
 import digests from "../../../data/digests.json";
 import { DigestStoredSnapshotSchema } from "@shared/types/digest";
+import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
 
 const fixtures = vi.hoisted(() => {
   const active = {
@@ -131,16 +130,8 @@ describe("buildPageMetadata", () => {
 });
 
 describe("METHODOLOGY_MARKDOWN_PATHS coverage", () => {
-  it("covers every on-disk methodology sub-route and the base /methodology/ path", () => {
-    // Derive slugs from the Next.js app-router directories under src/app/methodology/.
-    // Any new changelog route must be present in the explicit Set or this test fails.
-    const methodologyDir = join(process.cwd(), "src/app/methodology");
-    const slugs = readdirSync(methodologyDir, { withFileTypes: true })
-      .filter((d) => d.isDirectory() && !d.name.startsWith("_") && !d.name.startsWith("(") && d.name !== "sections")
-      .map((d) => `/methodology/${d.name}/`);
-
-    // Base path must always be present
-    const allPaths = ["/methodology/", ...slugs];
+  it("covers the base route and every registry-backed methodology changelog route", () => {
+    const allPaths = ["/methodology/", ...METHODOLOGY_CHANGELOG_SITEMAP_PATHS];
 
     for (const path of allPaths) {
       expect(

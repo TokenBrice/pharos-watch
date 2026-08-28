@@ -4,7 +4,6 @@ import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { SEE_ALSO_GRAPH } from "@/lib/see-also-graph";
 import { buildCoverageDatasetJsonLd } from "@/lib/analytics-dataset-json-ld";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
 import {
@@ -65,19 +64,17 @@ const COVERAGE_STATIC_SECTION = (
   </section>
 );
 
-export const metadata = buildPageMetadata({
-  title: "Coverage Matrix: Stablecoin Feature Coverage",
-  description: coverageDescription,
-  canonical: "/coverage/",
-  ogImage: `${SITE_URL}/og-coverage.png`,
-});
-
-export default createClientFeaturePage({
+const route = createClientFeaturePage({
+  path: "/coverage/",
+  metadata: {
+    title: "Coverage Matrix: Stablecoin Feature Coverage",
+    description: coverageDescription,
+    ogImage: `${SITE_URL}/og-coverage.png`,
+  },
   loadClient: () => import("./client").then((m) => ({ default: m.default })),
   loading: <Skeleton className="h-[560px] w-full rounded-xl" />,
   shell: {
     breadcrumbName: "Coverage",
-    path: "/coverage/",
     title: "Coverage Matrix",
     leadParagraphs: [
       `What Pharos can show for each of the ${ACTIVE_STABLECOIN_COUNT} active stablecoins, and how much of the ${TRACKED_STABLECOIN_COUNT}-asset tracked market each feature reaches.`,
@@ -100,3 +97,6 @@ export default createClientFeaturePage({
   beforeClient: COVERAGE_STATIC_SECTION,
   afterClient: <SeeAlsoFooter links={SEE_ALSO_GRAPH["/coverage/"]} />,
 });
+
+export const metadata = route.metadata;
+export default route.Page;

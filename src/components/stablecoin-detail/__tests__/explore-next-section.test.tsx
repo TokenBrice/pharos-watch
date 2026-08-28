@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 
 vi.mock("next/link", async () => {
@@ -28,7 +28,6 @@ const coin = {
 } as unknown as StablecoinMeta;
 
 describe("ExploreNextSection", () => {
-  afterEach(() => cleanup());
 
   it("links mechanism tracker CTAs to the canonical active screener filter", () => {
     render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);

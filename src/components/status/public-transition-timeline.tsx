@@ -1,7 +1,8 @@
 "use client";
 import type { PublicStatusHistoryWindow, PublicStatusTransition } from "@shared/types";
 import { PUBLIC_STATUS_HISTORY_WINDOWS } from "@shared/types/status";
-import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { TableCell, TableRow } from "@/components/table";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -9,6 +10,13 @@ const TYPE_LABELS: Record<string, string> = {
   recover: "Recovery",
   init: "Initialized",
 };
+
+const PUBLIC_TRANSITION_COLUMNS: readonly DataTableColumn[] = [
+  { id: "time", label: "Time", className: "pb-2 font-medium" },
+  { id: "transition", label: "Transition", className: "pb-2 font-medium" },
+  { id: "type", label: "Type", className: "pb-2 font-medium" },
+  { id: "reason", label: "Reason", className: "pb-2 font-medium" },
+];
 
 interface PublicTransitionTimelineProps {
   transitions: PublicStatusTransition[];
@@ -55,31 +63,18 @@ export function PublicTransitionTimeline({
         ) : transitions.length === 0 ? (
           <p className="text-sm text-muted-foreground">No status changes recorded in this window.</p>
         ) : (
-          <TableFrame
+          <DataTableShell
             tableId="public-status-transition-timeline"
             testId="public-status-transition-timeline-table"
+            columns={PUBLIC_TRANSITION_COLUMNS}
             chrome="content"
             density="compact"
+            caption="Public status transition history"
+            captionClassName="sr-only"
+            headerClassName=""
+            headerRowClassName="border-b text-left text-muted-foreground"
           >
-            <TableCaption className="sr-only">Public status transition history</TableCaption>
-            <TableHeader>
-              <TableRow className="border-b text-left text-muted-foreground">
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Time
-                </TableHead>
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Transition
-                </TableHead>
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Type
-                </TableHead>
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Reason
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transitions.map((transition) => {
+            {transitions.map((transition) => {
                 const toTone = getStatusTone(transition.to as "healthy" | "degraded" | "stale");
                 return (
                   <TableRow key={transition.id} className="border-b last:border-0">
@@ -104,8 +99,7 @@ export function PublicTransitionTimeline({
                   </TableRow>
                 );
               })}
-            </TableBody>
-          </TableFrame>
+          </DataTableShell>
         )}
       </div>
     </div>

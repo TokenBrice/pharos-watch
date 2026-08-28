@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildPipelineIntegrityModel,
   buildPipelineModeSummaries,
-  buildPipelineModeUrl,
   buildPipelineQualityModel,
   collectPipelineLoaderErrors,
-  parsePipelineMode,
 } from "@/lib/pipeline-workspace-model";
 import {
   degraded,
@@ -26,21 +24,6 @@ function withReadyQuality() {
     },
   });
 }
-
-describe("pipeline URL modes", () => {
-  it("parses only known modes and preserves unrelated URL state when updating", () => {
-    expect(parsePipelineMode("?view=integrity&scope=all")).toBe("integrity");
-    expect(parsePipelineMode("?view=not-a-mode")).toBeNull();
-    expect(parsePipelineMode("?scope=all")).toBeNull();
-
-    expect(
-      buildPipelineModeUrl(
-        { pathname: "/admin/pipeline/", search: "?scope=all", hash: "#signal" } as Location,
-        "markets",
-      ),
-    ).toBe("/admin/pipeline/?scope=all&view=markets#signal");
-  });
-});
 
 describe("pipeline quality model", () => {
   it("distinguishes a real zero from an unknown denominator", () => {

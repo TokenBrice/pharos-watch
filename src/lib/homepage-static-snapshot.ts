@@ -1,4 +1,4 @@
-import topStablecoinsDataset from "../../public/datasets/top-stablecoins/latest.json";
+import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/generated/public-dataset-current";
 import { numberValue } from "@shared/lib/type-guards";
 import { buildHomepageHeroSnapshot, type HomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
 
@@ -17,7 +17,7 @@ interface TopStablecoinsDataset {
 
 export type { HomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
 
-const TOP_STABLECOINS_DATASET = topStablecoinsDataset as TopStablecoinsDataset;
+const TOP_STABLECOINS_DATASET = PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as TopStablecoinsDataset;
 
 function asOfISO(): string | null {
   const value = TOP_STABLECOINS_DATASET._meta?.asOfISO;

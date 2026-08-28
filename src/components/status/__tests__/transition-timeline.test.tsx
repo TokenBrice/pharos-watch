@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { StatusTransition } from "@shared/types";
 import { DEFAULT_INCIDENT_HISTORY_QUERY } from "@/lib/incident-history-view-model";
 import { TransitionTimeline } from "../transition-timeline";
 
-afterEach(cleanup);
 
 function makeTransitions(): StatusTransition[] {
   return [

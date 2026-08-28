@@ -1,4 +1,4 @@
-import { escapeXml, rssResponse, toRfc822, type RssItem } from "@/lib/rss";
+import { createRssRoute, escapeXml, toRfc822, type RssItem } from "@/lib/rss";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
 
@@ -28,15 +28,11 @@ function methodologyItems(): RssItem[] {
     });
 }
 
-export async function GET(): Promise<Response> {
-  const items = methodologyItems();
-  return rssResponse({
-    title: "Pharos Methodology Changelog",
-    link: `${SITE_URL}/methodology/`,
-    feedUrl: `${SITE_URL}${FEED_PATH}`,
-    description:
-      "Versioned methodology updates from pharos.watch — Safety Score, DEWS, DDR, PSI, Liquidity, Chain Health, Blacklist Tracker, Mint/Burn Flow, Pricing Pipeline, and Yield Intelligence.",
-    language: "en-US",
-    items,
-  });
-}
+export const GET = createRssRoute({
+  title: "Pharos Methodology Changelog",
+  link: `${SITE_URL}/methodology/`,
+  feedUrl: `${SITE_URL}${FEED_PATH}`,
+  description:
+    "Versioned methodology updates from pharos.watch — Safety Score, DEWS, DDR, PSI, Liquidity, Chain Health, Blacklist Tracker, Mint/Burn Flow, Pricing Pipeline, and Yield Intelligence.",
+  items: methodologyItems,
+});

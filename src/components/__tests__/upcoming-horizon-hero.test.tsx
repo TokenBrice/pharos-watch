@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { UpcomingHorizonHero } from "@/components/upcoming-horizon-hero";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -19,9 +19,6 @@ const PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter(
 const LABEL_SEPARATOR = "\u2014";
 
 describe("UpcomingHorizonHero", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("keeps phase dots linked and overflow reachable across responsive layouts", () => {
     render(<UpcomingHorizonHero />);

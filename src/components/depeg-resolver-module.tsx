@@ -1,9 +1,8 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { Info } from "lucide-react";
+import { DdrInfoTooltip } from "@/components/depeg-resolver-info-tooltip";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DepegResolverRowCard } from "@/components/depeg-resolver-row-card-parts";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
@@ -41,21 +40,16 @@ function ResolverHeader({ data }: { data: DdrResponse | undefined }) {
           >
             Beta
           </Badge>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger
-                aria-label="About the Depeg Duration Resolver"
-                className="pharos-focus-ring inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
-              >
-                <Info className="h-3.5 w-3.5" aria-hidden="true" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[280px]">
+          <DdrInfoTooltip
+            ariaLabel="About the Depeg Duration Resolver"
+            content={
+              <>
                 For each open confirmed depeg, the resolver weighs kill signals against recovery anchors for a
                 mechanistic verdict, then — when recovery is plausible — an empirical expected duration from comparable
                 historical incidents.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </>
+            }
+          />
         </div>
         {lineage ? (
           <p className="pharos-numeric text-[10px] text-muted-foreground">

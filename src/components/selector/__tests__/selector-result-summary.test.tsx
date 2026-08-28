@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { act } from "react";
 import type { SelectorInput } from "@shared/lib/selector";
 
@@ -14,7 +14,6 @@ vi.mock("next/link", async () => {
 });
 
 afterEach(() => {
-  cleanup();
   vi.useRealTimers();
 });
 

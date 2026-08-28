@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeAltClient } from "@/components/home-alt-client";
 
@@ -52,9 +52,6 @@ describe("HomeAltClient", () => {
     homeAltMiniCardGridMock.mockClear();
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
   it("keeps the rankings module behind the homepage lazy boundary", () => {
     render(<HomeAltClient />);

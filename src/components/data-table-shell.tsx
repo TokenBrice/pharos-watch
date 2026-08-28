@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 import {
   TableBody,
+  TableCaption,
   TableCell,
   TableFrame,
   TableHead,
@@ -58,6 +59,7 @@ export interface DataTableSortControls<K extends string> {
 export interface DataTableShellProps<K extends string> {
   tableId?: string;
   testId?: string;
+  chrome?: DataTableFrameProps["chrome"];
   columns: readonly DataTableColumn<K>[];
   children: React.ReactNode;
   sort?: DataTableSortControls<K>;
@@ -68,7 +70,10 @@ export interface DataTableShellProps<K extends string> {
   viewportProps?: DataTableFrameProps["viewportProps"];
   tableClassName?: string;
   tableProps?: DataTableFrameProps["tableProps"];
+  caption?: React.ReactNode;
+  captionClassName?: string;
   headerClassName?: string;
+  headerRowClassName?: string;
   stickyHeader?: DataTableFrameProps["stickyHeader"];
   pagination?: TablePaginationProps;
   /** Enable striped rows for horizontal scanning */
@@ -141,6 +146,7 @@ export function TableBackgroundRefreshingBar({
 export function DataTableShell<K extends string>({
   tableId,
   testId,
+  chrome,
   columns,
   children,
   sort,
@@ -151,7 +157,10 @@ export function DataTableShell<K extends string>({
   viewportProps,
   tableClassName,
   tableProps,
+  caption,
+  captionClassName,
   headerClassName,
+  headerRowClassName,
   stickyHeader,
   pagination,
   striped = false,
@@ -171,6 +180,7 @@ export function DataTableShell<K extends string>({
     <TableFrame
       tableId={tableId}
       testId={testId}
+      chrome={chrome}
       className={containerClassName}
       viewportClassName={viewportClassName}
       viewportProps={resolvedViewportProps}
@@ -187,8 +197,9 @@ export function DataTableShell<K extends string>({
       }
       footerSlot={pagination ? <TablePagination {...pagination} /> : null}
     >
-      <TableHeader className={cn("bg-muted", headerClassName)}>
-        <TableRow rowIntent="static">
+      {caption ? <TableCaption className={captionClassName}>{caption}</TableCaption> : null}
+      <TableHeader className={headerClassName === undefined ? "bg-muted" : headerClassName}>
+        <TableRow rowIntent="static" className={headerRowClassName}>
           {columns.map((column) =>
             column.sortKey && sort ? (
               <SortableTableHead

@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { PreferredSourcePrompt, PREFERRED_SOURCE_URL } from "../preferred-source-prompt";
 
-afterEach(cleanup);
 
 describe("PreferredSourcePrompt", () => {
   // Google's source-preferences tool takes a bare host in `q`. A URL, a path,

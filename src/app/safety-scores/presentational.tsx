@@ -1,23 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
 import { ArrowUpRight, Map as MapIcon } from "lucide-react";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
-import { SafetyGradeDistributionBar } from "./grade-distribution-bar";
+import { SafetyGradeDistributionBar } from "@/components/safety-grade-distribution-bar";
+import { useImageUnavailable } from "./use-image-unavailable";
 import type { GradeFilter, PegFilter } from "./v9-view-model";
 
 const SAFETY_MAP_PATH = "/safety-scores/map/";
 const SAFETY_MAP_IMAGE_PATH = "/safety-scores/map.png";
 
 function SafetyMapPreview() {
-  const [unavailable, setUnavailable] = useState(false);
-  const checkAlreadyFailed = useCallback((image: HTMLImageElement | null) => {
-    if (image && image.complete && image.naturalWidth === 0) {
-      setUnavailable(true);
-    }
-  }, []);
+  const { unavailable, checkAlreadyFailed, onError } = useImageUnavailable();
 
   return (
     <Link
@@ -39,7 +34,7 @@ function SafetyMapPreview() {
             width={3200}
             height={1800}
             className="h-full min-h-32 w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
-            onError={() => setUnavailable(true)}
+            onError={onError}
           />
         )}
       </div>

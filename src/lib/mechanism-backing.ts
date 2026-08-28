@@ -1,6 +1,6 @@
-import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import { abbreviateNumberParts } from "@shared/lib/format";
 import type { MechanismArchetype } from "@shared/types";
+import { getMechanismReviewOverlay } from "./mechanism-overlay.server";
 
 /**
  * Build-time extraction of the reviewed backing metrics the CDP collateral rail
@@ -129,27 +129,6 @@ const METRIC_SPECS: Partial<Record<MechanismArchetype, readonly MetricSpec[]>> =
   ],
 };
 
-interface OverlayComponentShape {
-  applicability?: string;
-  rationale?: string;
-  sourceUrl?: string;
-}
-
-interface OverlayEntryShape {
-  assetId: string;
-  archetype: string;
-  reviewedAt: string;
-  sources: Array<{ label: string; url: string }>;
-  metrics: Record<string, number | null>;
-  analogousMetrics?: Record<string, number | null>;
-  metricApplicability?: Record<string, { state: string; rationale?: string; sourceUrl?: string }>;
-  components?: Record<string, OverlayComponentShape>;
-}
-
-const OVERLAYS_BY_ASSET_ID: ReadonlyMap<string, OverlayEntryShape> = new Map(
-  (mechanismReviewOverlays.overlays as unknown as OverlayEntryShape[]).map((overlay) => [overlay.assetId, overlay]),
-);
-
 /** `custodyContinuity` -> `Custody continuity`. */
 function humanizeComponentKey(key: string): string {
   const spaced = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
@@ -239,7 +218,7 @@ function noteState(state: string | undefined): MechanismBackingNote["state"] | n
 }
 
 export function buildMechanismBackingView(assetId: string): MechanismBackingView | null {
-  const overlay = OVERLAYS_BY_ASSET_ID.get(assetId);
+  const overlay = getMechanismReviewOverlay(assetId);
   if (!overlay) return null;
   const source = overlay.sources[0];
   if (!source) return null;
@@ -268,25 +247,28 @@ export function buildMechanismBackingView(assetId: string): MechanismBackingView
   const notes: MechanismBackingNote[] = [];
   for (const [key, applicability] of Object.entries(overlay.metricApplicability ?? {})) {
     const state = noteState(applicability.state);
-    if (state === null || !applicability.rationale) continue;
+    const rationale = "rationale" in applicability ? applicability.rationale : undefined;
+    if (state === null || !rationale) continue;
     const spec = (METRIC_SPECS[archetype] ?? []).find((candidate) => candidate.key === key);
     notes.push({
       key: `metric:${key}`,
       label: spec?.label ?? humanizeComponentKey(key),
       state,
-      rationale: applicability.rationale,
-      sourceUrl: applicability.sourceUrl ?? null,
+      rationale,
+      sourceUrl: "sourceUrl" in applicability ? applicability.sourceUrl : null,
     });
   }
   for (const [key, component] of Object.entries(overlay.components ?? {})) {
+    if (!("applicability" in component)) continue;
     const state = noteState(component.applicability);
-    if (state === null || !component.rationale) continue;
+    const rationale = "rationale" in component ? component.rationale : undefined;
+    if (state === null || !rationale) continue;
     notes.push({
       key: `component:${key}`,
       label: humanizeComponentKey(key),
       state,
-      rationale: component.rationale,
-      sourceUrl: component.sourceUrl ?? null,
+      rationale,
+      sourceUrl: "sourceUrl" in component ? component.sourceUrl : null,
     });
   }
 

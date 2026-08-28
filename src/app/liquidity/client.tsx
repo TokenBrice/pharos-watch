@@ -17,6 +17,7 @@ import type { PegCurrency } from "@shared/types";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 import { trackEvent } from "@/lib/analytics";
 import { decodeState, encodeState, type UrlStateSchema } from "@/lib/url-state";
+import { replaceEncodedUrlState } from "@/lib/replace-encoded-url-state";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import {
@@ -55,8 +56,7 @@ export function LiquidityClient() {
       trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v });
       const encoded = encodeState({ peg: v }, LIQUIDITY_URL_SCHEMA);
       replaceParams((params) => {
-        params.delete("peg");
-        for (const [key, value] of new URLSearchParams(encoded)) params.set(key, value);
+        replaceEncodedUrlState(params, encoded, { clear: "key", key: "peg" });
       });
     },
     [replaceParams],

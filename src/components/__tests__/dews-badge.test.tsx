@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
 
 import { DEWSBadge } from "@/components/dews-badge";
 
-afterEach(cleanup);
 
 describe("DEWSBadge", () => {
   it("returns null for CALM band", () => {

@@ -2,7 +2,8 @@ import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/sta
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
-import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { TableCell, TableRow } from "@/components/table";
 import { LazyDetails } from "./lazy-details";
 import { StatusPill } from "./severity-pill";
 import { PublicSignalCard } from "./public-signal-card";
@@ -10,6 +11,18 @@ import { PublicSignalCard } from "./public-signal-card";
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;
 }
+
+const CACHE_FRESHNESS_COLUMNS: readonly DataTableColumn[] = [
+  { id: "lane", label: "Lane", className: "pb-2 font-medium" },
+  { id: "provider", label: "Provider", className: "pb-2 font-medium" },
+  { id: "producer", label: "Producer", className: "pb-2 font-medium" },
+  { id: "cache", label: "Cache", className: "pb-2 font-medium" },
+  { id: "endpoint-basis", label: "Endpoint Basis", className: "pb-2 font-medium" },
+  { id: "source", label: "Source", className: "pb-2 font-medium" },
+  { id: "mode", label: "Mode", className: "pb-2 font-medium" },
+  { id: "band", label: "Band", className: "pb-2 font-medium" },
+  { id: "note", label: "Actionable Note", className: "pb-2 font-medium" },
+];
 
 export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   const sorted = Object.entries(caches).sort(([, a], [, b]) => {
@@ -137,40 +150,6 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     );
   };
 
-  const tableHead = (
-    <TableHeader>
-      <TableRow className="border-b text-left text-muted-foreground">
-        <TableHead scope="col" className="pb-2 font-medium">
-          Lane
-        </TableHead>
-        <TableHead scope="col" className="pb-2 font-medium">
-          Provider
-        </TableHead>
-        <TableHead scope="col" className="pb-2 font-medium">
-          Producer
-        </TableHead>
-        <TableHead scope="col" className="pb-2 font-medium">
-          Cache
-        </TableHead>
-        <TableHead scope="col" className="pb-2 font-medium">
-          Endpoint Basis
-        </TableHead>
-        <TableHead scope="col" className="pb-2 font-medium">
-          Source
-        </TableHead>
-        <TableHead scope="col" className="pb-2 font-medium">
-          Mode
-        </TableHead>
-        <TableHead scope="col" className="pb-2 font-medium">
-          Band
-        </TableHead>
-        <TableHead scope="col" className="pb-2 font-medium">
-          Actionable Note
-        </TableHead>
-      </TableRow>
-    </TableHeader>
-  );
-
   return (
     <PublicSignalCard title="Cache Freshness">
       <div>
@@ -183,16 +162,18 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         </div>
         <div>
           {unhealthy.length > 0 && (
-            <TableFrame
+            <DataTableShell
               tableId="cache-freshness-unhealthy"
               testId="cache-freshness-unhealthy-table"
+              columns={CACHE_FRESHNESS_COLUMNS}
               chrome="content"
               density="compact"
               tableProps={{ "aria-label": "Unhealthy cache freshness" }}
+              headerClassName=""
+              headerRowClassName="border-b text-left text-muted-foreground"
             >
-              {tableHead}
-              <TableBody>{unhealthy.map(renderRow)}</TableBody>
-            </TableFrame>
+              {unhealthy.map(renderRow)}
+            </DataTableShell>
           )}
           {ok.length > 0 && (
             <LazyDetails
@@ -203,17 +184,19 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
                 </summary>
               }
             >
-              <TableFrame
+              <DataTableShell
                 tableId="cache-freshness-healthy"
                 testId="cache-freshness-healthy-table"
+                columns={CACHE_FRESHNESS_COLUMNS}
                 chrome="content"
                 density="compact"
-                className="mt-2"
+                containerClassName="mt-2"
                 tableProps={{ "aria-label": "Healthy cache freshness" }}
+                headerClassName=""
+                headerRowClassName="border-b text-left text-muted-foreground"
               >
-                {tableHead}
-                <TableBody>{ok.map(renderRow)}</TableBody>
-              </TableFrame>
+                {ok.map(renderRow)}
+              </DataTableShell>
             </LazyDetails>
           )}
         </div>

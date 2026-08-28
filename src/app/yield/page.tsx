@@ -2,7 +2,6 @@ import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
 import { YieldContentLoadingState } from "@/app/yield/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
@@ -12,13 +11,6 @@ import type { FaqItem } from "@/lib/faq";
 
 const desc =
   "Compare risk-adjusted stablecoin yield rankings by APY, safety grade, source freshness, benchmark spread, venue risk, and Pharos Yield Score.";
-
-export const metadata = buildPageMetadata({
-  title: "Stablecoin Yield Intelligence",
-  description: desc,
-  canonical: "/yield/",
-  ogImage: `${SITE_URL}/og-yield.png`,
-});
 
 const FAQ_ITEMS = [
   {
@@ -71,12 +63,17 @@ const YIELD_PICKER_NOTE = (
   </p>
 );
 
-export default createClientFeaturePage({
-  loadClient: () => import("./client").then((m) => ({ default: m.YieldClient })),
+const route = createClientFeaturePage({
+  path: "/yield/",
+  metadata: {
+    title: "Stablecoin Yield Intelligence",
+    description: desc,
+    ogImage: `${SITE_URL}/og-yield.png`,
+  },
+  loadClient: () => import("@/components/yield/yield-client").then((m) => ({ default: m.YieldClient })),
   loading: <YieldContentLoadingState />,
   shell: {
     breadcrumbName: "Yield Intelligence",
-    path: "/yield/",
     title: "Yield Intelligence",
     methodology: {
       version: YIELD_METHODOLOGY_VERSION_LABEL,
@@ -91,3 +88,6 @@ export default createClientFeaturePage({
     </>
   ),
 });
+
+export const metadata = route.metadata;
+export default route.Page;

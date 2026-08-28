@@ -21,6 +21,7 @@ import {
 } from "@/lib/yield-source-risk";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
+import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { trackEvent } from "@/lib/analytics";
@@ -147,12 +148,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
                 {YIELD_SOURCE_DEPTH_DEFINITIONS[sourceExplorer.sourceDepthLens].label} depth
               </span>
               {freshness && (
-                <span
-                  className={freshness.textClassName}
-                  title={freshness.tooltipText}
-                >
-                  {freshness.displayText}
-                </span>
+                <YieldFreshnessLabel freshness={freshness} mode="plain-title" />
               )}
               {sourceExplorer.sourceSwitch.changed ? (
                 <span

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import {
   DataTableEmptyRow,
@@ -15,9 +15,6 @@ import {
 const columns: readonly DataTableColumn[] = [{ id: "name", label: "Name" }] as const;
 
 describe("DataTableShell", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("preserves the children-first table frame contract", () => {
     render(

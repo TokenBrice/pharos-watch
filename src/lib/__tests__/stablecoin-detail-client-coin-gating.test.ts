@@ -90,4 +90,70 @@ describe("buildStablecoinDetailClientCoin display gating", () => {
     expect("reserveQualitySummary" in clientCoin).toBe(false);
     expect("reserveReview" in clientCoin).toBe(false);
   });
+
+  it("sanitizes malformed mint-authority fields at the client projector boundary", () => {
+    const clientCoin = buildStablecoinDetailClientCoin(coinWith({
+      mintAuthority: {
+        mintPath: "permissioned-minter",
+        authorityPosture: "bounded-admin",
+        confidence: "verified",
+        summary: "Minting is controlled by a published admin.",
+        controls: [
+          {
+            chain: { name: "ethereum" },
+            address: { value: "0x1234" },
+            label: "Malformed admin",
+            role: "minter-admin",
+            authorityType: "safe",
+            directMintAbility: "can-authorize",
+            threshold: "2",
+            signerCount: Number.NaN,
+            timelockDelaySec: { seconds: 3600 },
+            capDescription: ["cap"],
+          },
+        ],
+      },
+    }));
+
+    expect(clientCoin.mintAuthoritySummary?.controls?.[0]).toEqual({
+      label: "Malformed admin",
+      role: "minter-admin",
+      authorityType: "safe",
+      directMintAbility: "can-authorize",
+    });
+  });
+
+  it("de-duplicates mint-authority review and incident sources by URL", () => {
+    const clientCoin = buildStablecoinDetailClientCoin(coinWith({
+      mintAuthority: {
+        mintPath: "issuer-direct-mint",
+        authorityPosture: "concentrated-admin",
+        confidence: "verified",
+        summary: "Issuer backend can mint through reviewed operator controls.",
+        review: {
+          sources: [
+            { label: "Review", url: "https://example.com/review" },
+            { label: "Review mirror", url: "https://example.com/review" },
+          ],
+        },
+        mintIncidents: [{
+          date: "2025-02-01",
+          status: "active",
+          summary: "Privileged mint incident.",
+          sources: [
+            { label: "Thread", url: "https://example.com/thread" },
+            { label: "Thread mirror", url: "https://example.com/thread" },
+          ],
+        }],
+      },
+    }));
+
+    expect(clientCoin.mintAuthoritySummary?.sources).toEqual([
+      { label: "Review", url: "https://example.com/review" },
+      { label: "Thread", url: "https://example.com/thread" },
+    ]);
+    expect(clientCoin.mintAuthoritySummary?.mintIncidents?.[0]?.sources).toEqual([
+      { label: "Thread", url: "https://example.com/thread" },
+    ]);
+  });
 });

@@ -6,7 +6,7 @@ import { YieldSourceSheet } from "@/components/yield-source-sheet";
 import {
   SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
   mergeSourceRiskGoldenFixtures,
-} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+} from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import type { YieldRanking } from "@shared/types";
 import { renderYieldSourceSheet } from "./yield-source-sheet-test-support";
 

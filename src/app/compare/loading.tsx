@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import { PageLoadingHeader, PageLoadingShell } from "@/components/page-loading-skeleton";
+import { PageLoadingRoute } from "@/app/page-loading-route";
 
 // Power-user tier: coin-selector strip, radar + comparison chart pair,
 // then comparison table. Matches the dynamic chart placeholders used
@@ -32,9 +32,8 @@ export function CompareContentLoadingState() {
 
 export default function Loading() {
   return (
-    <PageLoadingShell>
-      <PageLoadingHeader sectionWidth="w-20" titleWidth="w-80 sm:w-[26rem]" includeEyebrow={false} />
+    <PageLoadingRoute sectionWidth="w-20" titleWidth="w-80 sm:w-[26rem]" includeEyebrow={false}>
       <CompareContentLoadingState />
-    </PageLoadingShell>
+    </PageLoadingRoute>
   );
 }

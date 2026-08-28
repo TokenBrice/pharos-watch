@@ -24,15 +24,9 @@ import type {
   MintAuthorityDetailControlViewModel,
   MintAuthorityDetailScoreViewModel,
   MintAuthorityDetailViewModel,
-  MintAuthorityPostureTone,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { cn } from "@/lib/utils";
-
-const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {
-  minimized: "bg-[var(--severity-healthy)]",
-  neutral: "bg-[var(--text-tertiary)]",
-  elevated: "bg-[var(--severity-mild)]",
-};
+import { MINT_AUTHORITY_POSTURE_DOT_CLASS } from "@/components/stablecoin-detail/mint-authority-presentation";
 
 /** The five published V9 posture bands — ordinal, not score ranges: 9.1
  *  retired the score cutoffs, so the ladder lights the published band rather
@@ -260,7 +254,10 @@ export function MintAuthoritySection({
                 <DetailBadge>
                   <span
                     aria-hidden
-                    className={cn("h-1.5 w-1.5 shrink-0 rounded-full", POSTURE_DOT_CLASS[profile.authorityPostureTone])}
+                    className={cn(
+                      "h-1.5 w-1.5 shrink-0 rounded-full",
+                      MINT_AUTHORITY_POSTURE_DOT_CLASS[profile.authorityPostureTone],
+                    )}
                   />
                   {profile.authorityPostureLabel}
                 </DetailBadge>

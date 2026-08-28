@@ -19,6 +19,7 @@ import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
 import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { decodeState, encodeState, type UrlStateSchema } from "@/lib/url-state";
+import { replaceEncodedUrlState } from "@/lib/replace-encoded-url-state";
 import { SummaryBand } from "./timeline-feed-sections";
 import { TimelineFeed } from "./timeline-feed";
 import { useTimelineFeedData } from "./use-timeline-feed-data";
@@ -116,8 +117,10 @@ export function TimelineClient() {
       const nextState = { ...urlState, [key]: value } as TimelineUrlState;
       const encoded = encodeState(nextState, TIMELINE_URL_SCHEMA);
       replaceParams((params) => {
-        for (const schemaKey of Object.keys(TIMELINE_URL_SCHEMA)) params.delete(schemaKey);
-        for (const [nextKey, nextValue] of new URLSearchParams(encoded)) params.set(nextKey, nextValue);
+        replaceEncodedUrlState(params, encoded, {
+          clear: "all",
+          schemaKeys: Object.keys(TIMELINE_URL_SCHEMA),
+        });
       });
     },
     [replaceParams, setParam, urlState],

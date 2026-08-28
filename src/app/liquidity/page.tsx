@@ -1,6 +1,5 @@
 import { LiquidityContentLoadingState } from "@/app/liquidity/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
@@ -9,19 +8,18 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 
 const liquidityDescription = `DEX liquidity scores, pool depth analysis, and protocol breakdowns for ${ACTIVE_STABLECOIN_COUNT} stablecoins, refreshed from the Pharos DEX liquidity lane across Curve, Uniswap, Fluid, and more.`;
-export const metadata = buildPageMetadata({
-  title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
-  description: liquidityDescription,
-  canonical: "/liquidity/",
-  ogImage: `${SITE_URL}/og-liquidity.png`,
-});
 
-export default createClientFeaturePage({
+const route = createClientFeaturePage({
+  path: "/liquidity/",
+  metadata: {
+    title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
+    description: liquidityDescription,
+    ogImage: `${SITE_URL}/og-liquidity.png`,
+  },
   loadClient: () => import("./client").then((m) => ({ default: m.LiquidityClient })),
   loading: <LiquidityContentLoadingState />,
   shell: {
     breadcrumbName: "DEX Liquidity",
-    path: "/liquidity/",
     title: "DEX Liquidity",
     methodology: {
       version: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
@@ -39,3 +37,6 @@ export default createClientFeaturePage({
     ),
   },
 });
+
+export const metadata = route.metadata;
+export default route.Page;

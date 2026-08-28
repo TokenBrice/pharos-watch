@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
-import { makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
+import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { buildYieldViewModel } from "@/lib/yield-view-model";
 
 const STORAGE_KEY = "pharos-watchlist-v1";
@@ -37,9 +37,6 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-afterEach(() => {
-  cleanup();
-});
 
 function buildModel(params: Parameters<typeof buildYieldViewModel>[1] = {}, watchlistIds?: ReadonlySet<string>) {
   return buildYieldViewModel(rows, params, { watchlistIds: watchlistIds ?? null });

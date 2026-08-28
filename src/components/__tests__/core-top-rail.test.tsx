@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 const pathnameMock = vi.fn<() => string>();
 const isBelowDesktopMock = vi.fn<() => boolean>();
@@ -23,7 +23,6 @@ vi.mock("@/hooks/use-is-mobile", () => ({
 import { CoreTopRail } from "@/components/core-top-rail";
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 

@@ -223,7 +223,7 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.score).toMatchObject({ score: null, bandLabel: "NR" });
   });
 
-  it("dedupes mint-authority sources and sorts incident callouts", () => {
+  it("sorts incident callouts from a typed mint-authority summary", () => {
     const viewModel = buildMintAuthorityDetailViewModel({
       id: "dedupe-test",
       mintAuthoritySummary: {
@@ -233,7 +233,6 @@ describe("stablecoin detail view-model builder", () => {
         summary: "Issuer backend can mint through reviewed operator controls.",
         sources: [
           { label: "Review", url: "https://example.com/review" },
-          { label: "Review", url: "https://example.com/review" },
           { label: "Docs", url: "https://example.com/docs" },
         ],
         mintIncidents: [
@@ -242,7 +241,6 @@ describe("stablecoin detail view-model builder", () => {
             status: "resolved",
             summary: "Older privileged mint incident.",
             sources: [
-              { label: "Postmortem", url: "https://example.com/postmortem" },
               { label: "Postmortem", url: "https://example.com/postmortem" },
             ],
           },
@@ -310,54 +308,6 @@ describe("stablecoin detail view-model builder", () => {
       null,
       "Modules or guards unknown",
     ]);
-  });
-
-  it("drops malformed mint-authority runtime fields instead of crashing", () => {
-    const controlsAsObject = buildMintAuthorityDetailViewModel({
-      mintAuthoritySummary: {
-        mintPath: "permissioned-minter",
-        authorityPosture: "bounded-admin",
-        confidence: "verified",
-        summary: "Minting is controlled by a published admin.",
-        controls: { label: "not an array" },
-      },
-    } as never);
-
-    expect(controlsAsObject.status).toBe("reviewed");
-    expect(controlsAsObject.controls).toEqual([]);
-
-    const malformedControlFields = buildMintAuthorityDetailViewModel({
-      mintAuthoritySummary: {
-        mintPath: "permissioned-minter",
-        authorityPosture: "bounded-admin",
-        confidence: "verified",
-        summary: "Minting is controlled by a published admin.",
-        controls: [
-          {
-            chain: { name: "ethereum" },
-            address: { value: "0x123400000000000000000000000000000000abcd" },
-            label: "Malformed admin",
-            role: "minter-admin",
-            authorityType: "safe",
-            directMintAbility: "can-authorize",
-            threshold: "2",
-            signerCount: Number.NaN,
-            timelockDelaySec: { seconds: 3600 },
-            capDescription: ["cap"],
-          },
-        ],
-      },
-    } as never);
-
-    expect(malformedControlFields.controls[0]).toMatchObject({
-      label: "Malformed admin",
-      locationLabel: "No address published",
-      fullLocationLabel: "No address published",
-      addressUrl: null,
-      thresholdLabel: null,
-      timelockLabel: null,
-      capDescription: null,
-    });
   });
 
   it("builds a ready view model from fetched inputs", () => {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 type LatestEventsResult = {
@@ -21,7 +21,6 @@ vi.mock("@/hooks/use-events", () => ({
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 

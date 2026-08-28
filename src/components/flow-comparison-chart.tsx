@@ -1,19 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import {
-  LineChart,
-  Line,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
-import { MonoYAxis, TimeXAxis, ChartLegendChip } from "@/components/chart-primitives/axes";
-import { ScreenReaderDataTable } from "@/components/chart-primitives/data-table";
-import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
+import { ChartLegendChip } from "@/components/chart-primitives/axes";
+import { MultiSeriesLineChart, mergeMultiSeriesData } from "@/components/chart-primitives/multi-series-line-chart";
 import type { FlowSeriesEntry } from "@/lib/compare-derive";
 
 export type FlowSeries = FlowSeriesEntry;
@@ -36,10 +26,7 @@ export function FlowComparisonChart({
   onHoursChange,
 }: FlowComparisonChartProps) {
   // Merge all series into flat array keyed by timestamp
-  const mergedData = useMemo(
-    () => mergeSeriesByTimestamp(series, (d) => d.netFlowUsd),
-    [series],
-  );
+  const mergedData = mergeMultiSeriesData(series, (d) => d.netFlowUsd);
 
   if (mergedData.length === 0) return null;
 
@@ -75,86 +62,28 @@ export function FlowComparisonChart({
             </ChartLegendChip>
           ))}
         </div>
-        <ScreenReaderDataTable
-          data={mergedData}
-          columns={[
-            { id: "ts", label: "Date", format: (row) => formatChartDate(row["ts"] as number, hours <= 24 ? "with-time" : "short") },
-            ...series.map((s) => ({
-              id: s.id,
-              label: s.label,
-              format: (row: Record<string, number>) => {
-                const v = row[s.id];
-                return v != null ? `${v >= 0 ? "+" : ""}${formatCurrency(v, 1)}` : "—";
-              },
-            })),
-          ]}
-          caption={(rows, truncated, total) =>
-            truncated
-              ? `Net flow comparison — most recent ${rows.length} of ${total} data points`
-              : `Net flow comparison — ${total} data points`
-          }
-        />
         <div className="pharos-chart-stage">
-          <ResponsiveContainer width="100%" height={200}>
-          <LineChart
+          <MultiSeriesLineChart
+            series={series}
+            getValue={(datum) => datum.netFlowUsd}
             data={mergedData}
+            ariaLabel={`Net flow comparison chart with ${series.length} series`}
+            height={200}
             margin={{ top: 4, right: 8, bottom: 0, left: 0 }}
-          >
-            <TimeXAxis
-              dataKey="ts"
-              tickFormatter={(ts: number) =>
-                hours <= 24
-                  ? new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                  : new Date(ts).toLocaleDateString([], { month: "short", day: "numeric" })
-              }
-            />
-            <MonoYAxis tickFormatter={(v: number) => formatCurrency(v, 1)} />
-            <ReferenceLine
-              y={0}
-              stroke="var(--color-border)"
-              strokeDasharray="4 4"
-            />
-            <Tooltip
-              content={({ active, payload, label }) => {
-                if (!active || !payload?.length) return null;
-                return (
-                  <PharosChartTooltip active={active}>
-                    <TooltipLabel>
-                      {formatChartDate(label as number, hours <= 24 ? "with-time" : "short")}
-                    </TooltipLabel>
-                    {payload.map((p) => {
-                      const val = p.value as number | null | undefined;
-                      const formatted =
-                        val != null
-                          ? `${val >= 0 ? "+" : ""}${formatCurrency(val, 1)}`
-                          : "—";
-                      return (
-                        <TooltipRow
-                          key={p.dataKey as string}
-                          color={p.color}
-                          label={String(p.name ?? p.dataKey)}
-                          value={formatted}
-                        />
-                      );
-                    })}
-                  </PharosChartTooltip>
-                );
-              }}
-            />
-            {series.map((s) => (
-              <Line
-                key={s.id}
-                type="monotone"
-                dataKey={s.id}
-                name={s.label}
-                stroke={s.color}
-                strokeWidth={1.5}
-                dot={false}
-                connectNulls
-              />
-            ))}
-          </LineChart>
-          </ResponsiveContainer>
+            xTickFormatter={(timestamp) => hours <= 24
+              ? new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              : new Date(timestamp).toLocaleDateString([], { month: "short", day: "numeric" })}
+            yTickFormatter={(value) => formatCurrency(value, 1)}
+            valueFormatter={(value) => `${value >= 0 ? "+" : ""}${formatCurrency(value, 1)}`}
+            tooltipLabelFormatter={(timestamp) => formatChartDate(timestamp, hours <= 24 ? "with-time" : "short")}
+            tableDateFormatter={(timestamp) => formatChartDate(timestamp, hours <= 24 ? "with-time" : "short")}
+            tableCaption={(rows, truncated, total) => truncated
+              ? `Net flow comparison — most recent ${rows.length} of ${total} data points`
+              : `Net flow comparison — ${total} data points`}
+            lineStrokeWidth={1.5}
+            showZeroLine
+            tooltipVariant="pharos"
+          />
         </div>
       </CardContent>
     </Card>

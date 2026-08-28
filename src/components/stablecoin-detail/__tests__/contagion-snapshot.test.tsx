@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 const useReportCardsV9Mock = vi.hoisted(() => vi.fn());
@@ -93,7 +93,6 @@ describe("ContagionSnapshot", () => {
     });
   });
 
-  afterEach(cleanup);
 
   it("renders the focused dependency map for the current asset", () => {
     render(

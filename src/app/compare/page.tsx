@@ -5,7 +5,6 @@ import { CompareContentLoadingState } from "@/app/compare/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
@@ -40,19 +39,17 @@ const PRIORITY_COMPARISON_SLUGS = new Set([
 
 const priorityComparisonPages = STATIC_COMPARISON_PAGES.filter((page) => PRIORITY_COMPARISON_SLUGS.has(page.slug));
 
-export const metadata = buildPageMetadata({
-  title: "Compare Stablecoins: Side-by-Side Analysis",
-  description: compareDescription,
-  canonical: "/compare/",
-  ogImage: `${SITE_URL}/og-compare.png`,
-});
-
-export default createClientFeaturePage({
-  loadClient: () => import("./client").then((m) => ({ default: m.CompareClient })),
+const route = createClientFeaturePage({
+  path: "/compare/",
+  metadata: {
+    title: "Compare Stablecoins: Side-by-Side Analysis",
+    description: compareDescription,
+    ogImage: `${SITE_URL}/og-compare.png`,
+  },
+  loadClient: () => import("@/components/compare/compare-client").then((m) => ({ default: m.CompareClient })),
   loading: <CompareContentLoadingState />,
   shell: {
     breadcrumbName: "Compare",
-    path: "/compare/",
     title: "Compare Stablecoins",
     leadParagraphs: [
       "Build a live peer set, then read peg behavior, liquidity, safety scores, and structural differences without bouncing between detail pages.",
@@ -71,6 +68,9 @@ export default createClientFeaturePage({
     </>
   ),
 });
+
+export const metadata = route.metadata;
+export default route.Page;
 
 function ComparePairDirectory() {
   return (

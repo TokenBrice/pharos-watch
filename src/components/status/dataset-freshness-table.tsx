@@ -1,11 +1,22 @@
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import type { StatusResponse } from "@shared/types";
-import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { TableCell, TableRow } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { StatusPill } from "./severity-pill";
 
 type DatasetKey = keyof StatusResponse["datasetFreshness"];
+
+const DATASET_FRESHNESS_COLUMNS: readonly DataTableColumn[] = [
+  { id: "domain", label: "Domain", className: "pb-2 font-medium" },
+  { id: "updated", label: "Updated", className: "pb-2 font-medium" },
+  { id: "age", label: "Age", className: "pb-2 font-medium" },
+  { id: "cadence", label: "Cadence", className: "pb-2 font-medium" },
+  { id: "grace-basis", label: "Grace Basis", className: "pb-2 font-medium" },
+  { id: "writers", label: "Writers", className: "pb-2 font-medium" },
+  { id: "band", label: "Band", className: "pb-2 font-medium" },
+];
 
 const DATASET_META: Record<
   DatasetKey,
@@ -121,41 +132,19 @@ export function DatasetFreshnessTable({
           basis is the reference window for this table, with green status held through 4x that basis and late after 6x
           so quiet event-backed domains follow writer health rather than the most recent emitted event.
         </div>
-        <TableFrame
+        <DataTableShell
           tableId="dataset-freshness"
           testId="dataset-freshness-table"
+          columns={DATASET_FRESHNESS_COLUMNS}
           chrome="content"
           density="compact"
           tableProps={{ "aria-label": "Pipeline freshness" }}
+          caption="Pipeline freshness by data domain"
+          captionClassName="sr-only"
+          headerClassName=""
+          headerRowClassName="border-b text-left text-muted-foreground"
         >
-          <TableCaption className="sr-only">Pipeline freshness by data domain</TableCaption>
-          <TableHeader>
-            <TableRow className="border-b text-left text-muted-foreground">
-              <TableHead scope="col" className="pb-2 font-medium">
-                Domain
-              </TableHead>
-              <TableHead scope="col" className="pb-2 font-medium">
-                Updated
-              </TableHead>
-              <TableHead scope="col" className="pb-2 font-medium">
-                Age
-              </TableHead>
-              <TableHead scope="col" className="pb-2 font-medium">
-                Cadence
-              </TableHead>
-              <TableHead scope="col" className="pb-2 font-medium">
-                Grace Basis
-              </TableHead>
-              <TableHead scope="col" className="pb-2 font-medium">
-                Writers
-              </TableHead>
-              <TableHead scope="col" className="pb-2 font-medium">
-                Band
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
+          {rows.map((row) => (
               <TableRow key={row.key} className="border-b last:border-0">
                 <TableCell className="py-2">{row.label}</TableCell>
                 <TableCell className="py-2 text-xs text-muted-foreground">
@@ -178,8 +167,7 @@ export function DatasetFreshnessTable({
                 </TableCell>
               </TableRow>
             ))}
-          </TableBody>
-        </TableFrame>
+        </DataTableShell>
       </CardContent>
     </Card>
   );

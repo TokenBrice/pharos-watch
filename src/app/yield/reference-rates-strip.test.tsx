@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { ReferenceRatesStrip } from "@/app/yield/reference-rates-strip";
+import { ReferenceRatesStrip } from "@/components/yield/reference-rates-strip";
 import type {
   YieldBenchmarkMeta,
   YieldBenchmarkRegistry,

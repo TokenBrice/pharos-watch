@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { ReliabilityDependenciesPanel } from "../reliability-dependencies-panel";
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-model";
 import {
@@ -9,7 +9,6 @@ import {
   makeOperationalDependencyFailureStatusResponse,
 } from "@/test-utils/status-fixtures";
 
-afterEach(cleanup);
 
 describe("ReliabilityDependenciesPanel", () => {
   it("renders root causes, provider circuits, and canary evidence from the status payload", () => {

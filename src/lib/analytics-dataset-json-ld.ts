@@ -1,9 +1,6 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
-import depegHistoryExport from "../../public/datasets/depeg-history/latest.json";
-import pegMechanismDistributionExport from "../../public/datasets/peg-mechanism-distribution/latest.json";
-import scoresLatestExport from "../../public/datasets/scores-latest/latest.json";
-import topStablecoinsExport from "../../public/datasets/top-stablecoins/latest.json";
+import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/generated/public-dataset-current";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 
@@ -32,7 +29,7 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
     description:
       "Public snapshot of tracked stablecoins with peg type, peg mechanism, price, circulating USD supply, chain count, and chain coverage.",
     keywords: ["stablecoin market cap", "stablecoin supply", "stablecoin chains", "stablecoin dataset"],
-    export: topStablecoinsExport as PublicDatasetExport,
+    export: PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as PublicDatasetExport,
   },
   {
     slug: "scores-latest",
@@ -40,7 +37,7 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
     description:
       "Public snapshot of latest PegScore, Safety Score, DEWS, LiquidityScore, grade, and coverage-class values for tracked stablecoins.",
     keywords: ["stablecoin safety scores", "PegScore", "DEWS", "LiquidityScore", "stablecoin risk data"],
-    export: scoresLatestExport as PublicDatasetExport,
+    export: PUBLIC_DATASET_CURRENT_EXPORTS["scores-latest"] as PublicDatasetExport,
   },
   {
     slug: "depeg-history",
@@ -48,7 +45,7 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
     description:
       "Public history of tracked depeg events with stablecoin IDs, direction, peak deviation, timing, duration, prices, peg reference, and source.",
     keywords: ["stablecoin depeg history", "depeg events", "peg monitoring", "stablecoin incident data"],
-    export: depegHistoryExport as PublicDatasetExport,
+    export: PUBLIC_DATASET_CURRENT_EXPORTS["depeg-history"] as PublicDatasetExport,
   },
   {
     slug: "peg-mechanism-distribution",
@@ -56,7 +53,7 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
     description:
       "Public market-structure export summarizing stablecoin counts by mechanism archetype, peg reference, and jurisdiction.",
     keywords: ["stablecoin mechanisms", "peg mechanism distribution", "stablecoin market structure"],
-    export: pegMechanismDistributionExport as PublicDatasetExport,
+    export: PUBLIC_DATASET_CURRENT_EXPORTS["peg-mechanism-distribution"] as PublicDatasetExport,
   },
 ] as const;
 

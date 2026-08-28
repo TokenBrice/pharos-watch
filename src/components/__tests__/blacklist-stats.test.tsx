@@ -1,14 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { BlacklistStats } from "@/components/blacklist-stats";
 
-afterEach(() => {
-  cleanup();
-});
 
 function makePerCoinRecord<T>(createValue: (symbol: BlacklistStablecoin) => T): Record<BlacklistStablecoin, T> {
   return Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, createValue(symbol)])) as Record<

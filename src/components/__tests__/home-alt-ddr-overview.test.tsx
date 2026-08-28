@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 import { HomeAltDdrOverview } from "@/components/home-alt-ddr-overview";
 
@@ -14,7 +14,6 @@ vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 

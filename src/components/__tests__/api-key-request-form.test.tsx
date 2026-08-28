@@ -1,13 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyRequestForm } from "@/components/api-key-request-form";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 afterEach(() => {
-  cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");

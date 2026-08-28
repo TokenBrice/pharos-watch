@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const { adminMutationMock } = vi.hoisted(() => ({
   adminMutationMock: vi.fn(),
@@ -36,7 +36,6 @@ function typeMessage(value = "<b>Maintenance</b>") {
 }
 
 afterEach(() => {
-  cleanup();
   adminMutationMock.mockReset();
 });
 

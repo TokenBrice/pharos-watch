@@ -1,11 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   PageLoadingChartBlock,
-  PageLoadingHeader,
   PageLoadingRowList,
-  PageLoadingShell,
   PageLoadingStatGrid,
 } from "@/components/page-loading-skeleton";
+import { PageLoadingRoute } from "@/app/page-loading-route";
 
 // Analytics tier: filter strip + DEX depth chart placeholder + cohort table.
 const LIQUIDITY_SKELETON_ROW_COUNT = 10;
@@ -48,9 +47,8 @@ export function LiquidityContentLoadingState() {
 
 export default function Loading() {
   return (
-    <PageLoadingShell>
-      <PageLoadingHeader sectionWidth="w-24" titleWidth="w-64 sm:w-80" />
+    <PageLoadingRoute sectionWidth="w-24" titleWidth="w-64 sm:w-80">
       <LiquidityContentLoadingState />
-    </PageLoadingShell>
+    </PageLoadingRoute>
   );
 }

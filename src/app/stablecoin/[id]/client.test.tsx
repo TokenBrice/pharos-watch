@@ -14,18 +14,40 @@ const {
   longformScrollspyNavMock,
   useNearViewportMock,
   useStablecoinDetailViewModelMock,
+  detailSectionNames,
+  detailSectionIndex,
 } = vi.hoisted(() => ({
   lazyViewportValues: [] as boolean[],
   nearViewportValues: [] as boolean[],
   longformScrollspyNavMock: vi.fn(),
   useNearViewportMock: vi.fn(),
   useStablecoinDetailViewModelMock: vi.fn(),
+  detailSectionNames: [
+    "McapChart",
+    "MarketDataSection",
+    "DEWSDetail",
+    "StablecoinSafetyScoreV9Card",
+    "ReservePanel",
+    "DepegHistory",
+    "FlowsSection",
+    "FlowHistorySection",
+    "BlacklistSection",
+    "BlacklistHistorySection",
+    "PegStabilityCard",
+    "YieldDetailSection",
+    "DexLiquidityCard",
+    "DistributionSection",
+    "SafetyScoreHistorySection",
+    "StablecoinDepegResolverCard",
+  ],
+  detailSectionIndex: { current: 0 },
 }));
 
 vi.mock("next/dynamic", () => ({
   default: (loader: () => Promise<unknown>) => {
     const source = loader.toString();
-    if (source.includes("ReservePanel")) {
+    const sectionName = source.includes("mod[name]") ? detailSectionNames[detailSectionIndex.current++] : source;
+    if (sectionName.includes("ReservePanel")) {
       return function ReservePanelStub({
         reserves,
         onRetry,
@@ -53,27 +75,27 @@ vi.mock("next/dynamic", () => ({
         );
       };
     }
-    if (source.includes("StablecoinSafetyScoreV9Card")) {
+    if (sectionName.includes("StablecoinSafetyScoreV9Card")) {
       return function ReportCardDetailStub({ rightColumn }: { rightColumn?: ReactNode }) {
         return <div data-testid="report-card">{rightColumn}</div>;
       };
     }
-    if (source.includes("FlowHistorySection")) {
+    if (sectionName.includes("FlowHistorySection")) {
       return function FlowHistorySectionStub() {
         return <div data-testid="flow-history-section" />;
       };
     }
-    if (source.includes("FlowsSection")) {
+    if (sectionName.includes("FlowsSection")) {
       return function FlowsSectionStub() {
         return <div data-testid="flows-section" />;
       };
     }
-    if (source.includes("BlacklistHistorySection")) {
+    if (sectionName.includes("BlacklistHistorySection")) {
       return function BlacklistHistorySectionStub() {
         return <div data-testid="blacklist-history-section" />;
       };
     }
-    if (source.includes("BlacklistSection")) {
+    if (sectionName.includes("BlacklistSection")) {
       return function BlacklistSectionStub() {
         return <div data-testid="blacklist-section" />;
       };

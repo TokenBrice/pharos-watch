@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FeedbackModal } from "@/components/feedback-modal";
 import {
@@ -28,7 +28,6 @@ describe("FeedbackModal", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.unstubAllGlobals();
     window.history.replaceState(null, "", "/");
   });

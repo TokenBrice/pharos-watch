@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { Term } from "@/components/term";
 import { GLOSSARY } from "@/lib/glossary";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
-afterEach(() => cleanup());
 
 describe("Term", () => {
   it("renders the wrapped label text", () => {

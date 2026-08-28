@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeApiKeySummary } from "@/test-utils/api-key-fixtures";
 import { STATUS_FIXTURE_NOW_SECONDS } from "@/test-utils/status-fixtures";
@@ -29,7 +29,6 @@ const KEYS = [
 ];
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 

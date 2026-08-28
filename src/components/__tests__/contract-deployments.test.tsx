@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
 import type { StablecoinMeta } from "@shared/types";
@@ -40,7 +40,6 @@ const meta = {
 } as unknown as StablecoinMeta;
 
 afterEach(() => {
-  cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   window.gtag = undefined;

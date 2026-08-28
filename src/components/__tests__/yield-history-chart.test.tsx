@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, cleanup, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 
@@ -22,7 +22,6 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   useYieldHistoryMock.mockReset();
 });
 

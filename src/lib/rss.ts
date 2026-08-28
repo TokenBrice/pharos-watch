@@ -101,3 +101,31 @@ export function rssResponse(feed: RssResponseFeed): Response {
     },
   });
 }
+
+interface RssRouteConfig {
+  title: string;
+  link: string;
+  feedUrl: string;
+  description: string;
+  language?: string;
+  items: () => RssItem[] | Promise<RssItem[]>;
+}
+
+/** Build a static RSS route while leaving domain-specific item construction local. */
+export function createRssRoute({
+  title,
+  link,
+  feedUrl,
+  description,
+  language = "en-US",
+  items,
+}: RssRouteConfig): () => Promise<Response> {
+  return async () => rssResponse({
+    title,
+    link,
+    feedUrl,
+    description,
+    language,
+    items: await items(),
+  });
+}

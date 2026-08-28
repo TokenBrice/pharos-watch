@@ -1,14 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { ContagionGraphControls } from "@/components/contagion-graph/contagion-graph-controls";
 import { ALL_NODE_LIMIT } from "@/lib/contagion-layout";
 
-afterEach(() => {
-  cleanup();
-});
 
 function renderControls(onNodeLimitChange = vi.fn()) {
   render(

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   PysHistorySparkline,
   type PysHistorySparklinePoint,
@@ -21,9 +21,6 @@ function buildPoints(
   }));
 }
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("PysHistorySparkline", () => {
   it("renders an SVG polyline when 30 points have pysAtPublish values", () => {

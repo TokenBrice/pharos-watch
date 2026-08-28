@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { useMarketDataChartWindow } from "./use-market-data-chart-window";
 
 vi.mock("@/hooks/use-chart-annotations", () => ({
@@ -15,9 +15,6 @@ const data = [
 
 const margin = { top: 5, right: 12, bottom: 20, left: 5 };
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("useMarketDataChartWindow", () => {
   it("uses one tick per month for month-oriented ranges", () => {

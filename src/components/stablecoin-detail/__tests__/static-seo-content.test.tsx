@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 
 vi.mock("next/link", async () => {
@@ -60,7 +60,6 @@ const summary: StablecoinAiSummary = {
 };
 
 describe("StablecoinDetailSeoContent", () => {
-  afterEach(() => cleanup());
 
   it("renders one hidden h1 plus a visible static profile with taxonomy links and facts", () => {
     const { container } = render(<StablecoinDetailSeoContent coin={coin} summary={summary} />);

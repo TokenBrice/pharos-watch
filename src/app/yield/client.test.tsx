@@ -3,8 +3,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { YieldClient } from "./client";
-import { makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
+import { YieldClient } from "@/components/yield/yield-client";
+import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 
@@ -76,15 +76,15 @@ vi.mock("@/components/stale-data-banner", () => ({
   },
 }));
 
-vi.mock("@/app/yield/source-board", () => ({
+vi.mock("@/components/yield/yield-source-board", () => ({
   YieldSourceBoard: () => <div data-testid="yield-source-board" />,
 }));
 
-vi.mock("@/app/yield/reference-rates-strip", () => ({
+vi.mock("@/components/yield/reference-rates-strip", () => ({
   ReferenceRatesStrip: () => <div data-testid="reference-rates-strip" />,
 }));
 
-vi.mock("@/app/yield/coin-index", () => ({
+vi.mock("@/components/yield/coin-index", () => ({
   YieldCoinIndex: () => <div data-testid="yield-coin-index" />,
 }));
 

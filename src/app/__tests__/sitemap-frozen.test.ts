@@ -30,6 +30,34 @@ describe("sitemap", () => {
     expect(sitemapPaths).toEqual([...PUBLIC_ROUTE_PATHS].sort());
   });
 
+  it("preserves the frozen URL, frequency, and priority policy for public hubs", () => {
+    const expected = [
+      ["/", "hourly", 1], ["/coverage/", "weekly", 0.6], ["/alt-pegs/", "daily", 0.7],
+      ["/start/", "monthly", 0.6], ["/freezewatch/", "daily", 0.85], ["/depeg/", "daily", 0.8],
+      ["/cemetery/", "monthly", 0.7], ["/compare/", "weekly", 0.7], ["/liquidity/", "daily", 0.8],
+      ["/upcoming/", "daily", 0.6], ["/digest/", "daily", 0.6], ["/safety-scores/", "daily", 0.8],
+      ["/safety-scores/map/", "daily", 0.6], ["/stability-index/", "daily", 0.8],
+      ["/dependency-map/", "daily", 0.7], ["/yield/", "daily", 0.7], ["/screener/", "daily", 0.7],
+      ["/funding/", "weekly", 0.5], ["/status/", "daily", 0.4], ["/flows/", "daily", 0.7],
+      ["/timeline/", "hourly", 0.75], ["/compliance/", "weekly", 0.6],
+      ["/pharoswatchbot/", "weekly", 0.7], ["/methodology/", "monthly", 0.6],
+      ["/changelog/", "weekly", 0.5], ["/blog/", "weekly", 0.6], ["/about/", "monthly", 0.5],
+      ["/about/api/", "monthly", 0.5], ["/about/bluechip/", "monthly", 0.5],
+      ["/learn/", "monthly", 0.5], ["/learn/glossary/", "monthly", 0.5],
+      ["/sitemap-tree/", "monthly", 0.3], ["/api/", "monthly", 0.5],
+      ["/stablecoins/", "weekly", 0.7], ["/stablecoins/backing/", "weekly", 0.6],
+      ["/stablecoins/governance/", "weekly", 0.6], ["/stablecoins/infrastructure/", "weekly", 0.6],
+      ["/privacy/", "yearly", 0.3], ["/docs/", "monthly", 0.6],
+    ];
+    const byPath = new Map(sitemap().map((entry) => [new URL(entry.url).pathname, entry]));
+
+    expect(expected.map(([path]) => [
+      path,
+      byPath.get(path as string)?.changeFrequency,
+      byPath.get(path as string)?.priority,
+    ])).toEqual(expected);
+  });
+
   it("emits a valid last-modified date for every URL", () => {
     for (const entry of sitemap()) {
       expect(entry.lastModified, entry.url).toBeInstanceOf(Date);

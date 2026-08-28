@@ -4,7 +4,7 @@ import { useId } from "react";
 import Link from "next/link";
 import { Area, AreaChart } from "recharts";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
-import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
+import { useTelegramPulse } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useCountUp } from "@/hooks/use-count-up";
 import { Skeleton } from "@/components/ui/skeleton";

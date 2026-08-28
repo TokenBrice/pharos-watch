@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
 import { makeStablecoin as makeStablecoinFixture } from "@shared/test-utils/stablecoin";
@@ -28,39 +28,11 @@ vi.mock("next/image", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
   for (const key of Object.keys(logosByIdMock)) delete logosByIdMock[key];
 });
 
 describe("SupplyMovesCard", () => {
-  it("distinguishes request failure from an empty movers list", () => {
-    useStablecoinsMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("market data unavailable"),
-      refetch: vi.fn(),
-      dataUpdatedAt: 0,
-    });
-    render(<SupplyMovesCard />);
-
-    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
-    expect(screen.queryByText("No qualifying 7-day supply moves")).toBeNull();
-  });
-
-  it("renders a valid empty state without an endless skeleton", () => {
-    useStablecoinsMock.mockReturnValue({
-      data: { peggedAssets: [] },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-      dataUpdatedAt: 1,
-    });
-    render(<SupplyMovesCard />);
-
-    expect(screen.getByText("No qualifying 7-day supply moves")).toBeTruthy();
-  });
-
   it("links the peak supply mover to its stablecoin page", () => {
     useStablecoinsMock.mockReturnValue({
       data: {

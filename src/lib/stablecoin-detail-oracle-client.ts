@@ -1,5 +1,7 @@
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import type { OracleRiskConfidence, OracleRiskRole, OracleRiskTier, StablecoinLink, StablecoinMeta } from "@shared/types";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { dedupeStablecoinLinksByUrl } from "@/lib/stablecoin-detail-links-client";
 
 /**
  * Client-safe projection of the server-only `oracleRisk` review, in the
@@ -74,13 +76,13 @@ const TIER_LABELS: Record<OracleRiskTier, string> = {
 
 // Tone strings match the bridge-client TIER_TONES palette byte-for-byte.
 const TIER_TONES: Record<OracleRiskTier, string> = {
-  "oracleless": "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  "privileged-internal-pricing": "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  "redundant-with-failover": "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  "medianized-with-delay": "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  "standard-external": "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  "single-source-or-laggy": "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  "opaque-or-unknown": "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  "oracleless": SEVERITY_TONE_CLASS.ok.pill,
+  "privileged-internal-pricing": SEVERITY_TONE_CLASS.watch.pill,
+  "redundant-with-failover": SEVERITY_TONE_CLASS.ok.pill,
+  "medianized-with-delay": SEVERITY_TONE_CLASS.info.pill,
+  "standard-external": SEVERITY_TONE_CLASS.info.pill,
+  "single-source-or-laggy": SEVERITY_TONE_CLASS.watch.pill,
+  "opaque-or-unknown": SEVERITY_TONE_CLASS.alert.pill,
 };
 
 const ROLE_TITLES: Record<OracleRiskRole, string> = {
@@ -187,16 +189,10 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
     .map((branch) => branch.liquidationDelaySec)
     .filter((value): value is number => value != null);
 
-  const sources: StablecoinLink[] = [];
-  const seen = new Set<string>();
-  for (const source of [
+  const sources = dedupeStablecoinLinksByUrl([
     ...(profile.sources ?? []),
     ...(profile.branches ?? []).flatMap((branch) => branch.sources ?? []),
-  ]) {
-    if (seen.has(source.url)) continue;
-    seen.add(source.url);
-    sources.push(source);
-  }
+  ]);
 
   const notApplicable = profile.branchApplicability?.disposition === "not-applicable";
   const role = resolveOracleRiskRole(coin);
@@ -208,8 +204,8 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
     tier: profile.tier,
     tierLabel: notApplicable ? "No liquidation oracle · not scored" : TIER_LABELS[profile.tier] ?? profile.tier,
     tierToneClass: notApplicable
-      ? "border-border/60 bg-muted/30 text-muted-foreground"
-      : TIER_TONES[profile.tier] ?? "border-border/60 bg-muted/30 text-muted-foreground",
+      ? SEVERITY_TONE_CLASS.neutral.pill
+      : TIER_TONES[profile.tier] ?? SEVERITY_TONE_CLASS.neutral.pill,
     summary: profile.summary,
     confidenceLabel: profile.confidence ? CONFIDENCE_LABELS[profile.confidence] : null,
     reviewedAt: profile.reviewedAt ?? null,

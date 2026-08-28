@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { VerdictPill } from "../verdict-pill";
 import type { StablecoinVerdictArchetype } from "@shared/lib/stablecoin-verdict";
 
-afterEach(cleanup);
 
 const LABELED_ARCHETYPES: { archetype: StablecoinVerdictArchetype; label: string }[] = [
   { archetype: "pre-launch", label: "Pre-Launch" },

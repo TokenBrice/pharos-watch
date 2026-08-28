@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  *
  * - `getParam(key, default?)` — read a param (falls back to default or "")
  * - `setParam(key, value)` / `setParams(updates)` — replace the current search state
- * - `pushParam(key, value)` / `pushParams(updates)` — create a new history entry
+ * - `pushSearchParams(updater)` — create a new history entry
  *
  * This keeps route-local filter state shareable without requiring App Router navigation.
  */
@@ -146,19 +146,6 @@ export function useUrlFilters() {
     [searchParams, writeParams],
   );
 
-  const pushParam = useCallback(
-    (key: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (isUrlFilterClearValue(value)) {
-        params.delete(key);
-      } else {
-        params.set(key, value);
-      }
-      writeParams(params, "push");
-    },
-    [searchParams, writeParams],
-  );
-
   const setParams = useCallback(
     (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -170,21 +157,6 @@ export function useUrlFilters() {
         }
       }
       writeParams(params, "replace");
-    },
-    [searchParams, writeParams],
-  );
-
-  const pushParams = useCallback(
-    (updates: Record<string, string>) => {
-      const params = new URLSearchParams(searchParams.toString());
-      for (const [key, value] of Object.entries(updates)) {
-        if (isUrlFilterClearValue(value)) {
-          params.delete(key);
-        } else {
-          params.set(key, value);
-        }
-      }
-      writeParams(params, "push");
     },
     [searchParams, writeParams],
   );
@@ -207,5 +179,5 @@ export function useUrlFilters() {
     [searchParams, writeParams],
   );
 
-  return { searchParams, getParam, setParam, pushParam, setParams, pushParams, pushSearchParams, replaceParams };
+  return { searchParams, getParam, setParam, setParams, pushSearchParams, replaceParams };
 }

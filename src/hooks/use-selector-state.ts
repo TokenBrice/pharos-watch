@@ -9,16 +9,18 @@ import {
   SELECTOR_URL_KEYS,
   transition,
   type SelectorAction,
-  type SelectorStep,
   type SelectorWizardState,
 } from "@/lib/selector-state";
 
 export interface UseSelectorStateResult {
   state: SelectorWizardState;
   dispatch: (action: SelectorAction) => void;
-  setStep: (step: SelectorStep) => void;
-  /** Build the canonical URL for the current state (no leading slash). */
-  toSearchString: () => string;
+}
+
+function writeSelectorState(params: URLSearchParams, state: SelectorWizardState): void {
+  for (const key of SELECTOR_URL_KEYS) params.delete(key);
+  const fresh = encodeSelectorState(state);
+  for (const [key, value] of fresh) params.set(key, value);
 }
 
 export function useSelectorState(): UseSelectorStateResult {
@@ -36,21 +38,13 @@ export function useSelectorState(): UseSelectorStateResult {
       (typeof urlStep === "number" && typeof valid === "number" && urlStep > valid);
     if (urlClaimsBeyondValid) {
       const next = { ...state, step: valid };
-      replaceParams((params) => {
-        for (const key of SELECTOR_URL_KEYS) params.delete(key);
-        const fresh = encodeSelectorState(next);
-        for (const [key, value] of fresh) params.set(key, value);
-      });
+      replaceParams((params) => writeSelectorState(params, next));
     }
   }, [state, replaceParams]);
 
   const dispatch = useCallback((action: SelectorAction) => {
     const next = transition(state, action);
-    const updater = (params: URLSearchParams) => {
-      for (const key of SELECTOR_URL_KEYS) params.delete(key);
-      const fresh = encodeSelectorState(next);
-      for (const [key, value] of fresh) params.set(key, value);
-    };
+    const updater = (params: URLSearchParams) => writeSelectorState(params, next);
     if (action.type === "relax" || action.type === "go-back") {
       replaceParams(updater);
     } else {
@@ -58,15 +52,5 @@ export function useSelectorState(): UseSelectorStateResult {
     }
   }, [state, pushSearchParams, replaceParams]);
 
-  const setStep = useCallback((step: SelectorStep) => {
-    const next = { ...state, step };
-    pushSearchParams((params) => {
-      for (const key of SELECTOR_URL_KEYS) params.delete(key);
-      const fresh = encodeSelectorState(next);
-      for (const [key, value] of fresh) params.set(key, value);
-    });
-  }, [state, pushSearchParams]);
-
-  const toSearchString = useCallback(() => encodeSelectorState(state).toString(), [state]);
-  return { state, dispatch, setStep, toSearchString };
+  return { state, dispatch };
 }

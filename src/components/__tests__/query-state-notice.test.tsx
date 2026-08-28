@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { QueryStateNotice } from "@/components/query-state-notice";
 
-afterEach(cleanup);
 
 describe("QueryStateNotice", () => {
   it("uses the classified unavailable tone while preserving its message API", () => {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import {
   createWorkspaceModeIds,
   WorkspaceModeTabs,
@@ -16,7 +16,6 @@ const MODES: WorkspaceModeSummary<TestMode>[] = [
   { id: "reserves", label: "Reserves", issueCount: 2, severity: "critical" },
 ];
 
-afterEach(cleanup);
 
 describe("WorkspaceModeTabs", () => {
   it("applies workspace configuration to the shared tab strip", () => {

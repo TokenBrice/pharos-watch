@@ -1,4 +1,4 @@
-import { escapeXml, rssResponse, toRfc822, type RssItem } from "@/lib/rss";
+import { createRssRoute, escapeXml, toRfc822, type RssItem } from "@/lib/rss";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
@@ -39,15 +39,11 @@ function cemeteryItems(): RssItem[] {
     });
 }
 
-export async function GET(): Promise<Response> {
-  const items = cemeteryItems();
-  return rssResponse({
-    title: "Pharos Cemetery",
-    link: `${SITE_URL}/cemetery/`,
-    feedUrl: `${SITE_URL}${FEED_PATH}`,
-    description:
-      "Failed, discontinued, and abandoned stablecoins archived by pharos.watch — each entry carries an epitaph, obituary, and cause-of-death classification.",
-    language: "en-US",
-    items,
-  });
-}
+export const GET = createRssRoute({
+  title: "Pharos Cemetery",
+  link: `${SITE_URL}/cemetery/`,
+  feedUrl: `${SITE_URL}${FEED_PATH}`,
+  description:
+    "Failed, discontinued, and abandoned stablecoins archived by pharos.watch — each entry carries an epitaph, obituary, and cause-of-death classification.",
+  items: cemeteryItems,
+});

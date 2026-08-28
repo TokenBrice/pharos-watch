@@ -1,6 +1,7 @@
 import { SEVERITY_TONE_CLASS, type SeverityTone } from "@/lib/severity-tone";
 import type { StablecoinLink, StablecoinMeta } from "@shared/types";
 import { isRecord, stringValue } from "@shared/lib/type-guards";
+import { readStablecoinLinks } from "@/lib/stablecoin-detail-links-client";
 
 /**
  * Client-safe projection of the server-only `blacklistabilityReview`, in the
@@ -53,18 +54,6 @@ function statusValue(value: unknown): BlacklistabilityClientStatus | null {
   return null;
 }
 
-function sourceList(value: unknown): StablecoinLink[] {
-  if (!Array.isArray(value)) return [];
-  const sources: StablecoinLink[] = [];
-  for (const source of value) {
-    if (!isRecord(source)) continue;
-    const label = stringValue(source.label);
-    const url = stringValue(source.url);
-    if (label && url) sources.push({ label, url });
-  }
-  return sources;
-}
-
 /**
  * The upstream asset a freeze power is inherited from. `variantOf` is the
  * wrapper relationship; `mintAuthority.inheritedFrom` covers reviewed
@@ -106,7 +95,7 @@ export function projectBlacklistabilityClientSummary(
   const evidence = stringValue(review.evidence);
   if (!status || !evidence) return null;
 
-  const sources = sourceList(review.sources);
+  const sources = readStablecoinLinks(review.sources);
   const sourceFreeRationale = stringValue(review.sourceFreeRationale);
   const upstreamLabel = status === "inherited" ? resolveUpstream(coin, parentById) : null;
 

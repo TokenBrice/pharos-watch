@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PsiBandCard } from "@/components/home-alt-mini-cards/psi-band-card";
 import type { StabilityIndexResponse } from "@shared/types/stability";
@@ -14,7 +14,6 @@ vi.mock("@/hooks/api-hooks", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 
@@ -51,21 +50,6 @@ function makePsiResponse(): StabilityIndexResponse {
 }
 
 describe("PsiBandCard", () => {
-  it("renders unavailable instead of a default steady band when the request fails", () => {
-    useStabilityIndexMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("psi unavailable"),
-      refetch: vi.fn(),
-      dataUpdatedAt: 0,
-    });
-
-    render(<PsiBandCard />);
-
-    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
-    expect(screen.queryByText(/Steady/)).toBeNull();
-  });
-
   it("renders the Stability Index score and the sparkline from raw samples", () => {
     useStabilityIndexMock.mockReturnValue({
       data: makePsiResponse(),

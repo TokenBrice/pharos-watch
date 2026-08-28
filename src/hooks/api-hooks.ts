@@ -27,6 +27,7 @@ import {
   type YieldRankingsResponse,
 } from "@shared/types";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
+import type { TelegramPulse } from "@shared/types/status";
 import {
   createApiQueryFn,
   createApiPollingQueryOptions,
@@ -229,6 +230,12 @@ export function useStabilityIndex() {
 
 export function useStabilityIndexDetail() {
   return useRegisteredApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexDetail);
+}
+
+// Public /pharoswatchbot telemetry contract. Keep rendered fields and
+// docs/telegram-alerts.md in sync with worker/src/api/telegram-pulse.ts.
+export function useTelegramPulse() {
+  return useRegisteredApiQuery<TelegramPulse>(FRONTEND_API_QUERY_DESCRIPTORS.telegramPulse);
 }
 
 export function useUsdsStatus() {

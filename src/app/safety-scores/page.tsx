@@ -3,7 +3,7 @@ import { Bell } from "lucide-react";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
-import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { buildApiOgImageUrl } from "@/lib/page-metadata";
 import { SafetyScoresContentLoadingState } from "@/app/safety-scores/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
@@ -17,13 +17,6 @@ import {
 
 const reportCardsDescription =
   "Compare active Safety Score V9 stablecoin ratings across backing, exit, economic control, evidence quality, dependencies, and structural caps.";
-
-export const metadata = buildPageMetadata({
-  title: "Safety Scores: Stablecoin Safety Grades",
-  description: reportCardsDescription,
-  canonical: "/safety-scores/",
-  ogImage: buildApiOgImageUrl(API_PATHS.ogSafetyScores()),
-});
 
 const FAQ_ITEMS = [
   {
@@ -53,12 +46,17 @@ const FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
-export default createClientFeaturePage({
+const route = createClientFeaturePage({
+  path: "/safety-scores/",
+  metadata: {
+    title: "Safety Scores: Stablecoin Safety Grades",
+    description: reportCardsDescription,
+    ogImage: buildApiOgImageUrl(API_PATHS.ogSafetyScores()),
+  },
   loadClient: () => import("./v9-client").then((m) => ({ default: m.ReportCardsV9Client })),
   loading: <SafetyScoresContentLoadingState />,
   shell: {
     breadcrumbName: "Safety Scores",
-    path: "/safety-scores/",
     title: "Safety Scores",
     methodology: {
       version: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
@@ -93,3 +91,6 @@ export default createClientFeaturePage({
     </>
   ),
 });
+
+export const metadata = route.metadata;
+export default route.Page;

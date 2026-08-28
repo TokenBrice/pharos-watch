@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { DistributionSection } from "@/components/stablecoin-detail/distribution-section";
 
@@ -13,7 +13,6 @@ vi.mock("@/hooks/api-hooks", () => ({ useDexLiquidity: useDexLiquidityMock }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 

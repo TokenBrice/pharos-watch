@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { installSvgCoordinateShim } from "./contagion-graph-test-support";
@@ -66,9 +66,6 @@ const DEPENDENCY_EDGES: ReportCardsV9DependencyEdge[] = [
 
 beforeAll(installSvgCoordinateShim);
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("ContagionGraph", () => {
   function getTraceCoinPicker(): HTMLSelectElement {

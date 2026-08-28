@@ -1,5 +1,3 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { MechanismArchetype } from "@shared/types";
 import {
@@ -7,13 +5,16 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { ArchetypeArticleJsonLd } from "@/lib/mechanism-json-ld";
 import { MECHANISM_EXPLAINER_TITLES } from "@/lib/mechanism-explainer-registry";
 import { LearnPageShell } from "../../_shared/learn-page-shell";
 import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
 import { ArchetypeExplainerBody } from "../explainer-shell";
 
-const ARCHETYPE_SLUGS = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
+const ARCHETYPE_BY_SLUG = new Map<string, MechanismArchetype>(
+  MECHANISM_ARCHETYPE_VALUES.map((archetype) => [archetype, archetype]),
+);
 
 const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
   "fiat-cash":
@@ -32,38 +33,7 @@ const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
     "Gold and silver tokens are title claims on specific vaulted bars, not on dollars. Learn how allocation, vault custody, bar-list audits, and physical redemption work.",
 };
 
-export function generateStaticParams() {
-  return MECHANISM_ARCHETYPE_VALUES.map((archetype) => ({ archetype }));
-}
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ archetype: string }>;
-}): Promise<Metadata> {
-  const { archetype } = await params;
-  if (!ARCHETYPE_SLUGS.has(archetype)) {
-    return { title: "Not Found", robots: { index: false } };
-  }
-  const slug = archetype as MechanismArchetype;
-  return buildPageMetadata({
-    title: MECHANISM_EXPLAINER_TITLES[slug],
-    description: DESCRIPTION_BY_ARCHETYPE[slug],
-    canonical: getMechanismExplainerPath(slug),
-    ogImage: `/og-learn-${slug}.png`,
-  });
-}
-
-export default async function ArchetypeExplainerPage({
-  params,
-}: {
-  params: Promise<{ archetype: string }>;
-}) {
-  const { archetype } = await params;
-  if (!ARCHETYPE_SLUGS.has(archetype)) {
-    notFound();
-  }
-  const slug = archetype as MechanismArchetype;
+function renderArchetypeExplainer(slug: MechanismArchetype) {
   const content = ARCHETYPE_CONTENT[slug];
   const label = getMechanismArchetypeLabel(slug);
   const explainerPath = getMechanismExplainerPath(slug);
@@ -85,3 +55,22 @@ export default async function ArchetypeExplainerPage({
     </LearnPageShell>
   );
 }
+
+const route = createStaticSlugRoute({
+  paramKey: "archetype",
+  pages: MECHANISM_ARCHETYPE_VALUES,
+  pageBySlug: ARCHETYPE_BY_SLUG,
+  getSlug: (archetype) => archetype,
+  metadata: (slug) => buildPageMetadata({
+    title: MECHANISM_EXPLAINER_TITLES[slug],
+    description: DESCRIPTION_BY_ARCHETYPE[slug],
+    canonical: getMechanismExplainerPath(slug),
+    ogImage: `/og-learn-${slug}.png`,
+  }),
+  missingMetadata: { title: "Not Found", robots: { index: false } },
+  render: renderArchetypeExplainer,
+});
+
+export const generateStaticParams = route.generateStaticParams;
+export const generateMetadata = route.generateMetadata;
+export default route.Page;

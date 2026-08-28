@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { HomeAltHeroChart } from "@/components/home-alt-hero-chart";
 import { CHART_SLATE_SOFT, CHART_SLATE_STRONG } from "@/lib/chart-colors";
 
@@ -14,9 +14,6 @@ vi.mock("@/hooks/use-chart-shell", () => ({
   }),
 }));
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("HomeAltHeroChart", () => {
   const rows = [

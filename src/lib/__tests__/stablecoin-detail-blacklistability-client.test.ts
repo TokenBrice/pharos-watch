@@ -158,4 +158,12 @@ describe("projectBlacklistabilityClientSummary", () => {
     expect(summary!.sources).toEqual([{ label: "Kept", url: "https://example.com/kept" }]);
     expect(summary!.reviewedAt).toBeNull();
   });
+
+  it("preserves valid duplicate links", () => {
+    const duplicate = { label: "Verified USDT source mirror", url: "https://example.com/usdt" };
+    const summary = projectBlacklistabilityClientSummary(
+      coinWith({ blacklistabilityReview: { ...FREEZABLE_REVIEW, sources: [FREEZABLE_REVIEW.sources[0], duplicate] } }),
+    );
+    expect(summary!.sources).toEqual([FREEZABLE_REVIEW.sources[0], duplicate]);
+  });
 });

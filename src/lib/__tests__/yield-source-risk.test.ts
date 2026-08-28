@@ -2,19 +2,21 @@ import { describe, expect, it } from "vitest";
 import {
   classifyYieldSourcePosture,
   classifyYieldSourceDepth,
-  classifyYieldSourceAgeContext,
   formatYieldSourceRiskSummary,
   formatYieldSourceRiskDriverSummary,
   getYieldSourceDepthDisplay,
   getYieldSourceRiskDrivers,
-  getYieldSourceFreshnessDisplay,
   isNativeYieldSource,
 } from "@/lib/yield-source-risk";
+import {
+  classifyYieldSourceAgeContext,
+  getYieldSourceFreshnessDisplay,
+} from "@/lib/yield-source-presentation";
 import {
   SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
   buildSourceRiskGoldenFixture,
   mergeSourceRiskGoldenFixtures,
-} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+} from "@shared/test-utils/yield-source-risk-golden-fixtures";
 
 describe("yield source risk UI helpers", () => {
   it("maps populated source-risk evidence to public driver labels", () => {

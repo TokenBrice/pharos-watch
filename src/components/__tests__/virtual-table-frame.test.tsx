@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import * as React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import {
   TableBody,
@@ -14,9 +14,6 @@ import {
 } from "@/components/table";
 
 describe("VirtualTableFrame", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("composes shell identity, slots, viewport overflow, and table slots without a nested shadcn container", () => {
     const surfaceRef = React.createRef<HTMLDivElement>();

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { SafetyScoreV9CurrentCardSchema } from "@shared/types/safety-score-v9-public";
 import { StablecoinSafetyScoreV9Card } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
@@ -12,7 +12,6 @@ import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fix
 const EXIT_WEAKEST_PILLARS = makeV9Pillars({ backing: 88, exit: 84, control: 86 });
 
 describe("StablecoinSafetyScoreV9Card", () => {
-  afterEach(cleanup);
 
   it("names its subject in the header so a screenshot of the module stands alone", () => {
     const card = makeV9Card({ score: 84, grade: "A", pillars: EXIT_WEAKEST_PILLARS });

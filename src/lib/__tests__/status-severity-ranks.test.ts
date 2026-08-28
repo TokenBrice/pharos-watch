@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { StatusCause } from "@shared/types";
 import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
 import {
+  buildWorkspaceModeUrl,
+  parseWorkspaceMode,
   SEVERITY_RANK,
   worstSeverity,
   type WorkspaceSeverity,
@@ -36,5 +38,19 @@ describe("status severity ranks", () => {
     expect(worstSeverity(["healthy", "watch"])).toBe("watch");
     expect(worstSeverity(["watch", "unknown"])).toBe("unknown");
     expect(worstSeverity(["unknown", "critical", "healthy"])).toBe("critical");
+  });
+
+  it("parses known workspace modes and preserves unrelated URL state when updating", () => {
+    const modes = [{ id: "first" }, { id: "second" }] as const;
+
+    expect(parseWorkspaceMode(modes, "?view=second&scope=all")).toBe("second");
+    expect(parseWorkspaceMode(modes, "?view=invalid")).toBeNull();
+    expect(parseWorkspaceMode(modes, "?scope=all")).toBeNull();
+    expect(
+      buildWorkspaceModeUrl(
+        { pathname: "/admin/example/", search: "?scope=all", hash: "#signal" } as Location,
+        "first",
+      ),
+    ).toBe("/admin/example/?scope=all&view=first#signal");
   });
 });

@@ -84,14 +84,32 @@ describe("Mini App versioned API client", () => {
     const snapshot = await postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" });
 
     const requestUrl = new URL(String(fetchMock.mock.calls[0]?.[0]), "https://pharos.watch");
-    expect(requestUrl.searchParams.get(TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM)).toBe(
+    expect(requestUrl.searchParams.getAll(TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM)).toEqual([
       TELEGRAM_MINI_APP_CONTRACT_VERSION,
-    );
-    expect(requestUrl.searchParams.get(TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM)).toBe(
+    ]);
+    expect(requestUrl.searchParams.getAll(TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM)).toEqual([
       TELEGRAM_MINI_APP_CATALOG_VERSION,
-    );
+    ]);
     expect(snapshot.state.catalog.searchableCoins.length).toBeGreaterThan(300);
     expect(snapshot.stateRevision).toBe(createTelegramMiniAppSnapshot(mutableState).stateRevision);
+  });
+
+  it("appends one version pair after an existing query", async () => {
+    const fetchMock = mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      body: legacyState,
+    }], { requireMatch: true });
+
+    await postMiniAppSnapshot("/api/telegram-mini-app/session?source=test", { initData: "signed" });
+
+    const requestUrl = new URL(String(fetchMock.mock.calls[0]?.[0]), "https://pharos.watch");
+    expect(requestUrl.searchParams.get("source")).toBe("test");
+    expect(requestUrl.searchParams.getAll(TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM)).toEqual([
+      TELEGRAM_MINI_APP_CONTRACT_VERSION,
+    ]);
+    expect(requestUrl.searchParams.getAll(TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM)).toEqual([
+      TELEGRAM_MINI_APP_CATALOG_VERSION,
+    ]);
   });
 
   it("keeps a new client compatible with an old Worker's full-catalog response", async () => {

@@ -82,6 +82,64 @@ interface StablecoinTableViewProps {
   onClearSearch?: () => void;
 }
 
+type StablecoinTableFrameMode = "loading" | "ready";
+
+const STABLECOIN_FRAME_CLASS_NAMES: Record<
+  StablecoinTableFrameMode,
+  Record<StablecoinTableVisualVariant, string | undefined>
+> = {
+  loading: {
+    default: undefined,
+    figmaOverview: "pharos-overview-table-shell",
+  },
+  ready: {
+    default: "animate-in fade-in duration-200",
+    figmaOverview: "pharos-overview-table-shell animate-in fade-in duration-200",
+  },
+};
+
+function StablecoinTableFrame({
+  children,
+  mode,
+  variant,
+  density,
+  tableMinWidthPx,
+  viewportRef,
+  surfaceRef,
+  topSlot,
+  footerSlot,
+}: {
+  children: ReactNode;
+  mode: StablecoinTableFrameMode;
+  variant: StablecoinTableVisualVariant;
+  density: TableDensity;
+  tableMinWidthPx: number;
+  viewportRef: Ref<HTMLDivElement>;
+  surfaceRef?: Ref<HTMLDivElement>;
+  topSlot?: ReactNode;
+  footerSlot?: ReactNode;
+}) {
+  const isOverview = variant === "figmaOverview";
+
+  return (
+    <VirtualTableFrame
+      {...STABLECOIN_FRAME_SHARED}
+      surfaceRef={surfaceRef}
+      className={STABLECOIN_FRAME_CLASS_NAMES[mode][variant]}
+      density={density}
+      striped="indexed"
+      mobileScrollHint={isOverview ? false : STABLECOIN_FRAME_SHARED.mobileScrollHint}
+      viewportRef={viewportRef}
+      viewportClassName={isOverview ? "pharos-overview-table-viewport" : STABLECOIN_FRAME_SHARED.viewportClassName}
+      tableProps={{ style: { minWidth: tableMinWidthPx } }}
+      topSlot={topSlot}
+      footerSlot={footerSlot}
+    >
+      {children}
+    </VirtualTableFrame>
+  );
+}
+
 function LoadingTable({
   variant,
   density,
@@ -100,24 +158,20 @@ function LoadingTable({
   | "isVisible"
   | "skeletonColumns"
 >) {
-  const isOverview = variant === "figmaOverview";
   return (
-    <VirtualTableFrame
-      {...STABLECOIN_FRAME_SHARED}
-      className={isOverview ? "pharos-overview-table-shell" : undefined}
+    <StablecoinTableFrame
+      mode="loading"
+      variant={variant}
       density={density}
-      striped="indexed"
-      mobileScrollHint={isOverview ? false : STABLECOIN_FRAME_SHARED.mobileScrollHint}
+      tableMinWidthPx={tableMinWidthPx}
       viewportRef={viewportRef}
-      viewportClassName={isOverview ? "pharos-overview-table-viewport" : STABLECOIN_FRAME_SHARED.viewportClassName}
-      tableProps={{ style: { minWidth: tableMinWidthPx } }}
     >
       <TableCaption className="sr-only">Stablecoin data table loading</TableCaption>
       <StablecoinTableHeader showPinnedControls={showPinnedControls} isVisible={isVisible} variant={variant} />
       <TableBody>
         <TableSkeletonRows columns={[...skeletonColumns]} rowCount={SKELETON_ROW_COUNT} />
       </TableBody>
-    </VirtualTableFrame>
+    </StablecoinTableFrame>
   );
 }
 
@@ -268,15 +322,13 @@ export function StablecoinTableView(props: StablecoinTableViewProps) {
     <DefaultFooter count={props.displayed.length} />
   );
   const tableFrame = (
-    <VirtualTableFrame
-      {...STABLECOIN_FRAME_SHARED}
-      surfaceRef={props.surfaceRef}
-      className={isOverview ? "pharos-overview-table-shell animate-in fade-in duration-200" : "animate-in fade-in duration-200"}
+    <StablecoinTableFrame
+      mode="ready"
+      variant={props.variant}
       density={props.density}
+      tableMinWidthPx={props.tableMinWidthPx}
       viewportRef={props.viewportRef}
-      mobileScrollHint={isOverview ? false : STABLECOIN_FRAME_SHARED.mobileScrollHint}
-      viewportClassName={isOverview ? "pharos-overview-table-viewport" : STABLECOIN_FRAME_SHARED.viewportClassName}
-      tableProps={{ style: { minWidth: props.tableMinWidthPx } }}
+      surfaceRef={props.surfaceRef}
       topSlot={
         <>
           {isOverview ? null : (
@@ -297,7 +349,7 @@ export function StablecoinTableView(props: StablecoinTableViewProps) {
         variant={props.variant}
       />
       <StablecoinRows {...props} />
-    </VirtualTableFrame>
+    </StablecoinTableFrame>
   );
 
   return isOverview ? <div className="space-y-3">{props.tableToolbar}{tableFrame}</div> : tableFrame;

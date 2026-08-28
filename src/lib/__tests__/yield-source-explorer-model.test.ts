@@ -3,7 +3,7 @@ import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model
 import {
   SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
   mergeSourceRiskGoldenFixtures,
-} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+} from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import type { AltYieldSource, YieldRanking, YieldSourceRisk } from "@shared/types";
 
 function ranking(overrides: Partial<YieldRanking> = {}): YieldRanking {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { createPharosQueryClient, Providers, SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
 import { setSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 
@@ -36,7 +36,6 @@ function pressKey(key: string) {
 }
 
 afterEach(() => {
-  cleanup();
   window.localStorage.clear();
 });
 

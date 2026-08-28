@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { YieldHealthCard } from "@/components/status/yield-health";
-import { SOURCE_RISK_GOLDEN_ROWS } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+import { SOURCE_RISK_GOLDEN_ROWS } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import type { YieldHealthSummary } from "@shared/types";
 
 function fieldCoverage(coverageRatio: number, eligibleCount = 120) {
@@ -189,9 +189,6 @@ function makeHealth(overrides: Partial<YieldHealthSummary> = {}): YieldHealthSum
 }
 
 describe("YieldHealthCard", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("renders per-family supplemental health counts", () => {
     render(<YieldHealthCard health={makeHealth()} />);

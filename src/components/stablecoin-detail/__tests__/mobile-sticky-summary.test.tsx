@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { createRef, type ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
@@ -104,7 +104,6 @@ describe("MobileStickySummary", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.unstubAllGlobals();
     document.documentElement.style.removeProperty("--pharos-sticky-summary-h");
   });

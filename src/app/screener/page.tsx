@@ -2,19 +2,11 @@ import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
 import { ScreenerContentLoadingState } from "@/app/screener/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const screenerDescription =
   "Filter the screenable stablecoin catalog by DEWS, Safety Grade, V9 pillars and mint-control posture, supply, type, mechanism, peg, and lifecycle.";
-
-export const metadata = buildPageMetadata({
-  title: "Pharos Screener: Filter Stablecoins by Score & Mechanism",
-  description: screenerDescription,
-  canonical: "/screener/",
-  ogImage: `${SITE_URL}/og-default.png`,
-});
 
 const FAQ_ITEMS = [
   {
@@ -90,12 +82,17 @@ const SCREENER_SUPPORT_SECTION = (
   </section>
 );
 
-export default createClientFeaturePage({
+const route = createClientFeaturePage({
+  path: "/screener/",
+  metadata: {
+    title: "Pharos Screener: Filter Stablecoins by Score & Mechanism",
+    description: screenerDescription,
+    ogImage: `${SITE_URL}/og-default.png`,
+  },
   loadClient: () => import("./client").then((m) => ({ default: m.ScreenerClient })),
   loading: <ScreenerContentLoadingState />,
   shell: {
     breadcrumbName: "Screener",
-    path: "/screener/",
     title: "Pharos Screener",
     leadParagraphs: [
       "Filter the tracked stablecoin universe by safety grade, risk dimensions, supply, type, mechanism, peg, and lifecycle. Every filter lives in the URL, so sharing the link shares the view.",
@@ -108,3 +105,6 @@ export default createClientFeaturePage({
     </>
   ),
 });
+
+export const metadata = route.metadata;
+export default route.Page;

@@ -7,10 +7,12 @@ import {
 } from "@/lib/yield-presentation";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
-  YIELD_SOURCE_CONFIDENCE_STYLES,
-  getYieldSourceFreshnessDisplay,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
+import {
+  YIELD_SOURCE_CONFIDENCE_STYLES,
+  getYieldSourceFreshnessDisplay,
+} from "@/lib/yield-source-presentation";
 import type {
   YieldBenchmarkSelectionMode,
   YieldRankChangeAttribution,

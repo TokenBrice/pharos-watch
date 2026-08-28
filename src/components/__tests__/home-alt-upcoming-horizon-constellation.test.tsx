@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
 import { logosById } from "@/lib/logos";
@@ -9,9 +9,6 @@ import { LAUNCH_PHASE_LABELS } from "@/lib/pre-launch";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 describe("HomeAltUpcomingHorizonConstellation", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("links visible coins as dots and folds ring overflow into +N tracker links", () => {
     render(<HomeAltUpcomingHorizonConstellation />);

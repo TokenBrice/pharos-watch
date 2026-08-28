@@ -12,16 +12,11 @@ import {
 } from "lucide-react";
 import { revealAnchorId } from "@/lib/anchor-reveal";
 import { cn } from "@/lib/utils";
+import { MINT_AUTHORITY_POSTURE_DOT_CLASS } from "@/components/stablecoin-detail/mint-authority-presentation";
 import type {
   MintAuthorityDetailControlViewModel,
   MintAuthorityPostureTone,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
-
-const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {
-  minimized: "bg-[var(--severity-healthy)]",
-  neutral: "bg-[var(--text-tertiary)]",
-  elevated: "bg-[var(--severity-mild)]",
-};
 
 /** Glyph per bounded `authorityType` key; EOAs carry a caution tone. */
 const AUTHORITY_GLYPHS: Record<string, { icon: LucideIcon; caution?: boolean }> = {
@@ -196,7 +191,10 @@ export function MintAuthorityRail({
           {symbol}
         </span>
         <span className="mt-0.5 inline-flex items-center gap-1.5 text-[10px] leading-snug text-muted-foreground">
-          <span aria-hidden="true" className={cn("h-1.5 w-1.5 shrink-0 rounded-full", POSTURE_DOT_CLASS[postureTone])} />
+          <span
+            aria-hidden="true"
+            className={cn("h-1.5 w-1.5 shrink-0 rounded-full", MINT_AUTHORITY_POSTURE_DOT_CLASS[postureTone])}
+          />
           {postureLabel}
         </span>
       </div>

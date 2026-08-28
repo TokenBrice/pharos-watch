@@ -15,6 +15,7 @@ import { useSort } from "@/hooks/use-sort";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { buildQueryFreshnessGroup } from "@/lib/query-refetch-group";
 import { decodeState, encodeState } from "@/lib/url-state";
+import { replaceEncodedUrlState } from "@/lib/replace-encoded-url-state";
 import {
   SCREENER_FILTER_DEFAULTS,
   SCREENER_URL_SCHEMA,
@@ -170,14 +171,10 @@ export function ScreenerClient() {
     (next: ScreenerFilters) => {
       const encoded = encodeState(next, SCREENER_URL_SCHEMA);
       replaceParams((params) => {
-        // Clear only the screener-owned keys; leave any unrelated params alone.
-        for (const key of Object.keys(SCREENER_URL_SCHEMA)) {
-          params.delete(key);
-        }
-        const incoming = new URLSearchParams(encoded);
-        for (const [key, value] of incoming) {
-          params.set(key, value);
-        }
+        replaceEncodedUrlState(params, encoded, {
+          clear: "all",
+          schemaKeys: Object.keys(SCREENER_URL_SCHEMA),
+        });
       });
     },
     [replaceParams],

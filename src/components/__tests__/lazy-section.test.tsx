@@ -1,13 +1,12 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LazySection } from "../lazy-section";
 
 describe("LazySection", () => {
   afterEach(() => {
-    cleanup();
     vi.unstubAllGlobals();
   });
 

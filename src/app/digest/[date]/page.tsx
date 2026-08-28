@@ -1,6 +1,4 @@
-import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestSnapshot } from "@/components/digest-snapshot";
 import { EditorialColophon } from "@/components/editorial-colophon";
@@ -11,6 +9,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-
 import { digestDisplay } from "@/lib/fonts/digest";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata, summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
 import { DIGEST_BY_DATE, DIGEST_ENTRIES } from "@/lib/digest-registry";
@@ -38,10 +37,6 @@ const DIGEST_RESEARCH_LINKS = [
   },
 ] as const;
 
-export function generateStaticParams() {
-  return DIGEST_ENTRIES.map((d) => ({ date: d.date }));
-}
-
 function formatDate(dateStr: string): string {
   return formatDigestDateLabel(dateStr, "long");
 }
@@ -57,31 +52,7 @@ function buildDigestMetadataDescription(digest: DigestContentEntry, formattedDat
   );
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ date: string }> }): Promise<Metadata> {
-  const { date } = await params;
-  const digest = DIGEST_BY_DATE.get(date);
-  if (!digest) {
-    return {
-      title: "Digest Not Found",
-      robots: { index: false },
-    };
-  }
-  const formatted = formatDate(digest.date);
-  return buildPageMetadata({
-    title: `${digest.title} (${formatted})`,
-    description: buildDigestMetadataDescription(digest, formatted),
-    canonical: `/digest/${digest.date}/`,
-    ogImage: "/og-editorial-digest.png",
-    ogType: "article",
-    publishedTime: new Date(digest.generatedAt * 1000).toISOString(),
-  });
-}
-
-export default async function DigestDetailPage({ params }: { params: Promise<{ date: string }> }) {
-  const { date } = await params;
-  const digest = DIGEST_BY_DATE.get(date);
-  if (!digest) notFound();
-
+function renderDigestDetail(digest: DigestContentEntry) {
   const formatted = formatDate(digest.date);
   const extendedParagraphs = splitDigestParagraphs(digest.extended);
   const isWeekly = digest.digestType === "weekly";
@@ -219,3 +190,27 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
     </div>
   );
 }
+
+const route = createStaticSlugRoute({
+  paramKey: "date",
+  pages: DIGEST_ENTRIES,
+  pageBySlug: DIGEST_BY_DATE,
+  getSlug: (digest) => digest.date,
+  metadata: (digest) => {
+    const formatted = formatDate(digest.date);
+    return buildPageMetadata({
+      title: `${digest.title} (${formatted})`,
+      description: buildDigestMetadataDescription(digest, formatted),
+      canonical: `/digest/${digest.date}/`,
+      ogImage: "/og-editorial-digest.png",
+      ogType: "article",
+      publishedTime: new Date(digest.generatedAt * 1000).toISOString(),
+    });
+  },
+  missingMetadata: { title: "Digest Not Found", robots: { index: false } },
+  render: renderDigestDetail,
+});
+
+export const generateStaticParams = route.generateStaticParams;
+export const generateMetadata = route.generateMetadata;
+export default route.Page;

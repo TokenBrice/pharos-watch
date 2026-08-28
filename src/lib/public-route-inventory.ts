@@ -33,7 +33,7 @@ export interface PublicRouteInventoryEntry {
   kind: PublicRouteKind;
 }
 
-const PRIMARY_PUBLIC_ROUTE_PATHS = [
+export const PUBLIC_PRIMARY_ROUTE_PATHS = [
   "/", "/coverage/", "/alt-pegs/", "/start/", "/freezewatch/", "/depeg/", "/cemetery/",
   "/compare/", "/liquidity/", "/upcoming/", "/digest/", "/safety-scores/", "/safety-scores/map/",
   "/stability-index/",
@@ -41,7 +41,7 @@ const PRIMARY_PUBLIC_ROUTE_PATHS = [
   "/compliance/", "/pharoswatchbot/", "/methodology/",
 ] as const;
 
-const REFERENCE_PUBLIC_ROUTE_PATHS = [
+export const PUBLIC_REFERENCE_ROUTE_PATHS = [
   "/changelog/", "/blog/", "/about/", "/about/api/", "/about/bluechip/", "/learn/",
   "/learn/glossary/", "/sitemap-tree/", "/api/", "/stablecoins/", "/stablecoins/backing/",
   "/stablecoins/governance/", "/stablecoins/infrastructure/", "/privacy/", "/docs/",
@@ -52,8 +52,8 @@ function entries(kind: PublicRouteKind, hrefs: readonly string[]): PublicRouteIn
 }
 
 const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
-  ...entries("primary", PRIMARY_PUBLIC_ROUTE_PATHS),
-  ...entries("reference", REFERENCE_PUBLIC_ROUTE_PATHS),
+  ...entries("primary", PUBLIC_PRIMARY_ROUTE_PATHS),
+  ...entries("reference", PUBLIC_REFERENCE_ROUTE_PATHS),
   ...entries("methodology", METHODOLOGY_CHANGELOG_SITEMAP_PATHS),
   ...entries("stablecoin", TRACKED_STABLECOINS.map((coin) => buildStablecoinUrl(coin.id))),
   ...entries("chain", getActiveChainIds().map((chainId) => `/chains/${chainId}/`)),

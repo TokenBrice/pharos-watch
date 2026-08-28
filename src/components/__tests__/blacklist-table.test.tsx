@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BlacklistTable } from "@/components/blacklist-table";
 import type { BlacklistEvent } from "@shared/types";
@@ -14,7 +14,6 @@ vi.mock("@/lib/exports/csv", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   downloadCsvMock.mockReset();
 });
 

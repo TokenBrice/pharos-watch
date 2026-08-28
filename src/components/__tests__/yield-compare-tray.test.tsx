@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldCompareTray } from "@/components/yield-compare-tray";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -23,9 +23,6 @@ const rows: YieldViewModelRow[] = [
   makeRow("usdt-tether", "USDT", "Tether"),
 ];
 
-afterEach(() => {
-  cleanup();
-});
 
 beforeEach(() => {
   window.history.replaceState(null, "", "/yield/");

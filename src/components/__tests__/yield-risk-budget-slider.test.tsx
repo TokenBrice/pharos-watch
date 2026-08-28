@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
 import type { YieldRiskBudgetStop } from "@/lib/yield-view-model";
 
-afterEach(cleanup);
 
 const stops: YieldRiskBudgetStop[] = [
   { key: "conservative", label: "Conservative", description: "", count: 3, active: false, overrides: {} },

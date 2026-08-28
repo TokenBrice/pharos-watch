@@ -1,16 +1,12 @@
 "use client";
 
-import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
+import { CohortCoinEmblems, summarizeCohort } from "@/app/alt-pegs/fiat-world-atlas/cohort-coin-emblems";
 import { CohortThreads } from "@/app/alt-pegs/fiat-world-atlas/cohort-threads";
 import type { SkyCohort } from "@/lib/alt-peg-hero";
 
 export function ConstellationCohort({ cohort }: { cohort: SkyCohort }) {
   if (cohort.coins.length === 0) return null;
-  const cohortMarketCap = cohort.coins.reduce((sum, coin) => sum + coin.marketCap, 0);
-  const cohortSymbolPreview = cohort.coins
-    .slice(0, 3)
-    .map((coin) => coin.symbol)
-    .join(" · ");
+  const summary = summarizeCohort(cohort.coins);
   return (
     <div className="constellation-cohort" aria-label={`${cohort.label}-linked stablecoins`}>
       <svg className="constellation-cohort__traces" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -33,21 +29,16 @@ export function ConstellationCohort({ cohort }: { cohort: SkyCohort }) {
       </svg>
       <CohortThreads coins={cohort.coins} colorHex="#a8bae0" />
       <span className="sky-region-tag" style={{ left: "82%", top: "9%" }}>
-        CPI · {cohort.coins.length} {cohort.coins.length === 1 ? "coin" : "coins"}
+        CPI · {summary.coinCount} {summary.coinCount === 1 ? "coin" : "coins"}
       </span>
-      {cohort.coins.map((c) => (
-        <CoinEmblem
-          key={c.id}
-          coin={c}
-          variant="star"
-          loading="eager"
-          cohortCoinCount={cohort.coins.length}
-          cohortMarketCap={cohortMarketCap}
-          cohortSymbolPreview={cohortSymbolPreview}
-          cohortRank={cohort.rank}
-          hoverCardYPlacement="below"
-        />
-      ))}
+      <CohortCoinEmblems
+        coins={cohort.coins}
+        cohortRank={cohort.rank}
+        summary={summary}
+        variant="star"
+        loading="eager"
+        hoverCardYPlacement="below"
+      />
     </div>
   );
 }

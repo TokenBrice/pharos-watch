@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 
 import { SafetyMapPoster } from "./poster";
+import { SafetyScoresHero } from "../presentational";
 
 /**
  * These tests drive the component through the three states a real browser can
@@ -68,6 +69,28 @@ function fallbackText(): HTMLElement | null {
   return screen.queryByText(/The map is not available right now/i);
 }
 
+function renderSafetyMapPreview() {
+  render(
+    <SafetyScoresHero
+      stats={[
+        { label: "Average score", value: "80", detail: "B" },
+        { label: "Supply in A/B", value: "80%", detail: "of supply" },
+        { label: "Weakest dimension", value: "Backing", detail: "watch" },
+      ]}
+      gradeCounts={{ A: 1 }}
+      totalCards={1}
+    />,
+  );
+}
+
+function previewLink(): HTMLElement {
+  return screen.getByRole("link", { name: "Open the Safety Score Map" });
+}
+
+function previewImage(): HTMLImageElement | null {
+  return previewLink().querySelector("img");
+}
+
 describe("SafetyMapPoster", () => {
   afterEach(cleanupFrontendTest);
 
@@ -123,6 +146,41 @@ describe("SafetyMapPoster", () => {
       expect(fallbackText()).not.toBeNull();
       expect(poster()).toBeNull();
       expect(downloadLink()).toBeNull();
+    });
+  });
+});
+
+describe("SafetyMapPreview", () => {
+  afterEach(cleanupFrontendTest);
+
+  it("shows the fallback when the preview already failed before hydration", () => {
+    withImageState(FAILED_BEFORE_HYDRATION, () => {
+      renderSafetyMapPreview();
+
+      expect(previewImage()).toBeNull();
+      expect(within(previewLink()).getByText("Full market map")).toBeTruthy();
+    });
+  });
+
+  it("keeps the preview visible after a successful load", () => {
+    withImageState(LOADED, () => {
+      renderSafetyMapPreview();
+
+      expect(previewImage()).not.toBeNull();
+      expect(screen.queryByText("Full market map")).toBeNull();
+    });
+  });
+
+  it("waits for onError when the preview is still loading", () => {
+    withImageState(STILL_LOADING, () => {
+      renderSafetyMapPreview();
+      const image = previewImage();
+      expect(image).not.toBeNull();
+
+      fireEvent.error(image!);
+
+      expect(previewImage()).toBeNull();
+      expect(within(previewLink()).getByText("Full market map")).toBeTruthy();
     });
   });
 });

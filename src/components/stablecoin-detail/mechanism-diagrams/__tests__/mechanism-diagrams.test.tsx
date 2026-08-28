@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { MechanismArchetype } from "@shared/types";
 import { mechanismDiagramFor, type MechanismDiagramOptions } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { VerticalThreeStepDiagram } from "@/components/stablecoin-detail/mechanism-diagrams/vertical-three-step-diagram";
 
-afterEach(() => cleanup());
 
 interface RenderedDiagram {
   container: HTMLElement;

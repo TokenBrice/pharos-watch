@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { RailCopyFold } from "../rail-copy-fold";
 
 function setHash(hash: string) {
@@ -13,7 +13,6 @@ function setHash(hash: string) {
 
 describe("RailCopyFold", () => {
   afterEach(() => {
-    cleanup();
     window.location.hash = "";
   });
 

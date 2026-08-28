@@ -2,9 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { Metadata } from "next";
 import type React from "react";
-import { notFound } from "next/navigation";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import ReactMarkdown from "react-markdown";
@@ -12,10 +10,11 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { markdownLinkComponent } from "@/components/markdown-link";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { BLOG_POST_BY_SLUG } from "@/data/blog";
 import sitemapDates from "@/generated/sitemap-dates.json";
-import { formatLongDate } from "@shared/lib/format";
+import { formatPublishedDate } from "../format-published-date";
 
 const POSTS_DIR = path.join(process.cwd(), "src/data/blog/posts");
 const OG_BLOG = "/og-blog.png";
@@ -50,33 +49,7 @@ const mdxComponents = {
   },
 };
 
-function formatPublishedDate(iso: string): string {
-  return formatLongDate(new Date(`${iso}T00:00:00Z`), { utc: true });
-}
-
-export function generateStaticParams() {
-  return Array.from(BLOG_POST_BY_SLUG.keys()).map((slug) => ({ slug }));
-}
-
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params;
-  const post = BLOG_POST_BY_SLUG.get(slug);
-  if (!post) return { title: "Post Not Found" };
-
-  return buildPageMetadata({
-    title: `${post.title} | Pharos Blog`,
-    titleAbsolute: true,
-    description: post.description,
-    canonical: `/blog/${slug}/`,
-    ogImage: post.coverImage ?? OG_BLOG,
-  });
-}
-
-export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const post = BLOG_POST_BY_SLUG.get(slug);
-  if (!post) notFound();
-
+function renderBlogPost(post: (typeof BLOG_POST_BY_SLUG extends ReadonlyMap<string, infer T> ? T : never), slug: string) {
   const source = fs.readFileSync(path.join(POSTS_DIR, `${post.slug}.md`), "utf-8");
   const canonical = `${SITE_URL}/blog/${slug}/`;
   const dateModified = (sitemapDates as Record<string, string>)[`/blog/${slug}/`] ?? post.datePublished;
@@ -137,3 +110,22 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     </FeaturePageShell>
   );
 }
+
+const route = createStaticSlugRoute({
+  paramKey: "slug",
+  pages: Array.from(BLOG_POST_BY_SLUG.values()),
+  pageBySlug: BLOG_POST_BY_SLUG,
+  metadata: (post, slug) => buildPageMetadata({
+    title: `${post.title} | Pharos Blog`,
+    titleAbsolute: true,
+    description: post.description,
+    canonical: `/blog/${slug}/`,
+    ogImage: post.coverImage ?? OG_BLOG,
+  }),
+  missingMetadata: { title: "Post Not Found" },
+  render: renderBlogPost,
+});
+
+export const generateStaticParams = route.generateStaticParams;
+export const generateMetadata = route.generateMetadata;
+export default route.Page;

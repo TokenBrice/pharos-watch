@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { MintBurnReconciliationSummary } from "@shared/types";
 import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
 
@@ -26,9 +26,6 @@ function makeSummary(rowCount: number): MintBurnReconciliationSummary {
 }
 
 describe("MintBurnReconciliationCard", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("collapses the long tail behind a disclosure button", () => {
     render(<MintBurnReconciliationCard summary={makeSummary(8)} />);

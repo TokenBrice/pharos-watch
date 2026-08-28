@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { DepegHistory } from "@/components/depeg-history";
 import type { DepegEvent } from "@shared/types";
 
@@ -14,7 +14,6 @@ vi.mock("@/hooks/use-depeg-events", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   useInfiniteDepegEventsMock.mockReset();
 });
 

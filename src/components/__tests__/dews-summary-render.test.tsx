@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { render } from "@testing-library/react";
 import { DEWSSummary } from "@/components/dews-summary";
 import { installMatchMediaMock } from "@/test-utils/frontend";
 
@@ -33,9 +33,6 @@ beforeAll(() => {
   installMatchMediaMock(true);
 });
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("DEWSSummary radar logos", () => {
   it("renders stablecoin logos for alert-or-higher dots while leaving watch dots plain", () => {

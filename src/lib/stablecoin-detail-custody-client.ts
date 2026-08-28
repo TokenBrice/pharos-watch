@@ -10,6 +10,8 @@ import type {
   StablecoinLink,
   StablecoinMeta,
 } from "@shared/types";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { dedupeStablecoinLinksByUrl } from "@/lib/stablecoin-detail-links-client";
 
 /**
  * Client-safe projection of the server-only `custodyProfile` review, in the
@@ -89,10 +91,10 @@ const POSTURE_LABELS: Record<CustodyPostureKey, string> = {
 
 // Tone strings match the bridge-client TIER_TONES palette byte-for-byte.
 const POSTURE_TONES: Record<CustodyPostureKey, string> = {
-  "segregated-remote": "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  segregated: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  "omnibus-or-mixed": "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  undisclosed: "border-border/60 bg-muted/30 text-muted-foreground",
+  "segregated-remote": SEVERITY_TONE_CLASS.ok.pill,
+  segregated: SEVERITY_TONE_CLASS.info.pill,
+  "omnibus-or-mixed": SEVERITY_TONE_CLASS.watch.pill,
+  undisclosed: SEVERITY_TONE_CLASS.neutral.pill,
 };
 
 const SEGREGATION_CLAUSES: Record<CustodySegregation, string> = {
@@ -154,18 +156,6 @@ export function shouldDisplayCustodyModule(
   return resolvedArchetype !== "cdp" && resolvedArchetype !== "algorithmic";
 }
 
-function dedupeSources(sources: StablecoinLink[] | undefined): StablecoinLink[] {
-  if (!sources) return [];
-  const seen = new Set<string>();
-  const deduped: StablecoinLink[] = [];
-  for (const source of sources) {
-    if (seen.has(source.url)) continue;
-    seen.add(source.url);
-    deduped.push(source);
-  }
-  return deduped;
-}
-
 export function projectCustodyClientSummary(coin: StablecoinMeta): CustodyClientSummary | null {
   const profile = coin.custodyProfile;
   // Single untrusted boundary: custodyProfile is typed as CustodyProfile, but
@@ -194,11 +184,11 @@ export function projectCustodyClientSummary(coin: StablecoinMeta): CustodyClient
     rehypothecationLabel: REHYPOTHECATION_LABELS[profile.rehypothecation] ?? profile.rehypothecation,
     rehypothecationToneClass:
       profile.rehypothecation === "permitted" || profile.rehypothecation === "conditional"
-        ? "text-amber-700 dark:text-amber-400"
+        ? SEVERITY_TONE_CLASS.watch.text
         : null,
     confidenceLabel: CONFIDENCE_LABELS[profile.confidence],
     uncertainty: profile.uncertainty || null,
     reviewedAt: profile.reviewedAt,
-    sources: dedupeSources(profile.sources),
+    sources: dedupeStablecoinLinksByUrl(profile.sources ?? []),
   };
 }

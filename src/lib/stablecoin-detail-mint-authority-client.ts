@@ -10,6 +10,7 @@ import {
 } from "@shared/types/core";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import { dedupeStablecoinLinksByUrl, readStablecoinLinks } from "@/lib/stablecoin-detail-links-client";
 
 type MintAuthorityClientControlSummary = NonNullable<MintAuthorityClientSummary["controls"]>[number];
 type MintAuthorityClientSourceSummary = NonNullable<MintAuthorityClientSummary["sources"]>[number];
@@ -35,15 +36,10 @@ function stringListValue(value: unknown): string[] {
 }
 
 function appendSources(target: MintAuthorityClientSourceSummary[], sources: unknown, seenUrls: Set<string>) {
-  if (!Array.isArray(sources)) return;
-
-  for (const source of sources) {
-    if (!isRecord(source)) continue;
-    const label = stringValue(source.label);
-    const url = stringValue(source.url);
-    if (!label || !url || seenUrls.has(url)) continue;
-    seenUrls.add(url);
-    target.push({ label, url });
+  for (const source of dedupeStablecoinLinksByUrl(readStablecoinLinks(sources))) {
+    if (seenUrls.has(source.url)) continue;
+    seenUrls.add(source.url);
+    target.push(source);
   }
 }
 

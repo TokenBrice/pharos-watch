@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { ComponentType } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HomeAltRankingsSection } from "@/components/home-alt-rankings-section";
@@ -156,6 +156,7 @@ interface SurfaceCase {
   Component: ComponentType;
   configure: (state: MonitoringState) => void;
   emptyText: string | RegExp;
+  emptyExtraText?: string;
   readyText: string;
 }
 
@@ -213,6 +214,7 @@ const SURFACES: SurfaceCase[] = [
       useBlacklistEventsPageMock.mockReturnValue(queryFor(state, freezesReady, { events: [] }));
     },
     emptyText: "$0",
+    emptyExtraText: "0X",
     readyText: "$1K",
   },
   {
@@ -230,48 +232,51 @@ const SURFACES: SurfaceCase[] = [
 ];
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 
-describe.each(SURFACES)("$Component.name semantic query states", ({ Component, configure, emptyText, readyText }) => {
-  function renderState(state: MonitoringState) {
-    useHomeAltFiltersMock.mockReturnValue({ activeFilters: [] });
-    usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
-    configure(state);
-    return render(<Component />);
-  }
+describe.each(SURFACES)(
+  "$Component.name semantic query states",
+  ({ Component, configure, emptyText, emptyExtraText, readyText }) => {
+    function renderState(state: MonitoringState) {
+      useHomeAltFiltersMock.mockReturnValue({ activeFilters: [] });
+      usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
+      configure(state);
+      return render(<Component />);
+    }
 
-  it("renders loading without making a status claim", () => {
-    const view = renderState("loading");
-    expect(view.container.querySelector('[data-slot="skeleton"], [data-testid="stablecoin-table"]')).toBeTruthy();
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.queryByRole("status")).toBeNull();
-  });
+    it("renders loading without making a status claim", () => {
+      const view = renderState("loading");
+      expect(view.container.querySelector('[data-slot="skeleton"], [data-testid="stablecoin-table"]')).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByRole("status")).toBeNull();
+    });
 
-  it("renders ready data", () => {
-    renderState("ready");
-    expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.queryByRole("status")).toBeNull();
-  });
+    it("renders ready data", () => {
+      renderState("ready");
+      expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByRole("status")).toBeNull();
+    });
 
-  it("renders a valid empty state", () => {
-    renderState("empty");
-    expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.queryByRole("status")).toBeNull();
-  });
+    it("renders a valid empty state", () => {
+      renderState("empty");
+      expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
+      if (emptyExtraText) expect(screen.getByText(emptyExtraText)).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByRole("status")).toBeNull();
+    });
 
-  it("renders unavailable without a healthy or empty claim", () => {
-    renderState("unavailable");
-    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
-    expect(screen.queryAllByText(emptyText)).toHaveLength(0);
-  });
+    it("renders unavailable without a healthy or empty claim", () => {
+      renderState("unavailable");
+      expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
+      expect(screen.queryAllByText(emptyText)).toHaveLength(0);
+    });
 
-  it("keeps retained data visible with a stale warning", () => {
-    renderState("stale-with-data");
-    expect(screen.getByRole("status").textContent).toContain("showing the last available data");
-    expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
-  });
-});
+    it("keeps retained data visible with a stale warning", () => {
+      renderState("stale-with-data");
+      expect(screen.getByRole("status").textContent).toContain("showing the last available data");
+      expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
+    });
+  },
+);

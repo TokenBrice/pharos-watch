@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { rssResponse, toRfc822, type RssItem } from "@/lib/rss";
+import { createRssRoute, toRfc822, type RssItem } from "@/lib/rss";
 import {
   getPeakDeviationMagnitudeBps,
   selectStaticDepegEventPages,
@@ -84,15 +84,11 @@ function depegItems(events: readonly DepegEventEntry[]): RssItem[] {
     });
 }
 
-export async function GET(): Promise<Response> {
-  const items = depegItems(loadEvents());
-  return rssResponse({
-    title: "Pharos Depeg Events",
-    link: `${SITE_URL}/depeg/`,
-    feedUrl: `${SITE_URL}${FEED_PATH}`,
-    description:
-      "Confirmed depeg events tracked by pharos.watch — symbol, direction, peak deviation, and resolution status.",
-    language: "en-US",
-    items,
-  });
-}
+export const GET = createRssRoute({
+  title: "Pharos Depeg Events",
+  link: `${SITE_URL}/depeg/`,
+  feedUrl: `${SITE_URL}${FEED_PATH}`,
+  description:
+    "Confirmed depeg events tracked by pharos.watch — symbol, direction, peak deviation, and resolution status.",
+  items: () => depegItems(loadEvents()),
+});

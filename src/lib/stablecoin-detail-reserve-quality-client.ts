@@ -1,4 +1,4 @@
-import type { SeverityTone } from "@/lib/severity-tone";
+import { SEVERITY_TONE_CLASS, type SeverityTone } from "@/lib/severity-tone";
 import type {
   ReserveAssetClass,
   ReserveLiquidityHorizon,
@@ -184,9 +184,9 @@ const TOP_POSITION_RISKS: ReadonlySet<ReserveRisk> = new Set(["medium", "high", 
 
 // Chip tone strings match the oracle/bridge TIER_TONES palette byte-for-byte.
 const CHIP_TONES = {
-  emerald: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  blue: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  amber: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  ok: SEVERITY_TONE_CLASS.ok.pill,
+  info: SEVERITY_TONE_CLASS.info.pill,
+  watch: SEVERITY_TONE_CLASS.watch.pill,
 } as const;
 
 /** Rounds to at most 1 decimal and trims trailing zeros, e.g. 12.56 -> "12.6%", 71 -> "71%". */
@@ -209,10 +209,10 @@ interface ChipVerdict {
  * headline is opacity itself.
  */
 function resolveChip(liquidWithinOneDayPct: number, unknownHorizonPct: number): ChipVerdict {
-  if (liquidWithinOneDayPct >= 90) return { label: "Highly liquid", toneClass: CHIP_TONES.emerald };
-  if (liquidWithinOneDayPct >= 60) return { label: "Mostly liquid", toneClass: CHIP_TONES.blue };
-  if (unknownHorizonPct >= 40) return { label: "Opaque exit", toneClass: CHIP_TONES.amber };
-  return { label: "Mixed liquidity", toneClass: CHIP_TONES.amber };
+  if (liquidWithinOneDayPct >= 90) return { label: "Highly liquid", toneClass: CHIP_TONES.ok };
+  if (liquidWithinOneDayPct >= 60) return { label: "Mostly liquid", toneClass: CHIP_TONES.info };
+  if (unknownHorizonPct >= 40) return { label: "Opaque exit", toneClass: CHIP_TONES.watch };
+  return { label: "Mixed liquidity", toneClass: CHIP_TONES.watch };
 }
 
 /**

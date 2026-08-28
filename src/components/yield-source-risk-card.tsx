@@ -1,7 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { VenueRiskBreakdown } from "@/components/venue-risk-breakdown";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
+import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import {
@@ -61,7 +63,7 @@ function RiskMetric({
   valueClassName,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   title?: string;
   valueClassName?: string;
 }) {
@@ -134,7 +136,9 @@ export function YieldSourceRiskCard({
         <RiskMetric label="Depth" value={depthMeta.label} title={depthMeta.description} />
         <RiskMetric
           label="Freshness"
-          value={freshness?.displayText ?? "n/a"}
+          value={
+            freshness ? <YieldFreshnessLabel freshness={freshness} mode="plain-title" /> : "n/a"
+          }
           title={freshness?.tooltipText}
           valueClassName={freshness?.textClassName}
         />

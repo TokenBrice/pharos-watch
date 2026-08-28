@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   CompareMobileSelectionControls,
-} from "./client";
+} from "@/components/compare/compare-client";
 import { buildCompareSelectionInsights } from "@/lib/compare-selection-insights";
 import type { CoinOption } from "@/lib/compare-types";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";

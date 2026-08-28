@@ -5,7 +5,7 @@ import { ShareButton } from "@/components/share-button";
 import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
 import { DepegContentLoadingState } from "@/app/depeg/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { buildApiOgImageUrl } from "@/lib/page-metadata";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
@@ -17,13 +17,6 @@ import {
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
 const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins with live peg deviations, DEWS early warnings, active incidents, heatmaps, severity, and history.`;
-
-export const metadata = buildPageMetadata({
-  title: "Depeg Tracker: Live Peg Alerts, DDR & DEWS",
-  description: depegDescription,
-  canonical: "/depeg/",
-  ogImage: buildApiOgImageUrl(API_PATHS.ogDepeg()),
-});
 
 const FAQ_ITEMS = [
   {
@@ -66,12 +59,17 @@ function TelegramAlertsHeaderAction() {
   );
 }
 
-export default createClientFeaturePage({
+const route = createClientFeaturePage({
+  path: "/depeg/",
+  metadata: {
+    title: "Depeg Tracker: Live Peg Alerts, DDR & DEWS",
+    description: depegDescription,
+    ogImage: buildApiOgImageUrl(API_PATHS.ogDepeg()),
+  },
   loadClient: () => import("./client").then((m) => ({ default: m.DepegClient })),
   loading: <DepegContentLoadingState />,
   shell: {
     breadcrumbName: "Depeg Tracker",
-    path: "/depeg/",
     title: "Depeg Tracker",
     methodology: {
       version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -95,3 +93,6 @@ export default createClientFeaturePage({
     </>
   ),
 });
+
+export const metadata = route.metadata;
+export default route.Page;
