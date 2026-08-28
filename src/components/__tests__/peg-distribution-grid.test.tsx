@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import type { PegCurrency } from "@shared/types";
 
@@ -50,9 +50,6 @@ function pegCoinCount(peg: PegCurrency): number {
   return TEST_COUNTS[peg];
 }
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("PegBrowseStrip", () => {
   it("uses the Figma collapsed fiat preview", () => {

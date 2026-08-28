@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { isValidFxRate } from "../fx-config";
 import { fetchRealtimeFxRates } from "../fx-realtime";
 import { FxSyncRunState } from "../../cron/sync-fx-rates-helpers";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 afterEach(() => {
   vi.useRealTimers();

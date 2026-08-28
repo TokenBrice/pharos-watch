@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
 import { writeDewsPublishedGeneration } from "../../dews-publication-pointer";
 import { projectDewsEscalated, projectDewsDeescalated, projectDewsBandTransitions } from "../dews";

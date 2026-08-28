@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -11,7 +11,6 @@ vi.mock("next/link", async () => {
 const { AiSummary } = await import("../ai-summary");
 
 describe("AiSummary", () => {
-  afterEach(() => cleanup());
 
   it("renders optional labeled sources without inventing review provenance", () => {
     render(<AiSummary

@@ -146,6 +146,17 @@ export function FlowBrrrOverview({
   const gaugeDisplay = snapshot.score == null
     ? null
     : getPressureShiftDisplay(snapshot.score);
+  const receiptBand = (
+    <FlowReceiptBand
+      gauge={gauge}
+      coins={coins}
+      weeklyHourly={weeklyHourly}
+      scopeLabel={scopeLabel}
+      syncWarning={syncWarning}
+      variant={isCompact ? "compact" : "default"}
+      className={isCompact ? "border-t border-dashed border-border/70 pt-4" : undefined}
+    />
+  );
 
   return (
     <div className={cn("h-full space-y-5", className)}>
@@ -230,24 +241,10 @@ export function FlowBrrrOverview({
           </div>
 
           {isCompact ? (
-            <FlowReceiptBand
-              gauge={gauge}
-              coins={coins}
-              weeklyHourly={weeklyHourly}
-              scopeLabel={scopeLabel}
-              syncWarning={syncWarning}
-              variant="compact"
-              className="border-t border-dashed border-border/70 pt-4"
-            />
+            receiptBand
           ) : (
             <div className="border-t border-dashed border-border/70 pt-5">
-              <FlowReceiptBand
-                gauge={gauge}
-                coins={coins}
-                weeklyHourly={weeklyHourly}
-                scopeLabel={scopeLabel}
-                syncWarning={syncWarning}
-              />
+              {receiptBand}
             </div>
           )}
         </div>

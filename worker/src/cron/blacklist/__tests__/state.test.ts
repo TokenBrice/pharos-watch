@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   claimBlacklistConfigAttempt,
   finalizeBlacklistConfigAttempt,

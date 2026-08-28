@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { analyzeGscCoverageInputs, renderGscCoverageReport } from "../maintenance/analyze-gsc-coverage.mjs";
+import { analyzeGscCoverageInputs, renderGscCoverageReport, runCli } from "../maintenance/analyze-gsc-coverage.mjs";
 import { writeStoredZip } from "./helpers/gsc-zip";
 
 function fixtureDir() {
@@ -118,5 +118,22 @@ describe("analyze-gsc-coverage", () => {
     ]);
     expect(report.missingDrilldowns).toEqual([]);
     expect(rendered).toContain("Crawled - currently not indexed | urls=1 | pathQueryGroups=1 | matchedIssue=yes");
+  });
+
+  it.each([
+    { argv: ["--help"], expectedCode: 0, stream: "stdout", text: "Usage: npm run analyze:gsc-coverage" },
+    { argv: ["--unknown"], expectedCode: 1, stream: "stderr", text: "Unknown option: --unknown" },
+    { argv: [], expectedCode: 1, stream: "stderr", text: "Usage: npm run analyze:gsc-coverage" },
+  ])("handles $stream CLI diagnostics", async ({ argv, expectedCode, stream, text }) => {
+    let stdout = "";
+    let stderr = "";
+    const code = await runCli(
+      argv,
+      { write: (chunk: string) => { stdout += chunk; return true; } } as typeof process.stdout,
+      { write: (chunk: string) => { stderr += chunk; return true; } } as typeof process.stderr,
+    );
+
+    expect(code).toBe(expectedCode);
+    expect(stream === "stdout" ? stdout : stderr).toContain(text);
   });
 });

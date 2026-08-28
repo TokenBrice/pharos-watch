@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { TableSourceLink } from "@/components/table/client";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
+import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import {
@@ -14,6 +15,7 @@ import {
   getYieldWorkbenchSourceRole,
   isYieldBenchmarkFallback,
   isYieldRankingSummary,
+  deriveYieldRowPresentation,
 } from "@/lib/yield-workbench-row";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
@@ -26,7 +28,7 @@ import {
 } from "@shared/lib/yield-opportunity-provenance";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
-import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
+import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription, getPysColor } from "@/lib/yield-constants";
 import {
   formatYieldSourceRiskSummary,
   getYieldSourceDepthDisplay,
@@ -80,7 +82,7 @@ export function ApyRangeBar({ apy30d, min, max }: { apy30d: number; min: number;
   );
 }
 
-function YieldRankChangeChip({ rankChip }: { rankChip: YieldRankChangeChipDisplay }) {
+export function YieldRankChangeChip({ rankChip, compact = false }: { rankChip: YieldRankChangeChipDisplay; compact?: boolean }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -90,7 +92,7 @@ function YieldRankChangeChip({ rankChip }: { rankChip: YieldRankChangeChipDispla
         >
           <span aria-hidden="true">{rankChip.arrow}</span>
           <span className="font-mono tabular-nums">{rankChip.signedRank}</span>
-          <span className="ml-0.5">{rankChip.short}</span>
+          {!compact ? <span className="ml-0.5">{rankChip.short}</span> : null}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-[260px] text-[11px]">
@@ -218,12 +220,14 @@ export function YieldSafetyBadge({
   safetyScore,
   safetySrLabel,
   opportunityDerived = false,
+  compact = false,
 }: {
   grade: YieldViewModelRow["safetyGrade"];
   safetyScore: number | null;
   safetySrLabel: string;
   /** True when the yield model produced this grade instead of Safety Score V9. */
   opportunityDerived?: boolean;
+  compact?: boolean;
 }) {
   // A Royco Dawn tranche grade and an external-opportunity grade publish into
   // the same field as the underlying card and render in the same visual
@@ -241,7 +245,7 @@ export function YieldSafetyBadge({
     return (
       <Badge
         variant="outline"
-        className={`px-1 py-0 text-sm font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
+        className={`${compact ? "px-1.5 py-0.5 text-[10px]" : "px-1 py-0 text-sm"} font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
         title={describe(safetyScore !== null ? `${grade} (${Math.round(safetyScore)}/100)` : grade)}
         aria-label={describe(safetySrLabel)}
       >
@@ -327,14 +331,7 @@ export function YieldSourceDetails({
         ) : null}
         {freshness ? (
           <>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className={`cursor-help ${freshness.textClassName}`}>{freshness.displayText}</span>
-              </TooltipTrigger>
-              <TooltipContent className="text-[11px]">
-                {freshness.tooltipText}
-              </TooltipContent>
-            </Tooltip>
+            <YieldFreshnessLabel freshness={freshness} />
             <span aria-hidden="true">·</span>
           </>
         ) : null}
@@ -348,14 +345,50 @@ export function YieldSignalsIndicator({
   row,
   sourceRiskMaterial,
   rawSourceRiskPenalty,
+  variant = "board",
 }: {
   row: YieldViewModelRow;
   sourceRiskMaterial: boolean;
   rawSourceRiskPenalty: number | null;
+  variant?: "board" | "mobile";
 }) {
   const warningSignalCount = row.warningSignals.length;
 
-  if (warningSignalCount === 0 && !sourceRiskMaterial) return null;
+  if (warningSignalCount === 0 && !sourceRiskMaterial) {
+    return variant === "mobile" ? <span>No warnings</span> : null;
+  }
+
+  if (variant === "mobile") {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={warningSignalCount > 0
+            ? "inline-flex cursor-help items-center gap-1 text-amber-700 dark:text-amber-400"
+            : "inline-flex cursor-help items-center gap-1 text-amber-700/80 dark:text-amber-400/80"}
+          >
+            <AlertTriangle
+              className={warningSignalCount >= 2
+                ? "h-3.5 w-3.5 fill-amber-500/20 text-amber-500"
+                : warningSignalCount === 1
+                  ? "h-3.5 w-3.5 text-amber-500"
+                  : "h-3.5 w-3.5 text-amber-500/70"}
+              aria-hidden="true"
+            />
+            <span>{warningSignalCount > 0
+              ? `${warningSignalCount} warning${warningSignalCount === 1 ? "" : "s"}`
+              : "Source-risk"}</span>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[260px] text-[11px]">
+          {warningSignalCount > 0
+            ? sourceRiskMaterial
+              ? `${warningSignalCount} warning signal${warningSignalCount === 1 ? "" : "s"} + source-risk ${(rawSourceRiskPenalty ?? 0).toFixed(2)}×`
+              : `${warningSignalCount} warning signal${warningSignalCount === 1 ? "" : "s"}`
+            : `Source-risk penalty ${(rawSourceRiskPenalty ?? 0).toFixed(2)}× (no warning signals)`}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
 
   if (warningSignalCount === 0 && sourceRiskMaterial) {
     return (
@@ -560,7 +593,42 @@ export function isOpportunityDerivedYieldRow(row: YieldViewModelRow): boolean {
   return isOpportunityDerivedSafety(row.provenance?.safetyProvenance);
 }
 
-export function formatYieldRowLabels(row: YieldViewModelRow) {
+export function deriveYieldRowDisplay(row: YieldViewModelRow, scalingFactor: number) {
+  const labels = formatYieldRowLabels(row);
+  const presentation = deriveYieldRowPresentation(row);
+  const sourceRole = getYieldWorkbenchSourceRole(row);
+  const breakdown = {
+    ...computePysBreakdown(
+      row.apy30d,
+      row.safetyScore,
+      row.yieldStability,
+      row.benchmarkRate,
+      row.sourceRisk?.sourceRiskPenalty ?? null,
+    ),
+    scalingFactor,
+  };
+
+  return {
+    ...presentation,
+    ...labels,
+    breakdown,
+    grade: row.safetyGrade,
+    safetyScore: row.safetyScore,
+    pysColor: getPysColor(row.pharosYieldScore),
+    warningCount: row.warningSignals.length,
+    sourceRiskSummary: formatYieldSourceRiskSummary(row.sourceRisk),
+    depthDisplay: getYieldSourceDepthDisplay({
+      depthLens: row.sourceDepthLens,
+      yieldType: row.yieldType,
+      sourceRole,
+      sourceTvlUsd: row.sourceTvlUsd,
+    }),
+    isCurrencyMismatchedBenchmark:
+      getYieldBenchmarkSelectionMode(row) === "fallback-usd" && row.peg !== null && row.peg !== "USD",
+  };
+}
+
+function formatYieldRowLabels(row: YieldViewModelRow) {
   const grade = row.safetyGrade;
   const safetyScore = row.safetyScore;
   // A native row has no venue to size apart from the asset itself, so a null

@@ -20,13 +20,11 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
   };
 });
 
-import { createApiPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
 import { CRON_1MIN, CRON_STABILITY_INDEX, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
-import { useHealth, useStabilityIndex } from "../api-hooks";
+import { useHealth, useStabilityIndex, useTelegramPulse } from "../api-hooks";
 import { useRequestSourceStats, useStatus } from "../admin-api-hooks";
-import { useEndpointProbes } from "../use-endpoint-probes";
-import { useTelegramPulse } from "../use-telegram-pulse";
+import { useEndpointProbes, usePublicEndpointProbes } from "../use-endpoint-probes";
 
 function mockQueryReturn() {
   useQueryMock.mockReturnValue({
@@ -191,20 +189,6 @@ describe("query polling policy", () => {
     vi.restoreAllMocks();
   });
 
-  it("createApiPollingQueryOptions enforces stale=interval and refetch=2x interval", () => {
-    const options = createApiPollingQueryOptions(["k"], "/api/health", 15_000);
-    expect(options.staleTime).toBe(15_000);
-    expect(options.refetchInterval).toBe(30_000);
-    expect(options.retry).toBe(2);
-  });
-
-  it("createStaticQueryOptions disables polling explicitly", () => {
-    const options = createStaticQueryOptions(["static"], async () => 1);
-    expect(options.staleTime).toBe(Infinity);
-    expect(options.refetchInterval).toBe(false);
-    expect(options.retry).toBe(1);
-  });
-
   it("useHealth uses shared polling policy with endpoint-specific retry", () => {
     useHealth();
     const options = useQueryMock.mock.calls[0][0] as {
@@ -362,6 +346,34 @@ describe("query polling policy", () => {
     expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy", "critical"]);
     expect(options.staleTime).toBe(CRON_1MIN);
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
+  });
+
+  it("keeps public probes on their own endpoint set and cache key", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "healthy" }),
+    } as Response);
+
+    usePublicEndpointProbes({ enabled: false });
+    const options = useQueryMock.mock.calls[0][0] as {
+      enabled: boolean;
+      retry: number;
+      staleTime: number;
+      refetchInterval: number;
+      queryKey: unknown[];
+      queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown[]>;
+    };
+
+    expect(options.enabled).toBe(false);
+    expect(options.retry).toBe(0);
+    expect(options.staleTime).toBe(CRON_1MIN);
+    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
+    expect(options.queryKey).toEqual(["endpoint-probes", "public"]);
+
+    await options.queryFn(queryContext(options.queryKey));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toEqual(expect.stringContaining("/api/health"));
   });
 
   it("gives admin probes a longer timeout budget than public probes", async () => {

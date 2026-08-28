@@ -1,10 +1,18 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { argv as processArgv } from "node:process";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   CliUsageError,
   parseCliInteger,
   parseStrictCliArgs,
+  requireCliString,
   runCliEntrypoint,
+  runDirectCli,
+  writeJsonOutput,
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
 
@@ -66,28 +74,58 @@ describe("strict operator CLI arguments", () => {
     const output = { write: vi.fn() };
     expect(writeCliHelpIfRequested({ help: true }, "Usage: tool", output)).toBe(true);
     expect(output.write).toHaveBeenCalledWith("Usage: tool\n");
+    expect(writeCliHelpIfRequested({ help: false }, "Usage: tool", output)).toBe(false);
   });
 
-  it("maps usage and runtime failures to distinct exit codes", async () => {
+  it.each([
+    { value: undefined, name: "--output", message: "--output is required" },
+    { value: "", name: "--output", message: "--output is required" },
+    { value: "  ", name: "--output", message: "--output is required" },
+  ])("rejects missing required string values: $value", ({ value, name, message }) => {
+    expect(() => requireCliString(value, name)).toThrow(message);
+  });
+
+  it("writes JSON output into a missing parent directory", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-cli-args-"));
+    try {
+      const outputPath = join(root, "nested", "report.json");
+      writeJsonOutput(outputPath, '{"ok":true}\n');
+      expect(readFileSync(outputPath, "utf8")).toBe('{"ok":true}\n');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    { label: "imported invocation", importMetaUrl: "file:///not-the-entrypoint.mjs", direct: false },
+    {
+      label: "direct invocation",
+      importMetaUrl: pathToFileURL(processArgv[1]!).href,
+      direct: true,
+    },
+  ])("only runs a $label", async ({ importMetaUrl, direct }) => {
+    const action = vi.fn();
+    const previousExitCode = process.exitCode;
+    try {
+      expect(runDirectCli(importMetaUrl, action)).toBe(direct);
+      await Promise.resolve();
+      expect(action).toHaveBeenCalledTimes(direct ? 1 : 0);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+  });
+
+  it.each([
+    { label: "success", action: async () => undefined, expectedExitCode: 0 },
+    { label: "usage failure", action: async () => { throw new CliUsageError("bad option"); }, expectedExitCode: 2 },
+    { label: "runtime failure", action: async () => { throw new Error("network down"); }, expectedExitCode: 1 },
+  ])("maps $label to exit code $expectedExitCode", async ({ action, expectedExitCode, label }) => {
     const previousExitCode = process.exitCode;
     const stderr = { write: vi.fn() };
     try {
-      await runCliEntrypoint(
-        async () => {
-          throw new CliUsageError("bad option");
-        },
-        { label: "tool", usage: "Usage: tool", stderr },
-      );
-      expect(process.exitCode).toBe(2);
-      expect(stderr.write).toHaveBeenCalledWith("tool: bad option\n");
-
-      await runCliEntrypoint(
-        async () => {
-          throw new Error("network down");
-        },
-        { label: "tool", usage: "Usage: tool", stderr },
-      );
-      expect(process.exitCode).toBe(1);
+      process.exitCode = 0;
+      await runCliEntrypoint(action, { label: "tool", usage: "Usage: tool", stderr });
+      expect(process.exitCode, label).toBe(expectedExitCode);
     } finally {
       process.exitCode = previousExitCode;
     }

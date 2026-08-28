@@ -177,17 +177,16 @@ export const entry: ChangelogEntry = {
 };
 ```
 
-#### 12. Update the barrel
+#### 12. Regenerate the barrel
 
-Edit `src/data/changelogs/index.ts`:
+`src/data/changelogs/index.ts` is a generated artifact (`changelog-registry`). Do not hand-edit it; regenerate it from the date-named entry files:
 
-- Insert the import in **chronological order** (existing convention — don't just append):
-  ```ts
-  import { entry as e<YYYYMMDD> } from "./<YYYY-MM-DD>";
-  ```
-- Insert `e<YYYYMMDD>` into the `all` array, also in chronological order.
+```bash
+npm run prebuild -- --only=changelog-registry              # regenerate
+npm run check:generated-artifacts -- --only=changelog-registry  # verify
+```
 
-The barrel's `.sort()` handles runtime ordering; the chronological layout exists for diff readability.
+Generation fails on duplicate or malformed date filenames. The barrel's `.sort()` handles runtime ordering.
 
 #### 13. Verify
 

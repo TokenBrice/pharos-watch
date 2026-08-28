@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import type { StressSignalEntry } from "@shared/types";
 
@@ -14,7 +14,6 @@ vi.mock("next/link", async () => {
   return createNextLinkMock();
 });
 
-afterEach(cleanup);
 
 function makeSignal(overrides: Partial<StressSignalEntry> = {}): StressSignalEntry {
   return {

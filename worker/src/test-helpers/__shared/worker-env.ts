@@ -1,5 +1,5 @@
 import type { Env } from "../../lib/env";
-import { mockD1 } from "./mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 function createRateLimit(): RateLimit {
   return {

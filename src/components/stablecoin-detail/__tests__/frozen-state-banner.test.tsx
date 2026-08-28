@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import type { StablecoinObituary } from "@shared/types";
 
 vi.mock("next/link", async () => {
@@ -22,7 +22,6 @@ const obituary: StablecoinObituary = {
 };
 
 describe("FrozenStateBanner", () => {
-  afterEach(() => cleanup());
 
   it("renders the epitaph headline", () => {
     render(<FrozenStateBanner symbol="USR" frozenAt="2026-04-27" obituary={obituary} />);

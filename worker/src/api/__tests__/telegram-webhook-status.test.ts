@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";

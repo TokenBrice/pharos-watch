@@ -80,7 +80,7 @@ import {
 } from "../authoritative-price-sources";
 import { CIRCUIT_SOURCE } from "../constants";
 import { PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   encodeUint256,
   fetchVaultAssetsPerShareViaSelector,

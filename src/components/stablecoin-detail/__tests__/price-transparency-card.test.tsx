@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, it, expect } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { resolvePriceTransparencySourceStatus } from "@/components/stablecoin-detail/price-transparency-status";
 import type { StablecoinData } from "@shared/types";
@@ -33,9 +33,6 @@ function makeCoinData(priceSource: string): StablecoinData {
   };
 }
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("resolveSourceStatus", () => {
   it("returns 'used' when source is in agreeSources", () => {

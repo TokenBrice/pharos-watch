@@ -1,6 +1,6 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { D1_BATCH_SIZE } from "../../lib/constants";

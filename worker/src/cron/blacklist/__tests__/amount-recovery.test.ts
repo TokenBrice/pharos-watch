@@ -17,7 +17,7 @@ import {
   mockD1 as createMockD1,
   type MockD1Options,
   type MockTableConfig,
-} from "../../../test-helpers/__shared/mock-d1";
+} from "@shared/test-utils/mock-d1";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";

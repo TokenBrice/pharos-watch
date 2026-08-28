@@ -5,20 +5,12 @@ import { ComplianceContentLoadingState } from "@/app/compliance/loading";
 import { buildComplianceStatusDistribution, buildComplianceSummary } from "@/lib/compliance-model";
 import { ComplianceStatusDistributionBars } from "@/app/compliance/status-distribution-bar";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const complianceDescription =
   "Stablecoin compliance tracker for EU MiCA authorization and U.S. GENIUS Act implementation-watch signals, with sourced public references.";
-
-export const metadata = buildPageMetadata({
-  title: "Stablecoin Compliance Tracker: MiCA and GENIUS Status",
-  description: complianceDescription,
-  canonical: "/compliance/",
-  ogImage: `${SITE_URL}/og-card.png`,
-});
 
 const COMPLIANCE_FAQ_ITEMS = [
   {
@@ -153,12 +145,17 @@ const COMPLIANCE_STATIC_SECTION = (
   </section>
 );
 
-export default createClientFeaturePage({
-  loadClient: () => import("./client").then((m) => ({ default: m.ComplianceClient })),
+const route = createClientFeaturePage({
+  path: "/compliance/",
+  metadata: {
+    title: "Stablecoin Compliance Tracker: MiCA and GENIUS Status",
+    description: complianceDescription,
+    ogImage: `${SITE_URL}/og-card.png`,
+  },
+  loadClient: () => import("@/components/compliance/compliance-client").then((m) => ({ default: m.ComplianceClient })),
   loading: <ComplianceContentLoadingState />,
   shell: {
     breadcrumbName: "Compliance",
-    path: "/compliance/",
     title: "Compliance Tracker",
     leadParagraphs: [
       "Where each assessed stablecoin stands under EU MiCA and the U.S. GENIUS Act, sourced from public registers, regulator notices, and issuer disclosures.",
@@ -178,3 +175,6 @@ export default createClientFeaturePage({
   ),
   afterClient: <FaqSection items={COMPLIANCE_FAQ_ITEMS} includeJsonLd />,
 });
+
+export const metadata = route.metadata;
+export default route.Page;

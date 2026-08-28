@@ -1,4 +1,4 @@
-import { jsonResponse } from "../../../test-helpers/__shared/mock-fetch";
+import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";

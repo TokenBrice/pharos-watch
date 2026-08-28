@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../collections";
 import { cleanupStaleLiveReserveArtifacts } from "../live-reserves-store-write";
 

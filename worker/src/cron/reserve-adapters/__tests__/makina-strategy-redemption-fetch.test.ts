@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { jsonResponse } from "../../../test-helpers/__shared/mock-fetch";
+import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { fetchWithRetryMock, resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
 
 const evmRpcMocks = vi.hoisted(() => ({

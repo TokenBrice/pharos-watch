@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronResult } from "../../lib/cron-logger";
 import { getCache } from "../../lib/db-cache";
-import { readCachedJson } from "../../lib/api-utils";
+import { readCachedJson } from "../../lib/api-cache-read";
 import { readPreviousYieldRankingsCount } from "./publication";
 
 const MIN_YIELD_COVERAGE_RATIO = 0.6;

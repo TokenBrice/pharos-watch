@@ -1,6 +1,6 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, it, expect, vi } from "vitest";
-import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 

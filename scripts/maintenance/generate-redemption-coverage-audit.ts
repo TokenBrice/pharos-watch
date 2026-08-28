@@ -13,7 +13,7 @@ import {
   QUARANTINED_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
-import { writeOutputFile } from "../lib/coverage-audit-cli";
+import { parseCoverageAuditCliArgs, runAsMain, writeOutputFile } from "../lib/coverage-audit-cli";
 import {
   REDEMPTION_COVERAGE_DISPOSITIONS,
   REDEMPTION_COVERAGE_REASON_CODES,
@@ -491,48 +491,21 @@ export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageA
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
-export function parseArgs(argv: string[]): {
+type CliOptions = {
   format: "markdown" | "json";
   reportPath: string | null;
   strictActiveGaps: boolean;
   check: boolean;
-} {
-  let format: "markdown" | "json" = "markdown";
-  let reportPath: string | null = null;
-  let strictActiveGaps = false;
-  let check = false;
+};
 
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--json") {
-      format = "json";
-      continue;
-    }
-    if (arg === "--markdown") {
-      format = "markdown";
-      continue;
-    }
-    if (arg === "--strict-active-gaps") {
-      strictActiveGaps = true;
-      continue;
-    }
-    if (arg === "--check") {
-      check = true;
-      continue;
-    }
-    if (arg === "--report") {
-      const value = argv[i + 1];
-      if (!value) {
-        throw new Error("--report requires a path");
-      }
-      reportPath = value;
-      i += 1;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  return { format, reportPath, strictActiveGaps, check };
+export function parseArgs(argv: string[]): CliOptions {
+  return parseCoverageAuditCliArgs(argv, {
+    createOptions: (): CliOptions => ({ format: "markdown", reportPath: null, strictActiveGaps: false, check: false }),
+    includeCheck: true,
+    options: [
+      { flag: "--strict-active-gaps", kind: "boolean", apply: (options) => { options.strictActiveGaps = true; } },
+    ],
+  });
 }
 
 export function evaluateRedemptionCoverageAudit(
@@ -586,11 +559,4 @@ export function runCli(
   return findings.length > 0 ? 1 : 0;
 }
 
-if (process.argv[1]?.endsWith("generate-redemption-coverage-audit.ts")) {
-  try {
-    process.exitCode = runCli();
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
-  }
-}
+runAsMain(import.meta.url, runCli);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { RAIL_PROSE_LEAD_CHARS } from "@/components/stablecoin-detail/prose-lead";
 import { MechanismReviewPanel } from "../mechanism-review-panel";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
@@ -32,7 +32,6 @@ function getSourcesContainer(container: HTMLElement) {
 }
 
 describe("MechanismReviewPanel", () => {
-  afterEach(() => cleanup());
 
   it("shows no fold affordance when the rail copy is short enough to render whole", () => {
     render(<MechanismReviewPanel review={review} compact />);

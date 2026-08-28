@@ -22,6 +22,23 @@ export interface CoverageMobileCardProps {
   logoSrc?: string;
 }
 
+function CoverageFeatureStatusRow({
+  feature,
+  status,
+}: {
+  feature: CoverageFeatureDefinition;
+  status: CoverageRow["statuses"][CoverageFeatureKey];
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+      <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">{feature.shortLabel}</dt>
+      <dd className="shrink-0">
+        <CoverageBadge status={status} compact />
+      </dd>
+    </div>
+  );
+}
+
 export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
   return (
     <details className="group rounded-xl border border-border/70 bg-background/35 open:bg-background/42">
@@ -46,15 +63,11 @@ export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
 
         <dl className="grid gap-2 sm:grid-cols-2">
           {MOBILE_PREVIEW_DEFINITIONS.map((feature) => (
-            <div
+            <CoverageFeatureStatusRow
               key={feature.key}
-              className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2"
-            >
-              <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">{feature.shortLabel}</dt>
-              <dd className="shrink-0">
-                <CoverageBadge status={row.statuses[feature.key]} compact />
-              </dd>
-            </div>
+              feature={feature}
+              status={row.statuses[feature.key]}
+            />
           ))}
         </dl>
       </summary>
@@ -62,15 +75,11 @@ export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
       <div className="space-y-4 border-t border-border/60 px-4 py-4">
         <dl className="grid gap-2">
           {REMAINING_MOBILE_FEATURES.map((feature) => (
-            <div
+            <CoverageFeatureStatusRow
               key={feature.key}
-              className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2"
-            >
-              <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">{feature.shortLabel}</dt>
-              <dd className="shrink-0">
-                <CoverageBadge status={row.statuses[feature.key]} compact />
-              </dd>
-            </div>
+              feature={feature}
+              status={row.statuses[feature.key]}
+            />
           ))}
         </dl>
 

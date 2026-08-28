@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { BackingMechanicsCard } from "../backing-mechanics-card";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 
@@ -18,7 +18,6 @@ const view: MechanismBackingView = {
   notes: [],
 };
 
-afterEach(cleanup);
 
 describe("BackingMechanicsCard", () => {
   it("renders nothing without a reviewed backing view", () => {

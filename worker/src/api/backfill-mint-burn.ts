@@ -3,7 +3,8 @@ import type { AlchemyLogEntry } from "../lib/alchemy-logs";
 import { createBudget, budgetExhausted } from "../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../lib/mint-burn-contracts";
 import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
-import { errorResponse, jsonResponse, parseQueryParams } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-response";
+import { parseQueryParams } from "../lib/api-params";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { assertActiveStablecoin } from "../lib/frozen-guards";
 import type { TopicFilter } from "../lib/evm-logs";
@@ -107,7 +108,6 @@ export interface BackfillMintBurnRouteContext {
 export async function handleBackfillMintBurn({
   db,
   url,
-  trustedAdmin,
   request,
   alchemyApiKey = null,
 }: BackfillMintBurnRouteContext): Promise<Response> {
@@ -342,5 +342,5 @@ export async function handleBackfillMintBurn({
     });
   };
 
-  return runAdminJob({ request, trustedAdmin, url, parseBody: true }, (context) => executeBackfill(context.body));
+  return runAdminJob({ request, url, parseBody: true }, (context) => executeBackfill(context.body));
 }

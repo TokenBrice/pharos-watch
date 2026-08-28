@@ -1,16 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
   return createNextLinkMock();
 });
 
-afterEach(() => {
-  cleanup();
-});
 
 vi.mock("@/hooks/use-blacklist-events", () => ({
   useBlacklistSummary: vi.fn(),

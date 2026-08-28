@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   buildDewsStablecoinIdsDigest,

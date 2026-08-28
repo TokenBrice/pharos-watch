@@ -1,7 +1,7 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/safety-score-history";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleSafetyScoreHistoryV2 } from "../safety-score-history-v2";
 

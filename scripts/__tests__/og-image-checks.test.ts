@@ -1,11 +1,13 @@
-import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import sharp from "sharp";
 import {
+  contentSha256,
   formatOgWriteStatus,
   promoteGeneratedPngIfChanged,
+  runOgArtifactBuild,
   writeFileIfChanged,
 } from "../lib/og-image-checks.mts";
 
@@ -22,6 +24,12 @@ afterEach(() => {
 });
 
 describe("OG image file promotion", () => {
+  it("pins deterministic artifact filenames and content hashes", () => {
+    expect([{ file: "og-editorial-digest.png" }, { file: "og-learn-case-ust.png" }].map((entry) => entry.file))
+      .toEqual(["og-editorial-digest.png", "og-learn-case-ust.png"]);
+    expect(contentSha256("pharos")).toBe("8653057a4b57183ce71278ca80dbd82a61196fa182652f4cba355614b768d063");
+  });
+
   it("leaves a visually identical public PNG untouched", async () => {
     const root = makeTempDir();
     const staging = join(root, "staging");
@@ -71,5 +79,52 @@ describe("OG image file promotion", () => {
     expect(formatOgWriteStatus({ check: false, changed: false, publicPath: "/public/card.png" })).toBe(
       "Unchanged /public/card.png",
     );
+  });
+
+  it("shares missing, unchanged, changed, check, and render-failure lifecycle", async () => {
+    const root = makeTempDir();
+    const publicDir = join(root, "public");
+    const stagingDir = join(root, "staging");
+    const roster = [{ file: "card.png", color: 25 }];
+    const render = async (entry: (typeof roster)[number], { stagedPath }: { stagedPath: string }) => {
+      await sharp({
+        create: { width: 2, height: 2, channels: 4, background: { r: entry.color, g: 0, b: 0, alpha: 1 } },
+      }).png().toFile(stagedPath);
+    };
+
+    const first = await runOgArtifactBuild({
+      check: false, family: "Test", publicDir, refreshCommand: "refresh", roster, stagingDir, render,
+    });
+    expect(first.changedFiles).toEqual(["card.png"]);
+    const bytes = readFileSync(join(publicDir, "card.png"));
+    const unchanged = await runOgArtifactBuild({
+      check: false, family: "Test", publicDir, refreshCommand: "refresh", roster, stagingDir, render,
+    });
+    expect(unchanged.changedFiles).toEqual([]);
+    expect(readFileSync(join(publicDir, "card.png"))).toEqual(bytes);
+
+    await expect(runOgArtifactBuild({
+      check: true, family: "Test", publicDir, refreshCommand: "refresh", roster, stagingDir, render,
+    })).resolves.toMatchObject({ staleFiles: [] });
+    await expect(runOgArtifactBuild({
+      check: true,
+      family: "Test",
+      publicDir,
+      refreshCommand: "refresh",
+      roster: [{ file: "missing.png", color: 10 }],
+      stagingDir,
+      render,
+    })).rejects.toThrow("Test OG images are stale: missing.png");
+
+    await expect(runOgArtifactBuild({
+      check: false,
+      family: "Test",
+      publicDir,
+      refreshCommand: "refresh",
+      roster,
+      stagingDir,
+      render: async () => { throw new Error("render failed"); },
+    })).rejects.toThrow("render failed");
+    expect(existsSync(stagingDir)).toBe(false);
   });
 });

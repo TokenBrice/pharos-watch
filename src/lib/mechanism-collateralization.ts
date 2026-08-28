@@ -1,4 +1,4 @@
-import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
+import { getMechanismReviewOverlay } from "./mechanism-overlay.server";
 
 /**
  * Build-time extraction of the reviewed collateralization metrics from the V9
@@ -19,21 +19,8 @@ export interface MechanismCollateralizationView {
   sourceUrl: string;
 }
 
-interface OverlayEntryShape {
-  assetId: string;
-  archetype: string;
-  reviewedAt: string;
-  sources: Array<{ label: string; url: string }>;
-  metrics: Record<string, number | null>;
-  metricApplicability?: Record<string, { state: string; rationale?: string }>;
-}
-
-const OVERLAYS_BY_ASSET_ID: ReadonlyMap<string, OverlayEntryShape> = new Map(
-  (mechanismReviewOverlays.overlays as unknown as OverlayEntryShape[]).map((overlay) => [overlay.assetId, overlay]),
-);
-
 export function buildMechanismCollateralizationView(assetId: string): MechanismCollateralizationView | null {
-  const overlay = OVERLAYS_BY_ASSET_ID.get(assetId);
+  const overlay = getMechanismReviewOverlay(assetId);
   // Collateralization ratio is a CDP-archetype metric; other archetypes carry
   // no comparable reviewed number (their backing is scored through components).
   if (!overlay || overlay.archetype !== "cdp") return null;
@@ -46,9 +33,13 @@ export function buildMechanismCollateralizationView(assetId: string): MechanismC
   if (typeof ratio !== "number" && !ratioNotApplicable) return null;
 
   const liquidationCapacity = overlay.metrics["liquidationCapacityRatio"];
+  const notApplicableRationale =
+    ratioApplicability && ratioApplicability.state === "not-applicable"
+      ? ratioApplicability.rationale
+      : null;
   return {
     ratio: typeof ratio === "number" ? ratio : null,
-    notApplicableRationale: ratioNotApplicable ? (ratioApplicability?.rationale ?? null) : null,
+    notApplicableRationale,
     liquidationCapacityRatio: typeof liquidationCapacity === "number" ? liquidationCapacity : null,
     reviewedAt: overlay.reviewedAt,
     sourceLabel: source.label,

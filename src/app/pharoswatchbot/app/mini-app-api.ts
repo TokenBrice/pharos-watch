@@ -38,6 +38,35 @@ function parseRetryAfterSec(value: unknown): number | null {
   return Math.min(60 * 60, Math.ceil(parsed));
 }
 
+interface VersionedMiniAppResponse {
+  contractVersion: string;
+  catalogVersion: string;
+}
+
+function appendMiniAppVersions(path: string): string {
+  const query = new URLSearchParams({
+    [TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM]: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+    [TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM]: TELEGRAM_MINI_APP_CATALOG_VERSION,
+  });
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}${query}`;
+}
+
+function assertMiniAppVersions(response: VersionedMiniAppResponse): void {
+  if (response.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) {
+    throw new MiniAppRequestError(409, "contract-version-mismatch", null, {
+      contractVersion: response.contractVersion,
+      catalogVersion: response.catalogVersion,
+    });
+  }
+  if (response.catalogVersion !== TELEGRAM_MINI_APP_CATALOG_VERSION) {
+    throw new MiniAppRequestError(409, "catalog-version-mismatch", null, {
+      contractVersion: response.contractVersion,
+      catalogVersion: response.catalogVersion,
+    });
+  }
+}
+
 export async function postMiniAppJson<T>(path: string, body: unknown, schema: ZodType<T>): Promise<T> {
   const response = await apiRequest(path, {
     method: "POST",
@@ -93,18 +122,7 @@ function hydrateMiniAppResponse(response: TelegramMiniAppResponse): TelegramMini
     };
   }
   const snapshot = compact.data;
-  if (snapshot.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) {
-    throw new MiniAppRequestError(409, "contract-version-mismatch", null, {
-      contractVersion: snapshot.contractVersion,
-      catalogVersion: snapshot.catalogVersion,
-    });
-  }
-  if (snapshot.catalogVersion !== TELEGRAM_MINI_APP_CATALOG_VERSION) {
-    throw new MiniAppRequestError(409, "catalog-version-mismatch", null, {
-      contractVersion: snapshot.contractVersion,
-      catalogVersion: snapshot.catalogVersion,
-    });
-  }
+  assertMiniAppVersions(snapshot);
   return {
     state: {
       ...snapshot.state,
@@ -115,18 +133,8 @@ function hydrateMiniAppResponse(response: TelegramMiniAppResponse): TelegramMini
 }
 
 export async function postMiniAppSnapshot(path: string, body: unknown): Promise<TelegramMiniAppClientSnapshot> {
-  const query = new URLSearchParams({
-    [TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM]: TELEGRAM_MINI_APP_CONTRACT_VERSION,
-    [TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM]: TELEGRAM_MINI_APP_CATALOG_VERSION,
-  });
-  const separator = path.includes("?") ? "&" : "?";
-  const response = await postMiniAppJson(`${path}${separator}${query}`, body, TelegramMiniAppResponseSchema);
+  const response = await postMiniAppJson(appendMiniAppVersions(path), body, TelegramMiniAppResponseSchema);
   return hydrateMiniAppResponse(response);
-}
-
-interface VersionedMiniAppResponse {
-  contractVersion: string;
-  catalogVersion: string;
 }
 
 export async function postVersionedMiniAppJson<T extends VersionedMiniAppResponse>(
@@ -134,24 +142,8 @@ export async function postVersionedMiniAppJson<T extends VersionedMiniAppRespons
   body: unknown,
   schema: ZodType<T>,
 ): Promise<T> {
-  const query = new URLSearchParams({
-    [TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM]: TELEGRAM_MINI_APP_CONTRACT_VERSION,
-    [TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM]: TELEGRAM_MINI_APP_CATALOG_VERSION,
-  });
-  const separator = path.includes("?") ? "&" : "?";
-  const response = await postMiniAppJson(`${path}${separator}${query}`, body, schema);
-  if (response.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) {
-    throw new MiniAppRequestError(409, "contract-version-mismatch", null, {
-      contractVersion: response.contractVersion,
-      catalogVersion: response.catalogVersion,
-    });
-  }
-  if (response.catalogVersion !== TELEGRAM_MINI_APP_CATALOG_VERSION) {
-    throw new MiniAppRequestError(409, "catalog-version-mismatch", null, {
-      contractVersion: response.contractVersion,
-      catalogVersion: response.catalogVersion,
-    });
-  }
+  const response = await postMiniAppJson(appendMiniAppVersions(path), body, schema);
+  assertMiniAppVersions(response);
   return response;
 }
 

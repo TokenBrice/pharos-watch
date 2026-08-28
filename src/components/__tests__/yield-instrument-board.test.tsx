@@ -215,6 +215,19 @@ describe("YieldInstrumentBoard", () => {
 
   it("keeps core board and mobile card row affordances in parity", () => {
     const desktop = renderBoard(baseRow);
+    const desktopDisplay = desktop.container.querySelector(`[data-yield-row-display="${baseRow.id}"]`);
+    const displayAttributes = [
+      "data-yield-grade",
+      "data-yield-safety-score",
+      "data-yield-pys",
+      "data-yield-source-risk",
+      "data-yield-freshness",
+      "data-yield-warning-count",
+      "data-yield-benchmark",
+    ];
+    const desktopContract = Object.fromEntries(
+      displayAttributes.map((attribute) => [attribute, desktopDisplay?.getAttribute(attribute)]),
+    );
     expect(screen.getAllByText("30-day APY: 4.3 percent").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Pharos Yield Score 76.0 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByLabelText("Safety grade: B+, score 82 out of 100").length).toBeGreaterThanOrEqual(1);
@@ -228,6 +241,10 @@ describe("YieldInstrumentBoard", () => {
     desktop.unmount();
 
     const mobile = renderMobileCard(baseRow);
+    const mobileDisplay = mobile.container.querySelector(`[data-yield-row-display="${baseRow.id}"]`);
+    expect(Object.fromEntries(
+      displayAttributes.map((attribute) => [attribute, mobileDisplay?.getAttribute(attribute)]),
+    )).toEqual(desktopContract);
     expect(screen.getByText("4.30%")).toBeTruthy();
     expect(screen.getByText("PYS 76.0")).toBeTruthy();
     expect(screen.getByText("B+")).toBeTruthy();

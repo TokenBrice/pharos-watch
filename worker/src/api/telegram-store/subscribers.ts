@@ -5,7 +5,7 @@ import type { SubscriberRow } from "../telegram-webhook-shared";
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "./_internals";
+} from "../../lib/telegram-operation-batch";
 
 /** Re-exported under the worker-local name every Telegram store module already imports. */
 export { unixNow };

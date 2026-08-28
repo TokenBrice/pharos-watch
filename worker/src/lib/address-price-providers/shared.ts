@@ -1,4 +1,6 @@
 export { isRecord } from "@shared/lib/type-guards";
+import { coerceNonNegativeNumber } from "@shared/lib/type-guards";
+import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { chunkArray } from "../collections";
 import { USER_AGENT } from "../constants";
 import { fetchWithRetry } from "../fetch-retry";
@@ -34,11 +36,11 @@ const PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 
 function parseRetryAfterSec(response: Response, nowMs = Date.now()): number | undefined {
   const value = response.headers.get("Retry-After")?.trim();
   if (!value) return undefined;
-  const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+  const parsed = parseRetryAfterSeconds(value, { nowMs });
+  if (parsed != null) return parsed;
+  // Preserve the provider diagnostic's legacy malformed/date fallback.
   const retryAt = Date.parse(value);
-  if (!Number.isFinite(retryAt)) return undefined;
-  return Math.max(0, Math.ceil((retryAt - nowMs) / 1000));
+  return Number.isFinite(retryAt) ? Math.max(0, Math.ceil((retryAt - nowMs) / 1000)) : undefined;
 }
 
 async function readProviderResponseText(response: Response, signal?: AbortSignal): Promise<string> {
@@ -78,8 +80,7 @@ export function parseObservedAt(value: unknown): number | null {
 export { parsePositiveNumber };
 
 export function parseNonNegativeNumber(value: unknown): number | null {
-  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
-  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  return coerceNonNegativeNumber(value);
 }
 
 /**

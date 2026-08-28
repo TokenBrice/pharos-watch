@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { loadYieldHealthSummary } from "../yield-health";
 import type { CronRunStatus, CronStatus } from "@shared/types/status";
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { usePathnameMock } = vi.hoisted(() => ({ usePathnameMock: vi.fn() }));
@@ -12,7 +12,6 @@ vi.mock("next/navigation", () => ({
 import { GlobalFooterChrome, MainContent, RegimeBarChrome, RouteChrome } from "../route-chrome";
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 

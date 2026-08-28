@@ -1,7 +1,7 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
 import type { YieldRankingsResponse } from "@shared/types/yield";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const computeSafetyScoresSnapshotMock = vi.hoisted(() => vi.fn());
 

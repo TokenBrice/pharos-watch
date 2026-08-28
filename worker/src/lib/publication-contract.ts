@@ -7,12 +7,8 @@ import type {
   PublicationSurfaceId,
 } from "@shared/types/status";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { getResponseReadyCacheKey } from "./api-cache-read";
-import { getCacheUpdatedAt } from "./db-cache";
 import { isMissingTableError } from "./db";
 import { parseObjectMetadata } from "./json-metadata";
-import { loadStablecoinsCache } from "./stablecoins-cache";
-import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 
 interface PublicationGenerationRow {
@@ -40,6 +36,14 @@ interface PublicationSurfaceLoader {
   load: (db: D1Database, now: number) => Promise<PublicationSurfaceHealth | null>;
 }
 
+interface PublicationLifecycleDescriptor {
+  definition: PublicationSurfaceDefinition;
+  table: "dex_liquidity_publication_generations" | "yield_publication_generations";
+  candidateRowsColumn: "written_row_count" | "source_row_count";
+  publishedRowsColumn: "current_row_count" | "ranking_count";
+  expectedRowsColumn: "expected_row_count" | "best_row_count";
+}
+
 const DEX_LIQUIDITY_SURFACE: PublicationSurfaceDefinition = {
   surface: "dex-liquidity",
   label: "DEX liquidity",
@@ -52,15 +56,27 @@ const YIELD_RANKINGS_SURFACE: PublicationSurfaceDefinition = {
   sourceOfTruth: "yield_publication_generations",
 };
 
+const PUBLICATION_LIFECYCLE_DESCRIPTORS = {
+  dexLiquidity: {
+    definition: DEX_LIQUIDITY_SURFACE,
+    table: "dex_liquidity_publication_generations",
+    candidateRowsColumn: "written_row_count",
+    publishedRowsColumn: "current_row_count",
+    expectedRowsColumn: "expected_row_count",
+  },
+  yieldRankings: {
+    definition: YIELD_RANKINGS_SURFACE,
+    table: "yield_publication_generations",
+    candidateRowsColumn: "source_row_count",
+    publishedRowsColumn: "ranking_count",
+    expectedRowsColumn: "best_row_count",
+  },
+} as const satisfies Record<string, PublicationLifecycleDescriptor>;
+
 const STABLECOINS_SURFACE: PublicationSurfaceDefinition = {
   surface: "stablecoins",
   label: "Stablecoins cache",
   sourceOfTruth: "surface_publication_generations",
-};
-
-const STABLECOINS_CACHE_SURFACE: PublicationSurfaceDefinition = {
-  ...STABLECOINS_SURFACE,
-  sourceOfTruth: "cache[stablecoins]",
 };
 
 const DEWS_SURFACE: PublicationSurfaceDefinition = {
@@ -69,20 +85,10 @@ const DEWS_SURFACE: PublicationSurfaceDefinition = {
   sourceOfTruth: "surface_publication_generations",
 };
 
-const DEWS_POINTER_SURFACE: PublicationSurfaceDefinition = {
-  ...DEWS_SURFACE,
-  sourceOfTruth: "cache[dews:published-generation]+stress_signal_publication_rows",
-};
-
 const PSI_SURFACE: PublicationSurfaceDefinition = {
   surface: "psi",
   label: "PSI samples",
   sourceOfTruth: "surface_publication_generations",
-};
-
-const PSI_SAMPLE_SURFACE: PublicationSurfaceDefinition = {
-  ...PSI_SURFACE,
-  sourceOfTruth: "stability_index_samples",
 };
 
 const SAFETY_SCORE_V9_SURFACE: PublicationSurfaceDefinition = {
@@ -184,9 +190,10 @@ async function firstBoundRow(
   return runWithOverloadRetry(() => db.prepare(sql).bind(...binds).first<PublicationGenerationRow>(), 2);
 }
 
-async function loadDexLiquidityPublicationSurface(
+async function loadPublicationLifecycleSurface(
   db: D1Database,
   now: number,
+  descriptor: PublicationLifecycleDescriptor,
 ): Promise<PublicationSurfaceHealth> {
   const selectColumns = `
     generation_id,
@@ -195,23 +202,23 @@ async function loadDexLiquidityPublicationSurface(
     NULL AS validated_at,
     published_at,
     failed_at,
-    written_row_count AS candidate_rows,
-    current_row_count AS published_rows,
-    expected_row_count AS expected_rows,
+    ${descriptor.candidateRowsColumn} AS candidate_rows,
+    ${descriptor.publishedRowsColumn} AS published_rows,
+    ${descriptor.expectedRowsColumn} AS expected_rows,
     failure_reason,
     metadata_json`;
   const [latestAttempted, latestPublished, latestFailed] = await Promise.all([
     firstRow(
       db,
       `SELECT ${selectColumns}
-         FROM dex_liquidity_publication_generations
+         FROM ${descriptor.table}
         ORDER BY started_at DESC
         LIMIT 1`,
     ),
     firstRow(
       db,
       `SELECT ${selectColumns}
-         FROM dex_liquidity_publication_generations
+         FROM ${descriptor.table}
         WHERE state = 'published'
         ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
         LIMIT 1`,
@@ -219,57 +226,27 @@ async function loadDexLiquidityPublicationSurface(
     firstRow(
       db,
       `SELECT ${selectColumns}
-         FROM dex_liquidity_publication_generations
+         FROM ${descriptor.table}
         WHERE state = 'failed'
         ORDER BY COALESCE(failed_at, started_at) DESC, started_at DESC
         LIMIT 1`,
     ),
   ]);
-  return buildSurfaceHealth(DEX_LIQUIDITY_SURFACE, now, latestAttempted, latestPublished, latestFailed);
+  return buildSurfaceHealth(descriptor.definition, now, latestAttempted, latestPublished, latestFailed);
+}
+
+async function loadDexLiquidityPublicationSurface(
+  db: D1Database,
+  now: number,
+): Promise<PublicationSurfaceHealth> {
+  return loadPublicationLifecycleSurface(db, now, PUBLICATION_LIFECYCLE_DESCRIPTORS.dexLiquidity);
 }
 
 async function loadYieldRankingsPublicationSurface(
   db: D1Database,
   now: number,
 ): Promise<PublicationSurfaceHealth> {
-  const selectColumns = `
-    generation_id,
-    state AS source_state,
-    started_at,
-    NULL AS validated_at,
-    published_at,
-    failed_at,
-    source_row_count AS candidate_rows,
-    ranking_count AS published_rows,
-    best_row_count AS expected_rows,
-    failure_reason,
-    metadata_json`;
-  const [latestAttempted, latestPublished, latestFailed] = await Promise.all([
-    firstRow(
-      db,
-      `SELECT ${selectColumns}
-         FROM yield_publication_generations
-        ORDER BY started_at DESC
-        LIMIT 1`,
-    ),
-    firstRow(
-      db,
-      `SELECT ${selectColumns}
-         FROM yield_publication_generations
-        WHERE state = 'published'
-        ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
-        LIMIT 1`,
-    ),
-    firstRow(
-      db,
-      `SELECT ${selectColumns}
-         FROM yield_publication_generations
-        WHERE state = 'failed'
-        ORDER BY COALESCE(failed_at, started_at) DESC, started_at DESC
-        LIMIT 1`,
-    ),
-  ]);
-  return buildSurfaceHealth(YIELD_RANKINGS_SURFACE, now, latestAttempted, latestPublished, latestFailed);
+  return loadPublicationLifecycleSurface(db, now, PUBLICATION_LIFECYCLE_DESCRIPTORS.yieldRankings);
 }
 
 async function loadGenericPublicationSurface(
@@ -345,30 +322,6 @@ async function loadGenericPublicationSurface(
   return buildSurfaceHealth(definition, now, latestAttempted, latestPublished, latestFailed);
 }
 
-function stablecoinsCacheFailureRow(
-  reason: string,
-  updatedAt: number | null,
-  now: number,
-  metadata: Record<string, unknown>,
-): PublicationGenerationRow {
-  const attemptedAt = updatedAt ?? now;
-  return {
-    generation_id: updatedAt == null
-      ? "stablecoins-cache:missing"
-      : `stablecoins-cache:${updatedAt}:invalid`,
-    source_state: "failed",
-    started_at: attemptedAt,
-    validated_at: null,
-    published_at: null,
-    failed_at: attemptedAt,
-    candidate_rows: null,
-    published_rows: null,
-    expected_rows: null,
-    failure_reason: reason,
-    metadata_json: JSON.stringify(metadata),
-  };
-}
-
 function publishedFallbackRow(
   generationId: string,
   publishedAt: number,
@@ -409,158 +362,6 @@ function failedFallbackRow(
     failure_reason: reason,
     metadata_json: JSON.stringify(metadata),
   };
-}
-
-async function loadStablecoinsPublicationSurface(
-  db: D1Database,
-  now: number,
-): Promise<PublicationSurfaceHealth> {
-  const genericSurface = await loadGenericPublicationSurface(db, now, STABLECOINS_SURFACE);
-  if (genericSurface) return genericSurface;
-
-  const responseReadyCacheKey = getResponseReadyCacheKey("stablecoins");
-  const [stablecoinsCache, responseReadyUpdatedAt] = await Promise.all([
-    loadStablecoinsCache(db, {
-      mode: "strict",
-      contract: "published",
-    }),
-    getCacheUpdatedAt(db, responseReadyCacheKey).catch(() => null),
-  ]);
-
-  const metadata = {
-    cacheKey: "stablecoins",
-    contract: "published",
-    responseReadyCacheKey,
-    responseReadyUpdatedAt,
-    responseReadyMatchesCanonical:
-      stablecoinsCache.updatedAt != null && responseReadyUpdatedAt === stablecoinsCache.updatedAt,
-    inputWatermarks: {
-      stablecoinsCache: stablecoinsCache.updatedAt,
-      responseReadyCache: responseReadyUpdatedAt,
-    },
-  };
-
-  if (stablecoinsCache.kind === "ok") {
-    const row: PublicationGenerationRow = {
-      generation_id: `stablecoins-cache:${stablecoinsCache.updatedAt}`,
-      source_state: "published",
-      started_at: stablecoinsCache.updatedAt,
-      validated_at: stablecoinsCache.updatedAt,
-      published_at: stablecoinsCache.updatedAt,
-      failed_at: null,
-      candidate_rows: stablecoinsCache.payload.peggedAssets.length,
-      published_rows: stablecoinsCache.payload.peggedAssets.length,
-      expected_rows: null,
-      failure_reason: null,
-      metadata_json: JSON.stringify(metadata),
-    };
-    return buildSurfaceHealth(STABLECOINS_CACHE_SURFACE, now, row, row, null);
-  }
-
-  const failedRow = stablecoinsCacheFailureRow(
-    stablecoinsCache.reason,
-    stablecoinsCache.updatedAt,
-    now,
-    metadata,
-  );
-  return buildSurfaceHealth(STABLECOINS_CACHE_SURFACE, now, failedRow, null, failedRow);
-}
-
-async function loadDewsFallbackPublicationSurface(
-  db: D1Database,
-  now: number,
-): Promise<PublicationSurfaceHealth> {
-  const published = await loadPublishedStressSignalGeneration(db, now);
-  if (published.status === "ok" && published.exactCoverageVerified) {
-    const publishedRow = publishedFallbackRow(
-      `dews:${published.computedAt}`,
-      published.computedAt,
-      published.rows.length,
-      {
-        inputWatermarks: {
-          publishedGeneration: published.computedAt,
-        },
-        cacheKey: "dews:published-generation",
-        exactCoverageVerified: true,
-      },
-    );
-    return buildSurfaceHealth(DEWS_POINTER_SURFACE, now, publishedRow, publishedRow, null);
-  }
-
-  const failureReason = published.status === "ok"
-    ? "legacy-publication-pointer-without-exact-coverage"
-    : published.reason;
-  const failedRow = failedFallbackRow(
-    "dews:missing",
-    failureReason,
-    now,
-    {
-      cacheKey: "dews:published-generation",
-      exactCoverageVerified: false,
-    },
-  );
-  return buildSurfaceHealth(DEWS_POINTER_SURFACE, now, failedRow, null, failedRow);
-}
-
-async function loadDewsPublicationSurface(
-  db: D1Database,
-  now: number,
-): Promise<PublicationSurfaceHealth> {
-  const genericSurface = await loadGenericPublicationSurface(db, now, DEWS_SURFACE);
-  return genericSurface ?? loadDewsFallbackPublicationSurface(db, now);
-}
-
-async function loadPsiFallbackPublicationSurface(
-  db: D1Database,
-  now: number,
-): Promise<PublicationSurfaceHealth> {
-  const row = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `SELECT stored_at, score, band, methodology_version
-           FROM stability_index_samples
-          ORDER BY stored_at DESC
-          LIMIT 1`,
-      )
-      .first<{
-        stored_at: number | null;
-        score: number | null;
-        band: string | null;
-        methodology_version: string | null;
-      }>(),
-  2);
-  if (row?.stored_at != null) {
-    const publishedRow = publishedFallbackRow(
-      `psi:${row.stored_at}`,
-      row.stored_at,
-      1,
-      {
-        inputWatermarks: {
-          stabilityIndexSample: row.stored_at,
-        },
-        score: row.score,
-        band: row.band,
-        methodologyVersion: row.methodology_version,
-      },
-    );
-    return buildSurfaceHealth(PSI_SAMPLE_SURFACE, now, publishedRow, publishedRow, null);
-  }
-
-  const failedRow = failedFallbackRow(
-    "psi:missing",
-    "missing-stability-index-sample",
-    now,
-    {},
-  );
-  return buildSurfaceHealth(PSI_SAMPLE_SURFACE, now, failedRow, null, failedRow);
-}
-
-async function loadPsiPublicationSurface(
-  db: D1Database,
-  now: number,
-): Promise<PublicationSurfaceHealth> {
-  const genericSurface = await loadGenericPublicationSurface(db, now, PSI_SURFACE);
-  return genericSurface ?? loadPsiFallbackPublicationSurface(db, now);
 }
 
 async function loadSafetyScoreV9PublicationSurface(
@@ -607,15 +408,15 @@ const PUBLICATION_SURFACE_LOADERS: PublicationSurfaceLoader[] = [
   },
   {
     definition: STABLECOINS_SURFACE,
-    load: loadStablecoinsPublicationSurface,
+    load: (db, now) => loadGenericPublicationSurface(db, now, STABLECOINS_SURFACE),
   },
   {
     definition: DEWS_SURFACE,
-    load: loadDewsPublicationSurface,
+    load: (db, now) => loadGenericPublicationSurface(db, now, DEWS_SURFACE),
   },
   {
     definition: PSI_SURFACE,
-    load: loadPsiPublicationSurface,
+    load: (db, now) => loadGenericPublicationSurface(db, now, PSI_SURFACE),
   },
   {
     definition: SAFETY_SCORE_V9_SURFACE,

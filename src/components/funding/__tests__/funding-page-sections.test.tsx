@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
 import {
   FundingKpiRow,
   CostBreakdown,
@@ -12,7 +12,6 @@ import {
 } from "../funding-page-sections";
 import type { CostLineItem, Donation } from "@shared/lib/funding/types";
 
-afterEach(cleanup);
 
 const COSTS: CostLineItem[] = [
   { label: "Ike", category: "team", usd_per_month: 1500 },

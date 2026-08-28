@@ -1,7 +1,7 @@
-import { handleStablecoinHistoryRequest } from "../lib/api-utils";
+import { handleStablecoinHistoryRequest } from "../lib/api-history";
 import { CACHE_PROFILES } from "../lib/constants";
 import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
-import { safeJsonParse } from "../lib/api-utils";
+import { safeJsonParse } from "../lib/api-cache-read";
 import {
   ExitRouteObservationCoverageSchema,
   ExitRouteObservationSchema,

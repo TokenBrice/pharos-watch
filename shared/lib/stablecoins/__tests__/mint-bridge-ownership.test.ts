@@ -14,6 +14,7 @@ import {
   validateMintBridgeOwnership,
   type MintBridgeOwnershipViolation,
 } from "../mint-bridge-ownership";
+import { makeStablecoinMeta } from "./test-support";
 
 const SOURCE = { label: "Fixture review", url: "https://example.com/review" };
 const ETHEREUM_TOKEN = "0x1111111111111111111111111111111111111111";
@@ -22,15 +23,6 @@ const BASE_TOKEN = "0x3333333333333333333333333333333333333333";
 const ETHEREUM_ROUTE = `ethereum:${ETHEREUM_TOKEN}`;
 const ARBITRUM_ROUTE = `arbitrum:${ARBITRUM_TOKEN}`;
 const BASE_ROUTE = `base:${BASE_TOKEN}`;
-
-const baseFlags = {
-  pegCurrency: "USD" as const,
-  governance: "centralized" as const,
-  backing: "rwa-backed" as const,
-  yieldBearing: false,
-  rwa: true,
-  navToken: false,
-};
 
 function makeRoute(
   id: string,
@@ -118,13 +110,7 @@ function contractsFor(routeIds: readonly string[]): ContractDeployment[] {
 }
 
 function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
-  return {
-    id: "fixture-usd",
-    name: "Fixture USD",
-    symbol: "FUSD",
-    flags: baseFlags,
-    ...overrides,
-  } as StablecoinMeta;
+  return makeStablecoinMeta(overrides);
 }
 
 function bridgeControl(

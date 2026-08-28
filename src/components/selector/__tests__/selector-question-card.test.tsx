@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 
 import { SelectorQuestionCard } from "@/components/selector/selector-question-card";
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("SelectorQuestionCard", () => {
   it("hides the action row when showActions is false", () => {

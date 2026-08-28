@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import {
   assertContentTableRowsMatchColumns,
@@ -16,9 +16,6 @@ import {
 } from "@/components/table";
 
 describe("Pharos table primitives", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("renders a table frame with the shared surface, viewport, and data slots", () => {
     render(

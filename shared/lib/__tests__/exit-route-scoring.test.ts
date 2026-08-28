@@ -3,6 +3,7 @@ import {
   EXIT_ROUTE_SCORING_TABLES,
   blendExitCapacityComponent,
   composeExitComponentScore,
+  hasMaterialExitCapacity,
   interpolateExitBreakpointScore,
   resolveExitDelayBandMultiplier,
   resolveExitRequestSupplyNotionalUsd,
@@ -83,6 +84,27 @@ describe("shared breakpoint interpolation", () => {
     expect(computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.061 }).coverageRatioScore).toBe(
       Math.round(raw),
     );
+  });
+});
+
+describe("policy-owned exit materiality", () => {
+  it("uses the caller's breakpoint envelope at first-positive absolute and coverage boundaries", () => {
+    const v9Exit = V9_CANDIDATE_POLICY_V1.policy.semantic.exit;
+    const absoluteFloor = v9Exit.absoluteCapacityBreakpoints.find((point) => point.value > 0 && point.score > 0)!.value;
+    const coverageFloor = v9Exit.coverageRatioBreakpoints.find((point) => point.value > 0 && point.score > 0)!.value;
+
+    expect(hasMaterialExitCapacity({
+      executableCapacityUsd: absoluteFloor - 1,
+      requestedNotionalUsd: (absoluteFloor - 1) / (coverageFloor - 0.0001),
+    }, v9Exit)).toBe(false);
+    expect(hasMaterialExitCapacity({
+      executableCapacityUsd: absoluteFloor,
+      requestedNotionalUsd: absoluteFloor / (coverageFloor - 0.0001),
+    }, v9Exit)).toBe(true);
+    expect(hasMaterialExitCapacity({
+      executableCapacityUsd: absoluteFloor - 1,
+      requestedNotionalUsd: (absoluteFloor - 1) / coverageFloor,
+    }, v9Exit)).toBe(true);
   });
 });
 

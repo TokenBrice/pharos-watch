@@ -1,7 +1,7 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { handleDepegResolver } from "../depeg-resolver";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,

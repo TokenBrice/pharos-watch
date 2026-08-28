@@ -1,4 +1,4 @@
-import { makeJsonRequest, readJsonResponse } from "./api-request-response.test-support";
+import { makeJsonRequest, readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -11,7 +11,7 @@ import { redactProviderBody } from "../api-key-requests/email";
 import type { ApiKeySelfServeEnv } from "../api-key-requests/types";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function setupSqlite(): DatabaseSync {
   return createLatestSchemaSqlite().sqlite;

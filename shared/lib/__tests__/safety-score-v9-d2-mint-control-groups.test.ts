@@ -17,16 +17,10 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
  *   issuer's identity — or any member asset's issuer identity — is unresolved.
  *   Splitting or merging an identical group is score-neutral.
  *
- * The ACTIVE block pins the fail-closed baseline that D2 keeps for the
- * cross-issuer and unresolved cases (today's behavior for ALL mint-control
- * groups), plus the cap mechanics the ruled diagnostic rung relies on. The
- * `describe.skip` block pins the ruled issuer-scoped resolution against the
- * Stage B seam documented below; it fails today by construction (the seam does
- * not exist yet) and is enabled by Stage B.
+ * The suites pin the fail-closed baseline that D2 keeps for cross-issuer and
+ * unresolved cases, plus the shipped issuer-scoped resolution.
  *
- * STAGE B SEAM (proposed contract — the dependency plan is identity-only
- * today, so issuer attribution must enter via new fact data; see the Stage A
- * report's schema-gap note):
+ * Issuer-scoped resolution contract:
  *
  *   export interface V9MintControlGroupIssuerFacts {
  *     controllerIssuerKey: string | null;   // resolved issuer of the shared controller
@@ -91,7 +85,7 @@ function scoreWithSignal(severity: V9Severity) {
   );
 }
 
-describe("D2 fail-closed baseline — active (must hold pre- and post-Stage-B)", () => {
+describe("D2 fail-closed baseline — active", () => {
   it("grades shared mint-control domains high today (the behavior cross-issuer and unresolved groups keep)", () => {
     const domain: V9FailureDomainRef = { kind: "mint-control", key: "ethereum:0xshared-controller" };
     expect(commonModeSignalSeverity(domain, EMPTY_CONTEXT, MATERIALITY)).toBe("high");
@@ -113,8 +107,8 @@ describe("D2 fail-closed baseline — active (must hold pre- and post-Stage-B)",
   });
 });
 
-describe("D2 ruled issuer-scoped grouping — Stage B", () => {
-  it("exposes the Stage B seam", () => {
+describe("D2 ruled issuer-scoped grouping — live", () => {
+  it("exposes the issuer-scoped resolution seam", () => {
     expect(typeof resolveV9MintControlGroupSeverity).toBe("function");
   });
 

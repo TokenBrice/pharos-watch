@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { pluralizeCount } from "@shared/lib/telegram-metrics";
@@ -11,16 +10,11 @@ import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
 import { useMiniAppMutations } from "./use-mini-app-mutations";
 import { miniAppErrorMessage } from "./error-messages";
-import { MiniButton } from "./components/MiniButton";
-import { HomeSkeleton } from "./components/HomeSkeleton";
 import { ForgottenView } from "./components/ForgottenView";
 import { PreviewState } from "./components/PreviewState";
-import { STALE_AUTH_READ_ONLY_COPY, StatusPanel } from "./components/StatusPanel";
-import { WatchlistPanel } from "./components/WatchlistPanel";
-import { CoinInsightPanel } from "./components/CoinInsightPanel";
-import { PresetsPanel } from "./components/PresetsPanel";
-import { SettingsPanel } from "./components/SettingsPanel";
 import { MiniAppTabs } from "./components/MiniAppTabs";
+import { MiniAppPanelRouter } from "./components/MiniAppPanelRouter";
+import { MiniAppSessionStatus, type MiniAppSessionStatus as MiniAppSessionStatusValue } from "./components/MiniAppSessionStatus";
 import { ALERT_LABELS, RECOMMENDED_OPERATION } from "./constants";
 import { isPausedSentinel } from "./format";
 import {
@@ -55,7 +49,7 @@ export function PharosWatchBotMiniAppClient() {
   } = useMiniAppView(state);
   // Session network status. The bridge hook owns the Telegram probe lifecycle; this state only
   // tracks the session fetch + the "missing launch data" terminal error after the bridge resolves.
-  const [status, setStatus] = useState<"preview" | "loading" | "ready" | "stale" | "error">("loading");
+  const [status, setStatus] = useState<MiniAppSessionStatusValue>("loading");
   const [confirmedMeta, setConfirmedMeta] = useState<{ revision: string; refreshedAtMs: number } | null>(null);
   const stateRef = useRef<TelegramMiniAppState | null>(null);
   const lastHiddenAtRef = useRef<number | null>(null);
@@ -318,171 +312,88 @@ export function PharosWatchBotMiniAppClient() {
         </div>
         <span className="sr-only" aria-live="polite">{announcement}</span>
 
-        {status === "loading" && !displayState ? <HomeSkeleton /> : null}
-        {status === "loading" && displayState ? <p className="sr-only" aria-live="polite">Refreshing settings. Editing is temporarily unavailable.</p> : null}
-        {status === "stale" && displayState && confirmedMeta ? (
-          <section role="status" aria-live="polite" className="mt-4 rounded-2xl border border-amber-500/35 bg-amber-500/10 p-4">
-            <div className="flex gap-3">
-              <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
-              <div className="min-w-0 flex-1">
-                <h2 className="text-sm font-semibold text-foreground">Showing last-known settings</h2>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {message} Editing is read-only until Refresh succeeds.
-                </p>
-                <dl className="mt-2 grid gap-1 text-[11px] text-muted-foreground">
-                  <div className="flex min-w-0 gap-2">
-                    <dt className="font-semibold text-foreground">Revision</dt>
-                    <dd className="min-w-0 break-all font-mono">{confirmedMeta.revision}</dd>
-                  </div>
-                  <div className="flex min-w-0 gap-2">
-                    <dt className="font-semibold text-foreground">Refreshed</dt>
-                    <dd>
-                      <time dateTime={new Date(confirmedMeta.refreshedAtMs).toISOString()}>
-                        {new Date(confirmedMeta.refreshedAtMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                      </time>
-                    </dd>
-                  </div>
-                </dl>
-                <div className="mt-3">
-                  <MiniButton variant="secondary" onClick={triggerRefresh}>Retry refresh</MiniButton>
-                </div>
-              </div>
-            </div>
-          </section>
-        ) : null}
-        {status === "error" ? (
-          <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
-            <p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p>
-            <div className="mt-3">
-              {initData ? (
-                <MiniButton variant="secondary" onClick={triggerRefresh}>Retry</MiniButton>
-              ) : webApp?.close ? (
-                <MiniButton variant="secondary" onClick={handleClose}>Close and reopen</MiniButton>
-              ) : (
-                <Button asChild variant="outline" className="gap-2">
-                  <a href={BOT_URL} target="_blank" rel="noopener noreferrer">
-                    Open PharosWatchBot <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  </a>
-                </Button>
-              )}
-            </div>
-          </section>
-        ) : null}
-        {message && status === "ready" ? <section role="status" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
-        {mutationRetryAfterSec > 0 && status === "ready" ? (
-          <section
-            role="timer"
-            aria-live="off"
-            aria-atomic="true"
-            className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground"
-          >
-            Pharos edit limit reached. Settings unlock in {mutationRetryAfterSec} {mutationRetryAfterSec === 1 ? "second" : "seconds"}.
-          </section>
-        ) : null}
-        {showStaleAuthBanner ? (
-          <section className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
-            <div className="flex gap-3">
-              <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">{STALE_AUTH_READ_ONLY_COPY.title}</h2>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{STALE_AUTH_READ_ONLY_COPY.body}</p>
-                {handleStaleAuthRelaunch ? (
-                  <div className="mt-3">
-                    <MiniButton variant="secondary" onClick={handleStaleAuthRelaunch}>
-                      Relaunch and keep this panel
-                    </MiniButton>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </section>
-        ) : null}
+        <MiniAppSessionStatus
+          status={status}
+          hasDisplayState={Boolean(displayState)}
+          confirmedMeta={confirmedMeta}
+          message={message}
+          mutationRetryAfterSec={mutationRetryAfterSec}
+          initData={initData}
+          canClose={Boolean(webApp?.close)}
+          showStaleAuthBanner={showStaleAuthBanner}
+          onRefresh={triggerRefresh}
+          onClose={handleClose}
+          onStaleAuthRelaunch={handleStaleAuthRelaunch}
+        />
 
         {displayState ? (
           <>
             <div className="mt-4">
-            {view === "home" ? (
-              <section role="tabpanel" id="pharos-mini-app-panel-home" aria-labelledby="pharos-mini-app-tab-home">
-                <StatusPanel
-                  state={displayState}
-                  canMutate={canMutate}
-                  isMutating={mutationControlsDisabled}
-                  pendingOperation={pendingOperation}
-                  onMutate={mutate}
-                  homeHeadline={headline}
-                  homeScreenStatus={homeScreenStatus}
-                  onAddToHomeScreen={handleAddToHomeScreen}
-                  onSendSample={handleSendSample}
-                />
-              </section>
-            ) : null}
-            {view === "watchlist" ? (
-              <section role="tabpanel" id="pharos-mini-app-panel-watchlist" aria-labelledby="pharos-mini-app-tab-watchlist">
-                {coinInsightTarget ? (
-                  <div className="mb-4">
-                    <CoinInsightPanel
-                      state={displayState}
-                      target={coinInsightTarget}
-                      webApp={webApp}
-                      onClose={() => setCoinInsightTarget(null)}
-                    />
-                  </div>
-                ) : null}
-                <WatchlistPanel
-                  state={displayState}
-                  canMutate={canMutate}
-                  canReadBulk={canReadPortability}
-                  isMutating={mutationControlsDisabled}
-                  isRequestBusy={isMutating}
-                  pendingOperation={pendingOperation}
-                  onMutate={mutate}
-                  onPreviewBulk={performBulkWatchlistPreview}
-                  onConfirmBulk={performMutation}
-                  onUndoBulk={performMutation}
-                  onRemove={handleRemoveCoin}
-                  onOpenInsight={setCoinInsightTarget}
-                  pendingUndo={pendingUndo}
-                  onUndo={handleUndoRemove}
-                  webApp={webApp}
-                  nowSec={nowSec}
-                  highlightedCoinId={highlightedCoinId}
-                  targetCoinId={visibleCoinTarget}
-                  onNavigateToCoin={setCoinTarget}
-                />
-              </section>
-            ) : null}
-            {view === "presets" ? (
-              <section role="tabpanel" id="pharos-mini-app-panel-presets" aria-labelledby="pharos-mini-app-tab-presets">
-                <PresetsPanel
-                  state={displayState}
-                  canMutate={canMutate}
-                  isMutating={mutationControlsDisabled}
-                  pendingOperation={pendingOperation}
-                  onMutate={mutate}
-                  onUnfollowPreset={handleUnfollowPreset}
-                />
-              </section>
-            ) : null}
-            {view === "settings" ? (
-              <section role="tabpanel" id="pharos-mini-app-panel-settings" aria-labelledby="pharos-mini-app-tab-settings">
-                <SettingsPanel
-                  state={displayState}
-                  canMutate={canMutate}
-                  canReadPortability={canReadPortability}
-                  isMutating={mutationControlsDisabled}
-                  isPortabilityRequestBusy={isMutating}
-                  pendingOperation={pendingOperation}
-                  onMutate={mutate}
-                  globalAlerts={confirmedGlobals}
-                  onUnsubscribeAll={handleUnsubscribeAll}
-                  onForgetMe={handleForgetMe}
-                  hasShowConfirm={Boolean(webApp?.showConfirm)}
-                  onExportWatchlist={() => performPortability({ kind: "export-watchlist" })}
-                  onPreviewWatchlistImport={(token) => performPortability({ kind: "preview-watchlist-import", token })}
-                  onConfirmWatchlistImport={(operation) => performMutation(operation)}
-                />
-              </section>
-            ) : null}
+              <MiniAppPanelRouter
+                view={view}
+                home={{
+                  state: displayState,
+                  canMutate,
+                  isMutating: mutationControlsDisabled,
+                  pendingOperation,
+                  onMutate: mutate,
+                  homeHeadline: headline,
+                  homeScreenStatus,
+                  onAddToHomeScreen: handleAddToHomeScreen,
+                  onSendSample: handleSendSample,
+                }}
+                watchlist={{
+                  state: displayState,
+                  canMutate,
+                  canReadBulk: canReadPortability,
+                  isMutating: mutationControlsDisabled,
+                  isRequestBusy: isMutating,
+                  pendingOperation,
+                  onMutate: mutate,
+                  onPreviewBulk: performBulkWatchlistPreview,
+                  onConfirmBulk: performMutation,
+                  onUndoBulk: performMutation,
+                  onRemove: handleRemoveCoin,
+                  onOpenInsight: setCoinInsightTarget,
+                  pendingUndo,
+                  onUndo: handleUndoRemove,
+                  webApp,
+                  nowSec,
+                  highlightedCoinId,
+                  targetCoinId: visibleCoinTarget,
+                  onNavigateToCoin: setCoinTarget,
+                }}
+                presets={{
+                  state: displayState,
+                  canMutate,
+                  isMutating: mutationControlsDisabled,
+                  pendingOperation,
+                  onMutate: mutate,
+                  onUnfollowPreset: handleUnfollowPreset,
+                }}
+                settings={{
+                  state: displayState,
+                  canMutate,
+                  canReadPortability,
+                  isMutating: mutationControlsDisabled,
+                  isPortabilityRequestBusy: isMutating,
+                  pendingOperation,
+                  onMutate: mutate,
+                  globalAlerts: confirmedGlobals,
+                  onUnsubscribeAll: handleUnsubscribeAll,
+                  onForgetMe: handleForgetMe,
+                  hasShowConfirm: Boolean(webApp?.showConfirm),
+                  onExportWatchlist: () => performPortability({ kind: "export-watchlist" }),
+                  onPreviewWatchlistImport: (token) => performPortability({ kind: "preview-watchlist-import", token }),
+                  onConfirmWatchlistImport: (operation) => performMutation(operation),
+                }}
+                coinInsight={coinInsightTarget ? {
+                  state: displayState,
+                  target: coinInsightTarget,
+                  webApp,
+                  onClose: () => setCoinInsightTarget(null),
+                } : null}
+              />
             </div>
 
             <p className="pharos-meta mt-6 text-center">

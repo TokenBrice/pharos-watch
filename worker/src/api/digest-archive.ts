@@ -1,4 +1,4 @@
-import { jsonFreshResponse } from "../lib/api-utils";
+import { jsonFreshResponse } from "../lib/api-response";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DigestForwardLookOutcome, DigestNextTrigger, DigestRiskSignal, DigestRiskTapeItem } from "@shared/types/digest";

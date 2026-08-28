@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
 import { hmacSha256Hex, makeExecutionContext } from "../test-helpers/__shared/auth";
 import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
@@ -10,7 +10,7 @@ import {
   matchesHttpResponseObservation,
   observeHttpResponse,
   type HttpResponseObservation,
-} from "../../../scripts/test-utils/http-response-contract";
+} from "@shared/test-utils/http-response-contract";
 
 const VALID_KEY_PEPPER = "test-pepper";
 const VALID_KEY_PREFIX = "0123456789abcdef";

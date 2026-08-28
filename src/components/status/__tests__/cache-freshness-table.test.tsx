@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { CacheFreshnessTable } from "../cache-freshness-table";
 import type { CacheStatus } from "@shared/types";
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("CacheFreshnessTable", () => {
   it("distinguishes producer cadence, endpoint target, and availability budget", async () => {

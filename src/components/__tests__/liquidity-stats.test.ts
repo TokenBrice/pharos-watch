@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
@@ -10,7 +10,6 @@ vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => createElement("img", { ...props, alt: props.alt ?? "" }),
 }));
 
-afterEach(() => cleanup());
 
 describe("LiquidityStats", () => {
   it("renders the exit route map with disclosed tail routes", () => {

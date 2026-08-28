@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import frozenManifestJson from "../data/night-watch-blacklist-manifest-2026-07-09.json";
 import {
+  fetchTronPage,
   parseReconciliationArgs,
   runNightWatchBlacklistReconciliation,
   validateFrozenManifest,
@@ -19,6 +20,30 @@ const bookmark = "00001d80-000109c2-000050a4-9f8ee3f29d2234f14494a399c6769f35";
 const nowMs = frozenManifest.cutoffInclusive + 15 * 60_000;
 const expectedApplyRunId = `${frozenManifest.manifestId}:apply:${Math.floor(nowMs / 1000)}`;
 const migrationsDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../migrations");
+
+describe("TronGrid retry policy", () => {
+  it("uses the existing exponential fallback for malformed Retry-After", async () => {
+    const timeoutSpy = vi.spyOn(globalThis, "setTimeout").mockImplementation((
+      ((callback: (...args: unknown[]) => void) => {
+        callback();
+        return 0 as never;
+      }) as unknown as typeof setTimeout
+    ));
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response("rate limited", {
+        status: 429,
+        headers: { "Retry-After": "later-ish" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }));
+    try {
+      await expect(fetchTronPage(fetchImpl, "https://api.trongrid.io/v1/test", {}, 1_000))
+        .resolves.toEqual({ success: true, data: [] });
+      expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 1_000);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
+});
 
 function amountNative(event: FrozenManifestEvent): number | null {
   return event.amountRaw == null ? null : Number(BigInt(event.amountRaw)) / 1_000_000;

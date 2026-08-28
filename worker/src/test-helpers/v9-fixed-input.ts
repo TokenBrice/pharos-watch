@@ -25,6 +25,21 @@ import {
   expectedWmDeploymentIdentity,
   type ReviewedDeploymentSupplyObservation,
 } from "../lib/safety-score-v9-supply-attribution-contract";
+import {
+  buildXautTransparencySource,
+  XAUT0_ADAPTER_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+  XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+  XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+  XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+  XAUT_CANONICAL_TOKEN_ADDRESS,
+  XAUT_TRANSPARENCY_SOURCE_ID,
+  XAUT_TREASURY_ADDRESS,
+  type XautLockMintObservation,
+} from "../lib/safety-score-v9-xaut-supply-attribution-contract";
 
 /** Shared timeout for the V9 evaluation suites; a full candidate build is slow. */
 export const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
@@ -39,6 +54,159 @@ export const V9_FIXTURE_CLOCK_SEC = 10_000;
 export const V9_FIXTURE_OBSERVED_AT_SEC = V9_FIXTURE_CLOCK_SEC - 100;
 
 const DAY_SEC = 86_400;
+
+type XautObservationPatch = Partial<Omit<XautLockMintObservation, "disclosure">> & {
+  disclosure?: Partial<XautLockMintObservation["disclosure"]>;
+};
+
+export interface XautObservationOptions extends XautObservationPatch {
+  clockSec?: number;
+}
+
+/** Canonical production-shaped XAUT observation with an explicitly controlled clock. */
+export function makeXautObservation(options: XautObservationOptions = {}): XautLockMintObservation {
+  const clockSec = options.clockSec ?? V9_FIXTURE_CLOCK_SEC;
+  const observation: XautLockMintObservation = {
+    chainId: "ethereum",
+    canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+    adapterAddress: XAUT0_ADAPTER_ADDRESS,
+    decimals: 6,
+    canonicalTotalSupplyRaw: "707747089000",
+    treasuryAddress: XAUT_TREASURY_ADDRESS,
+    treasuryBalanceRaw: "94923429468",
+    adapterLockedSupplyRaw: "29720802896",
+    blockNumber: 25_601_844,
+    blockTimeSec: clockSec - 100,
+    blockHash: `0x${"ab".repeat(32)}`,
+    canonicalRuntimeCodeSha256: XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+    canonicalImplementationAddress: XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+    canonicalImplementationCodeSha256: XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+    adapterRuntimeCodeSha256: XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+    adapterImplementationAddress: XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+    adapterImplementationCodeSha256: XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+    adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+    adapterEndpointAddress: XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+    disclosure: {
+      sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
+      sourceConfigDigest: buildXautTransparencySource()!.configDigest,
+      sourceTimestampSec: clockSec - 200,
+      responseSha256: "c".repeat(64),
+      totalAuthorizedRaw: "707747089000",
+      notIssuedRaw: "94923429468",
+      quarantinedRaw: "0",
+    },
+  };
+  const { clockSec: _clockSec, disclosure, ...patch } = options;
+  return {
+    ...observation,
+    ...patch,
+    disclosure: { ...observation.disclosure, ...disclosure },
+  };
+}
+
+export function patchXautObservation(
+  observation: XautLockMintObservation,
+  patch: XautObservationPatch,
+): XautLockMintObservation {
+  return {
+    ...observation,
+    ...patch,
+    disclosure: { ...observation.disclosure, ...patch.disclosure },
+  };
+}
+
+export function corruptXautObservation(
+  observation: XautLockMintObservation,
+  field: keyof XautLockMintObservation | `disclosure.${keyof XautLockMintObservation["disclosure"]}`,
+  value: unknown,
+): XautLockMintObservation {
+  if (field.startsWith("disclosure.")) {
+    const disclosureField = field.slice("disclosure.".length) as keyof XautLockMintObservation["disclosure"];
+    return patchXautObservation(observation, {
+      disclosure: { [disclosureField]: value } as Partial<XautLockMintObservation["disclosure"]>,
+    });
+  }
+  return { ...observation, [field]: value } as XautLockMintObservation;
+}
+
+export interface WmDeploymentObservationOptions {
+  clockSec?: number;
+  rawSupplyByRoute?: Readonly<Record<string, string>>;
+  blockTimeByChain?: Readonly<Record<string, number>>;
+}
+
+type KeysOfUnion<T> = T extends T ? keyof T : never;
+
+const DEFAULT_WM_RAW_SUPPLY_BY_ROUTE: Readonly<Record<string, string>> = {
+  "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291": "86712798085682",
+  "arbitrum:0x437cc33344a0b27a429f795ff6b469c72698b291": "88459935972",
+  "base:0x437cc33344a0b27a429f795ff6b469c72698b291": "70802728527",
+  "plume:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp": "247794997129",
+};
+
+const DEFAULT_WM_BLOCK_OFFSET_BY_CHAIN: Readonly<Record<string, number>> = {
+  ethereum: -21,
+  arbitrum: -14,
+  base: -13,
+  plume: -12,
+  solana: -25,
+};
+
+export function makeWmDeploymentObservations(
+  options: WmDeploymentObservationOptions = {},
+): ReviewedDeploymentSupplyObservation[] {
+  const clockSec = options.clockSec ?? V9_FIXTURE_CLOCK_SEC;
+  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
+  if (!inventory) throw new Error("Missing wM route inventory");
+  return inventory.routes.map((route, index) => {
+    const identity = expectedWmDeploymentIdentity(route.routeId);
+    const rawSupply = options.rawSupplyByRoute?.[route.routeId] ?? DEFAULT_WM_RAW_SUPPLY_BY_ROUTE[route.routeId];
+    const blockTimeSec = options.blockTimeByChain?.[route.chainId]
+      ?? clockSec + (DEFAULT_WM_BLOCK_OFFSET_BY_CHAIN[route.chainId] ?? -10);
+    if (!identity || rawSupply === undefined) throw new Error(`Missing wM fixture row for ${route.routeId}`);
+    const common = {
+      routeId: route.routeId,
+      chainId: route.chainId,
+      contractAddress: route.contractAddress,
+      decimals: route.decimals,
+      rawSupply,
+      blockNumberOrSlot: (25_000_000 + index).toString(),
+      blockTimeSec,
+    };
+    return identity.runtime === "evm"
+      ? {
+          ...common,
+          blockHash: `0x${(index + 1).toString(16).repeat(64)}`,
+          runtimeCodeSha256: identity.runtimeCodeSha256,
+          implementationAddress: identity.implementationAddress,
+          implementationCodeSha256: identity.implementationCodeSha256,
+          underlyingTokenAddress: identity.underlyingTokenAddress,
+          controllerAddress: identity.controllerAddress,
+        }
+      : {
+          ...common,
+          blockHash: "B".repeat(44),
+          programOwner: identity.programOwner,
+          mintAuthority: identity.mintAuthority,
+          controllerAddress: identity.controllerAddress,
+          controllerProgramOwner: identity.controllerProgramOwner,
+        };
+  });
+}
+
+export function corruptWmDeploymentObservation(
+  observations: readonly ReviewedDeploymentSupplyObservation[],
+  predicate: (observation: ReviewedDeploymentSupplyObservation, index: number) => boolean,
+  field: KeysOfUnion<ReviewedDeploymentSupplyObservation>,
+  value: unknown,
+): ReviewedDeploymentSupplyObservation[] {
+  return observations.map((observation, index) =>
+    predicate(observation, index)
+      ? { ...observation, [field]: value } as ReviewedDeploymentSupplyObservation
+      : observation,
+  );
+}
 
 /**
  * The derived clock at the time this helper was written (2026-08-10T00:00:00Z:
@@ -484,36 +652,16 @@ export function withV9WmReviewedDeploymentAttribution(fixedInput: V9FixedInput) 
   ).reduce((sum, value) => sum + value, 0);
   const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
   if (!inventory) throw new Error("Missing wM route inventory");
-  const observations: ReviewedDeploymentSupplyObservation[] = inventory.routes.map((route, index) => {
-    const identity = expectedWmDeploymentIdentity(route.routeId);
-    if (!identity) throw new Error(`Missing wM deployment identity ${route.routeId}`);
-    const common = {
-      routeId: route.routeId,
-      chainId: route.chainId,
-      contractAddress: route.contractAddress,
-      decimals: route.decimals,
-      rawSupply: route.chainId === "ethereum" ? "86712798085682" : route.chainId === "solana" ? "247794997129" : "1",
-      blockNumberOrSlot: (25_000_000 + index).toString(),
-      blockTimeSec: fixedInput.clockSec - 10 + index,
-    };
-    return identity.runtime === "evm"
-      ? {
-          ...common,
-          blockHash: `0x${(index + 1).toString(16).repeat(64)}`,
-          runtimeCodeSha256: identity.runtimeCodeSha256,
-          implementationAddress: identity.implementationAddress,
-          implementationCodeSha256: identity.implementationCodeSha256,
-          underlyingTokenAddress: identity.underlyingTokenAddress,
-          controllerAddress: identity.controllerAddress,
-        }
-      : {
-          ...common,
-          blockHash: "B".repeat(44),
-          programOwner: identity.programOwner,
-          mintAuthority: identity.mintAuthority,
-          controllerAddress: identity.controllerAddress,
-          controllerProgramOwner: identity.controllerProgramOwner,
-        };
+  const observations = makeWmDeploymentObservations({
+    clockSec: fixedInput.clockSec,
+    rawSupplyByRoute: Object.fromEntries(inventory.routes.map((route) => [
+      route.routeId,
+      route.chainId === "ethereum" ? "86712798085682" : route.chainId === "solana" ? "247794997129" : "1",
+    ])),
+    blockTimeByChain: Object.fromEntries(inventory.routes.map((route, index) => [
+      route.chainId,
+      fixedInput.clockSec - 10 + index,
+    ])),
   });
   const attribution = deriveReviewedDeploymentUnitPartition({
     assetId: "wm-m0",

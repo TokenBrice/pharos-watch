@@ -1,22 +1,8 @@
-type DlYieldPool = {
-  pool: string;
-  chain: string;
-  project: string;
-  symbol: string;
-  tvlUsd: number;
-  apy: number;
-  apyBase: number;
-  apyReward: number | null;
-  apyMean30d: number;
-  stablecoin: boolean;
-  exposure: string;
-  underlyingTokens: string[] | null;
-  poolMeta?: string;
-};
+import type { DlPool } from "../yield-sync/types";
 
 export function makeDlYieldPool(
-  overrides: Partial<DlYieldPool> = {},
-): DlYieldPool {
+  overrides: Partial<DlPool> = {},
+): DlPool {
   return {
     pool: "pool-sdai-native",
     chain: "Ethereum",

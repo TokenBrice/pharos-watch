@@ -4,7 +4,7 @@ import { fetchBalancerPools } from "../dex-liquidity/fetch-balancer";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
-import { jsonResponse, mockFetch as createFetchMock } from "../../test-helpers/__shared/mock-fetch";
+import { jsonResponse, mockFetch as createFetchMock } from "@shared/test-utils/mock-fetch";
 
 vi.mock("../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../lib/abort")>("../../lib/abort");

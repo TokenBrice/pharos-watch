@@ -1,4 +1,4 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it } from "vitest";
 import { TELEGRAM_PENDING_CAPACITY_SQL } from "../../lib/telegram-pending-capacity";
 import {
@@ -6,58 +6,35 @@ import {
   makeCacheRow,
   makeCronRow,
   cleanupStatusTest,
-  fixtureMockD1 as baseFixtureMockD1,
+  buildStatusD1Scenario,
   fixtureMakeApiRequest,
   fixtureCRON_INTERVALS,
 } from "./status.test-support";
 
-function fixtureMockD1(tables: Parameters<typeof baseFixtureMockD1>[0] = []) {
-  return baseFixtureMockD1([
-    ...tables,
-    { match: "SELECT 1", rows: [], first: { value: 1 } },
-    { match: "pharos:status-derived:mint-burn-24h", rows: [] },
-    { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
-    { match: "FROM reserve_sync_state", rows: [] },
-    { match: "FROM reserve_composition", rows: [] },
-    { match: "/* blacklist-gap-metrics-cache-read */", rows: [], first: null },
-    { match: "/* blacklist-gap-metrics-cache-write */", rows: [] },
-    { match: "FROM status_state", rows: [], first: null },
-    { match: "FROM status_probe_runs", rows: [], first: null },
-    { match: "FROM status_discrepancy_state", rows: [], first: null },
-    { match: "FROM status_transitions WHERE scope", rows: [], first: null },
-    { match: "FROM cron_leases", rows: [] },
-    { match: "FROM cron_run_progress", rows: [] },
-    { match: "FROM cron_slot_executions", rows: [] },
-    { match: "blacklist-reconciliation-status-latest", rows: [], first: null },
-    { match: "FROM worker_repair_tasks", rows: [] },
-    { match: "FROM onchain_supply", rows: [], first: null },
-    { match: "FROM supply_history", rows: [], first: null },
-    { match: "FROM daily_digest", rows: [], first: null },
-    { match: "FROM telegram_preset_subscriptions", rows: [] },
-    { match: "FROM telegram_watcher_lifecycle_daily", rows: [], first: null },
-    { match: "FROM telegram_alert_source_events", rows: [], first: null },
-    { match: "FROM telegram_alert_job_targets", rows: [], first: null },
-    { match: "FROM telegram_alert_jobs", rows: [], first: null },
-    { match: "FROM telegram_alert_job_target_items", rows: [], first: null },
-    { match: "FROM telegram_alert_dead_letters", rows: [], first: null },
-    { match: "FROM telegram_usage_daily", rows: [], first: null },
-  ]);
+function fixtureMockD1(overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = []) {
+  return buildStatusD1Scenario({
+    sections: ["sentinel", "live", "publication", "derived", "reserves", "statusState", "cronState", "telegram"],
+    optionalOverrides: overrides,
+    sectionOverrides: {
+      derived: [
+        { match: "pharos:status-derived:mint-burn-24h", rows: [] },
+        { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
+        { match: "/* blacklist-gap-metrics-cache-read */", rows: [], first: null },
+        { match: "/* blacklist-gap-metrics-cache-write */", rows: [] },
+        { match: "blacklist-reconciliation-status-latest", rows: [], first: null },
+        { match: "FROM worker_repair_tasks", rows: [] },
+        { match: "FROM onchain_supply", rows: [], first: null },
+        { match: "FROM supply_history", rows: [], first: null },
+        { match: "FROM daily_digest", rows: [], first: null },
+      ],
+    },
+  });
 }
 
 describe("handleStatus", () => {
   afterEach(cleanupStatusTest);
   it("returns Cache-Control: no-store", async () => {
     const db = fixtureMockD1([
-      { match: "cache WHERE key IN", rows: [] },
-      { match: "dex_liquidity", rows: [], first: { age: 300 } },
-      { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
-      { match: "cron_runs", rows: [] },
-      { match: "cache", rows: [] },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -69,18 +46,12 @@ describe("handleStatus", () => {
   it("includes cron health data in the response", async () => {
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
-      { match: "dex_liquidity", rows: [], first: { age: 300 } },
-      { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
       {
         match: "cron_runs",
         rows: [makeCronRow("sync-stablecoins", "ok", 100)],
       },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -130,15 +101,7 @@ describe("handleStatus", () => {
         ],
       },
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins"), makeCacheRow("stablecoin-charts")] },
-      { match: "dex_liquidity", rows: [], first: { age: 300 } },
-      { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
-      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
       { match: "cache", rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
@@ -179,9 +142,6 @@ describe("handleStatus", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
-      { match: "dex_liquidity", rows: [], first: { age: 300 } },
-      { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
       { match: "cron_runs", rows: [makeCronRow("dispatch-telegram-alerts", "ok", 30)] },
       {
         match: "cron_leases",
@@ -211,9 +171,6 @@ describe("handleStatus", () => {
       },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -299,7 +256,6 @@ describe("handleStatus", () => {
         first: { value: stablecoinsCache, updated_at: now - 60 },
       },
       { match: "blacklist_events", rows: [], first: { total: 1000, missing: 0, missing_recent: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
 
@@ -321,9 +277,6 @@ describe("handleStatus", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
-      { match: "dex_liquidity", rows: [], first: { age: 300 } },
-      { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
       { match: "cron_runs", rows: [makeCronRow("sync-blacklist", "error", 30)] },
       { match: "cron_leases", rows: [] },
       {
@@ -344,9 +297,6 @@ describe("handleStatus", () => {
       },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -391,8 +341,6 @@ describe("handleStatus", () => {
         rows: [],
         first: { value: stablecoinsCache, updated_at: now - 60 },
       },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
 
@@ -424,15 +372,9 @@ describe("handleStatus", () => {
   it("includes Telegram bot subscriber stats when Telegram tables are present", async () => {
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
-      { match: "dex_liquidity", rows: [], first: { age: 300 } },
-      { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
       { match: "cron_runs", rows: [makeCronRow("dispatch-telegram-alerts", "ok", 60)] },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
       {
         match: "FROM telegram_subscribers s",
         rows: [],
@@ -577,15 +519,9 @@ describe("handleStatus", () => {
   it("returns telegramBot=null when Telegram tables are unavailable", async () => {
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
-      { match: "dex_liquidity", rows: [], first: { age: 300 } },
-      { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
       { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 100)] },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
       {
         match: "FROM telegram_subscribers s",
         rows: [],
@@ -603,15 +539,9 @@ describe("handleStatus", () => {
   it("surfaces Telegram subsection loader failures through sectionErrors", async () => {
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
-      { match: "dex_liquidity", rows: [], first: { age: 300 } },
-      { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
       { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 100)] },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
       {
         match: "FROM telegram_subscribers s",
         rows: [],
@@ -635,8 +565,6 @@ describe("handleStatus", () => {
 
   it("marks status degraded and skips data-quality queries when DB sentinel fails", async () => {
     const db = fixtureMockD1([
-      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
-      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
     ]) as D1Database & { prepare: (sql: string) => D1PreparedStatement };
 
     const seenSql: string[] = [];
@@ -680,18 +608,12 @@ describe("handleStatus", () => {
   it("keeps cron healthy when latest run is skipped_locked but a fresh ok run exists", async () => {
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
-      { match: "dex_liquidity", rows: [], first: { age: 300 } },
-      { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
       {
         match: "cron_runs",
         rows: [makeCronRow("sync-stablecoins", "skipped_locked", 30), makeCronRow("sync-stablecoins", "ok", 90)],
       },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -734,7 +656,6 @@ describe("handleStatus", () => {
         first: { value: stablecoinsCache, updated_at: now - 60 },
       },
       { match: "blacklist_events", rows: [], first: { total: 1000, missing: 1, missing_recent: 0 } },
-      { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
 

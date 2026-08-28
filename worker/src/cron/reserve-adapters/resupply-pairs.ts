@@ -5,7 +5,7 @@ import { decodeAbiParameters } from "viem/utils";
 import { throwIfAborted } from "../../lib/abort";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import type { AdapterContext, AdapterResult } from "./types";
-import { encodeUint256 } from "../../lib/evm-selectors";
+import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -129,12 +129,8 @@ function encodeConvertToAssetsCall(shares: bigint): `0x${string}` {
   return `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(shares)}` as `0x${string}`;
 }
 
-function encodeAddressArgument(address: string): string {
-  return address.toLowerCase().replace(/^0x/, "").padStart(64, "0");
-}
-
 function encodeGetMaxRedeemableDebtCall(pairAddress: `0x${string}`): `0x${string}` {
-  return `${GET_MAX_REDEEMABLE_DEBT_SELECTOR}${encodeAddressArgument(pairAddress)}` as `0x${string}`;
+  return encodeAddressCallData(GET_MAX_REDEEMABLE_DEBT_SELECTOR, pairAddress);
 }
 
 function decodeBooleanResult(raw: string | null, context: string): boolean {

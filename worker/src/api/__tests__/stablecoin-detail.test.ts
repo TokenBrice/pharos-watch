@@ -1,7 +1,7 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 // Stub external fetches before importing the handler

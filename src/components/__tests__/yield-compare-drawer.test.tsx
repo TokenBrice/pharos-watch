@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -60,9 +60,6 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/yield/");
 });
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("YieldCompareDrawer", () => {
   it("renders metric rows side-by-side for the selected coins", () => {

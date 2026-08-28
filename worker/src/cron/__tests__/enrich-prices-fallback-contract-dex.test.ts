@@ -8,36 +8,19 @@ import {
   fixtureEnrichMissingPrices,
   fixtureRunDexScreenerPass,
   fixtureRunDlContractPasses,
-  fixtureMockD1 as createFixtureMockD1,
+  makeFixtureMockD1 as fixtureMockD1,
   fixtureMockFetch,
-  fixtureCIRCUIT_SOURCE,
+  installFetch,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
-
-function installFetch(implementation: (url: string) => Response | Promise<Response>) {
-  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
-}
-
-function fixtureMockD1(
-  tables: Parameters<typeof createFixtureMockD1>[0] = [],
-  options?: Parameters<typeof createFixtureMockD1>[1],
-) {
-  return createFixtureMockD1(
-    [
-      ...tables,
-      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    ],
-    options,
-  );
-}
+import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   it("returns zero counts when no assets are missing prices", async () => {
     const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 1.0, pegType: "peggedUSD", circulating: {} },
-      { id: "usdc-circle", name: "USD Coin", symbol: "USDC", price: 0.999, pegType: "peggedUSD", circulating: {} },
+      makePeggedAsset({ price: 1.0 }),
+      makePeggedAsset({ id: "usdc-circle", name: "USD Coin", symbol: "USDC", price: 0.999 }),
     ];
     const progress: string[] = [];
 
@@ -73,7 +56,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
     const assets: PeggedAsset[] = [
-      { id: "missing-usd", name: "Missing USD", symbol: "mUSD", price: 0, pegType: "peggedUSD", circulating: {} },
+      makePeggedAsset({ id: "missing-usd", name: "Missing USD", symbol: "mUSD", price: 0 }),
     ];
 
     const stats = await fixtureEnrichMissingPrices(assets, undefined, db);
@@ -92,15 +75,10 @@ describe("enrichMissingPrices", () => {
 
   it("enriches via Pass 1 (contract address → DL coins API)", async () => {
     const assets: PeggedAsset[] = [
-      {
-        id: "usdt-tether",
-        name: "Tether",
-        symbol: "USDT",
+      makePeggedAsset({
         price: 0,
         address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     fixtureMockFetch([
@@ -124,14 +102,12 @@ describe("enrichMissingPrices", () => {
 
   it("enriches via curated tracked contract metadata when the upstream row is addressless", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "ctusd-citrea",
         name: "Citrea USD",
         symbol: "ctUSD",
         price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     fixtureMockFetch([
@@ -155,14 +131,12 @@ describe("enrichMissingPrices", () => {
 
   it("normalizes EVM contract casing for DefiLlama contract fallback", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "usg-tangent",
         name: "Tangent USD",
         symbol: "USG",
         price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     fixtureMockFetch([
@@ -187,14 +161,12 @@ describe("enrichMissingPrices", () => {
   it("preserves case-sensitive Sui Move identifiers from tracked metadata", async () => {
     const suiAusdCoinId = "sui:0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD";
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "ausd-agora",
         name: "Agora Dollar",
         symbol: "AUSD",
         price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     fixtureMockFetch([
@@ -218,15 +190,12 @@ describe("enrichMissingPrices", () => {
   it("preserves colon-rich Move identifiers in explicit chain-qualified addresses", async () => {
     const suiUsdtCoinId = "sui:0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT";
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "sui-usdt-test",
         name: "Sui USDT",
-        symbol: "USDT",
         price: 0,
         address: suiUsdtCoinId,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     fixtureMockFetch([
@@ -262,23 +231,19 @@ describe("enrichMissingPrices", () => {
       },
     ], { requireMatch: true });
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "m-m0",
         name: "M by M0",
         symbol: "M",
         price: 0,
         address: `ethereum:${mAddress}`,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-      {
+      }),
+      makePeggedAsset({
         id: "usdx-kava",
         name: "Kava USDX",
         symbol: "USDX",
         price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     const result = await fixtureRunDlContractPasses(assets, undefined);
@@ -297,15 +262,13 @@ describe("enrichMissingPrices", () => {
       },
     ]);
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "failed-contract",
         name: "Failed Contract",
         symbol: "FAIL",
         price: 0,
         address: "ethereum:0xfailed",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     const result = await fixtureRunDlContractPasses(assets, undefined);
@@ -316,7 +279,7 @@ describe("enrichMissingPrices", () => {
 
   it("rejects unreasonable DefiLlama contract prices and allows later fallback passes to resolve", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "jpyc-jpyc",
         name: "JPYC",
         symbol: "JPYC",
@@ -324,8 +287,7 @@ describe("enrichMissingPrices", () => {
         address: "ethereum:0xjpyc",
         cmcSlug: "jpyc",
         pegType: "peggedJPY",
-        circulating: {},
-      },
+      }),
     ];
 
     fixtureMockFetch([
@@ -354,15 +316,11 @@ describe("enrichMissingPrices", () => {
 
   it("does not enrich assets with 'wrong' geckoId via contract passes — falls through to CMC/DexScreener", async () => {
     const assets: PeggedAsset[] = [
-      {
-        id: "usdt-tether",
-        name: "SomeToken",
+      makePeggedAsset({
         symbol: "TOK",
         price: 0,
         geckoId: "sometoken-wrong",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     // All APIs return empty — asset stays unpriced
@@ -382,16 +340,11 @@ describe("enrichMissingPrices", () => {
 
   it("leaves assets unpriced when all APIs return empty data", async () => {
     const assets: PeggedAsset[] = [
-      {
-        id: "usdt-tether",
-        name: "Tether",
-        symbol: "USDT",
+      makePeggedAsset({
         price: 0,
         address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         geckoId: "tether",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     // All APIs return 200 but with no useful price data
@@ -413,16 +366,15 @@ describe("enrichMissingPrices", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const observedAt = nowSec - 3600;
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "dllr-sovryn",
         name: "DLLR",
         symbol: "DLLR",
         price: null,
         priceSource: "defillama",
         geckoId: "sovryn-dollar",
-        pegType: "peggedUSD",
         circulating: { peggedUSD: 2_000_000 },
-      },
+      }),
     ];
 
     installFetch(async (url: string) => {
@@ -462,16 +414,15 @@ describe("enrichMissingPrices", () => {
   it("does not apply low-volume CoinGecko fallback to unallowlisted stale rows", async () => {
     const observedAt = Math.floor(Date.now() / 1000) - 3600;
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "usx-dforce",
         name: "dForce USD",
         symbol: "USX",
         price: null,
         priceSource: "defillama",
         geckoId: "token-dforce-usd",
-        pegType: "peggedUSD",
         circulating: { peggedUSD: 2_000_000 },
-      },
+      }),
     ];
 
     installFetch(async (url: string) => {
@@ -516,15 +467,14 @@ describe("enrichMissingPrices", () => {
     ]);
 
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "cjpy-yamato",
         name: "CJPY",
         symbol: "CJPY",
         price: 0,
         pegType: "peggedJPY",
         chains: ["Ethereum"],
-        circulating: {},
-      },
+      }),
     ];
 
     fixtureMockFetch([
@@ -561,18 +511,16 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0.0005);
   });
 
-  it("prefers exact DexScreener token-address lookups before symbol search", async () => {
+  it("enriches via an exact DexScreener token-address lookup", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "mystery-usd",
         name: "Mystery USD",
         symbol: "MUSD",
         price: 0,
         address: "0xabc",
         chains: ["Base"],
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     const fetchSpy = installFetch(async (url: string) => {
@@ -598,9 +546,6 @@ describe("enrichMissingPrices", () => {
           { status: 200 },
         );
       }
-      if (url.includes("dexscreener.com/latest/dex/search")) {
-        return new Response(JSON.stringify({ pairs: [] }), { status: 200 });
-      }
       return new Response("Not found", { status: 404 });
     });
 
@@ -609,46 +554,17 @@ describe("enrichMissingPrices", () => {
     expect(stats.passDex).toBe(1);
     expect(assets[0].price).toBe(1.0004);
     expect(assets[0].priceSource).toBe("dexscreener-exact");
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
-  });
-
-  it("does not call retired DexScreener fallback search", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "mystery-usd",
-        name: "Mystery USD",
-        symbol: "USDT",
-        price: 0,
-        pegType: "peggedUSD",
-        chains: ["Ethereum"],
-        circulating: {},
-      },
-    ];
-
-    const fetchSpy = installFetch(async (url: string) => {
-      if (url.includes("dexscreener.com")) {
-        return new Response("upstream error", { status: 500 });
-      }
-      return new Response(JSON.stringify({}), { status: 200 });
-    });
-
-    const stats = await fixtureEnrichMissingPrices(assets);
-
-    expect(stats.passDex).toBe(0);
-    expect(stats.finalMissing).toBe(1);
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("api.dexscreener.com/tokens/v1/base/0xabc"))).toBe(true);
   });
 
   it("uses tracked contract metadata for addressless DexScreener exact fallback targets", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "gusd-gate",
         name: "GUSD",
         symbol: "GUSD",
         price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     const fetchSpy = installFetch(async (url: string) => {
@@ -687,14 +603,12 @@ describe("enrichMissingPrices", () => {
 
   it("rejects metadata-derived DexScreener exact prices when the tracked token symbol differs", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "usdo-openeden",
         name: "OpenDollar USDO",
         symbol: "USDO",
         price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     installFetch(async (url: string) => {
@@ -730,356 +644,4 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0);
   });
 
-  it("keeps retired DexScreener search independent from exact token lookups", async () => {
-    const db = fixtureMockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_SEARCH}`],
-        rows: [],
-        first: null,
-      },
-    ]);
-
-    const assets: PeggedAsset[] = [
-      {
-        id: "exact-usd",
-        name: "Exact USD",
-        symbol: "EXACT",
-        price: 0,
-        address: "0xabc",
-        chains: ["Base"],
-        pegType: "peggedUSD",
-        circulating: { total: 100 },
-      },
-      {
-        id: "search-usd",
-        name: "Search USD",
-        symbol: "CHFAU",
-        price: 0,
-        pegType: "peggedUSD",
-        chains: ["Ethereum"],
-        circulating: { total: 90 },
-      },
-    ];
-
-    const fetchSpy = installFetch(async (url: string) => {
-      if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
-        return new Response(
-          JSON.stringify([
-            {
-              chainId: "base",
-              dexId: "aerodrome",
-              pairAddress: "0xpair",
-              baseToken: { address: "0xabc", name: "Exact USD", symbol: "EXACT" },
-              quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-              priceUsd: "1.0004",
-              priceNative: "1.0004",
-              liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
-              volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 },
-              pairCreatedAt: Date.now(),
-            },
-          ]),
-          { status: 200 },
-        );
-      }
-      if (url.includes("dexscreener.com/latest/dex/search?q=CHFAU")) {
-        return new Response("upstream error", { status: 500 });
-      }
-      return new Response("Not found", { status: 404 });
-    });
-
-    const result = await fixtureRunDexScreenerPass(assets, undefined, db);
-
-    expect(result.resolved).toBe(1);
-    expect(assets[0].price).toBe(1.0004);
-
-    const circuitWrites = db
-      .getHistory()
-      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))
-      .map((entry) => String(entry.binds[0]));
-
-    expect(circuitWrites).toContain(`circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
-    expect(circuitWrites).not.toContain(`circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_SEARCH}`);
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
-  });
-
-  it("does not probe or recover the retired DexScreener search breaker", async () => {
-    const openedAt = Math.floor(Date.now() / 1000) - 3600;
-    const db = fixtureMockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_SEARCH}`],
-        rows: [
-          {
-            key: `circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_SEARCH}`,
-            value: JSON.stringify({
-              state: "open",
-              consecutiveFailures: 3,
-              lastFailureAt: openedAt,
-              lastSuccessAt: null,
-              openedAt,
-            }),
-            updated_at: openedAt,
-          },
-        ],
-      },
-    ]);
-
-    const assets: PeggedAsset[] = [
-      {
-        id: "search-usd",
-        name: "Search USD",
-        symbol: "CHFAU",
-        price: 0,
-        pegType: "peggedUSD",
-        chains: ["Ethereum"],
-        circulating: { total: 90 },
-      },
-    ];
-
-    const fetchSpy = fixtureMockFetch();
-
-    const result = await fixtureRunDexScreenerPass(assets, undefined, db);
-
-    expect(result.resolved).toBe(0);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    const searchHistory = db
-      .getHistory()
-      .filter((entry) => entry.binds.includes(`circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_SEARCH}`));
-    expect(searchHistory).toHaveLength(0);
-  });
-
-  it("can still run exact DexScreener lookups when the search breaker is open", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = fixtureMockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_SEARCH}`],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            state: "open",
-            consecutiveFailures: 3,
-            lastFailureAt: nowSec - 60,
-            lastSuccessAt: null,
-            openedAt: nowSec - 60,
-          }),
-          updated_at: nowSec - 60,
-        },
-      },
-    ]);
-
-    const assets: PeggedAsset[] = [
-      {
-        id: "exact-usd",
-        name: "Exact USD",
-        symbol: "EXACT",
-        price: 0,
-        address: "0xabc",
-        chains: ["Base"],
-        pegType: "peggedUSD",
-        circulating: { total: 100 },
-      },
-      {
-        id: "search-usd",
-        name: "Search USD",
-        symbol: "SUSD",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: { total: 90 },
-      },
-    ];
-
-    const fetchSpy = installFetch(async (url: string) => {
-      if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
-        return new Response(
-          JSON.stringify([
-            {
-              chainId: "base",
-              dexId: "aerodrome",
-              pairAddress: "0xpair",
-              baseToken: { address: "0xabc", name: "Exact USD", symbol: "EXACT" },
-              quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-              priceUsd: "1.0004",
-              priceNative: "1.0004",
-              liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
-              volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 },
-              pairCreatedAt: Date.now(),
-            },
-          ]),
-          { status: 200 },
-        );
-      }
-      if (url.includes("dexscreener.com/latest/dex/search")) {
-        throw new Error("search path should have been skipped");
-      }
-      return new Response("Not found", { status: 404 });
-    });
-
-    const result = await fixtureRunDexScreenerPass(assets, undefined, db);
-
-    expect(result.resolved).toBe(1);
-    expect(fetchSpy.mock.calls).toHaveLength(1);
-    expect(fetchSpy.mock.calls[0]?.[0]).toContain("api.dexscreener.com/tokens/v1/base/0xabc");
-  });
-
-  it("does not fall back to DexScreener symbol search when an exact token target exists", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        address: "0xabc",
-        chains: ["Base"],
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
-
-    const fetchSpy = installFetch(async (url: string) => {
-      if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
-        return new Response(JSON.stringify([]), { status: 200 });
-      }
-      if (url.includes("dexscreener.com/latest/dex/search")) {
-        return new Response(
-          JSON.stringify({
-            pairs: [
-              {
-                baseToken: { symbol: "USDG" },
-                quoteToken: { symbol: "USDC" },
-                priceUsd: "1.0003",
-                liquidity: { usd: 250_000 },
-                chainId: "base",
-              },
-            ],
-          }),
-          { status: 200 },
-        );
-      }
-      return new Response("Not found", { status: 404 });
-    });
-
-    const result = await fixtureRunDexScreenerPass(assets, undefined, undefined);
-
-    expect(result.resolved).toBe(0);
-    expect(assets[0].price).toBe(0);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy.mock.calls[0]?.[0]).toContain("api.dexscreener.com/tokens/v1/base/0xabc");
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
-  });
-
-  it("does not spend DexScreener request budget on retired symbol-search candidates", { timeout: 15_000 }, async () => {
-    const assets: PeggedAsset[] = [
-      { id: "deusd-1", name: "DEUSD 1", symbol: "DEUSD", price: 0, pegType: "peggedUSD", circulating: { total: 100 } },
-      { id: "bean-1", name: "Bean 1", symbol: "BEAN", price: 0, pegType: "peggedUSD", circulating: { total: 90 } },
-      {
-        id: "usdn-1",
-        name: "USDN 1",
-        symbol: "USDN",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: { total: 80 },
-        chains: ["Ethereum"],
-      },
-      { id: "tor-1", name: "TOR 1", symbol: "TOR", price: 0, pegType: "peggedUSD", circulating: { total: 70 } },
-      {
-        id: "usdr-1",
-        name: "USDR 1",
-        symbol: "CTUSD",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: { total: 60 },
-        chains: ["Ethereum"],
-      },
-      { id: "pinto-1", name: "Pinto 1", symbol: "PINTO", price: 0, pegType: "peggedUSD", circulating: { total: 50 } },
-      {
-        id: "usbd-1",
-        name: "USBD 1",
-        symbol: "USBD",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: { total: 40 },
-        chains: ["Ethereum"],
-      },
-      {
-        id: "usdx-1",
-        name: "USDX 1",
-        symbol: "TEST",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: { total: 30 },
-        chains: ["Ethereum"],
-      },
-      { id: "husd-1", name: "HUSD 1", symbol: "HUSD", price: 0, pegType: "peggedUSD", circulating: { total: 20 } },
-      {
-        id: "usx-1",
-        name: "USX 1",
-        symbol: "CASH",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: { total: 10 },
-        chains: ["Ethereum"],
-      },
-      {
-        id: "chfau-1",
-        name: "CHFAU 1",
-        symbol: "CHFAU",
-        price: 0,
-        pegType: "peggedCHF",
-        circulating: { total: 9 },
-        chains: ["Ethereum"],
-      },
-    ];
-
-    const fetchSpy = installFetch(async (url: string) => {
-      if (
-        url.includes("q=USDN") ||
-        url.includes("q=CTUSD") ||
-        url.includes("q=USBD") ||
-        url.includes("q=TEST") ||
-        url.includes("q=CASH")
-      ) {
-        return new Response("upstream error", { status: 500 });
-      }
-      if (url.includes("q=CHFAU")) {
-        return new Response(
-          JSON.stringify({
-            pairs: [
-              {
-                baseToken: { symbol: "CHFAU" },
-                quoteToken: { symbol: "USDC" },
-                priceUsd: "1.126",
-                liquidity: { usd: 250_000 },
-                volume: { h24: 25_000 },
-                pairCreatedAt: maturePairCreatedAt(),
-                chainId: "ethereum",
-              },
-            ],
-          }),
-          { status: 200 },
-        );
-      }
-      return new Response("Not found", { status: 404 });
-    });
-
-    const result = await fixtureRunDexScreenerPass(assets, { peggedCHF: 1.12 }, undefined);
-
-    expect(result.resolved).toBe(0);
-    expect(assets[10].price).toBe(0);
-    expect(assets[10].priceSource).toBeUndefined();
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
 });

@@ -1,5 +1,6 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
@@ -54,14 +55,6 @@ interface HoneyFactoryRedemptionCapacityParams {
 interface RedemptionCapacityObservation {
   metadata?: Record<string, unknown>;
   warnings: LiveReserveWarning[];
-}
-
-function encodeWord(value: bigint): string {
-  return value.toString(16).padStart(64, "0");
-}
-
-function encodeAddressCall(selector: string, address: string): string {
-  return `${selector}${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
 }
 
 function requireUint(value: bigint | null, label: string): bigint {
@@ -161,7 +154,7 @@ async function observeHoneyFactoryRedemptionCapacity(
 
     const assets = await Promise.all(
       Array.from({ length: assetCount }, (_, index) =>
-        onchain.uint256(factory, `${SELECTORS.registeredAssets}${encodeWord(BigInt(index))}`)
+        onchain.uint256(factory, `${SELECTORS.registeredAssets}${encodeUint256(BigInt(index))}`)
           .then((value) => addressFromWord(value, `registeredAssets(${index})`))),
     );
     if (new Set(assets.map((asset) => asset.toLowerCase())).size !== assets.length) {
@@ -171,7 +164,7 @@ async function observeHoneyFactoryRedemptionCapacity(
     const [factoryPaused, forcedBasketMode, basketMode, weights, globalCap] = await Promise.all([
       onchain.uint256(factory, SELECTORS.paused).then((value) => requireBool(value, "paused()")),
       onchain.uint256(factory, SELECTORS.forcedBasketMode).then((value) => requireBool(value, "forcedBasketMode()")),
-      onchain.uint256(factory, `${SELECTORS.isBasketModeEnabled}${encodeWord(0n)}`)
+      onchain.uint256(factory, `${SELECTORS.isBasketModeEnabled}${encodeUint256(0n)}`)
         .then((value) => requireBool(value, "isBasketModeEnabled(false)")),
       onchain.raw(factory, SELECTORS.getWeights).then((value) => decodeUintArray(value, assetCount, "getWeights()")),
       onchain.uint256(factory, SELECTORS.globalCap).then((value) => requireUint(value, "globalCap()")),
@@ -187,14 +180,14 @@ async function observeHoneyFactoryRedemptionCapacity(
     const stableAssets = new Map(params.stableAssets.map((asset) => [asset.address.toLowerCase(), asset]));
     const observations = await Promise.all(assets.map(async (asset, index) => {
       const [vaultRaw, collectedFees, redeemRate, isPegged, relativeCap] = await Promise.all([
-        onchain.uint256(factory, encodeAddressCall(SELECTORS.vaults, asset)),
-        onchain.uint256(factory, encodeAddressCall(SELECTORS.collectedAssetFees, asset))
+        onchain.uint256(factory, encodeAddressCallData(SELECTORS.vaults, asset)),
+        onchain.uint256(factory, encodeAddressCallData(SELECTORS.collectedAssetFees, asset))
           .then((value) => requireUint(value, `collectedAssetFees(${asset})`)),
-        onchain.uint256(factory, encodeAddressCall(SELECTORS.redeemRates, asset))
+        onchain.uint256(factory, encodeAddressCallData(SELECTORS.redeemRates, asset))
           .then((value) => requireUint(value, `redeemRates(${asset})`)),
-        onchain.uint256(factory, encodeAddressCall(SELECTORS.isPegged, asset))
+        onchain.uint256(factory, encodeAddressCallData(SELECTORS.isPegged, asset))
           .then((value) => requireBool(value, `isPegged(${asset})`)),
-        onchain.uint256(factory, encodeAddressCall(SELECTORS.relativeCap, asset))
+        onchain.uint256(factory, encodeAddressCallData(SELECTORS.relativeCap, asset))
           .then((value) => requireUint(value, `relativeCap(${asset})`)),
       ]);
       const vault = addressFromWord(vaultRaw, `vaults(${asset})`);
@@ -202,7 +195,7 @@ async function observeHoneyFactoryRedemptionCapacity(
         onchain.uint256(vault, SELECTORS.asset),
         onchain.uint256(vault, SELECTORS.paused).then((value) => requireBool(value, `vault ${vault} paused()`)),
         onchain.raw(vault, SELECTORS.custodyInfo).then(decodeCustodyInfo),
-        onchain.uint256(vault, encodeAddressCall(SELECTORS.balanceOf, factory))
+        onchain.uint256(vault, encodeAddressCallData(SELECTORS.balanceOf, factory))
           .then((value) => requireUint(value, `vault ${vault} balanceOf(factory)`)),
         onchain.uint256(asset, SELECTORS.decimals)
           .then((value) => requireUint(value, `asset ${asset} decimals()`)),
@@ -219,20 +212,20 @@ async function observeHoneyFactoryRedemptionCapacity(
 
       const netShares = factoryShares - collectedFees;
       const convertedAssets = requireUint(
-        await onchain.uint256(vault, `${SELECTORS.convertToAssets}${encodeWord(netShares)}`),
+        await onchain.uint256(vault, `${SELECTORS.convertToAssets}${encodeUint256(netShares)}`),
         `vault ${vault} convertToAssets(net shares)`,
       );
       const liquidityHolder = custodyInfo.isCustodyVault ? custodyInfo.custodyAddress : vault;
       if (liquidityHolder == null) throw new Error(`${ADAPTER_KEY}: custody vault ${vault} has no custody address`);
       const holderBalance = requireUint(
-        await onchain.uint256(asset, encodeAddressCall(SELECTORS.balanceOf, liquidityHolder)),
+        await onchain.uint256(asset, encodeAddressCallData(SELECTORS.balanceOf, liquidityHolder)),
         `asset ${asset} balanceOf(liquidity holder)`,
       );
       const allowance = custodyInfo.isCustodyVault
         ? requireUint(
             await onchain.uint256(
               asset,
-              `${SELECTORS.allowance}${liquidityHolder.slice(2).padStart(64, "0")}${vault.slice(2).padStart(64, "0")}`,
+              encodeAddressCallData(SELECTORS.allowance, liquidityHolder, vault),
             ),
             `asset ${asset} custody allowance`,
           )

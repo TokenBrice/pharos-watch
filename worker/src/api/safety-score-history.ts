@@ -1,4 +1,5 @@
-import { handleStablecoinHistoryRequest, getLatestSuccessfulCronTimestamp } from "../lib/api-utils";
+import { handleStablecoinHistoryRequest } from "../lib/api-history";
+import { getLatestSuccessfulCronTimestamp } from "../lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";

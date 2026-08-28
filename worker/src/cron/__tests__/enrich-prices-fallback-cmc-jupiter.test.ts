@@ -4,43 +4,23 @@ import {
   cleanupEnrichMissingPricesTest,
   fixtureEnrichMissingPrices,
   fixtureRunJupiterPass,
-  fixtureMockD1 as createFixtureMockD1,
+  makeFixtureMockD1 as fixtureMockD1,
   fixtureMockFetch,
   fixtureCIRCUIT_SOURCE,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
+import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 
 
 
-
-function fixtureMockD1(
-  tables: Parameters<typeof createFixtureMockD1>[0] = [],
-  options?: Parameters<typeof createFixtureMockD1>[1],
-) {
-  return createFixtureMockD1(
-    [
-      ...tables,
-      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    ],
-    options,
-  );
-}
 
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   it("fills missing Solana prices from documented Jupiter V3 payloads without liquidity", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
     ];
 
     fixtureMockFetch([
@@ -70,14 +50,7 @@ describe("enrichMissingPrices", () => {
   it("falls back to the next bounded Solana RPC when the primary slot endpoint returns 403", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
     ];
 
     const fetchSpy = fixtureMockFetch([
@@ -120,14 +93,7 @@ describe("enrichMissingPrices", () => {
   it("fails Jupiter freshness closed after every bounded Solana slot RPC fails", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
     ];
 
     const fetchSpy = fixtureMockFetch([
@@ -165,14 +131,7 @@ describe("enrichMissingPrices", () => {
   it("sends the configured Jupiter API key on V3 price requests", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
     ];
 
     const fetchSpy = fixtureMockFetch([
@@ -200,14 +159,7 @@ describe("enrichMissingPrices", () => {
   it("does not reject Jupiter V3 quotes solely because createdAt is old", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
     ];
 
     fixtureMockFetch([
@@ -239,7 +191,7 @@ describe("enrichMissingPrices", () => {
   it("adds bounded Jupiter evidence to low-depth Solana primary prices without replacing the primary source", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "usdg-paxos",
         name: "USDG",
         symbol: "USDG",
@@ -248,9 +200,8 @@ describe("enrichMissingPrices", () => {
         priceConfidence: "single-source",
         consensusSources: ["coingecko"],
         agreeSources: ["coingecko"],
-        pegType: "peggedUSD",
         circulating: { solana: 10_000_000 },
-      },
+      }),
     ];
 
     fixtureMockFetch([
@@ -288,7 +239,7 @@ describe("enrichMissingPrices", () => {
   it("does not add Jupiter primary evidence when the quote diverges from the current primary price", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "usdg-paxos",
         name: "USDG",
         symbol: "USDG",
@@ -297,9 +248,8 @@ describe("enrichMissingPrices", () => {
         priceConfidence: "single-source",
         consensusSources: ["coingecko"],
         agreeSources: ["coingecko"],
-        pegType: "peggedUSD",
         circulating: { solana: 10_000_000 },
-      },
+      }),
     ];
 
     fixtureMockFetch([
@@ -327,14 +277,7 @@ describe("enrichMissingPrices", () => {
   it("rejects Jupiter quotes with stale block ids", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
     ];
 
     fixtureMockFetch([
@@ -368,14 +311,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
     const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
     ];
 
     fixtureMockFetch([
@@ -420,14 +356,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
     const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
     ];
 
     fixtureMockFetch([
@@ -466,14 +395,7 @@ describe("enrichMissingPrices", () => {
 
   it("reports Jupiter non-OK responses in pass diagnostics", async () => {
     const assets: PeggedAsset[] = [
-      {
-        id: "usdg-paxos",
-        name: "USDG",
-        symbol: "USDG",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
     ];
     const db = fixtureMockD1([{ match: "cache", rows: [], first: null }]);
 
@@ -518,14 +440,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
     const assets: PeggedAsset[] = [
-      {
-        id: "usbd-bima",
-        name: "USBD",
-        symbol: "USBD",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usbd-bima", name: "USBD", symbol: "USBD", price: 0 }),
     ];
 
     const fetchSpy = fixtureMockFetch();
@@ -546,14 +461,7 @@ describe("enrichMissingPrices", () => {
 
   it("skips Jupiter fetches when there are no Solana fallback candidates and the circuit is closed", async () => {
     const assets: PeggedAsset[] = [
-      {
-        id: "usbd-bima",
-        name: "USBD",
-        symbol: "USBD",
-        price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      makePeggedAsset({ id: "usbd-bima", name: "USBD", symbol: "USBD", price: 0 }),
     ];
 
     const db = fixtureMockD1([{ match: "cache", rows: [], first: null }], { requireMatch: true });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { act } from "react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -54,7 +54,6 @@ describe("TableExportMenu", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.useRealTimers();
     downloadCsvWithPreambleMock.mockReset();
     downloadNdjsonWithPreambleMock.mockReset();

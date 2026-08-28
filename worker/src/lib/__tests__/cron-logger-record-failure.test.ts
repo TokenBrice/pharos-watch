@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { logCronEvent, recordCronFailure, __resetCronFailureCountsForTests } from "../cron-logger";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 describe("recordCronFailure", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActiveSafetyScoreSource } from "../safety-score-active-source";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const mockLoadActiveSafetyScoreSource = vi.fn();
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
 import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
@@ -28,7 +28,6 @@ const meta = {
   },
 } as unknown as StablecoinMeta;
 
-afterEach(cleanup);
 
 describe("KeyLinksCard", () => {
   it("renders the curated links and the reserve attestation link", () => {

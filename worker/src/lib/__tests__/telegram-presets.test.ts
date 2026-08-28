@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   listTelegramPresets,
   resolveTelegramPresetAlias,

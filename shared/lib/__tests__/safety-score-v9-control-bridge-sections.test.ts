@@ -1,19 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
-import {
-  evaluateV9EconomicControl,
-  type EvaluateV9EconomicControlArgs,
-  type V9BridgeControlReview,
-  type V9EconomicControlAssetFacts,
-  type V9MintMechanismReview,
-  type V9OracleControlReview,
-} from "../safety-score-v9/control";
+import { evaluateV9EconomicControl } from "../safety-score-v9/control";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
   boundedUnknown,
+  makeEconomicControlArgs as args,
+  makeEconomicControlFacts as baseFacts,
   makeDeploymentControl,
   missing,
-  notApplicable,
   requiredKnown,
 } from "./safety-score-v9-fixtures.test-support";
 
@@ -28,51 +22,6 @@ function bridgeControl(
     economicLossScope: "deployment",
     ...overrides,
   });
-}
-
-function noMint(): V9MintMechanismReview {
-  return {
-    status: notApplicable("mint"),
-    controlKey: null,
-    reconciliation: "not-applicable",
-    supervision: "unknown",
-    upgrade: { state: "not-applicable", controlKey: null },
-  };
-}
-
-function noOracle(): V9OracleControlReview {
-  return { status: notApplicable("oracle"), tier: null, branches: [] };
-}
-
-function noBridge(): V9BridgeControlReview {
-  return { status: notApplicable("bridge"), routes: [] };
-}
-
-function baseFacts(controls: readonly V9DeploymentControlFactV2[] = []): V9EconomicControlAssetFacts {
-  return {
-    assetId: "fixture-asset",
-    archetype: "fiat-cash",
-    controlStatus: controls.length > 0 ? requiredKnown("controls") : notApplicable("controls"),
-    controls,
-    supply: {
-      status: requiredKnown("supply"),
-      selectedBridgeRoutes: [],
-      selectedRouteSupplyShare: 1,
-      unknownRouteSupplyShare: 0,
-      unreviewedRouteSupplyShare: 0,
-    },
-  };
-}
-
-function args(overrides: Partial<EvaluateV9EconomicControlArgs> = {}): EvaluateV9EconomicControlArgs {
-  return {
-    policy: V9_CANDIDATE_POLICY_V1,
-    facts: baseFacts(),
-    mint: noMint(),
-    oracle: noOracle(),
-    bridge: noBridge(),
-    ...overrides,
-  };
 }
 
 /**

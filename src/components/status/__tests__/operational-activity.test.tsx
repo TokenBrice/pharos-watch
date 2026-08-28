@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { ApiKeyAuditEntry } from "@shared/types";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
 import { OperationalActivity, type OperationalActivitySourceState } from "../operational-activity";
 
-afterEach(cleanup);
 
 const adminEntry: AdminActionAuditEntry = {
   id: 1,

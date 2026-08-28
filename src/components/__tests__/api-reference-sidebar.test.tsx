@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ApiReferenceSidebar } from "@/components/api-reference-sidebar";
 
-afterEach(cleanup);
 
 const MOCK_SECTIONS = [
   {

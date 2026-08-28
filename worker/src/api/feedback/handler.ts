@@ -1,4 +1,4 @@
-import { errorResponse, jsonResponse } from "../../lib/api-utils";
+import { errorResponse, jsonResponse } from "../../lib/api-response";
 import { isWellFormedIdempotencyKey, runIdempotentAction } from "../../lib/idempotency";
 import { releaseFeedbackRateLimit } from "../../lib/rate-limit";
 import { logWorkerEvent } from "../../lib/structured-log";

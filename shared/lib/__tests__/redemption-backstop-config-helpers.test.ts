@@ -2,10 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   defineBackstopRegistry,
   defineBatch,
-  rebindEntriesToRegistry,
+  finalizeBackstopRegistry,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import {
-  applyTrackedReviewedDocs,
   documentedBoundSupplyFull,
   documentedVariableFee,
   expandIds,
@@ -16,6 +15,7 @@ import {
   resolveV9RedemptionRouteCostBpsAtNotional,
   sourceRef,
   undisclosedReviewedFee,
+  withTrackedReviewedDocs,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstop-configs/shared";
 import { resolveFeeConfidence, resolveFeeModelKind } from "@shared/lib/redemption-backstop-confidence";
@@ -99,17 +99,16 @@ describe("redemption backstop config helpers", () => {
     expect(entries.find((entry) => entry.id === "beta")).toMatchObject({ sourceFilePath: "shared/base.ts" });
   });
 
-  it("rebinds entries to a registry mutated after it was built", () => {
+  it("finalizes entries and their registry without mutating source configs", () => {
     const entries = defineBatch(["alpha", "beta"], createBaseConfig(), { sourceFilePath: "shared/base.ts" });
-    const registry = defineBackstopRegistry(entries);
-    applyTrackedReviewedDocs(registry, ["alpha"], "2026-01-02");
+    const finalized = finalizeBackstopRegistry(entries, [
+      { stablecoinIds: ["alpha"], reviewedAt: "2026-01-02" },
+    ]);
 
-    const rebound = rebindEntriesToRegistry(entries, registry);
-
-    expect(rebound.map((entry) => entry.id)).toEqual(["alpha", "beta"]);
-    expect(rebound[0]!.config).toBe(registry["alpha"]);
-    expect(rebound[0]!.config.reviewedAt).toBe("2026-01-02");
-    expect(rebound[0]!.sourceFilePath).toBe("shared/base.ts");
+    expect(finalized.entries.map((entry) => entry.id)).toEqual(["alpha", "beta"]);
+    expect(finalized.entries[0]!.config).toBe(finalized.configs["alpha"]);
+    expect(finalized.entries[0]!.config.reviewedAt).toBe("2026-01-02");
+    expect(finalized.entries[0]!.sourceFilePath).toBe("shared/base.ts");
     expect(entries[0]!.config.reviewedAt).toBeUndefined();
   });
 
@@ -239,11 +238,9 @@ describe("redemption backstop config helpers", () => {
       docs: [sourceRef("Existing docs", "https://example.com/existing", ["route"])],
     };
     const configs = {
-      "usdc-circle": withMissingDocs,
-      "usdt-tether": withExistingDocs,
+      "usdc-circle": withTrackedReviewedDocs(withMissingDocs, "usdc-circle", "2026-05-12"),
+      "usdt-tether": withTrackedReviewedDocs(withExistingDocs, "usdt-tether", "2026-05-12"),
     };
-
-    applyTrackedReviewedDocs(configs, ["usdc-circle", "usdt-tether"], "2026-05-12");
 
     expect(configs["usdc-circle"].reviewedAt).toBe("2026-05-12");
     expect(configs["usdc-circle"].docs?.length).toBeGreaterThan(0);
@@ -254,8 +251,10 @@ describe("redemption backstop config helpers", () => {
     ]);
   });
 
-  it("throws when a tracked reviewed docs id is absent from the config map", () => {
-    expect(() => applyTrackedReviewedDocs({}, ["usdc-circle"], "2026-05-12")).toThrow(
+  it("throws when a tracked reviewed docs id is absent from the registry entries", () => {
+    expect(() => finalizeBackstopRegistry([], [
+      { stablecoinIds: ["usdc-circle"], reviewedAt: "2026-05-12" },
+    ])).toThrow(
       'Missing redemption backstop config for stablecoin id "usdc-circle" while applying tracked reviewed docs',
     );
   });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD,
   runMintBurnGrowthWatchdog,

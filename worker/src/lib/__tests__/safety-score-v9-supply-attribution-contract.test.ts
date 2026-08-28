@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
+  corruptWmDeploymentObservation,
+  corruptXautObservation,
+  makeWmDeploymentObservations,
+  makeXautObservation,
+} from "../../test-helpers/v9-fixed-input";
+import {
   buildReviewedDeploymentRouteInventory,
   deriveReviewedDeploymentUnitPartition,
   expectedCentrifugeDeploymentIdentity,
-  expectedWmDeploymentIdentity,
   reviewedDeploymentAttributionValidationError,
   reviewedDeploymentObservationTimingIssue,
   reviewedDeploymentIdentityValidationError,
@@ -12,20 +17,8 @@ import {
 } from "../safety-score-v9-supply-attribution-contract";
 import {
   buildXautRepresentationGroupInventory,
-  buildXautTransparencySource,
   deriveXautRepresentationGroupSupplyAttribution,
-  XAUT0_ADAPTER_ADDRESS,
-  XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
-  XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
-  XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
-  XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
-  XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
-  XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
-  XAUT_CANONICAL_RUNTIME_CODE_SHA256,
-  XAUT_CANONICAL_TOKEN_ADDRESS,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
-  XAUT_TRANSPARENCY_SOURCE_ID,
-  XAUT_TREASURY_ADDRESS,
   xautRepresentationGroupAttributionValidationError,
   type XautLockMintObservation,
 } from "../safety-score-v9-xaut-supply-attribution-contract";
@@ -51,38 +44,10 @@ const BLOCK_TIME_BY_CHAIN: Record<string, number> = {
 };
 
 function observations(): ReviewedDeploymentSupplyObservation[] {
-  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
-  if (!inventory) throw new Error("Missing wM route inventory");
-  return inventory.routes.map((route, index) => {
-    const identity = expectedWmDeploymentIdentity(route.routeId);
-    if (!identity) throw new Error(`Missing identity for ${route.routeId}`);
-    const common = {
-      routeId: route.routeId,
-      chainId: route.chainId,
-      contractAddress: route.contractAddress,
-      decimals: route.decimals,
-      rawSupply: RAW_SUPPLY_BY_ROUTE[route.routeId]!,
-      blockNumberOrSlot: (25_000_000 + index).toString(),
-      blockTimeSec: BLOCK_TIME_BY_CHAIN[route.chainId]!,
-    };
-    return identity.runtime === "evm"
-      ? {
-          ...common,
-          blockHash: `0x${(index + 1).toString(16).repeat(64)}`,
-          runtimeCodeSha256: identity.runtimeCodeSha256,
-          implementationAddress: identity.implementationAddress,
-          implementationCodeSha256: identity.implementationCodeSha256,
-          underlyingTokenAddress: identity.underlyingTokenAddress,
-          controllerAddress: identity.controllerAddress,
-        }
-      : {
-          ...common,
-          blockHash: "B".repeat(44),
-          programOwner: identity.programOwner,
-          mintAuthority: identity.mintAuthority,
-          controllerAddress: identity.controllerAddress,
-          controllerProgramOwner: identity.controllerProgramOwner,
-        };
+  return makeWmDeploymentObservations({
+    clockSec: CLOCK_SEC,
+    rawSupplyByRoute: RAW_SUPPLY_BY_ROUTE,
+    blockTimeByChain: BLOCK_TIME_BY_CHAIN,
   });
 }
 
@@ -150,56 +115,44 @@ describe("reviewed deployment supply attribution contract", () => {
     ["duplicate route", () => [...observations().slice(0, -1), observations()[0]!]],
     [
       "unexpected route",
-      () => observations().map((row, index) => index === 0 ? { ...row, routeId: "arbitrum:unexpected" } : row),
+      () => corruptWmDeploymentObservation(observations(), (_row, index) => index === 0, "routeId", "arbitrum:unexpected"),
     ],
     [
       "wrong chain",
-      () => observations().map((row, index) => index === 0 ? { ...row, chainId: "base" } : row),
+      () => corruptWmDeploymentObservation(observations(), (_row, index) => index === 0, "chainId", "base"),
     ],
     [
       "wrong address",
-      () => observations().map((row, index) => index === 0
-        ? { ...row, contractAddress: "0x0000000000000000000000000000000000000001" }
-        : row),
+      () => corruptWmDeploymentObservation(observations(), (_row, index) => index === 0, "contractAddress", "0x0000000000000000000000000000000000000001"),
     ],
     [
       "wrong decimals",
-      () => observations().map((row, index) => index === 0 ? { ...row, decimals: 18 } : row),
+      () => corruptWmDeploymentObservation(observations(), (_row, index) => index === 0, "decimals", 18),
     ],
     [
       "malformed raw supply",
-      () => observations().map((row, index) => index === 0 ? { ...row, rawSupply: "-1" } : row),
+      () => corruptWmDeploymentObservation(observations(), (_row, index) => index === 0, "rawSupply", "-1"),
     ],
     ["all-zero raw supply", () => observations().map((row) => ({ ...row, rawSupply: "0" }))],
     [
       "wrong EVM code identity",
-      () => observations().map((row, index) => index === 0
-        ? { ...row, runtimeCodeSha256: "0".repeat(64) }
-        : row),
+      () => corruptWmDeploymentObservation(observations(), (_row, index) => index === 0, "runtimeCodeSha256", "0".repeat(64)),
     ],
     [
       "wrong EVM implementation code identity",
-      () => observations().map((row, index) => index === 0
-        ? { ...row, implementationCodeSha256: "0".repeat(64) }
-        : row),
+      () => corruptWmDeploymentObservation(observations(), (_row, index) => index === 0, "implementationCodeSha256", "0".repeat(64)),
     ],
     [
       "missing block hash",
-      () => observations().map((row, index) => index === 0
-        ? { ...row, blockHash: "" }
-        : row),
+      () => corruptWmDeploymentObservation(observations(), (_row, index) => index === 0, "blockHash", ""),
     ],
     [
       "malformed Solana block hash",
-      () => observations().map((row) => row.chainId === "solana"
-        ? { ...row, blockHash: "0".repeat(44) }
-        : row),
+      () => corruptWmDeploymentObservation(observations(), (row) => row.chainId === "solana", "blockHash", "0".repeat(44)),
     ],
     [
       "wrong Solana controller",
-      () => observations().map((row) => row.chainId === "solana"
-        ? { ...row, controllerAddress: "11111111111111111111111111111111" }
-        : row),
+      () => corruptWmDeploymentObservation(observations(), (row) => row.chainId === "solana", "controllerAddress", "11111111111111111111111111111111"),
     ],
   ])("fails closed for %s", (_label, mutate) => {
     expect(derive(mutate())).toBeNull();
@@ -412,42 +365,7 @@ describe("Centrifuge burn/mint deployment supply attribution contract", () => {
 const XAUT_AGGREGATE_SUPPLY_USD = 2_480_000_000;
 
 function xautObservation(): XautLockMintObservation {
-  return {
-    chainId: "ethereum",
-    canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
-    adapterAddress: XAUT0_ADAPTER_ADDRESS,
-    decimals: 6,
-    canonicalTotalSupplyRaw: "707747089000",
-    treasuryAddress: XAUT_TREASURY_ADDRESS,
-    treasuryBalanceRaw: "94923429468",
-    adapterLockedSupplyRaw: "29720802896",
-    blockNumber: 25_601_844,
-    blockTimeSec: CLOCK_SEC - 100,
-    blockHash: `0x${"ab".repeat(32)}`,
-    canonicalRuntimeCodeSha256:
-      XAUT_CANONICAL_RUNTIME_CODE_SHA256,
-    canonicalImplementationAddress:
-      XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
-    canonicalImplementationCodeSha256:
-      XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
-    adapterRuntimeCodeSha256:
-      XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
-    adapterImplementationAddress:
-      XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
-    adapterImplementationCodeSha256:
-      XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
-    adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
-    adapterEndpointAddress: XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
-    disclosure: {
-      sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
-      sourceConfigDigest: buildXautTransparencySource()!.configDigest,
-      sourceTimestampSec: CLOCK_SEC - 200,
-      responseSha256: "c".repeat(64),
-      totalAuthorizedRaw: "707747089000",
-      notIssuedRaw: "94923429468",
-      quarantinedRaw: "0",
-    },
-  };
+  return makeXautObservation({ clockSec: CLOCK_SEC });
 }
 
 describe("XAUT representation-group supply attribution contract", () => {
@@ -509,43 +427,6 @@ describe("XAUT representation-group supply attribution contract", () => {
       }),
     ).toContain("route inventory mismatch");
     expect(
-      deriveXautRepresentationGroupSupplyAttribution({
-        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT,
-        scoringClockSec: CLOCK_SEC,
-        observation: {
-          ...xautObservation(),
-          adapterEndpointAddress:
-            "0x0000000000000000000000000000000000000001",
-        },
-      }),
-    ).toBeNull();
-    expect(
-      deriveXautRepresentationGroupSupplyAttribution({
-        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT,
-        scoringClockSec: CLOCK_SEC,
-        observation: {
-          ...xautObservation(),
-          treasuryBalanceRaw: "94923429467",
-        },
-      }),
-    ).toBeNull();
-    expect(
-      deriveXautRepresentationGroupSupplyAttribution({
-        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT,
-        scoringClockSec: CLOCK_SEC,
-        observation: {
-          ...xautObservation(),
-          disclosure: {
-            ...xautObservation().disclosure,
-            quarantinedRaw: "1",
-          },
-        },
-      }),
-    ).toBeNull();
-    expect(
       xautRepresentationGroupAttributionValidationError({
         attribution,
         aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
@@ -588,5 +469,18 @@ describe("XAUT representation-group supply attribution contract", () => {
         clockSec: CLOCK_SEC,
       }),
     ).toContain("does not conserve");
+  });
+
+  it.each([
+    ["adapter endpoint", "adapterEndpointAddress", "0x0000000000000000000000000000000000000001"],
+    ["treasury balance", "treasuryBalanceRaw", "94923429467"],
+    ["quarantined disclosure supply", "disclosure.quarantinedRaw", "1"],
+  ] as const)("rejects invalid %s", (_label, field, value) => {
+    expect(deriveXautRepresentationGroupSupplyAttribution({
+      aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+      registryFingerprint: REGISTRY_FINGERPRINT,
+      scoringClockSec: CLOCK_SEC,
+      observation: corruptXautObservation(xautObservation(), field, value),
+    })).toBeNull();
   });
 });

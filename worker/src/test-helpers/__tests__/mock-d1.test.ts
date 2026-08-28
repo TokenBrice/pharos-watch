@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "../__shared/mock-d1";
+import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "@shared/test-utils/mock-d1";
 
 describe("mockD1 helper", () => {
   it("supports bind-aware matching and tracks statement history", async () => {

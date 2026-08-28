@@ -25,6 +25,7 @@ import {
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
 } from "@/lib/depeg-event-page-data";
+import { PUBLIC_PRIMARY_ROUTE_PATHS, PUBLIC_REFERENCE_ROUTE_PATHS } from "@/lib/public-route-inventory";
 
 export const dynamic = "force-static";
 
@@ -43,6 +44,11 @@ type StaticPageSpec = readonly [
   priority: number,
   resolveLastModified?: (path: string) => Date,
 ];
+type StaticPagePolicy = readonly [
+  changeFrequency: SitemapChangeFrequency,
+  priority: number,
+  resolveLastModified?: (path: string) => Date,
+];
 
 export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS;
 
@@ -50,6 +56,12 @@ export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = SHARED_METHODOLOGY_CHANGELOG_
 /** Resolve a Git-derived edit date without turning an unmapped route into a deploy-time change. */
 function lastEdited(path: string, fallbackPath = "/"): Date {
   const iso = LAST_EDITED[path] ?? LAST_EDITED[fallbackPath];
+  if (!iso) {
+    throw new Error(
+      `Missing sitemap last-modified date for ${path} (fallback: ${fallbackPath}). ` +
+        "Regenerate src/generated/sitemap-dates.json.",
+    );
+  }
   return new Date(iso);
 }
 
@@ -125,49 +137,55 @@ export default function sitemap(): MetadataRoute.Sitemap {
     return ms > 0 ? new Date(ms) : lastEdited(path);
   };
 
-  const staticPageSpecs = [
-    ["/", "hourly", 1.0, liveDataLastModified],
-    ["/coverage/", "weekly", 0.6],
-    ["/alt-pegs/", "daily", 0.7],
-    ["/start/", "monthly", 0.6],
-    ["/freezewatch/", "daily", 0.85, liveDataLastModified],
-    ["/depeg/", "daily", 0.8, liveDataLastModified],
-    ["/cemetery/", "monthly", 0.7],
-    ["/compare/", "weekly", 0.7],
-    ["/liquidity/", "daily", 0.8, liveDataLastModified],
-    ["/upcoming/", "daily", 0.6],
-    ["/digest/", "daily", 0.6, liveDataLastModified],
-    ["/safety-scores/", "daily", 0.8, liveDataLastModified],
-    ["/safety-scores/map/", "daily", 0.6, liveDataLastModified],
-    ["/stability-index/", "daily", 0.8, liveDataLastModified],
-    ["/dependency-map/", "daily", 0.7, liveDataLastModified],
-    ["/yield/", "daily", 0.7, liveDataLastModified],
-    ["/screener/", "daily", 0.7],
-    ["/funding/", "weekly", 0.5, fundingLastModified],
-    ["/status/", "daily", 0.4, liveDataLastModified],
-    ["/flows/", "daily", 0.7],
-    ["/timeline/", "hourly", 0.75, liveDataLastModified],
-    ["/compliance/", "weekly", 0.6],
-    ["/pharoswatchbot/", "weekly", 0.7],
-    ["/methodology/", "monthly", 0.6],
-  ] as const satisfies readonly StaticPageSpec[];
-
-  const referencePageSpecs = [
-    ["/changelog/", "weekly", 0.5, changelogLastModified],
-    ["/blog/", "weekly", 0.6],
-    ["/about/", "monthly", 0.5],
-    ["/about/api/", "monthly", 0.5],
-    ["/about/bluechip/", "monthly", 0.5],
-    ["/learn/", "monthly", 0.5],
-    ["/learn/glossary/", "monthly", 0.5],
-    ["/sitemap-tree/", "monthly", 0.3],
-    ["/api/", "monthly", 0.5],
-    ["/stablecoins/", "weekly", 0.7],
-    ["/stablecoins/backing/", "weekly", 0.6],
-    ["/stablecoins/governance/", "weekly", 0.6],
-    ["/stablecoins/infrastructure/", "weekly", 0.6],
-    ["/privacy/", "yearly", 0.3],
-  ] as const satisfies readonly StaticPageSpec[];
+  const primaryPagePolicy: Record<(typeof PUBLIC_PRIMARY_ROUTE_PATHS)[number], StaticPagePolicy> = {
+    "/": ["hourly", 1.0, liveDataLastModified],
+    "/coverage/": ["weekly", 0.6],
+    "/alt-pegs/": ["daily", 0.7],
+    "/start/": ["monthly", 0.6],
+    "/freezewatch/": ["daily", 0.85, liveDataLastModified],
+    "/depeg/": ["daily", 0.8, liveDataLastModified],
+    "/cemetery/": ["monthly", 0.7],
+    "/compare/": ["weekly", 0.7],
+    "/liquidity/": ["daily", 0.8, liveDataLastModified],
+    "/upcoming/": ["daily", 0.6],
+    "/digest/": ["daily", 0.6, liveDataLastModified],
+    "/safety-scores/": ["daily", 0.8, liveDataLastModified],
+    "/safety-scores/map/": ["daily", 0.6, liveDataLastModified],
+    "/stability-index/": ["daily", 0.8, liveDataLastModified],
+    "/dependency-map/": ["daily", 0.7, liveDataLastModified],
+    "/yield/": ["daily", 0.7, liveDataLastModified],
+    "/screener/": ["daily", 0.7],
+    "/funding/": ["weekly", 0.5, fundingLastModified],
+    "/status/": ["daily", 0.4, liveDataLastModified],
+    "/flows/": ["daily", 0.7],
+    "/timeline/": ["hourly", 0.75, liveDataLastModified],
+    "/compliance/": ["weekly", 0.6],
+    "/pharoswatchbot/": ["weekly", 0.7],
+    "/methodology/": ["monthly", 0.6],
+  };
+  const referencePagePolicy: Record<(typeof PUBLIC_REFERENCE_ROUTE_PATHS)[number], StaticPagePolicy> = {
+    "/changelog/": ["weekly", 0.5, changelogLastModified],
+    "/blog/": ["weekly", 0.6],
+    "/about/": ["monthly", 0.5],
+    "/about/api/": ["monthly", 0.5],
+    "/about/bluechip/": ["monthly", 0.5],
+    "/learn/": ["monthly", 0.5],
+    "/learn/glossary/": ["monthly", 0.5],
+    "/sitemap-tree/": ["monthly", 0.3],
+    "/api/": ["monthly", 0.5],
+    "/stablecoins/": ["weekly", 0.7],
+    "/stablecoins/backing/": ["weekly", 0.6],
+    "/stablecoins/governance/": ["weekly", 0.6],
+    "/stablecoins/infrastructure/": ["weekly", 0.6],
+    "/privacy/": ["yearly", 0.3],
+    "/docs/": ["monthly", 0.6, docsIndexLastModified],
+  };
+  const staticPageSpecs = PUBLIC_PRIMARY_ROUTE_PATHS.map(
+    (path) => [path, ...primaryPagePolicy[path]] as StaticPageSpec,
+  );
+  const referencePageSpecs = PUBLIC_REFERENCE_ROUTE_PATHS
+    .filter((path) => path !== "/docs/")
+    .map((path) => [path, ...referencePagePolicy[path]] as StaticPageSpec);
 
   const staticPages: MetadataRoute.Sitemap = [
     ...buildStaticSitemapEntries(staticPageSpecs, lastEdited),
@@ -291,8 +309,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${SITE_URL}/docs/`,
       lastModified: docsIndexLastModified(),
-      changeFrequency: "monthly",
-      priority: 0.6,
+      changeFrequency: referencePagePolicy["/docs/"][0],
+      priority: referencePagePolicy["/docs/"][1],
     },
   ];
 

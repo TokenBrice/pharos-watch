@@ -7,7 +7,7 @@ import {
   resolveBlockTimestamps,
 } from "../alchemy-logs";
 import { createBudget } from "../evm-logs";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 let fetchMock: ReturnType<typeof mockFetch>;
 

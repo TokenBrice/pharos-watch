@@ -1,6 +1,10 @@
 import { canonicalEvmAddress } from "./evm-codecs";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 import {
+  CURVE_STABLESWAP_DEPLOYMENT,
+  CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
+} from "@shared/lib/measured-execution-deployment-policies";
+import {
   CURVE_ALUSD_3CRV_METAPOOL_ADDRESS, CURVE_DOLA_FRAXBP_METAPOOL_ADDRESS,
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS, CURVE_EUSD_FRAXBP_METAPOOL_ADDRESS,
   CURVE_GUSD_3CRV_METAPOOL_ADDRESS, CURVE_MAI_AM3CRV_METAPOOL_ADDRESS,
@@ -83,8 +87,8 @@ export const CURVE_DOLA_SUSDE_RATE_BEARING_POLICY: CurveRateBearingPoolPolicy = 
   adapterProfileId: CURVE_RATE_BEARING_ADAPTER_PROFILE_ID,
   poolAddress: CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
   expectedPoolCodeHash: "0x94804f252de72c79ef819798e3149d5d461d4fbc8417aa0f5e314070c3cb599f",
-  factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
-  expectedFactoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
+  factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
+  expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
   factoryPoolIndex: 298,
   expectedRegistryId: "factory-stable-ng",
   factoryArrayEncoding: "dynamic",
@@ -144,8 +148,8 @@ export const CURVE_USD1_METAPOOL_POLICY: CurveMetapoolPolicy = {
   adapterProfileId: CURVE_METAPOOL_ADAPTER_PROFILE_ID,
   poolAddress: CURVE_USD1_COMPOSITE_POOL_ADDRESS,
   expectedPoolCodeHash: "0x25478b25c12a81937ddb75e0c5ed8ca8ab248a102316873d092f49ca870b8cca",
-  factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
-  expectedFactoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
+  factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
+  expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
   factoryPoolIndex: 553,
   expectedRegistryId: "factory-stable-ng",
   factoryArrayEncoding: "dynamic",
@@ -298,25 +302,17 @@ export const CURVE_NXUSD_METAPOOL_POLICY: CurveMetapoolPolicy = {
   scoreEligible: false,
 };
 
-const ETHEREUM_DAI: CurveCompositeToken = {
-  address: "0x6b175474e89094c44da98b954eedeac495271d0f",
-  symbol: "DAI",
-  decimals: 18,
-};
+const ETHEREUM_DAI: CurveCompositeToken = CURVE_STABLESWAP_DEPLOYMENT.poolTokens[0];
 const ETHEREUM_USDC: CurveCompositeToken = {
-  address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-  symbol: "USDC",
-  decimals: 6,
+  ...CURVE_STABLESWAP_DEPLOYMENT.poolTokens[1],
   trackedAssetId: "usdc-circle",
 };
 const ETHEREUM_USDT: CurveCompositeToken = {
-  address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-  symbol: "USDT",
-  decimals: 6,
+  ...CURVE_STABLESWAP_DEPLOYMENT.poolTokens[2],
   trackedAssetId: "usdt-tether",
 };
 const ETHEREUM_3CRV: CurveCompositeToken = {
-  address: "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
+  address: CURVE_STABLESWAP_DEPLOYMENT.lpTokenAddress,
   symbol: "3Crv",
   decimals: 18,
 };
@@ -415,9 +411,8 @@ const CURVE_ALUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
   outputIndex: 2,
   metapool: {
     basePoolBinding: "factory-get-base-pool",
-    basePoolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
-    expectedBasePoolCodeHash:
-      "0x954a1e212c557c85043985931498ffa3e2fcbe7dfe9cd61513f36eb47d6f4dfc",
+    basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
+    expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
     basePoolTokens: [ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
   },
 });
@@ -499,8 +494,8 @@ export const CURVE_GUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
   stablecoinId: "gusd-gemini",
   poolAddress: CURVE_GUSD_3CRV_METAPOOL_ADDRESS,
   expectedPoolCodeHash: "0xce79330162abf07fc163331f9d9d1553b93dbf509eeafa1215fafa6113c5088e",
-  factoryAddress: "0x90e00ace148ca3b23ac1bc8c240c2a7dd9c2d7f5",
-  expectedFactoryCodeHash: "0x13d7cfcf1cef4bf310fa544567a427771c9be2c16bbf2c6be845d3d5f4cc5f22",
+  factoryAddress: CURVE_STABLESWAP_DEPLOYMENT.registryAddress,
+  expectedFactoryCodeHash: CURVE_STABLESWAP_DEPLOYMENT.registryCodeHash,
   factoryPoolIndex: 19,
   expectedRegistryId: "main",
   factoryArrayEncoding: "registry-fixed",
@@ -532,9 +527,8 @@ export const CURVE_GUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
   outputIndex: 2,
   metapool: {
     basePoolBinding: "registry-lp-token",
-    basePoolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
-    expectedBasePoolCodeHash:
-      "0x954a1e212c557c85043985931498ffa3e2fcbe7dfe9cd61513f36eb47d6f4dfc",
+    basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
+    expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
     basePoolTokens: [ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
   },
 });
@@ -544,8 +538,8 @@ const CURVE_MEUSD_CRV2POOL_METAPOOL_POLICY = activeMetapoolPolicy({
   stablecoinId: "meusd-mezo",
   poolAddress: CURVE_MEUSD_CRV2POOL_METAPOOL_ADDRESS,
   expectedPoolCodeHash: "0xfeb82e1a7ec3cc0f6773f0ea2d12acaadfa4f8b979a94a23c02626fefd5f9eb0",
-  factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
-  expectedFactoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
+  factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
+  expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
   factoryPoolIndex: 518,
   expectedRegistryId: "factory-stable-ng",
   factoryArrayEncoding: "dynamic",
@@ -621,9 +615,8 @@ const CURVE_OUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
   outputIndex: 2,
   metapool: {
     basePoolBinding: "factory-get-base-pool",
-    basePoolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
-    expectedBasePoolCodeHash:
-      "0x954a1e212c557c85043985931498ffa3e2fcbe7dfe9cd61513f36eb47d6f4dfc",
+    basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
+    expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
     basePoolTokens: [ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
   },
 });

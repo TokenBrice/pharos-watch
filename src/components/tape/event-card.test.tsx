@@ -2,12 +2,11 @@
 
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { EventCard } from "@/components/tape/event-card";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 afterEach(() => {
-  cleanup();
   vi.useRealTimers();
 });
 

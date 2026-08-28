@@ -1,10 +1,24 @@
-import { cloneRedemptionBackstopConfig, type RedemptionBackstopConfig } from "./shared";
+import {
+  cloneRedemptionBackstopConfig,
+  type RedemptionBackstopConfig,
+  withTrackedReviewedDocs,
+} from "./shared";
 
 export interface RedemptionBackstopRegistryEntry {
   id: string;
   config: RedemptionBackstopConfig;
   overrideReason?: string;
   sourceFilePath?: string;
+}
+
+export interface RedemptionBackstopReviewedDocsPatch {
+  stablecoinIds: readonly string[];
+  reviewedAt?: string;
+}
+
+export interface FinalizedRedemptionBackstopRegistry {
+  entries: readonly RedemptionBackstopRegistryEntry[];
+  configs: Record<string, RedemptionBackstopConfig>;
 }
 
 export function defineBackstopRegistry(
@@ -24,21 +38,35 @@ export function defineBackstopRegistry(
   return configs;
 }
 
-/**
- * Re-point a family's entries at the config objects held by its own registry.
- *
- * A family that calls `applyTrackedReviewedDocs` after `defineBackstopRegistry`
- * backfills docs onto the registry's clones, not onto the source configs the
- * entries were built from. Rebinding lets the exported entry array carry those
- * backfills to the manifest. Entry order, override reasons, and source file
- * paths are untouched; duplicate ids resolve to the winning config, which is
- * what the manifest would have read off the registry anyway.
- */
-export function rebindEntriesToRegistry(
+/** Finish reviewed-doc defaults before exposing either entries or their registry. */
+export function finalizeBackstopRegistry(
   entries: readonly RedemptionBackstopRegistryEntry[],
-  configs: Record<string, RedemptionBackstopConfig>,
-): RedemptionBackstopRegistryEntry[] {
-  return entries.map((entry) => ({ ...entry, config: configs[entry.id] ?? entry.config }));
+  reviewedDocsPatches: readonly RedemptionBackstopReviewedDocsPatch[] = [],
+): FinalizedRedemptionBackstopRegistry {
+  const reviewedAtById = new Map<string, string | undefined>();
+  for (const patch of reviewedDocsPatches) {
+    for (const stablecoinId of patch.stablecoinIds) reviewedAtById.set(stablecoinId, patch.reviewedAt);
+  }
+
+  const configs = defineBackstopRegistry(entries.map((entry) => ({
+    ...entry,
+    config: reviewedAtById.has(entry.id)
+      ? withTrackedReviewedDocs(entry.config, entry.id, reviewedAtById.get(entry.id))
+      : entry.config,
+  })));
+
+  for (const stablecoinId of reviewedAtById.keys()) {
+    if (!configs[stablecoinId]) {
+      throw new Error(
+        `Missing redemption backstop config for stablecoin id "${stablecoinId}" while applying tracked reviewed docs`,
+      );
+    }
+  }
+
+  return {
+    configs,
+    entries: entries.map((entry) => ({ ...entry, config: configs[entry.id] ?? entry.config })),
+  };
 }
 
 /**

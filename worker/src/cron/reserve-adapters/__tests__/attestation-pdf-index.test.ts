@@ -7,7 +7,7 @@ import {
   type AttestationPdfIndexParams,
 } from "../attestation-pdf-index";
 import { HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "../request";
-import { mockFetchStrict } from "../../../test-helpers/__shared/mock-fetch";
+import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
 
 const CONFIGURED_PARAMS: AttestationPdfIndexParams = {
   slices: [

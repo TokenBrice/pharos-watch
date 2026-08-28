@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GoogleAnalytics } from "@/components/google-analytics";
 
@@ -13,7 +13,6 @@ vi.mock("next/navigation", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   document.head.innerHTML = "";
   delete window.dataLayer;
   delete window.gtag;

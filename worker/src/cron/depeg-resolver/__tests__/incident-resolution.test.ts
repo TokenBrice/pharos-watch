@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import type { StablecoinMeta } from "@shared/types/core";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
 import {

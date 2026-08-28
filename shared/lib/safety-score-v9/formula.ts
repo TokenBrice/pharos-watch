@@ -30,6 +30,7 @@ import {
   type V9ScopedRiskSignal,
 } from "./scoped-risk";
 import { clampScore } from "../math";
+import { compareText } from "./primitives";
 
 export type { V9AggregationStrategy } from "./aggregation";
 
@@ -161,10 +162,6 @@ export interface V9ScoreAdjustmentTrace {
 }
 
 const SCORE_MAX = 100;
-function compareCodeUnits(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
 /**
  * Snap binary float noise to the nearest 15-significant-digit decimal before
  * quantizing: an additive Number.EPSILON is magnitude-blind (one ULP at ~59.5
@@ -198,9 +195,9 @@ function canonicalAdverseAttribution(
     ).values(),
   ].sort(
     (left, right) =>
-      compareCodeUnits(left.source, right.source) ||
-      compareCodeUnits(left.path, right.path) ||
-      compareCodeUnits(left.message, right.message),
+      compareText(left.source, right.source) ||
+      compareText(left.path, right.path) ||
+      compareText(left.message, right.message),
   );
 }
 
@@ -223,12 +220,12 @@ function canonicalBoundedUncertaintyAttribution(
     ).values(),
   ].sort(
     (left, right) =>
-      compareCodeUnits(left.source, right.source) ||
-      compareCodeUnits(left.code, right.code) ||
-      compareCodeUnits(left.path, right.path) ||
-      compareCodeUnits(left.message, right.message) ||
-      compareCodeUnits(left.responsibility, right.responsibility) ||
-      compareCodeUnits(left.boundedness, right.boundedness),
+      compareText(left.source, right.source) ||
+      compareText(left.code, right.code) ||
+      compareText(left.path, right.path) ||
+      compareText(left.message, right.message) ||
+      compareText(left.responsibility, right.responsibility) ||
+      compareText(left.boundedness, right.boundedness),
   );
 }
 
@@ -251,7 +248,7 @@ function signalLimit(signal: V9StructuralSignal, policy: V9ValidatedPolicyEnvelo
 }
 
 function scopedSignalKey(signal: V9StructuralSignal): string {
-  const domains = [...signal.failureDomainKeys].sort(compareCodeUnits);
+  const domains = [...signal.failureDomainKeys].sort(compareText);
   return [
     "signal",
     signal.kind,
@@ -269,7 +266,7 @@ function scopedRiskSignal(
   const limit = signalLimit(signal, policy);
   if (signal.economicLossScope === undefined || limit === null) return null;
   const failureDomainKey =
-    [...signal.failureDomainKeys].sort(compareCodeUnits).join("+") ||
+    [...signal.failureDomainKeys].sort(compareText).join("+") ||
     `signal:${signal.kind}:${signal.reason}`;
   const rawShare = signal.materialSharePct === undefined ? null : signal.materialSharePct / 100;
   if (
@@ -283,8 +280,8 @@ function scopedRiskSignal(
     signalKey: scopedSignalKey(signal),
     exposureKey: signal.exposureKey ?? scopedSignalKey(signal),
     riskEventKey: signal.riskEventKey ?? scopedSignalKey(signal),
-    failureDomainKeys: [...signal.failureDomainKeys].sort(compareCodeUnits).length > 0
-      ? [...signal.failureDomainKeys].sort(compareCodeUnits)
+    failureDomainKeys: [...signal.failureDomainKeys].sort(compareText).length > 0
+      ? [...signal.failureDomainKeys].sort(compareText)
       : [failureDomainKey],
     economicLossScope: signal.economicLossScope,
     exposedScore: limit,
@@ -537,8 +534,8 @@ export function resolveV9StructuralCaps(
   assertV9ValidatedPolicyEnvelope(policy);
   const sorted = [...signals].sort(
     (left, right) =>
-      compareCodeUnits(left.kind, right.kind) ||
-      compareCodeUnits(left.reason, right.reason) ||
+      compareText(left.kind, right.kind) ||
+      compareText(left.reason, right.reason) ||
       (left.materialSharePct ?? -1) - (right.materialSharePct ?? -1),
   );
   const caps = sorted.flatMap((signal) => {
@@ -552,7 +549,7 @@ export function resolveV9StructuralCaps(
     }
   }
   for (const [failureDomain, count] of [...oracleDomainCounts].sort(([left], [right]) =>
-    compareCodeUnits(left, right),
+    compareText(left, right),
   )) {
     if (count < policy.policy.semantic.materiality.commonModeOracleMinBranches) continue;
     caps.push({
@@ -764,8 +761,8 @@ function compareCapCandidates(
     left.limit - right.limit ||
     capPriority(left.source, policy) - capPriority(right.source, policy) ||
     capReasonPrecedence(left.kind) - capReasonPrecedence(right.kind) ||
-    compareCodeUnits(left.kind, right.kind) ||
-    compareCodeUnits(left.reason, right.reason)
+    compareText(left.kind, right.kind) ||
+    compareText(left.reason, right.reason)
   );
 }
 
@@ -932,9 +929,9 @@ function scoreV9InputWithCaps(
   }
   const unresolvedFacts = [...input.unresolved].sort(
     (left, right) =>
-      compareCodeUnits(left.code, right.code) ||
-      compareCodeUnits(left.path ?? "", right.path ?? "") ||
-      compareCodeUnits(left.reason, right.reason),
+      compareText(left.code, right.code) ||
+      compareText(left.path ?? "", right.path ?? "") ||
+      compareText(left.reason, right.reason),
   );
   for (const fact of unresolvedFacts) {
     const resolved = resolveV9ReasonPolicy(policy, fact.code);

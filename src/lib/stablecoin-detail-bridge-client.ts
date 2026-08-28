@@ -1,4 +1,5 @@
 import type { BridgeRouteRiskConfidence, StablecoinLink, StablecoinMeta } from "@shared/types";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
 /**
  * Client-safe projection of the server-only `bridgeRouteRisk` profile, in the
@@ -32,14 +33,14 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 const TIER_TONES: Record<string, string> = {
-  "single-chain-or-native": "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  "issuer-native-burn-mint": "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  "canonical-rollup-bridge": "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  "issuer-native-lock-mint": "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  "external-validated-network": "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  "liquidity-or-intent-route": "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  "single-chain-or-native": SEVERITY_TONE_CLASS.ok.pill,
+  "issuer-native-burn-mint": SEVERITY_TONE_CLASS.ok.pill,
+  "canonical-rollup-bridge": SEVERITY_TONE_CLASS.info.pill,
+  "issuer-native-lock-mint": SEVERITY_TONE_CLASS.info.pill,
+  "external-validated-network": SEVERITY_TONE_CLASS.watch.pill,
+  "liquidity-or-intent-route": SEVERITY_TONE_CLASS.watch.pill,
   "external-lock-mint": "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
-  "opaque-or-unknown": "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  "opaque-or-unknown": SEVERITY_TONE_CLASS.alert.pill,
 };
 
 const CONFIDENCE_LABELS: Record<string, string> = {
@@ -64,7 +65,7 @@ export function projectBridgeRouteRiskClientSummary(coin: StablecoinMeta): Bridg
   return {
     tier: profile.tier,
     tierLabel: TIER_LABELS[profile.tier] ?? profile.tier,
-    tierToneClass: TIER_TONES[profile.tier] ?? "border-border/60 bg-muted/30 text-muted-foreground",
+    tierToneClass: TIER_TONES[profile.tier] ?? SEVERITY_TONE_CLASS.neutral.pill,
     summary: profile.summary,
     reviewedAt: profile.reviewedAt,
     confidence: profile.confidence,

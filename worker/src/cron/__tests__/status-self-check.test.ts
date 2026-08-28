@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 type HealthProbeStatus = "healthy" | "degraded" | "stale";
 

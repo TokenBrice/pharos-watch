@@ -15,7 +15,6 @@ import {
   base64UrlToBytes,
   base64UrlToString,
   bytesToBase64Url,
-  stringToBase64Url,
 } from "@shared/lib/base64url";
 import { parseJson } from "./json-parse";
 
@@ -120,16 +119,6 @@ export type WatchlistTokenDecodeResult =
   | { ok: true; version: 2; state: WatchlistTokenV2State }
   | { ok: true; version: 3; state: WatchlistTokenV2State }
   | { ok: false; error: WatchlistTokenDecodeError };
-
-/** Historical encoder retained for v1 compatibility fixtures and tests. */
-export function encodeWatchlistToken(state: WatchlistTokenV1State): string {
-  return stringToBase64Url(JSON.stringify({
-    v: V1_TOKEN_VERSION,
-    c: state.coinIds,
-    t: state.alertTypes,
-    p: state.presetIds,
-  }));
-}
 
 function bit(value: boolean, position: number): number {
   return value ? (1 << position) : 0;
@@ -410,34 +399,6 @@ function decodeV3DirectRows(value: unknown): WatchlistTokenDirectState[] | null 
     rows.push(row);
   }
   return rows;
-}
-
-export async function encodeWatchlistTokenV2(state: WatchlistTokenV2State): Promise<string> {
-  if (state.direct.some((row) => row.alertFreeze || row.overrideFreeze)) {
-    throw new Error("pw2 cannot represent freeze alert intent");
-  }
-  const body: WatchlistTokenV2Body = {
-    v: V2_TOKEN_VERSION,
-    r: state.registryVersion,
-    d: encodeBinaryRows(
-      state.direct,
-      DIRECT_BINARY_ROW_BYTES,
-      (row) => row.stablecoinId,
-      (row) => packedNumber(packWatchlistDirectState(row)),
-      DIRECT_ID_BY_HASH,
-    ),
-    p: encodeBinaryRows(
-      state.presets,
-      PRESET_BINARY_ROW_BYTES,
-      (row) => row.presetId,
-      (row) => packedNumber(packWatchlistPresetState(row)),
-      PRESET_ID_BY_HASH,
-    ),
-  };
-  const compressed = await gzip(new TextEncoder().encode(JSON.stringify(body)));
-  const token = `${V2_PREFIX}.${bytesToBase64Url(compressed)}.${bytesToBase64Url(await digest96(compressed))}`;
-  if (token.length > MAX_WATCHLIST_TOKEN_CHARS) throw new Error("Watchlist token exceeds the copy/paste limit");
-  return token;
 }
 
 /** pw3 extends pw2's direct row with freeze and local-freeze-override bits. */

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { useEffect } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { HoverProvider, useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 
 type HoverState = ReturnType<typeof useHoverState>;
@@ -15,7 +15,6 @@ function Probe({ onState }: { onState: (state: HoverState) => void }) {
 }
 
 describe("HoverProvider", () => {
-  afterEach(() => cleanup());
 
   function renderProbe(withProvider = true) {
     let probe: HoverState | null = null;

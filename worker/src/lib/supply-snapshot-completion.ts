@@ -1,6 +1,19 @@
 import { sha256Hex } from "@shared/lib/sha256";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { getCache } from "./db-cache";
-import type { StablecoinPublicationWaiver } from "./stablecoin-publication-coverage";
+import {
+  evaluateStablecoinPublicationCoverage,
+  resolveStablecoinPublicationWaivers,
+  selectAppliedStablecoinPublicationWaivers,
+  type StablecoinPublicationCoverage,
+  type StablecoinPublicationWaiver,
+} from "./stablecoin-publication-coverage";
+import {
+  loadStablecoinsCache,
+  type StablecoinsCacheFailureReason,
+  type StablecoinsCacheLoadOk,
+  type StablecoinsCachePayload,
+} from "./stablecoins-cache";
 
 export const SNAPSHOT_SUPPLY_LAST_WRITE_KEY = "snapshot-supply:last-write";
 export const SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY = "snapshot-chain-supply:last-write";
@@ -31,6 +44,36 @@ export interface CompletedSupplySnapshot {
   exactCoverageVerified: boolean;
   ownedRowIds: string[] | null;
 }
+
+export interface SupplySnapshotPreflightOptions<Context> {
+  nowSec?: number;
+  requiredActiveIds: readonly string[];
+  publicationWaivers: readonly StablecoinPublicationWaiver[];
+  completionCacheKey?: string;
+  maxCacheAgeSec?: number;
+  assertContinuation?: () => void;
+  deriveCoverage: (
+    payload: StablecoinsCachePayload,
+    requiredActiveIds: readonly string[],
+    snapshotDate: number,
+  ) => { accountedIds: Iterable<string>; context: Context };
+}
+
+export type SupplySnapshotPreflightResult<Context> =
+  | { kind: "cache-unavailable"; reason: StablecoinsCacheFailureReason }
+  | { kind: "cache-stale"; cache: StablecoinsCacheLoadOk; cacheAgeSec: number; nowSec: number }
+  | {
+      kind: "ready";
+      cache: StablecoinsCacheLoadOk;
+      cacheAgeSec: number;
+      nowSec: number;
+      snapshotDate: number;
+      requiredActiveIds: string[];
+      publicationCoverage: StablecoinPublicationCoverage;
+      coverageExpectation: SupplySnapshotCoverageExpectation;
+      lastWrite: CompletedSupplySnapshot | null;
+      context: Context;
+    };
 
 function canonicalizeRequiredActiveIds(ids: readonly string[]): string[] {
   return [...new Set(ids)].sort();
@@ -88,6 +131,60 @@ export function buildSupplySnapshotCompletionMarker(
     accountedActiveCount: input.accountedActiveCount,
     coverageDigest: input.coverage.coverageDigest,
     ownedRowIds: [...new Set(input.ownedRowIds)].sort(),
+  };
+}
+
+export async function preflightSupplySnapshot<Context>(
+  db: D1Database,
+  options: SupplySnapshotPreflightOptions<Context>,
+): Promise<SupplySnapshotPreflightResult<Context>> {
+  const cache = await loadStablecoinsCache(db, { mode: "strict" });
+  if (cache.kind !== "ok") {
+    return { kind: "cache-unavailable", reason: cache.reason };
+  }
+  options.assertContinuation?.();
+
+  const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
+  const cacheAgeSec = nowSec - cache.updatedAt;
+  if (options.maxCacheAgeSec != null && cacheAgeSec > options.maxCacheAgeSec) {
+    return { kind: "cache-stale", cache, cacheAgeSec, nowSec };
+  }
+  const snapshotDate = startOfUtcDaySec(new Date());
+  const requiredActiveIds = [...new Set(options.requiredActiveIds)].sort();
+  const { accountedIds, context } = options.deriveCoverage(cache.payload, requiredActiveIds, snapshotDate);
+  const publicationCoverage = evaluateStablecoinPublicationCoverage(
+    accountedIds,
+    nowSec,
+    options.publicationWaivers,
+    requiredActiveIds,
+  );
+  const resolvedWaivers = resolveStablecoinPublicationWaivers(
+    requiredActiveIds,
+    nowSec,
+    options.publicationWaivers,
+  );
+  const appliedWaivers = selectAppliedStablecoinPublicationWaivers(
+    publicationCoverage.waivedActiveIds,
+    resolvedWaivers,
+  );
+  const coverageExpectation = buildSupplySnapshotCoverageExpectation(requiredActiveIds, appliedWaivers);
+  const lastWrite = await getCompletedSupplySnapshot(db, {
+    cacheKey: options.completionCacheKey,
+    expectedCoverage: coverageExpectation,
+  });
+  options.assertContinuation?.();
+
+  return {
+    kind: "ready",
+    cache,
+    cacheAgeSec,
+    nowSec,
+    snapshotDate,
+    requiredActiveIds,
+    publicationCoverage,
+    coverageExpectation,
+    lastWrite,
+    context,
   };
 }
 

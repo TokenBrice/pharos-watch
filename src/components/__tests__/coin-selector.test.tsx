@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { CoinSelector } from "@/components/coin-selector";
 
 const COINS = [
@@ -9,7 +9,6 @@ const COINS = [
   { id: "usdt-tether", name: "Tether", symbol: "USDT" },
 ];
 
-afterEach(cleanup);
 
 describe("CoinSelector disabled state", () => {
   it("locks an open picker and prevents option selection", () => {

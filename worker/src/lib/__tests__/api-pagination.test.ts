@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { describe, expect, it, vi } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeJsonCursor } from "../api-params";
 import {
   buildPaginatedEventResponse,
@@ -377,5 +377,79 @@ describe("buildPaginatedEventResponse", () => {
     });
     expect(response.status).toBe(400);
     expect(db.getHistory()).toHaveLength(0);
+  });
+});
+
+describe("fetchPaginatedEvents", () => {
+  it("builds count and data queries with validated pagination inputs", async () => {
+    type BoundStatement = { sql: string; binds: unknown[] };
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({ sql, binds }),
+      }),
+      batch: vi.fn(async (stmts: BoundStatement[]) => {
+        expect(stmts).toHaveLength(2);
+        expect(stmts[0]).toEqual({
+          sql: "SELECT COUNT(*) as total FROM blacklist_events WHERE stablecoin_id = ?",
+          binds: ["usdt-tether"],
+        });
+        expect(stmts[1]).toEqual({
+          sql: "SELECT * FROM blacklist_events WHERE stablecoin_id = ? ORDER BY timestamp DESC, id ASC LIMIT ? OFFSET ?",
+          binds: ["usdt-tether", 25, 50],
+        });
+
+        return [
+          { results: [{ total: 2 }] },
+          { results: [{ id: "a" }, { id: "b" }] },
+        ];
+      }),
+    } as unknown as D1Database;
+
+    const result = await fetchPaginatedEvents<{ id: string }, string>(db, {
+      tableName: "blacklist_events",
+      orderBy: "timestamp DESC, id ASC",
+      conditions: ["stablecoin_id = ?"],
+      filterBindings: ["usdt-tether"],
+      limit: 25,
+      offset: 50,
+      mapRow: (row) => row.id,
+    });
+
+    expect(result).toEqual({
+      total: 2,
+      events: ["a", "b"],
+    });
+  });
+
+  it("rejects non-allowlisted tables and malformed order clauses", async () => {
+    await expect(fetchPaginatedEvents({} as D1Database, {
+      tableName: "cache",
+      orderBy: "timestamp DESC",
+      conditions: [],
+      filterBindings: [],
+      limit: 10,
+      offset: 0,
+      mapRow: (row) => row,
+    })).rejects.toThrow("Invalid table: cache");
+
+    await expect(fetchPaginatedEvents({} as D1Database, {
+      tableName: "blacklist_events",
+      orderBy: "timestamp DOWN",
+      conditions: [],
+      filterBindings: [],
+      limit: 10,
+      offset: 0,
+      mapRow: (row) => row,
+    })).rejects.toThrow("Invalid orderBy direction: DOWN");
+
+    await expect(fetchPaginatedEvents({} as D1Database, {
+      tableName: "blacklist_events",
+      orderBy: "timestamp DESC NULLS LAST",
+      conditions: [],
+      filterBindings: [],
+      limit: 10,
+      offset: 0,
+      mapRow: (row) => row,
+    })).rejects.toThrow("Invalid orderBy: timestamp DESC NULLS LAST");
   });
 });

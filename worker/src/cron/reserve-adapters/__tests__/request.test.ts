@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { jsonResponse, mockFetchStrict } from "../../../test-helpers/__shared/mock-fetch";
+import { jsonResponse, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 import {
   buildBrowserHeaders,
   fetchJsonAdapterInput,

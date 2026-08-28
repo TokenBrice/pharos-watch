@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { CRON_TIMEOUT_MS } from "../../lib/cron-timeouts";
 import { runCronDurationWatchdog } from "../cron-duration-watchdog";

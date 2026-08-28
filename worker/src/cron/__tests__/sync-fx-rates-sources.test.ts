@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
 // The raw wrapper is deliberately its own spy rather than the JSON wrapper's

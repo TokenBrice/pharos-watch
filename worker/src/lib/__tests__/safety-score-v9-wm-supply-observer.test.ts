@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { sha256HexFromBytes } from "@shared/lib/sha256";
+import { makeWmDeploymentObservations } from "../../test-helpers/v9-fixed-input";
 import type { ChainRpcConfig } from "../chain-registry";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../evm-rpc";
 import {
@@ -99,24 +100,10 @@ function evmCodeAtBlock(
 }
 
 function solanaObservation(): ReviewedDeploymentSupplyObservation {
-  const inventory = buildReviewedDeploymentRouteInventory("wm-m0")!;
-  const route = inventory.routes.find((candidate) => candidate.chainId === "solana")!;
-  const identity = expectedWmDeploymentIdentity(route.routeId);
-  if (!identity || identity.runtime !== "solana") throw new Error("Missing Solana identity");
-  return {
-    routeId: route.routeId,
-    chainId: route.chainId,
-    contractAddress: route.contractAddress,
-    decimals: route.decimals,
-    rawSupply: "247794997129",
-    blockNumberOrSlot: "434885841",
-    blockTimeSec: 1_784_881_315,
-    blockHash: "B".repeat(44),
-    programOwner: identity.programOwner,
-    mintAuthority: identity.mintAuthority,
-    controllerAddress: identity.controllerAddress,
-    controllerProgramOwner: identity.controllerProgramOwner,
-  };
+  const observation = makeWmDeploymentObservations({ clockSec: CLOCK_SEC })
+    .find((candidate) => candidate.chainId === "solana");
+  if (!observation) throw new Error("Missing Solana observation");
+  return { ...observation, blockNumberOrSlot: "434885841" };
 }
 
 function dependencies() {

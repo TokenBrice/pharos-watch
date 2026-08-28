@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
-import { jsonResponse } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse } from "../lib/admin-job";
 import type { D1Database } from "@cloudflare/workers-types";

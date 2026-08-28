@@ -20,6 +20,7 @@ import {
   type V9StructuralCap,
 } from "./safety-score-v9/formula";
 import { assertV9ValidatedPolicyEnvelope } from "./safety-score-v9/policy";
+import { compareText } from "./safety-score-v9/primitives";
 
 export {
   V9_CANDIDATE_POLICY_V1,
@@ -39,10 +40,6 @@ export interface V9ResearchScenarioCap extends V9StructuralCap {
 }
 
 const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
-
-function compareCodeUnits(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 /** Phase-zero scenario adapter; arbitrary caps are never accepted by production scoring input. */
 export function scoreV9ResearchScenarioInput(
@@ -149,7 +146,7 @@ export function scoreCompiledAssetSet(
 
     if (visiting.has(assetId)) {
       const cycleStart = visitStack.indexOf(assetId);
-      const cycleIds = visitStack.slice(cycleStart).sort(compareCodeUnits);
+      const cycleIds = visitStack.slice(cycleStart).sort(compareText);
       const cycleLabel = cycleIds.join(", ");
       for (const cycleId of cycleIds) {
         if (traces.has(cycleId)) continue;
@@ -184,9 +181,9 @@ export function scoreCompiledAssetSet(
     return trace;
   };
 
-  for (const assetId of [...byId.keys()].sort()) visit(assetId);
+  for (const assetId of [...byId.keys()].sort(compareText)) visit(assetId);
   return {
-    traces: [...traces.values()].sort((left, right) => compareCodeUnits(left.assetId, right.assetId)),
+    traces: [...traces.values()].sort((left, right) => compareText(left.assetId, right.assetId)),
     evaluatedOrder,
   };
 }

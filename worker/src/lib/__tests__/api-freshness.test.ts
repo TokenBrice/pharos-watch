@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   buildFreshnessMeta,
   buildCacheStatuses,
@@ -395,5 +395,537 @@ describe("buildCacheStatuses sentinel validation", () => {
       message: expect.stringContaining("no-pointer"),
     }));
     expect(statusFloor).toBe("stale");
+  });
+});
+
+describe("buildCacheStatuses", () => {
+  function makeDb(nowSec: number) {
+    const seenSql: string[] = [];
+    const db = {
+      prepare: (sql: string) => {
+        seenSql.push(sql);
+        const first = async <T>() => {
+          if (sql.includes("FROM cache WHERE key = ?")) {
+            return {
+              value: JSON.stringify({
+                updatedAt: nowSec - 120,
+                source: "compute-dews",
+                publishStatus: "published",
+                coverageVersion: 2,
+                expectedRowCount: 2,
+                stablecoinIdsDigest: "a".repeat(64),
+              }),
+              updated_at: nowSec - 120,
+            } as T;
+          }
+          if (sql.includes("MAX(updated_at)")) {
+            return { age: 120 } as T;
+          }
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => {
+              if (sql.includes("cache WHERE key IN")) {
+                return {
+                  results: [{ key: "stablecoins", updated_at: nowSec - 60 }] as T[],
+                  success: true,
+                  meta: {},
+                };
+              }
+              return { results: [] as T[], success: true, meta: {} };
+            },
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+    return { db, seenSql };
+  }
+
+  it("uses table timestamps for table-backed datasets and the publication pointer for DEWS", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const { db, seenSql } = makeDb(nowSec);
+
+    await buildCacheStatuses(db, nowSec);
+
+    const dexSql = seenSql.find((s) => s.includes("dex_liquidity"));
+    const yieldSql = seenSql.find((s) => s.includes("yield_data"));
+    expect(dexSql).toContain("? - MAX(updated_at)");
+    expect(yieldSql).toContain("? - MAX(updated_at)");
+    expect(yieldSql).toContain("is_best = 1");
+    expect(seenSql.some((sql) => sql.includes("FROM stress_signals"))).toBe(false);
+    expect(seenSql.some((sql) => sql.includes("FROM cache WHERE key = ?"))).toBe(true);
+  });
+
+  it("uses freshness sentinels when present and skips hot-table freshness queries", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const seenSql: string[] = [];
+    const db = {
+      prepare: (sql: string) => {
+        seenSql.push(sql);
+        const first = async <T>() => null as T | null;
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => {
+              if (sql.includes("cache WHERE key IN")) {
+                return {
+                  results: [
+                    { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
+                    {
+                      key: "freshness:dex-liquidity",
+                      updated_at: nowSec - 120,
+                      value: JSON.stringify({
+                        updatedAt: nowSec - 120,
+                        source: "sync-dex-liquidity",
+                        publishStatus: "ok",
+                      }),
+                    },
+                    {
+                      key: "freshness:yield-data",
+                      updated_at: nowSec - 180,
+                      value: JSON.stringify({
+                        updatedAt: nowSec - 180,
+                        source: "sync-yield-data",
+                        publishStatus: "ok",
+                      }),
+                    },
+                    {
+                      key: "freshness:dews",
+                      updated_at: nowSec - 240,
+                      value: JSON.stringify({
+                        updatedAt: nowSec - 240,
+                        source: "compute-dews",
+                        publishStatus: "ok",
+                      }),
+                    },
+                  ] as T[],
+                  success: true,
+                  meta: {},
+                };
+              }
+              return { results: [] as T[], success: true, meta: {} };
+            },
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches, diagnostics } = await buildCacheStatuses(db, nowSec);
+
+    expect(caches["dex-liquidity"]?.ageSeconds).toBe(120);
+    expect(caches["dex-liquidity"]).toMatchObject({
+      freshnessSource: "freshness-sentinel",
+      producerJob: "sync-dex-liquidity",
+      producerIntervalSec: 7200,
+      endpointMaxAge: 14_400,
+      availabilityMaxAge: 43200,
+    });
+    expect(caches["yield-data"]?.ageSeconds).toBe(180);
+    expect(caches["yield-data"]).toMatchObject({
+      freshnessSource: "freshness-sentinel",
+      producerJob: "sync-yield-data",
+      producerIntervalSec: 3600,
+      endpointMaxAge: 3600,
+      availabilityMaxAge: 3600,
+    });
+    expect(caches.dews?.ageSeconds).toBe(240);
+    expect(caches.dews).toMatchObject({
+      freshnessSource: "freshness-sentinel",
+      producerJob: "compute-dews",
+      producerIntervalSec: 1800,
+      endpointMaxAge: 1800,
+      availabilityMaxAge: 1800,
+    });
+    expect(diagnostics).toEqual([]);
+    expect(seenSql.some((sql) => sql.includes("FROM dex_liquidity"))).toBe(false);
+    expect(seenSql.some((sql) => sql.includes("FROM yield_data"))).toBe(false);
+    expect(seenSql.some((sql) => sql.includes("FROM stress_signals"))).toBe(false);
+  });
+
+  it("clamps negative table ages to zero without accepting a future DEWS table row", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = {
+      prepare: (sql: string) => {
+        const first = async <T>() => {
+          if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+            return { age: -30 } as T;
+          }
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches } = await buildCacheStatuses(db, nowSec);
+    expect(caches["dex-liquidity"]?.ageSeconds).toBe(0);
+    expect(caches["yield-data"]?.ageSeconds).toBe(0);
+    expect(caches.dews?.ageSeconds).toBeNull();
+  });
+
+  it("reports missing DEWS publication evidence instead of throwing", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = {
+      prepare: (sql: string) => {
+        const first = async <T>() => {
+          if (sql.includes("MAX(updated_at)")) {
+            return { age: 60 } as T;
+          }
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches, failures } = await buildCacheStatuses(db, nowSec);
+    expect(caches.dews?.ageSeconds).toBeNull();
+    expect(failures).toEqual([
+      {
+        key: "dews",
+        source: "table-freshness",
+        message: "DEWS published generation unavailable (no-pointer): publication pointer is missing",
+      },
+    ]);
+  });
+
+  it("does not let producer cron timestamps replace missing DEWS publication evidence", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = {
+      prepare: (sql: string) => {
+        const first = async <T>() => {
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => {
+              if (sql.includes("FROM cron_runs")) {
+                return {
+                  results: [{ job: "compute-dews", started_at: nowSec - 300 }] as T[],
+                  success: true,
+                  meta: {},
+                };
+              }
+              return { results: [] as T[], success: true, meta: {} };
+            },
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
+    expect(caches.dews?.ageSeconds).toBeNull();
+    expect(caches.dews?.warning).toBeUndefined();
+    expect(diagnostics).not.toContainEqual(expect.objectContaining({ key: "dews" }));
+    expect(failures).toEqual([
+      {
+        key: "dews",
+        source: "table-freshness",
+        message: "DEWS published generation unavailable (no-pointer): publication pointer is missing",
+      },
+    ]);
+    expect(warnings).not.toContain("dews: freshness table query failed; using cron fallback");
+  });
+
+  it("uses table fallback warnings when the cache lookup fails", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const db = {
+        prepare: (sql: string) => {
+          const first = async <T>() => {
+            if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+              return { age: 45 } as T;
+            }
+            return null as T | null;
+          };
+          return {
+            bind: (..._args: unknown[]) => ({
+              all: async <T>() => {
+                if (sql.includes("cache WHERE key IN")) {
+                  throw new Error("cache lookup failed");
+                }
+                if (sql.includes("FROM cron_runs")) {
+                  return { results: [] as T[], success: true, meta: {} };
+                }
+                return { results: [] as T[], success: true, meta: {} };
+              },
+              first,
+              run: async () => ({ success: true, meta: {} }),
+            }),
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          };
+        },
+        batch: async () => [],
+        exec: async () => ({ count: 0, duration: 0 }),
+        dump: async () => new ArrayBuffer(0),
+      } as unknown as D1Database;
+
+      const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
+
+      expect(caches["dex-liquidity"]?.ageSeconds).toBe(45);
+      expect(caches["dex-liquidity"]?.warning).toBe(
+        "dex-liquidity: freshness sentinel lookup failed; using table fallback",
+      );
+      expect(diagnostics).toContainEqual({
+        key: "dex-liquidity",
+        freshnessSource: "table-fallback",
+        warning: "dex-liquidity: freshness sentinel lookup failed; using table fallback",
+        failureSource: "cache-table",
+      });
+      expect(failures).toContainEqual({
+        key: "__cache__",
+        source: "cache-table",
+        message: "cache lookup failed",
+      });
+      expect(warnings).toContain("dex-liquidity: freshness sentinel lookup failed; using table fallback");
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[api-freshness] dex-liquidity: freshness sentinel lookup failed; using table fallback"),
+      );
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it("uses cron fallback warnings when cache lookup fails and table freshness is unavailable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const db = {
+        prepare: (sql: string) => {
+          const first = async <T>() => {
+            if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+              return { age: null } as T;
+            }
+            return null as T | null;
+          };
+          return {
+            bind: (..._args: unknown[]) => ({
+              all: async <T>() => {
+                if (sql.includes("cache WHERE key IN")) {
+                  throw new Error("cache lookup failed");
+                }
+                if (sql.includes("FROM cron_runs")) {
+                  return {
+                    results: [
+                      { job: "sync-dex-liquidity", started_at: nowSec - 90 },
+                      { job: "sync-yield-data", started_at: nowSec - 120 },
+                      { job: "compute-dews", started_at: nowSec - 150 },
+                    ] as T[],
+                    success: true,
+                    meta: {},
+                  };
+                }
+                return { results: [] as T[], success: true, meta: {} };
+              },
+              first,
+              run: async () => ({ success: true, meta: {} }),
+            }),
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          };
+        },
+        batch: async () => [],
+        exec: async () => ({ count: 0, duration: 0 }),
+        dump: async () => new ArrayBuffer(0),
+      } as unknown as D1Database;
+
+      const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
+
+      expect(caches["dex-liquidity"]?.ageSeconds).toBe(90);
+      expect(caches["dex-liquidity"]?.warning).toBe(
+        "dex-liquidity: freshness sentinel lookup failed; using cron fallback",
+      );
+      expect(diagnostics).toContainEqual({
+        key: "dex-liquidity",
+        freshnessSource: "cron-fallback",
+        warning: "dex-liquidity: freshness sentinel lookup failed; using cron fallback",
+        failureSource: "cache-table",
+      });
+      expect(failures).toContainEqual({
+        key: "__cache__",
+        source: "cache-table",
+        message: "cache lookup failed",
+      });
+      expect(warnings).toContain("dex-liquidity: freshness sentinel lookup failed; using cron fallback");
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[api-freshness] dex-liquidity: freshness sentinel lookup failed; using cron fallback"),
+      );
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it("records cron fallback failures when both table and producer fallback lookups are unavailable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const db = {
+        prepare: (sql: string) => {
+          const first = async <T>() => {
+            if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+              return { age: null } as T;
+            }
+            return null as T | null;
+          };
+          return {
+            bind: (..._args: unknown[]) => ({
+              all: async <T>() => {
+                if (sql.includes("FROM cron_runs")) {
+                  throw new Error("cron lookup failed");
+                }
+                return { results: [] as T[], success: true, meta: {} };
+              },
+              first,
+              run: async () => ({ success: true, meta: {} }),
+            }),
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          };
+        },
+        batch: async () => [],
+        exec: async () => ({ count: 0, duration: 0 }),
+        dump: async () => new ArrayBuffer(0),
+      } as unknown as D1Database;
+
+      const { failures } = await buildCacheStatuses(db, nowSec);
+
+      expect(failures).toContainEqual({
+        key: "dex-liquidity",
+        source: "cron-fallback",
+        message: "cron lookup failed",
+      });
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[api-freshness] Failed to read producer cron fallbacks"),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("uses fx-rates-meta usableSyncAt for cache freshness and keeps cadence-aware source warnings separate", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = {
+      prepare: (sql: string) => {
+        const first = async <T>() => {
+          if (sql.includes("FROM cache WHERE key = ?")) {
+            return {
+              value: JSON.stringify({
+                updatedAt: nowSec - 60,
+                source: "compute-dews",
+                publishStatus: "published",
+                coverageVersion: 2,
+                expectedRowCount: 2,
+                stablecoinIdsDigest: "a".repeat(64),
+              }),
+              updated_at: nowSec - 60,
+            } as T;
+          }
+          if (sql.includes("MAX(updated_at)")) {
+            return { age: 60 } as T;
+          }
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => {
+              if (sql.includes("cache WHERE key IN")) {
+                return {
+                  results: [
+                    { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
+                    { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
+                    { key: "usds-status", updated_at: nowSec - 60, value: "{}" },
+                    { key: "fx-rates", updated_at: nowSec - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+                    {
+                      key: "fx-rates-meta",
+                      updated_at: nowSec - 60,
+                      value: JSON.stringify({
+                        usableSyncAt: nowSec - 60,
+                        mode: "cached-fallback",
+                        sourceUpdatedAtByPeg: { peggedEUR: nowSec - 8 * 3600 },
+                        sourceModeByPeg: { peggedEUR: "cached" },
+                        sourceCadenceByPeg: { peggedEUR: "intraday" },
+                        consecutiveFallbackRuns: 4,
+                      }),
+                    },
+                    { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
+                  ] as T[],
+                  success: true,
+                  meta: {},
+                };
+              }
+              return { results: [] as T[], success: true, meta: {} };
+            },
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches, statusFloor, warnings } = await buildCacheStatuses(db, nowSec);
+
+    expect(caches["fx-rates"]?.ageSeconds).toBe(60);
+    expect(caches["fx-rates"]?.mode).toBe("cached-fallback");
+    expect(caches["fx-rates"]?.sourceStatus).toBe("degraded");
+    expect(caches["fx-rates"]?.consecutiveFallbackRuns).toBe(4);
+    expect(statusFloor).toBe("degraded");
+    expect(warnings[0]).toContain("cached fallback FX rates");
   });
 });

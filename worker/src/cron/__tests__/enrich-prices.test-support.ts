@@ -26,11 +26,11 @@ import {
   runDlContractPasses,
   runJupiterPass,
 } from "../sync-stablecoins/enrich-prices-passes";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
-import type { MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;
 const staleObservedAtSec = () => Math.floor(Date.now() / 1000) - 2 * 3600;
@@ -88,6 +88,24 @@ const fixtureMockD1 = mockD1;
 const fixtureMockFetch = mockFetch;
 const fixtureCIRCUIT_SOURCE = CIRCUIT_SOURCE;
 
+function installFetch(implementation: (url: string) => Response | Promise<Response>) {
+  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
+}
+
+function makeFixtureMockD1(
+  tables: Parameters<typeof mockD1>[0] = [],
+  options?: Parameters<typeof mockD1>[1],
+) {
+  return fixtureMockD1(
+    [
+      ...tables,
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ],
+    options,
+  );
+}
+
 type PoolObservation = {
   price: number;
   tvlUsd: number;
@@ -95,17 +113,6 @@ type PoolObservation = {
   chain: string;
   observedAt?: number;
 };
-
-function makePeggedAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
-  return {
-    id: "test-asset",
-    name: "Test Stablecoin",
-    symbol: "TEST",
-    pegType: "peggedUSD",
-    circulating: {},
-    ...overrides,
-  };
-}
 
 function makePrimaryPriceResult(overrides: Partial<PrimaryPriceResult> = {}): PrimaryPriceResult {
   return {
@@ -277,7 +284,8 @@ export {
   fixtureMockD1,
   fixtureMockFetch,
   fixtureCIRCUIT_SOURCE,
-  makePeggedAsset,
+  installFetch,
+  makeFixtureMockD1,
   makePrimaryPriceResult,
   makePrimaryPriceResults,
   makePriceConsensusResult,

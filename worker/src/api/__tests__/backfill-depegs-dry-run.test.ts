@@ -1,8 +1,8 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({ kind: "missing", reason: "test", payload: null })),

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
 import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 import type { PlacedCoin } from "@/lib/alt-peg-hero";
@@ -19,7 +19,6 @@ const sample: PlacedCoin = {
 };
 
 describe("CoinEmblem", () => {
-  afterEach(() => cleanup());
 
   it("renders an anchor with href and accessible label", () => {
     const { getByRole } = render(

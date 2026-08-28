@@ -15,27 +15,53 @@ import {
   isDexExitRouteCoverageWithinRouteBudget,
   validateExitRouteCapacityCurve,
 } from "../p4-exit-route-capacity";
-import { makeMeasuredProfile } from "./measured-execution.test-support";
+import { makeMeasuredProfile, withMeasuredObservationHistory } from "@shared/test-utils/measured-execution.test-support";
+import { validateMeasuredExecutionProfile } from "../p4-exit-route-measured-profile-validation";
+
+
+/** Structural mutation target for deployment-proof drift tests (fields the mutators write). */
+interface MutableMeasuredProfile {
+  hookAddress: string;
+  poolTokenAddresses: string[];
+  executionEndpoint: { address: string; codeHash: string };
+  tokenIn: { address: string };
+  tokenOut: { address: string };
+  uniswapV4PoolProvenance: {
+    poolManagerAddress: string;
+    poolManagerCodeHash: string;
+    stateViewAddress: string;
+    stateViewCodeHash: string;
+  };
+  registryProvenance: {
+    registryAddress: string;
+    registryCodeHash: string;
+    registeredPoolAddress: string;
+    lpTokenAddress: string;
+    poolTokenAddresses: string[];
+  };
+  stableSwapNgFactoryProvenance: {
+    factoryAddress: string;
+    factoryCodeHash: string;
+    poolIndex: number;
+    registeredPoolAddress: string;
+    poolTokenAddresses: string[];
+  };
+}
 
 describe("P4 DEX exit route observations", () => {
-  function measuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
-    return makeMeasuredProfile(quotedAt);
-  }
-
   function aerodromeMeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
-    const profile = measuredProfile(quotedAt);
+    const profile = makeMeasuredProfile(quotedAt);
     if (!profile.poolProvenance) throw new Error("Measured fixture must retain pool provenance");
-    return {
-      ...profile,
+    return makeMeasuredProfile(quotedAt, {
       adapterProfileId: "aerodrome-slipstream-quoter-v2",
       protocol: "aerodrome-slipstream",
       chain: "base",
       poolId: `base:${profile.poolProvenance.resolvedPoolAddress}`,
-    };
+    });
   }
 
   function uniswapV4MeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
-    const { poolProvenance: _poolProvenance, ...profile } = measuredProfile(quotedAt);
+    const { poolProvenance: _poolProvenance, ...profile } = makeMeasuredProfile(quotedAt);
     const poolId = `0x${"12".repeat(32)}`;
     return {
       ...profile,
@@ -68,9 +94,7 @@ describe("P4 DEX exit route observations", () => {
     const poolAddress = "0x313698667d7fdd6789a9bc70821309ff891e729a" as const;
     const crvUsd = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e" as const;
     const wbtc = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599" as const;
-    const base = measuredProfile(quotedAt);
-    return {
-      ...base,
+    return makeMeasuredProfile(quotedAt, {
       adapterProfileId: "curve-cryptoswap-get-dy-v1",
       protocol: "curve",
       poolId: `ethereum:${poolAddress}`,
@@ -98,7 +122,7 @@ describe("P4 DEX exit route observations", () => {
         factoryCodeHash: `0x${"cd".repeat(32)}`,
         resolvedPoolAddress: poolAddress,
       },
-    };
+    });
   }
 
   function curveStableSwapMeasuredProfiles(
@@ -127,7 +151,6 @@ describe("P4 DEX exit route observations", () => {
       },
     ];
     return tokens.slice(0, 2).map((outputToken, outputIndex) => {
-      const base = measuredProfile(quotedAt);
       const capacityCurve = DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => ({
         requestedNotionalUsd,
         maxCostBps: DEX_MEASURED_MAX_COST_BPS,
@@ -135,8 +158,7 @@ describe("P4 DEX exit route observations", () => {
         completionRatio: 1,
         executionCostBps: outputIndex === 0 ? 55 : 46,
       }));
-      return {
-        ...base,
+      return makeMeasuredProfile(quotedAt, {
         targetId: `curve-3pool-usdt-${outputToken.symbol.toLowerCase()}`,
         targetGenerationId: "curve-target-generation",
         quoteGenerationId: "curve-quote-generation",
@@ -185,7 +207,7 @@ describe("P4 DEX exit route observations", () => {
           conservativeStatistic: "pointwise-minimum" as const,
           conservativeCapacityCurve: capacityCurve,
         },
-      };
+      });
     });
   }
 
@@ -236,7 +258,6 @@ describe("P4 DEX exit route observations", () => {
     const poolAddress = "0xc061caa073f3d95f80f8e5428d32d2d76f5e1622" as const;
     const usdg = "0xe343167631d89b6ffc58b88d6b7fb0228795491d" as const;
     const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" as const;
-    const base = measuredProfile(quotedAt);
     const capacityCurve = [
       { requestedNotionalUsd: 100_000, executableUsd: 100_000, executionCostBps: 1.0633 },
       { requestedNotionalUsd: 1_000_000, executableUsd: 1_000_000, executionCostBps: 1.362 },
@@ -247,8 +268,7 @@ describe("P4 DEX exit route observations", () => {
       maxCostBps: DEX_MEASURED_MAX_COST_BPS,
       completionRatio: point.executableUsd / point.requestedNotionalUsd,
     }));
-    return {
-      ...base,
+    return makeMeasuredProfile(quotedAt, {
       targetId: "curve-stableswap-ng-usdg-usdc",
       targetGenerationId: "curve-ng-target-generation",
       quoteGenerationId: "curve-ng-quote-generation",
@@ -300,7 +320,7 @@ describe("P4 DEX exit route observations", () => {
         conservativeStatistic: "pointwise-minimum",
         conservativeCapacityCurve: capacityCurve,
       },
-    };
+    });
   }
 
   function curveDusdStableSwapNgMeasuredProfile(
@@ -396,34 +416,6 @@ describe("P4 DEX exit route observations", () => {
     };
   }
 
-  function withObservationHistory(
-    profile: DexMeasuredExecutionPublicProfile,
-    successfulObservationCount: number,
-    conservativeExecutableUsd: number,
-  ): DexMeasuredExecutionPublicProfile {
-    const conservativeCapacityCurve = profile.capacityCurve.map((point) => {
-      const executableUsd = Math.min(point.executableUsd, conservativeExecutableUsd);
-      return {
-        ...point,
-        executableUsd,
-        completionRatio: executableUsd / point.requestedNotionalUsd,
-      };
-    });
-    return {
-      ...profile,
-      observationHistory: {
-        completeProducerCycleCount: successfulObservationCount,
-        successfulObservationCount,
-        consecutiveSuccessCount: successfulObservationCount,
-        observationWindowStartedAt: profile.quotedAt - 1_000,
-        observationWindowEndedAt: profile.quotedAt + 10,
-        latestOperationalFailureAt: null,
-        conservativeStatistic: "pointwise-minimum",
-        conservativeCapacityCurve,
-      },
-    };
-  }
-
   it("falls back Solana and Tron pools to shaped evidence outside the strict denominator", () => {
     // Liquidity Score v6 Phase 3: the native measured lanes are removed, so
     // Raydium/Orca/SunSwap pools carry no measured profiles and no
@@ -445,7 +437,7 @@ describe("P4 DEX exit route observations", () => {
           poolType: "uniswap-v3",
           source: "dl",
           extra: {
-            measuredExecution: measuredProfile(observedAt - 60),
+            measuredExecution: makeMeasuredProfile(observedAt - 60),
             measuredExecutionPhysicalPoolId: physicalPoolId,
           },
         },
@@ -513,7 +505,7 @@ describe("P4 DEX exit route observations", () => {
           poolType: "uniswap-v3",
           source: "dl",
           extra: {
-            measuredExecution: measuredProfile(observedAt - 60),
+            measuredExecution: makeMeasuredProfile(observedAt - 60),
             measuredExecutionPhysicalPoolId: physicalPoolId,
           },
         },
@@ -541,7 +533,7 @@ describe("P4 DEX exit route observations", () => {
   it("uses the pointwise-minimum curve and requires two successful cycles for high confidence", () => {
     const observedAt = 1_752_560_000;
     const physicalPoolId = "ethereum:0x3333333333333333333333333333333333333333";
-    const profile = withObservationHistory(measuredProfile(observedAt - 60), 2, 750_000);
+    const profile = withMeasuredObservationHistory(makeMeasuredProfile(observedAt - 60), 2, 750_000);
     profile.observationHistory = {
       ...profile.observationHistory!,
       completeProducerCycleCount: 3,
@@ -581,7 +573,7 @@ describe("P4 DEX exit route observations", () => {
     });
     expect(result.observations[0]?.capacityCurve).toEqual(profile.observationHistory?.conservativeCapacityCurve);
 
-    const immature = withObservationHistory(measuredProfile(observedAt - 60), 1, 750_000);
+    const immature = withMeasuredObservationHistory(makeMeasuredProfile(observedAt - 60), 1, 750_000);
     const immatureResult = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       observedAt,
@@ -1067,17 +1059,17 @@ describe("P4 DEX exit route observations", () => {
     const observedAt = 1_752_560_000;
     const cases = [
       {
-        profile: measuredProfile(observedAt - 10_801),
+        profile: makeMeasuredProfile(observedAt - 10_801),
         extra: {},
         reason: "invalidMeasuredExecution:stale-profile",
       },
       {
-        profile: measuredProfile(observedAt - 60),
+        profile: makeMeasuredProfile(observedAt - 60),
         extra: { ammExecutionModel: { source: "raydium" } },
         reason: "conflictingExecutionCapabilityEvidence",
       },
       {
-        profile: { ...measuredProfile(observedAt - 60), marginalOutputRatio: 0.97 },
+        profile: { ...makeMeasuredProfile(observedAt - 60), marginalOutputRatio: 0.97 },
         extra: {},
         reason: "invalidMeasuredExecution:marginal-failure-with-positive-capacity",
       },
@@ -2594,5 +2586,78 @@ describe("P4 DEX exit route observations", () => {
       outputEvidenceKind: "reserve-based-amm-simulation",
       scoreEligible: true,
     });
+  });
+
+  it.each([
+    ["hook", (profile: MutableMeasuredProfile) => { profile.hookAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["token set", (profile: MutableMeasuredProfile) => { profile.poolTokenAddresses = [profile.poolTokenAddresses[0]]; }],
+    ["PoolManager address", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.poolManagerAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["PoolManager hash", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.poolManagerCodeHash = `0x${"11".repeat(32)}`; }],
+    ["StateView address", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.stateViewAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["StateView hash", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.stateViewCodeHash = `0x${"11".repeat(32)}`; }],
+    ["Quoter address", (profile: MutableMeasuredProfile) => { profile.executionEndpoint.address = "0x1111111111111111111111111111111111111111"; }],
+    ["Quoter hash", (profile: MutableMeasuredProfile) => { profile.executionEndpoint.codeHash = `0x${"11".repeat(32)}`; }],
+  ])("rejects Uniswap V4 deployment-proof drift in %s", (_field, mutate) => {
+    const profile = structuredClone(uniswapV4MeasuredProfile(1_752_559_940));
+    mutate(profile as unknown as MutableMeasuredProfile);
+    expect(validateMeasuredExecutionProfile(profile, {
+      stablecoinId: "usdc-circle",
+      observedAt: 1_752_560_000,
+      pool: {
+        poolId: "retained-v4", project: "uniswap-v4", chain: "ethereum", tvlUsd: 2_000_000,
+        symbol: "USDC-USDT", source: "dl", poolType: "uniswap-v4", extra: { measuredExecutionPhysicalPoolId: profile.poolId },
+      },
+    })).toContain("invalid-uniswap-v4-identity");
+  });
+
+  it.each([
+    ["pool address", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.executionEndpoint.address = "0x1111111111111111111111111111111111111111"; })],
+    ["pool hash", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.executionEndpoint.codeHash = `0x${"11".repeat(32)}`; })],
+    ["registry address", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.registryAddress = "0x1111111111111111111111111111111111111111"; })],
+    ["registry hash", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.registryCodeHash = `0x${"11".repeat(32)}`; })],
+    ["registered pool", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.registeredPoolAddress = "0x1111111111111111111111111111111111111111"; })],
+    ["LP token", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.lpTokenAddress = "0x1111111111111111111111111111111111111111"; })],
+    ["profile tokens", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; })],
+    ["registry tokens", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; })],
+  ])("rejects Curve StableSwap deployment-proof drift in %s", (_field, mutate) => {
+    const profiles = curveStableSwapMeasuredProfiles(1_784_877_491, 3);
+    mutate(profiles as unknown as MutableMeasuredProfile[]);
+    const issues = profiles.flatMap((profile) => validateMeasuredExecutionProfile(profile, {
+      stablecoinId: "usdt-tether",
+      observedAt: 1_784_877_551,
+      pool: {
+        poolId: "retained-3pool", project: "curve", chain: "ethereum", tvlUsd: 160_047_206,
+        symbol: "DAI-USDC-USDT", source: "dl", poolType: "curve-stableswap-high-a", extra: { measuredExecutionPhysicalPoolId: profile.poolId },
+      },
+    }));
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.stringMatching(/invalid-curve-stableswap-identity|physical-pool-provenance-mismatch/),
+    ]));
+  });
+
+  it.each([
+    ["pool address", (profile: MutableMeasuredProfile) => { profile.executionEndpoint.address = "0x1111111111111111111111111111111111111111"; }],
+    ["pool hash", (profile: MutableMeasuredProfile) => { profile.executionEndpoint.codeHash = `0x${"11".repeat(32)}`; }],
+    ["profile tokens", (profile: MutableMeasuredProfile) => { profile.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; }],
+    ["input index", (profile: MutableMeasuredProfile) => { profile.tokenIn.address = "0x1111111111111111111111111111111111111111"; }],
+    ["output index", (profile: MutableMeasuredProfile) => { profile.tokenOut.address = "0x1111111111111111111111111111111111111111"; }],
+    ["factory address", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.factoryAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["factory hash", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.factoryCodeHash = `0x${"11".repeat(32)}`; }],
+    ["pool index", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.poolIndex += 1; }],
+    ["registered pool", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.registeredPoolAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["factory tokens", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; }],
+  ])("rejects Curve StableSwap-NG deployment-proof drift in %s", (_field, mutate) => {
+    const profile = structuredClone(curveStableSwapNgMeasuredProfile(1_784_879_199, 3));
+    mutate(profile as unknown as MutableMeasuredProfile);
+    expect(validateMeasuredExecutionProfile(profile, {
+      stablecoinId: "usdg-paxos",
+      observedAt: 1_784_879_259,
+      pool: {
+        poolId: "retained-ng", project: "curve", chain: "ethereum", tvlUsd: 20_501_133,
+        symbol: "USDG-USDC", source: "dl", poolType: "curve-stableswap-high-a", extra: { measuredExecutionPhysicalPoolId: profile.poolId },
+      },
+    })).toEqual(expect.arrayContaining([
+      expect.stringMatching(/invalid-curve-stableswap-ng-identity|physical-pool-provenance-mismatch/),
+    ]));
   });
 });

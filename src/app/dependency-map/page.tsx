@@ -3,18 +3,10 @@ import { FaqSection } from "@/components/faq-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const description =
   "Interactive graph of collateral dependencies between up to 200 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
-
-export const metadata = buildPageMetadata({
-  title: "Dependency Map: Stablecoin Collateral Graph",
-  description,
-  canonical: "/dependency-map/",
-  ogImage: `${SITE_URL}/og-dependency-map.png`,
-});
 
 const DEPENDENCY_MAP_FAQ_ITEMS = [
   {
@@ -67,12 +59,17 @@ const DEPENDENCY_MAP_STATIC_SECTION = (
   </section>
 );
 
-export default createClientFeaturePage({
+const route = createClientFeaturePage({
+  path: "/dependency-map/",
+  metadata: {
+    title: "Dependency Map: Stablecoin Collateral Graph",
+    description,
+    ogImage: `${SITE_URL}/og-dependency-map.png`,
+  },
   loadClient: () => import("./client").then((m) => ({ default: m.DependencyMapClient })),
   loading: <Skeleton className="h-[600px] w-full rounded-lg" />,
   shell: {
     breadcrumbName: "Dependency Map",
-    path: "/dependency-map/",
     title: "Dependency Map",
     leadParagraphs: [
       "See hidden systemic risk: the live graph of who backs whom.",
@@ -88,3 +85,6 @@ export default createClientFeaturePage({
   beforeClient: DEPENDENCY_MAP_STATIC_SECTION,
   afterClient: <FaqSection items={DEPENDENCY_MAP_FAQ_ITEMS} includeJsonLd />,
 });
+
+export const metadata = route.metadata;
+export default route.Page;

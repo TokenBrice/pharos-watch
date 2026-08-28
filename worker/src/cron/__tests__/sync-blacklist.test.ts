@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 as createMockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function installFetch(implementation: (request: Request) => Response | Promise<Response>) {
   return mockFetch([{ match: () => true, respond: implementation }]);

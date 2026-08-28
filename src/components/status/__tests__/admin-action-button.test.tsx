@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionButton } from "@/components/status/admin-action-button";
@@ -71,7 +71,6 @@ describe("AdminActionButton", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });

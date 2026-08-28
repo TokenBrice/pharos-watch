@@ -1,15 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { TableToolbarFrame } from "@/components/table";
 import { TableSourceLink } from "@/components/table/client";
 
 describe("table affordances", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("renders a generic toolbar frame with actions and no settings requirement", () => {
     render(

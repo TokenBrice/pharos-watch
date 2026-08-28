@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ExitRouteFamilySchema } from "./exit-route";
+import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
 import { scoreToGrade } from "./safety-score-v9-grade";
 import { V9DependencyEconomicRoleSchema } from "./dependency-types";
 import {
@@ -1072,13 +1074,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
       .object({
         key: z.string().min(1),
         label: z.string().min(1).max(160),
-        routeFamily: z.enum([
-          "dex-amm",
-          "dex-orderbook",
-          "issuer-redemption",
-          "protocol-redemption",
-          "eventual-redemption",
-        ]),
+        routeFamily: ExitRouteFamilySchema,
         score: ScoreSchema,
         components: z.array(
           z
@@ -1102,7 +1098,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
             maxCostBps: z.number().finite().nonnegative(),
             executionCostBps: z.number().finite().nonnegative(),
             settlementDelaySec: z.number().finite().nonnegative(),
-            capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]),
+            capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema,
             chain: z.string().min(1).nullable(),
             protocol: z.string().min(1).nullable(),
             poolId: z.string().min(1).nullable(),
@@ -1128,20 +1124,12 @@ const SafetyScoreV9ExitBreakdownSchema = z
         .object({
           key: z.string().min(1),
           label: z.string().min(1).max(160),
-          routeFamily: z.enum([
-            "dex-amm",
-            "dex-orderbook",
-            "issuer-redemption",
-            "protocol-redemption",
-            "eventual-redemption",
-          ]),
+          routeFamily: ExitRouteFamilySchema,
           score: ScoreSchema.nullable(),
           included: z.boolean(),
           exclusionReason: V9ReasonCodeSchema.nullable(),
           confidenceFactor: z.number().finite().min(0).max(1).nullable().optional(),
-          capacityScoringHorizon: z
-            .enum(["immediate", "daily", "queued", "eventual", "unknown"])
-            .optional(),
+          capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
           settlementDelaySec: z.number().finite().nonnegative().optional(),
           capacity: z
             .object({
@@ -1291,7 +1279,6 @@ export const SafetyScoreV9BreakdownsSchema = z
     control: SafetyScoreV9ControlBreakdownSchema,
   })
   .strict();
-export type SafetyScoreV9Breakdowns = z.infer<typeof SafetyScoreV9BreakdownsSchema>;
 
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),

@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("SafetyGradeBadge", () => {
   it("renders a labelled grade badge with optional score", () => {

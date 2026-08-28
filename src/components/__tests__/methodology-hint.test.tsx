@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { MethodologyHint } from "../methodology-hint";
 
 describe("MethodologyHint desktop popover", () => {
-  afterEach(() => cleanup());
 
   it("opens on click and exposes focusable methodology links", async () => {
     render(<MethodologyHint topic="pegScore" />);

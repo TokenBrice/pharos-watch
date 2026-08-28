@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadBudgetOnlySurfaceStatuses } from "../budget-surface-telemetry";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 describe("budget-only surface telemetry", () => {
   it("loads known budget-only surface rows and marks missing telemetry separately", async () => {

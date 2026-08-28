@@ -3,7 +3,7 @@ import {
   BluechipRatingsMapSchema,
   type BluechipRatingsMap,
 } from "@shared/types/market";
-import { validatePayloadWithSchema } from "./api-utils";
+import { validatePayloadWithSchema } from "./api-schema";
 
 export function parseBluechipRatingsCache(
   raw: string | null | undefined,

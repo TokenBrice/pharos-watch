@@ -5,7 +5,6 @@ import {
   fixtureApplyListAggregatorDowngrade,
   installPrimaryPriceRoutes,
   makePoolChallengeInputs,
-  makePeggedAsset,
   makePrimaryPriceResult,
   makePrimaryPriceResults,
   makePriceConsensusResult,
@@ -14,6 +13,7 @@ import {
   type PriceValidationContext,
   type PriceValidationReferences,
 } from "./enrich-prices.test-support";
+import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 const installFetch = installPrimaryPriceRoutes;
 import { selectDexPriceChallengerRowsFromPools } from "../dex-liquidity/challenger-publish";

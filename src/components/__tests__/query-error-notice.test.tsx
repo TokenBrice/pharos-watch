@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { ApiFetchError } from "@/lib/api";
 
-afterEach(cleanup);
 
 describe("QueryErrorNotice", () => {
   it("returns null when error is falsy", () => {

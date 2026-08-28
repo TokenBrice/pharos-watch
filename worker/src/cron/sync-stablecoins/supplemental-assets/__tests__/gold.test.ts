@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { mockRegistry } from "../../../../test-helpers/cron";
-import { mockFetch } from "../../../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 // Live supplies observed 2026-07-29. Arbitrum is the conserved global total:
 // its CCIP LockRelease pool holds exactly Ethereum + Pharos supply and the

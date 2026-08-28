@@ -2,9 +2,8 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Info } from "lucide-react";
+import { DdrInfoTooltip } from "@/components/depeg-resolver-info-tooltip";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
@@ -217,21 +216,16 @@ export function DepegResolverPostureModule({ data, logos }: DepegResolverPosture
             DDR
           </span>
           <h2 className="pharos-section-title">Outlook Posture</h2>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger
-                aria-label="About the outlook posture board"
-                className="pharos-focus-ring inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
-              >
-                <Info className="h-3.5 w-3.5" aria-hidden="true" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[280px]">
+          <DdrInfoTooltip
+            ariaLabel="About the outlook posture board"
+            content={
+              <>
                 The whole live book at a glance: every open depeg sorted by the resolver&apos;s recovery verdict, with its
                 current gap to peg and — where benchmarked — its expected time to clear. Each event&apos;s full forecast is
                 below.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </>
+            }
+          />
         </div>
         <p className="min-w-0 flex-1 text-pretty text-sm text-muted-foreground">
           <span className="font-mono tabular-nums text-foreground">{items.length}</span> open depegs

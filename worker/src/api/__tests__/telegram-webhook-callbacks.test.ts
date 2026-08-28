@@ -40,7 +40,15 @@ describe("handleCallbackQuery", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"], presetIds: [] }),
+          action_payload: JSON.stringify({
+            schemaVersion: 1,
+            alertTypes: ["dews"],
+            presetIds: [],
+            resolvedIds: [],
+            ambiguousTicker: "USDF",
+            candidates: ambiguous.matches,
+            remainingTickers: ["USDC"],
+          }),
           alert_types: JSON.stringify(["dews"]),
           resolved_ids: JSON.stringify([]),
           ambiguous_ticker: "USDF",

@@ -92,44 +92,31 @@ interface FieldOptionsBase<Label extends string, Value> {
   metadata?: string | { key: string; project: (value: Value) => unknown };
 }
 
-type RequiredFieldOptions<Label extends string, Value> = FieldOptionsBase<Label, Value> & { optional?: false };
-type OptionalFieldOptions<Label extends string, Value> = FieldOptionsBase<Label, Value> & { optional: true };
-type AnyFieldOptions<Label extends string, Value> = FieldOptionsBase<Label, Value> & { optional?: boolean };
+type ObservationOptional<Optional extends boolean | undefined> =
+  Optional extends true ? true : Optional extends false | undefined ? false : boolean;
 
-function defineField<Label extends string, Value>(
-  options: AnyFieldOptions<Label, Value>,
+function defineField<Label extends string, Value, Optional extends boolean | undefined>(
+  options: FieldOptionsBase<Label, Value> & { optional?: Optional },
   decode: ObservationDecoder<Value>,
-): EvmObservationField<Label, Value, boolean> {
-  return { ...options, decode };
+): EvmObservationField<Label, Value, ObservationOptional<Optional>> {
+  return { ...options, decode } as EvmObservationField<Label, Value, ObservationOptional<Optional>>;
 }
 
-export function rawObservation<const Label extends string>(
-  options: RequiredFieldOptions<Label, `0x${string}`>,
-): EvmObservationField<Label, `0x${string}`, false>;
-export function rawObservation<const Label extends string>(
-  options: OptionalFieldOptions<Label, `0x${string}`>,
-): EvmObservationField<Label, `0x${string}`, true>;
-export function rawObservation<const Label extends string>(
-  options: AnyFieldOptions<Label, `0x${string}`>,
-): EvmObservationField<Label, `0x${string}`, boolean>;
-export function rawObservation<Label extends string>(
-  options: AnyFieldOptions<Label, `0x${string}`>,
-): EvmObservationField<Label, `0x${string}`, boolean> {
+export function rawObservation<
+  const Label extends string,
+  const Optional extends boolean | undefined = undefined,
+>(
+  options: FieldOptionsBase<Label, `0x${string}`> & { optional?: Optional },
+): EvmObservationField<Label, `0x${string}`, ObservationOptional<Optional>> {
   return defineField(options, (raw) => raw);
 }
 
-export function uint256Observation<const Label extends string>(
-  options: RequiredFieldOptions<Label, bigint>,
-): EvmObservationField<Label, bigint, false>;
-export function uint256Observation<const Label extends string>(
-  options: OptionalFieldOptions<Label, bigint>,
-): EvmObservationField<Label, bigint, true>;
-export function uint256Observation<const Label extends string>(
-  options: AnyFieldOptions<Label, bigint>,
-): EvmObservationField<Label, bigint, boolean>;
-export function uint256Observation<Label extends string>(
-  options: AnyFieldOptions<Label, bigint>,
-): EvmObservationField<Label, bigint, boolean> {
+export function uint256Observation<
+  const Label extends string,
+  const Optional extends boolean | undefined = undefined,
+>(
+  options: FieldOptionsBase<Label, bigint> & { optional?: Optional },
+): EvmObservationField<Label, bigint, ObservationOptional<Optional>> {
   return defineField(options, (raw, label) => {
     const value = decodeUint256Word(raw);
     if (value == null) throw new Error(`${label} returned malformed uint256 payload`);
@@ -137,18 +124,12 @@ export function uint256Observation<Label extends string>(
   });
 }
 
-export function boolObservation<const Label extends string>(
-  options: RequiredFieldOptions<Label, boolean>,
-): EvmObservationField<Label, boolean, false>;
-export function boolObservation<const Label extends string>(
-  options: OptionalFieldOptions<Label, boolean>,
-): EvmObservationField<Label, boolean, true>;
-export function boolObservation<const Label extends string>(
-  options: AnyFieldOptions<Label, boolean>,
-): EvmObservationField<Label, boolean, boolean>;
-export function boolObservation<Label extends string>(
-  options: AnyFieldOptions<Label, boolean>,
-): EvmObservationField<Label, boolean, boolean> {
+export function boolObservation<
+  const Label extends string,
+  const Optional extends boolean | undefined = undefined,
+>(
+  options: FieldOptionsBase<Label, boolean> & { optional?: Optional },
+): EvmObservationField<Label, boolean, ObservationOptional<Optional>> {
   return defineField(options, (raw, label) => {
     const value = decodeStrictBoolWord(raw);
     if (value == null) throw new Error(`${label} returned malformed bool payload`);
@@ -156,18 +137,12 @@ export function boolObservation<Label extends string>(
   });
 }
 
-export function addressObservation<const Label extends string>(
-  options: RequiredFieldOptions<Label, string>,
-): EvmObservationField<Label, string, false>;
-export function addressObservation<const Label extends string>(
-  options: OptionalFieldOptions<Label, string>,
-): EvmObservationField<Label, string, true>;
-export function addressObservation<const Label extends string>(
-  options: AnyFieldOptions<Label, string>,
-): EvmObservationField<Label, string, boolean>;
-export function addressObservation<Label extends string>(
-  options: AnyFieldOptions<Label, string>,
-): EvmObservationField<Label, string, boolean> {
+export function addressObservation<
+  const Label extends string,
+  const Optional extends boolean | undefined = undefined,
+>(
+  options: FieldOptionsBase<Label, string> & { optional?: Optional },
+): EvmObservationField<Label, string, ObservationOptional<Optional>> {
   return defineField(options, (raw, label) => {
     const value = decodeStrictAddressWord(raw);
     if (value == null) throw new Error(`${label} returned malformed address payload`);
@@ -178,24 +153,13 @@ export function addressObservation<Label extends string>(
 export function customObservation<
   const Label extends string,
   Value,
+  const Optional extends boolean | undefined = undefined,
 >(
-  options: RequiredFieldOptions<Label, Value> & { decode: ObservationDecoder<Value> },
-): EvmObservationField<Label, Value, false>;
-export function customObservation<
-  const Label extends string,
-  Value,
->(
-  options: OptionalFieldOptions<Label, Value> & { decode: ObservationDecoder<Value> },
-): EvmObservationField<Label, Value, true>;
-export function customObservation<
-  const Label extends string,
-  Value,
->(
-  options: AnyFieldOptions<Label, Value> & { decode: ObservationDecoder<Value> },
-): EvmObservationField<Label, Value, boolean>;
-export function customObservation<Label extends string, Value>(
-  options: AnyFieldOptions<Label, Value> & { decode: ObservationDecoder<Value> },
-): EvmObservationField<Label, Value, boolean> {
+  options: FieldOptionsBase<Label, Value> & {
+    optional?: Optional;
+    decode: ObservationDecoder<Value>;
+  },
+): EvmObservationField<Label, Value, ObservationOptional<Optional>> {
   const { decode, ...field } = options;
   return defineField(field, decode);
 }

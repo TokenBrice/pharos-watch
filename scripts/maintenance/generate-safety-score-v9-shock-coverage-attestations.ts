@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import {
   collectShockCoverageJournalPaths,
   SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH,
@@ -75,76 +75,78 @@ function replayJournal(journalPath: string): void {
   process.stdout.write(result.stdout);
 }
 
-void runCliEntrypoint(
-  async () => {
-    const { values } = parseStrictCliArgs(process.argv.slice(2), {
-      options: { check: { type: "boolean" }, help: { type: "boolean", short: "h" } },
+export async function runShockCoverageReplayAttestationsCli(argv = process.argv.slice(2)): Promise<void> {
+  const { values } = parseStrictCliArgs(argv, {
+    options: { check: { type: "boolean" }, help: { type: "boolean", short: "h" } },
+  });
+  if (writeCliHelpIfRequested(values, USAGE)) return;
+
+  const outPath = resolve(REPO_ROOT, SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH);
+  const cached = loadPassingAttestations(outPath);
+  const attestations: Attestation[] = [];
+  const runDate = new Date().toISOString().slice(0, 10);
+  let replayed = 0;
+
+  for (const absolutePath of collectShockCoverageJournalPaths(REPO_ROOT)) {
+    const journalPath = relative(REPO_ROOT, absolutePath).split(sep).join("/");
+    const rawBytes = readFileSync(absolutePath);
+    const journalSha256 = createHash("sha256").update(rawBytes).digest("hex");
+
+    const reusable = cached.get(`${journalPath}@${journalSha256}`);
+    if (reusable) {
+      attestations.push(reusable);
+      continue;
+    }
+
+    replayJournal(journalPath);
+    replayed += 1;
+    const journal = JSON.parse(rawBytes.toString("utf8")) as { calls: unknown[]; codePins: unknown[] };
+    attestations.push({
+      journalPath,
+      journalSha256,
+      attestedAt: runDate,
+      exactReplayPassed: true,
+      callsConsumed: journal.calls.length,
+      codePinsConsumed: journal.codePins.length,
     });
-    if (writeCliHelpIfRequested(values, USAGE)) return;
+  }
 
-    const outPath = resolve(REPO_ROOT, SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH);
-    const cached = loadPassingAttestations(outPath);
-    const attestations: Attestation[] = [];
-    const runDate = new Date().toISOString().slice(0, 10);
-    let replayed = 0;
+  attestations.sort((left, right) => (left.journalPath < right.journalPath ? -1 : 1));
 
-    for (const absolutePath of collectShockCoverageJournalPaths(REPO_ROOT)) {
-      const journalPath = relative(REPO_ROOT, absolutePath).split(sep).join("/");
-      const rawBytes = readFileSync(absolutePath);
-      const journalSha256 = createHash("sha256").update(rawBytes).digest("hex");
+  const previous = existsSync(outPath) ? readFileSync(outPath, "utf8") : null;
+  const previousAttestedAt =
+    previous === null ? null : ((JSON.parse(previous) as { attestedAt?: string }).attestedAt ?? null);
+  // Hold the file-level attestedAt steady when nothing was replayed so the
+  // artifact does not churn on every scheduled run. Per-entry attestedAt is
+  // the load-bearing date; this field only records the latest replay run.
+  const attestedAt = replayed === 0 && previousAttestedAt ? previousAttestedAt : runDate;
 
-      const reusable = cached.get(`${journalPath}@${journalSha256}`);
-      if (reusable) {
-        attestations.push(reusable);
-        continue;
-      }
+  const contents = `${JSON.stringify(
+    {
+      schemaVersion: 1,
+      kind: "safety-score-v9-shock-coverage-replay-attestations",
+      replayTool: { path: REPLAY_TOOL_PATH, version: "1", mode: "offline-byte-identical" },
+      attestedAt,
+      attestations,
+    },
+    null,
+    2,
+  )}\n`;
 
-      replayJournal(journalPath);
-      replayed += 1;
-      const journal = JSON.parse(rawBytes.toString("utf8")) as { calls: unknown[]; codePins: unknown[] };
-      attestations.push({
-        journalPath,
-        journalSha256,
-        attestedAt: runDate,
-        exactReplayPassed: true,
-        callsConsumed: journal.calls.length,
-        codePinsConsumed: journal.codePins.length,
-      });
-    }
+  if (previous === contents) {
+    console.log(`[shock-attestations] Attestations are current (${attestations.length} journals).`);
+    return;
+  }
+  if (values.check === true) {
+    throw new Error(
+      `Shock-coverage replay attestations are stale. Run \`npx tsx ${relative(REPO_ROOT, fileURLToPath(import.meta.url)).split(sep).join("/")}\`.`,
+    );
+  }
+  writeFileSync(outPath, contents);
+  console.log(`[shock-attestations] Wrote ${attestations.length} attestations (${replayed} replayed).`);
+}
 
-    attestations.sort((left, right) => (left.journalPath < right.journalPath ? -1 : 1));
-
-    const previous = existsSync(outPath) ? readFileSync(outPath, "utf8") : null;
-    const previousAttestedAt =
-      previous === null ? null : ((JSON.parse(previous) as { attestedAt?: string }).attestedAt ?? null);
-    // Hold the file-level attestedAt steady when nothing was replayed so the
-    // artifact does not churn on every scheduled run. Per-entry attestedAt is
-    // the load-bearing date; this field only records the latest replay run.
-    const attestedAt = replayed === 0 && previousAttestedAt ? previousAttestedAt : runDate;
-
-    const contents = `${JSON.stringify(
-      {
-        schemaVersion: 1,
-        kind: "safety-score-v9-shock-coverage-replay-attestations",
-        replayTool: { path: REPLAY_TOOL_PATH, version: "1", mode: "offline-byte-identical" },
-        attestedAt,
-        attestations,
-      },
-      null,
-      2,
-    )}\n`;
-
-    if (previous === contents) {
-      console.log(`[shock-attestations] Attestations are current (${attestations.length} journals).`);
-      return;
-    }
-    if (values.check === true) {
-      throw new Error(
-        `Shock-coverage replay attestations are stale. Run \`npx tsx ${relative(REPO_ROOT, fileURLToPath(import.meta.url)).split(sep).join("/")}\`.`,
-      );
-    }
-    writeFileSync(outPath, contents);
-    console.log(`[shock-attestations] Wrote ${attestations.length} attestations (${replayed} replayed).`);
-  },
-  { label: "generate-safety-score-v9-shock-coverage-attestations", usage: USAGE },
-);
+runDirectCli(import.meta.url, () => runShockCoverageReplayAttestationsCli(process.argv.slice(2)), {
+  label: "generate-safety-score-v9-shock-coverage-attestations",
+  usage: USAGE,
+});

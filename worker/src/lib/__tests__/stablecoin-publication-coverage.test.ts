@@ -6,7 +6,7 @@ import {
   evaluateStablecoinPublicationCoverage,
   loadPreviousStablecoinActivePriceCoverage,
 } from "../stablecoin-publication-coverage";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const QUARANTINED_NIGHT_WATCH_OMISSIONS = [
   "benji-franklin-templeton",

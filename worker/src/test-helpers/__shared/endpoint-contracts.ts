@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1, type MockD1Database } from "./mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 
 export interface StablecoinParameterContractDescriptor {
   name: string;

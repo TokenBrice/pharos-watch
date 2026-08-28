@@ -1,5 +1,14 @@
 import { z } from "zod";
 import { CanonicalTextSchema, StrictIsoDateSchema } from "./safety-schema-primitives";
+import {
+  V9OperationalResilienceIncidentSchema,
+  V9OperationalResilienceLatestAssuranceSchema,
+  V9OperationalResilienceReconciliationProceduresSchema,
+  V9OperationalResilienceReportHistorySchema,
+  V9OperationalResilienceSourceConfidenceSchema,
+  V9OperationalResilienceStressEpisodeSchema,
+  V9OperationalResilienceStressSettlementSchema,
+} from "./safety-score-v9-operational-resilience-primitives";
 
 const CanonicalKeySchema = CanonicalTextSchema.refine(
   (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
@@ -16,12 +25,6 @@ const SourceIdsSchema = z
   .refine((ids) => new Set(ids).size === ids.length, "Evidence source IDs must be unique");
 const NonNegativeFiniteSchema = z.number().finite().nonnegative();
 
-const SafetyScoreV9OperationalResilienceSourceConfidenceSchema = z.enum([
-  "issuer-reported",
-  "independent-assurance",
-  "audited",
-]);
-
 const OperationalResilienceSourceSchema = z
   .object({
     sourceId: CanonicalKeySchema,
@@ -29,7 +32,7 @@ const OperationalResilienceSourceSchema = z
     publisher: CanonicalTextSchema,
     publishedAt: IsoDateSchema,
     url: z.string().url(),
-    confidence: SafetyScoreV9OperationalResilienceSourceConfidenceSchema,
+    confidence: V9OperationalResilienceSourceConfidenceSchema,
   })
   .strict();
 
@@ -42,16 +45,6 @@ const LiveHistoryEligibilitySchema = z
   })
   .strict();
 
-const StressSettlementSchema = z.discriminatedUnion("state", [
-  z
-    .object({
-      state: z.enum(["settled-in-full", "not-settled-in-full"]),
-      verification: z.enum(["issuer-reported", "independently-verified"]),
-    })
-    .strict(),
-  z.object({ state: z.literal("unknown") }).strict(),
-]);
-
 const RedemptionStressWindowSchema = z
   .object({
     episodeKey: CanonicalKeySchema,
@@ -59,7 +52,7 @@ const RedemptionStressWindowSchema = z
     maximumWindowDays: z.number().int().positive(),
     redeemedUsdLowerBound: NonNegativeFiniteSchema,
     redeemedSupplyRatioLowerBound: NonNegativeFiniteSchema,
-    settlement: StressSettlementSchema,
+    settlement: V9OperationalResilienceStressSettlementSchema,
     sourceIds: SourceIdsSchema,
   })
   .strict();
@@ -83,54 +76,28 @@ const RedemptionThroughputSchema = z
     }
   });
 
-const StressEpisodeSchema = z
-  .object({
-    episodeKey: CanonicalKeySchema,
-    name: CanonicalTextSchema,
-    observedMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
-    redemptionContinued: z.boolean().nullable(),
-    recoveredWithinSec: NonNegativeFiniteSchema.nullable(),
-    sourceIds: SourceIdsSchema,
-  })
-  .strict();
+const StressEpisodeSchema = V9OperationalResilienceStressEpisodeSchema.extend({
+  episodeKey: CanonicalKeySchema,
+  sourceIds: SourceIdsSchema,
+}).strict();
 
 const ReserveReconciliationSchema = z
   .object({
-    firstReportPeriodEnd: IsoDateSchema,
-    latestReportPeriodEnd: IsoDateSchema,
-    observedReportHistoryMonths: z.number().int().nonnegative(),
-    reportedCadence: z.enum(["monthly", "quarterly", "semi-annual", "annual", "ad-hoc"]),
-    continuityEvidence: z.enum(["issuer-reported", "independently-verified", "unknown"]),
-    missedMaterialPeriods: z.number().int().nonnegative().nullable(),
+    ...V9OperationalResilienceReportHistorySchema.shape,
     historySourceIds: SourceIdsSchema,
-    latestAssurance: z
-      .object({
-        level: z.enum(["limited-assurance", "reasonable-assurance", "audit"]),
-        standard: CanonicalTextSchema,
-        periodEnd: IsoDateSchema,
-        sourceIds: SourceIdsSchema,
-      })
-      .strict(),
-    latestReconciliationProcedures: z
-      .object({
-        bankAndDepositaryBalances: z.boolean().nullable(),
-        blockchainAssetsAndLiabilities: z.boolean().nullable(),
-        sourceIds: SourceIdsSchema,
-      })
-      .strict(),
+    latestAssurance: V9OperationalResilienceLatestAssuranceSchema.extend({
+      sourceIds: SourceIdsSchema,
+    }).strict(),
+    latestReconciliationProcedures: V9OperationalResilienceReconciliationProceduresSchema.extend({
+      sourceIds: SourceIdsSchema,
+    }).strict(),
   })
   .strict();
 
-const MaterialIncidentSchema = z
-  .object({
-    incidentKey: CanonicalKeySchema,
-    name: CanonicalTextSchema,
-    category: z.enum(["redemption", "reserve", "custody", "control", "assurance"]),
-    state: z.enum(["active", "resolved"]),
-    occurredAt: IsoDateSchema,
-    resolvedAt: IsoDateSchema.nullable(),
-    sourceIds: SourceIdsSchema,
-  })
+const MaterialIncidentSchema = V9OperationalResilienceIncidentSchema.extend({
+  incidentKey: CanonicalKeySchema,
+  sourceIds: SourceIdsSchema,
+})
   .strict()
   .superRefine((incident, ctx) => {
     if (incident.state === "active" && incident.resolvedAt !== null) {

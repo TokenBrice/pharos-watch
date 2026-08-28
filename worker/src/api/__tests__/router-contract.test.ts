@@ -4,8 +4,8 @@ import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation";
 import { route, ROUTER_STATIC_PATHS } from "../../router";
 import type { FullRouteContext } from "../../routes/shared";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 mockFetch([{
   match: () => true,

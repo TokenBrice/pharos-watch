@@ -3,7 +3,7 @@ import {
   YIELD_METHODOLOGY_VERSION,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/yield-methodology";
-import { buildMethodologyEnvelope } from "../../lib/api-utils";
+import { buildMethodologyEnvelope } from "../../lib/api-methodology";
 
 export function buildYieldMethodology(asOf: number) {
   return buildMethodologyEnvelope({

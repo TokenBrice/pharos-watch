@@ -2,7 +2,7 @@ import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "@shared/
 import type { DepegEventCloseReason } from "@shared/types/market";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../lib/abort";
-import { readCachedJson } from "../lib/api-utils";
+import { readCachedJson } from "../lib/api-cache-read";
 import { getCache } from "../lib/db-cache";
 import { buildInClause, chunkArray } from "../lib/db";
 import { DEPEG_STEP_VALUES } from "../lib/telegram-constants";

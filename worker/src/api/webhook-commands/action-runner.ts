@@ -28,6 +28,7 @@ import {
   applySettingToSubscriptions,
   applySubscribeIntent,
   applyUnsubscribeIntent,
+  buildPendingDisambiguationActionPayload,
   loadSubscriptionsByIds,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingDisambiguation,
@@ -513,7 +514,14 @@ export function makeActionRunner(
           clearPending: Boolean(clearPendingOnTerminal),
         };
         await context.planIntent?.(createTelegramWebhookIntent(`command:${actionType}`, normalizedPayload, "required"));
-        const serializedActionPayload = JSON.stringify(actionPayload);
+        const serializedActionPayload = JSON.stringify(buildPendingDisambiguationActionPayload({
+          actionPayload,
+          alertTypes,
+          resolvedCoins: resolution.coins,
+          ambiguousTicker: resolution.ticker,
+          candidates: resolution.candidates,
+          remainingTickers: resolution.remainingTickers,
+        }));
         const operationStatements = context.preparePendingMutationAppliedStatement
           ? [context.preparePendingMutationAppliedStatement({
               chatId: context.chatId,

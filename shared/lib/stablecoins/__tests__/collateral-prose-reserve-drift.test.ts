@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "../../../types";
 import { findCollateralProseReserveDriftFindings } from "../collateral-prose-reserve-drift";
+import { makeStablecoinMeta } from "./test-support";
 
 interface CoinOverrides extends Partial<StablecoinMeta> {
   id: string;
@@ -8,7 +9,7 @@ interface CoinOverrides extends Partial<StablecoinMeta> {
 }
 
 function makeCoin(overrides: CoinOverrides): StablecoinMeta {
-  return {
+  return makeStablecoinMeta({
     name: overrides.id,
     flags: {
       backing: "rwa-backed",
@@ -19,7 +20,7 @@ function makeCoin(overrides: CoinOverrides): StablecoinMeta {
       navToken: false,
     },
     ...overrides,
-  } as StablecoinMeta;
+  });
 }
 
 const REVIEW = {

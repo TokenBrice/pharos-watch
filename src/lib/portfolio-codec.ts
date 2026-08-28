@@ -1,5 +1,4 @@
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { isKnownCoinId } from "@shared/lib/validate-coin-id";
 import {
   decodeStablecoinUrlToken,
   encodeStablecoinUrlToken,
@@ -47,7 +46,7 @@ export function parsePortfolioUrlParam(param: string): PortfolioHolding[] {
     if (!token || amountRaw === undefined || amountRaw === "") continue;
 
     const coinId = decodeStablecoinUrlToken(token);
-    if (!coinId || !isKnownCoinId(coinId)) continue;
+    if (!coinId) continue;
     const amount = Number(amountRaw);
     const holding = normalizePortfolioHolding({ coinId, amount });
     if (holding) holdings.push(holding);

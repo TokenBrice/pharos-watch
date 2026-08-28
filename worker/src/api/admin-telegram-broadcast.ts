@@ -4,7 +4,7 @@ import {
   type AdminRouteContext,
   makeIdempotentAdminRoute,
 } from "../lib/route-wrappers";
-import { parseRequestJsonWithSchema } from "../lib/api-utils";
+import { parseRequestJsonWithSchema } from "../lib/api-json-body";
 import { logAdminAction } from "../lib/admin-action-audit";
 import {
   enqueuePendingAlerts,

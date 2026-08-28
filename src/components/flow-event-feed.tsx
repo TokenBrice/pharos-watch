@@ -8,10 +8,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { DataTableEmptyRow, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { TablePagination } from "@/components/table-pagination";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink, ArrowDownUp } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useMintBurnEvents } from "@/hooks/use-mint-burn-flows";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
+import { EventFeedEmpty, EventFeedSkeleton } from "@/components/event-feed-state";
 import {
   formatCurrency,
   formatAddress,
@@ -97,38 +97,6 @@ function getEventBadge(event: MintBurnEvent): {
 // Loading skeleton
 // ---------------------------------------------------------------------------
 
-function FeedSkeleton() {
-  return (
-    <div className="rounded-xl border overflow-hidden">
-      <div className="bg-muted/50 h-10" />
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-5 w-12 rounded-full" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-16" />
-          <div className="flex-1" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-4 shrink-0" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Empty state
-// ---------------------------------------------------------------------------
-
-function FeedEmpty() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
-      <ArrowDownUp className="h-10 w-10 opacity-40" />
-      <p className="text-sm">No mint/burn events recorded yet.</p>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Error state
 // ---------------------------------------------------------------------------
@@ -156,10 +124,10 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
     offset: page * pageSize,
   });
 
-  if (isLoading) return <FeedSkeleton />;
+  if (isLoading) return <EventFeedSkeleton variant="flow" />;
   if (isError) return <FeedError message="Please try again in a few moments." />;
   if (!data || data.events.length === 0) {
-    if (page === 0) return <FeedEmpty />;
+    if (page === 0) return <EventFeedEmpty variant="flow" />;
     // If we paginated past the end, show the table with a "no more" message
   }
 

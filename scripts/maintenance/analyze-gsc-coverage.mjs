@@ -1,20 +1,34 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
-import { inflateRawSync } from "node:zlib";
-import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mts";
+import {
+  appendGscReportPreamble,
+  appendGscReportSection,
+  collectInputEntries,
+  cleanPathLabel,
+  compareText,
+  firstNumberToken,
+  formatGscUsage,
+  KNOWN_GSC_FILES,
+  normalizeHeaderName,
+  parseCsv,
+  runAsyncDirect,
+  runGscCli,
+  uniqueHeaders,
+  writeGscUnknownOption,
+  writeGscUsage,
+} from "../lib/gsc-report.mts";
 
-const CSV_EXT = ".csv";
-const ZIP_EXT = ".zip";
-const UNSUPPORTED_SHEET_EXTENSIONS = new Set([".xlsx", ".xls"]);
-const KNOWN_GSC_FILES = new Set([
-  "chart.csv",
-  "critical issues.csv",
-  "non-critical issues.csv",
-  "metadata.csv",
-  "table.csv",
-]);
+export {
+  collectInputEntries,
+  compareText,
+  firstNumberToken,
+  isDigit,
+  normalizeHeaderName,
+  parseCsv,
+  stripBom,
+  uniqueHeaders,
+} from "../lib/gsc-report.mts";
 
 const ISSUE_NAME_HEADERS = [
   "Reason",
@@ -43,26 +57,6 @@ const LIVE_CHECK_FIELDS = [
   "notes",
 ];
 
-export function compareText(a, b) {
-  const left = String(a ?? "");
-  const right = String(b ?? "");
-  const lowerLeft = left.toLowerCase();
-  const lowerRight = right.toLowerCase();
-  if (lowerLeft < lowerRight) return -1;
-  if (lowerLeft > lowerRight) return 1;
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
-}
-
-export function normalizeHeaderName(value) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/^\uFEFF/, "")
-    .replace(/[^a-z0-9]+/g, "");
-}
-
 function normalizeIssueKey(value) {
   return String(value ?? "")
     .trim()
@@ -74,99 +68,6 @@ function normalizeIssueKey(value) {
     .replace(/\b(csv|zip|xlsx|xls|table|metadata|drilldown|export)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function cleanPathLabel(value) {
-  const base = path.basename(String(value ?? ""));
-  return base
-    .replace(/\.(csv|zip|xlsx|xls)$/i, "")
-    .replace(/[_-]+/g, " ")
-    .trim();
-}
-
-function cleanStandaloneCsvIssueLabel(value) {
-  const base = path.basename(String(value ?? ""));
-  return base
-    .replace(/\.(csv|zip|xlsx|xls)$/i, "")
-    .replace(/_+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function displayPath(inputPath) {
-  const relative = path.relative(process.cwd(), inputPath);
-  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return inputPath;
-  return relative;
-}
-
-export function stripBom(value) {
-  return String(value ?? "").replace(/^\uFEFF/, "");
-}
-
-export function parseCsv(text) {
-  const input = stripBom(String(text ?? ""));
-  if (input.length === 0) return [];
-
-  const rows = [];
-  let row = [];
-  let cell = "";
-  let inQuotes = false;
-
-  for (let index = 0; index < input.length; index += 1) {
-    const char = input[index];
-
-    if (inQuotes) {
-      if (char === '"') {
-        if (input[index + 1] === '"') {
-          cell += '"';
-          index += 1;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        cell += char;
-      }
-      continue;
-    }
-
-    if (char === '"') {
-      inQuotes = true;
-    } else if (char === ",") {
-      row.push(cell);
-      cell = "";
-    } else if (char === "\n") {
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    } else if (char === "\r") {
-      if (input[index + 1] === "\n") index += 1;
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    } else {
-      cell += char;
-    }
-  }
-
-  if (cell.length > 0 || row.length > 0 || input.endsWith(",")) {
-    row.push(cell);
-    rows.push(row);
-  }
-
-  return rows.filter((candidate) => candidate.some((value) => value.trim().length > 0));
-}
-
-export function uniqueHeaders(headers) {
-  const seen = new Map();
-  return headers.map((header, index) => {
-    const trimmed = stripBom(String(header ?? "").trim()) || `column_${index + 1}`;
-    const key = normalizeHeaderName(trimmed) || `column${index + 1}`;
-    const count = seen.get(key) ?? 0;
-    seen.set(key, count + 1);
-    return count === 0 ? trimmed : `${trimmed}_${count + 1}`;
-  });
 }
 
 function csvRecords(text) {
@@ -203,36 +104,6 @@ function getField(record, candidates) {
 function hasHeader(headers, candidates) {
   const normalized = new Set(headers.map((header) => normalizeHeaderName(header)));
   return candidates.some((candidate) => normalized.has(normalizeHeaderName(candidate)));
-}
-
-export function isDigit(char) {
-  return char >= "0" && char <= "9";
-}
-
-export function firstNumberToken(value) {
-  const cleaned = String(value ?? "").replaceAll(",", "");
-  for (let index = 0; index < cleaned.length; index += 1) {
-    const char = cleaned[index] ?? "";
-    const startsNegativeNumber = char === "-" && isDigit(cleaned[index + 1] ?? "");
-    if (!isDigit(char) && !startsNegativeNumber) continue;
-
-    let end = index + (startsNegativeNumber ? 1 : 0);
-    let sawDot = false;
-    while (end < cleaned.length) {
-      const next = cleaned[end] ?? "";
-      if (isDigit(next)) {
-        end += 1;
-      } else if (next === "." && !sawDot) {
-        sawDot = true;
-        end += 1;
-      } else {
-        break;
-      }
-    }
-    const token = cleaned.slice(index, end);
-    return token === "-" || token === "." || token === "-." ? "" : token;
-  }
-  return "";
 }
 
 function parseCount(value) {
@@ -285,215 +156,6 @@ function severityRank(value) {
   if (value === "critical") return 0;
   if (value === "non-critical") return 1;
   return 2;
-}
-
-function normalizeZipEntryPath(value) {
-  return String(value ?? "")
-    .replaceAll("\\", "/")
-    .replace(/^\/+/, "")
-    .replace(/\/+$/, "");
-}
-
-function decodeZipName(buffer) {
-  return buffer.toString("utf8");
-}
-
-function findEndOfCentralDirectory(buffer) {
-  const signature = 0x06054b50;
-  const minimumOffset = Math.max(0, buffer.length - 65_557);
-  for (let offset = buffer.length - 22; offset >= minimumOffset; offset -= 1) {
-    if (buffer.readUInt32LE(offset) === signature) return offset;
-  }
-  return -1;
-}
-
-function readZipCsvEntries(buffer, zipPath) {
-  const notes = [];
-  const entries = [];
-  const eocdOffset = findEndOfCentralDirectory(buffer);
-  if (eocdOffset < 0) {
-    notes.push(`${zipPath}: unsupported ZIP file; central directory was not found.`);
-    return { entries, notes };
-  }
-
-  const totalEntries = buffer.readUInt16LE(eocdOffset + 10);
-  const centralDirectoryOffset = buffer.readUInt32LE(eocdOffset + 16);
-  let offset = centralDirectoryOffset;
-
-  for (let index = 0; index < totalEntries; index += 1) {
-    if (offset + 46 > buffer.length || buffer.readUInt32LE(offset) !== 0x02014b50) {
-      notes.push(`${zipPath}: unsupported ZIP file; central directory entry ${index + 1} is malformed.`);
-      break;
-    }
-
-    const flags = buffer.readUInt16LE(offset + 8);
-    const compressionMethod = buffer.readUInt16LE(offset + 10);
-    const compressedSize = buffer.readUInt32LE(offset + 20);
-    const uncompressedSize = buffer.readUInt32LE(offset + 24);
-    const fileNameLength = buffer.readUInt16LE(offset + 28);
-    const extraLength = buffer.readUInt16LE(offset + 30);
-    const commentLength = buffer.readUInt16LE(offset + 32);
-    const localHeaderOffset = buffer.readUInt32LE(offset + 42);
-    const nameStart = offset + 46;
-    const nameEnd = nameStart + fileNameLength;
-    const entryName = normalizeZipEntryPath(decodeZipName(buffer.subarray(nameStart, nameEnd)));
-    offset = nameEnd + extraLength + commentLength;
-
-    if (!entryName || entryName.endsWith("/")) continue;
-
-    const ext = path.posix.extname(entryName).toLowerCase();
-    const zipEntryLabel = `${zipPath}:${entryName}`;
-    if (UNSUPPORTED_SHEET_EXTENSIONS.has(ext)) {
-      notes.push(
-        `${zipEntryLabel}: XLSX/XLS parsing is unsupported without adding a dependency; export this GSC data as CSV or ZIP of CSV files.`,
-      );
-      continue;
-    }
-    if (ext !== CSV_EXT) continue;
-
-    if ((flags & 0x1) !== 0) {
-      notes.push(`${zipEntryLabel}: encrypted ZIP entries are unsupported; skipped.`);
-      continue;
-    }
-    if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff) {
-      notes.push(`${zipEntryLabel}: ZIP64 entries are unsupported; skipped.`);
-      continue;
-    }
-    if (compressionMethod !== 0 && compressionMethod !== 8) {
-      notes.push(`${zipEntryLabel}: ZIP compression method ${compressionMethod} is unsupported; skipped.`);
-      continue;
-    }
-    if (localHeaderOffset + 30 > buffer.length || buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) {
-      notes.push(`${zipEntryLabel}: local ZIP header is malformed; skipped.`);
-      continue;
-    }
-
-    const localNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
-    const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28);
-    const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
-    const dataEnd = dataStart + compressedSize;
-    if (dataEnd > buffer.length) {
-      notes.push(`${zipEntryLabel}: compressed payload is truncated; skipped.`);
-      continue;
-    }
-
-    const compressed = buffer.subarray(dataStart, dataEnd);
-    const payload = compressionMethod === 8 ? inflateRawSync(compressed) : compressed;
-    entries.push({ entryName, buffer: payload, sourceLabel: zipEntryLabel });
-  }
-
-  return { entries, notes };
-}
-
-function addCsvEntry(collected, inputPath, containerPath, containerName, relativePath, buffer, sourceLabel) {
-  const normalizedRelativePath = normalizeZipEntryPath(relativePath);
-  collected.entries.push({
-    inputPath,
-    containerPath,
-    containerName,
-    relativePath: normalizedRelativePath,
-    fileName: path.posix.basename(normalizedRelativePath),
-    sourceLabel,
-    text: buffer.toString("utf8"),
-  });
-}
-
-function addUnsupportedSheetNote(notes, label) {
-  notes.push(
-    `${label}: XLSX/XLS parsing is unsupported without adding a dependency; export this GSC data as CSV or ZIP of CSV files.`,
-  );
-}
-
-function collectFromFile(filePath, collected, options = {}) {
-  const ext = path.extname(filePath).toLowerCase();
-  const inputPath = options.inputPath ?? filePath;
-  const sourceLabel = options.sourceLabel ?? displayPath(filePath);
-
-  if (ext === CSV_EXT) {
-    const relativePath = options.relativePath ?? path.basename(filePath);
-    const containerPath = options.containerPath ?? filePath;
-    const containerName = options.containerName ?? cleanPathLabel(filePath);
-    addCsvEntry(collected, inputPath, containerPath, containerName, relativePath, readFileSync(filePath), sourceLabel);
-    return;
-  }
-
-  if (ext === ZIP_EXT) {
-    const zipBuffer = readFileSync(filePath);
-    const zipPathLabel = sourceLabel;
-    const zipContainerName = cleanPathLabel(filePath);
-    const { entries, notes } = readZipCsvEntries(zipBuffer, zipPathLabel);
-    collected.notes.push(...notes);
-    for (const entry of entries) {
-      addCsvEntry(collected, inputPath, filePath, zipContainerName, entry.entryName, entry.buffer, entry.sourceLabel);
-    }
-    return;
-  }
-
-  if (UNSUPPORTED_SHEET_EXTENSIONS.has(ext)) {
-    addUnsupportedSheetNote(collected.notes, sourceLabel);
-  }
-}
-
-function walkDirectory(directoryPath, collected, inputPath, rootDirectory) {
-  const entries = readdirSync(directoryPath, { withFileTypes: true }).sort((left, right) =>
-    compareText(left.name, right.name),
-  );
-  for (const entry of entries) {
-    const absolutePath = path.join(directoryPath, entry.name);
-    if (entry.isDirectory()) {
-      walkDirectory(absolutePath, collected, inputPath, rootDirectory);
-      continue;
-    }
-    if (!entry.isFile()) continue;
-
-    const relativePath = path.relative(rootDirectory, absolutePath).replaceAll(path.sep, "/");
-    const ext = path.extname(entry.name).toLowerCase();
-    if (ext === CSV_EXT) {
-      const fileName = path.posix.basename(relativePath).toLowerCase();
-      const isStandaloneCsv = !KNOWN_GSC_FILES.has(fileName);
-      addCsvEntry(
-        collected,
-        inputPath,
-        isStandaloneCsv ? absolutePath : rootDirectory,
-        isStandaloneCsv ? cleanStandaloneCsvIssueLabel(absolutePath) : cleanPathLabel(rootDirectory),
-        isStandaloneCsv ? path.basename(absolutePath) : relativePath,
-        readFileSync(absolutePath),
-        displayPath(absolutePath),
-      );
-    } else if (ext === ZIP_EXT) {
-      collectFromFile(absolutePath, collected, { inputPath, sourceLabel: displayPath(absolutePath) });
-    } else if (UNSUPPORTED_SHEET_EXTENSIONS.has(ext)) {
-      addUnsupportedSheetNote(collected.notes, displayPath(absolutePath));
-    }
-  }
-}
-
-export function collectInputEntries(inputPaths) {
-  const collected = { entries: [], notes: [], inputs: [] };
-  const resolvedInputs = inputPaths.map((inputPath) => path.resolve(inputPath)).sort(compareText);
-
-  for (const inputPath of resolvedInputs) {
-    collected.inputs.push(displayPath(inputPath));
-    if (!existsSync(inputPath)) {
-      collected.notes.push(`${displayPath(inputPath)}: input path does not exist; skipped.`);
-      continue;
-    }
-
-    const stats = statSync(inputPath);
-    if (stats.isDirectory()) {
-      walkDirectory(inputPath, collected, inputPath, inputPath);
-    } else if (stats.isFile()) {
-      collectFromFile(inputPath, collected, { inputPath, sourceLabel: displayPath(inputPath) });
-    }
-  }
-
-  collected.entries.sort((left, right) => {
-    const byContainer = compareText(left.containerPath, right.containerPath);
-    if (byContainer !== 0) return byContainer;
-    return compareText(left.relativePath, right.relativePath);
-  });
-  collected.notes = [...new Set(collected.notes)].sort(compareText);
-  return collected;
 }
 
 function groupEntries(entries) {
@@ -807,69 +469,33 @@ export function renderGscCoverageReport(report) {
     ],
   });
 
-  lines.push("Chart snapshots:");
-  if (report.charts.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const chart of report.charts) {
-      const metricSuffix = chart.latestMetrics.length > 0 ? ` | latest=${chart.latestMetrics.join(", ")}` : "";
-      const dateSuffix = chart.latestDate ? ` | latestDate=${chart.latestDate}` : "";
-      lines.push(`- ${chart.sourceLabel} | rows=${chart.rowCount}${dateSuffix}${metricSuffix}`);
-    }
-  }
-  lines.push("");
+  appendGscReportSection(lines, "Chart snapshots:", report.charts, (chart) => {
+    const metricSuffix = chart.latestMetrics.length > 0 ? ` | latest=${chart.latestMetrics.join(", ")}` : "";
+    const dateSuffix = chart.latestDate ? ` | latestDate=${chart.latestDate}` : "";
+    return `${chart.sourceLabel} | rows=${chart.rowCount}${dateSuffix}${metricSuffix}`;
+  });
 
-  lines.push("Issue counts:");
-  if (report.issueCounts.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const issue of report.issueCounts) {
-      lines.push(
-        `- [${issue.severity}] ${issue.issueName} | pages=${formatPages(issue.pages)} | exportRows=${issue.rows.length}` +
-          formatValues("source", issue.sourceValues) +
-          formatValues("validation", issue.validationValues) +
-          formatValues("trend", issue.trendValues),
-      );
-    }
-  }
-  lines.push("");
+  appendGscReportSection(lines, "Issue counts:", report.issueCounts, (issue) =>
+    `[${issue.severity}] ${issue.issueName} | pages=${formatPages(issue.pages)} | exportRows=${issue.rows.length}` +
+    formatValues("source", issue.sourceValues) +
+    formatValues("validation", issue.validationValues) +
+    formatValues("trend", issue.trendValues),
+  );
 
-  lines.push("Drilldown issue mapping:");
-  if (report.drilldowns.length === 0) {
-    lines.push("- none");
-  } else {
-    const issueKeys = new Set(report.issueCounts.map((issue) => issue.issueKey));
-    for (const drilldown of report.drilldowns) {
-      const matched = issueKeys.has(drilldown.issueKey) ? "yes" : "no";
-      lines.push(
-        `- ${drilldown.issueName} | urls=${drilldown.urlCount} | pathQueryGroups=${drilldown.urlGroups.length} | matchedIssue=${matched} | source=${drilldown.sourceLabel}`,
-      );
-    }
-  }
-  lines.push("");
+  const issueKeys = new Set(report.issueCounts.map((issue) => issue.issueKey));
+  appendGscReportSection(lines, "Drilldown issue mapping:", report.drilldowns, (drilldown) => {
+    const matched = issueKeys.has(drilldown.issueKey) ? "yes" : "no";
+    return `${drilldown.issueName} | urls=${drilldown.urlCount} | pathQueryGroups=${drilldown.urlGroups.length} | matchedIssue=${matched} | source=${drilldown.sourceLabel}`;
+  });
 
-  lines.push("URL groups by path/query key:");
-  if (report.urlGroups.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const group of report.urlGroups) {
-      const samples = group.urls.slice(0, 3).join(", ");
-      lines.push(`- ${group.key} | urls=${group.urls.length} | issues=${group.issues.join(", ")} | samples=${samples}`);
-    }
-  }
-  lines.push("");
+  appendGscReportSection(lines, "URL groups by path/query key:", report.urlGroups, (group) => {
+    const samples = group.urls.slice(0, 3).join(", ");
+    return `${group.key} | urls=${group.urls.length} | issues=${group.issues.join(", ")} | samples=${samples}`;
+  });
 
-  lines.push("Missing drilldowns:");
-  if (report.missingDrilldowns.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const issue of report.missingDrilldowns) {
-      lines.push(
-        `- [${issue.severity}] ${issue.issueName} | pages=${formatPages(issue.pages)} | expected=export matching Table.csv drilldown before URL-level triage`,
-      );
-    }
-  }
-  lines.push("");
+  appendGscReportSection(lines, "Missing drilldowns:", report.missingDrilldowns, (issue) =>
+    `[${issue.severity}] ${issue.issueName} | pages=${formatPages(issue.pages)} | expected=export matching Table.csv drilldown before URL-level triage`,
+  );
 
   lines.push("Manual live-check plan fields:");
   lines.push(`- ${LIVE_CHECK_FIELDS.join(", ")}`);
@@ -889,36 +515,38 @@ export function renderGscCoverageReport(report) {
 }
 
 function usage() {
-  return [
+  return formatGscUsage([
     "Usage: npm run analyze:gsc-coverage -- <gsc-export-dir-or-file> [...more paths]",
     "",
     "Accepts GSC coverage/drilldown directories, ZIP files, CSV files, and XLSX/XLS files.",
     "XLSX/XLS files are reported as unsupported unless the data is exported as CSV; this script does not add dependencies.",
-  ].join("\n");
+  ]);
 }
 
 export async function runCli(argv = process.argv.slice(2), stdout = process.stdout, stderr = process.stderr) {
   const args = [];
   for (const arg of argv) {
     if (arg === "--help" || arg === "-h") {
-      stdout.write(`${usage()}\n`);
+      writeGscUsage(stdout, usage());
       return 0;
     }
     if (arg.startsWith("-")) {
-      stderr.write(`Unknown option: ${arg}\n\n${usage()}\n`);
+      writeGscUnknownOption(stderr, arg, usage());
       return 1;
     }
     args.push(arg);
   }
 
   if (args.length === 0) {
-    stderr.write(`${usage()}\n`);
+    writeGscUsage(stderr, usage());
     return 1;
   }
 
-  const report = await analyzeGscCoverageInputs(args);
-  stdout.write(renderGscCoverageReport(report));
-  return 0;
+  return runGscCli(async () => {
+    const report = await analyzeGscCoverageInputs(args);
+    stdout.write(renderGscCoverageReport(report));
+    return 0;
+  }, stderr);
 }
 
 runAsyncDirect(import.meta.url, process.argv[1], runCli);

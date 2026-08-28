@@ -1,6 +1,6 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleApiKeyAuditLog } from "../api-key-audit-log";
 
@@ -53,6 +53,35 @@ describe("api-key-audit-log handler", () => {
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?apiKeyId=7");
     const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
     expect(response.status).toBe(200);
+  });
+
+  it("uses the configured default and maximum limits", async () => {
+    const defaultDb = mockD1([{ match: "FROM api_key_audit_log", rows: [] }]);
+    await handleApiKeyAuditLog({
+      db: defaultDb,
+      trustedAdmin: true,
+      request: new Request("https://api.pharos.watch/api/api-keys/audit-log"),
+    });
+    expect(defaultDb.getHistory()[0]?.binds).toEqual([50]);
+
+    const maximumDb = mockD1([{ match: "FROM api_key_audit_log", rows: [] }]);
+    await handleApiKeyAuditLog({
+      db: maximumDb,
+      trustedAdmin: true,
+      request: new Request("https://api.pharos.watch/api/api-keys/audit-log?limit=200"),
+    });
+    expect(maximumDb.getHistory()[0]?.binds).toEqual([200]);
+  });
+
+  it("returns an empty page without changing the no-store contract", async () => {
+    const db = mockD1([{ match: "FROM api_key_audit_log", rows: [] }]);
+    const response = await handleApiKeyAuditLog({
+      db,
+      trustedAdmin: true,
+      request: new Request("https://api.pharos.watch/api/api-keys/audit-log"),
+    });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ entries: [] });
   });
 
   it("rejects partially numeric limit filters", async () => {

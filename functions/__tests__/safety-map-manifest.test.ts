@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { KVNamespace } from "@cloudflare/workers-types";
+import type { SafetyMapContext } from "../lib/safety-map";
 import { makeKV } from "./helpers/mock-kv";
 import { onRequest } from "../safety-scores/map.json.ts";
 
-function context(request: Request, env: { SELECTOR_SNAPSHOTS?: KVNamespace }) {
+function context(request: Request, env: { SELECTOR_SNAPSHOTS?: KVNamespace }): SafetyMapContext {
   return { request, env };
 }
 

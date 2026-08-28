@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowUpRight, DownloadIcon } from "lucide-react";
+import { ArrowUpRight, DownloadIcon } from "lucide-react";
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import { YieldCompareTray } from "@/components/yield-compare-tray";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
@@ -17,6 +17,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { TableSourceLink } from "@/components/table/client";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
+import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useYieldRankings } from "@/hooks/api-hooks";
@@ -24,25 +25,20 @@ import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { computePysBreakdown, formatYieldWarningSignal, getPysColor } from "@/lib/yield-constants";
-import {
-  formatYieldSourceRiskSummary,
-  getYieldSourceDepthDisplay,
-  isNativeYieldSource,
-} from "@/lib/yield-source-risk";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
-import {
-  YIELD_OPPORTUNITY_SAFETY_DESCRIPTION,
-  isOpportunityDerivedSafety,
-} from "@shared/lib/yield-opportunity-provenance";
+import { formatYieldWarningSignal } from "@/lib/yield-constants";
+import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
+import { formatPercent, formatScore } from "@shared/lib/format";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
+import {
+  YieldRankChangeChip,
+  YieldSafetyBadge,
+  YieldSignalsIndicator,
+  deriveYieldRowDisplay,
+} from "@/components/yield-leaderboard-row-parts";
 import { trackEvent } from "@/lib/analytics";
 import {
-  deriveYieldRowPresentation,
-  getYieldWorkbenchSourceRole,
   isYieldBenchmarkFallback,
 } from "@/lib/yield-workbench-row";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
@@ -467,25 +463,17 @@ export function YieldMobileCard({
   onOpenSourceSheet: (stablecoinId: string) => void;
   onToggleCompare: (stablecoinId: string) => void;
 }) {
-  const pysColor = getPysColor(row.pharosYieldScore);
-  const grade = row.safetyGrade;
-  const safetyScore = row.safetyScore;
-  const stabilityPct = row.yieldStability !== null ? Math.round(row.yieldStability * 100) : null;
-  const sourceRole = getYieldWorkbenchSourceRole(row);
-  // Native rows have no venue to size apart from the asset itself: a null TVL
-  // there is "not applicable", not a measurement we missed.
-  const tvlIsNative = row.sourceTvlUsd === null && isNativeYieldSource(sourceRole, row.yieldType);
-  const tvlLabel =
-    row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : tvlIsNative ? "Native" : "—";
-  const depthDisplay = getYieldSourceDepthDisplay({
-    depthLens: row.sourceDepthLens,
-    yieldType: row.yieldType,
-    sourceRole,
-    sourceTvlUsd: row.sourceTvlUsd,
-  });
-  const warningCount = row.warningSignals.length;
-  const sourceRiskSummary = formatYieldSourceRiskSummary(row.sourceRisk);
   const {
+    pysColor,
+    grade,
+    safetyScore,
+    stabilityPct,
+    safetySrLabel,
+    tvlIsNative,
+    tvlLabel,
+    depthDisplay,
+    warningCount,
+    sourceRiskSummary,
     confidenceStyle,
     confidenceLabel,
     freshness,
@@ -498,19 +486,19 @@ export function YieldMobileCard({
     availableSources,
     altSourceCount,
     benchmarkReferenceText,
-  } = deriveYieldRowPresentation(row);
-
-  // WHY: only used when expanded with a non-null PYS; cheap to compute inline rather than extracting a helper.
-  const { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult } = computePysBreakdown(
-    row.apy30d,
-    safetyScore,
-    row.yieldStability,
-    row.benchmarkRate,
-    row.sourceRisk?.sourceRiskPenalty ?? null,
-  );
+    breakdown: { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult },
+  } = useMemo(() => deriveYieldRowDisplay(row, 1), [row]);
 
   return (
     <article
+      data-yield-row-display={row.id}
+      data-yield-grade={grade ?? "NR"}
+      data-yield-safety-score={safetyScore ?? ""}
+      data-yield-pys={row.pharosYieldScore ?? ""}
+      data-yield-source-risk={sourceRiskScore ?? ""}
+      data-yield-freshness={freshness?.displayText ?? ""}
+      data-yield-warning-count={warningCount}
+      data-yield-benchmark={benchmarkReferenceText}
       className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-amber-500/60" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -555,27 +543,7 @@ export function YieldMobileCard({
             {row.pharosYieldScore !== null ? (
               <>
                 <span>PYS {formatScore(row.pharosYieldScore)}</span>
-                {rankChip ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span
-                        className={`inline-flex cursor-help items-center gap-0.5 rounded-full border border-border/40 bg-background/60 px-1.5 py-0 text-[10px] font-medium ${rankChip.colorClass}`}
-                        aria-label={`Rank change: ${rankChip.signedRank}, driver ${rankChip.short}`}
-                      >
-                        <span aria-hidden="true">{rankChip.arrow}</span>
-                        <span className="font-mono tabular-nums">{rankChip.signedRank}</span>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[240px] text-[11px]">
-                      <span className="block">{rankChip.long}</span>
-                      {rankChip.pysDeltaLabel ? (
-                        <span className="block font-mono tabular-nums text-muted-foreground">
-                          {rankChip.pysDeltaLabel}
-                        </span>
-                      ) : null}
-                    </TooltipContent>
-                  </Tooltip>
-                ) : null}
+                {rankChip ? <YieldRankChangeChip rankChip={rankChip} compact /> : null}
                 <YieldCohortChip cohort={row.cohortPercentile} />
               </>
             ) : pysNullReasonText ? (
@@ -594,24 +562,13 @@ export function YieldMobileCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {confidenceStyle && confidenceLabel ? <span className={confidenceStyle.pill}>{confidenceLabel}</span> : null}
-        {grade && grade !== "NR" ? (
-          <Badge
-            variant="outline"
-            className={`px-1.5 py-0.5 text-[10px] font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
-            title={
-              isOpportunityDerivedSafety(row.provenance?.safetyProvenance)
-                ? YIELD_OPPORTUNITY_SAFETY_DESCRIPTION
-                : undefined
-            }
-          >
-            {grade}
-            {isOpportunityDerivedSafety(row.provenance?.safetyProvenance) ? (
-              <span aria-hidden="true" className="ml-0.5 align-super text-[8px] leading-none">
-                {"\u2020"}
-              </span>
-            ) : null}
-          </Badge>
-        ) : null}
+        <YieldSafetyBadge
+          grade={grade}
+          safetyScore={safetyScore}
+          safetySrLabel={safetySrLabel}
+          opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+          compact
+        />
         <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
           {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
         </Badge>
@@ -627,51 +584,17 @@ export function YieldMobileCard({
           </MobileMetricPill>
         ) : null}
         {freshness ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <MobileMetricPill className={`cursor-help ${freshness.textClassName}`}>
-                {freshness.displayText}
-              </MobileMetricPill>
-            </TooltipTrigger>
-            <TooltipContent className="text-[11px]">
-              {freshness.tooltipText}
-            </TooltipContent>
-          </Tooltip>
+          <YieldFreshnessLabel
+            freshness={freshness}
+            render={({ className, label }) => <MobileMetricPill className={className}>{label}</MobileMetricPill>}
+          />
         ) : null}
-        {warningCount > 0 ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex cursor-help items-center gap-1 text-amber-700 dark:text-amber-400">
-                <AlertTriangle
-                  className={
-                    warningCount >= 2 ? "h-3.5 w-3.5 fill-amber-500/20 text-amber-500" : "h-3.5 w-3.5 text-amber-500"
-                  }
-                  aria-hidden="true"
-                />
-                <span>{`${warningCount} warning${warningCount === 1 ? "" : "s"}`}</span>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-[260px] text-[11px]">
-              {sourceRiskMaterial
-                ? `${warningCount} warning signal${warningCount === 1 ? "" : "s"} + source-risk ${(rawSourceRiskPenalty ?? 0).toFixed(2)}×`
-                : `${warningCount} warning signal${warningCount === 1 ? "" : "s"}`}
-            </TooltipContent>
-          </Tooltip>
-        ) : sourceRiskMaterial ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex cursor-help items-center gap-1 text-amber-700/80 dark:text-amber-400/80">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-500/70" aria-hidden="true" />
-                <span>Source-risk</span>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-[260px] text-[11px]">
-              Source-risk penalty {(rawSourceRiskPenalty ?? 0).toFixed(2)}× (no warning signals)
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <span>No warnings</span>
-        )}
+        <YieldSignalsIndicator
+          row={row}
+          sourceRiskMaterial={sourceRiskMaterial}
+          rawSourceRiskPenalty={rawSourceRiskPenalty}
+          variant="mobile"
+        />
       </div>
 
       <div className="mt-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2 text-xs text-muted-foreground">

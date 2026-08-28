@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const {
   sleepWithSignalMock,
@@ -206,6 +206,34 @@ describe("fetchWithRetry", () => {
     expect(res?.ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(cancel).toHaveBeenCalledTimes(1);
+    expect(sleepWithSignalMock).toHaveBeenCalledWith(5000, undefined);
+  });
+
+  it("preserves fallback backoff for a malformed Retry-After header", async () => {
+    mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: "rate limited", status: 429, headers: { "Retry-After": "later-ish" } },
+        { body: { ok: true } },
+      ],
+    }]);
+
+    await fetchWithRetry("https://example.com/token", undefined, 1);
+
+    expect(sleepWithSignalMock).toHaveBeenCalledWith(5000, undefined);
+  });
+
+  it("preserves fallback backoff for a negative Retry-After header", async () => {
+    mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: "rate limited", status: 429, headers: { "Retry-After": "-1" } },
+        { body: { ok: true } },
+      ],
+    }]);
+
+    await fetchWithRetry("https://example.com/token", undefined, 1);
+
     expect(sleepWithSignalMock).toHaveBeenCalledWith(5000, undefined);
   });
 

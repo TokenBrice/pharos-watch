@@ -11,7 +11,7 @@ import {
   PUBLIC_API_KEY_HEADER,
   PUBLIC_API_RETRY_GUIDANCE,
 } from "@shared/lib/public-api-contract";
-import { errorResponse, jsonResponse } from "../../lib/api-utils";
+import { errorResponse, jsonResponse } from "../../lib/api-response";
 
 const SELF_SERVE_PENDING_MESSAGE = "If this address can receive verification email, check your inbox to continue.";
 

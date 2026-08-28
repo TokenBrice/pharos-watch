@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { escapeXml, renderRss20, toRfc822 } from "./rss";
+import { createRssRoute, escapeXml, renderRss20, rssResponse, toRfc822 } from "./rss";
 
 describe("rss helpers", () => {
   it("escapes XML special characters", () => {
@@ -54,5 +54,29 @@ describe("rss helpers", () => {
     // CDATA must keep `]]>` from breaking the section.
     expect(xml).toContain("<![CDATA[<p>body with ]]]]><![CDATA[>");
     expect(xml).toContain("]]>");
+  });
+
+  it("assembles route output byte-identically to a direct RSS response", async () => {
+    const items = [{
+      title: "One & Only",
+      link: "https://example.com/one/",
+      description: "<p>Body</p>",
+      guid: "example:one",
+      pubDate: "Thu, 01 Jan 1970 00:00:00 GMT",
+    }];
+    const feed = {
+      title: "Example Feed",
+      link: "https://example.com/",
+      feedUrl: "https://example.com/feed.xml",
+      description: "Example description",
+      language: "en-US",
+      items,
+    };
+
+    const expected = rssResponse(feed);
+    const actual = await createRssRoute({ ...feed, items: () => items })();
+
+    expect(await actual.text()).toBe(await expected.text());
+    expect(Array.from(actual.headers.entries())).toEqual(Array.from(expected.headers.entries()));
   });
 });

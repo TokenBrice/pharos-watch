@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SOURCE_RISK_GOLDEN_ROWS,
   type YieldSourceRiskGoldenCaseId,
-} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+} from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
 import { buildHistoryKey, evaluateYieldSources, evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";

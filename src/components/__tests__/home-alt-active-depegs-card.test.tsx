@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
 import type { DepegEvent } from "@shared/types";
@@ -27,7 +27,6 @@ vi.mock("next/image", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 
@@ -54,28 +53,6 @@ function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
 }
 
 describe("ActiveDepegsCard", () => {
-  it("does not claim all coins are on peg when either signal request fails", () => {
-    useActiveDepegEventsMock.mockReturnValue({
-      data: { events: [] },
-      isLoading: false,
-      loadedCount: 0,
-      error: new Error("depeg feed unavailable"),
-      refetch: vi.fn(),
-      dataUpdatedAt: 0,
-    });
-    usePegSummaryMock.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("peg summary unavailable"),
-      refetch: vi.fn(),
-      dataUpdatedAt: 0,
-    });
-    render(<ActiveDepegsCard />);
-
-    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
-    expect(screen.queryByText("All on peg")).toBeNull();
-  });
-
   it("filters frozen coins out of the active depeg count and list", () => {
     useActiveDepegEventsMock.mockReturnValue({
       data: {

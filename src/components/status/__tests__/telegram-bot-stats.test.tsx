@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { CronStatus, StatusResponse } from "@shared/types";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
@@ -151,7 +151,6 @@ function renderWorkbench(input?: {
   return render(<TelegramBotStats model={model} />);
 }
 
-afterEach(cleanup);
 
 describe("TelegramBotStats", () => {
   it("leads with delivery evidence in the model priority order and separates audience coverage", () => {

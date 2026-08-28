@@ -1,18 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import {
-  LineChart,
-  Line,
-  ResponsiveContainer,
-} from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { ChartLegendChip, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartLegendChip } from "@/components/chart-primitives/axes";
+import { MultiSeriesLineChart, mergeMultiSeriesData } from "@/components/chart-primitives/multi-series-line-chart";
 import { formatChartDate, formatChartPercent } from "@shared/lib/format";
-import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
 import type { SupplySeriesEntry } from "@/lib/compare-derive";
 
 interface ComparisonChartProps {
@@ -35,7 +30,7 @@ export function ComparisonChart({
   const [normalized, setNormalized] = useState(false);
   // Merge all series into a single array keyed by timestamp
   const mergedData = useMemo(
-    () => mergeSeriesByTimestamp(series, (d) => d.value),
+    () => mergeMultiSeriesData(series, (d) => d.value),
     [series],
   );
 
@@ -145,44 +140,25 @@ export function ComparisonChart({
         )}
         {displayData.length > 0 ? (
           <div className="pharos-chart-stage">
-            <div
+            <MultiSeriesLineChart
+              series={series}
+              getValue={(datum) => datum.value}
+              data={displayData}
+              ariaLabel={`${title} comparison chart with ${series.length} series`}
               className="h-[300px] sm:h-[400px]"
-              role="figure"
-              aria-label={`${title} comparison chart with ${series.length} series`}
-            >
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <LineChart
-                  data={displayData}
-                  margin={{ top: 8, right: 8, bottom: 16, left: 0 }}
-                >
-                  <TimeGrid />
-                  <TimeXAxis
-                    dataKey="ts"
-                    minTickGap={72}
-                    tickFormatter={formatTimestamp}
-                  />
-                  <MonoYAxis tickFormatter={activeFormatter} />
-                  <DateTooltip
-                    formatter={(value, name) => {
-                      const match = series.find((s) => s.id === name);
-                      return [activeFormatter(Number(value)), match?.label ?? String(name ?? "")];
-                    }}
-                  />
-                  {series.map((s) => (
-                    <Line
-                      key={s.id}
-                      type="monotone"
-                      dataKey={s.id}
-                      name={s.id}
-                      stroke={s.color}
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+              height="100%"
+              margin={{ top: 8, right: 8, bottom: 16, left: 0 }}
+              xTickFormatter={formatTimestamp}
+              yTickFormatter={activeFormatter}
+              valueFormatter={activeFormatter}
+              tooltipLabelFormatter={(timestamp) => formatChartDate(timestamp, "short")}
+              tableDateFormatter={(timestamp) => formatChartDate(timestamp, "short")}
+              tableCaption={(rows, truncated, total) => truncated
+                ? `${title} comparison — most recent ${rows.length} of ${total} data points`
+                : `${title} comparison — ${total} data points`}
+              minTickGap={72}
+              showGrid
+            />
           </div>
         ) : (
           <div className="pharos-empty-note flex h-[300px] sm:h-[400px] items-center justify-center text-center">

@@ -4,7 +4,7 @@ import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { type BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
   upsertBlacklistCurrentBalance: vi.fn(),

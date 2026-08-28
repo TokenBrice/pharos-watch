@@ -15,6 +15,7 @@ import {
   formatCurrency,
   formatCompactCount,
   formatCompactUsd,
+  formatCompactUsdWithOptions,
   formatCompactUsdShort,
   formatCompactUsdShortLowerK,
   formatSignedCompactUsd,
@@ -165,6 +166,41 @@ describe("formatCurrency", () => {
   it("returns N/A for NaN", () => expect(formatCurrency(NaN)).toBe("N/A"));
   it("returns N/A for Infinity", () => expect(formatCurrency(Infinity)).toBe("N/A"));
   it("respects custom decimals", () => expect(formatCurrency(1.2345e9, 3)).toBe("$1.234B"));
+});
+
+describe("formatCompactUsdWithOptions", () => {
+  const profile = {
+    decimals: { trillion: 1, billion: 1, million: 1, thousand: 0, unit: 0 },
+    invalidFallback: "n/a",
+    trimTrailingZeros: true,
+    useGrouping: true,
+  } as const;
+
+  it("pins tier, unit, sign, and invalid output bytes", () => {
+    expect(formatCompactUsdWithOptions(1_250_000_000_000, profile)).toBe("$1.3T");
+    expect(formatCompactUsdWithOptions(2_000_000_000, profile)).toBe("$2B");
+    expect(formatCompactUsdWithOptions(3_500_000, profile)).toBe("$3.5M");
+    expect(formatCompactUsdWithOptions(4_200, profile)).toBe("$4K");
+    expect(formatCompactUsdWithOptions(999, profile)).toBe("$999");
+    expect(formatCompactUsdWithOptions(-2_500_000, profile)).toBe("-$2.5M");
+    expect(formatCompactUsdWithOptions(null, profile)).toBe("n/a");
+    expect(formatCompactUsdWithOptions(Infinity, profile)).toBe("n/a");
+  });
+
+  it("supports capped tiers, lowercase k, and explicit sign placement", () => {
+    expect(formatCompactUsdWithOptions(1_250_000_000_000, {
+      ...profile,
+      maximumTier: "billion",
+    })).toBe("$1,250B");
+    expect(formatCompactUsdWithOptions(12_500, {
+      ...profile,
+      thousandSuffix: "k",
+    })).toBe("$13k");
+    expect(formatCompactUsdWithOptions(-2_000_000, {
+      ...profile,
+      signPosition: "after-currency",
+    })).toBe("$-2M");
+  });
 });
 
 describe("formatSignedCurrency", () => {

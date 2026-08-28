@@ -1,7 +1,6 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineRecordEntries } from "./factory";
+import { defineRecordEntries, finalizeBackstopRegistry } from "./factory";
 import {
-  applyTrackedReviewedDocs,
   basketRedeemBase,
   documentedBoundSupplyFull,
   documentedVariableFee,
@@ -28,7 +27,7 @@ const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 const REVIEWED_MENTO_XOFM_PSM_AT = "2026-07-27";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_BASKET_REDEMPTION_AT);
 
-export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "cusd-cap": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
@@ -633,13 +632,13 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
 };
 
-applyTrackedReviewedDocs(
-  PSM_AND_BASKET_BACKSTOP_CONFIGS,
-  ["dai-makerdao", "usds-sky", "dusd-alto"],
-  REVIEWED_REMEDIATION_AT,
+const FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
+  defineRecordEntries(RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS),
+  [
+    { stablecoinIds: ["dai-makerdao", "usds-sky", "dusd-alto"], reviewedAt: REVIEWED_REMEDIATION_AT },
+    { stablecoinIds: ["usd3-reserve-protocol"], reviewedAt: REVIEWED_RESERVE_PROTOCOL_DTF_AT },
+  ],
 );
 
-applyTrackedReviewedDocs(PSM_AND_BASKET_BACKSTOP_CONFIGS, ["usd3-reserve-protocol"], REVIEWED_RESERVE_PROTOCOL_DTF_AT);
-
-/** Declared after the doc backfills above so the entries carry the finished configs. */
-export const PSM_AND_BASKET_BACKSTOP_ENTRIES = defineRecordEntries(PSM_AND_BASKET_BACKSTOP_CONFIGS);
+export const PSM_AND_BASKET_BACKSTOP_CONFIGS = FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY.configs;
+export const PSM_AND_BASKET_BACKSTOP_ENTRIES = FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY.entries;

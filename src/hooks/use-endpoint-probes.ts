@@ -314,26 +314,37 @@ export async function collectEndpointProbes(
  */
 export type EndpointProbeMode = "full" | "critical";
 
+function useEndpointProbeQuery(
+  key: readonly unknown[],
+  paths: readonly string[],
+  enabled: boolean,
+): UseQueryResult<EndpointProbeResult[], Error> {
+  return usePollingQuery(
+    key,
+    ({ signal }) => collectEndpointProbes(paths, signal),
+    CRON_1MIN,
+    { enabled, retry: 0 },
+  );
+}
+
 export function useEndpointProbes(
   options: { enabled?: boolean; mode?: EndpointProbeMode } = {},
 ): UseQueryResult<EndpointProbeResult[], Error> {
   const mode = options.mode ?? "full";
   const paths = mode === "critical" ? CRITICAL_ENDPOINTS : ALL_ENDPOINTS;
-  return usePollingQuery(
+  return useEndpointProbeQuery(
     mode === "critical" ? ["endpoint-probes", "ops-proxy", "critical"] : ["endpoint-probes", "ops-proxy"],
-    ({ signal }) => collectEndpointProbes(paths, signal),
-    CRON_1MIN,
-    { enabled: options.enabled ?? true, retry: 0 },
+    paths,
+    options.enabled ?? true,
   );
 }
 
 export function usePublicEndpointProbes(
   options: { enabled?: boolean } = {},
 ): UseQueryResult<EndpointProbeResult[], Error> {
-  return usePollingQuery(
+  return useEndpointProbeQuery(
     ["endpoint-probes", "public"],
-    ({ signal }) => collectEndpointProbes(PUBLIC_ENDPOINTS, signal),
-    CRON_1MIN,
-    { enabled: options.enabled ?? true, retry: 0 },
+    PUBLIC_ENDPOINTS,
+    options.enabled ?? true,
   );
 }

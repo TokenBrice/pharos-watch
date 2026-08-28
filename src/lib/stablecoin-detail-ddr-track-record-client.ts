@@ -17,11 +17,10 @@ import {
   MUTED_TONE,
   RED_TONE,
   SKY_TONE,
-  ddrSourceEventStateToActualOutcome,
   formatDdrSignedDuration,
-  isDdrCorrectVerdict,
-  isDdrMissVerdict,
+  getActualOutcome,
   isDdrScoredVerdict,
+  summarizePredictionRows,
 } from "@/lib/depeg-resolver-review-presentation";
 
 /**
@@ -71,14 +70,6 @@ export interface DdrTrackRecordSummary {
 
 /** Incident rows rendered inline; the rest fold into a count with a /depeg link. */
 const INCIDENT_DISPLAY_LIMIT = 6;
-
-function getActualOutcomeLabel(row: DdrrRow): string {
-  const outcome =
-    row.kind === "prediction_review" || row.kind === "no_call_review"
-      ? row.actual.kind
-      : ddrSourceEventStateToActualOutcome(row.sourceEventState);
-  return DDR_OUTCOME_LABELS[outcome];
-}
 
 function getOutcomeChip(row: DdrrRow): { label: string; toneClass: string } {
   switch (row.kind) {
@@ -176,6 +167,7 @@ export function projectDdrTrackRecordSummary(
 
   const predictionRows = rows.filter((row) => row.kind === "prediction_review");
   const scoredRows = predictionRows.filter((row) => isDdrScoredVerdict(row.verdictReview));
+  const predictionBreakdown = summarizePredictionRows(predictionRows);
   const durationErrors = predictionRows
     .map((row) => row.absoluteDurationErrorSec)
     .filter((value): value is number => value != null && Number.isFinite(value));
@@ -184,8 +176,8 @@ export function projectDdrTrackRecordSummary(
   const counts = {
     reviewedForecastCount: predictionRows.length,
     scoredCount: scoredRows.length,
-    correctCount: scoredRows.filter((row) => isDdrCorrectVerdict(row.verdictReview)).length,
-    missCount: scoredRows.filter((row) => isDdrMissVerdict(row.verdictReview)).length,
+    correctCount: predictionBreakdown.correctRecoverable + predictionBreakdown.correctTerminal,
+    missCount: predictionBreakdown.falseTerminal + predictionBreakdown.falseRecoverable,
     pendingCount: predictionRows.filter((row) => row.verdictReview === "pending").length,
     noCallCount: rows.filter((row) => row.kind === "no_call_review").length,
     notCalledCount: rows.filter((row) => row.kind === "coverage").length,
@@ -205,7 +197,7 @@ export function projectDdrTrackRecordSummary(
       dateLabel: formatIsoDate(row.startedAt),
       outcomeLabel: chip.label,
       outcomeToneClass: chip.toneClass,
-      actualOutcomeLabel: getActualOutcomeLabel(row),
+      actualOutcomeLabel: DDR_OUTCOME_LABELS[getActualOutcome(row)],
       durationLabel: getDurationLabel(row),
       erratumLabel: getErratumLabel(row),
     };

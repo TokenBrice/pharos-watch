@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { pathnameMock, reportCallbacks } = vi.hoisted(() => ({
@@ -21,7 +21,6 @@ vi.mock("next/web-vitals", () => ({
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 
 afterEach(() => {
-  cleanup();
   delete window.gtag;
   delete window.dataLayer;
   pathnameMock.mockReset();

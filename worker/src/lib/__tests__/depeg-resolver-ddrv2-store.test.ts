@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@cloudflare/workers-types";
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   closeRecoveredPreLockIncidents,

@@ -1,3 +1,4 @@
+import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { logWorkerEventArgs } from "./structured-log";
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
 import { escapeHtml } from "./telegram-html";
@@ -221,12 +222,18 @@ export async function sendToChat(
 
     if (!res.ok) {
       const retryAfterRaw = res.headers.get("Retry-After");
-      const retryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
+      const parsedRetryAfterSec = parseRetryAfterSeconds(retryAfterRaw, {
+        allowNumericPrefix: true,
+        numericRounding: "floor",
+      });
+      const legacyRetryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
+      const retryAfterSec = parsedRetryAfterSec
+        ?? (Number.isFinite(legacyRetryAfterSec) ? legacyRetryAfterSec : null);
       const body = await readResponseTextBoundedWithSignal(res, 16_384, signal).catch(() => "");
       const failure = classifyTelegramResponseFailure(
         res.status,
         body,
-        Number.isFinite(retryAfterSec) ? retryAfterSec : null,
+        retryAfterSec,
       );
       return {
         ok: false,

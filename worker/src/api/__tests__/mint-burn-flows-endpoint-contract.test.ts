@@ -1,6 +1,6 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";

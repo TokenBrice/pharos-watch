@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { FiatEmblems } from "@/app/alt-pegs/fiat-world-atlas/fiat-emblems";
 import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 import type { PegCluster, PlacedCoin } from "@/lib/alt-peg-hero";
@@ -21,7 +21,6 @@ function coin(overrides: Partial<PlacedCoin> & Pick<PlacedCoin, "id" | "symbol">
 }
 
 describe("FiatEmblems", () => {
-  afterEach(() => cleanup());
 
   it("adds center hit targets for crowded map hover while keeping them out of tab order", () => {
     const clusters: PegCluster[] = [

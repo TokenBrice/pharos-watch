@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { StatusSection } from "@/components/status/page-primitives";
 
-afterEach(cleanup);
 
 describe("StatusSection heading outline", () => {
   it("adds a nonvisual h2 group between a routed h1 and local h3 content", () => {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { getDatasetFreshness } from "../derived-data";
 
 const NOW = 1_800_000_000;

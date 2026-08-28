@@ -1,7 +1,7 @@
 "use client";
 
 import { useCountUp } from "@/hooks/use-count-up";
-import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
+import { useTelegramPulse } from "@/hooks/api-hooks";
 import { TELEGRAM_PULSE_STATIC } from "@/lib/telegram-pulse-static";
 
 /**

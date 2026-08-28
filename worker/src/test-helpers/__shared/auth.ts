@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 
 export { hmacSha256Hex } from "../../lib/api-key-core";
 
@@ -9,7 +9,8 @@ type ApiRequestOptions = {
   body?: BodyInit | null;
 };
 
-function normalizeApiPath(path: string): string {
+function normalizeApiPath(path: string | URL): string {
+  if (path instanceof URL) return path.toString();
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
   if (path.startsWith("/")) return `https://x${path}`;
   return `https://x/${path}`;
@@ -19,7 +20,7 @@ export function makeApiUrl(path: string): URL {
   return new URL(normalizeApiPath(path));
 }
 
-export function makeApiRequest(path: string, options: ApiRequestOptions = {}): Request {
+export function makeApiRequest(path: string | URL, options: ApiRequestOptions = {}): Request {
   const { method = "GET", adminKey, headers, body } = options;
   const resolvedHeaders = new Headers(headers);
   const requestUrl = adminKey
@@ -42,6 +43,41 @@ export function makeApiRequest(path: string, options: ApiRequestOptions = {}): R
   });
 }
 
+export function makeJsonRequest(
+  path: string | URL,
+  body: unknown,
+  options: Omit<ApiRequestOptions, "body"> = {},
+): Request {
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
+  return makeApiRequest(path, {
+    ...options,
+    method: options.method ?? "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+}
+
+export function makeJsonBodyRequest(
+  path: string | URL,
+  body: BodyInit,
+  options: Omit<ApiRequestOptions, "body"> = {},
+): Request {
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
+  return makeApiRequest(path, {
+    ...options,
+    method: options.method ?? "POST",
+    headers,
+    body,
+  });
+}
+
+export async function readJsonResponse<T = unknown>(response: Response, expectedStatus: number): Promise<T> {
+  expect(response.status).toBe(expectedStatus);
+  return (await response.json()) as T;
+}
+
 /**
  * Shared auth-test crypto stub used by handlers that call requireAdmin().
  */
@@ -55,7 +91,7 @@ export function makeExecutionContext() {
     waits,
     ctx: {
       waitUntil: vi.fn((promise: Promise<unknown>) => {
-        waits.push(promise);
+        waits.push(Promise.resolve(promise));
       }),
       passThroughOnException: vi.fn(),
     } as unknown as ExecutionContext,

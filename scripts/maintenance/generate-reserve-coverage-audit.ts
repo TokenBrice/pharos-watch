@@ -16,14 +16,15 @@ import {
   isRecord,
   loadCoverageAuditSiteDataInputs,
   markdownValue,
+  parseCoverageAuditCliArgs,
   readRequiredJsonFile,
   resolveGeneratedAt,
+  runCoverageAuditCli,
   sortByMarketCapOrRank,
   stringValue,
-  writeOutputFile,
   type UnknownRecord,
 } from "../lib/coverage-audit-cli";
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { runAsMain } from "../lib/coverage-audit-cli";
 import {
   DEFAULT_SOURCE_QUALITY_NOTE,
   REVIEWED_LIVE_RESERVE_SOURCE_NOTES,
@@ -687,76 +688,23 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
 }
 
 export function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    prod: false,
-    apiBase: null,
-    reportCardsPath: null,
-    stablecoinsPath: null,
-    format: "markdown",
-    reportPath: null,
-    generatedAt: null,
-  };
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--prod") {
-      options.prod = true;
-      continue;
-    }
-    if (arg === "--api-base") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--api-base requires a URL");
-      options.apiBase = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--report-cards") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--report-cards requires a file path");
-      options.reportCardsPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--stablecoins") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--stablecoins requires a file path");
-      options.stablecoinsPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--json") {
-      options.format = "json";
-      continue;
-    }
-    if (arg === "--markdown") {
-      options.format = "markdown";
-      continue;
-    }
-    if (arg === "--report") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--report requires a path");
-      options.reportPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--generated-at") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--generated-at requires an ISO timestamp or 'now'");
-      options.generatedAt = value;
-      i += 1;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  if (options.prod && options.apiBase) {
-    throw new Error("Choose only one of --prod or --api-base.");
-  }
-  if ((options.prod || options.apiBase) && (options.reportCardsPath || options.stablecoinsPath)) {
-    throw new Error("Choose fetched reserve coverage inputs or local input files, not both.");
-  }
-
-  return options;
+  return parseCoverageAuditCliArgs(argv, {
+    createOptions: (): CliOptions => ({ prod: false, apiBase: null, reportCardsPath: null, stablecoinsPath: null, format: "markdown", reportPath: null, generatedAt: null }),
+    includeGeneratedAt: true,
+    generatedAtMissingMessage: "--generated-at requires an ISO timestamp or 'now'",
+    options: [
+      { flag: "--prod", kind: "boolean", apply: (options) => { options.prod = true; } },
+      { flag: "--api-base", kind: "value", missingMessage: "--api-base requires a URL", apply: (options, value) => { options.apiBase = value!; } },
+      { flag: "--report-cards", kind: "value", missingMessage: "--report-cards requires a file path", apply: (options, value) => { options.reportCardsPath = value!; } },
+      { flag: "--stablecoins", kind: "value", missingMessage: "--stablecoins requires a file path", apply: (options, value) => { options.stablecoinsPath = value!; } },
+    ],
+    validate: (options) => {
+      if (options.prod && options.apiBase) throw new Error("Choose only one of --prod or --api-base.");
+      if ((options.prod || options.apiBase) && (options.reportCardsPath || options.stablecoinsPath)) {
+        throw new Error("Choose fetched reserve coverage inputs or local input files, not both.");
+      }
+    },
+  });
 }
 
 async function loadReportCardInput(
@@ -784,39 +732,21 @@ async function loadReportCardInput(
   };
 }
 
-function writeOutput(path: string, output: string, cwd: string): void {
-  const target = writeOutputFile(path, output, cwd);
-  process.stdout.write(`Wrote reserve coverage audit to ${target}\n`);
-}
-
 export async function runCli(
   argv = process.argv.slice(2),
   cwd = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
-  const options = parseArgs(argv);
-  const loaded = await loadReportCardInput(options, cwd, fetchImpl);
-  const audit = buildReserveCoverageAudit({
-    ...loaded,
-    generatedAt: resolveGeneratedAt(options),
+  return runCoverageAuditCli(argv, {
+    parse: parseArgs,
+    cwd,
+    build: async (options) => {
+      const loaded = await loadReportCardInput(options, cwd, fetchImpl);
+      return buildReserveCoverageAudit({ ...loaded, generatedAt: resolveGeneratedAt(options) });
+    },
+    renderMarkdown: renderReserveCoverageAuditMarkdown,
+    writeMessage: (target) => `Wrote reserve coverage audit to ${target}`,
   });
-  const output =
-    options.format === "json" ? `${JSON.stringify(audit, null, 2)}\n` : renderReserveCoverageAuditMarkdown(audit);
-
-  if (options.reportPath) {
-    writeOutput(options.reportPath, output, cwd);
-  } else {
-    process.stdout.write(output);
-  }
-
-  return 0;
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
-  runCli()
-    .then((code) => process.exit(code))
-    .catch((error: unknown) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exit(1);
-    });
-}
+runAsMain(import.meta.url, runCli);

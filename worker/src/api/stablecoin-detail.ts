@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCache } from "../lib/db-cache";
-import { errorResponse } from "../lib/api-utils";
+import { errorResponse } from "../lib/api-response";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {

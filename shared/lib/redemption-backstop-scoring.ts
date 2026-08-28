@@ -289,10 +289,13 @@ export function computeRedemptionBackstopScore(args: {
   }
   if (
     args.executableCapacityUsd != null &&
-    !hasMaterialExitCapacity({
-      executableCapacityUsd: args.executableCapacityUsd,
-      requestedNotionalUsd: args.modeledExitSizeUsd,
-    })
+    !hasMaterialExitCapacity(
+      {
+        executableCapacityUsd: args.executableCapacityUsd,
+        requestedNotionalUsd: args.modeledExitSizeUsd,
+      },
+      EXIT_ROUTE_SCORING_TABLES,
+    )
   ) {
     return { score: 0, capsApplied: ["immaterial-executable-capacity"] };
   }

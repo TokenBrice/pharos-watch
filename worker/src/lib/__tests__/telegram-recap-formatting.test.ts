@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { splitMessage } from "../telegram-alerts-formatting";
 import { formatTelegramRecap } from "../telegram-recap-formatting";
 import type { TelegramRecapScopedFact } from "../telegram-recap-ranking";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function fact(overrides: Partial<TelegramRecapScopedFact> = {}): TelegramRecapScopedFact {
   return {

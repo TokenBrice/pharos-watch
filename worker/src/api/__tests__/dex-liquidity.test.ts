@@ -1,6 +1,6 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, it, expect, vi } from "vitest";
-import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { handleDexLiquidity } from "../dex-liquidity";
 

@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { CircuitRecord } from "@shared/types";
 import { CircuitBreakerTable } from "../circuit-breaker-table";
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("CircuitBreakerTable", () => {
   it("keeps tripped breakers visible and nests healthy breakers in a shared table", async () => {

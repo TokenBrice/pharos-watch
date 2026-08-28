@@ -4,7 +4,7 @@ import {
   getNetFlowDirection24h,
   getPressureShiftState,
 } from "@shared/lib/mint-burn-signals";
-import { getLatestSuccessfulCronTimestampResult } from "../../lib/api-utils";
+import { getLatestSuccessfulCronTimestampResult } from "../../lib/api-freshness";
 import { buildInClause } from "../../lib/db";
 import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import {

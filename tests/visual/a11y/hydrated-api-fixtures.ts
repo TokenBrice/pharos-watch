@@ -1,6 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 import { summarizeDdrrRows } from "../../../shared/lib/depeg-resolver-review/summary";
-import { makeYieldRanking } from "../../../shared/lib/__tests__/yield-ranking-fixtures";
+import { makeYieldRanking } from "../../../shared/test-utils/yield-ranking-fixtures";
 import { projectYieldRankingsSummary } from "../../../shared/lib/yield-rankings-summary";
 import {
   DepegEventsResponseSchema,

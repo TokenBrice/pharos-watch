@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import type { MintBurnConfigSummary, SyncMintBurnConfigResult } from "../mint-burn/sync-config";
 import {

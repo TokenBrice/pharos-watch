@@ -4,6 +4,7 @@ import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
+import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import {
   ShockCoverageEvidenceV1Schema,
@@ -20,6 +21,11 @@ export const SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH =
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const JOURNAL_SUFFIX = "-shock-coverage.json";
+const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts [options]
+
+Options:
+  --check      Fail instead of writing when the registry is stale
+  -h, --help   Show this help`;
 
 export interface CompactShockCoverageCodePin {
   name: string;
@@ -256,8 +262,8 @@ export function renderShockCoverageMeasurementRegistry(registry: ShockCoverageMe
 }
 
 export function runShockCoverageMeasurementRegistryGenerator(args = process.argv.slice(2), root = REPO_ROOT): void {
-  const unknown = args.filter((arg) => arg !== "--check");
-  if (unknown.length > 0) throw new Error(`Unknown arguments: ${unknown.join(", ")}`);
+  const { values } = parseStrictCliArgs(args, { options: { check: { type: "boolean" } } });
+  if (writeCliHelpIfRequested(values, USAGE)) return;
 
   const registry = buildShockCoverageMeasurementRegistry(root);
   syncGeneratedArtifacts({
@@ -267,7 +273,7 @@ export function runShockCoverageMeasurementRegistryGenerator(args = process.argv
         contents: renderShockCoverageMeasurementRegistry(registry),
       },
     ],
-    check: args.includes("--check"),
+    check: values.check === true,
     staleMessage:
       "Shock-coverage measurement registry is stale. Run `npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts`.",
     currentMessage: `Shock-coverage measurement registry is current (${registry.measurements.length} journals).`,
@@ -275,6 +281,7 @@ export function runShockCoverageMeasurementRegistryGenerator(args = process.argv
   });
 }
 
-if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
-  runShockCoverageMeasurementRegistryGenerator();
-}
+runDirectCli(import.meta.url, () => runShockCoverageMeasurementRegistryGenerator(process.argv.slice(2)), {
+  label: "generate-safety-score-v9-shock-coverage-registry",
+  usage: USAGE,
+});

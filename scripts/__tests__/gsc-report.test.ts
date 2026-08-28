@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mts";
+import {
+  appendGscReportPreamble,
+  appendGscReportSection,
+  parsePositiveNumber,
+  runAsyncDirect,
+  runGscCli,
+} from "../lib/gsc-report.mts";
 
 describe("GSC report helpers", () => {
   it("renders a shared report preamble with optional detail lines and empty sections", () => {
@@ -34,5 +40,22 @@ describe("GSC report helpers", () => {
 
   it("only starts async CLI handling for direct entrypoint runs", () => {
     expect(runAsyncDirect("file:///example.mjs", "/not-example.mjs", async () => 0)).toBe(false);
+  });
+
+  it("shares section rendering and positive-number validation", () => {
+    const lines: string[] = [];
+    appendGscReportSection(lines, "Rows", [1, 2], (value) => String(value * 2));
+    appendGscReportSection(lines, "Empty", []);
+
+    expect(lines).toEqual(["Rows:", "- 2", "- 4", "", "Empty:", "- none", ""]);
+    expect(parsePositiveNumber("5", "--top", { integer: true })).toBe(5);
+    expect(() => parsePositiveNumber("0", "--top", { integer: true })).toThrow("Invalid --top: 0");
+  });
+
+  it("maps shared analyzer failures to status one", async () => {
+    let stderr = "";
+    await expect(runGscCli(() => { throw new Error("malformed export"); }, { write: (text) => { stderr += text; } }))
+      .resolves.toBe(1);
+    expect(stderr).toBe("malformed export\n");
   });
 });

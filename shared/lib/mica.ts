@@ -17,47 +17,72 @@ interface MicaBadgeStyle extends BadgeStyle {
   textCls?: string;
 }
 
+interface MicaStatusDescriptor {
+  badge: MicaBadgeStyle;
+  description: string;
+}
+
 /** Pill style for the EBA-supervised "significant EMT/ART" marker (info-blue: regulatory scope, not a risk state). */
 export const MICA_SIGNIFICANT_BADGE_CLS =
   "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
 
 /** Detail-page / table pill styles per MiCA authorization status. */
-export const MICA_STATUS_BADGE_STYLES: Record<MicaStatus, MicaBadgeStyle> = {
+const MICA_STATUS_DESCRIPTORS = {
   authorized: {
-    label: "Authorized",
-    cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-    textCls: "text-green-700 dark:text-green-400",
+    badge: {
+      label: "Authorized",
+      cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+      textCls: "text-green-700 dark:text-green-400",
+    },
+    description: "Issuer holds an in-effect EMI or credit-institution authorization listed on a competent-authority register.",
   },
   pending: {
-    label: "Pending",
-    cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-    textCls: "text-amber-700 dark:text-amber-400",
+    badge: {
+      label: "Pending",
+      cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+      textCls: "text-amber-700 dark:text-amber-400",
+    },
+    description: "Authorization application filed with a competent authority; decision outstanding.",
   },
   transitional: {
-    label: "Transitional",
-    cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-    textCls: "text-amber-700 dark:text-amber-400",
+    badge: {
+      label: "Transitional",
+      cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+      textCls: "text-amber-700 dark:text-amber-400",
+    },
+    description: "Offered or traded on EU venues under a member-state CASP grandfathering window; no issuer authorization yet.",
   },
   "non-compliant": {
-    label: "Non-Compliant",
-    cls: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-    textCls: "text-red-700 dark:text-red-400",
+    badge: {
+      label: "Non-Compliant",
+      cls: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+      textCls: "text-red-700 dark:text-red-400",
+    },
+    description: "In EU scope with no authorization or transitional cover; delisted or restricted on EU venues.",
   },
   "out-of-scope": {
-    label: "Out of Scope",
-    cls: "bg-muted/40 text-muted-foreground border-border/60",
-    textCls: "text-muted-foreground",
+    badge: {
+      label: "Out of Scope",
+      cls: "bg-muted/40 text-muted-foreground border-border/60",
+      textCls: "text-muted-foreground",
+    },
+    description: "Not offered to the public or admitted to trading in the EU.",
   },
-};
+} as const satisfies Record<MicaStatus, MicaStatusDescriptor>;
+
+function projectMicaStatuses<Value>(
+  project: (descriptor: MicaStatusDescriptor) => Value,
+): Record<MicaStatus, Value> {
+  return Object.fromEntries(
+    (Object.entries(MICA_STATUS_DESCRIPTORS) as [MicaStatus, MicaStatusDescriptor][])
+      .map(([status, descriptor]) => [status, project(descriptor)]),
+  ) as Record<MicaStatus, Value>;
+}
+
+export const MICA_STATUS_BADGE_STYLES = projectMicaStatuses((descriptor) => descriptor.badge);
 
 /** Full sentence-form descriptions used in tooltips and copy. */
-export const MICA_STATUS_DESCRIPTIONS: Record<MicaStatus, string> = {
-  authorized: "Issuer holds an in-effect EMI or credit-institution authorization listed on a competent-authority register.",
-  pending: "Authorization application filed with a competent authority; decision outstanding.",
-  transitional: "Offered or traded on EU venues under a member-state CASP grandfathering window; no issuer authorization yet.",
-  "non-compliant": "In EU scope with no authorization or transitional cover; delisted or restricted on EU venues.",
-  "out-of-scope": "Not offered to the public or admitted to trading in the EU.",
-};
+export const MICA_STATUS_DESCRIPTIONS = projectMicaStatuses((descriptor) => descriptor.description);
 
 /** Token-type pill styles (EMT vs ART). */
 export const MICA_TOKEN_TYPE_BADGE_STYLES: Record<MicaTokenType, MicaBadgeStyle> = {

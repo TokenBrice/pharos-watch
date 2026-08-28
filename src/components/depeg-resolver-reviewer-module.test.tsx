@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import {
   DepegResolverReviewerModule,
   DepegResolverReviewerSkeleton,
@@ -22,9 +22,6 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: () => <span data-testid="logo" />,
 }));
 
-afterEach(() => {
-  cleanup();
-});
 
 function makeSummary(headline: Partial<DdrrSummary["headline"]> = {}): DdrrSummary {
   const base = summarizeDdrrRows([]);

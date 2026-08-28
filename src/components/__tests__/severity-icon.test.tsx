@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
 import { DeviationIcon } from "@/components/severity-icon";
 
-afterEach(cleanup);
 
 describe("DeviationIcon", () => {
   it("renders an svg element for a healthy deviation", () => {

@@ -13,6 +13,7 @@ import {
   type DexMeasuredExecutionRegistryBindingProof,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
+import { CURVE_STABLESWAP_DEPLOYMENT } from "@shared/lib/measured-execution-deployment-policies";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockTimestamp,
@@ -73,17 +74,13 @@ export interface CurveStableSwapPoolPolicy {
 
 /** Exact reviewed legacy main-registry deployment. This is not a generic Curve allowlist. */
 export const CURVE_3POOL_STABLESWAP_POLICY: CurveStableSwapPoolPolicy = {
-  chain: "ethereum",
-  poolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
-  expectedPoolCodeHash: "0x954a1e212c557c85043985931498ffa3e2fcbe7dfe9cd61513f36eb47d6f4dfc",
-  registryAddress: "0x90e00ace148ca3b23ac1bc8c240c2a7dd9c2d7f5",
-  expectedRegistryCodeHash: "0x13d7cfcf1cef4bf310fa544567a427771c9be2c16bbf2c6be845d3d5f4cc5f22",
-  lpTokenAddress: "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
-  poolTokens: [
-    { address: "0x6b175474e89094c44da98b954eedeac495271d0f", symbol: "DAI", decimals: 18 },
-    { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 },
-    { address: "0xdac17f958d2ee523a2206206994597c13d831ec7", symbol: "USDT", decimals: 6 },
-  ],
+  chain: CURVE_STABLESWAP_DEPLOYMENT.chain,
+  poolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
+  expectedPoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
+  registryAddress: CURVE_STABLESWAP_DEPLOYMENT.registryAddress,
+  expectedRegistryCodeHash: CURVE_STABLESWAP_DEPLOYMENT.registryCodeHash,
+  lpTokenAddress: CURVE_STABLESWAP_DEPLOYMENT.lpTokenAddress,
+  poolTokens: CURVE_STABLESWAP_DEPLOYMENT.poolTokens,
   mode: "active",
   scoreEligible: true,
 };

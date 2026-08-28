@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { CollateralizationCard } from "../collateralization-card";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 
@@ -16,7 +16,6 @@ const reviewed: MechanismCollateralizationView = {
 
 describe("CollateralizationCard", () => {
   afterEach(() => {
-    cleanup();
     vi.useRealTimers();
   });
 

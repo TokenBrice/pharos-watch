@@ -1,5 +1,14 @@
 import { z } from "zod";
 import { canonicalArrayBy } from "./safety-score-v9-fact-primitives";
+import {
+  V9OperationalResilienceClaimConfidenceSchema,
+  V9OperationalResilienceIncidentSchema,
+  V9OperationalResilienceLatestAssuranceSchema,
+  V9OperationalResilienceReconciliationProceduresSchema,
+  V9OperationalResilienceReportHistorySchema,
+  V9OperationalResilienceStressEpisodeSchema,
+  V9OperationalResilienceStressSettlementSchema,
+} from "./safety-score-v9-operational-resilience-primitives";
 import { CanonicalTextSchema, StrictIsoDateSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 
 const NonNegativeFiniteSchema = z.number().finite().nonnegative();
@@ -10,15 +19,7 @@ const EvidenceRefIdsSchema = canonicalArrayBy(CanonicalTextSchema, (value) => va
   "Operational-resilience claims require evidence",
 );
 
-const V9OperationalResilienceClaimConfidenceSchema = z.enum([
-  "issuer-reported",
-  "independent-assurance",
-  "audited",
-  "unknown",
-]);
-export type V9OperationalResilienceClaimConfidence = z.infer<
-  typeof V9OperationalResilienceClaimConfidenceSchema
->;
+export type { V9OperationalResilienceClaimConfidence } from "./safety-score-v9-operational-resilience-primitives";
 
 const ClaimEvidenceFields = {
   evidenceRefIds: EvidenceRefIdsSchema,
@@ -48,15 +49,7 @@ const V9OperationalResilienceRedemptionStressWindowFactSchema = z
     maximumWindowDays: z.number().int().positive(),
     redeemedUsdLowerBound: NonNegativeFiniteSchema,
     redeemedSupplyRatioLowerBound: NonNegativeFiniteSchema,
-    settlement: z.discriminatedUnion("state", [
-      z
-        .object({
-          state: z.enum(["settled-in-full", "not-settled-in-full"]),
-          verification: z.enum(["issuer-reported", "independently-verified"]),
-        })
-        .strict(),
-      z.object({ state: z.literal("unknown") }).strict(),
-    ]),
+    settlement: V9OperationalResilienceStressSettlementSchema,
     ...ClaimEvidenceFields,
   })
   .strict();
@@ -71,45 +64,20 @@ const V9OperationalResilienceRedemptionFactSchema = z
   })
   .strict();
 
-const V9OperationalResilienceStressEpisodeFactSchema = z
-  .object({
-    episodeKey: CanonicalTextSchema,
-    name: CanonicalTextSchema,
-    observedMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
-    redemptionContinued: z.boolean().nullable(),
-    recoveredWithinSec: NonNegativeFiniteSchema.nullable(),
-    ...ClaimEvidenceFields,
-  })
-  .strict();
+const V9OperationalResilienceStressEpisodeFactSchema = V9OperationalResilienceStressEpisodeSchema.extend(
+  ClaimEvidenceFields,
+).strict();
 
-const V9OperationalResilienceReportHistoryFactSchema = z
-  .object({
-    firstReportPeriodEnd: IsoDateSchema,
-    latestReportPeriodEnd: IsoDateSchema,
-    observedReportHistoryMonths: z.number().int().nonnegative(),
-    reportedCadence: z.enum(["monthly", "quarterly", "semi-annual", "annual", "ad-hoc"]),
-    continuityEvidence: z.enum(["issuer-reported", "independently-verified", "unknown"]),
-    missedMaterialPeriods: z.number().int().nonnegative().nullable(),
-    ...ClaimEvidenceFields,
-  })
-  .strict();
+const V9OperationalResilienceReportHistoryFactSchema = V9OperationalResilienceReportHistorySchema.extend(
+  ClaimEvidenceFields,
+).strict();
 
-const V9OperationalResilienceLatestAssuranceFactSchema = z
-  .object({
-    level: z.enum(["limited-assurance", "reasonable-assurance", "audit"]),
-    standard: CanonicalTextSchema,
-    periodEnd: IsoDateSchema,
-    ...ClaimEvidenceFields,
-  })
-  .strict();
+const V9OperationalResilienceLatestAssuranceFactSchema = V9OperationalResilienceLatestAssuranceSchema.extend(
+  ClaimEvidenceFields,
+).strict();
 
-const V9OperationalResilienceReconciliationProceduresFactSchema = z
-  .object({
-    bankAndDepositaryBalances: z.boolean().nullable(),
-    blockchainAssetsAndLiabilities: z.boolean().nullable(),
-    ...ClaimEvidenceFields,
-  })
-  .strict();
+const V9OperationalResilienceReconciliationProceduresFactSchema =
+  V9OperationalResilienceReconciliationProceduresSchema.extend(ClaimEvidenceFields).strict();
 
 const V9OperationalResilienceReserveReconciliationFactSchema = z
   .object({
@@ -119,17 +87,9 @@ const V9OperationalResilienceReserveReconciliationFactSchema = z
   })
   .strict();
 
-const V9OperationalResilienceIncidentFactSchema = z
-  .object({
-    incidentKey: CanonicalTextSchema,
-    name: CanonicalTextSchema,
-    category: z.enum(["redemption", "reserve", "custody", "control", "assurance"]),
-    state: z.enum(["active", "resolved"]),
-    occurredAt: IsoDateSchema,
-    resolvedAt: IsoDateSchema.nullable(),
-    ...ClaimEvidenceFields,
-  })
-  .strict();
+const V9OperationalResilienceIncidentFactSchema = V9OperationalResilienceIncidentSchema.extend(
+  ClaimEvidenceFields,
+).strict();
 
 const V9OperationalResilienceIncidentReviewFactSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("not-reviewed") }).strict(),

@@ -8,7 +8,7 @@ import { executeAtomicBatch } from "../../lib/db";
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "./_internals";
+} from "../../lib/telegram-operation-batch";
 import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 
 /**

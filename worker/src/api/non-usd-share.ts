@@ -2,7 +2,9 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { addFreshnessHeaders, jsonResponseWithHeaders, parseQueryParams } from "../lib/api-utils";
+import { addFreshnessHeaders } from "../lib/api-freshness";
+import { jsonResponseWithHeaders } from "../lib/api-response";
+import { parseQueryParams } from "../lib/api-params";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 

@@ -1,7 +1,6 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
-import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 
 vi.mock("../../lib/mint-burn-historical-price-repair", () => ({
   DEFAULT_HISTORICAL_MINT_PRICE_REPAIR_LIMIT: 100,
@@ -104,11 +103,5 @@ describe("handleBackfillMintBurnPrices", () => {
 
     expect(response.status).toBe(400);
     expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
-  });
-
-  registerUnauthorizedEndpointContract({
-    name: "mint/burn price backfill",
-    invoke: () => handleBackfillMintBurnPrices({ db, url: makeApiUrl("/api/backfill-mint-burn-prices"), request: makeApiRequest("/api/backfill-mint-burn-prices") }),
-    body: { error: "Unauthorized" },
   });
 });

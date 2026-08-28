@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import type { MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { ActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {

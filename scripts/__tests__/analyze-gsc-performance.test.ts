@@ -151,4 +151,21 @@ describe("analyze-gsc-performance", () => {
       )).rejects.toThrow(`Invalid ${option.split("=")[0]}: 0`);
     }
   });
+
+  it.each([
+    { argv: ["--help"], expectedCode: 0, stream: "stdout", text: "Usage: npm run analyze:gsc-performance" },
+    { argv: ["--unknown"], expectedCode: 1, stream: "stderr", text: "Unknown option: --unknown" },
+    { argv: [], expectedCode: 1, stream: "stderr", text: "Usage: npm run analyze:gsc-performance" },
+  ])("handles $stream CLI diagnostics", async ({ argv, expectedCode, stream, text }) => {
+    let stdout = "";
+    let stderr = "";
+    const code = await runCli(
+      argv,
+      { write: (chunk: string) => (stdout += chunk) },
+      { write: (chunk: string) => (stderr += chunk) },
+    );
+
+    expect(code).toBe(expectedCode);
+    expect(stream === "stdout" ? stdout : stderr).toContain(text);
+  });
 });

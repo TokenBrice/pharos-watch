@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import { runCoingeckoLowVolumePass } from "../enrich-prices-coingecko-low-volume-pass";
-import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function asset(input: Partial<PeggedAsset> & Pick<PeggedAsset, "id" | "symbol">): PeggedAsset {
   return {

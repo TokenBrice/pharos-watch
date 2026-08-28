@@ -9,25 +9,20 @@ import {
   StablecoinRiskReviewSidecarSchema,
 } from "../schema";
 import { OracleRiskProfileSchema } from "../../../types/stablecoin-meta-schemas";
+import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
 
-const baseFlags = {
-  pegCurrency: "USD",
-  governance: "centralized",
-  backing: "rwa-backed",
-  yieldBearing: false,
-  rwa: true,
-  navToken: false,
-};
+const baseFlags = CANONICAL_STABLECOIN_FLAGS;
 
-function makeCoin(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: "fixture-usd",
-    name: "Fixture USD",
-    symbol: "FUSD",
-    flags: baseFlags,
-    ...overrides,
-  };
-}
+describe("raw StablecoinMeta fixture", () => {
+  it("pins the schema-test defaults independently of parser behavior", () => {
+    expect(makeCoin()).toEqual({
+      id: "fixture-usd",
+      name: "Fixture USD",
+      symbol: "FUSD",
+      flags: CANONICAL_STABLECOIN_FLAGS,
+    });
+  });
+});
 
 describe("StablecoinMeta schema — MiCA profile", () => {
   it("requires source references for assessed in-scope MiCA statuses", () => {

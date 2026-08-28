@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { PipelineIntegrityPanel } from "../pipeline-integrity-panel";
 import { buildPipelineIntegrityModel } from "@/lib/pipeline-workspace-model";
 import {
@@ -10,7 +10,6 @@ import {
   makePublicationFailureStatusResponse,
 } from "@/test-utils/status-fixtures";
 
-afterEach(cleanup);
 
 describe("PipelineIntegrityPanel", () => {
   it("renders controls, publication surfaces, and dependencies with raw identifiers in detail", () => {

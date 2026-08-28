@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 
@@ -135,7 +135,6 @@ describe("LongformScrollspyNav", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();

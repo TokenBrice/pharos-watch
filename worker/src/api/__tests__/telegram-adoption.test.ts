@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeJsonRequest } from "./api-request-response.test-support";
+import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import { handleTelegramAdoption } from "../telegram-adoption";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import type { FullRouteContext } from "../../routes/shared";
 import { getRouteMatch } from "../../routes/registry";
 

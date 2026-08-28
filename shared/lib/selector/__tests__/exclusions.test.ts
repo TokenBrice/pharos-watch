@@ -10,14 +10,11 @@ import {
   tradingPegScoreFloor,
   yieldPegScoreFloor,
 } from "../exclusions";
-import type { MergedRow, SelectorInput } from "../types";
-import { makeMergedRow } from "./fixture";
+import type { MergedRow } from "../types";
+import { makeInput, makeMergedRowWithIdentity } from "./fixture";
 
 function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
-  return makeMergedRow({
-    id: "test-coin",
-    symbol: "TEST",
-    name: "Test Stable",
+  return makeMergedRowWithIdentity({ id: "test-coin", symbol: "TEST", name: "Test Stable" }, {
     protocolSlug: "test",
     mechanismArchetype: "cdp",
     pegScore: 95,
@@ -35,22 +32,6 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
     dewsAgeSec: 200,
     ...overrides,
   });
-}
-
-function makeInput(overrides: Partial<SelectorInput> = {}): SelectorInput {
-  return {
-    profile: "treasury",
-    pegCurrency: "USD",
-    horizon: "1to6m",
-    depegTolerance: "tight",
-    composability: "moderate",
-    exitSpeed: "any",
-    minApy: null,
-    yieldNativeOnly: false,
-    decentralization: "any",
-    custodyOk: "any",
-    ...overrides,
-  };
 }
 
 describe("threshold helpers", () => {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { StatusResponse } from "@shared/types";
 import { ReserveSyncHealthCard } from "../reserve-sync-health";
 
@@ -43,7 +43,6 @@ function makeReserveHealth(
 }
 
 describe("ReserveSyncHealthCard", () => {
-  afterEach(() => cleanup());
 
   it("explains conservative report-card inputs when reserve evidence is degraded", () => {
     render(

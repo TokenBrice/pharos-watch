@@ -7,7 +7,7 @@ import {
   resolveApiRequestRouteMetric,
 } from "@shared/lib/request-attribution";
 import { findDynamicEndpointDescriptor } from "@shared/lib/api-endpoints";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
   API_REQUEST_SOURCE_STATS_RETENTION_DAYS,

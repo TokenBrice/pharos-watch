@@ -6,10 +6,8 @@ import {
   STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
   StablecoinListResponseSchema,
 } from "@shared/types/market";
-import {
-  createCacheHandler,
-  errorResponse,
-} from "../lib/api-utils";
+import { createCacheHandler } from "../lib/api-cache-read";
+import { errorResponse } from "../lib/api-response";
 import { CACHE_PROFILES } from "../lib/constants";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../lib/response-ready-cache-contracts";
 import { normalizeStablecoinChartPoints } from "../lib/stablecoin-charts-payload";

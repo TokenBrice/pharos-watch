@@ -6,55 +6,33 @@ import {
   cleanupEnrichMissingPricesTest,
   fixtureEnrichMissingPrices,
   fixtureRunCmcPass,
-  fixtureMockD1 as createFixtureMockD1,
+  makeFixtureMockD1 as fixtureMockD1,
   fixtureMockFetch,
   fixtureCIRCUIT_SOURCE,
+  installFetch,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
 import { selectRotatedCmcCandidates } from "../sync-stablecoins/enrich-prices-cmc-pass";
-
-
-function installFetch(implementation: (url: string) => Response | Promise<Response>) {
-  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
-}
-
-function fixtureMockD1(
-  tables: Parameters<typeof createFixtureMockD1>[0] = [],
-  options?: Parameters<typeof createFixtureMockD1>[1],
-) {
-  return createFixtureMockD1(
-    [
-      ...tables,
-      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-      { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    ],
-    options,
-  );
-}
-
+import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   it("prefers cmcSlug-based matching over symbol for CMC fallback (BUG-1)", async () => {
     // Two coins share symbol "GUSD" — slug-based matching should pick the right price
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "gusd-gemini",
         name: "Gemini Dollar",
         symbol: "GUSD",
         price: 0,
         cmcSlug: "gemini-dollar",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-      {
+      }),
+      makePeggedAsset({
         id: "gusd-gate",
         name: "Gate USD",
         symbol: "GUSD",
         price: 0,
         cmcSlug: "gatechain-token",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     const db = fixtureMockD1([
@@ -109,14 +87,12 @@ describe("enrichMissingPrices", () => {
       },
     ]);
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "usbd-bima",
         name: "USBD",
         symbol: "USBD",
         price: 1,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     const fetchSpy = fixtureMockFetch();
@@ -148,14 +124,12 @@ describe("enrichMissingPrices", () => {
 
   it("skips the CMC breaker check when no assets are missing", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "usdg-paxos",
         name: "USDG",
         symbol: "USDG",
         price: 1,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     const now = Math.floor(Date.now() / 1000);
@@ -187,14 +161,12 @@ describe("enrichMissingPrices", () => {
 
   it("skips ambiguous tracked symbols without a slug in CMC fallback", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "gusd-gemini",
         name: "Gemini Dollar",
         symbol: "GUSD",
         price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
 
     const db = fixtureMockD1([
@@ -222,15 +194,13 @@ describe("enrichMissingPrices", () => {
 
   it("reports CMC fallback diagnostics on successful slug matches", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "test-dollar",
         name: "Test Dollar",
         symbol: "TUSD",
         price: 0,
         cmcSlug: "test-dollar",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
     const db = fixtureMockD1([
       {
@@ -264,20 +234,18 @@ describe("enrichMissingPrices", () => {
   });
 
   it("retrieves an exact slug through targeted quotes when the category page is truncated", async () => {
-    const assets: PeggedAsset[] = [{
+    const assets: PeggedAsset[] = [makePeggedAsset({
       id: "test-dollar",
       name: "Test Dollar",
       symbol: "TUSD",
       price: 0,
       cmcSlug: "test-dollar",
-      pegType: "peggedUSD",
       contracts: [{
         chain: "ethereum",
         address: "0x1111111111111111111111111111111111111111",
         decimals: 18,
       }],
-      circulating: {},
-    }];
+    })];
     const fetchSpy = fixtureMockFetch([
       { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
       {
@@ -330,20 +298,18 @@ describe("enrichMissingPrices", () => {
   });
 
   it("does not let truncated category rows bypass targeted CMC quote validation", async () => {
-    const assets: PeggedAsset[] = [{
+    const assets: PeggedAsset[] = [makePeggedAsset({
       id: "mnee-mnee",
       name: "MNEE USD",
       symbol: "MNEE",
       price: 0,
       cmcSlug: "mnee",
-      pegType: "peggedUSD",
       contracts: [{
         chain: "ethereum",
         address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
         decimals: 18,
       }],
-      circulating: {},
-    }];
+    })];
     const fetchSpy = fixtureMockFetch([
       {
         match: "/v1/cryptocurrency/category",
@@ -387,19 +353,17 @@ describe("enrichMissingPrices", () => {
   });
 
   it("replays an identity-verified targeted quote across the next three cooldown generations", async () => {
-    const makeAsset = (): PeggedAsset => ({
+    const makeAsset = () => makePeggedAsset({
       id: "test-dollar",
       name: "Test Dollar",
       symbol: "TUSD",
       price: 0,
       cmcSlug: "test-dollar",
-      pegType: "peggedUSD",
       contracts: [{
         chain: "ethereum",
         address: "0x1111111111111111111111111111111111111111",
         decimals: 18,
       }],
-      circulating: {},
     });
     const initialDb = fixtureMockD1([
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
@@ -498,20 +462,18 @@ describe("enrichMissingPrices", () => {
       ],
     }]);
     const fetchSpy = fixtureMockFetch();
-    const assets: PeggedAsset[] = [{
+    const assets: PeggedAsset[] = [makePeggedAsset({
       id: "test-dollar",
       name: "Test Dollar",
       symbol: "TUSD",
       price: 0,
       cmcSlug: "test-dollar",
-      pegType: "peggedUSD",
       contracts: [{
         chain: "ethereum",
         address: "0x1111111111111111111111111111111111111111",
         decimals: 18,
       }],
-      circulating: {},
-    }];
+    })];
 
     const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
 
@@ -523,11 +485,11 @@ describe("enrichMissingPrices", () => {
   it("rotates targeted candidates at the hourly quota boundary", () => {
     const candidates = Array.from({ length: 26 }, (_, index) => ({
       index,
-      asset: {
+      asset: makePeggedAsset({
         id: `coin-${index}`,
         symbol: `C${index}`,
         cmcSlug: `coin-${index}`,
-      } as PeggedAsset,
+      }),
     }));
 
     const first = selectRotatedCmcCandidates(candidates, 0).map((entry) => entry.asset.id);
@@ -547,20 +509,18 @@ describe("enrichMissingPrices", () => {
     ["inactive quote", "TUSD", "0x1111111111111111111111111111111111111111", undefined, 0, 143_000],
     ["zero-volume quote", "TUSD", "0x1111111111111111111111111111111111111111", undefined, 1, 0],
   ])("rejects a targeted CMC %s", async (_name, symbol, tokenAddress, lastUpdated, isActive, volume24h) => {
-    const assets: PeggedAsset[] = [{
+    const assets: PeggedAsset[] = [makePeggedAsset({
       id: "test-dollar",
       name: "Test Dollar",
       symbol: "TUSD",
       price: 0,
       cmcSlug: "test-dollar",
-      pegType: "peggedUSD",
       contracts: [{
         chain: "ethereum",
         address: "0x1111111111111111111111111111111111111111",
         decimals: 18,
       }],
-      circulating: {},
-    }];
+    })];
     fixtureMockFetch([
       { match: "/v1/cryptocurrency/category", body: cmcCategory([]) },
       {
@@ -584,15 +544,13 @@ describe("enrichMissingPrices", () => {
 
   it("skips CMC quotes with stale quote timestamps", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "test-dollar",
         name: "Test Dollar",
         symbol: "TUSD",
         price: 0,
         cmcSlug: "test-dollar",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
     const db = fixtureMockD1([
       {
@@ -621,15 +579,13 @@ describe("enrichMissingPrices", () => {
 
   it("records a CMC breaker failure when an OK response has a malformed payload", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "test-dollar",
         name: "Test Dollar",
         symbol: "TUSD",
         price: 0,
         cmcSlug: "test-dollar",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
     const db = fixtureMockD1([
       {
@@ -675,14 +631,12 @@ describe("enrichMissingPrices", () => {
 
   it("ignores truncated category rows while reporting an unseen tail", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "test-dollar",
         name: "Test Dollar",
         symbol: "TUSD",
         price: 0,
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
     const db = fixtureMockD1([
       {
@@ -731,15 +685,13 @@ describe("enrichMissingPrices", () => {
 
   it("drains CMC non-OK response bodies before recording failure", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "test-dollar",
         name: "Test Dollar",
         symbol: "TUSD",
         price: 0,
         cmcSlug: "test-dollar",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
     const db = fixtureMockD1([
       {
@@ -761,15 +713,13 @@ describe("enrichMissingPrices", () => {
 
   it("writes the CMC local cooldown when the category endpoint returns 429", async () => {
     const assets: PeggedAsset[] = [
-      {
+      makePeggedAsset({
         id: "test-dollar",
         name: "Test Dollar",
         symbol: "TUSD",
         price: 0,
         cmcSlug: "test-dollar",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+      }),
     ];
     const db = fixtureMockD1([
       {

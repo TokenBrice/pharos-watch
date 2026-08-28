@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
 import type { DdrRow } from "@shared/types/depeg-resolver";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
 import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/methodology-versions/depeg-resolver";
 import { buildDdrResponse, normalizeErratumRecord } from "../depeg-resolver/public-projection";

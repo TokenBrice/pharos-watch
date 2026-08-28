@@ -23,7 +23,7 @@ import {
   validateCurveCryptoSwapProfileProof,
   type CurveCryptoSwapPoolPolicy,
 } from "../curve-cryptoswap";
-import { makeMeasuredTarget } from "@shared/lib/__tests__/measured-execution.test-support";
+import { makeMeasuredTarget } from "@shared/test-utils/measured-execution.test-support";
 
 const ETHEREUM_BLOCK = 25_536_894;
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";

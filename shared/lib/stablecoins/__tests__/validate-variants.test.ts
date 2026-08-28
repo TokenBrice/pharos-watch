@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { MechanismArchetype, StablecoinMeta, VariantKind } from "../../../types";
 import { validateVariantRelationships } from "../validate-variants";
+import { makeStablecoinMeta } from "./test-support";
 
 interface CoinOverrides extends Partial<StablecoinMeta> {
   id: string;
 }
 
 function makeCoin(overrides: CoinOverrides): StablecoinMeta {
-  return {
+  return makeStablecoinMeta({
     name: overrides.id,
     symbol: overrides.id.toUpperCase(),
     flags: {
@@ -19,7 +20,7 @@ function makeCoin(overrides: CoinOverrides): StablecoinMeta {
       navToken: false,
     },
     ...overrides,
-  } as StablecoinMeta;
+  });
 }
 
 function makeParent(id: string, archetype: MechanismArchetype | null): StablecoinMeta {

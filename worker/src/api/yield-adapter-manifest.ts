@@ -1,6 +1,4 @@
-import {
-  jsonResponse,
-  } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
 import { CACHE_PROFILES } from "../lib/constants";
 import { YIELD_ADAPTER_MANIFEST } from "../lib/yield-config/yield-config";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";

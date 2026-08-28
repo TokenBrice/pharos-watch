@@ -1,6 +1,8 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCacheIfNewer } from "./db-cache";
-import { addFreshnessHeaders, jsonResponseWithHeaders, readCachedJsonOr503 } from "./api-utils";
+import { addFreshnessHeaders } from "./api-freshness";
+import { jsonResponseWithHeaders } from "./api-response";
+import { readCachedJsonOr503 } from "./api-cache-read";
 import { CACHE_PROFILES } from "./constants";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "./mint-burn-health-config";
 import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectPsiBandShifts } from "../psi";
 
 const SEC = 1_700_000_000;

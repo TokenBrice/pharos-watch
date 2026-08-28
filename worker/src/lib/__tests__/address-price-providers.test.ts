@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   buildAddressPriceTargetsByProvider,
   collectAddressPriceProviderQuotes,
@@ -673,6 +673,29 @@ describe("address price providers", () => {
       endpoint: "birdeye-address:request-cap",
       candidateCount: 1,
     });
+  });
+
+  it("omits provider Retry-After diagnostics for malformed headers", async () => {
+    const targets = [makeDexScreenerTarget(0, {
+      chain: "solana",
+      providerChainId: "solana",
+      address: "So11111111111111111111111111111111111111110",
+    })];
+    mockFetch([{
+      match: () => true,
+      body: "Too many requests",
+      status: 429,
+      headers: { "Retry-After": "later-ish" },
+    }]);
+
+    const result = await runBirdeyeAddressProvider(
+      targets,
+      { birdeyeApiKey: "test-key" },
+      undefined,
+      Date.now() + 60_000,
+    );
+
+    expect(result.diagnostics[0].retryAfterSec).toBeUndefined();
   });
 
   it("reports Birdeye targets skipped by the request cap", async () => {

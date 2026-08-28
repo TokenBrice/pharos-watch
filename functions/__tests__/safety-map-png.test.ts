@@ -1,19 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import type { KVNamespace } from "@cloudflare/workers-types";
+import type { SafetyMapContext, SafetyMapEnv } from "../lib/safety-map";
 import { makeKV, type TestKVNamespace } from "./helpers/mock-kv";
 import { onRequest } from "../safety-scores/map.png.ts";
 
 const PNG_MAGIC = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01, 0x02]);
 
-interface SafetyMapEnv {
-  SELECTOR_SNAPSHOTS?: KVNamespace;
-}
-
 function mapRequest(search = "", method = "GET"): Request {
   return new Request(`https://pharos.watch/safety-scores/map.png${search}`, { method });
 }
 
-function mapContext(request: Request, env: SafetyMapEnv) {
+function mapContext(request: Request, env: SafetyMapEnv): SafetyMapContext {
   return { request, env };
 }
 

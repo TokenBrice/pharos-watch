@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Send, SquareArrowRight } from "lucide-react";
 
 import { useHealth } from "@/hooks/api-hooks";
-import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
+import { useTelegramPulse } from "@/hooks/api-hooks";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";

@@ -16,6 +16,7 @@ import {
   type ChainRpcConfig,
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
   return createFixtureMockD1([
@@ -72,20 +73,13 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-sdai-zero",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
               tvlUsd: 500_000_000,
               apy: 0,
               apyBase: 0,
-              apyReward: null,
               apyMean30d: 0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
       ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -221,20 +215,13 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-sdai-zero",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
               tvlUsd: 500_000_000,
               apy: 0,
               apyBase: 0,
-              apyReward: null,
               apyMean30d: 0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
       ], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -535,20 +522,13 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
+            makeDlYieldPool({
               pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
               tvlUsd: 1_000_000_000,
               apy: 5.2,
               apyBase: 5.2,
-              apyReward: null,
               apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
           ],
         },
       },
@@ -1137,20 +1117,12 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
+            makeDlYieldPool({
               tvlUsd: 1_000_000_000,
               apy: 5.2,
               apyBase: 5.2,
-              apyReward: null,
               apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
       ], nowSec - 60),
       risk_free_rate: cacheRow("4.0", nowSec),
     });

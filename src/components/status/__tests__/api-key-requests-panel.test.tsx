@@ -68,7 +68,6 @@ function renderPanel(
 }
 
 afterEach(() => {
-  cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });

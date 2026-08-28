@@ -1,6 +1,5 @@
-import { defineBackstopRegistry, defineRecordEntries } from "../factory";
+import { defineRecordEntries, finalizeBackstopRegistry } from "../factory";
 import {
-  applyTrackedReviewedDocs,
   documentedBoundSupplyFull,
   documentedVariableFee,
   fixedFee,
@@ -1745,24 +1744,17 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
 };
 
-applyTrackedReviewedDocs(RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS, [
-  "ousg-ondo-finance",
-  "u-united-stables",
-  "usd0-usual",
-]);
-applyTrackedReviewedDocs(
-  RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS,
-  ["dusd-dtrinity", "yousd-yield-optimizer"],
-  REVIEWED_REMEDIATION_AT,
-);
-applyTrackedReviewedDocs(
-  RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS,
-  ["pusd-polymarket", "susd-solayer", "usx-dforce", "xdai-gnosis"],
-  REVIEWED_STABLECOIN_BATCH_AT,
+const FINALIZED_STABLECOIN_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
+  defineRecordEntries(RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS, { sourceFilePath: SOURCE_FILE_PATH }),
+  [
+    { stablecoinIds: ["ousg-ondo-finance", "u-united-stables", "usd0-usual"] },
+    { stablecoinIds: ["dusd-dtrinity", "yousd-yield-optimizer"], reviewedAt: REVIEWED_REMEDIATION_AT },
+    {
+      stablecoinIds: ["pusd-polymarket", "susd-solayer", "usx-dforce", "xdai-gnosis"],
+      reviewedAt: REVIEWED_STABLECOIN_BATCH_AT,
+    },
+  ],
 );
 
-export const STABLECOIN_REDEEM_BACKSTOP_ENTRIES = defineRecordEntries(RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS, {
-  sourceFilePath: SOURCE_FILE_PATH,
-});
-
-export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS = defineBackstopRegistry(STABLECOIN_REDEEM_BACKSTOP_ENTRIES);
+export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS = FINALIZED_STABLECOIN_REDEEM_BACKSTOP_REGISTRY.configs;
+export const STABLECOIN_REDEEM_BACKSTOP_ENTRIES = FINALIZED_STABLECOIN_REDEEM_BACKSTOP_REGISTRY.entries;

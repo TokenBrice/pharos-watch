@@ -1,4 +1,4 @@
-import { jsonResponse } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
 import type { HealthResponse, TelegramHealthSummary } from "@shared/types/status";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { assessPublicHealth } from "../lib/public-health-assessment";

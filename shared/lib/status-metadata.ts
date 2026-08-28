@@ -8,6 +8,7 @@ import type {
   PerAlertTypeDeliveryStats,
   TelegramDispatchCronMetadata,
 } from "../types/status";
+import { coerceFiniteNumber } from "./type-guards";
 
 /**
  * Maps each tracked cache key to the primary upstream provider whose outage
@@ -34,10 +35,7 @@ export function readMetadataRecord(value: unknown): Record<string, unknown> | nu
 }
 
 export function readMetadataNumber(value: unknown): number | null {
-  if (value == null || typeof value === "boolean") return null;
-  if (typeof value === "string" && value.trim().length === 0) return null;
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  return coerceFiniteNumber(value);
 }
 
 export function readMetadataString(value: unknown): string | null {

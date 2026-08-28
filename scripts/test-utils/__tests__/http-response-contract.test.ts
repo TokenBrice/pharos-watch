@@ -3,7 +3,7 @@ import {
   matchesHttpResponseObservation,
   observeHttpResponse,
   type HttpResponseObservation,
-} from "../http-response-contract";
+} from "@shared/test-utils/http-response-contract";
 
 describe("HTTP response contract observer", () => {
   const jsonGolden = {

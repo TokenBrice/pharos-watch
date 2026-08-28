@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchFluidPools } from "../fetch-fluid";
 import { initLiquidityFallbackCounters } from "../pool-helpers";
-import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 describe("fetchFluidPools", () => {
   afterEach(() => {

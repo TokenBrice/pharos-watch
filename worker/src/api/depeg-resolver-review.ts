@@ -7,10 +7,7 @@ import {
   DDRR_PUBLIC_WARNING,
   type DdrrResponse,
 } from "@shared/types/depeg-resolver-review";
-import {
-  cacheControlForDegradedPayload,
-  jsonFreshResponse,
-} from "../lib/api-utils";
+import { cacheControlForDegradedPayload, jsonFreshResponse } from "../lib/api-response";
 import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { buildEmptyDdrrSummary } from "../lib/depeg-resolver-review-response";
 import { loadDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";

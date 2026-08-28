@@ -5,13 +5,10 @@ import {
   selectLowestSubDimension,
 } from "../lowest-sub-dimension";
 import type { MergedRow } from "../types";
-import { makeMergedRow } from "./fixture";
+import { makeMergedRowWithIdentity } from "./fixture";
 
 function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
-  return makeMergedRow({
-    id: "t",
-    symbol: "T",
-    name: "T",
+  return makeMergedRowWithIdentity({ id: "t", symbol: "T", name: "T" }, {
     effectiveTvlUsd: 1e8,
     ...overrides,
   });

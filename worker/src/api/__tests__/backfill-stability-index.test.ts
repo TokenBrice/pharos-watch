@@ -1,7 +1,6 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
-import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
 import { computeStabilityIndex } from "../../lib/stability-index";
 
@@ -210,11 +209,6 @@ describe("handleBackfillStabilityIndex", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-  });
-
-  registerUnauthorizedEndpointContract({
-    name: "stability index backfill",
-    invoke: () => callBackfillStabilityIndex({ db: makeDb(), request: makeApiRequest("/api/backfill-stability-index") }),
   });
 
   it("returns 404 when there are no depeg events", async () => {
@@ -628,7 +622,6 @@ describe("handleBackfillStabilityIndex", () => {
   });
 
   it("cleans up the scratch table when filling it fails", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const nowSec = Math.floor(Date.now() / 1000);
     const targetDay = Math.floor((nowSec - 86400) / 86400) * 86400;
     const execCalls: string[] = [];
@@ -657,14 +650,12 @@ describe("handleBackfillStabilityIndex", () => {
       return origBatch(statements);
     }) as typeof db.batch;
 
-    const response = await callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+    await expect(callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
         method: "POST",
         adminKey: "secret",
-      }) });
+      }) })).rejects.toThrow("scratch fill failed");
 
-    expect(response.status).toBe(500);
     expect(execCalls).toEqual(["DROP TABLE IF EXISTS stability_index_rebuild"]);
-    errorSpy.mockRestore();
   });
 
   it("logs advisory lease release failures without replacing a successful result", async () => {

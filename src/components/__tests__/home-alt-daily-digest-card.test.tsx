@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DailyDigestCard } from "@/components/home-alt-mini-cards/daily-digest-card";
 
@@ -19,7 +19,6 @@ vi.mock("@/lib/fonts/digest", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 

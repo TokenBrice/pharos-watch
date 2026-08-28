@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DdrTrackRecordSection } from "@/components/stablecoin-detail/ddr-track-record-section";
 import { DDRR_PUBLIC_WARNING, type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
@@ -18,7 +18,6 @@ vi.mock("@/lib/feature-flags", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
   resolverEnabledMock.mockReturnValue(true);
   reviewerEnabledMock.mockReturnValue(true);

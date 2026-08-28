@@ -1,6 +1,3 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
-import { pathToFileURL } from "node:url";
 import { GOLDEN_SCENARIOS, PAIRWISE_CONSTRAINTS } from "@shared/data/safety-score-v9/golden-scenarios-v1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import {
@@ -11,7 +8,13 @@ import {
 } from "@shared/lib/safety-score-v9/scenario-evaluator";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9-research";
 import type { V9MethodologyPolicy, V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
-import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import {
+  assertCliUsage,
+  parseStrictCliArgs,
+  runDirectCli,
+  writeCliHelpIfRequested,
+  writeJsonOutput,
+} from "../lib/cli-args.mjs";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts [options]
 
@@ -716,10 +719,7 @@ export function runV9PolicySensitivityCli(
   argv: readonly string[],
   io: CliIo = {
     stdout: (text) => process.stdout.write(text),
-    writeOutput: (path, text) => {
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, text, "utf8");
-    },
+    writeOutput: writeJsonOutput,
   },
 ): void {
   const options = parseV9PolicySensitivityArgs(argv);
@@ -740,9 +740,7 @@ export function runV9PolicySensitivityCli(
   else io.stdout(json);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  void runCliEntrypoint(() => runV9PolicySensitivityCli(process.argv.slice(2)), {
-    label: "safety-score-v9:policy-sensitivity",
-    usage: USAGE,
-  });
-}
+runDirectCli(import.meta.url, () => runV9PolicySensitivityCli(process.argv.slice(2)), {
+  label: "safety-score-v9:policy-sensitivity",
+  usage: USAGE,
+});

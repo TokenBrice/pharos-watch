@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { logCronRun } from "../cron-logger";
 import { CRON_ABANDONED_JOB_GRACE_MS, CronJobAbandonedError } from "../cron-lease-primitives";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 describe("logCronRun", () => {

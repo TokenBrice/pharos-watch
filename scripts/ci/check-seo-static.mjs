@@ -472,12 +472,24 @@ function redirectSourceMatchesPath(source, pathname) {
   return sourcePath === "/" || pathname === sourcePath || pathname.startsWith(`${sourcePath}/`);
 }
 
+function isPublicDatasetRewrite(rule) {
+  if (rule.status !== "200") return false;
+  const destination = /^\/datasets\/([^/]+)\/\d{4}-\d{2}-\d{2}\.(csv|json|ndjson)$/.exec(rule.destination);
+  if (!destination) return false;
+  const latest = /^\/datasets\/([^/]+)\/latest\.(csv|json|ndjson)$/.exec(rule.source);
+  if (latest) {
+    return latest[1] === destination[1] && latest[2] === destination[2];
+  }
+  const sheet = /^\/sheets\/([^/]+)\.csv$/.exec(rule.source);
+  return sheet != null && sheet[1] === destination[1] && destination[2] === "csv";
+}
+
 function validateStaticRedirects(outDir, errors) {
   const rules = collectRedirectRules(outDir);
   for (const rule of rules) {
     const destinationPath = redirectPathTemplate(rule.destination);
     if (!destinationPath) continue;
-    if (rule.status !== "301") {
+    if (rule.status !== "301" && !isPublicDatasetRewrite(rule)) {
       errors.push(`_redirects internal rule must be permanent (301): ${rule.source} ${rule.destination} ${rule.status}`);
     }
     const nextRule = rules.find((candidate) => redirectSourceMatchesPath(candidate.source, destinationPath));

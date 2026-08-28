@@ -226,12 +226,12 @@ The mock renders a plain `<a>` with a forwarded ref and passes every other prop 
 
 `installMatchMediaMock(matches)` takes either a boolean or a `(query: string) => boolean` predicate, which covers query-dependent suites (simulated viewport widths, `(prefers-reduced-motion: reduce)`) without rebuilding the `MediaQueryList` shape.
 
-### Mock D1 (`worker/src/test-helpers/__shared/mock-d1.ts`)
+### Mock D1 (`shared/test-utils/mock-d1.ts`)
 
 Lightweight D1 mock. By default it matches on SQL substrings, but critical-path tests should use stricter behavior when the test is meant to lock a query contract rather than only response shape.
 
 ```ts
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const db = mockD1([
   { match: "COUNT", rows: [{ total: 5 }] },
@@ -250,12 +250,12 @@ const db = mockD1([
 
 Cross-runtime tests outside `worker/src` should use `scripts/test-utils/d1.ts` for minimal D1 and RemoteD1 mocks. `makeTestD1Database()` covers Pages Functions that need `prepare()`, `batch()`, and `getHistory()`, while `createRemoteD1Mock()` covers worker maintenance scripts that accept a `RemoteD1Client` dependency.
 
-### Mock Fetch (`worker/src/test-helpers/__shared/mock-fetch.ts`)
+### Mock Fetch (`shared/test-utils/mock-fetch.ts`)
 
 Stubs global `fetch` for testing cron jobs that make HTTP requests.
 
 ```ts
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const spy = mockFetch([
   { match: "frankfurter.dev", body: { rates: { EUR: 0.925 } } },
@@ -380,7 +380,7 @@ When adding tests, prefer colocating them near the module under test unless an e
 - **Pure `shared/lib/` + `src/lib/` functions** — formatters, supply helpers, classification maps, peg-rate derivation, and frontend derivations. These are the highest-value tests: deterministic, fast, and catch regressions in shared logic.
 - **Edge cases** — `NaN`, `Infinity`, `null`, `undefined`, zero, negative values, empty inputs. The existing tests set this standard.
 - **Boundary values** — tier boundaries in formatters (e.g., 999 vs 1000 for K suffix).
-- **API contract tests** — when a worker handler has multiple response modes (different JSON shapes based on query params), add a contract test for each mode in `worker/src/api/__tests__/`. Use the shared D1 mock from `worker/src/test-helpers/__shared/mock-d1.ts`.
+- **API contract tests** — when a worker handler has multiple response modes (different JSON shapes based on query params), add a contract test for each mode in `worker/src/api/__tests__/`. Use the shared D1 mock from `shared/test-utils/mock-d1.ts`.
 - **Degraded-mode scenarios** — for cron jobs, test the normal path plus at least one failure/fallback scenario (e.g., upstream API 503, stale cache, missing data). Use `mockFetch()` to simulate API failures and `vi.useFakeTimers()` for deterministic time.
 
 ### Default test boundaries
@@ -490,7 +490,7 @@ When scaffolding is shared by multiple suites, follow the [sibling test-support 
 
 **Worker library test:** Same as above but in `worker/src/lib/__tests__/`. Import via relative paths (no `@/` alias).
 
-**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `../../test-helpers/__shared/mock-d1.ts`. Use shared fixtures from `../../test-helpers/__shared/fixtures.ts` for row data. Validate response shape against Zod schemas from `shared/types/index.ts`.
+**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `@shared/test-utils/mock-d1`. Use shared fixtures from `../../test-helpers/__shared/fixtures.ts` for row data. Validate response shape against Zod schemas from `shared/types/index.ts`.
 
 **Cron test:** Create in `worker/src/cron/__tests__/`. Mock external dependencies with `vi.mock()` and HTTP calls with `mockFetch()`. Test both normal path and at least one degraded-mode scenario.
 
@@ -498,7 +498,7 @@ Example API contract test:
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { handleBlacklist } from "../blacklist";
 
@@ -523,8 +523,8 @@ Example cron test with degraded mode:
 
 ```ts
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: async (url: string, opts?: RequestInit) => fetch(url, opts),

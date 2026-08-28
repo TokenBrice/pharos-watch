@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { PysBreakdown, type PysBreakdownProps } from "@/components/pys-breakdown";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { formatSignedPysDelta } from "@/lib/yield-presentation";
@@ -47,9 +47,6 @@ function renderWithProvider(props: PysBreakdownProps) {
 }
 
 describe("PysBreakdown", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   it("renders score, breakdown lines, and methodology link with version label", () => {
     const { container } = renderWithProvider(baseProps({ mode: "inline", score: 50 }));

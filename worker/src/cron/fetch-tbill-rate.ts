@@ -41,21 +41,6 @@ import { tryBocCorra } from "./tbill-sources/boc";
 import { tryCbrtTlref } from "./tbill-sources/cbrt";
 import { tryCbrKeyRate } from "./tbill-sources/cbr";
 
-// Parsers live in ./tbill-sources/* alongside their fetch adapters; re-exported
-// here so the existing fetch-tbill-rate test suite can keep importing them.
-export { parseTreasuryYieldXml } from "./tbill-sources/treasury";
-export { parseNyFedEffrJson } from "./tbill-sources/nyfed";
-export { parseEcbCompoundedEstrCsv } from "./tbill-sources/ecb";
-export { parseBoeSoniaCsv, parseBoeSoniaCompoundedIndexCsv } from "./tbill-sources/boe";
-export { parseBojCallRateJson } from "./tbill-sources/boj";
-export { parseRbaF1MoneyMarketCsv } from "./tbill-sources/rba";
-export { parseSixSar3mcCsv } from "./tbill-sources/six";
-export { parseBanxicoSeries } from "./tbill-sources/banxico";
-export { parseBcbSelicSeries } from "./tbill-sources/bcb";
-export { parseBocValetSeries } from "./tbill-sources/boc";
-export { parseCbrtEvdsSeries } from "./tbill-sources/cbrt";
-export { parseCbrKeyRateXml } from "./tbill-sources/cbr";
-
 const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
 const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
 const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";

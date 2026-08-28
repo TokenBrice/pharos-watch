@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { useRecentBlacklist7dMock, isBlacklistBannerEnabledMock } = vi.hoisted(() => ({
   useRecentBlacklist7dMock: vi.fn(),
@@ -29,7 +29,6 @@ describe("RecentBlacklistBanner", () => {
     isBlacklistBannerEnabledMock.mockReset();
   });
 
-  afterEach(cleanup);
 
   it("returns null when the feature flag is off", () => {
     isBlacklistBannerEnabledMock.mockReturnValue(false);

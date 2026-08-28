@@ -1,12 +1,23 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { StatTile } from "@/components/stat-tile";
-import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { TableCell, TableRow } from "@/components/table";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 import { StatusPill } from "./severity-pill";
 import { AttributionBadge, AttributionPanel } from "./attribution-panel";
 import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { cn } from "@/lib/utils";
+
+const API_KEY_LOAD_COLUMNS: readonly DataTableColumn[] = [
+  { id: "key", label: "Key", className: "pb-2 font-medium" },
+  { id: "class", label: "Class", className: "pb-2 font-medium" },
+  { id: "requests", label: "Requests", className: "pb-2 font-medium" },
+  { id: "keyed-share", label: "Keyed Share", className: "pb-2 font-medium" },
+  { id: "public-api-share", label: "Public API Share", className: "pb-2 font-medium" },
+  { id: "rate-limit", label: "Rate Limit", className: "pb-2 font-medium" },
+  { id: "status", label: "Status", className: "pb-2 font-medium" },
+];
 
 function trafficClassBadgeClassName(trafficClass: "external" | "site"): string {
   return trafficClass === "site"
@@ -91,41 +102,18 @@ export function ApiKeyLoadTable({
             </div>
           )}
 
-          <TableFrame
+          <DataTableShell
             tableId="api-key-load"
             testId="api-key-load-table"
+            columns={API_KEY_LOAD_COLUMNS}
             chrome="content"
             density="compact"
             tableClassName="min-w-[760px]"
             tableProps={{ "aria-label": "API key load" }}
+            headerClassName=""
+            headerRowClassName="border-b text-left text-muted-foreground"
           >
-            <TableHeader>
-              <TableRow className="border-b text-left text-muted-foreground">
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Key
-                </TableHead>
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Class
-                </TableHead>
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Requests
-                </TableHead>
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Keyed Share
-                </TableHead>
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Public API Share
-                </TableHead>
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Rate Limit
-                </TableHead>
-                <TableHead scope="col" className="pb-2 font-medium">
-                  Status
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {apiKeys.map((row) => {
+            {apiKeys.map((row) => {
                 const status = getApiKeyStatus(row, nowSeconds);
                 return (
                   <TableRow key={row.apiKeyId} className="border-b last:border-0">
@@ -158,8 +146,7 @@ export function ApiKeyLoadTable({
                   </TableRow>
                 );
               })}
-            </TableBody>
-          </TableFrame>
+          </DataTableShell>
         </div>
       )}
     </AttributionPanel>

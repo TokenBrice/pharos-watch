@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { VenueRiskBreakdown } from "@/components/venue-risk-breakdown";
 
-afterEach(cleanup);
 
 describe("VenueRiskBreakdown", () => {
   it("renders the five category scores, tier, and weighted score", () => {

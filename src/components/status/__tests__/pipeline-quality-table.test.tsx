@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { PipelineQualityTable } from "../pipeline-quality-table";
 import { buildPipelineQualityModel } from "@/lib/pipeline-workspace-model";
 import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
-afterEach(cleanup);
 
 describe("PipelineQualityTable", () => {
   it("renders the semantic threshold columns and keeps active depegs outside the breakpoint table", () => {

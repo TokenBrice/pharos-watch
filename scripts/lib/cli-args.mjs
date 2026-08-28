@@ -1,4 +1,8 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { argv as processArgv } from "node:process";
 import { parseArgs } from "node:util";
+import { isDirectRun } from "./smoke-runtime.mjs";
 
 /** @typedef {{ type: "string" | "boolean", short?: string, multiple?: boolean, default?: string | boolean | string[] | boolean[] }} CliOptionDefinition */
 /** @typedef {{ allowNegativeValues?: readonly string[], allowPositionals?: boolean, conflicts?: readonly (readonly string[])[], options?: Record<string, CliOptionDefinition> }} StrictCliConfig */
@@ -107,6 +111,18 @@ export function assertCliUsage(condition, message) {
   if (!condition) throw new CliUsageError(message);
 }
 
+/** @param {unknown} value @param {string} name */
+export function requireCliString(value, name) {
+  assertCliUsage(typeof value === "string" && value.trim().length > 0, `${name} is required`);
+  return value;
+}
+
+/** @param {string} path @param {string} contents */
+export function writeJsonOutput(path, contents) {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, contents, "utf8");
+}
+
 /** @param {unknown} value @param {{ name: string, min?: number, max?: number }} bounds */
 export function parseCliInteger(value, { name, min = Number.MIN_SAFE_INTEGER, max = Number.MAX_SAFE_INTEGER }) {
   const normalized = String(value ?? "").trim();
@@ -146,4 +162,17 @@ export async function runCliEntrypoint(action, { label, usage, stderr = process.
     if (usageError && usage) stderr.write(`\n${usage.trimEnd()}\n`);
     process.exitCode = usageError ? 2 : 1;
   }
+}
+
+/**
+ * Run a CLI only when its module is the process entrypoint.
+ *
+ * @param {string} importMetaUrl
+ * @param {() => unknown | Promise<unknown>} action
+ * @param {{ label?: string, usage?: string, stderr?: { write: (text: string) => unknown } }} [metadata]
+ */
+export function runDirectCli(importMetaUrl, action, metadata = {}) {
+  if (!isDirectRun(importMetaUrl, processArgv[1])) return false;
+  void runCliEntrypoint(action, metadata);
+  return true;
 }

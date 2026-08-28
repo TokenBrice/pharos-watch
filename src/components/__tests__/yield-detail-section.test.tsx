@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldDetailSection from "@/components/yield-detail-section";
 import {
   SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
   buildSourceRiskGoldenFixture,
   mergeSourceRiskGoldenFixtures,
-} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
-import { makeYieldProvenance } from "@/test/fixtures/yield";
+} from "@shared/test-utils/yield-source-risk-golden-fixtures";
+import { makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
 
 const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock } = vi.hoisted(() => ({
@@ -142,9 +142,6 @@ describe("YieldDetailSection", () => {
     HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
   it("renders the loading shell for tracked yield-bearing assets", () => {
     useYieldRankingsMock.mockReturnValue({

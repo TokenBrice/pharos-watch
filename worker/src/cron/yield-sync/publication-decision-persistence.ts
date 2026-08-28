@@ -6,7 +6,8 @@ import {
 } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import { getCache, type CacheWriteResult } from "../../lib/db-cache";
-import { readCachedJson, validatePayloadWithSchema } from "../../lib/api-utils";
+import { readCachedJson } from "../../lib/api-cache-read";
+import { validatePayloadWithSchema } from "../../lib/api-schema";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates, getConfidencePriority } from "./evaluation-arbitration";
 import { publishYieldRowsAtomically } from "./publication-atomic-batch";

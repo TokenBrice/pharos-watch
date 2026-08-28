@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Infrastructure, StablecoinMeta } from "@shared/types";
 
 const { isHeroVerdictEnabledMock } = vi.hoisted(() => ({
@@ -69,7 +69,6 @@ describe("HeroVerdict standalone (mobile section)", () => {
   beforeEach(() => {
     isHeroVerdictEnabledMock.mockReset();
   });
-  afterEach(cleanup);
 
   it("renders the verdict pill when the flag is on and the archetype is categorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
@@ -103,7 +102,6 @@ describe("HeroMobileIdentity heading aria-describedby", () => {
   beforeEach(() => {
     isHeroVerdictEnabledMock.mockReset();
   });
-  afterEach(cleanup);
 
   it("wires aria-describedby when the flag is on and the archetype is categorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
@@ -139,7 +137,6 @@ describe("HeroDesktopIdentity verdict pill", () => {
   beforeEach(() => {
     isHeroVerdictEnabledMock.mockReset();
   });
-  afterEach(cleanup);
 
   it("renders the pill and wires aria-describedby when the flag is on and the archetype is categorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);

@@ -1,6 +1,5 @@
-import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { MechanismArchetype } from "@shared/types";
+import { getMechanismReviewOverlay } from "./mechanism-overlay.server";
 
 /**
  * Build-time extraction of the V9 mechanism review narrative. Import this module
@@ -27,26 +26,12 @@ export interface MechanismReviewView {
   sources: MechanismReviewSource[];
 }
 
-interface OverlayEntryShape {
-  assetId: string;
-  archetype: string;
-  reviewedAt: string;
-  notes?: string;
-  sources?: Array<{ label: string; url: string }>;
-}
-
-const ARCHETYPES = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
-
-const OVERLAYS_BY_ASSET_ID: ReadonlyMap<string, OverlayEntryShape> = new Map(
-  (mechanismReviewOverlays.overlays as unknown as OverlayEntryShape[]).map((overlay) => [overlay.assetId, overlay]),
-);
-
 export function buildMechanismReviewView(assetId: string): MechanismReviewView | null {
-  const overlay = OVERLAYS_BY_ASSET_ID.get(assetId);
-  if (!overlay || !ARCHETYPES.has(overlay.archetype)) return null;
+  const overlay = getMechanismReviewOverlay(assetId);
+  if (!overlay) return null;
 
-  const notes = overlay.notes?.trim();
-  const sources = (overlay.sources ?? []).filter((source) => source.label.trim() && source.url.trim());
+  const notes = overlay.notes.trim();
+  const sources = overlay.sources.filter((source) => source.label.trim() && source.url.trim());
   // The panel exists to show reviewed evidence; without prose or a citation
   // there is nothing to show that the score bars do not already say.
   if (!notes || sources.length === 0) return null;

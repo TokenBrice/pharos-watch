@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Download, ImageOff } from "lucide-react";
+import { useImageUnavailable } from "../use-image-unavailable";
 
 /**
  * The poster bytes are served by `functions/safety-scores/map.png.ts` out of KV,
@@ -66,17 +66,7 @@ function PosterUnavailable() {
 }
 
 export function SafetyMapPoster() {
-  const [unavailable, setUnavailable] = useState(false);
-
-  // Runs in the commit phase, as React attaches to the hydrated element.
-  // `complete` is also true for a successful load, so the zero `naturalWidth` is
-  // what distinguishes a finished-and-failed fetch; an image still in flight is
-  // left to `onError`.
-  const checkAlreadyFailed = useCallback((image: HTMLImageElement | null) => {
-    if (image && image.complete && image.naturalWidth === 0) {
-      setUnavailable(true);
-    }
-  }, []);
+  const { unavailable, checkAlreadyFailed, onError } = useImageUnavailable();
 
   if (unavailable) {
     return <PosterUnavailable />;
@@ -93,7 +83,7 @@ export function SafetyMapPoster() {
           width={POSTER_WIDTH}
           height={POSTER_HEIGHT}
           className="aspect-[16/9] w-full bg-[#05070d] object-contain"
-          onError={() => setUnavailable(true)}
+          onError={onError}
         />
       </figure>
       <a

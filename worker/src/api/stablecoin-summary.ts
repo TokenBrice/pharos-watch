@@ -1,10 +1,7 @@
 import type { StablecoinData } from "@shared/types/market";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import {
-  addFreshnessHeaders,
-  errorResponse,
-  jsonResponse,
-  } from "../lib/api-utils";
+import { addFreshnessHeaders } from "../lib/api-freshness";
+import { errorResponse, jsonResponse } from "../lib/api-response";
 import { CACHE_PROFILES } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import {

@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { FlowReceiptBand } from "@/components/flow-receipt-band";
 import type { MintBurnCoinFlow, MintBurnGauge, MintBurnHourlyBucket } from "@shared/types";
 
-afterEach(() => cleanup());
 
 const gauge: MintBurnGauge = {
   score: 12,

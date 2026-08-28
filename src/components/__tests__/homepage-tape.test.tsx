@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 type LatestEventsResult = {
@@ -24,7 +24,6 @@ vi.mock("@/lib/logos", () => ({
 import { HomepageTape } from "@/components/homepage-tape";
 
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });
 

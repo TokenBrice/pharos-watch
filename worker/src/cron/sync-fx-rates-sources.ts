@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { validatePayloadWithSchema } from "../lib/api-utils";
+import { validatePayloadWithSchema } from "../lib/api-schema";
 import { USER_AGENT } from "../lib/constants";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import type {

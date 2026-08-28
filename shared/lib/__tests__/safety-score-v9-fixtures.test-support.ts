@@ -3,6 +3,14 @@ import type {
   V9FactStatusV2,
   V9FailureDomainRef,
 } from "../../types/safety-score-v9-facts";
+import {
+  type EvaluateV9EconomicControlArgs,
+  type V9BridgeControlReview,
+  type V9EconomicControlAssetFacts,
+  type V9MintMechanismReview,
+  type V9OracleControlReview,
+} from "../safety-score-v9/control";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 export function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
   return {
@@ -106,6 +114,71 @@ export function makeDeploymentControl(
     modulesOrGuards: "unknown",
     incidentState: "none",
     failureDomains: [failureDomain(domainKind[controlKind], controlKey)],
+    ...overrides,
+  };
+}
+
+export function makeEconomicControlFacts(
+  controls: readonly V9DeploymentControlFactV2[] = [],
+  overrides: Partial<V9EconomicControlAssetFacts> = {},
+): V9EconomicControlAssetFacts {
+  return {
+    assetId: "fixture-asset",
+    archetype: "fiat-cash",
+    controlStatus: controls.length > 0 ? requiredKnown("controls") : notApplicable("controls"),
+    controls,
+    supply: {
+      status: requiredKnown("supply"),
+      selectedBridgeRoutes: [],
+      selectedRouteSupplyShare: 1,
+      unknownRouteSupplyShare: 0,
+      unreviewedRouteSupplyShare: 0,
+    },
+    ...overrides,
+  };
+}
+
+export function noMintReview(): V9MintMechanismReview {
+  return {
+    status: notApplicable("mint"),
+    controlKey: null,
+    reconciliation: "not-applicable",
+    supervision: "unknown",
+    upgrade: { state: "not-applicable", controlKey: null },
+  };
+}
+
+export function noOracleReview(): V9OracleControlReview {
+  return { status: notApplicable("oracle"), tier: null, branches: [] };
+}
+
+export function noBridgeReview(): V9BridgeControlReview {
+  return { status: notApplicable("bridge"), routes: [] };
+}
+
+export function makeReviewedMintInput(
+  controlKey: string,
+  overrides: Partial<V9MintMechanismReview> = {},
+): V9MintMechanismReview {
+  return {
+    status: requiredKnown("mint"),
+    controlKey,
+    reconciliation: "not-applicable",
+    supervision: "unknown",
+    upgrade: { state: "immutable", controlKey: null },
+    ...overrides,
+  };
+}
+
+export function makeEconomicControlArgs(
+  overrides: Partial<EvaluateV9EconomicControlArgs> = {},
+): EvaluateV9EconomicControlArgs {
+  return {
+    policy: V9_CANDIDATE_POLICY_V1,
+    facts: makeEconomicControlFacts(),
+    mint: noMintReview(),
+    oracle: noOracleReview(),
+    bridge: noBridgeReview(),
     ...overrides,
   };
 }

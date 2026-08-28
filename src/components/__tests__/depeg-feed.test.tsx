@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen } from "@testing-library/react";
 import { DepegFeed } from "@/components/depeg-feed";
 import { installMatchMediaMock } from "@/test-utils/frontend";
 import type { DepegEvent } from "@shared/types";
@@ -19,7 +19,6 @@ beforeEach(() => {
   installMatchMediaMock(true);
 });
 
-afterEach(cleanup);
 
 function makeEvent(overrides: Partial<DepegEvent>): DepegEvent {
   return {

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 import {
   CONFIGURED_COINS,

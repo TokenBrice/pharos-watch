@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CIRCUIT_SOURCE } from "../constants";
 import { loadProviderCircuitHealth } from "../provider-circuit-health";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { CircuitRecord } from "@shared/types/status";
 
 function circuit(overrides: Partial<CircuitRecord>): CircuitRecord {

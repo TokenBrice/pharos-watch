@@ -1,28 +1,23 @@
 import type { BackingType, GovernanceType } from "../../types";
+import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 
 // Governance (Type) labels
 // ---------------------------------------------------------------------------
 
 /** Full labels used in metadata, descriptions, and structured data. */
-export const GOVERNANCE_LABELS: Record<GovernanceType, string> = {
-  centralized: "Centralized (CeFi)",
-  "centralized-dependent": "CeFi-Dependent",
-  decentralized: "Decentralized (DeFi)",
-};
+export const GOVERNANCE_LABELS = projectDescriptors(GOVERNANCE_DESCRIPTORS, (descriptor) => descriptor.label);
 
 /** Short labels used in table badges, stat cards, and filter options. */
-export const GOVERNANCE_LABELS_SHORT: Record<GovernanceType, string> = {
-  centralized: "CeFi",
-  "centralized-dependent": "CeFi-Dep",
-  decentralized: "DeFi",
-};
+export const GOVERNANCE_LABELS_SHORT = projectDescriptors(
+  GOVERNANCE_DESCRIPTORS,
+  (descriptor) => descriptor.shortLabel,
+);
 
 /** Lowercase prose phrases used inline in metadata descriptions and sentences. */
-export const GOVERNANCE_PROSE_LABELS: Record<GovernanceType, string> = {
-  centralized: "centralized",
-  "centralized-dependent": "CeFi-dependent",
-  decentralized: "decentralized",
-};
+export const GOVERNANCE_PROSE_LABELS = projectDescriptors(
+  GOVERNANCE_DESCRIPTORS,
+  (descriptor) => descriptor.proseLabel,
+);
 
 // ---------------------------------------------------------------------------
 // Filter option tuples — used by heatmap and depeg filter UIs
@@ -40,32 +35,19 @@ export const GOVERNANCE_FILTER_OPTIONS: { value: GovernanceType | "all"; label: 
 // ---------------------------------------------------------------------------
 
 /** Full labels used in metadata and descriptions. */
-export const BACKING_LABELS: Record<BackingType, string> = {
-  "rwa-backed": "Real-World Asset Backed",
-  "crypto-backed": "Crypto-Collateralized",
-  algorithmic: "Algorithmic",
-};
+export const BACKING_LABELS = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.label);
 
 /** Short labels used in table badge text. */
-export const BACKING_LABELS_SHORT: Record<BackingType, string> = {
-  "rwa-backed": "RWA",
-  "crypto-backed": "Crypto",
-  algorithmic: "Algo",
-};
+export const BACKING_LABELS_SHORT = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.shortLabel);
 
 /** Sentence-case labels used in inline classification prose. */
-export const BACKING_SENTENCE_LABELS: Record<BackingType, string> = {
-  "rwa-backed": "RWA-backed",
-  "crypto-backed": "Crypto-backed",
-  algorithmic: "algorithmic",
-};
+export const BACKING_SENTENCE_LABELS = projectDescriptors(
+  BACKING_DESCRIPTORS,
+  (descriptor) => descriptor.sentenceLabel,
+);
 
 /** Prose phrases used inline in metadata descriptions. */
-export const BACKING_PROSE_LABELS: Record<BackingType, string> = {
-  "rwa-backed": "backed by real-world assets",
-  "crypto-backed": "collateralized by crypto assets",
-  algorithmic: "algorithmic stablecoin",
-};
+export const BACKING_PROSE_LABELS = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.proseLabel);
 
 export function getBackingLabelShort(value: string): string {
   if (value in BACKING_LABELS_SHORT) {

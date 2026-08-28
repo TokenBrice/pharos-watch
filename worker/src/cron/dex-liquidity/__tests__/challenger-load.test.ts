@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
-import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 
 describe("challenger load", () => {
   it("does not run the full legacy JSON load when published snapshots cover", async () => {

@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
-import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
@@ -13,7 +11,13 @@ import {
 } from "@shared/types/safety-score-v9-evidence-queue";
 import { SafetyScoreV9ResponseSchema, type SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";
 import { loadPerCoinStablecoinEntries, type StablecoinSourceEntry } from "../lib/stablecoin-catalog-sources";
-import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import {
+  parseStrictCliArgs,
+  requireCliString,
+  runDirectCli,
+  writeCliHelpIfRequested,
+  writeJsonOutput,
+} from "../lib/cli-args.mjs";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-missing-data-registry.ts [options]
 
@@ -1123,10 +1127,7 @@ interface RegistryIo {
 
 const DEFAULT_IO: RegistryIo = {
   readJson: (path) => JSON.parse(readFileSync(path, "utf8")) as unknown,
-  writeText: (path, contents) => {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, contents, "utf8");
-  },
+  writeText: writeJsonOutput,
   stdout: process.stdout,
 };
 
@@ -1139,25 +1140,23 @@ export function runV9MissingDataRegistryCli(argv: readonly string[], io: Registr
     },
   });
   if (writeCliHelpIfRequested(values, USAGE, io.stdout)) return null;
-  assertCliUsage(typeof values.replay === "string", "--replay is required");
-  assertCliUsage(typeof values.policy === "string", "--policy is required");
-  assertCliUsage(typeof values.output === "string", "--output is required");
+  const replayPath = requireCliString(values.replay, "--replay");
+  const policyPath = requireCliString(values.policy, "--policy");
+  const outputPath = requireCliString(values.output, "--output");
 
   const registry = generateV9MissingDataRegistry({
-    replay: io.readJson(values.replay),
-    policy: io.readJson(values.policy),
+    replay: io.readJson(replayPath),
+    policy: io.readJson(policyPath),
     catalogEntries: loadPerCoinStablecoinEntries(),
   });
-  io.writeText(values.output, `${JSON.stringify(registry, null, 2)}\n`);
+  io.writeText(outputPath, `${JSON.stringify(registry, null, 2)}\n`);
   io.stdout.write(
-    `Wrote ${registry.summary.openItemCount} missing-data items for ${registry.summary.stablecoinCount} stablecoins to ${values.output}\n`,
+    `Wrote ${registry.summary.openItemCount} missing-data items for ${registry.summary.stablecoinCount} stablecoins to ${outputPath}\n`,
   );
   return registry;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  void runCliEntrypoint(() => runV9MissingDataRegistryCli(process.argv.slice(2)), {
-    label: "safety-score-v9:missing-data-registry",
-    usage: USAGE,
-  });
-}
+runDirectCli(import.meta.url, () => runV9MissingDataRegistryCli(process.argv.slice(2)), {
+  label: "safety-score-v9:missing-data-registry",
+  usage: USAGE,
+});

@@ -2,9 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { Metadata } from "next";
 import type React from "react";
-import { notFound } from "next/navigation";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
@@ -15,6 +13,7 @@ import { TableBody, TableFrame, TableHead, TableHeader, TableRow } from "@/compo
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { cn } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PUBLIC_DOC_BY_SLUG, preparePublicDocMarkdown, resolvePublicDocHref } from "@shared/lib/public-docs";
 import docsMetadata from "@/generated/docs-metadata.json";
@@ -103,27 +102,7 @@ const mdxComponents = {
   ),
 };
 
-export function generateStaticParams() {
-  return Array.from(PUBLIC_DOC_BY_SLUG.keys()).map((slug) => ({ slug }));
-}
-
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params;
-  const doc = PUBLIC_DOC_BY_SLUG.get(slug);
-  if (!doc) return { title: "Doc Not Found" };
-
-  return buildPageMetadata({
-    title: buildDocMetadataTitle(doc),
-    description: doc.summary,
-    canonical: `/docs/${slug}/`,
-  });
-}
-
-export default async function DocPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const doc = PUBLIC_DOC_BY_SLUG.get(slug);
-  if (!doc) notFound();
-
+function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, infer T> ? T : never), slug: string) {
   const source = preparePublicDocMarkdown(fs.readFileSync(path.join(DOCS_DIR, doc.source), "utf-8"), {
     source: doc.source,
     stripTitle: true,
@@ -173,3 +152,20 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
     </FeaturePageShell>
   );
 }
+
+const route = createStaticSlugRoute({
+  paramKey: "slug",
+  pages: Array.from(PUBLIC_DOC_BY_SLUG.values()),
+  pageBySlug: PUBLIC_DOC_BY_SLUG,
+  metadata: (doc, slug) => buildPageMetadata({
+    title: buildDocMetadataTitle(doc),
+    description: doc.summary,
+    canonical: `/docs/${slug}/`,
+  }),
+  missingMetadata: { title: "Doc Not Found" },
+  render: renderDoc,
+});
+
+export const generateStaticParams = route.generateStaticParams;
+export const generateMetadata = route.generateMetadata;
+export default route.Page;

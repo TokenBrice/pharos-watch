@@ -798,8 +798,8 @@ Commit the sitemap output separately or amend it into the source commit without 
 You can also run the individual checks directly when iterating:
 
 - new redemption config -> `npm run audit:coverage -- --domain=redemption-backstops`
-- L2BEAT-backed chain route review -> `npm run candidates:l2beat-bridge-routes` and `npm run audit:coverage -- --domain=l2beat-snapshot -- --check`
-- dependency/process context review -> `npm run audit:dependency-coverage` (report) or `npm run check:dependency-review-gaps` (gate), and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
+- L2BEAT-backed chain route review -> `npm run candidates:l2beat-bridge-routes` and `npm run audit:coverage -- --domain=l2beat-snapshot --check`
+- dependency/process context review -> `npm run audit:coverage -- --domain=dependency-coverage` (report) or `npm run check:dependency-review-gaps` (gate), and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
 - verified docs changed -> `npm run check:verified-doc-links`, `npm run check:doc-sync`
 
 If you added or changed a new upstream/provider or methodology-affecting runtime path, update the matching verified docs in the same change:

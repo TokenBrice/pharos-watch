@@ -8,7 +8,7 @@ import {
 } from "../admin-job";
 
 describe("admin-job helpers", () => {
-  it("rejects unauthorized requests before invoking the handler", async () => {
+  it("executes jobs without owning route authentication", async () => {
     const response = await runAdminJob(
       {
         request: new Request("https://api.pharos.watch/api/admin"),
@@ -17,8 +17,8 @@ describe("admin-job helpers", () => {
       async () => new Response("ok"),
     );
 
-    expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("ok");
   });
 
   it("parses body payloads and computes dryRun from body or query", async () => {
@@ -30,7 +30,6 @@ describe("admin-job helpers", () => {
           body: JSON.stringify({ dryRun: true, configKey: " usdc " }),
         }),
         url: new URL("https://api.pharos.watch/api/admin?dry-run=false"),
-        trustedAdmin: true,
         parseBody: true,
       },
       async ({ body, dryRun }) => Response.json({ body, dryRun }),
@@ -52,7 +51,6 @@ describe("admin-job helpers", () => {
           body: "{",
         }),
         url: new URL("https://api.pharos.watch/api/admin"),
-        trustedAdmin: true,
         parseBody: true,
       },
       async () => new Response("ok"),

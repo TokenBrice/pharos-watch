@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NonUsdShareChart } from "@/components/non-usd-share-chart";
 
 const { useNonUsdShareMock, handleAnimationEndMock } = vi.hoisted(() => ({
@@ -25,9 +25,6 @@ vi.mock("@/hooks/use-chart-shell", () => ({
 }));
 
 describe("NonUsdShareChart", () => {
-  afterEach(() => {
-    cleanup();
-  });
 
   beforeEach(() => {
     useNonUsdShareMock.mockReturnValue({

@@ -8,36 +8,84 @@ import type {
 } from "../types/core";
 import type { BadgeStyle } from "./classification";
 
-export const GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES: Record<GeniusAuthorizationStatus, BadgeStyle> = {
+interface GeniusAuthorizationStatusDescriptor {
+  badge: BadgeStyle;
+  shortLabel: string;
+  textCls: string | undefined;
+  description: string;
+}
+
+const GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS = {
   "ppsi-approved": {
-    label: "PPSI Approved",
-    cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+    badge: {
+      label: "PPSI Approved",
+      cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+    },
+    shortLabel: "PPSI Approved",
+    textCls: "text-emerald-700 dark:text-emerald-400",
+    description: "Official source identifies a domestic permitted payment stablecoin issuer approval for this token or issuer pathway.",
   },
   "state-qualified": {
-    label: "State Qualified",
-    cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+    badge: {
+      label: "State Qualified",
+      cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+    },
+    shortLabel: "State Qualified",
+    textCls: "text-emerald-700 dark:text-emerald-400",
+    description: "Official source identifies a state-qualified payment stablecoin issuer pathway.",
   },
   "official-application-pending": {
-    label: "Official Pending",
-    cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+    badge: {
+      label: "Official Pending",
+      cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+    },
+    shortLabel: "Filing Pending",
+    textCls: undefined,
+    description: "Public regulator source shows an application or registration is filed and pending.",
   },
   "issuer-announced-intent": {
-    label: "Issuer Intent",
-    cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+    badge: {
+      label: "Issuer Intent",
+      cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+    },
+    shortLabel: "Issuer Intent",
+    textCls: undefined,
+    description: "Issuer or partner materials signal a GENIUS-era issuance path, but no token-specific official approval was found.",
   },
   "no-public-authorization-found": {
-    label: "No Public Auth Found",
-    cls: "bg-muted/40 text-muted-foreground border-border/60",
+    badge: { label: "No Public Auth Found", cls: "bg-muted/40 text-muted-foreground border-border/60" },
+    shortLabel: "None Found",
+    textCls: "text-muted-foreground",
+    description: "A dated negative-evidence review found no qualifying public approval, application, or registration source.",
   },
   "not-applicable": {
-    label: "Not Applicable",
-    cls: "bg-muted/40 text-muted-foreground border-border/60",
+    badge: { label: "Not Applicable", cls: "bg-muted/40 text-muted-foreground border-border/60" },
+    shortLabel: "Not Applicable",
+    textCls: "text-muted-foreground",
+    description: "The reviewed asset is outside the tracked GENIUS payment-stablecoin authorization posture.",
   },
   unknown: {
-    label: "Unknown",
-    cls: "bg-muted/40 text-muted-foreground border-border/60",
+    badge: { label: "Unknown", cls: "bg-muted/40 text-muted-foreground border-border/60" },
+    shortLabel: "Unknown",
+    textCls: "text-muted-foreground",
+    description: "The public posture has not been resolved from available sources.",
   },
-};
+} as const satisfies Record<GeniusAuthorizationStatus, GeniusAuthorizationStatusDescriptor>;
+
+function projectAuthorizationStatuses<Value>(
+  project: (descriptor: GeniusAuthorizationStatusDescriptor) => Value,
+): Record<GeniusAuthorizationStatus, Value> {
+  return Object.fromEntries(
+    (Object.entries(GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS) as [
+      GeniusAuthorizationStatus,
+      GeniusAuthorizationStatusDescriptor,
+    ][]).map(([status, descriptor]) => [status, project(descriptor)]),
+  ) as Record<GeniusAuthorizationStatus, Value>;
+}
+
+export const GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES = projectAuthorizationStatuses(
+  (descriptor) => descriptor.badge,
+);
 
 /**
  * Authored-short authorization-status labels for dense surfaces (hero
@@ -46,15 +94,7 @@ export const GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES: Record<GeniusAuthorizatio
  * every label describes a *pathway* status — never a present-day federal
  * license.
  */
-export const GENIUS_STATUS_SHORT_LABELS: Record<GeniusAuthorizationStatus, string> = {
-  "ppsi-approved": "PPSI Approved",
-  "state-qualified": "State Qualified",
-  "official-application-pending": "Filing Pending",
-  "issuer-announced-intent": "Issuer Intent",
-  "no-public-authorization-found": "None Found",
-  "not-applicable": "Not Applicable",
-  unknown: "Unknown",
-};
+export const GENIUS_STATUS_SHORT_LABELS = projectAuthorizationStatuses((descriptor) => descriptor.shortLabel);
 
 /**
  * Text-only tones for flat surfaces that carry no pill background. Approved
@@ -62,25 +102,11 @@ export const GENIUS_STATUS_SHORT_LABELS: Record<GeniusAuthorizationStatus, strin
  * (`undefined`), and absent/inapplicable statuses are muted. Tailwind classes
  * are static strings per the repo gotcha.
  */
-export const GENIUS_STATUS_TEXT_CLS: Record<GeniusAuthorizationStatus, string | undefined> = {
-  "ppsi-approved": "text-emerald-700 dark:text-emerald-400",
-  "state-qualified": "text-emerald-700 dark:text-emerald-400",
-  "official-application-pending": undefined,
-  "issuer-announced-intent": undefined,
-  "no-public-authorization-found": "text-muted-foreground",
-  "not-applicable": "text-muted-foreground",
-  unknown: "text-muted-foreground",
-};
+export const GENIUS_STATUS_TEXT_CLS = projectAuthorizationStatuses((descriptor) => descriptor.textCls);
 
-export const GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS: Record<GeniusAuthorizationStatus, string> = {
-  "ppsi-approved": "Official source identifies a domestic permitted payment stablecoin issuer approval for this token or issuer pathway.",
-  "state-qualified": "Official source identifies a state-qualified payment stablecoin issuer pathway.",
-  "official-application-pending": "Public regulator source shows an application or registration is filed and pending.",
-  "issuer-announced-intent": "Issuer or partner materials signal a GENIUS-era issuance path, but no token-specific official approval was found.",
-  "no-public-authorization-found": "A dated negative-evidence review found no qualifying public approval, application, or registration source.",
-  "not-applicable": "The reviewed asset is outside the tracked GENIUS payment-stablecoin authorization posture.",
-  unknown: "The public posture has not been resolved from available sources.",
-};
+export const GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS = projectAuthorizationStatuses(
+  (descriptor) => descriptor.description,
+);
 
 export const GENIUS_APPLICABILITY_LABELS: Record<GeniusApplicability, string> = {
   "apparent-payment-stablecoin": "Apparent payment stablecoin",

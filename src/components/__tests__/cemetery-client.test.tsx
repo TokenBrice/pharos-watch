@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -67,7 +67,6 @@ describe("CemeteryClient", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.unstubAllGlobals();
   });
 

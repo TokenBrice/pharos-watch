@@ -1,6 +1,6 @@
 "use client";
 
-import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
+import { CohortCoinEmblems, summarizeCohort } from "@/app/alt-pegs/fiat-world-atlas/cohort-coin-emblems";
 import { CohortThreads } from "@/app/alt-pegs/fiat-world-atlas/cohort-threads";
 import type { SkyCohort } from "@/lib/alt-peg-hero";
 
@@ -8,13 +8,7 @@ const SUN_HALO_PCT = { cx: 19, cy: 48 };
 
 export function SunCohort({ cohort }: { cohort: SkyCohort }) {
   if (cohort.coins.length === 0) return null;
-  const [primary, ...rest] = cohort.coins;
-  const coinCount = cohort.coins.length;
-  const cohortMarketCap = cohort.coins.reduce((sum, coin) => sum + coin.marketCap, 0);
-  const cohortSymbolPreview = cohort.coins
-    .slice(0, 3)
-    .map((coin) => coin.symbol)
-    .join(" · ");
+  const summary = summarizeCohort(cohort.coins);
 
   return (
     <div className="sun-cohort" aria-label="Gold stablecoins">
@@ -38,31 +32,16 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
       </svg>
       <CohortThreads coins={cohort.coins} colorHex="#facc15" />
       <span className="sky-region-tag" style={{ left: "19%", top: "9%" }}>
-        Gold · {coinCount} {coinCount === 1 ? "coin" : "coins"}
+        Gold · {summary.coinCount} {summary.coinCount === 1 ? "coin" : "coins"}
       </span>
-      <CoinEmblem
-        coin={primary}
-        variant="sun-core"
-        loading="eager"
-        cohortCoinCount={coinCount}
-        cohortMarketCap={cohortMarketCap}
-        cohortSymbolPreview={cohortSymbolPreview}
+      <CohortCoinEmblems
+        coins={cohort.coins}
         cohortRank={cohort.rank}
+        summary={summary}
+        variant={(_coin, index) => index < 2 ? "sun-core" : "sun-planet"}
+        loading={(_coin, index) => index < 3 ? "eager" : "lazy"}
         hoverCardYPlacement="below"
       />
-      {rest.map((c, i) => (
-        <CoinEmblem
-          key={c.id}
-          coin={c}
-          variant={i === 0 ? "sun-core" : "sun-planet"}
-          loading={i < 2 ? "eager" : "lazy"}
-          cohortCoinCount={coinCount}
-          cohortMarketCap={cohortMarketCap}
-          cohortSymbolPreview={cohortSymbolPreview}
-          cohortRank={cohort.rank}
-          hoverCardYPlacement="below"
-        />
-      ))}
     </div>
   );
 }

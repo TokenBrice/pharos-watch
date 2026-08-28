@@ -1,5 +1,4 @@
-import { defineBackstopRegistry, defineRecordEntries, rebindEntriesToRegistry } from "../factory";
-import { applyTrackedReviewedDocs } from "../shared";
+import { defineRecordEntries, finalizeBackstopRegistry } from "../factory";
 import { BASE_OFFCHAIN_ISSUER_ENTRIES } from "./base-batches";
 import { COMMODITY_OFFCHAIN_CONFIGS } from "./commodity";
 import { COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS } from "./coverage-and-stablecoin-audit";
@@ -33,58 +32,32 @@ const OFFCHAIN_ISSUER_REGISTRY_ENTRIES = [
   }),
 ];
 
-export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
-  defineBackstopRegistry(OFFCHAIN_ISSUER_REGISTRY_ENTRIES);
-
-applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
-  "usdt-tether",
-  "usdc-circle",
-  "pyusd-paypal",
-  "fdusd-first-digital",
-  "rlusd-ripple",
-  "eurc-circle",
-  "usdg-paxos",
-  "usd1-world-liberty-financial",
-  "ausd-agora",
-  "tusd-trueusd",
-  "brz-transfero",
-  "a7a5-old-vector",
-  "ylds-figure",
-  "usdtb-ethena",
-  "gusd-gate",
-  "usyc-hashnote",
-  "buidl-blackrock",
-  "usdy-ondo-finance",
-  "paxg-paxos",
-  "xaut-tether",
-  "kau-kinesis",
-  "kag-kinesis",
-]);
-
-applyTrackedReviewedDocs(
-  OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
-  ["zarp-zarp", "cetes-etherfuse", "cgo-comtech", "dgld-gold-token-sa"],
-  REVIEWED_REMEDIATION_AT,
-);
-
-applyTrackedReviewedDocs(
-  OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
-  [
-    "audx-aussie-dollar-token",
-    "brl1-brl1",
-    "cngn-compliant-naira",
-    "kgst-kyrgyz-som",
-    "reur-royal-euro",
-    "wars-argentine-peso",
-    "eusd-telcoin",
-    "jpyc-jpyc-v1",
-    "rusd-royal-dollar",
-  ],
-  REVIEWED_NON_USD_BATCH_AT,
-);
-
-/** Declared after the doc backfills above so the entries carry the finished configs. */
-export const OFFCHAIN_ISSUER_BACKSTOP_ENTRIES = rebindEntriesToRegistry(
+const FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   OFFCHAIN_ISSUER_REGISTRY_ENTRIES,
-  OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
+  [
+    {
+      stablecoinIds: [
+        "usdt-tether", "usdc-circle", "pyusd-paypal", "fdusd-first-digital", "rlusd-ripple",
+        "eurc-circle", "usdg-paxos", "usd1-world-liberty-financial", "ausd-agora", "tusd-trueusd",
+        "brz-transfero", "a7a5-old-vector", "ylds-figure", "usdtb-ethena", "gusd-gate",
+        "usyc-hashnote", "buidl-blackrock", "usdy-ondo-finance", "paxg-paxos", "xaut-tether",
+        "kau-kinesis", "kag-kinesis",
+      ],
+    },
+    {
+      stablecoinIds: ["zarp-zarp", "cetes-etherfuse", "cgo-comtech", "dgld-gold-token-sa"],
+      reviewedAt: REVIEWED_REMEDIATION_AT,
+    },
+    {
+      stablecoinIds: [
+        "audx-aussie-dollar-token", "brl1-brl1", "cngn-compliant-naira", "kgst-kyrgyz-som",
+        "reur-royal-euro", "wars-argentine-peso", "eusd-telcoin", "jpyc-jpyc-v1", "rusd-royal-dollar",
+      ],
+      reviewedAt: REVIEWED_NON_USD_BATCH_AT,
+    },
+  ],
 );
+
+export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
+  FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY.configs;
+export const OFFCHAIN_ISSUER_BACKSTOP_ENTRIES = FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY.entries;

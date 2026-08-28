@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { handleForget } from "../forget";
 import type { WebhookCommandContext } from "../context";
 

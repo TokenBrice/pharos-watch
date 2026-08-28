@@ -1,4 +1,4 @@
-import { rssResponse, toRfc822, type RssItem } from "@/lib/rss";
+import { createRssRoute, toRfc822, type RssItem } from "@/lib/rss";
 import { DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
@@ -23,15 +23,11 @@ function digestItems(entries: readonly DigestContentEntry[]): RssItem[] {
     }));
 }
 
-export async function GET(): Promise<Response> {
-  const items = digestItems(DIGEST_ENTRIES);
-  return rssResponse({
-    title: "Pharos Digest",
-    link: `${SITE_URL}/digest/`,
-    feedUrl: `${SITE_URL}${FEED_PATH}`,
-    description:
-      "Daily and weekly digests from pharos.watch — stablecoin market signals, PSI moves, depeg flags, and yield anomalies.",
-    language: "en-US",
-    items,
-  });
-}
+export const GET = createRssRoute({
+  title: "Pharos Digest",
+  link: `${SITE_URL}/digest/`,
+  feedUrl: `${SITE_URL}${FEED_PATH}`,
+  description:
+    "Daily and weekly digests from pharos.watch — stablecoin market signals, PSI moves, depeg flags, and yield anomalies.",
+  items: () => digestItems(DIGEST_ENTRIES),
+});

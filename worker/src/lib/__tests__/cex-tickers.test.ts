@@ -23,7 +23,7 @@ import {
 } from "../cex-tickers";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import coinbaseTickerFixture from "./fixtures/coinbase-ticker.json";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 beforeEach(() => sleepWithSignalMock.mockClear());
 afterEach(() => vi.unstubAllGlobals());

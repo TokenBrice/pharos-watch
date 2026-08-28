@@ -1,4 +1,5 @@
-import { errorResponse, jsonResponse, parseIntParam } from "./api-utils";
+import { errorResponse, jsonResponse } from "./api-response";
+import { parseIntParam } from "./api-params";
 
 interface BackfillCoin {
   id: string;

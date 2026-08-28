@@ -17,13 +17,11 @@ import {
   isOpportunityDerivedYieldRow,
   YieldSignalsIndicator,
   YieldSourceDetails,
-  formatYieldRowLabels,
+  deriveYieldRowDisplay,
 } from "@/components/yield-leaderboard-row-parts";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
 import { trackEvent } from "@/lib/analytics";
-import { deriveYieldRowPresentation, getYieldBenchmarkSelectionMode } from "@/lib/yield-workbench-row";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
@@ -209,24 +207,11 @@ function YieldInstrumentRowBase({
   onOpenSourceSheet,
   onToggleCompare,
 }: YieldInstrumentRowProps) {
-  const grade = row.safetyGrade;
-  const safetyScore = row.safetyScore;
-  const pysColor = getPysColor(row.pharosYieldScore);
-  const labels = formatYieldRowLabels(row);
-  const breakdown = useMemo(
-    () => ({
-      ...computePysBreakdown(
-        row.apy30d,
-        safetyScore,
-        row.yieldStability,
-        row.benchmarkRate,
-        row.sourceRisk?.sourceRiskPenalty ?? null,
-      ),
-      scalingFactor,
-    }),
-    [row.apy30d, row.benchmarkRate, row.sourceRisk?.sourceRiskPenalty, row.yieldStability, safetyScore, scalingFactor],
-  );
   const {
+    grade,
+    safetyScore,
+    pysColor,
+    breakdown,
     confidenceStyle,
     confidenceLabel,
     freshness,
@@ -239,13 +224,11 @@ function YieldInstrumentRowBase({
     availableSources,
     altSourceCount,
     benchmarkReferenceText,
-  } = useMemo(() => deriveYieldRowPresentation(row), [row]);
-
-  // WHY: USD-fallback benchmark on a non-USD peg yields a currency-mismatched score; surface a caveat.
-  const isCurrencyMismatchedBenchmark =
-    getYieldBenchmarkSelectionMode(row) === "fallback-usd" && row.peg !== null && row.peg !== "USD";
+    isCurrencyMismatchedBenchmark,
+    warningCount,
+    ...labels
+  } = useMemo(() => deriveYieldRowDisplay(row, scalingFactor), [row, scalingFactor]);
   const totalSourceCount = 1 + altSourceCount;
-  const warningCount = row.warningSignals.length;
   const benchmarkRate = row.benchmarkRate ?? riskFreeRate;
   const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;
 
@@ -257,6 +240,14 @@ function YieldInstrumentRowBase({
           convenience; the keyboard-reachable expand control is the chevron. */}
       <div
         id={`yield-row-${row.id}`}
+        data-yield-row-display={row.id}
+        data-yield-grade={grade ?? "NR"}
+        data-yield-safety-score={safetyScore ?? ""}
+        data-yield-pys={row.pharosYieldScore ?? ""}
+        data-yield-source-risk={sourceRiskScore ?? ""}
+        data-yield-freshness={freshness?.displayText ?? ""}
+        data-yield-warning-count={warningCount}
+        data-yield-benchmark={benchmarkReferenceText}
         onClick={() => onToggleExpanded(row.id)}
         onMouseEnter={() => onPrefetch(row.id)}
         className={cn(

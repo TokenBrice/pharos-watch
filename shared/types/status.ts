@@ -16,6 +16,8 @@ export * from "./status/core";
 export type {
   D1CapacityAssessment,
   D1CapacityForecastBasis,
+  D1CapacityGrowthWindow,
+  D1CapacityGrowthWindowKey,
   D1CapacityThresholdState,
 } from "./status/d1-capacity";
 export * from "./status/cron";

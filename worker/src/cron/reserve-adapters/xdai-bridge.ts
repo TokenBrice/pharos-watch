@@ -12,7 +12,7 @@ import {
   fetchEvmStorageAtBlock,
   type EvmBlockHeader,
 } from "../../lib/evm-rpc";
-import { encodeAddress } from "../../lib/evm-selectors";
+import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import { decodeStrictAddressWord } from "./abi-decode";
 import { runAdapterIo } from "./concurrency";
 import {
@@ -89,10 +89,6 @@ export interface XdaiBridgeObservation {
   legacyDai: bigint;
   legacySdai: bigint;
   outstanding: bigint;
-}
-
-function encodeAddressCall(selector: string, address: string): `0x${string}` {
-  return `${selector}${encodeAddress(address)}` as `0x${string}`;
 }
 
 function ratioFromBigInts(numerator: bigint, denominator: bigint, label: string): number {
@@ -403,26 +399,26 @@ function ethereumFields(params: XdaiBridgeParams) {
     addressObservation({ label: "foreign-erc20token", contract: bridge, data: SELECTORS.erc20token, allowFailure: true,
       verify: (value) => expectedAddress(value, usds, "foreign.erc20token()") }),
     boolObservation({ label: "foreign-interestEnabled", contract: bridge,
-      data: encodeAddressCall(SELECTORS.isInterestEnabled, usds), allowFailure: true,
+      data: encodeAddressCallData(SELECTORS.isInterestEnabled, usds), allowFailure: true,
       verify: (value) => value ? null : "foreign bridge interest wiring is disabled for USDS" }),
     uint256Observation({ label: "foreign-investedAmount", contract: bridge,
-      data: encodeAddressCall(SELECTORS.investedAmount, usds), allowFailure: true }),
+      data: encodeAddressCallData(SELECTORS.investedAmount, usds), allowFailure: true }),
     bridgeModeObservation("foreign-bridgeMode", bridge),
     uint256Observation({ label: "usds-balance", contract: usds,
-      data: encodeAddressCall(SELECTORS.balanceOf, bridge), allowFailure: true }),
+      data: encodeAddressCallData(SELECTORS.balanceOf, bridge), allowFailure: true }),
     decimalsObservation("usds-decimals", usds),
     uint256Observation({ label: "susds-balance", contract: susds,
-      data: encodeAddressCall(SELECTORS.balanceOf, bridge), allowFailure: true }),
+      data: encodeAddressCallData(SELECTORS.balanceOf, bridge), allowFailure: true }),
     addressObservation({ label: "susds-asset", contract: susds, data: SELECTORS.asset, allowFailure: true,
       verify: (value) => expectedAddress(value, usds, "sUSDS.asset()") }),
     decimalsObservation("susds-decimals", susds),
     uint256Observation({ label: "susds-maxWithdraw", contract: susds,
-      data: encodeAddressCall(SELECTORS.maxWithdraw, bridge), allowFailure: true }),
+      data: encodeAddressCallData(SELECTORS.maxWithdraw, bridge), allowFailure: true }),
     uint256Observation({ label: "dai-balance", contract: params.daiAddress,
-      data: encodeAddressCall(SELECTORS.balanceOf, bridge), allowFailure: true }),
+      data: encodeAddressCallData(SELECTORS.balanceOf, bridge), allowFailure: true }),
     decimalsObservation("dai-decimals", params.daiAddress),
     uint256Observation({ label: "sdai-balance", contract: params.sdaiAddress,
-      data: encodeAddressCall(SELECTORS.balanceOf, bridge), allowFailure: true }),
+      data: encodeAddressCallData(SELECTORS.balanceOf, bridge), allowFailure: true }),
     decimalsObservation("sdai-decimals", params.sdaiAddress),
   ] as const;
 }
@@ -436,7 +432,7 @@ function gnosisFields(params: XdaiBridgeParams) {
       allowFailure: true, verify: (value) => expectedAddress(value, params.usdsDepositContractAddress, "home USDS deposit wiring") }),
     bridgeModeObservation("home-bridgeMode", home),
     uint256Observation({ label: "mintedTotallyByBridge", contract: params.blockRewardAddress,
-      data: encodeAddressCall(SELECTORS.mintedTotallyByBridge, home), allowFailure: true }),
+      data: encodeAddressCallData(SELECTORS.mintedTotallyByBridge, home), allowFailure: true }),
     uint256Observation({ label: "totalBurntCoins", contract: home, data: SELECTORS.totalBurntCoins, allowFailure: true }),
   ] as const;
 }
@@ -638,7 +634,7 @@ export async function fetchXdaiBridgeReserves(
     fields: [uint256Observation({
       label: "susds-convertToAssets",
       contract: params.susdsAddress,
-      data: `${SELECTORS.convertToAssets}${susdsShares.toString(16).padStart(64, "0")}`,
+      data: `${SELECTORS.convertToAssets}${encodeUint256(susdsShares)}`,
       allowFailure: true,
       verify: (value) => susdsShares > 0n && value === 0n
         ? "sUSDS convertToAssets() returned zero for nonzero shares"

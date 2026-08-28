@@ -19,7 +19,7 @@ import { toErrorMessage } from "../lib/error-utils";
  * `since`/`until` since they scan static sources keyed by id; they still honor
  * `dryRun`.
  */
-import { errorResponse, jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-response";
 import { runAdminJob, readAdminIntegerParam } from "../lib/admin-job";
 import { TAPE_PROJECTOR_JOBS } from "../lib/tape-projectors/registry";
 import type { ProjectorOptions } from "../lib/tape-projectors/types";
@@ -59,10 +59,9 @@ export interface BackfillTapeRouteContext {
 export async function handleBackfillTape({
   db,
   url,
-  trustedAdmin,
   request,
 }: BackfillTapeRouteContext): Promise<Response> {
-  return runAdminJob({ request, trustedAdmin, url, parseBody: true }, async ({ body }) => {
+  return runAdminJob({ request, url, parseBody: true }, async ({ body }) => {
     const requestedClasses = readRepeatable(url, "class");
 
     const allowedNames = new Set(TAPE_PROJECTOR_JOBS.map((job) => job.name));

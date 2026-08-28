@@ -1,13 +1,18 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
-import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
 import {
   buildV9CuratedMintPostureQueue,
   type V9CuratedMintPostureInput,
   type V9CuratedMintPostureQueue,
 } from "@shared/lib/safety-score-v9/mint-posture-annotation";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import {
+  assertCliUsage,
+  parseStrictCliArgs,
+  requireCliString,
+  runDirectCli,
+  writeCliHelpIfRequested,
+  writeJsonOutput,
+} from "../lib/cli-args.mjs";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-mint-posture-queue.ts [options]
 
@@ -34,10 +39,7 @@ export interface V9MintPostureQueueIo {
 
 const DEFAULT_IO: V9MintPostureQueueIo = {
   readJson: (path) => JSON.parse(readFileSync(path, "utf8")) as unknown,
-  writeText: (path, contents) => {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, contents, "utf8");
-  },
+  writeText: writeJsonOutput,
   stdout: process.stdout,
 };
 
@@ -86,11 +88,11 @@ export function runV9MintPostureQueueCli(
     },
   });
   if (writeCliHelpIfRequested(values, USAGE, io.stdout)) return null;
-  assertCliUsage(typeof values.replay === "string", "--replay is required");
-  assertCliUsage(typeof values.output === "string", "--output is required");
+  const replayPath = requireCliString(values.replay, "--replay");
+  const outputPath = requireCliString(values.output, "--output");
 
-  const queue = buildV9MintPostureQueueFromCards(readV9PublishedCards(io.readJson(values.replay)));
-  io.writeText(values.output, `${JSON.stringify(queue, null, 2)}\n`);
+  const queue = buildV9MintPostureQueueFromCards(readV9PublishedCards(io.readJson(replayPath)));
+  io.writeText(outputPath, `${JSON.stringify(queue, null, 2)}\n`);
   io.stdout.write(
     `Curated mint-posture queue: ${queue.entries.length} disagreement(s) across ${queue.reviewedAssetCount} asset(s); ` +
       `${queue.nrCards.length} NR card(s) excluded.\n`,
@@ -101,9 +103,7 @@ export function runV9MintPostureQueueCli(
   return queue;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  void runCliEntrypoint(() => runV9MintPostureQueueCli(process.argv.slice(2)), {
-    label: "safety-score-v9:mint-posture-queue",
-    usage: USAGE,
-  });
-}
+runDirectCli(import.meta.url, () => runV9MintPostureQueueCli(process.argv.slice(2)), {
+  label: "safety-score-v9:mint-posture-queue",
+  usage: USAGE,
+});

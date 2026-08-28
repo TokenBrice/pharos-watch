@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 describe("challenger legacy fallback", () => {
   it("surfaces a missing mandatory challenger snapshot table", async () => {

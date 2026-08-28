@@ -2,17 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import {
   evaluateV9EconomicControl,
-  type EvaluateV9EconomicControlArgs,
-  type V9BridgeControlReview,
-  type V9EconomicControlAssetFacts,
-  type V9MintMechanismReview,
   type V9MintPosture,
   type V9MintReconciliation,
   type V9MintSupervision,
-  type V9OracleControlReview,
 } from "../safety-score-v9/control";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import { makeDeploymentControl, notApplicable, requiredKnown } from "./safety-score-v9-fixtures.test-support";
+import {
+  makeDeploymentControl,
+  makeEconomicControlArgs,
+  makeEconomicControlFacts,
+  makeReviewedMintInput,
+} from "./safety-score-v9-fixtures.test-support";
 
 const UNATTESTED_EOA_PENALTY =
   V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintMergedSignals.unattestedEoaPenalty;
@@ -28,43 +28,15 @@ function mintControl(overrides: Partial<V9DeploymentControlFactV2> = {}): V9Depl
   });
 }
 
-function facts(controls: readonly V9DeploymentControlFactV2[]): V9EconomicControlAssetFacts {
-  return {
-    assetId: "fixture-asset",
-    archetype: "fiat-cash",
-    controlStatus: controls.length > 0 ? requiredKnown("controls") : notApplicable("controls"),
-    controls,
-    supply: {
-      status: requiredKnown("supply"),
-      selectedBridgeRoutes: [],
-      selectedRouteSupplyShare: 1,
-      unknownRouteSupplyShare: 0,
-      unreviewedRouteSupplyShare: 0,
-    },
-  };
-}
-
 function mintComponentScore(
   control: V9DeploymentControlFactV2,
   supervision: V9MintSupervision,
   reconciliation: V9MintReconciliation,
 ): { posture: V9MintPosture; score: number } {
-  const noOracle: V9OracleControlReview = { status: notApplicable("oracle"), tier: null, branches: [] };
-  const noBridge: V9BridgeControlReview = { status: notApplicable("bridge"), routes: [] };
-  const mint: V9MintMechanismReview = {
-    status: requiredKnown("mint"),
-    controlKey: control.controlKey,
-    reconciliation,
-    supervision,
-    upgrade: { state: "immutable", controlKey: null },
-  };
-  const args: EvaluateV9EconomicControlArgs = {
-    policy: V9_CANDIDATE_POLICY_V1,
-    facts: facts([control]),
-    mint,
-    oracle: noOracle,
-    bridge: noBridge,
-  };
+  const args = makeEconomicControlArgs({
+    facts: makeEconomicControlFacts([control]),
+    mint: makeReviewedMintInput(control.controlKey, { reconciliation, supervision }),
+  });
   const component = evaluateV9EconomicControl(args).components.find((entry) => entry.kind === "mint");
   if (!component) throw new Error("mint component missing");
   return { posture: component.posture as V9MintPosture, score: component.score };

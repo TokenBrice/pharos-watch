@@ -1,14 +1,12 @@
 import {
   encodeJsonCursor,
-  errorResponse,
-  getLatestSuccessfulCronTimestamp,
-  jsonFreshResponse,
   parseBooleanParam,
   parseJsonCursorParam,
   parseQueryParams,
   resolveOrReject,
-  buildFreshnessMeta,
-} from "../lib/api-utils";
+} from "../lib/api-params";
+import { errorResponse, jsonFreshResponse } from "../lib/api-response";
+import { getLatestSuccessfulCronTimestamp, buildFreshnessMeta } from "../lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import { queryTapeEvents, type TapeEventQueryFilters } from "../lib/tape-event-store";
 import { rowToTapeEvent } from "../lib/tape-event-helpers";

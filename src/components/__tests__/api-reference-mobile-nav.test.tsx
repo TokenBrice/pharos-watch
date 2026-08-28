@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { ApiReferenceMobileNav } from "@/components/api-reference-mobile-nav";
 import type { SidebarSection } from "@/components/api-reference-sidebar";
 
@@ -24,7 +24,6 @@ const MOCK_SECTIONS: SidebarSection[] = [
 ];
 
 describe("ApiReferenceMobileNav", () => {
-  afterEach(cleanup);
 
   it("shows the current section label", () => {
     render(

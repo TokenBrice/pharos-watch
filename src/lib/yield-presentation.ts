@@ -9,7 +9,7 @@ import type {
   YieldRankChangeAttribution,
   YieldScoreQualification,
 } from "@shared/types";
-import { YIELD_RANK_CHANGE_DRIVER_LABELS } from "@/lib/yield-source-risk";
+import { YIELD_RANK_CHANGE_DRIVER_LABELS } from "@/lib/yield-source-presentation";
 
 export const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
   "apy-non-positive": "30d APY ≤ 0",

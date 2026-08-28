@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { AccessPosturePanel } from "../access-posture-panel";
 import type { StablecoinSafetyScoreV9AccessRow } from "@/lib/stablecoin-safety-score-v9-presentation";
 import type { TransferReviewView } from "@/lib/transfer-review";
@@ -42,7 +42,6 @@ const review: TransferReviewView = {
   ],
 };
 
-afterEach(cleanup);
 
 describe("AccessPosturePanel", () => {
   it("renders the scored rows and nothing else when no transfer review exists", () => {

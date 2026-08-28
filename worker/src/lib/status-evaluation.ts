@@ -26,7 +26,7 @@ import {
 import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
-import type { CacheFreshnessDiagnostic } from "./api-utils";
+import { type CacheFreshnessDiagnostic } from "./api-freshness";
 
 function readRepairRunnerAutoRepairCount(crons: StatusResponse["crons"]): number | null {
   const value = crons["worker-repair-runner"]?.lastRun?.metadata?.autoRepairCount;

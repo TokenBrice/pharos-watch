@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { YieldCoinIndex } from "@/app/yield/coin-index";
+import { YieldCoinIndex } from "@/components/yield/coin-index";
 
 describe("YieldCoinIndex", () => {
   afterEach(() => {

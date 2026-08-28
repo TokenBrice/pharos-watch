@@ -1,16 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CoinLockup } from "@/components/depeg-resolver-row-card-shared";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { DdrInfoTooltip } from "@/components/depeg-resolver-info-tooltip";
 import { isDepegResolverReviewerEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -463,21 +457,16 @@ function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: Ddr
           >
             {calibrating ? "Calibrating" : "Review"}
           </Badge>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger
-                aria-label="About the Depeg Duration Resolver Reviewer"
-                className="pharos-focus-ring inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
-              >
-                <Info className="h-3.5 w-3.5" aria-hidden="true" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[300px]">
-                Each stored DDR readout is graded against later confirmed event data. Open events stay
-                pending unless terminal lifecycle evidence, such as frozen or dead status, matures the
-                call.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <DdrInfoTooltip
+            ariaLabel="About the Depeg Duration Resolver Reviewer"
+            maxWidth="wide"
+            content={
+              <>
+                Each stored DDR readout is graded against later confirmed event data. Open events stay pending unless
+                terminal lifecycle evidence, such as frozen or dead status, matures the call.
+              </>
+            }
+          />
         </div>
         {meta ? (
           <p className="font-mono text-[10px] text-muted-foreground">

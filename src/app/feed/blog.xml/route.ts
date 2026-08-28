@@ -1,5 +1,5 @@
 import { BLOG_POSTS } from "@/data/blog";
-import { rssResponse, toRfc822, type RssItem } from "@/lib/rss";
+import { createRssRoute, toRfc822, type RssItem } from "@/lib/rss";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const dynamic = "force-static";
@@ -17,14 +17,11 @@ function blogItems(): RssItem[] {
   }));
 }
 
-export async function GET(): Promise<Response> {
-  return rssResponse({
-    title: "Pharos Blog",
-    link: `${SITE_URL}/blog/`,
-    feedUrl: `${SITE_URL}${FEED_PATH}`,
-    description:
-      "Product updates and the story of Pharos — what shipped, what's next, and why we build stablecoin risk tooling in the open.",
-    language: "en-US",
-    items: blogItems(),
-  });
-}
+export const GET = createRssRoute({
+  title: "Pharos Blog",
+  link: `${SITE_URL}/blog/`,
+  feedUrl: `${SITE_URL}${FEED_PATH}`,
+  description:
+    "Product updates and the story of Pharos — what shipped, what's next, and why we build stablecoin risk tooling in the open.",
+  items: blogItems,
+});

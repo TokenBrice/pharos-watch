@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 
@@ -122,11 +122,12 @@ vi.mock("../telegram-digest-transport", async (importOriginal) => {
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
-import { classifyRegime } from "../daily-digest";
 import { buildUserPrompt } from "../daily-digest/prompt";
+import { classifyRegime } from "../daily-digest/prompt/regime";
 import {
   parseDigestModelResponse,
   validateDigestModelOutput,
+  type DigestValidationProfile,
   type ParsedDigestResponse,
 } from "../daily-digest/response";
 
@@ -215,225 +216,164 @@ describe("parseDigestModelResponse meta normalization", () => {
     return { lead: meta.lead, tone: meta.tone };
   }
 
-  it("retains observed natural lead tokens", () => {
-    expect(parseLeadTone("gauge-flip", "dry").lead).toBe("gauge-flip");
-    expect(parseLeadTone("psi-band-change", "dry").lead).toBe("psi-band-change");
-    expect(parseLeadTone("issuer-concentration", "dry").lead).toBe("issuer-concentration");
-    expect(parseLeadTone("regime-divergence", "dry").lead).toBe("regime-divergence");
-    expect(parseLeadTone("chain-migration", "dry").lead).toBe("chain-migration");
-    expect(parseLeadTone("reserve-event", "dry").lead).toBe("reserve-event");
-  });
-
-  it("retains observed natural tones", () => {
-    expect(parseLeadTone("depeg", "sardonic").tone).toBe("sardonic");
-    expect(parseLeadTone("depeg", "observant").tone).toBe("observant");
-    expect(parseLeadTone("depeg", "forensic").tone).toBe("forensic");
-  });
-
-  it("collapses garbage to 'other'", () => {
-    expect(parseLeadTone("asdfghjkl", "dry").lead).toBe("other");
-    expect(parseLeadTone("depeg", "asdfghjkl").tone).toBe("other");
+  it.each([
+    {
+      label: "retains observed natural lead tokens",
+      cases: ["gauge-flip", "psi-band-change", "issuer-concentration", "regime-divergence", "chain-migration", "reserve-event"]
+        .map((lead) => ({ actual: parseLeadTone(lead, "dry").lead, expected: lead })),
+    },
+    {
+      label: "retains observed natural tones",
+      cases: ["sardonic", "observant", "forensic"]
+        .map((tone) => ({ actual: parseLeadTone("depeg", tone).tone, expected: tone })),
+    },
+    {
+      label: "collapses garbage to 'other'",
+      cases: [
+        { actual: parseLeadTone("asdfghjkl", "dry").lead, expected: "other" },
+        { actual: parseLeadTone("depeg", "asdfghjkl").tone, expected: "other" },
+      ],
+    },
+  ])("$label", ({ cases }) => {
+    for (const { actual, expected } of cases) expect(actual).toBe(expected);
   });
 });
 
 describe("lead family variety check", () => {
-  function validateWith(currentLead: string, recentLeads: string[]) {
-    const parsed: ParsedDigestResponse = {
-      digestTitle: "T",
-      digestText: "T.",
-      digestExtended: "T. T. T.\n\nT. T. T.\n\nT. T. T.",
-      digestMeta: JSON.stringify({ lead: currentLead, tone: "dry", coins: ["USDT"] }),
-      strippedDashCount: 0,
-      forbiddenPhraseHits: [],
-      usedRawTextFallback: false,
-    };
-    const recentMeta = recentLeads.map((l) => ({
-      meta: { lead: l, tone: "dry" } as Record<string, unknown>,
+  it.each([
+    {
+      label: "fires repeated-lead-family when family repeats 2 of last 3",
+      recentLeads: ["psi-regime", "psi-band-change", "supply-reversal"],
+      expected: true,
+    },
+    {
+      label: "does not fire when lead families differ",
+      recentLeads: ["depeg", "grade-transition", "ftq"],
+      expected: false,
+    },
+  ])("$label", ({ recentLeads, expected }) => {
+    const recentMeta = recentLeads.map((lead) => ({
+      meta: { lead, tone: "dry" } as Record<string, unknown>,
       title: "x",
     }));
-    return validateDigestModelOutput(parsed, { kind: "daily", recentMeta });
-  }
-
-  it("fires repeated-lead-family when family repeats 2 of last 3", () => {
-    const issues = validateWith("psi-streak", ["psi-regime", "psi-band-change", "supply-reversal"]);
-    expect(issues.some((i) => i.code === "repeated-lead-family")).toBe(true);
-  });
-
-  it("does not fire when lead families differ", () => {
-    const issues = validateWith("psi-streak", ["depeg", "grade-transition", "ftq"]);
-    expect(issues.some((i) => i.code === "repeated-lead-family")).toBe(false);
+    const issues = validateDigestModelOutput(makeParsedFixture({ lead: "psi-streak" }), {
+      kind: "daily",
+      recentMeta,
+    });
+    expect(issues.some((issue) => issue.code === "repeated-lead-family")).toBe(expected);
   });
 });
 
 describe("forward-look voice guard", () => {
-  it("flags missing forward-look when digest is purely retrospective", () => {
-    const issues = validateDigestModelOutput(
-      makeParsedFixture({
+  it.each([
+    {
+      label: "flags missing forward-look when digest is purely retrospective",
+      fixture: {
         extended: "USDT added $2B.\n\nUSDC pulled $500M.\n\nThe gap is now the story.",
         text: "USDT added $2B while USDC pulled $500M.",
-      }),
-      { kind: "daily", recentMeta: [] },
-    );
-    expect(issues.some((i) => i.code === "missing-forward-look")).toBe(true);
-  });
-
-  it("does not flag when forward-look is present in extended", () => {
-    const issues = validateDigestModelOutput(
-      makeParsedFixture({
+      },
+      expected: true,
+    },
+    {
+      label: "does not flag when forward-look is present in extended",
+      fixture: {
         extended: "USDT added $2B.\n\nUSDC pulled $500M.\n\nIf the gap holds next week, it is a rotation.",
-      }),
-      { kind: "daily", recentMeta: [] },
-    );
-    expect(issues.some((i) => i.code === "missing-forward-look")).toBe(false);
-  });
-
-  it("does not flag when forward-look is only in the text hook", () => {
-    const issues = validateDigestModelOutput(
-      makeParsedFixture({ extended: "A.\n\nB.\n\nC.", text: "Watch if USDT crosses $185B." }),
-      { kind: "daily", recentMeta: [] },
-    );
-    expect(issues.some((i) => i.code === "missing-forward-look")).toBe(false);
+      },
+      expected: false,
+    },
+    {
+      label: "does not flag when forward-look is only in the text hook",
+      fixture: { extended: "A.\n\nB.\n\nC.", text: "Watch if USDT crosses $185B." },
+      expected: false,
+    },
+  ])("$label", ({ fixture, expected }) => {
+    const issues = validateDigestModelOutput(makeParsedFixture(fixture), { kind: "daily", recentMeta: [] });
+    expect(issues.some((issue) => issue.code === "missing-forward-look")).toBe(expected);
   });
 });
 
 describe("lead requirement validator", () => {
-  it("hard-fails when a required critical candidate is not the declared lead", () => {
-    const issues = validateDigestModelOutput(
-      makeParsedFixture({
+  it.each([
+    {
+      label: "hard-fails when a required critical candidate is not the declared lead",
+      fixture: {
         leadSignalId: "market:usdc-circle:weekly-supply",
         extended:
           "PMUSD stayed 5284 bps below peg on $65M.\n\nUSDC added $2B.\n\nIf PMUSD holds there next session, the peg stress remains the lead.",
-      }),
-      {
-        kind: "daily",
-        recentMeta: [],
-        leadRequirements: [
-          {
-            candidateIds: ["depeg:pmusd-active"],
-            severity: "hard",
-            mentionTokens: ["PMUSD"],
-            reason: "PMUSD critical depeg must lead",
-          },
-        ],
       },
-    );
-
-    expect(issues.some((issue) => issue.code === "lead-candidate-mismatch" && issue.severity === "hard")).toBe(true);
-  });
-
-  it("hard-fails when a required critical candidate is omitted from the copy", () => {
-    const issues = validateDigestModelOutput(
-      makeParsedFixture({
+      issueCode: "lead-candidate-mismatch",
+    },
+    {
+      label: "hard-fails when a required critical candidate is omitted from the copy",
+      fixture: {
         leadSignalId: "depeg:pmusd-active",
         extended:
           "USDC added $2B.\n\nUSDT held steady.\n\nIf the flow reverses next session, the supply story changes.",
-      }),
-      {
-        kind: "daily",
-        recentMeta: [],
-        leadRequirements: [
-          {
-            candidateIds: ["depeg:pmusd-active"],
-            severity: "hard",
-            mentionTokens: ["PMUSD"],
-            reason: "PMUSD critical depeg must lead",
-          },
-        ],
       },
-    );
-
-    expect(issues.some((issue) => issue.code === "required-lead-missing" && issue.severity === "hard")).toBe(true);
+      issueCode: "required-lead-missing",
+    },
+  ])("$label", ({ fixture, issueCode }) => {
+    const issues = validateDigestModelOutput(makeParsedFixture(fixture), {
+      kind: "daily",
+      recentMeta: [],
+      leadRequirements: [{
+        candidateIds: ["depeg:pmusd-active"],
+        severity: "hard",
+        mentionTokens: ["PMUSD"],
+        reason: "PMUSD critical depeg must lead",
+      }],
+    });
+    expect(issues.some((issue) => issue.code === issueCode && issue.severity === "hard")).toBe(true);
   });
 });
 
 describe("opening-fingerprint voice guard", () => {
-  it("flags PSI-verb opening when any of last 3 also opened that way", () => {
-    const recent = [
-      { meta: null, title: "a", rawText: "PSI sits at 95. USDC hit ATH." },
-      { meta: null, title: "b", rawText: "USDT minted $2B. PSI unchanged." },
-      { meta: null, title: "c", rawText: "Flows rotated into gold. USDC weak." },
-    ];
-    const parsed = makeParsedFixture({ extended: "PSI ticked to 96 in BEDROCK.\n\nUSDC added $500M.\n\nReal closer." });
-    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: recent });
-    expect(issues.some((i) => i.code === "opening-pattern-repetition")).toBe(true);
-  });
-
-  it("does not flag when opening is structurally different", () => {
-    const recent = [
-      { meta: null, title: "a", rawText: "PSI sits at 95." },
-      { meta: null, title: "b", rawText: "PSI slipped to 93." },
-    ];
-    const parsed = makeParsedFixture({
+  it.each([
+    {
+      label: "flags PSI-verb opening when any of last 3 also opened that way",
+      extended: "PSI ticked to 96 in BEDROCK.\n\nUSDC added $500M.\n\nReal closer.",
+      recentText: ["PSI sits at 95. USDC hit ATH.", "USDT minted $2B. PSI unchanged.", "Flows rotated into gold. USDC weak."],
+      expected: true,
+    },
+    {
+      label: "does not flag when opening is structurally different",
       extended: "USDT just added $2B overnight.\n\nPSI drifted to 93.\n\nReal closer.",
-    });
-    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: recent });
-    expect(issues.some((i) => i.code === "opening-pattern-repetition")).toBe(false);
+      recentText: ["PSI sits at 95.", "PSI slipped to 93."],
+      expected: false,
+    },
+  ])("$label", ({ extended, recentText, expected }) => {
+    const recentMeta = recentText.map((rawText, index) => ({ meta: null, title: String(index), rawText }));
+    const issues = validateDigestModelOutput(makeParsedFixture({ extended }), { kind: "daily", recentMeta });
+    expect(issues.some((issue) => issue.code === "opening-pattern-repetition")).toBe(expected);
   });
 });
 
 describe("forbidden-tic voice guard", () => {
-  it("flags plumbing metaphor anywhere in extended", () => {
-    const issues = validateDigestModelOutput(
-      makeParsedFixture({ extended: "PSI held.\n\nThe plumbing flinched again.\n\nDone." }),
-      { kind: "daily", recentMeta: [] },
-    );
-    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(true);
-  });
-
-  it("flags 'worth watching' in closer position", () => {
-    const issues = validateDigestModelOutput(
-      makeParsedFixture({ extended: "Line one.\n\nLine two.\n\nLine three, worth monitoring into next week." }),
-      { kind: "daily", recentMeta: [] },
-    );
-    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(true);
-  });
-
-  it("does NOT flag 'worth watching' mid-paragraph when last sentence is different", () => {
-    const issues = validateDigestModelOutput(
-      makeParsedFixture({
-        extended:
-          "A coin worth watching for mcap drift, plus five others. Real closer sentence here.\n\nLine two.\n\nLine three.",
-      }),
-      { kind: "daily", recentMeta: [] },
-    );
-    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(false);
-  });
-
-  it("does not flag prose free of tics", () => {
-    const issues = validateDigestModelOutput(
-      makeParsedFixture({ extended: "USDT added $3B.\n\nUSDC pulled $200M.\n\nThe gap is now the story." }),
-      { kind: "daily", recentMeta: [] },
-    );
-    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(false);
+  it.each([
+    ["flags plumbing metaphor anywhere in extended", "PSI held.\n\nThe plumbing flinched again.\n\nDone.", true],
+    ["flags 'worth watching' in closer position", "Line one.\n\nLine two.\n\nLine three, worth monitoring into next week.", true],
+    ["does NOT flag 'worth watching' mid-paragraph when last sentence is different", "A coin worth watching for mcap drift, plus five others. Real closer sentence here.\n\nLine two.\n\nLine three.", false],
+    ["does not flag prose free of tics", "USDT added $3B.\n\nUSDC pulled $200M.\n\nThe gap is now the story.", false],
+  ] as const)("%s", (_label, extended, expected) => {
+    const issues = validateDigestModelOutput(makeParsedFixture({ extended }), { kind: "daily", recentMeta: [] });
+    expect(issues.some((issue) => issue.code === "forbidden-tic")).toBe(expected);
   });
 });
 
 describe("tone cluster validator", () => {
-  it("fires tone-cluster when same tone appears 3+ times in last 5", () => {
-    const recent = Array.from({ length: 5 }, () => ({
-      meta: { lead: "depeg", tone: "foreboding" } as Record<string, unknown>,
-      title: "prior",
+  it.each([
+    ["fires tone-cluster when same tone appears 3+ times in last 5", ["foreboding", "foreboding", "foreboding", "foreboding", "foreboding"], true],
+    ["does not fire when spread across tones", ["dry", "sardonic", "foreboding", "clinical", "wistful"], false],
+  ] as const)("%s", (_label, tones, expected) => {
+    const recentMeta = tones.map((tone, index) => ({
+      meta: { lead: "depeg", tone } as Record<string, unknown>,
+      title: String(index),
     }));
-    const result = validateDigestModelOutput(makeParsedFixture({ tone: "foreboding" }), {
+    const issues = validateDigestModelOutput(makeParsedFixture({ tone: "foreboding" }), {
       kind: "daily",
-      recentMeta: recent,
+      recentMeta,
     });
-    expect(result.some((i) => i.code === "tone-cluster")).toBe(true);
-  });
-
-  it("does not fire when spread across tones", () => {
-    const recent = [
-      { meta: { tone: "dry" } as Record<string, unknown>, title: "a" },
-      { meta: { tone: "sardonic" } as Record<string, unknown>, title: "b" },
-      { meta: { tone: "foreboding" } as Record<string, unknown>, title: "c" },
-      { meta: { tone: "clinical" } as Record<string, unknown>, title: "d" },
-      { meta: { tone: "wistful" } as Record<string, unknown>, title: "e" },
-    ];
-    const result = validateDigestModelOutput(makeParsedFixture({ tone: "foreboding" }), {
-      kind: "daily",
-      recentMeta: recent,
-    });
-    expect(result.some((i) => i.code === "tone-cluster")).toBe(false);
+    expect(issues.some((issue) => issue.code === "tone-cluster")).toBe(expected);
   });
 });
 
@@ -647,13 +587,15 @@ describe("classifyRegime", () => {
     yesterdayIndex: null,
   };
 
-  it("returns CALM when nothing is elevated", () => {
-    expect(classifyRegime(baseData)).toBe("CALM");
-  });
-
-  it("returns CRISIS when FTQ is active", () => {
-    expect(
-      classifyRegime({
+  it.each([
+    {
+      label: "returns CALM when nothing is elevated",
+      data: baseData,
+      expected: "CALM",
+    },
+    {
+      label: "returns CRISIS when FTQ is active",
+      data: {
         ...baseData,
         mintBurnFlows: {
           gaugeScore: -20,
@@ -661,22 +603,20 @@ describe("classifyRegime", () => {
           flightToQuality: { active: true, safeNetUsd: 200_000_000, riskyNetUsd: -200_000_000 },
           topPressure: [],
         },
-      }),
-    ).toBe("CRISIS");
-  });
-
-  it("returns CRISIS when PSI band is TREMOR", () => {
-    expect(
-      classifyRegime({
+      },
+      expected: "CRISIS",
+    },
+    {
+      label: "returns CRISIS when PSI band is TREMOR",
+      data: {
         ...baseData,
         stabilityIndex: { score: 65, band: "TREMOR", components: { severity: 30, breadth: 5, trend: -3 } },
-      }),
-    ).toBe("CRISIS");
-  });
-
-  it("returns TENSION when ALERT+ coins have material mcap", () => {
-    expect(
-      classifyRegime({
+      },
+      expected: "CRISIS",
+    },
+    {
+      label: "returns TENSION when ALERT+ coins have material mcap",
+      data: {
         ...baseData,
         dewsStress: {
           bandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
@@ -684,18 +624,20 @@ describe("classifyRegime", () => {
           bandChanges: [],
           elevatedCoins: [{ symbol: "USDT", band: "ALERT", score: 50, mcapUsd: 2_000_000_000 }],
         },
-      }),
-    ).toBe("TENSION");
-  });
-
-  it("returns WATCHFUL when 1 unsuppressed active depeg is present", () => {
-    expect(
-      classifyRegime({
+      },
+      expected: "TENSION",
+    },
+    {
+      label: "returns WATCHFUL when 1 unsuppressed active depeg is present",
+      data: {
         ...baseData,
         activeDepegCount: 1,
         topDepegs: [{ symbol: "USDT", bps: 5, mcapUsd: 100_000_000_000 }],
-      }),
-    ).toBe("WATCHFUL");
+      },
+      expected: "WATCHFUL",
+    },
+  ] as const)("$label", ({ data, expected }) => {
+    expect(classifyRegime(data as DigestInputData)).toBe(expected);
   });
 });
 
@@ -1879,135 +1821,143 @@ describe("collectDewsStress — topSignals enrichment", () => {
 });
 
 describe("gate/retry correctness (Batch 3)", () => {
-  it("flags forbidden phrases as a soft issue instead of silently stripping them", () => {
-    const parsed = makeParsedFixture({
-      extended: "Meanwhile, USDT sits still at 3 bps. Watch for USDC next session if flows reverse hard tomorrow. The market held its line through the close today quietly.\n\nSupply held flat for a third session running now. Depth on the majors stayed intact through both sessions. Nothing in the flow data suggests stress building yet.\n\nDEWS stayed green across every tracked name today. The gauge sat at plus twelve through the close. Nobody moved more than ten million on the day.",
-    });
-    parsed.forbiddenPhraseHits = ["Meanwhile, "];
-    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: [] });
-    const hit = issues.find((issue) => issue.code === "forbidden-phrase");
-    expect(hit?.severity).toBe("soft");
-    expect(parsed.digestExtended).toContain("Meanwhile, ");
-  });
+  const mentionOnlyProfile: DigestValidationProfile = {
+    kind: "daily",
+    recentMeta: [],
+    leadRequirements: [
+      { candidateIds: [], severity: "soft", mentionTokens: ["PMUSD"], reason: "ongoing critical, demoted" },
+    ],
+  };
 
-  it("flags meta.coins entries the copy never mentions", () => {
-    const parsed = makeParsedFixture({});
-    parsed.digestMeta = JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT", "GHOST"] });
-    parsed.digestText = "USDT held its peg with room to spare. Watch for tomorrow's flows next session.";
-    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: [] });
-    const hit = issues.find((issue) => issue.code === "meta-coins-mismatch");
-    expect(hit?.severity).toBe("soft");
-    expect(hit?.message).toContain("GHOST");
-    expect(hit?.message).not.toContain("USDT,");
-  });
-
-  it("validates mention-only requirements without pinning a lead", () => {
-    const parsed = makeParsedFixture({ leadSignalId: "yield:usdc" });
-    parsed.digestExtended = `PMUSD remains 2,950 bps under peg, unchanged. ${parsed.digestExtended}`;
-    const issues = validateDigestModelOutput(parsed, {
-      kind: "daily",
-      recentMeta: [],
-      leadRequirements: [
-        { candidateIds: [], severity: "soft", mentionTokens: ["PMUSD"], reason: "ongoing critical, demoted" },
+  it.each([
+    {
+      label: "flags forbidden phrases as a soft issue instead of silently stripping them",
+      parsed: () => {
+        const parsed = makeParsedFixture({
+          extended: "Meanwhile, USDT sits still at 3 bps. Watch for USDC next session if flows reverse hard tomorrow. The market held its line through the close today quietly.\n\nSupply held flat for a third session running now. Depth on the majors stayed intact through both sessions. Nothing in the flow data suggests stress building yet.\n\nDEWS stayed green across every tracked name today. The gauge sat at plus twelve through the close. Nobody moved more than ten million on the day.",
+        });
+        parsed.forbiddenPhraseHits = ["Meanwhile, "];
+        return parsed;
+      },
+      profile: { kind: "daily", recentMeta: [] } satisfies DigestValidationProfile,
+      expected: [{ code: "forbidden-phrase", present: true, severity: "soft" as const }],
+      copyIncludes: "Meanwhile, ",
+    },
+    {
+      label: "flags meta.coins entries the copy never mentions",
+      parsed: () => {
+        const parsed = makeParsedFixture();
+        parsed.digestMeta = JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT", "GHOST"] });
+        parsed.digestText = "USDT held its peg with room to spare. Watch for tomorrow's flows next session.";
+        return parsed;
+      },
+      profile: { kind: "daily", recentMeta: [] } satisfies DigestValidationProfile,
+      expected: [{
+        code: "meta-coins-mismatch",
+        present: true,
+        severity: "soft" as const,
+        messageIncludes: "GHOST",
+        messageExcludes: "USDT,",
+      }],
+    },
+    {
+      label: "validates mention-only requirements without pinning a lead",
+      parsed: () => {
+        const parsed = makeParsedFixture({ leadSignalId: "yield:usdc" });
+        parsed.digestExtended = `PMUSD remains 2,950 bps under peg, unchanged. ${parsed.digestExtended}`;
+        return parsed;
+      },
+      profile: mentionOnlyProfile,
+      expected: [
+        { code: "required-lead-missing", present: false },
+        { code: "lead-candidate-mismatch", present: false },
       ],
-    });
-    expect(issues.some((issue) => issue.code === "required-lead-missing")).toBe(false);
-    expect(issues.some((issue) => issue.code === "lead-candidate-mismatch")).toBe(false);
-  });
-
-  it("flags a missing mention-only token as a soft issue", () => {
-    const parsed = makeParsedFixture({ leadSignalId: "yield:usdc" });
-    const issues = validateDigestModelOutput(parsed, {
-      kind: "daily",
-      recentMeta: [],
-      leadRequirements: [
-        { candidateIds: [], severity: "soft", mentionTokens: ["PMUSD"], reason: "ongoing critical, demoted" },
+    },
+    {
+      label: "flags a missing mention-only token as a soft issue",
+      parsed: () => makeParsedFixture({ leadSignalId: "yield:usdc" }),
+      profile: mentionOnlyProfile,
+      expected: [
+        { code: "required-lead-missing", present: true, severity: "soft" as const },
+        { code: "lead-candidate-mismatch", present: false },
       ],
-    });
-    expect(issues.some((issue) => issue.code === "required-lead-missing" && issue.severity === "soft")).toBe(true);
-    expect(issues.some((issue) => issue.code === "lead-candidate-mismatch")).toBe(false);
+    },
+  ])("$label", ({ parsed: buildParsed, profile, expected, ...testCase }) => {
+    const parsed = buildParsed();
+    const issues = validateDigestModelOutput(parsed, profile);
+    for (const expectation of expected) {
+      const hit = issues.find((issue) => issue.code === expectation.code);
+      expect(hit != null).toBe(expectation.present);
+      if ("severity" in expectation) expect(hit?.severity).toBe(expectation.severity);
+      if ("messageIncludes" in expectation) expect(hit?.message).toContain(expectation.messageIncludes);
+      if ("messageExcludes" in expectation) expect(hit?.message).not.toContain(expectation.messageExcludes);
+    }
+    if ("copyIncludes" in testCase) expect(parsed.digestExtended).toContain(testCase.copyIncludes);
   });
 });
 
 describe("editorial guards (Batch 7)", () => {
-  it("flags a price/bps contradiction in one sentence", () => {
-    const parsed = makeParsedFixture({});
-    parsed.digestExtended = `USX sits 5,783 bps below peg while the quote reads $0.997 as a courtesy. ${parsed.digestExtended}`;
-    const issues = validateDigestModelOutput(parsed, {
-      kind: "daily",
-      recentMeta: [],
-      depegFacts: [{ symbol: "USX", currentPriceUsd: 0.4217, currentBps: -5783 }],
-    });
-    const hit = issues.find((issue) => issue.code === "price-bps-mismatch");
-    expect(hit?.severity).toBe("soft");
-    expect(hit?.message).toContain("USX");
-  });
+  const repeatedUsxTitles = [
+    { meta: null, title: "USX Turns Twenty Days Old" },
+    { meta: null, title: "USX Passes 450 Hours Broken" },
+  ];
 
-  it("accepts a consistent price/bps pairing", () => {
-    const parsed = makeParsedFixture({});
-    parsed.digestExtended = `USX sits 5,783 bps below peg at $0.42 with no bid in sight. ${parsed.digestExtended}`;
-    const issues = validateDigestModelOutput(parsed, {
-      kind: "daily",
-      recentMeta: [],
-      depegFacts: [{ symbol: "USX", currentPriceUsd: 0.4217, currentBps: -5783 }],
-    });
-    expect(issues.some((issue) => issue.code === "price-bps-mismatch")).toBe(false);
-  });
-
-  it("flags fabricated movement claims against previous-edition facts", () => {
-    const parsed = makeParsedFixture({});
-    parsed.digestExtended = `APXUSD narrowed from 3,650 bps yesterday, a recovery nobody measured. ${parsed.digestExtended}`;
-    const issues = validateDigestModelOutput(parsed, {
-      kind: "daily",
-      recentMeta: [],
-      prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159, bps: -3159 }],
-    });
-    expect(issues.some((issue) => issue.code === "unverifiable-movement-claim")).toBe(true);
-  });
-
-  it("accepts movement claims the previous edition supports", () => {
-    const parsed = makeParsedFixture({});
-    parsed.digestExtended = `APXUSD widened from 3,159 bps to 3,410 bps overnight. ${parsed.digestExtended}`;
-    const issues = validateDigestModelOutput(parsed, {
-      kind: "daily",
-      recentMeta: [],
-      prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159 }],
-    });
-    expect(issues.some((issue) => issue.code === "unverifiable-movement-claim")).toBe(false);
-  });
-
-  it("flags the same coin in three consecutive titles and day-count titles", () => {
-    const parsed = makeParsedFixture({});
-    parsed.digestTitle = "USX Enters Week Four";
-    const recentMeta = [
-      { meta: null, title: "USX Turns Twenty Days Old" },
-      { meta: null, title: "USX Passes 450 Hours Broken" },
-    ];
-    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta });
-    expect(issues.some((issue) => issue.code === "title-symbol-streak")).toBe(true);
-    expect(issues.some((issue) => issue.code === "title-day-counting")).toBe(true);
-  });
-
-  it("does not flag a fresh subject or a first-day duration title", () => {
-    const parsed = makeParsedFixture({});
-    parsed.digestTitle = "RLUSD Finds A Deeper Bid";
-    const recentMeta = [
-      { meta: null, title: "USX Turns Twenty Days Old" },
-      { meta: null, title: "USX Passes 450 Hours Broken" },
-    ];
-    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta });
-    expect(issues.some((issue) => issue.code === "title-symbol-streak")).toBe(false);
-    expect(issues.some((issue) => issue.code === "title-day-counting")).toBe(false);
-  });
-
-  it("dedupes titles against the extended trailing window", () => {
-    const parsed = makeParsedFixture({});
-    parsed.digestTitle = "USDC Touches Its Ceiling";
-    const issues = validateDigestModelOutput(parsed, {
-      kind: "daily",
-      recentMeta: [],
-      recentTitles: ["USDC Touches Its Ceiling"],
-    });
-    expect(issues.some((issue) => issue.code === "repeated-title")).toBe(true);
+  it.each([
+    {
+      label: "flags a price/bps contradiction in one sentence",
+      parsed: () => makeParsedFixture({ extended: `USX sits 5,783 bps below peg while the quote reads $0.997 as a courtesy. ${DEFAULT_PARSED_EXTENDED}` }),
+      profile: { kind: "daily", recentMeta: [], depegFacts: [{ symbol: "USX", currentPriceUsd: 0.4217, currentBps: -5783 }] } satisfies DigestValidationProfile,
+      expected: [{ code: "price-bps-mismatch", present: true, severity: "soft" as const, messageIncludes: "USX" }],
+    },
+    {
+      label: "accepts a consistent price/bps pairing",
+      parsed: () => makeParsedFixture({ extended: `USX sits 5,783 bps below peg at $0.42 with no bid in sight. ${DEFAULT_PARSED_EXTENDED}` }),
+      profile: { kind: "daily", recentMeta: [], depegFacts: [{ symbol: "USX", currentPriceUsd: 0.4217, currentBps: -5783 }] } satisfies DigestValidationProfile,
+      expected: [{ code: "price-bps-mismatch", present: false }],
+    },
+    {
+      label: "flags fabricated movement claims against previous-edition facts",
+      parsed: () => makeParsedFixture({ extended: `APXUSD narrowed from 3,650 bps yesterday, a recovery nobody measured. ${DEFAULT_PARSED_EXTENDED}` }),
+      profile: { kind: "daily", recentMeta: [], prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159, bps: -3159 }] } satisfies DigestValidationProfile,
+      expected: [{ code: "unverifiable-movement-claim", present: true }],
+    },
+    {
+      label: "accepts movement claims the previous edition supports",
+      parsed: () => makeParsedFixture({ extended: `APXUSD widened from 3,159 bps to 3,410 bps overnight. ${DEFAULT_PARSED_EXTENDED}` }),
+      profile: { kind: "daily", recentMeta: [], prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159 }] } satisfies DigestValidationProfile,
+      expected: [{ code: "unverifiable-movement-claim", present: false }],
+    },
+    {
+      label: "flags the same coin in three consecutive titles and day-count titles",
+      parsed: () => ({ ...makeParsedFixture(), digestTitle: "USX Enters Week Four" }),
+      profile: { kind: "daily", recentMeta: repeatedUsxTitles } satisfies DigestValidationProfile,
+      expected: [
+        { code: "title-symbol-streak", present: true },
+        { code: "title-day-counting", present: true },
+      ],
+    },
+    {
+      label: "does not flag a fresh subject or a first-day duration title",
+      parsed: () => ({ ...makeParsedFixture(), digestTitle: "RLUSD Finds A Deeper Bid" }),
+      profile: { kind: "daily", recentMeta: repeatedUsxTitles } satisfies DigestValidationProfile,
+      expected: [
+        { code: "title-symbol-streak", present: false },
+        { code: "title-day-counting", present: false },
+      ],
+    },
+    {
+      label: "dedupes titles against the extended trailing window",
+      parsed: () => ({ ...makeParsedFixture(), digestTitle: "USDC Touches Its Ceiling" }),
+      profile: { kind: "daily", recentMeta: [], recentTitles: ["USDC Touches Its Ceiling"] } satisfies DigestValidationProfile,
+      expected: [{ code: "repeated-title", present: true }],
+    },
+  ])("$label", ({ parsed: buildParsed, profile, expected }) => {
+    const issues = validateDigestModelOutput(buildParsed(), profile);
+    for (const expectation of expected) {
+      const hit = issues.find((issue) => issue.code === expectation.code);
+      expect(hit != null).toBe(expectation.present);
+      if ("severity" in expectation) expect(hit?.severity).toBe(expectation.severity);
+      if ("messageIncludes" in expectation) expect(hit?.message).toContain(expectation.messageIncludes);
+    }
   });
 });

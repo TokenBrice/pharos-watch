@@ -1,211 +1,62 @@
-import { describe, expect, it } from "vitest";
+import { DatabaseSync } from "node:sqlite";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
   runTelegramRetentionCleanup,
 } from "../telegram-retention-cleanup";
 
-interface UsageDailyRow {
-  day: string;
+const databases: DatabaseSync[] = [];
+
+afterEach(() => {
+  while (databases.length > 0) databases.pop()?.close();
+});
+
+function setupLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
+  const result = createLatestSchemaSqlite();
+  databases.push(result.sqlite);
+  return result;
 }
 
-interface WatcherLifecycleRow {
-  day: string;
+function countRows(sqlite: DatabaseSync, table: string): number {
+  return Number((sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number }).count);
 }
 
-interface ProcessedUpdateRow {
-  received_at: number;
+function insertUsageDaily(sqlite: DatabaseSync, day: string, suffix = "row"): void {
+  sqlite.prepare(
+    `INSERT INTO telegram_usage_daily
+       (day, event_type, source_category, action_detail, outcome, latency_bucket,
+        failure_class, count, first_seen_at, last_seen_at)
+     VALUES (?, ?, 'unknown', '', 'unknown', 'unknown', '', 1, 1, 1)`,
+  ).run(day, suffix);
 }
 
-interface DeadLetterRow {
-  expired_at: number;
+function insertWatcherLifecycle(sqlite: DatabaseSync, day: string): void {
+  sqlite.prepare("INSERT INTO telegram_watcher_lifecycle_daily (day, snapshot_at) VALUES (?, 1)").run(day);
 }
 
-interface CreatedAtRow {
-  created_at: number;
+function insertProcessedUpdates(sqlite: DatabaseSync, count: number, receivedAt: number): void {
+  const insert = sqlite.prepare(
+    "INSERT INTO telegram_processed_updates (update_id, received_at, status) VALUES (?, ?, 'processed')",
+  );
+  sqlite.exec("BEGIN");
+  for (let index = 0; index < count; index += 1) insert.run(index + 1, receivedAt);
+  sqlite.exec("COMMIT");
 }
 
-interface UpdatedAtRow {
-  updated_at: number;
-}
-
-interface CacheRow {
-  key: string;
-  value: string;
-  updated_at: number;
-}
-
-interface RecapTargetRow {
-  status: string;
-  updated_at: number;
-}
-
-interface StubState {
-  usageDaily: UsageDailyRow[];
-  watcherLifecycle: WatcherLifecycleRow[];
-  processedUpdates: ProcessedUpdateRow[];
-  deadLetters: DeadLetterRow[];
-  jobTargets: CreatedAtRow[];
-  jobs: CreatedAtRow[];
-  adoptionClientQuota: UpdatedAtRow[];
-  diagnostics: UpdatedAtRow[];
-  cache: CacheRow[];
-  recapTargets: RecapTargetRow[];
-}
-
-function makeState(): StubState {
-  return {
-    usageDaily: [],
-    watcherLifecycle: [],
-    processedUpdates: [],
-    deadLetters: [],
-    jobTargets: [],
-    jobs: [],
-    adoptionClientQuota: [],
-    diagnostics: [],
-    cache: [],
-    recapTargets: [],
-  };
-}
-
-/**
- * Minimal D1 stub that understands every statement issued by
- * `runTelegramRetentionCleanup` (its own deletes plus the deletes inside
- * `pruneTelegramProcessedUpdates` and the UPDATE in
- * `reconcileExpiredTelegramAlertJobTargets`). Mirrors the pattern in
- * prune-cron-history.test.ts and telegram-inactive-cleanup.test.ts.
- */
-function createStubDb(state: StubState, options: { afterProcessedUpdateDelete?: () => void } = {}): D1Database {
-  function boundDeleteLimit(bound: unknown[]): number {
-    const limit = Number(bound[2]);
-    return Number.isFinite(limit) ? limit : Number.POSITIVE_INFINITY;
+function insertRecapTargets(sqlite: DatabaseSync, count: number, updatedAt: number): void {
+  const insert = sqlite.prepare(
+    `INSERT INTO telegram_recap_targets
+       (recap_key, chat_id, local_date, window_start_at, window_end_at,
+        preference_generation, watchlist_fingerprint, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, 'watchlist', 'cancelled', ?, ?)`,
+  );
+  sqlite.exec("BEGIN");
+  for (let index = 0; index < count; index += 1) {
+    insert.run(`recap-${index}`, `chat-${index}`, `2024-${String(Math.floor(index / 28) % 12 + 1).padStart(2, "0")}-${String(index % 28 + 1).padStart(2, "0")}`, updatedAt, updatedAt, updatedAt, updatedAt);
   }
-
-  function deleteMatching<T>(rows: T[], predicate: (row: T) => boolean, limit = Number.POSITIVE_INFINITY): number {
-    let removed = 0;
-    for (let i = 0; i < rows.length && removed < limit;) {
-      if (predicate(rows[i])) {
-        rows.splice(i, 1);
-        removed += 1;
-      } else {
-        i += 1;
-      }
-    }
-    return removed;
-  }
-
-  function prepare(sql: string): D1PreparedStatement {
-    let bound: unknown[] = [];
-    const stmt = {
-      bind: (...args: unknown[]) => {
-        bound = args;
-        return stmt as unknown as D1PreparedStatement;
-      },
-      run: async () => {
-        if (sql.startsWith("UPDATE telegram_alert_job_targets")) {
-          // reconcileExpiredTelegramAlertJobTargets: no rows to update in
-          // these tests.
-          return { success: true, meta: { changes: 0 } };
-        }
-        if (sql.trimStart().startsWith("DELETE FROM telegram_recap_targets")) {
-          const [aggregateCutoff, terminalCutoff, limit] = bound as [number, number, number];
-          const removed = deleteMatching(
-            state.recapTargets,
-            (row) =>
-              (["sent", "skipped_no_changes", "skipped_paused", "skipped_stale"].includes(row.status) &&
-                row.updated_at < aggregateCutoff) ||
-              (["cancelled", "expired", "execution_unknown", "failed_permanent"].includes(row.status) &&
-                row.updated_at < terminalCutoff),
-            limit,
-          );
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM telegram_processed_updates")) {
-          const [cutoff, _unknownCutoff, limit] = bound as [number, number, number];
-          const removed = deleteMatching(state.processedUpdates, (row) => row.received_at < cutoff, limit);
-          options.afterProcessedUpdateDelete?.();
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM telegram_alert_dead_letters")) {
-          const [cutoff] = bound as [number];
-          const removed = deleteMatching(state.deadLetters, (row) => row.expired_at < cutoff, boundDeleteLimit(bound));
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM telegram_alert_job_targets")) {
-          const [cutoff] = bound as [number];
-          const removed = deleteMatching(state.jobTargets, (row) => row.created_at < cutoff, boundDeleteLimit(bound));
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM telegram_alert_jobs")) {
-          const [cutoff] = bound as [number];
-          const removed = deleteMatching(state.jobs, (row) => row.created_at < cutoff, boundDeleteLimit(bound));
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM telegram_usage_daily")) {
-          const [cutoff] = bound as [unknown];
-          if (typeof cutoff !== "string") {
-            throw new Error(
-              `telegram_usage_daily.day is TEXT; cutoff must be a YYYY-MM-DD string, got ${typeof cutoff}`,
-            );
-          }
-          const removed = deleteMatching(state.usageDaily, (row) => row.day < cutoff, boundDeleteLimit(bound));
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM telegram_watcher_lifecycle_daily")) {
-          const [cutoff] = bound as [unknown];
-          if (typeof cutoff !== "string") {
-            throw new Error(
-              `telegram_watcher_lifecycle_daily.day is TEXT; cutoff must be a YYYY-MM-DD string, got ${typeof cutoff}`,
-            );
-          }
-          const removed = deleteMatching(state.watcherLifecycle, (row) => row.day < cutoff, boundDeleteLimit(bound));
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM telegram_adoption_client_quota")) {
-          const [cutoff] = bound as [number];
-          const removed = deleteMatching(
-            state.adoptionClientQuota,
-            (row) => row.updated_at < cutoff,
-            boundDeleteLimit(bound),
-          );
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM telegram_chat_delivery_diagnostics")) {
-          const [cutoff] = bound as [number];
-          const removed = deleteMatching(state.diagnostics, (row) => row.updated_at < cutoff, boundDeleteLimit(bound));
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM cache")) {
-          const [prefixLike, cutoff, limit] = bound as [string, number, number];
-          const prefix = prefixLike.endsWith("%") ? prefixLike.slice(0, -1) : prefixLike;
-          const removed = deleteMatching(
-            state.cache,
-            (row) => row.key.startsWith(prefix) && row.updated_at < cutoff,
-            Number.isFinite(limit) ? limit : Number.POSITIVE_INFINITY,
-          );
-          return { success: true, meta: { changes: removed } };
-        }
-        return { success: true, meta: { changes: 0 } };
-      },
-      first: async () => {
-        if (sql.includes("SELECT COUNT(*) AS count") && sql.includes("FROM telegram_processed_updates")) {
-          const [cutoff, _unknownCutoff, limit] = bound as [number, number, number];
-          const count = Math.min(state.processedUpdates.filter((row) => row.received_at < cutoff).length, limit);
-          return { count };
-        }
-        return null;
-      },
-      all: async () => ({ results: [], success: true, meta: {} }),
-    };
-    return stmt as unknown as D1PreparedStatement;
-  }
-
-  return {
-    prepare,
-    batch: async () => [],
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  sqlite.exec("COMMIT");
 }
 
 function todayString(nowSec: number): string {
@@ -214,7 +65,7 @@ function todayString(nowSec: number): string {
 
 describe("runTelegramRetentionCleanup", () => {
   it("throws before D1 work when the cron signal is already aborted", async () => {
-    const db = createStubDb(makeState());
+    const { db } = setupLatestSchema();
     const controller = new AbortController();
     controller.abort(new Error("retention cleanup aborted"));
 
@@ -222,83 +73,85 @@ describe("runTelegramRetentionCleanup", () => {
   });
 
   it("prunes telegram_usage_daily rows older than the YYYY-MM-DD cutoff", async () => {
-    const state = makeState();
+    const { sqlite, db } = setupLatestSchema();
     // A row from January 2024 — well past the 400-day retention window.
-    state.usageDaily.push({ day: "2024-01-01" });
-    const db = createStubDb(state);
+    insertUsageDaily(sqlite, "2024-01-01");
 
     const result = await runTelegramRetentionCleanup(db);
 
     expect(result.status).toBe("ok");
-    expect(state.usageDaily).toHaveLength(0);
+    expect(countRows(sqlite, "telegram_usage_daily")).toBe(0);
     const metadata = JSON.parse(result.metadata!) as { usageDailyPruned: number };
     expect(metadata.usageDailyPruned).toBe(1);
   });
 
   it("keeps fresh telegram_usage_daily rows from today", async () => {
-    const state = makeState();
+    const { sqlite, db } = setupLatestSchema();
     const now = Math.floor(Date.now() / 1000);
-    state.usageDaily.push({ day: todayString(now) });
-    const db = createStubDb(state);
+    insertUsageDaily(sqlite, todayString(now));
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.usageDaily).toHaveLength(1);
+    expect(countRows(sqlite, "telegram_usage_daily")).toBe(1);
     const metadata = JSON.parse(result.metadata!) as { usageDailyPruned: number };
     expect(metadata.usageDailyPruned).toBe(0);
   });
 
   it("prunes telegram_watcher_lifecycle_daily rows older than the YYYY-MM-DD cutoff", async () => {
-    const state = makeState();
-    state.watcherLifecycle.push({ day: "2024-01-01" });
-    const db = createStubDb(state);
+    const { sqlite, db } = setupLatestSchema();
+    insertWatcherLifecycle(sqlite, "2024-01-01");
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.watcherLifecycle).toHaveLength(0);
+    expect(countRows(sqlite, "telegram_watcher_lifecycle_daily")).toBe(0);
     const metadata = JSON.parse(result.metadata!) as { watcherLifecyclePruned: number };
     expect(metadata.watcherLifecyclePruned).toBe(1);
   });
 
   it("keeps fresh telegram_watcher_lifecycle_daily rows from today", async () => {
-    const state = makeState();
+    const { sqlite, db } = setupLatestSchema();
     const now = Math.floor(Date.now() / 1000);
-    state.watcherLifecycle.push({ day: todayString(now) });
-    const db = createStubDb(state);
+    insertWatcherLifecycle(sqlite, todayString(now));
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.watcherLifecycle).toHaveLength(1);
+    expect(countRows(sqlite, "telegram_watcher_lifecycle_daily")).toBe(1);
     const metadata = JSON.parse(result.metadata!) as { watcherLifecyclePruned: number };
     expect(metadata.watcherLifecyclePruned).toBe(0);
   });
 
   it("binds a string cutoff for both day-typed tables (regression guard)", async () => {
-    // The stub's DELETE handlers throw if the bind is not a string. This
-    // exercises both telegram_usage_daily and telegram_watcher_lifecycle_daily
-    // and locks the text-vs-integer comparison fix.
-    const state = makeState();
-    state.usageDaily.push({ day: "2024-01-01" });
-    state.watcherLifecycle.push({ day: "2024-01-01" });
-    const db = createStubDb(state);
+    const { sqlite, db } = setupLatestSchema();
+    insertUsageDaily(sqlite, "2024-01-01");
+    insertWatcherLifecycle(sqlite, "2024-01-01");
 
     await expect(runTelegramRetentionCleanup(db)).resolves.toMatchObject({ status: "ok" });
-    expect(state.usageDaily).toHaveLength(0);
-    expect(state.watcherLifecycle).toHaveLength(0);
+    expect(countRows(sqlite, "telegram_usage_daily")).toBe(0);
+    expect(countRows(sqlite, "telegram_watcher_lifecycle_daily")).toBe(0);
   });
 
   it("caps large retention deletes per table and reports cappedAtLimit metadata", async () => {
-    const state = makeState();
+    const { sqlite, db } = setupLatestSchema();
+    const usageInsert = sqlite.prepare(
+      `INSERT INTO telegram_usage_daily
+         (day, event_type, source_category, action_detail, outcome, latency_bucket,
+          failure_class, count, first_seen_at, last_seen_at)
+       VALUES ('2024-01-01', ?, 'unknown', '', 'unknown', 'unknown', '', 1, 1, 1)`,
+    );
+    const diagnosticsInsert = sqlite.prepare(
+      "INSERT INTO telegram_chat_delivery_diagnostics (chat_id, updated_at) VALUES (?, 1)",
+    );
+    sqlite.exec("BEGIN");
     for (let i = 0; i < 10_001; i += 1) {
-      state.usageDaily.push({ day: "2024-01-01" });
-      state.diagnostics.push({ updated_at: 1 });
+      usageInsert.run(`event-${i}`);
+      diagnosticsInsert.run(`chat-${i}`);
     }
-    const db = createStubDb(state);
+    sqlite.exec("COMMIT");
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.usageDaily).toHaveLength(1);
-    expect(state.diagnostics).toHaveLength(1);
+    expect(countRows(sqlite, "telegram_usage_daily")).toBe(1);
+    expect(countRows(sqlite, "telegram_chat_delivery_diagnostics")).toBe(1);
     const metadata = JSON.parse(result.metadata!) as {
       deleteBatchLimit: number;
       usageDailyPruned: number;
@@ -316,16 +169,13 @@ describe("runTelegramRetentionCleanup", () => {
   });
 
   it("caps recap-target pruning and reports the retention run as truncated", async () => {
-    const state = makeState();
+    const { sqlite, db } = setupLatestSchema();
     const now = Math.floor(Date.now() / 1000);
-    for (let i = 0; i < 10_001; i += 1) {
-      state.recapTargets.push({ status: "cancelled", updated_at: now - 91 * 24 * 60 * 60 });
-    }
-    const db = createStubDb(state);
+    insertRecapTargets(sqlite, 10_001, now - 91 * 24 * 60 * 60);
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.recapTargets).toHaveLength(1);
+    expect(countRows(sqlite, "telegram_recap_targets")).toBe(1);
     const metadata = JSON.parse(result.metadata!) as {
       recapTargetsPruned: number;
       runBudgetTruncated: boolean;
@@ -337,17 +187,14 @@ describe("runTelegramRetentionCleanup", () => {
   });
 
   it("caps processed-update retention to one bounded run and reports a lower-bound backlog", async () => {
-    const state = makeState();
+    const { sqlite, db } = setupLatestSchema();
     const now = Math.floor(Date.now() / 1000);
     const staleReceivedAt = now - 8 * 24 * 60 * 60;
-    for (let i = 0; i < 12_001; i += 1) {
-      state.processedUpdates.push({ received_at: staleReceivedAt });
-    }
-    const db = createStubDb(state);
+    insertProcessedUpdates(sqlite, 12_001, staleReceivedAt);
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.processedUpdates).toHaveLength(7_001);
+    expect(countRows(sqlite, "telegram_processed_updates")).toBe(7_001);
     const metadata = JSON.parse(result.metadata!) as {
       processedUpdatesPruned: number;
       processedUpdatesRemainingBacklog: { count: number; exact: boolean; probeLimit: number };
@@ -371,25 +218,18 @@ describe("runTelegramRetentionCleanup", () => {
   });
 
   it("stops processed-update batches at the time budget and reports the exact remaining backlog", async () => {
-    const state = makeState();
+    const { sqlite, db } = setupLatestSchema();
     const now = Math.floor(Date.now() / 1000);
     const staleReceivedAt = now - 8 * 24 * 60 * 60;
-    for (let i = 0; i < 3_000; i += 1) {
-      state.processedUpdates.push({ received_at: staleReceivedAt });
-    }
+    insertProcessedUpdates(sqlite, 3_000, staleReceivedAt);
 
-    let monotonicMs = 0;
-    const db = createStubDb(state, {
-      afterProcessedUpdateDelete: () => {
-        monotonicMs = 10;
-      },
-    });
+    const monotonicTimes = [0, 0, 10];
     const result = await runTelegramRetentionCleanup(db, undefined, {
-      monotonicNow: () => monotonicMs,
+      monotonicNow: () => monotonicTimes.shift() ?? 10,
       processedUpdateTimeBudgetMs: 10,
     });
 
-    expect(state.processedUpdates).toHaveLength(2_000);
+    expect(countRows(sqlite, "telegram_processed_updates")).toBe(2_000);
     const metadata = JSON.parse(result.metadata!) as {
       processedUpdatesPruned: number;
       processedUpdatesRemainingBacklog: { count: number; exact: boolean; probeLimit: number };
@@ -421,26 +261,31 @@ describe("runTelegramRetentionCleanup", () => {
   });
 
   it("prunes stale Telegram adoption client quota rows after two days", async () => {
-    const state = makeState();
+    const { sqlite, db } = setupLatestSchema();
     const now = Math.floor(Date.now() / 1000);
-    state.adoptionClientQuota.push({ updated_at: now - 3 * 24 * 60 * 60 }, { updated_at: now - 3600 });
-    const db = createStubDb(state);
+    sqlite.prepare(
+      `INSERT INTO telegram_adoption_client_quota
+         (bucket_start, ip_hash, request_count, updated_at)
+       VALUES (?, ?, 1, ?), (?, ?, 1, ?)`,
+    ).run(1, "a".repeat(32), now - 3 * 24 * 60 * 60, 2, "b".repeat(32), now - 3600);
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.adoptionClientQuota).toEqual([{ updated_at: now - 3600 }]);
+    expect(sqlite.prepare("SELECT updated_at FROM telegram_adoption_client_quota").all()).toEqual([
+      { updated_at: now - 3600 },
+    ]);
     const metadata = JSON.parse(result.metadata!) as { adoptionClientQuotaPruned: number };
     expect(metadata.adoptionClientQuotaPruned).toBe(1);
   });
 
   it("prunes stale Telegram chat cache residue by prefix", async () => {
-    const state = makeState();
+    const { sqlite, db } = setupLatestSchema();
     const now = Math.floor(Date.now() / 1000);
     const staleShortLived = now - 8 * 24 * 60 * 60;
     const freshShortLived = now - 3600;
     const staleWarning = now - 31 * 24 * 60 * 60;
     const freshWarning = now - 20 * 24 * 60 * 60;
-    state.cache.push(
+    const cacheRows = [
       { key: "telegram:command-cooldown:42:/status", value: "1", updated_at: staleShortLived },
       { key: "telegram:mini-app-mutation-burst:42", value: "12", updated_at: staleShortLived },
       { key: "telegram:command-flood:42", value: "1", updated_at: staleShortLived },
@@ -455,12 +300,13 @@ describe("runTelegramRetentionCleanup", () => {
       { key: "telegram:chat-admins:-43", value: "1", updated_at: freshShortLived },
       { key: "telegram:group-welcome:-43", value: "1", updated_at: freshShortLived },
       { key: "telegram:re-engagement-warned:43", value: "1", updated_at: freshWarning },
-    );
-    const db = createStubDb(state);
+    ];
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    for (const row of cacheRows) insert.run(row.key, row.value, row.updated_at);
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.cache.map((row) => row.key).sort()).toEqual(
+    expect((sqlite.prepare("SELECT key FROM cache ORDER BY key").all() as Array<{ key: string }>).map((row) => row.key)).toEqual(
       [
         "telegram:command-cooldown:43:/status",
         "telegram:mini-app-mutation-burst:43",

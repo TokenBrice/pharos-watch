@@ -1,12 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
 import * as activeSafetyScoreSource from "../safety-score-active-source";
 import { loadPublicationHealth } from "../publication-contract";
-import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 
 const NOW = 1_775_890_000;
 
@@ -27,28 +26,23 @@ function generationRow(overrides: Record<string, unknown>): Record<string, unkno
   };
 }
 
-function stablecoinPayload(count = 2): string {
-  return JSON.stringify({
-    peggedAssets: Array.from({ length: count }, (_, index) => ({
-      id: `coin-${index + 1}`,
-      name: `Coin ${index + 1}`,
-      symbol: `C${index + 1}`,
-      pegType: "peggedUSD",
-      pegMechanism: "fiat-backed",
-      price: 1,
-      priceSource: "test",
-      circulating: { peggedUSD: 1_000_000 },
-      chainCirculating: {
-        Ethereum: {
-          current: 1_000_000,
-          circulatingPrevDay: 1_000_000,
-          circulatingPrevWeek: 1_000_000,
-          circulatingPrevMonth: 1_000_000,
-        },
-      },
-      chains: ["Ethereum"],
-    })),
-  });
+function normalizedGeneration(overrides: Record<string, unknown>): Record<string, unknown> {
+  const row = generationRow(overrides);
+  const metadata = row.metadata_json == null ? null : JSON.parse(String(row.metadata_json));
+  return {
+    generationId: row.generation_id,
+    sourceState: row.source_state,
+    state: row.source_state === "staged" ? "candidate" : row.source_state,
+    startedAt: row.started_at,
+    validatedAt: row.validated_at,
+    publishedAt: row.published_at,
+    failedAt: row.failed_at,
+    candidateRows: row.candidate_rows,
+    publishedRows: row.published_rows,
+    expectedRows: row.expected_rows,
+    failureReason: row.failure_reason,
+    ...(metadata ? { metadata } : {}),
+  };
 }
 
 const EMPTY_PUBLICATION_TABLES: MockTableConfig[] = [
@@ -56,9 +50,6 @@ const EMPTY_PUBLICATION_TABLES: MockTableConfig[] = [
   { match: "FROM yield_publication_generations", rows: [], first: null },
   { match: "FROM surface_publication_generations", rows: [], first: null },
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-  { match: "SELECT updated_at FROM cache WHERE key = ?", rows: [], first: null },
-  { match: "pharos:stress-signals:published-exact", rows: [] },
-  { match: "FROM stability_index_samples", rows: [], first: null },
 ];
 
 function mockPublicationD1(tables: MockTableConfig[] = []): MockD1Database {
@@ -66,25 +57,6 @@ function mockPublicationD1(tables: MockTableConfig[] = []): MockD1Database {
 }
 
 describe("loadPublicationHealth", () => {
-  it("reports a missing mandatory PSI fallback table", async () => {
-    const db = mockPublicationD1([
-      {
-        match: "FROM stability_index_samples",
-        rows: [],
-        throwError: new Error("D1_ERROR: no such table: stability_index_samples"),
-      },
-    ]);
-
-    const health = await loadPublicationHealth(db, NOW);
-
-    expect(health.surfaces.psi).toBeUndefined();
-    expect(health.failedSurfaces).toContainEqual({
-      surface: "psi",
-      code: "publication_surface_table_missing",
-      message: "Publication surface storage is not available in this environment.",
-    });
-  });
-
   it("maps existing DEX and yield publication ledgers into shared surface health", async () => {
     const db = mockPublicationD1([
       {
@@ -171,6 +143,85 @@ describe("loadPublicationHealth", () => {
     ]);
 
     const health = await loadPublicationHealth(db, NOW);
+
+    const lifecycleHistory = db.getHistory().filter((entry) =>
+      entry.sql.includes("FROM dex_liquidity_publication_generations") ||
+      entry.sql.includes("FROM yield_publication_generations"),
+    );
+    expect(lifecycleHistory.map((entry) => JSON.stringify({ sql: entry.sql, binds: entry.binds })))
+      .toEqual([
+        ["dex_liquidity_publication_generations", "written_row_count", "current_row_count", "expected_row_count"],
+        ["dex_liquidity_publication_generations", "written_row_count", "current_row_count", "expected_row_count"],
+        ["dex_liquidity_publication_generations", "written_row_count", "current_row_count", "expected_row_count"],
+        ["yield_publication_generations", "source_row_count", "ranking_count", "best_row_count"],
+        ["yield_publication_generations", "source_row_count", "ranking_count", "best_row_count"],
+        ["yield_publication_generations", "source_row_count", "ranking_count", "best_row_count"],
+      ].map(([table, candidateRows, publishedRows, expectedRows], index) => JSON.stringify({
+        sql: `SELECT \n    generation_id,\n    state AS source_state,\n    started_at,\n    NULL AS validated_at,\n    published_at,\n    failed_at,\n    ${candidateRows} AS candidate_rows,\n    ${publishedRows} AS published_rows,\n    ${expectedRows} AS expected_rows,\n    failure_reason,\n    metadata_json\n         FROM ${table}\n        ${index % 3 === 0
+          ? "ORDER BY started_at DESC"
+          : index % 3 === 1
+            ? "WHERE state = 'published'\n        ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC"
+            : "WHERE state = 'failed'\n        ORDER BY COALESCE(failed_at, started_at) DESC, started_at DESC"}\n        LIMIT 1`,
+        binds: [],
+      })));
+    expect(JSON.stringify({
+      dex: health.surfaces["dex-liquidity"],
+      yield: health.surfaces["yield-rankings"],
+    })).toBe(JSON.stringify({
+      dex: {
+        surface: "dex-liquidity",
+        label: "DEX liquidity",
+        sourceOfTruth: "dex_liquidity_publication_generations",
+        lastPublishedGeneration: normalizedGeneration({
+          generation_id: "dex-published",
+          started_at: NOW - 3_600,
+          published_at: NOW - 3_500,
+          candidate_rows: 407,
+          published_rows: 407,
+          expected_rows: 407,
+        }),
+        lastAttemptedGeneration: normalizedGeneration({
+          generation_id: "dex-candidate",
+          source_state: "staged",
+          started_at: NOW - 1_200,
+          published_at: null,
+          candidate_rows: 400,
+          published_rows: null,
+          expected_rows: 407,
+          metadata_json: JSON.stringify({ inputWatermarks: { dexDiscovery: NOW - 2_000 } }),
+        }),
+        lastFailureReason: "candidate-row-count-mismatch",
+        candidateAgeSec: 1_200,
+        dependencyWatermarks: { dexDiscovery: NOW - 2_000 },
+      },
+      yield: {
+        surface: "yield-rankings",
+        label: "Yield rankings",
+        sourceOfTruth: "yield_publication_generations",
+        lastPublishedGeneration: normalizedGeneration({
+          generation_id: "yield-published",
+          started_at: NOW - 7_200,
+          published_at: NOW - 7_100,
+          candidate_rows: 118,
+          published_rows: 118,
+          expected_rows: 118,
+        }),
+        lastAttemptedGeneration: normalizedGeneration({
+          generation_id: "yield-failed",
+          source_state: "failed",
+          started_at: NOW - 900,
+          published_at: null,
+          failed_at: NOW - 880,
+          candidate_rows: 120,
+          published_rows: null,
+          expected_rows: 118,
+          failure_reason: "cache-newer-than-generation",
+        }),
+        lastFailureReason: "cache-newer-than-generation",
+        candidateAgeSec: null,
+        dependencyWatermarks: null,
+      },
+    }));
 
     expect(health.checkedAt).toBe(NOW);
     expect(health.surfaces["dex-liquidity"]).toMatchObject({
@@ -290,91 +341,19 @@ describe("loadPublicationHealth", () => {
     });
   });
 
-  it("derives stablecoins publication health from the canonical cache before generic writes exist", async () => {
-    const updatedAt = NOW - 120;
-    const db = mockPublicationD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "stablecoins",
-            value: stablecoinPayload(3),
-            updated_at: updatedAt,
-          },
-          {
-            key: "stablecoins:response-ready:v2",
-            value: "{}",
-            updated_at: updatedAt,
-          },
-        ],
-      },
-    ]);
-
-    const health = await loadPublicationHealth(db, NOW);
-
-    expect(health.surfaces.stablecoins).toMatchObject({
-      sourceOfTruth: "cache[stablecoins]",
-      candidateAgeSec: null,
-      lastFailureReason: null,
-      dependencyWatermarks: {
-        stablecoinsCache: updatedAt,
-        responseReadyCache: updatedAt,
-      },
-      lastAttemptedGeneration: {
-        generationId: `stablecoins-cache:${updatedAt}`,
-        sourceState: "published",
-        state: "published",
-        candidateRows: 3,
-        publishedRows: 3,
-        validatedAt: updatedAt,
-        publishedAt: updatedAt,
-      },
-      lastPublishedGeneration: {
-        generationId: `stablecoins-cache:${updatedAt}`,
-        state: "published",
-      },
-    });
-    expect(health.surfaces.stablecoins?.lastPublishedGeneration?.metadata).toMatchObject({
-      cacheKey: "stablecoins",
-      responseReadyMatchesCanonical: true,
-    });
-  });
-
   it("keeps successful surfaces when one surface query throws", async () => {
-    const updatedAt = NOW - 120;
     const db = mockPublicationD1([
       {
         match: "FROM yield_publication_generations",
         rows: [],
         throwError: new Error("D1_ERROR: query failed: yield publication ledger unavailable"),
       },
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "stablecoins",
-            value: stablecoinPayload(2),
-            updated_at: updatedAt,
-          },
-          {
-            key: "stablecoins:response-ready:v2",
-            value: "{}",
-            updated_at: updatedAt,
-          },
-        ],
-      },
     ]);
 
     const health = await loadPublicationHealth(db, NOW);
 
     expect(health.surfaces["dex-liquidity"]).toBeDefined();
-    expect(health.surfaces.stablecoins).toMatchObject({
-      sourceOfTruth: "cache[stablecoins]",
-      lastPublishedGeneration: {
-        generationId: `stablecoins-cache:${updatedAt}`,
-        state: "published",
-      },
-    });
+    expect(health.surfaces.stablecoins).toBeUndefined();
     expect(health.surfaces["yield-rankings"]).toBeUndefined();
     expect(health.failedSurfaces).toEqual([
       {
@@ -386,27 +365,11 @@ describe("loadPublicationHealth", () => {
   });
 
   it("reports a missing mandatory generic publication table", async () => {
-    const updatedAt = NOW - 180;
     const db = mockPublicationD1([
       {
         match: "FROM surface_publication_generations",
         rows: [],
         throwError: new Error("D1_ERROR: no such table: surface_publication_generations"),
-      },
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "stablecoins",
-            value: stablecoinPayload(2),
-            updated_at: updatedAt,
-          },
-          {
-            key: "stablecoins:response-ready:v2",
-            value: "{}",
-            updated_at: updatedAt,
-          },
-        ],
       },
     ]);
 
@@ -424,9 +387,7 @@ describe("loadPublicationHealth", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM surface_publication_generations"))).toBe(true);
   });
 
-  it("derives DEWS, PSI, and canonical V9 publication health from current sources", async () => {
-    const dewsAt = NOW - 300;
-    const psiAt = NOW - 240;
+  it("derives canonical V9 publication health from its current source", async () => {
     const reportCardsAt = NOW - 180;
     const snapshot = makeWorkerReportCardsV9Response({
       asOfSec: reportCardsAt - 60,
@@ -441,63 +402,10 @@ describe("loadPublicationHealth", () => {
         kind: "v9",
         snapshot,
       });
-    const dewsRows = [
-      { stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt },
-      { stablecoin_id: "usdt-tether", score: 20, band: "WATCH", signals_json: "{}", computed_at: dewsAt },
-    ];
-    const db = mockPublicationD1([
-      {
-        match: "pharos:stress-signals:published-exact",
-        matchBinds: [dewsAt],
-        rows: dewsRows,
-      },
-      {
-        match: "FROM stability_index_samples",
-        rows: [],
-        first: {
-          stored_at: psiAt,
-          score: 82,
-          band: "Calm",
-          methodology_version: "psi-v1",
-        },
-      },
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "dews:published-generation",
-            value: JSON.stringify({
-              updatedAt: dewsAt,
-              source: "compute-dews",
-              publishStatus: "published",
-              coverageVersion: 2,
-              expectedRowCount: dewsRows.length,
-              stablecoinIdsDigest: buildDewsStablecoinIdsDigest(dewsRows.map((row) => row.stablecoin_id)),
-            }),
-            updated_at: dewsAt,
-          },
-        ],
-      },
-    ]);
+    const db = mockPublicationD1();
 
     const health = await loadPublicationHealth(db, NOW);
 
-    expect(health.surfaces.dews).toMatchObject({
-      sourceOfTruth: "cache[dews:published-generation]+stress_signal_publication_rows",
-      lastPublishedGeneration: {
-        generationId: `dews:${dewsAt}`,
-        state: "published",
-        publishedRows: 2,
-      },
-    });
-    expect(health.surfaces.psi).toMatchObject({
-      sourceOfTruth: "stability_index_samples",
-      lastPublishedGeneration: {
-        generationId: `psi:${psiAt}`,
-        state: "published",
-        publishedRows: 1,
-      },
-    });
     expect(health.surfaces["safety-score-v9"]).toMatchObject({
       sourceOfTruth: "cache[report-cards:v9]+cache[report-cards:v9:publication-health]",
       lastPublishedGeneration: {
@@ -511,46 +419,7 @@ describe("loadPublicationHealth", () => {
     });
   });
 
-  it("fails DEWS publication health closed when the pointed generation is partial", async () => {
-    const dewsAt = NOW - 300;
-    const publishedIds = ["usdc-circle", "usdt-tether"];
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: dewsAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: publishedIds.length,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(publishedIds),
-      }),
-      updated_at: dewsAt,
-    };
-    const db = mockPublicationD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["dews:published-generation"],
-        rows: [pointer],
-        first: pointer,
-      },
-      {
-        match: "pharos:stress-signals:published-exact",
-        matchBinds: [dewsAt],
-        rows: [{ stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt }],
-      },
-    ]);
-
-    const health = await loadPublicationHealth(db, NOW);
-
-    expect(health.surfaces.dews).toMatchObject({
-      sourceOfTruth: "cache[dews:published-generation]+stress_signal_publication_rows",
-      lastPublishedGeneration: null,
-      lastFailureReason: "published generation coverage mismatch: rows=1/2",
-    });
-    expect(db.getHistory().some((entry) => entry.sql.includes("stress_signals_latest"))).toBe(false);
-  });
-
-  it("returns present surfaces with null generation details when ledgers are empty", async () => {
+  it("does not synthesize stablecoins, DEWS, or PSI surfaces when the generic ledger is empty", async () => {
     const health = await loadPublicationHealth(mockPublicationD1(), NOW);
 
     expect(health.surfaces["dex-liquidity"]).toMatchObject({
@@ -565,16 +434,9 @@ describe("loadPublicationHealth", () => {
       lastFailureReason: null,
       candidateAgeSec: null,
     });
-    expect(health.surfaces.stablecoins).toMatchObject({
-      lastAttemptedGeneration: {
-        generationId: "stablecoins-cache:missing",
-        state: "failed",
-        failureReason: "missing-cache",
-      },
-      lastPublishedGeneration: null,
-      lastFailureReason: "missing-cache",
-      candidateAgeSec: null,
-    });
+    expect(health.surfaces.stablecoins).toBeUndefined();
+    expect(health.surfaces.dews).toBeUndefined();
+    expect(health.surfaces.psi).toBeUndefined();
     expect(health.failedSurfaces).toBeUndefined();
   });
 });

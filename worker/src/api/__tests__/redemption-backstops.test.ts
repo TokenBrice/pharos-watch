@@ -1,7 +1,7 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
-import { assertAllD1MatchesUsed, mockD1Strict } from "../../test-helpers/__shared/mock-d1";
+import { assertAllD1MatchesUsed, mockD1Strict } from "@shared/test-utils/mock-d1";
 import { handleRedemptionBackstops } from "../redemption-backstops";
 
 function makeRedemptionRow(overrides: Record<string, unknown> = {}) {

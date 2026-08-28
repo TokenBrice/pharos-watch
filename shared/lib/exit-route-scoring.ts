@@ -80,7 +80,7 @@ export interface ExitComponentScores {
   cost: number;
 }
 
-function firstPositiveExitBreakpointValue(
+export function firstPositiveExitBreakpointValue(
   points: readonly { value: number; score: number }[],
 ): number {
   return points.find((point) => point.value > 0 && point.score > 0)?.value ?? 0;
@@ -95,18 +95,24 @@ function firstPositiveExitBreakpointValue(
  * being carried by non-capacity components when the route moves no meaningful
  * value.
  */
-export function hasMaterialExitCapacity(args: {
-  executableCapacityUsd: number;
-  requestedNotionalUsd: number | null | undefined;
-}): boolean {
+export function hasMaterialExitCapacity(
+  args: {
+    executableCapacityUsd: number;
+    requestedNotionalUsd: number | null | undefined;
+  },
+  policy: {
+    coverageRatioBreakpoints: readonly ExitBreakpoint[];
+    absoluteCapacityBreakpoints: readonly ExitBreakpoint[];
+  },
+): boolean {
   if (
     !Number.isFinite(args.executableCapacityUsd) ||
     args.executableCapacityUsd <= 0
   ) {
     return false;
   }
-  const coverageFloor = firstPositiveExitBreakpointValue(EXIT_ROUTE_SCORING_TABLES.coverageRatioBreakpoints);
-  const absoluteFloor = firstPositiveExitBreakpointValue(EXIT_ROUTE_SCORING_TABLES.absoluteCapacityBreakpoints);
+  const coverageFloor = firstPositiveExitBreakpointValue(policy.coverageRatioBreakpoints);
+  const absoluteFloor = firstPositiveExitBreakpointValue(policy.absoluteCapacityBreakpoints);
   if (absoluteFloor > 0 && args.executableCapacityUsd >= absoluteFloor) return true;
   if (
     args.requestedNotionalUsd == null ||

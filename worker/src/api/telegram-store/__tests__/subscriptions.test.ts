@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 as baseMockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import type { MockD1Database } from "@shared/test-utils/mock-d1";
+import {
+  assertTelegramWrite,
+  mockTelegramD1 as mockD1,
+} from "../../../test-helpers/__shared/telegram";
 import { applySettingToSubscriptions, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
 import { prepareCoinSettingStatements } from "../../telegram-webhook-settings-mutations";
 import type { ParsedSetCommand } from "../../telegram-webhook-shared";
@@ -11,37 +15,20 @@ const COIN: ResolvedCoin = {
   name: "USD Coin",
 };
 
-function mockD1(
-  tables: Parameters<typeof baseMockD1>[0] = [],
-  options: Parameters<typeof baseMockD1>[1] = {},
-): MockD1Database {
-  return baseMockD1([
-    ...tables,
-    { match: "INSERT INTO telegram_subscribers", rows: [] },
-    { match: "INSERT INTO telegram_subscriptions", rows: [] },
-  ], options);
-}
-
 function normalizeSql(sql: string): string {
   return sql.replace(/\s+/g, " ").trim();
 }
 
 function subscriptionInsert(db: MockD1Database): { sql: string; binds: unknown[] } {
-  const insert = db
-    .getHistory()
-    .find((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"));
-  if (!insert) throw new Error("expected telegram_subscriptions insert");
-  return insert;
+  return assertTelegramWrite(db, { sql: "INSERT INTO telegram_subscriptions" });
 }
 
 function expectPreferenceGenerationBump(db: MockD1Database): void {
-  const subscriber = db
-    .getHistory()
-    .find((entry) => entry.sql.includes("INSERT INTO telegram_subscribers"));
+  const subscriber = assertTelegramWrite(db, { sql: "INSERT INTO telegram_subscribers" });
   expect(subscriber?.sql).toContain(
     "preference_generation = telegram_subscribers.preference_generation + 1",
   );
-  expect(subscriber?.binds[(subscriber?.binds.length ?? 0) - 1]).toBe(1);
+  expect(subscriber.binds[subscriber.binds.length - 1]).toBe(1);
 }
 
 async function settingsPath(setting: string, value: string): Promise<{ sql: string; binds: unknown[] }> {

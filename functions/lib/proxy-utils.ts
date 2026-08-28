@@ -1,3 +1,5 @@
+import { createJsonErrorResponse } from "@shared/lib/http-response";
+
 /**
  * Shared proxy utilities for Cloudflare Pages Function handlers.
  * Used by both the ops-admin proxy and the site-data proxy.
@@ -5,13 +7,10 @@
 
 /** Return a JSON error response with no-store cache control. */
 export function jsonError(status: number, message: string, headers?: HeadersInit): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "Content-Type": "application/json",
-      ...headers,
-    },
+  const responseHeaders = new Headers(headers);
+  if (!responseHeaders.has("Cache-Control")) responseHeaders.set("Cache-Control", "no-store");
+  return createJsonErrorResponse(status, message, {
+    headers: responseHeaders,
   });
 }
 

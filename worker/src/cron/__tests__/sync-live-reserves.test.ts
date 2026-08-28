@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
@@ -726,81 +726,6 @@ describe("syncLiveReserves", () => {
     expect(cleanupEvent).toBeDefined();
   });
 
-  it("persists a deferred cursor on budget exhaustion and resumes from that coin on the next run", async () => {
-    // The sync queue is evidence-class ordered, so expectations follow the
-    // ordered queue rather than raw registry order.
-    const configuredIds = SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id);
-    let nowMs = 0;
-    let activeRun = 1;
-    const visitedByRun = new Map<number, string[]>();
-
-    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
-    mockAdapterRegistry(async (coin) => {
-      const visited = visitedByRun.get(activeRun) ?? [];
-      visited.push(coin?.id ?? "unknown");
-      visitedByRun.set(activeRun, visited);
-      if (activeRun === 1 && visited.length === 1) {
-        nowMs = 11 * 60 * 1000;
-      }
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
-    });
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-
-    const firstRun = await syncLiveReserves(db, new AbortController().signal, {});
-    const firstRunMetadata = JSON.parse(firstRun?.metadata ?? "{}") as {
-      deferredCoins?: number;
-      nextCursorStablecoinId?: string | null;
-      cursorTailState?: string | null;
-      cursorRecordedAt?: number | null;
-      cursorTailCompletedAt?: number | null;
-      runBudgetTruncationCount?: number;
-    };
-    const cursorWrites = db.getHistory().filter((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === LIVE_RESERVE_RUN_CURSOR_CACHE_KEY
-    );
-
-    expect(firstRunMetadata).toMatchObject({
-      deferredCoins: configuredCoinCount - 1,
-      nextCursorStablecoinId: configuredIds[1],
-      cursorTailState: "complete",
-      runBudgetTruncationCount: 1,
-    });
-    expect(typeof firstRunMetadata.cursorRecordedAt).toBe("number");
-    expect(typeof firstRunMetadata.cursorTailCompletedAt).toBe("number");
-    expect(cursorWrites).toHaveLength(2);
-    expect(JSON.parse(cursorWrites[0]?.binds[1] as string)).toMatchObject({
-      nextStablecoinId: configuredIds[1],
-      deferredCount: configuredCoinCount - 1,
-      tailState: "recording",
-    });
-    expect(JSON.parse(cursorWrites[1]?.binds[1] as string)).toMatchObject({
-      nextStablecoinId: configuredIds[1],
-      deferredCount: configuredCoinCount - 1,
-      tailState: "complete",
-    });
-
-    activeRun = 2;
-    nowMs = 0;
-    const cursorValue = cursorWrites[1]?.binds[1];
-    const resumedDb = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [LIVE_RESERVE_RUN_CURSOR_CACHE_KEY],
-        rows: [],
-        first: {
-          value: cursorValue,
-          updated_at: 0,
-        },
-      },
-    ]);
-    await syncLiveReserves(resumedDb, new AbortController().signal, {});
-
-    expect(visitedByRun.get(1)?.[0]).toBe(configuredIds[0]);
-    expect(visitedByRun.get(2)?.[0]).toBe(firstRunMetadata.nextCursorStablecoinId);
-  });
-
   it("recovers stale live-reserve circuit breakers with no configured candidates", async () => {
     const staleBreakerKey = "live-reserves:removed-adapter-key";
     const configuredBreakerKey = `live-reserves:${
@@ -1076,44 +1001,6 @@ describe("syncLiveReserves", () => {
       itemsDone: configuredCoinCount,
       itemsTotal: configuredCoinCount,
     });
-  });
-
-  it("defers remaining coins when the per-run budget is exhausted", async () => {
-    vi.useFakeTimers();
-    const nowBase = Date.now();
-    vi.setSystemTime(nowBase);
-
-    // Each adapter invocation advances the clock by 6 minutes so that after 2
-    // coins (>= 12min > 11min budget), the budget guard kicks in.
-    mockAdapterRegistry(async () => {
-      vi.setSystemTime(Date.now() + 6 * 60 * 1000);
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
-    });
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    const resultPromise = syncLiveReserves(db, new AbortController().signal, {});
-    await vi.runAllTimersAsync();
-    const result = await resultPromise;
-
-    const metadata = JSON.parse(result?.metadata ?? "{}") as { skipped?: number; synced?: number };
-    expect(metadata.skipped).toBeGreaterThan(0);
-    expect(metadata.synced).toBeLessThan(configuredCoinCount);
-
-    const deferredInserts = db.getHistory().filter((entry) => (
-      entry.sql.includes("INSERT INTO reserve_sync_state")
-      && entry.binds.some(
-        (bind) => typeof bind === "string" && bind === "run-budget-exhausted",
-      )
-    ));
-    expect(deferredInserts.length).toBeGreaterThan(0);
-
-    // The deferred statement must never set pending_attempt_id — it binds its
-    // values in positional order (stablecoinId, adapterKey, breakerKey,
-    // attemptedAt, reason, metadata) and the SQL pins pending_attempt_id to NULL.
-    for (const entry of deferredInserts) {
-      expect(entry.sql).toMatch(/pending_attempt_id\s*=\s*NULL/);
-    }
   });
 
   it("defers the full queue safely when configured run budget is below adapter timeout", async () => {

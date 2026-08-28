@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "../../../lib/blacklist/amount-repair-queue";
 
 const DEFAULT_BLACKLIST_MAINTENANCE_D1_TABLES: MockTableConfig[] = [

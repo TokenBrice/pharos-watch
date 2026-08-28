@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PerAlertTypeDelivery } from "@shared/types/status";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   buildFreshTargetJobIdMap,
   finalizeTelegramAlertJobManifests,

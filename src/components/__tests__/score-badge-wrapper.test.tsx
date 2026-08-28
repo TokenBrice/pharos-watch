@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
 
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
-afterEach(cleanup);
 
 describe("ScoreBadgeWrapper", () => {
   it("renders the wrapped badge with an inline version suffix in suffix mode", () => {

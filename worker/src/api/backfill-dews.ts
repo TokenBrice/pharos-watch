@@ -3,11 +3,7 @@ import { resolvePsiInclusiveStablecoinId } from "@shared/lib/stablecoin-id-regis
 import { percentileNearestRank } from "@shared/lib/stats";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import {
-  errorResponse,
-  jsonResponse,
-  methodNotAllowedResponse,
-} from "../lib/api-utils";
+import { errorResponse, jsonResponse, methodNotAllowedResponse } from "../lib/api-response";
 import { BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS } from "../lib/backtest-anchors";
 import { BACKTEST_LOOKBACK_DAYS } from "../lib/constants";
 import { computeDEWS } from "../lib/dews";
@@ -19,7 +15,6 @@ import type {
   PersistedJsonDecodeReason,
   SourceFailure,
 } from "../lib/dews/contracts";
-import { runAdminRoute } from "../lib/route-wrappers";
 import { computeAndStoreDEWS } from "../lib/dews/service";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
 
@@ -587,54 +582,44 @@ export interface BackfillDewsRouteContext {
   request?: Request;
 }
 
-export function handleBackfillDEWS({
+export async function handleBackfillDEWS({
   db,
   url,
-  trustedAdmin,
   request,
 }: BackfillDewsRouteContext): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "backfill-dews",
-      request,
-      trustedAdmin,
-    },
-    async () => {
-      const method = request?.method ?? "GET";
-      const dryRun = url.searchParams.get("dry-run") === "true";
-      const mode = url.searchParams.get("mode");
-      const repairModeRaw = url.searchParams.get("repair");
-      const repairMode = parseRepairMode(repairModeRaw);
+  const method = request?.method ?? "GET";
+  const dryRun = url.searchParams.get("dry-run") === "true";
+  const mode = url.searchParams.get("mode");
+  const repairModeRaw = url.searchParams.get("repair");
+  const repairMode = parseRepairMode(repairModeRaw);
 
-      if (repairModeRaw && repairMode == null) {
-        return errorResponse(400, `Unsupported repair mode: ${repairModeRaw}`);
+  if (repairModeRaw && repairMode == null) {
+    return errorResponse(400, `Unsupported repair mode: ${repairModeRaw}`);
+  }
+
+  if (method === "GET") {
+    if (mode === "backtest-metrics") {
+      return handleBacktestMetrics(db);
+    }
+    if (repairMode) {
+      if (!dryRun) {
+        return methodNotAllowedResponse(
+          "Method not allowed. GET supports repair previews only with dry-run=true; use POST for DEWS repair mutations.",
+          ["POST"],
+        );
       }
-
-      if (method === "GET") {
-        if (mode === "backtest-metrics") {
-          return handleBacktestMetrics(db);
-        }
-        if (repairMode) {
-          if (!dryRun) {
-            return methodNotAllowedResponse(
-              "Method not allowed. GET supports repair previews only with dry-run=true; use POST for DEWS repair mutations.",
-              ["POST"],
-            );
-          }
-          return repairMode === "refresh-current"
-            ? handleRefreshCurrentRepair(db, true)
-            : handlePruneHistoryRepair(db, url, true);
-        }
-        return handleHistoricalBacktest(db);
-      }
-
-      if (!repairMode) {
-        return errorResponse(400, "POST /api/backfill-dews requires repair=refresh-current or repair=prune-history.");
-      }
-
       return repairMode === "refresh-current"
-        ? handleRefreshCurrentRepair(db, dryRun)
-        : handlePruneHistoryRepair(db, url, dryRun);
-    },
-  );
+        ? handleRefreshCurrentRepair(db, true)
+        : handlePruneHistoryRepair(db, url, true);
+    }
+    return handleHistoricalBacktest(db);
+  }
+
+  if (!repairMode) {
+    return errorResponse(400, "POST /api/backfill-dews requires repair=refresh-current or repair=prune-history.");
+  }
+
+  return repairMode === "refresh-current"
+    ? handleRefreshCurrentRepair(db, dryRun)
+    : handlePruneHistoryRepair(db, url, dryRun);
 }

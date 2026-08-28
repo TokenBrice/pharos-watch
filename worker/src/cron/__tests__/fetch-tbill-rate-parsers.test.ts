@@ -24,21 +24,18 @@ vi.mock("../../lib/circuit-breaker", () => ({
   recordOutcome: vi.fn(),
 }));
 
-import {
-  parseBanxicoSeries,
-  parseBcbSelicSeries,
-  parseBoeSoniaCsv,
-  parseBoeSoniaCompoundedIndexCsv,
-  parseBojCallRateJson,
-  parseBocValetSeries,
-  parseCbrKeyRateXml,
-  parseCbrtEvdsSeries,
-  parseEcbCompoundedEstrCsv,
-  parseNyFedEffrJson,
-  parseRbaF1MoneyMarketCsv,
-  parseSixSar3mcCsv,
-  parseTreasuryYieldXml,
-} from "../fetch-tbill-rate";
+import { parseBanxicoSeries } from "../tbill-sources/banxico";
+import { parseBcbSelicSeries } from "../tbill-sources/bcb";
+import { parseBoeSoniaCompoundedIndexCsv } from "../tbill-sources/boe";
+import { parseBojCallRateJson } from "../tbill-sources/boj";
+import { parseBocValetSeries } from "../tbill-sources/boc";
+import { parseCbrKeyRateXml } from "../tbill-sources/cbr";
+import { parseCbrtEvdsSeries } from "../tbill-sources/cbrt";
+import { parseEcbCompoundedEstrCsv } from "../tbill-sources/ecb";
+import { parseNyFedEffrJson } from "../tbill-sources/nyfed";
+import { parseRbaF1MoneyMarketCsv } from "../tbill-sources/rba";
+import { parseSixSar3mcCsv } from "../tbill-sources/six";
+import { parseTreasuryYieldXml } from "../tbill-sources/treasury";
 import { parseEtherfuseCetesStablebondPage } from "../yield-sync/etherfuse-cetes";
 
 const TREASURY_XML_SNIPPET = `<QR_BC_CM><LIST_G_WEEK_OF_MONTH>
@@ -104,22 +101,6 @@ describe("parseEcbCompoundedEstrCsv", () => {
     expect(parseEcbCompoundedEstrCsv(ECB_ESTR_3M_CSV_SNIPPET)).toEqual({
       rate: 1.9358,
       recordDate: "2026-03-26",
-    });
-  });
-});
-
-describe("parseBoeSoniaCsv", () => {
-  it("extracts the latest Bank of England SONIA observation", () => {
-    expect(parseBoeSoniaCsv("DATE,IUDSOIA\n01 Jun 2026,3.7291\n03 Jun 2026,3.7306\n")).toEqual({
-      rate: 3.7306,
-      recordDate: "2026-06-03",
-    });
-  });
-
-  it("skips malformed trailing rows", () => {
-    expect(parseBoeSoniaCsv("DATE,IUDSOIA\n01 Jun 2026,3.7291\nnot-a-date,3.8\n")).toEqual({
-      rate: 3.7291,
-      recordDate: "2026-06-01",
     });
   });
 });

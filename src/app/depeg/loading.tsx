@@ -1,10 +1,9 @@
 import {
   PageLoadingChartBlock,
-  PageLoadingHeader,
   PageLoadingRowList,
-  PageLoadingShell,
   PageLoadingStatGrid,
 } from "@/components/page-loading-skeleton";
+import { PageLoadingRoute } from "@/app/page-loading-route";
 
 // Analytics tier: KPI strip, heatmap placeholder, then recent depeg rows.
 const DEPEG_SKELETON_ROW_COUNT = 8;
@@ -34,9 +33,8 @@ export function DepegContentLoadingState() {
 
 export default function Loading() {
   return (
-    <PageLoadingShell>
-      <PageLoadingHeader sectionWidth="w-28" titleWidth="w-64 sm:w-80" />
+    <PageLoadingRoute sectionWidth="w-28" titleWidth="w-64 sm:w-80">
       <DepegContentLoadingState />
-    </PageLoadingShell>
+    </PageLoadingRoute>
   );
 }

@@ -1,9 +1,8 @@
 import { z } from "zod";
-
-const V9MechanismProfileQualitySchema = z.enum(["strong", "adequate", "limited", "weak", "failed"]);
+import { V9MechanismQualitySchema } from "./safety-score-v9-fact-input-primitives";
 
 const V9MechanismProfileFactSchema = z.union([
-  z.object({ disposition: z.literal("supported"), quality: V9MechanismProfileQualitySchema }).strict(),
+  z.object({ disposition: z.literal("supported"), quality: V9MechanismQualitySchema }).strict(),
   z.object({ disposition: z.enum(["issuer-undisclosed", "integration-missing", "method-unsupported"]) }).strict(),
 ]);
 

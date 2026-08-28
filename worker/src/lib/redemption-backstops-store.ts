@@ -53,7 +53,7 @@ import {
   inferProviderCapacityConfidence,
   inferProviderCapacitySemantics,
 } from "@shared/lib/redemption-backstop-providers";
-import { buildMethodologyEnvelope } from "./api-utils";
+import { buildMethodologyEnvelope } from "./api-methodology";
 import { decodeJsonString } from "./cache-json";
 import { SNAPSHOT_ROW_COLUMNS } from "./redemption-backstops-store-write";
 export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-write";

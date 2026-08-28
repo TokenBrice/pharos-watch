@@ -3,11 +3,11 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InstrumentPanel } from "./instrument-panel";
-import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
+import { useTelegramPulse } from "@/hooks/api-hooks";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramPulse } from "@shared/types/status";
 
-vi.mock("@/hooks/use-telegram-pulse", () => ({
+vi.mock("@/hooks/api-hooks", () => ({
   useTelegramPulse: vi.fn(),
 }));
 

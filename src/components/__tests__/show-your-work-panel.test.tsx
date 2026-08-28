@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 
 afterEach(() => {
-  cleanup();
   try {
     window.localStorage.removeItem("pharos.show-work");
   } catch {

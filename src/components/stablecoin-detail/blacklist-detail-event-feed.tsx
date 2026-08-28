@@ -4,9 +4,9 @@ import Link from "next/link";
 import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink, ShieldOff } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
+import { EventFeedEmpty, EventFeedSkeleton } from "@/components/event-feed-state";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { formatAddress, formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
@@ -58,33 +58,6 @@ function formatFeedAmount(evt: BlacklistEvent): { primary: string; detail: strin
   };
 }
 
-function FeedSkeleton() {
-  return (
-    <div className="rounded-xl border overflow-hidden">
-      <div className="bg-muted/50 h-10" />
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-16" />
-          <div className="flex-1" />
-          <Skeleton className="h-4 w-4 shrink-0" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FeedEmpty() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
-      <ShieldOff className="h-10 w-10 opacity-40" />
-      <p className="text-sm">No blacklist events recorded yet.</p>
-    </div>
-  );
-}
-
 export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
   const { data, isLoading, isError } = useBlacklistEventsPage({
     stablecoin: symbol,
@@ -92,7 +65,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
     offset: 0,
   });
 
-  if (isLoading) return <FeedSkeleton />;
+  if (isLoading) return <EventFeedSkeleton variant="blacklist" />;
   if (isError) {
     return (
       <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
@@ -100,7 +73,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
       </div>
     );
   }
-  if (!data || data.events.length === 0) return <FeedEmpty />;
+  if (!data || data.events.length === 0) return <EventFeedEmpty variant="blacklist" />;
 
   return (
     <>

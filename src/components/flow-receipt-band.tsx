@@ -42,6 +42,38 @@ function statusLabel(status: string): string {
   return status.replace("-", " ");
 }
 
+const RECEIPT_ROW_STYLES: Record<"default" | "compact", { container: string; label: string }> = {
+  default: {
+    container: "rounded-lg border border-border/60 bg-background/50 p-3",
+    label: "text-[11px] font-semibold uppercase tracking-wide text-muted-foreground",
+  },
+  compact: {
+    container: "rounded-lg border border-border/60 bg-background/45 px-3 py-2.5",
+    label: "text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
+  },
+};
+
+function ReceiptRow({
+  row,
+  variant,
+}: {
+  row: FlowPressureReceiptRow;
+  variant: "default" | "compact";
+}) {
+  const styles = RECEIPT_ROW_STYLES[variant];
+  return (
+    <div className={styles.container}>
+      <div className="flex items-center justify-between gap-3">
+        <span className={styles.label}>{row.label}</span>
+        <span className={cn("pharos-numeric text-sm font-semibold", valueClass(row))}>
+          {formatReceiptCurrency(row)}
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">{row.detail}</p>
+    </div>
+  );
+}
+
 export function FlowReceiptBand({
   gauge,
   coins,
@@ -59,31 +91,15 @@ export function FlowReceiptBand({
     syncWarning,
   });
   const isCompact = variant === "compact";
+  const receiptRowVariant = isCompact ? "compact" : "default";
+  const receiptRows = model.rows.map((row) => (
+    <ReceiptRow key={row.id} row={row} variant={receiptRowVariant} />
+  ));
 
   if (isCompact) {
     return (
       <section className={cn("grid gap-2 sm:grid-cols-2 lg:grid-cols-3", className)} aria-label="Flow receipt">
-        {model.rows.map((row) => (
-          <div
-            key={row.id}
-            className="rounded-lg border border-border/60 bg-background/45 px-3 py-2.5"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {row.label}
-              </span>
-              <span
-                className={cn(
-                  "pharos-numeric text-sm font-semibold",
-                  valueClass(row),
-                )}
-              >
-                {formatReceiptCurrency(row)}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">{row.detail}</p>
-          </div>
-        ))}
+        {receiptRows}
       </section>
     );
   }
@@ -109,29 +125,7 @@ export function FlowReceiptBand({
         </div>
       </header>
 
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {model.rows.map((row) => (
-          <div
-            key={row.id}
-            className="rounded-lg border border-border/60 bg-background/50 p-3"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {row.label}
-              </span>
-              <span
-                className={cn(
-                  "pharos-numeric text-sm font-semibold",
-                  valueClass(row),
-                )}
-              >
-                {formatReceiptCurrency(row)}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">{row.detail}</p>
-          </div>
-        ))}
-      </div>
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{receiptRows}</div>
 
       <div className="border-t border-border/60 pt-3">
         <div className="flex flex-wrap items-start gap-x-6 gap-y-2 text-sm">

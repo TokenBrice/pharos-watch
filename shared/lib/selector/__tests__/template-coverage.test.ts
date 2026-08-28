@@ -14,7 +14,7 @@ import {
   type LowestSubDimension,
   type MergedRow,
 } from "../types";
-import { makeMergedRow } from "./fixture";
+import { makeMergedRowWithIdentity } from "./fixture";
 import { getTemplate, renderWatchText, TEMPLATES } from "../what-to-watch-templates";
 import type { LiveWatchKey } from "../what-to-watch-templates";
 
@@ -26,10 +26,7 @@ const LIVE_WATCH_KEYS = LOWEST_SUB_DIMENSION_KEYS.filter(
 );
 
 function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
-  return makeMergedRow({
-    id: "watch-row",
-    symbol: "WATCH",
-    name: "Watch Row",
+  return makeMergedRowWithIdentity({ id: "watch-row", symbol: "WATCH", name: "Watch Row" }, {
     protocolSlug: "watch",
     mechanismArchetype: "cdp",
     pegScore: 95,

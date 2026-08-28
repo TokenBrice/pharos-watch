@@ -122,95 +122,103 @@ type EndpointDefinitionFactoryInput<Key extends string = string> = Omit<
   siteDataAccess?: EndpointSiteDataAccess;
 };
 
-type PublicGetDefinition<T extends EndpointDefinitionFactoryInput> = T & {
-  readonly methods: readonly ["GET"];
-  readonly adminRequired: false;
-  readonly mutatingAdmin: false;
-  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : false;
-};
-
-type PublicPostDefinition<T extends EndpointDefinitionFactoryInput> = T & {
-  readonly methods: readonly ["POST"];
-  readonly adminRequired: false;
-  readonly mutatingAdmin: false;
-  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
-  readonly publicApiAccess: T["publicApiAccess"] extends EndpointPublicApiAccess ? T["publicApiAccess"] : "exempt";
-  readonly siteDataAccess: T["siteDataAccess"] extends EndpointSiteDataAccess ? T["siteDataAccess"] : "denied";
-};
-
-type AdminGetDefinition<T extends EndpointDefinitionFactoryInput> = T & {
-  readonly methods: readonly ["GET"];
-  readonly adminRequired: true;
-  readonly mutatingAdmin: false;
-  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
-};
-
-type AdminMutationDefinition<T extends EndpointDefinitionFactoryInput> = T & {
-  readonly methods: readonly ["POST"];
-  readonly adminRequired: true;
-  readonly mutatingAdmin: true;
-  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
-};
-
-type AdminDualModeMutationDefinition<T extends EndpointDefinitionFactoryInput> = T & {
-  readonly methods: readonly ["GET", "POST"];
-  readonly adminRequired: true;
-  readonly mutatingAdmin: true;
-  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
-};
-
-function publicGet<const T extends EndpointDefinitionFactoryInput>(definition: T): PublicGetDefinition<T> {
-  return {
-    cacheBypass: false,
-    ...definition,
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-  } as PublicGetDefinition<T>;
+interface EndpointDefinitionPolicy<
+  Methods extends readonly EndpointMethod[],
+  AdminRequired extends boolean,
+  MutatingAdmin extends boolean,
+  CacheBypass extends boolean,
+> {
+  methods: Methods;
+  adminRequired: AdminRequired;
+  mutatingAdmin: MutatingAdmin;
+  cacheBypass: CacheBypass;
+  publicApiAccess?: EndpointPublicApiAccess;
+  siteDataAccess?: EndpointSiteDataAccess;
 }
 
-function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(definition: T): PublicPostDefinition<T> {
+type PolicyDefault<Policy, Key extends "publicApiAccess" | "siteDataAccess"> =
+  Policy extends Record<Key, infer Value> ? { readonly [Property in Key]: Value } : unknown;
+
+type PolicyEndpointDefinition<
+  T extends EndpointDefinitionFactoryInput,
+  Policy extends EndpointDefinitionPolicy<readonly EndpointMethod[], boolean, boolean, boolean>,
+> = T & {
+  readonly methods: Policy["methods"];
+  readonly adminRequired: Policy["adminRequired"];
+  readonly mutatingAdmin: Policy["mutatingAdmin"];
+  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : Policy["cacheBypass"];
+} & PolicyDefault<Policy, "publicApiAccess"> & PolicyDefault<Policy, "siteDataAccess">;
+
+const PUBLIC_GET_POLICY = {
+  methods: ["GET"],
+  adminRequired: false,
+  mutatingAdmin: false,
+  cacheBypass: false,
+} as const satisfies EndpointDefinitionPolicy<readonly ["GET"], false, false, false>;
+
+const PUBLIC_POST_EXEMPT_POLICY = {
+  methods: ["POST"],
+  adminRequired: false,
+  mutatingAdmin: false,
+  cacheBypass: true,
+  publicApiAccess: "exempt",
+  siteDataAccess: "denied",
+} as const satisfies EndpointDefinitionPolicy<readonly ["POST"], false, false, true>;
+
+const ADMIN_GET_POLICY = {
+  methods: ["GET"],
+  adminRequired: true,
+  mutatingAdmin: false,
+  cacheBypass: true,
+} as const satisfies EndpointDefinitionPolicy<readonly ["GET"], true, false, true>;
+
+const ADMIN_MUTATION_POLICY = {
+  methods: ["POST"],
+  adminRequired: true,
+  mutatingAdmin: true,
+  cacheBypass: true,
+} as const satisfies EndpointDefinitionPolicy<readonly ["POST"], true, true, true>;
+
+const ADMIN_DUAL_MODE_MUTATION_POLICY = {
+  methods: ["GET", "POST"],
+  adminRequired: true,
+  mutatingAdmin: true,
+  cacheBypass: true,
+} as const satisfies EndpointDefinitionPolicy<readonly ["GET", "POST"], true, true, true>;
+
+function defineEndpoint<
+  const T extends EndpointDefinitionFactoryInput,
+  const Policy extends EndpointDefinitionPolicy<readonly EndpointMethod[], boolean, boolean, boolean>,
+>(definition: T, policy: Policy): PolicyEndpointDefinition<T, Policy> {
   return {
-    cacheBypass: true,
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
+    cacheBypass: policy.cacheBypass,
+    ...(policy.publicApiAccess ? { publicApiAccess: policy.publicApiAccess } : {}),
+    ...(policy.siteDataAccess ? { siteDataAccess: policy.siteDataAccess } : {}),
     ...definition,
-    methods: ["POST"],
-    adminRequired: false,
-    mutatingAdmin: false,
-  } as PublicPostDefinition<T>;
+    methods: policy.methods,
+    adminRequired: policy.adminRequired,
+    mutatingAdmin: policy.mutatingAdmin,
+  } as PolicyEndpointDefinition<T, Policy>;
 }
 
-function adminGet<const T extends EndpointDefinitionFactoryInput>(definition: T): AdminGetDefinition<T> {
-  return {
-    cacheBypass: true,
-    ...definition,
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-  } as AdminGetDefinition<T>;
+function publicGet<const T extends EndpointDefinitionFactoryInput>(definition: T) {
+  return defineEndpoint(definition, PUBLIC_GET_POLICY);
 }
 
-function adminMutation<const T extends EndpointDefinitionFactoryInput>(definition: T): AdminMutationDefinition<T> {
-  return {
-    cacheBypass: true,
-    ...definition,
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-  } as AdminMutationDefinition<T>;
+function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(definition: T) {
+  return defineEndpoint(definition, PUBLIC_POST_EXEMPT_POLICY);
 }
 
-function adminDualModeMutation<const T extends EndpointDefinitionFactoryInput>(
-  definition: T,
-): AdminDualModeMutationDefinition<T> {
-  return {
-    cacheBypass: true,
-    ...definition,
-    methods: ["GET", "POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-  } as AdminDualModeMutationDefinition<T>;
+function adminGet<const T extends EndpointDefinitionFactoryInput>(definition: T) {
+  return defineEndpoint(definition, ADMIN_GET_POLICY);
+}
+
+function adminMutation<const T extends EndpointDefinitionFactoryInput>(definition: T) {
+  return defineEndpoint(definition, ADMIN_MUTATION_POLICY);
+}
+
+function adminDualModeMutation<const T extends EndpointDefinitionFactoryInput>(definition: T) {
+  return defineEndpoint(definition, ADMIN_DUAL_MODE_MUTATION_POLICY);
 }
 
 export interface StatusPageAction {
@@ -1021,7 +1029,9 @@ const BASE_ENDPOINT_DEFINITIONS = [
 ] as const satisfies readonly BaseEndpointDefinition[];
 
 export type EndpointKey = (typeof BASE_ENDPOINT_DEFINITIONS)[number]["key"];
-export type EndpointDefinitionByKey<K extends EndpointKey> = Extract<(typeof ENDPOINT_DEFINITIONS)[number], { key: K }>;
+export type EndpointDefinitionByKey<K extends EndpointKey> =
+  Extract<(typeof BASE_ENDPOINT_DEFINITIONS)[number], { key: K }>
+  & Pick<EndpointDefinition, "publicApiAccess" | "siteDataAccess">;
 export type EndpointDependenciesForKey<K extends EndpointKey> =
   Extract<(typeof BASE_ENDPOINT_DEFINITIONS)[number], { key: K }> extends {
     routeDependencies: infer Deps extends readonly EndpointDependency[];

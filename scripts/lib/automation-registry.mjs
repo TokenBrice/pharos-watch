@@ -317,10 +317,11 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "public-datasets",
     buildLifecycle: "maintenance-only",
+    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
     command: "tsx scripts/maintenance/generate-public-datasets.ts",
     dependsOn: ["report-card-registry-fingerprint"],
-    outputPaths: ["public/datasets/**"],
+    outputPaths: ["public/_redirects", "public/datasets/**", "src/lib/datasets/public-dataset-current.ts"],
     phase: 2,
     reproducibility: "network-derived",
     script: "scripts/maintenance/generate-public-datasets.ts",
@@ -356,6 +357,18 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     reproducibility: "mixed",
     script: "scripts/maintenance/generate-api-reference.ts",
     sourcePaths: ["public/openapi.json"],
+  }),
+  generatedArtifact({
+    id: "changelog-registry",
+    buildLifecycle: "maintenance-only",
+    autoStage: true,
+    checkCommand: "node --import tsx scripts/maintenance/generate-changelog-registry.ts --check",
+    command: "node --import tsx scripts/maintenance/generate-changelog-registry.ts",
+    outputPaths: ["src/data/changelogs/index.ts"],
+    phase: 2,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-changelog-registry.ts",
+    sourcePaths: ["src/data/changelogs/*.ts"],
   }),
   generatedArtifact({
     id: "og-editorial",
@@ -427,8 +440,9 @@ function assertKnownGeneratedArtifactBuildLifecycles(lifecycles) {
 /**
  * Split selected artifact ids into those the pre-commit hook may regenerate and
  * stage on its own, and those a human must handle. Network-derived artifacts,
- * browser-rendered OG images, and gitignored outputs are never auto-staged: a
+ * browser-rendered OG images, and gitignored outputs are normally manual: a
  * commit hook must not make network calls, take minutes, or stage nothing.
+ * Offline-safe generators that preserve checked-in data may opt in explicitly.
  *
  * @param {readonly string[]} ids
  * @returns {{ autoStage: string[], manual: string[] }}

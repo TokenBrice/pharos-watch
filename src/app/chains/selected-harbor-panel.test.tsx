@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SelectedHarborPanel } from "./selected-harbor-panel";
 import type { ChainHarborEntry } from "./harbor-map";
 
@@ -9,8 +9,6 @@ vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) =>
     createElement("img", { ...props, alt: props.alt ?? "" }),
 }));
-
-afterEach(() => cleanup());
 
 describe("SelectedHarborPanel", () => {
   it("renders exact selected harbor supply, health, cargo, and wake fields", () => {

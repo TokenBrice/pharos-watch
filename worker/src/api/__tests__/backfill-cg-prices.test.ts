@@ -1,13 +1,14 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
+import { mockFetchRetry } from "../../test-helpers/cron/mock-fetch-retry";
 import { handleBackfillCgPricesTrusted } from "../backfill-cg-prices";
 
 stubCryptoForAuth();
 
-vi.mock("../../lib/fetch-retry", () => {
-  const fetchWithRetry = vi.fn(async () => (
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry({
+  fetchWithRetry: vi.fn(async () => (
     new Response(
       JSON.stringify({
         prices: [[1_700_000_000_000, 1.001]],
@@ -15,15 +16,8 @@ vi.mock("../../lib/fetch-retry", () => {
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     )
-  ));
-  return {
-    fetchWithRetry,
-    fetchJsonWithRetry: async (..._args: unknown[]) => {
-      const response = await fetchWithRetry();
-      return { response, body: await response.json() };
-    },
-  };
-});
+  )),
+}));
 
 function makeDb(existingRows: Array<{ snapshot_date: number; price: number | null; circulating_usd: number }> = []): D1Database {
   const stmt = (sql: string) => ({

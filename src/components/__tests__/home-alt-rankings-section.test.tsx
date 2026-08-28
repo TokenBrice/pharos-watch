@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeAltRankingsSection } from "@/components/home-alt-rankings-section";
 
@@ -101,9 +101,6 @@ describe("HomeAltRankingsSection", () => {
     usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: ["usdc-circle"], togglePinned: togglePinnedMock });
   });
 
-  afterEach(() => {
-    cleanup();
-  });
 
   it("configures the main table with homepage defaults", () => {
     render(<HomeAltRankingsSection titleId="home-alt-rankings-title" />);

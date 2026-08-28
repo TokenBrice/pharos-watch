@@ -1,10 +1,7 @@
-import {
-  addFreshnessHeaders,
-  errorResponse,
-  jsonResponse,
-  buildMethodologyEnvelope,
-  parseBooleanParam,
-} from "../lib/api-utils";
+import { addFreshnessHeaders } from "../lib/api-freshness";
+import { errorResponse, jsonResponse } from "../lib/api-response";
+import { buildMethodologyEnvelope } from "../lib/api-methodology";
+import { parseBooleanParam } from "../lib/api-params";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";

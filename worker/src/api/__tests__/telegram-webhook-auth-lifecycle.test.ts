@@ -1,4 +1,4 @@
-import { makeJsonRequest } from "./api-request-response.test-support";
+import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchSpy,

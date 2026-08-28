@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 as createMockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { recordOutcomeSafe } from "../../lib/circuit-breaker";
 

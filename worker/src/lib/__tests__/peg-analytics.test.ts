@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
 
 const { STABLECOINS_MOCK } = vi.hoisted(() => ({

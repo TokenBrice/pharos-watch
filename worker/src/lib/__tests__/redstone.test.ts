@@ -7,7 +7,7 @@ import {
 import { REDSTONE_SYMBOL_CONFIG } from "@shared/lib/pricing-provider-config";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import redstoneBatchFixture from "./fixtures/redstone-batch.json";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 afterEach(() => {
   vi.useRealTimers();

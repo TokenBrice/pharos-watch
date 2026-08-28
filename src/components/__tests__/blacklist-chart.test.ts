@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { createElement, isValidElement } from "react";
-import { cleanup, render } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getBlacklistChartCoins, getBlacklistTooltipSummary, BlacklistChart } from "@/components/blacklist-chart";
 import type { QuarterlyStackedBarChart } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
@@ -16,7 +16,6 @@ vi.mock("@/components/chart-primitives/quarterly-stacked-bar-chart", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
   quarterlyChartMock.mockClear();
 });
 

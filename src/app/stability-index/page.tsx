@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { FaqSection } from "@/components/faq-section";
-import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { buildApiOgImageUrl } from "@/lib/page-metadata";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
@@ -10,13 +10,6 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 
 const description = "Historical Pharos Stability Index scores, component breakdowns, and condition band analysis for the stablecoin market.";
-
-export const metadata = buildPageMetadata({
-  title: "Stability Index: Pharos Stablecoin Market Health",
-  description,
-  canonical: "/stability-index/",
-  ogImage: buildApiOgImageUrl(API_PATHS.ogStabilityIndex()),
-});
 
 const FAQ_ITEMS = [
   {
@@ -31,7 +24,13 @@ const FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
-export default createClientFeaturePage({
+const route = createClientFeaturePage({
+  path: "/stability-index/",
+  metadata: {
+    title: "Stability Index: Pharos Stablecoin Market Health",
+    description,
+    ogImage: buildApiOgImageUrl(API_PATHS.ogStabilityIndex()),
+  },
   loadClient: () => import("./client").then((m) => ({ default: m.StabilityIndexClient })),
   loading: (
     <div className="space-y-6">
@@ -42,7 +41,6 @@ export default createClientFeaturePage({
   ),
   shell: {
     breadcrumbName: "Stability Index",
-    path: "/stability-index/",
     title: "Pharos Stability Index",
     methodology: {
       version: PSI_METHODOLOGY_VERSION_LABEL,
@@ -54,3 +52,6 @@ export default createClientFeaturePage({
   },
   afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
 });
+
+export const metadata = route.metadata;
+export default route.Page;

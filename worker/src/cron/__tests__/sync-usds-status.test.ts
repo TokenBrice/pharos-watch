@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { useEffect } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { CohortThreads } from "@/app/alt-pegs/fiat-world-atlas/cohort-threads";
 import { HoverProvider, useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 import type { PlacedCoin } from "@/lib/alt-peg-hero";
@@ -32,7 +32,6 @@ function Grabber({ onState }: { onState: (state: HoverState) => void }) {
 }
 
 describe("CohortThreads", () => {
-  afterEach(() => cleanup());
 
   function makeHandleCapture() {
     let hoverHandle: HoverState | null = null;

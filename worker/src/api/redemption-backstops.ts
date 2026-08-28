@@ -1,4 +1,4 @@
-import { respondWithFreshSnapshot } from "../lib/api-utils";
+import { respondWithFreshSnapshot } from "../lib/api-response";
 import { CACHE_PROFILES } from "../lib/constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {

@@ -7,10 +7,25 @@ import {
 } from "../telegram-webhook-parsing";
 import type { PendingDisambiguationRow } from "../telegram-webhook-shared";
 
+function canonicalPayload(overrides: Record<string, unknown> = {}): string {
+  return JSON.stringify({
+    schemaVersion: 1,
+    alertTypes: ["dews"],
+    resolvedIds: ["usdc-circle"],
+    ambiguousTicker: "USDF",
+    candidates: [
+      { id: "usdf-falcon", symbol: "USDF", name: "Falcon USD" },
+      { id: "usdf-tradfi", symbol: "USDF", name: "TradFi USD" },
+    ],
+    remainingTickers: ["USDC"],
+    ...overrides,
+  });
+}
+
 function makePendingRow(overrides: Partial<PendingDisambiguationRow> = {}): PendingDisambiguationRow {
   return {
     action_type: "subscribe",
-    action_payload: JSON.stringify({ alertTypes: ["dews"] }),
+    action_payload: canonicalPayload(),
     alert_types: JSON.stringify(["dews"]),
     resolved_ids: JSON.stringify(["usdc-circle"]),
     ambiguous_ticker: "USDF",
@@ -198,26 +213,41 @@ describe("parseStartPayload", () => {
 });
 
 describe("parsePendingDisambiguation", () => {
-  it("falls back to legacy alert types when action_payload is malformed", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
+  it("parses an unversioned old-production row through the legacy columns", () => {
     const parsed = parsePendingDisambiguation(
       makePendingRow({
-        action_payload: "{bad-json",
+        action_payload: JSON.stringify({ presetIds: ["usd-top25"] }),
         alert_types: JSON.stringify(["safety"]),
       }),
     );
 
     expect(parsed).toMatchObject({
       actionType: "subscribe",
+      presetIds: ["usd-top25"],
+      resolvedCoins: [{ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }],
       ambiguousTicker: "USDF",
+      candidates: [
+        { id: "usdf-falcon", symbol: "USDF", name: "Falcon USD" },
+        { id: "usdf-tradfi", symbol: "USDF", name: "TradFi USD" },
+      ],
       remainingTickers: ["USDC"],
     });
     expect(parsed?.actionType === "subscribe" && [...parsed.alertTypes]).toEqual(["safety"]);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=action_payload"));
   });
 
-  it("preserves valid pending state when resolved_ids is malformed", () => {
+  it("fails loudly for an explicit unsupported canonical payload version", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const parsed = parsePendingDisambiguation(
+      makePendingRow({ action_payload: canonicalPayload({ schemaVersion: 2 }) }),
+    );
+
+    expect(parsed).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("unsupported canonical schemaVersion=2"));
+    warnSpy.mockRestore();
+  });
+
+  it("parses the canonical payload independently of malformed legacy columns", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const parsed = parsePendingDisambiguation(
@@ -230,7 +260,7 @@ describe("parsePendingDisambiguation", () => {
       actionType: "subscribe",
       ambiguousTicker: "USDF",
       remainingTickers: ["USDC"],
-      resolvedCoins: [],
+      resolvedCoins: [{ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }],
     });
     if (
       parsed
@@ -240,13 +270,14 @@ describe("parsePendingDisambiguation", () => {
     ) {
       expect(parsed.candidates).toHaveLength(2);
     }
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=resolved_ids"));
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   it("preserves preset ids from the stored action payload", () => {
     const parsed = parsePendingDisambiguation(
       makePendingRow({
-        action_payload: JSON.stringify({ alertTypes: ["dews"], presetIds: ["usd-top25"] }),
+        action_payload: canonicalPayload({ presetIds: ["usd-top25"] }),
       }),
     );
 
@@ -262,12 +293,13 @@ describe("parsePendingDisambiguation", () => {
 
     const parsed = parsePendingDisambiguation(
       makePendingRow({
-        candidates: "{bad-json",
+        action_payload: canonicalPayload({ candidates: "{bad-json" }),
       }),
     );
 
     expect(parsed).toBeNull();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=candidates"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("canonical candidates are missing or malformed"));
+    warnSpy.mockRestore();
   });
 
   it("parses a confirm-bulk subscribe payload with empty candidates", () => {

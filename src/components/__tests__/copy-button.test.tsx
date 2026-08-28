@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { CopyButton } from "@/components/copy-button";
 
-afterEach(cleanup);
 
 const mockWriteText = vi.fn().mockResolvedValue(undefined);
 

@@ -1,16 +1,20 @@
-import { createServer } from "node:net";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   allocatePort,
+  aggregateRouteResults,
   canListen,
   isDirectRun,
+  launchChromiumBrowser,
   parseBoolean,
   parseCliOptions,
   readCliValue,
   resolveStaticExportPort,
+  retrySmokeOperation,
+  runBoundedWorkerPool,
+  withBrowserContext,
 } from "../lib/smoke-runtime.mjs";
 
 describe("smoke-runtime CLI helpers", () => {
@@ -60,11 +64,18 @@ describe("smoke-runtime CLI helpers", () => {
   });
 
   it("allocates numeric local ports for smoke servers", async () => {
-    const port = await allocatePort("127.0.0.1");
+    const listeners = new Map<string, (...args: never[]) => void>();
+    const server = {
+      once: (event: string, callback: (...args: never[]) => void) => { listeners.set(event, callback); },
+      listen: () => { listeners.get("listening")?.(); },
+      close: (callback: () => void) => callback(),
+      address: () => ({ port: 49232 }),
+    };
+    const createFakeServer = (() => server) as unknown as typeof import("node:net").createServer;
+    const port = await allocatePort("127.0.0.1", { createServerImpl: createFakeServer });
 
-    expect(Number.isInteger(port)).toBe(true);
-    expect(port).toBeGreaterThan(0);
-    expect(await canListen("127.0.0.1", port)).toBe(true);
+    expect(port).toBe(49232);
+    expect(await canListen("127.0.0.1", port, { createServerImpl: createFakeServer })).toBe(true);
   });
 
   it("resolves explicit and fallback static-export ports as numbers", async () => {
@@ -74,34 +85,65 @@ describe("smoke-runtime CLI helpers", () => {
       }),
     ).toBe(49231);
 
-    const server = createServer();
-    await new Promise<void>((resolve, reject) => {
-      server.once("error", reject);
-      server.listen({ host: "127.0.0.1", port: 0 }, resolve);
-    });
-    const address = server.address();
-    const preferredPort = typeof address === "object" && address ? address.port : undefined;
-    expect(preferredPort).toBeTypeOf("number");
+    const preferredPort = 49231;
 
     const fallbackCalls: Array<{ host: string; preferredPort: number; fallbackPort: number }> = [];
-    try {
-      const fallbackPort = await resolveStaticExportPort("127.0.0.1", {
-        env: {},
-        preferredPort,
-        onFallback: (event) => fallbackCalls.push(event),
-      });
+    const fallbackPort = await resolveStaticExportPort("127.0.0.1", {
+      env: {},
+      preferredPort,
+      canListenImpl: async () => false,
+      allocatePortImpl: async () => 49232,
+      onFallback: (event) => fallbackCalls.push(event),
+    });
 
-      expect(Number.isInteger(fallbackPort)).toBe(true);
-      expect(fallbackPort).not.toBe(preferredPort);
-      expect(fallbackCalls).toEqual([
-        {
-          host: "127.0.0.1",
-          preferredPort,
-          fallbackPort,
-        },
-      ]);
-    } finally {
-      await new Promise((resolve) => server.close(resolve));
-    }
+    expect(fallbackPort).toBe(49232);
+    expect(fallbackCalls).toEqual([{ host: "127.0.0.1", preferredPort, fallbackPort }]);
+  });
+
+  it("owns Chromium fallback and browser/context lifecycle through adapters", async () => {
+    const closeContext = vi.fn();
+    const closeBrowser = vi.fn();
+    const context = { close: closeContext };
+    const browser = { close: closeBrowser, newContext: vi.fn(async () => context) };
+    const launch = vi.fn()
+      .mockRejectedValueOnce(new Error("Executable doesn't exist; Please run the following command"))
+      .mockResolvedValueOnce(browser);
+    const chromium = { launch } as Parameters<typeof launchChromiumBrowser>[0];
+
+    const launched = await launchChromiumBrowser(chromium, { env: {} as NodeJS.ProcessEnv, log: vi.fn() });
+    expect(launched).toBe(browser);
+    expect(launch).toHaveBeenLastCalledWith({ channel: "chrome", headless: true });
+
+    const launchBrowser = (async () => browser) as NonNullable<Parameters<typeof withBrowserContext>[0]["launch"]>;
+    await expect(withBrowserContext({ chromium, contextOptions: undefined, launch: launchBrowser }, async (activeContext: typeof context) => {
+      expect(activeContext).toBe(context);
+      return "ok";
+    })).resolves.toBe("ok");
+    expect(closeContext).toHaveBeenCalledOnce();
+    expect(closeBrowser).toHaveBeenCalledOnce();
+  });
+
+  it("runs bounded route workers, retries, and aggregates normalized results", async () => {
+    const active = { count: 0, maximum: 0 };
+    const results = await runBoundedWorkerPool(["/", "/yield/", "/flows/"], 2, async (route: string) => {
+      active.count += 1;
+      active.maximum = Math.max(active.maximum, active.count);
+      await Promise.resolve();
+      active.count -= 1;
+      return { route, failures: route === "/flows/" ? ["overflow"] : [], screenshotPath: route === "/flows/" ? "flows.png" : null };
+    });
+    expect(active.maximum).toBeLessThanOrEqual(2);
+    expect(aggregateRouteResults(results)).toEqual({
+      failures: ["overflow"],
+      results,
+      screenshots: ["flows.png"],
+    });
+
+    let attempts = 0;
+    await expect(retrySmokeOperation(async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("transient");
+      return "recovered";
+    }, { retries: 1, sleepImpl: async () => {} })).resolves.toBe("recovered");
   });
 });

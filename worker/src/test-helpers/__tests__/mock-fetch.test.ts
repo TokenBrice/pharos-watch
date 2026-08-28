@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assertAllFetchRoutesUsed, mockFetch, mockFetchStrict } from "../__shared/mock-fetch";
+import { assertAllFetchRoutesUsed, mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 
 describe("mockFetch helper", () => {
   afterEach(() => {

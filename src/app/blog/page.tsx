@@ -6,7 +6,7 @@ import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { BLOG_POSTS } from "@/data/blog";
-import { formatLongDate } from "@shared/lib/format";
+import { formatPublishedDate } from "./format-published-date";
 
 const BLOG_DESCRIPTION =
   "Product updates and the story of Pharos: what shipped, what's next, and why we build stablecoin risk tooling in the open.";
@@ -17,10 +17,6 @@ export const metadata: Metadata = buildPageMetadata({
   canonical: "/blog/",
   ogImage: "/og-blog.png",
 });
-
-function formatPublishedDate(iso: string): string {
-  return formatLongDate(new Date(`${iso}T00:00:00Z`), { utc: true });
-}
 
 export default function BlogHubPage() {
   const blogJsonLd = safeJsonLd(

@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { PublicStatusTransition } from "@shared/types";
 import { PublicTransitionTimeline } from "../public-transition-timeline";
 
-afterEach(() => {
-  cleanup();
-});
 
 describe("PublicTransitionTimeline", () => {
   it("renders the public transition log as a shared table and keeps window controls", () => {

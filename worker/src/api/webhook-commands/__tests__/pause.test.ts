@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as baseMockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { PAUSE_SENTINEL_TS } from "../../../lib/telegram-constants";
 import type { WebhookCommandContext } from "../context";
 import { handlePause } from "../pause";

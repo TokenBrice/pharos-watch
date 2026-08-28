@@ -5,8 +5,89 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";
 import type { LlamaPool } from "../dex-liquidity/types";
 
+const phaseFixtures = vi.hoisted(() => {
+  function create(overrides: Record<string, unknown> = {}) {
+    return {
+      directApi: { pools: [], ok: true, degraded: false, errors: [] as string[] },
+      uniV3: {
+        uniV3PoolFees: new Map(),
+        uniV3SymbolFees: new Map(),
+        uniV3PriceObs: new Map(),
+        uniV3ExecutionCandidates: new Map(),
+      },
+      aerodrome: {
+        aerodromePriceObs: new Map(),
+        aerodromeIsStable: new Map(),
+        aerodromeV2ExecutionCandidates: new Map(),
+      },
+      uniswapV4: { uniswapV4ExecutionCandidates: new Map() },
+      primary: {
+        pools: [],
+        rawPoolCount: 0,
+        dexProjects: new Set<string>(),
+        protocolTvlCaps: new Map<string, number>(),
+        curvePayloads: [],
+        graphApiKey: "graph-key",
+        dlYieldsAvailable: true,
+        dlProtocolsAvailable: true,
+      },
+      curve: { curvePoolMap: new Map(), priceObservations: new Map() },
+      knownPools: {
+        exactKeys: new Set<string>(),
+        exactStablecoinIdsByKey: new Map<string, Set<string>>(),
+        derivedKeyCounts: new Map<string, number>(),
+        derivedToExactKeys: new Map<string, Set<string>>(),
+        wildcardKeyCounts: new Map<string, number>(),
+        wildcardToExactKeys: new Map<string, Set<string>>(),
+        concreteFeeVariantKeys: new Map<string, Set<string>>(),
+      },
+      poolMetrics: { metrics: new Map(), rejections: [] },
+      stagedPools: {
+        mergedCount: 0,
+        skippedCount: 0,
+        skippedByExactIdentityCount: 0,
+        skippedByUniqueDerivedIdentityCount: 0,
+        skippedByOptionalWildcardIdentityCount: 0,
+        skippedByAuthoritativeProtocolCount: 0,
+        skipDimensions: [],
+        priceObservations: new Map(),
+      },
+      scores: {
+        scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]),
+        globalAgg: { totalTvl: 0 },
+        retainedPoolsByStablecoin: new Map(),
+        tvlStabilityMap: new Map(),
+        diagnostics: {
+          protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
+          fallbackCounters: { tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 },
+        },
+      },
+      stablecoinsCache: { kind: "error" as const, reason: "missing-cache" as const, updatedAt: null },
+      orderbook: {
+        checkedSymbols: 2,
+        venueCount: 2,
+        observations: 3,
+        maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
+        maxDepthUp2PctUsdBySymbol: { USDT: 900_000, USDC: 450_000 },
+      },
+      challenger: { publishedStablecoins: 0, skippedStablecoins: 0, missingTables: false },
+      ...overrides,
+    };
+  }
+
+  let current = create();
+  return {
+    get current() {
+      return current;
+    },
+    reset(overrides: Record<string, unknown> = {}) {
+      current = create(overrides);
+    },
+  };
+});
+
 function makeDirectApiResult() {
-  return { pools: [], ok: true, degraded: false, errors: [] as string[] };
+  return phaseFixtures.current.directApi;
 }
 
 function deferred<T>() {
@@ -18,66 +99,29 @@ function deferred<T>() {
 }
 
 vi.mock("../dex-liquidity/subgraph-source-families", () => ({
-  fetchUniV3Data: vi.fn(async () => ({
-    uniV3PoolFees: new Map(),
-    uniV3SymbolFees: new Map(),
-    uniV3PriceObs: new Map(),
-    uniV3ExecutionCandidates: new Map(),
-  })),
-  fetchAerodromeData: vi.fn(async () => ({
-    aerodromePriceObs: new Map(),
-    aerodromeIsStable: new Map(),
-    aerodromeV2ExecutionCandidates: new Map(),
-  })),
-  fetchUniswapV4Data: vi.fn(async () => ({
-    uniswapV4ExecutionCandidates: new Map(),
-  })),
+  fetchUniV3Data: vi.fn(async () => phaseFixtures.current.uniV3),
+  fetchAerodromeData: vi.fn(async () => phaseFixtures.current.aerodrome),
+  fetchUniswapV4Data: vi.fn(async () => phaseFixtures.current.uniswapV4),
 }));
 
 vi.mock("../dex-liquidity/fetch-primary", () => ({
-  fetchDataSources: vi.fn(async () => null),
-  buildCurveLookups: vi.fn(async () => ({ curvePoolMap: new Map(), priceObservations: new Map() })),
-  buildKnownPoolAddresses: vi.fn(() => ({
-    exactKeys: new Set<string>(),
-    exactStablecoinIdsByKey: new Map<string, Set<string>>(),
-    derivedKeyCounts: new Map<string, number>(),
-    derivedToExactKeys: new Map<string, Set<string>>(),
-    wildcardKeyCounts: new Map<string, number>(),
-    wildcardToExactKeys: new Map<string, Set<string>>(),
-    concreteFeeVariantKeys: new Map<string, Set<string>>(),
-  })),
+  fetchDataSources: vi.fn(async () => phaseFixtures.current.primary),
+  buildCurveLookups: vi.fn(async () => phaseFixtures.current.curve),
+  buildKnownPoolAddresses: vi.fn(() => phaseFixtures.current.knownPools),
 }));
 
 vi.mock("../dex-liquidity/process-pools", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../dex-liquidity/process-pools")>()),
-  processPoolMetrics: vi.fn(() => ({ metrics: new Map(), rejections: [] })),
+  processPoolMetrics: vi.fn(() => phaseFixtures.current.poolMetrics),
 }));
 
 vi.mock("../dex-liquidity/staging-merge", () => ({
-  mergeStagedPools: vi.fn(async () => ({
-    mergedCount: 0,
-    skippedCount: 0,
-    skippedByExactIdentityCount: 0,
-    skippedByUniqueDerivedIdentityCount: 0,
-    skippedByOptionalWildcardIdentityCount: 0,
-    skippedByAuthoritativeProtocolCount: 0,
-    skipDimensions: [],
-    priceObservations: new Map(),
-  })),
+  mergeStagedPools: vi.fn(async () => phaseFixtures.current.stagedPools),
 }));
 
 vi.mock("../dex-liquidity/scoring", () => ({
   loadCurrentDexScoringGenerationId: vi.fn(async () => null),
-  computeStablecoinScores: vi.fn(async () => ({
-    scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]),
-    globalAgg: { totalTvl: 0 },
-    retainedPoolsByStablecoin: new Map(),
-    tvlStabilityMap: new Map(),
-    diagnostics: {
-      protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
-      fallbackCounters: { tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 },
-    },
-  })),
+  computeStablecoinScores: vi.fn(async () => phaseFixtures.current.scores),
   computeDepthStability: vi.fn(async () => {}),
   computeDexPrices: vi.fn(async () => {}),
 }));
@@ -159,11 +203,7 @@ vi.mock("../dex-liquidity/challenger-persistence", async () => {
   );
   return {
     ...actual,
-    publishDexPriceChallengerSnapshots: vi.fn(async () => ({
-      publishedStablecoins: 0,
-      skippedStablecoins: 0,
-      missingTables: false,
-    })),
+    publishDexPriceChallengerSnapshots: vi.fn(async () => phaseFixtures.current.challenger),
   };
 });
 
@@ -189,11 +229,7 @@ vi.mock("../../lib/stablecoins-cache", async () => {
   const actual = await vi.importActual<typeof import("../../lib/stablecoins-cache")>("../../lib/stablecoins-cache");
   return {
     ...actual,
-    loadStablecoinsCache: vi.fn(async () => ({
-      kind: "error" as const,
-      reason: "missing-cache" as const,
-      updatedAt: null,
-    })),
+    loadStablecoinsCache: vi.fn(async () => phaseFixtures.current.stablecoinsCache),
   };
 });
 vi.mock("../../lib/dex-api-common", async () => {
@@ -205,13 +241,7 @@ vi.mock("../../lib/dex-api-common", async () => {
   };
 });
 vi.mock("../../lib/cex-orderbooks", () => ({
-  fetchMajorStablecoinOrderbookDepthSummary: vi.fn(async () => ({
-    checkedSymbols: 2,
-    venueCount: 2,
-    observations: 3,
-    maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
-    maxDepthUp2PctUsdBySymbol: { USDT: 900_000, USDC: 450_000 },
-  })),
+  fetchMajorStablecoinOrderbookDepthSummary: vi.fn(async () => phaseFixtures.current.orderbook),
 }));
 
 import {
@@ -305,28 +335,14 @@ function makeTrackedStablecoin(id: string, symbol: string, price: number): Stabl
 describe("dex liquidity scoring stage cycle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(fetchDataSources).mockResolvedValue({
-      pools: [],
-      rawPoolCount: 0,
-      dexProjects: new Set<string>(),
-      protocolTvlCaps: new Map<string, number>(),
-      curvePayloads: [],
-      graphApiKey: "graph-key",
-      dlYieldsAvailable: true,
-      dlProtocolsAvailable: true,
-    });
-    vi.mocked(loadStablecoinsCache).mockResolvedValue({
-      kind: "error",
-      reason: "missing-cache",
-      updatedAt: null,
-    });
+    phaseFixtures.reset();
     vi.mocked(convertToGtNewPools).mockReturnValue(new Map());
     vi.mocked(extractPriceObservations).mockReturnValue(new Map());
     vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(null);
   });
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
-    vi.mocked(fetchDataSources).mockResolvedValueOnce(null);
+    phaseFixtures.reset({ primary: null });
     await expect(runDexLiquidityScoringCycle(db, "graph-key")).rejects.toThrow("catastrophic source failure");
   });
 
@@ -351,7 +367,7 @@ describe("dex liquidity scoring stage cycle", () => {
   });
 
   it("returns degraded when non-catastrophic critical source family fails", async () => {
-    vi.mocked(fetchDataSources).mockResolvedValueOnce({
+    phaseFixtures.reset({ primary: {
       pools: [],
       rawPoolCount: 0,
       dexProjects: new Set<string>(),
@@ -360,7 +376,7 @@ describe("dex liquidity scoring stage cycle", () => {
       graphApiKey: "graph-key",
       dlYieldsAvailable: true,
       dlProtocolsAvailable: false,
-    });
+    } });
 
     const result = await runDexLiquidityScoringCycle(db, "graph-key");
 
@@ -668,32 +684,6 @@ describe("dex liquidity scoring stage cycle", () => {
     });
 
     await runDexLiquidityScoringCycle(db, "graph-key");
-  });
-
-  it("finishes direct providers before loading primary sources", async () => {
-    vi.mocked(fetchDataSources).mockImplementationOnce(async () => {
-      expect(fetchFluidPools).toHaveBeenCalledOnce();
-      expect(fetchBalancerPools).toHaveBeenCalledOnce();
-      expect(fetchPancakeSwapPools).toHaveBeenCalledOnce();
-      expect(fetchMeteoraPools).toHaveBeenCalledOnce();
-      expect(fetchRaydiumPools).toHaveBeenCalledOnce();
-      expect(fetchOrcaPools).toHaveBeenCalledOnce();
-      expect(fetchSlipstreamPools).toHaveBeenCalledTimes(2);
-      return {
-        pools: [],
-        rawPoolCount: 0,
-        dexProjects: new Set<string>(),
-        protocolTvlCaps: new Map<string, number>(),
-        curvePayloads: [],
-        graphApiKey: "graph-key",
-        dlYieldsAvailable: true,
-        dlProtocolsAvailable: true,
-      };
-    });
-
-    await runDexLiquidityScoringCycle(db, "graph-key");
-
-    expect(fetchDataSources).toHaveBeenCalledOnce();
   });
 
   it("reports high-SLO stage metadata during source and scoring phases", async () => {

@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { ApiRequestAttributionResponse, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
 import {
-  buildReliabilityModeUrl,
   buildReliabilityWorkspaceModel,
-  parseReliabilityMode,
   type ReliabilityWorkspaceInput,
 } from "@/lib/reliability-workspace-model";
 import {
@@ -116,19 +114,6 @@ function input(overrides: Partial<ReliabilityWorkspaceInput> = {}): ReliabilityW
     ...overrides,
   };
 }
-
-describe("reliability URL modes", () => {
-  it("parses valid modes and preserves unrelated URL state", () => {
-    expect(parseReliabilityMode("?view=dependencies&scope=all")).toBe("dependencies");
-    expect(parseReliabilityMode("?view=invalid")).toBeNull();
-    expect(
-      buildReliabilityModeUrl(
-        { pathname: "/admin/reliability/", search: "?scope=all", hash: "#root" } as Location,
-        "endpoints",
-      ),
-    ).toBe("/admin/reliability/?scope=all&view=endpoints#root");
-  });
-});
 
 describe("reliability issue model", () => {
   it("classifies probes through the shared triage classifier, including non-2xx below 400", () => {

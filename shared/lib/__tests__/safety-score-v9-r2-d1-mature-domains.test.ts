@@ -21,9 +21,8 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
  * boundaries and at unknown share for BOTH domains, using a test-local
  * materiality fixture that already lists the ruled new members — this proves
  * the membership semantics generalize to tron/hyperliquid/xrpl/raydium the moment
- * the policy lists them, and it must pass before AND after Stage B. The
- * `describe.skip` block pins the ruled policy membership against the LIVE
- * candidate policy; it fails today by construction and is enabled by Stage B.
+ * the policy lists them. The final suite pins that membership against the live
+ * candidate policy.
  */
 
 type V9Materiality = V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"];
@@ -164,9 +163,7 @@ describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 
   });
 });
 
-// STAGE B: un-skip once the R2/D1 policy membership lands in
-// shared/data/safety-score-v9/methodology-policy-candidate-v1.json.
-describe("R2/D1/D5 ruled policy membership — Stage B", () => {
+describe("R2/D1/D5 ruled policy membership — live policy", () => {
   it("lists tron, hyperliquid, and xrpl in semantic.materiality.matureChains", () => {
     expect(CANDIDATE_MATERIALITY.matureChains).toContain("tron");
     expect(CANDIDATE_MATERIALITY.matureChains).toContain("hyperliquid");

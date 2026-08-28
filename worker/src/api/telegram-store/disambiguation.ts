@@ -11,12 +11,12 @@ import { dedupeCoins } from "../../lib/telegram-coin-dedupe";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import type { CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
-import { d1ChangeCount } from "./_internals";
+import { d1ChangeCount } from "../../lib/telegram-operation-batch";
 import { unixNow } from "./subscribers";
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "./_internals";
+} from "../../lib/telegram-operation-batch";
 import { executeAtomicBatch } from "../../lib/db";
 
 interface PendingDisambiguationPersistenceInput {
@@ -32,6 +32,27 @@ interface PendingDisambiguationPersistenceInput {
   expiresAt?: number;
   operationStatements?: D1PreparedStatement[];
   beforePendingStatements?: D1PreparedStatement[];
+}
+
+const PENDING_ACTION_PAYLOAD_SCHEMA_VERSION = 1;
+
+export function buildPendingDisambiguationActionPayload(input: {
+  actionPayload: object;
+  alertTypes?: Set<string>;
+  resolvedCoins: ResolvedCoin[];
+  ambiguousTicker: string;
+  candidates: ResolvedCoin[];
+  remainingTickers: string[];
+}): Record<string, unknown> {
+  return {
+    ...input.actionPayload,
+    schemaVersion: PENDING_ACTION_PAYLOAD_SCHEMA_VERSION,
+    alertTypes: Array.from(input.alertTypes ?? []),
+    resolvedIds: dedupeCoins(input.resolvedCoins).map((coin) => coin.id),
+    ambiguousTicker: input.ambiguousTicker,
+    candidates: input.candidates,
+    remainingTickers: input.remainingTickers,
+  };
 }
 
 export async function persistPendingDisambiguation(
@@ -50,10 +71,11 @@ export async function persistPendingDisambiguation(
     operationStatements?: D1PreparedStatement[];
   },
 ): Promise<boolean> {
+  const actionPayload = buildPendingDisambiguationActionPayload(input);
   return persistPendingDisambiguationRow(db, {
     chatId: input.chatId,
     actionType: input.actionType,
-    actionPayload: input.actionPayload,
+    actionPayload,
     alertTypes: Array.from(input.alertTypes ?? []),
     resolvedIds: dedupeCoins(input.resolvedCoins).map((coin) => coin.id),
     ambiguousTicker: input.ambiguousTicker,
@@ -71,6 +93,9 @@ export async function persistPendingDisambiguationRow(
 ): Promise<boolean> {
   const nowSec = unixNow();
   const expiresAt = input.expiresAt ?? nowSec + DISAMBIGUATION_TTL_SEC;
+  // These legacy columns remain NOT NULL until a separately operated D1
+  // migration drops them. Keep dual-writing the derived values, but never read
+  // them back; action_payload is the canonical serialized pending action.
   const statement = db
     .prepare(`
       INSERT INTO telegram_pending_disambiguation (
@@ -140,7 +165,7 @@ export async function loadPendingDisambiguation(
 ): Promise<PendingDisambiguationRow | null> {
   return db
     .prepare(
-      "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+      "SELECT action_type, action_payload, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
     )
     .bind(chatId)
     .first<PendingDisambiguationRow>();

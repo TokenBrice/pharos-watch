@@ -1,4 +1,5 @@
 import type { StablecoinMeta } from "@shared/types/core";
+export { normalizeEvmAddress } from "../../lib/evm-selectors";
 
 export function parseEvmAddressResult(result: `0x${string}`): string | null {
   return /^0x[0-9a-fA-F]{64}$/.test(result)
@@ -10,11 +11,6 @@ export function parseEvmAddressResult(result: `0x${string}`): string | null {
  * Trim, lowercase, and validate an EVM address. Returns `null` for missing or
  * malformed input. Callers needing a throwing variant should wrap this.
  */
-export function normalizeEvmAddress(value: string | undefined): string | null {
-  const trimmed = value?.trim().toLowerCase();
-  return trimmed && /^0x[0-9a-f]{40}$/.test(trimmed) ? trimmed : null;
-}
-
 export function resolveCoinContractAddress(
   coin: StablecoinMeta,
   chainId: string,

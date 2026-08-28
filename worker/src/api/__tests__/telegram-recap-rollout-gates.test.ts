@@ -3,7 +3,7 @@ import { handleRecap } from "../webhook-commands/recap";
 import type { WebhookCommandContext } from "../webhook-commands/context";
 import { handleRecapCallback } from "../webhook-callbacks/recap";
 import type { CallbackContext } from "../webhook-callbacks/_shared";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 function commandContext(policy: TelegramRecapRolloutPolicy): WebhookCommandContext {

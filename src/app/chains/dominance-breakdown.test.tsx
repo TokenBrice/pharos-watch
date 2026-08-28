@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ImgHTMLAttributes } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeChain } from "@/hooks/__tests__/chain-profile-fixtures";
-import { DominanceBreakdown } from "./client";
+import { DominanceBreakdown } from "./dominance-breakdown";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),

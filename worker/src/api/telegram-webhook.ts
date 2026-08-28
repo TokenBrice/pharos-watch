@@ -7,7 +7,7 @@ import {
   migrateTelegramChatId,
   unixNow,
 } from "./telegram-webhook-store";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler } from "../lib/api-response";
 import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
 import { validateTelegramWebhookSecret } from "./telegram-webhook-auth";
 import {

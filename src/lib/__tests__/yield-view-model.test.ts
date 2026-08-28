@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
+import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { YIELD_FILTER_AXIS_REGISTRY, buildYieldViewModel } from "@/lib/yield-view-model";
 
 const rows = [

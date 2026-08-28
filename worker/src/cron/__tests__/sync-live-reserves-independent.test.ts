@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
 

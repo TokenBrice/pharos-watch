@@ -9,7 +9,7 @@ import {
   getApiKeyRuntimeState,
   recordApiKeyAudit,
 } from "../../lib/api-key-core";
-import { parseOptionalRequestJsonObject } from "../../lib/api-utils";
+import { parseOptionalRequestJsonObject } from "../../lib/api-json-body";
 import type {
   ApiKeyRequestAdminRow,
   ApiKeyRequestDb,
