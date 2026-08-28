@@ -12,7 +12,6 @@
  *   tsx scripts/maintenance/build-og-learn-images.ts
  *   tsx scripts/maintenance/build-og-learn-images.ts --check
  */
-import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -20,6 +19,7 @@ import { mechanismDiagramFor } from "../../src/components/stablecoin-detail/mech
 import type { MechanismArchetype } from "@shared/types";
 import { MECHANISM_EXPLAINER_ENTRIES } from "../../src/lib/mechanism-explainer-registry";
 import { escapeXml } from "../lib/og-svg.mts";
+import { inspectPublishedOgRoster, writeOgSourceRoster } from "../lib/og-image-checks.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -28,25 +28,17 @@ const CHECK_MODE = process.argv.includes("--check");
 const OUT_DIR = resolve(REPO_ROOT, "agents/og-learn-staging");
 
 function checkPublishedPngs(): void {
-  const missing: string[] = [];
-  const empty: string[] = [];
-  for (const entry of MECHANISM_EXPLAINER_ENTRIES) {
-    const path = resolve(REPO_ROOT, "public", entry.ogFilename);
-    if (!existsSync(path)) {
-      missing.push(`public/${entry.ogFilename}`);
-      continue;
-    }
-    if (statSync(path).size <= 0) {
-      empty.push(`public/${entry.ogFilename}`);
-    }
-  }
+  const { missing, empty } = inspectPublishedOgRoster(
+    MECHANISM_EXPLAINER_ENTRIES.map((entry) => ({ ...entry, file: entry.ogFilename })),
+    resolve(REPO_ROOT, "public"),
+  );
 
   if (missing.length > 0 || empty.length > 0) {
     if (missing.length > 0) {
-      console.error(`Missing mechanism OG PNG(s): ${missing.join(", ")}`);
+      console.error(`Missing mechanism OG PNG(s): ${missing.map((file) => `public/${file}`).join(", ")}`);
     }
     if (empty.length > 0) {
-      console.error(`Empty mechanism OG PNG(s): ${empty.join(", ")}`);
+      console.error(`Empty mechanism OG PNG(s): ${empty.map((file) => `public/${file}`).join(", ")}`);
     }
     process.exit(1);
   }
@@ -58,8 +50,6 @@ if (CHECK_MODE) {
   checkPublishedPngs();
   process.exit(0);
 }
-
-mkdirSync(OUT_DIR, { recursive: true });
 
 // Light product-shell substitutions. var() doesn't resolve in standalone SVG.
 const TOKEN_MAP: Record<string, string> = {
@@ -133,8 +123,14 @@ function buildOgSvg(slug: MechanismArchetype, title: string): string {
 `;
 }
 
-for (const entry of MECHANISM_EXPLAINER_ENTRIES) {
-  const out = resolve(OUT_DIR, entry.ogFilename.replace(/\.png$/, ".svg"));
-  writeFileSync(out, buildOgSvg(entry.slug, entry.title));
+const written = writeOgSourceRoster({
+  roster: MECHANISM_EXPLAINER_ENTRIES.map((entry) => ({ ...entry, file: entry.ogFilename })),
+  stagingDir: OUT_DIR,
+  render: (entry) => ({
+    file: entry.ogFilename.replace(/\.png$/, ".svg"),
+    contents: buildOgSvg(entry.slug, entry.title),
+  }),
+});
+for (const out of written) {
   console.log(`Wrote ${out}`);
 }

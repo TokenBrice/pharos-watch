@@ -26,8 +26,7 @@ import { escapeXml } from "../lib/og-svg.mts";
 import {
   assertNoStaleOgOutputs,
   formatOgWriteStatus,
-  promoteGeneratedPngIfChanged,
-  stalePngCheckLabel,
+  runOgArtifactBuild,
   writeFileIfChanged,
 } from "../lib/og-image-checks.mts";
 
@@ -178,6 +177,7 @@ const renderInputs = CARDS.map((card) => {
   const svg = buildSvg({ kicker: card.kicker, title: card.title });
   return {
     card,
+    file: card.file,
     svg,
     signature: {
       file: card.file,
@@ -293,60 +293,50 @@ if (
 const browser = await firefox.launch({ headless: true });
 const staleFiles = [];
 try {
-  for (const { card, svg } of renderInputs) {
-    const svgPath = resolve(STAGING, card.file.replace(/\.png$/, ".svg"));
-    const htmlPath = resolve(STAGING, card.file.replace(/\.png$/, ".html"));
-    writeFileSync(svgPath, svg);
-    writeFileSync(htmlPath, buildHtml(svg));
-
-    const publicPath = resolve(PUBLIC, card.file);
-    const outPath = resolve(
-      STAGING,
-      card.file.replace(/\.png$/, CHECK_MODE ? ".check.png" : `.write-${process.pid}.png`),
-    );
-    const page = await browser.newPage({
-      viewport: { width: 1200, height: 628 },
-    });
-    await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
-    // Wait for Firefox to resolve the @font-face declarations before snapshot.
-    await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({
-      path: outPath,
-      omitBackground: false,
-      clip: { x: 0, y: 0, width: 1200, height: 628 },
-      timeout: 30000,
-    });
-    await page.close();
-
-    let changed = false;
-    if (CHECK_MODE) {
-      const staleLabel = await stalePngCheckLabel({
-        fileLabel: card.file,
-        expectedPath: publicPath,
-        actualPath: outPath,
-      });
-      if (staleLabel) {
-        staleFiles.push(staleLabel);
+  const artifactResult = await runOgArtifactBuild({
+    check: CHECK_MODE,
+    family: "Editorial",
+    publicDir: PUBLIC,
+    refreshCommand: "npm run build:og-editorial",
+    roster: renderInputs,
+    stagingDir: STAGING,
+    cleanup: false,
+    assertStale: false,
+    render: async ({ card, svg }, { stagedPath }) => {
+      const svgPath = resolve(STAGING, card.file.replace(/\.png$/, ".svg"));
+      const htmlPath = resolve(STAGING, card.file.replace(/\.png$/, ".html"));
+      writeFileSync(svgPath, svg);
+      writeFileSync(htmlPath, buildHtml(svg));
+      const page = await browser.newPage({ viewport: { width: 1200, height: 628 } });
+      try {
+        await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
+        await page.evaluate(() => document.fonts.ready);
+        await page.screenshot({
+          path: stagedPath,
+          omitBackground: false,
+          clip: { x: 0, y: 0, width: 1200, height: 628 },
+          timeout: 30000,
+        });
+      } finally {
+        await page.close();
+        try {
+          unlinkSync(svgPath);
+          unlinkSync(htmlPath);
+        } catch {
+          /* swallow */
+        }
       }
-    } else {
-      changed = await promoteGeneratedPngIfChanged({ stagedPath: outPath, publicPath });
-    }
-
-    // Clean up the staging files now that the PNG is captured.
-    try {
-      unlinkSync(svgPath);
-      unlinkSync(htmlPath);
-      if (CHECK_MODE) unlinkSync(outPath);
-    } catch {
-      /* swallow */
-    }
-    console.log(formatOgWriteStatus({
-      check: CHECK_MODE,
-      changed,
-      publicPath,
-      suffix: ` (kicker: ${card.kicker})`,
-    }));
-  }
+    },
+    onResult: ({ card }, { changed, publicPath }) => {
+      console.log(formatOgWriteStatus({
+        check: CHECK_MODE,
+        changed,
+        publicPath,
+        suffix: ` (kicker: ${card.kicker})`,
+      }));
+    },
+  });
+  staleFiles.push(...artifactResult.staleFiles);
 
   if (CHECK_MODE) {
     if (existingSignatureManifest !== signatureManifest) {

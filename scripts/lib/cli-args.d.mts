@@ -24,6 +24,8 @@ export class CliUsageError extends Error {
 
 export function parseStrictCliArgs(argv: readonly string[], config?: StrictCliConfig): StrictCliResult;
 export function assertCliUsage(condition: unknown, message: string): asserts condition;
+export function requireCliString(value: unknown, name: string): string;
+export function writeJsonOutput(path: string, contents: string): void;
 export function parseCliInteger(
   value: unknown,
   bounds: { name: string; min?: number; max?: number },
@@ -41,3 +43,12 @@ export function runCliEntrypoint(
     stderr?: { write: (text: string) => unknown };
   },
 ): Promise<void>;
+export function runDirectCli(
+  importMetaUrl: string,
+  action: () => unknown | Promise<unknown>,
+  metadata?: {
+    label?: string;
+    usage?: string;
+    stderr?: { write: (text: string) => unknown };
+  },
+): boolean;

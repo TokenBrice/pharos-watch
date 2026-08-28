@@ -3,7 +3,7 @@
 /**
  * One entrypoint for the curation coverage-backlog audits.
  *
- * These five analyses drive real curation queues, but each used to carry its
+ * These seven analyses drive real curation queues, but each used to carry its
  * own `check:*` npm alias even though none of them ran in CI. They are manual
  * audits, so they share one manual command:
  *
@@ -15,19 +15,29 @@
  * `--report <path>`), so no analysis behaviour is lost.
  */
 
-import { spawnSync } from "node:child_process";
+import {
+  createExecutionUnit,
+  createSpawnCommand,
+  runExecutionUnit,
+  runSpawnCommand,
+  type CommandImplementation,
+  type ExecutionResult,
+  type SpawnCommand,
+} from "../lib/command-runner.mts";
 import { localBin } from "../lib/local-bin.mts";
 
-const DOMAIN_SCRIPTS = {
+export const DOMAIN_SCRIPTS = {
   "redemption-backstops": "scripts/ci/check-redemption-backstops.ts",
   "redemption-coverage": "scripts/maintenance/generate-redemption-coverage-audit.ts",
+  "dependency-coverage": "scripts/maintenance/generate-dependency-coverage-audit.ts",
+  "reserve-coverage": "scripts/maintenance/generate-reserve-coverage-audit.ts",
   "oracle-risk": "scripts/ci/check-oracle-risk-coverage.ts",
   "mechanism-archetype": "scripts/ci/check-mechanism-archetype-coverage.ts",
   "l2beat-snapshot": "scripts/maintenance/generate-l2beat-snapshot-coverage-audit.ts",
 } as const;
 
 type Domain = keyof typeof DOMAIN_SCRIPTS;
-interface ParsedArgs {
+export interface ParsedCoverageAuditArgs {
   help: boolean;
   domains: Domain[];
   forwarded: string[];
@@ -51,7 +61,7 @@ function usage(): string {
   ].join("\n");
 }
 
-function parseArgs(argv: readonly string[]): ParsedArgs {
+export function parseCoverageAuditArgs(argv: readonly string[]): ParsedCoverageAuditArgs {
   const domains: string[] = [];
   let all = false;
   const forwarded = [];
@@ -98,37 +108,67 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   return { help: false, domains: selected.filter(isDomain), forwarded };
 }
 
-function runDomain(domain: Domain, forwarded: readonly string[]): number {
+export interface RunCoverageAuditOptions {
+  runCommandImpl?: CommandImplementation<SpawnCommand>;
+  log?: (message: string) => void;
+  error?: (message: string) => void;
+}
+
+async function runDomain(
+  domain: Domain,
+  forwarded: readonly string[],
+  { runCommandImpl = runSpawnCommand, log = console.log, error = console.error }: RunCoverageAuditOptions = {},
+): Promise<number> {
   const script = DOMAIN_SCRIPTS[domain];
-  console.log(`\n[audit:coverage] ${domain} -> tsx ${script}${forwarded.length > 0 ? ` ${forwarded.join(" ")}` : ""}`);
-  const result = spawnSync(localBin("tsx"), [script, ...forwarded], { stdio: "inherit" });
-  if (result.error) {
-    console.error(`[audit:coverage] ${domain} failed to start: ${result.error.message}`);
+  log(`\n[audit:coverage] ${domain} -> tsx ${script}${forwarded.length > 0 ? ` ${forwarded.join(" ")}` : ""}`);
+  const command = createSpawnCommand(localBin("tsx"), [script, ...forwarded]);
+  let result: ExecutionResult;
+  try {
+    result = await runExecutionUnit(createExecutionUnit([command]), {
+      label: "audit:coverage",
+      reporter: {},
+      runCommandImpl,
+    });
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : String(caught);
+    error(`[audit:coverage] ${domain} failed to start: ${message}`);
     return 1;
   }
-  return result.status ?? 1;
+  return result.status;
 }
 
-let options;
-try {
-  options = parseArgs(process.argv.slice(2));
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  console.error(`\n${usage()}`);
-  process.exit(1);
-}
-
-if (options.help) {
-  console.log(usage());
-  process.exit(0);
-}
-
-let status = 0;
-for (const domain of options.domains) {
-  const domainStatus = runDomain(domain, options.forwarded);
-  if (domainStatus !== 0) {
-    console.error(`[audit:coverage] ${domain} exited with status ${domainStatus}`);
-    status = domainStatus;
+export async function runCoverageAudit(
+  argv: readonly string[] = process.argv.slice(2),
+  options: RunCoverageAuditOptions = {},
+): Promise<number> {
+  let parsed: ParsedCoverageAuditArgs;
+  try {
+    parsed = parseCoverageAuditArgs(argv);
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : String(caught);
+    (options.error ?? console.error)(message);
+    (options.error ?? console.error)(`\n${usage()}`);
+    return 1;
   }
+
+  if (parsed.help) {
+    (options.log ?? console.log)(usage());
+    return 0;
+  }
+
+  let status = 0;
+  for (const domain of parsed.domains) {
+    const domainStatus = await runDomain(domain, parsed.forwarded, options);
+    if (domainStatus !== 0) {
+      (options.error ?? console.error)(`[audit:coverage] ${domain} exited with status ${domainStatus}`);
+      status = domainStatus;
+    }
+  }
+  return status;
 }
-process.exit(status);
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  void runCoverageAudit().then((status) => {
+    process.exitCode = status;
+  });
+}

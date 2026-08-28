@@ -5,21 +5,24 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
+import {
+  collectWorkerCronSnapshot,
+  WORKER_WATCH_DEFAULTS,
+} from "./watch-worker-cron.mjs";
 
-const DEFAULT_API_URL = "https://api.pharos.watch";
-const DEFAULT_ADMIN_API_URL = "https://ops-api.pharos.watch";
-const DEFAULT_DATABASE = "stablecoin-db";
+const DEFAULT_API_URL = WORKER_WATCH_DEFAULTS.apiUrl;
+const DEFAULT_ADMIN_API_URL = WORKER_WATCH_DEFAULTS.adminApiUrl;
+const DEFAULT_DATABASE = WORKER_WATCH_DEFAULTS.database;
 const DEFAULT_EVIDENCE_JSON = "agents/night-watch-evidence.json";
 const DEFAULT_CHECKPOINT_JSONL = "agents/night-watch-evidence.jsonl";
 const DEFAULT_OUTPUT = "agents/night-watch-report.md";
 const DEFAULT_INTERVAL_MINUTES = 15;
-const DEFAULT_METADATA_BYTES = 800;
+const DEFAULT_METADATA_BYTES = WORKER_WATCH_DEFAULTS.metadataBytes;
 const DEFAULT_SAMPLE_LIMIT = 120;
 const CYCLE_MS = 4 * 60 * 60 * 1000;
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT_DIR = resolve(dirname(__filename), "../..");
-const WATCH_SCRIPT = resolve(ROOT_DIR, "scripts/maintenance/watch-worker-cron.mjs");
 const REGISTRY_FIXTURE = resolve(ROOT_DIR, "scripts/lib/night-watch-registry-fixture.json");
 
 function usage() {
@@ -210,44 +213,32 @@ async function collectProbeOnlySnapshot(args) {
   };
 }
 
-function collectD1Snapshot(args, sinceMinutes) {
-  const childArgs = [
-    WATCH_SCRIPT,
-    "--json",
-    "--database",
-    args.database,
-    "--since-minutes",
-    String(Math.max(1, Math.ceil(sinceMinutes))),
-    "--limit",
-    String(args.sampleLimit),
-    "--api-url",
-    args.apiUrl,
-    "--admin-api-url",
-    args.adminApiUrl,
-    "--metadata-bytes",
-    String(args.metadataBytes),
-  ];
-  if (args.includeStatus) childArgs.push("--include-status");
-  if (args.includeStatusHistory) childArgs.push("--include-status-history");
-  if (!args.remote) childArgs.push("--local");
-  const env = { ...process.env };
-  if (args.cfAccessClientId) env.CF_ACCESS_CLIENT_ID = args.cfAccessClientId;
-  if (args.cfAccessClientSecret) env.CF_ACCESS_CLIENT_SECRET = args.cfAccessClientSecret;
+export async function collectD1Snapshot(args, sinceMinutes, collector = collectWorkerCronSnapshot) {
   const collectedAt = new Date().toISOString();
   try {
-    const stdout = execFileSync(process.execPath, childArgs, {
-      cwd: ROOT_DIR,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      maxBuffer: 64 * 1024 * 1024,
-      env,
+    const report = await collector({
+      ...WORKER_WATCH_DEFAULTS,
+      database: args.database,
+      sinceMinutes: Math.max(1, Math.ceil(sinceMinutes)),
+      limit: args.sampleLimit,
+      apiUrl: args.apiUrl,
+      adminApiUrl: args.adminApiUrl,
+      metadataBytes: args.metadataBytes,
+      remote: args.remote,
+      json: true,
+      skipHealth: false,
+      includeStatus: args.includeStatus,
+      includeStatusHistory: args.includeStatusHistory,
+      includeFullMetadata: false,
+      cfAccessClientId: args.cfAccessClientId,
+      cfAccessClientSecret: args.cfAccessClientSecret,
     });
-    return { collectedAt, mode: "d1", ...JSON.parse(stdout) };
+    return { collectedAt, mode: "d1", ...report };
   } catch (error) {
     return {
       collectedAt,
       mode: "d1-error",
-      error: childProcessErrorMessage(error),
+      error: redactCredentialText(childProcessErrorMessage(error), args),
       probes: {},
       recentRuns: [],
       slots: [],
@@ -255,6 +246,14 @@ function collectD1Snapshot(args, sinceMinutes) {
       progress: [],
     };
   }
+}
+
+function redactCredentialText(message, args) {
+  let redacted = message;
+  for (const credential of [args.cfAccessClientId, args.cfAccessClientSecret]) {
+    if (credential) redacted = redacted.replaceAll(credential, "[redacted]");
+  }
+  return redacted;
 }
 
 function childProcessErrorMessage(error) {
@@ -272,7 +271,7 @@ function loadScheduleMatrix() {
     import { SCHEDULED_SLOT_PLANS, SHARED_SCHEDULED_JOB_IDENTITIES } from "./shared/lib/scheduled-runner-registry.ts";
     console.log(JSON.stringify({ cronJobs: CRON_JOB_DEFINITIONS, budgetEntries: CRON_CONNECTION_BUDGET_ENTRIES, slotPlans: SCHEDULED_SLOT_PLANS, sharedJobPaths: SHARED_SCHEDULED_JOB_IDENTITIES }));
   `;
-  const stdout = execFileSync("npx", ["--no-install", "tsx", "--eval", source], {
+  const stdout = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", source], {
     cwd: ROOT_DIR,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -904,7 +903,7 @@ async function collectEvidence(args) {
     if (delayMs > 0) await sleep(delayMs);
     const elapsedMinutes = Math.max(args.intervalMinutes, Math.ceil((Date.now() - startMs) / 60_000) + args.intervalMinutes);
     const snapshot = args.includeD1
-      ? collectD1Snapshot(args, elapsedMinutes)
+      ? await collectD1Snapshot(args, elapsedMinutes)
       : await collectProbeOnlySnapshot(args);
     const checkpointedSnapshot = { ...snapshot, watchTargetAt: targetAt };
     snapshots.push(checkpointedSnapshot);

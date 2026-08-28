@@ -1,14 +1,21 @@
 #!/usr/bin/env node
 
-import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mts";
 import {
+  appendGscReportPreamble,
+  appendGscReportSection,
   collectInputEntries,
   compareText,
   firstNumberToken,
+  formatGscUsage,
   normalizeHeaderName,
   parseCsv,
+  parsePositiveNumber,
+  runAsyncDirect,
+  runGscCli,
   uniqueHeaders,
-} from "./analyze-gsc-coverage.mjs";
+  writeGscUnknownOption,
+  writeGscUsage,
+} from "../lib/gsc-report.mts";
 
 const DEFAULT_TARGET_CTR = 0.045;
 const DEFAULT_MIN_IMPRESSIONS = 100;
@@ -105,14 +112,6 @@ function parseTargetCtr(value) {
   const parsed = parseCtr(value);
   if (parsed === null || parsed <= 0 || parsed >= 1) {
     throw new Error(`Invalid target CTR: ${value}`);
-  }
-  return parsed;
-}
-
-function parsePositiveInteger(value, optionName) {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`Invalid ${optionName}: ${value}`);
   }
   return parsed;
 }
@@ -477,51 +476,21 @@ export function renderGscPerformanceReport(report) {
   lines.push(`- ${formatAggregateMetrics(report.site)}`);
   lines.push("");
 
-  lines.push("Family CTR gaps:");
-  if (report.families.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const family of report.families) {
-      lines.push(
-        `- ${family.family} | pages=${formatInteger(family.pageCount)} | ${formatAggregateMetrics(family)}${formatSources(family.sources)}`,
-      );
-    }
-  }
-  lines.push("");
+  appendGscReportSection(lines, "Family CTR gaps:", report.families, (family) =>
+    `${family.family} | pages=${formatInteger(family.pageCount)} | ${formatAggregateMetrics(family)}${formatSources(family.sources)}`,
+  );
 
-  lines.push("Priority pages below target:");
-  if (report.priorityPages.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const page of report.priorityPages) {
-      lines.push(
-        `- ${page.displayUrl} | family=${page.family} | ${formatAggregateMetrics(page)} | positionBucket=${positionBucket(page.averagePosition)} | queries=${formatInteger(page.queryCount)} | queryKeys=${page.queryKeys.join(",") || "none"} | labels=${labelsForPage(page, report.options.minImpressions)}${formatSources(page.sources)}`,
-      );
-    }
-  }
-  lines.push("");
+  appendGscReportSection(lines, "Priority pages below target:", report.priorityPages, (page) =>
+    `${page.displayUrl} | family=${page.family} | ${formatAggregateMetrics(page)} | positionBucket=${positionBucket(page.averagePosition)} | queries=${formatInteger(page.queryCount)} | queryKeys=${page.queryKeys.join(",") || "none"} | labels=${labelsForPage(page, report.options.minImpressions)}${formatSources(page.sources)}`,
+  );
 
-  lines.push("Low-sample pages below target:");
-  if (report.lowSamplePages.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const page of report.lowSamplePages) {
-      lines.push(
-        `- ${page.displayUrl} | family=${page.family} | ${formatAggregateMetrics(page)} | positionBucket=${positionBucket(page.averagePosition)} | labels=${labelsForPage(page, report.options.minImpressions)}${formatSources(page.sources)}`,
-      );
-    }
-  }
-  lines.push("");
+  appendGscReportSection(lines, "Low-sample pages below target:", report.lowSamplePages, (page) =>
+    `${page.displayUrl} | family=${page.family} | ${formatAggregateMetrics(page)} | positionBucket=${positionBucket(page.averagePosition)} | labels=${labelsForPage(page, report.options.minImpressions)}${formatSources(page.sources)}`,
+  );
 
-  lines.push("Query opportunities below target:");
-  if (report.queryOpportunities.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const query of report.queryOpportunities) {
-      lines.push(`- ${query.query} | ${formatAggregateMetrics(query)}${formatSources(query.sources)}`);
-    }
-  }
-  lines.push("");
+  appendGscReportSection(lines, "Query opportunities below target:", report.queryOpportunities, (query) =>
+    `${query.query} | ${formatAggregateMetrics(query)}${formatSources(query.sources)}`,
+  );
 
   lines.push("Recommended triage order:");
   lines.push("- Start with the largest family targetClickGap, then inspect its priority pages.");
@@ -534,7 +503,7 @@ export function renderGscPerformanceReport(report) {
 }
 
 function usage() {
-  return [
+  return formatGscUsage([
     "Usage: npm run analyze:gsc-performance -- [options] <gsc-performance-export-dir-or-file> [...more paths]",
     "",
     "Accepts GSC performance export directories, ZIP files, CSV files, and XLSX/XLS files.",
@@ -544,7 +513,7 @@ function usage() {
     `  --target-ctr <value>      Target CTR as a fraction or percent, default ${formatCtr(DEFAULT_TARGET_CTR)}`,
     `  --min-impressions <n>    Minimum impressions for priority rows, default ${DEFAULT_MIN_IMPRESSIONS}`,
     `  --top <n>                Number of page/query opportunities to print, default ${DEFAULT_TOP_COUNT}`,
-  ].join("\n");
+  ]);
 }
 
 /**
@@ -563,7 +532,7 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--help" || arg === "-h") {
-      stdout.write(`${usage()}\n`);
+      writeGscUsage(stdout, usage());
       return 0;
     }
     if (arg === "--target-ctr") {
@@ -572,17 +541,21 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
     } else if (arg.startsWith("--target-ctr=")) {
       options.targetCtr = parseTargetCtr(arg.slice("--target-ctr=".length));
     } else if (arg === "--min-impressions") {
-      options.minImpressions = parsePositiveInteger(argv[index + 1], "--min-impressions");
+      options.minImpressions = parsePositiveNumber(argv[index + 1], "--min-impressions", { integer: true });
       index += 1;
     } else if (arg.startsWith("--min-impressions=")) {
-      options.minImpressions = parsePositiveInteger(arg.slice("--min-impressions=".length), "--min-impressions");
+      options.minImpressions = parsePositiveNumber(
+        arg.slice("--min-impressions=".length),
+        "--min-impressions",
+        { integer: true },
+      );
     } else if (arg === "--top") {
-      options.topCount = parsePositiveInteger(argv[index + 1], "--top");
+      options.topCount = parsePositiveNumber(argv[index + 1], "--top", { integer: true });
       index += 1;
     } else if (arg.startsWith("--top=")) {
-      options.topCount = parsePositiveInteger(arg.slice("--top=".length), "--top");
+      options.topCount = parsePositiveNumber(arg.slice("--top=".length), "--top", { integer: true });
     } else if (arg.startsWith("-")) {
-      stderr.write(`Unknown option: ${arg}\n\n${usage()}\n`);
+      writeGscUnknownOption(stderr, arg, usage());
       return 1;
     } else {
       args.push(arg);
@@ -590,18 +563,15 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
   }
 
   if (args.length === 0) {
-    stderr.write(`${usage()}\n`);
+    writeGscUsage(stderr, usage());
     return 1;
   }
 
-  try {
+  return runGscCli(async () => {
     const report = await analyzeGscPerformanceInputs(args, options);
     stdout.write(renderGscPerformanceReport(report));
     return 0;
-  } catch (error) {
-    stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    return 1;
-  }
+  }, stderr);
 }
 
 runAsyncDirect(import.meta.url, process.argv[1], runCli);

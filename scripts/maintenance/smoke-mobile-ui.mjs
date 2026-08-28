@@ -2,8 +2,18 @@
 
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { isDirectRun, normalizeRoute, parseCliOptions, parsePositiveInt } from "../lib/smoke-runtime.mjs";
-import { launchChromiumBrowser, loadChromium } from "./smoke-ui.mjs";
+import {
+  captureFailureScreenshot,
+  ensureHttpUrl,
+  getBoundedWorkerCount,
+  isDirectRun,
+  launchChromiumBrowser,
+  loadChromium,
+  normalizeRouteList,
+  parseCliOptions,
+  parsePositiveInt,
+  retrySmokeOperation,
+} from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_MOBILE_UI_URL ?? process.env.SMOKE_UI_URL ?? "http://localhost:3000";
 const DEFAULT_WAIT_MS = 1500;
@@ -107,20 +117,11 @@ export function parseArgs(argv) {
 }
 
 function ensureUrl(input) {
-  const trimmed = (input ?? "").trim();
-  if (!trimmed) {
-    throw new Error("Missing URL. Pass --url http://localhost:3000 or set SMOKE_MOBILE_UI_URL.");
-  }
-  return new URL(trimmed).toString();
+  return ensureHttpUrl(input, "Missing URL. Pass --url http://localhost:3000 or set SMOKE_MOBILE_UI_URL.");
 }
 
 export function parseRouteList(input, fallback = DEFAULT_MOBILE_UI_ROUTES) {
-  const routes = (input ?? "")
-    .split(",")
-    .map((route) => route.trim())
-    .filter(Boolean)
-    .map((route) => normalizeRoute(route));
-  return routes.length > 0 ? Array.from(new Set(routes)) : fallback;
+  return normalizeRouteList(input, fallback);
 }
 
 function parseViewportToken(token) {
@@ -587,8 +588,7 @@ async function maybeCaptureFailureScreenshot(page, dir, label) {
   if (!trimmed) return null;
   await mkdir(trimmed, { recursive: true });
   const path = join(trimmed, `${sanitizeLabel(label)}.png`);
-  await page.screenshot({ fullPage: true, path });
-  return path;
+  return captureFailureScreenshot(page, path);
 }
 
 async function runRouteCheck(page, options) {
@@ -602,20 +602,16 @@ async function runRouteCheck(page, options) {
   };
   page.on("console", onConsole);
   try {
-    let summary;
-    try {
-      summary = await captureRoute(page, options);
-    } catch (navigationError) {
-      // Name the route and absorb one transient navigation failure (slow CI
-      // runner, proxy hiccup); a real hang fails both attempts with context
-      // instead of crashing the whole smoke anonymously.
-      console.log(
-        `[mobile-ui-smoke] RETRY ${options.route} @ ${formatViewport(viewport)} after navigation error: ${
-          navigationError instanceof Error ? navigationError.message.split("\n")[0] : String(navigationError)
-        }`,
-      );
-      summary = await captureRoute(page, options);
-    }
+    const summary = await retrySmokeOperation(() => captureRoute(page, options), {
+      retries: 1,
+      onRetry: ({ error: navigationError }) => {
+        console.log(
+          `[mobile-ui-smoke] RETRY ${options.route} @ ${formatViewport(viewport)} after navigation error: ${
+            navigationError instanceof Error ? navigationError.message.split("\n")[0] : String(navigationError)
+          }`,
+        );
+      },
+    });
     const failures = assertRouteSummary(summary, { consoleMessages, strictTouchTargets });
     if (failures.length > 0) {
       const screenshotPath = await maybeCaptureFailureScreenshot(
@@ -663,8 +659,10 @@ export function getMobileWorkerCount(taskCount, workersInput) {
   if (taskCount <= 0) {
     return 1;
   }
-  const requested = parsePositiveInt(workersInput, DEFAULT_MOBILE_UI_WORKERS);
-  return Math.max(1, Math.min(MAX_MOBILE_UI_WORKERS, requested, taskCount));
+  return getBoundedWorkerCount(taskCount, workersInput, {
+    fallback: DEFAULT_MOBILE_UI_WORKERS,
+    maximum: MAX_MOBILE_UI_WORKERS,
+  });
 }
 
 export async function run(argv = process.argv.slice(2)) {

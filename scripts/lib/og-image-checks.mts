@@ -1,5 +1,7 @@
 /* eslint-disable security/detect-non-literal-fs-filename -- helpers operate on explicit caller-selected generated asset paths. */
-import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import sharp from "sharp";
 
 interface PngComparisonTolerance {
@@ -135,4 +137,110 @@ export function assertNoStaleOgOutputs({
   throw new Error(
     `${family} OG images are stale: ${staleFiles.join(", ")}. Run \`${refreshCommand}\` to refresh them.`,
   );
+}
+
+export function contentSha256(contents: string | Uint8Array): string {
+  return createHash("sha256").update(contents).digest("hex");
+}
+
+export async function validateGeneratedPng(path: string): Promise<void> {
+  if (!existsSync(path) || readFileSync(path).length === 0) throw new Error(`Generated PNG is missing or empty: ${path}`);
+  const metadata = await sharp(path).metadata();
+  if (metadata.format !== "png" || !metadata.width || !metadata.height) {
+    throw new Error(`Generated artifact is not a valid PNG: ${path}`);
+  }
+}
+
+export interface OgArtifactRosterEntry {
+  file: string;
+}
+
+export interface OgArtifactRenderContext {
+  stagedPath: string;
+  stagingDir: string;
+  publicPath: string;
+}
+
+export async function runOgArtifactBuild<T extends OgArtifactRosterEntry>({
+  check,
+  family,
+  publicDir,
+  refreshCommand,
+  roster,
+  stagingDir,
+  render,
+  onResult,
+  cleanup = true,
+  assertStale = true,
+}: {
+  check: boolean;
+  family: string;
+  publicDir: string;
+  refreshCommand: string;
+  roster: readonly T[];
+  stagingDir: string;
+  render: (entry: T, context: OgArtifactRenderContext) => Promise<void>;
+  onResult?: (entry: T, result: { changed: boolean; publicPath: string; staleLabel: string | null }) => void;
+  cleanup?: boolean;
+  assertStale?: boolean;
+}): Promise<{ changedFiles: string[]; staleFiles: string[] }> {
+  mkdirSync(stagingDir, { recursive: true });
+  mkdirSync(publicDir, { recursive: true });
+  const changedFiles: string[] = [];
+  const staleFiles: string[] = [];
+  try {
+    for (const entry of roster) {
+      const publicPath = resolve(publicDir, entry.file);
+      const stagedPath = resolve(stagingDir, `${entry.file}.${check ? "check" : `write-${process.pid}`}.png`);
+      await render(entry, { stagedPath, stagingDir, publicPath });
+      await validateGeneratedPng(stagedPath);
+      let changed = false;
+      let staleLabel: string | null = null;
+      if (check) {
+        staleLabel = await stalePngCheckLabel({ fileLabel: entry.file, expectedPath: publicPath, actualPath: stagedPath });
+        if (staleLabel) staleFiles.push(staleLabel);
+        unlinkSync(stagedPath);
+      } else {
+        changed = await promoteGeneratedPngIfChanged({ stagedPath, publicPath });
+        if (changed) changedFiles.push(entry.file);
+      }
+      onResult?.(entry, { changed, publicPath, staleLabel });
+    }
+    if (assertStale) assertNoStaleOgOutputs({ family, staleFiles, refreshCommand });
+    return { changedFiles, staleFiles };
+  } finally {
+    if (cleanup) rmSync(stagingDir, { recursive: true, force: true });
+  }
+}
+
+export function inspectPublishedOgRoster<T extends OgArtifactRosterEntry>(
+  roster: readonly T[],
+  publicDir: string,
+): { missing: string[]; empty: string[] } {
+  const missing: string[] = [];
+  const empty: string[] = [];
+  for (const entry of roster) {
+    const path = resolve(publicDir, entry.file);
+    if (!existsSync(path)) missing.push(entry.file);
+    else if (readFileSync(path).length === 0) empty.push(entry.file);
+  }
+  return { missing, empty };
+}
+
+export function writeOgSourceRoster<T extends OgArtifactRosterEntry>({
+  roster,
+  stagingDir,
+  render,
+}: {
+  roster: readonly T[];
+  stagingDir: string;
+  render: (entry: T) => { file: string; contents: string | Uint8Array };
+}): string[] {
+  mkdirSync(stagingDir, { recursive: true });
+  return roster.map((entry) => {
+    const artifact = render(entry);
+    const path = resolve(stagingDir, artifact.file);
+    writeFileSync(path, artifact.contents);
+    return path;
+  });
 }

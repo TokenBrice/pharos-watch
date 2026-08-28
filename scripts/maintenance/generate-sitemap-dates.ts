@@ -7,6 +7,10 @@ import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { assertFullGitHistory } from "../lib/git-history.mts";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
+import {
+  METHODOLOGY_CHANGELOG_REGISTRY,
+  type MethodologyChangelogRegistryKey,
+} from "../../shared/lib/methodology-versions/registry";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
@@ -39,6 +43,26 @@ const BLOG_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/data/blog/index.ts"),
   join(__dirname, "../../src/lib/page-metadata.ts"),
 ];
+const METHODOLOGY_CHANGELOG_SHARED_SOURCES = [
+  // This route owns the shared display config as well as dynamic route metadata.
+  join(__dirname, "../../src/app/methodology/[slug]/page.tsx"),
+];
+const METHODOLOGY_CHANGELOG_ENTRY_SOURCES: Record<MethodologyChangelogRegistryKey, string> = {
+  "safety-score": join(__dirname, "../../shared/data/methodology-changelogs/safety-score"),
+  "depeg-dews": join(__dirname, "../../shared/data/methodology-changelogs/depeg-dews"),
+  "depeg-resolver": join(__dirname, "../../shared/data/methodology-changelogs/depeg-resolver"),
+  "liquidity-score": join(__dirname, "../../shared/data/methodology-changelogs/liquidity-score"),
+  "stability-index": join(__dirname, "../../shared/data/methodology-changelogs/stability-index"),
+  "chain-health": join(__dirname, "../../shared/data/methodology-changelogs/chain-health"),
+  yield: join(__dirname, "../../shared/data/methodology-changelogs/yield-methodology"),
+  "blacklist-tracker": join(__dirname, "../../shared/data/methodology-changelogs/blacklist-tracker"),
+  "mint-burn-flow": join(__dirname, "../../shared/data/methodology-changelogs/mint-burn-flow"),
+  "pricing-pipeline": join(__dirname, "../../shared/data/methodology-changelogs/pricing-pipeline"),
+  "redemption-backstop": join(__dirname, "../../shared/data/methodology-changelogs/redemption-backstop"),
+};
+const SCORING_CHANGELOG_CONTENT_SOURCES = [
+  join(__dirname, "../../src/app/methodology/changelog-content/scoring"),
+];
 
 const GIT_LOG_MARKER = "--PHAROS-SITEMAP-COMMIT--";
 const GIT_DATE_SCAN_PATHS = [
@@ -49,6 +73,7 @@ const GIT_DATE_SCAN_PATHS = [
   "src/lib/page-metadata.ts",
   "src/lib/stablecoin-detail-json-ld.ts",
   "shared/data/stablecoins/coins",
+  "shared/data/methodology-changelogs",
 ];
 
 interface GitDateIndex {
@@ -186,11 +211,22 @@ function addBlogDates(dates: Record<string, string>): void {
   }
 }
 
+function addMethodologyChangelogDates(dates: Record<string, string>): void {
+  const sharedLastModified = latestIso(...METHODOLOGY_CHANGELOG_SHARED_SOURCES.map(getLastModified));
+
+  for (const changelog of METHODOLOGY_CHANGELOG_REGISTRY) {
+    const sources = [METHODOLOGY_CHANGELOG_ENTRY_SOURCES[changelog.key]];
+    if (changelog.key === "safety-score") sources.push(...SCORING_CHANGELOG_CONTENT_SOURCES);
+    dates[changelog.publicPath] = latestIso(sharedLastModified, ...sources.map(getLastModified));
+  }
+}
+
 const dates: Record<string, string> = {};
 walkPages(APP_DIR, "/", dates);
 addStablecoinDetailDates(dates);
 addCaseStudyDates(dates);
 addBlogDates(dates);
+addMethodologyChangelogDates(dates);
 
 // The mechanism explainer hub date must move when any archetype content
 // module under the cluster changes — per-archetype Article JSON-LD sources

@@ -1,6 +1,19 @@
 #!/usr/bin/env node
 
-import { assert, isDirectRun, normalizeRoute, readNonNegativeIntEnv, readPositiveIntEnv, sleep } from "../lib/smoke-runtime.mjs";
+import {
+  assert,
+  chunkWorkerItems,
+  ensureHttpUrl,
+  isDirectRun,
+  launchChromiumBrowser,
+  loadChromium,
+  normalizeRoute,
+  readNonNegativeIntEnv,
+  readPositiveIntEnv,
+  sleep,
+} from "../lib/smoke-runtime.mjs";
+
+export { getBrowserLaunchOptions, launchChromiumBrowser, loadChromium } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const DEFAULT_MODE = process.env.SMOKE_UI_MODE ?? "local";
@@ -62,12 +75,7 @@ function parseArgs(argv) {
 }
 
 function ensureUrl(input) {
-  const trimmed = (input ?? "").trim();
-  if (!trimmed) {
-    throw new Error("Missing URL. Pass --url https://... or set SMOKE_UI_URL.");
-  }
-  const parsed = new URL(trimmed);
-  return parsed.toString();
+  return ensureHttpUrl(input, "Missing URL. Pass --url https://... or set SMOKE_UI_URL.");
 }
 
 function ensureMode(input) {
@@ -76,55 +84,6 @@ function ensureMode(input) {
     return normalized;
   }
   throw new Error(`Invalid mode "${input}". Expected "local" or "live".`);
-}
-
-export async function loadChromium() {
-  try {
-    const { chromium } = await import("playwright");
-    return chromium;
-  } catch (error) {
-    throw new Error(
-      `[smoke-ui] Failed to load Playwright from the installed workspace dependencies: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-}
-
-export function getBrowserLaunchOptions() {
-  const executablePath = (process.env.SMOKE_UI_BROWSER_EXECUTABLE_PATH ?? "").trim();
-  if (executablePath) {
-    return { executablePath, headless: true };
-  }
-
-  const channel = (process.env.SMOKE_UI_BROWSER_CHANNEL ?? "").trim();
-  if (channel) {
-    return { channel, headless: true };
-  }
-
-  if (process.env.GITHUB_ACTIONS === "true") {
-    return { channel: "chrome", headless: true };
-  }
-
-  return { headless: true };
-}
-
-function isMissingPlaywrightBrowserError(error) {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes("Executable doesn't exist") || message.includes("Please run the following command");
-}
-
-export async function launchChromiumBrowser(chromium) {
-  const launchOptions = getBrowserLaunchOptions();
-  try {
-    return await chromium.launch(launchOptions);
-  } catch (error) {
-    const hasExplicitBrowser = Boolean(launchOptions.channel) || Boolean(launchOptions.executablePath);
-    if (hasExplicitBrowser || !isMissingPlaywrightBrowserError(error)) {
-      throw error;
-    }
-
-    console.log("[smoke-ui] WARN Playwright-managed Chromium missing; retrying with system Chrome");
-    return chromium.launch({ channel: "chrome", headless: true });
-  }
 }
 
 function getUiWaitTimeoutMs() {
@@ -155,17 +114,7 @@ export function getOverflowWorkerCount(mode, routeCount, skipOverflow = false) {
 }
 
 export function chunkOverflowRoutes(routes, workerCount) {
-  if (!Array.isArray(routes) || routes.length === 0 || workerCount <= 0) {
-    return [];
-  }
-
-  const chunkCount = Math.min(routes.length, workerCount);
-  const chunkSize = Math.ceil(routes.length / chunkCount);
-  const chunks = [];
-  for (let i = 0; i < routes.length; i += chunkSize) {
-    chunks.push(routes.slice(i, i + chunkSize));
-  }
-  return chunks;
+  return chunkWorkerItems(routes, workerCount);
 }
 
 export function getOverflowRoutes(mode) {

@@ -21,8 +21,6 @@ import {
   mkdirSync,
   writeFileSync,
   readFileSync,
-  unlinkSync,
-  rmSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -31,8 +29,7 @@ import { escapeXml } from "../lib/og-svg.mts";
 import {
   assertNoStaleOgOutputs,
   formatOgWriteStatus,
-  promoteGeneratedPngIfChanged,
-  stalePngCheckLabel,
+  runOgArtifactBuild,
   writeFileIfChanged,
 } from "../lib/og-image-checks.mts";
 
@@ -86,6 +83,7 @@ const OUTCOME_LABEL: Record<string, string> = { survived: "Survived", wounded: "
 const OUTCOME_COLOR: Record<string, string> = { survived: "#15803d", wounded: "#a16207", died: "#dc2626" };
 
 const CARDS = CASE_STUDY_LIST.map((study) => ({
+  file: `og-learn-case-${study.slug}.png`,
   slug: study.slug,
   kicker: study.eyebrow,
   title: study.title,
@@ -240,73 +238,64 @@ async function main() {
     svgSha256: string;
   }> = [];
   try {
-    for (const card of CARDS) {
-      const fileName = `og-learn-case-${card.slug}.png`;
-      const logoSignature = card.logoPath
-        ? {
-            path: repoRelativePath(card.logoPath),
-            sha256: sha256(readFileSync(card.logoPath)),
-          }
-        : null;
-      const signatureSvg = buildSvg({
-        ...card,
-        logoHref: logoSignature ? `repo://${logoSignature.path}` : null,
-      });
-      const svg = buildSvg({
-        ...card,
-        logoHref: card.logoPath ? pathToFileURL(card.logoPath).href : null,
-      });
-      signatures.push({
-        file: fileName,
-        slug: card.slug,
-        kicker: card.kicker,
-        title: card.title,
-        outcome: card.outcome,
-        logo: logoSignature,
-        svgSha256: sha256(signatureSvg),
-      });
-      const svgPath = resolve(STAGING, `${card.slug}.svg`);
-      const htmlPath = resolve(STAGING, `${card.slug}.html`);
-      writeFileSync(svgPath, svg);
-      writeFileSync(htmlPath, buildHtml(svg));
-
-      const publicPath = resolve(PUBLIC, fileName);
-      const outPath = resolve(STAGING, `${card.slug}.${CHECK_MODE ? "check" : "write"}.png`);
-      const page = await browser.newPage({ viewport: { width: 1200, height: 628 } });
-      await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
-      await page.evaluate(() => document.fonts.ready);
-      await page.waitForTimeout(400);
-      await page.screenshot({
-        path: outPath,
-        omitBackground: false,
-        clip: { x: 0, y: 0, width: 1200, height: 628 },
-        timeout: 30000,
-      });
-      await page.close();
-
-      let changed = false;
-      if (CHECK_MODE) {
-        const staleLabel = await stalePngCheckLabel({
-          fileLabel: fileName,
-          expectedPath: publicPath,
-          actualPath: outPath,
+    const artifactResult = await runOgArtifactBuild({
+      check: CHECK_MODE,
+      family: "Case-study",
+      publicDir: PUBLIC,
+      refreshCommand: "npm run build:og-case-studies",
+      roster: CARDS,
+      stagingDir: STAGING,
+      assertStale: false,
+      render: async (card, { stagedPath }) => {
+        const fileName = card.file;
+        const logoSignature = card.logoPath
+          ? {
+              path: repoRelativePath(card.logoPath),
+              sha256: sha256(readFileSync(card.logoPath)),
+            }
+          : null;
+        const signatureSvg = buildSvg({
+          ...card,
+          logoHref: logoSignature ? `repo://${logoSignature.path}` : null,
         });
-        if (staleLabel) {
-          staleFiles.push(staleLabel);
-        }
-      } else {
-        changed = await promoteGeneratedPngIfChanged({ stagedPath: outPath, publicPath });
-      }
+        const svg = buildSvg({
+          ...card,
+          logoHref: card.logoPath ? pathToFileURL(card.logoPath).href : null,
+        });
+        signatures.push({
+          file: fileName,
+          slug: card.slug,
+          kicker: card.kicker,
+          title: card.title,
+          outcome: card.outcome,
+          logo: logoSignature,
+          svgSha256: sha256(signatureSvg),
+        });
+        const svgPath = resolve(STAGING, `${card.slug}.svg`);
+        const htmlPath = resolve(STAGING, `${card.slug}.html`);
+        writeFileSync(svgPath, svg);
+        writeFileSync(htmlPath, buildHtml(svg));
 
-      try {
-        unlinkSync(svgPath);
-        unlinkSync(htmlPath);
-        if (CHECK_MODE) unlinkSync(outPath);
-      } catch {
-        /* swallow */
-      }
-      console.log(formatOgWriteStatus({ check: CHECK_MODE, changed, publicPath }));
-    }
+        const page = await browser.newPage({ viewport: { width: 1200, height: 628 } });
+        try {
+          await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
+          await page.evaluate(() => document.fonts.ready);
+          await page.waitForTimeout(400);
+          await page.screenshot({
+            path: stagedPath,
+            omitBackground: false,
+            clip: { x: 0, y: 0, width: 1200, height: 628 },
+            timeout: 30000,
+          });
+        } finally {
+          await page.close();
+        }
+      },
+      onResult: (_card, { changed, publicPath }) => {
+        console.log(formatOgWriteStatus({ check: CHECK_MODE, changed, publicPath }));
+      },
+    });
+    staleFiles.push(...artifactResult.staleFiles);
 
     const signatureManifest = buildSignatureManifest(signatures);
     if (CHECK_MODE) {
@@ -325,7 +314,6 @@ async function main() {
     });
   } finally {
     await browser.close();
-    rmSync(STAGING, { recursive: true, force: true });
   }
 }
 

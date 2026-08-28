@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import { isDirectRun } from "./smoke-runtime.mjs";
 
@@ -75,15 +76,28 @@ export function resolveSelectedStablecoins<T>(
 }
 
 export function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
+  return formatCompactUsdWithOptions(value, {
+    currencyPrefix: "",
+    decimals: { trillion: 2, billion: 2, million: 2, thousand: 2, unit: 2 },
+    invalidFallback: (invalid) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 })
+      .format(invalid as number),
+    maximumTier: null,
+    trimTrailingZeros: true,
+    useGrouping: true,
+  });
 }
 
 export function formatUsd(value: number | null): string {
   if (value == null) return "";
-  if (value >= 1_000_000_000) return `$${formatNumber(value / 1_000_000_000)}B`;
-  if (value >= 1_000_000) return `$${formatNumber(value / 1_000_000)}M`;
-  if (value >= 1_000) return `$${formatNumber(value / 1_000)}K`;
-  return `$${formatNumber(value)}`;
+  return formatCompactUsdWithOptions(value, {
+    compactNegative: false,
+    decimals: { trillion: 2, billion: 2, million: 2, thousand: 2, unit: 2 },
+    invalidFallback: (invalid) => `$${formatNumber(invalid as number)}`,
+    maximumTier: "billion",
+    signPosition: "after-currency",
+    trimTrailingZeros: true,
+    useGrouping: true,
+  });
 }
 
 export function markdownValue(value: unknown): string {
@@ -129,6 +143,140 @@ export function resolveGeneratedAt(options: { generatedAt: string | null }): str
 }
 
 export type CoverageAuditReportFormat = "markdown" | "json";
+
+export interface CoverageAuditShellOptions {
+  format: CoverageAuditReportFormat;
+  reportPath: string | null;
+}
+
+export interface CoverageAuditOptionDescriptor<T> {
+  flag: string;
+  kind: "boolean" | "value";
+  missingMessage?: string;
+  apply: (options: T, value?: string) => void;
+}
+
+export interface CoverageAuditCliDescriptor<T extends CoverageAuditShellOptions> {
+  createOptions: () => T;
+  options?: readonly CoverageAuditOptionDescriptor<T>[];
+  includeGeneratedAt?: boolean;
+  generatedAtMissingMessage?: string;
+  includeCheck?: boolean;
+  usage?: () => string;
+  validate?: (options: T) => void;
+}
+
+export function parseCoverageAuditCliArgs<T extends CoverageAuditShellOptions>(
+  argv: readonly string[],
+  descriptor: CoverageAuditCliDescriptor<T>,
+): T {
+  const options = descriptor.createOptions();
+  const optionByFlag = new Map((descriptor.options ?? []).map((option) => [option.flag, option]));
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--json") {
+      options.format = "json";
+      continue;
+    }
+    if (arg === "--markdown") {
+      options.format = "markdown";
+      continue;
+    }
+    if (arg === "--report") {
+      const value = argv[index + 1];
+      if (!value) throw new Error("--report requires a path");
+      options.reportPath = value;
+      index += 1;
+      continue;
+    }
+    if (descriptor.includeGeneratedAt && arg === "--generated-at") {
+      const value = argv[index + 1];
+      if (!value) throw new Error(descriptor.generatedAtMissingMessage ?? "--generated-at requires an ISO timestamp");
+      (options as T & { generatedAt: string | null }).generatedAt = value;
+      index += 1;
+      continue;
+    }
+    if (descriptor.includeCheck && arg === "--check") {
+      (options as T & { check: boolean }).check = true;
+      continue;
+    }
+    if (descriptor.usage && (arg === "--help" || arg === "-h")) {
+      process.stdout.write(`${descriptor.usage()}\n`);
+      process.exit(0);
+    }
+    const option = optionByFlag.get(arg);
+    if (!option) throw new Error(`Unknown argument: ${arg}`);
+    if (option.kind === "boolean") {
+      option.apply(options);
+      continue;
+    }
+    const value = argv[index + 1];
+    if (!value) throw new Error(option.missingMessage ?? `${arg} requires a value`);
+    option.apply(options, value);
+    index += 1;
+  }
+  descriptor.validate?.(options);
+  return options;
+}
+
+export interface CoverageAuditRunDescriptor<TOptions extends CoverageAuditShellOptions, TAudit> {
+  parse: (argv: string[]) => TOptions;
+  build: (options: TOptions) => TAudit | Promise<TAudit>;
+  renderMarkdown: (audit: TAudit) => string;
+  cwd?: string;
+  stdout?: Pick<NodeJS.WriteStream, "write">;
+  writeMessage?: (target: string) => string;
+  evaluate?: (audit: TAudit, options: TOptions) => readonly string[];
+  checkMessage?: (audit: TAudit, failures: readonly string[]) => string;
+}
+
+export async function runCoverageAuditCli<TOptions extends CoverageAuditShellOptions, TAudit>(
+  argv: string[],
+  descriptor: CoverageAuditRunDescriptor<TOptions, TAudit>,
+): Promise<number> {
+  const options = descriptor.parse(argv);
+  const audit = await descriptor.build(options);
+  const output = renderCoverageAuditReport(audit, options.format, descriptor.renderMarkdown);
+  const stdout = descriptor.stdout ?? process.stdout;
+  const failures = descriptor.evaluate?.(audit, options) ?? [];
+  if (options.reportPath) {
+    const target = writeOutputFile(options.reportPath, output, descriptor.cwd);
+    if (descriptor.writeMessage) stdout.write(`${descriptor.writeMessage(target)}\n`);
+    if (descriptor.checkMessage && (options as TOptions & { check?: boolean }).check) {
+      stdout.write(`${descriptor.checkMessage(audit, failures)}\n`);
+    }
+  } else {
+    stdout.write(output);
+  }
+  return failures.length > 0 ? 1 : 0;
+}
+
+export function renderMarkdownSummary(rows: readonly [string, unknown][]): string[] {
+  return rows.map(([label, value]) => `- ${label}: ${value}`);
+}
+
+export function renderMarkdownTable(
+  headings: readonly string[],
+  rows: readonly (readonly unknown[])[],
+  { limit }: { limit?: number } = {},
+): string[] {
+  const selected = limit == null ? rows : rows.slice(0, limit);
+  return [
+    headings.map(markdownValue).join(" | "),
+    headings.map(() => "---").join(" | "),
+    ...selected.map((row) => row.map(markdownValue).join(" | ")),
+  ];
+}
+
+export function renderMarkdownAuditDocument(title: string, sections: readonly {
+  heading: string;
+  lines: readonly string[];
+}[], preamble: readonly string[] = []): string {
+  const lines = [`# ${title}`, "", ...preamble];
+  if (preamble.length > 0) lines.push("");
+  for (const section of sections) lines.push(`## ${section.heading}`, "", ...section.lines, "");
+  return `${lines.join("\n").trimEnd()}\n`;
+}
 
 export interface CandidateReportCliOptions {
   coinIds: string[];
@@ -347,10 +495,10 @@ function writeAdvisoryReport(
   return target;
 }
 
-export function runAsMain(importMetaUrl: string, runCli: () => Promise<number>): void {
+export function runAsMain(importMetaUrl: string, runCli: () => Promise<number> | number): void {
   if (!isDirectRun(importMetaUrl, process.argv[1])) return;
 
-  runCli()
+  Promise.resolve().then(runCli)
     .then((code) => {
       process.exitCode = code;
     })

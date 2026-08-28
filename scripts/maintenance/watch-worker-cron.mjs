@@ -4,11 +4,28 @@ import { execFileSync } from "node:child_process";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
 
-const DEFAULT_DATABASE = "stablecoin-db";
-const DEFAULT_API_URL = "https://api.pharos.watch";
-const DEFAULT_ADMIN_API_URL = "https://ops-api.pharos.watch";
-const DEFAULT_METADATA_BYTES = 800;
-const DEFAULT_MAX_BUFFER_MB = 32;
+export const WORKER_WATCH_DEFAULTS = Object.freeze({
+  database: "stablecoin-db",
+  apiUrl: "https://api.pharos.watch",
+  adminApiUrl: "https://ops-api.pharos.watch",
+  sinceMinutes: 180,
+  limit: 80,
+  metadataBytes: 800,
+  maxBufferMb: 32,
+});
+
+export const WORKER_WATCH_OPTION_SCHEMA = Object.freeze([
+  ["--database", "database", "value"], ["--since-minutes", "sinceMinutes", "integer"],
+  ["--limit", "limit", "integer"], ["--api-url", "apiUrl", "value"],
+  ["--admin-api-url", "adminApiUrl", "value"], ["--metadata-bytes", "metadataBytes", "integer"],
+  ["--include-full-metadata", "includeFullMetadata", "boolean"], ["--include-status", "includeStatus", "boolean"],
+  ["--include-status-history", "includeStatusHistory", "boolean"],
+  ["--cf-access-client-id", "cfAccessClientId", "value"],
+  ["--cf-access-client-secret", "cfAccessClientSecret", "value"],
+  ["--max-buffer-mb", "maxBufferMb", "integer"], ["--json", "json", "boolean"],
+  ["--skip-health", "skipHealth", "boolean"],
+  ["--local", "remote", "false"],
+]);
 
 function usage() {
   return [
@@ -36,85 +53,34 @@ function usage() {
   ].join("\n");
 }
 
-function parseArgs(argv) {
+export function parseWorkerWatchArgs(argv) {
   const args = {
-    database: DEFAULT_DATABASE,
-    sinceMinutes: 180,
-    limit: 80,
-    apiUrl: DEFAULT_API_URL,
-    adminApiUrl: DEFAULT_ADMIN_API_URL,
+    ...WORKER_WATCH_DEFAULTS,
     remote: true,
     json: false,
     skipHealth: false,
     includeStatus: false,
     includeStatusHistory: false,
     includeFullMetadata: false,
-    metadataBytes: DEFAULT_METADATA_BYTES,
-    maxBufferMb: DEFAULT_MAX_BUFFER_MB,
     cfAccessClientId: process.env.CF_ACCESS_CLIENT_ID ?? "",
     cfAccessClientSecret: process.env.CF_ACCESS_CLIENT_SECRET ?? "",
   };
 
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index];
-    const next = () => {
+    if (arg === "--help") {
+      console.log(usage());
+      process.exit(0);
+    }
+    const descriptor = WORKER_WATCH_OPTION_SCHEMA.find(([flag]) => flag === arg);
+    if (!descriptor) throw new Error(`Unknown option: ${arg}`);
+    const [, key, kind] = descriptor;
+    if (kind === "boolean") args[key] = true;
+    else if (kind === "false") args[key] = false;
+    else {
       const value = argv[++index];
       if (!value) throw new Error(`Missing value for ${arg}`);
-      return value;
-    };
-
-    switch (arg) {
-      case "--database":
-        args.database = next();
-        break;
-      case "--since-minutes":
-        args.sinceMinutes = Number.parseInt(next(), 10);
-        break;
-      case "--limit":
-        args.limit = Number.parseInt(next(), 10);
-        break;
-      case "--api-url":
-        args.apiUrl = next();
-        break;
-      case "--admin-api-url":
-        args.adminApiUrl = next();
-        break;
-      case "--metadata-bytes":
-        args.metadataBytes = Number.parseInt(next(), 10);
-        break;
-      case "--include-full-metadata":
-        args.includeFullMetadata = true;
-        break;
-      case "--include-status":
-        args.includeStatus = true;
-        break;
-      case "--include-status-history":
-        args.includeStatusHistory = true;
-        break;
-      case "--cf-access-client-id":
-        args.cfAccessClientId = next();
-        break;
-      case "--cf-access-client-secret":
-        args.cfAccessClientSecret = next();
-        break;
-      case "--max-buffer-mb":
-        args.maxBufferMb = Number.parseInt(next(), 10);
-        break;
-      case "--local":
-        args.remote = false;
-        break;
-      case "--json":
-        args.json = true;
-        break;
-      case "--skip-health":
-        args.skipHealth = true;
-        break;
-      case "--help":
-        console.log(usage());
-        process.exit(0);
-        break;
-      default:
-        throw new Error(`Unknown option: ${arg}`);
+      args[key] = kind === "integer" ? Number.parseInt(value, 10) : value;
     }
   }
 
@@ -205,11 +171,11 @@ export function classifyArtifactFailure(descriptor, message) {
   };
 }
 
-function loadExistingTables(args, tables) {
+function loadExistingTables(args, tables, select = d1Select) {
   if (tables.length === 0) return { tables: new Set(), error: null };
   const tableList = tables.map((table) => `'${escapeSqlLiteral(table)}'`).join(", ");
   try {
-    const rows = d1Select(
+    const rows = select(
       args,
       `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${tableList})`,
     );
@@ -222,7 +188,7 @@ function loadExistingTables(args, tables) {
   }
 }
 
-function optionalD1Select(args, descriptor, existingTables = null) {
+function optionalD1Select(args, descriptor, existingTables = null, select = d1Select) {
   if (descriptor.optionalMissing && descriptor.table && existingTables?.tables) {
     if (!existingTables.tables.has(descriptor.table)) {
       return { rows: [], error: null, gap: missingOptionalArtifactGap(descriptor) };
@@ -234,7 +200,7 @@ function optionalD1Select(args, descriptor, existingTables = null) {
   }
 
   try {
-    return { rows: d1Select(args, descriptor.sql), error: null, gap: null };
+    return { rows: select(args, descriptor.sql), error: null, gap: null };
   } catch (error) {
     const message = errorMessage(error);
     const gap = classifyArtifactFailure(descriptor, message);
@@ -337,14 +303,17 @@ function metadataSelect(args, columnName) {
   return `length(${columnName}) AS metadata_bytes, substr(${columnName}, 1, ${Math.floor(args.metadataBytes)}) AS metadata_preview`;
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
+export async function collectWorkerCronSnapshot(args, {
+  select = d1Select,
+  probeCollector = fetchProbes,
+  now = () => new Date(),
+} = {}) {
   const sinceSec = Math.floor(args.sinceMinutes * 60);
   const limit = Math.floor(args.limit);
   const metadataBytes = Math.floor(args.metadataBytes);
 
   // SAFETY: sinceSec/limit/metadataBytes are positive integers derived from validated CLI numeric options.
-  const recentRuns = d1Select(args, `
+  const recentRuns = select(args, `
     SELECT job, started_at, duration_ms, status, error, item_count, slot_started_at, ${metadataSelect(args, "metadata")}
       FROM cron_runs
      WHERE slot_started_at >= unixepoch() - ${sinceSec}
@@ -352,19 +321,19 @@ async function main() {
      ORDER BY COALESCE(slot_started_at, started_at) DESC, started_at DESC
      LIMIT ${limit}
   `);
-  const slots = d1Select(args, `
+  const slots = select(args, `
     SELECT slot_key, slot_started_at, state, result_status, execution_owner, started_at, finished_at, updated_at, ${metadataSelect(args, "metadata")}
       FROM cron_slot_executions
      WHERE slot_started_at >= unixepoch() - ${Math.max(sinceSec, 24 * 3600)}
      ORDER BY slot_started_at DESC
      LIMIT 80
   `);
-  const leases = d1Select(args, `
+  const leases = select(args, `
     SELECT job, lease_owner, lease_until, heartbeat_at, updated_at
       FROM cron_leases
      ORDER BY lease_until ASC
   `);
-  const progress = d1Select(args, `
+  const progress = select(args, `
     SELECT job, started_at, updated_at, stage, items_done, items_total, message, lease_owner, slot_started_at, ${metadataSelect(args, "metadata")}
       FROM cron_run_progress
      ORDER BY updated_at DESC
@@ -375,7 +344,7 @@ async function main() {
     "worker_canary_runs",
     "surface_publication_generations",
   ];
-  const existingOptionalTables = loadExistingTables(args, optionalArtifactTables);
+  const existingOptionalTables = loadExistingTables(args, optionalArtifactTables, select);
   const jobAttempts = optionalD1Select(args, {
     artifact: "jobAttempts",
     table: "worker_job_attempts",
@@ -388,7 +357,7 @@ async function main() {
      ORDER BY updated_at DESC
      LIMIT ${Math.min(limit, 80)}
   `,
-  }, existingOptionalTables);
+  }, existingOptionalTables, select);
   const repairTasks = optionalD1Select(args, {
     artifact: "repairTasks",
     table: "worker_repair_tasks",
@@ -401,7 +370,7 @@ async function main() {
      ORDER BY updated_at DESC
      LIMIT 80
   `,
-  }, existingOptionalTables);
+  }, existingOptionalTables, select);
   const canaryRuns = optionalD1Select(args, {
     artifact: "canaryRuns",
     table: "worker_canary_runs",
@@ -412,7 +381,7 @@ async function main() {
      ORDER BY observed_at DESC
      LIMIT 80
   `,
-  }, existingOptionalTables);
+  }, existingOptionalTables, select);
   const dexPublicationGenerations = optionalD1Select(args, {
     artifact: "dexPublicationGenerations",
     table: "dex_liquidity_publication_generations",
@@ -424,7 +393,7 @@ async function main() {
      ORDER BY started_at DESC
      LIMIT 20
   `,
-  });
+  }, null, select);
   const yieldPublicationGenerations = optionalD1Select(args, {
     artifact: "yieldPublicationGenerations",
     table: "yield_publication_generations",
@@ -436,7 +405,7 @@ async function main() {
      ORDER BY started_at DESC
      LIMIT 20
   `,
-  });
+  }, null, select);
   const surfacePublicationGenerations = optionalD1Select(args, {
     artifact: "surfacePublicationGenerations",
     table: "surface_publication_generations",
@@ -452,8 +421,8 @@ async function main() {
      ORDER BY started_at DESC
      LIMIT 40
   `,
-  }, existingOptionalTables);
-  const probes = await fetchProbes(args);
+  }, existingOptionalTables, select);
+  const probes = await probeCollector(args);
   const optionalResults = {
     jobAttempts,
     repairTasks,
@@ -472,7 +441,7 @@ async function main() {
   );
 
   const report = {
-    generatedAt: new Date().toISOString(),
+    generatedAt: now().toISOString(),
     scope: args.remote ? "remote" : "local",
     database: args.database,
     sinceMinutes: args.sinceMinutes,
@@ -495,15 +464,19 @@ async function main() {
     artifactErrors,
   };
 
-  if (args.json) {
-    console.log(JSON.stringify(report, null, 2));
-  } else {
-    printHuman(report);
-  }
+  return report;
+}
+
+export async function runCli(argv = process.argv.slice(2)) {
+  const args = parseWorkerWatchArgs(argv);
+  const report = await collectWorkerCronSnapshot(args);
+  if (args.json) console.log(JSON.stringify(report, null, 2));
+  else printHuman(report);
+  return 0;
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  main().catch((error) => {
+  runCli().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   });

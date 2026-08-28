@@ -33,13 +33,14 @@ import {
   loadCoverageAuditSiteDataInputs,
   markdownValue,
   numberValue,
+  parseCoverageAuditCliArgs,
   readJsonFile,
   readRequiredJsonFile,
   resolveGeneratedAt,
+  runCoverageAuditCli,
   runAsMain,
   sortByMarketCapOrRank,
   stringValue,
-  writeOutputFile,
 } from "../lib/coverage-audit-cli";
 import {
   DEPENDENCY_ADAPTER_MAPPING_REVIEWS,
@@ -1776,81 +1777,30 @@ export function evaluateDependencyCoverageStructure(audit: DependencyCoverageAud
 }
 
 export function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    apiBase: null,
-    prod: false,
-    inputDir: null,
-    reportCardsPath: null,
-    stablecoinsPath: null,
-    format: "markdown",
-    reportPath: null,
-    generatedAt: null,
-  };
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--prod") {
-      options.prod = true;
-      continue;
-    }
-    if (arg === "--api-base") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--api-base requires a URL");
-      options.apiBase = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--input") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--input requires a directory path");
-      options.inputDir = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--report-cards") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--report-cards requires a file path");
-      options.reportCardsPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--stablecoins") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--stablecoins requires a file path");
-      options.stablecoinsPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--json") {
-      options.format = "json";
-      continue;
-    }
-    if (arg === "--markdown") {
-      options.format = "markdown";
-      continue;
-    }
-    if (arg === "--report") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--report requires a path");
-      options.reportPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--generated-at") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--generated-at requires an ISO timestamp or 'now'");
-      options.generatedAt = value;
-      i += 1;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  if (options.prod && options.apiBase) {
-    throw new Error("Choose only one of --prod or --api-base.");
-  }
-
-  return options;
+  return parseCoverageAuditCliArgs(argv, {
+    createOptions: (): CliOptions => ({
+      apiBase: null,
+      prod: false,
+      inputDir: null,
+      reportCardsPath: null,
+      stablecoinsPath: null,
+      format: "markdown",
+      reportPath: null,
+      generatedAt: null,
+    }),
+    includeGeneratedAt: true,
+    generatedAtMissingMessage: "--generated-at requires an ISO timestamp or 'now'",
+    options: [
+      { flag: "--prod", kind: "boolean", apply: (options) => { options.prod = true; } },
+      { flag: "--api-base", kind: "value", missingMessage: "--api-base requires a URL", apply: (options, value) => { options.apiBase = value!; } },
+      { flag: "--input", kind: "value", missingMessage: "--input requires a directory path", apply: (options, value) => { options.inputDir = value!; } },
+      { flag: "--report-cards", kind: "value", missingMessage: "--report-cards requires a file path", apply: (options, value) => { options.reportCardsPath = value!; } },
+      { flag: "--stablecoins", kind: "value", missingMessage: "--stablecoins requires a file path", apply: (options, value) => { options.stablecoinsPath = value!; } },
+    ],
+    validate: (options) => {
+      if (options.prod && options.apiBase) throw new Error("Choose only one of --prod or --api-base.");
+    },
+  });
 }
 
 async function loadOptionalInputs(
@@ -1900,33 +1850,21 @@ async function loadOptionalInputs(
   };
 }
 
-function writeOutput(path: string, output: string, cwd: string): void {
-  const target = writeOutputFile(path, output, cwd);
-  process.stdout.write(`Wrote dependency coverage audit to ${target}\n`);
-}
-
 export async function runCli(
   argv = process.argv.slice(2),
   cwd = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
-  const options = parseArgs(argv);
-  const loaded = await loadOptionalInputs(options, cwd, fetchImpl);
-  const audit = buildDependencyCoverageAudit({
-    ...loaded,
-    generatedAt: resolveGeneratedAt(options),
+  return runCoverageAuditCli(argv, {
+    parse: parseArgs,
+    cwd,
+    build: async (options) => {
+      const loaded = await loadOptionalInputs(options, cwd, fetchImpl);
+      return buildDependencyCoverageAudit({ ...loaded, generatedAt: resolveGeneratedAt(options) });
+    },
+    renderMarkdown: renderDependencyCoverageAuditMarkdown,
+    writeMessage: (target) => `Wrote dependency coverage audit to ${target}`,
   });
-  const output = options.format === "json"
-    ? `${JSON.stringify(audit, null, 2)}\n`
-    : renderDependencyCoverageAuditMarkdown(audit);
-
-  if (options.reportPath) {
-    writeOutput(options.reportPath, output, cwd);
-  } else {
-    process.stdout.write(output);
-  }
-
-  return 0;
 }
 
 runAsMain(import.meta.url, runCli);

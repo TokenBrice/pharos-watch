@@ -1,6 +1,13 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import {
+  assertCliUsage,
+  parseStrictCliArgs,
+  requireCliString,
+  runDirectCli,
+  writeCliHelpIfRequested,
+  writeJsonOutput,
+} from "../lib/cli-args.mjs";
 import { z } from "zod";
 import {
   aggregateV9GeneralizedMean,
@@ -220,23 +227,27 @@ export function buildV9AggregationCounterfactual(input: unknown, inputPath = "<m
   return output;
 }
 
+const USAGE = `Usage: tsx scripts/maintenance/replay-safety-score-v9-aggregation.ts <replay.json> [output.json]
+
+Options:
+  -h, --help   Show this help`;
+
 export function runV9AggregationCounterfactualCli(argv: readonly string[]): void {
-  const inputPath = argv[0];
-  const outputPath = argv[1];
-  if (!inputPath) {
-    throw new Error(
-      "Usage: tsx scripts/maintenance/replay-safety-score-v9-aggregation.ts <replay.json> [output.json]",
-    );
-  }
+  const { positionals, values } = parseStrictCliArgs(argv, { allowPositionals: true });
+  if (writeCliHelpIfRequested(values, USAGE)) return;
+  assertCliUsage(positionals.length <= 2, "Expected a replay JSON path and optional output JSON path");
+  const inputPath = requireCliString(positionals[0], "replay JSON input");
+  const outputPath = positionals[1];
   const output = buildV9AggregationCounterfactual(
     JSON.parse(readFileSync(resolve(inputPath), "utf8")),
     inputPath,
   );
   const serialized = `${JSON.stringify(output, null, 2)}\n`;
-  if (outputPath) writeFileSync(resolve(outputPath), serialized);
+  if (outputPath) writeJsonOutput(resolve(outputPath), serialized);
   else process.stdout.write(serialized);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runV9AggregationCounterfactualCli(process.argv.slice(2));
-}
+runDirectCli(import.meta.url, () => runV9AggregationCounterfactualCli(process.argv.slice(2)), {
+  label: "safety-score-v9:aggregation-counterfactual",
+  usage: USAGE,
+});

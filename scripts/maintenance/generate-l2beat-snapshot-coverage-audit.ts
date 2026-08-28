@@ -15,11 +15,12 @@ import {
 import {
   isRecord,
   markdownValue,
+  parseCoverageAuditCliArgs,
   readJsonFile,
   resolveGeneratedAt,
+  runCoverageAuditCli,
   runAsMain,
   stringValue,
-  writeOutputFile,
 } from "../lib/coverage-audit-cli";
 
 const L2BEAT_SUMMARY_URL = "https://l2beat.com/api/scaling/summary";
@@ -88,50 +89,19 @@ function usage(): string {
 }
 
 export function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    inputPath: null,
-    live: false,
-    format: "markdown",
-    reportPath: null,
-    check: false,
-    generatedAt: null,
-  };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--input") {
-      const value = argv[++index];
-      if (!value) throw new Error("--input requires a path");
-      options.inputPath = value;
-    } else if (arg === "--live") {
-      options.live = true;
-    } else if (arg === "--json") {
-      options.format = "json";
-    } else if (arg === "--markdown") {
-      options.format = "markdown";
-    } else if (arg === "--report") {
-      const value = argv[++index];
-      if (!value) throw new Error("--report requires a path");
-      options.reportPath = value;
-    } else if (arg === "--check") {
-      options.check = true;
-    } else if (arg === "--generated-at") {
-      const value = argv[++index];
-      if (!value) throw new Error("--generated-at requires an ISO timestamp");
-      options.generatedAt = value;
-    } else if (arg === "--help" || arg === "-h") {
-      process.stdout.write(`${usage()}\n`);
-      process.exit(0);
-    } else {
-      throw new Error(`Unknown argument: ${arg}`);
-    }
-  }
-
-  if (options.inputPath && options.live) {
-    throw new Error("Choose only one of --input or --live.");
-  }
-
-  return options;
+  return parseCoverageAuditCliArgs(argv, {
+    createOptions: (): CliOptions => ({ inputPath: null, live: false, format: "markdown", reportPath: null, check: false, generatedAt: null }),
+    includeCheck: true,
+    includeGeneratedAt: true,
+    usage,
+    options: [
+      { flag: "--input", kind: "value", missingMessage: "--input requires a path", apply: (options, value) => { options.inputPath = value!; } },
+      { flag: "--live", kind: "boolean", apply: (options) => { options.live = true; } },
+    ],
+    validate: (options) => {
+      if (options.inputPath && options.live) throw new Error("Choose only one of --input or --live.");
+    },
+  });
 }
 
 function booleanValue(value: unknown): boolean | null {
@@ -380,10 +350,6 @@ export function renderL2BeatSnapshotCoverageAuditMarkdown(audit: L2BeatSnapshotC
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
-function writeOutput(path: string, contents: string): void {
-  writeOutputFile(path, contents);
-}
-
 async function loadObservedProjects(options: CliOptions): Promise<{
   projects?: Map<string, ObservedProject>;
   source: L2BeatSnapshotCoverageAudit["observedSource"];
@@ -407,37 +373,27 @@ export async function runCli(
   argv = process.argv.slice(2),
   stdout: Pick<NodeJS.WriteStream, "write"> = process.stdout,
 ): Promise<number> {
-  const options = parseArgs(argv);
-  const observed = await loadObservedProjects(options);
-  const generatedAt = resolveGeneratedAt({ generatedAt: options.generatedAt });
-  const audit = buildL2BeatSnapshotCoverageAudit({
-    observedProjects: observed.projects,
-    observedSource: observed.source,
-    generatedAt,
-  });
-  const output = options.format === "json"
-    ? `${JSON.stringify(audit, null, 2)}\n`
-    : renderL2BeatSnapshotCoverageAuditMarkdown(audit);
-
-  if (options.reportPath) {
-    writeOutput(options.reportPath, output);
-  } else {
-    stdout.write(output);
-  }
-
-  if (options.check) {
-    const failures = [
+  return runCoverageAuditCli(argv, {
+    parse: parseArgs,
+    stdout,
+    build: async (options) => {
+      const observed = await loadObservedProjects(options);
+      return buildL2BeatSnapshotCoverageAudit({
+        observedProjects: observed.projects,
+        observedSource: observed.source,
+        generatedAt: resolveGeneratedAt({ generatedAt: options.generatedAt }),
+      });
+    },
+    renderMarkdown: renderL2BeatSnapshotCoverageAuditMarkdown,
+    evaluate: (audit, options) => options.check ? [
       ...audit.coverage.aliasIssues.map((issue) => issue.message),
       ...audit.driftRows.map((row) => `${row.projectId} ${row.field} drifted: ${row.current} -> ${row.observed}`),
-    ];
-    if (failures.length > 0) {
-      if (options.reportPath) stdout.write(`L2BEAT snapshot coverage check failed: ${failures.length} issue(s)\n`);
-      return 1;
-    }
-    if (options.reportPath) stdout.write("L2BEAT snapshot coverage check passed\n");
-  }
-
-  return 0;
+    ] : [],
+    checkMessage: (_audit, failures) =>
+      failures.length > 0
+        ? `L2BEAT snapshot coverage check failed: ${failures.length} issue(s)`
+        : "L2BEAT snapshot coverage check passed",
+  });
 }
 
 runAsMain(import.meta.url, runCli);
