@@ -19,6 +19,24 @@ import {
 const NOW = Date.UTC(2026, 6, 13) / 1_000;
 const V9_FIXTURE_CLOCK = Date.UTC(2027, 0, 1) / 1_000;
 
+function singleObservationDexLiquidity(route: ExitRouteObservation): Record<string, unknown> {
+  return {
+    exitRouteObservations: [route],
+    exitRouteObservationCoverage: {
+      status: "populated",
+      capabilityMatrixVersion: "p4a.9",
+      retainedPoolCount: 1,
+      observationCount: 1,
+      scoreEligibleObservationCount: 1,
+      scoreEligiblePoolCount: 1,
+      scoreEligibleCapabilityPoolCount: 1,
+      unsupportedPoolCount: 0,
+      evidenceCounts: { "reserve-based-amm-simulation": 1 },
+      unsupportedReasons: {},
+    },
+  };
+}
+
 function supplyFullRow(overrides: Partial<RedemptionBackstopEntry> = {}): RedemptionBackstopEntry {
   return {
     stablecoinId: "usdc-circle",
@@ -1019,21 +1037,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       commonModeKeys: ["chain:ethereum", "protocol:curve"],
     };
     (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "scrvusd-curve": {
-        exitRouteObservations: [route],
-        exitRouteObservationCoverage: {
-          status: "populated",
-          capabilityMatrixVersion: "p4a.9",
-          retainedPoolCount: 1,
-          observationCount: 1,
-          scoreEligibleObservationCount: 1,
-          scoreEligiblePoolCount: 1,
-          scoreEligibleCapabilityPoolCount: 1,
-          unsupportedPoolCount: 0,
-          evidenceCounts: { "reserve-based-amm-simulation": 1 },
-          unsupportedReasons: {},
-        },
-      },
+      "scrvusd-curve": singleObservationDexLiquidity(route),
     };
     (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
       "usdaf-asymmetry": {
@@ -1111,21 +1115,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       commonModeKeys: ["chain:ethereum", "protocol:curve"],
     };
     (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "asset-input": {
-        exitRouteObservations: [route],
-        exitRouteObservationCoverage: {
-          status: "populated",
-          capabilityMatrixVersion: "p4a.9",
-          retainedPoolCount: 1,
-          observationCount: 1,
-          scoreEligibleObservationCount: 1,
-          scoreEligiblePoolCount: 1,
-          scoreEligibleCapabilityPoolCount: 1,
-          unsupportedPoolCount: 0,
-          evidenceCounts: { "reserve-based-amm-simulation": 1 },
-          unsupportedReasons: {},
-        },
-      },
+      "asset-input": singleObservationDexLiquidity(route),
     };
     (fixedInput as { navPriceById: Record<string, unknown> }).navPriceById = {
       "thbill-theo": {
