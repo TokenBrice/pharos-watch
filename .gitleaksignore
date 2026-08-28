@@ -298,3 +298,9 @@ d4efe6c590e4429387ea91a9b4b73bad760042e4:shared/data/safety-score-v9/transfer-re
 # release-branch commit and in its squash-merge to main.
 bbdd0cb8933579fb83586d8fd8901acfbf52ba5a:worker/src/cron/dex-discovery/__tests__/crawl-horizon-pools.test.ts:generic-api-key:166
 5489cf1d57362cbc30fa2d95995819d1afc97d62:worker/src/cron/dex-discovery/__tests__/crawl-horizon-pools.test.ts:generic-api-key:166
+
+# Historical Telegram watchlist V1 wire-format fixture (base64url JSON, not a
+# credential) introduced by the test-consolidation commit; the literal was
+# replaced with a builder in a follow-up commit, so the squash-merge diff to
+# main does not contain it and needs no entry.
+2fae13ddb881f6713326f1a85a1056986fe42a79:worker/src/lib/__tests__/telegram-watchlist-token.test.ts:generic-api-key:15
