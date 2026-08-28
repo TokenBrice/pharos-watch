@@ -416,10 +416,13 @@ describe("wave2 redemption exit-route embeds", () => {
     expect(observation).toMatchObject({
       routeId: "redemption:satusd-river:collateral-redeem",
       routeFamily: "protocol-redemption",
-      output: { kind: "collateral", assetKeys: ["asset:btc", "asset:eth", "asset:bnb"] },
+      // The complete collateral inventory is issuer-undisclosed, so the
+      // observation must not publish a partial BTC/ETH/BNB asset-key subset.
+      output: { kind: "collateral" },
       evidenceKind: "onchain-contract-state",
       scoreEligible: true,
     });
+    expect(observation?.output).not.toHaveProperty("assetKeys");
     expect(observation?.executableUsd).toBe(entry.capacityProfile?.modeledExitSizeUsd);
     expect(observation?.executableUsd).toBeGreaterThan(0);
   });
