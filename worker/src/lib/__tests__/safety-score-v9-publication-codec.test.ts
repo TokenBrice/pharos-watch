@@ -33,7 +33,7 @@ describe("Safety Score V9 publication codec", () => {
       await serializeSafetyScoreV9Publication(publication),
     ) as Record<string, unknown>;
     const priorPayload = JSON.parse(
-      gunzipSync(Buffer.from(String(envelope.payload), "base64")).toString("utf8"),
+      Buffer.from(gunzipSync(Buffer.from(String(envelope.payload), "base64"))).toString("utf8"),
     ) as typeof publication;
     const legacyPayload = stableJsonStringifyV1({
       ...priorPayload,
@@ -48,7 +48,7 @@ describe("Safety Score V9 publication codec", () => {
       payloadSha256: createHash("sha256").update(legacyPayload).digest("hex"),
       uncompressedBytes: Buffer.byteLength(legacyPayload),
       compressedBytes: compressed.byteLength,
-      payload: compressed.toString("base64"),
+      payload: Buffer.from(compressed).toString("base64"),
     });
 
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
@@ -89,7 +89,7 @@ describe("Safety Score V9 publication codec", () => {
       await serializeSafetyScoreV9Publication(publication),
     ) as Record<string, unknown>;
     const legacyPublication = JSON.parse(
-      gunzipSync(Buffer.from(String(envelope.payload), "base64")).toString("utf8"),
+      Buffer.from(gunzipSync(Buffer.from(String(envelope.payload), "base64"))).toString("utf8"),
     ) as typeof publication;
     legacyPublication.cards[0]!.caps = [cap];
     legacyPublication.cards[0]!.bindingCap = cap;
@@ -100,7 +100,7 @@ describe("Safety Score V9 publication codec", () => {
       payloadSha256: createHash("sha256").update(legacyPayload).digest("hex"),
       uncompressedBytes: Buffer.byteLength(legacyPayload),
       compressedBytes: compressed.byteLength,
-      payload: compressed.toString("base64"),
+      payload: Buffer.from(compressed).toString("base64"),
     });
 
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
@@ -116,7 +116,7 @@ describe("Safety Score V9 publication codec", () => {
       await serializeSafetyScoreV9Publication(publication),
     ) as Record<string, unknown>;
     const legacyPublication = JSON.parse(
-      gunzipSync(Buffer.from(String(envelope.payload), "base64")).toString("utf8"),
+      Buffer.from(gunzipSync(Buffer.from(String(envelope.payload), "base64"))).toString("utf8"),
     ) as typeof publication;
     for (const card of legacyPublication.cards) {
       delete (card.scoreTrace.evidenceResponsibility as { facts?: unknown }).facts;
@@ -132,7 +132,7 @@ describe("Safety Score V9 publication codec", () => {
       payloadSha256: createHash("sha256").update(legacyPayload).digest("hex"),
       uncompressedBytes: Buffer.byteLength(legacyPayload),
       compressedBytes: compressed.byteLength,
-      payload: compressed.toString("base64"),
+      payload: Buffer.from(compressed).toString("base64"),
     });
 
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
@@ -165,7 +165,7 @@ describe("Safety Score V9 publication codec", () => {
       await serializeSafetyScoreV9Publication(publication),
     ) as Record<string, unknown>;
     const storedPublication = JSON.parse(
-      gunzipSync(Buffer.from(String(envelope.payload), "base64")).toString("utf8"),
+      Buffer.from(gunzipSync(Buffer.from(String(envelope.payload), "base64"))).toString("utf8"),
     ) as typeof publication;
     for (const card of storedPublication.cards) {
       card.scoreTrace.evidenceResponsibility.summaries =
@@ -186,7 +186,7 @@ describe("Safety Score V9 publication codec", () => {
       payloadSha256: createHash("sha256").update(payload).digest("hex"),
       uncompressedBytes: Buffer.byteLength(payload),
       compressedBytes: compressed.byteLength,
-      payload: compressed.toString("base64"),
+      payload: Buffer.from(compressed).toString("base64"),
     });
 
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
