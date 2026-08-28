@@ -30,7 +30,7 @@ export const CURVE_NATIVE_DISCOVERY_CHAINS: ReadonlySet<string> = new Set([
 ]);
 
 /** Native Horizon liquidity-pool discovery is currently scoped to classic Stellar assets. */
-export const HORIZON_DISCOVERY_CHAINS: ReadonlySet<string> = new Set(["stellar"]);
+const HORIZON_DISCOVERY_CHAINS: ReadonlySet<string> = new Set(["stellar"]);
 
 /**
  * GeckoTerminal networks that are safe for the deployment census but are not
