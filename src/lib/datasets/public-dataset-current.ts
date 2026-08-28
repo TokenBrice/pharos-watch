@@ -4,8 +4,6 @@ import depegHistoryExport from "../../../public/datasets/depeg-history/2026-07-0
 import scoresLatestExport from "../../../public/datasets/scores-latest/2026-07-08.json";
 import pegMechanismDistributionExport from "../../../public/datasets/peg-mechanism-distribution/2026-07-08.json";
 
-export const PUBLIC_DATASET_CURRENT_SNAPSHOT_DATE = "2026-07-08";
-
 export const PUBLIC_DATASET_CURRENT_EXPORTS = {
   "top-stablecoins": topStablecoinsExport,
   "depeg-history": depegHistoryExport,
