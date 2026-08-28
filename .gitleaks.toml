@@ -112,3 +112,17 @@ regexes = [
   '''0x6a4854078428eea517e8013827cba9f90583f8a9fdf8610c8791d1b04feb6a3eee428bf506c98ead1e870918f26a1d41f5bfb792b1e4f331679d1ad3e527326f''',
 ]
 paths = ['''(?:^|/)shared/data/stablecoins/domains/risk-review/usdcx-movement\.json$''']
+
+# Stellar Soroban contract identifiers are StrKey-encoded: `C` plus exactly 55
+# base32 characters, optionally prefixed by their asset code as `CODE-C...`.
+# They are public on-chain identifiers exactly like the EVM and Solana
+# carve-outs above; DEX census fixtures and curated rows cite them verbatim,
+# and their base32 entropy trips the generic-api-key rule when the surrounding
+# variable or key mentions "token". The uppercase RFC 4648 base32 alphabet
+# (A-Z, 2-7) plus the fixed C prefix and exact length keep this narrow: a real
+# generic credential is effectively never shaped like a StrKey contract id.
+[[allowlists]]
+description = "Stellar Soroban StrKey contract identifiers are public on-chain identifiers, not secrets"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = ['''^(?:[A-Z0-9]{1,12}-)?C[A-Z2-7]{55}$''']
