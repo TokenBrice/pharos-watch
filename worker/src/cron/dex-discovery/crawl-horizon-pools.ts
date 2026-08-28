@@ -1,4 +1,7 @@
-import { HORIZON_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
+import {
+  getHorizonDiscoveryAsset,
+  isHorizonDiscoveryDeployment,
+} from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment } from "@shared/types/core";
@@ -22,9 +25,6 @@ import type { DexDeploymentProviderCheck } from "./types";
 
 const HORIZON_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const HORIZON_PAGE_LIMIT = 200;
-const STELLAR_CLASSIC_ASSET_RE = /^([A-Za-z0-9]{1,12})-(G[A-Z2-7]{55})$/;
-const STELLAR_ISSUER_RE = /^G[A-Z2-7]{55}$/;
-const STELLAR_ASSET_CODE_RE = /^[A-Za-z0-9]{1,12}$/;
 
 interface HorizonReserve {
   asset: string;
@@ -54,7 +54,7 @@ const trackedClassicAssets = new Map<string, { stablecoinId: string; address: st
 for (const coin of ACTIVE_STABLECOINS) {
   for (const deployment of [...(coin.contracts ?? []), ...(coin.tradedContracts ?? [])]) {
     if (deployment.chain !== "stellar") continue;
-    const horizonAsset = toHorizonClassicAsset(deployment.address, coin.symbol);
+    const horizonAsset = getHorizonDiscoveryAsset(deployment.address, coin.symbol);
     if (horizonAsset) {
       trackedClassicAssets.set(horizonAsset, { stablecoinId: coin.id, address: deployment.address });
     }
@@ -64,14 +64,6 @@ for (const coin of ACTIVE_STABLECOINS) {
 /** Test-only reset for the isolate-local request pacing clock. */
 export function resetHorizonDiscoveryStateForTests(): void {
   horizonRequestState.reset();
-}
-
-function toHorizonClassicAsset(address: string, symbol?: string): string | null {
-  const match = STELLAR_CLASSIC_ASSET_RE.exec(address);
-  if (match) return `${match[1]}:${match[2]}`;
-  return STELLAR_ISSUER_RE.test(address) && symbol && STELLAR_ASSET_CODE_RE.test(symbol)
-    ? `${symbol}:${address}`
-    : null;
 }
 
 function toRepoStellarAsset(asset: string): string | null {
@@ -154,20 +146,22 @@ export async function crawlHorizonPoolsStage(input: {
   context: CrawlStageContext;
 }): Promise<HorizonPoolsStageResult> {
   const providerChecks: DexDeploymentProviderCheck[] = [];
-  const targets = input.coinTargets.filter((target) => HORIZON_DISCOVERY_CHAINS.has(target.chain));
+  const targets = input.coinTargets.filter((target) =>
+    isHorizonDiscoveryDeployment(target.chain, target.address),
+  );
   if (targets.length === 0 || input.context.timeExceeded()) return { providerChecks };
 
   for (const target of targets) {
     if (input.context.timeExceeded()) return { providerChecks, stoppedEarly: true };
     const stablecoinSymbol = ACTIVE_STABLECOINS.find((coin) => coin.id === input.context.stablecoinId)?.symbol;
-    const horizonAsset = toHorizonClassicAsset(target.address, stablecoinSymbol);
+    const horizonAsset = getHorizonDiscoveryAsset(target.address, stablecoinSymbol);
     if (!horizonAsset) {
-      // Horizon's classic AMM endpoint cannot query Soroban contract-token ids.
+      // A bare issuer needs the tracked asset code to form Horizon's filter.
       providerChecks.push({
         chain: target.chain,
         address: target.address,
         provider: "horizon",
-        status: "degraded",
+        status: "failure",
       });
       continue;
     }

@@ -30,9 +30,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "WCLP has six independent native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis; their native MINTER_ROLE, DEFAULT_ADMIN_ROLE, and UUPS upgrade paths remain in Mint Authority. The separate LimitedMinterBridge burn/mint adapter is issuer-operated bridge machinery and is route-scoped here with rate-limit, admin, pause, and bridge-mint capabilities. Celo is an authored deployment with a probable representation-like role graph, but its BridgeDeposit/operator binding remains unresolved.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration FIX2-20",
+    "summary": "WCLP has six independent native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis; their native MINTER_ROLE, DEFAULT_ADMIN_ROLE, and UUPS upgrade paths remain in Mint Authority. Celo is a reviewed issuer-operated burn/mint representation: the live token role graph, registered LimitedMinterBridge, BridgeDeposit linkage, operator roles, enabled outbound peers, replay guard, rate limits, pause controls, and fixed-destination minter are now identified from verified source and current Celo state.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "probable",
     "protocols": [
       {
@@ -42,7 +42,7 @@
         "bridgeTypes": [
           "burn-mint"
         ],
-        "note": "Ripio's official BridgeDeposit, LimitedMinterBridge, and LimitedMinter sources define issuer-operated burn/mint infrastructure; current BridgeDeposit/operator binding remains unresolved."
+        "note": "Ripio's official BridgeDeposit, LimitedMinterBridge, and LimitedMinter sources define issuer-operated burn/mint infrastructure; the Celo deployment and its live contract/operator binding were verified on 2026-08-28."
       }
     ],
     "sources": [
@@ -77,6 +77,14 @@
       {
         "label": "Celo JSON-RPC fixed reads",
         "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Celo WCLP LimitedMinterBridge",
+        "url": "https://celo.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+      },
+      {
+        "label": "Celo WCLP BridgeDeposit",
+        "url": "https://celo.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
       }
     ],
     "routes": [
@@ -270,17 +278,30 @@
         "id": "celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "destinationChain": "celo",
         "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-        "protocol": "Ripio wCLP Celo route under review",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Ripio's Celo launch announcement and current role reads identify this deployment as representation-like, but the BridgeDeposit/operator binding, supported-token state, source-chain burn accounting, destination mint accounting, and pause/admin/upgrade controls remain unresolved; it is not treated as native issuance.",
+        "protocol": "Ripio wCLP Celo bridge representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "celo",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Ripio's Celo launch announcement publishes this WCLP deployment. At Celo block 75967600, the token granted MINTER_ROLE to LimitedMinterBridge 0x46167c... and fixed-destination LimitedMinter 0xd168cf..., while the 4-of-7 Ripio Safe retained the token's admin, minter, pauser, and upgrader roles. LimitedMinterBridge registered WCLP with a 4,750,000-token daily cap and granted mint access to BridgeDeposit 0x465e64... and an operator EOA. BridgeDeposit pointed back to that adapter, exposed a two-member operator set, and enabled WCLP routes to all six reviewed source chains. This is a reviewed issuer-operated burn/mint representation; privileged administrators can bypass or change its accounting controls, which is priced in the route tier rather than hidden as an identity gap.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 75017603,
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:celo:0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+          "eoa:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "eoa:celo:0x9e6475c19da6c1e3eb8e9d408cefd1fb511e1d8b",
+          "operator:celo:0xbc924f707ca021f9b220088afe56c85b9cb43085",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "observedAt": "2026-08-28",
+        "observedBlock": 75967600,
         "sources": [
           {
             "label": "Ripio Celo launch announcement",
@@ -293,6 +314,14 @@
           {
             "label": "Celo JSON-RPC fixed reads",
             "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Celo WCLP LimitedMinterBridge",
+            "url": "https://celo.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          },
+          {
+            "label": "Celo WCLP BridgeDeposit",
+            "url": "https://celo.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
           }
         ]
       }
@@ -300,14 +329,9 @@
     "controls": [
       {
         "id": "wclp-limited-minter-bridge",
-        "label": "Ripio WCLP LimitedMinterBridge adapter",
+        "label": "Ripio WCLP Ethereum LimitedMinterBridge adapter",
         "routeRefs": [
-          "ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-          "base:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-          "worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-          "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-          "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-          "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+          "ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
         ],
         "capabilities": [
           "bridge-mint",
@@ -320,24 +344,357 @@
         "failureDomainKeys": [
           "protocol:ripio-limited-minter-bridge",
           "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
-          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
-          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
-          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
-          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
-          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
-          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "contract:ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:ethereum:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
           "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "LimitedMinterBridge tokenConfigs returned a 76,000,000 wCLP dailyMaxMint on the Ethereum and Celo reads; its source exposes admin-controlled token registration and daily-limit changes, pause, and arbitrary-recipient minting.",
+        "capDescription": "The 2026-08-16 review recorded a 76,000,000 WCLP daily cap on Ethereum. External token administrators can change registration and route limits, while adapter administrators control pause state and arbitrary-recipient mint access.",
         "canRaiseCap": true,
         "routeChecks": {
-          "caps": "The adapter's tokenConfigs dailyMaxMint was 76,000,000 wCLP at the reviewed Ethereum and Celo reads; the source permits an administrator to change token registration and daily limits.",
-          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source tokens and an operator fulfills destination minting, but the current BridgeDeposit address, operator binding, supported-token state, and route idempotency were not resolved.",
-          "pausersAdminsUpgraders": "LimitedMinterBridge exposes admin-controlled token registration, pause, daily-limit changes, and arbitrary-recipient mintTo(). Its own MINTER_ROLE member count was zero on all seven current reads, so the active BridgeDeposit/operator and admin execution path remain an evidence gap."
+          "caps": "The Ethereum adapter's reviewed tokenConfigs dailyMaxMint was 76,000,000 WCLP. Its verified source lets an external token administrator register or unregister WCLP and change this limit.",
+          "trustedPeerOrRemote": "The adapter held WCLP MINTER_ROLE at the fixed review; its own MINTER_ROLE member count was zero, so no active fulfillment caller was established at that observation.",
+          "pausersAdminsUpgraders": "Verified source exposes administrator-controlled token registration, daily-limit changes, minter grants, and pause state."
         },
         "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio latam-stables repository",
+            "url": "https://github.com/ripio/latam-stables"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 review, Ethereum LimitedMinterBridge 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 held WCLP MINTER_ROLE and had a 76,000,000-token daily limit; its own MINTER_ROLE member count was zero. The verified source defines administrator-controlled registration, limits, pause, and arbitrary-recipient minting."
+      },
+      {
+        "id": "wclp-base-limited-minter-bridge",
+        "label": "Ripio WCLP Base LimitedMinterBridge adapter",
+        "routeRefs": [
+          "base:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": ["bridge-mint", "rate-limit", "admin", "pause"],
+        "controllerChain": "base",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:base:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:base:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source permits external token administrators to register WCLP and change the Base daily limit; the numeric limit was not independently re-read in this refresh.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",
+          "pausersAdminsUpgraders": "Verified source exposes administrator-controlled registration, daily limits, minter grants, and pause state."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {"label": "Ripio LimitedMinterBridge source", "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"},
+          {"label": "Ripio latam-stables repository", "url": "https://github.com/ripio/latam-stables"}
+        ],
+        "evidence": "The fixed 2026-08-16 review identified Base LimitedMinterBridge 0x46167c... as a WCLP MINTER_ROLE holder. This chain-qualified control preserves that exact local contract rather than attributing Base authority to the same-address Ethereum deployment."
+      },
+      {
+        "id": "wclp-worldchain-limited-minter-bridge",
+        "label": "Ripio WCLP Worldchain LimitedMinterBridge adapter",
+        "routeRefs": [
+          "worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": ["bridge-mint", "rate-limit", "admin", "pause"],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:worldchain:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:worldchain:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source permits external token administrators to register WCLP and change the Worldchain daily limit; the numeric limit was not independently re-read in this refresh.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",
+          "pausersAdminsUpgraders": "Verified source exposes administrator-controlled registration, daily limits, minter grants, and pause state."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {"label": "Ripio LimitedMinterBridge source", "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"},
+          {"label": "Ripio latam-stables repository", "url": "https://github.com/ripio/latam-stables"}
+        ],
+        "evidence": "The fixed 2026-08-16 review identified Worldchain LimitedMinterBridge 0x46167c... as a WCLP MINTER_ROLE holder. This chain-qualified control preserves that exact local contract rather than attributing Worldchain authority to Ethereum."
+      },
+      {
+        "id": "wclp-bsc-limited-minter-bridge",
+        "label": "Ripio WCLP BSC LimitedMinterBridge adapter",
+        "routeRefs": [
+          "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": ["bridge-mint", "rate-limit", "admin", "pause"],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:bsc:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:bsc:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source permits external token administrators to register WCLP and change the BSC daily limit; the numeric limit was not independently re-read in this refresh.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",
+          "pausersAdminsUpgraders": "Verified source exposes administrator-controlled registration, daily limits, minter grants, and pause state."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {"label": "Ripio LimitedMinterBridge source", "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"},
+          {"label": "Ripio latam-stables repository", "url": "https://github.com/ripio/latam-stables"}
+        ],
+        "evidence": "The fixed 2026-08-16 review identified BSC LimitedMinterBridge 0x46167c... as a WCLP MINTER_ROLE holder. This chain-qualified control preserves that exact local contract rather than attributing BSC authority to Ethereum."
+      },
+      {
+        "id": "wclp-polygon-limited-minter-bridge",
+        "label": "Ripio WCLP Polygon LimitedMinterBridge adapter",
+        "routeRefs": [
+          "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": ["bridge-mint", "rate-limit", "admin", "pause"],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:polygon:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:polygon:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source permits external token administrators to register WCLP and change the Polygon daily limit; the numeric limit was not independently re-read in this refresh.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",
+          "pausersAdminsUpgraders": "Verified source exposes administrator-controlled registration, daily limits, minter grants, and pause state."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {"label": "Ripio LimitedMinterBridge source", "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"},
+          {"label": "Ripio latam-stables repository", "url": "https://github.com/ripio/latam-stables"}
+        ],
+        "evidence": "The fixed 2026-08-16 review identified Polygon LimitedMinterBridge 0x46167c... as a WCLP MINTER_ROLE holder. This chain-qualified control preserves that exact local contract rather than attributing Polygon authority to Ethereum."
+      },
+      {
+        "id": "wclp-gnosis-limited-minter-bridge",
+        "label": "Ripio WCLP Gnosis LimitedMinterBridge adapter",
+        "routeRefs": [
+          "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": ["bridge-mint", "rate-limit", "admin", "pause"],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:gnosis:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:gnosis:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source permits external token administrators to register WCLP and change the Gnosis daily limit; the numeric limit was not independently re-read in this refresh.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",
+          "pausersAdminsUpgraders": "Verified source exposes administrator-controlled registration, daily limits, minter grants, and pause state."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {"label": "Ripio LimitedMinterBridge source", "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"},
+          {"label": "Ripio latam-stables repository", "url": "https://github.com/ripio/latam-stables"}
+        ],
+        "evidence": "The fixed 2026-08-16 review identified Gnosis LimitedMinterBridge 0x46167c... as a WCLP MINTER_ROLE holder. This chain-qualified control preserves that exact local contract rather than attributing Gnosis authority to Ethereum."
+      },
+      {
+        "id": "wclp-celo-limited-minter-bridge",
+        "label": "Ripio WCLP Celo LimitedMinterBridge adapter",
+        "routeRefs": [
+          "celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": ["bridge-mint", "rate-limit", "admin", "pause"],
+        "controllerChain": "celo",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Celo adapter registered WCLP with a mutable 4,750,000-token daily limit. External token administrators can change registration and limits, while adapter administrators control minter grants and pause state.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "At Celo block 75967600, tokenConfigs returned exists=true and dailyMaxMint=4,750,000 WCLP.",
+          "trustedPeerOrRemote": "The adapter granted MINTER_ROLE to BridgeDeposit 0x465e6423... and direct EOA 0x5ca3f8ee....",
+          "pausersAdminsUpgraders": "The adapter had DEFAULT_ADMIN_ROLE holders EOA 0x5ca3f8ee... and 4-of-7 Safe 0x2b839174..., and paused() was false."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 75967600,
+        "sources": [
+          {"label": "Ripio LimitedMinterBridge source", "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"},
+          {"label": "Celo WCLP LimitedMinterBridge", "url": "https://celo.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"},
+          {"label": "Celo JSON-RPC fixed reads", "url": "https://forno.celo.org"}
+        ],
+        "evidence": "At Celo block 75967600 on 2026-08-28, LimitedMinterBridge held WCLP MINTER_ROLE, registered WCLP with a 4,750,000-token daily limit, and had two live MINTER_ROLE members: EOA 0x5ca3f8ee... and BridgeDeposit 0x465e6423.... This chain-qualified row records the Celo adapter separately from same-address deployments."
+      },
+      {
+        "id": "wclp-celo-bridge-deposit",
+        "label": "Ripio WCLP Celo BridgeDeposit burn and fulfillment",
+        "routeRefs": [
+          "celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-bridge-deposit",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "operator:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:celo:0xbc924f707ca021f9b220088afe56c85b9cb43085",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BridgeDeposit is the issuer-operated source-burn and destination-fulfillment controller. Its administrators can change enabled peers, fees, the LimitedMinterBridge pointer, operator membership, and pause state.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Celo block 75967600, BridgeDeposit pointed to LimitedMinterBridge 0x46167c..., held the adapter's MINTER_ROLE, and enabled WCLP outbound routes to Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Two BRIDGE_OPERATOR_ROLE holders can submit destination fulfillments.",
+          "onchainAmountBounds": "depositForBridge() burns source WCLP and records totalBurnedTo; fulfillBridgeMint() records totalMintedFrom and bridgeFulfilled keyed by source chain, transaction hash, and deposit ID. The six current Celo peer counters were zero at the observation block.",
+          "pausersAdminsUpgraders": "BridgeDeposit had two DEFAULT_ADMIN_ROLE holders (EOA 0x5ca3f8ee... and Safe 0x2b839174...), two bridge operators, one fee manager, and paused()=false. Administrators can reconfigure peers, operators, fees, pause state, and the adapter pointer."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 75967600,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Celo WCLP BridgeDeposit",
+            "url": "https://celo.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          },
+          {
+            "label": "Celo JSON-RPC fixed reads",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "The verified Celo BridgeDeposit is the live WCLP bridge caller: it points to LimitedMinterBridge 0x46167c..., appears in that adapter's MINTER_ROLE, has two operator principals, and enables all six source/destination chain IDs authored by WCLP. Its source enforces a burn on deposit, operator-gated destination fulfillment, replay protection, and per-peer accounting, while its two administrators can reconfigure those controls."
+      },
+      {
+        "id": "wclp-celo-fixed-destination-minter",
+        "label": "Ripio WCLP Celo fixed-destination LimitedMinter",
+        "routeRefs": [
+          "celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter",
+          "contract:celo:0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+          "contract:celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:celo:0x9e6475c19da6c1e3eb8e9d408cefd1fb511e1d8b",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinter registered WCLP with a mutable 28,000,000-token daily limit and fixed destination 0xb6c9e6451a4b4f65249f60de4fd12da1088a2807.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "At Celo block 75967626, tokenConfigs returned exists=true, a 28,000,000 WCLP daily maximum, and fixed destination 0xb6c9e645.... The verified source lets the external token admin change both the limit and destination.",
+          "trustedPeerOrRemote": "This is a fixed-destination issuer facility rather than a peer-authenticated bridge endpoint; its WCLP output is nevertheless part of the representation's route-level mint surface.",
+          "pausersAdminsUpgraders": "The 4-of-7 Ripio Safe was the LimitedMinter admin; the Safe and EOA 0x9e6475c1... held its MINTER_ROLE, and paused()=false."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 75967626,
+        "sources": [
+          {
+            "label": "Ripio LimitedMinter source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinter.sol"
+          },
+          {
+            "label": "Celo WCLP LimitedMinter",
+            "url": "https://celo.blockscout.com/address/0xd168cfbbe260d48cd119497a9a2ee8482080c5e7"
+          },
+          {
+            "label": "Celo JSON-RPC fixed reads",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "Celo WCLP grants MINTER_ROLE to the verified fixed-destination LimitedMinter. Current state identifies its two authorized callers, 4-of-7 Safe administrator, 28,000,000-token daily cap, and destination EOA; this separately controlled representation-mint path is included so the route inventory does not hide an alternate mint surface."
+      },
+      {
+        "id": "wclp-celo-bridge-admin-eoa",
+        "label": "Ripio WCLP Celo bridge administrator and direct minter EOA",
+        "routeRefs": [
+          "celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "This EOA can mint directly through LimitedMinterBridge and administer that adapter and BridgeDeposit, including mutable WCLP limits, caller roles, enabled peers, pause state, fees, and the active adapter pointer.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The EOA's LimitedMinterBridge administrator role can change WCLP's 4,750,000-token daily cap and registration.",
+          "trustedPeerOrRemote": "The EOA was both a direct adapter minter and a BridgeDeposit administrator/operator, so it can submit destination fulfillment and reconfigure enabled peers and operator membership.",
+          "pausersAdminsUpgraders": "At Celo block 75967600, the EOA held LimitedMinterBridge DEFAULT_ADMIN_ROLE and MINTER_ROLE plus BridgeDeposit DEFAULT_ADMIN_ROLE and BRIDGE_OPERATOR_ROLE."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 75967600,
         "sources": [
           {
             "label": "Ripio LimitedMinterBridge source",
@@ -348,15 +705,142 @@
             "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
           },
           {
+            "label": "Celo JSON-RPC fixed reads",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "Fixed-block role enumeration at Celo block 75967600 identifies 0x5ca3f8eeba12d83408fc097c2dad79212456f20f as a direct LimitedMinterBridge minter and administrator and as a BridgeDeposit administrator/operator. This row exposes the single-EOA authority behind the delivery contracts instead of stopping at their contract addresses."
+      },
+      {
+        "id": "wclp-celo-bridge-operator-eoa",
+        "label": "Ripio WCLP Celo BridgeDeposit operator EOA",
+        "routeRefs": [
+          "celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "validator"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0xbc924f707ca021f9b220088afe56c85b9cb43085",
+        "failureDomainKeys": [
+          "protocol:ripio-bridge-deposit",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "operator:celo:0xbc924f707ca021f9b220088afe56c85b9cb43085"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "This EOA can submit replay-protected BridgeDeposit destination fulfillments, but it cannot change the LimitedMinterBridge daily cap through the observed operator role.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Celo block 75967600, the EOA held BRIDGE_OPERATOR_ROLE on BridgeDeposit and could call fulfillBridgeMint for enabled peers; no administrator or adapter role was observed for it.",
+          "onchainAmountBounds": "Fulfillments pass through BridgeDeposit replay protection and the LimitedMinterBridge 4,750,000-token daily cap."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 75967600,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Celo JSON-RPC fixed reads",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "Fixed-block role enumeration at Celo block 75967600 identifies 0xbc924f707ca021f9b220088afe56c85b9cb43085 as one of two BridgeDeposit operators. The verified source gates destination fulfillment on that role, while cap administration belongs to separate principals."
+      },
+      {
+        "id": "wclp-celo-fixed-minter-eoa",
+        "label": "Ripio WCLP Celo fixed-destination minter EOA",
+        "routeRefs": [
+          "celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x9e6475c19da6c1e3eb8e9d408cefd1fb511e1d8b",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter",
+          "contract:celo:0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+          "eoa:celo:0x9e6475c19da6c1e3eb8e9d408cefd1fb511e1d8b"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "This EOA can call the fixed-destination LimitedMinter under its 28,000,000-token daily cap; it cannot change that cap or destination through the observed minter role.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "caps": "At Celo block 75967626, the LimitedMinter daily maximum was 28,000,000 WCLP and the observed EOA held only its MINTER_ROLE.",
+          "trustedPeerOrRemote": "The LimitedMinter sends all output to fixed destination 0xb6c9e6451a4b4f65249f60de4fd12da1088a2807 rather than to a caller-selected recipient."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 75967626,
+        "sources": [
+          {
             "label": "Ripio LimitedMinter source",
             "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinter.sol"
+          },
+          {
+            "label": "Celo JSON-RPC fixed reads",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "Fixed-block role enumeration at Celo block 75967626 identifies 0x9e6475c19da6c1e3eb8e9d408cefd1fb511e1d8b as a LimitedMinter caller. The row records that single-key mint trigger separately from the contract and its Safe administrator."
+      },
+      {
+        "id": "wclp-celo-bridge-admin-safe",
+        "label": "Ripio WCLP Celo bridge and token administrator Safe",
+        "routeRefs": [
+          "celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause",
+          "upgrade",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:celo:0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The 4-of-7 Ripio Safe can mint WCLP directly and administer or upgrade the token, administer both bridge contracts, and change the mutable limits and fixed destination exposed by the two minter adapters.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's administrator roles can change the LimitedMinterBridge 4,750,000-token daily cap and the LimitedMinter 28,000,000-token cap and destination.",
+          "trustedPeerOrRemote": "The Safe can reconfigure BridgeDeposit peers, operator membership, fees, and the LimitedMinterBridge pointer; it also held direct token and LimitedMinter mint roles.",
+          "pausersAdminsUpgraders": "Current role enumeration found the Safe in the WCLP token's DEFAULT_ADMIN, MINTER, PAUSER, and UPGRADER roles and in the administrator roles of LimitedMinterBridge, BridgeDeposit, and LimitedMinter."
+        },
+        "observedAt": "2026-08-28",
+        "observedBlock": 75967626,
+        "sources": [
+          {
+            "label": "Celo Ripio Safe",
+            "url": "https://celo.blockscout.com/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+          },
+          {
+            "label": "Celo JSON-RPC fixed reads",
+            "url": "https://forno.celo.org"
           },
           {
             "label": "Ripio latam-stables repository",
             "url": "https://github.com/ripio/latam-stables"
           }
         ],
-        "evidence": "At the fixed 2026-08-16 reads, LimitedMinterBridge 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 held WCLP MINTER_ROLE on the six authored native deployments and Celo. Its own MINTER_ROLE member count was zero on all seven current reads, so the live BridgeDeposit/operator is not established. The verified source nevertheless defines issuer-operated burn/mint, per-token daily limits, admin-controlled registration and limits, pause, and arbitrary-recipient minting; those capabilities remain route-scoped here and are not global native Mint Authority."
+        "evidence": "At the Celo fixed blocks reviewed on 2026-08-28, 0x2b839174fe62466067c22e2a4c8054071f9d8d68 was a 4-of-7 Safe and held the enumerated token, adapter, BridgeDeposit, and LimitedMinter roles. This exact multisig is recorded alongside the weaker direct EOA callers; it does not replace them in route-authority assessment."
       }
     ]
   }

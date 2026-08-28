@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "CASH's native issuance remains on Solana; the HyperEVM inner CASH representation and Solana OFTStore are connected through a LayerZero V2 burn/mint route. Bridge minting, peer and route-limit administration, OApp and Endpoint upgrades, HyperEVM TokenAuthority administration/upgrades, and the OFT owner are scored here rather than as canonical mint authority. The route model is verified, but current Solana OFTStore allowance/peer state and the LayerZero Endpoint ProgramData authority remain unresolved.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary FIX-10",
+    "summary": "CASH's native issuance remains on Solana; the HyperEVM inner CASH representation and Solana OFTStore are connected through a LayerZero V2 burn/mint route. Current HyperEVM RPC reads bind the OFT to the inner CASH token and the Solana OFTStore peer, while current Solana ProgramData and Squads v3 state resolve the Endpoint and Token-2022 upgrade authorities; the Endpoint upgrade control identity is only partially resolved because the application-selected LayerZero DVN/executor validation domain remains unknown. Bridge minting, peer and route-limit administration, OApp and Endpoint upgrades, HyperEVM TokenAuthority administration/upgrades, and the OFT owner are scored here rather than as canonical mint authority. Selected-route resolution remains unresolved via the separate unknown validation control, so Bridge Risk remains blocked; only the missing-bridge-route-rows gap was cleared.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -37,6 +37,10 @@
       {
         "label": "LayerZero V2 source",
         "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
+      },
+      {
+        "label": "Squads v3 PDA and multisig state source",
+        "url": "https://github.com/Squads-Protocol/squads-mpl"
       },
       {
         "label": "HyperEVM CASH OFT verified source",
@@ -91,19 +95,19 @@
       },
       {
         "id": "hyperevm:0x061af032ccf1ce35a39b556e0f442bf2dbe1ed06",
-        "sourceChain": "hyperevm",
+        "sourceChain": "solana",
         "destinationChain": "hyperevm",
         "canonicalChain": "solana",
         "contractAddress": "0x061af032ccf1ce35a39b556e0f442bf2dbe1ed06",
         "representationId": "hyperevm:0x1b64c96e52a61504d5f42dfb3b25295d0313afd6",
         "protocol": "LayerZero V2 CASH OFT and Solana OFTStore",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "The HyperEVM inner CASH proxy is the representation token: live OFT token() at block 43369980 returned 0x061af032ccf1ce35a39b556e0f442bf2dbe1ed06, whose name and symbol are CASH and whose totalSupply at block 43368230 was 80,000 units. The OFT owner, TokenAuthority administrator, proxy code, and burn/source-token relationship are verified, but current Solana OFTStore allowance, peer, pause, and route-limit state was not decoded from the finalized custom-program account; the LayerZero Endpoint ProgramData 9RJb... also returned no account state. Classification therefore remains unresolved pending those current reads.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At HyperEVM block 44338803, OFT token() returned inner CASH 0x061af032ccf1ce35a39b556e0f442bf2dbe1ed06 and peers(30168) returned bytes32 0x26c994a2...baeaec6, the exact base58 encoding of Solana OFTStore 3cQmk45EJhd1WhNU9PP14ihZ27JzKtsFwy3fwXBT7Dty. The verified MintBurnOFTAdapter source burns the source token in _debit and mints on destination credit, establishing a LayerZero-validated bridge representation. Route-limit and upgrade authorities remain explicit adverse controls below rather than reasons to leave the route classification unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "hyperevm",
         "controllerAddress": "0x242a7a7f0275c881f5014ea1d6dcc73021807709",
@@ -115,8 +119,8 @@
           "contract:hyperevm:0x1b64c96e52a61504d5f42dfb3b25295d0313afd6",
           "contract:hyperevm:0x061af032ccf1ce35a39b556e0f442bf2dbe1ed06"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 43369980,
+        "observedAt": "2026-08-28",
+        "observedBlock": 44338803,
         "sources": [
           {
             "label": "Current HyperEVM RPC reads",
@@ -158,7 +162,7 @@
         ],
         "authorityType": "contract",
         "routeChecks": {
-          "trustedPeerOrRemote": "The OFTStore is the Solana-side LayerZero route to HyperEVM OFT 0x1b64...; the current peer read remains pending.",
+          "trustedPeerOrRemote": "At HyperEVM block 44338803, OFT 0x1b64... peers(30168) returned the bytes32 encoding of Solana OFTStore 3cQm..., confirming the current HyperEVM-to-Solana trusted remote.",
           "rateLimits": "At slot 432714278 the Bridge minter allowance for OFTStore 3cQm... was 999,999,997.993 CASH; current allowance and route maximum were not decoded.",
           "caps": "Bridge applies a 20,000,000-CASH per-call limit and the OFTStore route has a separate allowance; governance can change both.",
           "pausersAdminsUpgraders": "The OFTStore participates in Bridge-program-controlled destination minting; current pause and frozen-receiver state remains pending."
@@ -297,14 +301,13 @@
       },
       {
         "id": "cash-layerzero-endpoint-validator",
-        "label": "CASH Solana LayerZero Endpoint verification domain",
+        "label": "CASH Solana LayerZero Endpoint upgrade authority",
         "routeRefs": [
           "solana:CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH",
           "hyperevm:0x061af032ccf1ce35a39b556e0f442bf2dbe1ed06"
         ],
         "capabilities": [
-          "upgrade",
-          "validator"
+          "upgrade"
         ],
         "controllerChain": "solana",
         "controllerAddress": "4QMpxbFQpupw6QzteuYnjgnfaP6BGZx4fW3PZTfBzTuY",
@@ -312,13 +315,15 @@
           "platform:solana-layerzero-endpoint",
           "solana:4QMpxbFQpupw6QzteuYnjgnfaP6BGZx4fW3PZTfBzTuY"
         ],
-        "authorityType": "unknown",
+        "authorityType": "multisig",
+        "threshold": 4,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
         "routeChecks": {
-          "attestorQuorum": "The last verified July observation identified a 4-of-5 Squads authority; current Endpoint ProgramData 9RJb... returned no account at finalized slot 439714386, so the live validator authority is unresolved.",
-          "unsupportedReason": "Do not treat the stale 4-of-5 authority as current until the Endpoint ProgramData account and live authority are found."
+          "pausersAdminsUpgraders": "At finalized slot 442196974, Endpoint ProgramData 9RJb... named 4QM... as its upgrade authority; Squads v3 PDA derivation binds 4QM... to multisig Dazb..., whose current state reports a 4-of-5 threshold and no program-enforced execution delay. This control records Endpoint program-upgrade authority only; it does not identify or administer the application-selected DVN/executor validation configuration."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 439714386,
+        "observedAt": "2026-08-28",
+        "observedBlock": 442196974,
         "sources": [
           {
             "label": "Current Solana finalized RPC ProgramData reads",
@@ -327,9 +332,50 @@
           {
             "label": "LayerZero V2 source",
             "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
+          },
+          {
+            "label": "Squads v3 PDA and multisig state source",
+            "url": "https://github.com/Squads-Protocol/squads-mpl"
           }
         ],
-        "evidence": "The July fixed-block review found LayerZero Endpoint program 76y... using ProgramData 9RJb... with a 4-of-5 Squads authority 4QM... and no timelock. At the current finalized read, that ProgramData account had no state, so the live validator/upgrade controller is unresolved; the adverse Endpoint verification-domain dependency remains recorded."
+        "evidence": "At finalized Solana slot 442196974 on 2026-08-28, LayerZero Endpoint ProgramData 9RJbAS28AVA4WamkGMHBA3eymx4AsoPWAbJkN28CqJCz existed and named 4QMpxbFQpupw6QzteuYnjgnfaP6BGZx4fW3PZTfBzTuY as its current upgrade authority. The official Squads v3 PDA seeds derive 4QM... as authority index 1 of multisig DazbcrVYizBrecec7vHJnSrhinc6y3nMWtkPj76hudui; that current Squads account reports threshold 4, five members, and no program-enforced delay. This control resolves the Endpoint program-upgrade path only; the application-selected DVN/executor roster and message-validation quorum remain unresolved in the separate validation-domain control."
+      },
+      {
+        "id": "cash-layerzero-v2-validation-domain",
+        "label": "CASH Solana-HyperEVM LayerZero V2 DVN/executor validation domain",
+        "routeRefs": [
+          "solana:CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH",
+          "hyperevm:0x061af032ccf1ce35a39b556e0f442bf2dbe1ed06"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "platform:solana-layerzero-endpoint"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "LayerZero V2 Endpoint/DVN/executor validation is an external route failure domain. The exact per-OApp DVN and executor configuration, validator membership, quorum, and emergency override roster were not read; no threshold or custody claim is made.",
+          "trustedPeerOrRemote": "The current HyperEVM OFT read identifies EID 30168 and its bytes32 peer for Solana OFTStore 3cQm..., so the delivery-contract link is known; that peer record does not identify the application-selected validator domain.",
+          "unsupportedReason": "The known Endpoint upgrade authority and delivery-contract peer do not identify the current CASH-specific DVN/executor roster, quorum, or validator controller."
+        },
+        "observedAt": "2026-08-28",
+        "sources": [
+          {
+            "label": "Current Solana finalized RPC ProgramData reads",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "LayerZero V2 source",
+            "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
+          },
+          {
+            "label": "Current HyperEVM RPC reads",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "The reviewed Solana ProgramData and Squads v3 reads resolve the 4-of-5 Endpoint upgrade multisig, and the reviewed HyperEVM OFT read resolves the EID 30168 peer to the Solana OFTStore; these are known upgrade and delivery-contract facts. The 2026-08-28 review did not resolve the application-selected CASH-specific DVN/executor roster, validator membership, quorum, emergency override roster, or controlling authority. The Endpoint upgrade multisig and OFTStore peer therefore cannot be treated as the validation-domain identity, and this separate control remains unknown."
       },
       {
         "id": "cash-solana-bridge-upgrade-common-mode",
@@ -342,15 +388,15 @@
           "upgrade"
         ],
         "controllerChain": "solana",
-        "controllerAddress": "6HZHZvHVArmDFbQmG1hGE1BLxyHRvgiYrkAFYBWSRYn",
+        "controllerAddress": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
         "failureDomainKeys": [
-          "solana:6HZHZvHVArmDFbQmG1hGE1BLxyHRvgiYrkAFYBWSRYn",
+          "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
           "program:solana:bridge"
         ],
         "authorityType": "eoa",
         "timelockDelaySec": 0,
-        "observedAt": "2026-08-16",
-        "observedBlock": 439714386,
+        "observedAt": "2026-08-28",
+        "observedBlock": 442198055,
         "sources": [
           {
             "label": "Current Solana finalized RPC ProgramData reads",
@@ -361,7 +407,7 @@
             "url": "https://explorer.solana.com/address/BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm"
           }
         ],
-        "evidence": "At finalized slots 439714386–439714402, Bridge ProgramData H79W... named 6HZ... as its current no-delay upgrade authority. This common-mode upgrade can replace both native mint checks and the Solana-side bridge mint path, so it is referenced here for the bridge capability while remaining separately authored in Mint Authority for canonical issuance."
+        "evidence": "At finalized Solana slot 442198055 on 2026-08-28, Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu named 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q as its current no-delay upgrade authority. The former 6HZHZvHV... value was an invalid byte-12 decode that included the bincode Option tag; the authority public key begins at byte 13. This common-mode upgrade can replace both native mint checks and the Solana-side bridge mint path, so it is referenced here for the bridge capability while remaining separately authored in Mint Authority for canonical issuance."
       },
       {
         "id": "cash-token-2022-bridge-upgrade",
@@ -374,13 +420,16 @@
           "upgrade"
         ],
         "controllerChain": "solana",
-        "controllerAddress": "768jbfNJ5QZrrxY6ive4BkZttPtUtCnez1nRzZaj1Ru",
+        "controllerAddress": "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz",
         "failureDomainKeys": [
           "platform:solana-token-2022-program"
         ],
-        "authorityType": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439714386,
+        "authorityType": "multisig",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "observedAt": "2026-08-28",
+        "observedBlock": 442197014,
         "sources": [
           {
             "label": "Current Solana finalized RPC ProgramData reads",
@@ -389,9 +438,13 @@
           {
             "label": "Token-2022 source",
             "url": "https://github.com/solana-program/token-2022"
+          },
+          {
+            "label": "Squads v3 PDA and multisig state source",
+            "url": "https://github.com/Squads-Protocol/squads-mpl"
           }
         ],
-        "evidence": "At finalized slots 439714386–439714402, Token-2022 ProgramData DoU57... named 768j... as its current upgrade authority. The shared program can affect both the canonical Token-2022 mint and the bridge representation; current custody, signer threshold, and execution delay remain unresolved."
+        "evidence": "At finalized Solana slots 442196974–442197014 on 2026-08-28, Token-2022 ProgramData DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY named AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz as its current upgrade authority. The official Squads v3 PDA seeds derive AeLm... as authority index 1 of multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ; that current account reports threshold 4, six members, and no program-enforced delay. This shared-program multisig can affect both the canonical Token-2022 mint and the bridge representation."
       },
       {
         "id": "cash-hyperevm-tokenauthority-admin",
@@ -494,12 +547,12 @@
         ],
         "authorityType": "eoa",
         "routeChecks": {
-          "trustedPeerOrRemote": "At HyperEVM block 43369980, OFT owner() returned 0x242a...; the OFT source's trusted Solana OFTStore peer was verified at the fixed review, but current peer state is pending.",
+          "trustedPeerOrRemote": "At HyperEVM block 44338803, OFT owner() returned 0x242a... and peers(30168) returned the bytes32 encoding of Solana OFTStore 3cQm....",
           "rateLimits": "The OFT owner can change destination limits; current destination limit state is not yet decoded.",
           "caps": "_debit transfers real inner CASH to the OFT and burns it; the route owner cannot manufacture source supply by itself."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 43369980,
+        "observedAt": "2026-08-28",
+        "observedBlock": 44338803,
         "sources": [
           {
             "label": "Current HyperEVM RPC reads",
@@ -510,7 +563,7 @@
             "url": "https://hyperevmscan.io/address/0x1b64c96e52a61504d5f42dfb3b25295d0313afd6#code"
           }
         ],
-        "evidence": "At HyperEVM block 43369980, OFT 0x1b64... owner() returned 0x242a... and token() returned inner CASH 0x061A.... The OFT owner can change peers, TokenAuthority, and destination limits; _debit transfers real inner CASH before burning, so this is bridge-route administration and burn capability rather than independent native minting."
+        "evidence": "At HyperEVM block 44338803 on 2026-08-28, OFT 0x1b64... owner() returned 0x242a..., token() returned inner CASH 0x061A..., and peers(30168) returned 0x26c994a2...baeaec6, the exact bytes32 encoding of Solana OFTStore 3cQm.... The OFT owner can change peers, TokenAuthority, and destination limits; the verified MintBurnOFTAdapter _debit path burns source CASH, so this is bridge-route administration and burn capability rather than independent native minting."
       }
     ]
   }

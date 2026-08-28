@@ -22,8 +22,8 @@
     "attestorTier": "self",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-07-22",
-      "publishedAt": "2026-07-22",
+      "periodEnd": "2026-08-27",
+      "publishedAt": "2026-08-27",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
@@ -31,15 +31,15 @@
       "confidence": "probable",
       "sources": [
         {
-          "label": "Goldfish collateral model and designated wallet (accessed 2026-07-22)",
+          "label": "Goldfish collateral model and designated wallet (accessed 2026-08-27)",
           "url": "https://goldfishgold.com/collateral"
         },
         {
-          "label": "ION.au collateral-wallet balance at Ethereum block 25590329 (2026-07-22)",
+          "label": "ION.au collateral-wallet balance at Ethereum block 25849423 (2026-08-27)",
           "url": "https://etherscan.io/token/0xd051c326c9aef673428e6f01eb65d2c52de95d30?a=0x2F371Ba19F89874689a91bA322194F9967Cb640D"
         },
         {
-          "label": "GGBR total supply at Ethereum block 25590329 (2026-07-22)",
+          "label": "GGBR total supply at Ethereum block 25849423 (2026-08-27)",
           "url": "https://etherscan.io/token/0x7e2ac793f3E692f388e66c7DC28F739d13B0B71A"
         }
       ]

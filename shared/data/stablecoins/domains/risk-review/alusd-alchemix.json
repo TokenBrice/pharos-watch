@@ -74,8 +74,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "alUSD has independent native AlchemistV2 CDP issuance on Ethereum, Arbitrum, Optimism, and Fantom. Metis is a bridge-only CrossChainCanonical representation. LayerZero/xERC20 mint, burn, lockbox, rate-limit, and bridge-upgrade capabilities remain scoped under Bridge Risk, including the unresolved Fantom Multichain-era EOA evidence.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; FIX2-18 alusd-alchemix migration",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "verified",
     "protocols": [
       {
@@ -289,7 +289,7 @@
           "protocol:layerzero-v2",
           "contract:arbitrum:0xd64ab29cc101e421ee3f4b0eaa721925395ddc05"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "LayerZero/xERC20 bridge rail mints the Arbitrum representation against the lockbox-backed route.",
           "rateLimits": "xBridges() showed 1,000,000 alUSD for the LayerZero OApp, plus legacy 500,000 and 100,000 alUSD bridge caps on 2026-07-20.",
@@ -297,7 +297,8 @@
         },
         "capDescription": "Bridge mint and burn capacity is governed by active xBridges() entries and does not replace the native Arbitrum AlchemistV2 CDP path.",
         "canRaiseCap": false,
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-28",
+        "observedBlock": 499058216,
         "sources": [
           {
             "label": "Arbitrum xalUSD bridge route evidence",
@@ -306,9 +307,13 @@
           {
             "label": "Alchemix on L2 docs",
             "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
           }
         ],
-        "evidence": "On 2026-07-20, Arbitrum xalUSD xBridges() showed LayerZero OApp 0xd64ab29cc101e421ee3f4b0eaa721925395ddc05 with a 1M cap and legacy bridge entries 0xee9dec2712cce65174b561151701bf54b99c24c8 and 0x19bede3d7addf500ec6777384dd48a5715836c85 with 500k and 100k caps."
+        "evidence": "On 2026-07-20, Arbitrum xalUSD xBridges() showed LayerZero OApp 0xd64ab29cc101e421ee3f4b0eaa721925395ddc05 with a 1M cap and legacy bridge entries 0xee9dec2712cce65174b561151701bf54b99c24c8 and 0x19bede3d7addf500ec6777384dd48a5715836c85 with 500k and 100k caps. At Arbitrum block 499058216 on 2026-08-28, eth_getCode returned 11,213 bytes for the OApp and owner() returned the separately reviewed 3-of-7 Safe 0x7e108711771dfdb10743f016d46d75a9379ca043, resolving this control's authority type as contract rather than the generic bridge placeholder."
       },
       {
         "id": "alusd-arbitrum-bridge-owner-safe",
@@ -371,7 +376,7 @@
           "protocol:layerzero-v2",
           "contract:optimism:0xd64ab29cc101e421ee3f4b0eaa721925395ddc05"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "LayerZero/xERC20 bridge rail mints the Optimism representation against the lockbox-backed route.",
           "rateLimits": "xBridges() showed a 1,000,000 alUSD mint/burn cap for the LayerZero OApp on 2026-07-20.",
@@ -379,7 +384,8 @@
         },
         "capDescription": "Bridge mint and burn capacity is governed by the active xBridges() entry and does not replace the native Optimism AlchemistV2 CDP path.",
         "canRaiseCap": false,
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-28",
+        "observedBlock": 156135144,
         "sources": [
           {
             "label": "Optimism xalUSD bridge route evidence",
@@ -388,9 +394,13 @@
           {
             "label": "Alchemix on L2 docs",
             "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+          },
+          {
+            "label": "Optimism PublicNode RPC",
+            "url": "https://optimism-rpc.publicnode.com"
           }
         ],
-        "evidence": "On 2026-07-20, Optimism xalUSD xBridges() showed exactly one whitelisted minter, LayerZero OApp 0xd64ab29cc101e421ee3f4b0eaa721925395ddc05, with a 1M mint/burn cap."
+        "evidence": "On 2026-07-20, Optimism xalUSD xBridges() showed exactly one whitelisted minter, LayerZero OApp 0xd64ab29cc101e421ee3f4b0eaa721925395ddc05, with a 1M mint/burn cap. At Optimism block 156135144 on 2026-08-28, eth_getCode returned 11,213 bytes for the OApp and owner() returned the separately reviewed 3-of-7 Safe 0xc224bf25dcc99236f00843c7d8c4194abe8aa94a, resolving this control's authority type as contract rather than the generic bridge placeholder."
       },
       {
         "id": "alusd-optimism-bridge-owner-safe",
@@ -530,7 +540,7 @@
           "protocol:layerzero-v2",
           "contract:metis:0x1d60ec09d68147e511b490ff07c794b3f9ded5a9"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "Metis is a CrossChainCanonical representation minted against the bridge lockbox route.",
           "rateLimits": "xBridges() showed a 5,000 alUSD LayerZero OApp cap and a 500,000 alUSD legacy bridge cap on 2026-07-20.",
@@ -538,7 +548,8 @@
         },
         "capDescription": "Metis bridge mint/burn capacity is governed by active xBridges() entries; Metis has no native AlchemistV2 issuance row.",
         "canRaiseCap": false,
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-28",
+        "observedBlock": 23080050,
         "sources": [
           {
             "label": "Metis xalUSD bridge route evidence",
@@ -547,9 +558,13 @@
           {
             "label": "Alchemix CrossChainCanonicalAlchemicTokenV2 source",
             "url": "https://github.com/alchemix-finance/v2-foundry/blob/02dbb39d44385621ece8a3ae13e76b2f07facf72/src/CrossChainCanonicalAlchemicTokenV2.sol"
+          },
+          {
+            "label": "Metis Andromeda RPC",
+            "url": "https://andromeda.metis.io/?owner=1088"
           }
         ],
-        "evidence": "On 2026-07-20, Metis xBridges() showed LayerZero OApp 0x1d60ec09d68147e511b490ff07c794b3f9ded5a9 with a 5k cap and legacy bridge 0x6b142227a277ce62808e0df93202483547ec0188 with a 500k cap. Metis remains representation-only and is excluded from Mint Authority."
+        "evidence": "On 2026-07-20, Metis xBridges() showed LayerZero OApp 0x1d60ec09d68147e511b490ff07c794b3f9ded5a9 with a 5k cap and legacy bridge 0x6b142227a277ce62808e0df93202483547ec0188 with a 500k cap. Metis remains representation-only and is excluded from Mint Authority. At Metis block 23080050 on 2026-08-28, eth_getCode returned 11,213 bytes for the OApp and owner() returned the separately reviewed 2-of-8 Safe 0x0f5c3a8b62ff7639895bb9737c5befb711c4f7f4, resolving this control's authority type as contract rather than the generic bridge placeholder."
       },
       {
         "id": "alusd-metis-bridge-owner-safe",
@@ -592,6 +607,35 @@
           }
         ],
         "evidence": "The Metis LayerZero OApp owner was observed as Safe 0x0f5c3a8b62ff7639895bb9737c5befb711c4f7f4, described in the reviewed evidence as a 2-of-8 Safe. Its bridge administration remains adverse Bridge Risk evidence while Metis stays representation-only."
+      },
+      {
+        "id": "alusd-layerzero-dvn-validation",
+        "label": "alUSD LayerZero DVN/ULN validator authority",
+        "routeRefs": [
+          "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+          "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+          "metis:0x303241e2b3b4aed0bb0f8623e7442368fed8faf3"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "The exact per-OApp send and receive ULN libraries, required and optional DVNs, confirmation thresholds, executor settings, and validator operating authorities were not independently read for the reviewed alUSD routes.",
+          "trustedPeerOrRemote": "The exact alUSD OApp contracts and owner Safes are recorded in separate route controls. Those delivery and application-admin identities do not establish the independent LayerZero validator authority."
+        },
+        "observedAt": "2026-08-28",
+        "sources": [
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "Current code and owner reads resolve the exact alUSD OApp delivery contracts separately. The reviewed evidence does not resolve the weakest external DVN/ULN validator authority for these routes, so this control remains unknown rather than inheriting the OApp contract identity."
       }
     ]
   }

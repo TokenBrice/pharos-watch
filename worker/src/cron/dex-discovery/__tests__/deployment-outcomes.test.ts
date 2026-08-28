@@ -12,6 +12,16 @@ const DEPLOYMENT = {
   address: "0x0000000000000000000000000000000000000001",
   decimals: 6,
 };
+const STELLAR_CLASSIC_DEPLOYMENT = {
+  chain: "stellar",
+  address: "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
+  decimals: 7,
+};
+const STELLAR_SOROBAN_DEPLOYMENT = {
+  chain: "stellar",
+  address: "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A",
+  decimals: 5,
+};
 
 function poolFor(address: string): StagedPool {
   return {
@@ -97,12 +107,30 @@ describe("DEX deployment outcomes", () => {
 
     const inaccessible = classifyDexDeploymentOutcomes({
       stablecoinId: "test",
-      deployments: [{ ...DEPLOYMENT, chain: "stellar" }],
+      deployments: [STELLAR_CLASSIC_DEPLOYMENT],
       pools: [],
       providerChecks: [],
       nowSec: 100,
     });
     expect(inaccessible[0]).toMatchObject({ outcome: "provider_inaccessible", providers: ["horizon"] });
+  });
+
+  it("classifies Soroban identities as unsupported method rather than Horizon outage", () => {
+    expect(
+      classifyDexDeploymentOutcomes({
+        stablecoinId: "test",
+        deployments: [STELLAR_SOROBAN_DEPLOYMENT],
+        pools: [],
+        providerChecks: [],
+        nowSec: 100,
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        outcome: "provider_inaccessible",
+        providers: [],
+        reason: "No registered token-pool provider supports this chain",
+      }),
+    ]);
   });
 
   it("does not persist retryable provider misses as a hard outage", () => {
@@ -137,7 +165,15 @@ describe("DEX deployment outcomes", () => {
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
     expect(outcomes).toHaveLength(50);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(30);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(38);
+    expect(outcomes).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "eurspkcc-spiko",
+        chain: "stellar",
+        address: STELLAR_SOROBAN_DEPLOYMENT.address,
+        providers: [],
+      }),
+    );
   });
 
   it("materializes an inaccessible outcome when a bounded crawl fails", () => {

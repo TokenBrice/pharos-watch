@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "STRC (Strategy preferred equity, BTC-linked)",
-      "pct": 61.2,
+      "pct": 59.8,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Strategy, Inc.",
@@ -16,8 +16,22 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "name": "Inventory",
+      "pct": 15.5,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
+      "riskFactors": [
+        "market",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
       "name": "Protocol Owned Liquidity",
-      "pct": 15.8,
+      "pct": 15.4,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
@@ -30,22 +44,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Inventory",
-      "pct": 13,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
-      "riskFactors": [
-        "market",
-        "custody",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-      "pct": 10,
+      "pct": 9.3,
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "USDC issuer and United States Treasury; split undisclosed",
@@ -58,8 +58,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research (apxusd-apyx)",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex Apyx Accountable live reserve review",
     "confidence": "verified",
     "sources": [
       {
@@ -79,38 +79,38 @@
         "url": "https://docs.apyx.fi/collateral-and-custody/transparency"
       }
     ],
-    "rationale": "Write-time re-open of the Accountable dashboard API on 2026-07-27T22:45:43.737Z (payload ts 1785192343737) reports reserves_split USD values STRC 189087988.65, Protocol Owned Liquidity 48810415.17, Inventory 39967447.71, Cash & Equivalents 30725438.26, and Other 8820.91 against total_reserves 308600110.7. Normalized with the live accountable adapter's one-decimal largest-slice remainder rule (Other rounds out at 0.003%), the mix is 61.2% STRC, 15.8% Protocol Owned Liquidity, 13.0% Inventory, and 10.0% Cash & Equivalents. The same payload reports collateralization 0.922477 (~7.75% deficit vs total_supply 327073514.82); the normalized composition is a mix of disclosed reserves only and must not be read as 100% liability coverage. Re-opened Apyx STRC docs still identify STRC as Strategy, Inc. perpetual preferred equity (Nasdaq STRC); transparency docs still designate the Accountable dashboard as the near-real-time reserve surface. Protocol Owned Liquidity and Inventory remain undisclosed baskets under the Apyx protocol failure domain; Cash & Equivalents still combines USDC and U.S. T-Bills without a split.",
-    "compositionBasis": "Timestamped Accountable reserves_split snapshot",
-    "compositionAsOf": "2026-07-27",
+    "rationale": "Refresh 2026-08-28: the headered Accountable dashboard API snapshot at 2026-08-27T22:00:04.418Z (payload ts 1787868004418) reports reserves_split USD values STRC 185788309.66, Inventory 48129916.91, Protocol Owned Liquidity 47941097.57, Cash & Equivalents 28831033.88, and Other 6320.88 against total_reserves 310696678.89. The current live accountable adapter normalizes those positive values to 59.8% STRC, 15.5% Inventory, 15.4% Protocol Owned Liquidity, and 9.3% Cash & Equivalents; Other is 0.002% and rounds out below the adapter's one-decimal output. The payload reports collateralization 0.993626 on the net-of-protocol-owned denominator (gross reserves/supply is 99.56% against total_supply 312073514.82), so the normalized composition remains a mix of disclosed reserves only and is not 100% liability coverage. STRC remains Strategy, Inc. perpetual preferred equity; Protocol Owned Liquidity and Inventory remain undisclosed Apyx-protocol baskets, while Cash & Equivalents still combines USDC and U.S. Treasury bills without a split.",
+    "compositionBasis": "Timestamped Accountable reserves_split snapshot normalized by the current accountable live-reserve adapter",
+    "compositionAsOf": "2026-08-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "USDC cannot be isolated from Treasury backing in Cash & Equivalents, while the source-native Protocol Owned Liquidity and Inventory buckets do not disclose their constituent assets.",
-    "knownUnknownExposurePct": 38.8,
+    "knownUnknownExposure": "USDC cannot be isolated from Treasury backing in Cash & Equivalents, while the source-native Protocol Owned Liquidity and Inventory buckets do not disclose their constituent assets. The source's opaque Other bucket is 0.002% and is below the live adapter's one-decimal emitted-slice threshold.",
+    "knownUnknownExposurePct": 40.2,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "STRC (Strategy preferred equity, BTC-linked)",
-        "pct": 61.2,
+        "pct": 59.8,
         "disposition": "untracked-exogenous-asset",
         "rationale": "STRC is preferred equity issued by Strategy rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "Protocol Owned Liquidity",
-        "pct": 15.8,
+        "reserveName": "Inventory",
+        "pct": 15.5,
         "disposition": "insufficient-evidence",
         "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
       },
       {
         "reserveIndex": 2,
-        "reserveName": "Inventory",
-        "pct": 13,
+        "reserveName": "Protocol Owned Liquidity",
+        "pct": 15.4,
         "disposition": "insufficient-evidence",
         "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-        "pct": 10,
+        "pct": 9.3,
         "disposition": "basket-needs-split",
         "rationale": "The source reports one combined cash-and-Treasury category.",
         "candidateCoinIds": [
@@ -134,8 +134,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex Apyx custody refresh",
     "confidence": "manual-review",
     "sources": [
       {
@@ -151,6 +151,6 @@
         "url": "https://accountable.apyx.fi/"
       }
     ],
-    "uncertainty": "Apyx states it works with custodians monthly to obtain attestations that backing assets exist and remain under custody control (Wolf & Company opinions published for March-June 2026 on the third-party attestation index), but the custodian identities, account segregation terms, bankruptcy-remoteness structure, and rehypothecation permissions are not disclosed in the reviewed documentation. The Protocol Owned Liquidity and Inventory buckets (28.8% of the 2026-07-27 reserves_split) are protocol-controlled with no stated custody arrangement."
+    "uncertainty": "Apyx states it works with custodians monthly to obtain attestations that backing assets exist and remain under custody control (Wolf & Company opinions published for March-June 2026 on the third-party attestation index), but the custodian identities, account segregation terms, bankruptcy-remoteness structure, and rehypothecation permissions are not disclosed in the reviewed documentation. The refreshed 2026-08-27 reserves_split places the protocol-controlled Inventory (15.5%) and Protocol Owned Liquidity (15.4%) buckets at 30.9% combined, with no stated custody arrangement."
   }
 }

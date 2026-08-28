@@ -1920,9 +1920,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "River's chain-local SatoshiXApp/CDP paths create native satUSD liabilities and remain in Mint Authority. Bridge Risk separately scores the issuer-deployed DebtTokenWithLz LayerZero OFT burn/mint routes, including owner-gated upgrades, peer/delegate/configuration authority, endpoint and messaging dependencies, and DVN/executor common-mode risk; the resulting route tier remains external-lock-mint.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Codex mint-bridge-boundary migration 2026-08-16",
+    "summary": "River's chain-local SatoshiXApp/CDP paths create native satUSD liabilities and remain in Mint Authority. Bridge Risk separately scores the issuer-deployed DebtTokenWithLz LayerZero OFT burn/mint routes, including owner-gated upgrades, peer/delegate/configuration authority, endpoint and messaging dependencies, and DVN/executor common-mode risk. This 2026-08-28 CTRL/BRDG review is source-enriched but remains blocked on unresolved current peers, route limits, LayerZero DVN/executor configuration, and the BEVM endpoint/implementation; it is not a cleared validation review. River's bridge documentation confirms the OFT burn/mint model, while the verified owner-gated UUPS implementations on the non-BEVM routes leave bridge-mint limits raiseable; the resulting route tier remains external-lock-mint.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex Safety Score V9 BRDG curation; Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Codex mint-bridge-boundary migration 2026-08-16",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -2394,6 +2394,7 @@
           "pausersAdminsUpgraders": "At Ethereum block 25771252, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
         },
         "capDescription": "The River owner administers the Ethereum DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 25771252,
         "sources": [
@@ -2441,6 +2442,7 @@
           "pausersAdminsUpgraders": "At Arbitrum block 495310633, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
         },
         "capDescription": "The River owner administers the Arbitrum DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 495310633,
         "sources": [
@@ -2488,6 +2490,7 @@
           "pausersAdminsUpgraders": "At Base block 50068609, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
         },
         "capDescription": "The River owner administers the Base DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 50068609,
         "sources": [
@@ -2535,6 +2538,7 @@
           "pausersAdminsUpgraders": "At BSC block 116368532, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
         },
         "capDescription": "The River owner administers the BSC DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 116368532,
         "sources": [
@@ -2582,6 +2586,7 @@
           "pausersAdminsUpgraders": "At Sonic block 77635658, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
         },
         "capDescription": "The River owner administers the Sonic DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 77635658,
         "sources": [
@@ -2629,6 +2634,7 @@
           "pausersAdminsUpgraders": "At BOB block 37032292, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
         },
         "capDescription": "The River owner administers the BOB DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 37032292,
         "sources": [
@@ -2676,6 +2682,7 @@
           "pausersAdminsUpgraders": "At Bitlayer block 24883067, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
         },
         "capDescription": "The River owner administers the Bitlayer DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 24883067,
         "sources": [
@@ -2723,6 +2730,7 @@
           "pausersAdminsUpgraders": "At Hemi block 5088321, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
         },
         "capDescription": "The River owner administers the Hemi DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 5088321,
         "sources": [
@@ -2750,9 +2758,7 @@
         "capabilities": [
           "bridge-mint",
           "bridge-burn",
-          "upgrade",
-          "admin",
-          "peer-config"
+          "admin"
         ],
         "controllerChain": "bevm",
         "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
@@ -2768,7 +2774,8 @@
           "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; current aggregate, per-lane, and endpoint-side limits were not enumerated because the BEVM RPC endpoint was unavailable.",
           "pausersAdminsUpgraders": "The reviewed route inventory identified owner-gated UUPS upgrade, setDelegate(), and LayerZero configuration paths. Current owner, endpoint address, delegate, and DVN/executor configuration remain unresolved because the BEVM RPC endpoint did not return state in the 2026-08-16 pass."
         },
-        "capDescription": "The River owner is the reviewed controller for the BEVM DebtTokenWithLz OFT representation, including bridge burn/mint and the owner-gated upgrade and peer/delegate paths. Current BEVM endpoint and LayerZero configuration are unresolved; local SatoshiXApp/CDP issuance remains separately authored in Mint Authority.",
+        "capDescription": "The reviewed River owner identity remains the BEVM route's administrative controller, and the route's burn/mint delivery semantics remain covered. Because the BEVM endpoint and implementation are unresolved, this control claims no upgrade or peer-configuration capability; local SatoshiXApp/CDP issuance remains separately authored in Mint Authority.",
+        "canRaiseCap": "unknown",
         "observedAt": "2026-07-20",
         "sources": [
           {
@@ -2784,7 +2791,7 @@
             "url": "https://docs.river.inc/products/editor/bridge"
           }
         ],
-        "evidence": "The reviewed fixed-block route inventory identifies the BEVM DebtTokenWithLz OFT path and River owner controller. Current BEVM endpoint, implementation, peer, delegate, and DVN/executor reads were not available in the 2026-08-16 pass, so those facts remain explicit evidence gaps rather than inferred values."
+        "evidence": "The reviewed fixed-block route inventory identifies the BEVM DebtTokenWithLz OFT path and recorded River owner controller. Current BEVM endpoint, implementation, peer, delegate, and DVN/executor reads were not available in the 2026-08-16 pass, so this owner control retains only the route's documented burn/mint semantics and administrative identity; unresolved implementation paths are not claimed."
       },
       {
         "id": "satusd-xlayer-oft-owner",
@@ -2815,6 +2822,7 @@
           "pausersAdminsUpgraders": "At X Layer block 68157538, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
         },
         "capDescription": "The River owner administers the X Layer DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 68157538,
         "sources": [
@@ -2832,6 +2840,54 @@
           }
         ],
         "evidence": "At X Layer block 68157538, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      },
+      {
+        "id": "satusd-layerzero-v2-validation-domain",
+        "label": "satUSD LayerZero V2 endpoint, DVN, and executor validation domain",
+        "routeRefs": [
+          "ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+          "arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
+          "bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
+          "bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783",
+          "hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
+          "xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "endpoint:layerzero-v2:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "LayerZero V2 endpoint/DVN/executor validation is an external route failure domain. The exact per-OApp DVN and executor configuration, validator membership, quorum, and emergency override roster were not read; no threshold or custody claim is made.",
+          "trustedPeerOrRemote": "The reviewed route rows identify the satUSD DebtTokenWithLz delivery contracts and known LayerZero V2 endpoint addresses on Ethereum, Arbitrum, Base, BSC, Sonic, BOB, Bitlayer, Hemi, and X Layer. Current satUSD peer mappings were not re-read; the BEVM route's endpoint, implementation, and peer state remain unresolved because its RPC endpoint did not return state.",
+          "rateLimits": "LayerZero messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated for the selected routes, and no numeric limit or cap claim is made.",
+          "unsupportedReason": "Delivery-contract addresses, River's OFT documentation, and the recorded owner EOA identify the route machinery but do not identify the current peer, DVN/executor roster, validator authority, or BEVM endpoint/implementation. A protocol label or delivery contract cannot stand in for a validator identity."
+        },
+        "observedAt": "2026-08-28",
+        "sources": [
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          },
+          {
+            "label": "L2BEAT LayerZero",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "The reviewed route rows and River bridge documentation establish the issuer-deployed DebtTokenWithLz delivery contracts and OFT burn/mint semantics for the ten selected LayerZero routes, while the owner controls separately preserve only source-proven route administration. The 2026-08-28 review found no primary source in the record that resolves current satUSD peers, aggregate or per-lane rate limits, per-OApp DVN/executor configuration, validator authority, or the BEVM endpoint/implementation. Delivery contracts, protocol labels, and the recorded owner EOA therefore do not resolve the independent validation domain; this control remains unknown and keeps the CTRL/BRDG review source-enriched but blocked rather than cleared."
       }
     ]
 

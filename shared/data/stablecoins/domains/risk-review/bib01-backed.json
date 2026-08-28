@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "bIB01 remains independently issuer-native and mintable on all seven authored token deployments; those native issuance rows stay canonical and outside Bridge Risk's bridge-control inventory. A separate six-chain BackedCCIPReceiver rail uses custody lock/release and Chainlink CCIP messaging against the native token addresses, with receiver owners, proxy upgrades, shared custody, router configuration, allowlists, and external message validation scored here. The receiver source contains no bIB01 mint or burn path, and BSC has no current receiver deployment.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration; bib01-backed verified finding",
+    "summary": "bIB01 remains independently issuer-native and mintable on all seven authored token deployments; those native issuance rows stay canonical and outside Bridge Risk's bridge-control inventory. A separate six-chain BackedCCIPReceiver rail uses custody lock/release and Chainlink CCIP messaging against the native token addresses, with receiver owners, proxy upgrades, shared custody, router configuration, allowlists, and known router delivery contracts scored here. The CCIP DON/RMN/OCR validation domain is modeled separately because the reviewed record does not enumerate its validator roster, quorum, or controller. The shared custody address is a verified EOA, and each configured CCIP router is retained as a delivery contract rather than a validation authority; the delivery evidence is source-enriched, but the unresolved validation domain keeps this review blocked rather than cleared. The receiver source contains no bIB01 mint or burn path, and BSC has no current receiver deployment.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex mint-bridge-boundary migration; bib01-backed verified finding; BRDG authority-model review 2026-08-28",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -426,7 +426,7 @@
           "contract:gnosis:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
           "contract:avalanche:0xbccb121bcc240def73c111211f18c23b81ff8b2e"
         ],
-        "authorityType": "custodian",
+        "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "lockboxOrEscrow": "custodyWallet() returned the same EOA 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad on all six receiver routes. The verified source transfers source bIB01 into this wallet and transfers the equivalent native token out on the destination receive path.",
@@ -453,274 +453,105 @@
         "evidence": "At Ethereum block 25771145, Base 50068162, Polygon 92147098, Arbitrum 495307116, Gnosis 47762958, and Avalanche 92985493, custodyWallet() returned the same 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad and the address had zero bytecode on every chain. This common EOA is retained as a shared custody failure domain; no bIB01 mint or burn is attributed to it."
       },
       {
-        "id": "bib01-ethereum-ccip-router-validation",
-        "label": "BackedCCIPReceiver Ethereum Chainlink CCIP router and validation",
+        "id": "bib01-ccip-validation-domain",
+        "label": "bIB01 Chainlink CCIP DON/RMN/OCR validation domain",
         "routeRefs": [
-          "ethereum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
-        ],
-        "capabilities": [
-          "validator"
-        ],
-        "controllerChain": "ethereum",
-        "controllerAddress": "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-        "failureDomainKeys": [
-          "protocol:chainlink-ccip",
-          "ccip-router:ethereum:0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-          "contract:ethereum:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
-          "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
-        ],
-        "authorityType": "bridge",
-        "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "trustedPeerOrRemote": "getRouter() returned 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d at Ethereum block 25771145; source/destination allowlist values were not fully enumerated.",
-          "attestorQuorum": "The custody route depends on Chainlink CCIP external message validation, including router/off-ramp and RMN security domains; the current validator/DVN/OCR configuration was not fully re-enumerated.",
-          "signingModel": "CCIP's external validation system is a route-level dependency. No bIB01-specific validator quorum or emergency configuration is claimed.",
-          "rateLimits": "CCIP route and receiver message limits were not fully enumerated at the observation block."
-        },
-        "capDescription": "The configured Chainlink router and external message-validation system govern the Ethereum custody transfer rail; the verified receiver source contains no bIB01 mint or burn.",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771145,
-        "sources": [
-          {
-            "label": "Ethereum BackedCCIPReceiver proxy",
-            "url": "https://eth.blockscout.com/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e?tab=contract"
-          },
-          {
-            "label": "Chainlink CCIP documentation",
-            "url": "https://docs.chain.link/ccip"
-          },
-          {
-            "label": "Ethereum JSON-RPC current reads",
-            "url": "https://ethereum-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At Ethereum block 25771145 on 2026-08-16, getRouter() returned 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned the shared custody EOA. The router and external validation path remain bridge controls; the receiver source has no bIB01 mint/burn function."
-      },
-      {
-        "id": "bib01-base-ccip-router-validation",
-        "label": "BackedCCIPReceiver Base Chainlink CCIP router and validation",
-        "routeRefs": [
-          "base:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
-        ],
-        "capabilities": [
-          "validator"
-        ],
-        "controllerChain": "base",
-        "controllerAddress": "0x881e3a65b4d4a04dd529061dd0071cf975f58bcd",
-        "failureDomainKeys": [
-          "protocol:chainlink-ccip",
-          "ccip-router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd",
-          "contract:base:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
-          "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
-        ],
-        "authorityType": "bridge",
-        "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "trustedPeerOrRemote": "getRouter() returned 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd at Base block 50068162; source/destination allowlist values were not fully enumerated.",
-          "attestorQuorum": "The custody route depends on Chainlink CCIP external message validation, including router/off-ramp and RMN security domains; the current validator/DVN/OCR configuration was not fully re-enumerated.",
-          "signingModel": "CCIP's external validation system is a route-level dependency. No bIB01-specific validator quorum or emergency configuration is claimed.",
-          "rateLimits": "CCIP route and receiver message limits were not fully enumerated at the observation block."
-        },
-        "capDescription": "The configured Chainlink router and external message-validation system govern the Base custody transfer rail; the verified receiver source contains no bIB01 mint or burn.",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50068162,
-        "sources": [
-          {
-            "label": "Base BackedCCIPReceiver proxy",
-            "url": "https://base.blockscout.com/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e?tab=contract"
-          },
-          {
-            "label": "Chainlink CCIP documentation",
-            "url": "https://docs.chain.link/ccip"
-          },
-          {
-            "label": "Base JSON-RPC current reads",
-            "url": "https://base-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At Base block 50068162 on 2026-08-16, getRouter() returned 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned the shared custody EOA. The router and external validation path remain bridge controls; the receiver source has no bIB01 mint/burn function."
-      },
-      {
-        "id": "bib01-polygon-ccip-router-validation",
-        "label": "BackedCCIPReceiver Polygon Chainlink CCIP router and validation",
-        "routeRefs": [
-          "polygon:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
-        ],
-        "capabilities": [
-          "validator"
-        ],
-        "controllerChain": "polygon",
-        "controllerAddress": "0x849c5ed5a80f5b408dd4969b78c2c8fdf0565bfe",
-        "failureDomainKeys": [
-          "protocol:chainlink-ccip",
-          "ccip-router:polygon:0x849c5ed5a80f5b408dd4969b78c2c8fdf0565bfe",
-          "contract:polygon:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
-          "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
-        ],
-        "authorityType": "bridge",
-        "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "trustedPeerOrRemote": "getRouter() returned 0x849c5ed5a80f5b408dd4969b78c2c8fdf0565bfe at Polygon block 92147098; source/destination allowlist values were not fully enumerated.",
-          "attestorQuorum": "The custody route depends on Chainlink CCIP external message validation, including router/off-ramp and RMN security domains; the current validator/DVN/OCR configuration was not fully re-enumerated.",
-          "signingModel": "CCIP's external validation system is a route-level dependency. No bIB01-specific validator quorum or emergency configuration is claimed.",
-          "rateLimits": "CCIP route and receiver message limits were not fully enumerated at the observation block."
-        },
-        "capDescription": "The configured Chainlink router and external message-validation system govern the Polygon custody transfer rail; the verified receiver source contains no bIB01 mint or burn.",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 92147098,
-        "sources": [
-          {
-            "label": "Polygon BackedCCIPReceiver proxy",
-            "url": "https://polygonscan.com/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e"
-          },
-          {
-            "label": "Chainlink CCIP documentation",
-            "url": "https://docs.chain.link/ccip"
-          },
-          {
-            "label": "Polygon JSON-RPC current reads",
-            "url": "https://polygon-bor-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At Polygon block 92147098 on 2026-08-16, getRouter() returned 0x849c5ed5a80f5b408dd4969b78c2c8fdf0565bfe, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned the shared custody EOA. The router and external validation path remain bridge controls; the receiver source has no bIB01 mint/burn function."
-      },
-      {
-        "id": "bib01-arbitrum-ccip-router-validation",
-        "label": "BackedCCIPReceiver Arbitrum Chainlink CCIP router and validation",
-        "routeRefs": [
-          "arbitrum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
-        ],
-        "capabilities": [
-          "validator"
-        ],
-        "controllerChain": "arbitrum",
-        "controllerAddress": "0x141fa059441e0ca23ce184b6a78bafd2a517dde8",
-        "failureDomainKeys": [
-          "protocol:chainlink-ccip",
-          "ccip-router:arbitrum:0x141fa059441e0ca23ce184b6a78bafd2a517dde8",
-          "contract:arbitrum:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
-          "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
-        ],
-        "authorityType": "bridge",
-        "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "trustedPeerOrRemote": "getRouter() returned 0x141fa059441e0ca23ce184b6a78bafd2a517dde8 at Arbitrum block 495307116; source/destination allowlist values were not fully enumerated.",
-          "attestorQuorum": "The custody route depends on Chainlink CCIP external message validation, including router/off-ramp and RMN security domains; the current validator/DVN/OCR configuration was not fully re-enumerated.",
-          "signingModel": "CCIP's external validation system is a route-level dependency. No bIB01-specific validator quorum or emergency configuration is claimed.",
-          "rateLimits": "CCIP route and receiver message limits were not fully enumerated at the observation block."
-        },
-        "capDescription": "The configured Chainlink router and external message-validation system govern the Arbitrum custody transfer rail; the verified receiver source contains no bIB01 mint or burn.",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495307116,
-        "sources": [
-          {
-            "label": "Arbitrum BackedCCIPReceiver proxy",
-            "url": "https://arbiscan.io/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e"
-          },
-          {
-            "label": "Chainlink CCIP documentation",
-            "url": "https://docs.chain.link/ccip"
-          },
-          {
-            "label": "Arbitrum JSON-RPC current reads",
-            "url": "https://arb1.arbitrum.io/rpc"
-          }
-        ],
-        "evidence": "At Arbitrum block 495307116 on 2026-08-16, getRouter() returned 0x141fa059441e0ca23ce184b6a78bafd2a517dde8, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned the shared custody EOA. The router and external validation path remain bridge controls; the receiver source has no bIB01 mint/burn function."
-      },
-      {
-        "id": "bib01-gnosis-ccip-router-validation",
-        "label": "BackedCCIPReceiver Gnosis Chainlink CCIP router and validation",
-        "routeRefs": [
-          "gnosis:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
-        ],
-        "capabilities": [
-          "validator"
-        ],
-        "controllerChain": "gnosis",
-        "controllerAddress": "0x4aad6071085df840abd9baf1697d5d5992bdadce",
-        "failureDomainKeys": [
-          "protocol:chainlink-ccip",
-          "ccip-router:gnosis:0x4aad6071085df840abd9baf1697d5d5992bdadce",
-          "contract:gnosis:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
-          "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
-        ],
-        "authorityType": "bridge",
-        "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "trustedPeerOrRemote": "getRouter() returned 0x4aad6071085df840abd9baf1697d5d5992bdadce at Gnosis block 47762958; source/destination allowlist values were not fully enumerated.",
-          "attestorQuorum": "The custody route depends on Chainlink CCIP external message validation, including router/off-ramp and RMN security domains; the current validator/DVN/OCR configuration was not fully re-enumerated.",
-          "signingModel": "CCIP's external validation system is a route-level dependency. No bIB01-specific validator quorum or emergency configuration is claimed.",
-          "rateLimits": "CCIP route and receiver message limits were not fully enumerated at the observation block."
-        },
-        "capDescription": "The configured Chainlink router and external message-validation system govern the Gnosis custody transfer rail; the verified receiver source contains no bIB01 mint or burn.",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 47762958,
-        "sources": [
-          {
-            "label": "Gnosis BackedCCIPReceiver proxy",
-            "url": "https://gnosisscan.io/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e"
-          },
-          {
-            "label": "Chainlink CCIP documentation",
-            "url": "https://docs.chain.link/ccip"
-          },
-          {
-            "label": "Gnosis JSON-RPC current reads",
-            "url": "https://gnosis-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At Gnosis block 47762958 on 2026-08-16, getRouter() returned 0x4aad6071085df840abd9baf1697d5d5992bdadce, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned the shared custody EOA. The router and external validation path remain bridge controls; the receiver source has no bIB01 mint/burn function."
-      },
-      {
-        "id": "bib01-avalanche-ccip-router-validation",
-        "label": "BackedCCIPReceiver Avalanche Chainlink CCIP router and validation",
-        "routeRefs": [
+          "ethereum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "base:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "polygon:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "arbitrum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "gnosis:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
           "avalanche:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
         ],
         "capabilities": [
           "validator"
         ],
-        "controllerChain": "avalanche",
-        "controllerAddress": "0xf4c7e640eda248ef95972845a62bdc74237805db",
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
-          "ccip-router:avalanche:0xf4c7e640eda248ef95972845a62bdc74237805db",
-          "contract:avalanche:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
-          "custody:eoa:0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad"
+          "protocol:chainlink-ccip-don",
+          "contract:ethereum:0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
+          "contract:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd",
+          "contract:polygon:0x849c5ed5a80f5b408dd4969b78c2c8fdf0565bfe",
+          "contract:arbitrum:0x141fa059441e0ca23ce184b6a78bafd2a517dde8",
+          "contract:gnosis:0x4aad6071085df840abd9baf1697d5d5992bdadce",
+          "contract:avalanche:0xf4c7e640eda248ef95972845a62bdc74237805db",
+          "contract:ethereum:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
+          "contract:base:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
+          "contract:polygon:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
+          "contract:arbitrum:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
+          "contract:gnosis:0xbccb121bcc240def73c111211f18c23b81ff8b2e",
+          "contract:avalanche:0xbccb121bcc240def73c111211f18c23b81ff8b2e"
         ],
-        "authorityType": "bridge",
-        "modulesOrGuardsStatus": "not-applicable",
+        "authorityType": "unknown",
         "routeChecks": {
-          "trustedPeerOrRemote": "getRouter() returned 0xf4c7e640eda248ef95972845a62bdc74237805db at Avalanche block 92985493; source/destination allowlist values were not fully enumerated.",
-          "attestorQuorum": "The custody route depends on Chainlink CCIP external message validation, including router/off-ramp and RMN security domains; the current validator/DVN/OCR configuration was not fully re-enumerated.",
-          "signingModel": "CCIP's external validation system is a route-level dependency. No bIB01-specific validator quorum or emergency configuration is claimed.",
-          "rateLimits": "CCIP route and receiver message limits were not fully enumerated at the observation block."
+          "attestorQuorum": "Chainlink CCIP's external validation domain includes DON/OCR consensus and Risk Management Network (RMN) controls for the reviewed custody lanes, but the exact production DON/RMN/OCR member roster, quorum, and controller were not enumerated; no threshold or custody claim is made.",
+          "trustedPeerOrRemote": "The reviewed getRouter() reads identify the six per-chain Chainlink Router delivery contracts used by the BackedCCIPReceiver routes; those delivery identities do not identify the bIB01-specific DON/RMN/OCR validation authority.",
+          "unsupportedReason": "The DON/RMN/OCR roster, quorum, and controlling authority were not independently enumerated. A Router delivery contract or Chainlink protocol label cannot stand in for a validator identity, so this shared validation-domain control remains unknown."
         },
-        "capDescription": "The configured Chainlink router and external message-validation system govern the Avalanche custody transfer rail; the verified receiver source contains no bIB01 mint or burn.",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 92985493,
+        "observedAt": "2026-08-28",
         "sources": [
-          {
-            "label": "Avalanche BackedCCIPReceiver proxy",
-            "url": "https://snowscan.xyz/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e"
-          },
           {
             "label": "Chainlink CCIP documentation",
             "url": "https://docs.chain.link/ccip"
           },
           {
+            "label": "Verified BackedCCIPReceiver implementation",
+            "url": "https://eth.blockscout.com/address/0x5ba339b721d32e603992bd96833d49283b6862dd?tab=contract"
+          },
+          {
+            "label": "Ethereum BackedCCIPReceiver proxy",
+            "url": "https://eth.blockscout.com/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e?tab=contract"
+          },
+          {
+            "label": "Ethereum JSON-RPC current reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Base BackedCCIPReceiver proxy",
+            "url": "https://base.blockscout.com/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e?tab=contract"
+          },
+          {
+            "label": "Base JSON-RPC current reads",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "Polygon BackedCCIPReceiver proxy",
+            "url": "https://polygonscan.com/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e"
+          },
+          {
+            "label": "Polygon JSON-RPC current reads",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Arbitrum BackedCCIPReceiver proxy",
+            "url": "https://arbiscan.io/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e"
+          },
+          {
+            "label": "Arbitrum JSON-RPC current reads",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Gnosis BackedCCIPReceiver proxy",
+            "url": "https://gnosisscan.io/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e"
+          },
+          {
+            "label": "Gnosis JSON-RPC current reads",
+            "url": "https://gnosis-rpc.publicnode.com"
+          },
+          {
+            "label": "Avalanche BackedCCIPReceiver proxy",
+            "url": "https://snowscan.xyz/address/0xbccb121bcc240def73c111211f18c23b81ff8b2e"
+          },
+          {
             "label": "Avalanche C-Chain JSON-RPC current reads",
             "url": "https://api.avax.network/ext/bc/C/rpc"
+          },
+          {
+            "label": "Backed official bridge UI",
+            "url": "https://defi.backed.fi/bridge"
           }
         ],
-        "evidence": "At Avalanche block 92985493 on 2026-08-16, getRouter() returned 0xf4c7e640eda248ef95972845a62bdc74237805db, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned the shared custody EOA. The router and external validation path remain bridge controls; the receiver source has no bIB01 mint/burn function."
+        "evidence": "The six reviewed BackedCCIPReceiver routes have known delivery and receiver identities. At Ethereum block 25771145, getRouter() returned 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad; at Base block 50068162, getRouter() returned 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad; at Polygon block 92147098, getRouter() returned 0x849c5ed5a80f5b408dd4969b78c2c8fdf0565bfe, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad; at Arbitrum block 495307116, getRouter() returned 0x141fa059441e0ca23ce184b6a78bafd2a517dde8, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad; at Gnosis block 47762958, getRouter() returned 0x4aad6071085df840abd9baf1697d5d5992bdadce, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad; and at Avalanche block 92985493, getRouter() returned 0xf4c7e640eda248ef95972845a62bdc74237805db, the receiver was unpaused, bIB01 was registered as 8492551 REGULAR, and custodyWallet() returned 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad. These per-chain reads establish delivery contracts and receiver state only. Chainlink documentation describes a separate CCIP DON/RMN/OCR validation layer, but the 2026-08-28 review did not establish its bIB01-specific member roster, quorum, or controller. The Router contracts therefore remain delivery identities only; this validation-domain control is unknown and blocks a cleared bridge claim."
       }
     ]
   }

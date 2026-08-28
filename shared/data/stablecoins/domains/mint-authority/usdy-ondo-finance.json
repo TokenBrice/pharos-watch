@@ -632,21 +632,31 @@
         ],
         "label": "USDY Sui TreasuryCap owner",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 7,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Live 0x2::coin::TreasuryCap 0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267 controls native Sui USDY issuance; the owner's signer policy and package upgrade authority were not exposed by public reads.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 311459302,
+        "capDescription": "Live 0x2::coin::TreasuryCap 0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267a controls native Sui USDY issuance and is owned by a native 4-of-7 Sui multisig; the separate package upgrade authority remains unresolved.",
+        "observedAt": "2026-08-27",
+        "observedBlock": 314522516,
         "failureDomainKeys": [
-          "sui:treasury-cap:0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267",
+          "sui:treasury-cap:0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267a",
           "issuer:ondo"
         ],
         "sources": [
           {
-            "label": "Sui GraphQL mainnet",
+            "label": "Sui GraphQL mainnet current object and signature reads",
             "url": "https://graphql.mainnet.sui.io/graphql"
+          },
+          {
+            "label": "USDY Sui TreasuryCap",
+            "url": "https://suiscan.xyz/mainnet/object/0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267a"
+          },
+          {
+            "label": "Latest TreasuryCap mutation signed by the owner multisig",
+            "url": "https://suiscan.xyz/mainnet/tx/S71ik7k1Nenkqjm85qWfymMfPVVdLRxoP58dQuUTBmk"
           },
           {
             "label": "USDY Sui coin metadata",
@@ -657,7 +667,7 @@
             "url": "https://docs.ondo.finance/"
           }
         ],
-        "evidence": "At Sui checkpoint 311459302, package 0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb published the first-class USDY coin and TreasuryCap 0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267 was owned by this address. The cap holder can execute the native mint path; public reads did not expose its signer policy or package upgrade authority."
+        "evidence": "A current Sui GraphQL type query on 2026-08-27 returned the live USDY TreasuryCap 0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267a at object version 961561917, owned by this address. Its latest mutation was successful transaction S71ik7k1Nenkqjm85qWfymMfPVVdLRxoP58dQuUTBmk at checkpoint 314522516 on 2026-08-24; the transaction carries a native MultisigSignature whose committee has threshold 4 and seven equal-weight members. The cap holder can execute the uncapped native mint path. The package upgrade authority was not established by these reads."
       },
       {
         "chain": "aptos",
@@ -815,6 +825,14 @@
           "url": "https://suiscan.xyz/mainnet/coin/0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY"
         },
         {
+          "label": "Sui GraphQL mainnet current object and signature reads",
+          "url": "https://graphql.mainnet.sui.io/graphql"
+        },
+        {
+          "label": "Latest USDY Sui TreasuryCap mutation",
+          "url": "https://suiscan.xyz/mainnet/tx/S71ik7k1Nenkqjm85qWfymMfPVVdLRxoP58dQuUTBmk"
+        },
+        {
           "label": "USDY Aptos deployment account",
           "url": "https://explorer.aptoslabs.com/account/0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc?network=mainnet"
         },
@@ -827,9 +845,9 @@
           "url": "https://github.com/ondoprotocol/usdy-noble"
         }
       ],
-      "evidence": "The six native USDY deployment set is now represented in Mint Authority. Ethereum's live native controls include the uncapped workflow-gated USDYManager, rate-limited InstantManager, its manager/pricer/admin/cap co-controls, the 4-of-7 Safe direct minter and token DEFAULT_ADMIN_ROLE holder, and the same Safe as ProxyAdmin owner. Plume's 3-of-7 Safe is the sole DEFAULT_ADMIN_ROLE and MINTER_ROLE holder and owns its ProxyAdmin. Sui has a live TreasuryCap owned by the reviewed address, Aptos has managed_coin::Capabilities held by a 4-of-7 deployment multisig, Stellar has a single-signer issuer, and Noble's 3-of-6 module owner is the sole minter with a replaceable allowance. Sui signer/package-upgrade policy and Plume Safe module/guard state remain unresolved evidence gaps. Native economics remain unbounded because direct issuer authorities and the uncapped legacy/direct routes can exceed downstream workflow limits. Ondo's documented daily asset and investor-liability verification supports periodic reconciliation and attestation-only supervision. LayerZero adapter, destination minters, Solana token-level bypass, and IBC voucher controls are recorded separately under Bridge Risk.",
-      "reviewer": "OpenAI Codex C01 control review",
-      "reviewedAt": "2026-08-16",
+      "evidence": "The six native USDY deployment set is now represented in Mint Authority. Ethereum's live native controls include the uncapped workflow-gated USDYManager, rate-limited InstantManager, its manager/pricer/admin/cap co-controls, the 4-of-7 Safe direct minter and token DEFAULT_ADMIN_ROLE holder, and the same Safe as ProxyAdmin owner. Plume's 3-of-7 Safe is the sole DEFAULT_ADMIN_ROLE and MINTER_ROLE holder and owns its ProxyAdmin. A current Sui GraphQL type query returned the live TreasuryCap owned by a native 4-of-7 multisig, Aptos has managed_coin::Capabilities held by a 4-of-7 deployment multisig, Stellar has a single-signer issuer, and Noble's 3-of-6 module owner is the sole minter with a replaceable allowance. Sui package-upgrade policy and Plume Safe module/guard state remain unresolved evidence gaps. Native economics remain unbounded because direct issuer authorities and the uncapped legacy/direct routes can exceed downstream workflow limits. Ondo's documented daily asset and investor-liability verification supports periodic reconciliation and attestation-only supervision. LayerZero adapter, destination minters, Solana token-level bypass, and IBC voucher controls are recorded separately under Bridge Risk.",
+      "reviewer": "Codex",
+      "reviewedAt": "2026-08-27",
       "disposition": "scoreable"
     }
   }

@@ -2,14 +2,15 @@
   "id": "zeusd-zoth",
   "name": "Zoth ZeUSD",
   "symbol": "ZeUSD",
-  "oneLiner": "ZeUSD is Zoth's deprecated V1 RWA-backed dollar token, minted at a fixed collateral valuation and burned to reclaim recorded collateral; V2 is separate.",
+  "oneLiner": "ZeUSD is Zoth's deprecated V1 RWA-collateralized debt-position dollar token; its tracked router is paused and V2 is separate.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
     "rwa": true
   },
   "collateral": "U.S. Treasury bills, ETFs, money market funds, and reverse repos (off-chain), and tokenized on-chain RWAs (e.g., Hashnote USYC, Matrixdock STBT, OpenEden TBILL); held in smart contract escrow vaults or traditional/omnibus escrow accounts",
-  "pegMechanism": "Tracked V1 records collateral value and ZeUSD debt when a deposit is minted, then requires the recorded ZeUSD amount to be burned before returning the recorded collateral. It has no continuing position-health check or forced-liquidation path; the shared deposit/redemption router pause was active at the reviewed finalized block.",
+  "pegMechanism": "Zoth documents ZeUSD as an RWA-collateralized debt position: issuers deposit eligible RWAs, mint under Safe LTV constraints, burn ZeUSD to reclaim collateral, and collateral can be liquidated or reinvested according to its LTV. The tracked deprecated V1 router records deposit metadata and is paused, so current enforcement and operability must not be inferred from the documentation alone.",
+  "mechanismArchetype": "cdp",
   "llamaId": "225",
   "detailProvider": "defillama",
   "geckoId": "zeusd",
@@ -93,11 +94,15 @@
     }
   ],
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-A wave6",
-    "rationale": "The tracked deprecated V1 is not a continuing borrower CDP: its router fixes collateral value and debt at mint and provides exact burn-and-reclaim redemption without ongoing health checks or forced liquidation. Pharos's closed archetype enum has no exact category for this fixed-mint RWA escrow receipt, so the false CDP label is removed rather than replaced with a materially different fiat issuer or fund-share model.",
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex Lane 2 primary-source review",
+    "rationale": "Zoth's official ZeUSD mechanics describes eligible RWA deposits as opening collateralized debt positions subject to Safe LTV ratios, with repayment/redemption and liquidation of the position. The tracked deprecated V1 deployment pairs its Router with a ZeDP NFT; its verified Router and CollateralVault implementations mint a per-position ZeUSD amount from collateral price and configured LTV, then require that recorded amount to be burned before withdrawal. Within Pharos's closed taxonomy, cdp is the closest collateralized-position class rather than a fiat issuer-reserve, Treasury-fund, or RWA-credit-fund mechanism. This classification does not assert decentralized governance or a currently executable liquidation route; the existing legacy/depeg and redemption-control caveats remain separately material.",
     "sources": [
+      {
+        "label": "Zoth ZeUSD mechanics — CDP, LTV, redemption, and liquidation description",
+        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
+      },
       {
         "label": "Zoth contract deployments and V1/V2 boundary",
         "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
@@ -105,6 +110,10 @@
       {
         "label": "Tracked ZeUSD V1 router verified implementation",
         "url": "https://eth.blockscout.com/address/0xea25b537209ec4aefbc7252c6a49b132639ea677?tab=contract"
+      },
+      {
+        "label": "Tracked ZeUSD V1 CollateralVault verified implementation",
+        "url": "https://eth.blockscout.com/address/0xfdfc611e17298DF89c0FF6EF9c5059a4Bd9602b1?tab=contract"
       }
     ]
   },

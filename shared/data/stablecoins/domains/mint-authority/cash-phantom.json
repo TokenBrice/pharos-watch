@@ -18,13 +18,14 @@
         "DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY"
       ],
       "adminAddresses": [
-        "6HZHZvHVArmDFbQmG1hGE1BLxyHRvgiYrkAFYBWSRYn",
-        "768jbfNJ5QZrrxY6ive4BkZttPtUtCnez1nRzZaj1Ru"
+        "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
+        "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "CASH Bridge program single-key upgrade authority",
-      "observedAt": "2026-08-16",
+      "observedAt": "2026-08-28",
+      "observedBlock": 442198055,
       "sources": [
         {
           "label": "Current Solana finalized RPC ProgramData reads",
@@ -41,6 +42,14 @@
         {
           "label": "Token-2022 source",
           "url": "https://github.com/solana-program/token-2022"
+        },
+        {
+          "label": "Squads V3 source",
+          "url": "https://github.com/Squads-Protocol/squads-mpl"
+        },
+        {
+          "label": "Latest Token-2022 upgrade transaction",
+          "url": "https://explorer.solana.com/tx/2cM3S25AJnHyy4shW7zsoqz5W8JPXPvXiUxk545n5ANf6BET9VvBRfsnSNYi9MqogjVWNBxNfaZpE9QBJX4XCbfn"
         }
       ]
     },
@@ -67,7 +76,7 @@
         ],
         "bypassSurfaces": [
           "Governance EOA E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw can change roles and limits immediately.",
-          "Program upgrader 6HZHZvHVArmDFbQmG1hGE1BLxyHRvgiYrkAFYBWSRYn can replace Bridge mint logic with no delay."
+          "Program upgrader 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q can replace Bridge mint logic with no delay."
         ],
         "sources": [
           {
@@ -117,7 +126,7 @@
       },
       {
         "chain": "solana",
-        "address": "6HZHZvHVArmDFbQmG1hGE1BLxyHRvgiYrkAFYBWSRYn",
+        "address": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
         "label": "CASH Bridge program single-key upgrade authority",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -128,10 +137,10 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439714386,
+        "observedAt": "2026-08-28",
+        "observedBlock": 442198055,
         "failureDomainKeys": [
-          "solana:6HZHZvHVArmDFbQmG1hGE1BLxyHRvgiYrkAFYBWSRYn"
+          "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
         ],
         "sources": [
           {
@@ -143,22 +152,25 @@
             "url": "https://explorer.solana.com/tx/23biLsrUSuYhnDDvRhQUu7u7bnHNVB5nhE5nVDEJHLFvzztHKb5h4DXBmA5gWosN9v1FcmLqTMaJQCkihwWnpSHa"
           }
         ],
-        "evidence": "At finalized Solana slots 439714386–439714402, Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu named 6HZHZvHVArmDFbQmG1hGE1BLxyHRvgiYrkAFYBWSRYn as its current upgrade authority. This single key can replace native Bridge mint logic immediately and invalidate every current allowance check; the older authority-transfer transaction remains historical provenance only."
+        "evidence": "At finalized Solana slot 442198055, Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu named 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q as its current upgrade authority. The prior 6HZHZvHV... value was a decoding error: that 32-byte slice began at the bincode Option tag at offset 12 instead of the authority key at offset 13. The corrected authority is an on-curve public key with no live account data at the cutoff, so Solana exposes a direct externally signable authority rather than an on-chain multisig or timelock. Successful transaction 23biLsr... at slot 401157588 records the transfer from BozdeW... to 76m8d.... This authority can replace native Bridge mint logic immediately and invalidate every current allowance check."
       },
       {
         "chain": "solana",
-        "address": "768jbfNJ5QZrrxY6ive4BkZttPtUtCnez1nRzZaj1Ru",
+        "address": "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz",
         "label": "Solana Token-2022 shared-program upgrade authority",
         "role": "other",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
         "deploymentRefs": [
           "solana:CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 439714386,
+        "observedAt": "2026-08-28",
+        "observedBlock": 442198055,
         "failureDomainKeys": [
           "platform:solana-token-2022-program"
         ],
@@ -170,9 +182,17 @@
           {
             "label": "Token-2022 source",
             "url": "https://github.com/solana-program/token-2022"
+          },
+          {
+            "label": "Squads V3 source",
+            "url": "https://github.com/Squads-Protocol/squads-mpl"
+          },
+          {
+            "label": "Latest Token-2022 upgrade transaction",
+            "url": "https://explorer.solana.com/tx/2cM3S25AJnHyy4shW7zsoqz5W8JPXPvXiUxk545n5ANf6BET9VvBRfsnSNYi9MqogjVWNBxNfaZpE9QBJX4XCbfn"
           }
         ],
-        "evidence": "At finalized Solana slots 439714386–439714402, Token-2022 ProgramData DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY named 768jbfNJ5QZrrxY6ive4BkZttPtUtCnez1nRzZaj1Ru as its current upgrade authority. The current custody, signer threshold, and execution-delay structure were not re-researched, so this shared-program dependency remains explicitly unknown rather than inheriting the stale July multisig facts."
+        "evidence": "At finalized Solana slot 442198055, Token-2022 ProgramData DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY named AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz as its current upgrade authority. The prior 768jbfNJ... value was a decoding error: that 32-byte slice began at the bincode Option tag at offset 12 instead of the authority key at offset 13. AeLm... is authority index 1 (bump 254) of Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ, whose current account data reports threshold 4 and six members. The latest Token-2022 upgrade at slot 427147035 executed through Squads transaction AMwAZJaEc3Rc7zt85Kn9nJQFcCZMzxHt96rsDcQUk4d2 with four recorded approvals. Squads V3 has no execution-delay field or module/guard layer, and its own ProgramData currently has no upgrade authority."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -199,11 +219,19 @@
         {
           "label": "Bridge Open Issuance CASH transparency",
           "url": "https://reserves.bridge.xyz/cash"
+        },
+        {
+          "label": "Squads V3 source",
+          "url": "https://github.com/Squads-Protocol/squads-mpl"
+        },
+        {
+          "label": "Latest Token-2022 upgrade transaction",
+          "url": "https://explorer.solana.com/tx/2cM3S25AJnHyy4shW7zsoqz5W8JPXPvXiUxk545n5ANf6BET9VvBRfsnSNYi9MqogjVWNBxNfaZpE9QBJX4XCbfn"
         }
       ],
-      "evidence": "At the current reviewed boundary, only Solana native issuance is compiled here: the Bridge-controlled Token-2022 mint uses a reserve-ledger-backed backend path with immediately changeable governance and current no-delay Bridge-program upgradeability. HyperEVM CASH, the Solana OFTStore, LayerZero OApp/Endpoint, peers, limits, and route administrators are bridge machinery and are scored separately under bridgeRouteRisk. No whole-supply CASH reserve reconciliation is evidenced; the official policy statement is not a dated CASH-specific reserve-to-liability report or prudential supervision, so reconciliation remains unknown. 2026-08-21 reconciliation update: that gap is now closed. Bridge's Open Issuance transparency page for CASH (accessed 2026-08-21) publishes a continuously updated whole-supply reserves comparison, showing supply 119,013,344 CASH against reserves of $119,014,177 with composition 7% cash and 93% T-bills, page updated 2026-08-21 13:50 UTC. That live feed reconciles the complete CASH liability against reserve assets, so reconciliation moves from unknown to continuous. Supervision stays none: no prudential supervisor is named, and the reconciliation is issuer-published rather than examined by an independent attestor. The mint-side authority findings above are unchanged; only the reconciliation evidence changed.",
-      "reviewer": "Codex Safety Score V9 evidence audit; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Safety Score 9.32 mint posture reclassification 2026-08-21",
-      "reviewedAt": "2026-08-21"
+      "evidence": "At the current reviewed boundary, only Solana native issuance is compiled here: the Bridge-controlled Token-2022 mint uses a reserve-ledger-backed backend path with immediately changeable governance and current no-delay Bridge-program upgradeability. HyperEVM CASH, the Solana OFTStore, LayerZero OApp/Endpoint, peers, limits, and route administrators are bridge machinery and are scored separately under bridgeRouteRisk. No whole-supply CASH reserve reconciliation is evidenced; the official policy statement is not a dated CASH-specific reserve-to-liability report or prudential supervision, so reconciliation remains unknown. 2026-08-21 reconciliation update: that gap is now closed. Bridge's Open Issuance transparency page for CASH (accessed 2026-08-21) publishes a continuously updated whole-supply reserves comparison, showing supply 119,013,344 CASH against reserves of $119,014,177 with composition 7% cash and 93% T-bills, page updated 2026-08-21 13:50 UTC. That live feed reconciles the complete CASH liability against reserve assets, so reconciliation moves from unknown to continuous. Supervision stays none: no prudential supervisor is named, and the reconciliation is issuer-published rather than examined by an independent attestor. 2026-08-28 control refresh: current ProgramData decodes corrected the CASH Bridge authority from the option-byte-inclusive 6HZHZvHV... slice to the on-curve direct authority 76m8dWSA..., and corrected the shared Token-2022 authority from the option-byte-inclusive 768jbfNJ... slice to AeLmXCb..., authority index 1 of a program-immutable Squads V3 deployment; currently 4-of-6, zero-delay; the latest Token-2022 upgrade recorded four approvals.",
+      "reviewer": "Codex",
+      "reviewedAt": "2026-08-28"
     }
   }
 }

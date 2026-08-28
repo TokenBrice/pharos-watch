@@ -942,8 +942,10 @@ describe("getRedemptionBackstopConfig", () => {
       settlementModel: "days",
       capacityModel: { kind: "supply-ratio", ratio: 0.3 },
       costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-03-23",
+      unresolvedOutputDisposition: "issuer-undisclosed",
+      reviewedAt: "2026-08-27",
     });
+    expect(getRedemptionBackstopConfig("uty-xsy")?.outputAssets).toBeUndefined();
 
     expect(getRedemptionBackstopConfig("yzusd-yuzu")).toMatchObject({
       routeFamily: "queue-redeem",
@@ -1100,9 +1102,10 @@ describe("getRedemptionBackstopConfig", () => {
     });
     expect(getRedemptionBackstopConfig("u-united-stables")).toMatchObject({
       outputAssetType: "stable-basket",
-      outputAssets: ["usdc-circle", "usdt-tether", "usd1-world-liberty-financial"],
-      reviewedAt: "2026-07-19",
+      unresolvedOutputDisposition: "issuer-undisclosed",
+      reviewedAt: "2026-08-27",
     });
+    expect(getRedemptionBackstopConfig("u-united-stables")?.outputAssets).toBeUndefined();
     expect(getRedemptionBackstopConfig("inalpha-nest")).toMatchObject({
       outputAssetType: "stable-basket",
       outputAssets: ["usdc-circle", "pusd-plume"],
@@ -1130,9 +1133,10 @@ describe("getRedemptionBackstopConfig", () => {
     });
     expect(getRedemptionBackstopConfig("silk-shade-protocol")).toMatchObject({
       outputAssetType: "mixed-collateral",
-      outputAssets: ["asset:sscrt", "asset:wbtc", "asset:usdc"],
-      reviewedAt: "2026-07-19",
+      unresolvedOutputDisposition: "issuer-undisclosed",
+      reviewedAt: "2026-08-27",
     });
+    expect(getRedemptionBackstopConfig("silk-shade-protocol")?.outputAssets).toBeUndefined();
     expect(getRedemptionBackstopConfig("usdp-parallel")).toMatchObject({
       outputAssetType: "mixed-collateral",
       outputAssets: [
@@ -1155,10 +1159,14 @@ describe("getRedemptionBackstopConfig", () => {
     });
     expect(getRedemptionBackstopConfig("satusd-river")).toMatchObject({
       outputAssetType: "bluechip-collateral",
-      outputAssets: ["asset:btc", "asset:eth", "asset:bnb"],
-      // Outputs were declared in the 2026-07-19 wave; the v4.34 fee-schedule
-      // re-read moved reviewedAt forward without changing the output set.
-      reviewedAt: "2026-08-12",
+      unresolvedOutputDisposition: "issuer-undisclosed",
+      reviewedAt: "2026-08-27",
+    });
+    expect(getRedemptionBackstopConfig("satusd-river")?.outputAssets).toBeUndefined();
+    expect(getRedemptionBackstopConfig("srusde-strata")).toMatchObject({
+      outputAssetType: "stable-basket",
+      outputAssets: ["usde-ethena", "susde-ethena"],
+      reviewedAt: "2026-08-27",
     });
 
     // Durable withholdings from the 2026-07-15 EXIT_OUTPUT waves remain

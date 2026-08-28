@@ -33,33 +33,45 @@
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Zephyr documents ZSD as a Djed-style stablecoin backed by one protocol-wide ZEPH reserve with a 400% minimum reserve ratio; current public materials do not identify the production oracle provider set or failure handling.",
+    "tier": "single-source-or-laggy",
+    "summary": "Zephyr's production code fetches pricing records from three hard-coded delivery endpoints but validates every record against one hard-coded RSA public key. Nodes may reuse the last acceptable record for up to ten blocks and derive moving-average and reserve values locally, leaving one signing authority and a bounded last-good-price path.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "ZSD has no borrower-specific collateral or liquidation branches, but Zephyr prices protocol-wide mint and redemption conversions through an oracle and gates minting with the resulting system-wide reserve ratio. That price-sensitive top-level conversion and reserve-ratio authority is scoreable without branch rows.",
+      "reviewedAt": "2026-08-28",
+      "reviewer": "Codex",
+      "rationale": "ZSD has one protocol-wide ZEPH reserve and no borrower-specific collateral positions or liquidation branches. The signed pricing record governs system-wide conversions and reserve-ratio gates, so the complete oracle path is represented at top level.",
       "sources": [
         {
-          "label": "Zephyr Protocol whitepaper (2023-06-05)",
-          "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+          "label": "Zephyr ten-block pricing-record validity at commit 67c5f53b",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h#L208-L209"
+        },
+        {
+          "label": "Zephyr pricing-record signature validation at commit 67c5f53b",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/oracle/pricing_record.cpp#L177-L234"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 data research",
-    "confidence": "limited",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Zephyr documentation",
-        "url": "https://zephyrprotocol.com/documentation"
+        "label": "Zephyr oracle endpoints and public key at commit 67c5f53b",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h#L270-L275"
       },
       {
-        "label": "Zephyr repository",
-        "url": "https://github.com/ZephyrProtocol/zephyr"
+        "label": "Zephyr pricing-record signature and timestamp validation at commit 67c5f53b",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/oracle/pricing_record.cpp#L177-L234"
+      },
+      {
+        "label": "Zephyr last-valid pricing-record selection at commit 67c5f53b",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/blockchain.cpp#L281-L303"
+      },
+      {
+        "label": "Zephyr endpoint fetch and local derived prices at commit 67c5f53b",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/blockchain.cpp#L1941-L1998"
       }
     ]
   }

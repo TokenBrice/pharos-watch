@@ -5,6 +5,25 @@
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "BtcUSD's canonical issuance is confined to the Bifrost native BtcUSD deployment: the BTCFi BtcUSD CDP handler 0x682143652b6e305730dd12b0dc7c38d5048fb647 holds the token's keccak(\"Minter\") role and mints against deposited BTC-variant collateral, while token owner/default admin 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5 can authorize additional minters but cannot mint directly. Base is a Bifrost Bridge representation and its owner/admin/proxy controls are authored under Bridge Risk. Bifrost AccessControl membership is non-enumerable through the reviewed public RPC and the native token/CDP implementation is not source-verified; those role-enumeration and source gaps keep this review at manual-review.",
+    "upgradeability": {
+      "model": "unknown",
+      "deploymentRefs": [
+        "bifrost:0x6906ccda405926fc3f04240187dd4fad5df6d555"
+      ],
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-08-28",
+      "observedBlock": 38025166,
+      "sources": [
+        {
+          "label": "BtcUSD Bifrost token on Bifrost explorer",
+          "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6906ccda405926fc3f04240187dd4fad5df6d555"
+        },
+        {
+          "label": "Bifrost public EVM RPC",
+          "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "bifrost",
@@ -56,16 +75,16 @@
             "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
           }
         ],
-        "evidence": "BTCFi's own getAvailableBtcfiHandlers API identifies this contract (chainId 3068) as the BtcUSD token handler. At Bifrost block 37087890 (2026-07-27): hasRole(keccak256(\"Minter\") = 0x6e58ad548d72b425ea94c15f453bf26caddb061d82b2551db7fdd3cefe0e9940, this contract) returned true on the native BtcUSD token, and an eth_call simulation of mint(address,uint256) from this address succeeded while identical simulations from the token owner EOA and the four collateral handler contracts reverted with AccessControlUnauthorizedAccount(account, Minter). The handler is a 5,266-byte non-proxy contract (EIP-1967 implementation slot zero, no owner())."
+        "evidence": "BTCFi's own getAvailableBtcfiHandlers API identifies this contract (chainId 3068) as the BtcUSD token handler. At Bifrost block 37087890 (2026-07-27): hasRole(keccak256(\"Minter\") = 0x6e58ad548d72b425ea94c15f453bf26caddb061d82b2551db7fdd3cefe0e9940, this contract) returned true on the native BtcUSD token, and an eth_call simulation of mint(address,uint256) from this address succeeded while identical simulations from the token owner EOA and the four collateral handler contracts reverted with AccessControlUnauthorizedAccount(account, Minter). The handler has 5,266 bytes of direct runtime code and a zero EIP-1967 implementation slot, but instruction-aware scanning found DELEGATECALL opcodes outside PUSH data in its unverified runtime. Those observations exclude a standard EIP-1967 proxy only; they do not resolve the delegated target or who can change it."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Bifrost block 37710739 (2026-08-16), native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 owner() returned 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; hasRole(DEFAULT_ADMIN_ROLE, owner) returned true, hasRole(keccak256(\"Minter\"), owner) returned false, a direct mint simulation from the owner reverted, getRoleAdmin(Minter) returned DEFAULT_ADMIN_ROLE, and a grantRole(Minter, owner) simulation returned success. BTCFi's supported-handler API identifies 0x682143652b6e305730dd12b0dc7c38d5048fb647 as the BtcUSD CDP handler; hasRole(Minter, handler) returned true and a mint simulation from the handler succeeded. The native token and handler are non-proxy deployments. Bifrost AccessControl membership is not enumerable through the reviewed public RPC: getRoleMemberCount reverts and historical role-grant logs were unavailable, so another native Minter cannot be excluded. The native token and CDP implementation are not source-verified, leaving the full collateral/accounting invariant and hidden native mint paths unverified. The native default admin can authorize a minter outside the handler's collateral math; therefore authorityPosture remains unbounded-or-compromised, economicCapSemantics remains unbounded, reconciliation remains unknown, and supervision remains none.",
-      "reviewer": "P2 mint-free cohort; Kimi data review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15; Codex mint-bridge-boundary review",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Bifrost block 37710739 (2026-08-16), native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 owner() returned 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; hasRole(DEFAULT_ADMIN_ROLE, owner) returned true, hasRole(keccak256(\"Minter\"), owner) returned false, a direct mint simulation from the owner reverted, getRoleAdmin(Minter) returned DEFAULT_ADMIN_ROLE, and a grantRole(Minter, owner) simulation returned success. BTCFi's supported-handler API identifies 0x682143652b6e305730dd12b0dc7c38d5048fb647 as the BtcUSD CDP handler; hasRole(Minter, handler) returned true and a mint simulation from the handler succeeded. Bifrost AccessControl membership is not enumerable through the reviewed public RPC: getRoleMemberCount reverts and historical role-grant logs were unavailable, so another native Minter cannot be excluded. The native token and CDP implementation are not source-verified, leaving the full collateral/accounting invariant and hidden native mint paths unverified. The native default admin can authorize a minter outside the handler's collateral math; therefore authorityPosture remains unbounded-or-compromised, economicCapSemantics remains unbounded, reconciliation remains unknown, and supervision remains none. At Bifrost block 38025166 on 2026-08-28, the token and current CDP handler had direct runtime bytecode (13,966 and 5,266 bytes), and their EIP-1967 implementation, admin, and beacon slots were all zero. Instruction-aware scanning found no DELEGATECALL, CALLCODE, CREATE, CREATE2, or SELFDESTRUCT instruction in the token runtime, but found DELEGATECALL opcodes outside PUSH data in the unverified handler runtime. This excludes a standard proxy for both deployments and supports token-code immutability, but it does not identify the handler's delegated targets or prove that the full native mint path cannot be changed. Upgradeability therefore remains unknown rather than being promoted from a standard-slot check.",
+      "reviewer": "P2 mint-free cohort; Kimi data review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15; Codex mint-bridge-boundary review; Codex lane 1 control-plane upgradeability audit",
+      "reviewedAt": "2026-08-28",
       "disposition": "scoreable",
       "sources": [
         {

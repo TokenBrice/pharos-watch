@@ -825,18 +825,26 @@
         ],
         "label": "VCHF ICP ledger controller cpbhu",
         "role": "proxy-admin",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-08-27",
         "sources": [
           {
             "label": "ICP VCHF Ledger controller state",
             "url": "https://ic-api.internetcomputer.org/api/v3/canisters/ly36x-wiaaa-aaaai-aqj7q-cai"
+          },
+          {
+            "label": "ICP cpbhu controller-canister state",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/cpbhu-5iaaa-aaaad-aalta-cai"
+          },
+          {
+            "label": "IC interface specification — principal classes",
+            "url": "https://docs.internetcomputer.org/references/ic-interface-spec/#principal"
           }
         ],
-        "evidence": "The current ICP dashboard API lists cpbhu-5iaaa-aaaad-aalta-cai as one of three controllers of the VCHF Ledger canister. A canister controller can replace ledger code and thereby alter mint-critical logic; no bridge program or route-level conservation mechanism is evidenced."
+        "evidence": "The live ICP dashboard API on 2026-08-27 lists cpbhu-5iaaa-aaaad-aalta-cai as one of three controllers of the VCHF Ledger canister and resolves cpbhu itself as a canister ID. Its controller list is empty, so the controller canister is immutable, but its deployed contract code remains a controller able to replace ledger code and alter mint-critical logic. This deterministically classifies the authority as a contract; no bridge program or route-level conservation mechanism is evidenced."
       },
       {
         "chain": "icp",
@@ -846,18 +854,22 @@
         ],
         "label": "VCHF ICP ledger controller klvbi",
         "role": "proxy-admin",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-08-27",
         "sources": [
           {
             "label": "ICP VCHF Ledger controller state",
             "url": "https://ic-api.internetcomputer.org/api/v3/canisters/ly36x-wiaaa-aaaai-aqj7q-cai"
+          },
+          {
+            "label": "IC interface specification — principal classes",
+            "url": "https://docs.internetcomputer.org/references/ic-interface-spec/#principal"
           }
         ],
-        "evidence": "The current ICP dashboard API lists klvbi-oehqk-57py5-nwtdd-y54c7-bzj4v-4bepc-7ebp4-rhgkm-73w2s-lqe as one of three controllers of the VCHF Ledger canister. A canister controller can replace ledger code and thereby alter mint-critical logic; no bridge program or route-level conservation mechanism is evidenced."
+        "evidence": "The live ICP dashboard API on 2026-08-27 lists klvbi-oehqk-57py5-nwtdd-y54c7-bzj4v-4bepc-7ebp4-rhgkm-73w2s-lqe as one of three controllers of the VCHF Ledger canister. Its decoded 29-byte principal ends in the specification's 0x02 self-authenticating identifier tag, meaning a corresponding private key authenticates the controller. This deterministically classifies the authority as an EOA-equivalent key principal able to replace ledger code and alter mint-critical logic; no bridge program or route-level conservation mechanism is evidenced."
       },
       {
         "chain": "icp",
@@ -867,18 +879,22 @@
         ],
         "label": "VCHF ICP ledger controller 54s52",
         "role": "proxy-admin",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-08-27",
         "sources": [
           {
             "label": "ICP VCHF Ledger controller state",
             "url": "https://ic-api.internetcomputer.org/api/v3/canisters/ly36x-wiaaa-aaaai-aqj7q-cai"
+          },
+          {
+            "label": "IC interface specification — principal classes",
+            "url": "https://docs.internetcomputer.org/references/ic-interface-spec/#principal"
           }
         ],
-        "evidence": "The current ICP dashboard API lists 54s52-xw4bt-zckmp-2gi6w-m2xtm-vdb7t-vwcdh-5bzie-y52et-fyewx-aae as one of three controllers of the VCHF Ledger canister. A canister controller can replace ledger code and thereby alter mint-critical logic; no bridge program or route-level conservation mechanism is evidenced."
+        "evidence": "The live ICP dashboard API on 2026-08-27 lists 54s52-xw4bt-zckmp-2gi6w-m2xtm-vdb7t-vwcdh-5bzie-y52et-fyewx-aae as one of three controllers of the VCHF Ledger canister. Its decoded 29-byte principal ends in the specification's 0x02 self-authenticating identifier tag, meaning a corresponding private key authenticates the controller. This deterministically classifies the authority as an EOA-equivalent key principal able to replace ledger code and alter mint-critical logic; no bridge program or route-level conservation mechanism is evidenced."
       },
       {
         "chain": "stellar",
@@ -976,6 +992,14 @@
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/ly36x-wiaaa-aaaai-aqj7q-cai"
         },
         {
+          "label": "IC interface specification — principal classes",
+          "url": "https://docs.internetcomputer.org/references/ic-interface-spec/#principal"
+        },
+        {
+          "label": "ICP cpbhu controller-canister state",
+          "url": "https://ic-api.internetcomputer.org/api/v3/canisters/cpbhu-5iaaa-aaaad-aalta-cai"
+        },
+        {
           "label": "VCHF Stellar Horizon issuer account",
           "url": "https://horizon.stellar.org/accounts/GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN"
         },
@@ -996,9 +1020,9 @@
           "url": "https://vnx.li/important-notice-upcoming-suspension-of-exchange-operations-on-the-vnx-platform/"
         }
       ],
-      "evidence": "Mint-path review on 2026-08-16 confirms that all 12 authored routes are issuer-native and none is a bridge representation. Ethereum remains fully reconstructed at block 25295081 for the VNXManager minter path and at block 25531301 for the VNXProxyAdmin no-delay upgrade path: role 1 had zero bearers, while self-administered role 0 had two code-empty EOA bearers able to self-grant upgrade access. Current RPC and verified-source reads re-confirmed the Base, Arbitrum, Avalanche, Celo, Polygon, and Fraxtal VNXCToken implementations, chain-local owner-context mint/admin authority, EIP-1967 proxy admins, and zero-delay admin ownership at the recorded 2026-08-16 blocks. Solana parsed mint state identifies issuer signer 51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY as mint authority; Tezos storage identifies the FA2 owner, RBAC contract, active RBAC bearer set, and mutable implementation; XRPL validated account_info identifies the VCHF issuer account; ICP dashboard state lists all three VCHF Ledger controllers; and Stellar Horizon confirms the issuer account's two signers and zero thresholds. These controls are native issuance evidence and are intentionally not duplicated as bridge controls. The latest AREVA fiat-token report still covers 2024-12-31 and the expected 2025 annual report remains unavailable, so current whole-supply reconciliation is unknown. Issuer-controlled EOAs and canister/FA2 administrators can mint directly or replace mint logic without a recorded delay, preserving the unbounded-or-compromised posture.",
-      "reviewer": "Codex FIX-05 vchf-vnx mint-authority migration",
-      "reviewedAt": "2026-08-16"
+      "evidence": "Mint-path review through 2026-08-27 confirms that all 12 authored routes are issuer-native and none is a bridge representation. Ethereum remains fully reconstructed at block 25295081 for the VNXManager minter path and at block 25531301 for the VNXProxyAdmin no-delay upgrade path: role 1 had zero bearers, while self-administered role 0 had two code-empty EOA bearers able to self-grant upgrade access. Current RPC and verified-source reads re-confirmed the Base, Arbitrum, Avalanche, Celo, Polygon, and Fraxtal VNXCToken implementations, chain-local owner-context mint/admin authority, EIP-1967 proxy admins, and zero-delay admin ownership at the recorded 2026-08-16 blocks. Solana parsed mint state identifies issuer signer 51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY as mint authority; Tezos storage identifies the FA2 owner, RBAC contract, active RBAC bearer set, and mutable implementation; XRPL validated account_info identifies the VCHF issuer account; the live ICP dashboard API identifies the ledger's three controllers, with the principal specification resolving cpbhu as a canister and the other two as key-backed self-authenticating principals; and Stellar Horizon confirms the issuer account's two signers and zero thresholds. These controls are native issuance evidence and are intentionally not duplicated as bridge controls. The latest AREVA fiat-token report still covers 2024-12-31 and the expected 2025 annual report remains unavailable, so current whole-supply reconciliation is unknown. Issuer-controlled EOAs and canister/FA2 administrators can mint directly or replace mint logic without a recorded delay, preserving the unbounded-or-compromised posture.",
+      "reviewer": "Codex lane 1 control-plane identity refresh",
+      "reviewedAt": "2026-08-27"
     }
   }
 }

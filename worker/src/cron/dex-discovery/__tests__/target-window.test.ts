@@ -83,6 +83,18 @@ describe("estimateDeploymentCrawlCostMs", () => {
 
   it("prices a native Horizon query for Stellar", () => {
     expect(estimateDeploymentCrawlCostMs("stellar")).toBe(1_600);
+    expect(
+      estimateDeploymentCrawlCostMs(
+        "stellar",
+        "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
+      ),
+    ).toBe(1_600);
+    expect(
+      estimateDeploymentCrawlCostMs(
+        "stellar",
+        "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A",
+      ),
+    ).toBe(0);
   });
 
   it("prices only EVM-shaped MANTRA deployments for GeckoTerminal", () => {
@@ -95,6 +107,16 @@ describe("estimateDeploymentCrawlCostMs", () => {
         "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A",
       ),
     ).toBe(0);
+  });
+
+  it("prices the registered Hedera and Injective GeckoTerminal queries", () => {
+    expect(estimateDeploymentCrawlCostMs("hedera", "0.0.6070123")).toBe(2_800);
+    expect(
+      estimateDeploymentCrawlCostMs(
+        "injective",
+        "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+      ),
+    ).toBe(2_800);
   });
 });
 

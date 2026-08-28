@@ -5,6 +5,7 @@ import {
   getActiveDexCoverageWaiver,
   getDexDiscoveryProviders,
   getGeckoTerminalDiscoveryTarget,
+  getHorizonDiscoveryAsset,
 } from "../dex-deployment-coverage";
 
 const REVIEW_AT_SEC = Date.UTC(2026, 6, 10) / 1000;
@@ -32,8 +33,8 @@ describe("DEX deployment coverage ownership", () => {
     }
 
     expect(unsupported).toHaveLength(50);
-    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(30);
-    expect(exclusivelyUnsupported).toHaveLength(4);
+    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(38);
+    expect(exclusivelyUnsupported).toHaveLength(3);
     expect(getDexDiscoveryProviders("stellar")).toEqual(["horizon"]);
   });
 
@@ -50,6 +51,45 @@ describe("DEX deployment coverage ownership", () => {
       network: "mantra-evm",
       address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
     });
+    expect(getGeckoTerminalDiscoveryTarget("hedera", "0.0.6070123")).toEqual({
+      network: "hedera-hashgraph",
+      address: "0x00000000000000000000000000000000005c9f6b",
+    });
+    expect(getGeckoTerminalDiscoveryTarget("hedera", "0x00000000000000000000000000000000009Ce723")).toEqual({
+      network: "hedera-hashgraph",
+      address: "0x00000000000000000000000000000000009ce723",
+    });
+    expect(getGeckoTerminalDiscoveryTarget("hedera", "0.0.18446744073709551615")).toEqual({
+      network: "hedera-hashgraph",
+      address: "0x000000000000000000000000ffffffffffffffff",
+    });
+    expect(getGeckoTerminalDiscoveryTarget("hedera", "0.0.18446744073709551616")).toBeNull();
+    expect(getGeckoTerminalDiscoveryTarget("injective", "0xa00c59ff5a080d2b954d0c75e46e22a0c371235a")).toEqual({
+      network: "injective",
+      address: "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+    });
+    expect(getGeckoTerminalDiscoveryTarget("injective", "peggy0xdAC17F958D2ee523a2206206994597C13D831ec7")).toEqual({
+      network: "injective",
+      address: "peggy0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    });
+    expect(
+      getGeckoTerminalDiscoveryTarget(
+        "injective",
+        "ibc/93eae5f9d6c14bfac8dd1afdbe95501055a7b22c5d8fa8c986c31d6efadca8a9",
+      ),
+    ).toEqual({
+      network: "injective",
+      address: "ibc/93EAE5F9D6C14BFAC8DD1AFDBE95501055A7B22C5D8FA8C986C31D6EFADCA8A9",
+    });
+    expect(
+      getGeckoTerminalDiscoveryTarget(
+        "injective",
+        "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+      ),
+    ).toEqual({
+      network: "injective",
+      address: "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+    });
     expect(
       getGeckoTerminalDiscoveryTarget(
         "mantra",
@@ -57,6 +97,20 @@ describe("DEX deployment coverage ownership", () => {
       ),
     ).toBeNull();
     expect(getDexDiscoveryProviders("mantra")).toEqual([]);
+    expect(getGeckoTerminalDiscoveryTarget("hedera", "0.1.6070123")).toBeNull();
+    expect(getGeckoTerminalDiscoveryTarget("injective", "not-a-denom")).toBeNull();
+  });
+
+  it("registers Horizon only for classic Stellar deployment identities", () => {
+    const issuer = "GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2";
+    const classic = `EURC-${issuer}`;
+    const soroban = "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A";
+
+    expect(getDexDiscoveryProviders("stellar", classic)).toEqual(["horizon"]);
+    expect(getHorizonDiscoveryAsset(classic, "EURC")).toBe(`EURC:${issuer}`);
+    expect(getHorizonDiscoveryAsset(issuer, "EURC")).toBe(`EURC:${issuer}`);
+    expect(getDexDiscoveryProviders("stellar", soroban)).toEqual([]);
+    expect(getHorizonDiscoveryAsset(soroban, "EURSPKCC")).toBeNull();
   });
 
   it("gives every exclusively inaccessible coin an owned, unexpired waiver", () => {
@@ -78,7 +132,7 @@ describe("DEX deployment coverage ownership", () => {
     });
 
     expect(missing).toEqual([]);
-    expect(DEX_COVERAGE_WAIVERS).toHaveLength(5);
+    expect(DEX_COVERAGE_WAIVERS).toHaveLength(4);
     expect(DEX_COVERAGE_WAIVERS.every((waiver) => waiver.owner.length > 0 && waiver.expiresAt > REVIEW_AT_SEC)).toBe(
       true,
     );

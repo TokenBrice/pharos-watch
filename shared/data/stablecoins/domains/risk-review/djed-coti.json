@@ -21,29 +21,41 @@
     "reviewedAt": "2026-07-14"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Djed uses one shared ADA reserve contract and an external pricing index for system-wide mint and redemption accounting; the reviewed primary sources do not identify the production oracle provider or failure handling.",
+    "tier": "standard-external",
+    "summary": "COTI documents Djed's production oracle as one aggregator drawing from at least six external market sources. An exchange-rate update is accepted only when at least three sources are available; otherwise no update occurs. That shared ADA/USD rate governs system-wide mint, redemption, and reserve-ratio accounting rather than borrower liquidations.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "Djed has no borrower-specific liquidation markets, but its shared reserve contract consumes an oracle-provided ADA/USD pricing index to price system-wide DJED and SHEN mint and redemption operations and to maintain the reserve ratio. That price-sensitive authority is scoreable without inventing collateral branches.",
+      "reviewedAt": "2026-08-28",
+      "reviewer": "Codex",
+      "rationale": "Djed has one shared ADA reserve and no borrower-specific collateral positions or liquidations. Its aggregated ADA/USD exchange rate prices protocol-wide DJED/SHEN mint and redemption and the 400%-800% reserve gates, so that complete price-sensitive path belongs at top level.",
       "sources": [
         {
-          "label": "IOG Djed design article (published 2021-08-18)",
-          "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
+          "label": "COTI: Djed oracle uses at least six external sources and requires three for updates",
+          "url": "https://medium.com/cotinetwork/answers-and-clarification-to-recent-djed-community-questions-95176450db09"
+        },
+        {
+          "label": "COTI FAQ: Djed and Shen mint/burn reserve-ratio gates",
+          "url": "https://faq.coticommunity.com/djed-and-shen/djed/minting-and-burning"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
-    "confidence": "limited",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "IOG Djed design article",
-        "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
+        "label": "COTI: Djed oracle uses at least six external sources and requires three for updates",
+        "url": "https://medium.com/cotinetwork/answers-and-clarification-to-recent-djed-community-questions-95176450db09"
+      },
+      {
+        "label": "COTI: Djed 1.2 production upgrade",
+        "url": "https://medium.com/cotinetwork/djeds-biggest-upgrade-since-launch-is-now-live-eeaa464a7499"
+      },
+      {
+        "label": "COTI FAQ: Djed and Shen minting and burning",
+        "url": "https://faq.coticommunity.com/djed-and-shen/djed/minting-and-burning"
       }
     ]
   }

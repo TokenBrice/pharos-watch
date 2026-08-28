@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
-      "pct": 60.93,
+      "pct": 62.94,
       "risk": "medium",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Undisclosed regulated custodian banks under Tori's mandate (identities withheld; verified by Accountable and HT Digital)",
@@ -17,7 +17,7 @@
     },
     {
       "name": "Delta-neutral futures arbitrage and calendar-spread positions",
-      "pct": 27.52,
+      "pct": 26.89,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed regulated investment banks and execution venues; on-chain tracing shows exchange deposit flows",
@@ -31,7 +31,7 @@
     },
     {
       "name": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
-      "pct": 10.25,
+      "pct": 10,
       "risk": "medium",
       "assetClass": "cash",
       "issuerOrObligor": "Undisclosed regulated investment banks; Accountable data connectors include a CEX feed for this bucket",
@@ -44,7 +44,7 @@
     },
     {
       "name": "On-chain stablecoin buffer in the minting custodian wallet",
-      "pct": 1.3,
+      "pct": 0.17,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle USDC and Tether USDT held in Tori's on-chain custodian wallet",
@@ -56,12 +56,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos R04 reserve research",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex Tori live proof-of-solvency refresh",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Accountable proof-of-solvency dashboard for Tori (15-minute cadence, Merkle/enclave/ZK verification; composition and custody figures as of 2026-08-05 09:15 UTC)",
+        "label": "Tori live proof-of-solvency API (source timestamp 2026-08-27T22:01:01.141Z)",
+        "url": "https://app.tori.finance/api/solvency"
+      },
+      {
+        "label": "Accountable proof-of-solvency dashboard for Tori (15-minute cadence, Merkle/enclave/ZK verification)",
         "url": "https://tori.accountable.capital"
       },
       {
@@ -81,11 +85,21 @@
         "url": "https://eth.blockscout.com/address/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
       }
     ],
-    "rationale": "Composition follows the Accountable attested asset-distribution table as of 2026-08-05 (total reserves $55.48M vs $55.21M supply, 100.5% collateral ratio): money markets 60.93%, delta-neutral futures arbitrage 27.52%, cash and equivalents held as FX collateral 10.25%, on-chain buffer 1.3%. Accountable independently verifies liabilities from the trUSD contract and asset values from custodian and venue data connectors on a 15-minute cadence using Merkle-root, enclave, and zero-knowledge proofs. Because the strategy-level percentages are independently attested and sum to the reported reserve total, the reserve split is treated as verified; the undisclosed custodian/venue identities and unpublished reserve-fund size are captured as risk factors and in the coin notice rather than as unknown reserve exposure.",
-    "compositionBasis": "Accountable attested asset-distribution and custody tables dated 2026-08-05; Tori strategy and institutional docs; verified ToriMinting contract source and independent on-chain flow tracing of the custodian wallet.",
-    "compositionAsOf": "2026-08-05",
+    "rationale": "Refresh 2026-08-28: Tori's live proof-of-solvency API reported at 2026-08-27T22:01:01.141Z total reserves of $66,273,406.18 against $66,154,991.59 total supply (100.179% gross coverage), with money markets 62.94%, delta-neutral futures arbitrage 26.89%, cash and equivalents held as FX collateral 10.00%, and on-chain buffer 0.17%. Accountable independently verifies liabilities from the trUSD contract and asset values from custodian and venue data connectors on a 15-minute cadence using Merkle-root, enclave, and zero-knowledge proofs. Because the strategy-level percentages are independently attested and sum to the reported reserve total, the reserve split is treated as verified; the undisclosed custodian/venue identities and unpublished reserve-fund size are captured as risk factors and in the coin notice rather than as unknown reserve exposure.",
+    "compositionBasis": "Timestamped Tori proof-of-solvency API asset-distribution snapshot; Accountable proof-of-solvency methodology; Tori strategy and institutional docs; verified ToriMinting contract source and independent on-chain flow tracing of the custodian wallet.",
+    "compositionAsOf": "2026-08-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "Custodian bank, investment-bank, and execution-venue identities are undisclosed by policy, venue-level allocations and leverage are unpublished, and the size of the protocol reserve fund is undisclosed; the attested split cannot be independently reconciled against the on-chain flows, which terminate at exchange deposit addresses and an unlabeled wallet. These gaps affect custody/counterparty risk assessment, not the verified strategy-level composition split.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "Custodian bank, investment-bank, and execution-venue identities are undisclosed by policy, venue-level allocations and leverage are unpublished, and the size of the protocol reserve fund is undisclosed; the attested split cannot be independently reconciled against the on-chain flows, which terminate at exchange deposit addresses and an unlabeled wallet. These gaps affect custody/counterparty risk assessment, not the verified strategy-level composition split. The 0.17% on-chain buffer also combines USDC and USDT without component weights.",
+    "knownUnknownExposurePct": 0.17,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 3,
+        "reserveName": "On-chain stablecoin buffer in the minting custodian wallet",
+        "pct": 0.17,
+        "disposition": "basket-needs-split",
+        "rationale": "The disclosed buffer combines USDC and USDT without current component weights, so it cannot support a single reserve-linked dependency.",
+        "candidateCoinIds": ["usdc-circle", "usdt-tether"]
+      }
+    ]
   }
 }

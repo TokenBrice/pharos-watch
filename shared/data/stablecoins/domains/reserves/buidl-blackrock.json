@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Tri-party repo — Deutsche Bank AG",
-      "pct": 21.223487,
+      "pct": 16.56599496,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Deutsche Bank AG",
@@ -13,7 +13,7 @@
     },
     {
       "name": "Tri-party repo — BofA Securities",
-      "pct": 19.471089,
+      "pct": 16.18826869,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "BofA Securities Inc.",
@@ -23,7 +23,7 @@
     },
     {
       "name": "Tri-party repo — Citigroup Global Markets",
-      "pct": 19.471089,
+      "pct": 12.59087565,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Citigroup Global Markets",
@@ -33,7 +33,7 @@
     },
     {
       "name": "Tri-party repo — J.P. Morgan Securities",
-      "pct": 17.52398,
+      "pct": 14.38957217,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "J.P. Morgan Securities",
@@ -43,7 +43,7 @@
     },
     {
       "name": "Tri-party repo — Royal Bank of Canada",
-      "pct": 6.892765,
+      "pct": 17.08761695,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Royal Bank of Canada",
@@ -53,17 +53,17 @@
     },
     {
       "name": "U.S. Treasury bills",
-      "pct": 15.41759,
+      "pct": 23.17767158,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
       "riskFactors": ["duration", "liquidity", "custody"],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 85
+      "maturityDaysMax": 77
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-24",
+    "reviewedAt": "2026-08-28",
     "reviewer": "Codex Chronicle Proof of Asset review",
     "confidence": "verified",
     "sources": [
@@ -80,15 +80,15 @@
         "url": "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
       },
       {
-        "label": "Chronicle BUIDL Proof of Asset holdings dashboard (source date 2026-07-22; proof verified 2026-07-24)",
+        "label": "Chronicle BUIDL Proof of Asset daily holdings dashboard (source timestamp 2026-08-27T06:16:23Z)",
         "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl"
       }
     ],
-    "rationale": "Chronicle's independently verified holdings table identifies all 15 positions as of 2026-07-22: five overnight tri-party repo positions totaling $2.172 billion and ten U.S. Treasury bills totaling $395.910 million. The six curated slices preserve each repo counterparty and aggregate only the same-obligor Treasury bills; percentages are derived from the reported $2.568 billion aggregate portfolio market value.",
+    "rationale": "Chronicle's daily independently verified holdings table identifies all 18 positions at its 2026-08-27T06:16:23Z source timestamp: five tri-party repo positions totaling $2.1355 billion and thirteen U.S. Treasury bills totaling $644.290777 million. The six curated slices preserve each repo counterparty and aggregate only the same-obligor Treasury bills; percentages are derived from the reported $2,779,790,777 aggregate portfolio market value. The current feed displays 2026-08-26 for every repo maturity despite the next-day source timestamp, so no new repo term is inferred from that anomaly. The latest stated Treasury-bill maturity is 2026-11-12, 77 days after the composition date.",
     "compositionBasis": "Chronicle Proof of Asset position-level market values",
-    "compositionAsOf": "2026-07-22",
+    "compositionAsOf": "2026-08-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified position remains in the dated holdings table. Chronicle reports $2.568 billion of portfolio market value against 2.618 billion outstanding shares at $1, a 98.09% gross-holdings-to-share-value reference; Pharos preserves that reconciliation separately and does not treat it as proof of a contractual collateralization ratio. The public sources still do not disclose a token-holder loss waterfall or the confidential offering memorandum.",
+    "knownUnknownExposure": "No unidentified position remains in the dated holdings table. The public sources still do not disclose a token-holder loss waterfall or the confidential offering memorandum; Pharos does not turn the displayed gross market value and outstanding-share figures into a contractual collateralization ratio.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": []
   },

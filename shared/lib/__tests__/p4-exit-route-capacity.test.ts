@@ -1594,7 +1594,11 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it("scores exact Curve stableswap pools through the invariant simulation", () => {
-    const stableswapPool = (amplification: number, balances: [number, number]) => ({
+    const stableswapPool = (
+      amplification: number,
+      balances: [number, number],
+      outputReferencePriceSource: "tracked-market" | "peg-reference" = "tracked-market",
+    ) => ({
       poolId: `ethereum:0x00000000000000000000000000000000000000a${amplification}`,
       project: "curve",
       chain: "ethereum",
@@ -1625,7 +1629,7 @@ describe("P4 DEX exit route observations", () => {
               decimals: 6,
               balance: balances[1],
               referencePriceUsd: 1,
-              referencePriceSource: "tracked-market" as const,
+              referencePriceSource: outputReferencePriceSource,
               trackedAssetId: "usdt-tether",
             },
           ],
@@ -1651,8 +1655,21 @@ describe("P4 DEX exit route observations", () => {
       scoreEligible: true,
       confidence: "high",
       output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+      outputUnitValueUsd: 1,
+      outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
+      outputUnitValueObservedAt: 1_720_000_000,
     });
     expect(validateExitRouteCapacityCurve(observation.capacityCurve!)).toEqual([]);
+
+    const pegDerivedObservation = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [stableswapPool(200, [5_000_000, 5_000_000], "peg-reference")],
+    }).observations[0]!;
+    expect(pegDerivedObservation.outputUnitValueUsd).toBeUndefined();
+    expect(pegDerivedObservation.outputUnitValueSourceId).toBeUndefined();
+    expect(pegDerivedObservation.outputUnitValueObservedAt).toBeUndefined();
+
     // A high-A balanced stable pool fills a request near half its depth
     // within the 200 bps bound — far above what constant-product math with
     // the same balances would allow.

@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "cNGN is canonically issued on Bantu and distributed to destination networks through the issuer's bridge architecture. The Bantu Foundation describes Bantu as the single source of truth and states that bridge contracts lock Bantu cNGN and mint equivalent destination representations; cNGN's official API exposes swaps between supported networks. The Ethereum, Base, BSC, Polygon, and Celo deployments are therefore bridge representations, not independent native liabilities. Solana is conservatively classified as a bridge representation because independent native issuance and per-chain reconciliation are unproven, while its exact AMTP relationship remains an evidence gap. Destination owner Safes, the Base proxy upgrade owner, and Solana mint/program authorities remain scoreable under Bridge Risk; AMTP validator, peer, rate-limit, and adapter addresses were not disclosed in the reviewed primary sources.",
-    "reviewedAt": "2026-08-17",
-    "reviewer": "Codex mint-bridge-boundary canonicality verification",
+    "summary": "cNGN is canonically issued on Bantu and distributed to destination networks through the issuer's bridge architecture. The Bantu Foundation describes Bantu as the single source of truth and states that bridge contracts lock Bantu cNGN and mint equivalent destination representations; cNGN's official API exposes swaps between supported networks. The Ethereum, Base, BSC, Polygon, and Celo deployments are therefore bridge representations, not independent native liabilities. Solana is conservatively classified as a bridge representation because independent native issuance and per-chain reconciliation are unproven, while its exact AMTP relationship remains an evidence gap. Destination owner Safes, the Base proxy upgrade owner, and Solana mint/program authorities remain scoreable under Bridge Risk; Polygon and Celo cap administration is resolved through their reviewed 2-of-2 Safes plus AdminOperations, but AMTP validator, peer, rate-limit, and adapter identities were not disclosed in the reviewed primary sources. CTRL is blocked/source-enriched because AMTP validation remains unknown. BRDG is blocked/producer because bridge materiality remains producer-owned and unresolved.",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -382,30 +382,60 @@
         "controllerChain": "polygon",
         "controllerAddress": "0xce6720dd9076aa67053abb27ecbd613a5867d1ba",
         "failureDomainKeys": [
-          "safe:polygon:0xce6720dd9076aa67053abb27ecbd613a5867d1ba"
+          "safe:polygon:0xce6720dd9076aa67053abb27ecbd613a5867d1ba",
+          "contract:polygon:0x50a1b2d9583cc12daaed29c91c2e767e4316fefd",
+          "contract:polygon:0x52828daa48c1a9a06f37500882b42daf0be04c3b"
         ],
         "authorityType": "safe",
         "threshold": 2,
         "signerCount": 2,
         "safe": {
+          "version": "1.3.0+L2",
           "owners": [
             "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
             "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
           ],
           "threshold": 2,
-          "source": "onchain"
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
+          "observedAt": "2026-08-28",
+          "source": "safe-api"
         },
-        "modulesOrGuardsStatus": "unknown",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 92151009,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "The current AdminOperations proxy 0x50a1b2d9583cc12daaed29c91c2e767e4316fefd requires a one-time canMint authorization and an exact mintAmount. Its 2-of-2 Safe owner can authorize a minter and set that minter's amount without an on-chain maximum; a 2026-08-28 eth_call from the Safe to addCanMint(address) succeeded.",
+          "pausersAdminsUpgraders": "owner() on both the cNGN token and its AdminOperations proxy returned the same 2-of-2 Safe. The current Safe Transaction Service response showed no enabled modules and zero guard/module-guard values."
+        },
+        "capDescription": "The 2-of-2 Safe owns the AdminOperations proxy that grants one-time mint authorization and assigns the exact mint amount; the reviewed implementation exposes no maximum amount, so this authority can raise destination mint capacity.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-28",
+        "observedBlock": 92776048,
         "sources": [
           {
             "label": "cNGN Polygon explorer",
             "url": "https://polygonscan.com/address/0x52828daa48c1a9a06f37500882b42daf0be04c3b"
+          },
+          {
+            "label": "Polygon Blockscout verified cNGN proxy and implementation",
+            "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x52828daa48c1a9a06f37500882b42daf0be04c3b"
+          },
+          {
+            "label": "Polygon cNGN implementation source",
+            "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x47189A325Fb47FE2ab7d70B9691Eaea73640D4f6"
+          },
+          {
+            "label": "Polygon cNGN owner Safe API",
+            "url": "https://safe-transaction-polygon.safe.global/api/v1/safes/0xCE6720Dd9076AA67053ABb27EcbD613a5867D1ba/"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
           }
         ],
-        "evidence": "The Polygon owner was enumerated in the fixed 2026-08-16 read at block 92,151,009: owner() returned Safe 0xce6720dd9076aa67053abb27ecbd613a5867d1ba, and the Safe has the same two consortium signers with threshold 2. This owner controls the destination representation; its exact minter-grant and module/guard state was not independently disclosed in the reviewed evidence, so canRaiseCap and modulesOrGuardsStatus remain conservative. The representation remains covered by a named bridge-mint holder rather than being treated as native issuance."
+        "evidence": "The Polygon owner was enumerated in the fixed 2026-08-16 read at block 92,151,009: owner() returned Safe 0xce6720dd9076aa67053abb27ecbd613a5867d1ba. Current reads at block 92,776,048 on 2026-08-28 returned that same Safe as owner() of both the cNGN token and AdminOperations proxy 0x50a1b2d9583cc12daaed29c91c2e767e4316fefd. The verified Cngn3 source makes minting contingent on AdminOperations canMint(sender) and exact mintAmount(sender); the Safe-owned AdminOperations contract accepts addCanMint(address) from the Safe, and its interface assigns the exact amount without a maximum. The current Safe API reports 2-of-2, no enabled modules, and zero guard/module-guard values."
       },
       {
         "id": "cngn-celo-owner-safe",
@@ -420,30 +450,64 @@
         "controllerChain": "celo",
         "controllerAddress": "0xe8c11f6168aa035620f7f14efba0c86d3b11c047",
         "failureDomainKeys": [
-          "safe:celo:0xe8c11f6168aa035620f7f14efba0c86d3b11c047"
+          "safe:celo:0xe8c11f6168aa035620f7f14efba0c86d3b11c047",
+          "contract:celo:0x41f870ddc2a827f7b2c2bce2c479c2e34fa27575",
+          "contract:celo:0xf6829d7393dae24509eb1e52ee8e572e2e271a4f"
         ],
         "authorityType": "safe",
         "threshold": 2,
         "signerCount": 2,
         "safe": {
+          "version": "1.3.0+L2",
           "owners": [
             "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
             "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
           ],
           "threshold": 2,
-          "source": "onchain"
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x4820a3D06a15c784aDf38036F9DfF00b08F898c1",
+          "masterCopy": "0xfb1bffC9d739B8D520DaF37dF666da4C687191EA",
+          "observedAt": "2026-08-28",
+          "source": "safe-api"
         },
-        "modulesOrGuardsStatus": "unknown",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-17",
-        "observedBlock": 75053963,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "The current AdminOperations proxy 0x41f870ddc2a827f7b2c2bce2c479c2e34fa27575 requires a one-time canMint authorization and an exact mintAmount. Its 2-of-2 Safe owner can authorize a minter and set that minter's amount without an on-chain maximum; a 2026-08-28 eth_call from the Safe to addCanMint(address) succeeded.",
+          "pausersAdminsUpgraders": "owner() on both the cNGN token and its AdminOperations proxy returned the same 2-of-2 Safe. The token owner can also replace the AdminOperations address. The current Safe Transaction Service response showed no enabled modules and zero guard/module-guard values."
+        },
+        "capDescription": "The 2-of-2 Safe owns the AdminOperations proxy that grants one-time mint authorization and assigns the exact mint amount; the reviewed implementation exposes no maximum amount, so this authority can raise destination mint capacity.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-28",
+        "observedBlock": 75968339,
         "sources": [
           {
             "label": "cNGN Celo explorer",
             "url": "https://celoscan.io/address/0xf6829d7393dae24509eb1e52ee8e572e2e271a4f"
+          },
+          {
+            "label": "Celo Blockscout verified cNGN proxy and implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xf6829d7393dae24509eb1e52ee8e572e2e271a4f"
+          },
+          {
+            "label": "Celo cNGN implementation source",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xee2455E4973d6a58AB9991BbDbb7abe0633ecB01"
+          },
+          {
+            "label": "Celo AdminOperations implementation source",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x0DF5e0c2e614991451F9DBAF99e17d1C6421966C"
+          },
+          {
+            "label": "Celo cNGN owner Safe API",
+            "url": "https://safe-transaction-celo.safe.global/api/v1/safes/0xE8C11F6168aa035620f7F14EFba0c86D3B11c047/"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
           }
         ],
-        "evidence": "At Celo block 75,053,963 on 2026-08-17, the live cNGN destination representation owner was Safe 0xe8c11f6168aa035620f7f14efba0c86d3b11c047 with threshold 2 and the same two consortium signers as the other reviewed EVM destinations. The owner is retained as a bridge-mint/admin failure domain for the Celo representation; exact minter-grant and module/guard state were not independently disclosed, so canRaiseCap and modulesOrGuardsStatus remain conservative."
+        "evidence": "At Celo block 75,053,963 on 2026-08-17, the live cNGN destination representation owner was Safe 0xe8c11f6168aa035620f7f14efba0c86d3b11c047. Current reads at block 75,968,339 on 2026-08-28 returned that same Safe as owner() of both the cNGN token and AdminOperations proxy 0x41f870ddc2a827f7b2c2bce2c479c2e34fa27575. The verified Cngn3 source makes minting contingent on AdminOperations canMint(sender) and exact mintAmount(sender); the verified Admin2 source gives its owner addCanMint and addMintAmount, while the token owner can replace the AdminOperations address. The Safe-owned AdminOperations contract accepted a simulated addCanMint(address) call from the Safe. The current Safe API reports 2-of-2, no enabled modules, and zero guard/module-guard values."
       },
       {
         "id": "cngn-base-proxy-admin",
@@ -527,6 +591,43 @@
           }
         ],
         "evidence": "Relocated from the Mint Authority upgradeability record: at finalized Solana slot 434,276,320, issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28 resolved to ProgramData BqJQj1J5a89WxEPf5TM8ppV5fbCKZFMGVGJNefB9Copb with upgrade authority EOA 8Ng3h97WUFx1QoQFadVTUTC2YKDdr4h1xGNETqsqvYZx. The EOA can change mint-critical program logic without a contract-enforced delay; this is destination representation upgrade/admin risk while Solana route canonicality remains unresolved."
+      },
+      {
+        "id": "cngn-amtp-validation-domain",
+        "label": "cNGN Bantu AMTP validation domain",
+        "routeRefs": [
+          "ethereum:0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab",
+          "base:0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
+          "bsc:0xa8aea66b361a8d53e8865c62d142167af28af058",
+          "polygon:0x52828daa48c1a9a06f37500882b42daf0be04c3b",
+          "celo:0xf6829d7393dae24509eb1e52ee8e572e2e271a4f",
+          "solana:3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:bantu-amtp",
+          "protocol:bantu-amtp-validation"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "The Bantu AMTP message-validation layer is a separate route failure domain. The reviewed sources do not disclose current validator or attestor membership, quorum, or emergency override configuration; no threshold or custody claim is made.",
+          "trustedPeerOrRemote": "The reviewed route rows identify the cNGN destination delivery contracts and the Bantu source-of-truth lock-and-mint architecture, but the current AMTP peer/remote bindings and adapter identities were not disclosed.",
+          "unsupportedReason": "Known cNGN delivery contracts and the resolved Polygon/Celo 2-of-2 Safe plus AdminOperations cap controls do not identify the AMTP validator, peer, rate-limit, or adapter authority."
+        },
+        "observedAt": "2026-08-28",
+        "sources": [
+          {
+            "label": "Bantu Foundation cNGN case study",
+            "url": "https://bantufoundation.org/case-studies/cngn"
+          },
+          {
+            "label": "cNGN bridge API",
+            "url": "https://docs.cngn.co/api-reference/bridge.md"
+          }
+        ],
+        "evidence": "The reviewed Bantu Foundation case study and cNGN bridge API establish the Bantu AMTP lock-and-mint delivery architecture, and the six route rows identify the destination delivery contracts. The 2026-08-28 review found no primary source that discloses current AMTP validator/attestor membership, peer/remote bindings, rate-limit authority, or adapter identities. Polygon and Celo 2-of-2 Safe plus AdminOperations controls resolve destination cap administration, but those delivery and cap-admin identities cannot stand in for the AMTP validation domain; this common validation control remains unknown."
       }
     ]
   }

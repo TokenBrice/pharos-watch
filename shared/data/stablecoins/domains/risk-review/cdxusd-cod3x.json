@@ -22,28 +22,44 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "cdxUSD supply is created through governance-limited Facilitator credit buckets rather than user CDPs whose collateral health is continuously priced for liquidation.",
+    "summary": "Cod3x's whitepaper describes planned Cod3x Lend borrower liquidations plus liquidity and arbitrage AMOs that monitor market prices. The live Base token instead exposed one Facilitator at block 50539797, labeled Multisig, with a 100 million cdxUSD bucket and 6.15 million outstanding; the token publishes no pricing or strategy rules for that live Facilitator.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "Cod3x documents bounded Facilitator credit lines and a Liquidity AMO, but the reviewed primary source does not disclose whether Facilitator collateral-sufficiency checks, AMO operations, or any mint or burn rule consumes asset prices or an internal valuation. The review therefore cannot establish either a price-sensitive top-level authority or the complete absence required for not-applicable.",
+      "reviewedAt": "2026-08-28",
+      "reviewer": "Codex",
+      "rationale": "The whitepaper's intended design is price-sensitive and includes a Cod3x Lend liquidation path and AMOs, but it does not identify deployed contracts for those planned Facilitators. At Base block 50539797 the live token's complete facilitator list contained only 0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b, labeled Multisig. No public source establishes that Facilitator's live collateral, price input, liquidation, AMO, backstop, or shutdown rules, so neither a current branch model nor a complete absence of price-sensitive control can be verified.",
       "sources": [
         {
-          "label": "Cod3x tech stack: cdxUSD Facilitators and Liquidity AMO (published 2024-09-25)",
-          "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+          "label": "Cod3x cdxUSD whitepaper at commit 840ee169",
+          "url": "https://github.com/Cod3x-Labs/Whitepapers/blob/840ee1696a282e56cb763318dd1b9c8278f8772f/Cod3x%20USD%20-%20Composable%20Credit%20Primitive.pdf"
+        },
+        {
+          "label": "Base Blockscout verified cdxUSD token source",
+          "url": "https://base.blockscout.com/address/0xc0d3700000987c99b3c9009069e4f8413fd22330?tab=contract"
+        },
+        {
+          "label": "Base PublicNode RPC fixed-block facilitator read",
+          "url": "https://base-rpc.publicnode.com"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 data research",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Cod3x tech stack: cdxUSD Facilitators",
-        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+        "label": "Cod3x cdxUSD whitepaper at commit 840ee169",
+        "url": "https://github.com/Cod3x-Labs/Whitepapers/blob/840ee1696a282e56cb763318dd1b9c8278f8772f/Cod3x%20USD%20-%20Composable%20Credit%20Primitive.pdf"
+      },
+      {
+        "label": "Base Blockscout verified cdxUSD token source",
+        "url": "https://base.blockscout.com/address/0xc0d3700000987c99b3c9009069e4f8413fd22330?tab=contract"
+      },
+      {
+        "label": "Base PublicNode RPC fixed-block facilitator read",
+        "url": "https://base-rpc.publicnode.com"
       }
     ]
   },

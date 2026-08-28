@@ -4,7 +4,34 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "PHT's canonical Ethereum deployment mints through a Maker-style DaiJoin and Vat path. At Ethereum block 25770390, PHT Join was warded on PHT and the live Vat exposed global and USDT-A debt ceilings; the Vat ward mapping is non-enumerable, so cap administration remains a reviewed raiseable gap. Polygon PHT and Tron PhtOFT are LayerZero bridge representations, and their owner, peer, delegate, and upgrade/configuration powers are assessed under Bridge Risk rather than global Mint Authority. No whole-supply reconciliation across the canonical token and representations is evidenced.",
+    "summary": "PHT's canonical Ethereum deployment mints through a Maker-style DaiJoin and Vat path. At Ethereum block 25770390, PHT Join was warded on PHT and the live Vat exposed global and USDT-A debt ceilings; the Vat ward mapping is non-enumerable, so cap administration remains a reviewed raiseable gap. The PHT token, DaiJoin, and Vat are direct immutable deployments; live wards can change mint authorization and debt ceilings but cannot replace those contracts' code. Polygon PHT and Tron PhtOFT are LayerZero bridge representations, and their owner, peer, delegate, and upgrade/configuration powers are assessed under Bridge Risk rather than global Mint Authority. No whole-supply reconciliation across the canonical token and representations is evidenced.",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0xbe370ad45d44eb45174c4ec60b88839fef32c077"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-08-27",
+      "observedBlock": 25849366,
+      "sources": [
+        {
+          "label": "PHT token on Ethereum",
+          "url": "https://etherscan.io/address/0xBe370Ad45D44eB45174C4Ec60b88839feF32C077#code"
+        },
+        {
+          "label": "PHT DaiJoin adapter on Ethereum",
+          "url": "https://etherscan.io/address/0x4bd328FD071b03e157d0a89dE199d9E005D71057#code"
+        },
+        {
+          "label": "PHT Vat CDP engine on Ethereum",
+          "url": "https://etherscan.io/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "APACX PHT vault/CDP mint path",
@@ -95,9 +122,9 @@
           "url": "https://docs.apacx.io/transparency"
         }
       ],
-      "evidence": "At Ethereum block 25770390, PHT totalSupply was 225,011,899.761301444119160709 through the reviewed Maker-style DaiJoin/Vat deployment. PHT Join 0x4bd328fd071b03e157d0a89de199d9e005d71057 was warded on PHT, and the live Vat exposed Line()=250,000,000 rad, USDT-A line=500,000,000 rad, and Art=6,939.383963243451574983 wad; the non-enumerable Vat wards mapping means the ability to raise those ceilings remains unresolved. APACX's system architecture and mint/redeem/bridge guide identify Ethereum as the primary execution environment and Polygon/Tron as LayerZero bridge representations. Their owner, peer, delegate, and upgrade/configuration powers are preserved under Bridge Risk and do not expand global native Mint Authority. No dated whole-supply collateral reconciliation across Ethereum, Polygon, and Tron was found, so reconciliation remains unknown and confidence remains manual-review.",
-      "reviewer": "Kimi data review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15; FIX2-17 boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Ethereum block 25770390, PHT totalSupply was 225,011,899.761301444119160709 through the reviewed Maker-style DaiJoin/Vat deployment. PHT Join 0x4bd328fd071b03e157d0a89de199d9e005d71057 was warded on PHT, and the live Vat exposed Line()=250,000,000 rad, USDT-A line=500,000,000 rad, and Art=6,939.383963243451574983 wad; the non-enumerable Vat wards mapping means the ability to raise those ceilings remains unresolved. APACX's system architecture and mint/redeem/bridge guide identify Ethereum as the primary execution environment and Polygon/Tron as LayerZero bridge representations. Their owner, peer, delegate, and upgrade/configuration powers are preserved under Bridge Risk and do not expand global native Mint Authority. No dated whole-supply collateral reconciliation across Ethereum, Polygon, and Tron was found, so reconciliation remains unknown and confidence remains manual-review. At Ethereum block 25849366 on 2026-08-27, the PHT token, DaiJoin, and Vat retained direct runtime bytecode (4,052, 1,774, and 7,006 bytes respectively), and all three contracts' EIP-1967 implementation, admin, and beacon slots were zero. The verified Maker-style sources contain no delegatecall upgrade path. Mint authorization and ceilings remain mutable through wards, as already captured by the reviewed controls, but the native contracts' mint logic itself is immutable.",
+      "reviewer": "Kimi data review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15; FIX2-17 boundary migration; Codex lane 1 control-plane immutability refresh",
+      "reviewedAt": "2026-08-27",
       "disposition": "scoreable"
     }
   }

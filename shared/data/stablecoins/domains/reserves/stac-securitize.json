@@ -2,7 +2,7 @@
   "id": "stac-securitize",
   "reserves": [
     {
-      "name": "AAA CLO tranches and PGIM AAA CLO ETF",
+      "name": "Securitize Tokenized AAA CLO Fund NAV",
       "pct": 100,
       "risk": "high",
       "assetClass": "public-credit",
@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-24",
-    "reviewer": "Codex Chronicle Proof of Asset review",
+    "reviewedAt": "2026-08-28",
+    "reviewer": "Codex Chronicle live-reserve identity review",
     "confidence": "verified",
     "sources": [
       {
@@ -37,7 +37,7 @@
         "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
       }
     ],
-    "rationale": "Chronicle's independently verified holdings table identifies all 60 positions as of 2026-07-23: one $28.03 million PGIM AAA CLO ETF position and 59 individually identified CLO tranches, totaling $376.28 million of portfolio market value. The static reserve view aggregates those uniformly high-risk public-credit positions into one scoring bucket; the Chronicle source preserves every position identity, value, and disclosed maturity.",
+    "rationale": "Chronicle's independently verified holdings table identifies all 60 positions as of 2026-07-23: one $28.03 million PGIM AAA CLO ETF position and 59 individually identified CLO tranches, totaling $376.28 million of portfolio market value. The static reserve view aggregates those uniformly high-risk public-credit positions into one scoring bucket; the Chronicle source preserves every position identity, value, and disclosed maturity. On 2026-08-28, the configured chronicle-nav single-asset adapter was verified to emit the exact live identity Securitize Tokenized AAA CLO Fund NAV, so the reviewed public-credit slice uses that identity without presenting the older position table as a new composition.",
     "compositionBasis": "Chronicle Proof of Asset position-level market values",
     "compositionAsOf": "2026-07-23",
     "scope": "full-composition",

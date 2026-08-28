@@ -1196,6 +1196,29 @@ function outputFromAmmToken(
   };
 }
 
+function trackedExactAmmOutputValuationFields(
+  token: Pick<DexAmmExecutionToken, "trackedAssetId" | "referencePriceUsd" | "referencePriceSource">,
+  sourceId: string,
+  observedAt: number,
+): Partial<
+  Pick<
+    ExitRouteObservation,
+    "outputUnitValueUsd" | "outputUnitValueSourceId" | "outputUnitValueObservedAt"
+  >
+> {
+  if (
+    !token.trackedAssetId ||
+    (token.referencePriceSource !== "source-token-usd" && token.referencePriceSource !== "tracked-market")
+  ) {
+    return {};
+  }
+  return {
+    outputUnitValueUsd: token.referencePriceUsd,
+    outputUnitValueSourceId: sourceId,
+    outputUnitValueObservedAt: observedAt,
+  };
+}
+
 export function validateExitRouteCapacityCurve(points: readonly ExitRouteCapacityPoint[]): string[] {
   const issues: string[] = [];
   const byCost = new Map<number, ExitRouteCapacityPoint[]>();
@@ -1532,6 +1555,11 @@ export function buildP4DexExitRouteObservations(params: {
           executableUsd: referencePoint.executableUsd,
           completionRatio: referencePoint.completionRatio,
           output,
+          ...trackedExactAmmOutputValuationFields(
+            outputToken,
+            `dex-amm-output-reference:${ammModel.source}:${outputToken.referencePriceSource}`,
+            params.observedAt,
+          ),
           evidenceKind: capability.outputEvidenceKind,
           confidence: capability.confidence,
           scoreEligible: capability.scoreEligible,
