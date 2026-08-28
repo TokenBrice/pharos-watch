@@ -21,6 +21,7 @@
     "dev:next": "next dev --webpack",
     "dev:proxy": "node --import tsx scripts/maintenance/dev-api-proxy.ts",
     "bootstrap:generated": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --bootstrap",
+    "check:bootstrap": "node --import tsx scripts/maintenance/run-bootstrap-rehearsal.ts",
     "bootstrap:generated:history": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=sitemap-dates,docs-metadata",
     "prebuild": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input",
     "build": "next build --webpack",
