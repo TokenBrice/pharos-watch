@@ -4,7 +4,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { formatTelegramAge } from "../lib/telegram-format-age";
 import type { DigestInputData } from "@shared/types/digest";
 import { escapeHtml } from "../lib/telegram";
-import { safeJsonParse } from "../lib/api-utils";
+import { safeJsonParse } from "../lib/api-cache-read";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { suggestClosestToken } from "../lib/telegram-alerts";
 import { TOP_VIEW_NAMES } from "../lib/telegram-constants";

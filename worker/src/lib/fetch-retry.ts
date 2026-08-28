@@ -1,4 +1,5 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import {
   cancelResponseBodyQuietly,
@@ -62,8 +63,10 @@ export function resolveRateLimitDelayMs(
   fallbackDelayMs: number,
   maxRetryDelayMs?: number,
 ): number {
-  const retryAfter = response.headers?.get?.("Retry-After");
-  const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
+  const waitSec = parseRetryAfterSeconds(response.headers?.get?.("Retry-After"), {
+    allowNumericPrefix: true,
+    numericRounding: "floor",
+  }) ?? 0;
   const delayMs = waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : fallbackDelayMs;
   return maxRetryDelayMs != null ? Math.min(delayMs, maxRetryDelayMs) : delayMs;
 }

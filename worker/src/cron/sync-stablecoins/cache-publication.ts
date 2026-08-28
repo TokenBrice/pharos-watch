@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { validatePayloadWithSchema } from "../../lib/api-utils";
+import { validatePayloadWithSchema } from "../../lib/api-schema";
 import { writeResponseReadyCache } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
 import { savePriceCache, setCacheIfNewer, type PriceCacheWriteEntry } from "../../lib/db-cache";

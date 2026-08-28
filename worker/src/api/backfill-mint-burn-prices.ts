@@ -1,4 +1,4 @@
-import { jsonResponse } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
 import { getIdempotencyKey, MAX_IDEMPOTENCY_KEY_LENGTH } from "../lib/idempotency";
 import {
   DEFAULT_HISTORICAL_MINT_PRICE_REPAIR_LIMIT,
@@ -6,7 +6,6 @@ import {
   repairHistoricalMintBurnPrices,
   type HistoricalMintPriceSourceLoader,
 } from "../lib/mint-burn-historical-price-repair";
-import { runAdminRoute } from "../lib/route-wrappers";
 
 const EXECUTION_CONFIRMATION = "historical-mint-prices";
 
@@ -47,60 +46,50 @@ export interface BackfillMintBurnPricesRouteContext extends BackfillMintBurnPric
 export async function handleBackfillMintBurnPrices({
   db,
   url,
-  trustedAdmin,
   request,
   ...options
 }: BackfillMintBurnPricesRouteContext): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "backfill-mint-burn-prices",
-      request,
-      trustedAdmin,
-    },
-    async () => {
-      try {
-        const dryRun = readBoolean(url, ["dry-run", "dryRun"], true);
-        const operatorRunId = getIdempotencyKey(request);
-        const timeTravelBookmark = url.searchParams.get("bookmark")?.trim() || null;
-        if (
-          !dryRun &&
-          (url.searchParams.get("confirm") !== EXECUTION_CONFIRMATION ||
-            !operatorRunId ||
-            !timeTravelBookmark ||
-            timeTravelBookmark.length > 512)
-        ) {
+  try {
+    const dryRun = readBoolean(url, ["dry-run", "dryRun"], true);
+    const operatorRunId = getIdempotencyKey(request);
+    const timeTravelBookmark = url.searchParams.get("bookmark")?.trim() || null;
+    if (
+      !dryRun &&
+      (url.searchParams.get("confirm") !== EXECUTION_CONFIRMATION ||
+        !operatorRunId ||
+        !timeTravelBookmark ||
+        timeTravelBookmark.length > 512)
+    ) {
           return jsonResponse(
-            {
-              error:
-                `Historical mint/burn price repair defaults to dry-run. ` +
-                `Mutation requires dry-run=false&confirm=${EXECUTION_CONFIRMATION}, ` +
-                `a fresh bookmark query parameter, and an Idempotency-Key header of 1 to ${MAX_IDEMPOTENCY_KEY_LENGTH} characters.`,
-            },
-            { status: 400, noStore: true },
-          );
-        }
+        {
+          error:
+            `Historical mint/burn price repair defaults to dry-run. ` +
+            `Mutation requires dry-run=false&confirm=${EXECUTION_CONFIRMATION}, ` +
+            `a fresh bookmark query parameter, and an Idempotency-Key header of 1 to ${MAX_IDEMPOTENCY_KEY_LENGTH} characters.`,
+        },
+            { status: 400 },
+      );
+    }
 
-        const result = await repairHistoricalMintBurnPrices(db, {
-          dryRun,
-          limit: readLimit(url),
-          stablecoinId: url.searchParams.get("stablecoin"),
-          retryIrreducible: readBoolean(url, ["retry-irreducible", "retryIrreducible"], false),
-          coingeckoApiKey: options.coingeckoApiKey ?? null,
-          operatorRunId,
-          timeTravelBookmark,
-          sourceLoader: options.sourceLoader,
-          nowSec: options.nowSec,
-        });
-        return jsonResponse(result, { noStore: true });
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          (error.message.includes("must be") || error.message.startsWith("unknown stablecoinId"))
-        ) {
-          return jsonResponse({ error: error.message }, { status: 400, noStore: true });
-        }
-        throw error;
-      }
-    },
-  );
+    const result = await repairHistoricalMintBurnPrices(db, {
+      dryRun,
+      limit: readLimit(url),
+      stablecoinId: url.searchParams.get("stablecoin"),
+      retryIrreducible: readBoolean(url, ["retry-irreducible", "retryIrreducible"], false),
+      coingeckoApiKey: options.coingeckoApiKey ?? null,
+      operatorRunId,
+      timeTravelBookmark,
+      sourceLoader: options.sourceLoader,
+      nowSec: options.nowSec,
+    });
+      return jsonResponse(result);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message.includes("must be") || error.message.startsWith("unknown stablecoinId"))
+    ) {
+        return jsonResponse({ error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
 }

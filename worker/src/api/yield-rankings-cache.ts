@@ -26,14 +26,10 @@ import {
   YIELD_METHODOLOGY_VERSION,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/yield-methodology";
-import {
-  addFreshnessHeaders,
-  buildFreshnessMeta,
-  buildMethodologyEnvelope,
-  createCacheHandler,
-  errorResponse,
-  jsonResponseWithHeaders,
-} from "../lib/api-utils";
+import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
+import { buildMethodologyEnvelope } from "../lib/api-methodology";
+import { createCacheHandler } from "../lib/api-cache-read";
+import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 

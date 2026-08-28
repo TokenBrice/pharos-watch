@@ -1,4 +1,4 @@
-import { errorResponse, jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-response";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { batchExecute } from "../lib/db";
@@ -42,10 +42,9 @@ export interface BackfillStabilityIndexRouteContext {
 export async function handleBackfillStabilityIndex({
   db,
   url,
-  trustedAdmin,
   request,
 }: BackfillStabilityIndexRouteContext): Promise<Response> {
-  return runAdminJob({ request, trustedAdmin, url }, async ({ dryRun }) => {
+  return runAdminJob({ request, url }, async ({ dryRun }) => {
     const rebuildTableSql = [
       "CREATE TABLE stability_index_rebuild (",
       "computed_at INTEGER PRIMARY KEY,",

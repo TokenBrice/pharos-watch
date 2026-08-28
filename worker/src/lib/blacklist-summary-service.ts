@@ -1,9 +1,6 @@
-import {
-  addFreshnessHeaders,
-  buildMethodologyEnvelope,
-  getLatestSuccessfulCronTimestamp,
-  jsonResponseWithHeaders,
-  } from "./api-utils";
+import { addFreshnessHeaders, getLatestSuccessfulCronTimestamp } from "./api-freshness";
+import { buildMethodologyEnvelope } from "./api-methodology";
+import { jsonResponseWithHeaders } from "./api-response";
 import { CACHE_PROFILES } from "./constants";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,

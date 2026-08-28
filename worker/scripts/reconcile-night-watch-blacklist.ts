@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
+import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/methodology-versions/blacklist-tracker";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { tronBase58ToHex } from "../src/lib/tron-address";
@@ -367,7 +368,7 @@ function parseTronPageEvent(
   };
 }
 
-async function fetchTronPage(
+export async function fetchTronPage(
   fetchImpl: typeof fetch,
   url: string,
   headers: Record<string, string>,
@@ -394,9 +395,11 @@ async function fetchTronPage(
     await response.text().catch(() => "");
     if (response.status !== 429 && response.status < 500) break;
     if (attempt < 2) {
-      const retryAfter = Number(response.headers.get("Retry-After"));
+      const retryAfter = parseRetryAfterSeconds(response.headers.get("Retry-After"), {
+        numericRounding: "none",
+      });
       const delayMs =
-        Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(5_000, retryAfter * 1_000) : 1_000 * 2 ** attempt;
+        retryAfter != null && retryAfter > 0 ? Math.min(5_000, retryAfter * 1_000) : 1_000 * 2 ** attempt;
       await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs));
     }
   }

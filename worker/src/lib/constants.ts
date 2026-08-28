@@ -176,7 +176,6 @@ export const CIRCUIT_SOURCE = {
   ALCHEMY_PRICES: "alchemy-prices",
   MORALIS_PRICES: "moralis-prices",
   BIRDEYE_PRICES: "birdeye-prices",
-  DEXSCREENER_SEARCH: "dexscreener-search",
   CMC_PRICES: "coinmarketcap-prices",
   TREASURY_RATES: "treasury-rates",
   ETHERSCAN: "etherscan",

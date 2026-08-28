@@ -14,7 +14,7 @@ import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { ratioToPercentage } from "@shared/lib/stats";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/lib/chains";
-import { resolveOrReject } from "../lib/api-utils";
+import { resolveOrReject } from "../lib/api-params";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getConditionBand } from "../lib/stability-index";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";

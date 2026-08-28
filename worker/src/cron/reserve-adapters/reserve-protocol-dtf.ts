@@ -9,7 +9,7 @@ import type {
 } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import { throwIfAborted } from "../../lib/abort";
-import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
@@ -110,7 +110,7 @@ function findDtfRow(rows: readonly ReserveProtocolDtfRow[], coin: StablecoinMeta
   const contractAddresses = new Set(
     (coin.contracts ?? [])
       .map((contract) => normalizeEvmAddress(contract.address))
-      .filter((address): address is string => address != null),
+      .filter((address): address is `0x${string}` => address != null),
   );
 
   for (const row of rows) {
@@ -186,10 +186,6 @@ function buildRedemptionTelemetry(
 
 function encodeQuoteCall(amount: bigint): `0x${string}` {
   return `${QUOTE_SELECTOR}${encodeUint256(amount)}${encodeUint256(APPLY_ISSUANCE_PREMIUM)}${encodeUint256(FLOOR_ROUNDING)}` as `0x${string}`;
-}
-
-function encodeAddressCall(selector: string, address: string): `0x${string}` {
-  return `${selector}${encodeAddress(address)}` as `0x${string}`;
 }
 
 function decodeQuoteResult(raw: string): Array<{ address: `0x${string}`; quantity: bigint }> {
@@ -506,7 +502,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
     throwIfAborted(signal);
     const [rawDecimals, rawAsset] = await Promise.all([
       onchain.uint256(entry.address, DECIMALS_SELECTOR),
-      onchain.raw(assetRegistry, encodeAddressCall(TO_ASSET_SELECTOR, entry.address)),
+      onchain.raw(assetRegistry, encodeAddressCallData(TO_ASSET_SELECTOR, entry.address)),
     ]);
     const tokenDecimals = decodeDecimals(rawDecimals, entry.address);
     const assetAddress = parseAddressResult(rawAsset, `toAsset(${entry.address})`);

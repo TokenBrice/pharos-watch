@@ -2,7 +2,7 @@ import { decodeAbiParameters, keccak256 } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
-import { encodeAddress } from "../../lib/evm-selectors";
+import { encodeAddressCallData } from "../../lib/evm-selectors";
 import { fetchJsonWithRetry } from "./request";
 import {
   decodeMulticall3Aggregate3Result,
@@ -148,10 +148,6 @@ function assertContractInventory(coin: StablecoinMeta): void {
   }
 }
 
-function encodeAddressCall(selector: string, address: string): string {
-  return `${selector}${encodeAddress(address)}`;
-}
-
 function getAdapterRpcUrls(chain: SupportedSupplyChain): string[] {
   const registered = getPublicFallbackRpcUrls(chain);
   if (chain !== "ethereum") return registered;
@@ -204,14 +200,14 @@ function buildStateFields(chain: SupportedSupplyChain, usdz: string) {
     rawObservation({ label: "usdz:mode", contract: usdz, data: USDZ_MODE_SELECTOR }),
     rawObservation({ label: "usdz:redeem-fee-rate", contract: usdz, data: REDEEM_FEE_RATE_SELECTOR }),
     rawObservation({ label: "usdz:fee-coefficient", contract: usdz, data: FEE_COEFFICIENT_SELECTOR }),
-    rawObservation({ label: "spct:balance-of-usdz", contract: SPCT_POOL_CONTRACT, data: encodeAddressCall(BALANCE_OF_SELECTOR, usdz) }),
+    rawObservation({ label: "spct:balance-of-usdz", contract: SPCT_POOL_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, usdz) }),
     rawObservation({ label: "spct:reserve-usd", contract: SPCT_POOL_CONTRACT, data: SPCT_RESERVE_USD_SELECTOR }),
     rawObservation({ label: "spct:paused", contract: SPCT_POOL_CONTRACT, data: PAUSED_SELECTOR }),
     rawObservation({ label: "spct:redeem-fee-rate", contract: SPCT_POOL_CONTRACT, data: REDEEM_FEE_RATE_SELECTOR }),
     rawObservation({ label: "spct:fee-coefficient", contract: SPCT_POOL_CONTRACT, data: FEE_COEFFICIENT_SELECTOR }),
-    rawObservation({ label: "spct:usdz-whitelisted", contract: SPCT_POOL_CONTRACT, data: encodeAddressCall(SPCT_IS_WHITELIST_SELECTOR, usdz) }),
-    rawObservation({ label: "usdc:spct-balance", contract: USDC_CONTRACT, data: encodeAddressCall(BALANCE_OF_SELECTOR, SPCT_POOL_CONTRACT) }),
-    rawObservation({ label: "usdc:usdz-balance", contract: USDC_CONTRACT, data: encodeAddressCall(BALANCE_OF_SELECTOR, usdz) }),
+    rawObservation({ label: "spct:usdz-whitelisted", contract: SPCT_POOL_CONTRACT, data: encodeAddressCallData(SPCT_IS_WHITELIST_SELECTOR, usdz) }),
+    rawObservation({ label: "usdc:spct-balance", contract: USDC_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, SPCT_POOL_CONTRACT) }),
+    rawObservation({ label: "usdc:usdz-balance", contract: USDC_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, usdz) }),
     rawObservation({ label: "oracle:price", contract: SPCT_PRICE_ORACLE_CONTRACT, data: ORACLE_GET_PRICE_SELECTOR }),
   );
   return fields;

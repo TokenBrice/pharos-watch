@@ -2,6 +2,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
+import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -41,16 +42,8 @@ interface ParallelizerBalanceObservation {
   paused: boolean;
 }
 
-function encodeAddressWord(address: string): string {
-  return address.slice(2).toLowerCase().padStart(64, "0");
-}
-
-function encodeAddressCall(selector: string, address: string): string {
-  return `${selector}${encodeAddressWord(address)}`;
-}
-
 function encodePauseCall(address: string): string {
-  return `${SELECTORS.isPaused}${encodeAddressWord(address)}${REDEEM_ACTION.toString(16).padStart(64, "0")}`;
+  return `${encodeAddressCallData(SELECTORS.isPaused, address)}${encodeUint256(REDEEM_ACTION)}`;
 }
 
 function parseAddressWord(value: bigint | null, label: string): string {
@@ -151,10 +144,10 @@ async function readDeployment(
     const [decimalsRaw, balanceRaw, oracleRaw] = await Promise.all([
       onchain.uint256(
         deployment.vaultAddress,
-        encodeAddressCall(SELECTORS.getCollateralDecimals, address),
+        encodeAddressCallData(SELECTORS.getCollateralDecimals, address),
       ),
-      onchain.uint256(address, `${ERC20_BALANCE_OF_SELECTOR}${encodeAddressWord(deployment.vaultAddress)}`),
-      onchain.raw(deployment.vaultAddress, encodeAddressCall(SELECTORS.getOracleValues, address)),
+      onchain.uint256(address, encodeAddressCallData(ERC20_BALANCE_OF_SELECTOR, deployment.vaultAddress)),
+      onchain.raw(deployment.vaultAddress, encodeAddressCallData(SELECTORS.getOracleValues, address)),
     ]);
     if (decimalsRaw == null || decimalsRaw < 0n || decimalsRaw > 36n) {
       throw new Error(`${ADAPTER_KEY}: ${deployment.chain} ${address} returned invalid decimals`);

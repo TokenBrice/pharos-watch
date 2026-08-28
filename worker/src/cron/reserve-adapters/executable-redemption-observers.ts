@@ -263,7 +263,7 @@ function sameAddressSet(actual: readonly string[], expected: readonly string[]):
   if (actual.length !== expected.length) return false;
   const normalizedActual = actual
     .map((address) => normalizeEvmAddress(address))
-    .filter((address): address is string => address != null)
+    .filter((address): address is `0x${string}` => address != null)
     .sort();
   const normalizedExpected = [...expected].map((address) => address.toLowerCase()).sort();
   return (

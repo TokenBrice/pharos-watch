@@ -49,14 +49,6 @@ import { isGroupChatType } from "./telegram-webhook-auth";
 import { createTelegramWebhookIntent } from "./telegram-webhook-effect-fence";
 import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 
-// Re-export for tests so existing imports keep working.
-export {
-  buildCoinKeyboard,
-  buildCoinMessage,
-  buildHomeKeyboard,
-  buildHomeMessage,
-};
-
 export interface SettingsCallbackQuery {
   id: string;
   data?: string;

@@ -44,7 +44,7 @@ export interface TelegramPresetResolveOptions {
   getStablecoinsCacheResult?: () => Promise<StablecoinsCacheLoadResult>;
 }
 
-const PRESET_BY_ID = new Map(
+const PRESET_BY_ID: ReadonlyMap<TelegramPresetId, TelegramPresetDefinition> = new Map(
   TELEGRAM_PRESET_DEFINITIONS.map((definition) => [definition.id, definition] as const),
 );
 

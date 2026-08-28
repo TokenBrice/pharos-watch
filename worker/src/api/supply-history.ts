@@ -1,7 +1,5 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import {
-  handleStablecoinHistoryRequest,
-  } from "../lib/api-utils";
+import { handleStablecoinHistoryRequest } from "../lib/api-history";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";

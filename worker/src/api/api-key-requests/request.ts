@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { hasConfiguredValue } from "@shared/lib/env-utils";
-import { errorResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
+import { errorResponse } from "../../lib/api-response";
+import { parseRequestJsonWithSchema } from "../../lib/api-json-body";
 import { hmacSha256Hex, randomBytes } from "../../lib/api-key-core";
 import { bytesToBase64Url } from "@shared/lib/base64url";
 import {

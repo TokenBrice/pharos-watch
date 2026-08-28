@@ -1,4 +1,16 @@
-import type { KVNamespace } from "@cloudflare/workers-types";
+import {
+  SAFETY_MAP_ARCHIVE_CACHE_CONTROL,
+  SAFETY_MAP_ARCHIVE_DATE_PATTERN,
+  SAFETY_MAP_IMAGE_HEADERS,
+  SAFETY_MAP_KEY_PREFIX,
+  SAFETY_MAP_LATEST_CACHE_CONTROL,
+  SAFETY_MAP_LATEST_KEY,
+  getSafetyMapReadMethod,
+  readSafetyMapKv,
+  safetyMapTextError,
+  withoutSafetyMapBody,
+  type SafetyMapContext,
+} from "../lib/safety-map";
 
 /**
  * Pages Function: `GET`/`HEAD` `/safety-scores/map.png`
@@ -29,42 +41,6 @@ import type { KVNamespace } from "@cloudflare/workers-types";
  * absent binding as a misconfiguration.
  */
 
-const KEY_PREFIX = "safety-map:";
-const LATEST_KEY = `${KEY_PREFIX}latest.png`;
-const ARCHIVE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Short edge TTL with a long grace window: the producer runs once a day. */
-const LATEST_CACHE_CONTROL = "public, max-age=60, s-maxage=300, stale-while-revalidate=86400";
-/** Dated keys are write-once, so they can be cached forever. */
-const ARCHIVE_CACHE_CONTROL = "public, max-age=31536000, s-maxage=31536000, immutable";
-
-const IMAGE_HEADERS = {
-  "Content-Type": "image/png",
-  "X-Content-Type-Options": "nosniff",
-} as const;
-
-const ERROR_HEADERS = {
-  "Content-Type": "text/plain; charset=utf-8",
-  "Cache-Control": "no-store",
-  "X-Content-Type-Options": "nosniff",
-} as const;
-
-interface SafetyMapEnv {
-  SELECTOR_SNAPSHOTS?: KVNamespace;
-}
-
-interface SafetyMapContext {
-  request: Request;
-  env: SafetyMapEnv;
-}
-
-function textError(status: number, message: string, headers?: HeadersInit): Response {
-  return new Response(`${message}\n`, {
-    status,
-    headers: { ...ERROR_HEADERS, ...headers },
-  });
-}
-
 /**
  * Resolve the KV key for this request, or a rejection response. Never lists the
  * namespace and never accepts a caller-supplied key fragment beyond a strict
@@ -73,34 +49,21 @@ function textError(status: number, message: string, headers?: HeadersInit): Resp
 function resolveKey(request: Request): { key: string; cacheControl: string } | Response {
   const date = new URL(request.url).searchParams.get("date");
   if (date === null) {
-    return { key: LATEST_KEY, cacheControl: LATEST_CACHE_CONTROL };
+    return { key: SAFETY_MAP_LATEST_KEY, cacheControl: SAFETY_MAP_LATEST_CACHE_CONTROL };
   }
-  if (!ARCHIVE_DATE_PATTERN.test(date)) {
-    return textError(400, "Invalid date; expected YYYY-MM-DD");
+  if (!SAFETY_MAP_ARCHIVE_DATE_PATTERN.test(date)) {
+    return safetyMapTextError(400, "Invalid date; expected YYYY-MM-DD");
   }
-  return { key: `${KEY_PREFIX}${date}.png`, cacheControl: ARCHIVE_CACHE_CONTROL };
-}
-
-/**
- * HEAD answers exactly as GET does, minus the body. Several social platforms
- * probe an image URL with HEAD before fetching it, so a 405 there would defeat
- * the poster's whole purpose.
- */
-function withoutBody(response: Response): Response {
-  return new Response(null, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
+  return { key: `${SAFETY_MAP_KEY_PREFIX}${date}.png`, cacheControl: SAFETY_MAP_ARCHIVE_CACHE_CONTROL };
 }
 
 export const onRequest = async ({ request, env }: SafetyMapContext): Promise<Response> => {
-  const method = request.method.toUpperCase();
-  if (method !== "GET" && method !== "HEAD") {
-    return textError(405, "Method not allowed", { Allow: "GET, HEAD" });
+  const method = getSafetyMapReadMethod(request);
+  if (method === null) {
+    return safetyMapTextError(405, "Method not allowed", { Allow: "GET, HEAD" });
   }
   const bodyless = method === "HEAD";
-  const respond = (response: Response): Response => (bodyless ? withoutBody(response) : response);
+  const respond = (response: Response): Response => (bodyless ? withoutSafetyMapBody(response) : response);
 
   const resolved = resolveKey(request);
   if (resolved instanceof Response) return respond(resolved);
@@ -108,19 +71,19 @@ export const onRequest = async ({ request, env }: SafetyMapContext): Promise<Res
   // An unbound namespace is the same observable state as an unpublished map:
   // the poster is not available, and the digest must omit it.
   if (!env.SELECTOR_SNAPSHOTS) {
-    return respond(textError(404, "Safety map is not available"));
+    return respond(safetyMapTextError(404, "Safety map is not available"));
   }
 
-  let bytes: ArrayBuffer | null;
-  try {
-    bytes = await env.SELECTOR_SNAPSHOTS.get(resolved.key, { type: "arrayBuffer" });
-  } catch (error) {
-    console.warn("[safety-map] KV read failure", error);
-    return respond(textError(503, "Safety map store temporarily unavailable"));
+  const result = await readSafetyMapKv(() =>
+    env.SELECTOR_SNAPSHOTS!.get(resolved.key, { type: "arrayBuffer" }),
+  );
+  if (!result.ok) {
+    return respond(safetyMapTextError(503, "Safety map store temporarily unavailable"));
   }
 
+  const bytes = result.value;
   if (bytes === null || bytes.byteLength === 0) {
-    return respond(textError(404, "Safety map is not available"));
+    return respond(safetyMapTextError(404, "Safety map is not available"));
   }
 
   // `Content-Length` is set explicitly so a HEAD probe learns the poster's size
@@ -129,7 +92,7 @@ export const onRequest = async ({ request, env }: SafetyMapContext): Promise<Res
     new Response(bytes, {
       status: 200,
       headers: {
-        ...IMAGE_HEADERS,
+        ...SAFETY_MAP_IMAGE_HEADERS,
         "Cache-Control": resolved.cacheControl,
         "Content-Length": String(bytes.byteLength),
       },

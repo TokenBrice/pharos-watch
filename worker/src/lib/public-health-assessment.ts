@@ -19,7 +19,7 @@ import type {
   HealthResponse,
   StablecoinPublicationHealth,
 } from "@shared/types/status";
-import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-utils";
+import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-freshness";
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
   BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,

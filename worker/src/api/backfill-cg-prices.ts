@@ -4,7 +4,7 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
-import { jsonResponse } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
 import { RATE_LIMITS } from "../lib/rate-limit";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
 import {

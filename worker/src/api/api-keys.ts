@@ -7,10 +7,8 @@ import {
   rotateApiKey,
   updateApiKey,
 } from "../lib/api-keys";
-import {
-  jsonResponse,
-  parseOptionalRequestJsonObject,
-} from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
+import { parseOptionalRequestJsonObject } from "../lib/api-json-body";
 import { runIdempotentAdminAction } from "../lib/idempotency";
 import { parseJsonObject } from "../lib/json-parse";
 import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";

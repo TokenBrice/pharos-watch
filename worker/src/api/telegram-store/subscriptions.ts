@@ -20,7 +20,7 @@ import {
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "./_internals";
+} from "../../lib/telegram-operation-batch";
 
 export type DewsMinBandValue = "ALERT" | "WARNING" | "DANGER" | null;
 export type SafetyModeValue = "all" | "downgrade-only" | "upgrade-only" | null;

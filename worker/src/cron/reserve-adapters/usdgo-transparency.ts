@@ -4,6 +4,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { keccak256, toBytes } from "viem/utils";
 import { fetchEvmRpcBatch } from "../../lib/evm-rpc";
+import { encodeAddressCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
@@ -97,10 +98,6 @@ function usdgoReportDate(href: string): string | null {
   return `${year}-${match[1]}-${match[2]}`;
 }
 
-function encodeAddressCall(selector: string, address: string): string {
-  return `${selector}${address.toLowerCase().slice(2).padStart(64, "0")}`;
-}
-
 function requireHex(value: unknown, label: string): string {
   if (typeof value !== "string" || !/^0x[0-9a-fA-F]+$/.test(value)) {
     throw new Error(`${ADAPTER_KEY}: ${label} is not a hex result`);
@@ -155,7 +152,7 @@ async function readBuidlObservation(
       { method: "eth_getCode", params: [params.avalancheBuidlToken, blockTag] },
       {
         method: "eth_call",
-        params: [{ to: params.avalancheBuidlToken, data: encodeAddressCall(BUIDL_BALANCE_OF_SELECTOR, params.avalancheBuidlWallet) }, blockTag],
+        params: [{ to: params.avalancheBuidlToken, data: encodeAddressCallData(BUIDL_BALANCE_OF_SELECTOR, params.avalancheBuidlWallet) }, blockTag],
       },
       {
         method: "eth_call",

@@ -22,7 +22,7 @@ function logPendingParseWarning(pending: PendingDisambiguationRow, field: string
   const actionType = pending.action_type ?? "unknown";
   const message = toErrorMessage(error);
   logWorkerEventArgs("api", "warn",
-    `[telegram-webhook] malformed pending field action=${actionType} ambiguous=${pending.ambiguous_ticker} field=${field} error=${message}`,
+    `[telegram-webhook] malformed pending field action=${actionType} field=${field} error=${message}`,
   );
 }
 
@@ -128,20 +128,34 @@ export function parseStoredConfirmBulkPayload(payload: Record<string, unknown>):
   return null;
 }
 
+function parsePendingActionPayload(pending: PendingDisambiguationRow): Record<string, unknown> | null {
+  if (!pending.action_payload) {
+    logPendingParseWarning(pending, "action_payload", new Error("canonical payload is missing"));
+    return null;
+  }
+  try {
+    const payload = JSON.parse(pending.action_payload) as unknown;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new TypeError("canonical payload is not an object");
+    }
+    return payload as Record<string, unknown>;
+  } catch (error) {
+    logPendingParseWarning(pending, "action_payload", error);
+    return null;
+  }
+}
+
 function parsePendingJsonField<T>(
   pending: PendingDisambiguationRow,
   field: keyof Pick<
     PendingDisambiguationRow,
-    "action_payload" | "alert_types" | "resolved_ids" | "candidates" | "remaining_tickers"
+    "alert_types" | "resolved_ids" | "candidates" | "remaining_tickers"
   >,
   fallback: T,
   transform: (value: unknown) => T,
 ): T {
   const rawValue = pending[field];
-  if (!rawValue) {
-    return fallback;
-  }
-
+  if (!rawValue) return fallback;
   try {
     return transform(JSON.parse(rawValue));
   } catch (error) {
@@ -253,14 +267,13 @@ export function parsePendingDisambiguation(
   const actionType = parsePendingActionType(pending.action_type ?? "subscribe");
   if (!actionType) {
     logWorkerEventArgs("api", "warn",
-      `[telegram-webhook] malformed pending action_type ambiguous=${pending.ambiguous_ticker} value=${String(pending.action_type)}`,
+      `[telegram-webhook] malformed pending action_type value=${String(pending.action_type)}`,
     );
     return null;
   }
 
-  const payload = parsePendingJsonField<Record<string, unknown>>(pending, "action_payload", {}, (value) =>
-    value && typeof value === "object" ? (value as Record<string, unknown>) : {},
-  );
+  const payload = parsePendingActionPayload(pending);
+  if (!payload) return null;
 
   if (actionType === "confirm-bulk") {
     const bulkPayload = parseStoredConfirmBulkPayload(payload);
@@ -280,18 +293,51 @@ export function parsePendingDisambiguation(
     };
   }
 
-  const legacyAlertTypes = new Set(parsePendingJsonField(pending, "alert_types", [], parseStringArray));
-  const resolvedIds = parsePendingJsonField(pending, "resolved_ids", [], parseStringArray);
-  const candidates = parsePendingJsonField(pending, "candidates", [], parseResolvedCoins);
-  const remainingTickers = parsePendingJsonField(pending, "remaining_tickers", [], parseStringArray);
+  const usesLegacyColumns = payload.schemaVersion === undefined;
+  if (!usesLegacyColumns && payload.schemaVersion !== 1) {
+    logPendingParseWarning(
+      pending,
+      "action_payload",
+      new Error(`unsupported canonical schemaVersion=${String(payload.schemaVersion)}`),
+    );
+    return null;
+  }
 
-  if (candidates.length === 0) return null;
+  // Activation-boundary compatibility only: an old Worker can write an
+  // unversioned row immediately before this Worker activates. Delete this
+  // branch in the first release deployed at least one DISAMBIGUATION_TTL_SEC
+  // after this Worker activates, alongside the deferred legacy-column drop.
+  const legacyAlertTypes = usesLegacyColumns
+    ? new Set(parsePendingJsonField(pending, "alert_types", [], parseStringArray))
+    : null;
+  const resolvedIds = usesLegacyColumns
+    ? parsePendingJsonField(pending, "resolved_ids", [], parseStringArray)
+    : parseStringArray(payload.resolvedIds);
+  const candidates = usesLegacyColumns
+    ? parsePendingJsonField(pending, "candidates", [], parseResolvedCoins)
+    : parseResolvedCoins(payload.candidates);
+  const remainingTickers = usesLegacyColumns
+    ? parsePendingJsonField(pending, "remaining_tickers", [], parseStringArray)
+    : parseStringArray(payload.remainingTickers);
+  const ambiguousTicker = usesLegacyColumns
+    ? pending.ambiguous_ticker
+    : typeof payload.ambiguousTicker === "string" ? payload.ambiguousTicker : "";
+
+  if (candidates.length === 0) {
+    if (usesLegacyColumns) return null;
+    logPendingParseWarning(
+      pending,
+      "action_payload",
+      new Error("canonical candidates are missing or malformed"),
+    );
+    return null;
+  }
 
   const resolvedCoins = dedupeCoins(resolvedIds.map((id) => STABLECOIN_BY_ID.get(id) ?? { id, symbol: id, name: id }));
 
   if (actionType === "subscribe") {
     const actionAlertTypes = new Set(
-      Array.isArray(payload.alertTypes) ? parseStringArray(payload.alertTypes) : Array.from(legacyAlertTypes),
+      Array.isArray(payload.alertTypes) ? parseStringArray(payload.alertTypes) : Array.from(legacyAlertTypes ?? []),
     );
     const depegWorseningBpsStep =
       isDepegStepValue(payload.depegWorseningBpsStep) ||
@@ -305,7 +351,7 @@ export function parsePendingDisambiguation(
       depegWorseningBpsStep,
       resolvedCoins,
       initiatorUserId: pending.initiator_user_id ?? null,
-      ambiguousTicker: pending.ambiguous_ticker,
+      ambiguousTicker,
       candidates,
       remainingTickers,
     };
@@ -317,7 +363,7 @@ export function parsePendingDisambiguation(
       presetIds: parseStringArray(payload.presetIds),
       resolvedCoins,
       initiatorUserId: pending.initiator_user_id ?? null,
-      ambiguousTicker: pending.ambiguous_ticker,
+      ambiguousTicker,
       candidates,
       remainingTickers,
     };
@@ -330,7 +376,7 @@ export function parsePendingDisambiguation(
     command: setCommand,
     resolvedCoins,
     initiatorUserId: pending.initiator_user_id ?? null,
-    ambiguousTicker: pending.ambiguous_ticker,
+    ambiguousTicker,
     candidates,
     remainingTickers,
   };

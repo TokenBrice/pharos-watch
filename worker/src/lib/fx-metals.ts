@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { validatePayloadWithSchema } from "./api-utils";
+import { validatePayloadWithSchema } from "./api-schema";
 import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "./stablecoins-cache";

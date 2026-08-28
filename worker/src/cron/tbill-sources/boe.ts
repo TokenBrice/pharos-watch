@@ -14,22 +14,6 @@ const BOE_SONIA_COMPOUNDED_INDEX_SERIES_CODE = "IUDZOS2";
 const BOE_COMPOUNDED_SONIA_WINDOW_DAYS = 90;
 const BOE_COMPOUNDED_SONIA_LOOKBACK_DAYS = 140;
 
-// Spot-SONIA fallback parser, currently not wired into production: GBP resolves
-// via parseBoeSoniaCompoundedIndexCsv. Retained (covered only by its own test).
-export function parseBoeSoniaCsv(csv: string): { recordDate: string; rate: number } | null {
-  const lines = csv.split(/\r?\n/);
-  for (let i = lines.length - 1; i >= 1; i--) {
-    const line = lines[i]?.trim();
-    if (!line) continue;
-    const [dateRaw, rateRaw] = line.split(",");
-    const recordDate = dateRaw ? parseEnglishDate(dateRaw) : null;
-    const rate = parseRate(rateRaw);
-    if (!recordDate || !isValidBenchmarkRate(rate)) continue;
-    return { recordDate, rate };
-  }
-  return null;
-}
-
 export interface SoniaCompoundedObservation {
   recordDate: string;
   indexValue: number;

@@ -16,6 +16,7 @@ import {
 } from "./helpers";
 import { parseEvmAddressResult } from "./evm";
 import { rethrowIfAborted } from "../../lib/abort";
+import { encodeAddressCallData } from "../../lib/evm-selectors";
 
 export interface FirmMarket {
   name: string;
@@ -214,10 +215,6 @@ const PSM_SELL_FEE_BPS_SELECTOR = "0x23cbe1f3";
 // ERC-4626 maxWithdraw(address) on the sUSDS vault
 const VAULT_MAX_WITHDRAW_SELECTOR = "0xce96cb77";
 
-function encodeAddressArg(selector: string, address: string): string {
-  return `${selector}${address.replace(/^0x/, "").toLowerCase().padStart(64, "0")}`;
-}
-
 interface InversePsmProbe {
   capacityUsd: number;
   supplyRaw: string;
@@ -242,7 +239,7 @@ async function probeInversePsm(signal: AbortSignal, ctx?: AdapterContext): Promi
       onchain.uint256(INVERSE_PSM_ADDRESS, PSM_SUPPLY_SELECTOR),
       onchain.uint256(
         INVERSE_PSM_VAULT_ADDRESS,
-        encodeAddressArg(VAULT_MAX_WITHDRAW_SELECTOR, INVERSE_PSM_ADDRESS),
+        encodeAddressCallData(VAULT_MAX_WITHDRAW_SELECTOR, INVERSE_PSM_ADDRESS),
       ),
     ]);
 

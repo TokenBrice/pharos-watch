@@ -1,20 +1,17 @@
-import { jsonResponse, parseOptionalRequestJsonObject } from "./api-utils";
+import { jsonResponse } from "./api-response";
+import { parseOptionalRequestJsonObject } from "./api-json-body";
 import { parseBooleanInput, readBodyOrQueryStringParam } from "./api-params";
-import { runAdminRoute } from "./route-wrappers";
 
 export interface AdminJobContext<TBody extends Record<string, unknown> = Record<string, unknown>> {
   url: URL;
   request?: Request;
-  trustedAdmin?: boolean;
   body: TBody;
   dryRun: boolean;
 }
 
 interface RunAdminJobOptions {
-  endpoint?: string;
   url: URL;
   request?: Request;
-  trustedAdmin?: boolean;
   parseBody?: boolean;
 }
 
@@ -22,28 +19,18 @@ export async function runAdminJob<TBody extends Record<string, unknown> = Record
   options: RunAdminJobOptions,
   handler: (context: AdminJobContext<TBody>) => Promise<Response>,
 ): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: options.endpoint ?? "admin-job",
-      request: options.request,
-      trustedAdmin: options.trustedAdmin,
-    },
-    async () => {
-      const parsedBody = options.parseBody ? await parseOptionalRequestJsonObject(options.request) : {};
-      if (parsedBody instanceof Response) {
-        return parsedBody;
-      }
+  const parsedBody = options.parseBody ? await parseOptionalRequestJsonObject(options.request) : {};
+  if (parsedBody instanceof Response) {
+    return parsedBody;
+  }
 
-      const body = parsedBody as TBody;
-      return handler({
-        url: options.url,
-        request: options.request,
-        trustedAdmin: options.trustedAdmin,
-        body,
-        dryRun: parseBooleanInput(body.dryRun, false) || options.url.searchParams.get("dry-run") === "true",
-      });
-    },
-  );
+  const body = parsedBody as TBody;
+  return handler({
+    url: options.url,
+    request: options.request,
+    body,
+    dryRun: parseBooleanInput(body.dryRun, false) || options.url.searchParams.get("dry-run") === "true",
+  });
 }
 
 export function readAdminStringParam(

@@ -2,7 +2,7 @@ import type { TelegramCreds } from "../lib/telegram";
 import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { runIdempotentAdminAction } from "../lib/idempotency";
 import { setCache } from "../lib/db-cache";
-import { jsonResponse } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { normalizeBlacklistSyncStateKey } from "../lib/db";
 

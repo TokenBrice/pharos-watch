@@ -13,6 +13,7 @@ import type {
   RedemptionRouteStatusSource,
 } from "@shared/types/redemption";
 import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
+import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import {
   RedemptionHolderEligibilitySchema,
   RedemptionLiveCapacityKindSchema,
@@ -165,9 +166,7 @@ function coerceString(value: unknown): string | null {
 
 function coerceReviewedAtDate(value: unknown): string | null {
   const date = coerceString(value);
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-  const parsed = new Date(`${date}T00:00:00.000Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date ? date : null;
+  return date && isValidIsoDateOnly(date) ? date : null;
 }
 
 function coerceUrlArray(value: unknown): string[] {

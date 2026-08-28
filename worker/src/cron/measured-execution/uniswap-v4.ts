@@ -13,6 +13,7 @@ import {
   type DexMeasuredExecutionTarget,
   type DexMeasuredExecutionUniswapV4PoolProof,
 } from "@shared/types/measured-execution";
+import { UNISWAP_V4_DEPLOYMENT } from "@shared/lib/measured-execution-deployment-policies";
 import { throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
@@ -29,9 +30,8 @@ import {
 import { MAX_UINT128, usdToRawAmount } from "./fixed-point";
 import { executeEvmQuotePlan, materializeEvmQuotePoint } from "./evm-quote-plan";
 
-export const UNISWAP_V4_ADAPTER_PROFILE_ID = "uniswap-v4-hook-free-quoter-v1";
-export const UNISWAP_V4_HOOK_FREE_ADDRESS =
-  "0x0000000000000000000000000000000000000000" as const;
+export const UNISWAP_V4_ADAPTER_PROFILE_ID = UNISWAP_V4_DEPLOYMENT.adapterProfileId;
+export const UNISWAP_V4_HOOK_FREE_ADDRESS = UNISWAP_V4_DEPLOYMENT.hookFreeAddress;
 
 const UNISWAP_V4_QUOTER_ABI = parseAbi([
   "function poolManager() view returns (address)",
@@ -79,15 +79,12 @@ const UNISWAP_V4_DEPLOYMENTS: readonly UniswapV4Deployment[] = [
     chain: "ethereum",
     mode: "active",
     scoreEligible: true,
-    poolManagerAddress: "0x000000000004444c5dc75cb358380d2e3de08a90",
-    expectedPoolManagerCodeHash:
-      "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293",
-    stateViewAddress: "0x7ffe42c4a5deea5b0fec41c94c136cf115597227",
-    expectedStateViewCodeHash:
-      "0xd7947778589cf4aac9a092a4451292a2056380941635ab7006d3c691d8dfd878",
-    endpointAddress: "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203",
-    expectedCodeHash:
-      "0x06de58fa119c5deaa7a667fb92d3894e25d9160e62fb82c8d86d43b47eefe441",
+    poolManagerAddress: UNISWAP_V4_DEPLOYMENT.poolManagerAddress,
+    expectedPoolManagerCodeHash: UNISWAP_V4_DEPLOYMENT.poolManagerCodeHash,
+    stateViewAddress: UNISWAP_V4_DEPLOYMENT.stateViewAddress,
+    expectedStateViewCodeHash: UNISWAP_V4_DEPLOYMENT.stateViewCodeHash,
+    endpointAddress: UNISWAP_V4_DEPLOYMENT.quoterAddress,
+    expectedCodeHash: UNISWAP_V4_DEPLOYMENT.quoterCodeHash,
   },
 ] as const;
 

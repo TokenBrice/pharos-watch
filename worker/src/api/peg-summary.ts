@@ -8,12 +8,9 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import {
-  addFreshnessHeaders,
-  errorResponse,
-  jsonResponse,
-  buildMethodologyEnvelope,
-} from "../lib/api-utils";
+import { addFreshnessHeaders } from "../lib/api-freshness";
+import { errorResponse, jsonResponse } from "../lib/api-response";
+import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { CACHE_PROFILES, getDepegThresholdBps } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";

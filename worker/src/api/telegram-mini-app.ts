@@ -14,7 +14,8 @@ import {
   type TelegramMiniAppVersionCompatibility,
 } from "@shared/lib/telegram-mini-app-contract";
 import { TELEGRAM_MINI_APP_CATALOG } from "@shared/lib/telegram-mini-app-catalog";
-import { jsonResponse, readRequestTextBounded } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
+import { readRequestTextBounded } from "../lib/api-json-body";
 import type { JsonResponseOptions } from "../lib/api-response";
 import {
   TelegramMiniAppAuthError,

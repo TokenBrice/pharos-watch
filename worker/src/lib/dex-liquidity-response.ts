@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { safeJsonParse } from "./api-utils";
+import { safeJsonParse } from "./api-cache-read";
 import { CURRENT_DEPLOYMENT_KEYS, deploymentKey } from "./dex-liquidity";
 import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {

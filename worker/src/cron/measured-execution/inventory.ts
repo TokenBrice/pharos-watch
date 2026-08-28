@@ -9,6 +9,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
 import { getTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { normalizeEvmAddress } from "../../lib/evm-selectors";
 // Alias the canonical key builder locally instead of importing token-resolution's
 // wrapper: that import closed a module cycle (dex-liquidity/types -> inventory ->
 // token-resolution -> types) flagged by check:shared-cycles.
@@ -27,11 +28,6 @@ import {
   computeUniswapV4PoolId,
   getUniswapV4Deployment,
 } from "./uniswap-v4";
-
-function canonicalEvmAddress(value: string): `0x${string}` | null {
-  const normalized = value.trim().toLowerCase();
-  return /^0x[a-f0-9]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-}
 
 export function parseUniV3FeePips(poolMeta: string | null | undefined): number | null {
   if (!poolMeta) return null;
@@ -63,7 +59,7 @@ export function buildUniV3ExecutionCandidateKey(
   feePips: number | null,
 ): string | null {
   if (feePips == null || !tokenAddresses || tokenAddresses.length !== 2) return null;
-  const addresses = tokenAddresses.map(canonicalEvmAddress);
+  const addresses = tokenAddresses.map(normalizeEvmAddress);
   if (addresses.some((address) => address == null)) return null;
   return `${canonicalExitRouteChain(chain)}|${(addresses as string[]).sort().join("|")}|${feePips}`;
 }
@@ -75,7 +71,7 @@ export function buildUniswapV4ExecutionCandidateKey(
 ): string | null {
   if (feePips == null || !Number.isInteger(feePips) || feePips < 0 || feePips > 1_000_000) return null;
   if (!tokenAddresses || tokenAddresses.length !== 2) return null;
-  const addresses = tokenAddresses.map(canonicalEvmAddress);
+  const addresses = tokenAddresses.map(normalizeEvmAddress);
   if (addresses.some((address) => address == null) || addresses[0] === addresses[1]) return null;
   return `${canonicalExitRouteChain(chain)}|${(addresses as string[]).sort().join("|")}|${feePips}`;
 }
@@ -144,8 +140,8 @@ function buildTwoTokenMeasuredExecutionTargets(
   const targets = new Map<string, DexMeasuredExecutionTarget>();
   for (const pool of input.pools) {
     if (pool.source !== spec.source || pool.tokens.length !== 2) continue;
-    const poolAddress = canonicalEvmAddress(pool.poolAddress);
-    const tokenAddresses = pool.tokens.map((token) => canonicalEvmAddress(token.address));
+    const poolAddress = normalizeEvmAddress(pool.poolAddress);
+    const tokenAddresses = pool.tokens.map((token) => normalizeEvmAddress(token.address));
     if (
       poolAddress == null ||
       tokenAddresses.some((address) => address == null) ||
@@ -279,8 +275,8 @@ function buildClMeasuredExecutionTarget(
   },
 ): DexMeasuredExecutionTarget | null {
   const candidate = input.candidate;
-  const tokenAddresses = candidate.tokens.map((token) => canonicalEvmAddress(token.address));
-  const poolAddress = canonicalEvmAddress(candidate.poolAddress);
+  const tokenAddresses = candidate.tokens.map((token) => normalizeEvmAddress(token.address));
+  const poolAddress = normalizeEvmAddress(candidate.poolAddress);
   if (!poolAddress || tokenAddresses.some((address) => address == null)) return null;
   const canonicalTokens = tokenAddresses as [`0x${string}`, `0x${string}`];
   const inputIndex = candidate.tokens.findIndex(
@@ -418,7 +414,7 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
   if (getUniswapV4Deployment(chain) == null) return null;
   const poolId = input.candidate.poolId.trim().toLowerCase();
   const hookAddress = input.candidate.hookAddress.trim().toLowerCase();
-  const tokenAddresses = input.candidate.tokens.map((token) => canonicalEvmAddress(token.address));
+  const tokenAddresses = input.candidate.tokens.map((token) => normalizeEvmAddress(token.address));
   if (
     !/^0x[a-f0-9]{64}$/.test(poolId) ||
     hookAddress !== UNISWAP_V4_HOOK_FREE_ADDRESS ||
@@ -595,9 +591,9 @@ export function buildUniV3DirectMeasuredExecutionTargets(input: {
       pool.price <= 0
     ) continue;
     const [token0, token1] = pool.tokens;
-    const poolAddress = canonicalEvmAddress(pool.poolAddress);
-    const token0Address = canonicalEvmAddress(token0.address);
-    const token1Address = canonicalEvmAddress(token1.address);
+    const poolAddress = normalizeEvmAddress(pool.poolAddress);
+    const token0Address = normalizeEvmAddress(token0.address);
+    const token1Address = normalizeEvmAddress(token1.address);
     const feePips = Math.round(pool.feeRate * 1_000_000);
     if (
       !poolAddress ||
@@ -681,9 +677,9 @@ export function buildSlipstreamMeasuredExecutionTargets(input: {
     ) continue;
 
     const [token0, token1] = pool.tokens;
-    const poolAddress = canonicalEvmAddress(pool.poolAddress);
-    const token0Address = canonicalEvmAddress(token0.address);
-    const token1Address = canonicalEvmAddress(token1.address);
+    const poolAddress = normalizeEvmAddress(pool.poolAddress);
+    const token0Address = normalizeEvmAddress(token0.address);
+    const token1Address = normalizeEvmAddress(token1.address);
     const token0PriceUsd = token0.priceUsd;
     const token1PriceUsd = token1.priceUsd;
     const spotToken1PerToken0 = pool.price;

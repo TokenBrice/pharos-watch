@@ -1,4 +1,4 @@
-import { jsonResponse } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
 import {
   buildFallbackStatusState,
   buildDiscrepancy,

@@ -7,7 +7,7 @@ import { getCache, shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache
 import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
-import { validatePayloadWithSchema } from "../lib/api-utils";
+import { validatePayloadWithSchema } from "../lib/api-schema";
 import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { parseBluechipRatingsCache } from "../lib/bluechip-cache";

@@ -4,7 +4,7 @@ import { buildPerCoinCacheControl, PER_COIN_CACHE_TTL_SECONDS } from "@shared/li
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CACHE_PROFILES, DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../../lib/constants";
 import { binarySearchNearest } from "../../lib/binary-search";
-import { errorResponse } from "../../lib/api-utils";
+import { errorResponse } from "../../lib/api-response";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
 import { logWorkerEvent } from "../../lib/structured-log";
 

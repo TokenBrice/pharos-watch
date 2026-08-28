@@ -1,7 +1,7 @@
-import { logWorkerEventArgs } from "../lib/structured-log";
-import { jsonResponse, parseOptionalPositiveIntegerParam } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-response";
+import { parseOptionalPositiveIntegerParam } from "../lib/api-params";
 import { runAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
-import { toErrorMessage } from "../lib/error-utils";
+import { loadAdminAuditPage, type AdminAuditPageDescriptor } from "./admin-audit-page";
 
 interface AuditLogRow {
   id: number;
@@ -15,18 +15,36 @@ interface AuditLogRow {
 const AUDIT_LOG_DEFAULT_LIMIT = 50;
 const AUDIT_LOG_MAX_LIMIT = 200;
 
-function parseAuditDetail(row: AuditLogRow): unknown {
-  if (!row.detail_json) return null;
-  try {
-    return JSON.parse(row.detail_json) as unknown;
-  } catch (error) {
-    logWorkerEventArgs("api", "warn",
-      `[api-key-audit-log] Failed to parse detail_json for row ${row.id}:`,
-      toErrorMessage(error),
-    );
-    return null;
-  }
-}
+const API_KEY_AUDIT_PAGE = {
+  unfilteredSql: `SELECT id, api_key_id, action, actor, detail_json, created_at
+           FROM api_key_audit_log
+           ORDER BY created_at DESC, id DESC
+           LIMIT ?`,
+  filteredSql: `SELECT id, api_key_id, action, actor, detail_json, created_at
+           FROM api_key_audit_log
+           WHERE api_key_id = ?
+           ORDER BY created_at DESC, id DESC
+           LIMIT ?`,
+  detailJson: (row) => row.detail_json,
+  rowId: (row) => row.id,
+  malformedDetailLog: "api-key",
+  detailContext: "api-key-audit-log",
+  mapRow: (row, detail) => ({
+    id: row.id,
+    apiKeyId: row.api_key_id,
+    action: row.action,
+    actor: row.actor,
+    detail,
+    createdAt: row.created_at,
+  }),
+} satisfies AdminAuditPageDescriptor<AuditLogRow, {
+  id: number;
+  apiKeyId: number;
+  action: string;
+  actor: string;
+  detail: unknown;
+  createdAt: number;
+}>;
 
 export function handleApiKeyAuditLog({ db, trustedAdmin, request }: AdminRouteContext): Promise<Response> {
   return runAdminRoute(
@@ -47,38 +65,11 @@ export function handleApiKeyAuditLog({ db, trustedAdmin, request }: AdminRouteCo
       const apiKeyId = parseOptionalPositiveIntegerParam(apiKeyIdParam, "apiKeyId");
       if (apiKeyId instanceof Response) return apiKeyId;
 
-      let rows: AuditLogRow[];
-      if (apiKeyId != null) {
-        const result = await db.prepare(
-          `SELECT id, api_key_id, action, actor, detail_json, created_at
-           FROM api_key_audit_log
-           WHERE api_key_id = ?
-           ORDER BY created_at DESC, id DESC
-           LIMIT ?`,
-        )
-          .bind(apiKeyId, limit)
-          .all<AuditLogRow>();
-        rows = result.results ?? [];
-      } else {
-        const result = await db.prepare(
-          `SELECT id, api_key_id, action, actor, detail_json, created_at
-           FROM api_key_audit_log
-           ORDER BY created_at DESC, id DESC
-           LIMIT ?`,
-        )
-          .bind(limit)
-          .all<AuditLogRow>();
-        rows = result.results ?? [];
-      }
-
-      const entries = rows.map((row) => ({
-        id: row.id,
-        apiKeyId: row.api_key_id,
-        action: row.action,
-        actor: row.actor,
-        detail: parseAuditDetail(row),
-        createdAt: row.created_at,
-      }));
+      const entries = await loadAdminAuditPage(db, {
+        descriptor: API_KEY_AUDIT_PAGE,
+        limit,
+        ...(apiKeyId == null ? {} : { filterValue: apiKeyId }),
+      });
 
       return jsonResponse({ entries });
     },

@@ -9,7 +9,7 @@ import {
 } from "@shared/lib/ops-limits";
 import { activateTrustedApiKey, createTrustedApiKey } from "../../lib/api-key-admin";
 import { getNowSec, recordApiKeyAudit } from "../../lib/api-key-core";
-import { jsonResponse } from "../../lib/api-utils";
+import { jsonResponse } from "../../lib/api-response";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { sendVerificationEmail } from "./email";
 import { checkApiKeyRequestRateLimit, pruneOldApiKeyRequestRateLimits } from "./rate-limit";

@@ -1,4 +1,5 @@
-import { parseQueryParams, jsonResponse, parseTimestampSecondsParam } from "../lib/api-utils";
+import { parseQueryParams, parseTimestampSecondsParam } from "../lib/api-params";
+import { jsonResponse } from "../lib/api-response";
 import {
   buildDiscrepancy,
   getDiscrepancyStreak,

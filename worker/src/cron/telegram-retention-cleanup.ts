@@ -401,7 +401,13 @@ export function pruneTelegramMiniAppMutationBurstCache(
  * One homogeneous capped-delete retention step. `countsTowardRunBudget` marks
  * the high-volume families whose cap truncates the whole retention run.
  */
-type TelegramRetentionDeleteStep =
+interface TelegramRetentionReportDescriptor {
+  flat?: false;
+  capped?: false;
+  group?: string;
+}
+
+type TelegramRetentionDeleteStep = (
   | {
       name: string;
       sql: string;
@@ -414,7 +420,10 @@ type TelegramRetentionDeleteStep =
       name: string;
       cachePrefix: string;
       cutoff: number;
-    };
+    }
+) & {
+  report?: TelegramRetentionReportDescriptor;
+};
 
 function runTelegramRetentionDeleteStep(
   db: D1Database,
@@ -428,6 +437,31 @@ function runTelegramRetentionDeleteStep(
       totalLimit: step.totalLimit,
       cutoffBindCount: step.cutoffBindCount,
     });
+}
+
+function buildRetentionStepReport(
+  steps: readonly TelegramRetentionDeleteStep[],
+  results: Record<string, CappedDeleteResult>,
+): {
+  pruned: Record<string, number>;
+  cappedAtLimit: Record<string, boolean>;
+} {
+  const report = {
+    pruned: {} as Record<string, number>,
+    cappedAtLimit: {} as Record<string, boolean>,
+  };
+  for (const step of steps) {
+    const result = results[step.name];
+    if (step.report?.flat !== false) report.pruned[`${step.name}Pruned`] = result.pruned;
+    if (step.report?.capped !== false) report.cappedAtLimit[step.name] = result.cappedAtLimit;
+    if (step.report?.group) {
+      const prunedKey = `${step.report.group}Pruned`;
+      report.pruned[prunedKey] = (report.pruned[prunedKey] ?? 0) + result.pruned;
+      report.cappedAtLimit[step.report.group] =
+        (report.cappedAtLimit[step.report.group] ?? false) || result.cappedAtLimit;
+    }
+  }
+  return report;
 }
 
 export async function runTelegramRetentionCleanup(
@@ -567,6 +601,7 @@ export async function runTelegramRetentionCleanup(
       cutoffBindCount: 1,
       totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
       countsTowardRunBudget: true,
+      report: { capped: false, group: "jobTargetItems" },
     },
     {
       name: "replayJobTargets",
@@ -593,6 +628,7 @@ export async function runTelegramRetentionCleanup(
       cutoffBindCount: 1,
       totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
       countsTowardRunBudget: true,
+      report: { capped: false, group: "jobTargets" },
     },
     {
       name: "targetPlans",
@@ -637,6 +673,7 @@ export async function runTelegramRetentionCleanup(
       )`,
       cutoff: replayCutoff,
       cutoffBindCount: 1,
+      report: { capped: false, group: "jobs" },
     },
     {
       name: "replaySourceResolutionTargets",
@@ -653,6 +690,7 @@ export async function runTelegramRetentionCleanup(
       )`,
       cutoff: replayCutoff,
       cutoffBindCount: 1,
+      report: { flat: false, capped: false, group: "sourceResolutionTargets" },
     },
     {
       name: "replaySourceResolutionMemberships",
@@ -669,6 +707,7 @@ export async function runTelegramRetentionCleanup(
       )`,
       cutoff: replayCutoff,
       cutoffBindCount: 1,
+      report: { flat: false, capped: false, group: "sourceResolutionMemberships" },
     },
     {
       name: "replaySourceResolutionPages",
@@ -685,6 +724,7 @@ export async function runTelegramRetentionCleanup(
       )`,
       cutoff: replayCutoff,
       cutoffBindCount: 1,
+      report: { flat: false, capped: false, group: "sourceResolutionPages" },
     },
     {
       name: "replaySourceEvents",
@@ -713,6 +753,7 @@ export async function runTelegramRetentionCleanup(
         )`,
       cutoff: replayCutoff,
       cutoffBindCount: 2,
+      report: { capped: false, group: "sourceEvents" },
     },
     {
       name: "deadLetters",
@@ -727,6 +768,7 @@ export async function runTelegramRetentionCleanup(
       cutoffBindCount: 2,
       totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
       countsTowardRunBudget: true,
+      report: { flat: false, capped: false, group: "jobTargetItems" },
     },
     {
       name: "auditJobTargets",
@@ -735,30 +777,35 @@ export async function runTelegramRetentionCleanup(
       cutoffBindCount: 2,
       totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
       countsTowardRunBudget: true,
+      report: { flat: false, capped: false, group: "jobTargets" },
     },
     {
       name: "auditJobs",
       sql: "DELETE FROM telegram_alert_jobs WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_jobs WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
       cutoff: alertAuditCutoff,
       cutoffBindCount: 2,
+      report: { flat: false, capped: false, group: "jobs" },
     },
     {
       name: "auditSourceResolutionTargets",
       sql: "DELETE FROM telegram_alert_source_resolution_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
       cutoff: alertAuditCutoff,
       cutoffBindCount: 2,
+      report: { flat: false, capped: false, group: "sourceResolutionTargets" },
     },
     {
       name: "auditSourceResolutionMemberships",
       sql: "DELETE FROM telegram_alert_source_resolution_memberships WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_memberships WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
       cutoff: alertAuditCutoff,
       cutoffBindCount: 2,
+      report: { flat: false, capped: false, group: "sourceResolutionMemberships" },
     },
     {
       name: "auditSourceResolutionPages",
       sql: "DELETE FROM telegram_alert_source_resolution_pages WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_pages WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
       cutoff: alertAuditCutoff,
       cutoffBindCount: 2,
+      report: { flat: false, capped: false, group: "sourceResolutionPages" },
     },
     {
       name: "freezeTargets",
@@ -799,6 +846,7 @@ export async function runTelegramRetentionCleanup(
         )`,
       cutoff: alertAuditCutoff,
       cutoffBindCount: 2,
+      report: { flat: false, capped: false, group: "sourceEvents" },
     },
     {
       name: "usageDaily",
@@ -890,83 +938,6 @@ export async function runTelegramRetentionCleanup(
     stepResults[step.name] = await runTelegramRetentionDeleteStep(db, step, signal);
   }
 
-  const {
-    replayJobTargetItems,
-    replayJobTargets,
-    replayJobs,
-    replaySourceResolutionTargets,
-    replaySourceResolutionMemberships,
-    replaySourceResolutionPages,
-    replaySourceEvents,
-    auditJobTargetItems,
-    auditJobTargets,
-    auditJobs,
-    auditSourceResolutionTargets,
-    auditSourceResolutionMemberships,
-    auditSourceResolutionPages,
-    auditSourceEvents,
-  } = stepResults;
-
-  const jobTargetItems = {
-    pruned: replayJobTargetItems.pruned + auditJobTargetItems.pruned,
-    cappedAtLimit: replayJobTargetItems.cappedAtLimit || auditJobTargetItems.cappedAtLimit,
-  };
-
-const RETENTION_STEPS_WITHOUT_FLAT_REPORT = new Set([
-  "replaySourceResolutionTargets",
-  "replaySourceResolutionMemberships",
-  "replaySourceResolutionPages",
-  "auditJobTargetItems",
-  "auditJobTargets",
-  "auditJobs",
-  "auditSourceResolutionTargets",
-  "auditSourceResolutionMemberships",
-  "auditSourceResolutionPages",
-  "auditSourceEvents",
-]);
-
-function buildRetentionStepReport(
-  steps: readonly TelegramRetentionDeleteStep[],
-  results: Record<string, CappedDeleteResult>,
-): {
-  pruned: Record<string, number>;
-  cappedAtLimit: Record<string, boolean>;
-} {
-  const report = {
-    pruned: {} as Record<string, number>,
-    cappedAtLimit: {} as Record<string, boolean>,
-  };
-  for (const step of steps) {
-    if (RETENTION_STEPS_WITHOUT_FLAT_REPORT.has(step.name)) continue;
-    report.pruned[step.name] = results[step.name].pruned;
-    report.cappedAtLimit[step.name] = results[step.name].cappedAtLimit;
-  }
-  return report;
-}
-  const jobTargets = {
-    pruned: replayJobTargets.pruned + auditJobTargets.pruned,
-    cappedAtLimit: replayJobTargets.cappedAtLimit || auditJobTargets.cappedAtLimit,
-  };
-  const jobs = {
-    pruned: replayJobs.pruned + auditJobs.pruned,
-    cappedAtLimit: replayJobs.cappedAtLimit || auditJobs.cappedAtLimit,
-  };
-  const sourceResolutionTargets = {
-    pruned: replaySourceResolutionTargets.pruned + auditSourceResolutionTargets.pruned,
-    cappedAtLimit: replaySourceResolutionTargets.cappedAtLimit || auditSourceResolutionTargets.cappedAtLimit,
-  };
-  const sourceResolutionMemberships = {
-    pruned: replaySourceResolutionMemberships.pruned + auditSourceResolutionMemberships.pruned,
-    cappedAtLimit: replaySourceResolutionMemberships.cappedAtLimit || auditSourceResolutionMemberships.cappedAtLimit,
-  };
-  const sourceResolutionPages = {
-    pruned: replaySourceResolutionPages.pruned + auditSourceResolutionPages.pruned,
-    cappedAtLimit: replaySourceResolutionPages.cappedAtLimit || auditSourceResolutionPages.cappedAtLimit,
-  };
-  const sourceEvents = {
-    pruned: replaySourceEvents.pruned + auditSourceEvents.pruned,
-    cappedAtLimit: replaySourceEvents.cappedAtLimit || auditSourceEvents.cappedAtLimit,
-  };
   const retentionStepReport = buildRetentionStepReport(retentionDeleteSteps, stepResults);
 
   const totalPruned =
@@ -995,40 +966,7 @@ function buildRetentionStepReport(
       legacyTerminalJobsPruned: highGrowthRetention.legacyTerminalJobsPruned,
       staleUnresolvedJobsPruned: highGrowthRetention.staleUnresolvedJobsPruned,
       staleUnresolvedSourcesPruned: highGrowthRetention.staleUnresolvedSourcesPruned,
-      targetPlanItemsPruned: retentionStepReport.pruned.targetPlanItems,
-      targetPlansPruned: retentionStepReport.pruned.targetPlans,
-      targetPlanPagesPruned: retentionStepReport.pruned.targetPlanPages,
-      planningSubscribersPruned: retentionStepReport.pruned.planningSubscribers,
-      targetExpiryProgressPruned: retentionStepReport.pruned.targetExpiryProgress,
-      replayJobTargetItemsPruned: retentionStepReport.pruned.replayJobTargetItems,
-      replayJobTargetsPruned: retentionStepReport.pruned.replayJobTargets,
-      replayJobsPruned: retentionStepReport.pruned.replayJobs,
-      replaySourceEventsPruned: retentionStepReport.pruned.replaySourceEvents,
-      deadLettersPruned: retentionStepReport.pruned.deadLetters,
-      jobTargetItemsPruned: jobTargetItems.pruned,
-      jobTargetsPruned: jobTargets.pruned,
-      jobsPruned: jobs.pruned,
-      sourceResolutionTargetsPruned: sourceResolutionTargets.pruned,
-      sourceResolutionMembershipsPruned: sourceResolutionMemberships.pruned,
-      sourceResolutionPagesPruned: sourceResolutionPages.pruned,
-      sourceEventsPruned: sourceEvents.pruned,
-      freezeTargetsPruned: retentionStepReport.pruned.freezeTargets,
-      freezeEventsPruned: retentionStepReport.pruned.freezeEvents,
-      usageDailyPruned: retentionStepReport.pruned.usageDaily,
-      watcherLifecyclePruned: retentionStepReport.pruned.watcherLifecycle,
-      adoptionDailyPruned: retentionStepReport.pruned.adoptionDaily,
-      adoptionRetentionPruned: retentionStepReport.pruned.adoptionRetention,
-      adoptionIngressQuotaPruned: retentionStepReport.pruned.adoptionIngressQuota,
-      adoptionClientQuotaPruned: retentionStepReport.pruned.adoptionClientQuota,
-      diagnosticsPruned: retentionStepReport.pruned.diagnostics,
-      commandCooldownCachePruned: retentionStepReport.pruned.commandCooldownCache,
-      miniAppMutationBurstCachePruned: retentionStepReport.pruned.miniAppMutationBurstCache,
-      miniAppAdoptionSessionCachePruned: retentionStepReport.pruned.miniAppAdoptionSessionCache,
-      commandFloodCachePruned: retentionStepReport.pruned.commandFloodCache,
-      chatMemberCachePruned: retentionStepReport.pruned.chatMemberCache,
-      chatAdminsCachePruned: retentionStepReport.pruned.chatAdminsCache,
-      groupWelcomeCachePruned: retentionStepReport.pruned.groupWelcomeCache,
-      reEngagementWarningCachePruned: retentionStepReport.pruned.reEngagementWarningCache,
+      ...retentionStepReport.pruned,
       expiredTargetsReconciled,
       runBudgetTruncated: processedUpdates.remainingBacklog.count > 0 || recapTargets.cappedAtLimit || retentionDeleteCapped,
       deleteBatchLimit: RETENTION_DELETE_BATCH_LIMIT,
@@ -1049,36 +987,7 @@ function buildRetentionStepReport(
         processedUpdates: processedUpdates.cappedAtLimit,
         recapTargets: recapTargets.cappedAtLimit,
         highGrowthRetention: highGrowthRetention.cappedAtLimit,
-        targetPlanItems: retentionStepReport.cappedAtLimit.targetPlanItems,
-        targetPlans: retentionStepReport.cappedAtLimit.targetPlans,
-        targetPlanPages: retentionStepReport.cappedAtLimit.targetPlanPages,
-        planningSubscribers: retentionStepReport.cappedAtLimit.planningSubscribers,
-        targetExpiryProgress: retentionStepReport.cappedAtLimit.targetExpiryProgress,
-        deadLetters: retentionStepReport.cappedAtLimit.deadLetters,
-        jobTargetItems: jobTargetItems.cappedAtLimit,
-        jobTargets: jobTargets.cappedAtLimit,
-        jobs: jobs.cappedAtLimit,
-        sourceResolutionTargets: sourceResolutionTargets.cappedAtLimit,
-        sourceResolutionMemberships: sourceResolutionMemberships.cappedAtLimit,
-        sourceResolutionPages: sourceResolutionPages.cappedAtLimit,
-        sourceEvents: sourceEvents.cappedAtLimit,
-        freezeTargets: retentionStepReport.cappedAtLimit.freezeTargets,
-        freezeEvents: retentionStepReport.cappedAtLimit.freezeEvents,
-        usageDaily: retentionStepReport.cappedAtLimit.usageDaily,
-        watcherLifecycle: retentionStepReport.cappedAtLimit.watcherLifecycle,
-        adoptionDaily: retentionStepReport.cappedAtLimit.adoptionDaily,
-        adoptionRetention: retentionStepReport.cappedAtLimit.adoptionRetention,
-        adoptionIngressQuota: retentionStepReport.cappedAtLimit.adoptionIngressQuota,
-        adoptionClientQuota: retentionStepReport.cappedAtLimit.adoptionClientQuota,
-        diagnostics: retentionStepReport.cappedAtLimit.diagnostics,
-        commandCooldownCache: retentionStepReport.cappedAtLimit.commandCooldownCache,
-        miniAppMutationBurstCache: retentionStepReport.cappedAtLimit.miniAppMutationBurstCache,
-        miniAppAdoptionSessionCache: retentionStepReport.cappedAtLimit.miniAppAdoptionSessionCache,
-        commandFloodCache: retentionStepReport.cappedAtLimit.commandFloodCache,
-        chatMemberCache: retentionStepReport.cappedAtLimit.chatMemberCache,
-        chatAdminsCache: retentionStepReport.cappedAtLimit.chatAdminsCache,
-        groupWelcomeCache: retentionStepReport.cappedAtLimit.groupWelcomeCache,
-        reEngagementWarningCache: retentionStepReport.cappedAtLimit.reEngagementWarningCache,
+        ...retentionStepReport.cappedAtLimit,
       },
       retentionDays: {
         alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,

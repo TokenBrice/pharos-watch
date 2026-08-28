@@ -1,4 +1,4 @@
-import { formatCompactUsdShort } from "@shared/lib/format";
+import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -12,15 +12,23 @@ import { safeJsonParse } from "../lib/api-cache-read";
 
 /** 24h mint/burn flow older than this is omitted from the terse alert Context line. */
 const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
+const ALERT_USD_PROFILE = {
+  decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 },
+  invalidFallback: "n/a",
+  maximumTier: "billion",
+  signPosition: "after-currency",
+} as const;
 
 function formatUsdCompact(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "n/a";
-  return formatCompactUsdShort(value);
+  return formatCompactUsdWithOptions(value, ALERT_USD_PROFILE);
 }
 
 function formatSignedUsdCompact(value: number): string {
-  const compact = formatCompactUsdShort(Math.abs(value));
-  return value > 0 ? `+${compact}` : value < 0 ? `-${compact}` : compact;
+  return formatCompactUsdWithOptions(value, {
+    ...ALERT_USD_PROFILE,
+    positiveSign: true,
+    signPosition: "before-currency",
+  });
 }
 
 export async function buildAlertContextLines(

@@ -1,4 +1,5 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { toErrorMessage } from "./error-utils";
 import { readResponseTextBoundedWithSignal } from "./response-body";
 
@@ -196,15 +197,15 @@ function formatSharePct(mcapUsd: number, totalMcapUsd: number): string {
 }
 
 function formatUsdCompact(value: number): string {
-  const units = [
-    { threshold: 1_000_000_000_000, suffix: "T" },
-    { threshold: 1_000_000_000, suffix: "B" },
-    { threshold: 1_000_000, suffix: "M" },
-  ];
-  const unit = units.find(({ threshold }) => value >= threshold);
-  if (!unit) return `$${Math.round(value).toLocaleString("en-US")}`;
-  const scaled = (value / unit.threshold).toFixed(1).replace(/\.0$/, "");
-  return `$${scaled}${unit.suffix}`;
+  return formatCompactUsdWithOptions(value, {
+    decimals: { trillion: 1, billion: 1, million: 1, thousand: 0, unit: 0 },
+    compactNegative: false,
+    invalidFallback: "N/A",
+    minimumTier: "million",
+    trimTrailingZeros: true,
+    useGrouping: true,
+    signPosition: "after-currency",
+  });
 }
 
 export function buildDigestSafetyMapCaptions(

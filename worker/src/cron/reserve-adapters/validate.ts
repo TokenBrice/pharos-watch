@@ -8,6 +8,7 @@ import {
   type LiveReserveWarning,
 } from "@shared/types/live-reserves";
 import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
+import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import type { ReserveAdapterDefinition } from "./types";
 import { isReserveRisk, PCT_SUM_ERROR_TOLERANCE } from "./helpers";
 import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
@@ -32,7 +33,6 @@ interface ValidationOptions {
 
 const PCT_SUM_WARNING_TOLERANCE = 0.5;
 export const MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC = 10 * 60;
-const REVIEWED_AT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function getFiniteMetadataNumber(metadata: Record<string, unknown> | undefined, key: string): number | null {
   const value = metadata?.[key];
@@ -85,11 +85,7 @@ function isValidUrl(value: string): boolean {
 }
 
 function isValidReviewedAtDate(value: string): boolean {
-  if (!REVIEWED_AT_DATE_PATTERN.test(value)) {
-    return false;
-  }
-  const date = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  return isValidIsoDateOnly(value);
 }
 
 function isKnownValue<const T extends readonly string[]>(values: T, value: unknown): value is T[number] {

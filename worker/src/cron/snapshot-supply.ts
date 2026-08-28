@@ -13,19 +13,14 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
-import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import {
-  buildSupplySnapshotCoverageExpectation,
   buildSupplySnapshotCompletionMarker,
-  getCompletedSupplySnapshot,
+  preflightSupplySnapshot,
   SNAPSHOT_SUPPLY_LAST_WRITE_KEY,
 } from "../lib/supply-snapshot-completion";
-import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
   evaluateStablecoinPublicationCoverage,
-  resolveStablecoinPublicationWaivers,
-  selectAppliedStablecoinPublicationWaivers,
   type StablecoinPublicationWaiver,
 } from "../lib/stablecoin-publication-coverage";
 
@@ -104,82 +99,85 @@ export async function snapshotSupply(
 ): Promise<CronResult> {
   throwIfAborted(signal);
 
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
+  const publicationWaivers = options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS;
+  const configuredRequiredActiveIds = options.requiredActiveIds ?? PSI_ELIGIBLE_STABLECOINS
+    .map((stablecoin) => stablecoin.id)
+    .filter((id) => ACTIVE_IDS.has(id));
+  const snapshotEligibleIds = new Set(
+    options.snapshotEligibleIds ?? PSI_ELIGIBLE_STABLECOINS.map((stablecoin) => stablecoin.id),
+  );
+  const preflight = await preflightSupplySnapshot(db, {
+    nowSec: options.nowSec,
+    requiredActiveIds: configuredRequiredActiveIds,
+    publicationWaivers,
+    assertContinuation: () => throwIfAborted(signal),
+    deriveCoverage: (payload, requiredActiveIds, snapshotDate) => {
+      const requiredActiveIdSet = new Set(requiredActiveIds);
+      const cachedIds = new Set(payload.peggedAssets.map((asset) => asset.id));
+      const restoredSnapshotIds = new Set<string>();
+      const nonRestoredSnapshotIds = new Set<string>();
+      const validSnapshotIds = new Set<string>();
+      const snapshotRows: Array<readonly [string, number, number, number | null]> = [];
+
+      for (const asset of payload.peggedAssets) {
+        if (!snapshotEligibleIds.has(asset.id)) continue;
+        if (asset.supplyRestored === true) {
+          restoredSnapshotIds.add(asset.id);
+          continue;
+        }
+        nonRestoredSnapshotIds.add(asset.id);
+
+        const circ = asset.circulating;
+        if (!circ) continue;
+        const circulatingUsd = getCirculatingRaw(asset);
+        if (circulatingUsd <= 0) continue;
+        validSnapshotIds.add(asset.id);
+
+        const price = typeof asset.price === "number" && asset.price > 0 ? asset.price : null;
+        snapshotRows.push([asset.id, snapshotDate, circulatingUsd, price]);
+      }
+
+      return {
+        accountedIds: new Set([...validSnapshotIds, ...restoredSnapshotIds]),
+        context: {
+          cachedIds,
+          requiredActiveIdSet,
+          restoredOnlyIds: [...restoredSnapshotIds]
+            .filter((id) => requiredActiveIdSet.has(id) && !nonRestoredSnapshotIds.has(id))
+            .sort(),
+          snapshotRows,
+          validSnapshotIds,
+        },
+      };
+    },
+  });
   throwIfAborted(signal);
-  if (stablecoinsCache.kind !== "ok") {
+  if (preflight.kind === "cache-unavailable") {
     logWorkerEventArgs("handler", "error", "[snapshot-supply] No stablecoins cache found");
     return {
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: stablecoinsCache.reason }),
+      metadata: JSON.stringify({ reason: preflight.reason }),
     };
   }
-  const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
-  const publicationWaivers = options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS;
-  const requiredActiveIds = [...new Set(options.requiredActiveIds ?? PSI_ELIGIBLE_STABLECOINS
-    .map((stablecoin) => stablecoin.id)
-    .filter((id) => ACTIVE_IDS.has(id)))].sort();
-  const snapshotEligibleIds = new Set(
-    options.snapshotEligibleIds ?? PSI_ELIGIBLE_STABLECOINS.map((stablecoin) => stablecoin.id),
-  );
-  const requiredActiveIdSet = new Set(requiredActiveIds);
-  const cachedIds = new Set(stablecoinsCache.payload.peggedAssets.map((asset) => asset.id));
-  const restoredSnapshotIds = new Set<string>();
-  const nonRestoredSnapshotIds = new Set<string>();
-  const validSnapshotIds = new Set<string>();
-  const snapshotRows: Array<readonly [string, number, number, number | null]> = [];
-
-  // One snapshot per UTC day, keyed on the marker's stored snapshotDate. The
-  // previous 20h wall-clock cooldown drifted the write time through the whole
-  // UTC day (consecutive rows spanned 20-28h), skewing day-over-day deltas;
-  // date-keying pins the write to the first healthy run after UTC midnight.
-  const snapshotDate = startOfUtcDaySec(new Date());
-
-  for (const asset of stablecoinsCache.payload.peggedAssets) {
-    if (!snapshotEligibleIds.has(asset.id)) continue;
-    if (asset.supplyRestored === true) {
-      restoredSnapshotIds.add(asset.id);
-      continue;
-    }
-    nonRestoredSnapshotIds.add(asset.id);
-
-    const circ = asset.circulating;
-    if (!circ) continue;
-    const circulatingUsd = getCirculatingRaw(asset);
-    if (circulatingUsd <= 0) continue;
-    validSnapshotIds.add(asset.id);
-
-    const price = typeof asset.price === "number" && asset.price > 0 ? asset.price : null;
-    snapshotRows.push([asset.id, snapshotDate, circulatingUsd, price]);
+  if (preflight.kind === "cache-stale") {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec }),
+    };
   }
-
-  const restoredOnlyIds = [...restoredSnapshotIds]
-    .filter((id) => requiredActiveIdSet.has(id) && !nonRestoredSnapshotIds.has(id))
-    .sort();
-
-  // Restored rows are never written (a carried-forward value is not that
-  // day's observation), but they are deliberate exclusions, not coverage
-  // gaps: counting them as missing would let a handful of restored coins
-  // veto every genuinely observed row for the whole UTC day.
-  const coverageAccountedIds = new Set([...validSnapshotIds, ...restoredSnapshotIds]);
-  const publicationCoverage = evaluateStablecoinPublicationCoverage(
-    coverageAccountedIds,
+  const {
+    cache: stablecoinsCache,
+    cacheAgeSec: cacheAge,
+    context: { cachedIds, requiredActiveIdSet, restoredOnlyIds, snapshotRows, validSnapshotIds },
+    coverageExpectation,
+    lastWrite,
     nowSec,
-    publicationWaivers,
+    publicationCoverage,
     requiredActiveIds,
-  );
-  const resolvedWaivers = resolveStablecoinPublicationWaivers(
-    requiredActiveIds,
-    nowSec,
-    publicationWaivers,
-  );
-  const appliedWaivers = selectAppliedStablecoinPublicationWaivers(
-    publicationCoverage.waivedActiveIds,
-    resolvedWaivers,
-  );
-  const coverageExpectation = buildSupplySnapshotCoverageExpectation(requiredActiveIds, appliedWaivers);
-  const lastWrite = await getCompletedSupplySnapshot(db, { expectedCoverage: coverageExpectation });
-  throwIfAborted(signal);
+    snapshotDate,
+  } = preflight;
   if (
     options.minStablecoinsCacheUpdatedAtSec != null
     && stablecoinsCache.updatedAt < options.minStablecoinsCacheUpdatedAtSec
@@ -204,7 +202,6 @@ export async function snapshotSupply(
   }
 
   // Verify cache freshness — skip if stale (>20 min) to avoid snapshotting outdated data
-  const cacheAge = nowSec - stablecoinsCache.updatedAt;
   if (cacheAge > CACHE_MAX_AGE_SEC) {
     logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping snapshot`);
     return {

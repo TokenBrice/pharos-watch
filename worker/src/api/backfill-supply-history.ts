@@ -9,7 +9,8 @@ import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../l
 import { fetchCoinGeckoMarketHistory } from "../lib/coingecko-market-history";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { batchExecute } from "../lib/db";
-import { encodeJsonCursor, jsonResponse, parseIntParam, parseJsonCursorParam } from "../lib/api-utils";
+import { encodeJsonCursor, parseIntParam, parseJsonCursorParam } from "../lib/api-params";
+import { jsonResponse } from "../lib/api-response";
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { selectBackfillCoins } from "../lib/backfill-query";

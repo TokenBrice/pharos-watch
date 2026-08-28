@@ -5,7 +5,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
-import { errorResponse, jsonResponseWithHeaders } from "../lib/api-utils";
+import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { CACHE_PROFILES } from "../lib/constants";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {

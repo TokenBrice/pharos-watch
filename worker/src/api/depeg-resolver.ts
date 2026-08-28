@@ -1,9 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { toErrorMessage } from "../lib/error-utils";
-import {
-  cacheControlForDegradedPayload,
-  jsonFreshResponse,
-  } from "../lib/api-utils";
+import { cacheControlForDegradedPayload, jsonFreshResponse } from "../lib/api-response";
 import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildInClause, chunkArray } from "../lib/db";

@@ -2,10 +2,7 @@ import type {
   ApiKeySelfServeRequestAdminListResponse,
   ApiKeySelfServeStatus,
 } from "@shared/types";
-import {
-  parseOptionalEnumParam,
-  parseOptionalPositiveIntegerParam,
-} from "../../lib/api-utils";
+import { parseOptionalEnumParam, parseOptionalPositiveIntegerParam } from "../../lib/api-params";
 import { getNowSec } from "../../lib/api-key-core";
 import {
   adminErrorResponse,

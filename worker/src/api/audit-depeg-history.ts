@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { jsonResponse, errorResponse } from "../lib/api-utils";
+import { jsonResponse, errorResponse } from "../lib/api-response";
 import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { D1_BATCH_SIZE, getDepegThresholdBps } from "../lib/constants";
 import { buildInClause, executeAtomicBatch } from "../lib/db";

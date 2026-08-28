@@ -1,11 +1,8 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { type DepegRow } from "../lib/depeg-helpers";
-import {
-  resolveOrReject,
-  buildMethodologyEnvelope,
-  buildPaginatedEventResponse,
-  parseBooleanParam,
-} from "../lib/api-utils";
+import { resolveOrReject, parseBooleanParam } from "../lib/api-params";
+import { buildMethodologyEnvelope } from "../lib/api-methodology";
+import { buildPaginatedEventResponse } from "../lib/api-pagination";
 import { CACHE_PROFILES, DEPEG_PENDING_EXPIRY_SEC, DEX_FRESHNESS_SEC } from "../lib/constants";
 import {
   normalizePendingDepegRow,

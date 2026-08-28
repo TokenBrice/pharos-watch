@@ -1,8 +1,6 @@
-import {
-  getLatestSuccessfulCronTimestamp,
-  jsonFreshResponse,
-  parseStablecoinHistoryQuery,
-  } from "../lib/api-utils";
+import { getLatestSuccessfulCronTimestamp } from "../lib/api-freshness";
+import { jsonFreshResponse } from "../lib/api-response";
+import { parseStablecoinHistoryQuery } from "../lib/api-history";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";

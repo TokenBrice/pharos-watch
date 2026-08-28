@@ -13,6 +13,10 @@ import {
   type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
+import {
+  CURVE_STABLESWAP_NG_DEPLOYMENTS,
+  CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
+} from "@shared/lib/measured-execution-deployment-policies";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockHeader,
@@ -76,58 +80,32 @@ export interface CurveStableSwapNgPoolPolicy {
 
 /** Exact reviewed USDG/USDC StableSwap-NG deployment. This is not a generic Curve allowlist. */
 export const CURVE_USDG_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy = {
-  chain: "ethereum",
-  stablecoinId: "usdg-paxos",
-  poolAddress: "0xc061caa073f3d95f80f8e5428d32d2d76f5e1622",
-  expectedPoolCodeHash: "0x1c7b77a94bb42408ab6d5cfd76223f0c794db9b119bb6035db91d8b09da65512",
-  factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
-  expectedFactoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
-  factoryPoolIndex: 563,
-  poolTokens: [
-    {
-      address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
-      symbol: "USDG",
-      decimals: 6,
-      trackedAssetId: "usdg-paxos",
-    },
-    {
-      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      symbol: "USDC",
-      decimals: 6,
-      trackedAssetId: "usdc-circle",
-    },
-  ],
-  inputIndex: 0,
-  outputIndex: 1,
+  chain: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].chain,
+  stablecoinId: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].stablecoinId,
+  poolAddress: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].poolAddress,
+  expectedPoolCodeHash: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].poolCodeHash,
+  factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
+  expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
+  factoryPoolIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].factoryPoolIndex,
+  poolTokens: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].poolTokens,
+  inputIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].inputIndex,
+  outputIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].outputIndex,
   mode: "active",
   scoreEligible: true,
 };
 
 /** Exact reviewed DUSD/USDC StableSwap-NG deployment. DUSD is the rate-bearing input; direct get_dy is required. */
 export const CURVE_DUSD_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy = {
-  chain: "ethereum",
-  stablecoinId: "dusd-dialectic",
-  poolAddress: "0x32e616f4f17d43f9a5cd9be0e294727187064cb3",
-  expectedPoolCodeHash: "0x1fb319d2b11164fe6584bf44ed640436ce07baa68c65e5b3b2338aa4ad8b6ac7",
-  factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
-  expectedFactoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
-  factoryPoolIndex: 580,
-  poolTokens: [
-    {
-      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      symbol: "USDC",
-      decimals: 6,
-      trackedAssetId: "usdc-circle",
-    },
-    {
-      address: "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
-      symbol: "DUSD",
-      decimals: 18,
-      trackedAssetId: "dusd-dialectic",
-    },
-  ],
-  inputIndex: 1,
-  outputIndex: 0,
+  chain: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].chain,
+  stablecoinId: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].stablecoinId,
+  poolAddress: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].poolAddress,
+  expectedPoolCodeHash: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].poolCodeHash,
+  factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
+  expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
+  factoryPoolIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].factoryPoolIndex,
+  poolTokens: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].poolTokens,
+  inputIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].inputIndex,
+  outputIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].outputIndex,
   mode: "active",
   scoreEligible: true,
 };

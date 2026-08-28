@@ -1,3 +1,4 @@
+import { createJsonResponse } from "@shared/lib/http-response";
 import { addFreshnessHeaders } from "./api-freshness-headers";
 import { CACHE_PROFILES } from "./constants";
 import { logWorkerEvent } from "./structured-log";
@@ -72,7 +73,7 @@ export function jsonResponse(body: unknown, options: JsonResponseOptions = {}): 
     headers["Retry-After"] = String(Math.max(1, Math.ceil(options.retryAfterSec)));
   }
 
-  return new Response(JSON.stringify(body), {
+  return createJsonResponse(body, {
     status: options.status,
     headers,
   });

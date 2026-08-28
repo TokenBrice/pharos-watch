@@ -1,10 +1,7 @@
-import {
-    errorResponse,
-  parseEnumParam,
-  parseOptionalEnumParam,
-  buildMethodologyEnvelope,
-  buildPaginatedEventResponse,
-} from "../lib/api-utils";
+import { errorResponse } from "../lib/api-response";
+import { parseEnumParam, parseOptionalEnumParam } from "../lib/api-params";
+import { buildMethodologyEnvelope } from "../lib/api-methodology";
+import { buildPaginatedEventResponse } from "../lib/api-pagination";
 import { CACHE_PROFILES } from "../lib/constants";
 import { CHAIN_META } from "@shared/lib/chains";
 import {

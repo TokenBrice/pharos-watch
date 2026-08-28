@@ -2,22 +2,16 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
 import { CHAIN_META } from "@shared/lib/chains";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
-import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { formatIsoDate } from "@shared/lib/format";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
-import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
-  evaluateStablecoinPublicationCoverage,
-  resolveStablecoinPublicationWaivers,
-  selectAppliedStablecoinPublicationWaivers,
   type StablecoinPublicationWaiver,
 } from "../lib/stablecoin-publication-coverage";
 import {
-  buildSupplySnapshotCoverageExpectation,
   buildSupplySnapshotCompletionMarker,
-  getCompletedSupplySnapshot,
+  preflightSupplySnapshot,
   SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY,
 } from "../lib/supply-snapshot-completion";
 
@@ -46,46 +40,39 @@ export async function snapshotChainSupply(
 ): Promise<CronResult> {
   if (signal?.aborted) return abortedCronResult();
 
-  const cache = await loadStablecoinsCache(db, { mode: "strict" });
-  if (cache.kind !== "ok") {
+  const preflight = await preflightSupplySnapshot(db, {
+    nowSec: options.nowSec,
+    requiredActiveIds: options.requiredActiveIds ?? [...CORE_AGGREGATE_ACTIVE_IDS],
+    publicationWaivers: options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS,
+    completionCacheKey: SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY,
+    maxCacheAgeSec: CACHE_MAX_AGE_SEC,
+    deriveCoverage: (payload, requiredActiveIds) => ({
+      accountedIds: payload.peggedAssets.map((asset) => String(asset.id)),
+      context: { expectedActiveIdSet: new Set(requiredActiveIds) },
+    }),
+  });
+  if (preflight.kind === "cache-unavailable") {
     logWorkerEventArgs("handler", "error", "[snapshot-chain-supply] No stablecoins cache found");
-    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: cache.reason }) };
+    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: preflight.reason }) };
   }
-
-  const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
-  const cacheAge = nowSec - cache.updatedAt;
-  if (cacheAge > CACHE_MAX_AGE_SEC) {
-    logWorkerEventArgs("handler", "warn", `[snapshot-chain-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping`);
+  if (preflight.kind === "cache-stale") {
+    logWorkerEventArgs("handler", "warn", `[snapshot-chain-supply] Cache is ${preflight.cacheAgeSec}s old (>${CACHE_MAX_AGE_SEC}s), skipping`);
     return {
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: cacheAge }),
+      metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec }),
     };
   }
 
-  // One snapshot per UTC day, keyed on the marker's stored snapshotDate.
-  // See snapshot-supply.ts for the drift rationale.
-  const snapshotDate = startOfUtcDaySec(new Date());
-  const expectedActiveIds = [...new Set(options.requiredActiveIds ?? CORE_AGGREGATE_ACTIVE_IDS)].sort();
-  const expectedActiveIdSet = new Set(expectedActiveIds);
-  const publicationWaivers = options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS;
-  const cachedIds = new Set(cache.payload.peggedAssets.map((asset) => String(asset.id)));
-  const publicationCoverage = evaluateStablecoinPublicationCoverage(
-    cachedIds,
+  const {
+    cache,
+    context: { expectedActiveIdSet },
+    coverageExpectation,
+    lastWrite,
     nowSec,
-    publicationWaivers,
-    expectedActiveIds,
-  );
-  const resolvedWaivers = resolveStablecoinPublicationWaivers(expectedActiveIds, nowSec, publicationWaivers);
-  const appliedWaivers = selectAppliedStablecoinPublicationWaivers(
-    publicationCoverage.waivedActiveIds,
-    resolvedWaivers,
-  );
-  const coverageExpectation = buildSupplySnapshotCoverageExpectation(expectedActiveIds, appliedWaivers);
-  const lastWrite = await getCompletedSupplySnapshot(db, {
-    cacheKey: SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY,
-    expectedCoverage: coverageExpectation,
-  });
+    publicationCoverage,
+    snapshotDate,
+  } = preflight;
   if (publicationCoverage.complete && lastWrite?.snapshotDate === snapshotDate && lastWrite.exactCoverageVerified) {
     return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
   }

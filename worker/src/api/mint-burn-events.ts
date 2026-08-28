@@ -1,11 +1,11 @@
+import { errorResponse } from "../lib/api-response";
 import {
-  errorResponse,
   parseEnumParam,
   parseFloatParam,
   parseOptionalEnumParam,
   parseRequiredStablecoinIdParam,
-  buildPaginatedEventResponse,
-} from "../lib/api-utils";
+} from "../lib/api-params";
+import { buildPaginatedEventResponse } from "../lib/api-pagination";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
