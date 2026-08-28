@@ -5,7 +5,7 @@ Material moved verbatim from `SKILL.md`: render-context notes, theme/signal cata
 ### Where the output lands
 
 - **File**: `src/data/changelogs/<YYYY-MM-DD>.ts` (the `to` date).
-- **Barrel**: `src/data/changelogs/index.ts` (chronological imports + entry in `all`; the `.sort()` handles runtime order).
+- **Barrel**: `src/data/changelogs/index.ts` — generated artifact (`changelog-registry`); regenerate with `npm run prebuild -- --only=changelog-registry` (the `.sort()` handles runtime order).
 - **Rendered at**: `/changelog/` via `ChangelogEntryCard` inside a timeline `<ol>`. Each entry's `id` is `dateRange.to`, used by both the card's hash anchor and `ChangelogWeekNav`.
 - **Displayed fields**: date range, "Latest" badge on the newest entry, `stats.totalCommits`, `headline`, `fieldNotes` editor note, summary list (label + tag + description + optional `href`), and a collapsed disclosure of the first 20 commits with an "and N more" tail.
 
