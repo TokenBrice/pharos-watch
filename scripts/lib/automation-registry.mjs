@@ -317,10 +317,11 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "public-datasets",
     buildLifecycle: "maintenance-only",
+    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
     command: "tsx scripts/maintenance/generate-public-datasets.ts",
     dependsOn: ["report-card-registry-fingerprint"],
-    outputPaths: ["public/_redirects", "public/datasets/**", "src/generated/public-dataset-current.ts"],
+    outputPaths: ["public/_redirects", "public/datasets/**", "src/lib/datasets/public-dataset-current.ts"],
     phase: 2,
     reproducibility: "network-derived",
     script: "scripts/maintenance/generate-public-datasets.ts",
@@ -439,8 +440,9 @@ function assertKnownGeneratedArtifactBuildLifecycles(lifecycles) {
 /**
  * Split selected artifact ids into those the pre-commit hook may regenerate and
  * stage on its own, and those a human must handle. Network-derived artifacts,
- * browser-rendered OG images, and gitignored outputs are never auto-staged: a
+ * browser-rendered OG images, and gitignored outputs are normally manual: a
  * commit hook must not make network calls, take minutes, or stage nothing.
+ * Offline-safe generators that preserve checked-in data may opt in explicitly.
  *
  * @param {readonly string[]} ids
  * @returns {{ autoStage: string[], manual: string[] }}

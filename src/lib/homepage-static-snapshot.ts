@@ -1,4 +1,4 @@
-import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/generated/public-dataset-current";
+import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
 import { numberValue } from "@shared/lib/type-guards";
 import { buildHomepageHeroSnapshot, type HomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
 

@@ -1,6 +1,6 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
-import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/generated/public-dataset-current";
+import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 

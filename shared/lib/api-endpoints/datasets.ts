@@ -8,7 +8,7 @@
  *
  * The stable `/datasets/<topic>/latest.*` URLs are Cloudflare Pages 200
  * rewrites to the current dated files. The generator also emits the matching
- * static frontend import module under `src/generated/`. CORS + Cache-Control
+ * committed static frontend import module under `src/lib/datasets/`. CORS + Cache-Control
  * rules live in `public/_headers`.
  */
 

@@ -13,13 +13,13 @@ describe("auto-stage partition", () => {
       "og-editorial",
       "public-datasets",
     ]);
-    expect(autoStage).toEqual(["safety-score-v9-evaluation-build"]);
-    expect(manual).toEqual(["public-datasets", "og-editorial"]);
+    expect(autoStage).toEqual(["safety-score-v9-evaluation-build", "public-datasets"]);
+    expect(manual).toEqual(["og-editorial"]);
   });
 
-  it("never auto-stages a network-derived artifact", () => {
+  it("keeps network-derived artifacts manual unless their generator is offline-safe", () => {
     const { autoStage } = selectAutoStageArtifactIds(["llms-txt", "public-datasets"]);
-    expect(autoStage).toEqual([]);
+    expect(autoStage).toEqual(["public-datasets"]);
   });
 });
 
