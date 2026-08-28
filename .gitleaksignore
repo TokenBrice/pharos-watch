@@ -292,3 +292,9 @@ d4efe6c590e4429387ea91a9b4b73bad760042e4:shared/data/safety-score-v9/transfer-re
 3717154f858c688984acb81d10f95fa3ecd849f4:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:739
 3717154f858c688984acb81d10f95fa3ecd849f4:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:741
 62c013cafc9e0d2420e5a12ffd68aa9e2f5434a2:worker/src/cron/reserve-adapters/usdrif-rif.ts:generic-api-key:28
+
+# Public EUTBL Soroban StrKey contract identifier (CODE-C... form) in the
+# Horizon census-scope test fixture, not a credential. Same finding in the
+# release-branch commit and in its squash-merge to main.
+bbdd0cb8933579fb83586d8fd8901acfbf52ba5a:worker/src/cron/dex-discovery/__tests__/crawl-horizon-pools.test.ts:generic-api-key:166
+5489cf1d57362cbc30fa2d95995819d1afc97d62:worker/src/cron/dex-discovery/__tests__/crawl-horizon-pools.test.ts:generic-api-key:166
