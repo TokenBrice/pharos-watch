@@ -1,4 +1,4 @@
-import { makeJsonRequest, readJsonResponse } from "./api-request-response.test-support";
+import { makeJsonRequest, readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -6,12 +6,12 @@ import {
   type MockD1Database,
   type MockD1Options,
   type MockTableConfig,
-} from "../../test-helpers/__shared/mock-d1";
+} from "@shared/test-utils/mock-d1";
 import { stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import type { FeedbackEnv } from "../feedback";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 // Stub fetch and crypto.subtle before importing the handler
 let fetchSpy: ReturnType<typeof mockFetch>;

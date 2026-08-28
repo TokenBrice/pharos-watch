@@ -25,24 +25,13 @@ import {
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9-extension";
 import {
-  buildXautTransparencySource,
   deriveXautRepresentationGroupSupplyAttribution,
-  XAUT0_ADAPTER_ADDRESS,
-  XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
-  XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
-  XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
-  XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
-  XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
-  XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
-  XAUT_CANONICAL_RUNTIME_CODE_SHA256,
-  XAUT_CANONICAL_TOKEN_ADDRESS,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
-  XAUT_TRANSPARENCY_SOURCE_ID,
-  XAUT_TREASURY_ADDRESS,
 } from "../safety-score-v9-xaut-supply-attribution-contract";
 import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
   V9_EVALUATION_TEST_TIMEOUT_MS,
+  makeXautObservation,
   makeV9FixedInput as exactFixedInput,
   v9CoinMaxReviewedAtSec,
   makeV9Extension as extension,
@@ -175,47 +164,17 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         aggregateSupplyUsd,
         registryFingerprint: fixed.registryFingerprint,
         scoringClockSec: fixed.clockSec,
-        observation: {
-          chainId: "ethereum",
-          canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
-          adapterAddress: XAUT0_ADAPTER_ADDRESS,
-          decimals: 6,
-          canonicalTotalSupplyRaw: "707747089000",
-          treasuryAddress: XAUT_TREASURY_ADDRESS,
-          treasuryBalanceRaw: "94923429468",
-          adapterLockedSupplyRaw: "29720802896",
-          blockNumber: 25_601_844,
+        observation: makeXautObservation({
+          clockSec,
           // Production-shaped consumer age: finalized-block lag plus the
           // healthy 30-minute capture cadence exceeds the generic 1800s
           // chain-supply window while remaining inside XAUT's explicit hour.
           blockTimeSec: clockSec - 2_800,
-          blockHash: `0x${"ab".repeat(32)}`,
-          canonicalRuntimeCodeSha256:
-            XAUT_CANONICAL_RUNTIME_CODE_SHA256,
-          canonicalImplementationAddress:
-            XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
-          canonicalImplementationCodeSha256:
-            XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
-          adapterRuntimeCodeSha256:
-            XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
-          adapterImplementationAddress:
-            XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
-          adapterImplementationCodeSha256:
-            XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
-          adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
-          adapterEndpointAddress:
-            XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
           disclosure: {
-            sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
-            sourceConfigDigest:
-              buildXautTransparencySource()!.configDigest,
             sourceTimestampSec: clockSec - 2_900,
             responseSha256: "e".repeat(64),
-            totalAuthorizedRaw: "707747089000",
-            notIssuedRaw: "94923429468",
-            quarantinedRaw: "0",
           },
-        },
+        }),
       });
     expect(attribution).not.toBeNull();
     fixed.safetyScoreV9SupplyAttributionById = {
@@ -485,44 +444,21 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         aggregateSupplyUsd,
         registryFingerprint: fixed.registryFingerprint,
         scoringClockSec: fixed.clockSec,
-        observation: {
-          chainId: "ethereum",
-          canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
-          adapterAddress: XAUT0_ADAPTER_ADDRESS,
-          decimals: 6,
+        observation: makeXautObservation({
+          clockSec,
           canonicalTotalSupplyRaw: "1000000000",
-          treasuryAddress: XAUT_TREASURY_ADDRESS,
           treasuryBalanceRaw: "100000000",
           adapterLockedSupplyRaw: "95000000",
-          blockNumber: 25_601_844,
           blockTimeSec: clockSec - 100,
           blockHash: `0x${"cd".repeat(32)}`,
-          canonicalRuntimeCodeSha256:
-            XAUT_CANONICAL_RUNTIME_CODE_SHA256,
-          canonicalImplementationAddress:
-            XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
-          canonicalImplementationCodeSha256:
-            XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
-          adapterRuntimeCodeSha256:
-            XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
-          adapterImplementationAddress:
-            XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
-          adapterImplementationCodeSha256:
-            XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
-          adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
-          adapterEndpointAddress:
-            XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
           disclosure: {
-            sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
-            sourceConfigDigest:
-              buildXautTransparencySource()!.configDigest,
             sourceTimestampSec: clockSec - 200,
             responseSha256: "f".repeat(64),
             totalAuthorizedRaw: "1000000000",
             notIssuedRaw: "100000000",
             quarantinedRaw: "0",
           },
-        },
+        }),
       });
     expect(attribution).not.toBeNull();
     expect(95_000_000 / 1_000_000_000).toBeLessThan(0.1);

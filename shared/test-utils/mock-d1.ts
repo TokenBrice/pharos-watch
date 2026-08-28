@@ -39,6 +39,10 @@ export interface MockD1Options {
   allowUnmatched?: boolean;
   /** Match normalized SQL exactly instead of substring search. */
   strictSql?: boolean;
+  /** Resolve write changes dynamically when a table does not provide runMeta. */
+  runChanges?: (sql: string) => number;
+  /** Execute every batch entry with run(), matching the legacy scripts preset. */
+  batchMode?: "auto" | "run";
 }
 
 export function mockD1Strict(tables: MockTableConfig[] = []): MockD1Database {
@@ -152,7 +156,21 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
       }
       if (table?.throwError != null) throw toError(table.throwError);
       await maybeDelay(table);
-      return { success: true, meta: table?.runMeta ?? { changes: 1 } };
+      return {
+        success: true,
+        meta: table?.runMeta ?? { changes: options.runChanges?.(sql) ?? 1 },
+      };
+    };
+
+    const executeRaw = async <T extends unknown[]>() => {
+      history.push({ sql, binds: [...boundValues] });
+      const table = findTable(sql, boundValues);
+      if (!table && requireMatch) {
+        throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
+      }
+      if (table?.throwError != null) throw toError(table.throwError);
+      await maybeDelay(table);
+      return (table?.rows ?? []).map((row) => Object.values(row)) as T[];
     };
 
     return {
@@ -162,6 +180,7 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
       all: executeAll,
       first: executeFirst,
       run: executeRun,
+      raw: executeRaw,
     } as unknown as MockPreparedStatement;
   }
 
@@ -179,6 +198,10 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
         };
 
         try {
+          if (options.batchMode === "run" && typeof executable.run === "function") {
+            results.push(await executable.run());
+            continue;
+          }
           if (isReadSql(executable.sql ?? "") && typeof executable.all === "function") {
             results.push(await executable.all());
             continue;
@@ -214,4 +237,15 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
       }
     },
   } as unknown as MockD1Database;
+}
+
+/** Permissive preset retained for cross-runtime tests that only observe writes. */
+export function makeTestD1Database(
+  options: { runChanges?: (sql: string) => number } = {},
+): MockD1Database {
+  return mockD1([], {
+    allowUnmatched: true,
+    batchMode: "run",
+    runChanges: options.runChanges ?? ((sql) => (sql.includes("DELETE") ? 0 : 1)),
+  });
 }

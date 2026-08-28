@@ -34,12 +34,26 @@ vi.mock("../../lib/safety-score-active-source", async () => {
   };
 });
 
+function pendingActionPayload(
+  candidates: readonly unknown[],
+  actionPayload: Record<string, unknown> = {},
+  remainingTickers: readonly string[] = [],
+): string {
+  return JSON.stringify({
+    ...actionPayload,
+    schemaVersion: 1,
+    resolvedIds: [],
+    ambiguousTicker: "USDF",
+    candidates,
+    remainingTickers,
+  });
+}
+
 
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
   it("handles /subscribe happy path with unique ticker", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         rows: [
@@ -68,7 +82,6 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         rows: [
@@ -102,7 +115,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("gates /subscribe ... all behind a confirmation prompt", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews safety all"), "test-secret", "bot-token");
 
@@ -136,11 +149,6 @@ describe("handleTelegramWebhook", () => {
             presetIds: [],
             subscribeAll: true,
           }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "999",
         },
@@ -163,7 +171,6 @@ describe("handleTelegramWebhook", () => {
 
   it("gates /subscribe with a >10-coin preset behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -201,7 +208,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews", "reserve"],
       presetIds: ["usd-top25"],
     });
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -230,7 +237,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews"],
       presetIds: [],
     });
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -263,7 +270,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews"],
       presetIds: [],
     });
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -285,7 +292,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews"],
       presetIds: [],
     });
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -312,7 +319,6 @@ describe("handleTelegramWebhook", () => {
       alert_snooze_until_ts: null,
     }));
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       { match: "FROM telegram_subscriptions", rows: subscriptions },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
     ]);
@@ -328,7 +334,6 @@ describe("handleTelegramWebhook", () => {
   it("refuses to export an unavailable row instead of silently dropping it", async () => {
     const stablecoinId = "retired-stablecoin";
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         rows: [{
@@ -357,7 +362,6 @@ describe("handleTelegramWebhook", () => {
 
   it("gates /subscribe with a >10-coin preset and depeg-step modifier behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -397,7 +401,6 @@ describe("handleTelegramWebhook", () => {
 
   it("handles /subscribe with a dashed preset alias (still gated above threshold)", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -428,14 +431,14 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("rejects preset watchlists for launch alerts", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe launch usd-top25"), "test-secret", "bot-token");
 
     expect(sentMessageBody().text).toContain("Preset watchlists support dews, depeg, and safety only");
   });
 
   it("rejects mixing all with preset targets", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     await handleTelegramWebhook(
       db,
       makeWebhookRequest(123, "/subscribe dews all usd-top25"),
@@ -447,7 +450,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("handles /subscribe with unknown ticker", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews XYZZY"), "test-secret", "bot-token");
 
     const text = sentMessageBody().text;
@@ -462,7 +465,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for disambiguation test");
     }
 
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews USDF"), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -491,17 +494,15 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"], presetIds: [] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(firstAmbiguous.matches),
-          remaining_tickers: JSON.stringify(["USDA"]),
+          action_payload: pendingActionPayload(
+            firstAmbiguous.matches,
+            { alertTypes: ["dews"], presetIds: [] },
+            ["USDA"],
+          ),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "999",
         },
       },
-      { match: "telegram_pending_disambiguation", rows: [] },
     ]);
 
     await handleTelegramWebhook(
@@ -528,11 +529,12 @@ describe("handleTelegramWebhook", () => {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
         first: {
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify(["USDC"]),
+          action_type: "subscribe",
+          action_payload: pendingActionPayload(
+            ambiguous.matches,
+            { alertTypes: ["dews"] },
+            ["USDC"],
+          ),
           expires_at: Math.floor(Date.now() / 1000) + 60,
         },
       },
@@ -590,16 +592,11 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({
+          action_payload: pendingActionPayload(ambiguous.matches, {
             alertTypes: ["depeg"],
             presetIds: [],
             depegWorseningBpsStep: 250,
           }),
-          alert_types: JSON.stringify(["depeg"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "999",
         },
@@ -640,12 +637,7 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
+          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "111",
         },
@@ -677,12 +669,7 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
+          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "999",
         },
@@ -710,12 +697,7 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
+          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "999",
         },
@@ -747,12 +729,7 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
+          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "111",
         },
@@ -788,12 +765,7 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
+          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "111",
         },
@@ -825,12 +797,7 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
+          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "999",
         },
@@ -861,12 +828,7 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
+          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "111",
         },
@@ -911,12 +873,7 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "unsubscribe",
-          action_payload: JSON.stringify({}),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify(["USDC"]),
+          action_payload: pendingActionPayload(ambiguous.matches, {}, ["USDC"]),
           expires_at: Math.floor(Date.now() / 1000) + 60,
         },
       },
@@ -932,13 +889,7 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain(usdc.matches[0].id);
   });
 
-  it("keeps a pending subscribe flow alive when a non-critical stored field is malformed", async () => {
-    const ambiguous = resolveTicker("USDF");
-    const usdc = resolveTicker("USDC");
-    if (ambiguous.status !== "ambiguous" || usdc.status !== "unique") {
-      throw new Error("Expected fixed ticker fixtures for telegram malformed pending-row test");
-    }
-
+  it("clears a pending row whose canonical payload is malformed", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const db = makeTelegramWebhookDb([
@@ -948,37 +899,8 @@ describe("handleTelegramWebhook", () => {
         first: {
           action_type: "subscribe",
           action_payload: "{bad-json",
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: "{bad-json",
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify(["USDC"]),
           expires_at: Math.floor(Date.now() / 1000) + 60,
         },
-      },
-      {
-        match: "FROM telegram_subscriptions",
-        matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],
-        rows: [
-          {
-            stablecoin_id: ambiguous.matches[0].id,
-            alert_dews: 1,
-            alert_depeg: 0,
-            alert_safety: 0,
-            dews_min_band: null,
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          },
-          {
-            stablecoin_id: usdc.matches[0].id,
-            alert_dews: 1,
-            alert_depeg: 0,
-            alert_safety: 0,
-            dews_min_band: null,
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          },
-        ],
       },
     ]);
 
@@ -986,9 +908,8 @@ describe("handleTelegramWebhook", () => {
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
-    expect(sentMessageBody().text).toContain("Updated subscriptions");
+    expect(sentMessageBody().text).toContain("pending selection could not be restored");
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=action_payload"));
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=resolved_ids"));
   });
 
   it("clears malformed active pending selections with a recovery message", async () => {
@@ -999,12 +920,14 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: "{bad-json",
-          remaining_tickers: JSON.stringify([]),
+          action_payload: JSON.stringify({
+            schemaVersion: 1,
+            alertTypes: ["dews"],
+            resolvedIds: [],
+            ambiguousTicker: "USDF",
+            candidates: "{bad-json",
+            remainingTickers: [],
+          }),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "999",
         },
@@ -1016,11 +939,11 @@ describe("handleTelegramWebhook", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
     expect(sentMessageBody().text).toContain("pending selection could not be restored");
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=candidates"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("canonical candidates are missing or malformed"));
   });
 
   it("gates /unsubscribe all behind a confirmation prompt", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe all"), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -1037,7 +960,6 @@ describe("handleTelegramWebhook", () => {
 
   it("gates /unsubscribe with a >10-coin preset behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -1071,7 +993,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected at least one frozen stablecoin fixture");
     }
 
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/unsubscribe ${frozen.id}`), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -1089,7 +1011,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for unsubscribe disambiguation test");
     }
 
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe USDF"), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -1117,12 +1039,7 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
+          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
           expires_at: Math.floor(Date.now() / 1000) + 60,
         },
       },
@@ -1148,11 +1065,6 @@ describe("handleTelegramWebhook", () => {
             coinIds: [],
             unsubscribeAll: true,
           }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "999",
         },
@@ -1188,7 +1100,6 @@ describe("handleTelegramWebhook", () => {
     const db = makeTelegramWebhookDb([
       { match: "SELECT action_type, action_payload", rows: [], first: null },
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1700000000 }] },
-      { match: "FROM safety_grade_history", rows: [{ grade: "A", score: 85, recorded_at: 1700000000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
       { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.9999, updated_at: 1700000000 }] },
     ]);
@@ -1274,7 +1185,6 @@ describe("handleTelegramWebhook", () => {
 
   it("executes /subscribe with a small explicit ticker set without confirmation", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         rows: [

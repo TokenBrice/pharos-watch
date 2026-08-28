@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   createTelegramFetchSpy,
+  mockTelegramD1 as mockD1,
   telegramApiCalls,
   telegramCallBody,
 } from "../../test-helpers/__shared/telegram";
@@ -10,32 +10,17 @@ import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 
 const {
+  handleSettingsCallback,
+  handleSettingsCommand,
+} = await import("../telegram-webhook-settings");
+const {
   buildCoinKeyboard,
   buildCoinMessage,
   buildHomeKeyboard,
   buildHomeMessage,
-  handleSettingsCallback,
-  handleSettingsCommand,
-} = await import("../telegram-webhook-settings");
+} = await import("../telegram-webhook-settings-render");
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
-
-function mockD1(
-  tables: Parameters<typeof baseMockD1>[0] = [],
-  options: Parameters<typeof baseMockD1>[1] = {},
-) {
-  return baseMockD1([
-    ...tables,
-    { match: "FROM telegram_subscribers", rows: [], first: null },
-    { match: "FROM telegram_subscriptions", rows: [] },
-    { match: "INSERT INTO telegram_subscribers", rows: [] },
-    { match: "UPDATE telegram_subscribers", rows: [] },
-    { match: "INSERT INTO telegram_subscriptions", rows: [] },
-    { match: "UPDATE telegram_subscriptions", rows: [] },
-    { match: "DELETE FROM telegram_subscriptions", rows: [] },
-    { match: "FROM cache", rows: [], first: null },
-  ], options);
-}
 
 function jsonBody(call: unknown[]): Record<string, unknown> {
   return telegramCallBody(call);
@@ -72,13 +57,7 @@ beforeEach(() => {
 
 describe("handleSettingsCommand", () => {
   it("sends the home view when called with no ticker", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = mockD1();
     await handleSettingsCommand(db, "fake-token", "42", null, "");
 
     expect(sendCalls().length).toBe(1);
@@ -101,20 +80,13 @@ describe("handleSettingsCommand", () => {
   });
 
   it("adds paginated per-coin owner buttons to the home view", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: null,
-      },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
-          subscriptionRow,
-        ),
-      },
-    ]);
+    const db = mockD1([], {
+      subscriptions: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
+        subscriptionRow,
+      ),
+    });
     await handleSettingsCommand(db, "fake-token", "42", null, "");
+    db.assertAllMatchesUsed();
 
     const body = jsonBody(sendCalls()[0]) as {
       reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data?: string }>> };
@@ -125,12 +97,7 @@ describe("handleSettingsCommand", () => {
   });
 
   it("renders the coin view for /settings USDC", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [],
-      },
-    ]);
+    const db = mockD1();
     await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
 
     expect(sendCalls().length).toBe(1);
@@ -149,7 +116,7 @@ describe("handleSettingsCommand", () => {
   });
 
   it("rejects an unknown ticker with the same not-found path other commands use", async () => {
-    const db = mockD1([]);
+    const db = mockD1();
     await handleSettingsCommand(db, "fake-token", "42", null, "NOPE");
     expect(sendCalls().length).toBe(1);
     expect(jsonBody(sendCalls()[0]).text).toContain("not found");
@@ -158,13 +125,7 @@ describe("handleSettingsCommand", () => {
 
 describe("handleSettingsCallback — chat-level", () => {
   it("settings:home re-renders the home view via editMessageText", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = mockD1();
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -185,11 +146,6 @@ describe("handleSettingsCallback — chat-level", () => {
 
   it("settings:home:<page> re-renders the requested coin-button page", async () => {
     const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: null,
-      },
       {
         match: "FROM telegram_subscriptions",
         rows: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
@@ -221,13 +177,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:gt:dews flips the global flag and re-renders", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: { global_alert_dews: 0 },
-      },
-    ]);
+    const db = mockD1();
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -257,13 +207,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:q:1 enables quiet hours with the default 22-07 window", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = mockD1();
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -294,13 +238,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:q:0 disables quiet hours", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = mockD1();
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -320,13 +258,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:sc clears the snooze timestamp", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = mockD1();
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -510,7 +442,7 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("unknown setting code under settings:c:<id>:?? acks gracefully without DB writes", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1();
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -549,13 +481,7 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("falls back to sendMessage when editMessageText fails", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = mockD1();
     fetchSpy.mockImplementation(async (url) => {
       if (String(url).includes("editMessageText")) {
         return new Response(JSON.stringify({ ok: false }), { status: 400 });
@@ -581,13 +507,7 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("does not send a duplicate panel when editMessageText reports not modified", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers WHERE chat_id = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = mockD1();
     fetchSpy.mockImplementation(async (url) => {
       if (String(url).includes("editMessageText")) {
         return new Response(JSON.stringify({ ok: false, description: "Bad Request: message is not modified" }), {

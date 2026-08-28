@@ -2,7 +2,7 @@ import {
   CRON_TRIGGER_SCHEDULES,
 } from "@shared/lib/cron-jobs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const cronMocks = vi.hoisted(() => ({
   syncStablecoins: vi.fn(async () => ({
@@ -391,24 +391,12 @@ vi.mock("../lib/coingecko", async (importOriginal) => {
 });
 
 import worker from "../index";
+import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
 import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
 } from "../lib/public-dataset-snapshot-budget";
-
-function makeCtx() {
-  const waits: Promise<unknown>[] = [];
-  return {
-    waits,
-    ctx: {
-      waitUntil: vi.fn((promise: Promise<unknown>) => {
-        waits.push(Promise.resolve(promise));
-      }),
-      passThroughOnException: vi.fn(),
-    } as unknown as ExecutionContext,
-  };
-}
 
 describe("worker.scheduled", () => {
   beforeEach(() => {
@@ -443,7 +431,7 @@ describe("worker.scheduled", () => {
       expect(new Set(schedules.map(([, cron]) => cron)).size).toBe(schedules.length);
 
       for (const [index, [, cron]] of schedules.entries()) {
-        const { ctx, waits } = makeCtx();
+        const { ctx, waits } = makeExecutionContext();
         await worker.scheduled(
           {
             cron,
@@ -475,7 +463,7 @@ describe("worker.scheduled", () => {
   }, 30_000);
 
   it("runs 15-min cron fan-out and chained jobs (charts excluded)", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -512,7 +500,7 @@ describe("worker.scheduled", () => {
       DB: mockD1([], { allowUnmatched: true }),
       CORS_ORIGIN: "https://pharos.watch",
     });
-    const supply = makeCtx();
+    const supply = makeExecutionContext();
 
     await worker.scheduled(
       {
@@ -529,7 +517,7 @@ describe("worker.scheduled", () => {
     ).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeSafetyScoreV9).not.toHaveBeenCalled();
 
-    const resolver = makeCtx();
+    const resolver = makeExecutionContext();
     await worker.scheduled(
       {
         cron: "13 * * * *",
@@ -546,7 +534,7 @@ describe("worker.scheduled", () => {
       ["22 * * * *", "2026-07-26T12:22:00Z"],
       ["52 * * * *", "2026-07-26T12:52:00Z"],
     ] as const) {
-      const publication = makeCtx();
+      const publication = makeExecutionContext();
       await worker.scheduled(
         {
           cron,
@@ -567,7 +555,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs status-self-check on the isolated offset trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -587,7 +575,7 @@ describe("worker.scheduled", () => {
   });
 
   it("throws loudly when a scheduled trigger is unmapped", async () => {
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -604,7 +592,7 @@ describe("worker.scheduled", () => {
   });
 
   it("derives slot identity from scheduledTime and threads it through slot fencing and cron logging", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -653,7 +641,7 @@ describe("worker.scheduled", () => {
     });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -688,7 +676,7 @@ describe("worker.scheduled", () => {
     });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -720,7 +708,7 @@ describe("worker.scheduled", () => {
       }),
     });
 
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -757,7 +745,7 @@ describe("worker.scheduled", () => {
       }),
     });
 
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -777,7 +765,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs DEX source staging on the hourly :10 trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -799,7 +787,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs two-hour DEX scoring before charts on an even-hour :16 trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -824,7 +812,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs dews → psi on the decoupled DB-only trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -850,7 +838,7 @@ describe("worker.scheduled", () => {
   it("contains DEX source-stage failures within its hourly physical cron", async () => {
     cronMocks.stageDexLiquidityScoring.mockRejectedValueOnce(new Error("dex stage failed"));
 
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -875,7 +863,7 @@ describe("worker.scheduled", () => {
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
     });
-    const consumer = makeCtx();
+    const consumer = makeExecutionContext();
     await worker.scheduled(
       { cron: "46 * * * *", scheduledTime: Date.parse("2026-08-10T12:46:00Z") } as ScheduledEvent,
       env,
@@ -889,7 +877,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs yield publication on the dedicated hourly trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -910,7 +898,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs supplemental yield refresh on the dedicated 4-hour :25 trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -933,7 +921,7 @@ describe("worker.scheduled", () => {
     const scheduledTime = Date.parse("2026-05-16T08:00:00Z");
     const slotStartedAt = Math.floor(scheduledTime / 1000);
 
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -982,7 +970,7 @@ describe("worker.scheduled", () => {
   it("contains individual daily 08:05 failures and continues the other jobs", async () => {
     cronMocks.generateDailyDigest.mockRejectedValueOnce(new Error("digest failed"));
 
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1013,7 +1001,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs weekly recap on the isolated daily 08:10 trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1033,7 +1021,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs live reserve sync on the dedicated 4-hourly trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1056,7 +1044,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs only blacklist on the dedicated 6-hourly :03 trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1075,7 +1063,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs only critical mint/burn on the dedicated :04/:34 triggers", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const db = mockD1([], { requireMatch: true });
     const env = createWorkerEnv({
       DB: db,
@@ -1105,7 +1093,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs only DEX discovery on the dedicated 2-hourly :06 trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1125,7 +1113,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs telegram dispatch on the dedicated 5-min trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1156,7 +1144,7 @@ describe("worker.scheduled", () => {
 
   it("fails telegram pending dispatch closed when recap rollout cleanup fails", async () => {
     cronMocks.cancelQueuedTelegramRecapsForRollout.mockRejectedValueOnce(new Error("cleanup failed"));
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1178,7 +1166,7 @@ describe("worker.scheduled", () => {
   });
 
   it("polls the manual digest trigger on the shared 5-min trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1197,7 +1185,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs daily 03:00 housekeeping on its dedicated trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1220,7 +1208,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs the monthly yield coverage audit on its dedicated trigger", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1238,7 +1226,7 @@ describe("worker.scheduled", () => {
   });
 
   it("runs the extended mint/burn lane on the offset 30-min slot", async () => {
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
     const env = createWorkerEnv({
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",

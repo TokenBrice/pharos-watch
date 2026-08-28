@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   mockCircuitBreaker,
   mockCircuitOutcomeRecord,
@@ -181,7 +181,7 @@ import { getCache, getCaches, setCache, setCacheIfNewer, writeFreshnessSentinel 
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";

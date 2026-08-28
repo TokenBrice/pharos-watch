@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { DexExitEvidenceKind } from "@shared/types/market";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
   DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY,

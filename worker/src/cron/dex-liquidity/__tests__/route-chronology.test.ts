@@ -3,73 +3,10 @@ import { describe, expect, it } from "vitest";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { createV9EvidenceReference } from "@shared/lib/safety-score-v9/evidence";
-import {
-  DEX_MEASURED_CAPACITY_NOTIONALS_USD,
-  DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
-  DEX_MEASURED_MAX_COST_BPS,
-  type DexMeasuredExecutionPublicProfile,
-} from "@shared/types/measured-execution";
+import { makeMeasuredProfile } from "@shared/test-utils/measured-execution.test-support";
 
 const ROUTE_FRESHNESS_MAX_SEC = 3_600;
 const PHYSICAL_POOL_ID = "ethereum:0x3333333333333333333333333333333333333333";
-
-function measuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
-  const physicalPoolAddress = "0x3333333333333333333333333333333333333333" as const;
-  return {
-    schemaVersion: DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
-    kind: "measured-executable-depth",
-    targetId: "target-1",
-    targetGenerationId: "target-generation",
-    quoteGenerationId: `quote-generation-${quotedAt}`,
-    adapterProfileId: "uniswap-v3-quoter-v2",
-    protocol: "uniswap-v3",
-    chain: "ethereum",
-    poolId: PHYSICAL_POOL_ID,
-    poolTokenAddresses: [
-      "0x1111111111111111111111111111111111111111",
-      "0x2222222222222222222222222222222222222222",
-    ],
-    tokenIn: {
-      address: "0x1111111111111111111111111111111111111111",
-      symbol: "USDC",
-      decimals: 6,
-      referencePriceUsd: 1,
-      trackedAssetId: "usdc-circle",
-    },
-    tokenOut: {
-      address: "0x2222222222222222222222222222222222222222",
-      symbol: "USDT",
-      decimals: 6,
-      referencePriceUsd: 1,
-      trackedAssetId: "usdt-tether",
-    },
-    feePips: 100,
-    retainedTvlUsdAtQuote: 2_000_000,
-    retainedPoolPriceUsdAtQuote: 1,
-    quotedAt,
-    blockNumber: 25_536_894,
-    executionEndpoint: {
-      address: "0x4444444444444444444444444444444444444444",
-      codeHash: `0x${"ab".repeat(32)}`,
-    },
-    poolProvenance: {
-      factoryAddress: "0x5555555555555555555555555555555555555555",
-      factoryCodeHash: `0x${"cd".repeat(32)}`,
-      resolvedPoolAddress: physicalPoolAddress,
-    },
-    maxCostBps: DEX_MEASURED_MAX_COST_BPS,
-    marginalOutputRatio: 0.999,
-    capacityCurve: DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => {
-      const executableUsd = Math.min(requestedNotionalUsd, 1_000_000);
-      return {
-        requestedNotionalUsd,
-        maxCostBps: DEX_MEASURED_MAX_COST_BPS,
-        executableUsd,
-        completionRatio: executableUsd / requestedNotionalUsd,
-      };
-    }),
-  };
-}
 
 function routeObservedAt(quotedAt: number, stageStartedAt: number) {
   const result = buildP4DexExitRouteObservations({
@@ -85,7 +22,9 @@ function routeObservedAt(quotedAt: number, stageStartedAt: number) {
         poolType: "uniswap-v3",
         source: "dl",
         extra: {
-          measuredExecution: measuredProfile(quotedAt),
+          measuredExecution: makeMeasuredProfile(quotedAt, {
+            quoteGenerationId: `quote-generation-${quotedAt}`,
+          }),
           measuredExecutionPhysicalPoolId: PHYSICAL_POOL_ID,
         },
       },

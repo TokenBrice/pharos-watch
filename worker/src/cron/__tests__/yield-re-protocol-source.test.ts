@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 vi.mock("../../lib/evm-rpc", () => ({
   fetchEvmUint256AtBlock: vi.fn(),
@@ -34,6 +34,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versio
 import type { YieldAdapterLifecycleEntry } from "../../lib/yield-config/yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
 import { buildYieldCoverageEvidenceFingerprint } from "../yield-coverage-review-dispositions";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
 const mockLoadDlStablecoinPools = vi.mocked(loadDlStablecoinPools);
@@ -99,10 +100,15 @@ describe("buildProtocolCategoryLookupFromCachePayload", () => {
 describe("runYieldCoverageAudit", () => {
   it("defers when the compact safety snapshot is not complete and never requests computed V8 scores", async () => {
     mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [{
-        pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000,
-        apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null,
-      }],
+      pools: [makeDlYieldPool({
+        pool: "new-usdc",
+        project: "new-lender",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      })],
       meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
     });
     mockComputeSafetyScoresSnapshot.mockResolvedValue({
@@ -138,10 +144,15 @@ describe("runYieldCoverageAudit", () => {
     ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
   ])("defers with explicit V9 provenance for %s", async (_label, reason) => {
     mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [{
-        pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000,
-        apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null,
-      }],
+      pools: [makeDlYieldPool({
+        pool: "new-usdc",
+        project: "new-lender",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      })],
       meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
     });
     mockComputeSafetyScoresSnapshot.mockResolvedValue({
@@ -171,20 +182,15 @@ describe("runYieldCoverageAudit", () => {
   });
 
   it("reports bounded progress stages through cache publication", async () => {
-    const dlPools: DlPool[] = [{
+    const dlPools: DlPool[] = [makeDlYieldPool({
       pool: "new-usdc",
-      chain: "Ethereum",
       project: "new-lender",
       symbol: "USDC",
       tvlUsd: 12_000_000,
       apy: 4,
       apyBase: 4,
-      apyReward: null,
       apyMean30d: 4,
-      stablecoin: true,
-      exposure: "single",
-      underlyingTokens: null,
-    }];
+    })];
     mockLoadDlStablecoinPools.mockResolvedValue({
       pools: dlPools,
       meta: {
@@ -358,20 +364,15 @@ describe("runYieldCoverageAudit", () => {
 
   it("returns degraded when protocol-category cache is unavailable", async () => {
     mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [{
+      pools: [makeDlYieldPool({
         pool: "new-usdc",
-        chain: "Ethereum",
         project: "new-lender",
         symbol: "USDC",
         tvlUsd: 12_000_000,
         apy: 4,
         apyBase: 4,
-        apyReward: null,
         apyMean30d: 4,
-        stablecoin: true,
-        exposure: "single",
-        underlyingTokens: null,
-      }],
+      })],
       meta: {
         mode: "dex-cache",
         updatedAt: 1_774_526_300,
@@ -420,55 +421,56 @@ describe("runYieldCoverageAudit", () => {
 
 describe("identifyCoverageGaps", () => {
   it("identifies high-TVL stablecoin pools not matched", () => {
-    const dlPools: DlPool[] = [{
-      pool: "unknown-pool", chain: "Ethereum", project: "new-protocol",
-      symbol: "NEW_STABLE", tvlUsd: 50_000_000, apy: 5, apyBase: 5,
-      apyReward: null, apyMean30d: 5, stablecoin: true,
-      exposure: "single", underlyingTokens: null,
-    }];
+    const dlPools: DlPool[] = [makeDlYieldPool({
+      pool: "unknown-pool",
+      project: "new-protocol",
+      symbol: "NEW_STABLE",
+      tvlUsd: 50_000_000,
+    })];
     const gaps = identifyCoverageGaps(dlPools, new Set());
     expect(gaps.unmatchedHighTvlPools.length).toBe(1);
     expect(gaps.unmatchedHighTvlPools[0].pool).toBe("unknown-pool");
   });
 
   it("does not flag pools already covered", () => {
-    const dlPools: DlPool[] = [{
-      pool: "covered-pool", chain: "Ethereum", project: "aave-v3",
-      symbol: "USDC", tvlUsd: 100_000_000, apy: 3, apyBase: 3,
-      apyReward: null, apyMean30d: 3, stablecoin: true,
-      exposure: "single", underlyingTokens: null,
-    }];
+    const dlPools: DlPool[] = [makeDlYieldPool({
+      pool: "covered-pool",
+      project: "aave-v3",
+      symbol: "USDC",
+      tvlUsd: 100_000_000,
+      apy: 3,
+      apyBase: 3,
+      apyMean30d: 3,
+    })];
     const gaps = identifyCoverageGaps(dlPools, new Set(["covered-pool"]));
     expect(gaps.unmatchedHighTvlPools.length).toBe(0);
   });
 
   it("identifies protocols not in allowlist", () => {
-    const dlPools: DlPool[] = [{
-      pool: "p1", chain: "Ethereum", project: "brand-new-protocol",
-      symbol: "USDC", tvlUsd: 10_000_000, apy: 4, apyBase: 4,
-      apyReward: null, apyMean30d: 4, stablecoin: true,
-      exposure: "single", underlyingTokens: null,
-    }];
+    const dlPools: DlPool[] = [makeDlYieldPool({
+      pool: "p1",
+      project: "brand-new-protocol",
+      symbol: "USDC",
+      tvlUsd: 10_000_000,
+      apy: 4,
+      apyBase: 4,
+      apyMean30d: 4,
+    })];
     const gaps = identifyCoverageGaps(dlPools, new Set());
     expect(gaps.missingProtocols.length).toBeGreaterThan(0);
     expect(gaps.missingProtocols[0].project).toBe("brand-new-protocol");
   });
 
   it("does not flag high-TVL pools on already-supported allowlisted protocols as unmatched gaps", () => {
-    const dlPools: DlPool[] = [{
+    const dlPools: DlPool[] = [makeDlYieldPool({
       pool: "aave-pool",
-      chain: "Ethereum",
       project: "aave-v3",
       symbol: "USDC",
       tvlUsd: 100_000_000,
       apy: 3,
       apyBase: 3,
-      apyReward: null,
       apyMean30d: 3,
-      stablecoin: true,
-      exposure: "single",
-      underlyingTokens: null,
-    }];
+    })];
 
     const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["aave-v3"]));
     expect(gaps.unmatchedHighTvlPools).toEqual([]);
@@ -477,9 +479,31 @@ describe("identifyCoverageGaps", () => {
 
   it("recommends high-confidence protocols with >$10M TVL and 3+ pools", () => {
     const dlPools: DlPool[] = [
-      { pool: "p1", chain: "Ethereum", project: "rising-protocol", symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "p2", chain: "Ethereum", project: "rising-protocol", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "p3", chain: "Arbitrum", project: "rising-protocol", symbol: "USDC", tvlUsd: 3_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
+      makeDlYieldPool({
+        pool: "p1",
+        project: "rising-protocol",
+        symbol: "USDC",
+        tvlUsd: 4_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "p2",
+        project: "rising-protocol",
+        symbol: "USDT",
+        tvlUsd: 4_000_000,
+        apy: 3.5,
+        apyBase: 3.5,
+        apyMean30d: 3.5,
+      }),
+      makeDlYieldPool({
+        pool: "p3",
+        chain: "Arbitrum",
+        project: "rising-protocol",
+        symbol: "USDC",
+        tvlUsd: 3_000_000,
+      }),
     ];
     const gaps = identifyCoverageGaps(
       dlPools,
@@ -499,9 +523,31 @@ describe("identifyCoverageGaps", () => {
 
   it("carries provided protocol category metadata on recommendations", () => {
     const dlPools: DlPool[] = [
-      { pool: "p1", chain: "Ethereum", project: "category-lender", symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "p2", chain: "Ethereum", project: "category-lender", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "p3", chain: "Arbitrum", project: "category-lender", symbol: "DAI", tvlUsd: 3_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
+      makeDlYieldPool({
+        pool: "p1",
+        project: "category-lender",
+        symbol: "USDC",
+        tvlUsd: 4_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "p2",
+        project: "category-lender",
+        symbol: "USDT",
+        tvlUsd: 4_000_000,
+        apy: 3.5,
+        apyBase: 3.5,
+        apyMean30d: 3.5,
+      }),
+      makeDlYieldPool({
+        pool: "p3",
+        chain: "Arbitrum",
+        project: "category-lender",
+        symbol: "DAI",
+        tvlUsd: 3_000_000,
+      }),
     ];
 
     const gaps = identifyCoverageGaps(
@@ -522,12 +568,56 @@ describe("identifyCoverageGaps", () => {
 
   it("requires an allowed lending category before assigning high-confidence", () => {
     const dlPools: DlPool[] = [
-      { pool: "p1", chain: "Ethereum", project: "aggregator-protocol", symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "p2", chain: "Ethereum", project: "aggregator-protocol", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "p3", chain: "Arbitrum", project: "aggregator-protocol", symbol: "DAI", tvlUsd: 4_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "p4", chain: "Ethereum", project: "missing-category-protocol", symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "p5", chain: "Ethereum", project: "missing-category-protocol", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "p6", chain: "Arbitrum", project: "missing-category-protocol", symbol: "DAI", tvlUsd: 4_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
+      makeDlYieldPool({
+        pool: "p1",
+        project: "aggregator-protocol",
+        symbol: "USDC",
+        tvlUsd: 4_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "p2",
+        project: "aggregator-protocol",
+        symbol: "USDT",
+        tvlUsd: 4_000_000,
+        apy: 3.5,
+        apyBase: 3.5,
+        apyMean30d: 3.5,
+      }),
+      makeDlYieldPool({
+        pool: "p3",
+        chain: "Arbitrum",
+        project: "aggregator-protocol",
+        symbol: "DAI",
+        tvlUsd: 4_000_000,
+      }),
+      makeDlYieldPool({
+        pool: "p4",
+        project: "missing-category-protocol",
+        symbol: "USDC",
+        tvlUsd: 4_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "p5",
+        project: "missing-category-protocol",
+        symbol: "USDT",
+        tvlUsd: 4_000_000,
+        apy: 3.5,
+        apyBase: 3.5,
+        apyMean30d: 3.5,
+      }),
+      makeDlYieldPool({
+        pool: "p6",
+        chain: "Arbitrum",
+        project: "missing-category-protocol",
+        symbol: "DAI",
+        tvlUsd: 4_000_000,
+      }),
     ];
 
     const gaps = identifyCoverageGaps(
@@ -555,8 +645,24 @@ describe("identifyCoverageGaps", () => {
 
   it("splits source-family adapter and lending allowlist recommendations", () => {
     const dlPools: DlPool[] = [
-      { pool: "morpho-usdc", chain: "Ethereum", project: "morpho-blue", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      makeDlYieldPool({
+        pool: "morpho-usdc",
+        project: "morpho-blue",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "new-usdc",
+        project: "new-lender",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
     ];
 
     const gaps = identifyCoverageGaps(
@@ -603,34 +709,24 @@ describe("identifyCoverageGaps", () => {
 
   it("surfaces allowlisted high-TVL venue slugs missing risk registry aliases", () => {
     const dlPools: DlPool[] = [
-      {
+      makeDlYieldPool({
         pool: "aave-usdc",
-        chain: "Ethereum",
         project: "aave",
         symbol: "USDC",
         tvlUsd: 25_000_000,
         apy: 3,
         apyBase: 3,
-        apyReward: null,
         apyMean30d: 3,
-        stablecoin: true,
-        exposure: "single",
-        underlyingTokens: null,
-      },
-      {
+      }),
+      makeDlYieldPool({
         pool: "renamed-usdc",
-        chain: "Ethereum",
         project: "renamed-aave-v3",
         symbol: "USDC",
         tvlUsd: 25_000_000,
         apy: 3,
         apyBase: 3,
-        apyReward: null,
         apyMean30d: 3,
-        stablecoin: true,
-        exposure: "single",
-        underlyingTokens: null,
-      },
+      }),
     ];
 
     const gaps = identifyCoverageGaps(
@@ -657,20 +753,15 @@ describe("identifyCoverageGaps", () => {
   it("escapes provider slugs in suggested lending allowlist snippets", () => {
     const maliciousProject = 'evil"\n  __pwned__: (() => { throw new Error("injected"); })(),\n  "tail';
     const dlPools: DlPool[] = [
-      {
+      makeDlYieldPool({
         pool: "evil-usdc",
-        chain: "Ethereum",
         project: maliciousProject,
         symbol: "USDC",
         tvlUsd: 12_000_000,
         apy: 4,
         apyBase: 4,
-        apyReward: null,
         apyMean30d: 4,
-        stablecoin: true,
-        exposure: "single",
-        underlyingTokens: null,
-      },
+      }),
     ];
 
     const gaps = identifyCoverageGaps(
@@ -695,12 +786,62 @@ describe("identifyCoverageGaps", () => {
 
   it("drives lending allowlist recommendations from the high-TVL queue and category gate", () => {
     const dlPools: DlPool[] = [
-      { pool: "queued-usdc", chain: "Ethereum", project: "queued-lender", symbol: "USDC", tvlUsd: 6_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "aggregate-a", chain: "Ethereum", project: "aggregate-only-lender", symbol: "USDC", tvlUsd: 2_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "aggregate-b", chain: "Base", project: "aggregate-only-lender", symbol: "USDC", tvlUsd: 2_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "aggregate-c", chain: "Arbitrum", project: "aggregate-only-lender", symbol: "USDT", tvlUsd: 2_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "aggregator-usdc", chain: "Ethereum", project: "yield-aggregator", symbol: "USDC", tvlUsd: 20_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "missing-category-usdc", chain: "Ethereum", project: "missing-category-lender", symbol: "USDC", tvlUsd: 20_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      makeDlYieldPool({
+        pool: "queued-usdc",
+        project: "queued-lender",
+        symbol: "USDC",
+        tvlUsd: 6_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "aggregate-a",
+        project: "aggregate-only-lender",
+        symbol: "USDC",
+        tvlUsd: 2_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "aggregate-b",
+        chain: "Base",
+        project: "aggregate-only-lender",
+        symbol: "USDC",
+        tvlUsd: 2_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "aggregate-c",
+        chain: "Arbitrum",
+        project: "aggregate-only-lender",
+        symbol: "USDT",
+        tvlUsd: 2_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "aggregator-usdc",
+        project: "yield-aggregator",
+        symbol: "USDC",
+        tvlUsd: 20_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "missing-category-usdc",
+        project: "missing-category-lender",
+        symbol: "USDC",
+        tvlUsd: 20_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
     ];
 
     const gaps = identifyCoverageGaps(
@@ -732,20 +873,12 @@ describe("identifyCoverageGaps", () => {
   });
 
   it("recommends native exact pools for tracked yield-bearing symbols", () => {
-    const dlPools: DlPool[] = [{
+    const dlPools: DlPool[] = [makeDlYieldPool({
       pool: "susde-native",
-      chain: "Ethereum",
       project: "ethena",
       symbol: "sUSDe",
       tvlUsd: 50_000_000,
-      apy: 5,
-      apyBase: 5,
-      apyReward: null,
-      apyMean30d: 5,
-      stablecoin: true,
-      exposure: "single",
-      underlyingTokens: null,
-    }];
+    })];
 
     const gaps = identifyCoverageGaps(dlPools, new Set());
 
@@ -759,7 +892,15 @@ describe("identifyCoverageGaps", () => {
 
   it("marks review-needed for protocols with <$10M TVL or <3 pools", () => {
     const dlPools: DlPool[] = [
-      { pool: "p1", chain: "Ethereum", project: "small-protocol", symbol: "USDC", tvlUsd: 6_000_000, apy: 3, apyBase: 3, apyReward: null, apyMean30d: 3, stablecoin: true, exposure: "single", underlyingTokens: null },
+      makeDlYieldPool({
+        pool: "p1",
+        project: "small-protocol",
+        symbol: "USDC",
+        tvlUsd: 6_000_000,
+        apy: 3,
+        apyBase: 3,
+        apyMean30d: 3,
+      }),
     ];
     const gaps = identifyCoverageGaps(dlPools, new Set());
     expect(gaps.protocolRecommendations).toContainEqual(
@@ -772,7 +913,7 @@ describe("identifyCoverageGaps", () => {
 
   it("flags deterministic auto-lending overrides that no longer pass static venue gates", () => {
     const stale = identifyStaleAutoLendingOverrides([
-      {
+      makeDlYieldPool({
         pool: "be50b874-8147-440d-b8ca-f2c202e9ed64",
         chain: "Flare",
         project: "clearpool-lending",
@@ -780,12 +921,9 @@ describe("identifyCoverageGaps", () => {
         tvlUsd: 1,
         apy: 0.01,
         apyBase: 0.01,
-        apyReward: null,
         apyMean30d: 0.01,
-        stablecoin: true,
-        exposure: "single",
         underlyingTokens: ["0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"],
-      },
+      }),
     ]);
 
     expect(stale).toContainEqual(
@@ -799,21 +937,13 @@ describe("identifyCoverageGaps", () => {
 
   it("queues a deterministic override whose source runtime blocks", () => {
     const stale = identifyStaleAutoLendingOverrides([
-      {
+      makeDlYieldPool({
         pool: "436e4129-667b-44d6-8322-ea59ce9b587c",
-        chain: "Ethereum",
         project: "aave-v3",
         symbol: "DLLR",
         poolMeta: "wstUSR lending market",
         tvlUsd: 2_000_000,
-        apy: 5,
-        apyBase: 5,
-        apyReward: null,
-        apyMean30d: 5,
-        stablecoin: true,
-        exposure: "single",
-        underlyingTokens: null,
-      },
+      }),
     ]);
 
     expect(stale).toContainEqual(
@@ -827,20 +957,14 @@ describe("identifyCoverageGaps", () => {
   it("applies the same supply-relative TVL floor as hourly auto-lending publication", () => {
     const stale = identifyStaleAutoLendingOverrides(
       [
-        {
+        makeDlYieldPool({
           pool: "be50b874-8147-440d-b8ca-f2c202e9ed64",
           chain: "Flare",
           project: "clearpool-lending",
           symbol: "USDX",
           tvlUsd: 500_000,
-          apy: 5,
-          apyBase: 5,
-          apyReward: null,
-          apyMean30d: 5,
-          stablecoin: true,
-          exposure: "single",
           underlyingTokens: ["0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"],
-        },
+        }),
       ],
       {
         stablecoinSupplyById: new Map([["usdx-hex-trust", 1_000_000_000]]),
@@ -859,20 +983,12 @@ describe("identifyCoverageGaps", () => {
   it("flags deterministic auto-lending overrides that no longer pass the safety gate", () => {
     const stale = identifyStaleAutoLendingOverrides(
       [
-        {
+        makeDlYieldPool({
           pool: "436e4129-667b-44d6-8322-ea59ce9b587c",
-          chain: "Ethereum",
           project: "aave-v3",
           symbol: "DLLR",
           tvlUsd: 2_000_000,
-          apy: 5,
-          apyBase: 5,
-          apyReward: null,
-          apyMean30d: 5,
-          stablecoin: true,
-          exposure: "single",
-          underlyingTokens: null,
-        },
+        }),
       ],
       {
         stablecoinSupplyById: new Map([["dllr-sovryn", 1_000_000]]),
@@ -890,10 +1006,39 @@ describe("identifyCoverageGaps", () => {
 
   it("builds a transient operator queue from headline gaps and recommendation candidates", () => {
     const dlPools: DlPool[] = [
-      { pool: "susde-native", chain: "Ethereum", project: "ethena", symbol: "sUSDe", tvlUsd: 50_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "morpho-usdc", chain: "Ethereum", project: "morpho-blue", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
-      { pool: "renamed-usdc", chain: "Ethereum", project: "renamed-aave-v3", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      makeDlYieldPool({
+        pool: "susde-native",
+        project: "ethena",
+        symbol: "sUSDe",
+        tvlUsd: 50_000_000,
+      }),
+      makeDlYieldPool({
+        pool: "morpho-usdc",
+        project: "morpho-blue",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "new-usdc",
+        project: "new-lender",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "renamed-usdc",
+        project: "renamed-aave-v3",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
     ];
     const gaps = identifyCoverageGaps(
       dlPools,

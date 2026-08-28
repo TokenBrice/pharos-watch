@@ -1,5 +1,5 @@
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
-import type { MockRoute } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import type { MockRoute } from "@shared/test-utils/mock-fetch";
 
 export type MockUrlResponse = Response | null | ((url: string, opts?: RequestInit) => Response | null);
 export type BenchmarkFetchRoutes = Record<string, MockUrlResponse>;

@@ -17,7 +17,7 @@ import {
   PYS_VENUE_PENALTY_SLOPE,
   PYS_VENUE_PENALTY_THRESHOLD,
 } from "../yield-scoring";
-import { SOURCE_RISK_GOLDEN_ROWS } from "./yield-source-risk-golden-fixtures";
+import { SOURCE_RISK_GOLDEN_ROWS } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 
 describe("PYS constants", () => {
   it("exports benchmark spread weight of 0.25", () => {

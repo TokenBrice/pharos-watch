@@ -127,9 +127,3 @@ describe("D3 trust boundary — V8 public peg output is byte-identical (active r
     });
   });
 });
-
-describe.skip("D3 band-aware peg pins dropped by owner ruling D7", () => {
-  it("is intentionally not implemented in V9", () => {
-    // D7 is the executable disposition for the superseded Stage A pins.
-  });
-});

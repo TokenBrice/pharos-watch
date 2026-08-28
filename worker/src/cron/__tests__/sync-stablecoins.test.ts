@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 import { defaultSyncRoutes, getPublishedAsset } from "./sync-stablecoins.test-support";
 
@@ -295,7 +295,7 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
-import * as apiUtils from "../../lib/api-utils";
+import * as apiUtils from "../../lib/api-schema";
 import * as evmRpcModule from "../../lib/evm-rpc";
 
 const DEFAULT_STABLECOINS_D1_TABLES: MockTableConfig[] = [

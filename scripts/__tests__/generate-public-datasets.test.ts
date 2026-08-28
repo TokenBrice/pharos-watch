@@ -24,6 +24,29 @@ async function makeRoot() {
   return root;
 }
 
+async function writeTopicRedirects(root: string, topic: string, snapshotDate = "2026-05-16") {
+  const redirectsPath = path.join(root, "_redirects");
+  await writeFile(
+    redirectsPath,
+    [
+      `/datasets/${topic}/latest.csv /datasets/${topic}/${snapshotDate}.csv 200`,
+      `/datasets/${topic}/latest.json /datasets/${topic}/${snapshotDate}.json 200`,
+      `/datasets/${topic}/latest.ndjson /datasets/${topic}/${snapshotDate}.ndjson 200`,
+      `/sheets/${topic}.csv /datasets/${topic}/${snapshotDate}.csv 200`,
+      "",
+    ].join("\n"),
+  );
+  return redirectsPath;
+}
+
+function artifactDirs(datasetsDir: string, redirectsPath: string) {
+  return {
+    datasetsDir,
+    redirectsPath,
+    currentDatasetModulePath: path.join(path.dirname(datasetsDir), "public-dataset-current.ts"),
+  };
+}
+
 function makeEnvelope(snapshotDate: string) {
   return {
     snapshotDate,
@@ -81,10 +104,24 @@ function makeCoverageSentinel(snapshotDate: string) {
 }
 
 describe("generate-public-datasets", () => {
+  it("generates direct 200 rewrites for latest datasets and Sheets CSV aliases", () => {
+    const block = testExports.buildPublicDatasetRedirectBlock("2026-07-08");
+
+    expect(block.match(/^\/datasets\/.+ 200$/gm)).toHaveLength(12);
+    expect(block.match(/^\/sheets\/.+ 200$/gm)).toHaveLength(4);
+    expect(block).toContain(
+      "/datasets/top-stablecoins/latest.json /datasets/top-stablecoins/2026-07-08.json 200",
+    );
+    expect(block).toContain(
+      "/sheets/top-stablecoins.csv /datasets/top-stablecoins/2026-07-08.csv 200",
+    );
+    expect(block).not.toContain("/datasets/top-stablecoins/latest.csv 301");
+  });
+
   it("fails closed when no API source is configured outside explicit stub mode", async () => {
     const { stderr } = await execFileAsync(
-      path.join(process.cwd(), "node_modules/.bin/tsx"),
-      ["scripts/maintenance/generate-public-datasets.ts"],
+      process.execPath,
+      ["--import", "tsx", "scripts/maintenance/generate-public-datasets.ts"],
       {
         env: {
           ...process.env,
@@ -105,8 +142,8 @@ describe("generate-public-datasets", () => {
 
   it("preserves checked-in mirrors during release when the configured live source is blocked", async () => {
     const { stderr } = await execFileAsync(
-      path.join(process.cwd(), "node_modules/.bin/tsx"),
-      ["scripts/maintenance/generate-public-datasets.ts"],
+      process.execPath,
+      ["--import", "tsx", "scripts/maintenance/generate-public-datasets.ts"],
       {
         env: {
           ...process.env,
@@ -463,14 +500,15 @@ describe("generate-public-datasets", () => {
     const datasetsDir = path.join(root, "datasets");
     const topicDir = path.join(datasetsDir, "top-stablecoins");
     await mkdir(topicDir, { recursive: true });
-    await writeFile(path.join(topicDir, "latest.csv"), "# Pharos pharos.watch\nid\n");
+    const redirectsPath = await writeTopicRedirects(root, "top-stablecoins");
+    await writeFile(path.join(topicDir, "2026-05-16.csv"), "# Pharos pharos.watch\nid\n");
     await writeFile(
-      path.join(topicDir, "latest.json"),
+      path.join(topicDir, "2026-05-16.json"),
       JSON.stringify({ _meta: { endpoint: "top-stablecoins", rowCount: 0 }, rows: [] }, null, 2),
     );
-    await writeFile(path.join(topicDir, "latest.ndjson"), '{"_meta":{"endpoint":"top-stablecoins"}}\n');
+    await writeFile(path.join(topicDir, "2026-05-16.ndjson"), '{"_meta":{"endpoint":"top-stablecoins"}}\n');
 
-    expect(testExports.checkTopic("top-stablecoins", { datasetsDir })).toEqual({
+    expect(testExports.checkTopic("top-stablecoins", artifactDirs(datasetsDir, redirectsPath))).toEqual({
       ok: false,
       reason: expect.stringContaining("rowCount 0 below required floor 493"),
     });
@@ -481,14 +519,15 @@ describe("generate-public-datasets", () => {
     const datasetsDir = path.join(root, "datasets");
     const topicDir = path.join(datasetsDir, "depeg-history");
     await mkdir(topicDir, { recursive: true });
-    await writeFile(path.join(topicDir, "latest.csv"), "# Pharos pharos.watch\nid\n42\n");
+    const redirectsPath = await writeTopicRedirects(root, "depeg-history");
+    await writeFile(path.join(topicDir, "2026-05-16.csv"), "# Pharos pharos.watch\nid\n42\n");
     await writeFile(
-      path.join(topicDir, "latest.json"),
+      path.join(topicDir, "2026-05-16.json"),
       JSON.stringify({ _meta: { endpoint: "depeg-history", rowCount: 1 }, rows: [{ id: "42" }] }, null, 2),
     );
-    await writeFile(path.join(topicDir, "latest.ndjson"), '{"_meta":{"endpoint":"depeg-history"}}\n{"id":"42"}\n');
+    await writeFile(path.join(topicDir, "2026-05-16.ndjson"), '{"_meta":{"endpoint":"depeg-history"}}\n{"id":"42"}\n');
 
-    expect(testExports.checkTopic("depeg-history", { datasetsDir })).toEqual({
+    expect(testExports.checkTopic("depeg-history", artifactDirs(datasetsDir, redirectsPath))).toEqual({
       ok: false,
       reason: expect.stringContaining("rowCount 1 below required floor 300"),
     });
@@ -499,14 +538,15 @@ describe("generate-public-datasets", () => {
     const datasetsDir = path.join(root, "datasets");
     const topicDir = path.join(datasetsDir, "depeg-history");
     await mkdir(topicDir, { recursive: true });
-    await writeFile(path.join(topicDir, "latest.csv"), "# Pharos pharos.watch\nid\n");
+    const redirectsPath = await writeTopicRedirects(root, "depeg-history");
+    await writeFile(path.join(topicDir, "2026-05-16.csv"), "# Pharos pharos.watch\nid\n");
     await writeFile(
-      path.join(topicDir, "latest.json"),
+      path.join(topicDir, "2026-05-16.json"),
       JSON.stringify({ _meta: { endpoint: "depeg-history", rowCount: 300 }, rows: [] }, null, 2),
     );
-    await writeFile(path.join(topicDir, "latest.ndjson"), '{"_meta":{"endpoint":"depeg-history"}}\n');
+    await writeFile(path.join(topicDir, "2026-05-16.ndjson"), '{"_meta":{"endpoint":"depeg-history"}}\n');
 
-    expect(testExports.checkTopic("depeg-history", { datasetsDir })).toEqual({
+    expect(testExports.checkTopic("depeg-history", artifactDirs(datasetsDir, redirectsPath))).toEqual({
       ok: false,
       reason: expect.stringContaining("rowCount 300 does not match rows length 0"),
     });

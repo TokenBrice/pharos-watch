@@ -29,7 +29,7 @@ import {
 } from "../curve-stableswap-ng";
 import { isOperationalDexMeasuredFailure } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
-import { makeMeasuredTarget } from "@shared/lib/__tests__/measured-execution.test-support";
+import { makeMeasuredTarget } from "@shared/test-utils/measured-execution.test-support";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",

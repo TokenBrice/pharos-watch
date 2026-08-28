@@ -6,7 +6,7 @@ import {
   fetchKrakenOrderbookDepths,
   summarizeCexOrderbookDepths,
 } from "../cex-orderbooks";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 afterEach(() => vi.unstubAllGlobals());
 

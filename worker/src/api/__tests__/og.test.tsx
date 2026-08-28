@@ -9,7 +9,7 @@ import satori from "satori";
 // The aliased standalone stub used by handleOg, mocked below so the handler
 // tests can inspect the element it would render.
 import satoriStandalone, { init as initSatoriStandalone } from "satori/standalone";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9-consumer-freshness";

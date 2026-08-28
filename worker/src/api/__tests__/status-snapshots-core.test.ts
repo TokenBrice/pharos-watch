@@ -1,4 +1,4 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StatusResponseSchema } from "@shared/types/status";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -11,26 +11,42 @@ import {
   makeRawStatusSnapshotRow,
   makeMinimalLiveStatusRows,
   cleanupStatusTest,
-  fixtureMockD1 as baseFixtureMockD1,
+  buildStatusD1Scenario,
   fixtureMakeApiRequest,
   fixtureDependencyHealthModule,
 } from "./status.test-support";
 
 function fixtureMockD1(
-  tables: Parameters<typeof baseFixtureMockD1>[0] = [],
-  options: Parameters<typeof baseFixtureMockD1>[1] = {},
+  overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = [],
+  options: { strictUnused?: boolean } = {},
 ) {
-  return baseFixtureMockD1([
-    ...tables,
-    { match: "SELECT 1", rows: [], first: { "1": 1 } },
+  return buildStatusD1Scenario({
+    sections: ["sentinel", "publication", "derived", "reserves", "statusState", "cronState", "telegram"],
+    overrides,
+    strictUnused: options.strictUnused ?? false,
+    sectionOverrides: {
+      sentinel: [{ match: "SELECT 1", rows: [], first: { "1": 1 } }],
+      derived: [
     { match: "WHERE key IN ('yield-rankings'", rows: [] },
     { match: "SELECT key, value FROM cache WHERE key IN (", rows: [] },
     { match: "SELECT key, LENGTH(value) as bytes FROM cache", rows: [] },
     { match: "FROM mint_burn_hourly INDEXED BY idx_mbh_ts", rows: [] },
     { match: "FROM (VALUES", rows: [] },
+    { match: "SELECT MAX(snapshot_date) as latest FROM supply_history", rows: [], first: null },
+    { match: "SELECT MAX(generated_at) as latest FROM daily_digest", rows: [], first: null },
+    { match: "SELECT MAX(started_at) as latest", rows: [], first: null },
+    { match: "blacklist-reconciliation-status-latest", rows: [], first: null },
+    { match: "FROM blacklist_reconciliation_runs", rows: [], first: null },
+    { match: "FROM worker_repair_tasks", rows: [], first: null },
+    { match: "FROM onchain_supply", rows: [], first: { latest: null, tracked: 0 } },
+      ],
+      reserves: [
     { match: "FROM reserve_sync_state", rows: [] },
     { match: "FROM reserve_composition", rows: [] },
     { match: "JOIN reserve_sync_state", rows: [] },
+      ],
+      publication: [
+    { match: "FROM worker_producer_heads", rows: [] },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
     { match: "SELECT updated_at FROM cache WHERE key = ?", rows: [], first: null },
     { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
@@ -39,6 +55,8 @@ function fixtureMockD1(
     { match: "FROM yield_publication_generations", rows: [], first: null },
     { match: "FROM surface_publication_generations", rows: [], first: null },
     { match: "FROM stability_index_samples", rows: [], first: null },
+      ],
+      telegram: [
     { match: "FROM telegram_subscribers s", rows: [], first: {
       total_chats: 0,
       active_chats_30d: 0,
@@ -67,22 +85,16 @@ function fixtureMockD1(
     { match: "FROM telegram_usage_daily", rows: [], first: null },
     { match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily WHERE day = ?", rows: [], first: null },
     { match: "FROM telegram_watcher_lifecycle_daily", rows: [] },
-    { match: "FROM onchain_supply", rows: [], first: { latest: null, tracked: 0 } },
-    { match: "FROM blacklist_reconciliation_runs", rows: [], first: null },
-    { match: "FROM worker_repair_tasks", rows: [], first: null },
+      ],
+      statusState: [
     { match: "SELECT COUNT(*) AS cnt FROM status_transitions", rows: [], first: { cnt: 0 } },
     { match: "SELECT scope, current_status, raw_status", rows: [], first: null },
     { match: "SELECT created_at, status, sample_count", rows: [], first: null },
     { match: "SELECT consecutive_divergent FROM status_discrepancy_state", rows: [], first: null },
     { match: "SELECT id, scope, previous_status", rows: [], first: null },
-    { match: "SELECT MAX(snapshot_date) as latest FROM supply_history", rows: [], first: null },
-    { match: "SELECT MAX(generated_at) as latest FROM daily_digest", rows: [], first: null },
-    { match: "SELECT MAX(started_at) as latest", rows: [], first: null },
-    { match: "blacklist-reconciliation-status-latest", rows: [], first: null },
-    { match: "FROM cron_leases", rows: [] },
-    { match: "FROM cron_run_progress", rows: [] },
-    { match: "FROM cron_slot_executions", rows: [] },
-  ], options);
+      ],
+    },
+  });
 }
 
 describe("handleStatus", () => {

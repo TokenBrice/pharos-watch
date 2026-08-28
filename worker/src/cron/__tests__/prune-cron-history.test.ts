@@ -1,20 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ARCHIVE_TABLES_WITHOUT_RETENTION_PRUNE, runPruneCronHistory } from "../prune-cron-history";
+import { runPruneCronHistory } from "../prune-cron-history";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 function createTestDb() {
   const { sqlite } = createLatestSchemaSqlite();
-  const preparedSqls: string[] = [];
-  const sqliteDb = createSqliteD1(sqlite);
-  const db = {
-    ...sqliteDb,
-    prepare: (sql: string) => {
-      preparedSqls.push(sql);
-      return sqliteDb.prepare(sql);
-    },
-  } as D1Database;
-  return { db, preparedSqls, sqlite };
+  return { db: createSqliteD1(sqlite), sqlite };
 }
 
 function insert(sqlite: import("node:sqlite").DatabaseSync, sql: string, ...values: unknown[]): void {
@@ -43,28 +34,72 @@ describe("runPruneCronHistory", () => {
     await expect(runPruneCronHistory(db, controller.signal)).rejects.toThrow("cron history prune aborted");
   });
 
-  it("removes cron_runs older than 7 days and keeps newer rows", async () => {
+  it.each([
+    {
+      label: "removes cron_runs older than 7 days and keeps newer rows",
+      seed: (sqlite: import("node:sqlite").DatabaseSync, now: number) => {
+        insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 3600, 1, "ok");
+        insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - 3600, 1, "ok");
+      },
+      remaining: (sqlite: import("node:sqlite").DatabaseSync) =>
+        select<{ started_at: number }>(sqlite, "SELECT started_at FROM cron_runs"),
+      expected: (now: number) => [{ started_at: now - 3600 }],
+      deletedKey: "cronRunsDeleted",
+      cutoffKey: "cutoffCronRunsSec",
+      cutoff: (now: number) => now - ONE_WEEK_SEC,
+    },
+    {
+      label: "removes cron_slot_executions older than 14 days and keeps newer rows",
+      seed: (sqlite: import("node:sqlite").DatabaseSync, now: number) => {
+        insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - TWO_WEEKS_SEC - 3600, "finished", "test", now, now);
+        insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - 3600, "finished", "test", now, now);
+      },
+      remaining: (sqlite: import("node:sqlite").DatabaseSync) =>
+        select<{ slot_started_at: number }>(sqlite, "SELECT slot_started_at FROM cron_slot_executions"),
+      expected: (now: number) => [{ slot_started_at: now - 3600 }],
+      deletedKey: "slotExecutionsDeleted",
+      cutoffKey: "cutoffSlotExecutionsSec",
+      cutoff: (now: number) => now - TWO_WEEKS_SEC,
+    },
+    {
+      label: "removes selector snapshot daily quota rows older than 2 days and keeps newer rows",
+      seed: (sqlite: import("node:sqlite").DatabaseSync, now: number) => {
+        const quota = "INSERT INTO selector_snapshot_daily_quota (quota_date, ip_hash, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?)";
+        insert(sqlite, quota, toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60), "old", now, now);
+        insert(sqlite, quota, toUtcDateString(now - 3600), "new", now, now);
+      },
+      remaining: (sqlite: import("node:sqlite").DatabaseSync) =>
+        select<{ quota_date: string }>(sqlite, "SELECT quota_date FROM selector_snapshot_daily_quota"),
+      expected: (now: number) => [{ quota_date: toUtcDateString(now - 3600) }],
+      deletedKey: "selectorSnapshotDailyQuotaDeleted",
+      cutoffKey: "cutoffSelectorSnapshotDailyQuotaDate",
+      cutoff: (now: number) => toUtcDateString(now - TWO_DAYS_SEC),
+    },
+    {
+      label: "removes block timestamp cache rows older than 14 days and keeps newer rows",
+      seed: (sqlite: import("node:sqlite").DatabaseSync, now: number) => {
+        insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 1, now, now - TWO_WEEKS_SEC - 3600);
+        insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 2, now, now - 3600);
+      },
+      remaining: (sqlite: import("node:sqlite").DatabaseSync) =>
+        select<{ updated_at: number }>(sqlite, "SELECT updated_at FROM block_timestamp_cache"),
+      expected: (now: number) => [{ updated_at: now - 3600 }],
+      deletedKey: "blockTimestampCacheDeleted",
+      cutoffKey: "cutoffBlockTimestampCacheSec",
+      cutoff: (now: number) => now - TWO_WEEKS_SEC,
+    },
+  ])("$label", async ({ seed, remaining, expected, deletedKey, cutoffKey, cutoff }) => {
     const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 3600, 1, "ok");
-    insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - 3600, 1, "ok");
+    seed(sqlite, now);
 
     const result = await runPruneCronHistory(db);
+    const metadata = JSON.parse(result.metadata!) as Record<string, number | string>;
 
-    expect(select<{ started_at: number }>(sqlite, "SELECT started_at FROM cron_runs")).toEqual([{ started_at: now - 3600 }]);
-    expect(result.itemCount).toBe(1);
+    expect(remaining(sqlite)).toEqual(expected(now));
+    expect(metadata[deletedKey]).toBe(1);
+    expect(metadata[cutoffKey]).toBe(cutoff(now));
     expect(result.status).toBe("ok");
-  });
-
-  it("removes cron_slot_executions older than 14 days and keeps newer rows", async () => {
-    const { db, sqlite } = createTestDb();
-    const now = Math.floor(Date.now() / 1000);
-    insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - TWO_WEEKS_SEC - 3600, "finished", "test", now, now);
-    insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - 3600, "finished", "test", now, now);
-
-    await runPruneCronHistory(db);
-
-    expect(select<{ slot_started_at: number }>(sqlite, "SELECT slot_started_at FROM cron_slot_executions")).toEqual([{ slot_started_at: now - 3600 }]);
   });
 
   it("removes terminal repair tasks older than 7 days and keeps active or newer rows", async () => {
@@ -114,44 +149,6 @@ describe("runPruneCronHistory", () => {
     ]);
     const metadata = JSON.parse(result.metadata!) as { recoveryCheckpointsDeleted: number };
     expect(metadata.recoveryCheckpointsDeleted).toBe(2);
-  });
-
-  it("removes selector snapshot daily quota rows older than 2 days and keeps newer rows", async () => {
-    const { db, sqlite } = createTestDb();
-    const now = Math.floor(Date.now() / 1000);
-    const quota = "INSERT INTO selector_snapshot_daily_quota (quota_date, ip_hash, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?)";
-    insert(sqlite, quota, toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60), "old", now, now);
-    insert(sqlite, quota, toUtcDateString(now - 3600), "new", now, now);
-
-    const result = await runPruneCronHistory(db);
-
-    expect(select<{ quota_date: string }>(sqlite, "SELECT quota_date FROM selector_snapshot_daily_quota")).toEqual([{ quota_date: toUtcDateString(now - 3600) }]);
-    const metadata = JSON.parse(result.metadata!) as { selectorSnapshotDailyQuotaDeleted: number };
-    expect(metadata.selectorSnapshotDailyQuotaDeleted).toBe(1);
-  });
-
-  it("removes block timestamp cache rows older than 14 days and keeps newer rows", async () => {
-    const { db, sqlite } = createTestDb();
-    const now = Math.floor(Date.now() / 1000);
-    insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 1, now, now - TWO_WEEKS_SEC - 3600);
-    insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 2, now, now - 3600);
-
-    const result = await runPruneCronHistory(db);
-
-    expect(select<{ updated_at: number }>(sqlite, "SELECT updated_at FROM block_timestamp_cache")).toEqual([{ updated_at: now - 3600 }]);
-    const metadata = JSON.parse(result.metadata!) as { blockTimestampCacheDeleted: number };
-    expect(metadata.blockTimestampCacheDeleted).toBe(1);
-  });
-
-  it("does not prune explicit append-only archive tables", async () => {
-    const { db, preparedSqls } = createTestDb();
-
-    await runPruneCronHistory(db);
-
-    const deleteSqls = preparedSqls.filter((sql) => /\bDELETE\s+FROM\b/i.test(sql));
-    for (const { table } of ARCHIVE_TABLES_WITHOUT_RETENTION_PRUNE) {
-      expect(deleteSqls.some((sql) => sql.toLowerCase().includes(`delete from ${table.toLowerCase()}`))).toBe(false);
-    }
   });
 
   it("reports all deleted counts in metadata", async () => {

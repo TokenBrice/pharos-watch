@@ -475,7 +475,6 @@ describe("handleTelegramWebhook", () => {
   it("/settings sends the chat-level settings keyboard", async () => {
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
-      { match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null },
     ]);
     const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "/settings"), "test-secret", "bot-token");
 
@@ -545,13 +544,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("/start in a group gives non-admins the read-only start message", async () => {
-    const db = makeTelegramWebhookDb([
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = makeTelegramWebhookDb();
     fetchSpy.mockImplementation(async (url) => {
       if (String(url).includes("getChatMember")) {
         return new Response(
@@ -595,20 +588,10 @@ describe("handleTelegramWebhook", () => {
           {
             action_type: "setup-step",
             action_payload: JSON.stringify({ step: "branch", alertTypes: [], target: null }),
-            alert_types: "[]",
-            resolved_ids: "[]",
-            ambiguous_ticker: "",
-            candidates: "[]",
-            remaining_tickers: "[]",
             expires_at: 9_999_999_999,
             initiator_user_id: "111",
           },
         ],
-      },
-      {
-        match: "INSERT INTO telegram_pending_disambiguation",
-        rows: [],
-        runMeta: { changes: 0 },
       },
     ]);
     fetchSpy.mockImplementation(async (url) => {
@@ -719,10 +702,6 @@ describe("handleTelegramWebhook", () => {
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1_700_000_000 }] },
-      {
-        match: "FROM safety_grade_history",
-        rows: [{ grade: "A", score: 85, recorded_at: 1_700_000_000 }],
-      },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
       {
         match: "FROM price_cache WHERE asset_id = ?",
@@ -777,10 +756,6 @@ describe("handleTelegramWebhook", () => {
   it("/start why_<coinId> dispatches into /why", async () => {
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
-      {
-        match: "FROM safety_grade_history",
-        rows: [{ grade: "A", score: 85, recorded_at: 1_700_000_000 }],
-      },
     ]);
     const res = await handleTelegramWebhook(
       db,
@@ -801,10 +776,6 @@ describe("handleTelegramWebhook", () => {
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1_700_000_000 }] },
-      {
-        match: "FROM safety_grade_history",
-        rows: [{ grade: "A", score: 85, recorded_at: 1_700_000_000 }],
-      },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
       {
         match: "FROM price_cache WHERE asset_id = ?",
@@ -867,7 +838,6 @@ describe("handleTelegramWebhook", () => {
     const db = makeTelegramWebhookDb([
       { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
       { match: "FROM stress_signals", rows: [] },
-      { match: "FROM safety_grade_history", rows: [] },
       { match: "FROM depeg_events", rows: [] },
       { match: "FROM dex_liquidity", rows: [] },
       { match: "FROM yield_data", rows: [] },

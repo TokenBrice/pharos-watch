@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { DigestInputData } from "@shared/types/digest";
+import { makeDigestSnapshotFixture } from "../../test-helpers/__fixtures__/digest-snapshots";
 import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
 import { validateDigestModelOutput } from "../daily-digest/response";
 
@@ -11,9 +10,7 @@ import { validateDigestModelOutput } from "../daily-digest/response";
 // was a partial-ingestion artifact. These tests pin the editorial and
 // publication gates that now stand between that data and a published claim.
 
-const FIXTURE = join(__dirname, "../../test-helpers/__fixtures__/digest-snapshots/2026-07-18.json");
-const fixture: { inputData: DigestInputData } = JSON.parse(readFileSync(FIXTURE, "utf8"));
-const BASE = fixture.inputData;
+const BASE = makeDigestSnapshotFixture("2026-07-18").inputData;
 
 function inputWithShift(overrides: Partial<NonNullable<DigestInputData["liquidityShifts"]>[number]> = {}): DigestInputData {
   return {

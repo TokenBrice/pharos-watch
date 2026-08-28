@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const pricingStageMocks = vi.hoisted(() => ({
   fetchAuthoritativeLivePriceOverrides: vi.fn(),

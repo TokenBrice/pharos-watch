@@ -743,6 +743,26 @@ describe("check-seo-static", () => {
     );
   });
 
+  it("allows direct public-dataset and Sheets 200 rewrites to dated artifacts", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root);
+    await writeFile(
+      path.join(root, "_redirects"),
+      [
+        "/datasets/top-stablecoins/latest.csv /datasets/top-stablecoins/2026-07-08.csv 200",
+        "/datasets/top-stablecoins/latest.json /datasets/top-stablecoins/2026-07-08.json 200",
+        "/datasets/top-stablecoins/latest.ndjson /datasets/top-stablecoins/2026-07-08.ndjson 200",
+        "/sheets/top-stablecoins.csv /datasets/top-stablecoins/2026-07-08.csv 200",
+        "",
+      ].join("\n"),
+    );
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors.filter((error) => error.includes("_redirects internal rule must be permanent"))).toEqual([]);
+  });
+
   it("ignores retired route text, canonical route links, and external retired-route links", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", {

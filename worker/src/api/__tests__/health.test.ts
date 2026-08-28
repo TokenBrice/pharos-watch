@@ -1,9 +1,10 @@
-import { readJsonResponse } from "./api-request-response.test-support";
-import { describe, it, expect, vi } from "vitest";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
-import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import { handleHealth } from "../health";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { buildStatusD1Scenario, cleanupStatusTest } from "./status.test-support";
 
 type HealthDbOptions = {
   extraCacheRows?: Record<string, unknown>[];
@@ -19,27 +20,30 @@ const STABLECOIN_COVERAGE_QUERY_MATCH =
   "metadata LIKE '%\"activePublicationCoverage\"%'";
 
 function healthD1(tables: MockTableConfig[]) {
-  return mockD1([
-    ...tables,
-    { match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [], first: null },
-    { match: "FROM dex_liquidity", rows: [], first: { age: 60 } },
-    { match: "FROM yield_data", rows: [], first: { age: 60 } },
-    { match: "key LIKE 'circuit:%'", rows: [] },
-    { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
-    { match: "blacklist-gap-metrics-cache-write", rows: [] },
-    {
-      match: "status IN ('ok', 'degraded')",
-      rows: [],
-      first: { item_count: 0, metadata: null },
-    },
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "stamped_identity", rows: [], first: null },
-    { match: "publication_identity", rows: [], first: null },
-    { match: "telegram_subscribers", rows: [], first: { n: 0 } },
-    { match: "telegram_pending_alerts", rows: [], first: null },
-    { match: "dispatch-telegram-alerts", rows: [], first: null },
-    { match: "SELECT 1", rows: [], first: { value: 1 } },
-  ]);
+  return buildStatusD1Scenario({
+    sections: ["sentinel"],
+    overrides: [
+      ...tables,
+      { match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [], first: null },
+      { match: "FROM dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "FROM yield_data", rows: [], first: { age: 60 } },
+      { match: "key LIKE 'circuit:%'", rows: [] },
+      { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
+      { match: "blacklist-gap-metrics-cache-write", rows: [] },
+      {
+        match: "status IN ('ok', 'degraded')",
+        rows: [],
+        first: { item_count: 0, metadata: null },
+      },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "stamped_identity", rows: [], first: null },
+      { match: "publication_identity", rows: [], first: null },
+      { match: "telegram_subscribers", rows: [], first: { n: 0 } },
+      { match: "telegram_pending_alerts", rows: [], first: null },
+      { match: "dispatch-telegram-alerts", rows: [], first: null },
+    ],
+    strictUnused: false,
+  });
 }
 
 function completePublicationEntry(
@@ -142,6 +146,17 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
 }
 
 describe("handleHealth", () => {
+  afterEach(cleanupStatusTest);
+  it("keeps the shared D1 scenario strict for unmatched and unused queries", async () => {
+    const db = buildStatusD1Scenario({
+      sections: [],
+      overrides: [{ match: "SELECT 1", rows: [], first: { value: 1 } }],
+      strictUnused: false,
+    });
+
+    await expect(db.prepare("SELECT 2").first()).rejects.toThrow("mockD1: no match for SQL: SELECT 2");
+    expect(() => db.assertAllMatchesUsed()).toThrow("mockD1: unused table match(es): SELECT 1");
+  });
   const telegramCapacityRow = {
     total: 3,
     expired: 0,
@@ -599,7 +614,11 @@ describe("handleHealth", () => {
   });
 
   it("returns stale with warnings when the DB health sentinel fails", async () => {
-    const db = mockD1([{ match: "SELECT 1", rows: [], throwError: new Error("db down") }]);
+    const db = buildStatusD1Scenario({
+      sections: ["sentinel"],
+      overrides: [{ match: "SELECT 1", rows: [], throwError: new Error("db down") }],
+      strictUnused: true,
+    });
 
     const res = await handleHealth(db);
     const body = (await readJsonResponse(res, 200)) as {

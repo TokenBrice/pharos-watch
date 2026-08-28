@@ -1,4 +1,4 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 /**
  * Per-handler shape contracts for the mutation-heaviest admin handlers.
  *
@@ -12,22 +12,16 @@ import { readJsonResponse } from "./api-request-response.test-support";
  * request/response shape to assert.
  */
 import { describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { mockFetchRetry } from "../../test-helpers/cron/mock-fetch-retry";
 
 stubCryptoForAuth();
 
 // Stub external services the handlers reach for during exercised paths.
-vi.mock("../../lib/fetch-retry", () => {
-  const fetchWithRetry = vi.fn(async () => new Response("{}", { status: 200 }));
-  return {
-    fetchWithRetry,
-    fetchJsonWithRetry: async (..._args: unknown[]) => {
-      const response = await fetchWithRetry();
-      return { response, body: await response.json() };
-    },
-  };
-});
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry({
+  fetchWithRetry: vi.fn(async () => new Response("{}", { status: 200 })),
+}));
 vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/mint-burn-pipeline/persistence")>();
   return { ...actual, recalcAffectedHours: vi.fn().mockResolvedValue(undefined) };

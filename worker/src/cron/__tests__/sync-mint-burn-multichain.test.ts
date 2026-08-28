@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 // Stub MINT_BURN_CONFIGS with two critical configs on different chains so the
 // orchestrator must produce distinct chain contexts and emit events for both.

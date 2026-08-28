@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchMeteoraPools } from "../fetch-meteora";
-import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function validMeteoraPool(index: number) {
   return {

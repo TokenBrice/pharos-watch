@@ -1,10 +1,10 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 /**
  * Contract tests for cache-backed public handlers.
  * Object payload handlers add `_meta`; array payload handlers keep header-only freshness.
  */
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   handleStablecoins,
   handleStablecoinCharts,

@@ -10,8 +10,8 @@ import {
 import { fetchGoldTokens } from "../sync-stablecoins/supplemental-assets/gold";
 import { fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
 import { fillMissingSupplyHistory } from "../sync-stablecoins/phase-helpers";
-import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 as createMockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 
 function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {

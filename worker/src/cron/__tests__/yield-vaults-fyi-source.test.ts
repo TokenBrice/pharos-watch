@@ -37,7 +37,7 @@ import {
 } from "../yield-sync/vaults-fyi";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

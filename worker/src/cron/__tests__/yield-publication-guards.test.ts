@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildSourceRiskGoldenFixture,
   getSourceRiskGoldenRow,
-} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+} from "@shared/test-utils/yield-source-risk-golden-fixtures";
 
 
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 
 
 

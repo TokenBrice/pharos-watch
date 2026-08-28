@@ -1,6 +1,6 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { makeYieldHistoryRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleYieldHistory } from "../yield-history";
@@ -11,7 +11,7 @@ import {
   SOURCE_RISK_GOLDEN_UPDATED_AT,
   buildSourceRiskGoldenFixture,
   getSourceRiskGoldenRow,
-} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+} from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 
 function mockD1(

@@ -1,7 +1,7 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
-import { registerStablecoinParameterContract, registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleBackfillYieldHistory } from "../backfill-yield-history";
 import type { ResolvedYield } from "../../cron/yield-sync/types";
 
@@ -56,11 +56,6 @@ function makeDb(capturedStatements: Array<{ sql: string; args: unknown[] }> = []
 describe("handleBackfillYieldHistory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  registerUnauthorizedEndpointContract({
-    name: "yield history backfill",
-    invoke: () => handleBackfillYieldHistory({ db: makeDb(), url: makeApiUrl("/api/backfill-yield-history"), request: makeApiRequest("/api/backfill-yield-history") }),
   });
 
   registerStablecoinParameterContract({

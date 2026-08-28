@@ -1,4 +1,4 @@
-import type { MockRoute } from "../../test-helpers/__shared/mock-fetch";
+import type { MockRoute } from "@shared/test-utils/mock-fetch";
 
 export type CacheWrite = { key: string; value: string };
 

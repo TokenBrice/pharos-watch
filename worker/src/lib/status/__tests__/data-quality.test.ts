@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { BlacklistGapMetrics } from "../../blacklist-gaps";
 import { getDataQuality } from "../data-quality";
 

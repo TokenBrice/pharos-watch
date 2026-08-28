@@ -6,7 +6,7 @@ import {
 } from "../crawl-horizon-pools";
 import { createCrawlStageContext } from "../staged-pool";
 import type { StagedPool } from "../types";
-import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const EURC_ADDRESS = "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2";
 const USDC_ADDRESS = "USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";

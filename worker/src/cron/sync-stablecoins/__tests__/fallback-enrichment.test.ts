@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { buildPriceValidationContext } from "../../../lib/price-validation";
 import { runFallbackPriceEnrichmentPhase } from "../fallback-enrichment";
 import type { PeggedAsset } from "../enrich-prices";

@@ -16,21 +16,9 @@ vi.mock("../lib/db-cache", async (importOriginal) => {
   };
 });
 
-import { mockD1 } from "../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { handleTriggerDigest } from "../api/admin-actions";
-
-function makeCtx() {
-  const waits: Promise<unknown>[] = [];
-  return {
-    waits,
-    ctx: {
-      waitUntil: vi.fn((promise: Promise<unknown>) => {
-        waits.push(Promise.resolve(promise));
-      }),
-      passThroughOnException: vi.fn(),
-    } as unknown as ExecutionContext,
-  };
-}
 
 function makeRequest(): Request {
   return new Request("https://ops-api.pharos.watch/api/trigger-digest", {
@@ -49,7 +37,7 @@ describe("trigger-digest route", () => {
     // Idempotency-Key is optional; absent header makes the handler run
     // directly via runIdempotentAdminAction's no-key shortcut.
 
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
     const response = await handleTriggerDigest(
       {
         request,

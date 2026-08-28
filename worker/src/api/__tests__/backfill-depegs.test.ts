@@ -1,7 +1,7 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it } from "vitest";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { applyBackfillEvents, buildBackfillEventsFingerprint, handleBackfillDepegsTrusted } from "../backfill-depegs";

@@ -1,6 +1,6 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
@@ -9,7 +9,7 @@ import {
   SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
   buildSourceRiskGoldenFixture,
   getSourceRiskGoldenRow,
-} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+} from "@shared/test-utils/yield-source-risk-golden-fixtures";
 
 const computeSafetyScoresSnapshotMock = vi.hoisted(() => vi.fn());
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { logAdminAction, DETAILS_MAX_LEN } from "../admin-action-audit";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 function makeAuditMockDb() {
   return mockD1([

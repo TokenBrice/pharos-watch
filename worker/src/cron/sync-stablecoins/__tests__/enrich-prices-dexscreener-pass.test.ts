@@ -11,7 +11,7 @@ vi.mock("../../../lib/dexscreener", async (importOriginal) => {
 
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { runDexScreenerPass } from "../enrich-prices-dexscreener-pass";
 import type { PeggedAsset } from "../enrich-prices";
 
@@ -52,7 +52,7 @@ describe("runDexScreenerPass", () => {
     vi.useRealTimers();
   });
 
-  it("does not use the retired symbol-search fallback for addressless assets", async () => {
+  it("does not make a DexScreener lookup when an asset has no target", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
     const result = await runDexScreenerPass([makeMissingAsset()], undefined, undefined);
@@ -114,9 +114,6 @@ describe("runDexScreenerPass", () => {
       state: "closed",
       consecutiveFailures: 1,
     });
-    expect(circuitWrites.some((entry) => entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`)).toBe(
-      false,
-    );
   });
 
   it("includes DexScreener response status details in exact lookup diagnostics", async () => {

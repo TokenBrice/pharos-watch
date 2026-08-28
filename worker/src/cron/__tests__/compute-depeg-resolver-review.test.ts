@@ -5,7 +5,7 @@ import {
   DDR_V2_EFFECTIVE_AT,
 } from "@shared/lib/methodology-versions/depeg-resolver";
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
-import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   buildDepegResolverReviewSnapshot,
   computeAndStoreDepegResolverReview,

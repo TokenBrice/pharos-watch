@@ -1,4 +1,4 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DDR_METHODOLOGY_VERSION,
@@ -7,7 +7,7 @@ import {
 } from "@shared/lib/methodology-versions/depeg-resolver";
 import { DDRR_REVIEWER_VERSION as DDRR_CACHE_REVIEWER_VERSION } from "@shared/types/depeg-resolver-review";
 import { handleDepegResolverReview } from "../depeg-resolver-review";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { DDRR_SNAPSHOT_CACHE_GENERATION } from "../../lib/depeg-resolver-review-snapshot-cache";
 import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
 

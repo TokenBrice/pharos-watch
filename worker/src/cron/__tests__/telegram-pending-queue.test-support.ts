@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Mock } from "vitest";
-import type { MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
   { match: "WHERE delivery_state = 'sending'", rows: [] },

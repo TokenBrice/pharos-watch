@@ -1,4 +1,4 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BOT_TOKEN,
@@ -16,7 +16,7 @@ import {
   stateReadTables,
   type MockTableConfig,
 } from "./telegram-mini-app.test-support";
-import { type MockPreparedStatement } from "../../test-helpers/__shared/mock-d1";
+import { type MockPreparedStatement } from "@shared/test-utils/mock-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { encodeWatchlistTokenV3 } from "../../lib/telegram-watchlist-token";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";

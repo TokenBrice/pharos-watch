@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { loadBlacklistConfigStates } from "../sync-support";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { normalizeBlacklistSyncStateKey } from "../../../lib/db";

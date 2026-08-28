@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   createTelegramFetchSpy,
   makeTelegramUpdateRequest,
+  mockTelegramD1 as mockD1,
   telegramApiCallBody,
 } from "../../test-helpers/__shared/telegram";
 
@@ -10,25 +10,6 @@ const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 const { handleTelegramWebhook } = await import("../telegram-webhook");
 const { TELEGRAM_INLINE_STATUS_POLICY } = await import("../telegram-inline-queries");
-
-function mockD1(
-  tables: Parameters<typeof baseMockD1>[0] = [],
-  options: Parameters<typeof baseMockD1>[1] = {},
-) {
-  return baseMockD1([
-    ...tables,
-    { match: "FROM dex_liquidity", rows: [], first: null },
-    { match: "FROM yield_data", rows: [], first: null },
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-    { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-    { match: "INSERT INTO telegram_usage_daily", rows: [] },
-    { match: "FROM stress_signals_latest", rows: [], first: null },
-    { match: "FROM stress_signals s", rows: [], first: null },
-    { match: "FROM stress_signal_publication_rows", rows: [], first: null },
-    { match: "stress_signals", rows: [], first: null },
-  ], options);
-}
 
 function makeInlineQueryRequest(query: string, updateId?: number): Request {
   return makeTelegramUpdateRequest(
@@ -86,7 +67,6 @@ describe("Telegram inline status cards", () => {
     const db = mockD1([
       ...inlineReadLimitRows(),
       { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.9997, updated_at: 1_700_000_000 }] },
-      { match: "FROM safety_grade_history", rows: [{ grade: "A", score: 88, recorded_at: 1_700_000_000 }] },
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 5, computed_at: 1_700_000_000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
     ]);
@@ -158,7 +138,6 @@ describe("Telegram inline status cards", () => {
           },
         ],
       },
-      { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 1, updated_at: 1_700_000_000 }] },
     ]);
 
     const response = await handleTelegramWebhook(db, makeInlineQueryRequest("  usdc  "), "test-secret", "bot-token");

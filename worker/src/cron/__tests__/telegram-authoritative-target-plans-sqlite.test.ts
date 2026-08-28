@@ -1,8 +1,6 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { emptyAlerts, type RoutedSubscriberAlert } from "../dispatch-telegram-routing";
 import {
   captureTelegramPlanningSubscriberPage,
@@ -37,19 +35,9 @@ const NOW = 1_800_000_000;
 const databases: DatabaseSync[] = [];
 
 function setupLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  const migrationDir = process.cwd().endsWith("/worker")
-    ? join(process.cwd(), "migrations")
-    : join(process.cwd(), "worker/migrations");
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration directory.
-  for (const file of readdirSync(migrationDir)
-    .filter((entry) => entry.endsWith(".sql"))
-    .sort()) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration replay.
-    sqlite.exec(readFileSync(join(migrationDir, file), "utf8"));
-  }
+  const { sqlite, db } = createLatestSchemaSqlite();
   databases.push(sqlite);
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return { sqlite, db };
 }
 
 afterEach(() => {

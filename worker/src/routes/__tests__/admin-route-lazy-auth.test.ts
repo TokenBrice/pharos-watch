@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ADMIN_STATIC_ROUTES } from "../admin-routes";
 import type { FullRouteContext, StaticRouteDefinition } from "../shared";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const moduleLoads = vi.hoisted(() => ({
   auditDepegHistory: vi.fn(),

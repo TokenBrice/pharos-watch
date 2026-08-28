@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { applyConsensusResults, createValidationContextResolver } from "../sync-stablecoins/pricing";
 import { enrichMissingPrices, type PeggedAsset, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;
 

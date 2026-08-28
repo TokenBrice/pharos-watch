@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { loadStatusSupplements } from "../status-supplements";
 
 const NOW = 1_775_910_000;
@@ -68,13 +68,7 @@ describe("loadStatusSupplements", () => {
     const supplements = await loadStatusSupplements(db, NOW, {});
 
     expect(supplements.publicationHealth).not.toBeNull();
-    expect(supplements.publicationHealth?.surfaces.stablecoins).toMatchObject({
-      sourceOfTruth: "cache[stablecoins]",
-      lastPublishedGeneration: {
-        generationId: `stablecoins-cache:${updatedAt}`,
-        state: "published",
-      },
-    });
+    expect(supplements.publicationHealth?.surfaces.stablecoins).toBeUndefined();
     expect(supplements.publicationHealth?.surfaces["yield-rankings"]).toBeUndefined();
     expect(supplements.publicationHealth?.failedSurfaces).toEqual([
       {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeTestD1Database } from "../../scripts/test-utils/d1";
+import { makeTestD1Database } from "@shared/test-utils/mock-d1";
 import { onRequest } from "../_site-data/[[path]].ts";
 import { resetSiteDataRequestAttributionStateForTests } from "../lib/request-attribution";
 import { MAX_PROXY_RESPONSE_BODY_BYTES } from "../lib/upstream-proxy";
@@ -7,7 +7,7 @@ import {
   matchesHttpResponseObservation,
   observeHttpResponse,
   type HttpResponseObservation,
-} from "../../scripts/test-utils/http-response-contract";
+} from "@shared/test-utils/http-response-contract";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makePagesProxyContext } from "./helpers/pages-context";
 

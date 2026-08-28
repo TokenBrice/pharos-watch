@@ -10,26 +10,12 @@ import {
   type ReportCardsFixedInput,
 } from "../report-cards-fixed-input";
 import {
-  buildReviewedDeploymentRouteInventory,
   deriveReviewedDeploymentUnitPartition,
-  expectedWmDeploymentIdentity,
   type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9-supply-attribution-contract";
 import {
-  buildXautTransparencySource,
   deriveXautRepresentationGroupSupplyAttribution,
-  XAUT0_ADAPTER_ADDRESS,
-  XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
-  XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
-  XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
-  XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
-  XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
-  XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
-  XAUT_CANONICAL_RUNTIME_CODE_SHA256,
-  XAUT_CANONICAL_TOKEN_ADDRESS,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
-  XAUT_TRANSPARENCY_SOURCE_ID,
-  XAUT_TREASURY_ADDRESS,
   type XautLockMintObservation,
 } from "../safety-score-v9-xaut-supply-attribution-contract";
 import {
@@ -47,6 +33,11 @@ import {
   createSafetyScoreV9FullRegistryInput,
   FULL_REGISTRY_CLOCK_SEC,
 } from "./fixtures/safety-score-v9-full-registry-input";
+import {
+  makeWmDeploymentObservations,
+  makeXautObservation,
+  patchXautObservation,
+} from "../../test-helpers/v9-fixed-input";
 
 // Mirrors the full-registry input fixture's own clock: this suite re-clocks that
 // input, so a source clock behind the fixture's own DEX observation would
@@ -91,41 +82,7 @@ function withClockAndAggregate(
 }
 
 function xautObservation(): XautLockMintObservation {
-  return {
-    chainId: "ethereum",
-    canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
-    adapterAddress: XAUT0_ADAPTER_ADDRESS,
-    decimals: 6,
-    canonicalTotalSupplyRaw: "707747089000",
-    treasuryAddress: XAUT_TREASURY_ADDRESS,
-    treasuryBalanceRaw: "94923429468",
-    adapterLockedSupplyRaw: "29720802896",
-    blockNumber: 25_601_844,
-    blockTimeSec: SOURCE_CLOCK_SEC - 100,
-    blockHash: `0x${"ab".repeat(32)}`,
-    canonicalRuntimeCodeSha256:
-      XAUT_CANONICAL_RUNTIME_CODE_SHA256,
-    canonicalImplementationAddress:
-      XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
-    canonicalImplementationCodeSha256:
-      XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
-    adapterRuntimeCodeSha256: XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
-    adapterImplementationAddress:
-      XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
-    adapterImplementationCodeSha256:
-      XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
-    adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
-    adapterEndpointAddress: XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
-    disclosure: {
-      sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
-      sourceConfigDigest: buildXautTransparencySource()!.configDigest,
-      sourceTimestampSec: SOURCE_CLOCK_SEC - 200,
-      responseSha256: "c".repeat(64),
-      totalAuthorizedRaw: "707747089000",
-      notIssuedRaw: "94923429468",
-      quarantinedRaw: "0",
-    },
-  };
+  return makeXautObservation({ clockSec: SOURCE_CLOCK_SEC });
 }
 
 function acceptedGenerationFixture(fixedInput: ReportCardsFixedInput) {
@@ -217,43 +174,12 @@ const WM_OBSERVED_OFFSET_SEC = Math.max(
 const REVIEWED_DEPLOYMENT_MAX_AGE_SEC = 1_800;
 
 function wmObservations(): ReviewedDeploymentSupplyObservation[] {
-  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
-  if (!inventory) throw new Error("Missing wM route inventory");
-  return inventory.routes.map((route, index) => {
-    const identity = expectedWmDeploymentIdentity(route.routeId);
-    const rawSupply = WM_RAW_SUPPLY_BY_ROUTE[route.routeId];
-    const blockTimeOffset =
-      WM_BLOCK_TIME_OFFSET_BY_CHAIN[route.chainId];
-    if (!identity || rawSupply === undefined || blockTimeOffset === undefined) {
-      throw new Error(`Missing wM fixture row for ${route.routeId}`);
-    }
-    const common = {
-      routeId: route.routeId,
-      chainId: route.chainId,
-      contractAddress: route.contractAddress,
-      decimals: route.decimals,
-      rawSupply,
-      blockNumberOrSlot: (25_000_000 + index).toString(),
-      blockTimeSec: SOURCE_CLOCK_SEC + blockTimeOffset,
-    };
-    return identity.runtime === "evm"
-      ? {
-          ...common,
-          blockHash: `0x${(index + 1).toString(16).repeat(64)}`,
-          runtimeCodeSha256: identity.runtimeCodeSha256,
-          implementationAddress: identity.implementationAddress,
-          implementationCodeSha256: identity.implementationCodeSha256,
-          underlyingTokenAddress: identity.underlyingTokenAddress,
-          controllerAddress: identity.controllerAddress,
-        }
-      : {
-          ...common,
-          blockHash: "B".repeat(44),
-          programOwner: identity.programOwner,
-          mintAuthority: identity.mintAuthority,
-          controllerAddress: identity.controllerAddress,
-          controllerProgramOwner: identity.controllerProgramOwner,
-        };
+  return makeWmDeploymentObservations({
+    clockSec: SOURCE_CLOCK_SEC,
+    rawSupplyByRoute: WM_RAW_SUPPLY_BY_ROUTE,
+    blockTimeByChain: Object.fromEntries(
+      Object.entries(WM_BLOCK_TIME_OFFSET_BY_CHAIN).map(([chainId, offset]) => [chainId, SOURCE_CLOCK_SEC + offset]),
+    ),
   });
 }
 
@@ -283,14 +209,12 @@ function withWmAggregate(
 
 function laggedXautObservation(lagSec: number): XautLockMintObservation {
   const observation = xautObservation();
-  return {
-    ...observation,
+  return patchXautObservation(observation, {
     blockTimeSec: SOURCE_CLOCK_SEC - lagSec,
     disclosure: {
-      ...observation.disclosure,
       sourceTimestampSec: SOURCE_CLOCK_SEC - lagSec - 100,
     },
-  };
+  });
 }
 
 function createCoTenantGeneration(

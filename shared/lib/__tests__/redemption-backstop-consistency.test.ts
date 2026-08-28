@@ -256,6 +256,15 @@ describe("redemption backstop config consistency", () => {
     expect(buildRedemptionBackstopRegistry()).toEqual(REDEMPTION_BACKSTOP_CONFIGS);
   });
 
+  it("keeps every finalized manifest entry deeply equal to its family and final registries", () => {
+    for (const moduleEntry of familyModules) {
+      for (const entry of moduleEntry.entries) {
+        expect(entry.config).toEqual(moduleEntry.configs[entry.id]);
+        expect(entry.config).toEqual(REDEMPTION_BACKSTOP_CONFIGS[entry.id]);
+      }
+    }
+  });
+
   it("family modules only contain their declared route families", () => {
     const violations = familyModules.flatMap((moduleEntry) =>
       Object.entries(moduleEntry.configs)

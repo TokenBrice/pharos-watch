@@ -5,8 +5,6 @@ import { describe, expect, it } from "vitest";
 import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../telegram-constants";
 import {
   decodeWatchlistToken,
-  encodeWatchlistToken,
-  encodeWatchlistTokenV2,
   encodeWatchlistTokenV3,
   MAX_WATCHLIST_TOKEN_CHARS,
   WATCHLIST_TOKEN_REGISTRY_VERSION,
@@ -14,8 +12,16 @@ import {
   type WatchlistTokenV2State,
 } from "../telegram-watchlist-token";
 
+const HISTORICAL_V1_TOKEN = "eyJ2IjoxLCJjIjpbInVzZGMtY2lyY2xlIiwiZGFpLW1ha2VyZGFvIl0sInQiOlsiZGV3cyIsImRlcGVnIiwic2FmZXR5Il0sInAiOlsidXNkLXRvcDI1Il19";
+const HISTORICAL_V2_TOKEN = "pw2.H4sIAAAAAAAAE6tWKlOyMtJRKlKyUkpOLEnMyU_XLTPUNU1KMTQzMrJQ0lFKUbJSKk0NTikOMAwNi0oy9DcrK1LSUSpQslIyLS01NHY0UKoFAGsVW_tGAAAA.9MSMq7cSLxtFSUOd";
+const HISTORICAL_CATALOG_V2_TOKEN = "pw2.H4sIAAAAAAAAE6tWKlOyMtJRKlKyUkpOLEnMyU_XLTPQzcgsLskvykxOzFHSUUpRslIKi0oy9DfL8VHSUSpQslJSqgUAa6vtEDkAAAA.qgXnJKhi4wIECgON";
+
 function base64url(json: string): string {
   return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function historicalV1Token(state: { coinIds: string[]; alertTypes: string[]; presetIds: string[] }): string {
+  return base64url(JSON.stringify({ v: 1, c: state.coinIds, t: state.alertTypes, p: state.presetIds }));
 }
 
 function bytesToBase64Url(bytes: Uint8Array): string {
@@ -57,17 +63,14 @@ describe("watchlist token codec", () => {
       alertTypes: ["dews", "depeg", "safety"],
       presetIds: ["usd-top25"],
     };
-    const body = JSON.stringify({ v: 1, c: state.coinIds, t: state.alertTypes, p: state.presetIds });
-    const legacy = btoa(body).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    expect(encodeWatchlistToken(state)).toBe(legacy);
-    await expect(decodeWatchlistToken(`/import  \`${legacy}\`\n`)).resolves.toEqual({
+    await expect(decodeWatchlistToken(`/import  \`${HISTORICAL_V1_TOKEN}\`\n`)).resolves.toEqual({
       ok: true,
       version: 1,
       state,
     });
   });
 
-  it("round-trips every v2 direct override/tuning field and preset intent", async () => {
+  it("decodes every field from a fixed historical v2 token", async () => {
     const state: WatchlistTokenV2State = {
       registryVersion: WATCHLIST_TOKEN_REGISTRY_VERSION,
       direct: [
@@ -94,9 +97,7 @@ describe("watchlist token codec", () => {
         },
       ],
     };
-    const token = await encodeWatchlistTokenV2(state);
-    expect(token).toMatch(/^pw2\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
-    await expect(decodeWatchlistToken(token)).resolves.toEqual({
+    await expect(decodeWatchlistToken(HISTORICAL_V2_TOKEN)).resolves.toEqual({
       ok: true,
       version: 2,
       state: { ...state, direct: [...state.direct].sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId)) },
@@ -104,12 +105,7 @@ describe("watchlist token codec", () => {
   });
 
   it("treats the embedded catalog version as provenance, not an index dependency", async () => {
-    const state: WatchlistTokenV2State = {
-      registryVersion: "catalog-v0-historical",
-      direct: [direct("usdc-circle")],
-      presets: [],
-    };
-    const decoded = await decodeWatchlistToken(await encodeWatchlistTokenV2(state));
+    const decoded = await decodeWatchlistToken(HISTORICAL_CATALOG_V2_TOKEN);
     expect(decoded).toMatchObject({ ok: true, version: 2, state: { registryVersion: "catalog-v0-historical" } });
   });
 
@@ -123,19 +119,13 @@ describe("watchlist token codec", () => {
     expect(token).toMatch(/^pw3\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
     await expect(decodeWatchlistToken(token)).resolves.toEqual({ ok: true, version: 3, state });
 
-    const legacy = await decodeWatchlistToken(
-      await encodeWatchlistTokenV2({
-        ...state,
-        direct: [{ ...state.direct[0], alertFreeze: false, overrideFreeze: false }],
-      }),
-    );
+    const legacy = await decodeWatchlistToken(HISTORICAL_CATALOG_V2_TOKEN);
     expect(legacy).toMatchObject({
       ok: true,
       version: 2,
       state: { direct: [{ alertFreeze: false, overrideFreeze: false }] },
     });
 
-    await expect(encodeWatchlistTokenV2(state)).rejects.toThrow("pw2 cannot represent freeze alert intent");
   });
 
   it("fits the maximum current subscribable registry in one export code-block line with headroom", async () => {
@@ -185,11 +175,7 @@ describe("watchlist token codec", () => {
   });
 
   it("rejects altered v2 payloads through the corruption/tamper digest", async () => {
-    const token = await encodeWatchlistTokenV2({
-      registryVersion: WATCHLIST_TOKEN_REGISTRY_VERSION,
-      direct: [direct("usdc-circle")],
-      presets: [],
-    });
+    const token = HISTORICAL_CATALOG_V2_TOKEN;
     const parts = token.split(".");
     const payload = parts[1];
     const replacement = payload[0] === "A" ? "B" : "A";
@@ -243,13 +229,13 @@ describe("watchlist token codec", () => {
   });
 
   it("retains the historical 4000-character v1 read boundary", async () => {
-    const accepted = encodeWatchlistToken({ coinIds: ["x".repeat(2_960)], alertTypes: ["dews"], presetIds: [] });
+    const accepted = historicalV1Token({ coinIds: ["x".repeat(2_960)], alertTypes: ["dews"], presetIds: [] });
     expect(accepted.length).toBeGreaterThan(MAX_WATCHLIST_TOKEN_CHARS);
     expect(accepted.length).toBeLessThanOrEqual(4000);
     const decoded = await decodeWatchlistToken(accepted);
     expect(decoded.ok && decoded.version === 1 ? decoded.state.coinIds[0]?.length : 0).toBe(2_960);
 
-    const rejected = encodeWatchlistToken({ coinIds: ["x".repeat(3_000)], alertTypes: ["dews"], presetIds: [] });
+    const rejected = historicalV1Token({ coinIds: ["x".repeat(3_000)], alertTypes: ["dews"], presetIds: [] });
     expect(rejected.length).toBeGreaterThan(4000);
     await expect(decodeWatchlistToken(rejected)).resolves.toEqual({ ok: false, error: "too-large" });
   });

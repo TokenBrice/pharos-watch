@@ -1,9 +1,9 @@
-import { makeJsonRequest } from "./api-request-response.test-support";
+import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import {
   mockD1 as baseMockD1,
   type MockD1Database,
   type MockTableConfig,
-} from "../../test-helpers/__shared/mock-d1";
+} from "@shared/test-utils/mock-d1";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,

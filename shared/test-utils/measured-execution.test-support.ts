@@ -1,3 +1,4 @@
+/** Cross-runtime builders for measured-execution tests. */
 import {
   DEX_MEASURED_CAPACITY_NOTIONALS_USD,
   DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
@@ -125,5 +126,33 @@ export function makeMeasuredProfile(
     marginalOutputRatio: 0.999,
     capacityCurve,
     ...overrides,
+  };
+}
+
+export function withMeasuredObservationHistory(
+  profile: DexMeasuredExecutionPublicProfile,
+  successfulObservationCount: number,
+  conservativeExecutableUsd: number,
+): DexMeasuredExecutionPublicProfile {
+  const conservativeCapacityCurve = profile.capacityCurve.map((point) => {
+    const executableUsd = Math.min(point.executableUsd, conservativeExecutableUsd);
+    return {
+      ...point,
+      executableUsd,
+      completionRatio: executableUsd / point.requestedNotionalUsd,
+    };
+  });
+  return {
+    ...profile,
+    observationHistory: {
+      completeProducerCycleCount: successfulObservationCount,
+      successfulObservationCount,
+      consecutiveSuccessCount: successfulObservationCount,
+      observationWindowStartedAt: profile.quotedAt - 1_000,
+      observationWindowEndedAt: profile.quotedAt + 10,
+      latestOperationalFailureAt: null,
+      conservativeStatistic: "pointwise-minimum",
+      conservativeCapacityCurve,
+    },
   };
 }

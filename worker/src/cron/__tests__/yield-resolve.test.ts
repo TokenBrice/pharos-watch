@@ -7,7 +7,7 @@
  * with controlled inputs.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { mockCircuitBreaker, mockDbCache, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
@@ -263,7 +263,7 @@ import { syncYieldData } from "../sync-yield-data";
 import { batchExecute } from "../../lib/db";
 import { getCache, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../../lib/yield-config/yield-config";
 import * as yieldSourcesModule from "../yield-sync/sources";
@@ -519,35 +519,16 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
     // Provide a curated DL pool and an auto-discovered lending pool with divergent APY
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 5.0,
-              apyBase: 5.0,
-              apyReward: null,
-              apyMean30d: 5.0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+        makeDlYieldPool(),
             // A fake lending pool with extremely different APY
-            {
+            makeDlYieldPool({
               pool: "pool-sdai-aave",
-              chain: "Ethereum",
               project: "aave-v3",
-              symbol: "sDAI",
               tvlUsd: 10_000_000,
               apy: 15.0,
               apyBase: 15.0,
-              apyReward: null,
               apyMean30d: 15.0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
       ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -884,20 +865,7 @@ describe("Pharos Yield Score (PYS) computation through sync", () => {
     installYieldCacheReader(vi.mocked(getCache), {
       risk_free_rate: cacheRow("4.25", nowSec),
       "dl-stablecoin-pools": cacheRow([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 5.0,
-              apyBase: 5.0,
-              apyReward: null,
-              apyMean30d: 5.0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+        makeDlYieldPool(),
       ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -1035,20 +1003,16 @@ describe("price-derived and auto-discovery yield paths", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-u-venus",
               chain: "BSC",
-              symbol: "U",
               project: "venus-core-pool",
+              symbol: "U",
               tvlUsd: 5_000_000,
               apy: 3.5,
               apyBase: 3.5,
-              apyReward: null,
               apyMean30d: 3.4,
-              exposure: "single",
-              stablecoin: true,
-              underlyingTokens: null,
-            },
+            }),
       ], nowSec - 300),
       risk_free_rate: cacheRow("4.0", nowSec),
     });
@@ -1069,21 +1033,17 @@ describe("price-derived and auto-discovery yield paths", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-u-venus",
               chain: "BSC",
+              project: "venus-core-pool",
               symbol: "U",
               poolMeta: "wstUSR lending market",
-              project: "venus-core-pool",
               tvlUsd: 5_000_000,
               apy: 3.5,
               apyBase: 3.5,
-              apyReward: null,
               apyMean30d: 3.4,
-              exposure: "single",
-              stablecoin: true,
-              underlyingTokens: null,
-            },
+            }),
       ], nowSec - 300),
       risk_free_rate: cacheRow("4.0", nowSec),
     });
@@ -1134,20 +1094,16 @@ describe("on-chain rate bootstrapping seed", () => {
     // DL pool for usde-ethena with 0% APY (simulating the USN-like scenario)
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-usde-native",
-              chain: "Ethereum",
               project: "ethena",
               symbol: "sUSDe",
               tvlUsd: 3_000_000_000,
               apy: 0,
               apyBase: 0,
-              apyReward: null,
               apyMean30d: 0,
               stablecoin: false,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
       ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -1232,20 +1188,16 @@ describe("on-chain rate bootstrapping seed", () => {
     installYieldCacheReader(vi.mocked(getCache), {
       risk_free_rate: cacheRow("4.0", Math.floor(Date.now() / 1000)),
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-susde-fallback",
-              chain: "Ethereum",
               project: "ethena",
               symbol: "sUSDe",
               tvlUsd: 3_000_000_000,
               apy: 5.5,
               apyBase: 5.5,
-              apyReward: null,
               apyMean30d: 5.4,
               stablecoin: false,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
       ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -1435,20 +1387,7 @@ describe("optional source budgets", () => {
 
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 6.5,
-              apyBase: 6.5,
-              apyReward: null,
-              apyMean30d: 6.3,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+        makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
       ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -1476,20 +1415,15 @@ describe("optional source budgets", () => {
 });
 
 describe("auto-lending safety availability", () => {
-  const usdcPool = {
+  const usdcPool = makeDlYieldPool({
     pool: "pool-usdc-aave",
-    chain: "Ethereum",
     project: "aave-v3",
     symbol: "USDC",
     tvlUsd: 10_000_000,
     apy: 3.5,
     apyBase: 3.5,
-    apyReward: null,
     apyMean30d: 3.4,
-    stablecoin: true,
-    exposure: "single" as const,
-    underlyingTokens: null,
-  };
+  });
 
   it("retains eligible lending candidates as unrated when the expected safety snapshot is unavailable", () => {
     const resolved: ResolvedYieldEntry[] = [];

@@ -4,18 +4,11 @@ import {
   DEFAULT_REQUEST_JSON_MAX_BYTES,
   parseOptionalRequestJsonObject,
   parseRequestJsonWithSchema,
-} from "../../lib/api-utils";
+} from "../../lib/api-json-body";
+import { makeJsonBodyRequest } from "../../test-helpers/__shared/auth";
 
 const encoder = new TextEncoder();
 const schema = z.object({ ok: z.boolean() });
-
-function postRequest(body: BodyInit, headers: Record<string, string> = {}): Request {
-  return new Request("https://api.pharos.watch/api/test", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
-    body,
-  });
-}
 
 function streamedRequest(chunks: string[], headers: Record<string, string> = {}): Request {
   const body = new ReadableStream<Uint8Array>({
@@ -37,16 +30,20 @@ function streamedRequest(chunks: string[], headers: Record<string, string> = {})
 describe("parseRequestJsonWithSchema bounded JSON parsing", () => {
   it("accepts valid JSON under the byte cap", async () => {
     await expect(
-      parseRequestJsonWithSchema(postRequest(JSON.stringify({ ok: true })), schema, {
-        maxBytes: 64,
-      }),
+      parseRequestJsonWithSchema(
+        makeJsonBodyRequest("https://api.pharos.watch/api/test", JSON.stringify({ ok: true })),
+        schema,
+        { maxBytes: 64 },
+      ),
     ).resolves.toEqual({ ok: true });
   });
 
   it("preserves invalid JSON as 400 under the byte cap", async () => {
-    const response = await parseRequestJsonWithSchema(postRequest("{"), schema, {
-      maxBytes: 64,
-    });
+    const response = await parseRequestJsonWithSchema(
+      makeJsonBodyRequest("https://api.pharos.watch/api/test", "{"),
+      schema,
+      { maxBytes: 64 },
+    );
 
     expect(response).toBeInstanceOf(Response);
     if (response instanceof Response) {
@@ -57,7 +54,9 @@ describe("parseRequestJsonWithSchema bounded JSON parsing", () => {
 
   it("rejects oversized declared Content-Length before reading", async () => {
     const response = await parseRequestJsonWithSchema(
-      postRequest(JSON.stringify({ ok: true }), { "Content-Length": "65" }),
+      makeJsonBodyRequest("https://api.pharos.watch/api/test", JSON.stringify({ ok: true }), {
+        headers: { "Content-Length": "65" },
+      }),
       schema,
       { maxBytes: 64 },
     );

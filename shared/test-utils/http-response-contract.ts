@@ -1,3 +1,4 @@
+/** Cross-runtime HTTP response observations for contract tests. */
 import { isDeepStrictEqual } from "node:util";
 
 export type CanonicalJsonValue =

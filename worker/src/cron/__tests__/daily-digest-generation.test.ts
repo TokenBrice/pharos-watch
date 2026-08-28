@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 import type { CronProgressUpdate } from "../../lib/cron-logger";

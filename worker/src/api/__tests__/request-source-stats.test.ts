@@ -1,8 +1,8 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { handleRequestSourceStats } from "../request-source-stats";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 describe("handleRequestSourceStats", () => {
   it("returns aggregated total site-vs-external demand for the requested window", async () => {

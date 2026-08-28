@@ -1,10 +1,10 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it } from "vitest";
 import {
   mockD1 as baseMockD1,
   type MockD1Database,
   type MockPreparedStatement,
-} from "../../test-helpers/__shared/mock-d1";
+} from "@shared/test-utils/mock-d1";
 import {
   handleTelegramPulse,
   publishTelegramPulseSnapshot,

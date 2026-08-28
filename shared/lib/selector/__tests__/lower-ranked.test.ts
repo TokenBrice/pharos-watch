@@ -4,15 +4,11 @@ import type {
   ExclusionRecord,
   MergedRow,
   SelectorComponent,
-  SelectorInput,
 } from "../types";
-import { makeMergedRow } from "./fixture";
+import { makeInput, makeMergedRowWithIdentity } from "./fixture";
 
 function makeRow(id: string, overrides: Partial<MergedRow> = {}): MergedRow {
-  return makeMergedRow({
-    id,
-    symbol: id.toUpperCase(),
-    name: id,
+  return makeMergedRowWithIdentity({ id, symbol: id.toUpperCase(), name: id }, {
     protocolSlug: id,
     supplyUsd: 100_000_000,
     dewsScore: 25,
@@ -21,22 +17,6 @@ function makeRow(id: string, overrides: Partial<MergedRow> = {}): MergedRow {
     chainTvl: { ethereum: 40_000_000 },
     ...overrides,
   });
-}
-
-function input(overrides: Partial<SelectorInput> = {}): SelectorInput {
-  return {
-    profile: "treasury",
-    pegCurrency: "USD",
-    horizon: "1to6m",
-    depegTolerance: "tight",
-    composability: "moderate",
-    exitSpeed: "any",
-    minApy: null,
-    yieldNativeOnly: false,
-    decentralization: "any",
-    custodyOk: "any",
-    ...overrides,
-  };
 }
 
 function comp(key: SelectorComponent["key"], normalized: number): SelectorComponent {
@@ -52,35 +32,35 @@ function comp(key: SelectorComponent["key"], normalized: number): SelectorCompon
 
 describe("userEmphasizedDimension", () => {
   it("zero tolerance + treasury → pegStabilityHistory", () => {
-    expect(userEmphasizedDimension(input({ depegTolerance: "zero" }))).toBe(
+    expect(userEmphasizedDimension(makeInput({ depegTolerance: "zero" }))).toBe(
       "pegStabilityHistory",
     );
   });
   it("zero tolerance + trading → pegStabilityLive", () => {
     expect(
       userEmphasizedDimension(
-        input({ profile: "trading", depegTolerance: "zero" }),
+        makeInput({ profile: "trading", depegTolerance: "zero" }),
       ),
     ).toBe("pegStabilityLive");
   });
   it("composability=high → liquidity", () => {
-    expect(userEmphasizedDimension(input({ composability: "high" }))).toBe("liquidity");
+    expect(userEmphasizedDimension(makeInput({ composability: "high" }))).toBe("liquidity");
   });
   it("exitSpeed=1h → liquidity", () => {
-    expect(userEmphasizedDimension(input({ exitSpeed: "1h" }))).toBe("liquidity");
+    expect(userEmphasizedDimension(makeInput({ exitSpeed: "1h" }))).toBe("liquidity");
   });
   it("treasury × 6mplus → safetyOverall", () => {
     expect(
-      userEmphasizedDimension(input({ profile: "treasury", horizon: "6mplus" })),
+      userEmphasizedDimension(makeInput({ profile: "treasury", horizon: "6mplus" })),
     ).toBe("safetyOverall");
   });
   it("yield + minApy set → pharosYieldScore", () => {
     expect(
-      userEmphasizedDimension(input({ profile: "yield", minApy: 5 })),
+      userEmphasizedDimension(makeInput({ profile: "yield", minApy: 5 })),
     ).toBe("pharosYieldScore");
   });
   it("default → safetyOverall", () => {
-    expect(userEmphasizedDimension(input())).toBe("safetyOverall");
+    expect(userEmphasizedDimension(makeInput())).toBe("safetyOverall");
   });
 });
 
@@ -96,7 +76,7 @@ describe("selectLowerRanked — Slot A", () => {
       { id: "nearMissA", reason: "dews-ceiling", severity: "hard" },
       { id: "nearMissB", reason: "safety-resilience-floor", severity: "hard" },
     ];
-    const result = selectLowerRanked([], excluded, input(), allMerged, new Set(), scorer);
+    const result = selectLowerRanked([], excluded, makeInput(), allMerged, new Set(), scorer);
     expect(result).toHaveLength(1);
     expect(result[0]!.slot).toBe("A");
     // Treasury PROFILE_DEFINING_EXCLUSIONS declares safety-resilience-floor before
@@ -113,7 +93,7 @@ describe("selectLowerRanked — Slot A", () => {
       { id: "hi", reason: "dews-ceiling", severity: "hard" },
       { id: "lo", reason: "dews-ceiling", severity: "hard" },
     ];
-    const result = selectLowerRanked([], excluded, input(), allMerged, new Set(), scorer);
+    const result = selectLowerRanked([], excluded, makeInput(), allMerged, new Set(), scorer);
     expect(result[0]!.id).toBe("hi");
   });
 
@@ -129,7 +109,7 @@ describe("selectLowerRanked — Slot A", () => {
     const result = selectLowerRanked(
       [],
       excluded,
-      input({ profile: "yield" }),
+      makeInput({ profile: "yield" }),
       allMerged,
       new Set(),
       scorer,
@@ -144,7 +124,7 @@ describe("selectLowerRanked — Slot A", () => {
       { id: "thin", reason: "coverage-too-thin", severity: "info" },
     ];
     expect(
-      selectLowerRanked([], excluded, input(), allMerged, new Set(), scorer),
+      selectLowerRanked([], excluded, makeInput(), allMerged, new Set(), scorer),
     ).toHaveLength(0);
   });
 
@@ -156,7 +136,7 @@ describe("selectLowerRanked — Slot A", () => {
     const result = selectLowerRanked(
       [],
       excluded,
-      input(),
+      makeInput(),
       allMerged,
       new Set(["excludedShortlist"]),
       scorer,
@@ -196,7 +176,7 @@ describe("selectLowerRanked — Slot B", () => {
     const result = selectLowerRanked(
       scored,
       [],
-      input(),
+      makeInput(),
       rows,
       new Set(["r1", "r2", "r3"]),
       scorer,
@@ -212,7 +192,7 @@ describe("selectLowerRanked — Slot B", () => {
     const result = selectLowerRanked(
       scored,
       [],
-      input(),
+      makeInput(),
       rows,
       new Set(),
       scorer,
@@ -236,7 +216,7 @@ describe("selectLowerRanked — Slot B", () => {
     const result = selectLowerRanked(
       scored,
       [],
-      input(),
+      makeInput(),
       rows,
       new Set(["r1", "r2", "r3"]),
       scorer,

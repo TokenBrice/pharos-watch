@@ -27,6 +27,7 @@ import {
   type ChainRpcConfig,
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -239,20 +240,12 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
+            makeDlYieldPool({
               tvlUsd: 84_819_532,
               apy: 4.45953,
               apyBase: 4.45953,
-              apyReward: null,
               apyMean30d: 4.43603,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
           ], nowSec),
       "yield:supplemental-sources:v1": cacheRow({
             version: 1,
@@ -575,19 +568,14 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-placeholder",
-              chain: "Ethereum",
               project: "aave-v3",
               symbol: "USDC",
               tvlUsd: 5_000_000,
               apy: 3.25,
               apyBase: 3.25,
-              apyReward: null,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
       ], nowSec - 60),
       risk_free_rate: cacheRow({
             rate: 4.0,
@@ -637,7 +625,7 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-u-venus",
               chain: "BSC",
               project: "venus-core-pool",
@@ -645,12 +633,8 @@ describe("syncYieldData", () => {
               tvlUsd: 15_000_000,
               apy: 2.4,
               apyBase: 2.4,
-              apyReward: null,
               apyMean30d: 2.3,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
       ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -728,20 +712,17 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-xaut-yo",
-              chain: "Ethereum",
               project: "yo-protocol",
               symbol: "XAUT",
               tvlUsd: 3_200_000,
               apy: 11.4,
               apyBase: 11.4,
-              apyReward: null,
               apyMean30d: 11.1,
               stablecoin: false,
-              exposure: "single",
               underlyingTokens: ["0x68749665ff8d2d112fa859aa293f07a622782f38"],
-            },
+            }),
       ], nowSec),
       stablecoins: cacheRow([{ id: "xaut-tether", circulating: { peggedGOLD: 1_000_000_000 } }], nowSec),
     });
@@ -769,7 +750,7 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": cacheRow([
-            {
+            makeDlYieldPool({
               pool: "pool-u-venus",
               chain: "BSC",
               project: "venus-core-pool",
@@ -777,12 +758,8 @@ describe("syncYieldData", () => {
               tvlUsd: 250_000, // below min TVL threshold
               apy: 2.4,
               apyBase: 2.4,
-              apyReward: null,
               apyMean30d: 2.3,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
       ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -842,20 +819,16 @@ describe("syncYieldData", () => {
           return new Response(
             JSON.stringify({
               data: [
-                {
+                makeDlYieldPool({
                   pool: "pool-lusd-aave",
-                  chain: "Ethereum",
                   project: "aave-v3",
                   symbol: "LUSD",
                   tvlUsd: 12_000_000,
                   apy: 0.75,
                   apyBase: 0.75,
-                  apyReward: null,
                   apyMean30d: 0.74,
-                  stablecoin: true,
-                  exposure: "single",
                   underlyingTokens: ["0x5f98805a4e8be255a32880fdec7f6728c6568ba0"],
-                },
+                }),
               ],
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
@@ -1048,20 +1021,13 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
+            makeDlYieldPool({
               pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
               tvlUsd: 1_000_000_000,
               apy: 5.2,
               apyBase: 5.2,
-              apyReward: null,
               apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
           ],
         },
       },
@@ -1099,20 +1065,13 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
+            makeDlYieldPool({
               pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
               tvlUsd: 1_000_000_000,
               apy: 5.2,
               apyBase: 5.2,
-              apyReward: null,
               apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
           ],
         },
       },
@@ -1144,20 +1103,13 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
+            makeDlYieldPool({
               pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
               tvlUsd: 1_000_000_000,
               apy: 5.2,
               apyBase: 5.2,
-              apyReward: null,
               apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
           ],
         },
       },
@@ -1195,20 +1147,13 @@ describe("syncYieldData", () => {
           match: "yields.llama.fi",
           body: {
             data: [
-              {
+              makeDlYieldPool({
                 pool: "pool-sdai-1",
-                chain: "Ethereum",
-                project: "maker",
-                symbol: "sDAI",
                 tvlUsd: 1_000_000_000,
                 apy: 5.2,
                 apyBase: 5.2,
-                apyReward: null,
                 apyMean30d: 5.1,
-                stablecoin: true,
-                exposure: "single",
-                underlyingTokens: null,
-              },
+              }),
             ],
           },
         },
@@ -1271,20 +1216,13 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
+            makeDlYieldPool({
               pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
               tvlUsd: 1_000_000_000,
               apy: 5.2,
               apyBase: 5.2,
-              apyReward: null,
               apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            }),
           ],
         },
       },

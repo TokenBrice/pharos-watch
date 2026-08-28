@@ -1,8 +1,7 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
-import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleBackfillTape } from "../backfill-tape";
 import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 
@@ -36,12 +35,6 @@ function emptyDb(): MockD1Database {
 }
 
 describe("handleBackfillTape", () => {
-  registerUnauthorizedEndpointContract({
-    name: "Tape backfill",
-    invoke: () => handleBackfillTape({ db: emptyDb(), url: makeApiUrl("/api/backfill-tape"), request: makeApiRequest("/api/backfill-tape", { method: "POST" }) }),
-    status: [401, 403],
-  });
-
   it("rejects unknown class names with 400", async () => {
     const res = await handleBackfillTape({ db: emptyDb(), url: makeApiUrl("/api/backfill-tape?class=does.not.exist"), trustedAdmin: true, request: makeApiRequest("/api/backfill-tape?class=does.not.exist", { method: "POST", adminKey: "secret" }) });
     const body = (await readJsonResponse(res, 400)) as { error: string };

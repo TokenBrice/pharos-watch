@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { jsonResponse } from "../../../test-helpers/__shared/mock-fetch";
+import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { fetchWithRetryMock, resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
 
 const WRAPPER = "0x437cc33344a0b27a429f795ff6b469c72698b291";

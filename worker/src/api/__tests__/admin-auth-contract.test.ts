@@ -7,8 +7,8 @@ import {
 import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation";
 import { route } from "../../router";
 import type { FullRouteContext } from "../../routes/shared";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 mockFetch([], { requireMatch: true });
 
@@ -96,17 +96,21 @@ describe("admin auth contract: every admin route fails closed without an admin s
   });
 
   it.each(ADMIN_CASES)(
-    "returns 401 or 403 for $label without any admin credential",
+    "returns the exact auth failure contract for $label without any admin credential",
     async ({ path, method }) => {
       const url = new URL(`https://api.pharos.watch${path}`);
       // No X-Pharos-Admin header, no Cf-Access-Jwt-Assertion header, no trustedAdmin.
       const request = new Request(url.toString(), { method });
       const response = await route(makeRouteCtx({ url, request }));
       expect(response, `expected the router to match ${method} ${path}`).not.toBeNull();
-      expect(
-        [401, 403],
-        `expected auth-failure status for ${method} ${path}, got ${response!.status}`,
-      ).toContain(response!.status);
+      const expectedStatus = method === "POST" ? 403 : 401;
+      const expectedError = method === "POST"
+        ? "Missing required X-Pharos-Admin header; refusing mutation."
+        : "Unauthorized";
+      expect(response!.status, `unexpected auth-failure status for ${method} ${path}`).toBe(expectedStatus);
+      expect(response!.headers.get("Content-Type")).toBe("application/json");
+      expect(response!.headers.get("Cache-Control")).toBe("no-store");
+      await expect(response!.json()).resolves.toEqual({ error: expectedError });
     },
     15_000,
   );

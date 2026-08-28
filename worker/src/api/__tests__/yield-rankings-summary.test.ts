@@ -1,9 +1,9 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldRankingsSummaryResponseSchema } from "@shared/types/yield-summary";
 import type { YieldRankingsResponse } from "@shared/types/yield";
-import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/lib/__tests__/yield-ranking-fixtures";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 import { handleYieldRankings } from "../cache-handlers";
 

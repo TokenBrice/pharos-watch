@@ -35,7 +35,6 @@ describe("handleTelegramWebhook", () => {
 
   it("handles /set for a unique ticker", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         rows: [
@@ -62,7 +61,6 @@ describe("handleTelegramWebhook", () => {
 
   it("handles /set all for global alert flags", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscribers",
         rows: [],
@@ -107,7 +105,6 @@ describe("handleTelegramWebhook", () => {
 
   it("handles /set all depeg-step for global worsening alerts", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscribers",
         rows: [],
@@ -140,7 +137,6 @@ describe("handleTelegramWebhook", () => {
 
   it("shows global alert coverage in /list", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscribers",
         rows: [],
@@ -167,7 +163,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("handles /mute quiet hours", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/mute 22-07"), "test-secret", "bot-token");
 
     const text = sentMessageBody().text;
@@ -176,7 +172,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("/unsnooze clears alert snooze and offers private Mini App controls", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsnooze"), "test-secret", "bot-token");
 
     expect(
@@ -188,7 +184,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("/timezone <zone> persists a valid IANA zone", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     const res = await handleTelegramWebhook(
       db,
       makeWebhookRequest(123, "/timezone Europe/Paris"),
@@ -207,7 +203,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("/timezone rejects unknown zones without writing to D1", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb();
     const res = await handleTelegramWebhook(
       db,
       makeWebhookRequest(123, "/timezone Mars/Olympus_Mons"),
@@ -224,7 +220,6 @@ describe("handleTelegramWebhook", () => {
 
   it("/timezone with no argument shows current zone and an inline keyboard", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscribers",
         rows: [],
@@ -276,7 +271,17 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "set",
-          action_payload: JSON.stringify({ ticker: "USDF", setting: "dews", enabled: true, minBand: "WARNING" }),
+          action_payload: JSON.stringify({
+            schemaVersion: 1,
+            ticker: "USDF",
+            setting: "dews",
+            enabled: true,
+            minBand: "WARNING",
+            resolvedIds: [],
+            ambiguousTicker: "USDF",
+            candidates: ambiguous.matches,
+            remainingTickers: ["USDC"],
+          }),
           alert_types: JSON.stringify([]),
           resolved_ids: JSON.stringify([]),
           ambiguous_ticker: "USDF",

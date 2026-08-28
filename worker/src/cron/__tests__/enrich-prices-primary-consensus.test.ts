@@ -3,10 +3,10 @@ import {
   fixtureFetchPrimaryPrices,
   fixtureApplyResolvedPrice,
   installPrimaryPriceRoutes,
-  makePeggedAsset,
   makePrimaryPricingDb,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
+import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 const installFetch = installPrimaryPriceRoutes;
 

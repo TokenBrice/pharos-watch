@@ -3,16 +3,17 @@ import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-fact
 import type { V9Severity } from "../../types/safety-score-v9";
 import {
   evaluateV9EconomicControl,
-  type EvaluateV9EconomicControlArgs,
-  type V9BridgeControlReview,
-  type V9EconomicControlAssetFacts,
   type V9MintMechanismReview,
   type V9MintSupervision,
-  type V9OracleControlReview,
 } from "../safety-score-v9/control";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import { makeDeploymentControl, notApplicable, requiredKnown } from "./safety-score-v9-fixtures.test-support";
+import {
+  makeDeploymentControl,
+  makeEconomicControlArgs as args,
+  makeEconomicControlFacts as facts,
+  makeReviewedMintInput,
+} from "./safety-score-v9-fixtures.test-support";
 
 /**
  * STAGE A pin for owner ruling R3 (2026-07-17, provisional pending the V8
@@ -28,14 +29,8 @@ import { makeDeploymentControl, notApplicable, requiredKnown } from "./safety-sc
  *   active mint compromise                -> critical@39 (unchanged)
  *   supervision none/unknown + reconciled -> high@59 (fail-closed, unchanged)
  *
- * ACTIVE describes pin the rungs R3 keeps (they must pass before AND after the
- * Stage B engine/policy batch). The `describe.skip` block pins the ruled new
- * rungs against the LIVE candidate policy and engine entry points; it fails
- * today by construction and is enabled by Stage B (remove the `.skip`). Stage B
- * must also update the superseded pin in
- * `safety-score-v9-control.test.ts` ("graduates a reconciled unbounded mint by
- * prudential-supervision evidence", which still expects attestation-only =>
- * high and prudential => moderate).
+ * The suites below pin both the retained fail-closed rungs and the shipped
+ * policy/engine behavior for the ruled reconciled-mint cases.
  */
 
 /** An economically unbounded issuer mint path (hot-wallet class). */
@@ -47,53 +42,12 @@ function unboundedMintControl(controlKey = "mint:issuer-eoa"): V9DeploymentContr
   });
 }
 
-function facts(controls: readonly V9DeploymentControlFactV2[]): V9EconomicControlAssetFacts {
-  return {
-    assetId: "fixture-asset",
-    archetype: "fiat-cash",
-    controlStatus: controls.length > 0 ? requiredKnown("controls") : notApplicable("controls"),
-    controls,
-    supply: {
-      status: requiredKnown("supply"),
-      selectedBridgeRoutes: [],
-      selectedRouteSupplyShare: 1,
-      unknownRouteSupplyShare: 0,
-      unreviewedRouteSupplyShare: 0,
-    },
-  };
-}
-
 function mintReview(
   controlKey: string,
   supervision: V9MintSupervision,
   reconciliation: V9MintMechanismReview["reconciliation"],
 ): V9MintMechanismReview {
-  return {
-    status: requiredKnown("mint"),
-    controlKey,
-    reconciliation,
-    supervision,
-    upgrade: { state: "immutable", controlKey: null },
-  };
-}
-
-function args(overrides: Partial<EvaluateV9EconomicControlArgs> = {}): EvaluateV9EconomicControlArgs {
-  const noOracle: V9OracleControlReview = { status: notApplicable("oracle"), tier: null, branches: [] };
-  const noBridge: V9BridgeControlReview = { status: notApplicable("bridge"), routes: [] };
-  return {
-    policy: V9_CANDIDATE_POLICY_V1,
-    facts: facts([]),
-    mint: {
-      status: notApplicable("mint"),
-      controlKey: null,
-      reconciliation: "not-applicable",
-      supervision: "unknown",
-      upgrade: { state: "not-applicable", controlKey: null },
-    },
-    oracle: noOracle,
-    bridge: noBridge,
-    ...overrides,
-  };
+  return makeReviewedMintInput(controlKey, { reconciliation, supervision });
 }
 
 function centralizedMintSeverity(
@@ -113,7 +67,7 @@ function centralizedMintSeverity(
 
 const SUPERVISIONS: readonly V9MintSupervision[] = ["prudential", "attestation-only", "none", "unknown"];
 
-describe("R3 kept rungs — active fail-closed baseline (must hold pre- and post-Stage-B)", () => {
+describe("R3 kept rungs — active fail-closed baseline", () => {
   it("drops opaque/unreconciled unbounded mints to the high rung when there is no active incident", () => {
     // RULED 2026-07-21 (MINT-SOFTEN, supersedes the critical rung of the
     // 2026-07-20 R3 baseline for the no-incident case): an unbounded mint with no
@@ -149,10 +103,7 @@ describe("R3 kept rungs — active fail-closed baseline (must hold pre- and post
   });
 });
 
-// STAGE B: un-skip once the R3 policy/engine batch lands (policy
-// signalLimits["centralized-mint"].low = 83; control.ts emits no failure for
-// prudential+reconciled and the low rung for attestation-only+reconciled).
-describe("R3 ruled ladder — Stage B", () => {
+describe("R3 ruled ladder — live policy", () => {
   it("emits NO centralized-mint structural failure for prudential + reconciled mints", () => {
     for (const reconciliation of ["continuous", "periodic"] as const) {
       expect(centralizedMintSeverity("prudential", reconciliation), reconciliation).toBeNull();

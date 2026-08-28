@@ -1,10 +1,10 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it } from "vitest";
 import {
   handleDebugSyncState,
   handleResetBlacklistSync,
 } from "../admin-actions";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 describe("admin mutation auth — custom header required for mutating methods", () => {
   it("rejects POST without X-Pharos-Admin header", async () => {

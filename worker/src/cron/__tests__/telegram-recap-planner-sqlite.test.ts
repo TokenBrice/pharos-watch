@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";

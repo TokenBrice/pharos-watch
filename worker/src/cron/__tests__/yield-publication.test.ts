@@ -5,7 +5,7 @@ import path from "node:path";
 import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";

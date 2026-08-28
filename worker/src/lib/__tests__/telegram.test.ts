@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 let fetchSpy = mockFetch([], { requireMatch: true });
 
@@ -169,6 +169,24 @@ describe("sendToChat", () => {
     fetchSpy.mockResolvedValueOnce(new Response("Too Many Requests", { status: 429 }));
     const result = await sendToChat("12345", "test", "bot-token");
     expect(result.retryAfterSec).toBeNull();
+  });
+
+  it("returns retryAfterSec null for a malformed Retry-After header", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("Too Many Requests", {
+      status: 429,
+      headers: { "Retry-After": "later-ish" },
+    }));
+    const result = await sendToChat("12345", "test", "bot-token");
+    expect(result.retryAfterSec).toBeNull();
+  });
+
+  it("preserves legacy negative Retry-After parsing", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("Too Many Requests", {
+      status: 429,
+      headers: { "Retry-After": "-1" },
+    }));
+    const result = await sendToChat("12345", "test", "bot-token");
+    expect(result.retryAfterSec).toBe(-1);
   });
 
   it("uses Telegram JSON retry_after when the Retry-After header is absent", async () => {

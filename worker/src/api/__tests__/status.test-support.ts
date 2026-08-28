@@ -1,7 +1,11 @@
 import { vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import {
+  mockD1,
+  type MockD1Database,
+  type MockTableConfig,
+} from "@shared/test-utils/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import * as dependencyHealthModule from "../../lib/dependency-health";
@@ -190,13 +194,110 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
     { match: "FROM status_state", rows: [], first: stateRow },
   ];
 }
+
+type StatusD1Section =
+  | "sentinel"
+  | "live"
+  | "publication"
+  | "derived"
+  | "reserves"
+  | "statusState"
+  | "cronState"
+  | "telegram";
+
+type StatusD1ScenarioOptions = {
+  sections?: StatusD1Section[];
+  overrides?: MockTableConfig[];
+  sectionOverrides?: Partial<Record<StatusD1Section, MockTableConfig[]>>;
+  strictUnused?: boolean;
+};
+
+const pendingStrictD1Assertions = new Set<MockD1Database>();
+
+const STATUS_D1_SECTIONS: Record<StatusD1Section, MockTableConfig[]> = {
+  sentinel: [{ match: "SELECT 1", rows: [], first: { value: 1 } }],
+  live: [],
+  publication: [
+    { match: "FROM worker_producer_heads", rows: [] },
+  ],
+  derived: [
+    { match: "pharos:status-derived:mint-burn-24h", rows: [] },
+    { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
+    { match: "SELECT key, LENGTH(value) as bytes FROM cache", rows: [] },
+    { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
+    { match: "blacklist-gap-aggregate", rows: [], first: null },
+  ],
+  reserves: [
+    { match: "FROM reserve_sync_state", rows: [] },
+    { match: "FROM reserve_composition", rows: [] },
+    { match: "JOIN reserve_sync_state", rows: [] },
+  ],
+  statusState: [
+    { match: "FROM status_state", rows: [], first: null },
+    { match: "FROM status_probe_runs", rows: [], first: null },
+    { match: "FROM status_discrepancy_state", rows: [], first: null },
+    { match: "FROM status_transitions WHERE scope", rows: [], first: null },
+  ],
+  cronState: [
+    { match: "FROM cron_leases", rows: [] },
+    { match: "FROM cron_run_progress", rows: [] },
+    { match: "FROM cron_slot_executions", rows: [] },
+  ],
+  telegram: [
+    { match: "FROM telegram_preset_subscriptions", rows: [] },
+    { match: "FROM telegram_watcher_lifecycle_daily", rows: [], first: null },
+    { match: "FROM telegram_alert_source_events", rows: [], first: null },
+    { match: "FROM telegram_alert_job_targets", rows: [], first: null },
+    { match: "FROM telegram_alert_jobs", rows: [], first: null },
+    { match: "FROM telegram_alert_job_target_items", rows: [], first: null },
+    { match: "FROM telegram_alert_dead_letters", rows: [], first: null },
+    { match: "FROM telegram_usage_daily", rows: [], first: null },
+  ],
+};
+
+function sameQuery(left: MockTableConfig, right: MockTableConfig) {
+  return left.match === right.match
+    && JSON.stringify(left.matchBinds ?? null) === JSON.stringify(right.matchBinds ?? null);
+}
+
+function buildStatusD1Scenario({
+  sections = ["sentinel", "publication", "derived", "reserves", "statusState", "cronState"],
+  overrides = [],
+  sectionOverrides = {},
+  strictUnused = true,
+}: StatusD1ScenarioOptions = {}): MockD1Database {
+  const now = Math.floor(Date.now() / 1000);
+  const sectionDefaults = sections.flatMap((section) =>
+    sectionOverrides[section] ?? (section === "live" ? makeMinimalLiveStatusRows(now) : STATUS_D1_SECTIONS[section]),
+  );
+  const defaults = sectionDefaults.filter(
+    (entry, index) => !sectionDefaults.slice(0, index).some((earlier) => sameQuery(entry, earlier)),
+  );
+  const uniqueOverrides = overrides.filter(
+    (entry, index) => !overrides.slice(0, index).some((earlier) => sameQuery(entry, earlier)),
+  );
+  const tables = [
+    ...uniqueOverrides,
+    ...defaults.filter((entry) => !uniqueOverrides.some((override) => sameQuery(entry, override))),
+  ];
+  const db = fixtureMockD1(tables, {}, sections.includes("publication"));
+  if (strictUnused) pendingStrictD1Assertions.add(db);
+  return db;
+}
+
 function cleanupStatusTest() {
-  vi.restoreAllMocks();
+  try {
+    for (const db of pendingStrictD1Assertions) db.assertAllMatchesUsed();
+  } finally {
+    pendingStrictD1Assertions.clear();
+    vi.restoreAllMocks();
+  }
 }
 
 function fixtureMockD1(
   tables: Parameters<typeof mockD1>[0] = [],
   options: Parameters<typeof mockD1>[1] = {},
+  includeStatusDefaults = true,
 ): ReturnType<typeof mockD1> {
   const activeIds = ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id);
   const stablecoinCoverageQueryMatch = `metadata LIKE '%\"activePublicationCoverage\"%'`;
@@ -246,9 +347,8 @@ function fixtureMockD1(
   };
   return mockD1(
     [
-      ...(hasPublicationFixture ? [] : [publicationFixture]),
-      ...(hasDewsPointerFixture ? [] : [dewsPointerFixture]),
-      { match: "FROM worker_producer_heads", rows: [] },
+      ...(!includeStatusDefaults || hasPublicationFixture ? [] : [publicationFixture]),
+      ...(!includeStatusDefaults || hasDewsPointerFixture ? [] : [dewsPointerFixture]),
       ...tables,
     ],
     options,
@@ -269,6 +369,7 @@ export {
   makeRawStatusForSnapshot,
   makeRawStatusSnapshotRow,
   makeMinimalLiveStatusRows,
+  buildStatusD1Scenario,
   cleanupStatusTest,
   fixtureMockD1,
   fixtureMakeApiRequest,

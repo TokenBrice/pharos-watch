@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,

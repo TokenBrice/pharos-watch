@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [

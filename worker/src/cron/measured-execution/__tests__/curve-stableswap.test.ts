@@ -26,7 +26,7 @@ import {
 } from "../curve-stableswap";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import type { EvmMulticall3Call } from "../../../lib/evm-rpc";
-import { makeMeasuredTarget } from "@shared/lib/__tests__/measured-execution.test-support";
+import { makeMeasuredTarget } from "@shared/test-utils/measured-execution.test-support";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",

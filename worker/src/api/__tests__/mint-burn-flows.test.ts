@@ -1,7 +1,7 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import * as flightToQualityClassification from "../../lib/flight-to-quality-classification";
 import {

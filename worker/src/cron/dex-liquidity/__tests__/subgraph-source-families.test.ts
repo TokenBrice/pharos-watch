@@ -17,7 +17,7 @@ import {
   buildUniswapV4ExecutionCandidateKey,
   buildUniV3ExecutionCandidateKey,
 } from "../../measured-execution/inventory";
-import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 describe("subgraph source families", () => {
   afterEach(() => {

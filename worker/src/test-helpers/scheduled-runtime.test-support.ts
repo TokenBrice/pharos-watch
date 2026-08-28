@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../handlers/scheduled/context";
 import { createWorkerEnv } from "./__shared/worker-env";
-import { mockD1 } from "./__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 /** Make a mocked memory-lane lease execute its callback immediately. */
 export function mockSuccessfulCronLease(

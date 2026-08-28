@@ -103,3 +103,10 @@ export function makeMergedRow(overrides: Partial<MergedRow> = {}): MergedRow {
     ...overrides,
   };
 }
+
+export function makeMergedRowWithIdentity(
+  identity: Pick<MergedRow, "id" | "symbol" | "name">,
+  overrides: Partial<MergedRow> = {},
+): MergedRow {
+  return makeMergedRow({ ...identity, ...overrides });
+}

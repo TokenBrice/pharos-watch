@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY,
   getD1UsageSummary,

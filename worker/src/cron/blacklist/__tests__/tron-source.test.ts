@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 vi.mock("../../../lib/abort", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/abort")>();

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { hmacSha256Hex } from "../../test-helpers/__shared/auth";
 import { makeApiKeyRow } from "../../test-helpers/__shared/fixtures";
 import {

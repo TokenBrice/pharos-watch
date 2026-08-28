@@ -1,27 +1,14 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { runTelegramRetentionCleanup } from "../telegram-retention-cleanup";
 
 const NOW_SEC = 1_800_000_000;
 const DAY_SEC = 24 * 60 * 60;
 
 function setupLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  const migrationDir = process.cwd().endsWith("/worker")
-    ? join(process.cwd(), "migrations")
-    : join(process.cwd(), "worker/migrations");
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- test replays checked-in migrations only.
-  for (const file of readdirSync(migrationDir)
-    .filter((entry) => entry.endsWith(".sql"))
-    .sort()) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test replays checked-in migrations only.
-    sqlite.exec(readFileSync(join(migrationDir, file), "utf8"));
-  }
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 interface SourceFixture {
@@ -306,6 +293,16 @@ describe("telegram authoritative retention", () => {
     vi.restoreAllMocks();
   });
 
+  it("preserves the complete empty-run metadata contract", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    const { sqlite, db } = setupLatestSchema();
+
+    const result = await runTelegramRetentionCleanup(db);
+
+    expect(JSON.parse(result.metadata!)).toMatchSnapshot();
+    sqlite.close();
+  });
+
   it("prunes terminal workflow rows and settled replay bundles without deleting ambiguous or active work", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
     const { sqlite, db } = setupLatestSchema();
@@ -394,6 +391,7 @@ describe("telegram authoritative retention", () => {
         authoritativeReplay: 14,
       },
     });
+    expect(metadata).toMatchSnapshot();
     sqlite.close();
   });
 
@@ -684,6 +682,7 @@ describe("telegram authoritative retention", () => {
       staleUnresolvedSourcesPruned: 2,
       highGrowthRetention: { rowLimit: 2, cappedAtLimit: true },
     });
+    expect(metadata).toMatchSnapshot();
     expect(Number(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_jobs").get()?.count)).toBe(2);
     expect(
       Number(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()?.count),
@@ -714,6 +713,7 @@ describe("telegram authoritative retention", () => {
     expect(metadata.highGrowthRetention.error).toContain("injected Telegram high-growth cleanup failure");
     expect(metadata.highGrowthRetention.durationMs).toBeGreaterThanOrEqual(0);
     expect(metadata.usageDailyPruned).toBe(0);
+    expect(metadata).toMatchSnapshot();
     sqlite.close();
   });
 });

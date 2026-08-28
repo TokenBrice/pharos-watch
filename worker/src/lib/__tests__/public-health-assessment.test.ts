@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { assessPublicHealth } from "../public-health-assessment";
-import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 /**

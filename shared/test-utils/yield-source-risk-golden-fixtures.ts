@@ -1,4 +1,4 @@
-import type { PysSourceRiskPenaltyInput } from "../yield-scoring";
+import type { PysSourceRiskPenaltyInput } from "@shared/lib/yield-scoring";
 import type { YieldSourceRisk, YieldVenueRiskTier } from "@shared/types/yield";
 
 export type YieldSourceRiskGoldenCaseId =

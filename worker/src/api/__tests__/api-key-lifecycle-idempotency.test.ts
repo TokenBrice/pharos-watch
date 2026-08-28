@@ -1,4 +1,4 @@
-import { readJsonResponse } from "./api-request-response.test-support";
+import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";

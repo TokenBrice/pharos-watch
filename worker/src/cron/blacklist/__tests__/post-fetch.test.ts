@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../../lib/constants";

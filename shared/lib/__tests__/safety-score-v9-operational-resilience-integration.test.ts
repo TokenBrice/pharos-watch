@@ -24,6 +24,7 @@ import {
 } from "../safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
+import { fixturePegFact } from "./safety-score-v9-facts.fixture-support";
 
 const AS_OF_SEC = 1_800_000_000;
 const BASE_EVIDENCE_ID = "evidence:base";
@@ -320,20 +321,7 @@ function compiledFactSet(routes: readonly V9ExitRouteFactV2[]): CompiledV9FactSe
             ],
           },
         },
-        peg: {
-          status: knownStatus(BASE_EVIDENCE_ID, "peg.current"),
-          pegKey: "peg:usd",
-          sourceGenerationId: SOURCE_FINGERPRINTS.peg.generationId,
-          referenceKind: "fiat",
-          referenceKey: "USD",
-          methodologyVersion: "fixture-peg-v1",
-          pegScore: 99,
-          currentDeviationBps: 1,
-          activeDepeg: false,
-          activeDepegBps: null,
-          trackingSpanDays: 365,
-          failureDomains: [{ kind: "oracle-feed", key: "oracle:usd" }],
-        },
+        peg: fixturePegFact(knownStatus(BASE_EVIDENCE_ID, "peg.current"), SOURCE_FINGERPRINTS.peg.generationId),
         supply: {
           status: knownStatus(BASE_EVIDENCE_ID, "supply.current"),
           sourceGenerationId: SOURCE_FINGERPRINTS.chainSupply.generationId,

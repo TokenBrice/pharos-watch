@@ -16,7 +16,13 @@ import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 
 import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "../safety-score-v9/score-bearing-gates-policy";
 import {
   boundedUnknown,
+  makeEconomicControlArgs as args,
+  makeEconomicControlFacts as facts,
   makeDeploymentControl as control,
+  makeReviewedMintInput,
+  noBridgeReview as noBridge,
+  noMintReview as noMint,
+  noOracleReview as noOracle,
   notApplicable,
   requiredKnown,
   stale,
@@ -32,59 +38,8 @@ const TIMELOCKED_TWO_OF_THREE_QUALITY =
   MERGED_MINT_SIGNALS.multisigQuorumAdjustment.majorityThresholdCredit +
   MERGED_MINT_SIGNALS.multisigQuorumAdjustment.timelockCredit;
 
-function facts(controls: readonly V9DeploymentControlFactV2[] = []): V9EconomicControlAssetFacts {
-  return {
-    assetId: "fixture-asset",
-    archetype: "fiat-cash",
-    controlStatus: controls.length > 0 ? requiredKnown("controls") : notApplicable("controls"),
-    controls,
-    supply: {
-      status: requiredKnown("supply"),
-      selectedBridgeRoutes: [],
-      selectedRouteSupplyShare: 1,
-      unknownRouteSupplyShare: 0,
-      unreviewedRouteSupplyShare: 0,
-    },
-  };
-}
-
-function noMint(): V9MintMechanismReview {
-  return {
-    status: notApplicable("mint"),
-    controlKey: null,
-    reconciliation: "not-applicable",
-    supervision: "unknown",
-    upgrade: { state: "not-applicable", controlKey: null },
-  };
-}
-
 function boundedMint(controlKey = "mint:primary"): V9MintMechanismReview {
-  return {
-    status: requiredKnown("mint"),
-    controlKey,
-    reconciliation: "not-applicable",
-    supervision: "unknown",
-    upgrade: { state: "immutable", controlKey: null },
-  };
-}
-
-function noOracle(): V9OracleControlReview {
-  return { status: notApplicable("oracle"), tier: null, branches: [] };
-}
-
-function noBridge(): V9BridgeControlReview {
-  return { status: notApplicable("bridge"), routes: [] };
-}
-
-function args(overrides: Partial<EvaluateV9EconomicControlArgs> = {}): EvaluateV9EconomicControlArgs {
-  return {
-    policy: V9_CANDIDATE_POLICY_V1,
-    facts: facts(),
-    mint: noMint(),
-    oracle: noOracle(),
-    bridge: noBridge(),
-    ...overrides,
-  };
+  return makeReviewedMintInput(controlKey);
 }
 
 type NullShareDeploymentScenario = {

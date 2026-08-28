@@ -1,26 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { mockTelegramD1 as mockD1 } from "../../test-helpers/__shared/telegram";
 import {
   countTelegramProcessedUpdateBacklog,
   loadPendingDisambiguation,
   persistPendingConfirmBulk,
+  persistPendingDisambiguation,
   persistPendingDisambiguationRow,
   pruneTelegramProcessedUpdates,
   upsertSubscriberRow,
 } from "../telegram-webhook-store";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-
-function mockD1(
-  tables: Parameters<typeof baseMockD1>[0] = [],
-  options: Parameters<typeof baseMockD1>[1] = {},
-) {
-  return baseMockD1([
-    ...tables,
-    { match: "INSERT INTO telegram_subscribers", rows: [] },
-  ], options);
-}
 
 describe("upsertSubscriberRow", () => {
   it("updates only quiet-hours columns on a mute-only call", async () => {
@@ -58,14 +49,44 @@ describe("upsertSubscriberRow", () => {
 });
 
 describe("persistPendingDisambiguationRow", () => {
-  it("returns false when a fresh pending row is owned by another user", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT INTO telegram_pending_disambiguation",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
+  it("stores a versioned canonical payload while satisfying legacy NOT NULL columns", async () => {
+    const candidates = [{ id: "usdf-falcon", symbol: "USDF", name: "Falcon USD" }];
+    const db = mockD1([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
+
+    await persistPendingDisambiguation(db, {
+      chatId: "42",
+      actionType: "subscribe",
+      actionPayload: { presetIds: ["usd-top25"] },
+      alertTypes: new Set(["dews"]),
+      resolvedCoins: [{ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }],
+      ambiguousTicker: "USDF",
+      candidates,
+      remainingTickers: ["USDA"],
+      initiatorUserId: "123",
+    });
+    db.assertAllMatchesUsed();
+
+    const [entry] = db.getHistory();
+    expect(JSON.parse(String(entry?.binds[2]))).toEqual({
+      presetIds: ["usd-top25"],
+      schemaVersion: 1,
+      alertTypes: ["dews"],
+      resolvedIds: ["usdc-circle"],
+      ambiguousTicker: "USDF",
+      candidates,
+      remainingTickers: ["USDA"],
+    });
+    expect(entry?.binds.slice(3, 8)).toEqual([
+      JSON.stringify(["dews"]),
+      JSON.stringify(["usdc-circle"]),
+      "USDF",
+      JSON.stringify(candidates),
+      JSON.stringify(["USDA"]),
     ]);
+  });
+
+  it("returns false when a fresh pending row is owned by another user", async () => {
+    const db = mockD1([], { writeResults: { pendingOperation: { insert: 0 } } });
 
     const persisted = await persistPendingDisambiguationRow(db, {
       chatId: "-100",
@@ -81,6 +102,7 @@ describe("persistPendingDisambiguationRow", () => {
     });
 
     expect(persisted).toBe(false);
+    db.assertAllMatchesUsed();
     const [entry] = db.getHistory();
     expect(entry?.sql).toContain("telegram_pending_disambiguation.expires_at <= ?");
     expect(entry?.sql).toContain("telegram_pending_disambiguation.initiator_user_id = excluded.initiator_user_id");
@@ -100,13 +122,7 @@ describe("persistPendingDisambiguationRow", () => {
   });
 
   it("uses the same ownership guard for bulk confirmations", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT INTO telegram_pending_disambiguation",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-    ]);
+    const db = mockD1([], { writeResults: { pendingOperation: { insert: 0 } } });
 
     const persisted = await persistPendingConfirmBulk(db, {
       chatId: "-100",
@@ -120,6 +136,7 @@ describe("persistPendingDisambiguationRow", () => {
     });
 
     expect(persisted).toBe(false);
+    db.assertAllMatchesUsed();
     const [entry] = db.getHistory();
     expect(entry?.binds).toContain("confirm-bulk");
     expect(entry?.sql).toContain("telegram_pending_disambiguation.initiator_user_id = excluded.initiator_user_id");
@@ -151,29 +168,23 @@ describe("persistPendingDisambiguationRow", () => {
 });
 
 describe("loadPendingDisambiguation", () => {
-  it("loads the full pending action row by chat id", async () => {
+  it("loads only the canonical pending action columns by chat id", async () => {
     const row = {
       action_type: "subscribe",
-      action_payload: "{}",
-      alert_types: "[]",
-      resolved_ids: "[]",
-      ambiguous_ticker: "USD",
-      candidates: "[]",
-      remaining_tickers: "[]",
+      action_payload: JSON.stringify({ schemaVersion: 1 }),
       expires_at: 1_700_000_300,
       initiator_user_id: "123",
     };
-    const db = mockD1([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [row],
-      },
-    ]);
+    const db = mockD1([], { pendingOperation: row });
 
     await expect(loadPendingDisambiguation(db, "42")).resolves.toEqual(row);
+    db.assertAllMatchesUsed();
 
     const [entry] = db.getHistory();
-    expect(entry?.sql).toContain("action_type, action_payload, alert_types");
+    expect(entry?.sql).toContain("action_type, action_payload, expires_at");
+    expect(entry?.sql).not.toContain("alert_types");
+    expect(entry?.sql).not.toContain("resolved_ids");
+    expect(entry?.sql).not.toContain("candidates");
     expect(entry?.sql).toContain("initiator_user_id FROM telegram_pending_disambiguation");
     expect(entry?.binds).toEqual(["42"]);
   });
@@ -193,6 +204,7 @@ describe("pruneTelegramProcessedUpdates", () => {
       nowSec: 1_700_000_000,
       retentionSec: 60,
     });
+    db.assertAllMatchesUsed();
 
     expect(pruned).toBe(7);
     const [entry] = db.getHistory();

@@ -1,6 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import { isFiniteNumber, isRecord, numberValue, stringValue } from "../type-guards";
+import {
+  coerceFiniteNumber,
+  coerceNonNegativeNumber,
+  isFiniteNumber,
+  isRecord,
+  numberValue,
+  stringValue,
+} from "../type-guards";
+
+describe("numeric coercion", () => {
+  it("accepts finite numbers and numeric strings without coercing blanks or booleans", () => {
+    expect(coerceFiniteNumber(12.5)).toBe(12.5);
+    expect(coerceFiniteNumber(" 12.5 ")).toBe(12.5);
+    expect(coerceFiniteNumber(0)).toBe(0);
+    for (const value of ["", "  ", true, false, null, undefined, NaN, Infinity, "Infinity", "nope"]) {
+      expect(coerceFiniteNumber(value)).toBeNull();
+    }
+  });
+
+  it("applies the non-negative bound after strict finite coercion", () => {
+    expect(coerceNonNegativeNumber("0")).toBe(0);
+    expect(coerceNonNegativeNumber("2.5")).toBe(2.5);
+    expect(coerceNonNegativeNumber(-1)).toBeNull();
+    expect(coerceNonNegativeNumber("-1")).toBeNull();
+    expect(coerceNonNegativeNumber(false)).toBeNull();
+  });
+});
 
 describe("isRecord", () => {
   it("accepts plain objects and rejects null, arrays, and primitives", () => {

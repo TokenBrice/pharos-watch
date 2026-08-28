@@ -7,7 +7,7 @@ import {
   matchesHttpResponseObservation,
   observeHttpResponse,
   type HttpResponseObservation,
-} from "../../scripts/test-utils/http-response-contract";
+} from "@shared/test-utils/http-response-contract";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const { verifyAccessJwtUserIdentity } = vi.hoisted(() => ({

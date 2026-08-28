@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetchRetry } from "../../test-helpers/cron";
-import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());

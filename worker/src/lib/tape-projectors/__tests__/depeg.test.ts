@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectDepegOpened, projectDepegResolved } from "../depeg";
 
 const SEC = 1_700_000_000;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { updateMintBurnAttemptState } from "../mint-burn/run-state";
 
 const keys = Array.from({ length: 127 }, (_, index) => `config-${index}`);

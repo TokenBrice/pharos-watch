@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { DigestInputData } from "@shared/types/digest";
 import type { StablecoinData } from "@shared/types/market";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import {
+  makeDigestSnapshotFixture,
+  type DigestSnapshotDate,
+  type DigestSnapshotFixture,
+} from "../../test-helpers/__fixtures__/digest-snapshots";
 import { collectActiveDepegs } from "../daily-digest/collectors-market";
 import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
 import { buildCriticalDailyLeadRequirements } from "../daily-digest/critical-lead-requirements";
@@ -15,21 +18,8 @@ import type { CollectorContext } from "../daily-digest/collectors-shared";
 // These fixtures reproduce the exact conditions of the 17-edition USX
 // headline lock and the fabricated USDA recovery, and pin the fixed behavior.
 
-const FIXTURE_DIR = join(__dirname, "../../test-helpers/__fixtures__/digest-snapshots");
-
-interface DigestSnapshotFixture {
-  date: string;
-  inputData: DigestInputData;
-  prevInputData: DigestInputData | null;
-}
-
-const FIXTURES: Record<string, string> = {
-  "2026-07-17": readFileSync(join(FIXTURE_DIR, "2026-07-17.json"), "utf8"),
-  "2026-07-18": readFileSync(join(FIXTURE_DIR, "2026-07-18.json"), "utf8"),
-};
-
-function loadFixture(date: string): DigestSnapshotFixture {
-  return JSON.parse(FIXTURES[date]) as DigestSnapshotFixture;
+function loadFixture(date: DigestSnapshotDate): DigestSnapshotFixture {
+  return makeDigestSnapshotFixture(date);
 }
 
 interface DepegEventSeed {
@@ -96,6 +86,19 @@ function generatedAt(inputData: DigestInputData): number {
 describe("daily-digest lead policy (golden replay of the July 2026 USX era)", () => {
   const fixture = loadFixture("2026-07-18");
   const nowSec = generatedAt(fixture.inputData);
+
+  it.each(["2026-07-17", "2026-07-18"] as const)(
+    "%s semantic fixture retains its competing signals, winner, and liquidity order",
+    (date) => {
+      const replay = loadFixture(date);
+      const candidates = buildEditorialCandidates(replay.inputData, replay.prevInputData);
+      const candidateIds = candidates.map((candidate) => candidate.id);
+      expect(candidateIds).toEqual(expect.arrayContaining([...replay.expectedCompetingCandidateIds]));
+      expect(candidates[0]?.id).toBe(replay.expectedLeadCandidateId);
+      expect(candidates.filter((candidate) => candidate.kind === "liquidity").map((candidate) => candidate.id))
+        .toEqual(replay.expectedLiquidityOrder);
+    },
+  );
 
   it("frozen usx-dforce no longer enters the active depeg set", async () => {
     const { topDepegs } = await replayCollector(seedsFromFixture(fixture.inputData), nowSec);

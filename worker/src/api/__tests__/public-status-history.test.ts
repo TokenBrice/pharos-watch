@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { PublicHealthAssessment } from "../../lib/public-health-assessment";
 import type { StatusCause } from "@shared/types/status";
 

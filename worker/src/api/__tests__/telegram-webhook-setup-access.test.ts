@@ -369,7 +369,6 @@ describe("handleTelegramWebhook", () => {
     const db = makeTelegramWebhookDb([
       { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
       { match: "FROM stress_signals", rows: [] },
-      { match: "FROM safety_grade_history", rows: [] },
       { match: "FROM depeg_events", rows: [] },
       { match: "FROM dex_liquidity", rows: [] },
       { match: "FROM yield_data", rows: [] },

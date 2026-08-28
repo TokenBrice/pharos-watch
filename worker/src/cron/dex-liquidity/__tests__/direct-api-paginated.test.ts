@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function nonOkStreamingResponse(status = 503): { response: Response; cancel: ReturnType<typeof vi.fn> } {
   const cancel = vi.fn(async () => undefined);

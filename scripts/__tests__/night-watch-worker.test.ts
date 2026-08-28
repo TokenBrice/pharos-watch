@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   assertNightWatchRegistryFixture,
   buildNightWatchCoverage,
+  collectD1Snapshot,
   loadNightWatchCheckpoint,
   parseArgs,
   persistNightWatchCheckpoint,
@@ -274,6 +275,44 @@ describe("night-watch-worker", () => {
     const markdown = renderNightWatchMarkdown(failedEvidence);
 
     expect(markdown).toContain("D1 snapshot failed (wrangler auth failed)");
+  });
+
+  it("consumes the single-watch collector directly for D1 samples", async () => {
+    const args = parseArgs([
+      "--start", generatedAt,
+      "--include-d1",
+      "--include-status-history",
+      "--local",
+      "--cf-access-client-secret", "secret",
+    ], new Date(generatedAt));
+    type SnapshotCollector = NonNullable<Parameters<typeof collectD1Snapshot>[2]>;
+    const collectorMock = vi.fn(async (
+      options: Parameters<SnapshotCollector>[0],
+      _dependencies?: Parameters<SnapshotCollector>[1],
+    ): ReturnType<SnapshotCollector> => ({
+      generatedAt,
+      scope: options.remote ? "remote" : "local",
+      probes: { statusHistory: { status: 200 } },
+      recentRuns: [], slots: [], leases: [], progress: [],
+    }) as unknown as Awaited<ReturnType<SnapshotCollector>>);
+    const collector = collectorMock as unknown as SnapshotCollector;
+
+    const snapshot = await collectD1Snapshot(args, 16, collector);
+    expect(collectorMock).toHaveBeenCalledOnce();
+    expect(collectorMock.mock.calls[0]![0]).toMatchObject({
+      sinceMinutes: 16,
+      limit: 120,
+      remote: false,
+      includeStatus: true,
+      includeStatusHistory: true,
+      cfAccessClientSecret: "secret",
+    });
+    expect(snapshot).toMatchObject({ mode: "d1", scope: "local" });
+
+    const failed = await collectD1Snapshot(args, 16, async () => {
+      throw new Error("authentication failed for secret");
+    });
+    expect(failed).toMatchObject({ mode: "d1-error", error: "authentication failed for [redacted]" });
   });
 
   it("renders optional artifact gaps separately from access gaps", () => {
