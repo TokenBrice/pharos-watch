@@ -102,10 +102,6 @@ export function OpsShell({ children }: { children: ReactNode }) {
 
   if (!opsUiHost) return <OpsPublicHostGate />;
 
-  const handleSignOut = () => {
-    window.location.assign("/cdn-cgi/access/logout");
-  };
-
   return (
     <div
       className="min-h-screen overflow-x-clip bg-background"
@@ -156,15 +152,14 @@ export function OpsShell({ children }: { children: ReactNode }) {
             >
               {isDark ? <Sun className="size-4" aria-hidden="true" /> : <Moon className="size-4" aria-hidden="true" />}
             </button>
-            <button
-              type="button"
-              onClick={handleSignOut}
+            <a
+              href="/cdn-cgi/access/logout"
               className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-md px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               title="Sign out"
             >
               <LogOut className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">Sign out</span>
-            </button>
+            </a>
           </div>
         </div>
 
