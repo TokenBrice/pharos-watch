@@ -69,7 +69,7 @@ describe("local PR check orchestration", () => {
   it("passes the resolved base SHA to coverage as CRITICAL_COVERAGE_COMPARE_REF, mirroring the CI merge job", () => {
     const command = createLaneCommand("critical-coverage", {
       base: "origin/main",
-      env: { PATH: "/usr/bin" },
+      env: { NODE_ENV: "test", PATH: "/usr/bin" },
       forwardedTestArgs: [],
       head: "HEAD",
       resolvedBaseSha: "91c2702677808b4380fe5dfde1bf5c09b570d2f0",
@@ -82,7 +82,7 @@ describe("local PR check orchestration", () => {
   it("scopes the gitleaks and classifier smokes to the requested base..head range", () => {
     const context = {
       base: "origin/main",
-      env: {},
+      env: { NODE_ENV: "test" as const },
       forwardedTestArgs: [],
       head: "HEAD",
       resolvedBaseSha: "91c2702677808b4380fe5dfde1bf5c09b570d2f0",
