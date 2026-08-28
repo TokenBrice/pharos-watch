@@ -83,7 +83,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 - `src/components/bluechip-header-badge.tsx` renders the external `Bluechip: <grade>` badge/link plus the Pharos-owned `Pharos Bluechip · since YYYY-MM` link to `/about/bluechip/` in the stablecoin detail hero, so the external grade stays clearly separate from Pharos-owned scores.
 - `src/hooks/use-selector.ts` reads the ratings map as one of the Selector's inputs.
 - `src/app/about/bluechip/active-list.tsx` renders the Pharos Bluechip roster from the ratings map plus V9 report cards.
-- `src/hooks/use-compare-data-model.ts` folds Bluechip ratings into the compare-page query slices, error propagation, `bluechipMap` projection, and refetch orchestration behind `src/components/compare/compare-client.tsx` (re-exported by `src/app/compare/client.tsx`).
+- `src/hooks/use-compare-data-model.ts` folds Bluechip ratings into the compare-page query slices, error propagation, `bluechipMap` projection, and refetch orchestration behind `src/components/compare/compare-client.tsx` (lazily loaded by `src/app/compare/page.tsx`).
 
 `src/lib/bluechip.ts` contains:
 - `BLUECHIP_REPORT_BASE` (`https://bluechip.org/en/coins`)

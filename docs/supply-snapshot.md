@@ -239,7 +239,7 @@ Aggregated homepage market-cap breakdown. The total series comes from `GET /api/
 
 ### Compare page
 
-**File:** `src/app/compare/client.tsx`
+**File:** `src/app/compare/page.tsx` (lazily loads `src/components/compare/compare-client.tsx`)
 
 The compare data model fetches per-coin `/api/supply-history` series directly through `useQueries()` in `src/hooks/use-compare-data-model.ts`. Side-by-side comparison charts do not depend on `GET /api/stablecoin/:id`.
 
