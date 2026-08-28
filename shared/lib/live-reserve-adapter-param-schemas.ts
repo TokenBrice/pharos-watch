@@ -11,7 +11,8 @@ const LiveReserveRiskSchema = ReserveRiskSchema;
 const LiveReserveDependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
 const AbsoluteUrlSchema = z.string().url();
 const EvmAddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
-const EvmCodeHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
+const EvmWordSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
+const EvmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
 
 const stringRecordSchema = z.record(z.string(), z.string());
 const riskRecordSchema = z.record(z.string(), LiveReserveRiskSchema);
@@ -56,13 +57,16 @@ const attestationPdfIndexParamsSchema = z
   .strict();
 
 const assuranceHostSchema = z.string().regex(/^[A-Za-z0-9.-]+$/);
+const assuranceParamsShape = {
+  indexHost: assuranceHostSchema,
+  reportHosts: z.array(assuranceHostSchema).min(1),
+};
 
 const audxAssuranceParamsSchema = z
   .object({
     product: z.literal("AUDX"),
     profile: z.literal("audx-v1"),
-    indexHost: assuranceHostSchema,
-    reportHosts: z.array(assuranceHostSchema).min(1),
+    ...assuranceParamsShape,
   })
   .strict();
 
@@ -70,8 +74,7 @@ const europAssuranceParamsSchema = z
   .object({
     product: z.literal("EUROP"),
     profile: z.literal("europ-v1"),
-    indexHost: assuranceHostSchema,
-    reportHosts: z.array(assuranceHostSchema).min(1),
+    ...assuranceParamsShape,
   })
   .strict();
 
@@ -79,8 +82,7 @@ const straitsxAssuranceParamsSchema = z
   .object({
     product: z.enum(["XSGD", "XUSD"]),
     profile: z.literal("straitsx-v1"),
-    indexHost: assuranceHostSchema,
-    reportHosts: z.array(assuranceHostSchema).min(1),
+    ...assuranceParamsShape,
   })
   .strict();
 
@@ -88,8 +90,7 @@ const usdgoAssuranceParamsSchema = z
   .object({
     product: z.literal("USDGO"),
     profile: z.literal("usdgo-v1"),
-    indexHost: assuranceHostSchema,
-    reportHosts: z.array(assuranceHostSchema).min(1),
+    ...assuranceParamsShape,
     issuerCrossCheckUrl: z.literal("https://www.usdgo.com/api/lark-bitable"),
     avalancheRpcUrl: z.literal("https://api.avax.network/ext/bc/C/rpc"),
     avalancheBuidlToken: z.literal("0x53fc82f14f009009b440a706e31c9021e1196a2f"),
@@ -103,9 +104,9 @@ const usdgoAssuranceParamsSchema = z
 const mocV3BucketSchema = z
   .object({
     address: EvmAddressSchema,
-    expectedProxyCodeHash: EvmCodeHashSchema,
+    expectedProxyCodeHash: EvmWordSchema,
     expectedImplementationAddress: EvmAddressSchema,
-    expectedImplementationCodeHash: EvmCodeHashSchema,
+    expectedImplementationCodeHash: EvmWordSchema,
     collateralToken: EvmAddressSchema,
     collateralDecimals: z.number().int().nonnegative().max(36),
     expectedPegContainerProvider: EvmAddressSchema,
@@ -127,21 +128,21 @@ const mocV3BucketsParamsSchema = z
     canonicalUsdrif: z
       .object({
         address: EvmAddressSchema,
-        expectedProxyCodeHash: EvmCodeHashSchema,
+        expectedProxyCodeHash: EvmWordSchema,
         decimals: z.number().int().nonnegative().max(36),
       })
       .strict(),
     rifToken: z
       .object({
         address: EvmAddressSchema,
-        expectedCodeHash: EvmCodeHashSchema,
+        expectedCodeHash: EvmWordSchema,
         decimals: z.number().int().nonnegative().max(36),
       })
       .strict(),
     docToken: z
       .object({
         address: EvmAddressSchema,
-        expectedCodeHash: EvmCodeHashSchema,
+        expectedCodeHash: EvmWordSchema,
         decimals: z.number().int().nonnegative().max(36),
       })
       .strict(),
@@ -192,15 +193,15 @@ const fraxFpiCollateralParamsSchema = z
     controllerAddress: EvmAddressSchema,
     fpiTokenAddress: EvmAddressSchema,
     fraxTokenAddress: EvmAddressSchema,
-    expectedControllerCodeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    expectedControllerCodeHash: EvmWordSchema,
     expectedFraxPriceFeedAddress: EvmAddressSchema,
-    expectedFraxPriceFeedCodeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    expectedFraxPriceFeedCodeHash: EvmWordSchema,
     expectedFraxPriceFeedDecimals: z.number().int().nonnegative().max(36),
     expectedFpiPriceFeedAddress: EvmAddressSchema,
-    expectedFpiPriceFeedCodeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    expectedFpiPriceFeedCodeHash: EvmWordSchema,
     expectedFpiPriceFeedDecimals: z.number().int().nonnegative().max(36),
     expectedCpiTrackerAddress: EvmAddressSchema,
-    expectedCpiTrackerCodeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    expectedCpiTrackerCodeHash: EvmWordSchema,
     maxPriceFeedAgeSec: z.number().int().positive(),
     fullConfidenceCpiTrackerAgeSec: z.number().int().positive(),
     maxCpiTrackerAgeSec: z.number().int().positive(),
@@ -258,7 +259,7 @@ const chainlinkNavParamsSchema = z
         usdcAddress: EvmAddressSchema,
         routerAddress: EvmAddressSchema,
         sourceAddress: EvmAddressSchema,
-        pauseSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
+        pauseSelector: EvmSelectorSchema.optional(),
       })
       .strict()
       .optional(),
@@ -465,8 +466,6 @@ const collateralPositionsParamsSchema = z
     message: "redemptionBridge and redemptionBridgeBasket are mutually exclusive",
   });
 
-const EvmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
-
 /** Opt-in live redemption probe for curated coins. The shape only describes
  *  atomic, same-block routes: a single uint256 read of what the route can pay
  *  out right now, valued 1:1 in USD. */
@@ -580,7 +579,7 @@ const reserveSliceDescriptorSchema = z
 const redemptionRateProbeSchema = z
   .object({
     contract: z.string(),
-    selector: z.string().regex(/^0x[0-9a-fA-F]{8}$/),
+    selector: EvmSelectorSchema,
     decimals: z.number().int().positive().optional(),
   })
   .strict();
@@ -655,44 +654,44 @@ const fraxtalHopWithdrawableRedemptionLiquiditySchema = z
     maxFinalizedBlockAgeSec: z.number().int().positive(),
     maxCrossChainBlockSkewSec: z.number().int().positive(),
     remoteHopAddress: EvmAddressSchema,
-    expectedRemoteHopCodeHash: EvmCodeHashSchema,
+    expectedRemoteHopCodeHash: EvmWordSchema,
     expectedEthereumSfrxUsdImplementationAddress: EvmAddressSchema,
-    expectedEthereumSfrxUsdProxyCodeHash: EvmCodeHashSchema,
-    expectedEthereumSfrxUsdImplementationCodeHash: EvmCodeHashSchema,
+    expectedEthereumSfrxUsdProxyCodeHash: EvmWordSchema,
+    expectedEthereumSfrxUsdImplementationCodeHash: EvmWordSchema,
     expectedEthereumEid: z.number().int().positive(),
     expectedFraxtalEid: z.number().int().positive(),
     expectedFraxtalHopAddress: EvmAddressSchema,
     expectedEthereumFrxUsdOftAddress: EvmAddressSchema,
-    expectedEthereumFrxUsdOftProxyCodeHash: EvmCodeHashSchema,
+    expectedEthereumFrxUsdOftProxyCodeHash: EvmWordSchema,
     expectedEthereumFrxUsdOftImplementationAddress: EvmAddressSchema,
-    expectedEthereumFrxUsdOftImplementationCodeHash: EvmCodeHashSchema,
+    expectedEthereumFrxUsdOftImplementationCodeHash: EvmWordSchema,
     expectedEthereumSfrxUsdOftAddress: EvmAddressSchema,
-    expectedEthereumSfrxUsdOftProxyCodeHash: EvmCodeHashSchema,
+    expectedEthereumSfrxUsdOftProxyCodeHash: EvmWordSchema,
     expectedEthereumSfrxUsdOftImplementationAddress: EvmAddressSchema,
-    expectedEthereumSfrxUsdOftImplementationCodeHash: EvmCodeHashSchema,
+    expectedEthereumSfrxUsdOftImplementationCodeHash: EvmWordSchema,
     expectedEthereumFrxUsdAddress: EvmAddressSchema,
     expectedEthUsdFeedAddress: EvmAddressSchema,
-    expectedEthUsdFeedCodeHash: EvmCodeHashSchema,
+    expectedEthUsdFeedCodeHash: EvmWordSchema,
     expectedEthUsdAggregatorAddress: EvmAddressSchema,
-    expectedEthUsdAggregatorCodeHash: EvmCodeHashSchema,
+    expectedEthUsdAggregatorCodeHash: EvmWordSchema,
     maxEthUsdOracleAgeSec: z.number().int().positive(),
-    expectedFraxtalHopCodeHash: EvmCodeHashSchema,
+    expectedFraxtalHopCodeHash: EvmWordSchema,
     mintRedeemerProxyAddress: EvmAddressSchema,
-    expectedMintRedeemerProxyCodeHash: EvmCodeHashSchema,
+    expectedMintRedeemerProxyCodeHash: EvmWordSchema,
     expectedMintRedeemerImplementationAddress: EvmAddressSchema,
-    expectedMintRedeemerImplementationCodeHash: EvmCodeHashSchema,
+    expectedMintRedeemerImplementationCodeHash: EvmWordSchema,
     expectedFrxUsdLockboxAddress: EvmAddressSchema,
-    expectedFrxUsdLockboxProxyCodeHash: EvmCodeHashSchema,
+    expectedFrxUsdLockboxProxyCodeHash: EvmWordSchema,
     expectedFrxUsdLockboxImplementationAddress: EvmAddressSchema,
-    expectedFrxUsdLockboxImplementationCodeHash: EvmCodeHashSchema,
+    expectedFrxUsdLockboxImplementationCodeHash: EvmWordSchema,
     expectedSfrxUsdLockboxAddress: EvmAddressSchema,
-    expectedSfrxUsdLockboxProxyCodeHash: EvmCodeHashSchema,
+    expectedSfrxUsdLockboxProxyCodeHash: EvmWordSchema,
     expectedSfrxUsdLockboxImplementationAddress: EvmAddressSchema,
-    expectedSfrxUsdLockboxImplementationCodeHash: EvmCodeHashSchema,
+    expectedSfrxUsdLockboxImplementationCodeHash: EvmWordSchema,
     expectedFraxtalFrxUsdAddress: EvmAddressSchema,
     expectedFraxtalSfrxUsdAddress: EvmAddressSchema,
     expectedVaultOracleAddress: EvmAddressSchema,
-    expectedVaultOracleCodeHash: EvmCodeHashSchema,
+    expectedVaultOracleCodeHash: EvmWordSchema,
     maxOracleToleranceSec: z.number().int().positive(),
     maxOraclePriceDeviationBps: z.number().finite().nonnegative(),
     maxRedemptionFeeBps: z.number().finite().nonnegative(),
@@ -718,13 +717,10 @@ const erc4626SingleAssetParamsSchema = z
   })
   .strict();
 
-const evmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
-const evmAbiWordSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
-
 const escrowBalanceIdentityCheckSchema = z
   .object({
-    selector: evmSelectorSchema,
-    args: z.array(evmAbiWordSchema).optional(),
+    selector: EvmSelectorSchema,
+    args: z.array(EvmWordSchema).optional(),
     expectedAddress: EvmAddressSchema,
   })
   .strict();
@@ -732,8 +728,8 @@ const escrowBalanceIdentityCheckSchema = z
 const escrowBalanceSelectorReadSchema = z
   .object({
     contract: EvmAddressSchema,
-    selector: evmSelectorSchema,
-    args: z.array(evmAbiWordSchema).optional(),
+    selector: EvmSelectorSchema,
+    args: z.array(EvmWordSchema).optional(),
     decimals: z.number().int().nonnegative().max(36),
     identityCheck: escrowBalanceIdentityCheckSchema.optional(),
   })
@@ -751,8 +747,8 @@ const escrowBalanceErc20ReadSchema = z
 const escrowBalancePauseCheckSchema = z
   .object({
     contract: EvmAddressSchema,
-    selector: evmSelectorSchema,
-    args: z.array(evmAbiWordSchema).optional(),
+    selector: EvmSelectorSchema,
+    args: z.array(EvmWordSchema).optional(),
   })
   .strict();
 
@@ -772,12 +768,12 @@ const escrowBalanceSharedParamsShape = {
 const escrowBalanceSingleParamsSchema = z
   .object({
     contract: EvmAddressSchema,
-    selector: evmSelectorSchema,
-    args: z.array(evmAbiWordSchema).optional(),
+    selector: EvmSelectorSchema,
+    args: z.array(EvmWordSchema).optional(),
     decimals: z.number().int().nonnegative().max(36),
     // Optional boolean view on the same contract; a true word withholds the
     // route instead of publishing capacity as freely redeemable.
-    pausedSelector: evmSelectorSchema.optional(),
+    pausedSelector: EvmSelectorSchema.optional(),
     ...escrowBalanceSharedParamsShape,
   })
   .strict();
@@ -819,13 +815,13 @@ const m0WrapperUnderlyingParamsSchema = z
   .object({
     mode: z.enum(["wrapped-m-token", "m-extension"]),
     wrapperAddress: z.string().optional(),
-    mTokenSelector: evmSelectorSchema.optional(),
+    mTokenSelector: EvmSelectorSchema.optional(),
     expectedMTokenAddress: z.string().optional(),
-    swapFacilitySelector: evmSelectorSchema.optional(),
+    swapFacilitySelector: EvmSelectorSchema.optional(),
     expectedSwapFacilityAddress: z.string().optional(),
     swapperAddress: z.string().optional(),
-    pausedSelector: evmSelectorSchema.optional(),
-    canSwapViaPathSelector: evmSelectorSchema.optional(),
+    pausedSelector: EvmSelectorSchema.optional(),
+    canSwapViaPathSelector: EvmSelectorSchema.optional(),
     slice: reserveSliceDescriptorSchema,
     sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),
@@ -840,17 +836,17 @@ const liquityNativeActivePoolParamsSchema = z
     collateralLabel: z.string(),
     collateralRisk: LiveReserveRiskSchema,
     collateralDecimals: z.number().int().nonnegative(),
-    debtSelector: evmSelectorSchema,
+    debtSelector: EvmSelectorSchema,
     debtDecimals: z.number().int().nonnegative().optional(),
-    collateralBalanceSelector: evmSelectorSchema,
+    collateralBalanceSelector: EvmSelectorSchema,
     priceFeedAddress: z.string(),
-    priceSelector: evmSelectorSchema,
+    priceSelector: EvmSelectorSchema,
     priceDecimals: z.number().int().nonnegative().optional(),
     troveManagerAddress: z.string(),
-    tcrSelector: evmSelectorSchema,
-    mcrSelector: evmSelectorSchema,
+    tcrSelector: EvmSelectorSchema,
+    mcrSelector: EvmSelectorSchema,
     borrowerOperationsAddress: z.string().optional(),
-    redemptionRateSelector: evmSelectorSchema.optional(),
+    redemptionRateSelector: EvmSelectorSchema.optional(),
     redemptionRateDecimals: z.number().int().nonnegative().optional(),
     sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),
@@ -958,10 +954,7 @@ const evmBranchBalancesParamsSchema = z
      * first branch's holder if omitted) to fetch a system-wide debt/supply total
      * and emits `collateralizationRatio` in metadata.
      */
-    debtSelector: z
-      .string()
-      .regex(/^0x[0-9a-fA-F]{8}$/)
-      .optional(),
+    debtSelector: EvmSelectorSchema.optional(),
     debtContract: z.string().optional(),
     debtDecimals: z.number().int().nonnegative().optional(),
     redemptionCapacity: z
@@ -1013,8 +1006,8 @@ const liquityV2MechanismMetricsBranchSchema = z
 const liquityV2MechanismMetricsSchema = z
   .object({
     supplyTokenAddress: EvmAddressSchema,
-    branchPriceSelector: evmSelectorSchema.optional(),
-    stabilityPoolDepositsSelector: evmSelectorSchema,
+    branchPriceSelector: EvmSelectorSchema.optional(),
+    stabilityPoolDepositsSelector: EvmSelectorSchema,
     maxSupplyDebtDivergencePct: z.number().finite().nonnegative().optional(),
     branches: z.array(liquityV2MechanismMetricsBranchSchema).min(1),
   })
@@ -1022,7 +1015,7 @@ const liquityV2MechanismMetricsSchema = z
 
 const liquityV2BranchesParamsSchema = evmBranchBalancesParamsSchema
   .extend({
-    shutdownSelector: evmSelectorSchema.optional(),
+    shutdownSelector: EvmSelectorSchema.optional(),
     mechanismMetrics: liquityV2MechanismMetricsSchema.optional(),
   })
   .strict()

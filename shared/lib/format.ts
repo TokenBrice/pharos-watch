@@ -10,10 +10,17 @@ type CompactUsdTier = "trillion" | "billion" | "million" | "thousand" | "unit";
 export interface CompactUsdFormatOptions {
   currencyPrefix?: string;
   decimals: Readonly<Record<CompactUsdTier, number>>;
-  invalidFallback: string;
-  maximumTier?: Exclude<CompactUsdTier, "unit">;
+  invalidFallback: string | ((value: number | null | undefined) => string);
+  compactNegative?: boolean;
+  /** Highest abbreviation tier to allow; null disables abbreviation. */
+  maximumTier?: Exclude<CompactUsdTier, "unit"> | null;
+  /** Smallest abbreviation tier to allow; lower values render as units. */
+  minimumTier?: Exclude<CompactUsdTier, "unit">;
+  positiveSign?: boolean;
   signPosition?: "before-currency" | "after-currency";
   thousandSuffix?: "K" | "k";
+  trimTrailingZeros?: boolean;
+  useGrouping?: boolean;
 }
 
 const COMPACT_USD_TIERS = [
@@ -29,26 +36,43 @@ const DEFAULT_COMPACT_USD_OPTIONS: CompactUsdFormatOptions = {
 };
 
 /** Canonical compact-USD renderer. Product-specific output differences are explicit options. */
-function formatCompactUsdWithOptions(
-  value: number,
+export function formatCompactUsdWithOptions(
+  value: number | null | undefined,
   options: CompactUsdFormatOptions = DEFAULT_COMPACT_USD_OPTIONS,
 ): string {
-  if (!Number.isFinite(value)) return options.invalidFallback;
+  if (value == null || !Number.isFinite(value)) {
+    return typeof options.invalidFallback === "function"
+      ? options.invalidFallback(value)
+      : options.invalidFallback;
+  }
 
-  const sign = value < 0 ? "-" : "";
+  const sign = value < 0 ? "-" : value > 0 && options.positiveSign ? "+" : "";
   const abs = Math.abs(value);
   const maximumTierIndex = options.maximumTier
     ? COMPACT_USD_TIERS.findIndex(({ tier }) => tier === options.maximumTier)
     : 0;
-  const selected = COMPACT_USD_TIERS
-    .slice(maximumTierIndex)
-    .find(({ divisor }) => abs >= divisor);
+  const minimumTierIndex = options.minimumTier
+    ? COMPACT_USD_TIERS.findIndex(({ tier }) => tier === options.minimumTier)
+    : COMPACT_USD_TIERS.length - 1;
+  const selected = options.maximumTier === null || (value < 0 && options.compactNegative === false)
+    ? undefined
+    : COMPACT_USD_TIERS
+        .slice(maximumTierIndex, minimumTierIndex + 1)
+        .find(({ divisor }) => abs >= divisor);
   const tier: CompactUsdTier = selected?.tier ?? "unit";
   const scaled = selected ? abs / selected.divisor : abs;
   const suffix = selected?.tier === "thousand"
     ? (options.thousandSuffix ?? selected.suffix)
     : (selected?.suffix ?? "");
-  const body = `${scaled.toFixed(options.decimals[tier])}${suffix}`;
+  const decimals = options.decimals[tier];
+  const formatted = options.useGrouping || options.trimTrailingZeros
+    ? new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: options.trimTrailingZeros ? 0 : decimals,
+        maximumFractionDigits: decimals,
+        useGrouping: options.useGrouping ?? false,
+      }).format(scaled)
+    : scaled.toFixed(decimals);
+  const body = `${formatted}${suffix}`;
   const currencyPrefix = options.currencyPrefix ?? "$";
 
   return options.signPosition === "after-currency"

@@ -38,38 +38,15 @@ export function resolveDefaultHolderEligibility(
   }
 }
 
-/**
- * Backfill tracked reviewed docs (and an optional reviewedAt) onto an already
- * constructed config map, mutating each matched config object in place.
- *
- * Callers invoke this at module scope immediately after the `export const`
- * registry declaration. The mutation relies on ESM live-binding semantics:
- * because it runs synchronously during module evaluation, any consumer that
- * imports the registry observes the post-mutation state. Do NOT destructure or
- * snapshot individual config entries before this call has run — a caller that
- * captures an entry pre-mutation (e.g. via top-level eager destructuring) would
- * see it without docs/reviewedAt. Keep these calls at module scope, before any
- * consumer reads the registry.
- */
-export function applyTrackedReviewedDocs(
-  configs: Record<string, RedemptionBackstopConfig>,
-  stablecoinIds: readonly string[],
+export function withTrackedReviewedDocs(
+  config: RedemptionBackstopConfig,
+  stablecoinId: string,
   reviewedAt?: string,
-): void {
-  for (const stablecoinId of stablecoinIds) {
-    const config = configs[stablecoinId];
-    if (!config) {
-      throw new Error(
-        `Missing redemption backstop config for stablecoin id "${stablecoinId}" while applying tracked reviewed docs`,
-      );
-    }
-    if (reviewedAt) {
-      config.reviewedAt ??= reviewedAt;
-    }
-    if (!config.docs || config.docs.length === 0) {
-      config.docs = trackedReviewedDocs(stablecoinId);
-    }
-  }
+): RedemptionBackstopConfig {
+  const finished = cloneRedemptionBackstopConfig(config);
+  if (reviewedAt && !finished.reviewedAt) finished.reviewedAt = reviewedAt;
+  if (!finished.docs || finished.docs.length === 0) finished.docs = trackedReviewedDocs(stablecoinId);
+  return finished;
 }
 
 /**

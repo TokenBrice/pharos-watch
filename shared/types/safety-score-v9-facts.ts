@@ -11,7 +11,13 @@ import {
   V9WrapperLocalFactsSchema,
   type V9ApplicableWrapperLocalFacts,
 } from "./safety-score-v9-wrapper";
-import { ExitRouteObservationHistorySchema } from "./exit-route";
+import {
+  ExitRouteConfidenceSchema,
+  ExitRouteEvidenceKindSchema,
+  ExitRouteFamilySchema,
+  ExitRouteObservationHistorySchema,
+} from "./exit-route";
+import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
 import {
   V9EvidenceResponsibilitySchema,
   V9FactStatusV2Schema,
@@ -531,33 +537,16 @@ const V9ExitRouteFactV2Schema = z
     routeId: CanonicalTextSchema,
     lane: V9RouteLaneSchema,
     sourceGenerationId: CanonicalTextSchema,
-    routeFamily: z.enum([
-      "dex-amm",
-      "dex-orderbook",
-      "issuer-redemption",
-      "protocol-redemption",
-      "eventual-redemption",
-    ]),
+    routeFamily: ExitRouteFamilySchema,
     holderAccess: V9RouteHolderAccessSchema,
     executionModel: V9RouteExecutionModelSchema,
     executionCertainty: V9RouteExecutionCertaintySchema,
     // Retained schema-v2 facts predate this field. Parse them conservatively;
     // current compilers still materialize the normalized value in their output.
     modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
-    observationConfidence: z.enum(["high", "medium", "low", "unknown"]),
+    observationConfidence: ExitRouteConfidenceSchema,
     observationHistory: ExitRouteObservationHistorySchema.nullable().optional(),
-    evidenceKind: z.enum([
-      "measured-executable-depth",
-      "reserve-based-amm-simulation",
-      "direct-orderbook-depth",
-      "generic-tvl-proxy",
-      "synthetic-or-fallback",
-      "unobserved",
-      "documented-terms",
-      "live-reserve-state",
-      "onchain-contract-state",
-      "manual-review",
-    ]),
+    evidenceKind: ExitRouteEvidenceKindSchema,
     coverageClass: V9RouteCoverageClassSchema,
     /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
     feeEvidence: z.literal("undisclosed-reviewed").optional(),
@@ -567,7 +556,7 @@ const V9ExitRouteFactV2Schema = z
      * rather than a measurement. Retained schema-v2 facts predate this field.
      */
     settlementBoundUnproven: z.boolean().optional(),
-    capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]).optional(),
+    capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
     settlementModel: V9RouteSettlementModelSchema,
     settlementSlaSec: z.number().int().nonnegative().nullable(),
     queueDepthUsd: z.number().finite().nonnegative().nullable().optional(),

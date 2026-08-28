@@ -4,10 +4,9 @@ import {
   V9FailureDomainRefSchema,
   compareText,
 } from "./safety-score-v9-fact-primitives";
+import { V9MechanismQualitySchema } from "./safety-score-v9-fact-input-primitives";
 
-const V9_MECHANISM_QUALITY_LEVELS = ["strong", "adequate", "limited", "weak", "failed"] as const;
-const V9MechanismQualityLevelSchema = z.enum(V9_MECHANISM_QUALITY_LEVELS);
-export type V9MechanismQualityLevel = z.infer<typeof V9MechanismQualityLevelSchema>;
+export type V9MechanismQualityLevel = z.infer<typeof V9MechanismQualitySchema>;
 
 const CanonicalFailureDomainsSchema = z
   .array(V9FailureDomainRefSchema)
@@ -22,7 +21,7 @@ const CanonicalFailureDomainsSchema = z
 const V9MechanismFactV1Schema = z
   .object({
     status: V9FactStatusV2Schema,
-    quality: V9MechanismQualityLevelSchema.nullable(),
+    quality: V9MechanismQualitySchema.nullable(),
     failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict()

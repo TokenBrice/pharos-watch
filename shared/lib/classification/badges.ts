@@ -9,6 +9,7 @@ import type {
   YieldType,
 } from "../../types";
 import type { BadgeStyle, PegChartColor, PegMetadata } from "./common";
+import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 import { mapPegMetadata, PEG_METADATA } from "./pegs";
 
 // Combined label+class style maps (for detail page pill badges)
@@ -17,33 +18,16 @@ import { mapPegMetadata, PEG_METADATA } from "./pegs";
 type ProofOfReservesType = NonNullable<StablecoinMeta["proofOfReserves"]>["type"];
 
 /** Governance badge styles for the detail page. */
-export const GOVERNANCE_BADGE_STYLES: Record<GovernanceType, BadgeStyle> = {
-  centralized: {
-    label: "Centralized",
-    cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
-  },
-  "centralized-dependent": {
-    label: "CeFi-Dependent",
-    cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-  },
-  decentralized: {
-    label: "Decentralized",
-    cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-  },
-};
+export const GOVERNANCE_BADGE_STYLES: Record<GovernanceType, BadgeStyle> = projectDescriptors(
+  GOVERNANCE_DESCRIPTORS,
+  (descriptor) => ({ label: descriptor.badgeLabel, cls: descriptor.badgeCls }),
+);
 
 /** Backing badge styles for the detail page. */
-export const BACKING_BADGE_STYLES: Record<BackingType, BadgeStyle> = {
-  "rwa-backed": { label: "RWA-Backed", cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20" },
-  "crypto-backed": {
-    label: "Crypto-Backed",
-    cls: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",
-  },
-  algorithmic: {
-    label: "Algorithmic",
-    cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-  },
-};
+export const BACKING_BADGE_STYLES: Record<BackingType, BadgeStyle> = projectDescriptors(
+  BACKING_DESCRIPTORS,
+  (descriptor) => ({ label: descriptor.badgeLabel, cls: descriptor.badgeCls }),
+);
 
 /** Peg currency badge styles for the detail page. */
 export const PEG_BADGE_STYLES = mapPegMetadata((metadata) => metadata.badge);

@@ -3,13 +3,58 @@
 
 export type ThreatBand = "CALM" | "WATCH" | "ALERT" | "WARNING" | "DANGER";
 
-export const THREAT_BAND_ORDER: Record<ThreatBand, number> = {
-  CALM: 0,
-  WATCH: 1,
-  ALERT: 2,
-  WARNING: 3,
-  DANGER: 4,
-};
+const THREAT_BAND_DESCRIPTORS = {
+  CALM: {
+    order: 0,
+    label: "Calm",
+    cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+    textCls: "text-green-700 dark:text-green-400",
+    hex: "#22c55e",
+  },
+  WATCH: {
+    order: 1,
+    label: "Watch",
+    cls: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
+    textCls: "text-teal-700 dark:text-teal-400",
+    hex: "#14b8a6",
+  },
+  ALERT: {
+    order: 2,
+    label: "Alert",
+    cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+    textCls: "text-yellow-700 dark:text-yellow-400",
+    hex: "#eab308",
+  },
+  WARNING: {
+    order: 3,
+    label: "Warning",
+    cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+    textCls: "text-orange-700 dark:text-orange-400",
+    hex: "#f97316",
+  },
+  DANGER: {
+    order: 4,
+    label: "Danger",
+    cls: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+    textCls: "text-red-700 dark:text-red-400",
+    hex: "#ef4444",
+  },
+} as const satisfies Record<ThreatBand, {
+  order: number;
+  label: string;
+  cls: string;
+  textCls: string;
+  hex: string;
+}>;
+
+function projectThreatBands<Value>(project: (descriptor: (typeof THREAT_BAND_DESCRIPTORS)[ThreatBand]) => Value) {
+  return Object.fromEntries(
+    (Object.entries(THREAT_BAND_DESCRIPTORS) as [ThreatBand, (typeof THREAT_BAND_DESCRIPTORS)[ThreatBand]][])
+      .map(([band, descriptor]) => [band, project(descriptor)]),
+  ) as Record<ThreatBand, Value>;
+}
+
+export const THREAT_BAND_ORDER = projectThreatBands((descriptor) => descriptor.order);
 
 const DEWS_ALERT_BANDS = ["ALERT", "WARNING", "DANGER"] as const satisfies readonly ThreatBand[];
 
@@ -21,13 +66,7 @@ export function isDewsAlertBand(value: string): value is (typeof DEWS_ALERT_BAND
   return isThreatBand(value) && DEWS_ALERT_BANDS.includes(value as (typeof DEWS_ALERT_BANDS)[number]);
 }
 
-export const THREAT_BAND_LABELS: Record<ThreatBand, string> = {
-  CALM: "Calm",
-  WATCH: "Watch",
-  ALERT: "Alert",
-  WARNING: "Warning",
-  DANGER: "Danger",
-};
+export const THREAT_BAND_LABELS = projectThreatBands((descriptor) => descriptor.label);
 
 /**
  * Threat-band styles, one definition per band.
@@ -39,36 +78,12 @@ export const THREAT_BAND_LABELS: Record<ThreatBand, string> = {
  * one entry, both projections. `THREAT_BAND_HEX` below pins the same ladder for
  * canvas/chart consumers and must move with it.
  */
-export const THREAT_BAND_STYLES: Record<ThreatBand, { cls: string; textCls: string }> = {
-  CALM: {
-    cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-    textCls: "text-green-700 dark:text-green-400",
-  },
-  WATCH: {
-    cls: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
-    textCls: "text-teal-700 dark:text-teal-400",
-  },
-  ALERT: {
-    cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
-    textCls: "text-yellow-700 dark:text-yellow-400",
-  },
-  WARNING: {
-    cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-    textCls: "text-orange-700 dark:text-orange-400",
-  },
-  DANGER: {
-    cls: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-    textCls: "text-red-700 dark:text-red-400",
-  },
-};
+export const THREAT_BAND_STYLES = projectThreatBands((descriptor) => ({
+  cls: descriptor.cls,
+  textCls: descriptor.textCls,
+}));
 
-export const THREAT_BAND_HEX: Record<ThreatBand, string> = {
-  CALM: "#22c55e",
-  WATCH: "#14b8a6",
-  ALERT: "#eab308",
-  WARNING: "#f97316",
-  DANGER: "#ef4444",
-};
+export const THREAT_BAND_HEX = projectThreatBands((descriptor) => descriptor.hex);
 
 /**
  * Derive the highest DEWS risk level from an array of threat bands.

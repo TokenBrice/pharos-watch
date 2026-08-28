@@ -17,19 +17,16 @@ import {
   PositiveNumberSchema,
 } from "../../types";
 import type { RedemptionDocSource } from "../../types";
+import { isValidIsoDateOnly } from "../../types/date-primitives";
 import { isRedemptionSettlementFaster } from "./settlement";
 
-const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
 const RatioSchema = z.number().finite().gt(0).lte(1);
 const StaticCapacityConfidenceSchema = RedemptionCapacityConfidenceSchema.exclude(["live-direct", "live-proxy"]);
 const ReviewedAtSchema = z
   .string()
-  .regex(REVIEWED_AT_PATTERN, "Expected YYYY-MM-DD")
-  .refine((value) => {
-    const parsed = new Date(`${value}T00:00:00.000Z`);
-    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-  }, "Expected a valid calendar date")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
+  .refine(isValidIsoDateOnly, "Expected a valid calendar date")
   .refine((value) => value <= currentUtcDate(), "reviewedAt cannot be in the future");
 
 const RedemptionDocSourceSupportsSchema = z.array(RedemptionDocSourceSupportSchema).superRefine((supports, ctx) => {

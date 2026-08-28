@@ -1,7 +1,6 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9AssetFactsBase, V9ExitRouteFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import type { ExitRouteObservationHistory } from "../../types/exit-route";
-import { compareText } from "../../types/safety-score-v9-fact-primitives";
 import type {
   RedemptionAccessModel,
   RedemptionExecutionModel,
@@ -11,6 +10,8 @@ import type {
 import {
   blendExitCapacityComponent,
   composeExitComponentScore,
+  firstPositiveExitBreakpointValue,
+  hasMaterialExitCapacity,
   interpolateExitBreakpointScore,
   resolveExitDelayBandMultiplier,
   resolveExitScoringRequest,
@@ -18,6 +19,7 @@ import {
 } from "../exit-route-scoring";
 import { clampScore } from "../math";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import { compareText, uniqueSorted } from "./primitives";
 
 export type V9ExitAccess = RedemptionAccessModel;
 export type V9ExitSettlement = RedemptionSettlementModel;
@@ -131,36 +133,8 @@ const EMPTY_HORIZONS: Readonly<Record<V9ExitHorizon, V9ExitHorizonTrace>> = {
   queued: { primaryRouteKey: null, score: null },
 };
 
-function firstPositiveBreakpointValue(
-  points: readonly { value: number; score: number }[],
-): number {
-  return points.find((point) => point.value > 0 && point.score > 0)?.value ?? 0;
-}
-
-/**
- * A route becomes economically material at the first positive coverage or
- * absolute-capacity policy band. This scales for both large and small assets
- * without deriving materiality from display rounding.
- */
-function hasMaterialExecutableCapacity(
-  completionRatio: number,
-  valuedExecutableUsd: number,
-  policy: V9ValidatedPolicyEnvelope["policy"]["semantic"]["exit"],
-): boolean {
-  const coverageFloor = firstPositiveBreakpointValue(policy.coverageRatioBreakpoints);
-  const absoluteFloor = firstPositiveBreakpointValue(policy.absoluteCapacityBreakpoints);
-  return (
-    (coverageFloor > 0 && completionRatio >= coverageFloor) ||
-    (absoluteFloor > 0 && valuedExecutableUsd >= absoluteFloor)
-  );
-}
-
 function roundTraceScore(value: number): number {
   return Math.round(value * 100) / 100;
-}
-
-function sortedUnique(values: readonly string[]): string[] {
-  return [...new Set(values)].sort();
 }
 
 /**
@@ -227,7 +201,7 @@ export function resolveV9ExitCapacityAtRequest(
   request: V9ExitStressRequest,
 ): V9ExitCapacityPoint | null {
   if (points.length === 0 || curveIssue(points)) return null;
-  const eligibleCosts = sortedUnique(
+  const eligibleCosts = uniqueSorted(
     points.filter((point) => point.maxCostBps <= request.maxCostBps).map((point) => String(point.maxCostBps)),
   ).map(Number);
   let best: V9ExitCapacityPoint | null = null;
@@ -638,7 +612,13 @@ function evaluateRoute(
     !route.scoreEligible &&
     isCreditableNonAtomicRedemption(route, envelope) &&
     !portfolioReviewed &&
-    !hasMaterialExecutableCapacity(completionRatio, valuedExecutableUsd, policy)
+    !hasMaterialExitCapacity(
+      {
+        executableCapacityUsd: valuedExecutableUsd,
+        requestedNotionalUsd: request.requestedNotionalUsd,
+      },
+      policy,
+    )
   ) {
     return {
       routeKey: route.routeKey,
@@ -703,11 +683,17 @@ function evaluateRoute(
   if (valuedExecutableUsd === 0) {
     score = 0;
     capsApplied.push("zero-executable-capacity");
-  } else if (!hasMaterialExecutableCapacity(completionRatio, valuedExecutableUsd, policy)) {
+  } else if (!hasMaterialExitCapacity(
+    {
+      executableCapacityUsd: valuedExecutableUsd,
+      requestedNotionalUsd: request.requestedNotionalUsd,
+    },
+    policy,
+  )) {
     score = 0;
     capsApplied.push("immaterial-executable-capacity");
   } else {
-    const firstPositiveCoverage = firstPositiveBreakpointValue(
+    const firstPositiveCoverage = firstPositiveExitBreakpointValue(
       policy.coverageRatioBreakpoints,
     );
     if (
@@ -1030,7 +1016,7 @@ export function evaluateV9Exit(
       diversificationRouteKey: null,
       diversificationBonus: 0,
       horizons,
-      reasons: sortedUnique([
+      reasons: uniqueSorted([
         ...(defaultReason ? [defaultReason] : []),
         ...diagnosticReasons,
       ]) as V9ReasonCode[],
@@ -1090,7 +1076,7 @@ export function evaluateV9Exit(
     // Excluded optional routes stay visible on their per-route traces; a weak
     // or unreviewed alternative cannot impose a critical reason once a
     // score-eligible route carries the exit claim.
-    reasons: sortedUnique([
+    reasons: uniqueSorted([
       ...(boundedGapFloorApplies && boundedGapReason ? [boundedGapReason] : []),
       ...(!boundedGapFloorApplies && primary.score === 0 ? ["no-viable-exit-path"] : []),
       ...(hasOtherIncludedRoute && !independent ? ["correlated-exit-routes"] : []),

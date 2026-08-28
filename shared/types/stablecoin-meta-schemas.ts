@@ -82,6 +82,7 @@ import {
 } from "./core";
 import { validateMintAuthorityProfile } from "./stablecoin-meta-mint-authority-refinements";
 import { HttpUrlSchema } from "./validators";
+import { isValidIsoDateOnly } from "./date-primitives";
 
 const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
 const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
@@ -92,17 +93,7 @@ const BlacklistabilityReviewStatusSchema = z.union([
 ]);
 const PositiveIntegerSchema = z.number().finite().int().positive();
 
-function isValidIsoDate(value: string): boolean {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
-}
-
-const StrictIsoDateSchema = z.string().refine(isValidIsoDate, {
+const StrictIsoDateSchema = z.string().refine(isValidIsoDateOnly, {
   message: "Expected YYYY-MM-DD",
 });
 const ReviewDateSchema = StrictIsoDateSchema;
@@ -129,7 +120,7 @@ export const FuzzyDateSchema = z.string().refine(
     if (/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return true;
     if (/^\d{4}-Q[1-4]$/.test(value)) return true;
     if (/^\d{4}-H[1-2]$/.test(value)) return true;
-    return isValidIsoDate(value);
+    return isValidIsoDateOnly(value);
   },
   {
     message: "Expected YYYY, YYYY-MM, YYYY-MM-DD, YYYY-Q[1-4], or YYYY-H[1-2]",

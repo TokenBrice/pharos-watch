@@ -1,10 +1,9 @@
 import { z } from "zod";
+import { V9MechanismQualitySchema } from "./safety-score-v9-fact-input-primitives";
 import {
   V9MechanismProfileReviewSchema,
   safetyScoreV9MechanismProfileArchetype,
 } from "./safety-score-v9-mechanism-profile";
-
-const MechanismQualitySchema = z.enum(["strong", "adequate", "limited", "weak", "failed"]);
 
 const SafetyScoreV9MechanismArchetypeSchema = z.enum([
   "cdp",
@@ -17,8 +16,8 @@ const SafetyScoreV9MechanismArchetypeSchema = z.enum([
 ]);
 
 const SafetyScoreV9MechanismOverlayComponentSchema = z.union([
-  z.object({ quality: MechanismQualitySchema }).strict(),
-  z.object({ applicability: z.literal("measured"), quality: MechanismQualitySchema }).strict(),
+  z.object({ quality: V9MechanismQualitySchema }).strict(),
+  z.object({ applicability: z.literal("measured"), quality: V9MechanismQualitySchema }).strict(),
   z
     .object({
       applicability: z.literal("not-applicable"),

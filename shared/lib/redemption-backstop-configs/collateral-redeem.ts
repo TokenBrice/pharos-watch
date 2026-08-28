@@ -1,7 +1,6 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineBackstopRegistry, defineBatch, defineRecordEntries, rebindEntriesToRegistry } from "./factory";
+import { defineBatch, defineRecordEntries, finalizeBackstopRegistry } from "./factory";
 import {
-  applyTrackedReviewedDocs,
   collateralRedeemBase,
   documentedBoundSupplyFull,
   documentedVariableFee,
@@ -990,29 +989,25 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
   }),
 ];
 
-export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
-  defineBackstopRegistry(COLLATERAL_REDEEM_REGISTRY_ENTRIES);
-
-applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, [
-  "feusd-felix",
-  "meusd-mezo",
-  "nect-beraborrow",
-  "usdq-quill",
-  "usdaf-asymmetry",
-  "reusd-resupply",
-  "satusd-river",
-]);
-
-applyTrackedReviewedDocs(
-  COLLATERAL_REDEEM_BACKSTOP_CONFIGS,
-  ["ussd-sonic-labs", "usdp-parallel"],
-  REVIEWED_REMEDIATION_AT,
-);
-
-applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, ["hbd-hive"], REVIEWED_HIVE_HBD_AT);
-
-/** Declared after the doc backfills above so the entries carry the finished configs. */
-export const COLLATERAL_REDEEM_BACKSTOP_ENTRIES = rebindEntriesToRegistry(
+const FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   COLLATERAL_REDEEM_REGISTRY_ENTRIES,
-  COLLATERAL_REDEEM_BACKSTOP_CONFIGS,
+  [
+    {
+      stablecoinIds: [
+        "feusd-felix",
+        "meusd-mezo",
+        "nect-beraborrow",
+        "usdq-quill",
+        "usdaf-asymmetry",
+        "reusd-resupply",
+        "satusd-river",
+      ],
+    },
+    { stablecoinIds: ["ussd-sonic-labs", "usdp-parallel"], reviewedAt: REVIEWED_REMEDIATION_AT },
+    { stablecoinIds: ["hbd-hive"], reviewedAt: REVIEWED_HIVE_HBD_AT },
+  ],
 );
+
+export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
+  FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY.configs;
+export const COLLATERAL_REDEEM_BACKSTOP_ENTRIES = FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY.entries;

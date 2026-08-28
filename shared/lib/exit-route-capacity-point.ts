@@ -74,3 +74,43 @@ export function buildExitRouteCapacityPoint(
     ...(executionCostBps != null && executableUsd > 0 ? { executionCostBps } : {}),
   };
 }
+
+export function validateExitRouteCapacityCurve(points: readonly ExitRouteCapacityPoint[]): string[] {
+  const issues: string[] = [];
+  const byCost = new Map<number, ExitRouteCapacityPoint[]>();
+  const byNotional = new Map<number, ExitRouteCapacityPoint[]>();
+
+  for (const point of points) {
+    if (point.executableUsd > point.requestedNotionalUsd + 0.01) {
+      issues.push(`executable-exceeds-request:${point.requestedNotionalUsd}:${point.maxCostBps}`);
+    }
+    const expectedRatio = point.executableUsd / point.requestedNotionalUsd;
+    if (Math.abs(expectedRatio - point.completionRatio) > 0.00001) {
+      issues.push(`completion-ratio-mismatch:${point.requestedNotionalUsd}:${point.maxCostBps}`);
+    }
+    byCost.set(point.maxCostBps, [...(byCost.get(point.maxCostBps) ?? []), point]);
+    byNotional.set(point.requestedNotionalUsd, [...(byNotional.get(point.requestedNotionalUsd) ?? []), point]);
+  }
+
+  for (const [cost, group] of byCost) {
+    const sorted = [...group].sort((left, right) => left.requestedNotionalUsd - right.requestedNotionalUsd);
+    for (let index = 1; index < sorted.length; index++) {
+      const previous = sorted[index - 1]!;
+      const current = sorted[index]!;
+      if (current.executableUsd + 0.01 < previous.executableUsd) issues.push(`notional-executable-decreased:${cost}`);
+      if (current.completionRatio > previous.completionRatio + 0.00001) issues.push(`notional-completion-increased:${cost}`);
+    }
+  }
+
+  for (const [notional, group] of byNotional) {
+    const sorted = [...group].sort((left, right) => left.maxCostBps - right.maxCostBps);
+    for (let index = 1; index < sorted.length; index++) {
+      const previous = sorted[index - 1]!;
+      const current = sorted[index]!;
+      if (current.executableUsd + 0.01 < previous.executableUsd) issues.push(`cost-executable-decreased:${notional}`);
+      if (current.completionRatio + 0.00001 < previous.completionRatio) issues.push(`cost-completion-decreased:${notional}`);
+    }
+  }
+
+  return issues;
+}

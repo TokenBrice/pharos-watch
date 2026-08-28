@@ -1,22 +1,6 @@
 import type { PegCurrency } from "../types/core";
 
-export const TELEGRAM_PRESET_IDS = [
-  "usd-top10",
-  "usd-top25",
-  "usd-top50",
-  "non-usd-top10",
-  "non-usd-top25",
-  "non-usd-top50",
-  "eur-top10",
-  "gold-top5",
-  "mcap-ge-1b",
-  "mcap-ge-100m",
-] as const;
-
-export type TelegramPresetId = (typeof TELEGRAM_PRESET_IDS)[number];
-
-export interface TelegramPresetDefinition {
-  id: TelegramPresetId;
+interface TelegramPresetDefinitionShape {
   label: string;
   description: string;
   category: "peg-leaders" | "market-cap";
@@ -27,7 +11,7 @@ export interface TelegramPresetDefinition {
   minMarketCapUsd?: number;
 }
 
-export const TELEGRAM_PRESET_DEFINITIONS: readonly TelegramPresetDefinition[] = Object.freeze([
+export const TELEGRAM_PRESET_DEFINITIONS = Object.freeze([
   {
     id: "usd-top10",
     label: "USD Top 10",
@@ -116,7 +100,17 @@ export const TELEGRAM_PRESET_DEFINITIONS: readonly TelegramPresetDefinition[] = 
     kind: "market-cap",
     minMarketCapUsd: 100_000_000,
   },
-]);
+] as const satisfies readonly (TelegramPresetDefinitionShape & { id: string })[]);
+
+export type TelegramPresetId = (typeof TELEGRAM_PRESET_DEFINITIONS)[number]["id"];
+
+export type TelegramPresetDefinition = TelegramPresetDefinitionShape & {
+  id: TelegramPresetId;
+};
+
+export const TELEGRAM_PRESET_IDS = TELEGRAM_PRESET_DEFINITIONS.map(
+  ({ id }) => id,
+) as readonly TelegramPresetId[];
 
 export const TELEGRAM_PRESET_LABEL_BY_ID: ReadonlyMap<TelegramPresetId, string> = new Map(
   TELEGRAM_PRESET_DEFINITIONS.map((definition) => [definition.id, definition.label] as const),

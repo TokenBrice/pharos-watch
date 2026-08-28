@@ -1,7 +1,6 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineRecordEntries } from "./factory";
+import { defineRecordEntries, finalizeBackstopRegistry } from "./factory";
 import {
-  applyTrackedReviewedDocs,
   documentedBoundSupplyFull,
   documentedVariableFee,
   undisclosedReviewedFee,
@@ -95,7 +94,7 @@ function erc4626ReserveTelemetryQueueConfig(options: {
   };
 }
 
-export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "alusd-alchemix": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
@@ -1004,7 +1003,10 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
 };
 
-applyTrackedReviewedDocs(QUEUE_REDEEM_BACKSTOP_CONFIGS, ["iusd-infinifi"], REVIEWED_REMEDIATION_AT);
+const FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
+  defineRecordEntries(RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS),
+  [{ stablecoinIds: ["iusd-infinifi"], reviewedAt: REVIEWED_REMEDIATION_AT }],
+);
 
-/** Declared after the doc backfill above so the entries carry the finished configs. */
-export const QUEUE_REDEEM_BACKSTOP_ENTRIES = defineRecordEntries(QUEUE_REDEEM_BACKSTOP_CONFIGS);
+export const QUEUE_REDEEM_BACKSTOP_CONFIGS = FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY.configs;
+export const QUEUE_REDEEM_BACKSTOP_ENTRIES = FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY.entries;

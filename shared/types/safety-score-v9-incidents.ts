@@ -3,6 +3,10 @@ import { canonicalArrayBy } from "./safety-score-v9-fact-primitives";
 import { V9ControlKindSchema } from "./safety-score-v9-fact-input-primitives";
 import { V9WrapperRiskAssessmentSchema } from "./safety-score-v9-wrapper";
 import {
+  V9OperationalResilienceIncidentCategorySchema,
+  V9OperationalResilienceIncidentStateSchema,
+} from "./safety-score-v9-operational-resilience-primitives";
+import {
   CanonicalTextSchema,
   FractionSchema,
   StrictIsoDateSchema,
@@ -84,7 +88,7 @@ const V9ControlIncidentSchema = z
           (kinds) => kinds.length > 0,
           "Control incidents require an owning control kind",
         ),
-        incidentState: z.enum(["active", "resolved"]),
+        incidentState: V9OperationalResilienceIncidentStateSchema,
       })
       .strict(),
   })
@@ -111,7 +115,7 @@ const V9OperationalIncidentSchema = z
     kind: z.literal("material-operational-outage"),
     posture: z
       .object({
-        category: z.enum(["redemption", "reserve", "custody", "control", "assurance"]),
+        category: V9OperationalResilienceIncidentCategorySchema,
         blocker: z.literal("active-material-incident"),
       })
       .strict(),

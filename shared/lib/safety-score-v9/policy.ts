@@ -13,7 +13,7 @@ import {
 } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { deepFreeze } from "./primitives";
+import { compareText, deepFreeze, uniqueSorted } from "./primitives";
 import {
   V9_SCORE_BEARING_GATES_POLICY_V923,
   parseV9ScoreBearingGatesPolicy,
@@ -23,14 +23,6 @@ import {
 const V9_POLICY_DIGEST_DOMAIN = "safety-score-v9.methodology-policy.v1";
 
 const validatedPolicyEnvelopes = new WeakSet<object>();
-
-function compareCodeUnits(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function sortedUnique<T extends string>(values: readonly T[]): T[] {
-  return [...new Set(values)].sort(compareCodeUnits);
-}
 
 function isUnknownRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -51,8 +43,8 @@ function policyWithRegistryMatureChains(rawPolicy: unknown): unknown {
     ) {
       throw new Error("Safety Score v9 matureChains must be an array of reviewed chain slugs");
     }
-    const authored = sortedUnique(authoredMatureChains);
-    const reviewed = sortedUnique(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS);
+    const authored = uniqueSorted(authoredMatureChains);
+    const reviewed = uniqueSorted(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS);
     if (authored.length !== reviewed.length || authored.some((value, index) => value !== reviewed[index])) {
       throw new Error(
         "Safety Score v9 matureChains must derive from chain-maturity-reviews-v1.ts",
@@ -82,33 +74,33 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
         assetPremiums: [...policy.semantic.formula.assetPremiums]
           .map((premium) => ({
             ...premium,
-            requiredOperationalComponents: sortedUnique(
+            requiredOperationalComponents: uniqueSorted(
               premium.requiredOperationalComponents,
             ),
           }))
           .sort(
             (left, right) =>
-              compareCodeUnits(left.assetId, right.assetId) ||
-              compareCodeUnits(left.kind, right.kind),
+              compareText(left.assetId, right.assetId) ||
+              compareText(left.kind, right.kind),
           ),
       },
       materiality: {
         ...policy.semantic.materiality,
-        matureChains: sortedUnique(policy.semantic.materiality.matureChains),
-        matureVenues: sortedUnique(policy.semantic.materiality.matureVenues),
+        matureChains: uniqueSorted(policy.semantic.materiality.matureChains),
+        matureVenues: uniqueSorted(policy.semantic.materiality.matureVenues),
       },
       backing: {
         ...policy.semantic.backing,
         reserve: {
           ...policy.semantic.backing.reserve,
-          maturityNotApplicableClasses: sortedUnique(policy.semantic.backing.reserve.maturityNotApplicableClasses),
+          maturityNotApplicableClasses: uniqueSorted(policy.semantic.backing.reserve.maturityNotApplicableClasses),
         },
         archetypes: Object.fromEntries(
           Object.entries(policy.semantic.backing.archetypes).map(([archetype, rubric]) => [
             archetype,
             {
               ...rubric,
-              serialComponentKeys: sortedUnique(rubric.serialComponentKeys),
+              serialComponentKeys: uniqueSorted(rubric.serialComponentKeys),
             },
           ]),
         ) as V9MethodologySemanticPayload["semantic"]["backing"]["archetypes"],
@@ -116,32 +108,32 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
       evidence: {
         ...policy.semantic.evidence,
         dispositions: [...policy.semantic.evidence.dispositions].sort((left, right) =>
-          compareCodeUnits(left.factClass, right.factClass),
+          compareText(left.factClass, right.factClass),
         ),
       },
       exit: {
         ...policy.semantic.exit,
         scoreableEvidenceKinds: {
-          dex: sortedUnique(policy.semantic.exit.scoreableEvidenceKinds.dex),
-          redemption: sortedUnique(policy.semantic.exit.scoreableEvidenceKinds.redemption),
+          dex: uniqueSorted(policy.semantic.exit.scoreableEvidenceKinds.dex),
+          redemption: uniqueSorted(policy.semantic.exit.scoreableEvidenceKinds.redemption),
         },
-        strongEvidenceKinds: sortedUnique(policy.semantic.exit.strongEvidenceKinds),
+        strongEvidenceKinds: uniqueSorted(policy.semantic.exit.strongEvidenceKinds),
       },
       accessPostureVocabulary: {
-        transfer: sortedUnique(policy.semantic.accessPostureVocabulary.transfer),
-        freezeExposure: sortedUnique(policy.semantic.accessPostureVocabulary.freezeExposure),
-        primaryExit: sortedUnique(policy.semantic.accessPostureVocabulary.primaryExit),
-        governance: sortedUnique(policy.semantic.accessPostureVocabulary.governance),
+        transfer: uniqueSorted(policy.semantic.accessPostureVocabulary.transfer),
+        freezeExposure: uniqueSorted(policy.semantic.accessPostureVocabulary.freezeExposure),
+        primaryExit: uniqueSorted(policy.semantic.accessPostureVocabulary.primaryExit),
+        governance: uniqueSorted(policy.semantic.accessPostureVocabulary.governance),
       },
     },
     reasonRegistry: [...policy.reasonRegistry]
       .map((entry) => ({
         ...entry,
-        archetypes: sortedUnique(entry.archetypes),
-        pathKinds: sortedUnique(entry.pathKinds),
-        permittedTreatments: sortedUnique(entry.permittedTreatments),
+        archetypes: uniqueSorted(entry.archetypes),
+        pathKinds: uniqueSorted(entry.pathKinds),
+        permittedTreatments: uniqueSorted(entry.permittedTreatments),
       }))
-      .sort((left, right) => compareCodeUnits(left.code, right.code)),
+      .sort((left, right) => compareText(left.code, right.code)),
   } satisfies V9MethodologySemanticPayload;
 }
 
@@ -154,16 +146,16 @@ function computeV9PolicySemanticDigest(
     ...gateSemantics,
     danger: {
       ...scoreBearingGates.danger,
-      withholdCentralizedMintSeverities: sortedUnique(
+      withholdCentralizedMintSeverities: uniqueSorted(
         scoreBearingGates.danger.withholdCentralizedMintSeverities,
       ),
-      fGateCentralizedMintSeverities: sortedUnique(
+      fGateCentralizedMintSeverities: uniqueSorted(
         scoreBearingGates.danger.fGateCentralizedMintSeverities,
       ),
-      preExitCentralizedMintSeverities: sortedUnique(
+      preExitCentralizedMintSeverities: uniqueSorted(
         scoreBearingGates.danger.preExitCentralizedMintSeverities,
       ),
-      dangerOnlyGrades: sortedUnique(scoreBearingGates.danger.dangerOnlyGrades),
+      dangerOnlyGrades: uniqueSorted(scoreBearingGates.danger.dangerOnlyGrades),
     },
   };
   return sha256Hex(
@@ -221,7 +213,7 @@ export function assertV9ReasonCodesRegistered(
 ): asserts emittedCodes is readonly V9ReasonCode[] {
   assertV9ValidatedPolicyEnvelope(envelope);
   const registered = new Set(envelope.policy.reasonRegistry.map((entry) => entry.code));
-  const unknown = sortedUnique(emittedCodes).filter(
+  const unknown = uniqueSorted(emittedCodes).filter(
     (code) => !V9ReasonCodeSchema.safeParse(code).success || !registered.has(code as V9ReasonCode),
   );
   if (unknown.length > 0) throw new Error(`Unregistered Safety Score v9 reason codes: ${unknown.join(", ")}`);
@@ -282,7 +274,7 @@ export function assertV9UnresolvedFactsMatchPolicy(
     .filter((fact) => fact.critical !== resolveV9ReasonPolicy(envelope, fact.code).critical)
     .map((fact) => fact.code)
     .filter((code, index, codes) => codes.indexOf(code) === index)
-    .sort(compareCodeUnits);
+    .sort(compareText);
   if (mismatches.length > 0) {
     throw new Error(`Safety Score v9 unresolved facts contradict policy treatment: ${mismatches.join(", ")}`);
   }

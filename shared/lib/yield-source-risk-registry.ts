@@ -24,76 +24,6 @@ const MORPHO_VENUE_SCORES: YieldVenueRiskScores = {
   operational: 2,
 };
 
-export const YIELD_RISK_CONFIG_PROTOCOLS = [
-  "aave-v3",
-  "compound-v3",
-  "sparklend",
-  "spark-savings",
-  "maple",
-  "yearn",
-  "yearn-finance",
-  "morpho",
-  "morpho-v1",
-  "morpho-blue",
-  "pendle",
-  "beefy",
-  // Phase 2 (yield v8.292) — long-tail venues scored on the Yearn 5-category rubric
-  // (2026-06-15). Slugs match the DeFiLlama `project` carried on auto-discovered
-  // lending rows so the score binds without sourceKey inference.
-  "clearpool",
-  "goldfinch",
-  "3jane-lending",
-  "centrifuge",
-  "flux-finance",
-  "cap",
-  "avantis",
-  "euler-v2",
-  "gearbox",
-  "curve-llamalend",
-  "fluid-lending",
-  "dolomite",
-  "exactly",
-  "fraxlend-v2",
-  "aave-v4",
-  "compound-v2",
-  "felix-cdp",
-  "frankencoin",
-  "kamino-lend",
-  "justlend",
-  "benqi-lending",
-  "aries-markets",
-  "scallop-lend",
-  "echelon-market",
-  "blend-pools-v2",
-  "jupiter-lend",
-  "hyperlend-pooled",
-  "curvance",
-  "sovryn-dex",
-  // FU3 Wave 2 (yield v8.292, reviewed 2026-06-15) — risky unscored allowlist venues
-  "truefi",
-  "radiant-v2",
-  "wildcat-protocol",
-  "gains-network",
-  "venus-core-pool",
-  "moonwell-lending",
-  "silo-v2",
-  "sturdy-v2",
-  "vesper",
-  "convex-finance",
-  "liqwid",
-  "lista-lending",
-  "loopscale",
-  "navi-lending",
-  "zest-v2",
-  "resupply",
-  "termmax",
-  "upshift",
-  "tectonic",
-  "openeden-usdo",
-] as const;
-
-export type YieldRiskConfigProtocol = (typeof YIELD_RISK_CONFIG_PROTOCOLS)[number];
-
 export interface YieldRiskConfigEntry {
   /**
    * Yearn-style 5-category venue-risk sub-scores (each 1..5, higher = riskier).
@@ -990,7 +920,13 @@ export const YIELD_RISK_CONFIG = {
       "24/7 instant TBILL mint/redeem ~$277M TVL; T-bill settlement adds some latency",
     ],
   },
-} satisfies Record<YieldRiskConfigProtocol, YieldRiskConfigEntry>;
+} satisfies Record<string, YieldRiskConfigEntry>;
+
+export type YieldRiskConfigProtocol = keyof typeof YIELD_RISK_CONFIG;
+
+export const YIELD_RISK_CONFIG_PROTOCOLS = Object.keys(
+  YIELD_RISK_CONFIG,
+) as readonly YieldRiskConfigProtocol[];
 
 const YIELD_RISK_CONFIG_PROTOCOL_ALIASES: Record<string, YieldRiskConfigProtocol> = {
   aave: "aave-v3",
