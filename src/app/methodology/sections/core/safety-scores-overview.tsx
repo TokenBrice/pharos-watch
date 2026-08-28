@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   METHODOLOGY_LINK_CLASS,
   MethodologyFacts,
@@ -138,7 +139,7 @@ export function SafetyScoresOverview() {
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
-        <a href="/methodology/scoring-changelog/" className={METHODOLOGY_LINK_CLASS}>Safety Score changelog</a>
+        <Link href="/methodology/scoring-changelog/" className={METHODOLOGY_LINK_CLASS}>Safety Score changelog</Link>
         {" · "}
         <a href="#pegscore-dews-methodology" className={METHODOLOGY_LINK_CLASS}>PegScore + DEWS</a>
         {" · "}

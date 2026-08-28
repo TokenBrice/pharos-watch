@@ -79,6 +79,7 @@ describe("OpsShell", () => {
       "#ops-main-content",
     );
     expect(screen.getByRole("link", { name: "Reliability" }).className).toContain("min-h-11");
+    expect(screen.getByRole("link", { name: "Sign out" }).getAttribute("href")).toBe("/cdn-cgi/access/logout");
     expect(screen.getByRole("button", { name: "Dark mode" }).className).toContain("size-11");
     expect(scrollToMock).toHaveBeenCalledWith(expect.objectContaining({ behavior: "auto" }));
   });
