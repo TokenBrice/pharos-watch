@@ -10,7 +10,6 @@ import {
   fixtureRunDlContractPasses,
   makeFixtureMockD1 as fixtureMockD1,
   fixtureMockFetch,
-  fixtureCIRCUIT_SOURCE,
   installFetch,
   type PeggedAsset,
 } from "./enrich-prices.test-support";

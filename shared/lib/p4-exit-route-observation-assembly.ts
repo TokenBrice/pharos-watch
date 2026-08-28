@@ -32,7 +32,6 @@ import {
   type P4DexRoutePoolInput,
 } from "./p4-exit-route-capability-policy";
 import {
-  CURVE_3POOL_TOKEN_ADDRESSES,
   isCompleteCurveStableSwapDirectionPacket,
   reviewedCurveStableSwapNgPolicyForProfile,
   validateMeasuredExecutionProfile,

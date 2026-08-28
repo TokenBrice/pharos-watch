@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { AtlasFullscreenDialog } from "@/app/alt-pegs/fiat-world-atlas/atlas-fullscreen-dialog";
 
 vi.mock("@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live", () => ({
@@ -15,7 +15,6 @@ vi.mock("@/app/alt-pegs/fiat-world-atlas/world-map", () => ({
 }));
 
 describe("AtlasFullscreenDialog", () => {
-  afterEach(() => cleanup());
 
   it("renders nothing when closed", () => {
     render(<AtlasFullscreenDialog open={false} onOpenChange={() => {}} />);

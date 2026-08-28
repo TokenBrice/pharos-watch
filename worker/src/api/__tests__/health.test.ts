@@ -22,7 +22,8 @@ const STABLECOIN_COVERAGE_QUERY_MATCH =
 function healthD1(tables: MockTableConfig[]) {
   return buildStatusD1Scenario({
     sections: ["sentinel"],
-    overrides: [
+    overrides: [],
+    optionalOverrides: [
       ...tables,
       { match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [], first: null },
       { match: "FROM dex_liquidity", rows: [], first: { age: 60 } },
@@ -42,7 +43,6 @@ function healthD1(tables: MockTableConfig[]) {
       { match: "telegram_pending_alerts", rows: [], first: null },
       { match: "dispatch-telegram-alerts", rows: [], first: null },
     ],
-    strictUnused: false,
   });
 }
 
@@ -151,11 +151,11 @@ describe("handleHealth", () => {
     const db = buildStatusD1Scenario({
       sections: [],
       overrides: [{ match: "SELECT 1", rows: [], first: { value: 1 } }],
-      strictUnused: false,
     });
 
     await expect(db.prepare("SELECT 2").first()).rejects.toThrow("mockD1: no match for SQL: SELECT 2");
     expect(() => db.assertAllMatchesUsed()).toThrow("mockD1: unused table match(es): SELECT 1");
+    await db.prepare("SELECT 1").first();
   });
   const telegramCapacityRow = {
     total: 3,
@@ -617,7 +617,6 @@ describe("handleHealth", () => {
     const db = buildStatusD1Scenario({
       sections: ["sentinel"],
       overrides: [{ match: "SELECT 1", rows: [], throwError: new Error("db down") }],
-      strictUnused: true,
     });
 
     const res = await handleHealth(db);

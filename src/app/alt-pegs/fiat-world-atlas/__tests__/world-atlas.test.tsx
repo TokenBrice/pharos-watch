@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { FiatWorldAtlas } from "@/app/alt-pegs/fiat-world-atlas/world-atlas";
 
 vi.mock("@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live", () => ({
@@ -13,7 +13,6 @@ vi.mock("@/app/alt-pegs/fiat-world-atlas/world-map", () => ({
 }));
 
 describe("FiatWorldAtlas", () => {
-  afterEach(() => cleanup());
 
   it("uses Alt-Peg Atlas as the single visible title", () => {
     render(<FiatWorldAtlas />);

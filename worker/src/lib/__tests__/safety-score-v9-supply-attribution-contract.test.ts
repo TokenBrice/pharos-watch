@@ -10,7 +10,6 @@ import {
   buildReviewedDeploymentRouteInventory,
   deriveReviewedDeploymentUnitPartition,
   expectedCentrifugeDeploymentIdentity,
-  expectedWmDeploymentIdentity,
   reviewedDeploymentAttributionValidationError,
   reviewedDeploymentObservationTimingIssue,
   reviewedDeploymentIdentityValidationError,

@@ -23,7 +23,6 @@ import {
   noBridgeReview as noBridge,
   noMintReview as noMint,
   noOracleReview as noOracle,
-  notApplicable,
   requiredKnown,
   stale,
 } from "./safety-score-v9-fixtures.test-support";

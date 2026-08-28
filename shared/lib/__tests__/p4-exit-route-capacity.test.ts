@@ -18,6 +18,36 @@ import {
 import { makeMeasuredProfile, withMeasuredObservationHistory } from "@shared/test-utils/measured-execution.test-support";
 import { validateMeasuredExecutionProfile } from "../p4-exit-route-measured-profile-validation";
 
+
+/** Structural mutation target for deployment-proof drift tests (fields the mutators write). */
+interface MutableMeasuredProfile {
+  hookAddress: string;
+  poolTokenAddresses: string[];
+  executionEndpoint: { address: string; codeHash: string };
+  tokenIn: { address: string };
+  tokenOut: { address: string };
+  uniswapV4PoolProvenance: {
+    poolManagerAddress: string;
+    poolManagerCodeHash: string;
+    stateViewAddress: string;
+    stateViewCodeHash: string;
+  };
+  registryProvenance: {
+    registryAddress: string;
+    registryCodeHash: string;
+    registeredPoolAddress: string;
+    lpTokenAddress: string;
+    poolTokenAddresses: string[];
+  };
+  stableSwapNgFactoryProvenance: {
+    factoryAddress: string;
+    factoryCodeHash: string;
+    poolIndex: number;
+    registeredPoolAddress: string;
+    poolTokenAddresses: string[];
+  };
+}
+
 describe("P4 DEX exit route observations", () => {
   function aerodromeMeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
     const profile = makeMeasuredProfile(quotedAt);
@@ -2559,17 +2589,17 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it.each([
-    ["hook", (profile: any) => { profile.hookAddress = "0x1111111111111111111111111111111111111111"; }],
-    ["token set", (profile: any) => { profile.poolTokenAddresses = [profile.poolTokenAddresses[0]]; }],
-    ["PoolManager address", (profile: any) => { profile.uniswapV4PoolProvenance.poolManagerAddress = "0x1111111111111111111111111111111111111111"; }],
-    ["PoolManager hash", (profile: any) => { profile.uniswapV4PoolProvenance.poolManagerCodeHash = `0x${"11".repeat(32)}`; }],
-    ["StateView address", (profile: any) => { profile.uniswapV4PoolProvenance.stateViewAddress = "0x1111111111111111111111111111111111111111"; }],
-    ["StateView hash", (profile: any) => { profile.uniswapV4PoolProvenance.stateViewCodeHash = `0x${"11".repeat(32)}`; }],
-    ["Quoter address", (profile: any) => { profile.executionEndpoint.address = "0x1111111111111111111111111111111111111111"; }],
-    ["Quoter hash", (profile: any) => { profile.executionEndpoint.codeHash = `0x${"11".repeat(32)}`; }],
+    ["hook", (profile: MutableMeasuredProfile) => { profile.hookAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["token set", (profile: MutableMeasuredProfile) => { profile.poolTokenAddresses = [profile.poolTokenAddresses[0]]; }],
+    ["PoolManager address", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.poolManagerAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["PoolManager hash", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.poolManagerCodeHash = `0x${"11".repeat(32)}`; }],
+    ["StateView address", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.stateViewAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["StateView hash", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.stateViewCodeHash = `0x${"11".repeat(32)}`; }],
+    ["Quoter address", (profile: MutableMeasuredProfile) => { profile.executionEndpoint.address = "0x1111111111111111111111111111111111111111"; }],
+    ["Quoter hash", (profile: MutableMeasuredProfile) => { profile.executionEndpoint.codeHash = `0x${"11".repeat(32)}`; }],
   ])("rejects Uniswap V4 deployment-proof drift in %s", (_field, mutate) => {
     const profile = structuredClone(uniswapV4MeasuredProfile(1_752_559_940));
-    mutate(profile);
+    mutate(profile as unknown as MutableMeasuredProfile);
     expect(validateMeasuredExecutionProfile(profile, {
       stablecoinId: "usdc-circle",
       observedAt: 1_752_560_000,
@@ -2581,17 +2611,17 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it.each([
-    ["pool address", (profiles: any[]) => profiles.forEach((profile) => { profile.executionEndpoint.address = "0x1111111111111111111111111111111111111111"; })],
-    ["pool hash", (profiles: any[]) => profiles.forEach((profile) => { profile.executionEndpoint.codeHash = `0x${"11".repeat(32)}`; })],
-    ["registry address", (profiles: any[]) => profiles.forEach((profile) => { profile.registryProvenance.registryAddress = "0x1111111111111111111111111111111111111111"; })],
-    ["registry hash", (profiles: any[]) => profiles.forEach((profile) => { profile.registryProvenance.registryCodeHash = `0x${"11".repeat(32)}`; })],
-    ["registered pool", (profiles: any[]) => profiles.forEach((profile) => { profile.registryProvenance.registeredPoolAddress = "0x1111111111111111111111111111111111111111"; })],
-    ["LP token", (profiles: any[]) => profiles.forEach((profile) => { profile.registryProvenance.lpTokenAddress = "0x1111111111111111111111111111111111111111"; })],
-    ["profile tokens", (profiles: any[]) => profiles.forEach((profile) => { profile.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; })],
-    ["registry tokens", (profiles: any[]) => profiles.forEach((profile) => { profile.registryProvenance.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; })],
+    ["pool address", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.executionEndpoint.address = "0x1111111111111111111111111111111111111111"; })],
+    ["pool hash", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.executionEndpoint.codeHash = `0x${"11".repeat(32)}`; })],
+    ["registry address", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.registryAddress = "0x1111111111111111111111111111111111111111"; })],
+    ["registry hash", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.registryCodeHash = `0x${"11".repeat(32)}`; })],
+    ["registered pool", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.registeredPoolAddress = "0x1111111111111111111111111111111111111111"; })],
+    ["LP token", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.lpTokenAddress = "0x1111111111111111111111111111111111111111"; })],
+    ["profile tokens", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; })],
+    ["registry tokens", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; })],
   ])("rejects Curve StableSwap deployment-proof drift in %s", (_field, mutate) => {
     const profiles = curveStableSwapMeasuredProfiles(1_784_877_491, 3);
-    mutate(profiles);
+    mutate(profiles as unknown as MutableMeasuredProfile[]);
     const issues = profiles.flatMap((profile) => validateMeasuredExecutionProfile(profile, {
       stablecoinId: "usdt-tether",
       observedAt: 1_784_877_551,
@@ -2606,19 +2636,19 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it.each([
-    ["pool address", (profile: any) => { profile.executionEndpoint.address = "0x1111111111111111111111111111111111111111"; }],
-    ["pool hash", (profile: any) => { profile.executionEndpoint.codeHash = `0x${"11".repeat(32)}`; }],
-    ["profile tokens", (profile: any) => { profile.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; }],
-    ["input index", (profile: any) => { profile.tokenIn.address = "0x1111111111111111111111111111111111111111"; }],
-    ["output index", (profile: any) => { profile.tokenOut.address = "0x1111111111111111111111111111111111111111"; }],
-    ["factory address", (profile: any) => { profile.stableSwapNgFactoryProvenance.factoryAddress = "0x1111111111111111111111111111111111111111"; }],
-    ["factory hash", (profile: any) => { profile.stableSwapNgFactoryProvenance.factoryCodeHash = `0x${"11".repeat(32)}`; }],
-    ["pool index", (profile: any) => { profile.stableSwapNgFactoryProvenance.poolIndex += 1; }],
-    ["registered pool", (profile: any) => { profile.stableSwapNgFactoryProvenance.registeredPoolAddress = "0x1111111111111111111111111111111111111111"; }],
-    ["factory tokens", (profile: any) => { profile.stableSwapNgFactoryProvenance.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; }],
+    ["pool address", (profile: MutableMeasuredProfile) => { profile.executionEndpoint.address = "0x1111111111111111111111111111111111111111"; }],
+    ["pool hash", (profile: MutableMeasuredProfile) => { profile.executionEndpoint.codeHash = `0x${"11".repeat(32)}`; }],
+    ["profile tokens", (profile: MutableMeasuredProfile) => { profile.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; }],
+    ["input index", (profile: MutableMeasuredProfile) => { profile.tokenIn.address = "0x1111111111111111111111111111111111111111"; }],
+    ["output index", (profile: MutableMeasuredProfile) => { profile.tokenOut.address = "0x1111111111111111111111111111111111111111"; }],
+    ["factory address", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.factoryAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["factory hash", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.factoryCodeHash = `0x${"11".repeat(32)}`; }],
+    ["pool index", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.poolIndex += 1; }],
+    ["registered pool", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.registeredPoolAddress = "0x1111111111111111111111111111111111111111"; }],
+    ["factory tokens", (profile: MutableMeasuredProfile) => { profile.stableSwapNgFactoryProvenance.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; }],
   ])("rejects Curve StableSwap-NG deployment-proof drift in %s", (_field, mutate) => {
     const profile = structuredClone(curveStableSwapNgMeasuredProfile(1_784_879_199, 3));
-    mutate(profile);
+    mutate(profile as unknown as MutableMeasuredProfile);
     expect(validateMeasuredExecutionProfile(profile, {
       stablecoinId: "usdg-paxos",
       observedAt: 1_784_879_259,

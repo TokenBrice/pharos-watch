@@ -1,11 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { PsiBeamDimmers } from "./psi-beam-dimmers";
 import type { PsiBeamDimmerLane } from "./view-model";
-
-afterEach(() => cleanup());
 
 describe("PsiBeamDimmers", () => {
   it("renders current component pressure lanes with the causality caveat", () => {

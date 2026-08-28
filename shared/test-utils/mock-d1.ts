@@ -18,6 +18,8 @@ export interface MockTableConfig {
   delayMs?: number;
   /** Optional error to throw when this statement executes. */
   throwError?: unknown;
+  /** Exclude a shared fallback fixture from unused-match assertions. */
+  allowUnused?: boolean;
 }
 
 export interface MockPreparedStatement extends D1PreparedStatement {
@@ -231,7 +233,7 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
     dump: async () => new ArrayBuffer(0),
     getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
     assertAllMatchesUsed: () => {
-      const unused = tables.filter((table) => (matchHits.get(table) ?? 0) === 0);
+      const unused = tables.filter((table) => !table.allowUnused && (matchHits.get(table) ?? 0) === 0);
       if (unused.length > 0) {
         throw new Error(`mockD1: unused table match(es): ${unused.map((table) => table.match).join(", ")}`);
       }

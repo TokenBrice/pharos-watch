@@ -30,7 +30,7 @@ const CURVE_3POOL_ADDRESS = CURVE_STABLESWAP_DEPLOYMENT.poolAddress;
 const CURVE_MAIN_REGISTRY_ADDRESS = CURVE_STABLESWAP_DEPLOYMENT.registryAddress;
 const CURVE_MAIN_REGISTRY_CODE_HASH = CURVE_STABLESWAP_DEPLOYMENT.registryCodeHash;
 const CURVE_3POOL_LP_TOKEN = CURVE_STABLESWAP_DEPLOYMENT.lpTokenAddress;
-export const CURVE_3POOL_TOKEN_ADDRESSES = CURVE_STABLESWAP_DEPLOYMENT.poolTokens.map((token) => token.address);
+const CURVE_3POOL_TOKEN_ADDRESSES = CURVE_STABLESWAP_DEPLOYMENT.poolTokens.map((token) => token.address);
 
 interface CurveStableSwapNgReviewedPolicy {
   chain: "ethereum";

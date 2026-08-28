@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ChainSummary } from "@shared/types/chains";
 import { ZERO_RATIO } from "@shared/types/ratio";
 import { buildChainHarborEntries, buildChainHarborModel, buildChainHarborModelFromEntries } from "./harbor-map";
@@ -10,8 +10,6 @@ import { NauticalChart } from "./nautical-chart";
 vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => createElement("img", { ...props, alt: props.alt ?? "" }),
 }));
-
-afterEach(() => cleanup());
 
 function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
   return {

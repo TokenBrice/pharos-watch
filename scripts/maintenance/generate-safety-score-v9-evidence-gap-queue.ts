@@ -3,7 +3,6 @@ import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-ga
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { V9EvidenceGapQueueV2Schema, type V9EvidenceGapQueueV2 } from "@shared/types/safety-score-v9-evidence-queue";
 import {
-  assertCliUsage,
   parseStrictCliArgs,
   requireCliString,
   runDirectCli,

@@ -17,8 +17,7 @@ import {
 function statusLoadersD1(overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = []) {
   return buildStatusD1Scenario({
     sections: ["sentinel", "live", "publication", "derived", "reserves"],
-    overrides,
-    strictUnused: false,
+    optionalOverrides: overrides,
     sectionOverrides: {
       reserves: [{ match: "FROM reserve_sync_state", rows: [] }],
     },

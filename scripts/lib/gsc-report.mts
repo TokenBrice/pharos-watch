@@ -316,11 +316,13 @@ function collectFromFile(filePath: string, collected: GscCollectedInputs, option
     const relativePath = options.relativePath ?? path.basename(filePath);
     const containerPath = options.containerPath ?? filePath;
     const containerName = options.containerName ?? cleanPathLabel(filePath);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
     addCsvEntry(collected, inputPath, containerPath, containerName, relativePath, readFileSync(filePath), sourceLabel);
     return;
   }
 
   if (ext === ZIP_EXT) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
     const zipBuffer = readFileSync(filePath);
     const zipPathLabel = sourceLabel;
     const zipContainerName = cleanPathLabel(filePath);
@@ -355,6 +357,7 @@ function cleanStandaloneCsvIssueLabel(value: unknown): string {
 }
 
 function walkDirectory(directoryPath: string, collected: GscCollectedInputs, inputPath: string, rootDirectory: string): void {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
   const entries = readdirSync(directoryPath, { withFileTypes: true }).sort((left, right) =>
     compareText(left.name, right.name),
   );
@@ -377,6 +380,7 @@ function walkDirectory(directoryPath: string, collected: GscCollectedInputs, inp
         isStandaloneCsv ? absolutePath : rootDirectory,
         isStandaloneCsv ? cleanStandaloneCsvIssueLabel(absolutePath) : cleanPathLabel(rootDirectory),
         isStandaloneCsv ? path.basename(absolutePath) : relativePath,
+        // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
         readFileSync(absolutePath),
         displayPath(absolutePath),
       );
@@ -394,11 +398,13 @@ export function collectInputEntries(inputPaths: readonly string[]): GscCollected
 
   for (const inputPath of resolvedInputs) {
     collected.inputs.push(displayPath(inputPath));
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
     if (!existsSync(inputPath)) {
       collected.notes.push(`${displayPath(inputPath)}: input path does not exist; skipped.`);
       continue;
     }
 
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
     const stats = statSync(inputPath);
     if (stats.isDirectory()) {
       walkDirectory(inputPath, collected, inputPath, inputPath);

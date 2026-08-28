@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { CoinCard } from "./CoinCard";
 import type { FollowedPreset, SubscribedCoin, TelegramMiniAppState } from "../types";
 
@@ -44,8 +44,6 @@ function renderCard(overrides: { coin: SubscribedCoin; globalAlerts?: GlobalAler
     />,
   );
 }
-
-afterEach(() => cleanup());
 
 describe("CoinCard source chip (C74)", () => {
   it("renders a Per-coin chip when a per-coin flag is enabled", () => {

@@ -18,12 +18,10 @@ import {
 
 function fixtureMockD1(
   overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = [],
-  options: { strictUnused?: boolean } = {},
 ) {
   return buildStatusD1Scenario({
     sections: ["sentinel", "publication", "derived", "reserves", "statusState", "cronState", "telegram"],
-    overrides,
-    strictUnused: options.strictUnused ?? false,
+    optionalOverrides: overrides,
     sectionOverrides: {
       sentinel: [{ match: "SELECT 1", rows: [], first: { "1": 1 } }],
       derived: [

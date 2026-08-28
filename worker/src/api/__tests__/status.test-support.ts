@@ -208,8 +208,8 @@ type StatusD1Section =
 type StatusD1ScenarioOptions = {
   sections?: StatusD1Section[];
   overrides?: MockTableConfig[];
+  optionalOverrides?: MockTableConfig[];
   sectionOverrides?: Partial<Record<StatusD1Section, MockTableConfig[]>>;
-  strictUnused?: boolean;
 };
 
 const pendingStrictD1Assertions = new Set<MockD1Database>();
@@ -263,8 +263,8 @@ function sameQuery(left: MockTableConfig, right: MockTableConfig) {
 function buildStatusD1Scenario({
   sections = ["sentinel", "publication", "derived", "reserves", "statusState", "cronState"],
   overrides = [],
+  optionalOverrides = [],
   sectionOverrides = {},
-  strictUnused = true,
 }: StatusD1ScenarioOptions = {}): MockD1Database {
   const now = Math.floor(Date.now() / 1000);
   const sectionDefaults = sections.flatMap((section) =>
@@ -272,16 +272,17 @@ function buildStatusD1Scenario({
   );
   const defaults = sectionDefaults.filter(
     (entry, index) => !sectionDefaults.slice(0, index).some((earlier) => sameQuery(entry, earlier)),
-  );
+  ).map((entry) => ({ ...entry, allowUnused: true }));
   const uniqueOverrides = overrides.filter(
     (entry, index) => !overrides.slice(0, index).some((earlier) => sameQuery(entry, earlier)),
   );
   const tables = [
     ...uniqueOverrides,
+    ...optionalOverrides.map((entry) => ({ ...entry, allowUnused: true })),
     ...defaults.filter((entry) => !uniqueOverrides.some((override) => sameQuery(entry, override))),
   ];
   const db = fixtureMockD1(tables, {}, sections.includes("publication"));
-  if (strictUnused) pendingStrictD1Assertions.add(db);
+  pendingStrictD1Assertions.add(db);
   return db;
 }
 
@@ -347,8 +348,8 @@ function fixtureMockD1(
   };
   return mockD1(
     [
-      ...(!includeStatusDefaults || hasPublicationFixture ? [] : [publicationFixture]),
-      ...(!includeStatusDefaults || hasDewsPointerFixture ? [] : [dewsPointerFixture]),
+      ...(!includeStatusDefaults || hasPublicationFixture ? [] : [{ ...publicationFixture, allowUnused: true }]),
+      ...(!includeStatusDefaults || hasDewsPointerFixture ? [] : [{ ...dewsPointerFixture, allowUnused: true }]),
       ...tables,
     ],
     options,

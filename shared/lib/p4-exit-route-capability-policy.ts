@@ -13,9 +13,6 @@ import type {
 } from "../types/market";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "../types/exit-route";
 import {
-  canonicalExitRouteAssetKey,
-  canonicalExitRouteChain,
-  canonicalExitRouteScopedKey,
 } from "./exit-route-identity";
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,

@@ -849,6 +849,7 @@ function checkTopic(
   for (const variant of ["csv", "json", "ndjson"] as const) {
     const source = `/datasets/${topic}/latest.${variant}`;
     const rule = rules.get(source);
+    // eslint-disable-next-line security/detect-non-literal-regexp -- topic/variant are compile-time dataset literals
     const expectedDestination = new RegExp(`^/datasets/${topic}/\\d{4}-\\d{2}-\\d{2}\\.${variant}$`);
     if (!rule || rule.status !== "200" || !expectedDestination.test(rule.destination)) {
       return { ok: false, reason: `${source} must be a 200 rewrite to a dated ${variant} artifact` };

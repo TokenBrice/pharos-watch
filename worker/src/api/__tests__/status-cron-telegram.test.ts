@@ -14,8 +14,7 @@ import {
 function fixtureMockD1(overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = []) {
   return buildStatusD1Scenario({
     sections: ["sentinel", "live", "publication", "derived", "reserves", "statusState", "cronState", "telegram"],
-    overrides,
-    strictUnused: false,
+    optionalOverrides: overrides,
     sectionOverrides: {
       derived: [
         { match: "pharos:status-derived:mint-burn-24h", rows: [] },

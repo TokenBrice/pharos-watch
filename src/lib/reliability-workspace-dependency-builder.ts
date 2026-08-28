@@ -1,7 +1,6 @@
 import { isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import type {
   ReliabilityDependenciesModel,
-  ReliabilityDependencyRoot,
   ReliabilityWorkspaceInput,
 } from "@/lib/reliability-workspace-model";
 

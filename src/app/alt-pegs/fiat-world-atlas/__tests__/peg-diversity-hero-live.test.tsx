@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
 
 vi.mock("@/hooks/use-stablecoins", () => ({
@@ -39,7 +39,6 @@ vi.mock("@/lib/alt-peg-market", () => ({
 }));
 
 describe("PegDiversityHeroLive", () => {
-  afterEach(() => cleanup());
 
   it("shows the size key in the map frame and expands the cohort strip to five rows", () => {
     const { container } = render(<PegDiversityHeroLive worldMap={<div data-testid="world-map" />} />);

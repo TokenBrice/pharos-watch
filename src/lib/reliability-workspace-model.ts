@@ -6,7 +6,6 @@ import type {
 } from "@shared/types";
 import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
 import { pickInitialMode, type WorkspaceSeverity } from "@/lib/status/workspace-mode";
-import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";
 
 export const RELIABILITY_MODES = [
   { id: "impact", label: "Impact" },

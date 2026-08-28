@@ -1279,7 +1279,6 @@ export const SafetyScoreV9BreakdownsSchema = z
     control: SafetyScoreV9ControlBreakdownSchema,
   })
   .strict();
-type SafetyScoreV9Breakdowns = z.infer<typeof SafetyScoreV9BreakdownsSchema>;
 
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),

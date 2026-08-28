@@ -101,7 +101,10 @@ describe("admin route boundary contract", () => {
     expect(handlers.backfillDepegs).toHaveBeenCalledTimes(callsBefore);
   });
 
-  it("owns malformed-body handling and no-store headers for parsed admin jobs", async () => {
+  // The mocked handler lazily imports the real admin-job module graph on first
+  // invocation; under a loaded full-suite worker pool that import can exceed the
+  // default 5s budget even though the behavior under test is deterministic.
+  it("owns malformed-body handling and no-store headers for parsed admin jobs", { timeout: 30_000 }, async () => {
     const route = findRoute("backfill-mint-burn");
 
     const response = await route.handler(makeContext(route, { trustedAdmin: true, body: "{" }));

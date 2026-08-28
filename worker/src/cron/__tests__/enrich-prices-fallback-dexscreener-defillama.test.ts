@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   staleObservedAtSec,
-  maturePairCreatedAt,
   dlQuote,
   cleanupEnrichMissingPricesTest,
   fixtureRunDexScreenerPass,
@@ -9,7 +8,6 @@ import {
   makeFixtureMockD1 as fixtureMockD1,
   fixtureMockFetch,
   fixtureCIRCUIT_SOURCE,
-  installFetch,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PsiBandCard } from "@/components/home-alt-mini-cards/psi-band-card";
 import type { StabilityIndexResponse } from "@shared/types/stability";

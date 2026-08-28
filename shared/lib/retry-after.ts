@@ -15,7 +15,7 @@ export function parseRetryAfterSeconds(
 
   const numeric = options.allowNumericPrefix
     ? parseInt(trimmed, 10)
-    : /^\d+(?:\.\d+)?$/.test(trimmed)
+    : /^\d+$/.test(trimmed) || /^\d+\.\d+$/.test(trimmed)
       ? Number(trimmed)
       : Number.NaN;
   if (Number.isFinite(numeric) && numeric >= 0) {
