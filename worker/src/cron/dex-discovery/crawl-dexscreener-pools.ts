@@ -1,11 +1,8 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import type { ContractDeployment } from "@shared/types/core";
-import { getGeckoTerminalDiscoveryNetwork } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
-import { CHAIN_META } from "@shared/lib/chains";
-import { CG_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
+import { DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { dsRateLimit, fetchDsTokenPairsWithStatus } from "../../lib/dexscreener";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -49,11 +46,6 @@ const defaultDexScreenerPoolsStageDependencies: DexScreenerPoolsStageDependencie
   fetchDsTokenPairsWithStatus,
 };
 
-interface SelectDexScreenerTargetsOptions {
-  coinTargets: ContractDeployment[];
-  discoveredPoolCount: number;
-}
-
 interface CrawlDexScreenerPoolsStageOptions {
   db: D1Database;
   targets: DexScreenerTarget[];
@@ -84,26 +76,6 @@ export async function finalizeDexScreenerDiscoveryRun(
     runState.successfulRequests > 0,
   );
   runState.outcomeRecorded = true;
-}
-
-export function selectDexScreenerTargets({
-  coinTargets,
-  discoveredPoolCount,
-}: SelectDexScreenerTargetsOptions): DexScreenerTarget[] {
-  const uncoveredChains: DexScreenerTarget[] = [];
-
-  for (const { chain, address } of coinTargets) {
-    const providers = CHAIN_META[chain]?.providers;
-    const hasCg = !!(CG_CHAIN_MAP[chain] ?? providers?.coingecko);
-    const hasGt = getGeckoTerminalDiscoveryNetwork(chain, address) != null;
-    if (!hasCg && !hasGt) {
-      uncoveredChains.push([chain, address]);
-    }
-  }
-
-  return discoveredPoolCount === 0
-    ? coinTargets.map(({ chain, address }) => [chain, address] as const)
-    : uncoveredChains;
 }
 
 export async function crawlDexScreenerPoolsStage({

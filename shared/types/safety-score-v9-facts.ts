@@ -856,7 +856,7 @@ const V9BridgeRouteControlReviewV2Schema = z
   })
   .strict();
 
-export const V9BridgeJoinDiagnosticsV1Schema = z
+const V9BridgeJoinDiagnosticsV1Schema = z
   .object({
     profileRouteCount: z.number().int().nonnegative(),
     canonicalSupplyRowCount: z.number().int().nonnegative(),
