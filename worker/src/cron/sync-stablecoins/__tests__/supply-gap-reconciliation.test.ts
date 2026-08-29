@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../enrich-prices";
+import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 
 const fetchTextWithRetryMock = vi.hoisted(() => vi.fn());
 
@@ -8,7 +9,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 }));
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
+  const actual = await importOriginal<typeof StablecoinRegistry>();
   const ACTIVE_META_BY_ID = new Map(actual.ACTIVE_META_BY_ID);
   const zarm = ACTIVE_META_BY_ID.get("zarm-mento");
   if (!zarm) throw new Error("missing ZARm test metadata");
@@ -260,7 +261,8 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
       supplySource: "onchain-total-supply",
       circulating: { peggedJPY: 103_627.12712522845 },
     });
-    expect((byId.get("jpym-mento")?.circulating as Record<string, number>).peggedCHF).toBeUndefined();
+    const jpymCirculating = byId.get("jpym-mento")?.circulating;
+    expect(jpymCirculating?.peggedCHF).toBeUndefined();
     expect(byId.get("zarm-mento")).toMatchObject({
       supplySource: "onchain-total-supply",
       circulating: { peggedZAR: 8_598.7022994136 },
