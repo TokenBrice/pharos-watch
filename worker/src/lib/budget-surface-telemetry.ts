@@ -3,7 +3,7 @@ import { isRecord } from "@shared/lib/type-guards";
 import type { BudgetOnlySurfaceStatus } from "@shared/types/status";
 import { buildInClause } from "./db";
 import { setCache } from "./db-cache";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "./structured-log";
 import { recordProducerOutcome, type ProducerIdentity } from "./producer-history";
 

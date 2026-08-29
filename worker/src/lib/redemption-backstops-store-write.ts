@@ -3,7 +3,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { batchExecute } from "./db";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
 

@@ -3,7 +3,7 @@ import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { throwIfAborted } from "../../lib/abort";
 import { redactProviderUrls } from "../../lib/safe-error-message";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { getAlchemyAuthHeaders } from "../../lib/chain-registry";
 import { fetchErc20TotalSupply } from "./onchain";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";

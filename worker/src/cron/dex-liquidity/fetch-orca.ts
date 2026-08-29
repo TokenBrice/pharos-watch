@@ -13,7 +13,7 @@ import {
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
 import { isDexApiRecord } from "./direct-api-json";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   describeDexPaginationWriteFailure,
   isDegradingDexPaginationWriteFailure,

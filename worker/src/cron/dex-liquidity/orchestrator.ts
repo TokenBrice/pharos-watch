@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -337,7 +338,7 @@ export async function consumeDexLiquidityScoringStage(
     logWorkerEventArgs("handler", "warn", JSON.stringify({
       scope: "dex-liquidity",
       message: "Failed to mark scoring stage consumed after publication",
-      error: error instanceof Error ? error.message : String(error),
+      error: toErrorMessage(error),
     }));
   }
   return result;

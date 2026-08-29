@@ -2,7 +2,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,

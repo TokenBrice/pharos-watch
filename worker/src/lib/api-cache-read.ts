@@ -6,7 +6,7 @@ import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
 import { errorResponse, jsonResponseWithHeaders, withErrorHandler } from "./api-response";
 import { validatePayloadWithSchema } from "./api-schema";
 import { IsolateLocalState } from "./isolate-local-state";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseJson } from "./json-parse";
 
 const CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES = 256;

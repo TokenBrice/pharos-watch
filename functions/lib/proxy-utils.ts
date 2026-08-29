@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { createJsonErrorResponse } from "@shared/lib/http-response";
 
 /**
@@ -16,13 +17,14 @@ export function jsonError(status: number, message: string, headers?: HeadersInit
 
 /** Normalize a fetch error into a loggable kind/message pair. */
 export function summarizeFetchError(error: unknown): { kind: string; message: string } {
+  const message = toErrorMessage(error);
   if (error instanceof DOMException) {
-    return { kind: error.name, message: error.message };
+    return { kind: error.name, message };
   }
   if (error instanceof Error) {
-    return { kind: error.name, message: error.message };
+    return { kind: error.name, message };
   }
-  return { kind: typeof error, message: String(error) };
+  return { kind: typeof error, message };
 }
 
 export function isHtmlResponse(response: Response): boolean {

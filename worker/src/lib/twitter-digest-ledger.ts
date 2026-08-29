@@ -1,6 +1,6 @@
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "./structured-log";
 
 const TWITTER_DIGEST_MAX_ATTEMPTS = 3;

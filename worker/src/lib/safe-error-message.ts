@@ -1,4 +1,4 @@
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 /**
  * Returns a sanitized error message safe to emit in Workers logs.

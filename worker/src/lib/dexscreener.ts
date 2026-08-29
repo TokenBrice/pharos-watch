@@ -9,7 +9,7 @@ import { DS_CHAIN_MAP } from "@shared/lib/chains";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
 import { USER_AGENT } from "./constants";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { readResponseTextBoundedWithSignal, readResponseTextWithSignal } from "./response-body";
 
 

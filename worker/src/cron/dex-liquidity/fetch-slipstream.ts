@@ -11,7 +11,8 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { buildChainAddressKey, resolveTrackedStablecoinId } from "./token-resolution";
 import { classifyClPoolType, normalizeFeeRateFromBps } from "./direct-source-helpers";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -372,7 +373,7 @@ export function sqrtRatioToSpotPrice(
 }
 
 function normalizeAddress(address: string): string {
-  return address.toLowerCase();
+  return canonicalEvmAddress(address) ?? address.trim().toLowerCase();
 }
 
 async function fetchSugarPools(

@@ -12,7 +12,7 @@ import {
   type MentoPoolExchange,
 } from "@shared/lib/mento-contracts";
 import type { AdapterContext, AdapterResult } from "./types";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { decodeBytes32ArrayWord } from "./abi-decode";
 import {
   buildRedemptionSnapshotMetadata,

@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { formatIsoDate } from "@shared/lib/format";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -432,7 +433,7 @@ export async function generateWeeklyRecap(
     logWorkerEventArgs("handler", "error", JSON.stringify({
       scope: "weekly-recap",
       message: "Failed to resolve active Safety Score source",
-      error: error instanceof Error ? error.message : String(error),
+      error: toErrorMessage(error),
     }));
     safetyContext = {
       status: "unavailable",

@@ -1,7 +1,7 @@
 import type { DdrCoinStructural } from "@shared/lib/depeg-resolver";
 import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { bytesToHex } from "../../lib/hash";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "../../lib/abort";
 import {
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,

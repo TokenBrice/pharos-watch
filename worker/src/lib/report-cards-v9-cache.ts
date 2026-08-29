@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildReportCardsV9DependencyGraph,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
@@ -130,7 +131,7 @@ export async function loadPublishedReportCardsV9Snapshot(
   } catch (error) {
     throw new ReportCardsV9SnapshotUnavailableError(
       `Canonical Safety Score V9 publication is unavailable: ${
-        error instanceof Error ? error.message : String(error)
+        toErrorMessage(error)
       }`,
     );
   }
@@ -152,7 +153,7 @@ export async function loadPublishedReportCardsV9Snapshot(
   } catch (error) {
     throw new ReportCardsV9SnapshotUnavailableError(
       `Canonical Safety Score V9 publication is incompatible: ${
-        error instanceof Error ? error.message : String(error)
+        toErrorMessage(error)
       }`,
     );
   }

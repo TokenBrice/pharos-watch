@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import type { MeasurementCall, MeasurementLog, MeasurementLogQuery } from "./schema";
 
 export interface PinnedBlock {
@@ -53,8 +54,8 @@ export function decodeBoolWord(returnData: string, wordIndex = 0, callName = "ca
 }
 
 export function normalizeAddress(address: string, callName = "address"): string {
-  const normalized = address.toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/.test(normalized) || normalized === `0x${"0".repeat(40)}`) {
+  const normalized = canonicalEvmAddress(address, { allowZero: false });
+  if (!normalized) {
     throw new Error(`${callName}: invalid or zero address ${address}`);
   }
   return normalized;

@@ -1,5 +1,5 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveSnapshotMetadata, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";

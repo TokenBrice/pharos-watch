@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { rethrowIfAborted } from "../../../lib/abort";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
@@ -70,7 +71,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     logWorkerEventArgs("handler", "warn", JSON.stringify({
       scope: "dex-liquidity",
       message: "Uniswap V4 fetch failed (non-fatal)",
-      error: err instanceof Error ? err.message : String(err),
+      error: toErrorMessage(err),
     }));
     failedSources.push("uniswap-v4-subgraph");
   }

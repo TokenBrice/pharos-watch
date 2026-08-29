@@ -10,7 +10,7 @@ import {
   type ExitRouteObservationCoverage,
   type LiquidityPoolSourceFamily,
 } from "@shared/types/market";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
 const TREND_24H_TOLERANCE_SEC = 12 * 3600;

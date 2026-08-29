@@ -3,7 +3,7 @@ import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 
 /** Limit the lifetime of prepared statements carrying serialized price/depth data. */

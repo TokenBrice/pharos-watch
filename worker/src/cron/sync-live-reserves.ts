@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
@@ -222,9 +223,7 @@ function createReserveAdapterRunner(args: {
             args.adapterTimeoutMs,
             args.adapterCtx,
           );
-          const primaryMessage = primaryError instanceof Error
-            ? primaryError.message
-            : String(primaryError);
+          const primaryMessage = toErrorMessage(primaryError);
           const truncated = primaryMessage.length > 200
             ? `${primaryMessage.slice(0, 200)}…`
             : primaryMessage;

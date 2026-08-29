@@ -8,7 +8,7 @@ import {
 } from "@shared/types/status";
 import { getCache, setCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../lib/structured-log";
 import {
   coerceCount,

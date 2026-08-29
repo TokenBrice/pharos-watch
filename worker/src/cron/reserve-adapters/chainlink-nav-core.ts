@@ -2,7 +2,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveRedemptionTelemetry, LiveReservesConfig } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   DECIMALS_SELECTOR,
   LATEST_ROUND_DATA_SELECTOR,

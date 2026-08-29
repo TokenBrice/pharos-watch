@@ -1,7 +1,7 @@
 import { isRecord } from "@shared/lib/type-guards";
 import type { RawStatusComputation } from "../status-evaluation";
 import { getCache, setCacheIfNewer } from "../db-cache";
-import { toErrorMessage } from "../error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   STATUS_SYSTEM_FRESHNESS_SEC,
   type StatusLevel,

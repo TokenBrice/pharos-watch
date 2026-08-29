@@ -4,7 +4,7 @@ import { detectPriceStaleness, fillMissingSupplyHistory } from "./phase-helpers"
 import { recordOutcome } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { reportCronProgress } from "../../lib/cron-progress";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices";
 

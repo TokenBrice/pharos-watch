@@ -8,7 +8,7 @@
  */
 
 import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { readCachedJson } from "../lib/api-cache-read";
 import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";

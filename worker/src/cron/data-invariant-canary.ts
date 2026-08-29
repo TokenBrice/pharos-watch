@@ -5,7 +5,7 @@ import {
   type WorkerCanaryMode,
 } from "../lib/canary-checks";
 import { throwIfAborted } from "../lib/abort";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export interface DataInvariantCanaryOptions {
   mode?: string;

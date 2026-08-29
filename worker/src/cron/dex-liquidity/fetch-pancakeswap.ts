@@ -5,7 +5,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { classifyClPoolType } from "./direct-source-helpers";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   DIRECT_API_REQUEST_TIMEOUT_MS,
   buildDirectApiRequestSignal,

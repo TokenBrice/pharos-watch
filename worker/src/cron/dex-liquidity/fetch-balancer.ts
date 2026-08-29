@@ -6,7 +6,8 @@ import {
   DIRECT_API_DEFAULT_MAX_PAGES,
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { rethrowIfAborted } from "../../lib/abort";
 
@@ -214,7 +215,7 @@ function isBalancerPool(value: unknown): value is BalancerPool {
 }
 
 function normalizedAddress(value: string): string {
-  return value.trim().toLowerCase();
+  return canonicalEvmAddress(value) ?? value.trim().toLowerCase();
 }
 
 function formatGraphqlErrors(errors: unknown): string[] {

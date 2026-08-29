@@ -8,7 +8,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { requireHtmlInput, requireJsonInputFromConfig } from "./input-guards";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export const ADAPTER_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 export const HTML_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";

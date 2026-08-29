@@ -1,8 +1,7 @@
-export function canonicalEvmAddress(value: unknown): `0x${string}` | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  return /^0x[0-9a-f]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-}
+import { canonicalEvmAddress as canonicalSharedEvmAddress } from "@shared/lib/evm-address";
+
+export const canonicalEvmAddress = (value: unknown): `0x${string}` | null =>
+  canonicalSharedEvmAddress(value);
 
 export function canonicalEvmHash(value: unknown): `0x${string}` | null {
   if (typeof value !== "string") return null;

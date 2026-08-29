@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
-import { LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS } from "@shared/lib/live-reserve-adapters";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(TEST_DIR, "../../../../..");
@@ -66,7 +66,7 @@ describe("http-html adapter fixture coverage", () => {
   const fixtureNames = readdirSync(FIXTURES_DIR);
   const htmlFixtureNames = fixtureNames.filter((name) => name.endsWith(".html")).sort();
   const httpHtmlAdapters = LIVE_RESERVE_ADAPTER_KEYS.filter((key) => {
-    const inputKinds = LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[key] as readonly string[];
+    const inputKinds = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].primaryInputKinds as readonly string[];
     return inputKinds.includes("http-html");
   });
 

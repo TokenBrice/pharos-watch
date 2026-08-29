@@ -17,7 +17,7 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildDexDeploymentCensusDetail,
   buildDexPlaceholderScoreDetailsJson,

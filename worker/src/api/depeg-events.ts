@@ -25,7 +25,7 @@ import {
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DepegPendingIncident } from "@shared/types/market";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../lib/structured-log";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";

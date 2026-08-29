@@ -1,4 +1,4 @@
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 
 export type PricingProviderDiagnosticSource =

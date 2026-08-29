@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { getCache, setCache } from "../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE, FRED_EFFR_CSV_URL, FRED_TBILL_CSV_URL } from "../lib/constants";
@@ -176,7 +177,7 @@ function isFreshGbpBenchmark(benchmark: ParsedYieldBenchmarkMeta | null): boolea
 }
 
 function retainedFallbackMonitorErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return toErrorMessage(error);
 }
 
 async function updateGbpRetainedFallbackMonitor(params: {

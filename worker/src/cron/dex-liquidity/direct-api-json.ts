@@ -1,5 +1,5 @@
 import { isRecord } from "@shared/lib/type-guards";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 export type DexApiJsonResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };

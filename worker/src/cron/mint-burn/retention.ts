@@ -2,7 +2,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { deleteCapped } from "../shared/capped-delete";
 
 export const MINT_BURN_EVENT_RETENTION_SEC = 8 * DAY_SECONDS;

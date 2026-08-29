@@ -4,7 +4,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "../lib/abort";
 import {
   buildReserveSyncStateRecord,

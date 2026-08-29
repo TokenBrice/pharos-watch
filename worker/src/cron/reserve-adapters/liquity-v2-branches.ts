@@ -7,7 +7,7 @@ import type {
 } from "@shared/types/live-reserves";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { rethrowIfAborted } from "../../lib/abort";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { AdapterContext, AdapterResult } from "./types";
 import { executeEvmObservationPlan, rawObservation } from "./evm-observation-plan";
 import { ERC4626_ASSET_SELECTOR, ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626";
@@ -253,7 +253,7 @@ function decodeMechanismBranchPrice(
     return { priceRaw, redeemable };
   } catch (error) {
     throw new Error(
-      `invalid protocol-price result for ${branchName}: ${error instanceof Error ? error.message : String(error)}`,
+      `invalid protocol-price result for ${branchName}: ${toErrorMessage(error)}`,
     );
   }
 }

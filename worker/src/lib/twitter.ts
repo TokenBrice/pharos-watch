@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "./structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
@@ -127,7 +128,7 @@ async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): P
   try {
     authHeader = await buildOAuthHeader("POST", url, creds);
   } catch (error) {
-    throw new TwitterPostError(`Twitter request signing failed before send: ${error instanceof Error ? error.message : String(error)}`, "definitive_failure");
+    throw new TwitterPostError(`Twitter request signing failed before send: ${toErrorMessage(error)}`, "definitive_failure");
   }
 
   const requestSignal = AbortSignal.timeout(10_000);
@@ -146,14 +147,14 @@ async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): P
       signal: requestSignal,
     });
   } catch (error) {
-    throw new TwitterPostError(`Twitter tweet request failed with an unknown execution outcome: ${error instanceof Error ? error.message : String(error)}`, "execution_unknown");
+    throw new TwitterPostError(`Twitter tweet request failed with an unknown execution outcome: ${toErrorMessage(error)}`, "execution_unknown");
   }
 
   let body: string;
   try {
     body = await readResponseTextBoundedWithSignal(res, 16_384, requestSignal);
   } catch (error) {
-    throw new TwitterPostError(`Twitter API ${res.status} response could not be read: ${error instanceof Error ? error.message : String(error)}`, "execution_unknown", res.status);
+    throw new TwitterPostError(`Twitter API ${res.status} response could not be read: ${toErrorMessage(error)}`, "execution_unknown", res.status);
   }
 
   if (!res.ok) {
@@ -169,7 +170,7 @@ async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): P
   try {
     decoded = JSON.parse(body);
   } catch (error) {
-    throw new TwitterPostError(`Twitter accepted the request but returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`, "execution_unknown", res.status);
+    throw new TwitterPostError(`Twitter accepted the request but returned invalid JSON: ${toErrorMessage(error)}`, "execution_unknown", res.status);
   }
   const tweetId = (decoded as { data?: { id?: unknown } })?.data?.id;
   if (typeof tweetId !== "string" || tweetId.length === 0) {
@@ -247,7 +248,7 @@ export async function postDigestTweet(
     try {
       mediaId = await uploadTweetImage(imageUrl, creds);
     } catch (error) {
-      mediaError = error instanceof Error ? error.message : String(error);
+      mediaError = toErrorMessage(error);
       logWorkerEventArgs("lib", "warn", `[twitter] Safety map attachment omitted: ${mediaError}`);
     }
   }

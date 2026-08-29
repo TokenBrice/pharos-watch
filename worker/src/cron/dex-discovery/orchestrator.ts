@@ -34,7 +34,7 @@ import {
   buildStaticInaccessibleDeploymentOutcomes,
   upsertDexDeploymentOutcomes,
 } from "./deployment-outcomes";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 export type EffectiveTier = "t1" | "t2" | "t3" | "dormant" | "skip";

@@ -1,5 +1,5 @@
 import { safeJsonParse } from "../lib/api-cache-read";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../lib/structured-log";
 
 export interface AdminAuditPageDescriptor<TRow, TEntry> {

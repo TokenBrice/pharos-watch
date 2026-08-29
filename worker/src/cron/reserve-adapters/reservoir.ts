@@ -18,7 +18,7 @@ import { PAUSED_SELECTOR } from "../../lib/evm-selectors";
 import { wrapperAssetMeta } from "./wrapper-assets";
 import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { rethrowIfAborted } from "../../lib/abort";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 interface ReservoirBalanceItem {
   label: string;

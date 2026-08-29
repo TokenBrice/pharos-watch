@@ -4,7 +4,7 @@ import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-acti
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/redemption-backstop";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,

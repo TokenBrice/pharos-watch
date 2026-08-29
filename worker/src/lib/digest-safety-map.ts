@@ -1,6 +1,6 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { readResponseTextBoundedWithSignal } from "./response-body";
 
 const MANIFEST_URL = `${SITE_ORIGIN}/safety-scores/map.json`;

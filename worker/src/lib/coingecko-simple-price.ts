@@ -7,7 +7,7 @@ import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { throwIfAborted } from "./abort";
 import { CoinGeckoSimplePriceSchema } from "./upstream-schemas";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 const PRIMARY_CG_BATCH_SIZE = 250;
 

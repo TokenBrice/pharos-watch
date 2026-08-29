@@ -20,13 +20,15 @@ import { isV9MaterialShare } from "./backing";
 import { assertV9FactSetCompiledInProcess } from "./compile";
 import {
   buildV9DependencyEvaluationPlan,
+  createV9DependencyResolutionContext,
   distinctV9RootLiabilityIds,
   projectV9RoleDependencyPillarLimits,
-  resolveV9DependencyInputs,
+  resolveV9DependencyInput,
   type V9CommonModeMember,
   type V9DependencyEvaluationPlan,
   type V9DependencyPathPlan,
   type V9ResolvedDependencyInputs,
+  type V9UpstreamResult,
 } from "./dependencies";
 import {
   projectV9ExitEvaluationRoute,
@@ -1088,8 +1090,10 @@ function evaluateV9FactSetRead(
     activeAssetIds: factSet.activeAssetIds,
     assets: factSet.assets,
   });
+  const dependencyResolutionContext = createV9DependencyResolutionContext(dependencyPlan);
   const commonSignals = commonModeSignalsByAsset(dependencyPlan, envelope, assetsById);
   const evaluatedById = new Map<string, V9EvaluatedAsset>();
+  const upstreamResultsById = new Map<string, V9UpstreamResult>();
   // Terminal unavailable-asset roots per evaluated asset, propagated in
   // topological order: an unavailable asset inherits the union of the roots of
   // its own unavailable upstreams, or is its own root when nothing upstream is
@@ -1106,19 +1110,7 @@ function evaluateV9FactSetRead(
   for (const assetId of dependencyPlan.topologicalOrder) {
     const asset = assetsById.get(assetId);
     if (!asset) throw new Error(`Safety Score v9 dependency plan references missing asset ${assetId}`);
-    const unresolved = resolveV9DependencyInputs(
-      dependencyPlan,
-      [...evaluatedById.values()].map((result) => ({
-        assetId: result.assetId,
-        score: projectV9DependencyScore(result.trace),
-        backingScore: projectV9EffectiveBackingPillarScore(result),
-        exitScore: result.scoreInput.pillars.exit.score,
-        accessScore: upstreamExitAccessScore(result.exit),
-        controlScore: result.scoreInput.pillars.control.score,
-        oracleNavScore: upstreamOracleNavScore(result, envelope),
-      })),
-    ).find((candidate) => candidate.assetId === assetId);
-    if (!unresolved) throw new Error(`Safety Score v9 dependency inputs are missing for ${assetId}`);
+    const unresolved = resolveV9DependencyInput(dependencyResolutionContext, assetId, upstreamResultsById);
     const resolved: V9ResolvedDependencyInputs = {
       ...unresolved,
       rolePillarProjections: projectV9RoleDependencyPillarLimits(unresolved, {
@@ -1139,6 +1131,15 @@ function evaluateV9FactSetRead(
       dependencySignals: commonSignals.get(assetId) ?? [],
     });
     evaluatedById.set(assetId, evaluatedAsset);
+    upstreamResultsById.set(assetId, {
+      assetId: evaluatedAsset.assetId,
+      score: projectV9DependencyScore(evaluatedAsset.trace),
+      backingScore: projectV9EffectiveBackingPillarScore(evaluatedAsset),
+      exitScore: evaluatedAsset.scoreInput.pillars.exit.score,
+      accessScore: upstreamExitAccessScore(evaluatedAsset.exit),
+      controlScore: evaluatedAsset.scoreInput.pillars.control.score,
+      oracleNavScore: upstreamOracleNavScore(evaluatedAsset, envelope),
+    });
     unavailabilityRootsById.set(assetId, unavailabilityRoots);
   }
 

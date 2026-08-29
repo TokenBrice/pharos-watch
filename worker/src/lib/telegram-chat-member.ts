@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCache } from "./db-cache";
 import { drainResponseBody } from "./response-body";
 import { postTelegramBotApi } from "./telegram";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 const CHAT_MEMBER_CACHE_TTL_SEC = 5 * 60;
 

@@ -2,7 +2,7 @@ import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import type { MintBurnAffectedHour } from "../../lib/mint-burn-pipeline/types";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { rethrowIfAborted } from "../../lib/abort";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export async function recalcMintBurnAffectedHours(
   db: D1Database,

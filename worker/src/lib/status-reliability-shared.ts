@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type {  StatusCause,
   StatusSectionError,
   StatusStateInfo,

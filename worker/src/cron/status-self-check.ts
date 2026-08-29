@@ -1,6 +1,6 @@
 import type { CronResult } from "../lib/cron-logger";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { API_ORIGIN, OPS_API_ORIGIN, SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { STATUS_PROBE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { cancelResponseBodyQuietly } from "../lib/response-body";

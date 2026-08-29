@@ -1,5 +1,5 @@
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export function reserveInfoWarning(code: string, message: string): LiveReserveWarning {
   return { code, message, severity: "info", effect: "info" };
