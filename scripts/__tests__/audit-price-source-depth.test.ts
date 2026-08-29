@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 import activeStablecoinsFixture from "./fixtures/audit-price-source-depth/active-stablecoins.json";
 import pegSummaryFixture from "./fixtures/audit-price-source-depth/peg-summary.json";
 import stablecoinsFixture from "./fixtures/audit-price-source-depth/stablecoins.json";
@@ -8,10 +11,104 @@ import {
   bucketSourceDepth,
   buildPriceSourceDepthAudit,
   classifySourceFamily,
+  parseArgs,
+  runCli,
   type AuditStablecoinMeta,
 } from "../maintenance/audit-price-source-depth";
 
 describe("audit-price-source-depth", () => {
+  it.each([
+    {
+      argv: ["--prod"],
+      expected: { source: "prod", format: "markdown", reportPath: null, writeAgentsBaseline: false },
+    },
+    {
+      argv: ["--prod", "--markdown"],
+      expected: { source: "prod", format: "markdown" },
+    },
+    {
+      argv: ["--input", "fixture-dir"],
+      expected: { source: "input", inputDir: "fixture-dir", format: "markdown" },
+    },
+    {
+      argv: ["--peg-summary", "peg.json", "--stablecoins", "stablecoins.json"],
+      expected: { source: "input", pegSummaryPath: "peg.json", stablecoinsPath: "stablecoins.json" },
+    },
+    {
+      argv: [
+        "--input", "fixture-dir", "--active-stablecoins", "active.json", "--json", "--report", "report.json",
+        "--write-agents-baseline", "--generated-at", "2026-08-29T00:00:00.000Z",
+      ],
+      expected: {
+        source: "input",
+        inputDir: "fixture-dir",
+        activeStablecoinsPath: "active.json",
+        format: "json",
+        reportPath: "report.json",
+        writeAgentsBaseline: true,
+        generatedAt: "2026-08-29T00:00:00.000Z",
+      },
+    },
+  ])("accepts source/output option combination %#", ({ argv, expected }) => {
+    expect(parseArgs(argv)).toMatchObject(expected);
+  });
+
+  it("keeps source selection validation and strict flags", () => {
+    expect(() => parseArgs([])).toThrow("Choose --prod or --input");
+    expect(() => parseArgs(["--input"])).toThrow("--input requires a directory path");
+    expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
+  });
+
+  it("routes fixture JSON through the shared report runner byte-for-byte", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "price-source-depth-report-"));
+    const fixtureDir = join(process.cwd(), "scripts/__tests__/fixtures/audit-price-source-depth");
+    const generatedAt = "2026-08-29T00:00:00.000Z";
+    const expectedAudit = buildPriceSourceDepthAudit({
+      activeStablecoins: activeStablecoinsFixture as AuditStablecoinMeta[],
+      pegSummary: pegSummaryFixture,
+      stablecoins: stablecoinsFixture,
+      generatedAt,
+      mode: "input",
+    });
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    try {
+      await expect(
+        runCli(["--input", fixtureDir, "--json", "--generated-at", generatedAt], cwd),
+      ).resolves.toBe(0);
+      const output = stdout.mock.calls.map(([value]) => String(value)).join("");
+      expect(output).toBe(`${JSON.stringify(expectedAudit, null, 2)}\n`);
+    } finally {
+      stdout.mockRestore();
+    }
+  });
+
+  it("keeps the baseline flag's default destination and write message", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "price-source-depth-baseline-"));
+    const fixtureDir = join(process.cwd(), "scripts/__tests__/fixtures/audit-price-source-depth");
+    const generatedAt = "2026-08-29T00:00:00.000Z";
+    const expectedAudit = buildPriceSourceDepthAudit({
+      activeStablecoins: activeStablecoinsFixture as AuditStablecoinMeta[],
+      pegSummary: pegSummaryFixture,
+      stablecoins: stablecoinsFixture,
+      generatedAt,
+      mode: "input",
+    });
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    let writes: string[] = [];
+    try {
+      await expect(
+        runCli(["--input", fixtureDir, "--write-agents-baseline", "--generated-at", generatedAt], cwd),
+      ).resolves.toBe(0);
+      writes = stdout.mock.calls.map(([value]) => String(value));
+    } finally {
+      stdout.mockRestore();
+    }
+
+    const target = join(cwd, "agents/source-depth-baseline-2026-08-29.json");
+    expect(readFileSync(target, "utf8")).toBe(`${JSON.stringify(expectedAudit, null, 2)}\n`);
+    expect(writes).toEqual([`Wrote price source depth audit to ${target}\n`]);
+  });
+
   it("uses canonical circulating normalization for mixed peg buckets", () => {
     const row = {
       circulating: {

@@ -1,8 +1,13 @@
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildDexPricingSourceGapAudit,
   extractConfiguredCurveStablecoinIds,
+  parseCliArgs,
   renderDexPricingSourceGapMarkdown,
+  runCli,
   type CurvePoolCandidate,
   type DexGapDexPriceRow,
   type DexGapStablecoinRow,
@@ -37,6 +42,64 @@ function stablecoinRow(overrides: Partial<DexGapStablecoinRow>): DexGapStablecoi
 }
 
 describe("audit-dex-pricing-source-gaps", () => {
+  it.each([
+    {
+      argv: ["--price-depth", "price-depth.json", "--dex-prices", "dex-prices.json"],
+      expected: { priceDepthPath: "price-depth.json", dexPricesPath: "dex-prices.json", format: "markdown" },
+    },
+    {
+      argv: [
+        "--stablecoins", "stablecoins.json", "--dex-prices", "dex-prices.json", "--dex-liquidity", "liquidity.json",
+        "--curve-candidates", "curve.json", "--json", "--markdown", "--report", "reports/gaps.md",
+        "--generated-at", "2026-08-29T00:00:00.000Z",
+      ],
+      expected: {
+        stablecoinsPath: "stablecoins.json",
+        dexPricesPath: "dex-prices.json",
+        dexLiquidityPath: "liquidity.json",
+        curveCandidatesPath: "curve.json",
+        format: "markdown",
+        reportPath: "reports/gaps.md",
+        generatedAt: "2026-08-29T00:00:00.000Z",
+      },
+    },
+    {
+      argv: ["--future-flag", "legacy-value", "--json"],
+      expected: { format: "json", stablecoinsPath: null, dexPricesPath: null },
+    },
+  ])("accepts legacy option combination %#", ({ argv, expected }) => {
+    expect(parseCliArgs(argv)).toMatchObject(expected);
+  });
+
+  it("keeps unknown-flag tolerance and missing-value behavior", () => {
+    expect(parseCliArgs(["--dex-prices"])).toMatchObject({ dexPricesPath: null });
+    expect(parseCliArgs(["--report"])).toMatchObject({ reportPath: null });
+    expect(parseCliArgs(["--generated-at"])).toMatchObject({ generatedAt: null });
+  });
+
+  it("routes JSON output through the shared runner byte-for-byte", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dex-pricing-source-gaps-"));
+    const stablecoins = [stablecoinRow({})];
+    const dexPrices = [dexPriceRow({})];
+    writeFileSync(join(cwd, "stablecoins.json"), JSON.stringify(stablecoins), "utf8");
+    writeFileSync(join(cwd, "dex-prices.json"), JSON.stringify(dexPrices), "utf8");
+    const generatedAt = "2026-08-29T00:00:00.000Z";
+    const expectedAudit = buildDexPricingSourceGapAudit({
+      stablecoins,
+      dexPrices,
+      dexLiquidity: [],
+      curveCandidates: [],
+      generatedAt,
+    });
+    const outputPath = join(cwd, "reports/gaps.json");
+
+    await expect(
+      runCli(["--stablecoins", "stablecoins.json", "--dex-prices", "dex-prices.json", "--json", "--generated-at", generatedAt, "--report", "reports/gaps.json"], cwd),
+    ).resolves.toBe(0);
+
+    expect(readFileSync(outputPath, "utf8")).toBe(`${JSON.stringify(expectedAudit, null, 2)}\n`);
+  });
+
   it("extracts configured Curve ids from the source file without importing Worker code", () => {
     expect(extractConfiguredCurveStablecoinIds(`
       export const CURVE_POOL_CONFIGS = [

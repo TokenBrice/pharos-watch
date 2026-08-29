@@ -11,6 +11,7 @@ import type {
   DdrrV2PredictionReviewRow,
 } from "@shared/types/depeg-resolver-review";
 import {
+  DEFAULT_DDRR_CALIBRATION_REPORT_PATH,
   buildDdrrCalibrationReport,
   isTrustedDdrrApiKeyDestination,
   parseArgs,
@@ -228,16 +229,32 @@ function response(rows: DdrrRow[]): DdrrResponse {
 }
 
 describe("generate-ddrr-calibration-report", () => {
-  it("parses CLI source options and rejects conflicting sources", () => {
-    expect(parseArgs(["--input", "agents/ddrr.json", "--json", "--report", "agents/ddrr.json"])).toMatchObject({
-      inputPath: "agents/ddrr.json",
-      format: "json",
-      reportPath: "agents/ddrr.json",
-    });
-    expect(parseArgs(["--api-base", "https://api.example.test", "--stdout"])).toMatchObject({
-      apiBase: "https://api.example.test",
-      stdout: true,
-    });
+  it.each([
+    {
+      argv: [],
+      expected: { inputPath: null, apiBase: null, url: null, prod: false, format: "markdown", reportPath: DEFAULT_DDRR_CALIBRATION_REPORT_PATH },
+    },
+    {
+      argv: ["--input", "agents/ddrr.json", "--json", "--report", "agents/ddrr.json"],
+      expected: { inputPath: "agents/ddrr.json", format: "json", reportPath: "agents/ddrr.json" },
+    },
+    {
+      argv: ["--api-base", "https://api.example.test", "--stdout", "--limit", "12"],
+      expected: { apiBase: "https://api.example.test", stdout: true, sampleLimit: 12 },
+    },
+    {
+      argv: ["--url", "https://fixture.example.test/review", "--markdown", "--generated-at", "2026-08-29T00:00:00.000Z"],
+      expected: { url: "https://fixture.example.test/review", format: "markdown", generatedAt: "2026-08-29T00:00:00.000Z" },
+    },
+    {
+      argv: ["--prod", "--json", "--stdout"],
+      expected: { prod: true, format: "json", stdout: true },
+    },
+  ])("accepts source/output option combination %#", ({ argv, expected }) => {
+    expect(parseArgs(argv)).toMatchObject(expected);
+  });
+
+  it("rejects conflicting sources", () => {
     expect(() => parseArgs(["--input", "agents/ddrr.json", "--prod"])).toThrow(
       "Choose only one of --input, --api-base, --url, or --prod.",
     );
@@ -311,14 +328,16 @@ describe("generate-ddrr-calibration-report", () => {
   it("loads saved payloads and writes JSON output", async () => {
     const dir = mkdtempSync(join(tmpdir(), "ddrr-calibration-"));
     const input = join(dir, "ddrr.json");
-    const output = join(dir, "report.json");
+    const generatedAt = "2026-06-29T00:00:00.000Z";
     writeFileSync(input, JSON.stringify(response([prediction()])), "utf8");
 
-    await expect(runCli(["--input", input, "--json", "--report", output], process.cwd())).resolves.toBe(0);
-    const written = JSON.parse(readFileSync(output, "utf8")) as {
-      sample: { predictionReviewCount: number };
-    };
-    expect(written.sample.predictionReviewCount).toBe(1);
+    await expect(runCli(["--input", input, "--json", "--generated-at", generatedAt], dir)).resolves.toBe(0);
+    const output = join(dir, DEFAULT_DDRR_CALIBRATION_REPORT_PATH);
+    const expected = buildDdrrCalibrationReport(response([prediction()]), {
+      generatedAt,
+      source: { mode: "input", detail: input },
+    });
+    expect(readFileSync(output, "utf8")).toBe(`${JSON.stringify(expected, null, 2)}\n`);
   });
 
   it("fetches production site-data with site headers", async () => {

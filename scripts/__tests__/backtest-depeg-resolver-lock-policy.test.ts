@@ -8,7 +8,9 @@ import {
   buildDdrLockPolicyBacktest,
   builtinAcceptanceRows,
   evaluateDdrLockPolicy,
+  parseArgs,
   runCli,
+  type DdrLockPolicyBacktestRow,
 } from "../maintenance/backtest-depeg-resolver-lock-policy";
 
 const STARTED_AT = 1_800_000_000;
@@ -26,6 +28,30 @@ function row(overrides: Partial<Parameters<typeof evaluateDdrLockPolicy>[0]> = {
 }
 
 describe("backtest-depeg-resolver-lock-policy", () => {
+  it.each([
+    {
+      argv: [],
+      expected: { fixturePath: null, reportPath: null, format: "markdown", generatedAt: null },
+    },
+    {
+      argv: ["--fixture", "rows.json", "--json", "--report", "out/report.json", "--generated-at", "2026-08-29T00:00:00.000Z"],
+      expected: { fixturePath: "rows.json", reportPath: "out/report.json", format: "json", generatedAt: "2026-08-29T00:00:00.000Z" },
+    },
+    {
+      argv: ["--fixture", "rows.json", "--generated-at", "now"],
+      expected: { fixturePath: "rows.json", generatedAt: "now" },
+    },
+  ])("accepts fixture/output option combination %#", ({ argv, expected }) => {
+    expect(parseArgs(argv)).toMatchObject(expected);
+  });
+
+  it("preserves the legacy strict flag set and optional missing values", () => {
+    expect(parseArgs(["--fixture"])).toMatchObject({ fixturePath: null });
+    expect(parseArgs(["--report"])).toMatchObject({ reportPath: null });
+    expect(() => parseArgs(["--markdown"])).toThrow("Unknown argument: --markdown");
+    expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
+  });
+
   it("early-locks only when readiness score is strictly greater than 0.75", () => {
     const above = evaluateDdrLockPolicy(row({ readinessScore: DDR_LOCK_READINESS_THRESHOLD + 0.000001 }));
     const exact = evaluateDdrLockPolicy(row({ eventId: 2, readinessScore: DDR_LOCK_READINESS_THRESHOLD }));
@@ -199,35 +225,34 @@ describe("backtest-depeg-resolver-lock-policy", () => {
 
   it("can run against an external fixture", async () => {
     const tmp = mkdtempSync(join(tmpdir(), "ddr-lock-policy-"));
+    const generatedAt = "2026-06-04T00:00:00.000Z";
+    const fixtureRows: DdrLockPolicyBacktestRow[] = [{
+      incidentKey: "ddr2:fixture",
+      eventId: 10,
+      startedAt: STARTED_AT,
+      evaluatedAt: STARTED_AT + DDR_LOCK_BACKSTOP_DELAY_SEC,
+      readinessScore: 0.4,
+      healthStatus: "healthy",
+      outcomeKind: "no_call",
+      existingPublicPredictionId: null,
+      expectedAction: "lock_no_call",
+    }];
     writeFileSync(
       join(tmp, "fixture.json"),
-      JSON.stringify([
-        {
-          incidentKey: "ddr2:fixture",
-          eventId: 10,
-          startedAt: STARTED_AT,
-          evaluatedAt: STARTED_AT + DDR_LOCK_BACKSTOP_DELAY_SEC,
-          readinessScore: 0.4,
-          outcomeKind: "no_call",
-          expectedAction: "lock_no_call",
-        },
-      ]),
+      JSON.stringify(fixtureRows),
     );
+    const expected = buildDdrLockPolicyBacktest({ rows: fixtureRows, generatedAt });
     const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     let output = "";
     try {
       await expect(
-        runCli(["--fixture", "fixture.json", "--json", "--generated-at", "2026-06-04T00:00:00.000Z"], tmp),
+        runCli(["--fixture", "fixture.json", "--json", "--generated-at", generatedAt], tmp),
       ).resolves.toBe(0);
       output = String(stdout.mock.calls[0]?.[0] ?? "");
     } finally {
       stdout.mockRestore();
     }
 
-    expect(JSON.parse(output).summary).toMatchObject({
-      total: 1,
-      failed: 0,
-      backstopNoCallCount: 1,
-    });
+    expect(output).toBe(`${JSON.stringify(expected, null, 2)}\n`);
   });
 });

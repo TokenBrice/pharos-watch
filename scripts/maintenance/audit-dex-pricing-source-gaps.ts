@@ -1,12 +1,17 @@
 #!/usr/bin/env tsx
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
-import { circulatingForStablecoinRow, type UnknownRecord } from "../lib/coverage-audit-cli";
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import {
+  circulatingForStablecoinRow,
+  parseReportCliArgs,
+  runAsMain,
+  runReportCli,
+  type UnknownRecord,
+} from "../lib/report-cli";
 
 const MATERIAL_DEX_TVL_USD = 500_000;
 const HIGH_PRIORITY_DEX_TVL_USD = 5_000_000;
@@ -568,101 +573,62 @@ function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
 
-function parseCliArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    stablecoinsPath: null,
-    priceDepthPath: null,
-    dexPricesPath: null,
-    dexLiquidityPath: null,
-    curveCandidatesPath: null,
-    reportPath: null,
-    format: "markdown",
-    generatedAt: null,
-  };
-
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    const next = argv[index + 1];
-    switch (arg) {
-      case "--stablecoins":
-        options.stablecoinsPath = next ?? null;
-        index++;
-        break;
-      case "--price-depth":
-        options.priceDepthPath = next ?? null;
-        index++;
-        break;
-      case "--dex-prices":
-        options.dexPricesPath = next ?? null;
-        index++;
-        break;
-      case "--dex-liquidity":
-        options.dexLiquidityPath = next ?? null;
-        index++;
-        break;
-      case "--curve-candidates":
-        options.curveCandidatesPath = next ?? null;
-        index++;
-        break;
-      case "--report":
-        options.reportPath = next ?? null;
-        index++;
-        break;
-      case "--json":
-        options.format = "json";
-        break;
-      case "--markdown":
-        options.format = "markdown";
-        break;
-      case "--generated-at":
-        options.generatedAt = next ?? null;
-        index++;
-        break;
-    }
-  }
-
-  return options;
-}
-
-async function main(): Promise<void> {
-  const options = parseCliArgs(process.argv.slice(2));
-  const stablecoinsPath = options.priceDepthPath ?? options.stablecoinsPath;
-  if (!stablecoinsPath || !options.dexPricesPath) {
-    throw new Error("Usage: audit-dex-pricing-source-gaps.ts (--price-depth <path> | --stablecoins <path>) --dex-prices <path> [--dex-liquidity <path>] [--curve-candidates <path>] [--report <path>] [--json]");
-  }
-
-  const stablecoins = normalizeStablecoinRows(readJson(resolve(stablecoinsPath)));
-  const dexPrices = normalizeDexPriceRows(readJson(resolve(options.dexPricesPath)));
-  const dexLiquidity = options.dexLiquidityPath
-    ? normalizeDexLiquidityRows(readJson(resolve(options.dexLiquidityPath)))
-    : [];
-  const curveCandidates = options.curveCandidatesPath
-    ? normalizeCurveCandidates(readJson(resolve(options.curveCandidatesPath)))
-    : [];
-
-  const audit = buildDexPricingSourceGapAudit({
-    stablecoins,
-    dexPrices,
-    dexLiquidity,
-    curveCandidates,
-    generatedAt: options.generatedAt ?? undefined,
-  });
-  const rendered = options.format === "json"
-    ? `${JSON.stringify(audit, null, 2)}\n`
-    : renderDexPricingSourceGapMarkdown(audit);
-
-  if (options.reportPath) {
-    const reportPath = resolve(options.reportPath);
-    mkdirSync(dirname(reportPath), { recursive: true });
-    writeFileSync(reportPath, rendered);
-  } else {
-    process.stdout.write(rendered);
-  }
-}
-
-if (isDirectRun(import.meta.url, process.argv[1])) {
-  main().catch((err) => {
-    console.error(err instanceof Error ? err.message : String(err));
-    process.exitCode = 1;
+export function parseCliArgs(argv: string[]): CliOptions {
+  return parseReportCliArgs(argv, {
+    createOptions: (): CliOptions => ({
+      stablecoinsPath: null,
+      priceDepthPath: null,
+      dexPricesPath: null,
+      dexLiquidityPath: null,
+      curveCandidatesPath: null,
+      reportPath: null,
+      format: "markdown",
+      generatedAt: null,
+    }),
+    includeGeneratedAt: true,
+    allowMissingGeneratedAt: true,
+    allowMissingReportPath: true,
+    compat: { ignoreUnknownArguments: true },
+    options: [
+      { flag: "--stablecoins", kind: "value", allowMissingValue: true, apply: (options, value) => { options.stablecoinsPath = value ?? null; } },
+      { flag: "--price-depth", kind: "value", allowMissingValue: true, apply: (options, value) => { options.priceDepthPath = value ?? null; } },
+      { flag: "--dex-prices", kind: "value", allowMissingValue: true, apply: (options, value) => { options.dexPricesPath = value ?? null; } },
+      { flag: "--dex-liquidity", kind: "value", allowMissingValue: true, apply: (options, value) => { options.dexLiquidityPath = value ?? null; } },
+      { flag: "--curve-candidates", kind: "value", allowMissingValue: true, apply: (options, value) => { options.curveCandidatesPath = value ?? null; } },
+    ],
   });
 }
+
+export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()): Promise<number> {
+  return runReportCli(argv, {
+    parse: parseCliArgs,
+    cwd,
+    build: (options) => {
+      const stablecoinsPath = options.priceDepthPath ?? options.stablecoinsPath;
+      const dexPricesPath = options.dexPricesPath;
+      if (!stablecoinsPath || !dexPricesPath) {
+        throw new Error("Usage: audit-dex-pricing-source-gaps.ts (--price-depth <path> | --stablecoins <path>) --dex-prices <path> [--dex-liquidity <path>] [--curve-candidates <path>] [--report <path>] [--json]");
+      }
+
+      const stablecoins = normalizeStablecoinRows(readJson(resolve(cwd, stablecoinsPath)));
+      const dexPrices = normalizeDexPriceRows(readJson(resolve(cwd, dexPricesPath)));
+      const dexLiquidity = options.dexLiquidityPath
+        ? normalizeDexLiquidityRows(readJson(resolve(cwd, options.dexLiquidityPath)))
+        : [];
+      const curveCandidates = options.curveCandidatesPath
+        ? normalizeCurveCandidates(readJson(resolve(cwd, options.curveCandidatesPath)))
+        : [];
+
+      return buildDexPricingSourceGapAudit({
+        stablecoins,
+        dexPrices,
+        dexLiquidity,
+        curveCandidates,
+        generatedAt: options.generatedAt ?? undefined,
+      });
+    },
+    renderMarkdown: renderDexPricingSourceGapMarkdown,
+  });
+}
+
+runAsMain(import.meta.url, runCli);
