@@ -37,7 +37,6 @@ Common targeted runners:
 npx vitest run scripts/maintenance/__tests__/build-annotation-candidates.test.ts
 npm run test:profile -- --output /tmp/pharos-vitest-profile.json
 npm run test:critical-contracts
-npm run test:invariants
 npm run coverage:critical
 npm run validate:pages-smoke
 npm run validate:worker-scheduled-smoke
@@ -349,7 +348,6 @@ The source of truth for the current test inventory is the filesystem, not this d
 ```bash
 rg --files src shared worker/src functions scripts | rg '(^|/)__tests__/|\.(test|spec)\.' | sort
 npm run test:critical-contracts
-npm run test:invariants
 npm run coverage:critical
 ```
 
@@ -366,7 +364,6 @@ Keep this section focused on how the suite is organized and which surfaces are g
 
 Critical gate coverage is intentionally smaller than the full suite:
 
-- `npm run test:invariants` covers numerical/schema invariants and critical cron-cache validation.
 - `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mts` with line/branch coverage ratchets owned by `scripts/lib/critical-coverage.mjs`. The weekly/manual all-critical workflow blocks on it, while the PR workflow runs it only when an enrolled critical source file changes. Telegram enrollment includes authoritative target planning and legacy recovery, pending lifecycle and outage control, webhook effect fencing and watchlist import, Mini App authentication plus authenticated state/theme contracts, and aggregate-only adoption analytics. Real-SQL migration, crash-resume, rollback, and external-effect failure suites are preferred wherever the runtime owns durable state; authenticated axe coverage remains owned by the Playwright accessibility gate.
 - `npm run test:critical-contracts` is the explicit API contract set and is always included by `test:pr`.
 
@@ -466,7 +463,6 @@ Selected files have explicit threshold overrides in `scripts/ci/check-critical-c
 ### Critical Test Suites
 
 - `npm run test:critical-contracts` is a targeted local runner for the explicitly enumerated contract suites owned by `scripts/lib/critical-test-files.mts`; keep the npm script as a runner only instead of duplicating suite membership in prose or `package.json`.
-- `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run check:pr -- --base=<ref>` runs the adaptive local PR contract against a committed diff.
 - `npm run check:release` performs the optional full Pages build/static checks and credential-free Worker bundle proof.
 - `npm run test:all` runs the complete suite; `npm run test:pr -- --base=<ref>` runs critical plus dependency-selected tests.
