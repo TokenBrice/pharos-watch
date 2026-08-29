@@ -72,7 +72,6 @@
     "ops:watch-worker-cron": "node scripts/maintenance/watch-worker-cron.mjs",
     "ops:night-watch-worker": "node scripts/maintenance/night-watch-worker.mjs",
     "ops:night-watch-worker:two-cycle": "node scripts/maintenance/night-watch-worker.mjs --cycles 2 --include-status --include-status-history --include-d1",
-    "calibrate:yield-outcomes": "tsx scripts/maintenance/generate-yield-outcome-validation.ts",
     "calibrate:yield-venue-risk": "tsx scripts/maintenance/yield-venue-risk-calibration.ts",
     "calibrate:ddrr": "tsx scripts/maintenance/generate-ddrr-calibration-report.ts",
     "freeze-stablecoin": "tsx scripts/maintenance/freeze-stablecoin.ts",
