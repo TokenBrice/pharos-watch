@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
+import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
 import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
 import wrappedMRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
@@ -35,6 +36,7 @@ import {
   makeV9FixedInput as exactFixedInput,
   v9CoinMaxReviewedAtSec,
   makeV9Extension as extension,
+  v9Status,
   withV9WmReviewedDeploymentAttribution as withWmReviewedDeploymentAttribution,
 } from "../../test-helpers/v9-fixed-input";
 
@@ -43,6 +45,59 @@ import {
 // retires the literal that had to be re-pinned every curation pass.
 const WM_CLOCK_SEC = v9CoinMaxReviewedAtSec("wm-m0") + 9 * 3_600;
 const XAUT_CLOCK_SEC = v9CoinMaxReviewedAtSec("xaut-tether") + 9 * 3_600;
+
+function nullSupplyReviewExtension(options: {
+  bridge?: "not-applicable" | "missing" | "required";
+  chainSupplyObservedAtSec?: number;
+} = {}) {
+  const value = structuredClone(extension());
+  const asset = value.assets[0]!;
+  asset.supplyReview = null;
+  if (options.bridge === "missing") {
+    asset.economicControlReview = null;
+  } else if (options.bridge === "required") {
+    asset.economicControlReview = {
+      ...asset.economicControlReview!,
+      bridge: {
+        ...asset.economicControlReview!.bridge,
+        status: v9Status("known", "v9.control.bridge-review"),
+      },
+    };
+  }
+  if (options.chainSupplyObservedAtSec !== undefined) {
+    value.sources.chainSupply.observedAtSec = options.chainSupplyObservedAtSec;
+  }
+  return value;
+}
+
+function rejectedWmAttributionRecord(
+  fixed: ReturnType<typeof exactFixedInput>,
+  completedAtSec: number,
+  rejectionCode: "chain-rpc-unavailable" | "deployment-state-unavailable",
+) {
+  return createSupplyAttributionJournalV1({
+    schemaVersion: 1,
+    lane: "supply-attribution",
+    assetId: "wm-m0",
+    attemptId: `supply-attribution:fixture:${completedAtSec}`,
+    sourceId: "wm.reviewed-deployment-unit-partition.v1",
+    sourceOriginClass: "onchain-observation",
+    baseInputGenerationId: fixed.baseInputGenerationId,
+    sourceGeneration: fixed.sourceGeneration,
+    registryFingerprint: fixed.registryFingerprint,
+    routeInventoryDigest: fixed.registryFingerprint,
+    attemptCode: "supply-attribution.collector.attempted",
+    admissionCode: "supply-attribution.admission.rejected-upstream",
+    fallbackCode: "supply-attribution.fallback.aggregate-only",
+    rejectionCode,
+    attemptedAtSec: completedAtSec - 1,
+    completedAtSec,
+    scoringClockSec: fixed.clockSec,
+    sourceObservedAtSec: null,
+    failedRouteId: null,
+    contentSha256: null,
+  });
+}
 
 describe("Safety Score v9 exact base fact-set adapter — supply attribution", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   it("aggregates chain aliases and conserves unresolved source supply without price multiplication", () => {
@@ -576,6 +631,141 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         (reason) => reason.code === "runtime-bridge-materiality-unavailable",
       ),
     ).toMatchObject({ responsibility: "producer-failed" });
+  });
+
+  it("uses the latest rejected attribution record in hashed outcome diagnostics", () => {
+    const fixed = exactFixedInput({
+      assetId: "wm-m0",
+      clockSec: WM_CLOCK_SEC,
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
+      omitLiveReserve: true,
+    });
+    fixed.supplyAttributionJournalById = {
+      "wm-m0": [
+        rejectedWmAttributionRecord(fixed, fixed.clockSec - 20, "chain-rpc-unavailable"),
+        rejectedWmAttributionRecord(fixed, fixed.clockSec - 10, "deployment-state-unavailable"),
+      ],
+    };
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        ["wm-m0", ({
+          ...wrappedMSource,
+          bridgeRouteRisk: wrappedMRiskReview.bridgeRouteRisk,
+          mintAuthority: wrappedMMintAuthority.mintAuthority,
+        } as unknown as V9ExtensionRegistryMeta)],
+      ]),
+    });
+    const wm = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!;
+    const outcomeEvidence = wm.evidence.find(
+      (evidence) => evidence.evidenceId === "wm-m0:supply-review-outcome",
+    )!;
+
+    expect(outcomeEvidence).toMatchObject({
+      sourceId: "safety-score-v9-supply-review-producer",
+      disposition: "rejected",
+      observedAtSec: fixed.clockSec,
+      rejection: {
+        code: "supply-review.attribution-rpc-rejection",
+        reason: "chainRows=0; canonicalizationFailures=0; reviewRoutes=4; attribution=deployment-state-unavailable",
+        rejectedAtSec: fixed.clockSec,
+      },
+    });
+    expect(outcomeEvidence.sourceGenerationId).toMatch(
+      /^supply-review-outcome:v1:[a-f0-9]{64}$/,
+    );
+    expect(outcomeEvidence.sourceGenerationId).toBe(
+      `supply-review-outcome:v1:${outcomeEvidence.contentSha256}`,
+    );
+  });
+
+  it("persists null-review outcome ownership and diagnostics for each integration and producer state", () => {
+    const cases = [
+      {
+        name: "missing-profile",
+        extension: { bridge: "missing" as const },
+        responsibility: "integration-missing" as const,
+        message: "Circulating USD is known, but the required bridge profile is missing or invalid.",
+        observationState: "bounded-unknown" as const,
+      },
+      {
+        name: "ambiguous-route-join",
+        extension: { bridge: "required" as const },
+        responsibility: "integration-missing" as const,
+        message: "Circulating USD is known, but bridge routes do not form one canonical, unique attribution join.",
+        observationState: "bounded-unknown" as const,
+      },
+      {
+        name: "stale-review",
+        extension: {
+          bridge: "required" as const,
+          chainSupplyObservedAtSec: AS_OF_SEC - 501,
+        },
+        responsibility: "producer-failed" as const,
+        message: "Circulating USD is known, but the supply review or its runtime chain input is stale.",
+        observationState: "stale" as const,
+      },
+    ];
+
+    for (const outcomeCase of cases) {
+      const fixed = exactFixedInput();
+      const alpha = compileSafetyScoreV9FactSetFromFixedInput(
+        fixed,
+        nullSupplyReviewExtension(outcomeCase.extension),
+      ).assets[0]!;
+      const outcomeEvidence = alpha.evidence.find(
+        (evidence) => evidence.evidenceId === "alpha:supply-review-outcome",
+      );
+      const materialityGap = alpha.gaps.find(
+        (gap) => gap.reasonCode === "runtime-bridge-materiality-unavailable",
+      );
+
+      expect(outcomeEvidence, outcomeCase.name).toMatchObject({
+        sourceId: "safety-score-v9-supply-review-producer",
+        disposition: "rejected",
+        contentSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        sourceGenerationId: expect.stringMatching(/^supply-review-outcome:v1:[a-f0-9]{64}$/),
+        rejection: {
+          code: `supply-review.${outcomeCase.name}`,
+          reason: "chainRows=1; canonicalizationFailures=0; reviewRoutes=0; attribution=none",
+          rejectedAtSec: fixed.clockSec,
+        },
+      });
+      expect(outcomeEvidence!.sourceGenerationId).toBe(
+        `supply-review-outcome:v1:${outcomeEvidence!.contentSha256}`,
+      );
+      expect(alpha.supply.status).toMatchObject({
+        observationState: outcomeCase.observationState,
+        evidenceRefIds: ["alpha:chain-supply", "alpha:supply-review-outcome"],
+      });
+      expect(materialityGap).toMatchObject({
+        ownerDomain: "control",
+        responsibility: outcomeCase.responsibility,
+        observationState: outcomeCase.observationState,
+        message: outcomeCase.message,
+        evidenceRefIds: ["alpha:chain-supply", "alpha:supply-review-outcome"],
+      });
+      expect(alpha.supply.selectedBridgeRoutes).toEqual([]);
+    }
+  });
+
+  it("keeps a null supply review known when bridge applicability is explicitly not applicable", () => {
+    const fixed = exactFixedInput();
+    const alpha = compileSafetyScoreV9FactSetFromFixedInput(
+      fixed,
+      nullSupplyReviewExtension({ bridge: "not-applicable" }),
+    ).assets[0]!;
+
+    expect(alpha.supply.status).toMatchObject({
+      observationState: "known",
+      evidenceRefIds: ["alpha:chain-supply"],
+    });
+    expect(alpha.evidence).not.toContainEqual(
+      expect.objectContaining({ evidenceId: "alpha:supply-review-outcome" }),
+    );
+    expect(alpha.gaps).not.toContainEqual(
+      expect.objectContaining({ reasonCode: "runtime-bridge-materiality-unavailable" }),
+    );
   });
 
   it("keeps supply missing when neither per-chain rows nor a positive aggregate bucket exist", () => {

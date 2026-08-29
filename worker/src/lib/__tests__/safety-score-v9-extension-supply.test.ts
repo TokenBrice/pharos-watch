@@ -60,11 +60,13 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       chainInputStale,
     });
 
-    expect(diagnose(base, "missing")).toMatchObject({
+    expect(diagnose(base, "missing")).toEqual({
       state: "missing-profile",
       responsibility: "integration-missing",
       chainRowCount: 2,
       canonicalizationFailureCount: 1,
+      reviewRouteCount: 2,
+      attributionRejectionCode: null,
     });
     expect(diagnose(base, "bounded-unknown")).toMatchObject({
       state: "ambiguous-route-join",
@@ -90,6 +92,31 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       responsibility: "producer-failed",
     });
 
+    const staleJournalHistory = {
+      ...base,
+      supplyAttributionJournalById: {
+        alpha: [
+          {
+            completedAtSec: 9_800,
+            admissionCode: "supply-attribution.admission.accepted",
+          },
+          {
+            completedAtSec: 9_900,
+            admissionCode: "supply-attribution.admission.rejected-stale",
+            rejectionCode: "safe-block-unavailable",
+          },
+        ],
+      },
+    } as unknown as ReportCardsFixedInput;
+    expect(diagnose(staleJournalHistory, "known")).toEqual({
+      state: "stale-review",
+      responsibility: "producer-failed",
+      chainRowCount: 2,
+      canonicalizationFailureCount: 1,
+      reviewRouteCount: 2,
+      attributionRejectionCode: "safe-block-unavailable",
+    });
+
     const rejected = {
       ...base,
       activeAssetIds: ["wm-m0"],
@@ -102,9 +129,12 @@ describe("buildSafetyScoreV9SupplyReview", () => {
         }],
       },
     } as unknown as ReportCardsFixedInput;
-    expect(diagnose(rejected, "bounded-unknown")).toMatchObject({
+    expect(diagnose(rejected, "bounded-unknown")).toEqual({
       state: "attribution-rpc-rejection",
       responsibility: "producer-failed",
+      chainRowCount: 0,
+      canonicalizationFailureCount: 0,
+      reviewRouteCount: 2,
       attributionRejectionCode: "chain-rpc-unavailable",
     });
   });
