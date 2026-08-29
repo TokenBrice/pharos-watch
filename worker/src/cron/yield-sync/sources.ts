@@ -21,11 +21,7 @@ export {
   fetchAaveV3SupplyRates,
   fetchCompoundV3SupplyRates,
   fetchOnChainRates,
-  type AaveV3RateResult,
   type AaveV3RateTarget,
-  type AaveV3SupplyRateRow,
-  type CompoundV3SupplyRateResult,
-  type OnChainRateResult,
   type OptionalRpcFamilyTelemetry,
 } from "./sources-rpc";
 export { loadDlStablecoinPools } from "./sources-dl";

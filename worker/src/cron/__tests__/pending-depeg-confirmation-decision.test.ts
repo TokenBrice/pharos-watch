@@ -98,10 +98,6 @@ function makePlan(overrides: Partial<ConfirmationPlanReady> = {}): ConfirmationP
   const row = overrides.row ?? makePendingRow();
   const pendingState = overrides.pendingState ?? normalizePendingDepegRow(row);
   return {
-    kind: "ready",
-    row,
-    pendingState,
-    outcomeState: overrides.outcomeState ?? { ...pendingState },
     asset: makeAsset({
       id: row.stablecoin_id,
       symbol: row.symbol,
@@ -123,6 +119,7 @@ function makePlan(overrides: Partial<ConfirmationPlanReady> = {}): ConfirmationP
     age: DEPEG_PENDING_MIN_AGE_SEC + 60,
     evidence: emptyEvidence(),
     ...overrides,
+    kind: "ready",
     row,
     pendingState,
     outcomeState: overrides.outcomeState ?? { ...pendingState },

@@ -285,7 +285,7 @@ function makeDlResponse(assetCount: number) {
       id: String(i + 1),
       name: `Stablecoin ${i + 1}`,
       symbol: `SC${i + 1}`,
-      geckoId: null,
+      geckoId: undefined,
       price: 1.0,
       priceSource: "defillama",
       priceConfidence: "high",
@@ -982,7 +982,7 @@ describe("syncStablecoins", () => {
   it("normalizes gecko_id aliases and nullable buckets before final schema validation", async () => {
     const db = makeDb();
     const dlData = makeDlResponse(60);
-    const target = dlData.peggedAssets[2] as Record<string, unknown>;
+    const target = dlData.peggedAssets[2] as unknown as Record<string, unknown>;
     delete target.geckoId;
     target.gecko_id = "coin-three";
     delete target.priceConfidence;
@@ -1323,7 +1323,7 @@ describe("syncStablecoins", () => {
     ]);
 
     const dlData = makeDlResponse(60);
-    const target = dlData.peggedAssets[0] as Record<string, unknown>;
+    const target = dlData.peggedAssets[0] as unknown as Record<string, unknown>;
     target.id = "jpyc-jpyc";
     target.name = "JPYC";
     target.symbol = "JPYC";

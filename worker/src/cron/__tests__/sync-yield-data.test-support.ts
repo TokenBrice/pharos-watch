@@ -16,24 +16,20 @@ export type StablecoinFixtureOverrides = Pick<MockRegistryStablecoin, "id"> &
 
 
 export function makeStablecoinFixture(overrides: StablecoinFixtureOverrides): MockRegistryStablecoin {
-  const defaultFlags: Record<string, unknown> = {
-    pegCurrency: "USD",
-    backing: "fiat-backed",
-    yieldBearing: false,
-    navToken: false,
-    governance: "centralized",
-  };
-  const {
-    flags: overrideFlags,
-    ...rest
-  } = overrides;
+  const { flags: overrideFlags, ...rest } = overrides;
   return {
-    id: "fixture-coin",
     name: "Fixture Coin",
     symbol: "FIX",
     geckoId: "fixture-coin",
-    flags: { ...defaultFlags, ...overrideFlags },
     ...rest,
+    flags: {
+      pegCurrency: "USD",
+      backing: "fiat-backed",
+      yieldBearing: false,
+      navToken: false,
+      governance: "centralized",
+      ...(overrideFlags ?? {}),
+    },
   };
 }
 
@@ -246,11 +242,6 @@ export function makeYieldHistoryRow(
   overrides: RequiredYieldHistoryFields & Partial<Omit<YieldHistoryFixtureRow, keyof RequiredYieldHistoryFields>>,
 ): YieldHistoryFixtureRow {
   return {
-    stablecoin_id: overrides.stablecoin_id,
-    source_key: overrides.source_key,
-    recorded_at: overrides.recorded_at,
-    is_best: overrides.is_best,
-    apy: overrides.apy,
     source_tvl_usd: null,
     data_source: "defillama",
     yield_source: null,

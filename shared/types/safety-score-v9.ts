@@ -1378,7 +1378,12 @@ const V9_RATED_GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D",
 const V9MethodologyPolicyBaseSchema = z
   .object({
     schemaVersion: z.literal(1),
-    policyId: z.literal("safety-score-v9"),
+    // Exact production id, or a derived test/sensitivity-variant id. Lifecycle
+    // and releaseVersion stay narrowed to the only committed shape (SH-4).
+    policyId: z.union([
+      z.literal("safety-score-v9"),
+      z.string().regex(/^safety-score-v9-[a-z0-9-]+$/),
+    ]),
     lifecycle: z.literal("active"),
     releaseVersion: z.string().regex(/^\d+\.\d+$/),
     semantic: V9MethodologySemanticSchema,

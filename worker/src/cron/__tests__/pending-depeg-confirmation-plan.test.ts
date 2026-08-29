@@ -77,12 +77,16 @@ describe("buildConfirmationPlan", () => {
       return;
     }
     if (spec.kind === "mutate") {
+      expect(plan.kind).toBe("mutate");
+      if (plan.kind !== "mutate") throw new Error(`unexpected plan kind: ${plan.kind}`);
       expect(plan.statements).toHaveLength(2);
       await db.batch(plan.statements);
       expect(sqlite.prepare("SELECT outcome, final_decision_reason FROM depeg_pending_outcomes WHERE pending_id = ?").get(input.row.id)).toEqual({ outcome: spec.outcome, final_decision_reason: spec.reason });
       expect(sqlite.prepare("SELECT id FROM depeg_pending WHERE id = ?").get(input.row.id)).toBeUndefined();
       return;
     }
+    expect(plan.kind).toBe("ready");
+    if (plan.kind !== "ready") throw new Error(`unexpected plan kind: ${plan.kind}`);
     expect(plan.pegReference).toBe(spec.peg);
     expect(plan.outcomeState.pegReference).toBe(spec.peg);
     expect(plan.age).toBeGreaterThanOrEqual(DEPEG_PENDING_MIN_AGE_SEC);

@@ -549,7 +549,7 @@ export function readPublicPriceRows(sqlite: import("node:sqlite").DatabaseSync):
        FROM dex_prices
        ORDER BY stablecoin_id`,
     )
-    .all() as PublicPriceRow[];
+    .all() as unknown as PublicPriceRow[];
 }
 
 export function insertPublicPrice(

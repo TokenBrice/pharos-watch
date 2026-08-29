@@ -12,7 +12,7 @@ vi.mock("../../lib/circuit-breaker", () => ({ recordOutcomeSafe: vi.fn(async () 
 
 const NOW_SEC = 1_700_000_000;
 const COIN_ID = "usdt-tether";
-const usdMeta: StablecoinMeta = { id: COIN_ID, name: "Tether", symbol: "USDT", geckoId: "tether", flags: { backing: "fiat-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: false, navToken: false } };
+const usdMeta: StablecoinMeta = { id: COIN_ID, name: "Tether", symbol: "USDT", geckoId: "tether", flags: { backing: "crypto-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: false, navToken: false } };
 const brlMeta: StablecoinMeta = { id: "brz-transfero", name: "Brazilian Digital Token", symbol: "BRZ", geckoId: "brz", flags: { backing: "rwa-backed", pegCurrency: "BRL", governance: "centralized", yieldBearing: false, rwa: true, navToken: false } };
 
 function row(overrides: Partial<PendingDepegRow> = {}): PendingDepegRow {
@@ -27,7 +27,33 @@ function emptyEvidence(): CollectedConfirmationEvidence {
 function input(overrides: Partial<ConfirmationEvidenceInput> = {}): ConfirmationEvidenceInput {
   const value = overrides.row ?? row();
   const pendingState = overrides.pendingState ?? normalizePendingDepegRow(value);
-  return { db: overrides.db ?? mockD1Strict([]), row: value, pendingState, outcomeState: { ...pendingState }, asset: makeAsset({ id: value.stablecoin_id, symbol: value.symbol, geckoId: "tether", price: 0.94, priceSource: "defillama", agreeSources: ["defillama"] }), meta: usdMeta, pegReference: 1, threshold: 100, secondaryBar: 100, nativeSignal: null, nativePegQuote: undefined, nativeSourceKey: "native:usd", authoritativePrice: 0.94, primaryStatus: "insufficient", primarySameDirectionDepegged: false, primaryConfirmationSources: [], temporalSameDirectionConfirmed: true, age: DEPEG_PENDING_MIN_AGE_SEC + 60, evidence: emptyEvidence(), dexPriceRows: new Map(), dexPriceSources: new Map(), poolChallengers: new Map(), cexAllowed: false, cexPrices: null, coingeckoAllowed: true, coingeckoApiKey: undefined, signal: undefined, now: NOW_SEC, ...overrides, db: overrides.db ?? mockD1Strict([]), row: value, pendingState, outcomeState: overrides.outcomeState ?? { ...pendingState }, evidence: overrides.evidence ?? emptyEvidence() };
+  const db = overrides.db ?? mockD1Strict([]);
+  const defaults = {
+    asset: makeAsset({ id: value.stablecoin_id, symbol: value.symbol, geckoId: "tether", price: 0.94, priceSource: "defillama", agreeSources: ["defillama"] }),
+    meta: usdMeta,
+    pegReference: 1,
+    threshold: 100,
+    secondaryBar: 100,
+    nativeSignal: null,
+    nativePegQuote: undefined,
+    nativeSourceKey: "native:usd",
+    authoritativePrice: 0.94,
+    primaryStatus: "insufficient" as const,
+    primarySameDirectionDepegged: false,
+    primaryConfirmationSources: [],
+    temporalSameDirectionConfirmed: true,
+    age: DEPEG_PENDING_MIN_AGE_SEC + 60,
+    dexPriceRows: new Map(),
+    dexPriceSources: new Map(),
+    poolChallengers: new Map(),
+    cexAllowed: false,
+    cexPrices: null,
+    coingeckoAllowed: true,
+    coingeckoApiKey: undefined,
+    signal: undefined,
+    now: NOW_SEC,
+  };
+  return { ...defaults, ...overrides, kind: "ready", db, row: value, pendingState, outcomeState: overrides.outcomeState ?? { ...pendingState }, evidence: overrides.evidence ?? emptyEvidence() };
 }
 function noOffchain(overrides: Partial<ConfirmationEvidenceInput> = {}): ConfirmationEvidenceInput {
   return input({ asset: makeAsset({ id: COIN_ID, symbol: "USDT", geckoId: undefined, price: 0.98 }), meta: undefined, ...overrides });
