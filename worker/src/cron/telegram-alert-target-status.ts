@@ -1,4 +1,4 @@
-import { batchExecute, buildInClause, chunkArray } from "../lib/db";
+import { batchExecute } from "../lib/db";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";

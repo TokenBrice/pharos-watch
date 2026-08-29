@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { makePegEvent as makeEvent, type TestPegEvent } from "@shared/test-utils/peg-fixtures";
+import { makePegEvent as makeEvent } from "@shared/test-utils/peg-fixtures";
 import {
   computePegScore,
   computePegScoreWithWindow,

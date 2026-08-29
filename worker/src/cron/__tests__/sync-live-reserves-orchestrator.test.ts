@@ -13,11 +13,9 @@ import {
 } from "../sync-live-reserves-shared";
 import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 import {
-  getReserveAdapterMock,
   mockLiveReserveAdapterRegistry,
   mockLiveReserveD1,
   recordOutcomeSafeMock,
-  recoverNoCandidateMock,
   shouldAttemptFetchMock,
 } from "./live-reserves.test-support";
 

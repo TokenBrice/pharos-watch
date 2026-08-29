@@ -35,7 +35,7 @@ import {
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, YIELD_TYPE_LABELS } from "@shared/lib/classification";
-import type { YieldHistoryPoint, YieldRanking } from "@shared/types";
+import type { YieldHistoryPoint } from "@shared/types";
 
 // Keep chart-bearing pieces dynamic: a static import here re-attaches the
 // whole recharts chunk to the eager first load of all 400+ coin yield pages.

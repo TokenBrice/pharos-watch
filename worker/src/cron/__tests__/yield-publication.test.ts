@@ -8,7 +8,7 @@ import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
-import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
+import { type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   cleanupFalseLinkedVariantSourceSwitches,

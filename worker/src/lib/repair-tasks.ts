@@ -11,8 +11,7 @@ import {
 import { buildInClause, isMissingTableError } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 
-const DDR_REPAIR_TASK_STATES = ["open", "claimed", "deferred", "closed", "failed"] as const;
-export type RepairTaskState = (typeof DDR_REPAIR_TASK_STATES)[number];
+export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "failed";
 
 const DDR_REPAIR_TASK_ACTIVE_STATE_SQL = "state IN ('open', 'claimed', 'deferred', 'failed')";
 const DDR_REPAIR_TASK_CLAIMABLE_STATE_SQL = "state IN ('open', 'deferred', 'failed')";

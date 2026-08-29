@@ -480,7 +480,6 @@ function decideExistingEvent(
     asset,
     price,
     bps,
-    absBps,
     direction,
     threshold,
     pegRef,
