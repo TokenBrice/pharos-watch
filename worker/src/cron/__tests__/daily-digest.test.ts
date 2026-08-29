@@ -1,126 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
-vi.mock("@shared/lib/stablecoins/registry", () => {
-  const stablecoins = [
-    {
-      id: "usdt-tether",
-      symbol: "USDT",
-      flags: { yieldBearing: false },
-      contracts: [
-        { chain: "ethereum", address: "0xdac17f958d2ee523a2206206994597c13d831ec7", decimals: 6 },
-        { chain: "tron", address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6 },
-        { chain: "arbitrum", address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", decimals: 6 },
-        { chain: "optimism", address: "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58", decimals: 6 },
-        { chain: "polygon", address: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", decimals: 6 },
-        { chain: "avalanche", address: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", decimals: 6 },
-        { chain: "bsc", address: "0x55d398326f99059ff775485246999027b3197955", decimals: 18 },
-      ],
-      tradedContracts: [{ chain: "optimism", address: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071", decimals: 6 }],
-    },
-    {
-      id: "usdc-circle",
-      symbol: "USDC",
-      flags: { yieldBearing: false },
-      contracts: [
-        { chain: "ethereum", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: 6 },
-        { chain: "arbitrum", address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", decimals: 6 },
-        { chain: "base", address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", decimals: 6 },
-        { chain: "optimism", address: "0x0b2c639c533813f4aa9d7837caf62653d097ff85", decimals: 6 },
-        { chain: "polygon", address: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals: 6 },
-        { chain: "avalanche", address: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", decimals: 6 },
-      ],
-    },
-    {
-      id: "paxg-paxos",
-      symbol: "PAXG",
-      flags: { yieldBearing: false },
-      contracts: [{ chain: "ethereum", address: "0x45804880De22913dAFE09f4980848ECE6EcbAf78", decimals: 18 }],
-    },
-    {
-      id: "xaut-tether",
-      symbol: "XAUT",
-      flags: { yieldBearing: false },
-      contracts: [{ chain: "ethereum", address: "0x68749665FF8D2d112Fa859AA293F07A622782F38", decimals: 6 }],
-    },
-  ];
-  // The digest's core aggregate universe is deliberately narrower than the
-  // fixture registry: PAXG/XAUT stay tracked (mint-burn reads their contracts)
-  // but are excluded from the id sets the aggregate iterates.
-  const ids = new Set(["usdt-tether", "usdc-circle"]);
-  return {
-    ...mockRegistry({ stablecoins }),
-    TRACKED_IDS: ids,
-    ACTIVE_IDS: ids,
-    FROZEN_IDS: new Set<string>(["usr-resolv"]),
-  };
-});
-
-vi.mock("../../lib/stablecoins-cache", () => ({
-  loadStablecoinsCache: vi.fn(),
-}));
-
-vi.mock("../../lib/safety-score-active-source", () => ({
-  loadActiveSafetyScoreSource: vi.fn(),
-}));
-
-vi.mock("../../lib/flight-to-quality-classification", () => ({
-  buildFlightToQualityClassificationFromV9Snapshot: vi.fn(() => ({
-    kind: "ok",
-    classification: {
-      safeIds: new Set(["usdt-tether", "usdc-circle"]),
-      riskyIds: new Set(["paxg-paxos", "xaut-tether"]),
-      safetyScoreIdentity: null,
-    },
-  })),
-}));
-
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
-}));
-
-vi.mock("../../lib/twitter", () => ({
-  postDigestTweet: vi.fn(),
-}));
+vi.mock("@shared/lib/stablecoins/registry", async () => (await import("./daily-digest.test-support")).mockDailyDigestRegistryModule());
+vi.mock("../../lib/stablecoins-cache", async () => (await import("./daily-digest.test-support")).mockDailyDigestStablecoinsCacheModule());
+vi.mock("../../lib/safety-score-active-source", async () => (await import("./daily-digest.test-support")).mockDailyDigestSafetySourceModule());
+vi.mock("../../lib/flight-to-quality-classification", async () => (await import("./daily-digest.test-support")).mockDailyDigestFlightToQualityModule());
+vi.mock("../../lib/fetch-retry", async () => (await import("./daily-digest.test-support")).mockDailyDigestFetchRetryModule());
+vi.mock("../../lib/twitter", async () => (await import("./daily-digest.test-support")).mockDailyDigestTwitterModule());
 
 vi.mock("../../lib/digest-safety-map", async (importOriginal) => {
   const { mockDigestSafetyMapModule } = await import("./daily-digest.test-support");
   return mockDigestSafetyMapModule(await importOriginal<typeof import("../../lib/digest-safety-map")>());
 });
 
-vi.mock("../../lib/telegram-digest-appendices", () => ({
-  prepareTelegramDigestAppendices: vi.fn(),
-}));
-
-vi.mock("../../lib/telegram-digest-outbox", () => ({
-  enqueueTelegramDigestEdition: vi.fn(),
-  deliverTelegramDigestEdition: vi.fn(),
-}));
+vi.mock("../../lib/telegram-digest-appendices", async () => (await import("./daily-digest.test-support")).mockDailyDigestAppendicesModule());
+vi.mock("../../lib/telegram-digest-outbox", async () => (await import("./daily-digest.test-support")).mockDailyDigestOutboxModule());
 
 vi.mock("../telegram-digest-transport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../telegram-digest-transport")>();
-  return {
-    ...actual,
-    runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
-    creds: unknown;
-    deliver: (creds: unknown) => Promise<{ status: string }>;
-  }) => {
-    if (!params.creds) return "no-creds";
-    try {
-      return (await params.deliver(params.creds)).status;
-    } catch (error) {
-      return `failed: ${String(error).slice(0, 100)}`;
-    }
-    }),
-  };
+  const { mockTelegramDigestTransportModule } = await import("./daily-digest.test-support");
+  return mockTelegramDigestTransportModule(actual);
 });
 
-vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
+vi.mock("../../lib/circuit-breaker", async () => (await import("./daily-digest.test-support")).mockDailyDigestCircuitBreakerModule());
 
 import { buildUserPrompt } from "../daily-digest/prompt";
 import { classifyRegime } from "../daily-digest/prompt/regime";
@@ -138,11 +44,24 @@ import {
   collectSupplyVelocity,
   collectMintBurnFlows,
 } from "../daily-digest/collectors-market";
-import { collectDewsStress, collectYieldAnomalies } from "../daily-digest/collectors-risk";
-import { collectCrossDayTrends, collectPsiContributors } from "../daily-digest/collectors-history";
+import {
+  collectDewsStress,
+  collectGradeTransitions,
+  collectSafetyScores,
+  collectYieldAnomalies,
+} from "../daily-digest/collectors-risk";
+import {
+  collectCrossDayTrends,
+  collectHistoricalContext,
+  collectPsiContributors,
+} from "../daily-digest/collectors-history";
 import type { CollectorContext } from "../daily-digest/collectors-shared";
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import type { DigestInputData } from "@shared/types/digest";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 
 import {
   loadActiveSafetyScoreSource,
@@ -576,6 +495,35 @@ describe("digest intelligence enrichment", () => {
   });
 });
 
+describe("daily digest prompt contracts", () => {
+  it("renders canonical V9 safety pillars without legacy dimensions", () => {
+    const pillar = { score: 91, evidenceLevel: "strong" as const, freshness: "current" as const, reasons: [] };
+    const cap = { kind: "redemption-access", limit: 82, reason: "Primary redemption remains eligibility-gated", binding: true };
+    const prompt = buildUserPrompt({
+      totalMcapUsd: 160_000_000, mcap7dDelta: 3_000_000, activeDepegCount: 0, topDepegs: [],
+      biggestSupplyChange: null, stabilityIndex: null, yesterdayIndex: null,
+      safetyScores: {
+        model: "v9",
+        mentionedCoins: [{
+          symbol: "USDT", grade: "A+", score: 88,
+          pillars: { backing: pillar, exit: { ...pillar, score: 86 }, control: { ...pillar, score: 84 } },
+          reasonCodes: ["bounded-mechanism-review"], caps: [cap], bindingCap: cap,
+        }],
+        gradeDistribution: { "A+": 1 },
+        provenance: {
+          model: "v9", schemaVersion: 1, methodologyVersion: "9.0", policyId: "safety-score-v9",
+          policyDigest: "a".repeat(64), evaluationBuildDigest: "b".repeat(64),
+          baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`, publicationGenerationId: "report-cards:v9:1", publishedAt: 110,
+        },
+      },
+    });
+
+    expect(prompt).toContain("Safety Scores (V9");
+    expect(prompt).toContain("backing=91, exit=86, control=84");
+    expect(prompt).not.toContain("peg=95");
+  });
+});
+
 describe("classifyRegime", () => {
   const baseData: DigestInputData = {
     totalMcapUsd: 200_000_000_000,
@@ -651,50 +599,79 @@ function makeCollectorCtx(db: D1Database): CollectorContext {
   const yesterdayTs = todayTs - 86_400;
 
   const trackedStablecoinAssets = [
-    makeAsset({
-      id: "usdt-tether",
-      symbol: "USDT",
-      price: 0.9975,
-      circulating: { peggedUSD: 100_000_000_000 },
-      circulatingPrevWeek: { peggedUSD: 95_000_000_000 },
-    }),
-    makeAsset({
-      id: "usdc-circle",
-      symbol: "USDC",
-      price: 0.99,
-      circulating: { peggedUSD: 50_000_000_000 },
-      circulatingPrevWeek: { peggedUSD: 52_000_000_000 },
-    }),
-    makeAsset({
-      id: "dai-makerdao",
-      symbol: "DAI",
-      price: 1.05,
-      circulating: { peggedUSD: 5_000_000 },
-      circulatingPrevWeek: { peggedUSD: 5_000_000 },
-    }),
+    makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.9975, circulating: { peggedUSD: 100_000_000_000 }, circulatingPrevWeek: { peggedUSD: 95_000_000_000 } }),
+    makeAsset({ id: "usdc-circle", symbol: "USDC", price: 0.99, circulating: { peggedUSD: 50_000_000_000 }, circulatingPrevWeek: { peggedUSD: 52_000_000_000 } }),
+    makeAsset({ id: "dai-makerdao", symbol: "DAI", price: 1.05, circulating: { peggedUSD: 5_000_000 }, circulatingPrevWeek: { peggedUSD: 5_000_000 } }),
   ];
   const stablecoinAssetById = new Map(trackedStablecoinAssets.map((asset) => [asset.id, asset]));
 
-  const mcapById = new Map<string, number>([
-    ["usdt-tether", 100_000_000_000],
-    ["usdc-circle", 50_000_000_000],
-    ["dai-makerdao", 5_000_000],
-  ]);
+  const mcapById = new Map<string, number>([["usdt-tether", 100_000_000_000], ["usdc-circle", 50_000_000_000], ["dai-makerdao", 5_000_000]]);
 
-  return {
-    db: db as unknown as D1Database,
-    trackedStablecoinAssets,
-    trackedStablecoinIds: new Set(trackedStablecoinAssets.map((asset) => asset.id)),
-    coreAggregateStablecoinAssets: trackedStablecoinAssets,
-    coreAggregateStablecoinIds: new Set(trackedStablecoinAssets.map((asset) => asset.id)),
-    stablecoinAssetById,
-    mcapById,
-    stablecoinsCacheIsFresh: true,
-    nowSec,
-    todayTs,
-    yesterdayTs,
-  };
+  return { db: db as unknown as D1Database, trackedStablecoinAssets, trackedStablecoinIds: new Set(trackedStablecoinAssets.map((asset) => asset.id)), coreAggregateStablecoinAssets: trackedStablecoinAssets, coreAggregateStablecoinIds: new Set(trackedStablecoinAssets.map((asset) => asset.id)), stablecoinAssetById, mcapById, stablecoinsCacheIsFresh: true, nowSec, todayTs, yesterdayTs };
 }
+
+describe("collectSafetyScores", () => {
+  it("publishes only canonical V9 grades, pillars, reasons, caps, and full identity", async () => {
+    const cap = { kind: "redemption-access", limit: 82, source: "structural" as const, reason: "Primary redemption remains eligibility-gated", binding: true };
+    const pillar = { score: 91, evidenceLevel: "strong" as const, freshness: "current" as const, components: ["reserves"], reasons: [{ code: "bounded-mechanism-review" as const, message: "Reviewed reserve reporting is current", path: "pillars.backing" }] };
+    const snapshot = makeWorkerReportCardsV9Response({ cards: [makeWorkerV9Card({
+      id: "usdt-tether", grade: "A+", score: 88,
+      pillars: { backing: pillar, exit: { ...pillar, score: 86, components: ["liquidity"] }, control: { ...pillar, score: 84, components: ["governance"] } },
+      caps: [cap], bindingCap: cap, reasonCodes: ["bounded-mechanism-review"],
+    })] });
+    vi.mocked(loadActiveSafetyScoreSource).mockReset().mockResolvedValueOnce({
+      kind: "v9",
+      snapshot,
+    });
+
+    const degradedReasons: string[] = [];
+    const result = await collectSafetyScores(makeCollectorCtx(mockD1([])), new Set(["USDT"]), degradedReasons);
+
+    expect(result.safetyContext).toMatchObject({ status: "available", expectedModel: "v9", identity: snapshot.safetyScoreIdentity });
+    expect(result.safetyScores).toMatchObject({
+      model: "v9",
+      provenance: {
+        ...snapshot.safetyScoreIdentity,
+        publishedAt: snapshot.updatedAt,
+      },
+      mentionedCoins: [{
+        symbol: "USDT",
+        grade: "A+",
+        score: 88,
+        pillars: { backing: { score: 91 }, exit: { score: 86 }, control: { score: 84 } },
+        reasonCodes: ["bounded-mechanism-review"],
+        bindingCap: { kind: "redemption-access", limit: 82 },
+      }],
+    });
+    expect(result.safetyScores).not.toHaveProperty("medianGrade");
+    expect(result.safetyGrades).toHaveLength(1);
+    expect(degradedReasons).toEqual([]);
+  });
+});
+
+describe("collectGradeTransitions", () => {
+  it("includes V2 organic grade transitions and canonical safety provenance", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+    vi.mocked(loadActiveSafetyScoreSource).mockReset().mockResolvedValueOnce(canonicalSafetySource([{ id: "usdt-tether", overallGrade: "A", overallScore: 88 }]));
+    const safetyResult = await collectSafetyScores(makeCollectorCtx(mockD1([])), new Set(["USDT"]), []);
+    const db = mockD1([
+      { match: "GROUP BY recorded_at HAVING COUNT(*) > 15", rows: [] },
+      {
+        match: "ORDER BY ABS(COALESCE(score, 0) - COALESCE(prev_score, 0)) DESC",
+        rows: [{ history_id: "safety-score-history:v2:test", stablecoin_id: "usdt-tether", recorded_at: todayTs, model: "v9", identity_schema_version: 1, methodology_version: "9.0", policy_id: "safety-score-v9", policy_digest: "a".repeat(64), evaluation_build_digest: "b".repeat(64), base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`, model_publication_generation_id: "report-cards:v9:1", transition_kind: "organic-grade-change", grade: "A-", score: 80, prev_grade: "A", prev_score: 85 }],
+      },
+    ]);
+    const degradedReasons: string[] = [];
+
+    const result = await collectGradeTransitions(makeCollectorCtx(db), safetyResult.safetyGrades, safetyResult.safetyIdentity, degradedReasons);
+
+    expect(result).toHaveLength(1);
+    expect(result![0]).toMatchObject({ symbol: "USDT", fromGrade: "A", toGrade: "A-", safetyScoreIdentity: { model: "v9", methodologyVersion: "9.0", publicationGenerationId: "report-cards:v9:1" } });
+    expect((db as MockD1Database).getHistory().some((entry) => entry.sql.includes("safety_grade_history"))).toBe(false);
+    expect(degradedReasons).toEqual([]);
+  });
+});
 
 describe("collectMintBurnFlows", () => {
   beforeEach(() => {
@@ -748,13 +725,45 @@ describe("collectMintBurnFlows", () => {
     expect(degradedReasons).toEqual(["mint-burn-gauge-stale"]);
   });
 
-  it("never derives the gauge from mint_burn_hourly", async () => {
+  it.each([
+    { label: "never derives the gauge from mint_burn_hourly" },
+    { label: "re-bins the published Bank Run Gauge into the stored input" },
+  ])("$label", async () => {
     const db = mockD1([publishedGaugeTable()]);
 
     const result = await collectMintBurnFlows(makeCollectorCtx(db));
 
     expect(result?.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
     expect(result?.gaugeBand).toBe("HEALTHY");
+    expect(result?.flightToQuality).toEqual({
+      active: false,
+      // PAXG is outside the digest's core aggregate universe but inside the
+      // published gauge universe, so its net flow reaches the FTQ split.
+      safeNetUsd: 150_000_000,
+      riskyNetUsd: -3_000_000,
+    });
+    expect(result?.topPressure.map((row) => row.symbol)).toEqual(["USDT", "USDC"]);
+    // One canonical loader serves both the digest collectors and the FTQ
+    // classifier, so the suite's healthy source classifies here. The
+    // fail-closed FTQ arms are covered by
+    // daily-digest/__tests__/mint-burn-ftq.test.ts.
+    expect(result?.classificationSource).toBe("safety-score-v9-publication");
+    expect(result?.classificationReason).toBeNull();
+    expect(result?.topChains).toEqual([
+      { chainId: "ethereum", netUsd: 150_000_000 },
+      { chainId: "arbitrum", netUsd: -3_000_000 },
+    ]);
+    const prompt = buildUserPrompt({
+      totalMcapUsd: 1,
+      mcap7dDelta: 0,
+      activeDepegCount: 0,
+      topDepegs: [],
+      biggestSupplyChange: null,
+      stabilityIndex: null,
+      yesterdayIndex: null,
+      mintBurnFlows: result!,
+    });
+    expect(prompt).toContain("Top chains by net flow");
     expect(
       (db as MockD1Database).getHistory().some((entry) => entry.sql.includes("mint_burn_hourly")),
     ).toBe(false);
@@ -1622,6 +1631,38 @@ describe("collectCrossDayTrends", () => {
   });
 });
 
+describe("collectHistoricalContext", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("includes historical context with PSI precedent and band streak", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+    const first = (match: string, value: Record<string, unknown> | null): MockTableConfig => ({ match, rows: [], first: value });
+    const db = mockD1([
+      first("SELECT COUNT(*) as cnt FROM stability_index", { cnt: 90 }),
+      first("SELECT MIN(generated_at) as oldest FROM daily_digest", null),
+      first("FROM daily_digest\n           WHERE json_extract(input_data", { generated_at: todayTs - 30 * 86_400 + 8 * 3600, psi_score: 89.0, psi_band: "STEADY" }),
+      {
+        match: "ORDER BY computed_at DESC LIMIT 90",
+        rows: [0, 1, 2].map((daysAgo) => ({ computed_at: todayTs - daysAgo * 86_400, band: "BEDROCK" })).concat({ computed_at: todayTs - 3 * 86_400, band: "STEADY" }),
+      },
+      first("SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", { ath_mcap: 120_000_000, snapshot_date: todayTs - 60 * 86_400 }),
+      first("ABS(s1.circulating_usd - s2.circulating_usd)", { snapshot_date: todayTs - 45 * 86_400, abs_change: 8_000_000 }),
+    ]);
+
+    const result = await collectHistoricalContext(makeCollectorCtx(db), 91.2, "BEDROCK", { id: "usdt-tether", symbol: "USDT", name: "Tether USD", changeUsd: 5_000_000, currentMcap: 100_000_000 });
+
+    expect(result).toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 } });
+  });
+});
+
 describe("collectDewsStress — topSignals enrichment", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -1712,34 +1753,52 @@ describe("collectDewsStress — topSignals enrichment", () => {
     expect(elevated.topSignals![0].name).toBe("pool balance drift");
   });
 
-  it("returns empty topSignals when signals_json is missing", async () => {
+  it.each([
+    {
+      label: "returns empty topSignals when signals_json is missing",
+      stablecoinId: "usdt-tether",
+      signalsJson: "{}",
+      history: [],
+    },
+    {
+      label: "marks the digest degraded when persisted DEWS signals JSON is malformed",
+      stablecoinId: "usdc-circle",
+      signalsJson: '{"pool":',
+      history: [{ stablecoin_id: "usdc-circle", score: 30, band: "WATCH" }],
+      expectedTopDriver: "unknown",
+      degradedReason: "dews-stress-signals-json",
+    },
+  ])("$label", async ({ stablecoinId, signalsJson, history, expectedTopDriver, degradedReason }) => {
     const computedAt = Math.floor(Date.now() / 1000) - 600;
-    const dewsRows: TestDewsRow[] = [
-      {
-        stablecoin_id: "usdt-tether",
+    const db = mockD1([
+      ...makePublishedDewsTables([{
+        stablecoin_id: stablecoinId,
         score: 65,
         band: "ALERT",
-        signals_json: "{}",
+        signals_json: signalsJson,
         computed_at: computedAt,
-      },
-    ];
-    const db = mockD1([
-      ...makePublishedDewsTables(dewsRows),
-      {
-        match: "FROM stress_signal_history WHERE snapshot_date = ?",
-        rows: [],
-      },
+      }]),
+      { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: history },
     ]);
+    const degradedReasons: string[] = [];
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const ctx = makeCollectorCtx(db);
-    const result = await collectDewsStress(ctx);
-
-    expect(result).toBeDefined();
-    expect(result!.elevatedCoins.length).toBe(1);
-    expect(result!.elevatedCoins[0].topSignals).toEqual([]);
+    try {
+      const result = await collectDewsStress(makeCollectorCtx(db), degradedReasons);
+      expect(result).toBeDefined();
+      expect(result!.elevatedCoins.length).toBe(1);
+      if (expectedTopDriver) expect(result!.bandChanges[0].topDriver).toBe(expectedTopDriver);
+      else expect(result!.elevatedCoins[0].topSignals).toEqual([]);
+      if (degradedReason) expect(degradedReasons).toContain(degradedReason);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
-  it("unwraps the v5.95 wrapped { signals, amplifiers } shape for elevatedCoins and bandChanges", async () => {
+  it.each([
+    { label: "unwraps the v5.95 wrapped { signals, amplifiers } shape for elevatedCoins and bandChanges" },
+    { label: "includes DEWS stress data with band changes in stored input" },
+  ])("$label", async () => {
     const wrappedJson = JSON.stringify({
       signals: {
         supply: { value: 30, available: true },
@@ -1756,12 +1815,30 @@ describe("collectDewsStress — topSignals enrichment", () => {
         signals_json: wrappedJson,
         computed_at: Math.floor(Date.now() / 1000) - 600,
       },
+      {
+        stablecoin_id: "usdc-circle",
+        score: 62,
+        band: "ALERT",
+        signals_json: '{"pool":{"value":70,"available":true},"liq":{"value":50,"available":true}}',
+        computed_at: Math.floor(Date.now() / 1000) - 600,
+      },
+      {
+        stablecoin_id: "dai-makerdao",
+        score: 8,
+        band: "CALM",
+        signals_json: '{"supply":{"value":5,"available":true}}',
+        computed_at: Math.floor(Date.now() / 1000) - 600,
+      },
     ];
     const db = mockD1([
       ...makePublishedDewsTables(dewsRows),
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
-        rows: [{ stablecoin_id: "usdt-tether", score: 25, band: "WATCH" }],
+        rows: [
+          { stablecoin_id: "usdt-tether", score: 25, band: "WATCH" },
+          { stablecoin_id: "usdc-circle", score: 30, band: "WATCH" },
+          { stablecoin_id: "dai-makerdao", score: 8, band: "CALM" },
+        ],
       },
     ]);
 
@@ -1770,8 +1847,13 @@ describe("collectDewsStress — topSignals enrichment", () => {
 
     expect(result).toBeDefined();
     // bandChanges must recover the top driver from the nested signals map.
-    expect(result!.bandChanges.length).toBe(1);
+    expect(result!.bandChanges.length).toBe(2);
     expect(result!.bandChanges[0].topDriver).toBe("pool balance drift");
+    expect(result!.bandCounts.calm).toBeGreaterThanOrEqual(1);
+    expect(result!.bandChanges.find((change) => change.symbol === "USDC")).toMatchObject({
+      from: "WATCH",
+      to: "ALERT",
+    });
     // elevatedCoins must surface non-empty topSignals — previously the Object.entries
     // iteration hit {signals,amplifiers} and filtered everything out.
     const elevated = result!.elevatedCoins[0];

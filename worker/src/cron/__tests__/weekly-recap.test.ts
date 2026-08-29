@@ -2,31 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
-}));
+vi.mock("../../lib/fetch-retry", async () => {
+  const { mockDailyDigestFetchRetryModule } = await import("./daily-digest.test-support");
+  return mockDailyDigestFetchRetryModule();
+});
 
-vi.mock("../../lib/telegram-digest-outbox", () => ({
-  enqueueTelegramDigestEdition: vi.fn(),
-  deliverTelegramDigestEdition: vi.fn(),
-}));
+vi.mock("../../lib/telegram-digest-outbox", async () => {
+  const { mockDailyDigestOutboxModule } = await import("./daily-digest.test-support");
+  return mockDailyDigestOutboxModule();
+});
 
 vi.mock("../telegram-digest-transport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../telegram-digest-transport")>();
-  return {
-    ...actual,
-    runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
-    creds: unknown;
-    deliver: (creds: unknown) => Promise<{ status: string }>;
-  }) => {
-    if (!params.creds) return "no-creds";
-    try {
-      return (await params.deliver(params.creds)).status;
-    } catch (error) {
-      return `failed: ${String(error).slice(0, 100)}`;
-    }
-    }),
-  };
+  const { mockTelegramDigestTransportModule } = await import("./daily-digest.test-support");
+  return mockTelegramDigestTransportModule(actual);
 });
 
 vi.mock("../../lib/digest-safety-context", async (importOriginal) => {
