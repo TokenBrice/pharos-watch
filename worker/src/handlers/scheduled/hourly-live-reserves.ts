@@ -26,15 +26,15 @@ import {
 } from "./slot-summary";
 import { logSkippedCronRun } from "./preflight-skip";
 import {
-  beginScheduledCheckpoint,
-  finishScheduledCheckpoint,
-  loadScheduledCheckpoint,
-  setScheduledCheckpointChildDisposition,
+  beginLiveReserveCheckpoint,
+  finishLiveReserveCheckpoint,
+  LIVE_RESERVE_SLOT_JOBS,
+  loadLiveReserveCheckpoint,
+  setLiveReserveCheckpointChildDisposition,
   type ScheduledCheckpointIdentity,
   type ScheduledRecoveryCheckpoint,
 } from "../../lib/scheduled-recovery-checkpoint";
-import { LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../../cron/sync-live-reserves-shared";
-import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import { SYNC_ORDERED_CONFIGURED_COINS } from "../../cron/sync-live-reserves-shared";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { buildAlertReserveSourceEnvelope } from "../../lib/alert-reserve-source-cache";
@@ -132,14 +132,6 @@ async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, sign
   };
 }
 
-export const LIVE_RESERVE_SLOT_JOBS = flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS.fourHourlyReserveSync);
-export const LIVE_RESERVE_CHILD_PREREQUISITES = {
-  "sync-live-reserves": [],
-  "sync-redemption-backstops": ["sync-live-reserves"],
-  "sync-kinesis-supply": [],
-  "reserve-post-sync-watchdog": ["sync-live-reserves"],
-} as const;
-
 function checkpointIdentity(checkpoint: ScheduledRecoveryCheckpoint): ScheduledCheckpointIdentity {
   return {
     scheduleKey: checkpoint.scheduleKey,
@@ -164,11 +156,11 @@ function checkpointTask(
     ...task,
     run: async (signal, reportProgress) => {
       const identity = checkpointIdentity(checkpoint);
-      await setScheduledCheckpointChildDisposition(runtime.db, identity, task.job, "running");
+      await setLiveReserveCheckpointChildDisposition(runtime.db, identity, task.job, "running");
       try {
         const result = await task.run(signal, reportProgress);
         const checkpointAfterTask =
-          task.job === "sync-live-reserves" ? await loadScheduledCheckpoint(runtime.db, identity) : null;
+          task.job === "sync-live-reserves" ? await loadLiveReserveCheckpoint(runtime.db, identity) : null;
         if (task.job === "sync-live-reserves" && !checkpointAfterTask) {
           throw new Error("live reserve checkpoint missing after queue execution");
         }
@@ -179,11 +171,11 @@ function checkpointTask(
             : result?.status === "error"
               ? "failed"
               : "completed";
-        await setScheduledCheckpointChildDisposition(runtime.db, identity, task.job, childDisposition);
+        await setLiveReserveCheckpointChildDisposition(runtime.db, identity, task.job, childDisposition);
         return result;
       } catch (error) {
         try {
-          await setScheduledCheckpointChildDisposition(runtime.db, identity, task.job, "failed");
+          await setLiveReserveCheckpointChildDisposition(runtime.db, identity, task.job, "failed");
         } catch (checkpointError) {
           logWorkerEventArgs("handler", "warn", `[hourly-live-reserves] Failed to mark ${task.job} checkpoint failed:`, checkpointError);
         }
@@ -283,7 +275,7 @@ async function recordBlockedReserveTasks(
 ): Promise<ScheduledSlotSummary> {
   const reason = `upstream-incomplete:${blockedBy}`;
   for (const task of tasks) {
-    await setScheduledCheckpointChildDisposition(runtime.db, checkpoint, task.job, "not_started");
+    await setLiveReserveCheckpointChildDisposition(runtime.db, checkpoint, task.job, "not_started");
     await logSkippedCronRun(runtime, {
       job: task.job,
       reason,
@@ -297,16 +289,10 @@ async function recordBlockedReserveTasks(
 export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext) {
   const checkpoint =
     runtime.recoveryCheckpoint ??
-    (await beginScheduledCheckpoint(runtime.db, {
-      scheduleKey: runtime.scheduleKey,
+    (await beginLiveReserveCheckpoint(runtime.db, {
       slotStartedAt: runtime.slotStartedAt,
-      job: "sync-live-reserves",
       invocationId: runtime.invocationId ?? createLeaseOwner("reserve-checkpoint"),
       workerVersion: runtime.workerVersion ?? null,
-      queueHash: LIVE_RESERVE_QUEUE_HASH,
-      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]?.id ?? null,
-      itemsTotal: SYNC_ORDERED_CONFIGURED_COINS.length,
-      childJobs: LIVE_RESERVE_SLOT_JOBS,
     }));
   const identity = checkpointIdentity(checkpoint);
   const [reserveAdapterGroup, redemptionGroup, kinesisGroup, postSyncGroup] =
@@ -323,7 +309,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
         },
       ])
     : buildScheduledSlotSummary([]);
-  const checkpointAfterMain = await loadScheduledCheckpoint(runtime.db, identity);
+  const checkpointAfterMain = await loadLiveReserveCheckpoint(runtime.db, identity);
   if (!checkpointAfterMain) {
     throw new Error("live reserve checkpoint missing after queue stage");
   }
@@ -361,12 +347,12 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     summaries.push(await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [postSyncGroup]));
   }
   const summary = mergeScheduledSlotSummaries(summaries);
-  const checkpointAfterChildren = await loadScheduledCheckpoint(runtime.db, identity);
+  const checkpointAfterChildren = await loadLiveReserveCheckpoint(runtime.db, identity);
   if (!checkpointAfterChildren) {
     throw new Error("live reserve checkpoint missing before slot finalization");
   }
   if (mainFailedAfterQueueExhaustion) {
-    await finishScheduledCheckpoint(runtime.db, identity, {
+    await finishLiveReserveCheckpoint(runtime.db, identity, {
       state: "failed",
       error: "live reserve queue exhausted without a successful result",
     });
@@ -375,7 +361,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     summary.jobsSkipped === 0 &&
     isReserveQueueExhausted(checkpointAfterChildren)
   ) {
-    await finishScheduledCheckpoint(runtime.db, identity, {
+    await finishLiveReserveCheckpoint(runtime.db, identity, {
       state: "completed",
       error: null,
     });

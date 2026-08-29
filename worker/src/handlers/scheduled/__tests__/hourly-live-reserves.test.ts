@@ -24,7 +24,7 @@ vi.mock("../../../lib/db-cache", () => ({
   setCache: vi.fn(async () => {}),
 }));
 vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
-  beginScheduledCheckpoint: vi.fn(async () => ({
+  beginLiveReserveCheckpoint: vi.fn(async () => ({
     scheduleKey: "fourHourlyReserveSync",
     slotStartedAt: 0,
     job: "sync-live-reserves",
@@ -48,9 +48,9 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
     updatedAt: 0,
     completedAt: null,
   })),
-  loadScheduledCheckpoint: vi.fn(),
-  setScheduledCheckpointChildDisposition: vi.fn(async () => {}),
-  finishScheduledCheckpoint: vi.fn(async () => {}),
+  loadLiveReserveCheckpoint: vi.fn(),
+  setLiveReserveCheckpointChildDisposition: vi.fn(async () => {}),
+  finishLiveReserveCheckpoint: vi.fn(async () => {}),
 }));
 vi.mock("../preflight-skip", () => ({
   logSkippedCronRun: vi.fn(async () => undefined),
@@ -65,9 +65,9 @@ import { getCache, setCache } from "../../../lib/db-cache";
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";
 import { SNAPSHOT_KEYS } from "../../../cron/telegram-alert-snapshots";
 import {
-  finishScheduledCheckpoint,
-  loadScheduledCheckpoint,
-  setScheduledCheckpointChildDisposition,
+  finishLiveReserveCheckpoint,
+  loadLiveReserveCheckpoint,
+  setLiveReserveCheckpointChildDisposition,
   type ScheduledRecoveryCheckpoint,
 } from "../../../lib/scheduled-recovery-checkpoint";
 
@@ -112,7 +112,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       lastSuccessAt: null,
       oldestFreshAgeSec: null,
     });
-    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(recoveryCheckpoint());
+    vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(recoveryCheckpoint());
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     runLeasedCron = vi.fn(
@@ -173,7 +173,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
   it("keeps reserve-dependent sidecars pending and still runs independent Kinesis after a reserve failure", async () => {
     vi.mocked(syncLiveReserves).mockRejectedValue(new Error("sync blew up"));
-    vi.mocked(loadScheduledCheckpoint).mockResolvedValue({
+    vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue({
       ...recoveryCheckpoint(),
       nextItemKey: "unfinished-coin",
       itemsDone: 0,
@@ -194,7 +194,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       "sync-live-reserves",
       "sync-kinesis-supply",
     ]);
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
     const errorLine = errorSpy.mock.calls
       .map((call: readonly unknown[]) => call[0])
       .find((value: unknown): value is string => typeof value === "string" && value.includes("Live reserves sync failed"));
@@ -221,7 +221,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       itemsDone: 20,
       itemsTotal: 20,
     };
-    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(exhaustedCheckpoint);
+    vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(exhaustedCheckpoint);
     vi.mocked(syncLiveReserves).mockResolvedValue({
       status: "error",
       error: "all reserve adapters failed",
@@ -237,7 +237,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(syncRedemptionBackstops).not.toHaveBeenCalled();
     expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
     expect(checkCollateralDrift).not.toHaveBeenCalled();
-    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+    expect(finishLiveReserveCheckpoint).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ attemptNo: 2 }),
       {
@@ -258,7 +258,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
     expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
     expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
     const errorLine = errorSpy.mock.calls
       .map((call: readonly unknown[]) => call[0])
       .find((value: unknown): value is string => typeof value === "string" && value.includes("Redemption backstops sync failed"));
@@ -309,8 +309,8 @@ describe("runFourHourlyReserveSyncSlot", () => {
     const summary = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
 
     expect(summary.jobsSkipped).toBeGreaterThan(0);
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
-    expect(vi.mocked(setScheduledCheckpointChildDisposition).mock.calls).not.toContainEqual([
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
+    expect(vi.mocked(setLiveReserveCheckpointChildDisposition).mock.calls).not.toContainEqual([
       expect.anything(),
       expect.anything(),
       contendedJob,
@@ -354,11 +354,11 @@ describe("runFourHourlyReserveSyncSlot", () => {
     const firstSummary = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
 
     expect(firstSummary.jobsSkipped).toBe(1);
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
 
     redemptionContended = false;
     runLeasedCron.mockClear();
-    vi.mocked(finishScheduledCheckpoint).mockClear();
+    vi.mocked(finishLiveReserveCheckpoint).mockClear();
     const successor = recoveryCheckpoint(
       {
         "sync-live-reserves": "completed",
@@ -368,13 +368,13 @@ describe("runFourHourlyReserveSyncSlot", () => {
       },
       3,
     );
-    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(successor);
+    vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(successor);
 
     const retrySummary = await runFourHourlyReserveSyncSlot(buildRuntime(successor));
 
     expect(retrySummary.jobsSkipped).toBe(0);
     expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-redemption-backstops"]);
-    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+    expect(finishLiveReserveCheckpoint).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ attemptNo: 3 }),
       { state: "completed", error: null },
@@ -388,7 +388,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
     expect(firstSummary).toMatchObject({ jobsErrored: 1, jobsSkipped: 0 });
     expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
 
     const successor = recoveryCheckpoint(
       {
@@ -399,7 +399,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       },
       3,
     );
-    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(successor);
+    vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(successor);
     runLeasedCron.mockClear();
 
     const retrySummary = await runFourHourlyReserveSyncSlot(buildRuntime(successor));
@@ -407,7 +407,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(retrySummary).toMatchObject({ jobsErrored: 0, jobsSkipped: 0 });
     expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-redemption-backstops"]);
     expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
-    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+    expect(finishLiveReserveCheckpoint).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ attemptNo: 3 }),
       { state: "completed", error: null },
@@ -420,13 +420,13 @@ describe("runFourHourlyReserveSyncSlot", () => {
     const summary = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
 
     expect(summary.jobsSkipped).toBe(1);
-    expect(setScheduledCheckpointChildDisposition).toHaveBeenCalledWith(
+    expect(setLiveReserveCheckpointChildDisposition).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
       "sync-kinesis-supply",
       "not_started",
     );
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
   });
 
   it("publishes a timestamped recovering reserve source after a missing producer generation", async () => {
@@ -456,7 +456,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       itemsDone: 10,
       itemsTotal: 20,
     };
-    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(partialCheckpoint);
+    vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(partialCheckpoint);
     vi.mocked(syncLiveReserves).mockResolvedValue({
       status: "degraded",
       metadata: JSON.stringify({
@@ -473,13 +473,13 @@ describe("runFourHourlyReserveSyncSlot", () => {
       "sync-live-reserves",
       "sync-kinesis-supply",
     ]);
-    expect(setScheduledCheckpointChildDisposition).toHaveBeenCalledWith(
+    expect(setLiveReserveCheckpointChildDisposition).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
       "sync-live-reserves",
       "not_started",
     );
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
 
     const exhaustedCheckpoint = {
       ...recoveryCheckpoint(
@@ -495,9 +495,9 @@ describe("runFourHourlyReserveSyncSlot", () => {
       itemsDone: 20,
       itemsTotal: 20,
     };
-    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(exhaustedCheckpoint);
+    vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(exhaustedCheckpoint);
     vi.mocked(syncLiveReserves).mockResolvedValue({ status: "ok" });
-    vi.mocked(finishScheduledCheckpoint).mockClear();
+    vi.mocked(finishLiveReserveCheckpoint).mockClear();
     runLeasedCron.mockClear();
 
     const retrySummary = await runFourHourlyReserveSyncSlot(buildRuntime(exhaustedCheckpoint));
@@ -508,7 +508,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       "sync-redemption-backstops",
       "reserve-post-sync-watchdog",
     ]);
-    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+    expect(finishLiveReserveCheckpoint).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ attemptNo: 3 }),
       { state: "completed", error: null },
@@ -535,13 +535,13 @@ describe("runFourHourlyReserveSyncSlot", () => {
       nextItemKey: null,
       itemsDone: 20,
     };
-    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(exhaustedCheckpoint);
+    vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(exhaustedCheckpoint);
     vi.mocked(syncLiveReserves).mockResolvedValue({ status: "ok" });
 
     await runFourHourlyReserveSyncSlot(buildRuntime(legacyCheckpoint));
 
     expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-live-reserves"]);
-    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+    expect(finishLiveReserveCheckpoint).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ attemptNo: 2 }),
       { state: "completed", error: null },
@@ -563,13 +563,13 @@ describe("runFourHourlyReserveSyncSlot", () => {
       itemsDone: 20,
       itemsTotal: 20,
     };
-    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(legacyCheckpoint);
+    vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(legacyCheckpoint);
 
     await runFourHourlyReserveSyncSlot(buildRuntime(legacyCheckpoint));
 
     expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-redemption-backstops"]);
     expect(checkCollateralDrift).not.toHaveBeenCalled();
-    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+    expect(finishLiveReserveCheckpoint).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ attemptNo: 2 }),
       { state: "completed", error: null },
@@ -584,7 +584,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       itemsTotal: 20,
     };
     const orchestrationError = new Error("checkpoint reload unavailable");
-    vi.mocked(loadScheduledCheckpoint)
+    vi.mocked(loadLiveReserveCheckpoint)
       .mockResolvedValueOnce(exhaustedCheckpoint)
       .mockRejectedValueOnce(orchestrationError);
 
@@ -594,6 +594,6 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(syncRedemptionBackstops).not.toHaveBeenCalled();
     expect(syncKinesisSupply).not.toHaveBeenCalled();
     expect(checkCollateralDrift).not.toHaveBeenCalled();
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
   });
 });

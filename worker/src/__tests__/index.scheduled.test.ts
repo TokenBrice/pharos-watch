@@ -206,22 +206,22 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
   let latestCheckpoint: Record<string, unknown> | null = null;
   return {
     ...actual,
-    beginScheduledCheckpoint: vi.fn(async (_db: D1Database, input: Record<string, unknown>) => {
+    beginLiveReserveCheckpoint: vi.fn(async (_db: D1Database, input: Record<string, unknown>) => {
       latestCheckpoint = {
-        scheduleKey: input.scheduleKey,
+        scheduleKey: "fourHourlyReserveSync",
         slotStartedAt: input.slotStartedAt,
-        job: input.job,
+        job: "sync-live-reserves",
         attemptNo: 1,
         executionGeneration: 1,
         invocationId: input.invocationId,
         workerVersion: input.workerVersion ?? null,
-        queueHash: input.queueHash,
+        queueHash: "test",
         state: "running",
-        nextItemKey: input.nextItemKey ?? null,
+        nextItemKey: null,
         currentItemKey: null,
         currentDomainAttemptId: null,
         itemsDone: 0,
-        itemsTotal: input.itemsTotal ?? 0,
+        itemsTotal: 0,
         childDispositions: {},
         recoveryOwner: null,
         recoveryLeaseUntil: null,
@@ -233,12 +233,12 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
       };
       return latestCheckpoint;
     }),
-    loadScheduledCheckpoint: vi.fn(async () => latestCheckpoint == null ? null : {
+    loadLiveReserveCheckpoint: vi.fn(async () => latestCheckpoint == null ? null : {
       ...latestCheckpoint,
       nextItemKey: null,
       itemsDone: latestCheckpoint.itemsTotal,
     }),
-    setScheduledCheckpointChildDisposition: vi.fn(async (
+    setLiveReserveCheckpointChildDisposition: vi.fn(async (
       _db: D1Database,
       _identity: Record<string, unknown>,
       job: string,
@@ -253,8 +253,8 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
         },
       };
     }),
-    finishScheduledCheckpoint: vi.fn(async () => undefined),
-    claimNextScheduledCheckpointRecovery: vi.fn(async () => null),
+    finishLiveReserveCheckpoint: vi.fn(async () => undefined),
+    claimNextLiveReserveCheckpointRecovery: vi.fn(async () => null),
   };
 });
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));

@@ -35,9 +35,9 @@ import {
   type LiveReserveSyncBudgetConfig,
 } from "./sync-live-reserves-config";
 import {
-  advanceScheduledCheckpoint,
-  loadScheduledCheckpoint,
-  markScheduledCheckpointItemStarted,
+  advanceLiveReserveCheckpoint,
+  loadLiveReserveCheckpoint,
+  markLiveReserveCheckpointItemStarted,
   type ScheduledCheckpointIdentity,
 } from "../lib/scheduled-recovery-checkpoint";
 import {
@@ -303,7 +303,7 @@ async function runReserveCoinQueue(args: {
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
       if (args.checkpoint) {
-        await advanceScheduledCheckpoint(args.db, args.checkpoint, {
+        await advanceLiveReserveCheckpoint(args.db, args.checkpoint, {
           nextItemKey: coin.id,
           itemsDone: globalIndex,
           ...(args.checkpoint.attemptNo > 1
@@ -375,7 +375,7 @@ async function runReserveCoinQueue(args: {
       ...(args.checkpoint
         ? {
             onAttemptStarted: (attemptId: string) =>
-              markScheduledCheckpointItemStarted(args.db, args.checkpoint!, {
+              markLiveReserveCheckpointItemStarted(args.db, args.checkpoint!, {
                 itemKey: coin.id,
                 domainAttemptId: attemptId,
                 itemsDone: globalIndex,
@@ -423,7 +423,7 @@ async function runReserveCoinQueue(args: {
   }
 
   if (args.checkpoint && args.orderedCoins.length > 0 && !checkpointBoundaryAdvanced) {
-    await advanceScheduledCheckpoint(args.db, args.checkpoint, {
+    await advanceLiveReserveCheckpoint(args.db, args.checkpoint, {
       nextItemKey: null,
       itemsDone: args.startIndex + args.orderedCoins.length,
       ...(args.checkpoint.attemptNo > 1
@@ -470,7 +470,7 @@ export async function syncLiveReserves(
   const runStartedMs = Date.now();
   const budgetConfig = resolveLiveReserveSyncBudgetConfig(budgetOverrides);
   let checkpoint = checkpointIdentity
-    ? await loadScheduledCheckpoint(db, checkpointIdentity)
+    ? await loadLiveReserveCheckpoint(db, checkpointIdentity)
     : null;
   if (checkpointIdentity && !checkpoint) {
     throw new Error("live reserve checkpoint missing");
@@ -518,7 +518,7 @@ export async function syncLiveReserves(
         throw new Error(`live reserve checkpoint item ${checkpointResumeId} no longer exists in the queue`);
       }
       checkpointResumeId = SYNC_ORDERED_CONFIGURED_COINS[completedIndex + 1]?.id ?? null;
-      await advanceScheduledCheckpoint(db, checkpointIdentity!, {
+      await advanceLiveReserveCheckpoint(db, checkpointIdentity!, {
         nextItemKey: checkpointResumeId,
         itemsDone: completedIndex + 1,
         ...(checkpoint.attemptNo > 1
@@ -560,7 +560,7 @@ export async function syncLiveReserves(
     && manageGlobalCursor
     && (checkpoint.nextItemKey !== frontierItemId || checkpoint.itemsDone !== startIndex)
   ) {
-    await advanceScheduledCheckpoint(db, checkpointIdentity!, {
+    await advanceLiveReserveCheckpoint(db, checkpointIdentity!, {
       nextItemKey: frontierItemId,
       itemsDone: startIndex,
     });
