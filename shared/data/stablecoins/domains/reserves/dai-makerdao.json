@@ -2,6 +2,7 @@
   "id": "dai-makerdao",
   "reserves": [
     {
+      "sourceKey": "sky-makercore:module:stablecoins",
       "name": "Stablecoins (PSM)",
       "pct": 40.4,
       "risk": "very-low",
@@ -18,6 +19,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "sky-makercore:module:grove",
       "name": "Grove (RWA)",
       "pct": 24.1,
       "risk": "low",
@@ -36,6 +38,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "sky-makercore:module:spark",
       "name": "Spark (lending)",
       "pct": 22.8,
       "risk": "low",
@@ -53,6 +56,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "sky-makercore:module:obex",
       "name": "Obex",
       "pct": 5.7,
       "risk": "medium",
@@ -70,6 +74,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "sky-makercore:module:core",
       "name": "Core (crypto vaults)",
       "pct": 4.6,
       "risk": "medium",
@@ -86,6 +91,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "sky-makercore:module:staked",
       "name": "Staking Engine",
       "pct": 1.5,
       "risk": "high",
@@ -100,6 +106,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "sky-makercore:module:legacy-rwa",
       "name": "Legacy RWA",
       "pct": 0.9,
       "risk": "low",

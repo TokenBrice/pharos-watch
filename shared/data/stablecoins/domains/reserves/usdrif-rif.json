@@ -2,6 +2,7 @@
   "id": "usdrif-rif",
   "reserves": [
     {
+      "sourceKey": "moc-v3-buckets:usdrif:rif",
       "name": "RIF collateral in the RIF On Chain V3 RIF bucket",
       "pct": 99.9996988184,
       "risk": "high",
@@ -11,6 +12,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "moc-v3-buckets:usdrif:doc",
       "name": "DOC collateral in the RIF On Chain V3 DOC bucket",
       "pct": 0.0003011816,
       "risk": "high",

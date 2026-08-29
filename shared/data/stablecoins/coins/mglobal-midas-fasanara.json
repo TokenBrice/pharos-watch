@@ -94,6 +94,7 @@
       "tokenAddress": "0x7433806912eae67919e66aea853d46fa0aef98a8",
       "assetLabel": "Fasanara Global diversified alternative debt strategy NAV",
       "assetRisk": "high",
+      "sourceKey": "chainlink-nav:mglobal-midas-fasanara",
       "maxOracleAgeSec": 4000000
     }
   },

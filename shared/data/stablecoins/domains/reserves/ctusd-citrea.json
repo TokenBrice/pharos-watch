@@ -2,39 +2,25 @@
   "id": "ctusd-citrea",
   "reserves": [
     {
-      "name": "Tokenized treasury collateral",
-      "pct": 97.9,
-      "risk": "low",
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "M0 Protocol and underlying U.S. Treasury reserve providers",
+      "sourceKey": "m0:eligible-collateral",
+      "name": "U.S. Treasury bills & cash (M0 eligible collateral)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "M0 permissioned minters and eligible collateral SPVs",
       "riskFactors": [
         "credit",
         "duration",
         "liquidity",
         "custody",
         "counterparty",
-        "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "Cash",
-      "pct": 2.1,
-      "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "Undisclosed M0 reserve institutions",
-      "riskFactors": [
-        "counterparty",
-        "liquidity",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
+    "reviewedAt": "2026-08-29",
     "reviewer": "Pharos reserve curation batch R09",
     "confidence": "verified",
     "sources": [
@@ -51,11 +37,11 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "Citrea identifies ctUSD as an M0-minted stablecoin and directs reserve verification to the M0 network. M0 specifies that extensions wrap and unwrap the base M token through SwapFacility at a perfect 1:1 relationship. The live M0 reserve adapter compiles slices named Tokenized treasury collateral and Cash; the curated rows classify those adapter slices verbatim. The direct M relationship remains represented by the documented extension path and is not duplicated as a second reserve graph edge. ctUSD-specific underlying positions, custodians, and provider weights are not published by M0, but those details sit below the adapter-level classification that V9 consumes.",
-    "compositionBasis": "M0 protocol category snapshot matching the live adapter slice names and the documented 1:1 M0 extension relationship",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Citrea identifies ctUSD as an M0-minted stablecoin and directs reserve verification to the M0 network. M0 specifies that extensions wrap and unwrap the base M token through SwapFacility at a perfect 1:1 relationship. M0 now exposes only the on-chain-indexed Minter Gateway total: its off-chain CollateralCurrent composition feed was retired in August 2026, as recorded in the adapter comment in worker/src/cron/reserve-adapters/m0.ts. The reviewed composition therefore contains one 100% keyed aggregate classified as other; the former 97.9% tokenized-Treasury / 2.1% cash snapshot is not treated as current. The direct M relationship remains represented by the documented extension path and is not duplicated as a second reserve graph edge. ctUSD-specific underlying positions, custodians, and provider weights are not published by M0.",
+    "compositionBasis": "Current M0 Protocol API on-chain-indexed Minter Gateway total, the M0 extension relationship, and the adapter-level aggregate classification",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "None at the adapter-level composition; ctUSD-specific underlying positions, custodians, and provider weights remain undisclosed by M0.",
+    "knownUnknownExposure": "The current M0 source exposes the full aggregate total but not its internal cash/Treasury allocation, minter-level provider shares, or ctUSD-specific custody terms; the retired 97.9/2.1 composition is not current.",
     "knownUnknownExposurePct": 0
   }
 }

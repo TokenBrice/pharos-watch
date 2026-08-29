@@ -531,11 +531,13 @@ export async function fetchUsdrifRifReserves(
   return {
     slices: slicesFromValues([
       {
+        sourceKey: "moc-v3-buckets:usdrif:rif",
         value: marketValues.find((value) => value.branch.label === "rif")?.marketValueUsd ?? 0,
         name: "RIF collateral admitted to the RIF On Chain V3 RIF bucket",
         risk: "high",
       },
       {
+        sourceKey: "moc-v3-buckets:usdrif:doc",
         value: marketValues.find((value) => value.branch.label === "doc")?.marketValueUsd ?? 0,
         name: "DOC collateral admitted to the RIF On Chain V3 DOC bucket",
         risk: "high",

@@ -2,6 +2,7 @@
   "id": "iauon-ondo",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:iauon-ondo",
       "name": "iShares Gold Trust (IAU) shares and cash in transit held for Ondo Global Markets",
       "pct": 100,
       "risk": "medium",

@@ -87,6 +87,7 @@
       "tokenAddress": "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
       "assetLabel": "iShares Gold Trust (IAU) ETF shares",
       "assetRisk": "low",
+      "sourceKey": "chainlink-nav:iauon-ondo",
       "oracleMethod": "latestRoundData",
       "maxOracleAgeSec": 345600
     }

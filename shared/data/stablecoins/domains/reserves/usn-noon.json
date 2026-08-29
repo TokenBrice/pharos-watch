@@ -4,7 +4,7 @@
     {
       "sourceKey": "accountable:noon:deployment:private-credit-ftac",
       "name": "Private Credit (Fasanara FTAC)",
-      "pct": 71.18,
+      "pct": 62.8,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Fasanara Capital and FTAC borrowers",
@@ -19,46 +19,23 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
-      "sourceKey": "accountable:noon:deployment:defi-lending",
-      "name": "DeFi Lending",
-      "pct": 10.24,
-      "risk": "medium",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Undisclosed DeFi protocols and borrowers",
+      "sourceKey": "accountable:noon:deployment:us-treasury-bills",
+      "name": "US Treasury Bills",
+      "pct": 21.5,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
       "riskFactors": [
-        "credit",
-        "liquidity",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "sourceKey": "accountable:noon:deployment:other",
-      "name": "Other / unmapped Accountable buckets",
-      "pct": 5.36,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Undisclosed Noon reserve counterparties (includes residual Funding Rate (BTC) dust)",
-      "riskFactors": [
-        "credit",
         "duration",
         "liquidity",
-        "custody",
-        "counterparty",
-        "smart-contract",
-        "market",
-        "basis",
-        "legal",
-        "concentration"
+        "custody"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     },
     {
       "sourceKey": "accountable:noon:deployment:clos-jaaa",
       "name": "CLOs (JAAA)",
-      "pct": 5.23,
+      "pct": 4.6,
       "risk": "high",
       "coinId": "jaaa-janus-henderson-anemoy",
       "depType": "collateral",
@@ -75,65 +52,138 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "sourceKey": "accountable:noon:deployment:us-treasury-bills",
-      "name": "US Treasury Bills",
-      "pct": 7.99,
-      "risk": "very-low",
-      "assetClass": "treasury-bill",
-      "issuerOrObligor": "United States Treasury",
+      "sourceKey": "accountable:noon:deployment:funding-rate-arb-hype",
+      "name": "Funding Rate Arb (HYPE)",
+      "pct": 4,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Noon cash-and-carry strategy, HYPE spot/perpetual venues, and funding counterparties",
       "riskFactors": [
-        "duration",
-        "liquidity",
-        "custody"
+        "basis",
+        "market",
+        "counterparty",
+        "liquidity"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:noon:deployment:defi-lending-euler",
+      "name": "DeFi Lending (Euler)",
+      "pct": 2.5,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Euler lending protocol, curated vaults, borrowers, and underlying reserve-asset issuers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "accountable:noon:deployment:defi-lending-morpho",
+      "name": "DeFi Lending (Morpho)",
+      "pct": 2.5,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho lending protocol, curated vaults, borrowers, and underlying reserve-asset issuers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "accountable:noon:deployment:undeployed",
+      "name": "Undeployed",
+      "pct": 2.1,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed Noon assets and custodians in Accountable's Undeployed bucket",
+      "riskFactors": [
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
-    "confidence": "probable",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Codex Noon Accountable reserve re-review 2026-08-29",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Noon Accountable dashboard API",
+        "label": "Noon Accountable live deployment API snapshot (data timestamp 2026-08-29T18:02:09.156Z)",
         "url": "https://cache.accountable.capital/dashboard/noon"
       },
       {
-        "label": "Noon radical transparency of reserves & returns",
-        "url": "https://docs.noon.capital/built-for-safety/3.-radical-transparency-of-reserves-and-returns"
+        "label": "Noon Accountable proof-of-solvency dashboard",
+        "url": "https://noon.accountable.capital/"
       },
       {
-        "label": "Noon liquidity documentation",
+        "label": "Noon deployment strategies (cash-and-carry funding-rate arbitrage; Morpho/Euler lending)",
+        "url": "https://docs.noon.capital/built-for-high-yields/our-deployment-strategies"
+      },
+      {
+        "label": "Noon DeFi Lending risk assessment (USDC/USDT, Morpho and Euler)",
+        "url": "https://docs.noon.capital/built-for-high-yields/our-deployment-strategies/defi-lending"
+      },
+      {
+        "label": "Noon liquidity disclosures (funding arbitrage T+0 to T+3; lending T+0)",
         "url": "https://docs.noon.capital/noon-the-basics/liquidity"
+      },
+      {
+        "label": "Noon reserve transparency methodology (Accountable source and live proof of solvency)",
+        "url": "https://docs.noon.capital/built-for-safety/3.-radical-transparency-of-reserves-and-returns"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of Accountable noon API (ts 2026-07-27T23:22:49.655Z): total_reserves $34,400,179.52 with deployment Private Credit (Fasanara FTAC) $24,486,151.98 (71.18%), DeFi Lending $3,521,782.05 (10.24%), CLOs (JAAA) $1,798,755.12 (5.23%), US Treasury Bills $2,748,703.09 (7.99%), Other $1,844,786.32 + Funding Rate (BTC) $0.96 merged into Other at 5.36%. Slices sum to 100%. Prior transparency URL /security/transparency 404s; replacement built-for-safety radical-transparency page still documents Accountable live PoS. Borrower-level FTAC/DeFi/Other detail remains undisclosed.",
-    "compositionBasis": "Accountable deployment-category snapshot captured at 2026-07-27T23:22:49.655Z (API ts 1785194569655)",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Re-review of the Accountable Noon deployment snapshot at data timestamp 1788026529156 (2026-08-29T18:02:09.156Z; total reserves $39,271,873.89; verifiability 100%). Raw deployment values are Private Credit (Fasanara FTAC) $24,667,649.67, US Treasury Bills $8,445,951.04, CLOs (JAAA) $1,800,175.38, Funding Rate Arb (HYPE) $1,584,299.43, DeFi Lending (Euler) $973,759.73, DeFi Lending (Morpho) $974,723.03, Undeployed $825,314.61, and Funding Rate Arb (BTC) $0.997. The current Accountable adapter normalizes positive values to one decimal: 62.8%, 21.5%, 4.6%, 4.0%, 2.5%, 2.5%, and 2.1%, respectively; the BTC balance is 0.0000025% and rounds to 0.0%, so the seven emitted rows sum to 100.0%. Noon's deployment-strategy documentation defines funding-rate arbitrage as a spot-long/perpetual-short delta-neutral cash-and-carry strategy, supporting the hedged-crypto classification of the HYPE-labeled row while leaving its venues, hedge notional, margin, and counterparties undisclosed. Noon documents Morpho and Euler as overcollateralized USDC/USDT lending strategies with protocol, oracle, liquidity, counterparty, and smart-contract risks; current vault addresses, pool weights, and borrowers are not published. Accountable's Undeployed label does not prove cash or stablecoin holdings, so that row is conservatively classified as other. FTAC, Treasury, and JAAA classifications are retained from the prior review.",
+    "compositionBasis": "Accountable Noon deployment snapshot at data timestamp 1788026529156, normalized by the current one-decimal Accountable deployment adapter",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "FTAC borrower-level exposure, DeFi protocol positions, and the unmapped Other bucket remain unresolved.",
-    "knownUnknownExposurePct": 86.78,
+    "knownUnknownExposure": "FTAC borrower identities, terms, seniority, and custody; Morpho/Euler vault addresses, current pool weights, and borrowers; HYPE execution venues, hedge notional, margin, and counterparties; and the assets and custodian behind Accountable's Undeployed bucket remain undisclosed. The $0.997 Funding Rate Arb (BTC) balance is below the adapter's one-decimal emission threshold and is not a separate static row.",
+    "knownUnknownExposurePct": 73.9,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Private Credit (Fasanara FTAC)",
-        "pct": 71.18,
+        "pct": 62.8,
         "disposition": "insufficient-evidence",
-        "rationale": "Category weight known; borrower identities/terms/seniority/custody not published."
+        "rationale": "Accountable identifies the FTAC strategy, but current borrower identities, terms, seniority, and custody are not published in the reviewed sources."
       },
       {
-        "reserveIndex": 1,
-        "reserveName": "DeFi Lending",
-        "pct": 10.24,
-        "disposition": "basket-needs-split",
-        "rationale": "Category weight known; protocol/market/position weights not published."
+        "reserveIndex": 3,
+        "reserveName": "Funding Rate Arb (HYPE)",
+        "pct": 4,
+        "disposition": "insufficient-evidence",
+        "rationale": "Accountable identifies the HYPE funding-arbitrage strategy and Noon documents the generic cash-and-carry structure, but current venues, hedge notional, margin, and counterparties are not published."
       },
       {
-        "reserveIndex": 2,
-        "reserveName": "Other / unmapped Accountable buckets",
-        "pct": 5.36,
+        "reserveIndex": 4,
+        "reserveName": "DeFi Lending (Euler)",
+        "pct": 2.5,
         "disposition": "insufficient-evidence",
-        "rationale": "Residual Accountable Other without constituent identity."
+        "rationale": "Accountable identifies Euler lending, but current vault addresses, pool weights, borrowers, and reserve-asset split are not published."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "DeFi Lending (Morpho)",
+        "pct": 2.5,
+        "disposition": "insufficient-evidence",
+        "rationale": "Accountable identifies Morpho lending, but current vault addresses, pool weights, borrowers, and reserve-asset split are not published."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "Undeployed",
+        "pct": 2.1,
+        "disposition": "insufficient-evidence",
+        "rationale": "Accountable labels this balance Undeployed but does not establish whether it is cash, a stablecoin, or another asset, nor identify its custodian."
       }
     ]
   },

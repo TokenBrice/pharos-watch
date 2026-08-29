@@ -2,6 +2,7 @@
   "id": "m-m0",
   "reserves": [
     {
+      "sourceKey": "m0:eligible-collateral",
       "name": "U.S. Treasury bills & cash (M0 eligible collateral)",
       "pct": 100,
       "risk": "very-low",

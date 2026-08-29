@@ -2,7 +2,7 @@
   "id": "usdr-ring",
   "reserves": [
     {
-      "name": "Ring protocol backing and liquidity positions (current allocation undisclosed)",
+      "name": "Ring protocol backing and liquidity positions (issuer allocation undisclosed)",
       "pct": 100,
       "risk": "very-high",
       "assetClass": "other",
@@ -18,71 +18,99 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-31",
+    "reviewedAt": "2026-08-29",
     "reviewer": "Codex Safety Score V9 reserve review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Ring Protocol current documentation",
-        "url": "https://docs.ring.exchange/"
+        "label": "Ring Protocol current documentation index",
+        "url": "https://docs.ring.exchange/llms.txt"
       },
       {
-        "label": "USDR verified token source",
-        "url": "https://eth.blockscout.com/address/0x4ea40dcee961675683e0a2e1721bd49cb9bca913?tab=contract"
+        "label": "Ring Protocol current architecture documentation",
+        "url": "https://docs.ring.exchange/concepts/ring-protocol"
+      },
+      {
+        "label": "CoinGecko Ring USD metadata (secondary)",
+        "url": "https://api.coingecko.com/api/v3/coins/ring-usd?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false"
+      },
+      {
+        "label": "USDR verified AssetToken source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
       },
       {
         "label": "Ring Protocol Core verified source",
-        "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
       },
       {
-        "label": "Ring documentation index (current product surface)",
-        "url": "https://docs.ring.exchange/llms.txt"
+        "label": "USDR launch mint transaction",
+        "url": "https://eth.blockscout.com/api/v2/transactions/0xc841bbb0a36f2c34bff988889e442ae41c2953e97fe2674136c9b1d92af66592"
+      },
+      {
+        "label": "Archived Ring RUSD documentation",
+        "url": "https://web.archive.org/web/20231130071113id_/https://docs.ring.exchange/protocol-core/ring-stablecoin/rusd"
+      },
+      {
+        "label": "Archived Ring PCV documentation",
+        "url": "https://web.archive.org/web/20231130073914id_/https://docs.ring.exchange/protocol-core/protocol-controlled-value"
+      },
+      {
+        "label": "Archived Ring bonding-curve documentation",
+        "url": "https://web.archive.org/web/20221001080106id_/https://docs.ring.exchange/protocol-core/bondingcurve/bondingcurve"
+      },
+      {
+        "label": "Archived Ring contract address directory",
+        "url": "https://web.archive.org/web/20231130080321id_/https://docs.ring.exchange/protocol-core/contract-addresses"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-31 of the current Ring documentation index (which describes Ring Swap, FewToken wrapping, routing, and developer tooling but no USDR reserve inventory) and verified Blockscout source for the deployed USDR AssetToken and Ring Core contracts. The contracts establish a permissioned issuance surface but expose no reproducible reserve ledger, asset inventory, allocation weights, obligors, or redemption-liquidity schedule. The reserve envelope therefore remains an honest 100% other slice with 100% unresolved composition.",
-    "compositionBasis": "Current issuer documentation and verified deployed contracts; no current reserve allocation published",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Write-time re-open on 2026-08-29. The current Ring documentation snapshot (updated 2026-08-20) covers FewToken, Ring Swap v2, routing, and SDK/API integration, but does not publish USDR reserve, bonding-curve, or PCV data. CoinGecko's mutable secondary description claims circular liquidity and instant redemptions without a source-backed allocation. The archived Ring pages recover an older RUSD design (PCV reserve funded through bonding-curve issuance and PCV allocation), but the archived address directory names RUSD 0x1036c90a7dea8a392901147870f74a40af812bb4 and Core 0x71641f4a9be0d866d1b1b01f6d28b7bcd91e66c3, not tracked USDR 0x4ea40dcee961675683e0a2e1721bd49cb9bca913 and Core 0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4. Blockscout's verified tracked USDR AssetToken source (verified 2025-09-12) is a role-gated ERC-20/CoreRef with mint, burn, and emergency methods only; the current Core (verified 2024-07-17) exposes role control but no RUSD, Ring, reserve, or redemption linkage. At Ethereum block 25862674 read on 2026-08-29, PCV_CONTROLLER_ROLE had zero members while four minters were present; the 2025-09-12 launch transaction minted 100400000 USDR directly to minter EOA 0x4F0AA5900B8292273B2f9A178D5468f8048bb9a with no collateral argument. No authoritative source maps the old PCV/bonding-curve system to current USDR/Core. Reserve assets, mechanism inputs, allocation, obligors, and holder-exercisable liquidity are therefore unavailable from the issuer/source, not an integration-only omission.",
+    "compositionBasis": "Historical Ring RUSD/PCV documentation checked against current Ring docs and the current USDR/Core verified contracts; no current USDR reserve allocation or mechanism source is published",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current reserve assets, strategy positions, allocation weights, obligors, and withdrawal liquidity are not publicly reproducible.",
+    "knownUnknownExposure": "Ring Protocol/USDR has not published a current reserve inventory, strategy or PCV addresses, allocation weights, obligors, collateralization calculation, or holder redemption/liquidity terms. CoinGecko claims are secondary and uncorroborated; the archived RUSD pages address a different deployment.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Ring protocol backing and liquidity positions (current allocation undisclosed)",
+        "reserveName": "Ring protocol backing and liquidity positions (issuer allocation undisclosed)",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "Current issuer documentation and verified contracts do not disclose a reproducible reserve inventory or allocation."
+        "rationale": "The issuer/source has not published a current USDR reserve inventory or mechanism mapping. Historical RUSD PCV/bonding-curve pages are not attributable to the tracked USDR/Core addresses, and the verified current contracts expose no reserve or redemption path."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Ring Protocol contracts and undisclosed reserve counterparties",
+        "name": "Ring Protocol contracts; reserve counterparties not identified",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-31",
+    "reviewedAt": "2026-08-29",
     "reviewer": "Codex Safety Score V9 reserve review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Ring Protocol current documentation",
-        "url": "https://docs.ring.exchange/"
+        "label": "Ring Protocol current documentation index",
+        "url": "https://docs.ring.exchange/llms.txt"
+      },
+      {
+        "label": "USDR verified AssetToken source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
       },
       {
         "label": "Ring Protocol Core verified source",
-        "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
       },
       {
-        "label": "Ring documentation index (current product surface)",
-        "url": "https://docs.ring.exchange/llms.txt"
+        "label": "Archived Ring RUSD documentation",
+        "url": "https://web.archive.org/web/20231130071113id_/https://docs.ring.exchange/protocol-core/ring-stablecoin/rusd"
       }
     ],
-    "uncertainty": "No current public source identifies reserve assets, custodians, provider shares, legal segregation, insolvency treatment, or rehypothecation terms.",
+    "uncertainty": "As of 2026-08-29, Ring's current docs and CoinGecko's secondary description do not identify reserve assets or custody. The current USDR AssetToken/Core verified sources show role-controlled issuance but no reserve custody, segregation, or redemption linkage; archived RUSD PCV pages concern old addresses. Provider identity, shares, segregation, bankruptcy remoteness, and rehypothecation are issuer/source-undisclosed.",
     "knownUnknownExposurePct": 100
   }
 }
