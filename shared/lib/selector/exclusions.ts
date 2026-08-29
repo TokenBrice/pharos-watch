@@ -137,9 +137,6 @@ export function applyUniversalExclusions(
   row: MergedRow,
   input: SelectorInput,
 ): ExclusionRecord | null {
-  if (row.lifecycle !== "active") {
-    return fail(row.id, "lifecycle-non-active");
-  }
   if (row.pegCurrency !== input.pegCurrency) {
     return fail(row.id, "peg-currency-mismatch");
   }

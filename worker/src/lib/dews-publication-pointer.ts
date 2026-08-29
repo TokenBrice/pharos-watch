@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "./structured-log";
 import { getCache, type CacheWriteResult } from "./db-cache";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -156,10 +157,6 @@ function prepareGatedDewsPublicationLedgerUpsert(
   );
 }
 
-function errorToMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function parseDewsPublishedGeneration(
   cached: { value: string; updatedAt: number } | null,
   nowSec: number,
@@ -219,7 +216,7 @@ function parseDewsPublishedGeneration(
       stablecoinIdsDigest: parsed.stablecoinIdsDigest,
     };
   } catch (error) {
-    return { status: "invalid-pointer", reason: `payload is not valid JSON: ${errorToMessage(error)}` };
+    return { status: "invalid-pointer", reason: `payload is not valid JSON: ${toErrorMessage(error)}` };
   }
 }
 
@@ -231,7 +228,7 @@ export async function readDewsPublishedGenerationResult(
     const cached = await getCache(db, DEWS_PUBLICATION_POINTER_CACHE_KEY);
     return parseDewsPublishedGeneration(cached, nowSec);
   } catch (error) {
-    return { status: "read-failed", error: errorToMessage(error) };
+    return { status: "read-failed", error: toErrorMessage(error) };
   }
 }
 

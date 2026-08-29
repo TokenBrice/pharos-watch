@@ -166,3 +166,51 @@ export function makeRedemptionWriteRecord(
     ...overrides,
   };
 }
+
+export function makeSupplyFullRedemption(
+  overrides: Partial<RedemptionBackstopEntry> = {},
+): RedemptionBackstopEntry {
+  return {
+    stablecoinId: "usdc-circle",
+    score: null,
+    dexLiquidityScore: null,
+    accessScore: 40,
+    settlementScore: 65,
+    executionCertaintyScore: 60,
+    capacityScore: null,
+    outputAssetQualityScore: 100,
+    costScore: 40,
+    routeFamily: "offchain-issuer",
+    accessModel: "issuer-api",
+    settlementModel: "atomic",
+    executionModel: "rules-based-nav",
+    outputAssetType: "stable-single",
+    provider: "supply-full-model",
+    sourceMode: "estimated",
+    resolutionState: "resolved",
+    routeStatus: "open",
+    routeStatusSource: "static-config",
+    holderEligibility: "verified-customer",
+    capacityConfidence: "documented-bound",
+    capacitySemantics: "eventual-only",
+    capacityProfile: {
+      immediateUsd: null,
+      eventualUsd: 100_000_000,
+      scoringUsd: null,
+      scoringHorizon: "eventual",
+      capacityProfileConfidence: "documented-bound",
+      modeledExitSizeUsd: 5_000_000,
+    },
+    feeConfidence: "fixed",
+    feeModelKind: "fixed-bps",
+    modelConfidence: "medium",
+    immediateCapacityUsd: null,
+    immediateCapacityRatio: null,
+    feeBps: 10,
+    queueEnabled: false,
+    methodologyVersion: "4.18",
+    updatedAt: Date.UTC(2026, 6, 13) / 1_000,
+    docs: { label: "Terms", url: "https://example.com/terms", reviewedAt: "2026-07-01" },
+    ...overrides,
+  };
+}

@@ -4,7 +4,6 @@ import type { PriceCacheEntry, PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { CronResult, PreviousStablecoinsCacheState } from "./shared";
-import type { StablecoinsStalenessSummary } from "./runtime";
 import type { PeggedAsset, EnrichmentStats } from "./enrich-prices";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
 import type {
@@ -92,48 +91,5 @@ export interface FallbackPriceEnrichmentOutput {
   nativePegCorrectionCount: number;
   nativePegFillCount: number;
   priceCacheEntries: PriceCacheWriteEntry[];
-  providerDiagnostics: PricingProviderAttemptDiagnostic[];
-}
-
-export interface FallbackSupplyHistoryInput extends FallbackAbortHandlers {
-  db: D1Database;
-  assets: PeggedAsset[];
-  signal?: AbortSignal;
-}
-
-export interface FallbackStalenessInput extends FallbackPhaseContext {
-  assets: PeggedAsset[];
-  previousAssetsById: ReadonlyMap<string, PeggedAsset>;
-  previousCacheState: PreviousStablecoinsCacheState;
-}
-
-export interface FallbackStalenessOutput {
-  stalenessWarning: boolean;
-  stalenessSummary: StablecoinsStalenessSummary | null;
-  stalenessCheckFailed: boolean;
-  stalenessCheckFailureReason?: string;
-}
-
-export interface FallbackCachePublicationInput extends FallbackPhaseContext, FallbackAbortHandlers {
-  assets: PeggedAsset[];
-  priceCacheEntries: PriceCacheWriteEntry[];
-  fxFallbackRates?: Record<string, number>;
-}
-
-export interface FallbackCachePublicationOutput {
-  cacheKey: string;
-  syncStartSec: number;
-}
-
-export interface FallbackDepegFollowThroughInput extends FallbackPhaseContext, FallbackAbortHandlers {
-  assets: PeggedAsset[];
-  previousAssetsById: Map<string, PeggedAsset>;
-  fxFallbackRates?: Record<string, number>;
-  coingeckoApiKey?: string | null;
-}
-
-export interface FallbackDepegFollowThroughOutput {
-  depegErrorCount: number;
-  depegErrors: string[];
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }

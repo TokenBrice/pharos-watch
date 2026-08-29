@@ -17,7 +17,7 @@ import {
 } from "./depeg-signals";
 import { isMissingTableError } from "./db";
 import { logMalformedJsonPath } from "./json-decode-observability";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
 export interface DepegRow {

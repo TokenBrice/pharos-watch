@@ -21,7 +21,6 @@ import {
   assertV9ReasonCodesRegistered,
   assertV9UnresolvedFactsMatchPolicy,
   assertV9ValidatedPolicyEnvelope,
-  getV9ScoreBearingGatesPolicy,
   resolveV9ReasonPolicy,
 } from "./policy";
 import {
@@ -632,7 +631,7 @@ export function hasV9DangerSignal(
   gate: V9DangerGate = "withhold",
 ): boolean {
   assertV9ValidatedPolicyEnvelope(policy);
-  const gates = getV9ScoreBearingGatesPolicy(policy).danger;
+  const gates = policy.policy.semantic.formula.danger;
   // (1) A fired signal:*:critical structural cap — presence, not bindingness.
   const measuredStructuralSignals = input.structuralSignals.filter(
     (signal) => signal.responsibility === "measured-adverse",
@@ -707,7 +706,7 @@ export interface V9PreExitDangerInput {
  */
 export function hasV9PreExitDangerSignal(input: V9PreExitDangerInput, policy: V9ValidatedPolicyEnvelope): boolean {
   assertV9ValidatedPolicyEnvelope(policy);
-  const gates = getV9ScoreBearingGatesPolicy(policy).danger;
+  const gates = policy.policy.semantic.formula.danger;
   const measuredStructuralSignals = input.structuralSignals.filter(
     (signal) => signal.responsibility === "measured-adverse",
   );
@@ -1174,7 +1173,7 @@ function scoreV9InputWithCaps(
       .map((fact) => fact.code),
   };
   const withholdDangerPresent = hasV9DangerSignal(dangerSignalInput, policy, "withhold");
-  const scoreBearingGates = getV9ScoreBearingGatesPolicy(policy);
+  const { danger, withhold } = policy.policy.semantic.formula;
 
   const effectiveNrReasons = [...nrReasons];
   let finalScore = baseFinalScore;
@@ -1189,10 +1188,10 @@ function scoreV9InputWithCaps(
   // are withheld — this keeps strong-backing majors from ever going NR.
   if (
     finalScore !== null &&
-    limitedPillarCount >= scoreBearingGates.withhold.minimumLimitedPillarCount &&
-    (!scoreBearingGates.withhold.requiresLimitedBacking || backingLimited) &&
+    limitedPillarCount >= withhold.minimumLimitedPillarCount &&
+    (!withhold.requiresLimitedBacking || backingLimited) &&
     !withholdDangerPresent &&
-    finalScore < scoreBearingGates.withhold.maxScoreExclusive
+    finalScore < withhold.maxScoreExclusive
   ) {
     effectiveNrReasons.push({
       code: "insufficient-evidence",
@@ -1257,7 +1256,7 @@ function scoreV9InputWithCaps(
         }]
       : []),
     ...(typeof pegMultiplierRaw === "number" &&
-      pegMultiplierRaw < scoreBearingGates.danger.adverseAttributionPegMultiplierFloor
+      pegMultiplierRaw < danger.adverseAttributionPegMultiplierFloor
       ? [{
           source: "peg-performance" as const,
           path: "peg:historical-performance",
@@ -1307,7 +1306,7 @@ function scoreV9InputWithCaps(
     finalScore !== null &&
     attributedGrade !== null &&
     attributedGrade !== "NR" &&
-    scoreBearingGates.danger.dangerOnlyGrades.includes(attributedGrade) &&
+    danger.dangerOnlyGrades.includes(attributedGrade) &&
     adverseAttribution.length === 0
   ) {
     effectiveNrReasons.push({

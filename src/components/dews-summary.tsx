@@ -334,14 +334,12 @@ function DEWSRadar({
   highest,
   totalCount,
   onCoinClick,
-  compact = false,
 }: {
   elevated: ElevatedCoin[];
   calmDots: CalmDot[];
   highest: ThreatBand;
   totalCount: number;
   onCoinClick: (id: string) => void;
-  compact?: boolean;
 }) {
   const uid = useId();
   const wakeGradId = useSvgId("dews-wake");
@@ -438,7 +436,7 @@ function DEWSRadar({
       className="mx-auto block"
       viewBox="0 0 560 500"
       width="100%"
-      style={{ height: compact ? "100%" : undefined, maxHeight: compact ? 470 : 440 }}
+      style={{ maxHeight: 440 }}
       aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}. Use arrow keys to navigate elevated coins.`}`}
       aria-describedby={liveMessageId}
       // group, not img: the radar contains focusable role="button" blips, and
@@ -562,14 +560,12 @@ function DEWSRadar({
 function DEWSLegend({
   bandCounts,
   updatedAtLabel,
-  compact = false,
 }: {
   bandCounts: BandCounts;
   updatedAtLabel: string;
-  compact?: boolean;
 }) {
   return (
-    <div className={`flex flex-wrap items-center gap-y-1 border-t ${compact ? "gap-x-3 pt-2" : "gap-x-4 pt-3"}`}>
+    <div className="flex flex-wrap items-center gap-y-1 border-t gap-x-4 pt-3">
       {LEGEND_BANDS.map((band) => (
         <div key={band} className="flex items-center gap-1.5">
           {band === "CALM" ? (
@@ -588,10 +584,7 @@ function DEWSLegend({
         </div>
       ))}
       <span
-        className={cn(
-          "pharos-numeric text-xs text-muted-foreground/70",
-          compact ? "w-full pt-1 sm:ml-auto sm:w-auto sm:pt-0" : "ml-auto",
-        )}
+        className="pharos-numeric text-xs text-muted-foreground/70 ml-auto"
       >
         Updated {updatedAtLabel}
       </span>
@@ -605,11 +598,10 @@ function DEWSLegend({
 
 interface DEWSSummaryProps {
   logos?: Record<string, string>;
-  showHeader?: boolean;
   className?: string;
 }
 
-export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummaryProps) {
+export function DEWSSummary({ logos, className }: DEWSSummaryProps) {
   const { data, isLoading, error } = useStressSignals();
   const { data: stablecoinsData } = useStablecoins();
   const router = useRouter();
@@ -628,12 +620,10 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
   if (isLoading) {
     return (
       <div className={cn("pharos-card-shell flex flex-col p-4 sm:p-5", className)}>
-        {showHeader && (
-          <h2 className="mb-3 text-base font-semibold leading-none">
-            <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-          </h2>
-        )}
-        <div aria-busy="true" className={`${showHeader ? "h-[440px]" : "min-h-[440px]"} rounded-lg bg-muted animate-pulse`} />
+        <h2 className="mb-3 text-base font-semibold leading-none">
+          <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
+        </h2>
+        <div aria-busy="true" className="h-[440px] rounded-lg bg-muted animate-pulse" />
       </div>
     );
   }
@@ -655,30 +645,27 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
 
   return (
     <div className={cn("pharos-card-shell flex flex-col p-4 sm:p-5", className)}>
-      {showHeader && (
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold leading-none">
-            <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-          </h2>
-          <span className="pharos-numeric text-xs text-muted-foreground">
-            {elevated.length > 0
-              ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`
-              : `All ${totalCount} coins calm`}
-          </span>
-        </div>
-      )}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-base font-semibold leading-none">
+          <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
+        </h2>
+        <span className="pharos-numeric text-xs text-muted-foreground">
+          {elevated.length > 0
+            ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`
+            : `All ${totalCount} coins calm`}
+        </span>
+      </div>
       <div className="pharos-chart-stage flex flex-1 flex-col">
-        <div className={cn(showHeader ? undefined : "flex flex-1 items-center justify-center")}>
+        <div>
           <DEWSRadar
             elevated={elevated}
             calmDots={calmDots}
             highest={highest}
             totalCount={totalCount}
             onCoinClick={(id) => router.push(buildStablecoinUrl(id))}
-            compact={!showHeader}
           />
         </div>
-        <DEWSLegend bandCounts={bandCounts} updatedAtLabel={updatedAtLabel} compact={!showHeader} />
+        <DEWSLegend bandCounts={bandCounts} updatedAtLabel={updatedAtLabel} />
       </div>
     </div>
   );

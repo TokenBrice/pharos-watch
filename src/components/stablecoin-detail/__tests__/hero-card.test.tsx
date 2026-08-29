@@ -228,33 +228,52 @@ type HeroBuilderParams = Parameters<typeof buildStablecoinDetailHeroViewModel>[0
 
 const NOT_REVIEWED_MINT_AUTHORITY = { status: "not-reviewed" } as HeroBuilderParams["mintAuthority"];
 
-function HeroCardUnderTest({
-  onOpenFeedback,
-  verdict: testVerdict = verdict,
-  resolvedMechanismArchetype = null,
-  mintAuthority = NOT_REVIEWED_MINT_AUTHORITY,
-  redemptionBackstop = null,
-  pegReferenceUnavailable = false,
-  ...props
-}: Omit<
-  HeroBuilderParams,
-  "verdict" | "resolvedMechanismArchetype" | "mintAuthority" | "redemptionBackstop" | "pegReferenceUnavailable"
-> & {
-  verdict?: HeroBuilderParams["verdict"];
-  resolvedMechanismArchetype?: HeroBuilderParams["resolvedMechanismArchetype"];
-  mintAuthority?: HeroBuilderParams["mintAuthority"];
-  redemptionBackstop?: HeroBuilderParams["redemptionBackstop"];
-  pegReferenceUnavailable?: HeroBuilderParams["pegReferenceUnavailable"];
-  onOpenFeedback: () => void;
-}) {
-  const model = buildStablecoinDetailHeroViewModel({
-    ...props,
-    verdict: testVerdict,
-    resolvedMechanismArchetype,
-    mintAuthority,
-    redemptionBackstop,
-    pegReferenceUnavailable,
-  });
+type HeroCoinOverrides = Omit<Partial<StablecoinMeta>, "flags"> & {
+  flags?: Partial<StablecoinMeta["flags"]>;
+};
+
+type HeroBuilderOverrides = Partial<Omit<HeroBuilderParams, "coin" | "coinData">> & {
+  coin?: HeroCoinOverrides;
+  coinData?: Partial<StablecoinData>;
+};
+
+function makeHeroProps(overrides: HeroBuilderOverrides = {}): HeroBuilderParams {
+  const { coin: coinOverrides, coinData: coinDataOverrides, ...rest } = overrides;
+
+  return {
+    coin: {
+      ...coin,
+      ...coinOverrides,
+      flags: { ...coin.flags, ...coinOverrides?.flags },
+    },
+    coinData: { ...coinData, ...coinDataOverrides },
+    logoSrc: "/logos/usdc.svg",
+    isNavToken: false,
+    mcap: 1_000_000_000,
+    supply: 1_000_000_000,
+    prevDay: 995_000_000,
+    prevWeek: 980_000_000,
+    prevMonth: 970_000_000,
+    performanceVsUsd1y: null,
+    pegRef: 1,
+    deviationBps: -2,
+    gaugeDeviationBps: 2,
+    pegReferenceUnavailable: false,
+    pegScoreResult,
+    liquidityData,
+    yieldRanking,
+    stressSignal,
+    reportCard: reportCardWithDirectBlacklistRisk,
+    verdict,
+    resolvedMechanismArchetype: null,
+    mintAuthority: NOT_REVIEWED_MINT_AUTHORITY,
+    redemptionBackstop: null,
+    ...rest,
+  };
+}
+
+function HeroCardUnderTest({ onOpenFeedback, ...overrides }: HeroBuilderOverrides & { onOpenFeedback: () => void }) {
+  const model = buildStablecoinDetailHeroViewModel(makeHeroProps(overrides));
   // The detail page renders the identity toolbar above the content/rail grid
   // and the card inside it; render both here to keep covering the pair.
   return (
@@ -265,32 +284,13 @@ function HeroCardUnderTest({
   );
 }
 
+function renderHero(overrides: HeroBuilderOverrides = {}): string {
+  return renderToStaticMarkup(<HeroCardUnderTest {...overrides} onOpenFeedback={() => {}} />);
+}
+
 describe("HeroCard", () => {
   it("renders shared identity, price, and metric content across responsive layouts", () => {
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={coin}
-        coinData={coinData}
-        logoSrc="/logos/usdc.svg"
-        isNavToken={false}
-        mcap={1_000_000_000}
-        supply={1_000_000_000}
-        prevDay={995_000_000}
-        prevWeek={980_000_000}
-        prevMonth={970_000_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={-2}
-        gaugeDeviationBps={2}
-        pegScoreResult={pegScoreResult}
-        liquidityData={liquidityData}
-        yieldRanking={yieldRanking}
-        stressSignal={stressSignal}
-        reportCard={reportCardWithDirectBlacklistRisk}
-        verdict={verdict}
-        onOpenFeedback={() => {}}
-      />,
-    );
+    const html = renderHero();
 
     expect(html).toContain("USD Coin");
     expect(html).toContain('data-logo-size="56"');
@@ -305,6 +305,11 @@ describe("HeroCard", () => {
     expect(html).toContain("Infrastructure");
     expect(html).toContain("Liquity v2");
     expect(html).toContain("Bluechip: B");
+  });
+
+  it("renders the prepared hero metric contract across responsive layouts", () => {
+    const html = renderHero();
+
     // The mobile-only peg gauge and freeze-summary chip were dropped: the hero
     // renders the same vocabulary at every breakpoint.
     expect(html).not.toContain("peg-gauge:");
@@ -314,15 +319,6 @@ describe("HeroCard", () => {
     expect(html).toContain("RWA-Backed");
     expect(html).toContain("Centralized");
     expect(html).toContain("Liq");
-    // Passport strip: the five verification facts as anchor-jump chips.
-    expect(html).toContain('aria-label="Verification passport"');
-    expect(html).toContain("Mechanism");
-    expect(html).toContain("RWA-Backed"); // archetype fallback when unresolved
-    expect(html).toContain("Jurisdiction");
-    expect(html).toContain("Freezable — issuer can freeze, block, or seize balances");
-    expect(html).toContain('href="#blacklist"'); // USDC is blacklist-tracked
-    expect(html).toContain("Chains");
-    expect(html).not.toContain(">Blacklistable<");
     expect(html).toContain("30d Excess");
     expect(html).toContain("+0.85%");
     expect(html).toContain("30D VS USD 3M T-BILL");
@@ -338,52 +334,47 @@ describe("HeroCard", () => {
     expect(html).toContain("Compare");
   });
 
+  it("renders the verification passport contract across responsive layouts", () => {
+    const html = renderHero();
+
+    // Passport strip: the five verification facts as anchor-jump chips.
+    expect(html).toContain('aria-label="Verification passport"');
+    expect(html).toContain("Mechanism");
+    expect(html).toContain("RWA-Backed"); // archetype fallback when unresolved
+    expect(html).toContain("Jurisdiction");
+    expect(html).toContain("Freezable — issuer can freeze, block, or seize balances");
+    expect(html).toContain('href="#blacklist"'); // USDC is blacklist-tracked
+    expect(html).toContain("Chains");
+    expect(html).not.toContain(">Blacklistable<");
+  });
+
   it("does not render NAV appreciation as a fixed-dollar peg deviation", () => {
-    const navCoin = {
-      ...coin,
-      id: "dusd-dialectic",
-      symbol: "DUSD",
-      name: "Dialectic USD",
-      flags: {
-        ...coin.flags,
-        backing: "crypto-backed" as const,
-        governance: "centralized-dependent" as const,
-        yieldBearing: true,
-        rwa: false,
-        navToken: true,
+    const html = renderHero({
+      coin: {
+        id: "dusd-dialectic",
+        symbol: "DUSD",
+        name: "Dialectic USD",
+        flags: {
+          backing: "crypto-backed",
+          governance: "centralized-dependent",
+          yieldBearing: true,
+          rwa: false,
+          navToken: true,
+        },
       },
-    };
-    const navCoinData = {
-      ...coinData,
-      id: "dusd-dialectic",
-      symbol: "DUSD",
-      name: "Dialectic USD",
-      price: 1.035,
-    };
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={navCoin}
-        coinData={navCoinData}
-        logoSrc="/logos/dusd.svg"
-        isNavToken
-        mcap={1_035_000}
-        supply={1_000_000}
-        prevDay={1_000_000}
-        prevWeek={1_000_000}
-        prevMonth={1_000_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={350}
-        gaugeDeviationBps={350}
-        pegScoreResult={null}
-        liquidityData={liquidityData}
-        yieldRanking={yieldRanking}
-        stressSignal={stressSignal}
-        reportCard={reportCardWithDirectBlacklistRisk}
-        verdict={{ archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" }}
-        onOpenFeedback={() => {}}
-      />,
-    );
+      coinData: { id: "dusd-dialectic", symbol: "DUSD", name: "Dialectic USD", price: 1.035 },
+      logoSrc: "/logos/dusd.svg",
+      isNavToken: true,
+      mcap: 1_035_000,
+      supply: 1_000_000,
+      prevDay: 1_000_000,
+      prevWeek: 1_000_000,
+      prevMonth: 1_000_000,
+      deviationBps: 350,
+      gaugeDeviationBps: 350,
+      pegScoreResult: null,
+      verdict: { archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" },
+    });
 
     expect(html).toContain("NAV token — no fixed peg");
     expect(html).not.toContain("+350 bps");
@@ -392,30 +383,7 @@ describe("HeroCard", () => {
   });
 
   it("keeps the subject case study callout docked inside the hero card", () => {
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={coin}
-        coinData={coinData}
-        logoSrc="/logos/usdc.svg"
-        isNavToken={false}
-        mcap={1_000_000_000}
-        supply={1_000_000_000}
-        prevDay={995_000_000}
-        prevWeek={980_000_000}
-        prevMonth={970_000_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={-2}
-        gaugeDeviationBps={2}
-        pegScoreResult={pegScoreResult}
-        liquidityData={liquidityData}
-        yieldRanking={yieldRanking}
-        stressSignal={stressSignal}
-        reportCard={null}
-        verdict={verdict}
-        onOpenFeedback={() => {}}
-      />,
-    );
+    const html = renderHero({ reportCard: null });
 
     expect(html).toContain('href="/learn/case-studies/usdc-svb-2023/"');
     expect(html).toContain("Read the case study: USDC and the Silicon Valley Bank weekend");
@@ -425,43 +393,19 @@ describe("HeroCard", () => {
   });
 
   it("uses the reviewed registry blacklist status for inherited-risk coins", () => {
-    const inheritedCoin: StablecoinMeta = {
-      ...coin,
-      id: "dai-makerdao",
-      name: "Mock Inherited",
-      symbol: "MCK",
-      flags: {
-        ...coin.flags,
-        governance: "centralized-dependent",
+    const html = renderHero({
+      coin: {
+        id: "dai-makerdao",
+        name: "Mock Inherited",
+        symbol: "MCK",
+        flags: { governance: "centralized-dependent" },
       },
-    };
-
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={inheritedCoin}
-        coinData={{ ...coinData, id: "dai-makerdao", name: "Mock Inherited", symbol: "MCK" }}
-        logoSrc="/logos/mock.svg"
-        isNavToken={false}
-        mcap={1_000_000_000}
-        supply={1_000_000_000}
-        prevDay={995_000_000}
-        prevWeek={980_000_000}
-        prevMonth={970_000_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={-2}
-        gaugeDeviationBps={2}
-        pegScoreResult={pegScoreResult}
-        liquidityData={liquidityData}
-        yieldRanking={null}
-        stressSignal={null}
-        reportCard={{
-          ...reportCardWithInheritedBlacklistRisk,
-          id: "dai-makerdao",
-        }}
-        onOpenFeedback={() => {}}
-      />,
-    );
+      coinData: { id: "dai-makerdao", name: "Mock Inherited", symbol: "MCK" },
+      logoSrc: "/logos/mock.svg",
+      yieldRanking: null,
+      stressSignal: null,
+      reportCard: { ...reportCardWithInheritedBlacklistRisk, id: "dai-makerdao" },
+    });
 
     expect(html).toContain("Centralized-Dependent");
     expect(html).toContain("Upstream freeze — freezing is inherited from an upstream issuer or collateral asset");
@@ -470,29 +414,10 @@ describe("HeroCard", () => {
   });
 
   it("uses shared no-gap copy when excess yield is unavailable", () => {
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={coin}
-        coinData={coinData}
-        logoSrc="/logos/usdc.svg"
-        isNavToken={false}
-        mcap={1_000_000_000}
-        supply={1_000_000_000}
-        prevDay={995_000_000}
-        prevWeek={980_000_000}
-        prevMonth={970_000_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={-2}
-        gaugeDeviationBps={2}
-        pegScoreResult={pegScoreResult}
-        liquidityData={liquidityData}
-        yieldRanking={{ ...yieldRanking, excessYield: null }}
-        stressSignal={stressSignal}
-        reportCard={reportCardWithInheritedBlacklistRisk}
-        onOpenFeedback={() => {}}
-      />,
-    );
+    const html = renderHero({
+      yieldRanking: { ...yieldRanking, excessYield: null },
+      reportCard: reportCardWithInheritedBlacklistRisk,
+    });
 
     expect(html).toContain("NO 30D BENCHMARK GAP");
   });
@@ -501,198 +426,113 @@ describe("HeroCard", () => {
     const parentCoin = CLIENT_TRACKED_META_BY_ID.get("usds-sky");
     expect(parentCoin).toBeDefined();
 
-    const variantCoin: StablecoinMeta = {
-      ...coin,
-      id: "susds-sky",
-      name: "Sky Savings USDS",
-      symbol: "sUSDS",
-      variantOf: "usds-sky",
-      variantKind: "savings-passthrough",
-      flags: {
-        ...coin.flags,
-        navToken: true,
+    const html = renderHero({
+      coin: {
+        id: "susds-sky",
+        name: "Sky Savings USDS",
+        symbol: "sUSDS",
+        variantOf: "usds-sky",
+        variantKind: "savings-passthrough",
+        flags: { navToken: true },
       },
-    };
-
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={variantCoin}
-        coinData={{ ...coinData, id: "susds-sky", name: "Sky Savings USDS", symbol: "sUSDS" }}
-        logoSrc="/logos/susds.svg"
-        isNavToken
-        mcap={1_000_000_000}
-        supply={1_000_000_000}
-        prevDay={995_000_000}
-        prevWeek={980_000_000}
-        prevMonth={970_000_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={0}
-        gaugeDeviationBps={0}
-        pegScoreResult={null}
-        liquidityData={liquidityData}
-        yieldRanking={yieldRanking}
-        stressSignal={stressSignal}
-        reportCard={null}
-        variantParent={parentCoin!}
-        variantKind="savings-passthrough"
-        onOpenFeedback={() => {}}
-      />,
-    );
+      coinData: { id: "susds-sky", name: "Sky Savings USDS", symbol: "sUSDS" },
+      logoSrc: "/logos/susds.svg",
+      isNavToken: true,
+      deviationBps: 0,
+      gaugeDeviationBps: 0,
+      pegScoreResult: null,
+      reportCard: null,
+      variantParent: parentCoin!,
+      variantKind: "savings-passthrough",
+    });
 
     expect(html).toContain("Wraps USDS");
   });
 
   it("renders 1Y vs USD for eligible non-USD coins when performance is available", () => {
-    const nonUsdCoin: StablecoinMeta = {
-      ...coin,
-      id: "zchf-frankencoin",
-      name: "Frankencoin",
-      symbol: "ZCHF",
-      flags: {
-        ...coin.flags,
-        pegCurrency: "CHF",
+    const html = renderHero({
+      coin: {
+        id: "zchf-frankencoin",
+        name: "Frankencoin",
+        symbol: "ZCHF",
+        flags: { pegCurrency: "CHF" },
       },
-    };
-
-    const nonUsdCoinData: StablecoinData = {
-      ...coinData,
-      id: "zchf-frankencoin",
-      name: "Frankencoin",
-      symbol: "ZCHF",
-      pegType: "peggedCHF",
-      price: 1.12,
-      circulating: { peggedCHF: 1_000_000_000 },
-      circulatingPrevDay: { peggedCHF: 995_000_000 },
-      circulatingPrevWeek: { peggedCHF: 980_000_000 },
-      circulatingPrevMonth: { peggedCHF: 970_000_000 },
-    };
-
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={nonUsdCoin}
-        coinData={nonUsdCoinData}
-        logoSrc="/logos/zchf.svg"
-        isNavToken={false}
-        mcap={1_000_000_000}
-        supply={1_000_000_000}
-        prevDay={995_000_000}
-        prevWeek={980_000_000}
-        prevMonth={970_000_000}
-        performanceVsUsd1y={12.34}
-        pegRef={1.12}
-        deviationBps={-2}
-        gaugeDeviationBps={2}
-        pegScoreResult={pegScoreResult}
-        liquidityData={liquidityData}
-        yieldRanking={yieldRanking}
-        stressSignal={stressSignal}
-        reportCard={null}
-        onOpenFeedback={() => {}}
-      />,
-    );
+      coinData: {
+        id: "zchf-frankencoin",
+        name: "Frankencoin",
+        symbol: "ZCHF",
+        pegType: "peggedCHF",
+        price: 1.12,
+        circulating: { peggedCHF: 1_000_000_000 },
+        circulatingPrevDay: { peggedCHF: 995_000_000 },
+        circulatingPrevWeek: { peggedCHF: 980_000_000 },
+        circulatingPrevMonth: { peggedCHF: 970_000_000 },
+      },
+      logoSrc: "/logos/zchf.svg",
+      performanceVsUsd1y: 12.34,
+      pegRef: 1.12,
+      reportCard: null,
+    });
 
     expect(html).toContain("1Y vs USD");
     expect(html).toContain("+12.34%");
   });
 
   it("renders a limited depeg coverage note for sub-floor off-peg coins", () => {
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={coin}
-        coinData={{ ...coinData, price: 0.97, circulating: { peggedUSD: 500_000 } }}
-        logoSrc="/logos/usdc.svg"
-        isNavToken={false}
-        mcap={500_000}
-        supply={500_000}
-        prevDay={495_000}
-        prevWeek={490_000}
-        prevMonth={480_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={-300}
-        gaugeDeviationBps={-300}
-        pegScoreResult={{ ...pegScoreResult, activeDepeg: false, depegEventCoverageLimited: true }}
-        liquidityData={liquidityData}
-        yieldRanking={yieldRanking}
-        stressSignal={stressSignal}
-        reportCard={reportCardWithInheritedBlacklistRisk}
-        onOpenFeedback={() => {}}
-      />,
-    );
+    const html = renderHero({
+      coinData: { price: 0.97, circulating: { peggedUSD: 500_000 } },
+      mcap: 500_000,
+      supply: 500_000,
+      prevDay: 495_000,
+      prevWeek: 490_000,
+      prevMonth: 480_000,
+      deviationBps: -300,
+      gaugeDeviationBps: -300,
+      pegScoreResult: { ...pegScoreResult, activeDepeg: false, depegEventCoverageLimited: true },
+      reportCard: reportCardWithInheritedBlacklistRisk,
+    });
 
     expect(html).toContain("Below $1.00M live-event floor. Deviation is shown, but event history may stay empty.");
   });
 
   it("renders an M0 infrastructure badge for M0-built stablecoins", () => {
-    const m0Coin: StablecoinMeta = {
-      ...coin,
-      id: "usdsc-startale",
-      name: "Startale USD",
-      symbol: "USDSC",
-      infrastructures: ["m0"],
-    };
-
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={m0Coin}
-        coinData={{ ...coinData, id: "usdsc-startale", name: "Startale USD", symbol: "USDSC" }}
-        logoSrc="/logos/usdsc.svg"
-        isNavToken={false}
-        mcap={4_100_232}
-        supply={4_100_232}
-        prevDay={4_000_000}
-        prevWeek={3_900_000}
-        prevMonth={3_500_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={-2}
-        gaugeDeviationBps={2}
-        pegScoreResult={pegScoreResult}
-        liquidityData={liquidityData}
-        yieldRanking={null}
-        stressSignal={null}
-        reportCard={null}
-        onOpenFeedback={() => {}}
-      />,
-    );
+    const html = renderHero({
+      coin: { id: "usdsc-startale", name: "Startale USD", symbol: "USDSC", infrastructures: ["m0"] },
+      coinData: { id: "usdsc-startale", name: "Startale USD", symbol: "USDSC" },
+      logoSrc: "/logos/usdsc.svg",
+      mcap: 4_100_232,
+      supply: 4_100_232,
+      prevDay: 4_000_000,
+      prevWeek: 3_900_000,
+      prevMonth: 3_500_000,
+      yieldRanking: null,
+      stressSignal: null,
+      reportCard: null,
+    });
 
     expect(html).toContain("Infrastructure");
     expect(html).toContain("M0");
   });
 
   it("renders multiple infrastructure badges when a coin belongs to more than one", () => {
-    const dualCoin: StablecoinMeta = {
-      ...coin,
-      id: "hypothetical-dual",
-      name: "Hypothetical Dual",
-      symbol: "HYP",
-      infrastructures: ["liquity-v2", "m0"],
-    };
-
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={dualCoin}
-        coinData={{ ...coinData, id: "hypothetical-dual", name: "Hypothetical Dual", symbol: "HYP" }}
-        logoSrc="/logos/hyp.svg"
-        isNavToken={false}
-        mcap={1_000_000}
-        supply={1_000_000}
-        prevDay={995_000}
-        prevWeek={990_000}
-        prevMonth={985_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={-2}
-        gaugeDeviationBps={2}
-        pegScoreResult={pegScoreResult}
-        liquidityData={liquidityData}
-        yieldRanking={null}
-        stressSignal={null}
-        reportCard={null}
-        onOpenFeedback={() => {}}
-      />,
-    );
+    const html = renderHero({
+      coin: {
+        id: "hypothetical-dual",
+        name: "Hypothetical Dual",
+        symbol: "HYP",
+        infrastructures: ["liquity-v2", "m0"],
+      },
+      coinData: { id: "hypothetical-dual", name: "Hypothetical Dual", symbol: "HYP" },
+      logoSrc: "/logos/hyp.svg",
+      mcap: 1_000_000,
+      supply: 1_000_000,
+      prevDay: 995_000,
+      prevWeek: 990_000,
+      prevMonth: 985_000,
+      yieldRanking: null,
+      stressSignal: null,
+      reportCard: null,
+    });
 
     expect(html).toContain("Liquity v2");
     expect(html).toContain("M0");

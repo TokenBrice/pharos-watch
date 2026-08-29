@@ -71,7 +71,6 @@ describe("Twitter digest delivery ledger", () => {
     const post = vi.fn(async () => ({
       tweetId: "1900000000000000001",
       mediaAttached: true,
-      mediaError: null,
     }));
 
     await expect(deliverTwitterDigestWithLedger(db, KEY, 17, NOW_SEC, post)).resolves.toMatchObject({

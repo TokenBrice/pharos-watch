@@ -9,9 +9,7 @@ import {
   type LiveReservesConfig,
 } from "../types/live-reserves";
 import {
-  adapterParamsSchemas,
-  LIVE_RESERVE_ADAPTER_DESCRIPTORS,
-  LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
+  LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_STATUS_VALUES,
 } from "./live-reserve-adapter-descriptors";
 
@@ -74,12 +72,12 @@ const baseLiveReserveConfigSchema = z.object({
 });
 
 export function createLiveReserveInputsSchema(adapterKey: LiveReserveAdapterKey): z.ZodTypeAny {
-  const inputSchema = createLiveReserveInputSchemaForKinds(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[adapterKey]);
+  const inputSchema = createLiveReserveInputSchemaForKinds(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].primaryInputKinds);
   return z.object({ primary: inputSchema, fallbacks: z.array(inputSchema).optional() }).strict();
 }
 
 export type LiveReserveAdapterParamsByKey = {
-  [K in LiveReserveAdapterKey]: z.infer<(typeof adapterParamsSchemas)[K]>;
+  [K in LiveReserveAdapterKey]: z.infer<(typeof LIVE_RESERVE_ADAPTER_DEFINITIONS)[K]["params"]>;
 };
 
 function validateAdapterConfigPolicy(
@@ -87,7 +85,7 @@ function validateAdapterConfigPolicy(
   config: Pick<LiveReservesConfig, "semantics" | "version">,
   ctx: z.RefinementCtx,
 ): void {
-  const policy = LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey].configValidation;
+  const policy = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].configValidation;
   const allowedSemantics = policy.allowedSemantics as readonly LiveReservesConfig["semantics"][];
   const allowedVersions = policy.allowedVersions as readonly number[];
 
@@ -107,12 +105,12 @@ function validateAdapterConfigPolicy(
   }
 }
 
-const liveReserveConfigAdapterKeys = Object.keys(LIVE_RESERVE_ADAPTER_DESCRIPTORS) as LiveReserveAdapterKey[];
+const liveReserveConfigAdapterKeys = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS) as LiveReserveAdapterKey[];
 const liveReserveConfigVariants = liveReserveConfigAdapterKeys.map((adapterKey) =>
   baseLiveReserveConfigSchema.extend({
     adapter: z.literal(adapterKey),
     inputs: createLiveReserveInputsSchema(adapterKey),
-    params: adapterParamsSchemas[adapterKey].optional(),
+    params: LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].params.optional(),
   }).superRefine((config, ctx) => validateAdapterConfigPolicy(adapterKey, config, ctx)),
 ) as unknown as readonly [z.ZodTypeAny, ...z.ZodTypeAny[]];
 
@@ -122,20 +120,17 @@ export const LiveReservesConfigSchema: z.ZodType<LiveReservesConfig> = z.union(
 
 
 export {
-  adapterParamsSchemas,
-  LIVE_RESERVE_ADAPTER_DESCRIPTORS,
-  LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
+  LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_STATUS_VALUES,
 };
 export { baseLiveReserveConfigSchema };
-export { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "./live-reserve-adapter-descriptors";
 
-export type { LiveReserveAdapterDescriptorMap } from "./live-reserve-adapter-descriptors";
+export type { LiveReserveAdapterDefinitionMap } from "./live-reserve-adapter-descriptors";
 
 export function getLiveReserveAdapterDefinition(
   adapterKey: string,
-): (typeof LIVE_RESERVE_ADAPTER_DESCRIPTORS)[LiveReserveAdapterKey] | null {
-  return LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey as LiveReserveAdapterKey] ?? null;
+): (typeof LIVE_RESERVE_ADAPTER_DEFINITIONS)[LiveReserveAdapterKey] | null {
+  return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey as LiveReserveAdapterKey] ?? null;
 }
 
 export function parseLiveReserveAdapterParams<K extends LiveReserveAdapterKey>(
@@ -143,7 +138,7 @@ export function parseLiveReserveAdapterParams<K extends LiveReserveAdapterKey>(
   params: Record<string, unknown> | undefined,
 ): LiveReserveAdapterParamsByKey[K] {
   // Zod indexed access loses the per-key type; cast aligns the schema with the keyed params type
-  const schema = adapterParamsSchemas[adapterKey] as unknown as z.ZodType<LiveReserveAdapterParamsByKey[K]>;
+  const schema = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].params as unknown as z.ZodType<LiveReserveAdapterParamsByKey[K]>;
   const parsed = schema.safeParse(params ?? {});
   if (parsed.success) {
     return parsed.data;

@@ -1,7 +1,7 @@
 import { D1_BATCH_SIZE } from "./constants";
 import { chunkArray } from "./collections";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   readCacheWithPolicy,
   writeCacheWithPolicy,

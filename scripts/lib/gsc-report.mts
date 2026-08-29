@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { inflateRawSync } from "node:zlib";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { isDirectRun } from "./smoke-runtime.mjs";
 
 const CSV_EXT = ".csv";
@@ -435,7 +436,7 @@ export function writeGscUnknownOption(output: GscOutput, arg: string, usage: str
 }
 
 export function writeGscError(output: GscOutput, error: unknown): void {
-  output.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  output.write(`${toErrorMessage(error)}\n`);
 }
 
 export async function runGscCli(
@@ -502,7 +503,7 @@ export function runAsyncDirect(importMetaUrl: string, argv1: string | undefined,
       process.exitCode = code;
     },
     (error) => {
-      console.error(error instanceof Error ? error.message : String(error));
+      console.error(toErrorMessage(error));
       process.exitCode = 1;
     },
   );

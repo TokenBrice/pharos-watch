@@ -357,7 +357,7 @@ Automated backstops:
 
 Mint Authority coverage is currently a manual reviewed-or-waived gate because absence can be intentional for direct, non-variant assets. `npm run check:stablecoin-data` validates authored `mintAuthority` profiles against the schema and requires active variants to carry an explicit inherited/wrapper review, but it does not require every high-value direct coin to have one yet.
 
-The chart-annotation stream (`shared/data/annotations/curated-annotations.ts`) is not gated by CI because absence is editorially ambiguous (no event vs. unrecorded event). It is handled instead by the `agents/annotation-candidates.md` queue, the `npm run candidates:annotations` producer, the `annotations-refresh` skill, and the `npm run digest:curation` rollup. The orchestrator appends a `launch` candidate row to the queue when a coin enters Pharos via a recent launch (see Phase 5 step on recent-launch annotation candidates).
+The chart-annotation stream (`shared/data/annotations/coins/*.json`, loaded by `shared/data/annotations/curated-annotations.ts`) is not gated by CI because absence is editorially ambiguous (no event vs. unrecorded event). It is handled instead by the `agents/annotation-candidates.md` queue, the `npm run candidates:annotations` producer, the `annotations-refresh` skill, and the `npm run digest:curation` rollup. The orchestrator appends a `launch` candidate row to the queue when a coin enters Pharos via a recent launch (see Phase 5 step on recent-launch annotation candidates).
 
 ---
 
@@ -465,14 +465,14 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
 - Work the three coupling groups below. The build, tests, and generated-artifact gates fail on **every** addition (active or pre-launch) until they match the registry.
 - Use `npm run check:stablecoin-data` before moving on.
 
-### 4a. Hand-edited source that hard-codes the tracked set
+### 4a. Generated client projections
 
-| File | What to change | Applies to |
-| --- | --- | --- |
-| `src/lib/stablecoin-static-data.ts` | Status count constants (`TRACKED_STABLECOIN_COUNT`, `ACTIVE_STABLECOIN_COUNT`, `PRE_LAUNCH_STABLECOIN_COUNT`, …), the listing-class counters (`CORE_AGGREGATE_STABLECOIN_COUNT`, `ACTIVE_VARIANT_STABLECOIN_COUNT`, `ACTIVE_STABLE_VALUE_INVESTMENT_COUNT`), `ACTIVE_PEG_CURRENCY_COUNTS`, the `TRACKED_STABLECOIN_IDS` array (canonical order), and `NON_ACTIVE_STABLECOIN_ID_SET` for pre-launch, quarantined, delisted, and frozen entries | Every addition. Only the counter matching the derived listing class moves, so check which class Phase 1 resolved. |
-| `src/lib/command-palette-search-data.ts` | One `COMMAND_PALETTE_STABLECOINS` search row | Every addition |
-
-`src/lib/__tests__/stablecoin-static-data.test.ts` enforces both against the shared registry; it needs no edit of its own.
+Do not hand-edit `src/lib/stablecoin-static-data.ts` or `src/lib/command-palette-search-data.ts` when
+the tracked set changes. They are stable re-export boundaries for the two gitignored modules emitted
+under `src/generated/` by the `stablecoin-client-projections` compile-input artifact. The generator
+derives counts, active peg coverage, the active-ID set, homepage profiles, and command-palette tuples
+from the validated registries. `npm run bootstrap:generated` materializes both modules after catalog
+and listing-decision edits.
 
 ### 4b. Hardcoded catalog snapshots in tests
 
@@ -499,7 +499,8 @@ artifact inventory and each unit's command live in `GENERATED_ARTIFACT_REGISTRY`
 | `public/llms.txt` | `npx tsx scripts/maintenance/generate-llms-txt.ts` | Active-stablecoin count in the summary line plus one per-coin entry |
 | `public/datasets/stablecoin-cemetery.json` + `.csv` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Provenance pins the curated dead-stablecoin file and the frozen-row projection, so a live addition leaves it byte-identical; it moves only when a frozen or dead row changes |
 
-Also regenerate the gitignored projections, which are not committed but which the build, the
+Also regenerate the gitignored projections, including the client constants and command-palette
+tuples, which are not committed but which the build, the
 tests, and `check:stablecoin-data` all read. Run `npm run bootstrap:generated` rather than an
 individual generator: it executes every bootstrap-safe unit in `GENERATED_ARTIFACT_REGISTRY`
 (`scripts/lib/automation-registry.mjs`), which owns the artifact inventory and each unit's
@@ -735,27 +736,34 @@ Use `tags` sparingly for editorial categorization, not for core classification.
 
 ### 6d. Historical chart annotations (optional)
 
-When a coin has notable historical events that the live tape can't recover (regulatory bans, market-wide shocks, mainnet launches, methodology pivots), curate them into `shared/data/annotations/curated-annotations.ts`. These render as dashed vertical markers on `PegDeviationChart` + `McapChart` when `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is on.
+When a coin has notable historical events that the live tape can't recover (regulatory bans, market-wide shocks, mainnet launches, methodology pivots), curate them into `shared/data/annotations/coins/<stablecoin-id>.json`. The typed loader at `shared/data/annotations/curated-annotations.ts` converts the ISO dates to Unix milliseconds for the runtime API. These render as dashed vertical markers on `PegDeviationChart` + `McapChart` when `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is on.
 
-Schema (mirrors `shared/types/chart-annotation.ts`):
+Authoring schema (the loader maps `date` to the runtime `ts` field; `note` is
+editorial metadata retained in the source asset):
 
-```ts
+```json
 {
-  ts: Date.UTC(YYYY, monthIdx, day), // months are 0-indexed
-  kind: "depeg" | "mint-burn-spike" | "blacklist-surge" | "exploit" | "governance" | "regulatory" | "methodology-change",
-  label: string, // ≤80 chars
-  severity?: "low" | "med" | "high",
-  href?: string, // primary source — issuer post-mortem, regulator filing, methodology changelog
+  "date": "YYYY-MM-DD",
+  "kind": "depeg",
+  "label": "...",
+  "severity": "med",
+  "href": "https://...",
+  "note": "..."
 }
 ```
+
+Use a full UTC ISO timestamp instead of the date-only form for sub-day
+precision. `kind` must be one of the values in `CHART_ANNOTATION_KINDS`,
+`label` is limited to 80 characters, `href` should be a primary source, and
+`note` retains the editorial rationale.
 
 Curation rules:
 
 - One entry per discrete event (don't collapse multi-day depegs).
 - Use the price-bottom / supply-pivot timestamp, not the press cycle.
 - Severity follows the tape vocabulary: `high` for grade-impacting events, `med` for non-fatal stress, `low` for context.
-- Add an inline `// YYYY-MM-DD — short note` comment on each `ts:` line so the date is legible at review time.
-- Sort each coin's array by `ts` ascending.
+- Keep the editorial rationale in the optional `note` field rather than a source comment.
+- Sort each coin's array by `date` ascending.
 - Do NOT invent dates. Drop a candidate rather than guess.
 
 Coverage policy: top-50 coins by market-cap target ≥1 annotation each when a meaningful historical event exists. Coins without notable events stay uncurated (empty / absent key is the correct state). The flag-flip gate for `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is ≥10 annotations across the top 4 coins by mcap (`usdc-circle`, `usdt-tether`, `dai-makerdao`, `usde-ethena`), enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.

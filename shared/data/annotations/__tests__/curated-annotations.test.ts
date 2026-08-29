@@ -1,4 +1,5 @@
-import { readdirSync } from "node:fs";
+/* eslint-disable security/detect-non-literal-fs-filename -- test reads checked-in per-coin annotation JSON from the repository only. */
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -8,6 +9,17 @@ import {
 import { CHART_ANNOTATION_KINDS } from "@shared/types/chart-annotation";
 
 const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
+const ANNOTATION_SOURCE_DIR = join(process.cwd(), "shared/data/annotations/coins");
+
+function annotationSourceFiles() {
+  return readdirSync(ANNOTATION_SOURCE_DIR)
+    .filter((fileName) => fileName.endsWith(".json"))
+    .sort();
+}
+
+function timestampForSourceDate(date: string): number {
+  return Date.parse(date.length === 10 ? `${date}T00:00:00.000Z` : date);
+}
 
 describe("curated-annotations", () => {
   it("uses only the public ChartAnnotationKind enum", () => {
@@ -45,6 +57,41 @@ describe("curated-annotations", () => {
       0,
     );
     expect(total).toBeGreaterThanOrEqual(10);
+  });
+
+  it("loads every per-coin JSON source in file and entry order", () => {
+    const sourceFiles = annotationSourceFiles();
+    const sourceIds = sourceFiles.map((fileName) => fileName.slice(0, -".json".length));
+    expect(sourceIds).toEqual(Object.keys(CURATED_ANNOTATIONS).sort());
+
+    for (const fileName of sourceFiles) {
+      const coinId = fileName.slice(0, -".json".length);
+      const source = JSON.parse(
+        readFileSync(join(ANNOTATION_SOURCE_DIR, fileName), "utf8"),
+      ) as Array<Record<string, unknown>>;
+      const loaded = CURATED_ANNOTATIONS[coinId];
+
+      expect(loaded).toBeDefined();
+      expect(loaded).toHaveLength(source.length);
+      for (const [index, entry] of source.entries()) {
+        const ts = timestampForSourceDate(String(entry.date));
+        expect(Number.isFinite(ts), `${coinId}[${index}] date`).toBe(true);
+        expect(loaded[index]).toMatchObject({
+          ts,
+          kind: entry.kind,
+          label: entry.label,
+        });
+        expect(loaded[index]?.severity).toBe(entry.severity);
+        expect(loaded[index]?.href).toBe(entry.href);
+        if (entry.note !== undefined) {
+          expect(String(entry.note).length, `${coinId}[${index}] note`).toBeGreaterThan(0);
+        }
+        expect(loaded[index]).not.toHaveProperty("note");
+        if (entry.href !== undefined) {
+          expect(String(entry.href)).toMatch(/^https?:\/\//);
+        }
+      }
+    }
   });
 
   it("only keys annotations to coins that exist in the stablecoin registry", () => {

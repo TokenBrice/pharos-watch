@@ -114,33 +114,6 @@ interface ReportCardScore {
   grade?: string;
 }
 
-interface StablecoinsResponse {
-  peggedAssets?: SnapshotEnvelope["stablecoins"];
-}
-
-interface ReportCardsResponse {
-  cards?: Array<{
-    id: string;
-    grade: string;
-    score: number | null;
-  }>;
-  methodology?: unknown;
-  updatedAt?: number;
-}
-
-interface StressSignalsResponse {
-  signals?: Record<string, { score?: number | null; band?: string | null }>;
-  methodology?: unknown;
-  updatedAt?: number;
-}
-
-interface DexLiquidityResponse {
-  [stablecoinId: string]: {
-    liquidityScore?: number | null;
-    coverageClass?: string | null;
-  };
-}
-
 function isoDateUtc(now: Date): string {
   return now.toISOString().slice(0, 10);
 }
@@ -235,56 +208,6 @@ async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
   }
 
   throw new Error("Depeg event pagination hit the 100-page safety cap before exhaustion.");
-}
-
-async function fetchLiveEndpointEnvelope(apiBase: string, snapshotDate: string): Promise<SnapshotEnvelope | null> {
-  const [stablecoins, reportCards, stressSignals, dexLiquidity] = await Promise.all([
-    safeFetchJson<StablecoinsResponse>(resolveApiPathUrl(apiBase, "/api/stablecoins")),
-    safeFetchJson<ReportCardsResponse>(resolveApiPathUrl(apiBase, "/api/report-cards/v9")),
-    safeFetchJson<StressSignalsResponse>(resolveApiPathUrl(apiBase, "/api/stress-signals")),
-    safeFetchJson<DexLiquidityResponse>(resolveApiPathUrl(apiBase, "/api/dex-liquidity")),
-  ]);
-
-  if (!stablecoins?.peggedAssets || !reportCards?.cards || !stressSignals?.signals || !dexLiquidity) {
-    return null;
-  }
-
-  const scores: Record<string, ReportCardScore> = {};
-  for (const card of reportCards.cards) {
-    scores[card.id] = {
-      safetyScore: card.score ?? undefined,
-      score: card.score ?? undefined,
-      safetyGrade: card.grade,
-      overall: card.score ?? undefined,
-      grade: card.grade,
-    };
-  }
-
-  const dews = Object.entries(stressSignals.signals).map(([stablecoinId, signal]) => ({
-    stablecoinId,
-    score: signal.score ?? 0,
-    band: signal.band ?? "unknown",
-  }));
-
-  const liquidity = Object.entries(dexLiquidity).map(([stablecoinId, row]) => ({
-    stablecoinId,
-    liquidityScore: row.liquidityScore ?? null,
-    coverageClass: row.coverageClass ?? null,
-  }));
-
-  return {
-    snapshotDate,
-    generatedAt: Math.max(reportCards.updatedAt ?? 0, stressSignals.updatedAt ?? 0),
-    methodologyVersions: {
-      reportCards: JSON.stringify(reportCards.methodology ?? null),
-      dews: JSON.stringify(stressSignals.methodology ?? null),
-      source: "live-endpoint-fallback",
-    },
-    stablecoins: stablecoins.peggedAssets,
-    reportCards: { scores },
-    dews,
-    liquidity,
-  };
 }
 
 // --- CSV helpers ------------------------------------------------------------
@@ -938,9 +861,6 @@ function validateDepegHistoryCoverage(events: readonly DepegEvent[], snapshotDat
 }
 
 function asOfIsoFromEnvelope(envelope: SnapshotEnvelope, snapshotDate: string): string {
-  if (envelope.methodologyVersions?.source === "live-endpoint-fallback") {
-    return new Date(Math.max(Date.now(), envelope.generatedAt * 1000)).toISOString();
-  }
   return envelope.generatedAt > 0
     ? new Date(envelope.generatedAt * 1000).toISOString()
     : `${snapshotDate}T00:00:00.000Z`;
@@ -963,23 +883,24 @@ export async function loadPublicDatasetLiveInputs(
   if (!envelope) {
     if (historical) {
       throw new Error(
-        `Unable to fetch historical public snapshot for ${requestedSnapshotDate}; refusing live-endpoint fallback.`,
+        `No immutable public snapshot is available for historical date ${requestedSnapshotDate}; `
+          + "API-backed public dataset generation requires the exact dated snapshot.",
       );
     }
     const latestDate = await fetchLatestSnapshotDate(apiBase);
-    if (latestDate && latestDate !== requestedSnapshotDate) {
+    if (latestDate) {
       effectiveSnapshotDate = latestDate;
       envelope = await fetchSnapshot(apiBase, latestDate);
     }
-  }
-  if (!envelope) {
-    console.warn(
-      `[generate-public-datasets] Snapshot API unavailable for ${requestedSnapshotDate}; falling back to current live endpoints.`,
-    );
-    envelope = await fetchLiveEndpointEnvelope(apiBase, effectiveSnapshotDate);
-  }
-  if (!envelope) {
-    throw new Error(`Unable to fetch public snapshot or live endpoint fallback for ${requestedSnapshotDate}.`);
+    if (!envelope) {
+      const latestDetail = latestDate
+        ? `latest indexed snapshot ${latestDate} could not be fetched`
+        : "the snapshot index contains no latest sealed snapshot";
+      throw new Error(
+        `No immutable public snapshot is available for current-date build ${requestedSnapshotDate}; ${latestDetail}. `
+          + "API-backed public dataset generation requires today's snapshot or the latest sealed snapshot.",
+      );
+    }
   }
   effectiveSnapshotDate = envelope.snapshotDate || effectiveSnapshotDate;
   const asOfISO = asOfIsoFromEnvelope(envelope, effectiveSnapshotDate);

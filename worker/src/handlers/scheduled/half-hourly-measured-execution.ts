@@ -8,7 +8,7 @@
  */
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
 import type { CronResult } from "../../lib/cron-logger";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 

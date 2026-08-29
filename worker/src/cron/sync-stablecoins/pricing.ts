@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { relativeBps } from "@shared/lib/depeg-signals";
 import {
   buildPriceValidationContext,
   type PriceValidationContext,
@@ -471,7 +472,7 @@ export function applyProtocolPriceOverrides(input: {
     }
 
     if (asset.price != null && asset.price > 0 && override.price > 0) {
-      const divergenceBps = Math.abs(Math.round(((override.price / asset.price) - 1) * 10000));
+      const divergenceBps = relativeBps(override.price, asset.price)!.absBps;
       if (divergenceBps > 100) {
         logWorkerEventArgs("handler", "warn",
           `[sync] Protocol override for ${asset.symbol} diverges ${divergenceBps}bps from consensus ` +

@@ -203,42 +203,25 @@ vi.mock("../lib/budget-surface-telemetry", async (importOriginal) => {
 });
 vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/scheduled-recovery-checkpoint")>();
-  let latestCheckpoint: Record<string, unknown> | null = null;
+  // vi.mock factories are hoisted above static imports; the fixture must load inside the factory.
+  const { makeLiveReserveCheckpoint } = await import("../lib/__tests__/scheduled-recovery-checkpoint.test-support");
+  let latestCheckpoint: import("../lib/scheduled-recovery-checkpoint").ScheduledRecoveryCheckpoint | null = null;
   return {
     ...actual,
-    beginScheduledCheckpoint: vi.fn(async (_db: D1Database, input: Record<string, unknown>) => {
-      latestCheckpoint = {
-        scheduleKey: input.scheduleKey,
-        slotStartedAt: input.slotStartedAt,
-        job: input.job,
-        attemptNo: 1,
-        executionGeneration: 1,
-        invocationId: input.invocationId,
-        workerVersion: input.workerVersion ?? null,
-        queueHash: input.queueHash,
-        state: "running",
-        nextItemKey: input.nextItemKey ?? null,
-        currentItemKey: null,
-        currentDomainAttemptId: null,
-        itemsDone: 0,
-        itemsTotal: input.itemsTotal ?? 0,
-        childDispositions: {},
-        recoveryOwner: null,
-        recoveryLeaseUntil: null,
-        sourceAttemptNo: null,
-        error: null,
-        createdAt: 0,
-        updatedAt: 0,
-        completedAt: null,
-      };
+    beginLiveReserveCheckpoint: vi.fn(async (_db: D1Database, input: Record<string, unknown>) => {
+      latestCheckpoint = makeLiveReserveCheckpoint({
+        slotStartedAt: input.slotStartedAt as number,
+        invocationId: input.invocationId as string,
+        workerVersion: (input.workerVersion as string | null) ?? null,
+      });
       return latestCheckpoint;
     }),
-    loadScheduledCheckpoint: vi.fn(async () => latestCheckpoint == null ? null : {
+    loadLiveReserveCheckpoint: vi.fn(async () => latestCheckpoint == null ? null : {
       ...latestCheckpoint,
       nextItemKey: null,
       itemsDone: latestCheckpoint.itemsTotal,
     }),
-    setScheduledCheckpointChildDisposition: vi.fn(async (
+    setLiveReserveCheckpointChildDisposition: vi.fn(async (
       _db: D1Database,
       _identity: Record<string, unknown>,
       job: string,
@@ -248,13 +231,13 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
       latestCheckpoint = {
         ...latestCheckpoint,
         childDispositions: {
-          ...(latestCheckpoint.childDispositions as Record<string, unknown>),
-          [job]: disposition,
+          ...latestCheckpoint.childDispositions,
+          [job]: disposition as import("../lib/scheduled-recovery-checkpoint").ScheduledChildDisposition,
         },
       };
     }),
-    finishScheduledCheckpoint: vi.fn(async () => undefined),
-    claimNextScheduledCheckpointRecovery: vi.fn(async () => null),
+    finishLiveReserveCheckpoint: vi.fn(async () => undefined),
+    claimNextLiveReserveCheckpointRecovery: vi.fn(async () => null),
   };
 });
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
@@ -1179,7 +1162,8 @@ describe("worker.scheduled", () => {
     );
     await Promise.all(waits);
 
-    expect(cronMocks.getCache).toHaveBeenCalledTimes(1);
+    // Idle poll reads the force-run intent and the safety-map deferral key.
+    expect(cronMocks.getCache).toHaveBeenCalledTimes(2);
     expect(cronMocks.generateDailyDigest).not.toHaveBeenCalled();
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
   });

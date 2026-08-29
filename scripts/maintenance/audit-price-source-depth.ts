@@ -3,6 +3,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { StablecoinMeta } from "@shared/types";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -17,11 +18,12 @@ import {
   numberValue,
   PROD_ORIGIN,
   PROD_STABLECOINS_URL,
+  parseReportCliArgs,
   readJsonFile,
+  runReportCli,
   stringValue,
   type UnknownRecord,
-  writeOutputFile,
-} from "../lib/coverage-audit-cli";
+} from "../lib/report-cli";
 
 const PROD_PEG_SUMMARY_URL = `${PROD_ORIGIN}/_site-data/peg-summary`;
 const PROD_REFERER = `${PROD_ORIGIN}/coverage/`;
@@ -748,93 +750,37 @@ export function renderPriceSourceDepthAuditMarkdown(audit: PriceSourceDepthAudit
 }
 
 export function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    source: null,
-    inputDir: null,
-    pegSummaryPath: null,
-    stablecoinsPath: null,
-    activeStablecoinsPath: null,
-    format: "markdown",
-    reportPath: null,
-    writeAgentsBaseline: false,
-    generatedAt: null,
-  };
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--prod") {
-      options.source = "prod";
-      continue;
-    }
-    if (arg === "--input") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--input requires a directory path");
-      options.source = "input";
-      options.inputDir = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--peg-summary") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--peg-summary requires a file path");
-      options.source = "input";
-      options.pegSummaryPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--stablecoins") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--stablecoins requires a file path");
-      options.source = "input";
-      options.stablecoinsPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--active-stablecoins") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--active-stablecoins requires a file path");
-      options.activeStablecoinsPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--json") {
-      options.format = "json";
-      continue;
-    }
-    if (arg === "--markdown") {
-      options.format = "markdown";
-      continue;
-    }
-    if (arg === "--report") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--report requires a path");
-      options.reportPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--write-agents-baseline") {
-      options.writeAgentsBaseline = true;
-      options.format = "json";
-      continue;
-    }
-    if (arg === "--generated-at") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--generated-at requires an ISO timestamp or 'now'");
-      options.generatedAt = value;
-      i += 1;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  if (!options.source) {
-    throw new Error("Choose --prod or --input <dir> / --peg-summary <file> --stablecoins <file>.");
-  }
-  if (options.source === "input" && !options.inputDir && (!options.pegSummaryPath || !options.stablecoinsPath)) {
-    throw new Error("Input mode requires --input <dir> or both --peg-summary and --stablecoins.");
-  }
-
-  return options;
+  return parseReportCliArgs(argv, {
+    createOptions: (): CliOptions => ({
+      source: null,
+      inputDir: null,
+      pegSummaryPath: null,
+      stablecoinsPath: null,
+      activeStablecoinsPath: null,
+      format: "markdown",
+      reportPath: null,
+      writeAgentsBaseline: false,
+      generatedAt: null,
+    }),
+    includeGeneratedAt: true,
+    generatedAtMissingMessage: "--generated-at requires an ISO timestamp or 'now'",
+    options: [
+      { flag: "--prod", kind: "boolean", apply: (options) => { options.source = "prod"; } },
+      { flag: "--input", kind: "value", missingMessage: "--input requires a directory path", apply: (options, value) => { options.source = "input"; options.inputDir = value!; } },
+      { flag: "--peg-summary", kind: "value", missingMessage: "--peg-summary requires a file path", apply: (options, value) => { options.source = "input"; options.pegSummaryPath = value!; } },
+      { flag: "--stablecoins", kind: "value", missingMessage: "--stablecoins requires a file path", apply: (options, value) => { options.source = "input"; options.stablecoinsPath = value!; } },
+      { flag: "--active-stablecoins", kind: "value", missingMessage: "--active-stablecoins requires a file path", apply: (options, value) => { options.activeStablecoinsPath = value!; } },
+      { flag: "--write-agents-baseline", kind: "boolean", apply: (options) => { options.writeAgentsBaseline = true; options.format = "json"; } },
+    ],
+    validate: (options) => {
+      if (!options.source) {
+        throw new Error("Choose --prod or --input <dir> / --peg-summary <file> --stablecoins <file>.");
+      }
+      if (options.source === "input" && !options.inputDir && (!options.pegSummaryPath || !options.stablecoinsPath)) {
+        throw new Error("Input mode requires --input <dir> or both --peg-summary and --stablecoins.");
+      }
+    },
+  });
 }
 
 function generatedAtFromPayload(payload: unknown): string | null {
@@ -891,27 +837,22 @@ export async function runCli(
   cwd = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
-  const options = parseArgs(argv);
-  const loaded = await loadInputs(options, cwd, fetchImpl);
-  const audit = buildPriceSourceDepthAudit({
-    ...loaded,
-    generatedAt: resolveGeneratedAt(options, loaded),
+  return runReportCli(argv, {
+    parse: parseArgs,
+    cwd,
+    build: async (options) => {
+      const loaded = await loadInputs(options, cwd, fetchImpl);
+      return buildPriceSourceDepthAudit({
+        ...loaded,
+        generatedAt: resolveGeneratedAt(options, loaded),
+      });
+    },
+    renderMarkdown: renderPriceSourceDepthAuditMarkdown,
+    resolveReportPath: (audit, options) => options.writeAgentsBaseline
+      ? options.reportPath ?? defaultBaselinePath(cwd, audit.generatedAt)
+      : options.reportPath,
+    writeMessage: (target) => `Wrote price source depth audit to ${target}`,
   });
-  const output = options.format === "json"
-    ? `${JSON.stringify(audit, null, 2)}\n`
-    : renderPriceSourceDepthAuditMarkdown(audit);
-  const reportPath = options.writeAgentsBaseline
-    ? options.reportPath ?? defaultBaselinePath(cwd, audit.generatedAt)
-    : options.reportPath;
-
-  if (reportPath) {
-    const target = writeOutputFile(reportPath, output, cwd);
-    process.stdout.write(`Wrote price source depth audit to ${target}\n`);
-  } else {
-    process.stdout.write(output);
-  }
-
-  return 0;
 }
 
 if (process.argv[1]?.endsWith("audit-price-source-depth.ts")) {
@@ -920,7 +861,7 @@ if (process.argv[1]?.endsWith("audit-price-source-depth.ts")) {
       process.exitCode = exitCode;
     },
     (error: unknown) => {
-      console.error(error instanceof Error ? error.message : String(error));
+      console.error(toErrorMessage(error));
       process.exitCode = 1;
     },
   );

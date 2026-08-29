@@ -36,7 +36,7 @@ import type {
   CollectorContext,
   CollectorResult,
 } from "./collectors-shared";
-import { markCollectorDegraded } from "./collectors-shared";
+import { collectorDegraded } from "./collectors-shared";
 import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
@@ -45,11 +45,17 @@ import { buildStandingConditions, collectCauseContext } from "./cause-context";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
 import { tryParseJson } from "../../lib/json-parse";
 
-function consumeCollectorResult<T>(result: CollectorResult<T>, degradedReasons: string[]): T {
-  if (result.degradedReason) {
-    degradedReasons.push(result.degradedReason);
+function aggregateCollectorReasons(results: readonly CollectorResult<unknown>[]): string[] {
+  const seen = new Set<string>();
+  const degradedReasons: string[] = [];
+  for (const result of results) {
+    for (const reason of result.degradedReasons) {
+      if (seen.has(reason)) continue;
+      seen.add(reason);
+      degradedReasons.push(reason);
+    }
   }
-  return result.value;
+  return degradedReasons;
 }
 
 export interface DailyDigestInputBuildResult {
@@ -119,8 +125,6 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       ? (parsed as { leadSignalId: string }).leadSignalId
       : null;
   });
-  const degradedReasons: string[] = [];
-
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
   if (stablecoinsCacheResult.kind !== "ok") {
     logWorkerEventArgs("handler", "warn",
@@ -139,7 +143,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
         stabilityIndex: null,
         yesterdayIndex: null,
       },
-      degradedReasons,
+      degradedReasons: [],
       recentMeta,
       previousInputData,
       recentLeadSignalIds,
@@ -223,11 +227,14 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   // public freshness budget as /api/stablecoins and the depeg resolver; once
   // stale, collectors may still use market-cap context but must not treat the
   // cached price as a current depeg-severity signal.
+  const collectorResults: CollectorResult<unknown>[] = [];
   if (!ctx.stablecoinsCacheIsFresh) {
-    markCollectorDegraded(degradedReasons, "stablecoins-cache-stale");
+    collectorResults.push(collectorDegraded(undefined, "stablecoins-cache-stale"));
   }
 
-  const { activeDepegCount, topDepegs, lifecycleFlags } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
+  const activeDepegsResult = await collectActiveDepegs(ctx);
+  collectorResults.push(activeDepegsResult);
+  const { activeDepegCount, topDepegs, lifecycleFlags } = activeDepegsResult.value;
 
   const [latestSample, latestDaily, avg24hRow, yesterdayRow] = await Promise.all([
     db
@@ -248,7 +255,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       .first<{ score: number; band: string }>(),
   ]);
   if (latestSample && nowSec - latestSample.stored_at > 2 * SECONDS.ONE_HOUR) {
-    markCollectorDegraded(degradedReasons, "psi-sample-stale");
+    collectorResults.push(collectorDegraded(undefined, "psi-sample-stale"));
   }
   const currentPsiSource = latestSample ?? latestDaily;
 
@@ -281,45 +288,70 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const yesterdayIndex = yesterdayRow ? { score: yesterdayRow.score, band: yesterdayRow.band } : null;
 
-  const blacklistActivity = consumeCollectorResult(await collectBlacklistActivity(ctx), degradedReasons);
-  const supplyVelocity = consumeCollectorResult(await collectSupplyVelocity(ctx), degradedReasons);
+  const [blacklistActivityResult, supplyVelocityResult] = await Promise.all([
+    collectBlacklistActivity(ctx),
+    collectSupplyVelocity(ctx),
+  ]);
+  collectorResults.push(blacklistActivityResult, supplyVelocityResult);
+  const blacklistActivity = blacklistActivityResult.value;
+  const supplyVelocity = supplyVelocityResult.value;
 
   const mentionedSymbols = new Set<string>();
   for (const d of topDepegs) mentionedSymbols.add(d.symbol);
   if (biggestSupplyChange) mentionedSymbols.add(biggestSupplyChange.symbol);
   if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
-  const { safetyScores, safetyGrades, safetyIdentity, safetyContext } = await collectSafetyScores(
-    ctx,
-    mentionedSymbols,
-    degradedReasons,
-  );
+  const safetyScoresResult = await collectSafetyScores(ctx, mentionedSymbols);
+  collectorResults.push(safetyScoresResult);
+  const { safetyScores, safetyGrades, safetyIdentity, safetyContext } = safetyScoresResult.value;
 
   // These eight collectors are independent (no cross-collector inputs) and only
-  // issue D1 queries, so run them concurrently. They mutate degradedReasons via
-  // dedup-guarded markCollectorDegraded, which is safe under the single-threaded
-  // event loop. collectHistoricalContext/collectGradeTransitions stay sequential
-  // because they depend on displayScore/displayBand and safetyGrades.
+  // issue D1 queries, so run them concurrently. Their results are reduced below
+  // in this explicit order so degraded-reason serialization is stable.
   const [
-    resolvedDepegs,
-    mintBurnFlows,
-    dewsStress,
-    psiContributors,
-    yieldAnomalies,
-    liquidityShifts,
-    crossDayTrends,
-    totalMcapAth,
+    resolvedDepegsResult,
+    mintBurnFlowsResult,
+    dewsStressResult,
+    psiContributorsResult,
+    yieldAnomaliesResult,
+    liquidityShiftsResult,
+    crossDayTrendsResult,
+    totalMcapAthResult,
   ] = await Promise.all([
-    collectResolvedDepegs(ctx, degradedReasons),
-    collectMintBurnFlows(ctx, degradedReasons),
-    collectDewsStress(ctx, degradedReasons),
-    collectPsiContributors(ctx, degradedReasons),
-    collectYieldAnomalies(ctx, degradedReasons),
-    collectLiquidityShifts(ctx, degradedReasons),
-    collectCrossDayTrends(ctx, degradedReasons),
-    collectTotalMcapAth(ctx, degradedReasons),
+    collectResolvedDepegs(ctx),
+    collectMintBurnFlows(ctx),
+    collectDewsStress(ctx),
+    collectPsiContributors(ctx),
+    collectYieldAnomalies(ctx),
+    collectLiquidityShifts(ctx),
+    collectCrossDayTrends(ctx),
+    collectTotalMcapAth(ctx),
   ]);
-  const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange, degradedReasons);
-  const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades, safetyIdentity, degradedReasons);
+  collectorResults.push(
+    resolvedDepegsResult,
+    mintBurnFlowsResult,
+    dewsStressResult,
+    psiContributorsResult,
+    yieldAnomaliesResult,
+    liquidityShiftsResult,
+    crossDayTrendsResult,
+    totalMcapAthResult,
+  );
+  const historicalContextResult = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
+  collectorResults.push(historicalContextResult);
+  const gradeTransitionsResult = await collectGradeTransitions(ctx, safetyGrades, safetyIdentity);
+  collectorResults.push(gradeTransitionsResult);
+
+  const degradedReasons = aggregateCollectorReasons(collectorResults);
+  const resolvedDepegs = resolvedDepegsResult.value;
+  const mintBurnFlows = mintBurnFlowsResult.value;
+  const dewsStress = dewsStressResult.value;
+  const psiContributors = psiContributorsResult.value;
+  const yieldAnomalies = yieldAnomaliesResult.value;
+  const liquidityShifts = liquidityShiftsResult.value;
+  const crossDayTrends = crossDayTrendsResult.value;
+  const totalMcapAth = totalMcapAthResult.value;
+  const historicalContext = historicalContextResult.value;
+  const gradeTransitions = gradeTransitionsResult.value;
 
   const inputData: DigestInputData = {
     digestVersion: 2,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
+import { makePublicHealth } from "./public-health.test-support";
 import { buildAvailabilityCauses, buildDataQualityCauses, synthesizeOverallCauses } from "../status/evaluation-causes";
 import {
   deriveAvailabilityStatus,
@@ -41,93 +42,6 @@ function makeReserveComposition(
     status: "healthy",
     freshCoverageRatio: 1,
     authoritativeFreshCoverageRatio: 0.8,
-    ...overrides,
-  };
-}
-
-function makePublicHealth(overrides?: Partial<PublicHealthAssessment>): PublicHealthAssessment {
-  return {
-    dbHealthy: true,
-    overallStatus: "healthy",
-    warnings: [],
-    caches: {},
-    cacheImpactStatus: "healthy",
-    worstCacheRatio: 0,
-    cacheFailures: [],
-    cacheDiagnostics: [],
-    cacheWarnings: [],
-    blacklist: {
-      totalEvents: 0,
-      missingAmounts: 0,
-      recentMissingAmounts: 0,
-      recentWindowSec: 86400,
-      missingRatio: 0,
-    },
-    blacklistMetrics: null,
-    blacklistQueryError: null,
-    mintBurn: {
-      totalEvents: 0,
-      latestEventTs: null,
-      latestHourlyTs: null,
-      freshnessAgeSec: null,
-      majorStaleCount: 0,
-      staleMajorSymbols: [],
-      sync: {
-        lastSuccessfulSyncAt: null,
-        freshnessStatus: "fresh",
-        warning: null,
-        criticalLaneHealthy: true,
-      },
-    },
-    mintBurnImpactStatus: "healthy",
-    mintBurnQueryError: null,
-    mintBurnLastRunStatus: "ok",
-    mintBurnBootstrap: false,
-    circuits: {},
-    openCircuitCount: 0,
-    circuitImpactStatus: "healthy",
-    circuitQueryError: null,
-    d1Capacity: null,
-    d1CapacityImpactStatus: "healthy",
-    d1CapacityQueryError: null,
-    alertBroker: {
-      activeCount: 0,
-      pendingCount: 0,
-      criticalActiveCount: 0,
-      failedDeliveryCount: 0,
-      missingTargetCount: 0,
-      oldestActiveAt: null,
-      activeConditionKeys: [],
-      queryFailed: false,
-    },
-    alertBrokerImpactStatus: "healthy",
-    stablecoinPublication: {
-      status: "complete",
-      expectedActiveCount: 0,
-      presentActiveCount: 0,
-      waivedActiveCount: 0,
-      missingActiveIds: [],
-      waivedActiveIds: [],
-      expiredWaiverIds: [],
-      observedAt: null,
-    },
-    stablecoinPublicationImpactStatus: "healthy",
-    activePriceCoverage: {
-      status: "complete",
-      expectedActiveCount: 0,
-      presentActiveCount: 0,
-      pricedActiveCount: 0,
-      missingPriceCount: 0,
-      pricedActiveIds: [],
-      missingActiveIds: [],
-      affectedMarketCapUsd: 0,
-      missingActiveAssets: [],
-      alertEligibleCount: 0,
-      alertEligibleIds: [],
-      maxConsecutiveMissingGenerations: 0,
-      observedAt: null,
-    },
-    activePriceCoverageImpactStatus: "healthy",
     ...overrides,
   };
 }
@@ -313,7 +227,7 @@ describe("status evaluation policy", () => {
 
   it("does not let circuit diagnostics failure degrade availability on its own", () => {
     const availability = deriveAvailabilityStatus({
-      publicHealth: makePublicHealth({
+      publicHealth: makePublicHealth("healthy", {
         circuitImpactStatus: "degraded",
         circuitQueryError: "Circuit breaker diagnostics unavailable.",
       }),
@@ -327,7 +241,7 @@ describe("status evaluation policy", () => {
 
   it("uses the same durable alert floor for admin availability", () => {
     const availability = deriveAvailabilityStatus({
-      publicHealth: makePublicHealth({
+      publicHealth: makePublicHealth("healthy", {
         alertBrokerImpactStatus: "degraded",
         alertBroker: {
           ...makePublicHealth().alertBroker,
@@ -346,7 +260,7 @@ describe("status evaluation policy", () => {
 
   it("uses the D1 capacity floor for admin availability", () => {
     const availability = deriveAvailabilityStatus({
-      publicHealth: makePublicHealth({
+      publicHealth: makePublicHealth("healthy", {
         d1CapacityImpactStatus: "stale",
       }),
       availabilityImpactingCronErrors: 0,
@@ -411,7 +325,7 @@ describe("status cause text", () => {
   it("warns when DEX data is display-valid but stale for live pricing", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
-        makePublicHealth({
+        makePublicHealth("healthy", {
           caches: {
             "dex-liquidity": {
               ageSeconds: 4_501,
@@ -437,7 +351,7 @@ describe("status cause text", () => {
   it("emits a warning cache cause when an override-tightened cache breaches its degraded band below the global threshold", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
-        makePublicHealth({
+        makePublicHealth("healthy", {
           // yield-data override bands are 2x/4x, so 2.1x degrades it even though
           // the global 8x band is untouched. A non-overridden cache at the same
           // 2.1x ratio stays healthy, proving per-key override resolution.
@@ -464,7 +378,7 @@ describe("status cause text", () => {
   it("escalates an override-tightened cache to a critical stale cause past its stale band", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
-        makePublicHealth({
+        makePublicHealth("healthy", {
           caches: {
             "yield-data": { ageSeconds: 14_760, maxAge: 3_600, healthy: false },
           },
@@ -486,7 +400,7 @@ describe("status cause text", () => {
   it("does not emit a cache-ratio cause when a non-overridden cache is within the global band", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
-        makePublicHealth({
+        makePublicHealth("healthy", {
           caches: {
             stablecoins: { ageSeconds: 18_000, maxAge: 3_600, healthy: true },
           },
@@ -502,7 +416,7 @@ describe("status cause text", () => {
 
   it("groups DEWS stale health downstream of DEX liquidity", () => {
     const causes = buildAvailabilityCauses({
-      publicHealth: makePublicHealth({
+      publicHealth: makePublicHealth("healthy", {
         caches: {
           "dex-liquidity": {
             ageSeconds: 8_000,
@@ -541,7 +455,7 @@ describe("status cause text", () => {
   it("gives mint/burn query failure precedence over stale public classification", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
-        makePublicHealth({
+        makePublicHealth("healthy", {
           mintBurnImpactStatus: "stale",
           mintBurnQueryError: "Mint/burn health data unavailable.",
           mintBurnLastRunStatus: "error",
@@ -573,7 +487,7 @@ describe("status cause text", () => {
   it("emits stale mint/burn cause when the timestamp query succeeds with no recent sync", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
-        makePublicHealth({
+        makePublicHealth("healthy", {
           mintBurnImpactStatus: "stale",
           mintBurnQueryError: null,
           mintBurnLastRunStatus: "error",
@@ -1008,7 +922,7 @@ describe("deriveAvailabilityStatus cron-error semantic", () => {
     expect(
       deriveAvailabilityStatus({
         ...baseInput,
-        publicHealth: makePublicHealth({ cacheImpactStatus: "stale" }),
+        publicHealth: makePublicHealth("healthy", { cacheImpactStatus: "stale" }),
       }),
     ).toBe("stale");
   });
@@ -1017,7 +931,7 @@ describe("deriveAvailabilityStatus cron-error semantic", () => {
     expect(
       deriveAvailabilityStatus({
         ...baseInput,
-        publicHealth: makePublicHealth({
+        publicHealth: makePublicHealth("healthy", {
           mintBurnImpactStatus: "stale",
           mintBurnLastRunStatus: "error",
         }),
@@ -1029,7 +943,7 @@ describe("deriveAvailabilityStatus cron-error semantic", () => {
     expect(
       deriveAvailabilityStatus({
         ...baseInput,
-        publicHealth: makePublicHealth({
+        publicHealth: makePublicHealth("healthy", {
           mintBurnImpactStatus: "stale",
           mintBurnQueryError: "Mint/burn health data unavailable.",
           mintBurnLastRunStatus: "error",

@@ -7,7 +7,7 @@ import {
   type ResolvedCronTimeoutBudget,
 } from "./cron-timeouts";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export interface CronLeaseOptions {
   ttlSec?: number;

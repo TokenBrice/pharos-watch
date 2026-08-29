@@ -1,0 +1,4 @@
+[
+  {"date":"2024-04-30","kind":"governance","label":"Astherus USDF launch on BSC — delta-neutral synthetic dollar","severity":"med","note":"2024-04-30 — Astherus launches USDF on BSC; Ethena-style delta-neutral via Ceffu/Binance"},
+  {"date":"2025-03-31","kind":"governance","label":"Astherus + APX merge — protocol rebrands to Aster","severity":"low","note":"2025-03-31 — Astherus + APX Finance merge and rebrand as Aster"}
+]

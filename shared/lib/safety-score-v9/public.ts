@@ -765,10 +765,7 @@ function allPublicReasonCodes(input: V9PublicCardProjectionInput): V9ReasonCode[
   ]);
 }
 
-// Test seam (keep exported): the public-projection suite asserts single-card
-// output without assembling a whole response envelope. Production callers go
-// through `buildSafetyScoreV9Response`.
-export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): SafetyScoreV9CurrentCard {
+function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): SafetyScoreV9CurrentCard {
   const isRateable = input.trace.finalScore !== null;
   const caps = input.trace.caps.map((cap) => ({
     kind: cap.kind,
@@ -778,7 +775,7 @@ export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): Sa
     binding: isRateable && cap.binding,
   }));
   const bindingCap = isRateable ? (caps.find((cap) => cap.binding) ?? null) : null;
-  return SafetyScoreV9CurrentCardSchema.parse({
+  return {
     id: input.trace.assetId,
     ...(input.backingFromLiveReserves === undefined
       ? {}
@@ -811,7 +808,14 @@ export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): Sa
     dependencies: projectDependencies(input),
     scoreTrace: projectScoreTrace(input),
     breakdowns: projectBreakdowns(input),
-  });
+  };
+}
+
+// Test seam (keep exported): the public-projection suite asserts single-card
+// output without assembling a whole response envelope. Production callers go
+// through `buildSafetyScoreV9Response`.
+export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): SafetyScoreV9CurrentCard {
+  return SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9CardUnchecked(input));
 }
 
 function canonicalSourceGenerations(sourceGenerations: Readonly<Record<string, string>>): Record<string, string> {
@@ -851,7 +855,7 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
   const ordered = [...args.results].sort((left, right) => compareText(left.trace.assetId, right.trace.assetId));
   const traces = ordered.map((result) => result.trace);
   const first = traces[0]!;
-  const cards = ordered.map(projectSafetyScoreV9Card);
+  const cards = ordered.map(projectSafetyScoreV9CardUnchecked);
   const notRatedIds = cards.filter((card) => card.grade === "NR").map((card) => card.id);
   return SafetyScoreV9CurrentResponseSchema.parse({
     model: "v9-critical-path",

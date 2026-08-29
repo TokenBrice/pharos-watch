@@ -5,6 +5,24 @@ import { loadYieldHealthSummary } from "../yield-health";
 import type { CronRunStatus, CronStatus } from "@shared/types/status";
 
 const NOW = 1_777_000_000;
+const SUPPLEMENTAL_SOURCE_FAMILIES = [
+  "morpho",
+  "pendle",
+  "yearnKong",
+  "beefy",
+  "vaultsFyi",
+  "compoundV3",
+  "aaveV3",
+  "roycoDawn",
+] as const;
+
+function supplementalFamilyRows(updatedAt: number, sourceCount = 0) {
+  return SUPPLEMENTAL_SOURCE_FAMILIES.map((family) => ({
+    key: `yield:supplemental-sources:v1:${family}`,
+    updated_at: updatedAt,
+    value: JSON.stringify({ sourceCount }),
+  }));
+}
 
 function cron(status: CronRunStatus = "ok", ageSec = 120, metadata?: Record<string, unknown>): CronStatus {
   return {
@@ -56,6 +74,7 @@ describe("loadYieldHealthSummary", () => {
           updated_at: NOW - 3600,
           value: "{}",
         },
+        ...supplementalFamilyRows(NOW - 3600),
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
@@ -93,6 +112,11 @@ describe("loadYieldHealthSummary", () => {
       supplemental: {
         ageSec: 3600,
         status: "healthy",
+        familyCount: 7,
+        freshFamilyCount: 7,
+        degradedFamilyCount: 0,
+        staleFamilyCount: 0,
+        missingFamilyCount: 0,
       },
       benchmark: {
         ageSec: 3600,
@@ -137,6 +161,8 @@ describe("loadYieldHealthSummary", () => {
           value: JSON.stringify({
             operatorQueue: {
               persistence: "durable",
+              promotionMode: "human-reviewed",
+              allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
               headlineGaps: [
                 {
                   id: "manifest-missing:eurc",
@@ -148,6 +174,7 @@ describe("loadYieldHealthSummary", () => {
                 },
               ],
               recommendationCandidates: [],
+              suppressedItemCount: 0,
             },
           }),
         },
@@ -156,13 +183,97 @@ describe("loadYieldHealthSummary", () => {
       { "sync-yield-data": cron() },
     );
 
-    expect(summary.coverageAudit.queuePersistence).toBe("durable");
+    expect(summary.coverageAudit).toMatchObject({
+      allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
+      queuePersistence: "durable",
+    });
     expect(summary.coverageAudit.headlineGaps).toEqual([
       expect.objectContaining({
         id: "manifest-missing:eurc",
         kind: "manifest-missing",
       }),
     ]);
+  });
+
+  it("treats a valid empty operator queue as authoritative after disposition filtering", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 600,
+          value: JSON.stringify({
+            manifestMissingIds: ["dismissed-manifest-item"],
+            staleVenueRiskScores: [{ protocol: "dismissed-venue-item" }],
+            operatorQueue: {
+              persistence: "durable",
+              promotionMode: "human-reviewed",
+              allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
+              headlineGaps: [],
+              recommendationCandidates: [],
+              suppressedItemCount: 2,
+            },
+          }),
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.coverageAudit).toMatchObject({
+      headlineGapCount: 1,
+      recommendationCandidateCount: 1,
+      allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
+      queuePersistence: "durable",
+      headlineGaps: [],
+      recommendationCandidates: [],
+    });
+  });
+
+  it("returns an unavailable queue for a missing current operator-queue contract", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([{
+        key: "yield-coverage-audit",
+        updated_at: NOW - 600,
+        value: JSON.stringify({
+          manifestMissingIds: ["legacy-item-must-not-reappear"],
+        }),
+      }]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.coverageAudit).toMatchObject({
+      allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
+      queuePersistence: "deferred",
+      headlineGaps: [],
+      recommendationCandidates: [],
+    });
+  });
+
+  it("returns an unavailable queue for a malformed current operator-queue contract", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([{
+        key: "yield-coverage-audit",
+        updated_at: NOW - 600,
+        value: JSON.stringify({
+          manifestMissingIds: ["legacy-item-must-not-reappear"],
+          operatorQueue: {
+            persistence: "durable",
+            headlineGaps: "not-an-array",
+            recommendationCandidates: [],
+          },
+        }),
+      }]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.coverageAudit).toMatchObject({
+      allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
+      queuePersistence: "deferred",
+      headlineGaps: [],
+      recommendationCandidates: [],
+    });
   });
 
   it("degrades aggregate health when a published non-USD benchmark is stale behind fresh USD", async () => {
@@ -213,11 +324,7 @@ describe("loadYieldHealthSummary", () => {
             },
           }),
         },
-        {
-          key: "yield:supplemental-sources:v1",
-          updated_at: NOW - 3600,
-          value: "{}",
-        },
+        ...supplementalFamilyRows(NOW - 3600),
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
@@ -292,11 +399,7 @@ describe("loadYieldHealthSummary", () => {
             },
           }),
         },
-        {
-          key: "yield:supplemental-sources:v1",
-          updated_at: NOW - 3600,
-          value: "{}",
-        },
+        ...supplementalFamilyRows(NOW - 3600),
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
@@ -385,11 +488,7 @@ describe("loadYieldHealthSummary", () => {
             },
           }),
         },
-        {
-          key: "yield:supplemental-sources:v1",
-          updated_at: NOW - 3600,
-          value: "{}",
-        },
+        ...supplementalFamilyRows(NOW - 3600),
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
@@ -471,11 +570,7 @@ describe("loadYieldHealthSummary", () => {
             },
           }),
         },
-        {
-          key: "yield:supplemental-sources:v1",
-          updated_at: NOW - 3600,
-          value: "{}",
-        },
+        ...supplementalFamilyRows(NOW - 3600),
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
@@ -548,33 +643,9 @@ describe("loadYieldHealthSummary", () => {
       staleVenueRiskScoreCount: 2,
       allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
       queuePersistence: "deferred",
+      headlineGaps: [],
+      recommendationCandidates: [],
     });
-    expect(summary.coverageAudit.headlineGaps).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "manifest-missing",
-          title: "missing-yield-asset",
-          actionHint: "accept",
-        }),
-        expect.objectContaining({
-          kind: "missing-protocol",
-          title: "USDC on new-protocol",
-        }),
-      ]),
-    );
-    expect(summary.coverageAudit.recommendationCandidates).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "source-family-adapter",
-          title: "aave-v3",
-        }),
-        expect.objectContaining({
-          kind: "stale-venue-risk-score",
-          title: "aave-v3",
-          actionHint: "watch",
-        }),
-      ]),
-    );
   });
 
   it("treats unknown venue risk tiers as missing evidence for penalty coverage", async () => {
@@ -611,11 +682,7 @@ describe("loadYieldHealthSummary", () => {
             },
           }),
         },
-        {
-          key: "yield:supplemental-sources:v1",
-          updated_at: NOW - 3600,
-          value: "{}",
-        },
+        ...supplementalFamilyRows(NOW - 3600),
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
@@ -710,11 +777,7 @@ describe("loadYieldHealthSummary", () => {
             },
           }),
         },
-        {
-          key: "yield:supplemental-sources:v1",
-          updated_at: NOW - 10 * 3600,
-          value: "{}",
-        },
+        ...supplementalFamilyRows(NOW - 10 * 3600),
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 60 * 86400,
@@ -734,9 +797,8 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.coverageAudit.status).toBe("degraded");
   });
 
-  it("uses fresh per-family supplemental caches when the aggregate is stale", async () => {
-    const summary = await loadYieldHealthSummary(
-      makeDb([
+  it("uses fresh per-family supplemental caches without aggregate fallback", async () => {
+    const db = makeDb([
         {
           key: "yield-rankings",
           updated_at: NOW - 300,
@@ -763,7 +825,9 @@ describe("loadYieldHealthSummary", () => {
           updated_at: NOW - 86400,
           value: "{}",
         },
-      ]),
+      ]);
+    const summary = await loadYieldHealthSummary(
+      db,
       NOW,
       { "sync-yield-data": cron() },
     );
@@ -774,6 +838,9 @@ describe("loadYieldHealthSummary", () => {
       freshFamilyCount: 7,
       missingFamilyCount: 0,
     });
+    const healthQuery = db.getHistory().find((entry) => entry.sql.includes("SELECT key, value, updated_at"));
+    expect(healthQuery?.sql).toContain("key IN ('yield-rankings', 'yield-coverage-audit')");
+    expect(healthQuery?.sql).not.toContain("'yield:supplemental-sources:v1',");
   });
 
   it("surfaces partial supplemental family health", async () => {

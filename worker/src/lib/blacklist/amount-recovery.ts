@@ -26,7 +26,7 @@ import {
   readDataWord,
 } from "../evm-logs";
 import { ETHERSCAN_V2_BASE } from "../constants";
-import { toErrorMessage } from "../error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { fetchEvmTokenBalance } from "./balance-providers";
 import type { BlacklistRow } from "./shared";

@@ -25,10 +25,9 @@ import { useApiQueryWithMeta } from "./use-api-query";
  *      auto-detected depegs / mint-burn spikes / freeze surges / methodology
  *      changes).
  *
- *   2. Static editorial annotations from
- *      `shared/data/annotations/curated-annotations.ts` (historical events the
- *      tape can't recover: SVB depeg, BUSD ban, Black Thursday, coin launches,
- *      etc).
+ *   2. Static editorial annotations from the per-coin JSON assets under
+ *      `shared/data/annotations/coins/` (historical events the tape can't
+ *      recover: SVB depeg, BUSD ban, Black Thursday, coin launches, etc).
  *
  * Both sources are clamped to `[fromMs, toMs]` in this memo so out-of-range
  * rows never extend the chart's data domain (defence in depth with

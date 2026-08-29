@@ -41,13 +41,12 @@ import {
   MINT_AUTHORITY_SCORE_FILTER_CONFIG,
   MINT_AUTHORITY_STATUS_CONFIG,
   resolveMintAuthorityScoreDisplay,
-  type PublishedMintComponent,
 } from "@/lib/mint-authority-display";
-import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
+import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
-import type { PegSummaryCoin, ReportCardGrade, StablecoinData } from "@shared/types";
+import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },
@@ -198,40 +197,10 @@ export function ScreenerClient() {
     for (const coin of pegData?.coins ?? []) {
       pegById.set(coin.id, coin);
     }
-    const reportById = new Map<
-      string,
-      {
-        grade: ReportCardGrade;
-        score: number | null;
-        backing: number | null;
-        exit: number | null;
-        control: number | null;
-        evidence: ScreenerRow["safetyEvidence"];
-        weakestPillar: ScreenerRow["safetyWeakestPillar"];
-        weakestScore: number | null;
-        bindingCapReason: string | null;
-        mint: PublishedMintComponent | null;
-      }
-    >();
-    for (const card of reportData?.cards ?? []) {
-      reportById.set(card.id, {
-        grade: card.grade,
-        score: card.score,
-        backing: card.pillars.backing.score,
-        exit: card.pillars.exit.score,
-        control: card.pillars.control.score,
-        evidence:
-          card.grade === "NR"
-            ? "nr"
-            : card.evidence.level === "insufficient"
-              ? "limited"
-              : card.evidence.level,
-        weakestPillar: card.weakestPillar?.pillar ?? null,
-        weakestScore: card.weakestPillar?.score ?? null,
-        bindingCapReason: card.bindingCap?.reason ?? null,
-        mint: readV9CardMintComponent(card),
-      });
-    }
+    const projectedSafety = reportData
+      ? buildV9SafetyTableMap(reportData, reportData.safetyScoreIdentity)
+      : null;
+    const safetyById = projectedSafety?.status === "available" ? projectedSafety.value : {};
     const dewsById = new Map<string, number>();
     for (const [id, entry] of Object.entries(stressData?.signals ?? {})) {
       dewsById.set(id, entry.score);
@@ -245,7 +214,7 @@ export function ScreenerClient() {
     for (const meta of CLIENT_TRACKED_STABLECOINS) {
       if (meta.status === "quarantined" || meta.status === "delisted") continue;
       const lifecycle = meta.status ?? "active";
-      const safety = reportById.get(meta.id) ?? null;
+      const safety = safetyById[meta.id] ?? null;
       const pegCoin = pegById.get(meta.id);
       const mintAuthorityScore = resolveMintAuthorityScoreDisplay(safety?.mint);
       rows.push({
@@ -262,12 +231,17 @@ export function ScreenerClient() {
         liquidityScore: liquidityById.get(meta.id) ?? null,
         safetyGrade: safety?.grade ?? null,
         safetyScore: safety?.score ?? null,
-        safetyBackingScore: safety?.backing ?? null,
-        safetyExitScore: safety?.exit ?? null,
-        safetyControlScore: safety?.control ?? null,
-        safetyEvidence: safety?.evidence ?? "nr",
-        safetyWeakestPillar: safety?.weakestPillar ?? null,
-        safetyWeakestScore: safety?.weakestScore ?? null,
+        safetyBackingScore: safety?.pillars.backing.score ?? null,
+        safetyExitScore: safety?.pillars.exit.score ?? null,
+        safetyControlScore: safety?.pillars.control.score ?? null,
+        safetyEvidence:
+          safety?.grade === "NR"
+            ? "nr"
+            : safety?.evidence.level === "insufficient"
+              ? "limited"
+              : safety?.evidence.level ?? "nr",
+        safetyWeakestPillar: safety?.weakestPillar?.pillar ?? null,
+        safetyWeakestScore: safety?.weakestPillar?.score ?? null,
         safetyBindingCapReason: safety?.bindingCapReason ?? null,
         custodyModel: resolveCustodyModel(meta),
         blacklistable: projectBlacklistable(meta.blacklistStatus),

@@ -6,7 +6,7 @@ import { isRecord } from "@shared/lib/type-guards";
 import { executeAtomicBatch } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseJson } from "../../lib/json-parse";
 import type {
   DexLiquidityPoolState,
@@ -658,7 +658,7 @@ async function markStageFailed(
   generationId: string,
   error: unknown,
 ): Promise<void> {
-  const failureReason = error instanceof Error ? error.message : String(error);
+  const failureReason = toErrorMessage(error);
   try {
     await db
       .prepare(

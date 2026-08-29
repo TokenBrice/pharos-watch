@@ -1,21 +1,15 @@
 import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
 import {
-  claimNextScheduledCheckpointRecovery,
-  inspectScheduledCheckpointRecoveryEligibility,
-  prepareEligibleScheduledCheckpointRecoveries,
-  retireIncompatibleScheduledCheckpointRecoveries,
+  claimNextLiveReserveCheckpointRecovery,
+  inspectLiveReserveCheckpointRecoveryEligibility,
+  prepareEligibleLiveReserveCheckpointRecoveries,
+  retireIncompatibleLiveReserveCheckpointRecoveries,
 } from "../../lib/scheduled-recovery-checkpoint";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./context";
-import {
-  LIVE_RESERVE_CHILD_PREREQUISITES,
-  LIVE_RESERVE_SLOT_JOBS,
-  runFourHourlyReserveSyncSlot,
-} from "./hourly-live-reserves";
+import { runFourHourlyReserveSyncSlot } from "./hourly-live-reserves";
 import { runSingleScheduledJob } from "./slot-groups";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
-import { LIVE_RESERVE_QUEUE_HASH } from "../../cron/sync-live-reserves-shared";
-import { LIVE_RESERVE_RECOVERY_DOMAIN_POLICY } from "../../cron/live-reserve-recovery-checkpoint";
 
 type ReserveRecoveryMode = "off" | "shadow" | "reconcile" | "recover";
 
@@ -27,7 +21,6 @@ function normalizeReserveRecoveryMode(value: string | null | undefined): Reserve
   return "off";
 }
 
-const RECOVERY_CHECKPOINT_JOB = "sync-live-reserves";
 const RECOVERY_LEASE_SEC = 15 * 60;
 const RECOVERY_STALE_AFTER_SEC = 2 * 60;
 
@@ -52,10 +45,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
   }
 
   if (mode === "shadow") {
-    const inspection = await inspectScheduledCheckpointRecoveryEligibility(runtime.db, {
-      scheduleKey: "fourHourlyReserveSync",
-      job: RECOVERY_CHECKPOINT_JOB,
-      expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
+    const inspection = await inspectLiveReserveCheckpointRecoveryEligibility(runtime.db, {
       staleAfterSec: RECOVERY_STALE_AFTER_SEC,
     });
     return {
@@ -77,29 +67,15 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     signal,
     reconcilerWorkerVersion: runtime.workerVersion ?? null,
   });
-  const incompatibleRetirement = await retireIncompatibleScheduledCheckpointRecoveries(runtime.db, {
-    scheduleKey: "fourHourlyReserveSync",
-    job: RECOVERY_CHECKPOINT_JOB,
-    childJobs: LIVE_RESERVE_SLOT_JOBS,
-    expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
-    domainPolicy: LIVE_RESERVE_RECOVERY_DOMAIN_POLICY,
+  const incompatibleRetirement = await retireIncompatibleLiveReserveCheckpointRecoveries(runtime.db, {
     limit: 5,
   });
-  const preparation = await prepareEligibleScheduledCheckpointRecoveries(runtime.db, {
-    scheduleKey: "fourHourlyReserveSync",
-    job: RECOVERY_CHECKPOINT_JOB,
-    childJobs: LIVE_RESERVE_SLOT_JOBS,
-    childPrerequisites: LIVE_RESERVE_CHILD_PREREQUISITES,
-    expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
+  const preparation = await prepareEligibleLiveReserveCheckpointRecoveries(runtime.db, {
     staleAfterSec: RECOVERY_STALE_AFTER_SEC,
-    domainPolicy: LIVE_RESERVE_RECOVERY_DOMAIN_POLICY,
     limit: 1,
   });
   if (mode === "reconcile") {
-    const inspection = await inspectScheduledCheckpointRecoveryEligibility(runtime.db, {
-      scheduleKey: "fourHourlyReserveSync",
-      job: RECOVERY_CHECKPOINT_JOB,
-      expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
+    const inspection = await inspectLiveReserveCheckpointRecoveryEligibility(runtime.db, {
       staleAfterSec: RECOVERY_STALE_AFTER_SEC,
     });
     return {
@@ -121,14 +97,9 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     };
   }
 
-  const checkpoint = await claimNextScheduledCheckpointRecovery(runtime.db, {
-    job: RECOVERY_CHECKPOINT_JOB,
-    childJobs: LIVE_RESERVE_SLOT_JOBS,
-    childPrerequisites: LIVE_RESERVE_CHILD_PREREQUISITES,
+  const checkpoint = await claimNextLiveReserveCheckpointRecovery(runtime.db, {
     owner: runtime.invocationId ?? createLeaseOwner("reserve-recovery"),
     leaseSec: RECOVERY_LEASE_SEC,
-    expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
-    domainPolicy: LIVE_RESERVE_RECOVERY_DOMAIN_POLICY,
   });
   if (!checkpoint) {
     return {

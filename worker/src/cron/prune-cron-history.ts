@@ -5,7 +5,7 @@ import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { createCronResult } from "../lib/cron-result";
 import { pruneRepairTasks } from "../lib/repair-tasks";
 import { WORKER_CANARY_RUN_RETENTION_SEC, pruneWorkerCanaryRuns } from "../lib/canary-checks";
-import { pruneScheduledRecoveryCheckpoints } from "../lib/scheduled-recovery-checkpoint";
+import { pruneLiveReserveRecoveryCheckpoints } from "../lib/scheduled-recovery-checkpoint";
 import { pruneProducerHistory } from "../lib/producer-history";
 
 // Kept in sync with the retention window previously enforced inline inside
@@ -69,7 +69,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   throwIfAborted(signal);
   const canaryRunsDeleted = await pruneWorkerCanaryRuns(db, now - WORKER_CANARY_RUN_RETENTION_SEC, signal);
   throwIfAborted(signal);
-  const recoveryCheckpointsDeleted = await pruneScheduledRecoveryCheckpoints(
+  const recoveryCheckpointsDeleted = await pruneLiveReserveRecoveryCheckpoints(
     db,
     now - SLOT_EXECUTION_RETENTION_SEC,
     signal,

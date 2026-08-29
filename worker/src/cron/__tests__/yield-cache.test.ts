@@ -7,7 +7,7 @@ import {
   buildRiskFreeRatesCachePayload,
   serializeRiskFreeRateCache,
   buildDlStablecoinPoolsCache,
-  buildYieldSupplementalSourcesCache,
+  buildYieldSupplementalFamilyCache,
   parseYieldSupplementalSourcesCache,
 } from "../yield-sync/cache";
 
@@ -120,13 +120,10 @@ describe("parseDlStablecoinPoolsCache", () => {
     expect(result!.meta.ageSeconds).toBe(1800);
   });
 
-  it("parses legacy array format", () => {
+  it("rejects legacy array format", () => {
     const pools = [{ pool: "abc", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null }];
     const raw = JSON.stringify(pools);
-    const result = parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec);
-    expect(result).not.toBeNull();
-    expect(result!.pools).toHaveLength(1);
-    expect(result!.meta.fallbackMode).toBe("legacy-array-cache");
+    expect(parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec)).toBeNull();
   });
 
   it("returns null for malformed JSON", () => {
@@ -138,10 +135,15 @@ describe("parseDlStablecoinPoolsCache", () => {
   });
 
   it("drops malformed cached DL rows while keeping valid rows", () => {
-    const raw = JSON.stringify([
-      { pool: "bad-apy", chain: "Ethereum", symbol: "sDAI", apy: Number.NaN, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
-      { pool: "valid", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
-    ]);
+    const raw = JSON.stringify({
+      updatedAt: nowSec - 3600,
+      source: "sync-dex-liquidity",
+      poolCount: 2,
+      data: [
+        { pool: "bad-apy", chain: "Ethereum", symbol: "sDAI", apy: Number.NaN, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
+        { pool: "valid", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
+      ],
+    });
 
     const result = parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec);
 
@@ -161,8 +163,28 @@ describe("parseDlStablecoinPoolsCache", () => {
 describe("parseYieldSupplementalSourcesCache", () => {
   const nowSec = 1710500000;
 
+  it("rejects legacy array format", () => {
+    const raw = JSON.stringify([{
+      symbol: "sDAI",
+      yield: {
+        currentApy: 4.2,
+        apyBase: 4.2,
+        apyReward: null,
+        sourcePool: null,
+        sourceTvlUsd: null,
+        dataSource: "protocol-api",
+        exchangeRate: null,
+        sourceKey: "protocol-api:test:ethereum:0x1",
+        sourceObservedAt: nowSec,
+        comparisonAnchorObservedAt: null,
+      },
+    }]);
+
+    expect(parseYieldSupplementalSourcesCache(raw, nowSec, nowSec)).toBeNull();
+  });
+
   it("accepts nullable reward and source TVL fields for otherwise valid supplemental candidates", () => {
-    const raw = buildYieldSupplementalSourcesCache([
+    const raw = buildYieldSupplementalFamilyCache([
       {
         symbol: "sDAI",
         chain: "ethereum",
@@ -243,7 +265,7 @@ describe("parseYieldSupplementalSourcesCache", () => {
   });
 
   it("rejects supplemental cache payloads with future updatedAt", () => {
-    const raw = buildYieldSupplementalSourcesCache([
+    const raw = buildYieldSupplementalFamilyCache([
       {
         symbol: "sDAI",
         yield: {

@@ -26,7 +26,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { sha256Hex } from "../lib/hash";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/chain-health";
 import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/depeg-dews";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";

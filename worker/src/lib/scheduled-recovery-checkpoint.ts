@@ -1,4 +1,9 @@
 import { unixNowSec as nowSec } from "@shared/lib/time-constants";
+import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import {
+  LIVE_RESERVE_QUEUE_HASH,
+  SYNC_ORDERED_CONFIGURED_COINS,
+} from "../cron/sync-live-reserves-shared";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { throwIfAborted } from "./abort";
 import { hasActiveChildLeaseForScheduledSlot } from "./scheduled-slot-reconciliation";
@@ -72,16 +77,10 @@ interface ScheduledCheckpointRow {
   completed_at: number | null;
 }
 
-export interface BeginScheduledCheckpointInput {
-  scheduleKey: string;
+export interface BeginLiveReserveCheckpointInput {
   slotStartedAt: number;
-  job: string;
   invocationId: string;
   workerVersion?: string | null;
-  queueHash: string;
-  nextItemKey: string | null;
-  itemsTotal: number;
-  childJobs: readonly string[];
   nowSec?: number;
 }
 
@@ -98,29 +97,6 @@ export interface AbandonedCheckpointPreparation {
   currentItemKey: string | null;
   currentDomainAttemptId: string | null;
 }
-
-export interface ScheduledRecoveryDomainPolicy {
-  reconcileAbandonedAttempt?: (
-    db: D1Database,
-    checkpoint: ScheduledRecoveryCheckpoint,
-    context: { timestamp: number; error: string; reason: "platform-abandoned" },
-  ) => Promise<void>;
-  buildIncompatibleRetirementStatements?: (
-    db: D1Database,
-    checkpoint: ScheduledRecoveryCheckpoint,
-    context: {
-      timestamp: number;
-      error: string;
-      expectedQueueHash: string;
-      checkpointRetiredExistsSql: string;
-      checkpointRetiredExistsBinds: readonly unknown[];
-    },
-  ) => readonly D1PreparedStatement[];
-}
-
-export type ScheduledChildPrerequisites = Readonly<
-  Partial<Record<string, readonly string[]>>
->;
 
 export type ScheduledRecoveryBlocker =
   | "active-child-lease"
@@ -199,6 +175,17 @@ const CHECKPOINT_COLUMNS = [
 ].join(", ");
 
 const ACTIVE_CHECKPOINT_STATES: readonly ScheduledCheckpointState[] = ["running", "recovering"];
+const LIVE_RESERVE_SCHEDULE_KEY = "fourHourlyReserveSync";
+const LIVE_RESERVE_CHECKPOINT_JOB = "sync-live-reserves";
+export const LIVE_RESERVE_SLOT_JOBS = flattenScheduledSlotPlanJobs(
+  SCHEDULED_SLOT_PLANS.fourHourlyReserveSync,
+);
+const LIVE_RESERVE_CHILD_PREREQUISITES = {
+  "sync-live-reserves": [],
+  "sync-redemption-backstops": ["sync-live-reserves"],
+  "sync-kinesis-supply": [],
+  "reserve-post-sync-watchdog": ["sync-live-reserves"],
+} as const;
 const PLATFORM_ABANDONED_ERROR = "scheduled invocation ended before terminal checkpoint";
 const QUEUE_HASH_DRIFT_RETIREMENT_ERROR =
   "scheduled recovery checkpoint retired because its queue hash no longer matches the active queue";
@@ -279,13 +266,13 @@ async function requireChanged(
   }
 }
 
-export async function beginScheduledCheckpoint(
+export async function beginLiveReserveCheckpoint(
   db: D1Database,
-  input: BeginScheduledCheckpointInput,
+  input: BeginLiveReserveCheckpointInput,
 ): Promise<ScheduledRecoveryCheckpoint> {
   const timestamp = input.nowSec ?? nowSec();
   const childDispositions = Object.fromEntries(
-    input.childJobs.map((job) => [job, "not_started" as const]),
+    LIVE_RESERVE_SLOT_JOBS.map((job) => [job, "not_started" as const]),
   );
   await runWithOverloadRetry(() =>
     db
@@ -297,14 +284,14 @@ export async function beginScheduledCheckpoint(
          ) VALUES (?, ?, ?, 1, 1, ?, ?, ?, 'running', ?, 0, ?, ?, ?, ?)`,
       )
       .bind(
-        input.scheduleKey,
+        LIVE_RESERVE_SCHEDULE_KEY,
         input.slotStartedAt,
-        input.job,
+        LIVE_RESERVE_CHECKPOINT_JOB,
         input.invocationId,
         input.workerVersion ?? null,
-        input.queueHash,
-        input.nextItemKey,
-        input.itemsTotal,
+        LIVE_RESERVE_QUEUE_HASH,
+        SYNC_ORDERED_CONFIGURED_COINS[0]?.id ?? null,
+        SYNC_ORDERED_CONFIGURED_COINS.length,
         JSON.stringify(childDispositions),
         timestamp,
         timestamp,
@@ -312,14 +299,12 @@ export async function beginScheduledCheckpoint(
       .run(),
   );
 
-  const checkpoint = await loadScheduledCheckpoint(db, {
-    scheduleKey: input.scheduleKey,
+  const checkpoint = await loadLiveReserveCheckpoint(db, {
     slotStartedAt: input.slotStartedAt,
-    job: input.job,
     attemptNo: 1,
   });
   if (!checkpoint) {
-    throw new Error(`failed to create scheduled checkpoint for ${input.scheduleKey}@${input.slotStartedAt}`);
+    throw new Error(`failed to create live reserve checkpoint for ${LIVE_RESERVE_SCHEDULE_KEY}@${input.slotStartedAt}`);
   }
   if (checkpoint.invocationId !== input.invocationId || checkpoint.state !== "running") {
     throw new ScheduledCheckpointOwnershipLostError(checkpoint);
@@ -327,9 +312,9 @@ export async function beginScheduledCheckpoint(
   return checkpoint;
 }
 
-export async function loadScheduledCheckpoint(
+export async function loadLiveReserveCheckpoint(
   db: D1Database,
-  input: { scheduleKey: string; slotStartedAt: number; job: string; attemptNo: number },
+  input: { slotStartedAt: number; attemptNo: number },
 ): Promise<ScheduledRecoveryCheckpoint | null> {
   const row = await runWithOverloadRetry(() =>
     db
@@ -338,7 +323,12 @@ export async function loadScheduledCheckpoint(
            FROM worker_scheduled_checkpoints
           WHERE schedule_key = ? AND slot_started_at = ? AND job = ? AND attempt_no = ?`,
       )
-      .bind(input.scheduleKey, input.slotStartedAt, input.job, input.attemptNo)
+      .bind(
+        LIVE_RESERVE_SCHEDULE_KEY,
+        input.slotStartedAt,
+        LIVE_RESERVE_CHECKPOINT_JOB,
+        input.attemptNo,
+      )
       .first<ScheduledCheckpointRow>(),
   );
   return row ? mapCheckpointRow(row) : null;
@@ -346,7 +336,7 @@ export async function loadScheduledCheckpoint(
 
 // Starting the next item also acknowledges the prior item. Persist its domain
 // attempt in the same write so recovery can fence any crash before domain work.
-export async function markScheduledCheckpointItemStarted(
+export async function markLiveReserveCheckpointItemStarted(
   db: D1Database,
   identity: ScheduledCheckpointIdentity,
   input: {
@@ -410,7 +400,7 @@ function buildScheduledCheckpointAdvanceStatement(
     );
 }
 
-export async function advanceScheduledCheckpoint(
+export async function advanceLiveReserveCheckpoint(
   db: D1Database,
   identity: ScheduledCheckpointIdentity,
   input: ScheduledCheckpointAdvance,
@@ -421,14 +411,14 @@ export async function advanceScheduledCheckpoint(
   );
 }
 
-export async function setScheduledCheckpointChildDisposition(
+export async function setLiveReserveCheckpointChildDisposition(
   db: D1Database,
   identity: ScheduledCheckpointIdentity,
   childJob: string,
   disposition: ScheduledChildDisposition,
   timestamp = nowSec(),
 ): Promise<void> {
-  const checkpoint = await loadScheduledCheckpoint(db, identity);
+  const checkpoint = await loadLiveReserveCheckpoint(db, identity);
   if (!checkpoint || checkpoint.executionGeneration !== identity.executionGeneration || checkpoint.invocationId !== identity.invocationId) {
     throw new ScheduledCheckpointOwnershipLostError(identity);
   }
@@ -449,7 +439,7 @@ export async function setScheduledCheckpointChildDisposition(
   );
 }
 
-export async function finishScheduledCheckpoint(
+export async function finishLiveReserveCheckpoint(
   db: D1Database,
   identity: ScheduledCheckpointIdentity,
   input: { state: "completed" | "failed"; error?: string | null; nowSec?: number },
@@ -475,9 +465,7 @@ export async function finishScheduledCheckpoint(
 
 async function loadLatestActiveCheckpointForSlot(
   db: D1Database,
-  scheduleKey: string,
   slotStartedAt: number,
-  job: string,
 ): Promise<ScheduledRecoveryCheckpoint | null> {
   const stateSql = ACTIVE_CHECKPOINT_STATES.map(() => "?").join(", ");
   const row = await runWithOverloadRetry(() =>
@@ -490,7 +478,7 @@ async function loadLatestActiveCheckpointForSlot(
           ORDER BY attempt_no DESC
           LIMIT 1`,
       )
-      .bind(scheduleKey, slotStartedAt, job, ...ACTIVE_CHECKPOINT_STATES)
+      .bind(LIVE_RESERVE_SCHEDULE_KEY, slotStartedAt, LIVE_RESERVE_CHECKPOINT_JOB, ...ACTIVE_CHECKPOINT_STATES)
       .first<ScheduledCheckpointRow>(),
   );
   return row ? mapCheckpointRow(row) : null;
@@ -499,19 +487,17 @@ async function loadLatestActiveCheckpointForSlot(
 async function loadCompletedCronJobsForSlot(
   db: D1Database,
   slotStartedAt: number,
-  jobs: readonly string[],
 ): Promise<Set<string>> {
-  if (jobs.length === 0) return new Set();
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT job, status, metadata
            FROM cron_runs
           WHERE slot_started_at = ?
-            AND job IN (${jobs.map(() => "?").join(", ")})
+            AND job IN (${LIVE_RESERVE_SLOT_JOBS.map(() => "?").join(", ")})
           ORDER BY started_at DESC`,
       )
-      .bind(slotStartedAt, ...jobs)
+      .bind(slotStartedAt, ...LIVE_RESERVE_SLOT_JOBS)
       .all<{ job: string; status: string; metadata: string | null }>(),
   );
   const completed = new Set<string>();
@@ -527,27 +513,75 @@ async function loadCompletedCronJobsForSlot(
   return completed;
 }
 
+function buildReserveAttemptAbandonmentStatements(
+  db: D1Database,
+  checkpoint: ScheduledRecoveryCheckpoint,
+  input: {
+    timestamp: number;
+    error: string;
+    metadata: string;
+    checkpointGuardSql: string;
+    checkpointGuardBinds: readonly unknown[];
+  },
+): D1PreparedStatement[] {
+  if (!checkpoint.currentItemKey || !checkpoint.currentDomainAttemptId) return [];
+  const sharedBinds = [
+    checkpoint.currentItemKey,
+    checkpoint.currentDomainAttemptId,
+    checkpoint.currentDomainAttemptId,
+    ...input.checkpointGuardBinds,
+  ];
+  return [
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO reserve_sync_attempt_history (
+           stablecoin_id, attempted_at, adapter_key, breaker_key, attempt_id,
+           status, warnings, warning_count, last_error, metadata
+         )
+         SELECT stablecoin_id, COALESCE(last_attempted_at, ?), adapter_key, breaker_key,
+                pending_attempt_id, 'error', NULL, 0, ?, ?
+           FROM reserve_sync_state
+          WHERE stablecoin_id = ?
+            AND pending_attempt_id = ?
+            AND last_attempt_id = ?
+            AND ${input.checkpointGuardSql}`,
+      )
+      .bind(input.timestamp, input.error, input.metadata, ...sharedBinds),
+    db
+      .prepare(
+        `UPDATE reserve_sync_state
+            SET pending_attempt_id = NULL,
+                last_status = 'error',
+                last_error = ?,
+                metadata = ?
+          WHERE stablecoin_id = ?
+            AND pending_attempt_id = ?
+            AND last_attempt_id = ?
+            AND ${input.checkpointGuardSql}`,
+      )
+      .bind(input.error, input.metadata, ...sharedBinds),
+  ];
+}
+
 async function prepareCheckpointAttemptForRecovery(
   db: D1Database,
   checkpoint: ScheduledRecoveryCheckpoint,
-  childJobs: readonly string[],
-  childPrerequisites: ScheduledChildPrerequisites | undefined,
   timestamp: number,
-  domainPolicy?: ScheduledRecoveryDomainPolicy,
 ): Promise<AbandonedCheckpointPreparation | null> {
-  const completedJobs = await loadCompletedCronJobsForSlot(db, checkpoint.slotStartedAt, childJobs);
+  const completedJobs = await loadCompletedCronJobsForSlot(db, checkpoint.slotStartedAt);
   const abandonedChildDispositions = { ...checkpoint.childDispositions };
   const recoveryChildDispositions = { ...checkpoint.childDispositions };
   const queueExhausted = checkpoint.nextItemKey === null && checkpoint.itemsDone === checkpoint.itemsTotal;
   const preservedCompletedJobs = new Set<string>();
-  let upstreamCompleted = queueExhausted;
-  for (const childJob of childJobs) {
+  const prerequisitesByJob = LIVE_RESERVE_CHILD_PREREQUISITES as Readonly<
+    Record<string, readonly string[]>
+  >;
+  for (const childJob of LIVE_RESERVE_SLOT_JOBS) {
     const childCompleted =
       completedJobs.has(childJob)
       || checkpoint.childDispositions[childJob] === "completed";
-    const prerequisitesCompleted = childPrerequisites
-      ? (childPrerequisites[childJob] ?? []).every((prerequisite) => preservedCompletedJobs.has(prerequisite))
-      : upstreamCompleted;
+    const prerequisitesCompleted = (prerequisitesByJob[childJob] ?? [])
+      .every((prerequisite) => preservedCompletedJobs.has(prerequisite));
     const durableFrontierCompleted = childJob !== checkpoint.job || queueExhausted;
     if (prerequisitesCompleted && durableFrontierCompleted && childCompleted) {
       abandonedChildDispositions[childJob] = "completed";
@@ -556,9 +590,6 @@ async function prepareCheckpointAttemptForRecovery(
     } else {
       abandonedChildDispositions[childJob] = "platform_abandoned";
       recoveryChildDispositions[childJob] = "not_started";
-    }
-    if (!childPrerequisites) {
-      upstreamCompleted = upstreamCompleted && childCompleted;
     }
   }
 
@@ -576,57 +607,79 @@ async function prepareCheckpointAttemptForRecovery(
     ? Math.max(0, checkpoint.itemsDone)
     : checkpoint.itemsDone;
 
+  const checkpointAbandonedExistsSql = `EXISTS (
+    SELECT 1
+      FROM worker_scheduled_checkpoints
+     WHERE ${identityWhereSql()}
+       AND state = 'platform_abandoned'
+       AND error = ?
+       AND completed_at = ?
+  )`;
+  const checkpointAbandonedBinds = [
+    ...identityBinds(checkpoint),
+    PLATFORM_ABANDONED_ERROR,
+    timestamp,
+  ];
+  const abandonmentMetadata = JSON.stringify({
+    reason: "platform-abandoned",
+    failureCategory: "platform-abandoned",
+    reconciledAt: timestamp,
+  });
+  const checkpointAbandonment = db
+    .prepare(
+      `UPDATE worker_scheduled_checkpoints
+          SET state = 'platform_abandoned', error = ?, completed_at = ?, updated_at = ?,
+              child_dispositions_json = ?, recovery_owner = NULL, recovery_lease_until = NULL
+        WHERE ${identityWhereSql()}
+          AND state IN ('running', 'recovering')`,
+    )
+    .bind(
+      PLATFORM_ABANDONED_ERROR,
+      timestamp,
+      timestamp,
+      JSON.stringify(abandonedChildDispositions),
+      ...identityBinds(checkpoint),
+    );
+  const readyAttemptCreation = db
+    .prepare(
+      `INSERT OR IGNORE INTO worker_scheduled_checkpoints (
+         schedule_key, slot_started_at, job, attempt_no, execution_generation,
+         invocation_id, worker_version, queue_hash, state, next_item_key,
+         current_item_key, current_domain_attempt_id, items_done, items_total,
+         child_dispositions_json, source_attempt_no, created_at, updated_at
+       )
+       SELECT schedule_key, slot_started_at, job, ?, ?, ?, worker_version, queue_hash,
+              'ready', ?, NULL, current_domain_attempt_id, ?, items_total, ?, attempt_no, ?, ?
+         FROM worker_scheduled_checkpoints
+        WHERE ${identityWhereSql()}
+          AND state = 'platform_abandoned'`,
+    )
+    .bind(
+      recoveryAttemptNo,
+      recoveryGeneration,
+      recoveryInvocationId,
+      recoveryNextItem,
+      recoveryItemsDone,
+      JSON.stringify(recoveryChildDispositions),
+      timestamp,
+      timestamp,
+      ...identityBinds(checkpoint),
+    );
   const results = await runWithOverloadRetry(() =>
     db.batch([
-      db
-        .prepare(
-          `UPDATE worker_scheduled_checkpoints
-              SET state = 'platform_abandoned', error = ?, completed_at = ?, updated_at = ?,
-                  child_dispositions_json = ?, recovery_owner = NULL, recovery_lease_until = NULL
-            WHERE ${identityWhereSql()}
-              AND state IN ('running', 'recovering')`,
-        )
-        .bind(
-          PLATFORM_ABANDONED_ERROR,
-          timestamp,
-          timestamp,
-          JSON.stringify(abandonedChildDispositions),
-          ...identityBinds(checkpoint),
-        ),
-      db
-        .prepare(
-          `INSERT OR IGNORE INTO worker_scheduled_checkpoints (
-             schedule_key, slot_started_at, job, attempt_no, execution_generation,
-             invocation_id, worker_version, queue_hash, state, next_item_key,
-             current_item_key, current_domain_attempt_id, items_done, items_total,
-             child_dispositions_json, source_attempt_no, created_at, updated_at
-           )
-           SELECT schedule_key, slot_started_at, job, ?, ?, ?, worker_version, queue_hash,
-                  'ready', ?, NULL, current_domain_attempt_id, ?, items_total, ?, attempt_no, ?, ?
-             FROM worker_scheduled_checkpoints
-            WHERE ${identityWhereSql()}
-              AND state = 'platform_abandoned'`,
-        )
-        .bind(
-          recoveryAttemptNo,
-          recoveryGeneration,
-          recoveryInvocationId,
-          recoveryNextItem,
-          recoveryItemsDone,
-          JSON.stringify(recoveryChildDispositions),
-          timestamp,
-          timestamp,
-          ...identityBinds(checkpoint),
-        ),
+      checkpointAbandonment,
+      ...buildReserveAttemptAbandonmentStatements(db, checkpoint, {
+        timestamp,
+        error: PLATFORM_ABANDONED_ERROR,
+        metadata: abandonmentMetadata,
+        checkpointGuardSql: checkpointAbandonedExistsSql,
+        checkpointGuardBinds: checkpointAbandonedBinds,
+      }),
+      readyAttemptCreation,
     ]),
   );
   if (((results[0] as D1Result | undefined)?.meta.changes ?? 0) !== 1) return null;
 
-  await domainPolicy?.reconcileAbandonedAttempt?.(db, checkpoint, {
-    timestamp,
-    error: PLATFORM_ABANDONED_ERROR,
-    reason: "platform-abandoned",
-  });
   return {
     abandonedAttemptNo: checkpoint.attemptNo,
     recoveryAttemptNo,
@@ -635,42 +688,29 @@ async function prepareCheckpointAttemptForRecovery(
   };
 }
 
-export async function prepareScheduledCheckpointRecoveryForSlot(
+export async function prepareLiveReserveCheckpointRecoveryForSlot(
   db: D1Database,
   input: {
-    scheduleKey: string;
     slotStartedAt: number;
-    job: string;
-    childJobs: readonly string[];
-    childPrerequisites?: ScheduledChildPrerequisites;
-    domainPolicy?: ScheduledRecoveryDomainPolicy;
     nowSec?: number;
   },
 ): Promise<AbandonedCheckpointPreparation | null> {
   const timestamp = input.nowSec ?? nowSec();
   const checkpoint = await loadLatestActiveCheckpointForSlot(
     db,
-    input.scheduleKey,
     input.slotStartedAt,
-    input.job,
   );
   if (!checkpoint) return null;
   return prepareCheckpointAttemptForRecovery(
     db,
     checkpoint,
-    input.childJobs,
-    input.childPrerequisites,
     timestamp,
-    input.domainPolicy,
   );
 }
 
-export async function inspectScheduledCheckpointRecoveryEligibility(
+export async function inspectLiveReserveCheckpointRecoveryEligibility(
   db: D1Database,
   input: {
-    scheduleKey: string;
-    job: string;
-    expectedQueueHash: string;
     staleAfterSec: number;
     nowSec?: number;
     limit?: number;
@@ -696,7 +736,7 @@ export async function inspectScheduledCheckpointRecoveryEligibility(
             ORDER BY c.updated_at ASC, c.slot_started_at ASC, c.attempt_no DESC
             LIMIT ?`,
         )
-        .bind(input.scheduleKey, input.job, input.expectedQueueHash, limit)
+        .bind(LIVE_RESERVE_SCHEDULE_KEY, LIVE_RESERVE_CHECKPOINT_JOB, LIVE_RESERVE_QUEUE_HASH, limit)
         .all<ScheduledRecoveryEligibilityRow>(),
     ),
     runWithOverloadRetry(() =>
@@ -709,7 +749,12 @@ export async function inspectScheduledCheckpointRecoveryEligibility(
             WHERE schedule_key = ? AND job = ?
               AND state IN ('running', 'recovering', 'ready')`,
         )
-        .bind(input.expectedQueueHash, input.expectedQueueHash, input.scheduleKey, input.job)
+        .bind(
+          LIVE_RESERVE_QUEUE_HASH,
+          LIVE_RESERVE_QUEUE_HASH,
+          LIVE_RESERVE_SCHEDULE_KEY,
+          LIVE_RESERVE_CHECKPOINT_JOB,
+        )
         .first<{ ready_count: number | null; incompatible_count: number | null }>(),
     ),
   ]);
@@ -718,7 +763,7 @@ export async function inspectScheduledCheckpointRecoveryEligibility(
   for (const row of rows.results ?? []) {
     const checkpoint = mapCheckpointRow(row);
     const blockers: ScheduledRecoveryBlocker[] = [];
-    if (checkpoint.queueHash !== input.expectedQueueHash) blockers.push("queue-hash-drift");
+    if (checkpoint.queueHash !== LIVE_RESERVE_QUEUE_HASH) blockers.push("queue-hash-drift");
     if (checkpoint.state === "recovering" && (checkpoint.recoveryLeaseUntil ?? 0) >= timestamp) {
       blockers.push("active-recovery-lease");
     }
@@ -767,14 +812,9 @@ export async function inspectScheduledCheckpointRecoveryEligibility(
   };
 }
 
-export async function retireIncompatibleScheduledCheckpointRecoveries(
+export async function retireIncompatibleLiveReserveCheckpointRecoveries(
   db: D1Database,
   input: {
-    scheduleKey: string;
-    job: string;
-    childJobs: readonly string[];
-    expectedQueueHash: string;
-    domainPolicy?: ScheduledRecoveryDomainPolicy;
     nowSec?: number;
     limit?: number;
   },
@@ -801,7 +841,13 @@ export async function retireIncompatibleScheduledCheckpointRecoveries(
           ORDER BY c.updated_at ASC, c.slot_started_at ASC, c.attempt_no DESC
           LIMIT ?`,
       )
-      .bind(input.scheduleKey, input.job, input.expectedQueueHash, timestamp, limit)
+      .bind(
+        LIVE_RESERVE_SCHEDULE_KEY,
+        LIVE_RESERVE_CHECKPOINT_JOB,
+        LIVE_RESERVE_QUEUE_HASH,
+        timestamp,
+        limit,
+      )
       .all<ScheduledCheckpointRow>(),
   );
   const checkpoints = (rows.results ?? []).map(mapCheckpointRow);
@@ -819,7 +865,7 @@ export async function retireIncompatibleScheduledCheckpointRecoveries(
       continue;
     }
     const childDispositions = { ...checkpoint.childDispositions };
-    for (const childJob of input.childJobs) {
+    for (const childJob of LIVE_RESERVE_SLOT_JOBS) {
       if (childDispositions[childJob] !== "completed") {
         childDispositions[childJob] = "platform_abandoned";
       }
@@ -848,36 +894,37 @@ export async function retireIncompatibleScheduledCheckpointRecoveries(
           JSON.stringify(childDispositions),
           ...identityBinds(checkpoint),
           checkpoint.queueHash,
-          input.expectedQueueHash,
+          LIVE_RESERVE_QUEUE_HASH,
           timestamp,
         ),
     ];
-    if (
-      checkpoint.currentItemKey
-      && checkpoint.currentDomainAttemptId
-      && input.domainPolicy?.buildIncompatibleRetirementStatements
-    ) {
-      const retiredCheckpointExistsSql = `EXISTS (
-        SELECT 1
-          FROM worker_scheduled_checkpoints
-         WHERE ${identityWhereSql()}
-           AND state = 'platform_abandoned'
-           AND error = ?
-           AND completed_at = ?
-      )`;
-      const retirementBinds = [
-        ...identityBinds(checkpoint),
-        QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
-        timestamp,
-      ];
-      statements.push(...input.domainPolicy.buildIncompatibleRetirementStatements(db, checkpoint, {
-        timestamp,
-        error: QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
-        expectedQueueHash: input.expectedQueueHash,
-        checkpointRetiredExistsSql: retiredCheckpointExistsSql,
-        checkpointRetiredExistsBinds: retirementBinds,
-      }));
-    }
+    const retiredCheckpointExistsSql = `EXISTS (
+      SELECT 1
+        FROM worker_scheduled_checkpoints
+       WHERE ${identityWhereSql()}
+         AND state = 'platform_abandoned'
+         AND error = ?
+         AND completed_at = ?
+    )`;
+    const retirementBinds = [
+      ...identityBinds(checkpoint),
+      QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
+      timestamp,
+    ];
+    const retirementMetadata = JSON.stringify({
+      reason: "queue-hash-drift",
+      failureCategory: "platform-abandoned",
+      expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
+      checkpointQueueHash: checkpoint.queueHash,
+      reconciledAt: timestamp,
+    });
+    statements.push(...buildReserveAttemptAbandonmentStatements(db, checkpoint, {
+      timestamp,
+      error: QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
+      metadata: retirementMetadata,
+      checkpointGuardSql: retiredCheckpointExistsSql,
+      checkpointGuardBinds: retirementBinds,
+    }));
     const results = await runWithOverloadRetry(() => db.batch(statements));
     if (((results[0] as D1Result | undefined)?.meta.changes ?? 0) !== 1) continue;
     summary.retired++;
@@ -891,16 +938,10 @@ export async function retireIncompatibleScheduledCheckpointRecoveries(
   return summary;
 }
 
-export async function prepareEligibleScheduledCheckpointRecoveries(
+export async function prepareEligibleLiveReserveCheckpointRecoveries(
   db: D1Database,
   input: {
-    scheduleKey: string;
-    job: string;
-    childJobs: readonly string[];
-    childPrerequisites?: ScheduledChildPrerequisites;
-    expectedQueueHash: string;
     staleAfterSec: number;
-    domainPolicy?: ScheduledRecoveryDomainPolicy;
     nowSec?: number;
     limit?: number;
   },
@@ -908,17 +949,12 @@ export async function prepareEligibleScheduledCheckpointRecoveries(
   inspection: ScheduledRecoveryEligibilityInspection;
   prepared: AbandonedCheckpointPreparation[];
 }> {
-  const inspection = await inspectScheduledCheckpointRecoveryEligibility(db, input);
+  const inspection = await inspectLiveReserveCheckpointRecoveryEligibility(db, input);
   const prepared: AbandonedCheckpointPreparation[] = [];
   for (const candidate of inspection.candidates) {
     if (!candidate.eligible || candidate.state === "ready") continue;
-    const result = await prepareScheduledCheckpointRecoveryForSlot(db, {
-      scheduleKey: candidate.scheduleKey,
+    const result = await prepareLiveReserveCheckpointRecoveryForSlot(db, {
       slotStartedAt: candidate.slotStartedAt,
-      job: input.job,
-      childJobs: input.childJobs,
-      childPrerequisites: input.childPrerequisites,
-      domainPolicy: input.domainPolicy,
       nowSec: inspection.observedAt,
     });
     if (result) prepared.push(result);
@@ -928,85 +964,63 @@ export async function prepareEligibleScheduledCheckpointRecoveries(
 
 async function requeueExpiredRecoveries(
   db: D1Database,
-  job: string,
-  childJobs: readonly string[],
-  childPrerequisites: ScheduledChildPrerequisites | undefined,
   timestamp: number,
-  expectedQueueHash?: string,
-  domainPolicy?: ScheduledRecoveryDomainPolicy,
 ): Promise<void> {
-  const queueHashPredicate = expectedQueueHash ? " AND queue_hash = ?" : "";
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT ${CHECKPOINT_COLUMNS}
            FROM worker_scheduled_checkpoints
-          WHERE job = ? AND state = 'recovering' AND recovery_lease_until < ?
-          ${queueHashPredicate}
+          WHERE schedule_key = ? AND job = ?
+            AND state = 'recovering' AND recovery_lease_until < ?
+            AND queue_hash = ?
           ORDER BY updated_at ASC
           LIMIT 5`,
       )
-      .bind(job, timestamp, ...(expectedQueueHash ? [expectedQueueHash] : []))
+      .bind(
+        LIVE_RESERVE_SCHEDULE_KEY,
+        LIVE_RESERVE_CHECKPOINT_JOB,
+        timestamp,
+        LIVE_RESERVE_QUEUE_HASH,
+      )
       .all<ScheduledCheckpointRow>(),
   );
   for (const row of rows.results ?? []) {
     await prepareCheckpointAttemptForRecovery(
       db,
       mapCheckpointRow(row),
-      childJobs,
-      childPrerequisites,
       timestamp,
-      domainPolicy,
     );
   }
 }
 
-export async function claimNextScheduledCheckpointRecovery(
+export async function claimNextLiveReserveCheckpointRecovery(
   db: D1Database,
   input: {
-    job: string;
-    childJobs: readonly string[];
-    childPrerequisites?: ScheduledChildPrerequisites;
     owner: string;
     leaseSec: number;
-    expectedQueueHash?: string;
-    domainPolicy?: ScheduledRecoveryDomainPolicy;
     nowSec?: number;
   },
 ): Promise<ScheduledRecoveryCheckpoint | null> {
   const timestamp = input.nowSec ?? nowSec();
-  await requeueExpiredRecoveries(
-    db,
-    input.job,
-    input.childJobs,
-    input.childPrerequisites,
-    timestamp,
-    input.expectedQueueHash,
-    input.domainPolicy,
-  );
-  const queueHashPredicate = input.expectedQueueHash ? " AND queue_hash = ?" : "";
+  await requeueExpiredRecoveries(db, timestamp);
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT ${CHECKPOINT_COLUMNS}
            FROM worker_scheduled_checkpoints
-          WHERE job = ? AND state = 'ready'
-          ${queueHashPredicate}
+          WHERE schedule_key = ? AND job = ? AND state = 'ready'
+            AND queue_hash = ?
           ORDER BY updated_at ASC, slot_started_at ASC
           LIMIT 5`,
       )
-      .bind(input.job, ...(input.expectedQueueHash ? [input.expectedQueueHash] : []))
+      .bind(LIVE_RESERVE_SCHEDULE_KEY, LIVE_RESERVE_CHECKPOINT_JOB, LIVE_RESERVE_QUEUE_HASH)
       .all<ScheduledCheckpointRow>(),
   );
 
   for (const row of rows.results ?? []) {
     const checkpoint = mapCheckpointRow(row);
-    if (input.expectedQueueHash && checkpoint.queueHash !== input.expectedQueueHash) continue;
-    await input.domainPolicy?.reconcileAbandonedAttempt?.(db, checkpoint, {
-      timestamp,
-      error: PLATFORM_ABANDONED_ERROR,
-      reason: "platform-abandoned",
-    });
+    if (checkpoint.queueHash !== LIVE_RESERVE_QUEUE_HASH) continue;
     const leaseUntil = timestamp + Math.max(60, input.leaseSec);
     const result = await runWithOverloadRetry(() =>
       db
@@ -1044,7 +1058,7 @@ export async function claimNextScheduledCheckpointRecovery(
   return null;
 }
 
-export async function pruneScheduledRecoveryCheckpoints(
+export async function pruneLiveReserveRecoveryCheckpoints(
   db: D1Database,
   cutoffUpdatedAt: number,
   signal?: AbortSignal,

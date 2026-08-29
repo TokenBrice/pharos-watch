@@ -8,6 +8,7 @@ import {
   buildDdrRepairTaskId,
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
   DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
+  loadDdrRepairDebtDetails,
   loadRepairDebtSummary,
   pruneRepairTasks,
   runWorkerRepairTaskRunner,
@@ -19,6 +20,7 @@ const NOW = 1_775_900_000;
 const REPAIR_TASK_RUNNER_TABLES: MockTableConfig[] = [
   { match: "INSERT INTO worker_repair_tasks", rows: [] },
   { match: "UPDATE worker_repair_tasks", rows: [], runMeta: { changes: 1 } },
+  { match: "SELECT state FROM worker_repair_tasks", rows: [], first: { state: "closed" } },
   { match: "FROM worker_repair_tasks", rows: [] },
   { match: "INSERT INTO depeg_resolver_event_repair_authorization_consumptions", rows: [] },
   { match: "INSERT INTO depeg_resolver_incident_event_links", rows: [] },
@@ -158,7 +160,7 @@ describe("repair tasks", () => {
     expect(buildDdrRepairTaskId("42")).toBe("repair:ddr-repair-required-event:42");
   });
 
-  it("dual-writes current DDR repair debt and closes stale DDR tasks", async () => {
+  it("syncs current DDR repair tasks and closes stale DDR tasks", async () => {
     const db = mockRepairD1();
 
     const result = await syncDdrRepairDebtTasks(
@@ -214,16 +216,23 @@ describe("repair tasks", () => {
           ('repair:ddr-repair-required-event:4', 'ddr-repair-required-event', '4', 50, 'open', 0, NULL, NULL, NULL,
            '{"eventId":4}', ${NOW - 100}, ${NOW - 100}),
           ('repair:ddr-repair-required-event:5', 'ddr-repair-required-event', '5', 50, 'failed', 1, ${NOW + 900}, NULL, NULL,
-           '{"eventId":5}', ${NOW - 100}, ${NOW - 100});
+           '{"eventId":5}', ${NOW - 100}, ${NOW - 100}),
+          ('repair:ddr-repair-required-event:6', 'ddr-repair-required-event', '6', 50, 'closed', 1, NULL, NULL, NULL,
+           '{"eventId":6}', ${NOW - 100}, ${NOW - 100}),
+          ('repair:ddr-repair-required-event:7', 'ddr-repair-required-event', '7', 50, 'deferred', 1, NULL, NULL, NULL,
+           '{"eventId":7}', ${NOW - 100}, ${NOW - 100});
       `);
 
       const result = await syncDdrRepairDebtTasks(
         db,
-        [{ eventId: 5, reason: "still-ambiguous" }],
+        [
+          { eventId: 5, reason: "still-ambiguous" },
+          { eventId: 6, reason: "reopened" },
+        ],
         NOW,
       );
 
-      expect(result).toEqual({ upserted: 1, closed: 2 });
+      expect(result).toEqual({ upserted: 2, closed: 3 });
       const states = db.sqlite.prepare(
         "SELECT subject_id, state, next_attempt_at FROM worker_repair_tasks ORDER BY subject_id",
       ).all() as Array<{ subject_id: string; state: string; next_attempt_at: number | null }>;
@@ -233,28 +242,47 @@ describe("repair tasks", () => {
         { subject_id: "3", state: "closed", next_attempt_at: NOW - 1 },
         { subject_id: "4", state: "closed", next_attempt_at: null },
         { subject_id: "5", state: "failed", next_attempt_at: NOW + 900 },
+        { subject_id: "6", state: "open", next_attempt_at: null },
+        { subject_id: "7", state: "closed", next_attempt_at: null },
       ]);
     } finally {
       db.close();
     }
   });
 
-  it("summarizes open repair debt by kind", async () => {
+  it("prunes only old closed repair tasks in SQLite", async () => {
+    const db = makeSqliteD1();
+    try {
+      db.sqlite.exec(`
+        INSERT INTO worker_repair_tasks
+          (task_id, kind, subject_id, state, created_at, updated_at)
+        VALUES
+          ('repair:ddr-repair-required-event:old-closed', 'ddr-repair-required-event', 'old-closed', 'closed', ${NOW}, ${NOW - 200}),
+          ('repair:ddr-repair-required-event:new-closed', 'ddr-repair-required-event', 'new-closed', 'closed', ${NOW}, ${NOW - 50}),
+          ('repair:ddr-repair-required-event:old-failed', 'ddr-repair-required-event', 'old-failed', 'failed', ${NOW}, ${NOW - 200});
+      `);
+
+      await expect(pruneRepairTasks(db, NOW - 100)).resolves.toBe(1);
+      expect(db.sqlite.prepare(
+        "SELECT subject_id, state FROM worker_repair_tasks ORDER BY subject_id",
+      ).all()).toEqual([
+        { subject_id: "new-closed", state: "closed" },
+        { subject_id: "old-failed", state: "failed" },
+      ]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("summarizes the fixed DDR repair debt kind", async () => {
     const db = mockRepairD1([
       {
         match: "FROM worker_repair_tasks",
         rows: [
           {
-            kind: "ddr-repair-required-event",
             open_count: 2,
             oldest_created_at: NOW - 3600,
             next_attempt_at: NOW + 900,
-          },
-          {
-            kind: "reserve-history-gap",
-            open_count: 1,
-            oldest_created_at: NOW - 7200,
-            next_attempt_at: null,
           },
         ],
       },
@@ -264,23 +292,81 @@ describe("repair tasks", () => {
 
     expect(summary).toEqual({
       status: "present",
-      openCount: 3,
-      oldestAgeSec: 7200,
+      openCount: 2,
+      oldestAgeSec: 3600,
       byKind: {
         "ddr-repair-required-event": {
           openCount: 2,
           oldestAgeSec: 3600,
           nextRunnerDueAt: NOW + 900,
         },
-        "reserve-history-gap": {
-          openCount: 1,
-          oldestAgeSec: 7200,
-          nextRunnerDueAt: null,
-        },
       },
       availabilityEscalated: false,
       nextRunnerDueAt: NOW + 900,
       source: "worker-repair-tasks",
+    });
+  });
+
+  it("projects bounded DDR repair details from active task rows", async () => {
+    const db = mockRepairD1([
+      {
+        match: "COUNT(*) OVER ()",
+        rows: [
+          {
+            subject_id: "43",
+            payload_json: JSON.stringify({ eventId: 43, reason: "failed-repair" }),
+            updated_at: NOW - 120,
+            total_count: 3,
+            latest_updated_at: NOW - 60,
+          },
+          {
+            subject_id: "42",
+            payload_json: JSON.stringify({ eventId: 42, reason: "incident-conflict" }),
+            updated_at: NOW - 60,
+            total_count: 3,
+            latest_updated_at: NOW - 60,
+          },
+          {
+            subject_id: "44",
+            payload_json: JSON.stringify({ eventId: 44, reason: "deferred-repair" }),
+            updated_at: NOW - 180,
+            total_count: 3,
+            latest_updated_at: NOW - 60,
+          },
+        ],
+      },
+    ]);
+
+    const details = await loadDdrRepairDebtDetails(db);
+
+    expect(details).toEqual({
+      checkedAt: NOW - 60,
+      count: 3,
+      events: [
+        { eventId: 42, reason: "incident-conflict" },
+        { eventId: 43, reason: "failed-repair" },
+        { eventId: 44, reason: "deferred-repair" },
+      ],
+      eventsTruncated: false,
+    });
+    expect(db.getHistory()[0]?.binds).toEqual([
+      "ddr-repair-required-event",
+    ]);
+  });
+
+  it("returns an empty DDR detail projection when no active task rows exist", async () => {
+    const db = mockRepairD1([
+      {
+        match: "COUNT(*) OVER ()",
+        rows: [],
+      },
+    ]);
+
+    await expect(loadDdrRepairDebtDetails(db)).resolves.toEqual({
+      checkedAt: null,
+      count: 0,
+      events: [],
+      eventsTruncated: false,
     });
   });
 
@@ -314,9 +400,6 @@ describe("repair tasks", () => {
       autoRepairCount: 0,
     });
     expect(db.getHistory().find((entry) => entry.sql.includes("COUNT(*) AS due_count"))?.binds).toEqual([
-      "open",
-      "deferred",
-      "failed",
       NOW,
     ]);
     expect(db.getHistory().some((entry) => entry.sql.includes("SET state = 'claimed'"))).toBe(false);
@@ -348,6 +431,67 @@ describe("repair tasks", () => {
       autoRepairCount: 0,
     });
     expect(db.getHistory().some((entry) => entry.sql.includes("SET state = 'claimed'"))).toBe(false);
+  });
+
+  it("claims due deferred, failed, and stale rows through SQLite lease transitions", async () => {
+    const db = makeSqliteD1();
+    try {
+      db.sqlite.exec(`
+        INSERT INTO worker_repair_tasks
+          (task_id, kind, subject_id, priority, state, attempt_count, next_attempt_at, locked_by, locked_until,
+           payload_json, created_at, updated_at)
+        VALUES
+          ('repair:ddr-repair-required-event:1', 'ddr-repair-required-event', '1', 50, 'deferred', 1, ${NOW - 1}, NULL, NULL,
+           '{"eventId":1}', ${NOW - 300}, ${NOW - 300}),
+          ('repair:ddr-repair-required-event:2', 'ddr-repair-required-event', '2', 50, 'failed', 2, ${NOW - 1}, NULL, NULL,
+           '{"eventId":2}', ${NOW - 200}, ${NOW - 200}),
+          ('repair:ddr-repair-required-event:3', 'ddr-repair-required-event', '3', 50, 'claimed', 3, NULL, 'old-owner', ${NOW - 1},
+           '{"eventId":3}', ${NOW - 100}, ${NOW - 100});
+      `);
+
+      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        dueCount: 2,
+        staleClaimCount: 1,
+        claimed: 3,
+        deferred: 3,
+        failed: 0,
+      });
+      expect(db.sqlite.prepare(
+        "SELECT subject_id, state, attempt_count, next_attempt_at, locked_by, locked_until, last_error FROM worker_repair_tasks ORDER BY subject_id",
+      ).all()).toEqual([
+        {
+          subject_id: "1",
+          state: "deferred",
+          attempt_count: 2,
+          next_attempt_at: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
+          locked_by: null,
+          locked_until: null,
+          last_error: "safe-class-not-proven",
+        },
+        {
+          subject_id: "2",
+          state: "deferred",
+          attempt_count: 3,
+          next_attempt_at: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
+          locked_by: null,
+          locked_until: null,
+          last_error: "safe-class-not-proven",
+        },
+        {
+          subject_id: "3",
+          state: "deferred",
+          attempt_count: 4,
+          next_attempt_at: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
+          locked_by: null,
+          locked_until: null,
+          last_error: "safe-class-not-proven",
+        },
+      ]);
+    } finally {
+      db.close();
+    }
   });
 
   it("defers ambiguous tasks and respects the hard per-run cap", async () => {
@@ -678,6 +822,82 @@ describe("repair tasks", () => {
       expect(db.sqlite.prepare(
         "SELECT COUNT(*) AS count FROM depeg_resolver_event_repair_authorization_consumptions WHERE event_id = 42",
       ).get()).toEqual({ count: 2 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("defers a rejected repair guard with the normal retryable deferral state", async () => {
+    const db = makeSqliteD1();
+    try {
+      seedNaturalPredecessorFixture(db);
+      db.sqlite.exec(`
+        CREATE TRIGGER mutate_repair_guard_fixture
+        AFTER UPDATE OF current_event_id ON depeg_resolver_incidents
+        WHEN NEW.current_event_id = 42
+        BEGIN
+          UPDATE depeg_resolver_incidents
+          SET current_started_at = NEW.current_started_at + 1
+          WHERE incident_key = NEW.incident_key;
+        END;
+      `);
+
+      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        claimed: 1,
+        autoRepairCount: 0,
+        closed: 0,
+        deferred: 1,
+        failed: 0,
+      });
+      expect(db.sqlite.prepare(
+        "SELECT state, locked_by, locked_until, next_attempt_at, last_error, closed_at FROM worker_repair_tasks WHERE task_id = ?",
+      ).get("repair:ddr-repair-required-event:42")).toEqual({
+        state: "deferred",
+        locked_by: null,
+        locked_until: null,
+        next_attempt_at: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
+        last_error: "safe-class-not-proven",
+        closed_at: null,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("marks a task failed when a guarded repair statement reports zero changes", async () => {
+    const db = makeSqliteD1();
+    try {
+      seedNaturalPredecessorFixture(db);
+      db.sqlite.exec(`
+        CREATE TRIGGER ignore_repair_pointer_update_fixture
+        BEFORE UPDATE OF current_event_id ON depeg_resolver_incidents
+        WHEN NEW.current_event_id = 42
+        BEGIN
+          SELECT RAISE(IGNORE);
+        END;
+      `);
+
+      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        claimed: 1,
+        autoRepairCount: 0,
+        closed: 0,
+        deferred: 0,
+        failed: 1,
+      });
+      expect(db.sqlite.prepare(
+        "SELECT state, locked_by, locked_until, next_attempt_at, last_error, closed_at FROM worker_repair_tasks WHERE task_id = ?",
+      ).get("repair:ddr-repair-required-event:42")).toEqual({
+        state: "failed",
+        locked_by: null,
+        locked_until: null,
+        next_attempt_at: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
+        last_error: "repair-execution-failed",
+        closed_at: null,
+      });
     } finally {
       db.close();
     }

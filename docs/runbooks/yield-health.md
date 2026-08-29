@@ -72,7 +72,7 @@ Use Wrangler's D1 execute command from `worker/` for the SQL below, and keep eve
 ```sql
 SELECT key, updated_at, length(value) AS bytes
 FROM cache
-WHERE key IN ('yield-rankings', 'yield:supplemental-sources:v1', 'yield-coverage-audit')
+WHERE key IN ('yield-rankings', 'yield-coverage-audit')
    OR key LIKE 'yield:supplemental-sources:v1:%'
 ORDER BY key;
 ```
@@ -112,7 +112,7 @@ LIMIT 10;
 - **Benchmark fallback/staleness:** inspect `yieldHealth.benchmarkRegistry`, then `risk_free_rates` and the latest `sync-yield-data` metadata for the named key. A retained fallback within 48h can remain score-bearing but degraded; after 48h the affected row must be NR. Do not let a healthy USD lane close an incident for a stale non-USD key that still has published rows.
 - **Low source-risk coverage:** inspect whether missing fields are absent from current rankings, retained alternates, or both. Missing or `unknown` venue tiers are evidence gaps; do not backfill guessed tiers.
 - **Stale comparison anchors:** inspect `yieldHealth.comparisonAnchorFreshness.staleAnchorExamples` and the latest `sync-yield-data` metadata. This identifies rows whose derived APY is comparing against an old anchor; do not change arbitration or manually rewrite history rows solely to clear this watch signal.
-- **Coverage-audit queue:** classify each headline gap or recommendation candidate from `yieldHealth.coverageAudit.headlineGaps` and `yieldHealth.coverageAudit.recommendationCandidates` as `accept`, `dismiss`, `intentional-gap`, or `watch` in the operator note for that audit cycle. Candidate kind `quarantine-ready-to-restore` identifies a successful quarantine re-probe for manual restoration review; it is not automatic source restoration. Headline kind `stale-auto-lending-override` identifies a deterministic auto-lending override whose current DeFiLlama row is missing or no longer clears static gates. `queuePersistence="durable"` means the visible queue reflects evidence-fingerprinted review dispositions; `queuePersistence="deferred"` is the legacy or unavailable-queue fallback and has no persistent dismissal state.
+- **Coverage-audit queue:** classify each headline gap or recommendation candidate from `yieldHealth.coverageAudit.headlineGaps` and `yieldHealth.coverageAudit.recommendationCandidates` as `accept`, `dismiss`, `intentional-gap`, or `watch` in the operator note for that audit cycle. Candidate kind `quarantine-ready-to-restore` identifies a successful quarantine re-probe for manual restoration review; it is not automatic source restoration. Headline kind `stale-auto-lending-override` identifies a deterministic auto-lending override whose current DeFiLlama row is missing or no longer clears static gates. `queuePersistence="durable"` means the visible queue reflects evidence-fingerprinted review dispositions; `queuePersistence="deferred"` means the queue is not backed by durable review dispositions and has no persistent dismissal state. A missing or malformed current `operatorQueue` is exposed as an empty deferred queue; legacy headline lists are not reconstructed.
 - **Old coverage audit:** inspect `yield-coverage-audit` cron history. It is monthly and watch-tier, so a late audit is a review backlog, not a public outage.
 
 ## Abort Conditions

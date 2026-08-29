@@ -35,7 +35,7 @@ export interface CollectorContext {
 
 export interface CollectorResult<T> {
   value: T;
-  degradedReason?: string;
+  degradedReasons: string[];
 }
 
 export interface SafetyScoresResult {
@@ -45,19 +45,16 @@ export interface SafetyScoresResult {
   safetyContext: DigestSafetyContext;
 }
 
+export function collectorResult<T>(value: T, degradedReasons: readonly string[] = []): CollectorResult<T> {
+  return { value, degradedReasons: [...degradedReasons] };
+}
+
 export function collectorOk<T>(value: T): CollectorResult<T> {
-  return { value };
+  return collectorResult(value);
 }
 
-export function collectorDegraded<T>(value: T, degradedReason: string): CollectorResult<T> {
-  return { value, degradedReason };
-}
-
-export function markCollectorDegraded(degradedReasons: string[] | undefined, degradedReason: string): void {
-  if (!degradedReasons || degradedReasons.includes(degradedReason)) {
-    return;
-  }
-  degradedReasons.push(degradedReason);
+export function collectorDegraded<T>(value: T, ...degradedReasons: string[]): CollectorResult<T> {
+  return collectorResult(value, degradedReasons);
 }
 
 export function logCollectorParseFailure(

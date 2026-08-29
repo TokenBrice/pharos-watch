@@ -1,14 +1,22 @@
 import { describe, expect, it } from "vitest";
+import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinData } from "@shared/types";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import type { PegSummaryCoin, PegSummaryResponse, StablecoinData } from "@shared/types";
+import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { buildStablecoinDetailHeroViewModel } from "../stablecoin-detail-hero-view-model";
 import { buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
-import { makeBuildStablecoinDetailViewModelParams } from "./fixtures/stablecoin-detail-view-model";
+import {
+  makeBuildStablecoinDetailViewModelParams,
+  makeReadyDetailParams,
+} from "./fixtures/stablecoin-detail-view-model";
 import {
   buildMintAuthorityDetailViewModel,
 } from "../stablecoin-detail-mint-authority-view-model";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
+import { buildDetailPegPriceSnapshot } from "../stablecoin-detail-query-view-model";
 
 function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
   return makeStablecoin({
@@ -20,28 +28,67 @@ function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): Stablecoin
   });
 }
 
+function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
+  return makePegSummaryCoinBase({
+    id: "usdt-tether",
+    symbol: "USDT",
+    name: "Tether",
+    ...overrides,
+  });
+}
+
 describe("stablecoin detail view-model builder", () => {
+  it.each([
+    ["USD", "usdt-tether", "peggedUSD", 1, -200, false],
+    ["non-USD", "eurc-circle", "peggedEUR", 1.2, -1000, false],
+    ["commodity", "xaut-tether", "peggedGOLD", 3000, 100, false],
+    ["unavailable reference", "eurc-circle", "peggedEUR", null, null, true],
+    ["unavailable price", "usdc-circle", "peggedUSD", 1, null, false],
+    ["NAV", "fpi-frax", "peggedVAR", null, null, false],
+  ] as const)("pins the %s Worker peg projection", (
+    _label,
+    id,
+    pegType,
+    pegReference,
+    currentDeviationBps,
+    pegReferenceUnavailable,
+  ) => {
+    const coin = TRACKED_META_BY_ID.get(id);
+    expect(coin).toBeDefined();
+    const pegSummaryCoin = makePegSummaryCoin({
+      id,
+      name: coin!.name,
+      symbol: coin!.symbol,
+      pegType,
+      pegCurrency: coin!.flags.pegCurrency,
+      currentDeviationBps,
+      pegReference: pegReference == null
+        ? null
+        : { valueUsd: pegReference, source: "median", contributorCount: 2, asOf: 1_700_000_000 },
+      ...(pegReferenceUnavailable ? { pegReferenceUnavailable: true } : {}),
+    });
+    const snapshot = buildDetailPegPriceSnapshot(
+      id,
+      coin!,
+      { coins: [pegSummaryCoin], summary: null, methodology: {} } as PegSummaryResponse,
+    );
+
+    expect(snapshot).toMatchObject({
+      pegRef: pegReference,
+      deviationBps: currentDeviationBps,
+      pegReferenceUnavailable,
+    });
+  });
+
   it("uses report-card snapshot freshness instead of the browser fetch timestamp", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether");
     expect(coin).toBeDefined();
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "usdt-tether",
-          coin: coin!,
-        },
+      makeReadyDetailParams({
+        id: "usdt-tether",
+        coin: coin!,
         queries: {
-          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                makeUsdtStablecoin(),
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
           reportCards: {
             data: {
               cards: [],
@@ -60,6 +107,48 @@ describe("stablecoin detail view-model builder", () => {
     if (viewModel.status !== "ready") return;
 
     expect(viewModel.reportCardUpdatedAt).toBe(1_700_000_123_000);
+  });
+
+  it("builds the ready hero through the pure hero projection", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether");
+    expect(coin).toBeDefined();
+
+    const viewModel = buildStablecoinDetailViewModel(
+      makeReadyDetailParams({ id: "usdt-tether", coin: coin! }),
+    );
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+
+    const expectedHero = buildStablecoinDetailHeroViewModel({
+      coin: viewModel.coin,
+      coinData: viewModel.coinData,
+      logoSrc: viewModel.logoSrc,
+      isNavToken: viewModel.isNavToken,
+      mcap: viewModel.mcap,
+      supply: viewModel.supply,
+      prevDay: viewModel.prevDay,
+      prevWeek: viewModel.prevWeek,
+      prevMonth: viewModel.prevMonth,
+      performanceVsUsd1y: viewModel.performanceVsUsd1y,
+      pegRef: viewModel.pegRef,
+      deviationBps: viewModel.deviationBps,
+      gaugeDeviationBps: viewModel.gaugeDeviationBps,
+      pegReferenceUnavailable: viewModel.pegReferenceUnavailable,
+      pegScoreResult: viewModel.pegScoreResult,
+      liquidityData: viewModel.liquidityData,
+      yieldRanking: viewModel.yieldRanking,
+      stressSignal: viewModel.stressSignal,
+      reportCard: viewModel.reportCard ?? null,
+      verdict: viewModel.verdict,
+      variantParent: viewModel.variantParent,
+      variantKind: viewModel.coin.variantKind ?? null,
+      resolvedMechanismArchetype: resolveMechanismArchetype(viewModel.coin, CLIENT_TRACKED_META_BY_ID),
+      mintAuthority: viewModel.mintAuthority,
+      redemptionBackstop: viewModel.redemptionBackstop ?? null,
+    });
+
+    expect(viewModel.hero).toEqual(expectedHero);
   });
 
   it("uses only compact mint-authority summaries for client detail presentation", () => {
@@ -315,26 +404,16 @@ describe("stablecoin detail view-model builder", () => {
     expect(coin).toBeDefined();
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "usdt-tether",
-          coin: coin!,
+      makeReadyDetailParams({
+        id: "usdt-tether",
+        coin: coin!,
+        asset: {
+          circulatingPrevDay: { peggedUSD: 90 },
+          circulatingPrevWeek: { peggedUSD: 80 },
+          circulatingPrevMonth: { peggedUSD: 70 },
         },
         queries: {
           supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: null }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                makeUsdtStablecoin({
-                  circulatingPrevDay: { peggedUSD: 90 },
-                  circulatingPrevWeek: { peggedUSD: 80 },
-                  circulatingPrevMonth: { peggedUSD: 70 },
-                }),
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
           pegSummary: {
             data: {
               summary: {} as never,
@@ -388,29 +467,12 @@ describe("stablecoin detail view-model builder", () => {
     expect(coin).toBeDefined();
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "mhyper-midas",
-          coin: coin!,
-        },
+      makeReadyDetailParams({
+        id: "mhyper-midas",
+        coin: coin!,
+        asset: { price: 1.1 },
         queries: {
           supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1.1 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: "mhyper-midas",
-                  name: "Midas mHYPER",
-                  symbol: "mHYPER",
-                  pegType: "peggedUSD",
-                  price: 1.1,
-                  circulating: { peggedUSD: 100 },
-                },
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
           pegSummary: {
             data: {
               summary: {} as never,
@@ -465,29 +527,11 @@ describe("stablecoin detail view-model builder", () => {
     };
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: coin.id,
-          coin,
-        },
+      makeReadyDetailParams({
+        id: coin.id,
+        coin,
         queries: {
           supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: coin.id,
-                  name: coin.name,
-                  symbol: coin.symbol,
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 100 },
-                },
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
           reportCards: {
             data: {
               cards: [makeV9Card({ id: coin.id, grade: "B", score: 80 })],
@@ -514,22 +558,10 @@ describe("stablecoin detail view-model builder", () => {
     expect(coin).toBeDefined();
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "usdt-tether",
-          coin: coin!,
-        },
+      makeReadyDetailParams({
+        id: "usdt-tether",
+        coin: coin!,
         queries: {
-          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                makeUsdtStablecoin(),
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
           redemptionBackstops: {
             data: {
               coins: {
@@ -665,32 +697,13 @@ describe("stablecoin detail view-model builder", () => {
     expect(coin?.flags.yieldBearing).toBe(false);
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "usdc-circle",
-          coin: coin!,
-        },
-        queries: {
-          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: "usdc-circle",
-                  name: "USD Coin",
-                  symbol: "USDC",
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 100 },
-                  circulatingPrevDay: { peggedUSD: 95 },
-                  circulatingPrevWeek: { peggedUSD: 90 },
-                  circulatingPrevMonth: { peggedUSD: 85 },
-                },
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
+      makeReadyDetailParams({
+        id: "usdc-circle",
+        coin: coin!,
+        asset: {
+          circulatingPrevDay: { peggedUSD: 95 },
+          circulatingPrevWeek: { peggedUSD: 90 },
+          circulatingPrevMonth: { peggedUSD: 85 },
         },
         supplemental: {
           yieldRankingsData: {
@@ -740,32 +753,14 @@ describe("stablecoin detail view-model builder", () => {
     expect(parent).toBeDefined();
 
     const variantViewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "susds-sky",
-          coin: variant!,
-        },
-        queries: {
-          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: "susds-sky",
-                  name: "Sky Savings USDS",
-                  symbol: "sUSDS",
-                  pegType: "peggedUSD",
-                  price: 1.02,
-                  circulating: { peggedUSD: 100 },
-                  circulatingPrevDay: { peggedUSD: 98 },
-                  circulatingPrevWeek: { peggedUSD: 96 },
-                  circulatingPrevMonth: { peggedUSD: 92 },
-                },
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
+      makeReadyDetailParams({
+        id: "susds-sky",
+        coin: variant!,
+        asset: {
+          price: 1.02,
+          circulatingPrevDay: { peggedUSD: 98 },
+          circulatingPrevWeek: { peggedUSD: 96 },
+          circulatingPrevMonth: { peggedUSD: 92 },
         },
       }),
     );
@@ -777,32 +772,13 @@ describe("stablecoin detail view-model builder", () => {
     expect(variantViewModel.variantSiblings.map((coin) => coin.id)).toContain("stusds-sky");
 
     const parentViewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "usds-sky",
-          coin: parent!,
-        },
-        queries: {
-          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: "usds-sky",
-                  name: "Sky Dollar",
-                  symbol: "USDS",
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 100 },
-                  circulatingPrevDay: { peggedUSD: 99 },
-                  circulatingPrevWeek: { peggedUSD: 98 },
-                  circulatingPrevMonth: { peggedUSD: 97 },
-                },
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
+      makeReadyDetailParams({
+        id: "usds-sky",
+        coin: parent!,
+        asset: {
+          circulatingPrevDay: { peggedUSD: 99 },
+          circulatingPrevWeek: { peggedUSD: 98 },
+          circulatingPrevMonth: { peggedUSD: 97 },
         },
       }),
     );
@@ -820,11 +796,9 @@ describe("stablecoin detail view-model builder", () => {
     expect(coin?.flags.pegCurrency).toBe("GOLD");
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "xaut-tether",
-          coin: coin!,
-        },
+      makeReadyDetailParams({
+        id: "xaut-tether",
+        coin: coin!,
         queries: {
           supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 3_000 }] },
           stablecoinList: {
@@ -896,11 +870,9 @@ describe("stablecoin detail view-model builder", () => {
     const anchorSec = nowSec - 365 * 24 * 60 * 60;
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "zchf-frankencoin",
-          coin: coin!,
-        },
+      makeReadyDetailParams({
+        id: "zchf-frankencoin",
+        coin: coin!,
         queries: {
           supplyHistory: {
             data: [
@@ -948,11 +920,9 @@ describe("stablecoin detail view-model builder", () => {
     const anchorSec = nowSec - 365 * 24 * 60 * 60;
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "cetes-etherfuse",
-          coin: coin!,
-        },
+      makeReadyDetailParams({
+        id: "cetes-etherfuse",
+        coin: coin!,
         queries: {
           supplyHistory: {
             data: [

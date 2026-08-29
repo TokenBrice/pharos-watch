@@ -5,6 +5,13 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  makeSafetyMapPsiPayload,
+  makeSafetyMapRatedCard,
+  makeSafetyMapReportCardsResponse,
+  makeSafetyMapStablecoinsPayload,
+  withSafetyMapAdverseAttribution,
+} from "./build-safety-score-map.test-support";
 
 /**
  * The `date` / `renderedAtSec` invariant (plan §11.2b rule 7).
@@ -89,7 +96,7 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
     "usd1-world-liberty-financial",
     "coin-11",
   ];
-  const cards = [
+  const cards = ([
     ["A+", 90],
     ["A", 84],
     ["A-", 81],
@@ -102,32 +109,55 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
     ["F", 18],
     ["F", 22],
     ["F", 28],
-  ].map(([grade, score], i) => ({ id: fixtureIds[i], score, grade }));
+  ] satisfies Array<[string, number]>).map(([grade, score], i) => ({ id: fixtureIds[i], score, grade }));
   const peggedAssets = cards.map((card, i) => ({
     id: card.id,
     symbol: `C${i}`,
     circulating: { peggedUSD: 1e11 * 0.2 ** i },
   }));
 
+  function reportCardsPayload(): unknown {
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const canonicalCards = cards.map((card) => {
+      const ratedCard = makeSafetyMapRatedCard(card);
+      if (card.grade !== "F") return ratedCard;
+      return withSafetyMapAdverseAttribution(ratedCard);
+    }).sort((left, right) => left.id.localeCompare(right.id));
+    return makeSafetyMapReportCardsResponse({
+      cards: canonicalCards,
+      fixtureId: "safety-map-clock-fixture",
+      methodologyVersion: "9.19",
+      defaultUpdatedAt: updatedAt,
+      asOfSec: capturedAtSec,
+    });
+  }
+
+  function stablecoinsPayload(): unknown {
+    return makeSafetyMapStablecoinsPayload(peggedAssets);
+  }
+
+  function psiPayload(): unknown {
+    const computedAt = Math.floor(Date.now() / 1000) - 5 * 60;
+    return makeSafetyMapPsiPayload({
+      score: 94.3,
+      band: "BEDROCK",
+      avg24h: 93.8,
+      avg24hBand: "BEDROCK",
+      computedAt,
+    }, computedAt);
+  }
+
   beforeAll(async () => {
     server = createServer((req, res) => {
       const path = (req.url ?? "").split("?")[0];
       const body =
         path === "/api/report-cards/v9"
-          ? { cards, methodology: { version: "9.19" }, asOfSec: capturedAtSec }
+          ? reportCardsPayload()
           : path === "/api/stablecoins"
-            ? { peggedAssets }
+            ? stablecoinsPayload()
             : path === "/api/stability-index"
-              ? {
-                  current: {
-                    score: 94.3,
-                    band: "BEDROCK",
-                    avg24h: 93.8,
-                    avg24hBand: "BEDROCK",
-                    computedAt: Math.floor(Date.now() / 1000) - 5 * 60,
-                  },
-                }
-            : null;
+              ? psiPayload()
+              : null;
       if (!body) {
         res.writeHead(404).end("{}");
         return;

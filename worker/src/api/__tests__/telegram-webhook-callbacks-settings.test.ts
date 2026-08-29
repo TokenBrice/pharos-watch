@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
+import { mockTelegramMembership } from "../../test-helpers/__shared/telegram";
 import {
   fetchSpy,
   handleCallbackQuery,
@@ -105,18 +106,7 @@ describe("handleCallbackQuery", () => {
           first: null,
         },
       ]);
-      fetchSpy.mockImplementation(async (url) => {
-        if (String(url).includes("getChatMember")) {
-          return new Response(
-            JSON.stringify({
-              ok: true,
-              result: { user: { id: 7, is_bot: false, first_name: "member" }, status: "member" },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response(JSON.stringify({ ok: true }), { status: 200 });
-      });
+      mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
 
       await handleCallbackQuery(db, "fake-token", {
         id: "cb-settings-group",

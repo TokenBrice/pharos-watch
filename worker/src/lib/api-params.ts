@@ -1,8 +1,6 @@
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
-import {
-  bucketUnixMillisecondsToUtcDay,
-  bucketUnixSecondsToUtcDay,
-} from "@shared/lib/time-buckets";
+import { parseEpoch } from "@shared/lib/epoch";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { errorResponse } from "./api-response";
 import { base64UrlToBytes, bytesToBase64Url } from "@shared/lib/base64url";
 
@@ -271,33 +269,21 @@ export function parseRequiredStablecoinIdParam(searchParams: URLSearchParams, na
 
 export function parseTimestampSecondsParam(value: string | null | undefined): number | null {
   if (!value) return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  if (/^\d+$/.test(trimmed)) {
-    const numeric = Number(trimmed);
-    if (!Number.isFinite(numeric)) return null;
-    return numeric >= 1_000_000_000_000 ? Math.floor(numeric / 1000) : Math.floor(numeric);
-  }
-
-  const parsedMs = Date.parse(trimmed);
-  if (Number.isNaN(parsedMs)) return null;
-  return Math.floor(parsedMs / 1000);
+  const parsed = parseEpoch(value, {
+    numericTextPolicy: "digits-only",
+    millisecondsThreshold: 1_000_000_000_000,
+    millisecondsThresholdInclusive: true,
+  });
+  return parsed.kind === "seconds" ? Math.floor(parsed.seconds) : null;
 }
 
 export function parseDayStartParam(value: string | null | undefined): number | null {
   if (!value) return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  if (/^\d+$/.test(trimmed)) {
-    const numeric = Number(trimmed);
-    if (!Number.isFinite(numeric)) return null;
-    const seconds = numeric > 1_000_000_000_000 ? Math.floor(numeric / 1000) : numeric;
-    return bucketUnixSecondsToUtcDay(seconds);
-  }
-
-  const parsedMs = Date.parse(trimmed);
-  if (Number.isNaN(parsedMs)) return null;
-  return bucketUnixMillisecondsToUtcDay(parsedMs) / 1000;
+  const parsed = parseEpoch(value, {
+    numericTextPolicy: "digits-only",
+    millisecondsThreshold: 1_000_000_000_000,
+    millisecondsThresholdInclusive: false,
+  });
+  if (parsed.kind !== "seconds") return null;
+  return bucketUnixSecondsToUtcDay(parsed.seconds);
 }

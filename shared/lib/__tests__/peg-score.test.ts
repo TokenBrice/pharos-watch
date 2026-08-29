@@ -1,5 +1,12 @@
-import { describe, it, expect } from "vitest";
-import { computePegScore, computeRecentPegStats, coinTrackingStart, PEG_SCORE_LOOKBACK_SEC } from "../peg-score";
+import { describe, it, expect, vi } from "vitest";
+import { makePegEvent as makeEvent } from "@shared/test-utils/peg-fixtures";
+import {
+  computePegScore,
+  computePegScoreWithWindow,
+  computeRecentPegStats,
+  coinTrackingStart,
+  PEG_SCORE_LOOKBACK_SEC,
+} from "../peg-score";
 
 const NOW = Math.floor(Date.now() / 1000);
 const DAY = 86400;
@@ -20,9 +27,39 @@ describe("coinTrackingStart", () => {
     const veryOld = NOW - 10 * 365 * DAY;
     expect(coinTrackingStart([], fourYearsAgo, veryOld)).toBe(fourYearsAgo);
   });
+
+  it("uses the earliest event when firstSeen is unavailable", () => {
+    const events = [
+      makeEvent({ startedAt: NOW - 100 * DAY, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 50 * DAY, peakDeviationBps: -200 }),
+    ];
+    expect(coinTrackingStart(events as never, fourYearsAgo)).toBe(NOW - 100 * DAY);
+  });
+
+  it("prefers firstSeen over the earliest event when it is older", () => {
+    const firstSeen = NOW - 300 * DAY;
+    const events = [makeEvent({ startedAt: NOW - 100 * DAY, peakDeviationBps: -200 })];
+    expect(coinTrackingStart(events as never, fourYearsAgo, firstSeen)).toBe(firstSeen);
+  });
 });
 
 describe("computePegScore", () => {
+  it("returns null pegScore with stable defaults when no tracking start exists", () => {
+    const result = computePegScore([], null, NOW);
+
+    expect(result).toMatchObject({
+      pegScore: null,
+      pegPct: 100,
+      severityScore: 100,
+      spreadPenalty: 0,
+      eventCount: 0,
+      worstDeviationBps: null,
+      activeDepeg: false,
+      lastEventAt: null,
+      trackingSpanDays: 0,
+    });
+  });
+
   it("returns null for insufficient tracking (< 7 days)", () => {
     const start = NOW - 3 * DAY;
     const result = computePegScore([], start, NOW);
@@ -236,6 +273,103 @@ describe("computePegScore", () => {
       const result = computePegScore([makeEvent(80, 1), makeEvent(40, 100_000)] as never, start, NOW);
       expect(result.spreadPenalty).toBe(15);
     });
+  });
+});
+
+describe("computePegScoreWithWindow", () => {
+  const windowNow = 1_700_000_000;
+
+  const nullCases = [
+    {
+      name: "returns null for NAV tokens",
+      isNavToken: true,
+      events: [],
+      earliestTrackingDate: windowNow - 30 * DAY,
+    },
+    {
+      name: "returns null when events are missing",
+      isNavToken: false,
+      events: null,
+      earliestTrackingDate: windowNow - 30 * DAY,
+    },
+  ];
+
+  it.each(nullCases)("$name", ({ isNavToken, events, earliestTrackingDate }) => {
+    expect(computePegScoreWithWindow(isNavToken, events as never, earliestTrackingDate)).toBeNull();
+  });
+
+  it("uses earliestTrackingDate when provided", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(windowNow * 1000);
+    try {
+      const events = [
+        makeEvent({
+          startedAt: windowNow - 10 * DAY,
+          endedAt: windowNow - 9 * DAY,
+          peakDeviationBps: -200,
+        }),
+      ];
+      const result = computePegScoreWithWindow(false, events as never, windowNow - 120 * DAY);
+
+      expect(result).not.toBeNull();
+      expect(result!.eventCount).toBe(1);
+      expect(result!.trackingSpanDays).toBe(120);
+      expect(result!.worstDeviationBps).toBe(-200);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+});
+
+describe("active depeg penalty thresholds", () => {
+  const now = 1_700_000_000;
+  const trackingStart = now - 365 * DAY;
+  const noDepegResult = computePegScore([], trackingStart, now);
+  const cases = [
+    { name: "uses the 5-point floor at 100 bps", peakDeviationBps: -100, minimumScoreDrop: 5, maximumScore: null },
+    { name: "scales a 500 bps depeg to 10 points", peakDeviationBps: -500, minimumScoreDrop: 10, maximumScore: null },
+    { name: "caps a 5000 bps depeg at 50 points", peakDeviationBps: -5000, minimumScoreDrop: null, maximumScore: 50 },
+  ];
+
+  it.each(cases)("$name", ({ peakDeviationBps, minimumScoreDrop, maximumScore }) => {
+    const result = computePegScore(
+      [makeEvent({ startedAt: now - DAY, peakDeviationBps })] as never,
+      trackingStart,
+      now,
+    );
+
+    if (minimumScoreDrop != null) {
+      expect(noDepegResult.pegScore! - result.pegScore!).toBeGreaterThanOrEqual(minimumScoreDrop);
+    }
+    if (maximumScore != null) {
+      expect(result.pegScore!).toBeLessThanOrEqual(maximumScore);
+    }
+  });
+});
+
+describe("young coin with chronic depegs", () => {
+  const now = 1_700_000_000;
+  const coinAge = 30 * DAY;
+  const trackingStart = now - coinAge;
+  const events = Array.from({ length: 120 }, (_, i) =>
+    makeEvent({
+      startedAt: trackingStart + i * 6 * 3600,
+      endedAt: trackingStart + i * 6 * 3600 + 2 * 3600,
+      peakDeviationBps: -350,
+    }),
+  );
+
+  it("scores chronic depegs against the coin's actual age", () => {
+    const result = computePegScore(events as never, trackingStart, now);
+
+    expect(result.pegScore).not.toBeNull();
+    expect(result.pegScore!).toBeLessThan(80);
+  });
+
+  it("does not dilute a young coin's chronic depegs across four years", () => {
+    const correctResult = computePegScore(events as never, trackingStart, now);
+    const dilutedResult = computePegScore(events as never, now - 4 * 365.25 * DAY, now);
+
+    expect(dilutedResult.pegScore!).toBeGreaterThan(correctResult.pegScore! + 15);
   });
 });
 

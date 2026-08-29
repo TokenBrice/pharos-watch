@@ -266,48 +266,6 @@ export function CompareClient() {
     setRange,
   } = useCompareSelection();
 
-  const {
-    bluechip,
-    comparisonCoins,
-    detailErrors,
-    detailLoading,
-    dex,
-    flowCardData,
-    flowCoinQueries,
-    flowData,
-    flowSeries,
-    globalError,
-    handleRetry,
-    list,
-    peg,
-    pegRates,
-    radarCards,
-    redemption,
-    reportCards,
-    stress,
-    supplySeries,
-    yieldRankings,
-  } = useCompareDataModel({
-    selectedIds,
-    flowHours,
-  });
-  const listData = list.data;
-  const pegSummary = peg.data;
-  const dexData = dex.data;
-  const reportCardsData = reportCards.data;
-
-  const { handleDownload, handleTwitterShare, handleWebShare, shareLoading, toast } = useCompareShareActions({
-    comparisonCoins,
-    logos,
-    pegRates,
-    radarCards: radarCards.map((entry) => ({
-      ...entry,
-      symbol: TRACKED_META_BY_ID.get(entry.card.id)?.symbol ?? entry.card.id,
-    })),
-    axisOrder: ["backing", "exit", "control"],
-    axisLabels: { backing: "Backing", exit: "Exit", control: "Control" },
-  });
-
   const [radarCohort, setRadarCohort] = usePreference<CompareRadarCohort>(
     "pharos-compare-radar-cohort",
     "peg",
@@ -317,9 +275,41 @@ export function CompareClient() {
     },
   );
 
+  const {
+    cohortBaseline,
+    comparisonCoins,
+    detailErrors,
+    detailLoading,
+    flowCardData,
+    flowErrorNotice,
+    flowScopeLabel,
+    flowSeries,
+    flowUpdatedAt,
+    freshnessQueries,
+    globalError,
+    handleRetry,
+    hasPrimaryData,
+    pegRates,
+    radarCards,
+    reportCardsResponse,
+    supplySeries,
+  } = useCompareDataModel({
+    selectedIds,
+    flowHours,
+    radarCohort,
+  });
+
+  const { handleDownload, handleTwitterShare, handleWebShare, shareLoading, toast } = useCompareShareActions({
+    comparisonCoins,
+    logos,
+    pegRates,
+    radarCards,
+    axisOrder: ["backing", "exit", "control"],
+    axisLabels: { backing: "Backing", exit: "Exit", control: "Control" },
+  });
+
   // nowSeconds only feeds the "Updated N min ago" flow-staleness label, so the
   // per-minute ticker is only worth running once flow data is present.
-  const flowUpdatedAt = flowData?.updatedAt ?? null;
   useEffect(() => {
     if (flowUpdatedAt == null) return;
     const updateNow = () => setNowSeconds(Math.floor(Date.now() / 1000));
@@ -327,43 +317,6 @@ export function CompareClient() {
     const interval = window.setInterval(updateNow, 60_000);
     return () => window.clearInterval(interval);
   }, [flowUpdatedAt]);
-
-  const cohortBaseline = useMemo(() => {
-    const allCards = reportCardsData?.cards ?? [];
-    if (allCards.length === 0 || radarCards.length === 0) {
-      return {
-        effectiveCohort: "all" as CompareRadarCohort,
-        series: [],
-        memberCount: 0,
-      };
-    }
-    const leadCardId = radarCards[0].card.id;
-    const leadMeta = TRACKED_META_BY_ID.get(leadCardId);
-    const leadPeg = leadMeta?.flags.pegCurrency ?? null;
-    const leadMech = leadMeta?.mechanismArchetype ?? null;
-    const cohortCards =
-      radarCohort === "peg"
-        ? allCards.filter((card) => {
-            const meta = TRACKED_META_BY_ID.get(card.id);
-            return meta?.flags.pegCurrency === leadPeg;
-          })
-        : radarCohort === "mechanism"
-          ? allCards.filter((card) => {
-              const meta = TRACKED_META_BY_ID.get(card.id);
-              return meta?.mechanismArchetype === leadMech;
-            })
-          : allCards;
-    const resolvedCards = radarCohort === "all" || cohortCards.length < 3 ? allCards : cohortCards;
-    return {
-      effectiveCohort: radarCohort === "all" || cohortCards.length < 3 ? "all" as CompareRadarCohort : radarCohort,
-      series: resolvedCards.map((card) => ({
-        card,
-        identity: reportCardsData!.safetyScoreIdentity,
-        color: "#64748b",
-      })),
-      memberCount: resolvedCards.length,
-    };
-  }, [radarCards, radarCohort, reportCardsData]);
 
   const activeSelectionLabel = selectedCoins
     .filter((coin): coin is NonNullable<(typeof selectedCoins)[number]> => coin !== null)
@@ -374,8 +327,8 @@ export function CompareClient() {
     [comparisonCoins, selectedCoins, selectedIds],
   );
   const flowUpdatedMinutes =
-    flowData?.updatedAt && nowSeconds != null
-      ? Math.max(0, Math.round((nowSeconds - flowData.updatedAt) / 60))
+    flowUpdatedAt && nowSeconds != null
+      ? Math.max(0, Math.round((nowSeconds - flowUpdatedAt) / 60))
       : null;
 
   // Render selector slots (filled slots + empty slots up to MAX_COINS)
@@ -399,62 +352,11 @@ export function CompareClient() {
     <div className="space-y-6">
       <QueryFreshnessNotices
         error={globalError}
-        hasData={!!listData?.peggedAssets?.length}
+        hasData={hasPrimaryData}
         onRetry={handleRetry}
-        queries={[
-          {
-            preset: "stablecoins",
-            dataUpdatedAt: list.dataUpdatedAt,
-            error: list.error,
-            hasData: !!listData?.peggedAssets?.length,
-            meta: list.meta,
-          },
-          {
-            preset: "pegSummary",
-            dataUpdatedAt: peg.dataUpdatedAt,
-            error: peg.error,
-            hasData: !!pegSummary?.coins?.length,
-            meta: peg.meta,
-          },
-          { preset: "dexLiquidity", dataUpdatedAt: dex.dataUpdatedAt, error: dex.error, hasData: !!dexData, meta: dex.meta },
-          {
-            preset: "reportCards",
-            dataUpdatedAt: reportCards.dataUpdatedAt,
-            error: reportCards.error,
-            hasData: !!reportCardsData?.cards?.length,
-            meta: reportCards.meta,
-          },
-          {
-            preset: "bluechip",
-            dataUpdatedAt: bluechip.dataUpdatedAt,
-            error: bluechip.error,
-            hasData: !!bluechip.data,
-            meta: bluechip.meta,
-          },
-          {
-            preset: "redemptionBackstops",
-            dataUpdatedAt: redemption.dataUpdatedAt,
-            error: redemption.error,
-            hasData: !!redemption.data?.coins,
-            meta: redemption.meta,
-          },
-          {
-            preset: "yieldRankings",
-            dataUpdatedAt: yieldRankings.dataUpdatedAt,
-            error: yieldRankings.error,
-            hasData: !!yieldRankings.data?.rankings?.length,
-            meta: yieldRankings.meta,
-          },
-          {
-            preset: "stressSignals",
-            dataUpdatedAt: stress.dataUpdatedAt,
-            error: stress.error,
-            hasData: !!stress.data?.signals,
-            meta: stress.meta,
-          },
-        ]}
+        queries={freshnessQueries}
       />
-      <SafetyScoreV9StatusNotice response={reportCardsData} />
+      <SafetyScoreV9StatusNotice response={reportCardsResponse} />
       <CompareScopeHero coinOptions={coinOptions} selectedCount={selectedIds.length} />
       {selectedIds.length >= 2 ? (
         <div className="pharos-card-shell px-4 py-3">
@@ -552,13 +454,7 @@ export function CompareClient() {
           <ComparisonTable coins={comparisonCoins} pegRates={pegRates} logos={logos} detailErrors={detailErrors} />
 
           {/* Live Flow Signals */}
-          {flowCoinQueries.length > 0 && flowCoinQueries.every((q) => q.isError) && (
-            <QueryErrorNotice
-              error={flowCoinQueries[0]?.error as Error | null}
-              hasData={false}
-              onRetry={() => flowCoinQueries.forEach((q) => void q.refetch())}
-            />
-          )}
+          {flowErrorNotice ? <QueryErrorNotice {...flowErrorNotice} /> : null}
           {(flowCardData.length > 0 || flowSeries.length > 0) && (
             <div className="pharos-card-shell space-y-4 p-4">
               <div className="flex items-center justify-between gap-2">
@@ -567,7 +463,7 @@ export function CompareClient() {
                 </h3>
                 {flowUpdatedMinutes != null && (
                   <span className="text-xs text-muted-foreground">
-                    Updated {flowUpdatedMinutes} min ago · {flowData?.scope?.label ?? "Configured issuance chains"}
+                    Updated {flowUpdatedMinutes} min ago · {flowScopeLabel}
                   </span>
                 )}
               </div>
@@ -631,11 +527,11 @@ export function CompareClient() {
                     <CompareRadarV9 series={radarCards} cohortSeries={cohortBaseline.series} size={300} />
                   </div>
                   <div className="flex flex-wrap gap-3 justify-center mt-3">
-                    {radarCards.map(({ card, color }) => (
+                    {radarCards.map(({ card, color, symbol }) => (
                       <div key={card.id} className="flex items-center gap-1.5 text-sm">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
                         <span>
-                          {TRACKED_META_BY_ID.get(card.id)?.symbol ?? card.id}: {card.grade}
+                          {symbol}: {card.grade}
                         </span>
                       </div>
                     ))}

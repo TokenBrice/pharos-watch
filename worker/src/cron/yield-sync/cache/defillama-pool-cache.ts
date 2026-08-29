@@ -84,25 +84,6 @@ export function parseDlStablecoinPoolsCache(
 ): { pools: DlPool[]; meta: YieldSourceInputMeta } | null {
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) {
-      const updatedAt = parseCachePayloadUpdatedAt(undefined, cacheUpdatedAt, nowSec);
-      if (updatedAt == null) {
-        logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected legacy DL pools cache with future updatedAt");
-        return null;
-      }
-      const { pools } = filterValidDlPools(parsed, "legacy dl-stablecoin-pools cache");
-      return {
-        pools,
-        meta: {
-          mode: "dex-cache",
-          updatedAt,
-          ageSeconds: nowSec - updatedAt,
-          poolCount: pools.length,
-          fallbackMode: "legacy-array-cache",
-        },
-      };
-    }
-
     if (isRecord(parsed) && Array.isArray(parsed.data)) {
       const { pools } = filterValidDlPools(parsed.data, "structured dl-stablecoin-pools cache");
       const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);

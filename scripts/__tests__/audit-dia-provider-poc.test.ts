@@ -1,8 +1,13 @@
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import {
   parseDiaQuotation,
+  parseArgs,
   runDiaProviderPocAudit,
+  runCli,
   selectDiaProbeTargets,
   type DiaAuditReport,
 } from "../maintenance/audit-dia-provider-poc";
@@ -96,6 +101,48 @@ function makeAudit(): Pick<PriceSourceDepthAudit, "rows"> {
 }
 
 describe("audit-dia-provider-poc", () => {
+  it.each([
+    {
+      argv: [],
+      expected: { inputPath: null, limit: 100, maxContractsPerCoin: 1, format: "markdown", reportPath: null },
+    },
+    {
+      argv: ["--input", "audit.json", "--limit", "12", "--max-contracts-per-coin", "3", "--json", "--report", "reports/dia.json"],
+      expected: { inputPath: "audit.json", limit: 12, maxContractsPerCoin: 3, format: "json", reportPath: "reports/dia.json" },
+    },
+  ])("accepts probe/output option combination %#", ({ argv, expected }) => {
+    expect(parseArgs(argv)).toMatchObject(expected);
+  });
+
+  it("preserves legacy optional values and strict format flags", () => {
+    expect(parseArgs(["--input"])).toMatchObject({ inputPath: null });
+    expect(parseArgs(["--report"])).toMatchObject({ reportPath: null });
+    expect(() => parseArgs(["--markdown"])).toThrow("Unknown argument: --markdown");
+    expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
+  });
+
+  it("writes JSON through the shared report runner", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dia-provider-poc-report-"));
+    writeFileSync(join(cwd, "audit.json"), JSON.stringify(makeAudit()), "utf8");
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    let writes: string[] = [];
+    try {
+      await expect(
+        runCli(["--input", "audit.json", "--json", "--report", "reports/dia.json"], cwd),
+      ).resolves.toBe(0);
+      writes = stdout.mock.calls.map(([value]) => String(value));
+    } finally {
+      stdout.mockRestore();
+    }
+
+    expect(JSON.parse(readFileSync(join(cwd, "reports/dia.json"), "utf8"))).toMatchObject({
+      source: "dia-audit-only",
+      targetCount: 0,
+      checkedCount: 0,
+    });
+    expect(writes).toEqual([`Wrote DIA provider POC audit to ${join(cwd, "reports/dia.json")}\n`]);
+  });
+
   it("selects below-target rows by market cap and exact supported contracts only", () => {
     const coinMetaById = new Map([
       ["alpha-usd", {

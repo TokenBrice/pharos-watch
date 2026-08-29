@@ -66,7 +66,7 @@ Peg has no `/stablecoins/peg/` hub. Peg slugs sit directly under `/stablecoins/`
 
 Both paths add indexed routes, so treat them as SEO changes rather than data edits.
 
-1. Add the enum value at its owning source: `INFRASTRUCTURE_VALUES` or `BACKING_TYPE_VALUES` in `shared/types/core.ts`, `GOVERNANCE_TYPE_VALUES` in `shared/types/stablecoin-taxonomy.ts`, or — for a peg — the static projection `ACTIVE_PEG_CURRENCIES` in `src/lib/stablecoin-static-data.ts` that `src/lib/__tests__/stablecoin-static-data.test.ts` holds in sync with the registry.
+1. Add the enum value at its owning source: `INFRASTRUCTURE_VALUES` or `BACKING_TYPE_VALUES` in `shared/types/core.ts`, `GOVERNANCE_TYPE_VALUES` in `shared/types/stablecoin-taxonomy.ts`, or `PEG_CURRENCY_VALUES` in `shared/types/core.ts`. The `stablecoin-client-projections` compile input derives `ACTIVE_PEG_CURRENCIES` from active registry entries during bootstrap.
 2. Add the slug to the matching record in `src/lib/stablecoin-taxonomy-urls.ts` or `ALL_SLUGS` in `src/lib/peg-landing.ts`. Confirm a new peg slug does not collide with `backing`, `governance`, or `infrastructure`.
 3. Author the cohort content entry — `INFRASTRUCTURE_CONTENT`, `BACKING_CONTENT`, or `GOVERNANCE_CONTENT` in `src/lib/stablecoin-taxonomy.ts`, or `PEG_INTRO` / `PEG_MARKET_CONTEXT` in `src/lib/peg-landing.ts` — and check the rendered title against the 61-character budget.
 4. Confirm `shared/lib/filter-tags.ts` emits the cohort's filter tag for member coins.

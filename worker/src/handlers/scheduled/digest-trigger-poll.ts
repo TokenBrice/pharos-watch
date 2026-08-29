@@ -1,4 +1,4 @@
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 // Digest trigger poll slot (every 5 minutes, cron "*/5 * * * *"):
 //   If `digest:force-run-request` cache key is set, run daily-digest under
 //   scheduled-event wall-clock (15 min). The `daily-digest` lease serializes
@@ -17,11 +17,17 @@ import { drainTelegramDigestOutbox } from "../../lib/telegram-digest-outbox";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
 import {
+  DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY,
+  parseDigestSafetyMapDeferral,
+  resolveDigestSafetyMap,
+} from "../../lib/digest-safety-map";
+import { formatIsoDate } from "@shared/lib/format";
+import {
   getRuntimeProducerIdentity,
   runRuntimeBudgetOnlyTask,
   type ScheduledRuntimeContext,
 } from "./context";
-import type { CronResult } from "../../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { recordBudgetSurfaceTelemetry, type BudgetSurfaceOutcome } from "../../lib/budget-surface-telemetry";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
@@ -192,11 +198,171 @@ function isFailureResult(result: CronResult | null): boolean {
   return typeof result?.metadata === "string" && result.metadata.startsWith("skipped:");
 }
 
+/**
+ * Leased daily-digest work with duplicate-safe recovery. When today already
+ * has a publishable row — a prior run generated but left a channel
+ * unresolved — delivery resumes from the stored edition; regenerating,
+ * forced or not, would mint a duplicate edition. Only when no publishable
+ * row exists (or the map is unavailable, where the generation gate defers)
+ * does the full generation path run.
+ */
+async function runDailyDigestWithResume(
+  runtime: ScheduledRuntimeContext,
+  force: boolean,
+  signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
+): Promise<CronResult> {
+  const { generateDailyDigest, resumeDailyDigestDelivery } = await import("../../cron/daily-digest");
+  const nowSec = Math.floor(Date.now() / 1000);
+  const resolution = await resolveDigestSafetyMap(formatIsoDate(nowSec), nowSec, signal);
+  if (resolution.kind === "available") {
+    const resumed = await resumeDailyDigestDelivery(
+      runtime.db,
+      buildTwitterCreds(runtime.env),
+      buildTelegramCreds(runtime.env),
+      resolution,
+      signal,
+      reportProgress,
+    );
+    if (resumed.kind === "resumed") {
+      return {
+        itemCount: 1,
+        ...(resumed.deliveryComplete ? {} : { status: "degraded" as const }),
+        metadata: `resumed delivery, tweet: ${resumed.tweetStatus}, telegram: ${resumed.telegramStatus}`,
+      };
+    }
+  }
+  return generateDailyDigest(
+    runtime.db,
+    runtime.env.ANTHROPIC_API_KEY ?? null,
+    buildTwitterCreds(runtime.env),
+    force,
+    buildTelegramCreds(runtime.env),
+    signal,
+    reportProgress,
+  );
+}
+
+/**
+ * Fail-closed retry loop for a withheld daily digest. `generateDailyDigest`
+ * writes the deferral intent when today's Safety Score map is not published;
+ * this slot re-checks every five minutes and, once the map is live, resumes
+ * the stored edition's delivery or generates the digest. The intent for a day
+ * whose map never publishes is retired at the date rollover with the digest
+ * deliberately unsent — never posted text-only.
+ */
+async function runSafetyMapDeferralRetry(
+  runtime: ScheduledRuntimeContext,
+  rawDeferral: string,
+  startedMs: number,
+) {
+  const deferral = parseDigestSafetyMapDeferral(rawDeferral);
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (!deferral) {
+    logWorkerEvent({ scope: "handler", level: "warn", event: "digest_safety_map_deferral_malformed", message: "Malformed Safety Score map deferral intent; discarding", job: DIGEST_TRIGGER_POLL_SURFACE, metadata: { payloadPrefix: rawDeferral.slice(0, 200) } });
+    await deleteCache(runtime.db, DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY);
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: DIGEST_TRIGGER_POLL_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: 1,
+      processedCount: 1,
+      outcome: "error",
+      error: "malformed-safety-map-deferral",
+      metadata: { deferralPending: true },
+      producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
+    });
+    return buildScheduledSlotSummary([
+      summarizeSkippedScheduledJob("digest-trigger-poll", "malformed-safety-map-deferral"),
+    ], { budgetOnlyJobs: 2 });
+  }
+  const today = formatIsoDate(nowSec);
+  if (deferral.date !== today) {
+    logWorkerEvent({
+      scope: "handler",
+      level: "error",
+      event: "daily_digest_unsent_safety_map_never_published",
+      message: "Daily digest stayed unsent: its Safety Score map never published before the date rolled over",
+      job: DIGEST_TRIGGER_POLL_SURFACE,
+      metadata: {
+        date: deferral.date,
+        reason: deferral.reason,
+        attempts: deferral.attempts,
+        firstDeferredAtSec: deferral.firstDeferredAtSec,
+      },
+    });
+    await deleteCache(runtime.db, DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY);
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: DIGEST_TRIGGER_POLL_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: 1,
+      processedCount: 1,
+      outcome: "error",
+      error: "daily-digest-unsent:safety-map-never-published",
+      metadata: { deferralPending: true, date: deferral.date, attempts: deferral.attempts },
+      producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
+    });
+    return buildScheduledSlotSummary([
+      summarizeSkippedScheduledJob("digest-trigger-poll", "safety-map-day-rolled-over-unsent"),
+    ], { budgetOnlyJobs: 2 });
+  }
+  const resolution = await resolveDigestSafetyMap(today, nowSec);
+  if (resolution.kind === "unavailable") {
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: DIGEST_TRIGGER_POLL_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: 1,
+      processedCount: 0,
+      outcome: "skipped",
+      skippedReason: "safety-map-still-unavailable",
+      metadata: { deferralPending: true, reason: resolution.reason, attempts: deferral.attempts },
+      producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
+    });
+    return buildScheduledSlotSummary([
+      summarizeSkippedScheduledJob("digest-trigger-poll", "safety-map-still-unavailable", { neutral: true }),
+    ], { budgetOnlyJobs: 2 });
+  }
+
+  let result: CronResult | null = null;
+  let caught: unknown = null;
+  try {
+    result = (await runtime.runLeasedCron("daily-digest", (signal, reportProgress) =>
+      runDailyDigestWithResume(runtime, false, signal, reportProgress))) ?? null;
+  } catch (err) {
+    caught = err;
+    logWorkerEvent({ scope: "handler", level: "error", event: "digest_safety_map_deferral_run_failed", message: "Deferred daily digest run failed after the Safety Score map became available", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { date: today, attempts: deferral.attempts } });
+  }
+  const leaseLocked = result?.status === "skipped_locked";
+  await recordBudgetSurfaceTelemetry(runtime.db, {
+    surface: DIGEST_TRIGGER_POLL_SURFACE,
+    durationMs: Date.now() - startedMs,
+    dueCount: 1,
+    processedCount: leaseLocked ? 0 : 1,
+    outcome: caught
+      ? "error"
+      : leaseLocked
+        ? "skipped"
+        : result?.status === "degraded" || result?.status === "error"
+          ? result.status
+          : "ok",
+    skippedReason: leaseLocked ? "daily-digest-lease-locked" : null,
+    error: caught ? toErrorMessage(caught) : null,
+    metadata: { deferralPending: true, date: today, attempts: deferral.attempts },
+    producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
+  });
+  return buildScheduledSlotSummary([
+    caught
+      ? summarizeThrownScheduledJob("daily-digest", caught)
+      : summarizeCronResult("daily-digest", result),
+  ], { budgetOnlyJobs: 2 });
+}
+
 export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext) {
   const startedMs = Date.now();
   await runTelegramDigestOutboxDrain(runtime);
   const pending = await getCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
   if (!pending) {
+    const deferralRow = await getCache(runtime.db, DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY);
+    if (deferralRow) return runSafetyMapDeferralRetry(runtime, deferralRow.value, startedMs);
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: DIGEST_TRIGGER_POLL_SURFACE,
       durationMs: Date.now() - startedMs,
@@ -241,6 +407,13 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
 
   const now = Math.floor(Date.now() / 1000);
   if (payload.state === "succeeded" || payload.state === "dead_letter") {
+    // A terminal force intent never executes again, so it must not starve the
+    // fail-closed map-deferral loop: a forced run that deferred for a missing
+    // map dead-letters here while the deferral key still owns the day. The
+    // deferral path only ever runs with the force key absent or terminal, so
+    // it cannot race a live forced run into a duplicate edition.
+    const deferralRow = await getCache(runtime.db, DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY);
+    if (deferralRow) return runSafetyMapDeferralRetry(runtime, deferralRow.value, startedMs);
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: DIGEST_TRIGGER_POLL_SURFACE,
       durationMs: Date.now() - startedMs,
@@ -289,7 +462,6 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   let caught: unknown = null;
 
   try {
-    const { generateDailyDigest } = await import("../../cron/daily-digest");
     result = (await runtime.runLeasedCron("daily-digest", async (signal, reportProgress) => {
       try {
         await setCache(
@@ -300,15 +472,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       } catch (err) {
         logWorkerEvent({ scope: "handler", level: "warn", event: "digest_force_run_running_state_persistence_failed", message: "Failed to persist running digest force-run state", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });
       }
-      return generateDailyDigest(
-        runtime.db,
-        runtime.env.ANTHROPIC_API_KEY ?? null,
-        buildTwitterCreds(runtime.env),
-        true,
-        buildTelegramCreds(runtime.env),
-        signal,
-        reportProgress,
-      );
+      return runDailyDigestWithResume(runtime, true, signal, reportProgress);
     })) ?? null;
   } catch (err) {
     caught = err;

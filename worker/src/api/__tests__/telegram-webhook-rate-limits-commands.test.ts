@@ -11,6 +11,7 @@ import {
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
   fixtureLastSendMessageBody,
+  mockTelegramMembership,
 } from "./telegram-webhook.test-support";
 
 
@@ -545,18 +546,7 @@ describe("handleTelegramWebhook", () => {
 
   it("/start in a group gives non-admins the read-only start message", async () => {
     const db = makeTelegramWebhookDb();
-    fetchSpy.mockImplementation(async (url) => {
-      if (String(url).includes("getChatMember")) {
-        return new Response(
-          JSON.stringify({
-            ok: true,
-            result: { user: { id: 7, is_bot: false, first_name: "member" }, status: "member" },
-          }),
-          { status: 200 },
-        );
-      }
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    });
+    mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
 
     const res = await handleTelegramWebhook(
       db,
@@ -594,18 +584,7 @@ describe("handleTelegramWebhook", () => {
         ],
       },
     ]);
-    fetchSpy.mockImplementation(async (url) => {
-      if (String(url).includes("getChatMember")) {
-        return new Response(
-          JSON.stringify({
-            ok: true,
-            result: { user: { id: 222, is_bot: false, first_name: "admin" }, status: "administrator" },
-          }),
-          { status: 200 },
-        );
-      }
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    });
+    mockTelegramMembership(fetchSpy, "administrator", { id: 222, is_bot: false, first_name: "admin" });
 
     const res = await handleTelegramWebhook(
       db,

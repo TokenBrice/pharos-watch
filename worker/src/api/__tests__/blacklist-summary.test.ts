@@ -1,7 +1,10 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
-import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
+import {
+  makeBlacklistReconciliationStatusRow,
+  makeBlacklistRow,
+} from "../../test-helpers/__shared/fixtures";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
 
@@ -169,30 +172,7 @@ describe("handleBlacklistSummary", () => {
       },
       {
         match: "blacklist-reconciliation-status-latest",
-        rows: [{
-          run_id: "run-1",
-          manifest_id: "night-watch-usdt-tron-2026-07-09",
-          manifest_sha256: "abc",
-          status: "verified",
-          time_travel_bookmark: "bookmark",
-          expected_event_count: 86,
-          present_event_count: 86,
-          missing_event_count: 0,
-          duplicate_identity_count: 0,
-          expected_destroyed_amount_raw: 8_874_287_612_325,
-          actual_destroyed_amount_raw: 8_874_287_612_325,
-          balance_replay_expected_count: 70,
-          balance_replay_matching_count: 70,
-          unresolved_manifest_gap_count: 0,
-          tron_cursor_after: 200,
-          tron_safe_head: 200,
-          arbitrum_min_cursor: 500,
-          arbitrum_min_safe_head: 500,
-          arbitrum_expected_config_count: 7,
-          arbitrum_at_safe_head_count: 7,
-          started_at: 100,
-          completed_at: 200,
-        }],
+        rows: [makeBlacklistReconciliationStatusRow()],
       },
     ]);
 

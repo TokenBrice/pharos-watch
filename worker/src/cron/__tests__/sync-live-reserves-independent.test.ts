@@ -1,51 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
-
-const DEFAULT_LIVE_RESERVE_D1_TABLES: MockTableConfig[] = [
-  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-  { match: "FROM reserve_sync_state", rows: [] },
-  { match: "FROM reserve_composition", rows: [] },
-  { match: "FROM reserve_sync_attempts", rows: [] },
-  { match: "INSERT INTO reserve_sync_state", rows: [] },
-  { match: "UPDATE reserve_sync_state", rows: [] },
-  { match: "INSERT INTO reserve_composition", rows: [] },
-  { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
-  { match: "INSERT INTO reserve_sync_attempts", rows: [] },
-  { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
-  { match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [] },
-  { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
-  { match: "SELECT key FROM cache WHERE key LIKE", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
-  { match: "DELETE FROM cache", rows: [] },
-  { match: "DELETE FROM reserve_composition_history", rows: [] },
-  { match: "DELETE FROM reserve_sync_attempt_history", rows: [] },
-];
-
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_LIVE_RESERVE_D1_TABLES]);
-}
-
-const getReserveAdapterMock = vi.fn();
-const shouldAttemptFetchMock = vi.fn();
-const recordOutcomeSafeMock = vi.fn();
-const recoverNoCandidateMock = vi.fn();
-
-vi.mock("../reserve-adapters/index", () => ({
-  getReserveAdapter: getReserveAdapterMock,
-}));
-
-vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../../lib/circuit-breaker")>();
-  return {
-    ...original,
-    shouldAttemptFetch: shouldAttemptFetchMock,
-    recordOutcomeSafe: recordOutcomeSafeMock,
-    recoverBreakerOnNoCandidate: recoverNoCandidateMock,
-  };
-});
+import {
+  mockLiveReserveD1,
+  recordOutcomeSafeMock,
+  recoverNoCandidateMock,
+  shouldAttemptFetchMock,
+} from "./live-reserves.test-support";
 
 describe("syncLiveReserves", () => {
   type ConfiguredCoin = (typeof ACTIVE_STABLECOINS)[number] & {
@@ -117,7 +79,7 @@ describe("syncLiveReserves", () => {
   }
 
   function dbWithPreviousLiveReserveRows(rows: ReturnType<typeof buildPreviousLiveReserveRows>) {
-    return mockD1([
+    return mockLiveReserveD1([
       {
         match: "FROM reserve_sync_state",
         rows: [rows.syncState],
@@ -138,7 +100,7 @@ describe("syncLiveReserves", () => {
     previousLastSuccessAttemptId: string;
   }) {
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
-    const db = mockD1();
+    const db = mockLiveReserveD1();
     const result = await syncReserveCoin({
       db,
       coin: args.coin,
@@ -260,7 +222,7 @@ describe("syncLiveReserves", () => {
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 30 * 60;
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
-    const writeDb = mockD1();
+    const writeDb = mockLiveReserveD1();
     const previousLastSuccessAttemptId = `${coin.id}:previous-success`;
     const result = await syncReserveCoin({
       db: writeDb,
@@ -316,7 +278,7 @@ describe("syncLiveReserves", () => {
     ) as ConfiguredCoin | undefined;
     expect(coin).toBeDefined();
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
-    const db = mockD1();
+    const db = mockLiveReserveD1();
     const result = await syncReserveCoin({
       db,
       coin: coin!,
@@ -352,7 +314,7 @@ describe("syncLiveReserves", () => {
     ) as ConfiguredCoin | undefined;
     expect(coin).toBeDefined();
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
-    const db = mockD1();
+    const db = mockLiveReserveD1();
     const result = await syncReserveCoin({
       db,
       coin: coin!,
@@ -419,7 +381,7 @@ describe("syncLiveReserves", () => {
   it("leaves the exact domain attempt pending when injection fires after pending begin", async () => {
     const coin = getIndependentConfiguredCoin();
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
-    const db = mockD1();
+    const db = mockLiveReserveD1();
 
     await expect(syncReserveCoin({
       db,
@@ -442,7 +404,7 @@ describe("syncLiveReserves", () => {
   it("leaves the authoritative write intact and skips history finalization when the write hook throws", async () => {
     const coin = getIndependentConfiguredCoin();
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
-    const db = mockD1();
+    const db = mockLiveReserveD1();
 
     const result = await syncReserveCoin({
       db,
@@ -480,7 +442,7 @@ describe("syncLiveReserves", () => {
     }));
 
     const result = await syncReserveCoin({
-      db: mockD1(),
+      db: mockLiveReserveD1(),
       coin,
       signal: new AbortController().signal,
       adapter: adapterForCoin(coin),

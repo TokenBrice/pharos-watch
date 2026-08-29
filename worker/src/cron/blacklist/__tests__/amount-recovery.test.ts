@@ -27,7 +27,7 @@ const DEFAULT_BLACKLIST_AMOUNT_D1_TABLES: MockTableConfig[] = [
   { match: "blacklist-amount-repair-queue-enqueue", rows: [] },
   { match: "blacklist-amount-repair-queue-reconcile-resolved", rows: [] },
   { match: "amount_attempt_count = COALESCE", rows: [] },
-  { match: "amount = ?, amount_native", rows: [] },
+  { match: "amount_native = ?, amount_usd_at_event", rows: [] },
   { match: "blacklist-amount-repair-queue-finish", rows: [] },
 ];
 
@@ -355,10 +355,11 @@ describe("enrichRowBalances", () => {
     const resolvedUpdates = history.filter((entry) =>
       entry.sql.includes("UPDATE blacklist_events") &&
       entry.sql.includes("amount_usd_at_event = ?") &&
-      entry.sql.includes("amount = ?"),
+      !entry.sql.includes("amount = ?"),
     );
     expect(resolvedUpdates).toHaveLength(2);
-    expect(resolvedUpdates.map((entry) => entry.binds[2])).toEqual([12, 12]);
+    expect(resolvedUpdates.map((entry) => entry.binds[0])).toEqual([10, 10]);
+    expect(resolvedUpdates.map((entry) => entry.binds[1])).toEqual([12, 12]);
   });
 
   it("honors a smaller repair limit for the post-scan maintenance tail", async () => {

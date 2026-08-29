@@ -3,6 +3,7 @@ import {
   canonicalExitRouteChain,
   canonicalExitRouteScopedId,
 } from "@shared/lib/exit-route-identity";
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type { DexApiPoolToken } from "../../lib/dex-api-types";
 import type { SymbolLookups } from "./types";
@@ -19,7 +20,8 @@ export interface TokenResolutionOptions {
 }
 
 export function normalizeTokenAddress(address: string): string {
-  return (address ?? "").trim().toLowerCase();
+  // Preserve legacy lowercasing for non-EVM identifiers; valid EVM values use strict canonicalization.
+  return canonicalEvmAddress(address) ?? (address ?? "").trim().toLowerCase();
 }
 
 export function buildChainAddressKey(chain: string, address: string): string {

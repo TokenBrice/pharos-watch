@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Mock } from "vitest";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
   { match: "WHERE delivery_state = 'sending'", rows: [] },
@@ -43,8 +44,11 @@ export type PendingAlertSeed = {
   markupPolicyJson?: string | null;
 };
 
-export function insertPendingSqlite(sqlite: DatabaseSync, row: PendingAlertSeed): void {
-  const now = Math.floor(Date.now() / 1000);
+export function insertPendingSqlite(
+  sqlite: DatabaseSync,
+  row: PendingAlertSeed,
+  now = Math.floor(Date.now() / 1000),
+): void {
   sqlite
     .prepare(
       `INSERT INTO telegram_pending_alerts (
@@ -86,16 +90,222 @@ export function insertPendingSqlite(sqlite: DatabaseSync, row: PendingAlertSeed)
     );
 }
 
+export type TelegramSourceEventSeed = {
+  sourceEventId: string;
+  planGeneration?: number;
+  detectedAt?: number;
+  expiresAt?: number;
+};
+
+/** Seeds the source event required by a target row with a plan generation. */
+export function insertSourceEventSqlite(
+  sqlite: DatabaseSync,
+  row: TelegramSourceEventSeed,
+  now = Math.floor(Date.now() / 1000),
+): void {
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_alert_source_events (
+         source_event_id, status, detected_at, expires_at, event_payload, baseline_payload,
+         target_plan_state, target_plan_generation
+       ) VALUES (?, 'planned', ?, ?, '{}', '{}', 'materializing', ?)`,
+    )
+    .run(
+      row.sourceEventId,
+      row.detectedAt ?? now,
+      row.expiresAt ?? now + 3_600,
+      row.planGeneration ?? 1,
+    );
+}
+
+/** Seeds a subscriber row satisfying the production NOT NULL columns. */
+export type TelegramSubscriberSeed = {
+  chatId: string;
+  createdAt?: number;
+  lastActiveAt?: number;
+  preferenceGeneration?: number;
+  alertSnoozeUntilTs?: number | null;
+  quietHoursEnabled?: number;
+  quietHoursStartUtc?: number | null;
+  quietHoursEndUtc?: number | null;
+  timezone?: string | null;
+  globalAlertDews?: number;
+  globalAlertDepeg?: number;
+  globalAlertSafety?: number;
+  globalAlertLaunch?: number;
+  globalAlertReserve?: number;
+  globalAlertFreeze?: number;
+};
+
+export function insertSubscriberSqlite(sqlite: DatabaseSync, row: TelegramSubscriberSeed): void {
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_subscribers (
+         chat_id, created_at, last_active_at, preference_generation, alert_snooze_until_ts,
+         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc, timezone,
+         global_alert_dews, global_alert_depeg, global_alert_safety,
+         global_alert_launch, global_alert_reserve, global_alert_freeze
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      row.chatId,
+      row.createdAt ?? 0,
+      row.lastActiveAt ?? 0,
+      row.preferenceGeneration ?? 0,
+      row.alertSnoozeUntilTs ?? null,
+      row.quietHoursEnabled ?? 0,
+      row.quietHoursStartUtc ?? null,
+      row.quietHoursEndUtc ?? null,
+      row.timezone ?? null,
+      row.globalAlertDews ?? 0,
+      row.globalAlertDepeg ?? 0,
+      row.globalAlertSafety ?? 0,
+      row.globalAlertLaunch ?? 0,
+      row.globalAlertReserve ?? 0,
+      row.globalAlertFreeze ?? 0,
+    );
+}
+
+export type TelegramAlertJobSeed = {
+  jobId: string;
+  alertType: string;
+  sourceEventId: string;
+  severity: string;
+  createdAt?: number;
+  expiresAt?: number;
+  status?: "discovered" | "queued" | "sent" | "degraded" | "expired";
+  targetCount?: number;
+  enqueuedCount?: number;
+  metadata?: string;
+};
+
+export type TelegramAlertJobTargetSeed = {
+  jobId: string;
+  targetKey: string;
+  chatId: string;
+  alertType: string;
+  pendingDedupeKey: string;
+  createdAt?: number;
+  status?: "planned" | "queued" | "sent" | "failed" | "expired";
+  effectState?: "unstarted" | "claimed" | "sending" | "complete" | "execution_unknown";
+  sourceEventId?: string | null;
+  planGeneration?: number | null;
+  chunkIndex?: number;
+  messageHtml?: string | null;
+  disableNotification?: number | null;
+  alertScopeJson?: string | null;
+  preferenceGeneration?: number | null;
+  markupPolicyJson?: string | null;
+};
+
+function insertAlertJobSqlite(sqlite: DatabaseSync, row: TelegramAlertJobSeed, now: number): void {
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_alert_jobs (
+         job_id, alert_type, source_event_id, severity, created_at, expires_at,
+         status, target_count, enqueued_count, metadata
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      row.jobId,
+      row.alertType,
+      row.sourceEventId,
+      row.severity,
+      row.createdAt ?? now,
+      row.expiresAt ?? now + 3_600,
+      row.status ?? "queued",
+      row.targetCount ?? 1,
+      row.enqueuedCount ?? row.targetCount ?? 1,
+      row.metadata ?? "{}",
+    );
+}
+
+function insertAlertJobTargetSqlite(sqlite: DatabaseSync, row: TelegramAlertJobTargetSeed, now: number): void {
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_alert_job_targets (
+         job_id, target_key, chat_id, chunk_index, alert_type, status,
+         pending_dedupe_key, created_at, effect_state, source_event_id, plan_generation,
+         message_html, disable_notification, alert_scope_json, preference_generation, markup_policy_json
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      row.jobId,
+      row.targetKey,
+      row.chatId,
+      row.chunkIndex ?? 0,
+      row.alertType,
+      row.status ?? "queued",
+      row.pendingDedupeKey,
+      row.createdAt ?? now,
+      row.effectState ?? "unstarted",
+      row.sourceEventId ?? null,
+      row.planGeneration ?? null,
+      row.messageHtml ?? null,
+      row.disableNotification ?? null,
+      row.alertScopeJson ?? null,
+      row.preferenceGeneration ?? null,
+      row.markupPolicyJson ?? null,
+    );
+}
+
+export type PendingQueueScenarioOverrides = {
+  now?: number;
+  subscriber?: TelegramSubscriberSeed | null;
+  sourceEvent?: TelegramSourceEventSeed | null;
+  job?: TelegramAlertJobSeed | null;
+  target?: TelegramAlertJobTargetSeed | null;
+  pending?: PendingAlertSeed | readonly PendingAlertSeed[];
+};
+
+export type PendingQueueScenario = {
+  sqlite: DatabaseSync;
+  db: D1Database;
+  now: number;
+};
+
+/**
+ * Creates a latest-schema SQLite fixture, seeds the requested typed rows, and
+ * always closes the database after the callback settles.
+ */
+export async function withPendingQueueScenario<T>(
+  overrides: PendingQueueScenarioOverrides,
+  callback: (scenario: PendingQueueScenario) => Promise<T> | T,
+): Promise<T> {
+  const { sqlite, db } = createLatestSchemaSqlite();
+  const now = overrides.now ?? Math.floor(Date.now() / 1000);
+  try {
+    if (overrides.subscriber) {
+      insertSubscriberSqlite(sqlite, {
+        ...overrides.subscriber,
+        createdAt: overrides.subscriber.createdAt ?? now,
+        lastActiveAt: overrides.subscriber.lastActiveAt ?? now,
+      });
+    }
+    if (overrides.sourceEvent) insertSourceEventSqlite(sqlite, overrides.sourceEvent, now);
+    if (overrides.job) insertAlertJobSqlite(sqlite, overrides.job, now);
+    if (overrides.target) insertAlertJobTargetSqlite(sqlite, overrides.target, now);
+    const pendingRows = overrides.pending == null
+      ? []
+      : Array.isArray(overrides.pending) ? overrides.pending : [overrides.pending];
+    for (const row of pendingRows) insertPendingSqlite(sqlite, row, now);
+    return await callback({ sqlite, db, now });
+  } finally {
+    sqlite.close();
+  }
+}
+
 export type TelegramDeliveryResult = {
   ok: boolean;
   blocked: boolean;
   retryable: boolean;
   permanentFailure: boolean;
-  statusCode: number;
+  statusCode: number | null;
   errorClass: string | null;
-  delivery: string;
+  delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
   retryAfterSec: number | null;
   rateLimitScope?: "chat" | "global";
+  migrateToChatId?: string;
 };
 
 export function makeTelegramDeliveryResult(
@@ -112,6 +322,90 @@ export function makeTelegramDeliveryResult(
     retryAfterSec: null,
     ...overrides,
   };
+}
+
+export type TelegramRateLimitScope = "chat" | "global";
+
+export const TELEGRAM_SENT_RESULT = Object.freeze(makeTelegramDeliveryResult());
+export const TELEGRAM_RETRYABLE_RESULT = Object.freeze(makeTelegramDeliveryResult({
+  ok: false,
+  retryable: true,
+  statusCode: 503,
+  errorClass: "server_error",
+  delivery: "retryable_failure",
+}));
+export const TELEGRAM_PERMANENT_RESULT = Object.freeze(makeTelegramDeliveryResult({
+  ok: false,
+  permanentFailure: true,
+  statusCode: 400,
+  errorClass: "bad_request",
+  delivery: "permanent_failure",
+}));
+export const TELEGRAM_BLOCKED_RESULT = Object.freeze(makeTelegramDeliveryResult({
+  ok: false,
+  blocked: true,
+  permanentFailure: true,
+  statusCode: 403,
+  errorClass: "blocked",
+  delivery: "blocked",
+}));
+export const TELEGRAM_CHAT_RATE_LIMIT_RESULT = Object.freeze(makeTelegramDeliveryResult({
+  ok: false,
+  retryable: true,
+  statusCode: 429,
+  errorClass: "rate_limit",
+  delivery: "retryable_failure",
+  retryAfterSec: 30,
+  rateLimitScope: "chat",
+}));
+export const TELEGRAM_GLOBAL_RATE_LIMIT_RESULT = Object.freeze(makeTelegramDeliveryResult({
+  ok: false,
+  retryable: true,
+  statusCode: 429,
+  errorClass: "rate_limit",
+  delivery: "retryable_failure",
+  retryAfterSec: 30,
+  rateLimitScope: "global",
+}));
+
+export function makeTelegramSentResult(overrides: Partial<TelegramDeliveryResult> = {}): TelegramDeliveryResult {
+  return makeTelegramDeliveryResult({ ...TELEGRAM_SENT_RESULT, ...overrides });
+}
+
+export function makeTelegramRetryableResult(
+  overrides: Partial<TelegramDeliveryResult> = {},
+): TelegramDeliveryResult {
+  return makeTelegramDeliveryResult({ ...TELEGRAM_RETRYABLE_RESULT, ...overrides });
+}
+
+export function makeTelegramPermanentResult(
+  overrides: Partial<TelegramDeliveryResult> = {},
+): TelegramDeliveryResult {
+  return makeTelegramDeliveryResult({ ...TELEGRAM_PERMANENT_RESULT, ...overrides });
+}
+
+export function makeTelegramBlockedResult(
+  overrides: Partial<TelegramDeliveryResult> = {},
+): TelegramDeliveryResult {
+  return makeTelegramDeliveryResult({ ...TELEGRAM_BLOCKED_RESULT, ...overrides });
+}
+
+export function makeTelegramRateLimitedResult(options: {
+  rateLimitScope: TelegramRateLimitScope;
+  retryAfterSec?: number | null;
+  statusCode?: number;
+  errorClass?: string | null;
+}): TelegramDeliveryResult {
+  const base = options.rateLimitScope === "global"
+    ? TELEGRAM_GLOBAL_RATE_LIMIT_RESULT
+    : TELEGRAM_CHAT_RATE_LIMIT_RESULT;
+  return makeTelegramDeliveryResult({
+    ...base,
+    statusCode: options.statusCode ?? 429,
+    errorClass: options.errorClass === undefined ? "rate_limit" : options.errorClass,
+    retryAfterSec: options.retryAfterSec === undefined ? 30 : options.retryAfterSec,
+    rateLimitScope: options.rateLimitScope,
+  });
 }
 
 type TelegramPendingMockSet = {

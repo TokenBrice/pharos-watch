@@ -29,7 +29,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/generate-safety-score-v9-mint-posture-queue.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-missing-data-registry.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts"),
-    strict("scripts/maintenance/generate-yield-outcome-validation.ts"),
     strict("scripts/maintenance/measure-cdp-mechanism-metrics.ts"),
     strict("scripts/maintenance/measure-cdp-shock-coverage.ts"),
     strict("scripts/maintenance/measure-protocol-api-mechanism-metrics.ts"),
@@ -63,6 +62,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
   ]),
   exemptions: Object.freeze([
     exempt("scripts/build-data/build-client-registry.mjs", "build"),
+    exempt("scripts/build-data/generate-stablecoin-client-projections.ts", "build"),
     exempt("scripts/ci/check-clone-ratchet.ts", "build"),
     exempt("scripts/ci/check-cloudflare-account-state-drift.mjs", "read-only"),
     exempt("scripts/ci/check-critical-coverage.ts", "test"),
@@ -154,7 +154,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/install-whyte-fonts.ts", "build"),
     exempt("scripts/maintenance/lighthouse-static-export.ts", "test"),
     exempt("scripts/maintenance/night-watch-worker.mjs", "build"),
-    exempt("scripts/maintenance/populate-bridge-route-deployments.ts", "build"),
     exempt("scripts/maintenance/prepare-workspace.ts", "build"),
     exempt("scripts/maintenance/profile-vitest.mjs", "test"),
     exempt("scripts/maintenance/refresh-independent-assurance-reports.ts", "build"),

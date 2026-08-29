@@ -16,8 +16,7 @@ import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
-import { loadDdrRepairDebt } from "../ddr-repair-debt";
-import { loadRepairDebtSummary } from "../repair-tasks";
+import { loadDdrRepairDebtDetails, loadRepairDebtSummary } from "../repair-tasks";
 import {
   EMPTY_BLACKLIST_RECONCILIATION_STATUS,
   loadBlacklistReconciliationStatus,
@@ -36,71 +35,6 @@ function emptyRepairDebt(source: DataQuality["repairDebt"]["source"] = "unavaila
     availabilityEscalated: false,
     nextRunnerDueAt: null,
     source,
-  };
-}
-
-function ddrCacheRepairDebtSummary(
-  repairDebt: Awaited<ReturnType<typeof loadDdrRepairDebt>>,
-  now: number,
-): DataQuality["repairDebt"] {
-  if (!repairDebt || repairDebt.count <= 0) {
-    return {
-      status: "ok",
-      openCount: 0,
-      oldestAgeSec: null,
-      byKind: {},
-      availabilityEscalated: false,
-      nextRunnerDueAt: null,
-      source: "ddr-cache-fallback",
-    };
-  }
-  const checkedAge = Math.max(0, now - repairDebt.checkedAt);
-  return {
-    status: "present",
-    openCount: repairDebt.count,
-    oldestAgeSec: checkedAge,
-    byKind: {
-      "ddr-repair-required-event": {
-        openCount: repairDebt.count,
-        oldestAgeSec: checkedAge,
-        nextRunnerDueAt: null,
-      },
-    },
-    availabilityEscalated: false,
-    nextRunnerDueAt: null,
-    source: "ddr-cache-fallback",
-  };
-}
-
-function mergeDdrCacheRepairDebtSummary(
-  repairDebt: DataQuality["repairDebt"],
-  ddrRepairDebt: NonNullable<Awaited<ReturnType<typeof loadDdrRepairDebt>>>,
-  now: number,
-): DataQuality["repairDebt"] {
-  const taskDdrCount = repairDebt.byKind["ddr-repair-required-event"]?.openCount ?? 0;
-  if (ddrRepairDebt.count <= taskDdrCount) {
-    return repairDebt;
-  }
-
-  const fallback = ddrCacheRepairDebtSummary(ddrRepairDebt, now);
-  const delta = ddrRepairDebt.count - taskDdrCount;
-  const oldestAgeSec =
-    repairDebt.oldestAgeSec == null
-      ? fallback.oldestAgeSec
-      : fallback.oldestAgeSec == null
-        ? repairDebt.oldestAgeSec
-        : Math.max(repairDebt.oldestAgeSec, fallback.oldestAgeSec);
-
-  return {
-    ...repairDebt,
-    status: "present",
-    openCount: repairDebt.openCount + delta,
-    oldestAgeSec,
-    byKind: {
-      ...repairDebt.byKind,
-      "ddr-repair-required-event": fallback.byKind["ddr-repair-required-event"],
-    },
-    source: "worker-repair-tasks+ddr-cache-fallback",
   };
 }
 
@@ -304,49 +238,41 @@ export async function getDataQuality(
   let ddrRepairDebtEvents: DataQuality["ddrRepairDebtEvents"] = [];
   let ddrRepairDebtEventsTruncated = false;
   let repairDebt: DataQuality["repairDebt"] = emptyRepairDebt();
-  let repairTaskSummaryLoaded = false;
   try {
     repairDebt = await loadRepairDebtSummary(db, now);
-    repairTaskSummaryLoaded = true;
   } catch (e) {
+    ddrRepairDebtStatus = "unknown";
     logWorkerEvent({
       scope: "status",
       level: "warn",
       event: "repair_debt_task_summary_query_failed",
       route: "status",
       source: "worker-repair-tasks",
-      message: "Failed to query repair task summary; falling back to DDR cache marker",
+      message: "Failed to query repair task summary; DDR repair debt status is unknown",
       error: e,
     });
   }
-  try {
-    const ddrRepairDebt = await loadDdrRepairDebt(db);
-    if (ddrRepairDebt && ddrRepairDebt.count > 0) {
+  const ddrTaskCount = repairDebt.byKind["ddr-repair-required-event"]?.openCount ?? 0;
+  if (ddrRepairDebtStatus !== "unknown" && ddrTaskCount > 0) {
+    try {
+      const ddrRepairDebt = await loadDdrRepairDebtDetails(db);
       ddrRepairDebtStatus = "present";
-      ddrRepairDebtCount = ddrRepairDebt.count;
+      ddrRepairDebtCount = ddrTaskCount;
       ddrRepairDebtCheckedAt = ddrRepairDebt.checkedAt;
       ddrRepairDebtEvents = ddrRepairDebt.events;
-      ddrRepairDebtEventsTruncated = ddrRepairDebt.eventsTruncated;
-      if (!repairTaskSummaryLoaded || repairDebt.openCount === 0) {
-        repairDebt = ddrCacheRepairDebtSummary(ddrRepairDebt, now);
-      } else {
-        repairDebt = mergeDdrCacheRepairDebtSummary(repairDebt, ddrRepairDebt, now);
-      }
-    } else if (!repairTaskSummaryLoaded) {
-      repairDebt = ddrCacheRepairDebtSummary(ddrRepairDebt, now);
+      ddrRepairDebtEventsTruncated = ddrRepairDebt.eventsTruncated || ddrTaskCount > ddrRepairDebt.events.length;
+    } catch (e) {
+      ddrRepairDebtStatus = "unknown";
+      logWorkerEvent({
+        scope: "status",
+        level: "warn",
+        event: "ddr_repair_debt_detail_query_failed",
+        route: "status",
+        source: "worker-repair-tasks",
+        message: "Failed to query DDR repair debt task details",
+        error: e,
+      });
     }
-  } catch (e) {
-    ddrRepairDebtStatus = "unknown";
-    if (!repairTaskSummaryLoaded) repairDebt = emptyRepairDebt();
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "ddr_repair_debt_query_failed",
-      route: "status",
-      source: "ddr-repair-debt",
-      message: "Failed to query DDR repair debt marker",
-      error: e,
-    });
   }
 
   let staleOnchainSupply = 0;

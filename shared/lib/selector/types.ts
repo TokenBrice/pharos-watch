@@ -371,7 +371,6 @@ export const EXCLUSION_REASONS = [
   "liquidity-diversification-floor",
   "effective-exit-floor",
   "supply-tvl-floor-1h",
-  "lifecycle-non-active",
   "peg-currency-mismatch",
   "yield-native-only-violation",
   "decentralization-required-violation",
@@ -568,7 +567,6 @@ export interface MergedRow {
   variantOf: string | null;
   isYieldBearing: boolean;
   pegCurrency: PegCurrency;
-  lifecycle: "active" | "frozen" | "pre-launch";
   governance: "centralized" | "centralized-dependent" | "decentralized" | null;
   canBeBlacklisted: boolean | "possible" | "inherited" | null;
   mechanismArchetype: string | null;

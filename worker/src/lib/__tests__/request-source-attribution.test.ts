@@ -23,6 +23,7 @@ import {
   recordWorkerRequestAttribution,
   resetRequestAttributionStateForTests,
 } from "../request-source-attribution";
+import { makeRequestAttributionTables } from "../../test-helpers/api-key-test-support";
 
 describe("request-source-attribution", () => {
   const enabledFlagValues = ["1", "true", "yes", "on", " TRUE ", "YeS", " ON "];
@@ -256,23 +257,7 @@ describe("request-source-attribution", () => {
   });
 
   it("batches same-minute stats rows and schedules prune only once per prune bucket", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT INTO api_request_consumer_stats",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-      {
-        match: "DELETE FROM api_request_consumer_stats",
-        rows: [],
-        runMeta: { changes: 3 },
-      },
-      {
-        match: "DELETE FROM api_key_request_stats",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-    ], { requireMatch: true });
+    const db = mockD1(makeRequestAttributionTables({ workerPruneChanges: 3 }), { requireMatch: true });
 
     await Promise.all([
       recordWorkerRequestAttribution(
@@ -304,23 +289,10 @@ describe("request-source-attribution", () => {
 
   it("logs prune failures and resets pending prune state for the next prune window", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const db = mockD1([
-      {
-        match: "INSERT INTO api_request_consumer_stats",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-      {
-        match: "DELETE FROM api_request_consumer_stats",
-        rows: [],
-        throwError: new Error("prune failed"),
-      },
-      {
-        match: "DELETE FROM api_key_request_stats",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-    ], { requireMatch: true });
+    const db = mockD1(
+      makeRequestAttributionTables({ workerPruneFailure: new Error("prune failed") }),
+      { requireMatch: true },
+    );
 
     const baseNowSec = 1_710_000_000;
 
@@ -347,23 +319,10 @@ describe("request-source-attribution", () => {
   });
 
   it("records per-key request stats and shares the same prune cadence", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT INTO api_key_request_stats",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-      {
-        match: "DELETE FROM api_request_consumer_stats",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-      {
-        match: "DELETE FROM api_key_request_stats",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-    ], { requireMatch: true });
+    const db = mockD1(
+      makeRequestAttributionTables({ includeApiKey: true, apiKeyPruneChanges: 1 }),
+      { requireMatch: true },
+    );
 
     await recordApiKeyRequestAttribution(db, 7, 1_710_000_000);
     await recordApiKeyRequestAttribution(db, 7, 1_710_000_030);
@@ -378,23 +337,10 @@ describe("request-source-attribution", () => {
   });
 
   it("buffers concurrent per-key request stats into one upsert per key and minute", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT INTO api_key_request_stats",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-      {
-        match: "DELETE FROM api_request_consumer_stats",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-      {
-        match: "DELETE FROM api_key_request_stats",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-    ], { requireMatch: true });
+    const db = mockD1(
+      makeRequestAttributionTables({ includeApiKey: true, apiKeyPruneChanges: 1 }),
+      { requireMatch: true },
+    );
 
     await Promise.all([
       recordApiKeyRequestAttribution(db, 7, 1_710_000_000),

@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -320,7 +321,7 @@ export async function fetchUsdgoTransparencyReserves(
   );
   const buidlPromise = readBuidlObservation(params, signal, ctx);
   const crossCheckPromise = readIssuerCrossCheck(params.issuerCrossCheckUrl, signal, ctx).catch((error: unknown) => ({
-    error: error instanceof Error ? error.message : String(error),
+    error: toErrorMessage(error),
   }));
   const [assurance, buidl, crossCheck] = await Promise.all([assurancePromise, buidlPromise, crossCheckPromise]);
 

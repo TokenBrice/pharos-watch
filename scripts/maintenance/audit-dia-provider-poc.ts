@@ -6,7 +6,12 @@ import type { PriceSourceDepthAudit, PriceSourceDepthRow } from "./audit-price-s
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
-import { runAsMain, toPositiveInt, writeOutputFile } from "../lib/coverage-audit-cli";
+import {
+  parseReportCliArgs,
+  runAsMain,
+  runReportCli,
+  toPositiveInt,
+} from "../lib/report-cli";
 
 const DIA_ASSET_QUOTATION_BASE_URL = "https://api.diadata.org/v1/assetQuotation";
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -106,45 +111,51 @@ function readJsonFile(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
 
-function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    inputPath: null,
-    limit: 100,
-    maxContractsPerCoin: 1,
-    format: "markdown",
-    reportPath: null,
-  };
+function usage(): string {
+  return [
+    "Usage: npm run audit:dia-provider -- --input agents/source-depth-baseline-YYYY-MM-DD.json [options]",
+    "",
+    "Options:",
+    "  --limit <n>                   Probe top n below-target active rows by market cap (default 100)",
+    "  --max-contracts-per-coin <n>  Probe up to n supported contracts per coin (default 1)",
+    "  --json                        Emit JSON instead of Markdown",
+    "  --report <path>               Write report to a file instead of stdout",
+  ].join("\n");
+}
 
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (arg === "--input") {
-      options.inputPath = argv[++index] ?? null;
-    } else if (arg === "--limit") {
-      options.limit = toPositiveInt(argv[++index] ?? "", "--limit");
-    } else if (arg === "--max-contracts-per-coin") {
-      options.maxContractsPerCoin = toPositiveInt(argv[++index] ?? "", "--max-contracts-per-coin");
-    } else if (arg === "--json") {
-      options.format = "json";
-    } else if (arg === "--report") {
-      options.reportPath = argv[++index] ?? null;
-    } else if (arg === "--help" || arg === "-h") {
-      process.stdout.write([
-        "Usage: npm run audit:dia-provider -- --input agents/source-depth-baseline-YYYY-MM-DD.json [options]",
-        "",
-        "Options:",
-        "  --limit <n>                   Probe top n below-target active rows by market cap (default 100)",
-        "  --max-contracts-per-coin <n>  Probe up to n supported contracts per coin (default 1)",
-        "  --json                        Emit JSON instead of Markdown",
-        "  --report <path>               Write report to a file instead of stdout",
-      ].join("\n"));
-      process.stdout.write("\n");
-      process.exit(0);
-    } else {
-      throw new Error(`Unknown argument: ${arg}`);
-    }
-  }
-
-  return options;
+export function parseArgs(argv: string[]): CliOptions {
+  return parseReportCliArgs(argv, {
+    createOptions: (): CliOptions => ({
+      inputPath: null,
+      limit: 100,
+      maxContractsPerCoin: 1,
+      format: "markdown",
+      reportPath: null,
+    }),
+    includeMarkdown: false,
+    allowMissingReportPath: true,
+    usage,
+    options: [
+      {
+        flag: "--input",
+        kind: "value",
+        allowMissingValue: true,
+        apply: (options, value) => { options.inputPath = value ?? null; },
+      },
+      {
+        flag: "--limit",
+        kind: "value",
+        allowMissingValue: true,
+        apply: (options, value) => { options.limit = toPositiveInt(value ?? "", "--limit"); },
+      },
+      {
+        flag: "--max-contracts-per-coin",
+        kind: "value",
+        allowMissingValue: true,
+        apply: (options, value) => { options.maxContractsPerCoin = toPositiveInt(value ?? "", "--max-contracts-per-coin"); },
+      },
+    ],
+  });
 }
 
 function defaultInputPath(cwd: string): string | null {
@@ -417,29 +428,26 @@ export async function runCli(
   cwd = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
-  const options = parseArgs(argv);
-  const inputPath = options.inputPath ? resolve(cwd, options.inputPath) : defaultInputPath(cwd);
-  if (!inputPath) {
-    throw new Error("No input audit found. Pass --input agents/source-depth-baseline-YYYY-MM-DD.json.");
-  }
-  const audit = readJsonFile(inputPath) as PriceSourceDepthAudit;
-  const report = await runDiaProviderPocAudit({
-    audit,
-    inputPath,
-    limit: options.limit,
-    maxContractsPerCoin: options.maxContractsPerCoin,
-    fetchImpl,
+  return runReportCli(argv, {
+    parse: parseArgs,
+    cwd,
+    build: async (options) => {
+      const inputPath = options.inputPath ? resolve(cwd, options.inputPath) : defaultInputPath(cwd);
+      if (!inputPath) {
+        throw new Error("No input audit found. Pass --input agents/source-depth-baseline-YYYY-MM-DD.json.");
+      }
+      const audit = readJsonFile(inputPath) as PriceSourceDepthAudit;
+      return runDiaProviderPocAudit({
+        audit,
+        inputPath,
+        limit: options.limit,
+        maxContractsPerCoin: options.maxContractsPerCoin,
+        fetchImpl,
+      });
+    },
+    renderMarkdown,
+    writeMessage: (target) => `Wrote DIA provider POC audit to ${target}`,
   });
-  const output = options.format === "json" ? `${JSON.stringify(report, null, 2)}\n` : renderMarkdown(report);
-
-  if (options.reportPath) {
-    const target = writeOutputFile(options.reportPath, output, cwd);
-    process.stdout.write(`Wrote DIA provider POC audit to ${target}\n`);
-  } else {
-    process.stdout.write(output);
-  }
-
-  return 0;
 }
 
 runAsMain(import.meta.url, runCli);

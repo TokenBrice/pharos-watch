@@ -228,7 +228,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     ],
     allowBareFetch: true,
     directFetchJustification:
-      "The same-owned Pages publication is an optional social attachment: reads are globally time-bounded, response bodies are consumed or cancelled, and every failure degrades to text-only delivery rather than retrying or blocking the digest.",
+      "The same-owned Pages publication is a required digest attachment: reads are globally time-bounded, response bodies are consumed or cancelled, and an unready map defers the digest edition (withhold-retry-resume) instead of retrying inline or publishing without it.",
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses one composed three-second AbortSignal across the manifest GET and dated-image HEAD probe.",
@@ -240,7 +240,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "readResponseTextBoundedWithSignal",
       "body?.cancel",
       "resolveDigestSafetyMap",
-      "daily_digest_safety_map_omitted",
+      "daily_digest_safety_map_deferred",
     ],
   },
   {

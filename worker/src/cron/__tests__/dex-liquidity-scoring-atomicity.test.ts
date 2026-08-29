@@ -1,74 +1,38 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import {
+  DEX_PRICE_SCENARIOS,
+  insertPublicPrice,
+  makeObservationMap,
+  makePricePoolMap,
+  readPublicPriceRows,
+  readPublicPrices,
+  seedPublishedDexGeneration as createPublishedDexGeneration,
+  type PriceScenario,
+  type PublicPriceRow,
+  type SeedGenerationOptions,
+  makeUsdPricePools,
+} from "../dex-liquidity/__tests__/scoring-test-support";
 import {
   computeDepthStability,
   computeDexPrices,
   DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
   pruneExpiredDexPriceStages,
 } from "../dex-liquidity/scoring";
-import type { PoolEntry } from "../dex-liquidity/types";
+import type { DexPriceObs, PoolEntry } from "../dex-liquidity/types";
 
 const NOW_SEC = 1_700_000_000;
 const GENERATION_ID = `dex-liquidity-${NOW_SEC}`;
 const EXPECTED_GENERATION_ROWS = ACTIVE_STABLECOINS.length + 1;
 const openSqlite: Array<import("node:sqlite").DatabaseSync> = [];
 
-function seedPublishedDexGeneration(): {
+function seedPublishedDexGeneration(options: SeedGenerationOptions = {}): {
   sqlite: import("node:sqlite").DatabaseSync;
   db: D1Database;
+  generationId: string;
 } {
-  const fixture = createLatestSchemaSqlite();
+  const fixture = createPublishedDexGeneration(options);
   openSqlite.push(fixture.sqlite);
-  fixture.sqlite
-    .prepare(
-      `INSERT INTO dex_liquidity_publication_generations
-        (generation_id, started_at, state, expected_row_count, written_row_count,
-         current_row_count, created_at, published_at)
-       VALUES (?, ?, 'published', ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      GENERATION_ID,
-      NOW_SEC,
-      EXPECTED_GENERATION_ROWS,
-      EXPECTED_GENERATION_ROWS,
-      EXPECTED_GENERATION_ROWS,
-      NOW_SEC,
-      NOW_SEC,
-    );
-
-  const insertStaged = fixture.sqlite.prepare(
-    `INSERT INTO dex_liquidity_run_rows
-      (generation_id, stablecoin_id, symbol, depth_stability, updated_at)
-     VALUES (?, ?, ?, ?, ?)`,
-  );
-  const insertPublic = fixture.sqlite.prepare(
-    `INSERT INTO dex_liquidity
-      (stablecoin_id, symbol, depth_stability, updated_at, publication_generation_id, publication_state)
-     VALUES (?, ?, ?, ?, ?, 'published')`,
-  );
-  fixture.sqlite.exec("BEGIN IMMEDIATE");
-  try {
-    for (const coin of ACTIVE_STABLECOINS) {
-      insertStaged.run(GENERATION_ID, coin.id, coin.symbol, 0.25, NOW_SEC);
-      insertPublic.run(coin.id, coin.symbol, 0.25, NOW_SEC, GENERATION_ID);
-    }
-    insertStaged.run(GENERATION_ID, "__global__", "__global__", null, NOW_SEC);
-    insertPublic.run("__global__", "__global__", null, NOW_SEC, GENERATION_ID);
-    fixture.sqlite.exec("COMMIT");
-  } catch (error) {
-    fixture.sqlite.exec("ROLLBACK");
-    throw error;
-  }
-
-  fixture.sqlite
-    .prepare(
-      `INSERT INTO dex_prices
-        (stablecoin_id, symbol, dex_price_usd, source_pool_count, source_total_tvl, updated_at)
-       VALUES ('legacy-a', 'OLDA', 0.91, 1, 100000, ?),
-              ('legacy-b', 'OLDB', 1.09, 1, 100000, ?)`,
-    )
-    .run(NOW_SEC - 1, NOW_SEC - 1);
   return fixture;
 }
 
@@ -150,32 +114,77 @@ function supersedeBeforePublication(
   } as unknown as D1Database;
 }
 
-function makePricePools(count: number): Map<string, PoolEntry[]> {
-  const usdCoins = ACTIVE_STABLECOINS.filter((coin) => coin.flags.pegCurrency === "USD").slice(0, count);
-  if (usdCoins.length !== count) throw new Error(`Expected ${count} active USD stablecoins for the fixture`);
-  return new Map(
-    usdCoins.map((coin, index) => [
-      coin.id,
-      [{
-        poolId: `ethereum:atomicity-${index}`,
-        project: "curve",
-        chain: "Ethereum",
-        tvlUsd: 100_000,
-        symbol: `${coin.symbol}/USDC`,
-        volumeUsd1d: 0,
-        volumeUsd7d: null,
-        poolType: "stable",
-        source: "dl",
-        price: 1,
-      } satisfies PoolEntry],
-    ]),
+function computePriceGeneration(
+  db: D1Database,
+  retainedPools: Map<string, PoolEntry[]>,
+  nowSec: number,
+  generationId = `dex-liquidity-${nowSec}`,
+  preloadedPrimaryPrices?: Map<string, number>,
+  exactPriceEvidence?: Map<string, DexPriceObs[]>,
+) {
+  return computeDexPrices(
+    db,
+    retainedPools,
+    nowSec,
+    undefined,
+    undefined,
+    exactPriceEvidence,
+    generationId,
+    preloadedPrimaryPrices,
   );
 }
 
-function readPublicPrices(sqlite: import("node:sqlite").DatabaseSync): unknown[] {
-  return sqlite
-    .prepare("SELECT stablecoin_id, symbol, dex_price_usd, updated_at FROM dex_prices ORDER BY stablecoin_id")
-    .all();
+function expectPriceStageEmpty(sqlite: import("node:sqlite").DatabaseSync, generationId: string): void {
+  expect(
+    sqlite
+      .prepare("SELECT COUNT(*) AS count FROM dex_price_run_rows WHERE generation_id = ?")
+      .get(generationId),
+  ).toEqual({ count: 0 });
+}
+
+async function runPriceScenario(scenario: PriceScenario): Promise<{
+  sqlite: import("node:sqlite").DatabaseSync;
+  db: D1Database;
+  generationId: string;
+  steps: Array<{ rows: PublicPriceRow[]; diagnostics: unknown }>;
+}> {
+  const fixture = seedPublishedDexGeneration({ nowSec: scenario.nowSec });
+  for (const row of scenario.existingPrices ?? []) {
+    insertPublicPrice(fixture.sqlite, row.stablecoinId, row.symbol, row.price, row.updatedAt ?? scenario.nowSec - 1);
+  }
+  if (scenario.cacheValue !== undefined) {
+    fixture.sqlite
+      .prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
+      .run(scenario.cacheValue, scenario.nowSec - 1);
+  }
+
+  const steps: Array<{ rows: PublicPriceRow[]; diagnostics: unknown }> = [];
+  for (const step of scenario.steps) {
+    const stepNowSec = step.nowSec ?? scenario.nowSec;
+    const diagnostics = await computePriceGeneration(
+      fixture.db,
+      makePricePoolMap(step.retainedPools ?? []),
+      stepNowSec,
+      fixture.generationId,
+      step.primaryPrices === undefined ? undefined : new Map(step.primaryPrices),
+      step.exactPriceEvidence === undefined ? undefined : makeObservationMap(step.exactPriceEvidence),
+    );
+    steps.push({ rows: readPublicPriceRows(fixture.sqlite), diagnostics });
+  }
+  return { ...fixture, steps };
+}
+
+function expectCompleteGeneration(
+  sqlite: import("node:sqlite").DatabaseSync,
+  generationId: string,
+  expected: PriceScenario["expectedGeneration"],
+): void {
+  if (!expected) return;
+  expect(
+    sqlite
+      .prepare("SELECT state, expected_row_count, current_row_count FROM dex_liquidity_publication_generations WHERE generation_id = ?")
+      .get(generationId),
+  ).toEqual(expected);
 }
 
 afterEach(() => {
@@ -188,7 +197,7 @@ describe("DEX scoring publication atomicity", () => {
     const before = readPublicPrices(sqlite);
 
     await expect(
-      computeDexPrices(failAfterSuccessfulBatches(db, 1), makePricePools(30), NOW_SEC),
+      computePriceGeneration(failAfterSuccessfulBatches(db, 1), makeUsdPricePools(30), NOW_SEC),
     ).rejects.toThrow("injected D1 batch failure");
 
     expect(readPublicPrices(sqlite)).toEqual(before);
@@ -202,7 +211,7 @@ describe("DEX scoring publication atomicity", () => {
     const before = readPublicPrices(sqlite);
 
     await expect(
-      computeDexPrices(failAfterSuccessfulBatches(db, 2), makePricePools(30), NOW_SEC),
+      computePriceGeneration(failAfterSuccessfulBatches(db, 2), makeUsdPricePools(30), NOW_SEC),
     ).rejects.toThrow("injected D1 batch failure");
 
     expect(readPublicPrices(sqlite)).toEqual(before);
@@ -214,7 +223,7 @@ describe("DEX scoring publication atomicity", () => {
   it("replays an ambiguous post-commit publication without emptying dex_prices", async () => {
     const { sqlite, db } = seedPublishedDexGeneration();
 
-    await computeDexPrices(failOnceAfterCommittedPublication(db), makePricePools(30), NOW_SEC);
+    await computePriceGeneration(failOnceAfterCommittedPublication(db), makeUsdPricePools(30), NOW_SEC);
 
     expect(
       sqlite.prepare("SELECT COUNT(*) AS count FROM dex_prices WHERE updated_at = ?").get(NOW_SEC),
@@ -230,7 +239,7 @@ describe("DEX scoring publication atomicity", () => {
     const before = readPublicPrices(sqlite);
 
     await expect(
-      computeDexPrices(supersedeBeforePublication(db, sqlite), makePricePools(30), NOW_SEC),
+      computePriceGeneration(supersedeBeforePublication(db, sqlite), makeUsdPricePools(30), NOW_SEC),
     ).rejects.toThrow("price publication fence/replacement changed 0 rows");
 
     expect(readPublicPrices(sqlite)).toEqual(before);
@@ -282,12 +291,118 @@ describe("DEX scoring publication atomicity", () => {
       throw error;
     }
 
-    await computeDexPrices(db, makePricePools(30), NOW_SEC);
+    await computePriceGeneration(db, makeUsdPricePools(30), NOW_SEC);
 
     expect(
       sqlite.prepare("SELECT COUNT(*) AS count FROM dex_prices WHERE updated_at = ?").get(NOW_SEC),
     ).toEqual({ count: 30 });
   });
+
+  it("publishes only eligible depth-stability rows and propagates DB failures", async () => {
+    const { sqlite, db } = seedPublishedDexGeneration();
+
+    await computeDepthStability(
+      db,
+      new Map([["usdt-tether", 0.9]]),
+      GENERATION_ID,
+    );
+
+    const publicDepthRows = sqlite
+      .prepare(
+        `SELECT stablecoin_id, depth_stability, publication_generation_id, publication_state
+         FROM dex_liquidity
+         WHERE stablecoin_id != '__global__'
+         ORDER BY stablecoin_id`,
+      )
+      .all();
+    expect(publicDepthRows).toEqual(
+      ACTIVE_STABLECOINS
+        .map((coin) => ({
+          stablecoin_id: coin.id,
+          depth_stability: coin.id === "usdt-tether" ? 0.9 : null,
+          publication_generation_id: GENERATION_ID,
+          publication_state: "published",
+        }))
+        .sort((a, b) => a.stablecoin_id.localeCompare(b.stablecoin_id)),
+    );
+    expect(
+      sqlite
+        .prepare(
+          `SELECT stablecoin_id, depth_stability
+           FROM dex_liquidity_run_rows
+           WHERE generation_id = ? AND stablecoin_id != '__global__'
+           ORDER BY stablecoin_id`,
+        )
+        .all(GENERATION_ID),
+    ).toEqual(
+      ACTIVE_STABLECOINS
+        .map((coin) => ({
+          stablecoin_id: coin.id,
+          depth_stability: coin.id === "usdt-tether" ? 0.9 : null,
+        }))
+        .sort((a, b) => a.stablecoin_id.localeCompare(b.stablecoin_id)),
+    );
+    expect(
+      sqlite
+        .prepare(
+          `SELECT state, expected_row_count, written_row_count, current_row_count
+           FROM dex_liquidity_publication_generations
+           WHERE generation_id = ?`,
+        )
+        .get(GENERATION_ID),
+    ).toEqual({
+      state: "published",
+      expected_row_count: EXPECTED_GENERATION_ROWS,
+      written_row_count: EXPECTED_GENERATION_ROWS,
+      current_row_count: EXPECTED_GENERATION_ROWS,
+    });
+
+    const failed = seedPublishedDexGeneration();
+    await expect(
+      computeDepthStability(
+        failAfterSuccessfulBatches(failed.db, 0),
+        new Map([["usdt-tether", 0.9]]),
+        failed.generationId,
+      ),
+    ).rejects.toThrow("injected D1 batch failure");
+    expect(
+      failed.sqlite
+        .prepare(
+          `SELECT COUNT(*) AS count
+           FROM dex_liquidity
+           WHERE stablecoin_id != '__global__' AND depth_stability = 0.25`,
+        )
+        .get(),
+    ).toEqual({ count: ACTIVE_STABLECOINS.length });
+  });
+
+  for (const scenario of DEX_PRICE_SCENARIOS) {
+    it(scenario.label, async () => {
+      const result = await runPriceScenario(scenario);
+      for (const [index, step] of scenario.steps.entries()) {
+        const actual = result.steps[index];
+        expect(actual?.rows).toEqual(step.expectedRows);
+        expectPriceStageEmpty(result.sqlite, result.generationId);
+        if (step.expectedDiagnostics !== undefined) {
+          const expected = step.expectedDiagnostics as {
+            retention?: { durationMs?: unknown };
+          };
+          expect(actual?.diagnostics).toEqual(
+            expected.retention
+              ? {
+                  ...expected,
+                  retention: {
+                    ...expected.retention,
+                    durationMs: expect.any(Number),
+                  },
+                }
+              : expected,
+          );
+        }
+      }
+      expectCompleteGeneration(result.sqlite, result.generationId, scenario.expectedGeneration);
+    });
+  }
 
   it("prunes only a bounded set of expired failed stages and protects live generations", async () => {
     const { sqlite, db } = seedPublishedDexGeneration();

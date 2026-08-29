@@ -176,7 +176,7 @@ When adding or updating `mintAuthority` metadata:
 
 1. Verify source links, current controls, thresholds, module/guard status, cap authority, proxy/admin reads, bridge route checks, and unresolved questions.
 2. Do not publish scanner output directly. `scripts/maintenance/audit-mint-authority.ts` writes candidates under `agents/mint-authority-candidates/`; a reviewer must curate metadata by hand.
-3. Use the advisory audits for review breadth and ownership: `npm run audit:mint-authority-review` for the curated review backlog and cited-source probe, and `npm run audit:mint-bridge-ownership` for authored mint/bridge domain ownership. Neither gates a merge; see [scripts.md](./scripts.md#manual-advisory-scripts).
+3. Use the advisory audits for review breadth and ownership: `npm run audit:mint-authority-review` for the curated review backlog and cited-source probe, and `npm run audit:mint-bridge-ownership` for authored mint/bridge domain ownership. Neither gates a merge; see [Curation Audits](./scripts.md#curation-audits).
 4. Regenerate stablecoin projections and run metadata checks.
 5. Run focused scoring and surface tests when score-affecting fields change.
 6. Update this doc, `/methodology`, and route docs if weights, caps, bands, inheritance, or public display semantics change.

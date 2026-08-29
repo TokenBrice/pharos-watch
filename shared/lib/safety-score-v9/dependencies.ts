@@ -150,6 +150,13 @@ export interface V9UpstreamResult {
   oracleNavScore?: number | null;
 }
 
+export interface V9DependencyResolutionContext {
+  componentByAssetId: ReadonlyMap<string, number>;
+  serialCycleMembers: ReadonlySet<string>;
+  serialBlocked: ReadonlySet<string>;
+  pathsByAssetId: ReadonlyMap<string, readonly V9DependencyPathPlan[]>;
+}
+
 export interface V9ResolvedRoleDependencyInput {
   assetId: string;
   upstreamAssetId: string;
@@ -596,6 +603,13 @@ export function resolveV9DependencyInputs(
     resultById.set(result.assetId, result);
   }
 
+  const context = createV9DependencyResolutionContext(plan);
+  return plan.topologicalOrder.map((assetId) => resolveV9DependencyInput(context, assetId, resultById));
+}
+
+export function createV9DependencyResolutionContext(
+  plan: V9DependencyEvaluationPlan,
+): V9DependencyResolutionContext {
   const componentByAssetId = new Map<string, number>();
   for (const [index, component] of plan.cyclicComponents.entries()) {
     for (const assetId of component) componentByAssetId.set(assetId, index);
@@ -609,33 +623,54 @@ export function resolveV9DependencyInputs(
     ...plan.controlPaths,
     ...plan.oracleNavPaths,
   ].sort(comparePath);
-  const inheritedDimensions = (role: V9DependencyEconomicRole): readonly V9DependencyScoreDimension[] => {
-    if (role === "serial-claim") return ["final"];
-    if (role === "basket-exposure") return ["backing"];
-    if (role === "exit-dependency") return ["exit", "access"];
-    if (role === "control-operator") return ["control"];
-    return ["oracle-nav"];
-  };
-  const scoreForDimension = (
-    result: V9UpstreamResult | undefined,
-    dimension: V9DependencyScoreDimension,
-  ): number | null => {
-    if (!result) return null;
-    if (dimension === "final") return result.score;
-    if (dimension === "backing") return result.backingScore;
-    if (dimension === "exit") return result.exitScore ?? null;
-    if (dimension === "access") return result.accessScore ?? null;
-    if (dimension === "control") return result.controlScore ?? null;
-    return result.oracleNavScore ?? null;
-  };
-  const roleInputs = paths.map((path): V9ResolvedRoleDependencyInput => {
+  const pathsByAssetId = new Map<string, V9DependencyPathPlan[]>();
+  for (const path of paths) {
+    const assetPaths = pathsByAssetId.get(path.assetId);
+    if (assetPaths === undefined) {
+      pathsByAssetId.set(path.assetId, [path]);
+    } else {
+      assetPaths.push(path);
+    }
+  }
+  return { componentByAssetId, serialCycleMembers, serialBlocked, pathsByAssetId };
+}
+
+function inheritedDimensions(role: V9DependencyEconomicRole): readonly V9DependencyScoreDimension[] {
+  if (role === "serial-claim") return ["final"];
+  if (role === "basket-exposure") return ["backing"];
+  if (role === "exit-dependency") return ["exit", "access"];
+  if (role === "control-operator") return ["control"];
+  return ["oracle-nav"];
+}
+
+function scoreForDimension(
+  result: V9UpstreamResult | undefined,
+  dimension: V9DependencyScoreDimension,
+): number | null {
+  if (!result) return null;
+  if (dimension === "final") return result.score;
+  if (dimension === "backing") return result.backingScore;
+  if (dimension === "exit") return result.exitScore ?? null;
+  if (dimension === "access") return result.accessScore ?? null;
+  if (dimension === "control") return result.controlScore ?? null;
+  return result.oracleNavScore ?? null;
+}
+
+export function resolveV9DependencyInput(
+  context: V9DependencyResolutionContext,
+  assetId: string,
+  upstreamResults: ReadonlyMap<string, V9UpstreamResult>,
+): V9ResolvedDependencyInputs {
+  const roleInputs = (context.pathsByAssetId.get(assetId) ?? []).map((path): V9ResolvedRoleDependencyInput => {
     const dimensions = inheritedDimensions(path.role);
-    const result = resultById.get(path.upstreamAssetId);
+    const result = upstreamResults.get(path.upstreamAssetId);
     const sameCycle =
-      componentByAssetId.has(path.assetId) &&
-      componentByAssetId.get(path.assetId) === componentByAssetId.get(path.upstreamAssetId);
+      context.componentByAssetId.has(path.assetId) &&
+      context.componentByAssetId.get(path.assetId) === context.componentByAssetId.get(path.upstreamAssetId);
     const cycleBlocked =
-      sameCycle || (path.role === "serial-claim" && (serialCycleMembers.has(path.assetId) || serialBlocked.has(path.assetId)));
+      sameCycle ||
+      (path.role === "serial-claim" &&
+        (context.serialCycleMembers.has(path.assetId) || context.serialBlocked.has(path.assetId)));
     const unavailableDimensions = cycleBlocked
       ? [...dimensions]
       : dimensions.filter((dimension) => scoreForDimension(result, dimension) === null);
@@ -658,21 +693,16 @@ export function resolveV9DependencyInputs(
       failureDomains: path.failureDomains,
     };
   });
-  const roleInputsByAssetId = new Map<string, V9ResolvedRoleDependencyInput[]>();
-  for (const input of roleInputs) {
-    roleInputsByAssetId.set(input.assetId, [...(roleInputsByAssetId.get(input.assetId) ?? []), input]);
-  }
-
-  return plan.topologicalOrder.map((assetId) => ({
+  return {
     assetId,
-    serial: (roleInputsByAssetId.get(assetId) ?? [])
+    serial: roleInputs
       .filter((input) => input.role === "serial-claim")
       .map((input) => ({
         upstreamAssetId: input.upstreamAssetId,
         score: input.score,
         blocked: input.boundedUnknown,
       })),
-    basket: (roleInputsByAssetId.get(assetId) ?? [])
+    basket: roleInputs
       .filter((input) => input.role === "basket-exposure")
       .map((input) => ({
         upstreamAssetId: input.upstreamAssetId,
@@ -680,9 +710,9 @@ export function resolveV9DependencyInputs(
         score: input.score,
         boundedUnknown: input.boundedUnknown,
       })),
-    roleInputs: roleInputsByAssetId.get(assetId) ?? [],
-    cycleBlocked: serialCycleMembers.has(assetId) || serialBlocked.has(assetId),
-  }));
+    roleInputs,
+    cycleBlocked: context.serialCycleMembers.has(assetId) || context.serialBlocked.has(assetId),
+  };
 }
 
 function roleTargetPillar(role: V9DependencyEconomicRole): V9RoleDependencyTargetPillar | null {

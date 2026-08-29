@@ -1,0 +1,4 @@
+[
+  {"date":"2025-03-01","kind":"exploit","label":"Zoth exploit — $285K unbacked ZeUSD mint","severity":"high","href":"https://blog.verichains.io/p/anatomy-of-a-hack-how-a-simple-logic","note":"2025-03-01 — Zoth collateral-accounting bug enabled unbacked ZeUSD."},
+  {"date":"2025-03-21","kind":"exploit","label":"Zoth key exploit — ~$8.4M USD0++ drained","severity":"high","href":"https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025","note":"2025-03-21 — Compromised admin key enabled a malicious Zoth upgrade."}
+]

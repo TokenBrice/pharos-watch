@@ -6,7 +6,7 @@ import {
   DIRECT_API_REQUEST_TIMEOUT_MS,
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { rethrowIfAborted } from "../../lib/abort";
 
 export interface PaginatedFetchOptions<TRow> {

@@ -13,7 +13,6 @@ import { coverageFeature as micaCoverageFeature } from "@/lib/coverage/mica";
 import { coverageFeature as priceCoverageFeature } from "@/lib/coverage/price";
 import { coverageFeature as redemptionCoverageFeature } from "@/lib/coverage/redemption";
 import { coverageFeature as reserveCoverageFeature } from "@/lib/coverage/reserves";
-import { COVERAGE_BREAKDOWN_VISUAL_CLASSES } from "@/lib/coverage-page-config";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 
 type TestCoin = StablecoinMeta & { mintAuthoritySummary?: MintAuthorityCoverageSummary };
@@ -537,68 +536,6 @@ describe("coverage helpers", () => {
 
     expect(summary.breakdown).toContainEqual({ key: "gaps", label: "gaps", count: 1 });
     expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 1 });
-  });
-
-  it("defines coverage snapshot visuals for every dependency breakdown key", () => {
-    for (const key of ["both", "dependent", "upstream", "resolved-none", "gaps", "data-unavailable"]) {
-      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.dependency?.[key]).toBeDefined();
-    }
-  });
-
-  it("defines coverage snapshot visuals for every mint-authority breakdown key", () => {
-    for (const key of [
-      "no-privileged-mint",
-      "governed-mint",
-      "multisig-mint",
-      "issuer-or-backend-mint",
-      "bridge-mint",
-      "inherited-authority",
-      "unknown",
-      "score-hardened",
-      "score-governed",
-      "score-managed",
-      "score-concentrated",
-      "score-exposed",
-      "score-nr",
-    ]) {
-      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.mintAuthority?.[key]).toBeDefined();
-    }
-  });
-
-  it("defines coverage snapshot visuals for every compliance breakdown key", () => {
-    for (const key of ["authorized", "pending", "transitional", "non-compliant", "out-of-scope", "unassessed"]) {
-      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.mica?.[key]).toBeDefined();
-    }
-    for (const key of [
-      "ppsi-approved",
-      "state-qualified",
-      "official-application-pending",
-      "issuer-announced-intent",
-      "no-public-authorization-found",
-      "not-applicable",
-      "unknown",
-      "unassessed",
-    ]) {
-      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.genius?.[key]).toBeDefined();
-    }
-  });
-
-  it("defines coverage snapshot visuals for every redemption breakdown key", () => {
-    for (const key of [
-      "modeled-heuristic",
-      "resolved-unscored",
-      "configured-unrated",
-      "impaired",
-      "offchain-issuer",
-      "psm-swap",
-      "queue-redeem",
-      "collateral-redeem",
-      "stablecoin-redeem",
-      "basket-redeem",
-      "data-unavailable",
-    ]) {
-      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.redemption?.[key]).toBeDefined();
-    }
   });
 
   it("counts only available features when building rows", () => {

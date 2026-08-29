@@ -333,8 +333,10 @@ describe("handleRemediateBlacklistAmountGaps", () => {
 
     const updateCall = db.getHistory().find((entry) => entry.sql.includes("UPDATE blacklist_events"));
     expect(updateCall).toBeTruthy();
+    expect(updateCall?.binds).toHaveLength(11);
     expect(updateCall?.binds[0]).toBe(0);
-    expect(updateCall?.binds[4]).toBe("resolved");
+    expect(updateCall?.binds[1]).toBe(0);
+    expect(updateCall?.binds[3]).toBe("resolved");
     const deletedCacheKeys = db.getHistory()
       .filter((entry) => entry.sql.includes("DELETE FROM cache WHERE key = ?"))
       .map((entry) => entry.binds[0])
@@ -403,8 +405,10 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     expect(response.status).toBe(200);
     const updateCall = db.getHistory().find((entry) => entry.sql.includes("UPDATE blacklist_events"));
     expect(updateCall?.sql).toContain("CASE WHEN amount_status = 'permanently_unavailable'");
+    expect(updateCall?.binds).toHaveLength(11);
     expect(updateCall?.binds[0]).toBe(0);
-    expect(updateCall?.binds[4]).toBe("permanently_unavailable");
-    expect(updateCall?.binds[5]).toBe("circle_mirror_zero_balance");
+    expect(updateCall?.binds[1]).toBeNull();
+    expect(updateCall?.binds[3]).toBe("permanently_unavailable");
+    expect(updateCall?.binds[4]).toBe("circle_mirror_zero_balance");
   });
 });

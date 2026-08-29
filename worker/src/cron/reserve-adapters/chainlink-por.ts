@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -262,7 +263,7 @@ async function fetchIssuerCirculation(
     );
     return adaptBackedCirculationResponse(payload, probe, contracts);
   } catch (error) {
-    return { failure: { reason: error instanceof Error ? error.message : String(error) } };
+    return { failure: { reason: toErrorMessage(error) } };
   }
 }
 

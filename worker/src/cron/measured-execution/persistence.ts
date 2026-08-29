@@ -2,7 +2,7 @@ import { DexMeasuredExecutionProfileSchema, DexMeasuredExecutionTargetSchema, ty
 import { rethrowIfAborted } from "../../lib/abort";
 import { batchExecute, prepareMultiRowInsertStatements } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   DEX_MEASURED_QUOTE_SURFACE, DEX_MEASURED_TARGET_SURFACE, DEX_SHADOW_MEASURED_QUOTE_SURFACE,
   DEX_SHADOW_MEASURED_TARGET_SURFACE, hashMeasuredTargetIds, latestPublishedGeneration, markGenerationFailed,

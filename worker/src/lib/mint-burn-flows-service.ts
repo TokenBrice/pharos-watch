@@ -8,7 +8,7 @@ import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "./mint-burn-health-confi
 import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
 import { decodeJsonString } from "./cache-json";
 import { logMalformedJsonPath } from "./json-decode-observability";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";

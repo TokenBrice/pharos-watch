@@ -17,7 +17,7 @@
  * floors; the digest is the human rollup read on a calendar cadence.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -26,7 +26,7 @@ const COINS_FILE = resolve(ROOT, "shared/data/stablecoins/coins.generated.json")
 const SUMMARIES_FILE = resolve(ROOT, "data/ai-summaries.json");
 const BASELINE_FILE = resolve(ROOT, "scripts/lib/curation-baseline-caps.json");
 const CANDIDATES_FILE = resolve(ROOT, "agents/annotation-candidates.md");
-const CURATED_ANNOTATIONS_FILE = resolve(ROOT, "shared/data/annotations/curated-annotations.ts");
+const CURATED_ANNOTATIONS_DIR = resolve(ROOT, "shared/data/annotations/coins");
 
 const AI_SUMMARY_STALENESS_DAYS = 180;
 const QUEUE_WARN_ROW_THRESHOLD = 30;
@@ -159,21 +159,31 @@ function analyzeSummaryStaleness(coins, summaries) {
   return { stale, missing };
 }
 
-function parseAnnotationsTs(text) {
+function readCuratedAnnotationTimestamps() {
   const timestamps = [];
-  const re = /Date\.UTC\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)/g;
-  let match;
-  while ((match = re.exec(text)) !== null) {
-    const yyyy = Number(match[1]);
-    const m = Number(match[2]);
-    const d = Number(match[3]);
-    const ts = Date.UTC(yyyy, m, d);
-    if (Number.isFinite(ts)) timestamps.push(ts);
+  if (!existsSync(CURATED_ANNOTATIONS_DIR)) return timestamps;
+  const files = readdirSync(CURATED_ANNOTATIONS_DIR)
+    .filter((fileName) => fileName.endsWith(".json"))
+    .sort();
+  for (const fileName of files) {
+    const entries = readJson(resolve(CURATED_ANNOTATIONS_DIR, fileName));
+    if (!Array.isArray(entries)) {
+      throw new Error(`Curated annotation source is not an array: ${fileName}`);
+    }
+    for (const [index, entry] of entries.entries()) {
+      const date = entry && typeof entry.date === "string" ? entry.date : "";
+      const iso = date.length === 10 ? `${date}T00:00:00.000Z` : date;
+      const ts = Date.parse(iso);
+      if (!Number.isFinite(ts)) {
+        throw new Error(`Invalid curated annotation date: ${fileName}[${index}]`);
+      }
+      timestamps.push(ts);
+    }
   }
   return timestamps;
 }
 
-function analyzeAnnotationQueue(queueText, curatedText) {
+function analyzeAnnotationQueue(queueText, curatedTimestamps) {
   const lines = queueText.split(/\r?\n/);
   let rowCount = 0;
   let oldestDate = null;
@@ -194,7 +204,7 @@ function analyzeAnnotationQueue(queueText, curatedText) {
   const lastSweptMatch = /<!--\s*last_swept_at:\s*(\d{4}-\d{2}-\d{2})\s*-->/.exec(queueText);
   const lastSweptAt = lastSweptMatch ? lastSweptMatch[1] : null;
 
-  const ts = parseAnnotationsTs(curatedText);
+  const ts = curatedTimestamps;
   const cutoffMs = Date.now() - ANNOTATION_STALE_YEARS * 365.25 * 24 * 60 * 60 * 1000;
   let staleCount = 0;
   for (const value of ts) if (value < cutoffMs) staleCount += 1;
@@ -335,12 +345,12 @@ function renderQueueHealth(report) {
   return lines.join("\n");
 }
 
-function quarterlyDueIn(curatedText) {
+function quarterlyDueIn(curatedTimestamps) {
   // Anchor to the digest file's mtime is unreliable across machines; instead
-  // we anchor to the most recent date inserted into the curated file. The
+  // we anchor to the most recent date inserted into the curated JSON assets. The
   // hand-check is a calendar reminder — "review top-50-by-mcap coins for
   // annotations older than 24 months every ~90 days".
-  const ts = parseAnnotationsTs(curatedText);
+  const ts = curatedTimestamps;
   if (ts.length === 0) return QUARTERLY_HAND_CHECK_DAYS;
   const latest = Math.max(...ts);
   const elapsed = Math.round((Date.now() - latest) / (1000 * 60 * 60 * 24));
@@ -354,14 +364,14 @@ function main() {
   const summaries = readJson(SUMMARIES_FILE);
   const baseline = readJson(BASELINE_FILE);
   const queueText = readTextOrEmpty(CANDIDATES_FILE);
-  const curatedText = readTextOrEmpty(CURATED_ANNOTATIONS_FILE);
+  const curatedTimestamps = readCuratedAnnotationTimestamps();
 
   const oneLiner = analyzeOneLiner(coins);
   const archetype = analyzeArchetype(coins, baseline);
   const attestor = analyzeAttestorTier(coins);
   const summary = analyzeSummaryStaleness(coins, summaries);
-  const queue = analyzeAnnotationQueue(queueText, curatedText);
-  const dueIn = quarterlyDueIn(curatedText);
+  const queue = analyzeAnnotationQueue(queueText, curatedTimestamps);
+  const dueIn = quarterlyDueIn(curatedTimestamps);
 
   const out = [
     renderHeader(dueIn),

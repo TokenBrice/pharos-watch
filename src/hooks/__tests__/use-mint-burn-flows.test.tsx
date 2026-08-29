@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { normalizeToSignedFlowIntensity } from "@/lib/flow-intensity";
+import type { MintBurnFlowsResponse } from "@shared/types";
+import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
+import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 const { useRegisteredApiQueryMock } = vi.hoisted(() => ({
   useRegisteredApiQueryMock: vi.fn(),
@@ -13,56 +15,64 @@ vi.mock("../api-hooks", () => ({
 
 import { useMintBurnEvents, useMintBurnFlows } from "../use-mint-burn-flows";
 
+const currentPayload = {
+  gauge: {
+    score: -34,
+    band: "CAUTIOUS",
+    intensitySemantics: "signed-v2",
+    flightToQuality: false,
+    flightIntensity: 0,
+    trackedCoins: 1,
+    trackedMcapUsd: 100_000_000,
+  },
+  coins: [makeMintBurnFlowCoin()],
+  chains: [],
+  hourly: [],
+  updatedAt: 1_700_000_000,
+  windowHours: 24,
+  scope: {
+    chainIds: ["ethereum"],
+    label: "Configured issuance chains",
+  },
+  sync: {
+    lastSuccessfulSyncAt: 1_700_000_000,
+    freshnessStatus: "fresh",
+    warning: null,
+    criticalLaneHealthy: true,
+  },
+} satisfies MintBurnFlowsResponse;
+
 describe("useMintBurnFlows", () => {
   beforeEach(() => {
     useRegisteredApiQueryMock.mockReset();
   });
 
-  it("normalizes legacy flow intensity semantics and derives missing activity fields", () => {
+  it("passes current signed flow values and states through unchanged", () => {
     useRegisteredApiQueryMock.mockReturnValue({
-      data: {
-        gauge: {
-          score: 70,
-          intensitySemantics: "midpoint-v1",
-        },
-        coins: [
-          {
-            id: "usdc-circle",
-            flowIntensity: 80,
-            pressureShiftScore: undefined,
-            pressureShiftState: undefined,
-            netFlowDirection24h: undefined,
-            mintCount24h: 1,
-            burnCount24h: 0,
-            mintVolume24hUsd: 100,
-            burnVolume24hUsd: 0,
-            netFlow24hUsd: 100,
-          },
-        ],
-      },
+      data: currentPayload,
       meta: { status: "fresh" },
     });
 
     const { result } = renderHook(() => useMintBurnFlows());
 
-    expect(result.current.data?.gauge.score).toBe(
-      normalizeToSignedFlowIntensity(70, "midpoint-v1"),
-    );
-    expect(result.current.data?.gauge.intensitySemantics).toBe("signed-v2");
+    expect(result.current.data).toBe(currentPayload);
+    expect(result.current.data?.gauge).toMatchObject({ score: -34, intensitySemantics: "signed-v2" });
     expect(result.current.data?.coins[0]).toMatchObject({
+      flowIntensity: -42,
+      pressureShiftScore: -42,
+      pressureShiftState: "worsening",
+      netFlowDirection24h: "burning",
       has24hActivity: true,
-      baselineDailyNetUsd: null,
-      baselineDailyAbsUsd: null,
-      baselineDataDays: null,
     });
-    expect(result.current.data?.coins[0].flowIntensity).toBe(
-      normalizeToSignedFlowIntensity(80, "midpoint-v1"),
-    );
-    expect(result.current.data?.coins[0].pressureShiftScore).toBe(
-      normalizeToSignedFlowIntensity(80, "midpoint-v1"),
-    );
-    expect(result.current.data?.coins[0].pressureShiftState).toBeDefined();
-    expect(result.current.data?.coins[0].netFlowDirection24h).toBe("minting");
+  });
+
+  it("rejects midpoint-v1 payloads at the live response schema boundary", () => {
+    const parsed = MintBurnFlowsResponseSchema.safeParse({
+      ...currentPayload,
+      gauge: { ...currentPayload.gauge, intensitySemantics: "midpoint-v1" },
+    });
+
+    expect(parsed.success).toBe(false);
   });
 
   it("builds event queries with stable filters and offsets", () => {

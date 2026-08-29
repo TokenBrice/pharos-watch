@@ -6,13 +6,24 @@ import {
   parseFreezeWatchPageFilters,
   useFreezeWatchPageController,
 } from "./view-model";
+import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
+import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 
-const { useBlacklistSummaryMock, useBlacklistEventsPageMock, replaceParamsMock, trackEventMock, trackSearchMock } = vi.hoisted(() => ({
+const {
+  useBlacklistSummaryMock,
+  useBlacklistEventsPageMock,
+  replaceParamsMock,
+  trackEventMock,
+  trackSearchMock,
+  useReportCardsV9Mock,
+} = vi.hoisted(() => ({
   useBlacklistSummaryMock: vi.fn(),
   useBlacklistEventsPageMock: vi.fn(),
   replaceParamsMock: vi.fn(),
   trackEventMock: vi.fn(),
   trackSearchMock: vi.fn(),
+  useReportCardsV9Mock: vi.fn(),
 }));
 
 let currentSearch = "";
@@ -42,10 +53,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useReportCardsV9: () => ({
-    data: { cards: [] },
-    isLoading: false,
-  }),
+  useReportCardsV9: useReportCardsV9Mock,
 }));
 
 describe("parseFreezeWatchPageFilters", () => {
@@ -96,6 +104,11 @@ describe("useFreezeWatchPageController", () => {
     replaceParamsMock.mockReset();
     trackEventMock.mockReset();
     trackSearchMock.mockReset();
+    useReportCardsV9Mock.mockReset();
+    useReportCardsV9Mock.mockReturnValue({
+      data: { cards: [] },
+      isLoading: false,
+    });
     useBlacklistSummaryMock.mockReturnValue({
       data: {
         chains: [
@@ -241,6 +254,26 @@ describe("useFreezeWatchPageController", () => {
     const { result } = renderHook(() => useFreezeWatchPageController());
     expect(result.current.rangeStart).toBe(0);
     expect(result.current.rangeEnd).toBe(0);
+  });
+
+  it("uses the canonical V9 projection for the drilldown table", () => {
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "shared-freezewatch-asset" })],
+    });
+    const canonical = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
+    const tableInputs = buildStablecoinTableInputs({ reportCardsV9: response });
+    expect(canonical.status).toBe("available");
+    if (canonical.status !== "available") return;
+
+    useReportCardsV9Mock.mockReturnValue({ data: response, isLoading: false });
+    const { result } = renderHook(() => useFreezeWatchPageController());
+
+    expect(result.current.reportCardMap?.["shared-freezewatch-asset"]).toEqual(
+      tableInputs.reportCards?.["shared-freezewatch-asset"],
+    );
+    expect(result.current.reportCardMap?.["shared-freezewatch-asset"]).toEqual(
+      canonical.value["shared-freezewatch-asset"],
+    );
   });
 
   it("removes stale chainId alias when updating the chain filter", () => {

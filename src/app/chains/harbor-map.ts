@@ -45,7 +45,7 @@ function buildChainHarborEntry(
   maxSupply: number,
 ): ChainHarborEntry {
   const dominantCargoUsd = chain.totalUsd * chain.dominantStablecoin.share;
-  const topStablecoinCargo = (chain.topStablecoins ?? [])
+  const topStablecoinCargo = chain.topStablecoins
     .filter((coin) => coin.supplyUsd > 0 && coin.share > 0)
     .map((coin) => ({
       id: coin.id,

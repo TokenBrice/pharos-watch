@@ -20,7 +20,7 @@ import {
   type DexPriceRow,
 } from "../lib/dex-liquidity-response";
 import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
   const [result, histResult, priceResult, deploymentResult, latestCron] = await Promise.all([

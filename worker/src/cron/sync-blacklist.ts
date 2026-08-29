@@ -13,7 +13,7 @@ import {
   type BlacklistRunBudget,
 } from "../lib/blacklist/run-budget";
 import { applyTronLedgerMirrorPass, deriveSyncBlacklistStatus } from "./blacklist/sync-support";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
 import { scanBlacklistConfigs } from "./blacklist/config-scan";
 

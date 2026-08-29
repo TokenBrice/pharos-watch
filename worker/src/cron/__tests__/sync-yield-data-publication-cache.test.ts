@@ -500,22 +500,27 @@ describe("syncYieldData", () => {
 
     // Simulate cached pools from DEX sync
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
-            {
-              pool: "pool-sdai-cached",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 900_000_000,
-              apy: 4.8,
-              apyBase: 4.8,
-              apyReward: null,
-              apyMean30d: 4.7,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
-          ], Math.floor(Date.now() / 1000)),
+      "dl-stablecoin-pools": cacheRow({
+            updatedAt: Math.floor(Date.now() / 1000),
+            source: "sync-dex-liquidity",
+            poolCount: 1,
+            data: [
+              {
+                pool: "pool-sdai-cached",
+                chain: "Ethereum",
+                project: "maker",
+                symbol: "sDAI",
+                tvlUsd: 900_000_000,
+                apy: 4.8,
+                apyBase: 4.8,
+                apyReward: null,
+                apyMean30d: 4.7,
+                stablecoin: true,
+                exposure: "single",
+                underlyingTokens: null,
+              },
+            ],
+          }, Math.floor(Date.now() / 1000)),
     });
 
     // No DL yields API call should happen (pools already cached)

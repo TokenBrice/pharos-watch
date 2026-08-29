@@ -1,0 +1,4 @@
+[
+  {"date":"2025-09-08","kind":"governance","label":"USDm announced — Ethena partnership for sequencer subsidy","severity":"low","note":"2025-09-08 — MegaETH unveils USDm with Ethena rails for sequencer subsidy"},
+  {"date":"2025-11-25","kind":"governance","label":"USDm pre-deposit botched — multisig misconfig, full refund","severity":"med","note":"2025-11-25 — Pre-deposit launch botched by 4-of-4 multisig misconfig; full refund"}
+]

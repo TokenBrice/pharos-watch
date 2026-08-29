@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "./structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
@@ -127,7 +128,7 @@ async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): P
   try {
     authHeader = await buildOAuthHeader("POST", url, creds);
   } catch (error) {
-    throw new TwitterPostError(`Twitter request signing failed before send: ${error instanceof Error ? error.message : String(error)}`, "definitive_failure");
+    throw new TwitterPostError(`Twitter request signing failed before send: ${toErrorMessage(error)}`, "definitive_failure");
   }
 
   const requestSignal = AbortSignal.timeout(10_000);
@@ -146,14 +147,14 @@ async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): P
       signal: requestSignal,
     });
   } catch (error) {
-    throw new TwitterPostError(`Twitter tweet request failed with an unknown execution outcome: ${error instanceof Error ? error.message : String(error)}`, "execution_unknown");
+    throw new TwitterPostError(`Twitter tweet request failed with an unknown execution outcome: ${toErrorMessage(error)}`, "execution_unknown");
   }
 
   let body: string;
   try {
     body = await readResponseTextBoundedWithSignal(res, 16_384, requestSignal);
   } catch (error) {
-    throw new TwitterPostError(`Twitter API ${res.status} response could not be read: ${error instanceof Error ? error.message : String(error)}`, "execution_unknown", res.status);
+    throw new TwitterPostError(`Twitter API ${res.status} response could not be read: ${toErrorMessage(error)}`, "execution_unknown", res.status);
   }
 
   if (!res.ok) {
@@ -169,7 +170,7 @@ async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): P
   try {
     decoded = JSON.parse(body);
   } catch (error) {
-    throw new TwitterPostError(`Twitter accepted the request but returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`, "execution_unknown", res.status);
+    throw new TwitterPostError(`Twitter accepted the request but returned invalid JSON: ${toErrorMessage(error)}`, "execution_unknown", res.status);
   }
   const tweetId = (decoded as { data?: { id?: unknown } })?.data?.id;
   if (typeof tweetId !== "string" || tweetId.length === 0) {
@@ -232,6 +233,10 @@ async function uploadTweetImage(imageUrl: string, creds: TwitterCreds): Promise<
 /**
  * Build tweet text from digest and post it.
  * The caller is responsible for catching errors.
+ *
+ * A mapped edition is all-or-nothing: when `imageUrl` is set, a media upload
+ * failure aborts the tweet (after one bounded retry) instead of degrading to a
+ * text-only post — the digest delivery contract requires the Safety Score map.
  */
 export async function postDigestTweet(
   digestTitle: string,
@@ -240,19 +245,29 @@ export async function postDigestTweet(
   editionNumber?: number | null,
   imageUrl?: string | null,
   mapHook?: string | null,
-): Promise<{ tweetId: string; mediaAttached: boolean; mediaError: string | null }> {
+): Promise<{ tweetId: string; mediaAttached: boolean }> {
   let mediaId: string | undefined;
-  let mediaError: string | null = null;
   if (imageUrl) {
     try {
       mediaId = await uploadTweetImage(imageUrl, creds);
     } catch (error) {
-      mediaError = error instanceof Error ? error.message : String(error);
-      logWorkerEventArgs("lib", "warn", `[twitter] Safety map attachment omitted: ${mediaError}`);
+      logWorkerEventArgs("lib", "warn", `[twitter] Safety map upload failed, retrying once: ${toErrorMessage(error)}`);
+      try {
+        mediaId = await uploadTweetImage(imageUrl, creds);
+      } catch (retryError) {
+        // No tweet was attempted, so this abort is a known non-post: tag it
+        // definitive so the delivery ledger keeps the bounded retry path open
+        // instead of freezing the day in execution_unknown.
+        throw new TwitterPostError(
+          `Safety map upload failed; mapped digest tweet aborted: ${toErrorMessage(retryError)}`,
+          "definitive_failure",
+          null,
+        );
+      }
     }
   }
   const tweetText = buildTweetText(digestTitle, digestText, editionNumber, mediaId ? mapHook : null);
   const tweetId = await postTweet(tweetText, creds, mediaId);
   logWorkerEventArgs("lib", "info", `[twitter] Posted digest tweet (${tweetText.length} chars${mediaId ? ", safety map attached" : ""})`);
-  return { tweetId, mediaAttached: Boolean(mediaId), mediaError };
+  return { tweetId, mediaAttached: Boolean(mediaId) };
 }

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
-import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useSort } from "@/hooks/use-sort";
 import { TableCell } from "@/components/table";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
@@ -24,7 +23,7 @@ import { NauticalChart } from "./nautical-chart";
 import { buildChainHarborEntries, buildChainHarborModelFromEntries, HARBOR_MAX } from "./harbor-map";
 import { nextHarborSweepId } from "./nautical-scene-math";
 import { SelectedHarborPanel } from "./selected-harbor-panel";
-import { attachTopStablecoinCargo, sortChains, type ChainSortKey } from "./chain-model";
+import { sortChains, type ChainSortKey } from "./chain-model";
 import { DominanceBreakdown } from "./dominance-breakdown";
 import { HealthBadge } from "./health-badge";
 const HARBOR_LIGHT_SWEEP_MS = 7_000;
@@ -42,7 +41,6 @@ const CHAIN_COLUMNS: readonly DataTableColumn<ChainSortKey>[] = [
 
 export function ChainsLeaderboardClient() {
   const { data, isLoading, isError, error, refetch, dataUpdatedAt, meta } = useChains();
-  const stablecoinsQuery = useStablecoins();
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ChainSortKey>("totalUsd", "desc");
   const router = useRouter();
   const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
@@ -60,15 +58,10 @@ export function ChainsLeaderboardClient() {
     return [...chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(0, 5);
   }, [chains]);
 
-  const chartChains = useMemo(() => {
-    if (!chains) return [];
-    return attachTopStablecoinCargo(chains, stablecoinsQuery.data?.peggedAssets);
-  }, [chains, stablecoinsQuery.data?.peggedAssets]);
-
   const harborEntries = useMemo(() => {
-    if (globalTotalUsd == null) return [];
-    return buildChainHarborEntries(chartChains, globalTotalUsd);
-  }, [chartChains, globalTotalUsd]);
+    if (globalTotalUsd == null || !chains) return [];
+    return buildChainHarborEntries(chains, globalTotalUsd);
+  }, [chains, globalTotalUsd]);
   const harborModel = useMemo(() => {
     if (globalTotalUsd == null) return undefined;
     return buildChainHarborModelFromEntries(harborEntries, globalTotalUsd);
@@ -135,11 +128,7 @@ export function ChainsLeaderboardClient() {
   }
   if (!data) return null;
 
-  const fallbackGlobalChange7d =
-    data.globalTotalUsd > 0
-      ? data.chains.reduce((sum, c) => sum + (c.change7dPct || 0) * c.totalUsd, 0) / data.globalTotalUsd
-      : 0;
-  const change7dPct = (Number.isFinite(data.globalChange7dPct) ? data.globalChange7dPct : fallbackGlobalChange7d) * 100;
+  const change7dPct = data.globalChange7dPct * 100;
   const show7dTrend = Math.abs(change7dPct) >= 0.05;
 
   return (
@@ -192,7 +181,7 @@ export function ChainsLeaderboardClient() {
         </div>
 
         <NauticalChart
-          chains={chartChains}
+          chains={data.chains}
           globalTotalUsd={data.globalTotalUsd}
           selectedChainId={selectedHarbor?.id ?? selectedChainId}
           onSelectChain={setSelectedChainId}

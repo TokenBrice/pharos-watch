@@ -31,12 +31,12 @@ import {
   formatUsd,
   isRecord,
   loadCoverageAuditSiteDataInputs,
-  markdownValue,
   numberValue,
   parseCoverageAuditCliArgs,
   readJsonFile,
   readRequiredJsonFile,
   resolveGeneratedAt,
+  renderMarkdownTable,
   runCoverageAuditCli,
   runAsMain,
   sortByMarketCapOrRank,
@@ -1400,28 +1400,45 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   };
 }
 
+function renderBoundedTable(
+  headings: readonly string[],
+  rows: readonly (readonly unknown[])[],
+  {
+    limit,
+    separator,
+    showOverflowNote = false,
+  }: {
+    limit: number;
+    separator: string;
+    showOverflowNote?: boolean;
+  },
+): string[] {
+  if (rows.length === 0) return ["_None._"];
+  const lines = renderMarkdownTable(headings, rows, { limit });
+  // The shared helper emits generic separators; retain this report's established alignment markers.
+  lines[1] = separator;
+  if (showOverflowNote && rows.length > limit) {
+    lines.push(`_Plus ${rows.length - limit} more rows._`);
+  }
+  return lines;
+}
+
 function renderMissingCandidates(rows: readonly MissingDependencyCandidateRow[]): string[] {
-  const clipped = rows.slice(0, MISSING_CANDIDATE_LIMIT);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "coin | mcap | local rank",
-    "--- | ---: | ---:",
-    ...clipped.map((row) => [
+  return renderBoundedTable(
+    ["coin", "mcap", "local rank"],
+    rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
       formatUsd(row.marketCapUsd),
       row.rank,
-    ].map(markdownValue).join(" | ")),
-    ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
-  ];
+    ]),
+    { limit: MISSING_CANDIDATE_LIMIT, separator: "--- | ---: | ---:", showOverflowNote: true },
+  );
 }
 
 function renderReserveRows(rows: readonly ReserveSliceCoverageRow[], limit: number): string[] {
-  const clipped = rows.slice(0, limit);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "coin | mcap | reserve index | reserve slice | pct | risk | depType",
-    "--- | ---: | ---: | --- | ---: | --- | ---",
-    ...clipped.map((row) => [
+  return renderBoundedTable(
+    ["coin", "mcap", "reserve index", "reserve slice", "pct", "risk", "depType"],
+    rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
       formatUsd(row.marketCapUsd),
       row.reserveIndex,
@@ -1429,26 +1446,23 @@ function renderReserveRows(rows: readonly ReserveSliceCoverageRow[], limit: numb
       row.pct,
       row.risk,
       row.depType,
-    ].map(markdownValue).join(" | ")),
-    ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
-  ];
+    ]),
+    { limit, separator: "--- | ---: | ---: | --- | ---: | --- | ---", showOverflowNote: true },
+  );
 }
 
 function renderManualDependencyRows(rows: readonly ManualOnlyDependencyRow[]): string[] {
-  const clipped = rows.slice(0, MANUAL_DEPENDENCY_LIMIT);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "coin | dependency | type | weight | review",
-    "--- | --- | --- | ---: | ---",
-    ...clipped.map((row) => [
+  return renderBoundedTable(
+    ["coin", "dependency", "type", "weight", "review"],
+    rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
       row.dependencyId,
       row.dependencyType,
       row.weight,
       row.reviewStatus,
-    ].map(markdownValue).join(" | ")),
-    ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
-  ];
+    ]),
+    { limit: MANUAL_DEPENDENCY_LIMIT, separator: "--- | --- | --- | ---: | ---", showOverflowNote: true },
+  );
 }
 
 function renderGraphDiagnostics(
@@ -1472,12 +1486,9 @@ function renderGraphDiagnostics(
 }
 
 function renderDependencyEdges(rows: readonly DependencyEdgeCoverageRow[]): string[] {
-  const clipped = rows.slice(0, FINDING_LIMIT);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "dependent | upstream | type | weight | lifecycle | scoreability | unavailable disposition",
-    "--- | --- | --- | ---: | --- | --- | ---",
-    ...clipped.map((row) => [
+  return renderBoundedTable(
+    ["dependent", "upstream", "type", "weight", "lifecycle", "scoreability", "unavailable disposition"],
+    rows.map((row) => [
       `${row.dependentSymbol ?? "?"} (${row.to})`,
       `${row.upstreamSymbol ?? "?"} (${row.from})`,
       row.type,
@@ -1485,21 +1496,18 @@ function renderDependencyEdges(rows: readonly DependencyEdgeCoverageRow[]): stri
       row.targetLifecycle,
       row.targetScoreability,
       row.targetDisposition?.action ?? null,
-    ].map(markdownValue).join(" | ")),
-    ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
-  ];
+    ]),
+    { limit: FINDING_LIMIT, separator: "--- | --- | --- | ---: | --- | --- | ---", showOverflowNote: true },
+  );
 }
 
 function renderDependencyProvenance(rows: readonly DependencySetProvenanceRow[]): string[] {
   const relevant = rows.filter((row) => (
     row.source !== "none" || row.fallbackReason != null || row.availableWeight != null || row.unavailableWeight != null
   ));
-  const clipped = relevant.slice(0, FINDING_LIMIT);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "coin | source | base | fallback | available | unavailable | live mapped | live unmapped",
-    "--- | --- | --- | --- | ---: | ---: | ---: | ---:",
-    ...clipped.map((row) => [
+  return renderBoundedTable(
+    ["coin", "source", "base", "fallback", "available", "unavailable", "live mapped", "live unmapped"],
+    relevant.map((row) => [
       `${row.symbol} (${row.coinId})`,
       row.source,
       row.baseSource,
@@ -1508,18 +1516,15 @@ function renderDependencyProvenance(rows: readonly DependencySetProvenanceRow[])
       row.unavailableWeight,
       row.mappedLiveReserveShare,
       row.unmappedLiveReserveShare,
-    ].map(markdownValue).join(" | ")),
-    ...(relevant.length > clipped.length ? [`_Plus ${relevant.length - clipped.length} more rows._`] : []),
-  ];
+    ]),
+    { limit: FINDING_LIMIT, separator: "--- | --- | --- | --- | ---: | ---: | ---: | ---:", showOverflowNote: true },
+  );
 }
 
 function renderMaterialReserveRows(rows: readonly MaterialUnlinkedReserveRow[]): string[] {
-  const clipped = rows.slice(0, FINDING_LIMIT);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "coin | mcap | index | slice | pct | matches | review | disposition",
-    "--- | ---: | ---: | --- | ---: | --- | --- | ---",
-    ...clipped.map((row) => [
+  return renderBoundedTable(
+    ["coin", "mcap", "index", "slice", "pct", "matches", "review", "disposition"],
+    rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
       formatUsd(row.marketCapUsd),
       row.reserveIndex,
@@ -1528,65 +1533,57 @@ function renderMaterialReserveRows(rows: readonly MaterialUnlinkedReserveRow[]):
       row.matchedSymbols.join(", ") || "stablecoin basket/depType",
       row.reviewStatus,
       row.disposition,
-    ].map(markdownValue).join(" | ")),
-    ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
-  ];
+    ]),
+    { limit: FINDING_LIMIT, separator: "--- | ---: | ---: | --- | ---: | --- | --- | ---", showOverflowNote: true },
+  );
 }
 
 function renderFindingRows(
   rows: ReadonlyArray<{ coinId?: string | null; targetId?: string; adapter?: string; reason: string; detail?: string }>,
 ): string[] {
-  const clipped = rows.slice(0, FINDING_LIMIT);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "subject | reason | detail",
-    "--- | --- | ---",
-    ...clipped.map((row) => [
+  return renderBoundedTable(
+    ["subject", "reason", "detail"],
+    rows.map((row) => [
       row.coinId ?? row.targetId ?? row.adapter ?? "registry",
       row.reason,
       row.detail ?? "",
-    ].map(markdownValue).join(" | ")),
-    ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
-  ];
+    ]),
+    { limit: FINDING_LIMIT, separator: "--- | --- | ---", showOverflowNote: true },
+  );
 }
 
 function renderRawDuplicateRows(rows: readonly RawAuthoredDuplicateRow[]): string[] {
-  const clipped = rows.slice(0, FINDING_LIMIT);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "coin | source | upstream | type | indices | total weight",
-    "--- | --- | --- | --- | --- | ---:",
-    ...clipped.map((row) => [
+  return renderBoundedTable(
+    ["coin", "source", "upstream", "type", "indices", "total weight"],
+    rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
       row.source,
       row.dependencyId,
       row.dependencyType,
       row.indices.join(", "),
       row.totalWeight,
-    ].map(markdownValue).join(" | ")),
-  ];
+    ]),
+    { limit: FINDING_LIMIT, separator: "--- | --- | --- | --- | --- | ---:" },
+  );
 }
 
 function renderOverweightRows(rows: readonly OverweightDependencySetRow[]): string[] {
-  if (rows.length === 0) return ["_None._"];
-  return [
-    "coin | source | total weight | dependencies",
-    "--- | --- | ---: | ---",
-    ...rows.slice(0, FINDING_LIMIT).map((row) => [
+  return renderBoundedTable(
+    ["coin", "source", "total weight", "dependencies"],
+    rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
       row.source,
       row.totalWeight,
       row.dependencies.map((dependency) => `${dependency.id}:${dependency.type ?? "collateral"}=${dependency.weight}`).join(", "),
-    ].map(markdownValue).join(" | ")),
-  ];
+    ]),
+    { limit: FINDING_LIMIT, separator: "--- | --- | ---: | ---" },
+  );
 }
 
 function renderReserveDispositionRows(rows: readonly ReserveDispositionRow[]): string[] {
-  if (rows.length === 0) return ["_None._"];
-  return [
-    "coin | index | reviewed slice | current slice | disposition | status | reviewed",
-    "--- | ---: | --- | --- | --- | --- | ---",
-    ...rows.slice(0, FINDING_LIMIT).map((row) => [
+  return renderBoundedTable(
+    ["coin", "index", "reviewed slice", "current slice", "disposition", "status", "reviewed"],
+    rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
       row.reserveIndex,
       row.reserveName,
@@ -1594,31 +1591,28 @@ function renderReserveDispositionRows(rows: readonly ReserveDispositionRow[]): s
       row.disposition,
       row.reviewStatus,
       `${row.reviewer}, ${row.reviewedAt}`,
-    ].map(markdownValue).join(" | ")),
-  ];
+    ]),
+    { limit: FINDING_LIMIT, separator: "--- | ---: | --- | --- | --- | --- | ---" },
+  );
 }
 
 function renderManualReviewGapRows(rows: readonly ManualDependencyReviewGapRow[]): string[] {
-  if (rows.length === 0) return ["_None._"];
-  return [
-    "coin | dependency | type | reason",
-    "--- | --- | --- | ---",
-    ...rows.slice(0, FINDING_LIMIT).map((row) => [
+  return renderBoundedTable(
+    ["coin", "dependency", "type", "reason"],
+    rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
       row.dependencyId,
       row.dependencyType,
       row.reason,
-    ].map(markdownValue).join(" | ")),
-  ];
+    ]),
+    { limit: FINDING_LIMIT, separator: "--- | --- | --- | ---" },
+  );
 }
 
 function renderL2BeatDeploymentContextRows(rows: readonly L2BeatDeploymentContextRow[]): string[] {
-  const clipped = rows.slice(0, L2BEAT_CONTEXT_LIMIT);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "coin | chain | route | L2BEAT project | layer | category | host | stage | env score",
-    "--- | --- | --- | --- | --- | --- | --- | --- | ---:",
-    ...clipped.map((row) => [
+  return renderBoundedTable(
+    ["coin", "chain", "route", "L2BEAT project", "layer", "category", "host", "stage", "env score"],
+    rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
       row.chainId,
       row.routeKind,
@@ -1628,9 +1622,9 @@ function renderL2BeatDeploymentContextRows(rows: readonly L2BeatDeploymentContex
       row.hostChain,
       row.stage,
       row.chainEnvironmentScore,
-    ].map(markdownValue).join(" | ")),
-    ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
-  ];
+    ]),
+    { limit: L2BEAT_CONTEXT_LIMIT, separator: "--- | --- | --- | --- | --- | --- | --- | --- | ---:", showOverflowNote: true },
+  );
 }
 
 export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageAudit): string {

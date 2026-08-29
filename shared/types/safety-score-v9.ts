@@ -796,6 +796,35 @@ const V9FormulaPolicySchema = z
       .object({ pure: ScoreSchema, staked: ScoreSchema, vault: ScoreSchema })
       .strict(),
     assetPremiums: z.array(V9AssetPremiumPolicySchema).default([]),
+    withhold: z
+      .object({
+        maxScoreExclusive: z.number().finite().min(0).max(100),
+        minimumLimitedPillarCount: z.number().int().min(1).max(3),
+        requiresLimitedBacking: z.boolean(),
+      })
+      .strict(),
+    danger: z
+      .object({
+        withholdPegMultiplierFloor: z.number().finite().min(0).max(1),
+        fGatePegMultiplierFloor: z.number().finite().min(0).max(1),
+        preExitPegMultiplierFloor: z.number().finite().min(0).max(1),
+        adverseAttributionPegMultiplierFloor: z.number().finite().min(0).max(1),
+        activeDepegMinimumBpsExclusive: z.number().finite().nonnegative(),
+        withholdCentralizedMintSeverities: z.array(V9SeveritySchema).min(1),
+        fGateCentralizedMintSeverities: z.array(V9SeveritySchema).min(1),
+        preExitCentralizedMintSeverities: z.array(V9SeveritySchema).min(1),
+        dangerOnlyGrades: z.array(V9GradeSchema.exclude(["NR"])).min(1),
+      })
+      .strict()
+      .superRefine((danger, ctx) => {
+        if (danger.fGatePegMultiplierFloor > danger.withholdPegMultiplierFloor) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["fGatePegMultiplierFloor"],
+            message: "F-gate peg floor cannot exceed the withhold danger floor",
+          });
+        }
+      }),
   })
   .strict();
 
@@ -818,6 +847,18 @@ const V9EvidencePolicySchema = z
       })
       .strict(),
     dispositions: z.array(V9FactDispositionSchema),
+    evidenceExpiry: z
+      .object({
+        reviewedResearchMaxAgeSec: z.number().int().positive(),
+        accessReviewMaxAgeSec: z.number().int().positive(),
+        researchOverlayMaxAgeSec: z.number().int().positive(),
+        mechanismOverlayMaxAgeSec: z.number().int().positive(),
+        issuerAttestedReserveMaxAgeSec: z.number().int().positive(),
+        reviewedReserveClassificationMaxAgeSec: z.number().int().positive(),
+        reviewedReserveCompositionMaxAgeSec: z.number().int().positive(),
+        reviewedReserveCompositionGraceSec: z.number().int().positive(),
+      })
+      .strict(),
   })
   .strict();
 
@@ -1116,6 +1157,7 @@ const V9ControlPolicySchema = z
       }),
     oracleTierQuality: exactEnumScoreMapSchema(ORACLE_RISK_TIER_VALUES),
     bridgeTierQuality: exactEnumScoreMapSchema(BRIDGE_ROUTE_RISK_TIER_VALUES),
+    materialBridgeHighShareThreshold: z.number().finite().min(0).max(1),
     boundedUnknownQuality: ScoreSchema,
   })
   .strict();
@@ -1236,32 +1278,21 @@ const V9MaterialityPolicySchema = z
     commonModeShareThreshold: z.number().finite().min(0).max(1),
     // Proven exposure at or above this threshold is high. Unknown or
     // unattributed exposure is also high regardless of its nominal bound.
-    commonModeHighShareThreshold: z.number().finite().min(0).max(1).optional(),
+    commonModeHighShareThreshold: z.number().finite().min(0).max(1),
     // Reviewed liquidity venues (dex-protocol common-mode) whose concentration is
     // not a capping signal. Non-mature venues use the proportional thresholds.
     matureVenues: z.array(z.string().min(1)),
-    // Retained schema-v1 policies may carry the former bridge allowlist. It is
-    // accepted only for replay compatibility and stripped before validation;
-    // current materiality semantics never consult it.
-    lowRiskBridgeTiers: z.array(z.string().min(1)).optional(),
   })
   .strict()
   .superRefine((materiality, ctx) => {
-    if (
-      materiality.commonModeHighShareThreshold !== undefined &&
-      materiality.commonModeShareThreshold >= materiality.commonModeHighShareThreshold
-    ) {
+    if (materiality.commonModeShareThreshold >= materiality.commonModeHighShareThreshold) {
       ctx.addIssue({
         code: "custom",
         path: ["commonModeHighShareThreshold"],
         message: "Common-mode high-share threshold must exceed the diagnostic-share threshold",
       });
     }
-  })
-  .transform(({ lowRiskBridgeTiers: _legacyBridgeTiers, ...materiality }) => ({
-    ...materiality,
-    commonModeHighShareThreshold: materiality.commonModeHighShareThreshold ?? materiality.commonModeShareThreshold,
-  }));
+  });
 
 const V9StructuralPolicySchema = z
   .object({
@@ -1389,15 +1420,14 @@ const V9_RATED_GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D",
 const V9MethodologyPolicyBaseSchema = z
   .object({
     schemaVersion: z.literal(1),
+    // Exact production id, or a derived test/sensitivity-variant id. Lifecycle
+    // and releaseVersion stay narrowed to the only committed shape (SH-4).
     policyId: z.union([
       z.literal("safety-score-v9"),
       z.string().regex(/^safety-score-v9-[a-z0-9-]+$/),
     ]),
-    lifecycle: z.enum(["candidate", "active", "retired"]),
-    releaseVersion: z
-      .string()
-      .regex(/^\d+\.\d+$/)
-      .nullable(),
+    lifecycle: z.literal("active"),
+    releaseVersion: z.string().regex(/^\d+\.\d+$/),
     semantic: V9MethodologySemanticSchema,
     reasonRegistry: z.array(V9ReasonRegistryEntrySchema),
   })
@@ -1423,13 +1453,6 @@ function validateAscendingBreakpoints(
 }
 
 export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefine((policy, ctx) => {
-  if (policy.lifecycle === "candidate" && policy.releaseVersion !== null) {
-    addPolicyIssue(ctx, ["releaseVersion"], "Candidate policy cannot claim a release version");
-  }
-  if (policy.lifecycle !== "candidate" && policy.releaseVersion === null) {
-    addPolicyIssue(ctx, ["releaseVersion"], "Active or retired policy requires a release version");
-  }
-
   const formula = policy.semantic.formula;
   const weightTotal = Object.values(formula.pillarWeights).reduce((sum, value) => sum + value, 0);
   if (Math.abs(weightTotal - 1) > 1e-9) {
@@ -1858,9 +1881,15 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
 });
 export type V9MethodologyPolicy = z.infer<typeof V9MethodologyPolicySchema>;
 
+type V9DigestMethodologySemantic = Omit<V9MethodologySemantic, "formula" | "evidence" | "control"> & {
+  formula: Omit<V9MethodologySemantic["formula"], "withhold" | "danger">;
+  evidence: Omit<V9MethodologySemantic["evidence"], "evidenceExpiry">;
+  control: Omit<V9MethodologySemantic["control"], "materialBridgeHighShareThreshold">;
+};
+
 export type V9MethodologySemanticPayload = {
   schemaVersion: 1;
-  semantic: V9MethodologySemantic;
+  semantic: V9DigestMethodologySemantic;
   reasonRegistry: V9ReasonRegistryEntry[];
 };
 

@@ -55,7 +55,7 @@ describe("deriveDataHealth", () => {
     expect(health.state).toBe("stale");
   });
 
-  it("trusts backend status over warning header when status is fresh", () => {
+  it("uses server warnings as a degradation floor", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);
     const health = deriveDataHealth({
@@ -70,10 +70,10 @@ describe("deriveDataHealth", () => {
         warning: '110 - "Response is stale"',
       },
     });
-    expect(health.state).toBe("fresh");
+    expect(health.state).toBe("degraded");
   });
 
-  it("prefers backend freshness metadata over a fresh browser fetch timestamp", () => {
+  it("classifies producer updatedAt instead of backend status or browser fetch time", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);
     const health = deriveDataHealth({
@@ -82,14 +82,137 @@ describe("deriveDataHealth", () => {
       staleTime: 15 * 60_000,
       hasData: true,
       meta: {
-        updatedAt: Math.floor((now - 2 * 60 * 60_000) / 1000),
-        ageSeconds: 7200,
-        status: "stale",
+        updatedAt: Math.floor((now - 5 * 60 * 60_000) / 1000),
+        ageSeconds: 18000,
+        status: "fresh",
       },
     });
     expect(health.state).toBe("stale");
-    expect(health.ageMs).toBe(7_200_000);
-    expect(health.dataUpdatedAt).toBe((Math.floor((now - 2 * 60 * 60_000) / 1000)) * 1000);
+    expect(health.ageMs).toBeGreaterThanOrEqual(18_000_000);
+    expect(health.dataUpdatedAt).toBe((Math.floor((now - 5 * 60 * 60_000) / 1000)) * 1000);
+  });
+
+  it("does not use backend freshness status as a second clock", () => {
+    const now = Date.parse("2026-08-29T12:00:00.000Z");
+    vi.spyOn(Date, "now").mockReturnValue(now);
+
+    const health = deriveDataHealth({
+      label: "Prices",
+      dataUpdatedAt: now,
+      staleTime: 15 * 60_000,
+      hasData: true,
+      meta: {
+        updatedAt: (now - 60_000) / 1000,
+        ageSeconds: 13 * 15 * 60,
+        status: "stale",
+      },
+    });
+
+    expect(health.state).toBe("fresh");
+    expect(health.ageMs).toBe(60_000);
+  });
+
+  it("reclassifies hydrated data as time passes without a refetch", () => {
+    const now = Date.parse("2026-08-29T12:00:00.000Z");
+    const updatedAt = now - 8 * 15 * 60_000;
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now);
+    const input = {
+      label: "Prices",
+      dataUpdatedAt: now,
+      staleTime: 15 * 60_000,
+      hasData: true,
+      meta: {
+        updatedAt: updatedAt / 1000,
+        ageSeconds: 0,
+        status: "fresh" as const,
+      },
+    };
+
+    expect(deriveDataHealth(input).state).toBe("fresh");
+    nowSpy.mockReturnValue(now + 1);
+    expect(deriveDataHealth(input).state).toBe("degraded");
+  });
+
+  it("uses exact fresh, degraded, and stale threshold boundaries", () => {
+    const now = Date.parse("2026-08-29T12:00:00.000Z");
+    const staleTime = 15 * 60_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const stateAtAge = (ageMs: number) => deriveDataHealth({
+      label: "Prices",
+      dataUpdatedAt: now - ageMs,
+      staleTime,
+      hasData: true,
+    }).state;
+
+    expect(stateAtAge(8 * staleTime)).toBe("fresh");
+    expect(stateAtAge(8 * staleTime + 1)).toBe("degraded");
+    expect(stateAtAge(12 * staleTime)).toBe("degraded");
+    expect(stateAtAge(12 * staleTime + 1)).toBe("stale");
+  });
+
+  it("clamps slight producer clock skew to zero age", () => {
+    const now = Date.parse("2026-08-29T12:00:00.000Z");
+    vi.spyOn(Date, "now").mockReturnValue(now);
+
+    const health = deriveDataHealth({
+      label: "Chains",
+      dataUpdatedAt: now,
+      staleTime: 15 * 60_000,
+      hasData: true,
+      meta: {
+        updatedAt: (now + 5_000) / 1000,
+        ageSeconds: 0,
+        status: "fresh",
+      },
+    });
+
+    expect(health.state).toBe("fresh");
+    expect(health.ageMs).toBe(0);
+  });
+
+  it("uses a degraded dependency as a floor without overriding stale producer age", () => {
+    const now = Date.parse("2026-08-29T12:00:00.000Z");
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const buildHealth = (ageMs: number) => deriveDataHealth({
+      label: "Chains",
+      dataUpdatedAt: now,
+      staleTime: 15 * 60_000,
+      hasData: true,
+      meta: {
+        updatedAt: (now - ageMs) / 1000,
+        ageSeconds: 0,
+        status: "fresh" as const,
+        dependencies: {
+          reportCards: { status: "stale" as const, ageSeconds: 0 },
+        },
+      },
+    });
+
+    expect(buildHealth(60_000).state).toBe("degraded");
+    expect(buildHealth(13 * 15 * 60_000).state).toBe("stale");
+  });
+
+  it("preserves warning-only degraded state without inventing an age", () => {
+    const health = deriveDataHealth({
+      label: "Daily Digest",
+      dataUpdatedAt: 0,
+      staleTime: 24 * 60 * 60_000,
+      hasData: true,
+      meta: {
+        status: "degraded",
+        warning: '110 - "Response is degraded"',
+      },
+    });
+
+    expect(health).toMatchObject({
+      state: "degraded",
+      dataUpdatedAt: 0,
+      ageMs: null,
+      meta: {
+        status: "degraded",
+        warning: '110 - "Response is degraded"',
+      },
+    });
   });
 
   it("returns unavailable on 503 error with no data", () => {

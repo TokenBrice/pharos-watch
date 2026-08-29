@@ -7,7 +7,7 @@ import {
   type V9FactStatusV2,
   type V9ObservationState,
 } from "../../types/safety-score-v9-facts";
-import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "./score-bearing-gates-policy";
+import { V9_CANDIDATE_POLICY_V1 } from "./policy";
 
 /**
  * Reviewed research evidence (bridge-route, mint-authority, and oracle
@@ -16,7 +16,7 @@ import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "./score-bearing-gates-policy
  * documentedTermsMaxAgeSec precedent.
  */
 export const V9_REVIEW_EVIDENCE_MAX_AGE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedResearchMaxAgeSec;
+  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
 
 /**
  * A reviewer-scoped open control question holds the bounded scoped-gap ceiling

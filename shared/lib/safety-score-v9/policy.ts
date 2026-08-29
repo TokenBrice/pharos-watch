@@ -14,11 +14,6 @@ import {
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { compareText, deepFreeze, uniqueSorted } from "./primitives";
-import {
-  V9_SCORE_BEARING_GATES_POLICY_V923,
-  parseV9ScoreBearingGatesPolicy,
-  type V9ScoreBearingGatesPolicy,
-} from "./score-bearing-gates-policy";
 
 const V9_POLICY_DIGEST_DOMAIN = "safety-score-v9.methodology-policy.v1";
 
@@ -65,12 +60,22 @@ function policyWithRegistryMatureChains(rawPolicy: unknown): unknown {
 }
 
 function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayload {
+  const {
+    withhold: _withhold,
+    danger: _danger,
+    ...formulaSemantics
+  } = policy.semantic.formula;
+  const { evidenceExpiry: _evidenceExpiry, ...evidenceSemantics } = policy.semantic.evidence;
+  const {
+    materialBridgeHighShareThreshold: _materialBridgeHighShareThreshold,
+    ...controlSemantics
+  } = policy.semantic.control;
   return {
     schemaVersion: policy.schemaVersion,
     semantic: {
       ...policy.semantic,
       formula: {
-        ...policy.semantic.formula,
+        ...formulaSemantics,
         assetPremiums: [...policy.semantic.formula.assetPremiums]
           .map((premium) => ({
             ...premium,
@@ -106,7 +111,7 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
         ) as V9MethodologySemanticPayload["semantic"]["backing"]["archetypes"],
       },
       evidence: {
-        ...policy.semantic.evidence,
+        ...evidenceSemantics,
         dispositions: [...policy.semantic.evidence.dispositions].sort((left, right) =>
           compareText(left.factClass, right.factClass),
         ),
@@ -125,6 +130,7 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
         primaryExit: uniqueSorted(policy.semantic.accessPostureVocabulary.primaryExit),
         governance: uniqueSorted(policy.semantic.accessPostureVocabulary.governance),
       },
+      control: controlSemantics,
     },
     reasonRegistry: [...policy.reasonRegistry]
       .map((entry) => ({
@@ -139,24 +145,26 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
 
 function computeV9PolicySemanticDigest(
   policy: V9MethodologyPolicy,
-  scoreBearingGates: V9ScoreBearingGatesPolicy,
 ): string {
-  const { methodologyVersion: _methodologyVersion, ...gateSemantics } = scoreBearingGates;
   const canonicalGates = {
-    ...gateSemantics,
+    withhold: policy.semantic.formula.withhold,
     danger: {
-      ...scoreBearingGates.danger,
+      ...policy.semantic.formula.danger,
       withholdCentralizedMintSeverities: uniqueSorted(
-        scoreBearingGates.danger.withholdCentralizedMintSeverities,
+        policy.semantic.formula.danger.withholdCentralizedMintSeverities,
       ),
       fGateCentralizedMintSeverities: uniqueSorted(
-        scoreBearingGates.danger.fGateCentralizedMintSeverities,
+        policy.semantic.formula.danger.fGateCentralizedMintSeverities,
       ),
       preExitCentralizedMintSeverities: uniqueSorted(
-        scoreBearingGates.danger.preExitCentralizedMintSeverities,
+        policy.semantic.formula.danger.preExitCentralizedMintSeverities,
       ),
-      dangerOnlyGrades: uniqueSorted(scoreBearingGates.danger.dangerOnlyGrades),
+      dangerOnlyGrades: uniqueSorted(policy.semantic.formula.danger.dangerOnlyGrades),
     },
+    control: {
+      materialBridgeHighShareThreshold: policy.semantic.control.materialBridgeHighShareThreshold,
+    },
+    evidenceExpiry: policy.semantic.evidence.evidenceExpiry,
   };
   return sha256Hex(
     stableJsonStringifyV1({
@@ -167,27 +175,14 @@ function computeV9PolicySemanticDigest(
   );
 }
 
-export type V9ValidatedPolicyWithScoreBearingGates = V9ValidatedPolicyEnvelope & {
-  readonly scoreBearingGates: V9ScoreBearingGatesPolicy;
-};
-
 /** Parse, cross-validate, digest, and freeze one explicit methodology policy. */
-export function loadV9MethodologyPolicy(
-  rawPolicy: unknown,
-  rawScoreBearingGates: unknown = V9_SCORE_BEARING_GATES_POLICY_V923,
-): V9ValidatedPolicyWithScoreBearingGates {
-  const basePolicy = V9MethodologyPolicySchema.parse(policyWithRegistryMatureChains(rawPolicy));
-  const scoreBearingGates = parseV9ScoreBearingGatesPolicy(rawScoreBearingGates);
-  const policy = {
-    ...basePolicy,
-    releaseVersion: scoreBearingGates.methodologyVersion,
-  } satisfies V9MethodologyPolicy;
+export function loadV9MethodologyPolicy(rawPolicy: unknown): V9ValidatedPolicyEnvelope {
+  const policy = V9MethodologyPolicySchema.parse(policyWithRegistryMatureChains(rawPolicy));
   const envelope = {
     policy,
-    scoreBearingGates,
-    semanticDigest: computeV9PolicySemanticDigest(policy, scoreBearingGates),
-  } satisfies V9ValidatedPolicyWithScoreBearingGates;
-  const frozen = deepFreeze(envelope) as V9ValidatedPolicyWithScoreBearingGates;
+    semanticDigest: computeV9PolicySemanticDigest(policy),
+  } satisfies V9ValidatedPolicyEnvelope;
+  const frozen = deepFreeze(envelope) as V9ValidatedPolicyEnvelope;
   validatedPolicyEnvelopes.add(frozen);
   return frozen;
 }
@@ -198,13 +193,6 @@ export function assertV9ValidatedPolicyEnvelope(
   if (!validatedPolicyEnvelopes.has(envelope)) {
     throw new Error("Safety Score v9 policy must be created by loadV9MethodologyPolicy()");
   }
-}
-
-export function getV9ScoreBearingGatesPolicy(
-  envelope: V9ValidatedPolicyEnvelope,
-): V9ScoreBearingGatesPolicy {
-  assertV9ValidatedPolicyEnvelope(envelope);
-  return (envelope as V9ValidatedPolicyWithScoreBearingGates).scoreBearingGates;
 }
 
 export function assertV9ReasonCodesRegistered(

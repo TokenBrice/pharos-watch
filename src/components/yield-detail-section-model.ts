@@ -11,14 +11,23 @@ import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-so
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { YieldRanking } from "@shared/types";
+import type { StablecoinStatus, YieldRanking, YieldRankingsResponse } from "@shared/types";
 
 export const ALT_SOURCE_INITIAL_COUNT = 6;
 
-export interface YieldDetailSectionReadyModel {
+export type YieldDetailModelMode = "embedded" | "full-page";
+
+export interface YieldDetailRegistryStatus {
+  stablecoinId: string;
+  lifecycle: StablecoinStatus;
+  shouldHaveYieldData: boolean;
+  mode: YieldDetailModelMode;
+  inactiveReason?: string | null;
+}
+
+export interface YieldDetailReadyModel {
   status: "ready";
   ranking: YieldRanking;
-  apiWarning: string | null;
   benchmarkSubtitle?: string;
   benchmarkRate: number;
   medianApy: number;
@@ -26,16 +35,13 @@ export interface YieldDetailSectionReadyModel {
   sourceExplorer: YieldSourceExplorerModel;
   sourceDepthLens: YieldSourceDepthLens;
   sourceRiskDrivers: YieldSourceRiskDriver[];
+  validatedSourceKeys: string[];
   externalSourceKeys?: string[];
   historySources: Array<{ sourceKey: string; yieldSource: string }>;
   dataSourceMeta: { label: string; badge: string };
   warningSignals: string[];
   singleWarning: string | null;
   stabilityValue: string;
-  showAllSources: boolean;
-  setShowAllSources: Dispatch<SetStateAction<boolean>>;
-  selectedSourceKeys: Set<string>;
-  toggleSource: (sourceKey: string) => void;
   pysBreakdown: {
     adjustedRiskPenalty: number;
     benchmarkAdjustment: number;
@@ -52,69 +58,38 @@ export interface YieldDetailSectionReadyModel {
   benchmarkLabel?: string | null;
 }
 
-export interface YieldDetailSectionLoadingModel {
-  status: "loading";
-  shouldHaveYieldData: boolean;
-}
+export type YieldDetailModel =
+  | YieldDetailReadyModel
+  | { status: "unavailable"; shouldHaveYieldData: boolean }
+  | { status: "hidden" }
+  | { status: "pre-launch"; hasRanking: boolean }
+  | { status: "inactive"; reason: string | null; hasRanking: boolean }
+  | { status: "frozen" };
 
-export interface YieldDetailSectionUnavailableModel {
-  status: "unavailable";
-  shouldHaveYieldData: boolean;
-}
+export function buildYieldDetailModel(
+  rankingResponse: YieldRankingsResponse | null | undefined,
+  registryStatus: YieldDetailRegistryStatus,
+  requestedSourceKeys: Iterable<string>,
+): YieldDetailModel {
+  const ranking = rankingResponse?.rankings.find((row) => row.id === registryStatus.stablecoinId);
 
-export interface YieldDetailSectionErrorModel {
-  status: "error";
-  shouldHaveYieldData: boolean;
-  error: Error | null;
-}
-
-export interface YieldDetailSectionHiddenModel {
-  status: "hidden";
-}
-
-export type YieldDetailSectionModel =
-  | YieldDetailSectionReadyModel
-  | YieldDetailSectionLoadingModel
-  | YieldDetailSectionUnavailableModel
-  | YieldDetailSectionErrorModel
-  | YieldDetailSectionHiddenModel;
-
-export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSectionModel {
-  const { getParam, replaceParams } = useUrlFilters();
-  const { data, meta: apiMeta, error, isLoading } = useYieldRankings();
-
-  const rawSelectedSourceKeys = useMemo(
-    () => new Set(getParam("sources").split(",").filter(Boolean)),
-    [getParam],
-  );
-  const [showAllSources, setShowAllSources] = useState(false);
-
-  const ranking = data?.rankings.find((row) => row.id === stablecoinId);
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
-  const shouldHaveYieldData = meta?.flags.yieldBearing ?? false;
-
-  if (!ranking && data?.rankings && !shouldHaveYieldData) {
-    return { status: "hidden" };
+  if (registryStatus.mode === "full-page") {
+    if (registryStatus.lifecycle === "pre-launch") {
+      return { status: "pre-launch", hasRanking: !!ranking };
+    }
+    if (registryStatus.lifecycle === "quarantined" || registryStatus.lifecycle === "delisted") {
+      return { status: "inactive", reason: registryStatus.inactiveReason ?? null, hasRanking: !!ranking };
+    }
   }
 
-  if (!ranking && !shouldHaveYieldData && !data?.rankings && !error) {
-    return { status: "hidden" };
-  }
-
-  if (!ranking && error && !shouldHaveYieldData) {
-    return { status: "hidden" };
-  }
-
-  if (!ranking && isLoading && shouldHaveYieldData) {
-    return { status: "loading", shouldHaveYieldData };
-  }
-
-  if (!ranking && error && shouldHaveYieldData) {
-    return { status: "error", shouldHaveYieldData, error: error instanceof Error ? error : null };
-  }
-
-  if (!ranking || !data) {
-    return { status: "unavailable", shouldHaveYieldData };
+  if (!ranking || !rankingResponse) {
+    if (registryStatus.mode === "embedded" && !registryStatus.shouldHaveYieldData) {
+      return { status: "hidden" };
+    }
+    if (registryStatus.mode === "full-page" && registryStatus.lifecycle === "frozen") {
+      return { status: "frozen" };
+    }
+    return { status: "unavailable", shouldHaveYieldData: registryStatus.shouldHaveYieldData };
   }
 
   const pysBreakdown = {
@@ -125,19 +100,107 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
       ranking.benchmarkRate,
       ranking.sourceRisk?.sourceRiskPenalty ?? null,
     ),
-    scalingFactor: data.scalingFactor,
+    scalingFactor: rankingResponse.scalingFactor,
   };
-  const pysColor = getPysColor(ranking.pharosYieldScore);
-  const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";
-  const dataSourceMeta = getYieldDataSourceMeta(ranking.dataSource);
   const sourceExplorer = buildYieldSourceExplorerModel(ranking);
   const availableSourceKeys = new Set(sourceExplorer.historySources.map((source) => source.sourceKey));
-  const selectedSourceKeys = new Set(
-    [...rawSelectedSourceKeys].filter((sourceKey) => availableSourceKeys.has(sourceKey)),
+  const validatedSourceKeys = [...requestedSourceKeys].filter((sourceKey) => availableSourceKeys.has(sourceKey));
+
+  return {
+    status: "ready",
+    ranking,
+    benchmarkSubtitle: getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false }),
+    benchmarkRate: ranking.benchmarkRate ?? rankingResponse.riskFreeRate ?? 0,
+    medianApy: rankingResponse.medianApy ?? 0,
+    benchmarkIsFallback: ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback,
+    sourceExplorer,
+    sourceDepthLens: sourceExplorer.sourceDepthLens,
+    sourceRiskDrivers: sourceExplorer.sourceRiskDrivers,
+    validatedSourceKeys,
+    externalSourceKeys: validatedSourceKeys.length > 0 ? validatedSourceKeys : undefined,
+    historySources: sourceExplorer.historySources,
+    dataSourceMeta: getYieldDataSourceMeta(ranking.dataSource),
+    warningSignals: ranking.warningSignals,
+    singleWarning: ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null,
+    stabilityValue: ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—",
+    pysBreakdown,
+    pysColor: getPysColor(ranking.pharosYieldScore),
+    yieldTypeLabel: YIELD_TYPE_LABELS[ranking.yieldType] ?? ranking.yieldType,
+    yieldTypeBadge: YIELD_TYPE_STYLES[ranking.yieldType]?.badge ?? "",
+    benchmarkLabel: ranking.benchmarkLabel,
+  };
+}
+
+export interface YieldDetailSectionReadyModel extends YieldDetailReadyModel {
+  apiWarning: string | null;
+  showAllSources: boolean;
+  setShowAllSources: Dispatch<SetStateAction<boolean>>;
+  selectedSourceKeys: Set<string>;
+  toggleSource: (sourceKey: string) => void;
+}
+
+export interface YieldDetailSectionLoadingModel {
+  status: "loading";
+  shouldHaveYieldData: boolean;
+}
+
+export interface YieldDetailSectionErrorModel {
+  status: "error";
+  shouldHaveYieldData: boolean;
+  error: Error | null;
+}
+
+export type YieldDetailSectionModel =
+  | YieldDetailSectionReadyModel
+  | YieldDetailSectionLoadingModel
+  | YieldDetailSectionErrorModel
+  | Extract<YieldDetailModel, { status: "unavailable" | "hidden" }>;
+
+export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSectionModel {
+  const { getParam, replaceParams } = useUrlFilters();
+  const { data, meta: apiMeta, error, isLoading } = useYieldRankings();
+  const sourcesParam = getParam("sources");
+  const requestedSourceKeys = useMemo(() => sourcesParam.split(",").filter(Boolean), [sourcesParam]);
+  const [showAllSources, setShowAllSources] = useState(false);
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const shouldHaveYieldData = meta?.flags.yieldBearing ?? false;
+  const model = useMemo(
+    () =>
+      buildYieldDetailModel(
+        data,
+        {
+          stablecoinId,
+          lifecycle: meta?.status ?? "active",
+          shouldHaveYieldData,
+          mode: "embedded",
+        },
+        requestedSourceKeys,
+      ),
+    [data, meta?.status, requestedSourceKeys, shouldHaveYieldData, stablecoinId],
   );
-  const externalSourceKeys = selectedSourceKeys.size > 0 ? [...selectedSourceKeys] : undefined;
-  const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
-  const benchmarkSubtitle = getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false });
+
+  if (model.status === "hidden") {
+    return model;
+  }
+
+  if (model.status !== "ready") {
+    if (isLoading && shouldHaveYieldData) {
+      return { status: "loading", shouldHaveYieldData };
+    }
+    if (error && shouldHaveYieldData) {
+      return { status: "error", shouldHaveYieldData, error: error instanceof Error ? error : null };
+    }
+    if (model.status === "pre-launch" || model.status === "inactive" || model.status === "frozen") {
+      // Full-page-only lifecycle outcomes cannot occur in embedded mode
+      // (builder gates them on mode === "full-page"); keep the embedded
+      // section's prior policy if that ever changes.
+      return { status: "unavailable", shouldHaveYieldData };
+    }
+    return model;
+  }
+
+  const selectedSourceKeys = new Set(model.validatedSourceKeys);
+  const availableSourceKeys = new Set(model.historySources.map((source) => source.sourceKey));
   const toggleSource = (sourceKey: string) => {
     if (!availableSourceKeys.has(sourceKey)) return;
     const next = new Set(selectedSourceKeys);
@@ -156,30 +219,11 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   };
 
   return {
-    status: "ready",
-    ranking,
+    ...model,
     apiWarning: apiMeta?.warning ?? null,
-    benchmarkSubtitle,
-    benchmarkRate: ranking.benchmarkRate ?? data?.riskFreeRate ?? 0,
-    medianApy: data?.medianApy ?? 0,
-    benchmarkIsFallback: ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback,
-    sourceExplorer,
-    sourceDepthLens: sourceExplorer.sourceDepthLens,
-    sourceRiskDrivers: sourceExplorer.sourceRiskDrivers,
-    externalSourceKeys,
-    historySources: sourceExplorer.historySources,
-    dataSourceMeta,
-    warningSignals: ranking.warningSignals,
-    singleWarning,
-    stabilityValue,
     showAllSources,
     setShowAllSources,
     selectedSourceKeys,
     toggleSource,
-    pysBreakdown,
-    pysColor,
-    yieldTypeLabel: YIELD_TYPE_LABELS[ranking.yieldType] ?? ranking.yieldType,
-    yieldTypeBadge: YIELD_TYPE_STYLES[ranking.yieldType]?.badge ?? "",
-    benchmarkLabel: ranking.benchmarkLabel,
   };
 }

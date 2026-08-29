@@ -24,10 +24,52 @@ import {
   fixtureSafetyScoresModule,
   fixtureYieldConfigModule,
   fixturePublicationModule,
-  type ChainRpcConfig,
+  makeEthereumRpcHandler,
+  makeEthereumRpcMap,
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
+import { buildDlStablecoinPoolsCache, buildYieldSupplementalFamilyCache, getYieldSupplementalFamilyCacheKey } from "../yield-sync/cache";
+import { loadYieldSyncState } from "../yield-sync/state-loading";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-families";
+import type { ResolvedYieldCandidate } from "../yield-sync/types";
+
+function dlPoolsCacheRow(
+  pools: Parameters<typeof buildDlStablecoinPoolsCache>[0],
+  updatedAt: number,
+) {
+  return cacheRow(buildDlStablecoinPoolsCache(pools, updatedAt), updatedAt);
+}
+
+function supplementalFamilyCacheRow(
+  candidates: ResolvedYieldCandidate[],
+  updatedAt: number,
+) {
+  return cacheRow(buildYieldSupplementalFamilyCache(candidates, updatedAt), updatedAt);
+}
+
+function supplementalCandidate(sourceKey: string, observedAt: number): ResolvedYieldCandidate {
+  return {
+    stablecoinId: "100",
+    symbol: "sDAI",
+    chain: "ethereum",
+    address: null,
+    yield: {
+      currentApy: 6.1,
+      apyBase: 6.1,
+      apyReward: null,
+      sourcePool: "fixture-pool",
+      sourceTvlUsd: 50_000_000,
+      dataSource: "protocol-api",
+      exchangeRate: null,
+      sourceKey,
+      yieldSource: "Fixture supplemental source",
+      yieldType: "lending-vault",
+      sourceObservedAt: observedAt,
+      comparisonAnchorObservedAt: null,
+    },
+  };
+}
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -37,7 +79,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -116,7 +158,6 @@ describe("syncYieldData", () => {
             ],
           }, nowSec),
       "yield:supplemental-sources:v1:beefy": cacheRow("{bad json", nowSec),
-      "yield:supplemental-sources:v1": cacheRow("{bad aggregate", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -132,7 +173,7 @@ describe("syncYieldData", () => {
     expect(supplementalRow).toBeDefined();
   });
 
-  it("merges aggregate supplemental candidates for missing per-family caches", async () => {
+  it("ignores the legacy aggregate supplemental cache when a family cache is missing", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -216,11 +257,11 @@ describe("syncYieldData", () => {
 
     const result = await fixtureSyncYieldData(db);
 
-    expect(result.itemCount).toBe(2);
+    expect(result.itemCount).toBe(1);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       sourceCoverage?: { supplementalFallbackMode?: string | null };
     };
-    expect(metadata.sourceCoverage?.supplementalFallbackMode).toBe("partial-family-cache-aggregate-merge");
+    expect(metadata.sourceCoverage?.supplementalFallbackMode).toBe("partial-family-cache");
     const rows = getPublishedYieldRows(db);
     expect(
       rows.some(
@@ -229,7 +270,65 @@ describe("syncYieldData", () => {
     ).toBe(true);
     expect(
       rows.some((row) => row.stablecoin_id === "100" && row.source_key === "protocol-api:beefy:ethereum:beefy-sdai"),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      vi.mocked(fixtureGetCache).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1"),
+    ).toBe(false);
+  });
+
+  it("classifies mixed fresh, stale, missing, and empty families from valid family presence", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const freshCandidate = supplementalCandidate("protocol-api:morpho:fixture", nowSec);
+
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      [getYieldSupplementalFamilyCacheKey("morpho")]: supplementalFamilyCacheRow([freshCandidate], nowSec),
+      [getYieldSupplementalFamilyCacheKey("pendle")]: supplementalFamilyCacheRow([], nowSec),
+      [getYieldSupplementalFamilyCacheKey("yearnKong")]: supplementalFamilyCacheRow(
+        [supplementalCandidate("protocol-api:yearn:fixture", nowSec - 13 * 3600)],
+        nowSec - 13 * 3600,
+      ),
+      [getYieldSupplementalFamilyCacheKey("vaultsFyi")]: supplementalFamilyCacheRow([], nowSec),
+      [getYieldSupplementalFamilyCacheKey("compoundV3")]: supplementalFamilyCacheRow([], nowSec),
+      [getYieldSupplementalFamilyCacheKey("aaveV3")]: supplementalFamilyCacheRow([], nowSec),
+      [getYieldSupplementalFamilyCacheKey("roycoDawn")]: supplementalFamilyCacheRow([], nowSec),
+    });
+    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
+    expect(state.supplementalCandidates).toEqual([freshCandidate]);
+    expect(state.supplementalMeta).toMatchObject({
+      mode: "cache",
+      updatedAt: nowSec,
+      ageSeconds: 0,
+      sourceCount: 1,
+      fallbackMode: "partial-family-cache",
+    });
+  });
+
+  it("treats an all-empty current family snapshot as valid supplemental cache state", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const emptyFamilyCaches = Object.fromEntries(
+      SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [
+        getYieldSupplementalFamilyCacheKey(family),
+        supplementalFamilyCacheRow([], nowSec),
+      ]),
+    );
+    installYieldCacheReader(vi.mocked(fixtureGetCache), emptyFamilyCaches);
+    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
+    expect(state.supplementalCandidates).toEqual([]);
+    expect(state.supplementalMeta).toMatchObject({
+      mode: "cache",
+      updatedAt: nowSec,
+      ageSeconds: 0,
+      sourceCount: 0,
+      fallbackMode: null,
+    });
   });
 
   it("keeps a higher native wrapper APY ahead of a lower supplemental lending source that clears size gates", async () => {
@@ -239,7 +338,7 @@ describe("syncYieldData", () => {
     poolMap["100"] = "pool-sdai-native";
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               tvlUsd: 84_819_532,
               apy: 4.45953,
@@ -247,7 +346,7 @@ describe("syncYieldData", () => {
               apyMean30d: 4.43603,
             }),
           ], nowSec),
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -306,7 +405,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -379,7 +478,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:aaveV3": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -437,7 +536,7 @@ describe("syncYieldData", () => {
               },
             ],
       }, nowSec),
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -493,7 +592,7 @@ describe("syncYieldData", () => {
     } as never);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -567,7 +666,7 @@ describe("syncYieldData", () => {
     } as never);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-placeholder",
               project: "aave-v3",
@@ -624,7 +723,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-u-venus",
               chain: "BSC",
@@ -711,7 +810,7 @@ describe("syncYieldData", () => {
     } as never);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-xaut-yo",
               project: "yo-protocol",
@@ -749,7 +848,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-u-venus",
               chain: "BSC",
@@ -812,87 +911,54 @@ describe("syncYieldData", () => {
 
     let activeRpcCalls = 0;
     let maxActiveRpcCalls = 0;
-    fixtureMockFetch([{ match: () => true, respond: async (request) => {
-        const url = request.url;
-
-        if (url.includes("yields.llama.fi")) {
-          return new Response(
-            JSON.stringify({
-              data: [
-                makeDlYieldPool({
-                  pool: "pool-lusd-aave",
-                  project: "aave-v3",
-                  symbol: "LUSD",
-                  tvlUsd: 12_000_000,
-                  apy: 0.75,
-                  apyBase: 0.75,
-                  apyMean30d: 0.74,
-                  underlyingTokens: ["0x5f98805a4e8be255a32880fdec7f6728c6568ba0"],
-                }),
-              ],
+    const rpcHandler = makeEthereumRpcHandler([
+      {
+        selector: "0x9bf2f1ac",
+        value: "0x0000000000000000000000000000000000000000000a88622849a78584de759b",
+      },
+      {
+        selector: "0xb140384b",
+        value: "0x0000000000000000000000000000000000000000001998cb5c5ea77bc8dc9000",
+      },
+    ]);
+    fixtureMockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            makeDlYieldPool({
+              pool: "pool-lusd-aave",
+              project: "aave-v3",
+              symbol: "LUSD",
+              tvlUsd: 12_000_000,
+              apy: 0.75,
+              apyBase: 0.75,
+              apyMean30d: 0.74,
+              underlyingTokens: ["0x5f98805a4e8be255a32880fdec7f6728c6568ba0"],
             }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-
-        if (url.includes("/simple/price?ids=liquity&vs_currencies=usd")) {
-          return new Response(JSON.stringify({ liquity: { usd: 0.280527 } }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-
-        if (url.includes("rpc.example/eth")) {
+          ],
+        },
+      },
+      {
+        match: "/simple/price?ids=liquity&vs_currencies=usd",
+        body: { liquity: { usd: 0.280527 } },
+      },
+      {
+        match: "rpc.example/eth",
+        respond: async (request) => {
           activeRpcCalls += 1;
           maxActiveRpcCalls = Math.max(maxActiveRpcCalls, activeRpcCalls);
-          await Promise.resolve();
           try {
-            const body = JSON.parse(await request.clone().text()) as {
-              params?: Array<{ data?: string } | string>;
-            };
-            const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
-
-            if (callData === "0x9bf2f1ac") {
-              return new Response(
-                JSON.stringify({
-                  result: "0x0000000000000000000000000000000000000000000a88622849a78584de759b",
-                }),
-                { status: 200, headers: { "Content-Type": "application/json" } },
-              );
-            }
-
-            if (callData === "0xb140384b") {
-              return new Response(
-                JSON.stringify({
-                  result: "0x0000000000000000000000000000000000000000001998cb5c5ea77bc8dc9000",
-                }),
-                { status: 200, headers: { "Content-Type": "application/json" } },
-              );
-            }
+            return await rpcHandler(request);
           } finally {
             activeRpcCalls -= 1;
           }
-        }
-
-        return new Response(JSON.stringify({ error: "Not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
-      },
-    }]);
-
-    const testChainRpcs = new Map<string, ChainRpcConfig>([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://rpc.example/eth",
-          explorerUrl: "https://etherscan.io",
         },
-      ],
+      },
     ]);
+
+    const testChainRpcs = makeEthereumRpcMap();
+    vi.mocked(fixtureGetChainRpc).mockReturnValue(testChainRpcs.get("ethereum"));
     const result = await fixtureSyncYieldData(db, undefined, testChainRpcs);
 
     expect(result.itemCount).toBe(2);

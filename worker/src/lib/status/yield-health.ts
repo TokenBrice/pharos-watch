@@ -14,7 +14,7 @@ import type {
   YieldSourceRiskCoverageField,
   YieldSourceRiskCoverageSummary,
 } from "@shared/types/status";
-import { YIELD_SUPPLEMENTAL_CACHE_KEY, getYieldSupplementalFamilyCacheKey } from "../../cron/yield-sync/cache";
+import { getYieldSupplementalFamilyCacheKey } from "../../cron/yield-sync/cache";
 import {
   REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
@@ -468,116 +468,11 @@ function sanitizeQueueItem(value: unknown): YieldCoverageAuditQueueItem | null {
   return item;
 }
 
-function readQueueItems(value: unknown): YieldCoverageAuditQueueItem[] {
-  return Array.isArray(value)
-    ? value.map(sanitizeQueueItem).filter((item): item is YieldCoverageAuditQueueItem => item != null)
-    : [];
-}
-
-function legacyPoolQueueItem(
-  kind: Extract<YieldCoverageAuditQueueItemKind, "unmatched-high-tvl-pool" | "missing-protocol" | "native-exact-pool">,
-  row: Record<string, unknown>,
-): YieldCoverageAuditQueueItem | null {
-  const pool = getString(row.pool);
-  const project = getString(row.project);
-  const symbol = getString(row.symbol);
-  const chain = getString(row.chain);
-  if (!pool || !project || !symbol || !chain) return null;
-  const stablecoinIds = getStringArray(row.stablecoinIds);
-  return {
-    id: `${kind}:${pool}`,
-    kind,
-    title: `${symbol} on ${project}`,
-    detail: kind === "native-exact-pool" && stablecoinIds?.length
-      ? `${chain} native pool for ${stablecoinIds.join(", ")}`
-      : `${chain} pool ${pool}`,
-    actionHint: kind === "native-exact-pool" ? "accept" : "watch",
-    stablecoinIds: stablecoinIds ?? undefined,
-    project,
-    pool,
-    symbol,
-    chain,
-    tvlUsd: getNumber(row.tvlUsd) ?? undefined,
-    apy: getNumber(row.apy) ?? undefined,
-  };
-}
-
-function legacyStaleAutoLendingOverrideQueueItem(row: Record<string, unknown>): YieldCoverageAuditQueueItem | null {
-  const stablecoinId = getString(row.stablecoinId);
-  const pool = getString(row.pool);
-  if (!stablecoinId || !pool) return null;
-  const reasons = getStringArray(row.reasons) ?? [];
-  return {
-    id: `stale-auto-lending-override:${stablecoinId}:${pool}`,
-    kind: "stale-auto-lending-override",
-    title: stablecoinId,
-    detail: `Override ${pool} no longer qualifies${reasons.length ? `: ${reasons.join(", ")}` : ""}`,
-    actionHint: "accept",
-    stablecoinIds: [stablecoinId],
-    pool,
-    project: getString(row.project) ?? undefined,
-    symbol: getString(row.symbol) ?? undefined,
-    chain: getString(row.chain) ?? undefined,
-    tvlUsd: getNumber(row.tvlUsd) ?? undefined,
-    apy: getNumber(row.apy) ?? undefined,
-  };
-}
-
-function legacyProtocolQueueItem(
-  kind: Extract<YieldCoverageAuditQueueItemKind, "source-family-adapter" | "lending-allowlist">,
-  row: Record<string, unknown>,
-): YieldCoverageAuditQueueItem | null {
-  const project = getString(row.project);
-  const poolCount = getNumber(row.poolCount);
-  const totalTvlUsd = getNumber(row.totalTvlUsd);
-  if (!project || poolCount == null || totalTvlUsd == null) return null;
-  const recommendedTier = getString(row.recommendedTier);
-  const examplePools = getStringArray(row.examplePools) ?? [];
-  return {
-    id: `${kind}:${project}`,
-    kind,
-    title: project,
-    detail: `${poolCount} pools${examplePools.length ? ` across ${examplePools.slice(0, 3).join(", ")}` : ""}`,
-    actionHint: recommendedTier === "high-confidence" ? "accept" : "watch",
-    project,
-    poolCount,
-    totalTvlUsd,
-    recommendedTier: recommendedTier === "high-confidence" || recommendedTier === "review-needed"
-      ? recommendedTier
-      : undefined,
-  };
-}
-
-function legacyStaleVenueRiskScoreQueueItem(row: Record<string, unknown>): YieldCoverageAuditQueueItem | null {
-  const protocol = getString(row.protocol) ?? getString(row.project) ?? getString(row.title);
-  if (!protocol) return null;
-  const reviewedAt = getString(row.reviewedAt);
-  const ageDays = getNumber(row.ageDays);
-  const confidence = getString(row.confidence);
-  const ageText = ageDays != null ? ` (${Math.round(ageDays)}d ago)` : "";
-  const confidenceText = confidence && confidence !== "verified" ? `, ${confidence} confidence` : "";
-  return {
-    id: `stale-venue-risk-score:${protocol}`,
-    kind: "stale-venue-risk-score",
-    title: protocol,
-    detail: reviewedAt
-      ? `Venue-risk score last reviewed ${reviewedAt}${ageText}${confidenceText}; re-verify audits, governance, and TVL.`
-      : "Venue-risk score needs re-verification.",
-    actionHint: "watch",
-    project: protocol,
-  };
-}
-
-function objectArray(value: unknown): Record<string, unknown>[] {
-  return Array.isArray(value)
-    ? value.map(getObject).filter((row): row is Record<string, unknown> => row != null)
-    : [];
-}
-
-function readQueuePersistence(
-  operatorQueue: Record<string, unknown> | null,
-): YieldHealthSummary["coverageAudit"]["queuePersistence"] {
-  return operatorQueue?.persistence === "durable" ? "durable" : "deferred";
+function readQueueItems(value: unknown): YieldCoverageAuditQueueItem[] | null {
+  if (!Array.isArray(value)) return null;
+  const items = value.map(sanitizeQueueItem);
+  if (items.some((item) => item == null)) return null;
+  return items as YieldCoverageAuditQueueItem[];
 }
 
 function buildCoverageAuditQueue(payload: Record<string, unknown> | null): Pick<
@@ -587,69 +482,25 @@ function buildCoverageAuditQueue(payload: Record<string, unknown> | null): Pick<
   const operatorQueue = getObject(payload?.operatorQueue);
   const queuedHeadlineGaps = readQueueItems(operatorQueue?.headlineGaps);
   const queuedRecommendations = readQueueItems(operatorQueue?.recommendationCandidates);
-  if (queuedHeadlineGaps.length > 0 || queuedRecommendations.length > 0) {
+  const queuePersistence = operatorQueue?.persistence;
+  // The current queue is authoritative when its required arrays are present,
+  // including when both arrays are empty after disposition filtering.
+  if (
+    queuedHeadlineGaps &&
+    queuedRecommendations &&
+    (queuePersistence === "deferred" || queuePersistence === "durable")
+  ) {
     return {
       headlineGaps: queuedHeadlineGaps.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
       recommendationCandidates: queuedRecommendations.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
       allowedActions: COVERAGE_AUDIT_QUEUE_ACTIONS,
-      queuePersistence: readQueuePersistence(operatorQueue),
+      queuePersistence,
     };
   }
 
-  // LEGACY FALLBACK PATH — reached only when the payload lacks a populated
-  // `operatorQueue`. The seven legacyXxx builders below reconstruct queue items
-  // from the pre-operatorQueue per-list wire format. Remove this entire block
-  // (and the legacyXxx helpers) once the yield-coverage-audit payload adopts
-  // `operatorQueue` universally; new queue item kinds should be added to the
-  // operatorQueue path above, not duplicated here.
-  const manifestMissingIds = getStringArray(payload?.manifestMissingIds) ?? [];
-  const yieldBearingMissingFromRankings = getStringArray(payload?.yieldBearingMissingFromRankings) ?? [];
-  const headlineGaps: YieldCoverageAuditQueueItem[] = [
-    ...manifestMissingIds.map((stablecoinId) => ({
-      id: `manifest-missing:${stablecoinId}`,
-      kind: "manifest-missing" as const,
-      title: stablecoinId,
-      detail: "Yield-bearing tracked asset has no adapter-manifest entry.",
-      actionHint: "accept" as const,
-      stablecoinIds: [stablecoinId],
-    })),
-    ...yieldBearingMissingFromRankings.map((stablecoinId) => ({
-      id: `ranking-missing:${stablecoinId}`,
-      kind: "ranking-missing" as const,
-      title: stablecoinId,
-      detail: "Manifest-covered yield-bearing asset is absent from the latest rankings cache.",
-      actionHint: "watch" as const,
-      stablecoinIds: [stablecoinId],
-    })),
-    ...objectArray(payload?.staleAutoLendingOverrides).map((row) =>
-      legacyStaleAutoLendingOverrideQueueItem(row),
-    ),
-    ...objectArray(payload?.unmatchedHighTvlPools).map((row) =>
-      legacyPoolQueueItem("unmatched-high-tvl-pool", row),
-    ),
-    ...objectArray(payload?.missingProtocols).map((row) =>
-      legacyPoolQueueItem("missing-protocol", row),
-    ),
-  ].filter((item): item is YieldCoverageAuditQueueItem => item != null);
-
-  const recommendationCandidates: YieldCoverageAuditQueueItem[] = [
-    ...objectArray(payload?.nativeExactPoolRecommendations).map((row) =>
-      legacyPoolQueueItem("native-exact-pool", row),
-    ),
-    ...objectArray(payload?.sourceFamilyAdapterRecommendations).map((row) =>
-      legacyProtocolQueueItem("source-family-adapter", row),
-    ),
-    ...objectArray(payload?.lendingAllowlistRecommendations).map((row) =>
-      legacyProtocolQueueItem("lending-allowlist", row),
-    ),
-    ...objectArray(payload?.staleVenueRiskScores).map((row) =>
-      legacyStaleVenueRiskScoreQueueItem(row),
-    ),
-  ].filter((item): item is YieldCoverageAuditQueueItem => item != null);
-
   return {
-    headlineGaps: headlineGaps.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
-    recommendationCandidates: recommendationCandidates.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
+    headlineGaps: [],
+    recommendationCandidates: [],
     allowedActions: COVERAGE_AUDIT_QUEUE_ACTIONS,
     queuePersistence: "deferred",
   };
@@ -659,14 +510,6 @@ function buildSupplementalHealth(
   now: number,
   byKey: Map<string, CacheRow>,
 ): YieldHealthSummary["supplemental"] {
-  const aggregateRow = byKey.get(YIELD_SUPPLEMENTAL_CACHE_KEY) ?? null;
-  const aggregateAgeSec = ageSeconds(now, aggregateRow?.updated_at);
-  const aggregateStatus = freshnessStatus(
-    aggregateAgeSec,
-    STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
-    { missingIs: "unknown", degradedAfterOne: true },
-  );
-
   const familyRows = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => {
     const row = byKey.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     const ageSec = ageSeconds(now, row?.updated_at);
@@ -704,10 +547,10 @@ function buildSupplementalHealth(
 
   if (!requiredFamilyRows.some((row) => row.updatedAt != null)) {
     return {
-      updatedAt: aggregateRow?.updated_at ?? null,
-      ageSec: aggregateAgeSec,
+      updatedAt: null,
+      ageSec: null,
       maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
-      status: aggregateStatus,
+      status: "unknown",
       familyCount: 0,
       freshFamilyCount: 0,
       degradedFamilyCount: 0,
@@ -744,7 +587,7 @@ export async function loadYieldHealthSummary(
     .prepare(
       `SELECT key, value, updated_at
        FROM cache
-       WHERE key IN ('yield-rankings', 'yield:supplemental-sources:v1', 'yield-coverage-audit')
+       WHERE key IN ('yield-rankings', 'yield-coverage-audit')
           OR key LIKE 'yield:supplemental-sources:v1:%'`,
     )
     .all<CacheRow>();

@@ -7,7 +7,7 @@
  * `agents/annotation-candidates.md`. The file lives under the gitignored
  * `agents/` scratch folder and feeds the `annotations-refresh` skill.
  *
- * Promotion to `shared/data/annotations/curated-annotations.ts` is always
+ * Promotion to `shared/data/annotations/coins/<stablecoin-id>.json` is always
  * editorial — this producer never writes there.
  *
  * Failure mode: source-by-source. If the worker endpoint is unreachable —

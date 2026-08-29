@@ -118,33 +118,29 @@ describe("twitter helpers", () => {
       42,
       "https://pharos.watch/safety-scores/map.png?date=2026-08-21",
       "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.",
-    )).resolves.toEqual({ tweetId: "1", mediaAttached: true, mediaError: null });
+    )).resolves.toEqual({ tweetId: "1", mediaAttached: true });
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
-  it("falls back to a text-only tweet when the map upload is unavailable", async () => {
+  it("retries the map upload once, then aborts the tweet instead of degrading to text-only", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("pharos.watch/safety-scores/map.png")) {
         return new Response("missing", { status: 404 });
       }
-      expect(JSON.parse(String(init?.body))).toEqual({ text: "Daily Digest\n\n$USDT held steady." });
-      return new Response(JSON.stringify({ data: { id: "1" } }), { status: 201 });
+      throw new Error("tweet endpoint must not be reached when the map upload fails");
     });
     vi.stubGlobal("fetch", fetchSpy);
 
-    const result = await postDigestTweet(
+    await expect(postDigestTweet(
       "Daily Digest",
       "USDT held steady.",
       creds,
       null,
       "https://pharos.watch/safety-scores/map.png?date=2026-08-21",
       "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.",
-    );
-    expect(result.mediaAttached).toBe(false);
-    expect(result.mediaError).toContain("HTTP 404");
-    expect(result.tweetId).toBe("1");
+    )).rejects.toThrow("HTTP 404");
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     warn.mockRestore();
   });

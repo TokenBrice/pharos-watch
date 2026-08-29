@@ -7,11 +7,9 @@ import {
   formatUsd,
   numberValue,
   parseCandidateReportOption,
-  parseCoverageAuditCliArgs,
-  runCoverageAuditCli,
-  renderCoverageAuditReport,
   stringValue,
 } from "../lib/coverage-audit-cli";
+import { parseReportCliArgs, renderReport, runReportCli } from "../lib/report-cli";
 
 describe("coverage audit CLI helpers", () => {
   it("preserves compact-USD report bytes across tiers and invalid values", () => {
@@ -71,7 +69,7 @@ describe("coverage audit CLI helpers", () => {
       stdout: true,
       generatedAt: "2026-06-12T00:00:00.000Z",
     });
-    expect(renderCoverageAuditReport({ ok: true }, options.format, () => "markdown\n")).toBe(
+    expect(renderReport({ ok: true }, options.format, () => "markdown\n")).toBe(
       '{\n  "ok": true\n}\n',
     );
   });
@@ -89,7 +87,7 @@ describe("coverage audit CLI helpers", () => {
 
   it("strictly parses descriptor options and preserves golden Markdown/JSON bytes", async () => {
     type Options = { format: "markdown" | "json"; reportPath: string | null; limit: number };
-    const parse = (argv: string[]) => parseCoverageAuditCliArgs<Options>(argv, {
+    const parse = (argv: string[]) => parseReportCliArgs<Options>(argv, {
       createOptions: () => ({ format: "markdown", reportPath: null, limit: 2 }),
       options: [{
         flag: "--limit",
@@ -103,7 +101,7 @@ describe("coverage audit CLI helpers", () => {
     expect(() => parse(["--wat"])).toThrow("Unknown argument: --wat");
 
     const markdownWrites: string[] = [];
-    await expect(runCoverageAuditCli([], {
+    await expect(runReportCli([], {
       parse,
       build: () => ({ generatedAt: "2026-08-28T00:00:00.000Z", rows: ["usdc", "usdt"] }),
       renderMarkdown: (audit) => `# Golden Audit\n\nGenerated: ${audit.generatedAt}\n\n## Rows\n\n${audit.rows.join("\n")}\n`,
@@ -114,7 +112,7 @@ describe("coverage audit CLI helpers", () => {
     );
 
     const jsonWrites: string[] = [];
-    await runCoverageAuditCli(["--json"], {
+    await runReportCli(["--json"], {
       parse,
       build: () => ({ generatedAt: "2026-08-28T00:00:00.000Z", rows: ["usdc", "usdt"] }),
       renderMarkdown: () => "unused",

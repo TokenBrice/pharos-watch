@@ -12,11 +12,9 @@ import {
   assertV9ReasonCodesRegistered,
   assertV9UnresolvedFactsMatchPolicy,
   assertV9ValidatedPolicyEnvelope,
-  getV9ScoreBearingGatesPolicy,
   loadV9MethodologyPolicy,
   resolveV9ReasonPolicy,
 } from "../safety-score-v9/policy";
-import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "../safety-score-v9/score-bearing-gates-policy";
 import { V9_BOUNDED_ATTRIBUTION_REASON_CODES } from "../../types/safety-score-v9-public";
 
 function candidateClone(): V9MethodologyPolicy {
@@ -107,9 +105,23 @@ describe("Safety Score v9 methodology policy", () => {
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
       "fa4af0387d3be293f6d6f3882900f0b5a567ed80bd4afa0a7e80563e8a11b455",
     );
-    expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
-      V9_SCORE_BEARING_GATES_POLICY_V923,
-    );
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
+      maxScoreExclusive: 55,
+      minimumLimitedPillarCount: 2,
+      requiresLimitedBacking: true,
+    });
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.danger).toEqual({
+      withholdPegMultiplierFloor: 0.9,
+      fGatePegMultiplierFloor: 0.8,
+      preExitPegMultiplierFloor: 0.9,
+      adverseAttributionPegMultiplierFloor: 0.9,
+      activeDepegMinimumBpsExclusive: 0,
+      withholdCentralizedMintSeverities: ["high", "critical"],
+      fGateCentralizedMintSeverities: ["critical"],
+      preExitCentralizedMintSeverities: ["critical"],
+      dangerOnlyGrades: ["F"],
+    });
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.control.materialBridgeHighShareThreshold).toBe(0.25);
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
     expect(cdpPolicy.minimumLiquidationCapacityRatio).toBe(0.5);
@@ -118,7 +130,7 @@ describe("Safety Score v9 methodology policy", () => {
       ratification: "owner-ratified",
     });
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
-    expect(Object.isFrozen(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1).evidenceExpiry)).toBe(true);
+    expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry)).toBe(true);
   });
 
   it("registers the scoped control question reason with the control-scoped-gap ceiling above control-unverified", () => {
@@ -131,32 +143,56 @@ describe("Safety Score v9 methodology policy", () => {
   });
 
   it("separates annual reserve-classification review from monthly composition freshness and grace", () => {
-    expect(V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry).toMatchObject({
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry).toEqual({
+      reviewedResearchMaxAgeSec: 365 * 86_400,
+      accessReviewMaxAgeSec: 365 * 86_400,
+      researchOverlayMaxAgeSec: 365 * 86_400,
+      mechanismOverlayMaxAgeSec: 365 * 86_400,
+      issuerAttestedReserveMaxAgeSec: 365 * 86_400,
       reviewedReserveClassificationMaxAgeSec: 365 * 86_400,
       reviewedReserveCompositionMaxAgeSec: 31 * 86_400,
       reviewedReserveCompositionGraceSec: 7 * 86_400,
     });
   });
 
+  it("validates each moved score-bearing gate in its owning semantic domain", () => {
+    const missingWithhold: unknown = candidateClone();
+    delete (missingWithhold as { semantic: { formula: { withhold?: unknown } } }).semantic.formula.withhold;
+    expect(() => loadV9MethodologyPolicy(missingWithhold)).toThrow();
+
+    const invertedDangerFloors = candidateClone();
+    invertedDangerFloors.semantic.formula.danger.fGatePegMultiplierFloor =
+      invertedDangerFloors.semantic.formula.danger.withholdPegMultiplierFloor + 0.01;
+    expect(() => loadV9MethodologyPolicy(invertedDangerFloors)).toThrow(/cannot exceed/i);
+
+    const invalidEvidenceExpiry = candidateClone();
+    invalidEvidenceExpiry.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec = 0;
+    expect(() => loadV9MethodologyPolicy(invalidEvidenceExpiry)).toThrow();
+
+    const invalidBridgeThreshold = candidateClone();
+    invalidBridgeThreshold.semantic.control.materialBridgeHighShareThreshold = 1.01;
+    expect(() => loadV9MethodologyPolicy(invalidBridgeThreshold)).toThrow();
+  });
+
   it("changes the semantic digest for every formerly external score-bearing gate family", () => {
-    const loadChangedGates = (change: (gates: typeof V9_SCORE_BEARING_GATES_POLICY_V923) => void) => {
-      const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V923);
-      change(gates);
-      return loadV9MethodologyPolicy(candidateClone(), gates).semanticDigest;
+    const loadChangedPolicy = (change: (policy: V9MethodologyPolicy) => void) => {
+      const policy = candidateClone();
+      change(policy);
+      return loadV9MethodologyPolicy(policy).semanticDigest;
     };
 
-    expect(loadChangedGates((gates) => { gates.withhold.maxScoreExclusive = 54; }))
+    expect(loadChangedPolicy((policy) => { policy.semantic.formula.withhold.maxScoreExclusive = 54; }))
       .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-    expect(loadChangedGates((gates) => { gates.danger.fGatePegMultiplierFloor = 0.79; }))
+    expect(loadChangedPolicy((policy) => { policy.semantic.formula.danger.fGatePegMultiplierFloor = 0.79; }))
       .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-    expect(loadChangedGates((gates) => { gates.danger.dangerOnlyGrades = ["D", "F"]; }))
+    expect(loadChangedPolicy((policy) => { policy.semantic.formula.danger.dangerOnlyGrades = ["D", "F"]; }))
       .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-    expect(loadChangedGates((gates) => { gates.control.materialBridgeHighShareThreshold = 0.24; }))
+    expect(loadChangedPolicy((policy) => { policy.semantic.control.materialBridgeHighShareThreshold = 0.24; }))
       .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
 
-    for (const field of Object.keys(V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry) as
-      (keyof typeof V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry)[]) {
-      expect(loadChangedGates((gates) => { gates.evidenceExpiry[field] += 1; }), field)
+    const evidenceExpiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
+    for (const field of Object.keys(evidenceExpiry) as (keyof typeof evidenceExpiry)[]) {
+      expect(loadChangedPolicy((policy) => { policy.semantic.evidence.evidenceExpiry[field] += 1; }), field)
         .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
     }
   });
@@ -208,18 +244,11 @@ describe("Safety Score v9 methodology policy", () => {
   });
 
   it("lets policy-only replay change a danger gate without editing production scoring", () => {
-    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V923);
-    gates.danger.withholdPegMultiplierFloor = 0.84;
-    const policy = loadV9MethodologyPolicy(candidateClone(), gates);
-    expect(getV9ScoreBearingGatesPolicy(policy).danger.withholdPegMultiplierFloor).toBe(0.84);
+    const changedPolicy = candidateClone();
+    changedPolicy.semantic.formula.danger.withholdPegMultiplierFloor = 0.84;
+    const policy = loadV9MethodologyPolicy(changedPolicy);
+    expect(policy.policy.semantic.formula.danger.withholdPegMultiplierFloor).toBe(0.84);
     expect(policy.semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-  });
-
-  it("keeps a gate policy version relabel digest-neutral", () => {
-    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V923);
-    gates.methodologyVersion = "9.22";
-    expect(loadV9MethodologyPolicy(candidateClone(), gates).semanticDigest)
-      .toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
 
   it("makes object order and set-like array order digest-neutral", () => {
@@ -235,6 +264,7 @@ describe("Safety Score v9 methodology policy", () => {
     reordered.semantic.backing.reserve.maturityNotApplicableClasses.reverse();
     reordered.semantic.backing.archetypes.cdp.serialComponentKeys.reverse();
     reordered.semantic.formula.assetPremiums[0]!.requiredOperationalComponents.reverse();
+    reordered.semantic.formula.danger.withholdCentralizedMintSeverities.reverse();
 
     const loaded = loadV9MethodologyPolicy(reordered);
     expect(loaded.semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
@@ -368,18 +398,6 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(invertedCommonModeTiers)).toThrow(/must exceed/i);
 
     expect(() => loadV9MethodologyPolicy({ ...candidateClone(), assetIds: ["usdc"] })).toThrow();
-  });
-
-  it("loads retained schema-v1 materiality fields through the conservative compatibility adapter", () => {
-    const retainedPolicy: unknown = structuredClone(candidateClone());
-    const materiality = (retainedPolicy as { semantic: { materiality: Record<string, unknown> } }).semantic.materiality;
-    delete materiality.commonModeHighShareThreshold;
-    materiality.commonModeShareThreshold = 0.15;
-    materiality.lowRiskBridgeTiers = ["canonical-rollup-bridge"];
-
-    const loaded = loadV9MethodologyPolicy(retainedPolicy);
-    expect(loaded.policy.semantic.materiality.commonModeHighShareThreshold).toBe(0.15);
-    expect("lowRiskBridgeTiers" in loaded.policy.semantic.materiality).toBe(false);
   });
 
   it("requires exact signal, disposition, priority, and reason coverage", () => {

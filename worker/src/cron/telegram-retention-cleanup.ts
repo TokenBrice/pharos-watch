@@ -2,7 +2,7 @@ import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { type CappedDeleteResult, deleteCapped } from "./shared/capped-delete";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,

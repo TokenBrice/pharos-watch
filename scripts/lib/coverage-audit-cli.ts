@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
@@ -153,6 +154,7 @@ export interface CoverageAuditOptionDescriptor<T> {
   flag: string;
   kind: "boolean" | "value";
   missingMessage?: string;
+  allowMissingValue?: boolean;
   apply: (options: T, value?: string) => void;
 }
 
@@ -161,8 +163,16 @@ export interface CoverageAuditCliDescriptor<T extends CoverageAuditShellOptions>
   options?: readonly CoverageAuditOptionDescriptor<T>[];
   includeGeneratedAt?: boolean;
   generatedAtMissingMessage?: string;
+  allowMissingGeneratedAt?: boolean;
+  allowMissingReportPath?: boolean;
+  includeMarkdown?: boolean;
   includeCheck?: boolean;
   usage?: () => string;
+  helpBehavior?: "exit" | "throw";
+  unknownArgumentMessage?: (arg: string) => string;
+  compat?: {
+    ignoreUnknownArguments?: boolean;
+  };
   validate?: (options: T) => void;
 }
 
@@ -178,22 +188,24 @@ export function parseCoverageAuditCliArgs<T extends CoverageAuditShellOptions>(
       options.format = "json";
       continue;
     }
-    if (arg === "--markdown") {
+    if (descriptor.includeMarkdown !== false && arg === "--markdown") {
       options.format = "markdown";
       continue;
     }
     if (arg === "--report") {
       const value = argv[index + 1];
-      if (!value) throw new Error("--report requires a path");
-      options.reportPath = value;
-      index += 1;
+      if (!value && !descriptor.allowMissingReportPath) throw new Error("--report requires a path");
+      options.reportPath = value ?? null;
+      if (value !== undefined) index += 1;
       continue;
     }
     if (descriptor.includeGeneratedAt && arg === "--generated-at") {
       const value = argv[index + 1];
-      if (!value) throw new Error(descriptor.generatedAtMissingMessage ?? "--generated-at requires an ISO timestamp");
-      (options as T & { generatedAt: string | null }).generatedAt = value;
-      index += 1;
+      if (!value && !descriptor.allowMissingGeneratedAt) {
+        throw new Error(descriptor.generatedAtMissingMessage ?? "--generated-at requires an ISO timestamp");
+      }
+      (options as T & { generatedAt: string | null }).generatedAt = value ?? null;
+      if (value !== undefined) index += 1;
       continue;
     }
     if (descriptor.includeCheck && arg === "--check") {
@@ -201,19 +213,25 @@ export function parseCoverageAuditCliArgs<T extends CoverageAuditShellOptions>(
       continue;
     }
     if (descriptor.usage && (arg === "--help" || arg === "-h")) {
+      if (descriptor.helpBehavior === "throw") throw new Error("help");
       process.stdout.write(`${descriptor.usage()}\n`);
       process.exit(0);
     }
     const option = optionByFlag.get(arg);
-    if (!option) throw new Error(`Unknown argument: ${arg}`);
+    if (!option) {
+      if (descriptor.compat?.ignoreUnknownArguments) continue;
+      throw new Error(descriptor.unknownArgumentMessage?.(arg) ?? `Unknown argument: ${arg}`);
+    }
     if (option.kind === "boolean") {
       option.apply(options);
       continue;
     }
     const value = argv[index + 1];
-    if (!value) throw new Error(option.missingMessage ?? `${arg} requires a value`);
+    if (!value && !option.allowMissingValue) {
+      throw new Error(option.missingMessage ?? `${arg} requires a value`);
+    }
     option.apply(options, value);
-    index += 1;
+    if (value !== undefined) index += 1;
   }
   descriptor.validate?.(options);
   return options;
@@ -226,6 +244,8 @@ export interface CoverageAuditRunDescriptor<TOptions extends CoverageAuditShellO
   cwd?: string;
   stdout?: Pick<NodeJS.WriteStream, "write">;
   writeMessage?: (target: string) => string;
+  resolveReportPath?: (audit: TAudit, options: TOptions) => string | null;
+  shouldWriteToStdout?: (options: TOptions, reportPath: string | null) => boolean;
   evaluate?: (audit: TAudit, options: TOptions) => readonly string[];
   checkMessage?: (audit: TAudit, failures: readonly string[]) => string;
 }
@@ -239,14 +259,18 @@ export async function runCoverageAuditCli<TOptions extends CoverageAuditShellOpt
   const output = renderCoverageAuditReport(audit, options.format, descriptor.renderMarkdown);
   const stdout = descriptor.stdout ?? process.stdout;
   const failures = descriptor.evaluate?.(audit, options) ?? [];
-  if (options.reportPath) {
-    const target = writeOutputFile(options.reportPath, output, descriptor.cwd);
+  const reportPath = descriptor.resolveReportPath
+    ? descriptor.resolveReportPath(audit, options)
+    : options.reportPath;
+  const shouldWriteToStdout = descriptor.shouldWriteToStdout?.(options, reportPath) ?? !reportPath;
+  if (shouldWriteToStdout || !reportPath) {
+    stdout.write(output);
+  } else {
+    const target = writeOutputFile(reportPath, output, descriptor.cwd);
     if (descriptor.writeMessage) stdout.write(`${descriptor.writeMessage(target)}\n`);
     if (descriptor.checkMessage && (options as TOptions & { check?: boolean }).check) {
       stdout.write(`${descriptor.checkMessage(audit, failures)}\n`);
     }
-  } else {
-    stdout.write(output);
   }
   return failures.length > 0 ? 1 : 0;
 }
@@ -503,7 +527,7 @@ export function runAsMain(importMetaUrl: string, runCli: () => Promise<number> |
       process.exitCode = code;
     })
     .catch((error: unknown) => {
-      console.error(error instanceof Error ? error.message : String(error));
+      console.error(toErrorMessage(error));
       process.exitCode = 1;
     });
 }

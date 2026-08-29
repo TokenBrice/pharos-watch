@@ -1,0 +1,3 @@
+[
+  {"date":"2026-03-17","kind":"exploit","label":"dLEND exploit — sdUSD inherits dUSD bad-debt risk","severity":"high","href":"https://nomoslabs.io/archive/dtrinity-2026","note":"2026-03-17 — sdUSD is the tracked dUSD savings wrapper and inherits the dTRINITY dLEND exploit risk through its parent collateral."}
+]

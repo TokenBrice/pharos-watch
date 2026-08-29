@@ -1,11 +1,12 @@
 import { logWorkerEventArgs } from "./structured-log";
+import { relativeBps } from "@shared/lib/depeg-signals";
 import {
   REDSTONE_PROVIDER_AUDIT_CONFIG,
   REDSTONE_SYMBOL_CONFIG,
 } from "@shared/lib/pricing-provider-config";
 import { median } from "@shared/lib/stats";
 import { sleepWithSignal, throwIfAborted } from "./abort";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import type { FetcherOutcome } from "./fetcher-result";
 
@@ -149,8 +150,8 @@ async function fetchRedstoneBatch(
 
     let agreeCount = 0;
     for (const venuePrice of venuePrices) {
-      const bps = Math.abs(((venuePrice / derivedPrice) - 1) * 10000);
-      if (bps <= 50) agreeCount++;
+      const deviation = relativeBps(venuePrice, derivedPrice);
+      if (deviation != null && deviation.absRawBps <= 50) agreeCount++;
     }
     const venueAgreementPct = venues.size > 0
       ? Math.round((agreeCount / venues.size) * 100)

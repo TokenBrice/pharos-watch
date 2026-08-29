@@ -1,3 +1,5 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 
 import {
@@ -76,11 +78,6 @@ function bigintToDecimal(value: bigint, decimals: number): number {
   return Number(`${whole}.${remainder.toString().padStart(decimals, "0").slice(0, 12)}`);
 }
 
-function canonicalAddress(value: string | null | undefined): `0x${string}` | null {
-  const normalized = value?.trim().toLowerCase() ?? "";
-  return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized as `0x${string}` : null;
-}
-
 async function loadCandidates(db: D1Database): Promise<Candidate[]> {
   const nowSec = Math.floor(Date.now() / 1_000);
   const result = await db
@@ -105,11 +102,11 @@ async function loadCandidates(db: D1Database): Promise<Candidate[]> {
     .all<StagedCandidateRow>();
 
   return (result.results ?? []).flatMap((row) => {
-    const poolAddress = canonicalAddress(
+    const poolAddress = canonicalEvmAddress(
       row.pool_id.startsWith(`${CHAIN}:`) ? row.pool_id.slice(CHAIN.length + 1) : null,
     );
-    const baseToken = canonicalAddress(row.base_token);
-    const quoteToken = canonicalAddress(row.quote_token);
+    const baseToken = canonicalEvmAddress(row.base_token);
+    const quoteToken = canonicalEvmAddress(row.quote_token);
     if (!poolAddress || !baseToken || !quoteToken || baseToken === quoteToken) return [];
     return [{ poolAddress, expectedTokens: new Set([baseToken, quoteToken]) }];
   });
@@ -179,9 +176,9 @@ export async function fetchUniswapV3BscShadowPools(input: {
 
     const decoded = candidates.flatMap((candidate, index) => {
       const prefix = `univ3-bsc-${index}`;
-      const factory = canonicalAddress(decodeResult<string>(state.get(`${prefix}-factory`), POOL_ABI, "factory"));
-      const token0 = canonicalAddress(decodeResult<string>(state.get(`${prefix}-token0`), POOL_ABI, "token0"));
-      const token1 = canonicalAddress(decodeResult<string>(state.get(`${prefix}-token1`), POOL_ABI, "token1"));
+      const factory = canonicalEvmAddress(decodeResult<string>(state.get(`${prefix}-factory`), POOL_ABI, "factory"));
+      const token0 = canonicalEvmAddress(decodeResult<string>(state.get(`${prefix}-token0`), POOL_ABI, "token0"));
+      const token1 = canonicalEvmAddress(decodeResult<string>(state.get(`${prefix}-token1`), POOL_ABI, "token1"));
       const fee = Number(decodeResult<number>(state.get(`${prefix}-fee`), POOL_ABI, "fee"));
       const slot0 = decodeResult<readonly [bigint, number, number, number, number, number, boolean]>(
         state.get(`${prefix}-slot0`),
@@ -227,7 +224,7 @@ export async function fetchUniswapV3BscShadowPools(input: {
     const pools: DexApiPool[] = [];
     for (let index = 0; index < decoded.length; index++) {
       const row = decoded[index]!;
-      const resolvedPool = canonicalAddress(
+      const resolvedPool = canonicalEvmAddress(
         decodeResult<string>(bindings.get(`univ3-bsc-binding-${index}`), FACTORY_ABI, "getPool"),
       );
       if (resolvedPool !== row.candidate.poolAddress) continue;
@@ -312,7 +309,7 @@ export async function fetchUniswapV3BscShadowPools(input: {
     return makeDexApiFetchResult([], {
       ok: false,
       degraded: true,
-      errors: [error instanceof Error ? error.message : String(error)],
+      errors: [toErrorMessage(error)],
     });
   }
 }

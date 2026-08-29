@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestMeta } from "./prompt";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export interface RecentDigestMetaEntry {
   meta: DigestMeta | null;

@@ -11,6 +11,7 @@ import type {
 } from "@shared/types/market";
 import type { DexLiquidityRow } from "../../lib/dex-liquidity-response";
 import type { ApiKeyRow } from "../../lib/api-key-core";
+import type { ReconciliationRunRow as BlacklistReconciliationStatusRow } from "../../lib/blacklist-reconciliation-status";
 import { makeStablecoin, TEST_STABLECOIN_TIMESTAMP_SEC } from "@shared/test-utils/stablecoin";
 
 type BlacklistRow = {
@@ -216,6 +217,43 @@ export function makeBlacklistRow(overrides: Partial<BlacklistRow> = {}): Blackli
     amount_last_provider: null,
     explorer_tx_url: "https://etherscan.io/tx/0xtx1",
     explorer_address_url: "https://etherscan.io/address/0xabc123",
+  };
+  return { ...defaults, ...overrides };
+}
+
+type BlacklistReconciliationStatusOverrides = Partial<BlacklistReconciliationStatusRow> & {
+  bookmark?: string | null;
+};
+
+export function makeBlacklistReconciliationStatusRow({
+  run_id = "run-1",
+  bookmark = "bookmark",
+  status = "verified",
+  ...overrides
+}: BlacklistReconciliationStatusOverrides = {}): BlacklistReconciliationStatusRow {
+  const defaults: BlacklistReconciliationStatusRow = {
+    run_id,
+    manifest_id: "night-watch-usdt-tron-2026-07-09",
+    manifest_sha256: "abc",
+    status,
+    time_travel_bookmark: bookmark,
+    expected_event_count: 86,
+    present_event_count: 86,
+    missing_event_count: 0,
+    duplicate_identity_count: 0,
+    expected_destroyed_amount_raw: 8_874_287_612_325,
+    actual_destroyed_amount_raw: 8_874_287_612_325,
+    balance_replay_expected_count: 70,
+    balance_replay_matching_count: 70,
+    unresolved_manifest_gap_count: 0,
+    tron_cursor_after: 200,
+    tron_safe_head: 200,
+    arbitrum_min_cursor: 500,
+    arbitrum_min_safe_head: 500,
+    arbitrum_expected_config_count: 7,
+    arbitrum_at_safe_head_count: 7,
+    started_at: 100,
+    completed_at: 200,
   };
   return { ...defaults, ...overrides };
 }

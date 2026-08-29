@@ -11,7 +11,7 @@ import {
   round4,
   type DexLiquidityDriftSummary,
 } from "./orchestrator-drift";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 type DexLiquidityCronMetadata = ReturnType<typeof DexLiquidityCronMetadataSchema.parse>;
 

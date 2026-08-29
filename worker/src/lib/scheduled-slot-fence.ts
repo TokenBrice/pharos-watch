@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { createLeaseOwner } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   reconcileStaleSlotArtifactsAndRecordEvent,
   getExpectedJobsForScheduledSlot,

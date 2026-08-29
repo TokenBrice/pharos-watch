@@ -514,7 +514,7 @@ export const BridgeRouteRiskProfileSchema = z
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     routes: z.array(BridgeRouteDeploymentSchema).min(1).optional(),
     controls: z.array(z.lazy(() => BridgeRouteControlSchema)).min(1).optional(),
-    scopedQuestions: z.array(z.lazy(() => BridgeRouteScopedQuestionSchema)).min(1).optional(),
+    scopedQuestions: z.array(z.lazy(() => ControlScopedQuestionSchema)).min(1).optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
@@ -834,6 +834,26 @@ const MintAuthorityNoLocalIssuanceExceptionSchema = z
   })
   .strict();
 
+const AuthorityControlFields = {
+  label: z.string().min(1),
+  authorityType: z.enum(MINT_AUTHORITY_TYPE_VALUES),
+  threshold: PositiveIntegerSchema.optional(),
+  signerCount: PositiveIntegerSchema.optional(),
+  timelockDelaySec: z.number().finite().int().min(0).optional(),
+  safe: MintAuthoritySafeStateSchema.optional(),
+  modulesOrGuardsStatus: z.enum(MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES).optional(),
+  keyCustodyAttestation: MintAuthorityKeyCustodyAttestationSchema.optional(),
+  routeChecks: MintAuthorityRouteChecksSchema.optional(),
+  capDescription: z.string().min(1).optional(),
+  canRaiseCap: z.union([z.boolean(), z.literal("unknown")]).optional(),
+  failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
+  bypassSurfaces: z.array(z.string().min(1)).optional(),
+  observedAt: ReviewDateSchema.optional(),
+  observedBlock: PositiveIntegerSchema.optional(),
+  sources: z.array(StablecoinLinkSchema).min(1).optional(),
+  evidence: z.string().min(12).optional(),
+};
+
 const BridgeRouteControlSchema = z
   .object({
     // Kebab-case without a nested quantifier: `^[a-z0-9]+(?:-[a-z0-9]+)*$` accepts
@@ -845,7 +865,6 @@ const BridgeRouteControlSchema = z
       .refine((value) => !value.startsWith("-") && !value.endsWith("-") && !value.includes("--"), {
         message: "Expected a kebab-case bridge control id",
       }),
-    label: z.string().min(1),
     routeRefs: z.array(DeploymentIdSchema).min(1),
     capabilities: z
       .array(z.enum(BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES))
@@ -855,26 +874,11 @@ const BridgeRouteControlSchema = z
       }),
     controllerChain: z.string().min(1).optional(),
     controllerAddress: z.string().min(1).optional(),
-    failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
-    authorityType: z.enum(MINT_AUTHORITY_TYPE_VALUES),
-    threshold: PositiveIntegerSchema.optional(),
-    signerCount: PositiveIntegerSchema.optional(),
-    timelockDelaySec: z.number().finite().int().min(0).optional(),
-    safe: MintAuthoritySafeStateSchema.optional(),
-    modulesOrGuardsStatus: z.enum(MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES).optional(),
-    keyCustodyAttestation: MintAuthorityKeyCustodyAttestationSchema.optional(),
-    routeChecks: MintAuthorityRouteChecksSchema.optional(),
-    capDescription: z.string().min(1).optional(),
-    canRaiseCap: z.union([z.boolean(), z.literal("unknown")]).optional(),
-    bypassSurfaces: z.array(z.string().min(1)).optional(),
-    observedAt: ReviewDateSchema.optional(),
-    observedBlock: PositiveIntegerSchema.optional(),
-    sources: z.array(StablecoinLinkSchema).min(1).optional(),
-    evidence: z.string().min(12).optional(),
+    ...AuthorityControlFields,
   })
   .strict();
 
-const BridgeRouteScopedQuestionSchema = z
+const ControlScopedQuestionSchema = z
   .object({
     controlRef: z.string().min(1),
     question: z.string().min(12),
@@ -890,25 +894,9 @@ const MintAuthorityControlSchema = z
     address: z.string().min(1).optional(),
     deploymentRefs: DeploymentRefsSchema.optional(),
     controllerAssetId: z.string().min(1).optional(),
-    label: z.string().min(1),
     role: z.enum(MINT_AUTHORITY_CONTROL_ROLE_VALUES),
-    authorityType: z.enum(MINT_AUTHORITY_TYPE_VALUES),
     directMintAbility: z.enum(MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES),
-    threshold: PositiveIntegerSchema.optional(),
-    signerCount: PositiveIntegerSchema.optional(),
-    timelockDelaySec: z.number().finite().int().min(0).optional(),
-    capDescription: z.string().min(1).optional(),
-    canRaiseCap: z.union([z.boolean(), z.literal("unknown")]).optional(),
-    modulesOrGuardsStatus: z.enum(MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES).optional(),
-    safe: MintAuthoritySafeStateSchema.optional(),
-    routeChecks: MintAuthorityRouteChecksSchema.optional(),
-    keyCustodyAttestation: MintAuthorityKeyCustodyAttestationSchema.optional(),
-    observedAt: ReviewDateSchema.optional(),
-    observedBlock: PositiveIntegerSchema.optional(),
-    failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
-    bypassSurfaces: z.array(z.string().min(1)).optional(),
-    sources: z.array(StablecoinLinkSchema).min(1).optional(),
-    evidence: z.string().min(12).optional(),
+    ...AuthorityControlFields,
   })
   .strict()
   .superRefine((control, ctx) => {
@@ -949,16 +937,6 @@ const MintAuthorityControlSchema = z
     }
   });
 
-const MintAuthorityScopedQuestionSchema = z
-  .object({
-    controlRef: z.string().min(1),
-    question: z.string().min(12),
-    reviewedAt: ReviewDateSchema,
-    reviewer: z.string().min(1),
-    sources: z.array(StablecoinLinkSchema).min(1).optional(),
-  })
-  .strict();
-
 const MintAuthorityReviewSchema = z
   .object({
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
@@ -968,7 +946,7 @@ const MintAuthorityReviewSchema = z
     reviewedAt: ReviewDateSchema,
     disposition: z.enum(["scoreable", "unresolved"]).optional(),
     unresolvedQuestions: z.array(z.string().min(1)).optional(),
-    scopedQuestions: z.array(MintAuthorityScopedQuestionSchema).min(1).optional(),
+    scopedQuestions: z.array(ControlScopedQuestionSchema).min(1).optional(),
     noLocalIssuance: MintAuthorityNoLocalIssuanceExceptionSchema.optional(),
   })
   .strict()
@@ -1226,7 +1204,7 @@ export type MintAuthorityRouteChecks = z.output<typeof MintAuthorityRouteChecksS
 export type MintAuthorityKeyCustodyAttestation = z.output<typeof MintAuthorityKeyCustodyAttestationSchema>;
 export type MintAuthorityNoLocalIssuanceException = z.output<typeof MintAuthorityNoLocalIssuanceExceptionSchema>;
 export type MintAuthorityControl = z.output<typeof MintAuthorityControlSchema>;
-export type MintAuthorityScopedQuestion = z.output<typeof MintAuthorityScopedQuestionSchema>;
+export type MintAuthorityScopedQuestion = z.output<typeof ControlScopedQuestionSchema>;
 export type MintAuthorityReview = z.output<typeof MintAuthorityReviewSchema>;
 export type MintAuthorityProfile = z.output<typeof MintAuthorityProfileSchema>;
 export type MintAuthorityUpgradeability = NonNullable<MintAuthorityProfile["upgradeability"]>;

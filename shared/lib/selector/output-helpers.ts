@@ -91,7 +91,7 @@ export function buildClosestSurvivors(
   const resolvedRowsById = resolveRowsById(rowsById, universe);
   const candidates: Array<SelectorClosestSurvivor & { sortScore: number }> = [];
   for (const record of excluded) {
-    if (record.reason === "howey-uncertain" || record.reason === "lifecycle-non-active") continue;
+    if (record.reason === "howey-uncertain") continue;
     const row = resolvedRowsById.get(record.id);
     if (!row) continue;
     const hypotheticalScore = scoreIgnoringExclusion(row, input);

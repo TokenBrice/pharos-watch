@@ -1,6 +1,6 @@
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "@shared/lib/safety-score-v9/score-bearing-gates-policy";
 import {
   RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
   validateReserveCompositionTotal,
@@ -17,7 +17,7 @@ import {
 } from "./safety-score-v9-extension-shared";
 
 const REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedReserveClassificationMaxAgeSec;
+  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveClassificationMaxAgeSec;
 
 export function buildSafetyScoreV9ReserveClassifications(slices: readonly ReserveSlice[]) {
   const byKey = new Map<string, ReserveSlice>();
@@ -232,11 +232,11 @@ const CORROBORATING_ASSURANCE_METHODS = new Set([
 ]);
 const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
 const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.issuerAttestedReserveMaxAgeSec;
+  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.issuerAttestedReserveMaxAgeSec;
 const REVIEWED_RESERVE_COMPOSITION_MAX_AGE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedReserveCompositionMaxAgeSec;
+  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveCompositionMaxAgeSec;
 const REVIEWED_RESERVE_COMPOSITION_GRACE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedReserveCompositionGraceSec;
+  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveCompositionGraceSec;
 // Monthly reports commonly land in the first week after month-end. The grace
 // covers that publication lag without extending composition into a second cycle.
 const REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC =

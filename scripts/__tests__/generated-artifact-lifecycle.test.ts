@@ -71,6 +71,7 @@ describe("generated artifact lifecycle", () => {
       "report-card-registry-fingerprint",
       "legacy-stablecoin-redirects",
       "stablecoin-client-registry",
+      "stablecoin-client-projections",
     ]);
   });
 

@@ -124,6 +124,7 @@ describe("critical invariants", () => {
       gauge: {
         score: 50,
         band: "ELEVATED",
+        intensitySemantics: "signed-v2",
         flightToQuality: false,
         flightIntensity: 10,
         trackedCoins: 20,

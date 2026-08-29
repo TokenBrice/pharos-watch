@@ -7,7 +7,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 - Active model: `v9`
 - **Current methodology version:** `v9.45`
 - Public response schema: report v5 with score trace v3
-- Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` plus the versioned score-bearing gate projection in `shared/lib/safety-score-v9/score-bearing-gates-policy.ts`
+- Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -43,7 +43,7 @@ Curated collateral links enter the dependency overlay only when the same curated
 
 Economic Control prices mint, upgrade, oracle, bridge, and other binding control paths. Mint-component posture derivation, the scoped-control-question contract, and the ceilings each takes are owned by [mint-authority-scoring.md](./mint-authority-scoring.md#current-v9-scope); this document keeps only the pillar-level contract.
 
-The policy semantic digest binds every score-bearing reshape and freshness gate: the insufficient-evidence withhold band, danger and F-grade peg predicates, pre-exit danger predicate, material-bridge high-share band, and the separately named evidence-expiry windows used by reviewed research, access, overlays, and reserve evidence. Counterfactual replay can supply a validated gate projection to the policy loader and receives a distinct semantic digest for any changed gate. Report-card presentation also derives grade thresholds from the active scoring policy rather than maintaining another threshold table.
+The policy semantic digest binds every score-bearing reshape and freshness gate: the insufficient-evidence withhold band, danger and F-grade peg predicates, pre-exit danger predicate, material-bridge high-share band, and the separately named evidence-expiry windows used by reviewed research, access, overlays, and reserve evidence. Counterfactual replay can change those fields in a policy clone and receives a distinct semantic digest for any changed gate. Report-card presentation also derives grade thresholds from the active scoring policy rather than maintaining another threshold table.
 
 Oracle applicability is explicit in Economic Control. A reviewed path with no price-sensitive oracle or internal valuation authority is not applicable and emits no scored component. If no other binding control remains, the neutral empty set resolves to 95 without manufacturing a display row. A genuinely oracleless mechanism scores 95; privileged internal pricing scores 45. The latter can apply to a top-level mint, redemption, NAV, or exchange-rate quote even when borrower liquidation branches do not exist. External oracle tiers retain their existing scores.
 

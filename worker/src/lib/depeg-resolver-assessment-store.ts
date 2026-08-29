@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "./structured-log";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import type { DdrAssessmentCheckpoint } from "@shared/types/depeg-resolver";
@@ -144,7 +145,7 @@ function formatNonConformingAssessmentSample(row: unknown): string {
   try {
     return JSON.stringify(row);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = toErrorMessage(error);
     try {
       if (row != null && typeof row === "object") {
         const allKeys = Object.keys(row);

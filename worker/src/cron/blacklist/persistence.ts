@@ -6,13 +6,12 @@ export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], 
   throwIfAborted(signal);
   if (rows.length === 0) return 0;
 
-  // `amount` is a legacy column kept in lockstep with amount_native for pre-v3.2 compat.
   const stmts = rows.map((row) =>
     db
       .prepare(
         `/* blacklist-persistence-insert-events */
          INSERT OR IGNORE INTO blacklist_events
-         (id, stablecoin, chain_id, chain_name, event_type, address, amount, amount_native, amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address, config_key, event_signature, event_topic0, suppression_reason, amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider, explorer_tx_url, explorer_address_url)
+         (id, stablecoin, chain_id, chain_name, event_type, address, amount_native, amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address, config_key, event_signature, event_topic0, suppression_reason, amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider, explorer_tx_url, explorer_address_url)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
@@ -22,7 +21,6 @@ export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], 
         row.chain_name,
         row.event_type,
         row.address,
-        row.amount_native,
         row.amount_native,
         row.amount_usd_at_event,
         row.amount_source,

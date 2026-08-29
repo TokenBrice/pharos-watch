@@ -82,6 +82,13 @@ function cachedYieldRankings(updatedAt: number): YieldRankingsResponse {
     scalingFactor: 8,
     medianApy: 4.8,
     updatedAt,
+    publication: {
+      generationId: `yield-${updatedAt}`,
+      updatedAt,
+      cutoffAt: updatedAt,
+      schemaVersion: 1,
+      status: "published",
+    },
     provenance: null,
   };
 }

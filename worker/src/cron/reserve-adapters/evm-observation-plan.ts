@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 
@@ -255,7 +256,7 @@ export async function executeEvmObservationPlan<
     try {
       values[field.label] = field.decode(result.returnData, field.label);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = toErrorMessage(error);
       throw new Error(`${plan.adapterKey} observation decode failed for ${field.label}: ${message}`);
     }
   }

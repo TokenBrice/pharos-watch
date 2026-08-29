@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
@@ -318,7 +319,7 @@ async function observeHoneyFactoryRedemptionCapacity(
         : [],
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     return {
       warnings: [reserveDegradedWarning(
         "redemption-capacity-unavailable",

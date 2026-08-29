@@ -53,6 +53,19 @@ export const __pegSummaryTestHooks = {
   normalizePegTypeFromCurrency: pegTypeFromCurrency,
 };
 
+function deriveCurrentDeviationBps(
+  asset: StablecoinData | undefined,
+  pegData: PegSummaryCoin,
+  isNavToken: boolean,
+): number | null {
+  if (isNavToken || pegData.pegReferenceUnavailable === true) return null;
+  const price = asset?.price;
+  const pegReference = pegData.pegReference?.valueUsd;
+  return price == null || pegReference == null
+    ? null
+    : deriveDepegSignal(price, pegReference)?.bps ?? null;
+}
+
 export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
@@ -92,9 +105,9 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   let pegDataById: ReadonlyMap<string, PegSummaryCoin>;
   let depegEventsToday: number;
   let depegEventsYesterday: number;
-  // On a snapshot cache hit, deviations reflect the snapshot's compute time,
-  // which can lag the live stablecoins cache by up to 30 min; key the
-  // freshness fields to the older of the two.
+  // Historical peg fields can lag the live stablecoins cache by up to 30 min,
+  // so key response freshness to the older of the two observations. Current
+  // deviation is recomputed below from the live price and snapshot reference.
   let freshnessAsOf = stablecoinsCache.updatedAt;
   const now = Math.floor(Date.now() / 1000);
 
@@ -149,7 +162,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     if (!pegData) continue;
 
     const asset = priceById.get(meta.id);
-    const currentBps = isNavToken ? null : pegData.currentDeviationBps;
+    const currentBps = deriveCurrentDeviationBps(asset, pegData, isNavToken);
     // NAV score fields are normalized at the peg-analytics source via
     // NULL_PEG_SCORE_RESULT; only live deviation is withheld again here.
     const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";

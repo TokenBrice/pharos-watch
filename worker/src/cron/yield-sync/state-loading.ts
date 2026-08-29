@@ -13,13 +13,11 @@ import {
   parseYieldSupplementalSourcesCache,
   serializeDeterministicOnChainHealthState,
   getYieldSupplementalFamilyCacheKey,
-  YIELD_SUPPLEMENTAL_CACHE_KEY,
   type DeterministicOnChainHealthState,
 } from "./cache";
 import { fetchOnChainRates, loadDlStablecoinPools, loadRiskFreeRateRegistry } from "./sources";
 import { buildStablecoinSupplyMapFromCacheValue } from "./supply-map";
 import {
-  getSupplementalCandidateFamily,
   REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "./supplemental-source-families";
@@ -75,6 +73,9 @@ async function loadYieldSupplementalCandidates(
   let requiredFamilyCacheRows = 0;
   let degradedRequiredFamilyCaches = 0;
   let latestFamilyUpdatedAt: number | null = null;
+  let latestFamilyRowUpdatedAt: number | null = null;
+  let invalidFamilyCacheRows = 0;
+  let staleFamilyCacheRows = 0;
 
   const familyCacheRows = await getCaches(
     db,
@@ -83,10 +84,17 @@ async function loadYieldSupplementalCandidates(
   for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
     const cachedFamily = familyCacheRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     if (!cachedFamily) continue;
+    latestFamilyRowUpdatedAt = Math.max(latestFamilyRowUpdatedAt ?? 0, cachedFamily.updatedAt);
     const requiredFamily = requiredFamilyKeys.has(family);
     if (requiredFamily) requiredFamilyCacheRows += 1;
     const parsedFamily = parseYieldSupplementalSourcesCache(cachedFamily.value, cachedFamily.updatedAt, startSec);
-    if (!parsedFamily || parsedFamily.ageSeconds > YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
+    if (!parsedFamily) {
+      invalidFamilyCacheRows += 1;
+      if (requiredFamily) degradedRequiredFamilyCaches += 1;
+      continue;
+    }
+    if (parsedFamily.ageSeconds > YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
+      staleFamilyCacheRows += 1;
       if (requiredFamily) degradedRequiredFamilyCaches += 1;
       continue;
     }
@@ -95,31 +103,13 @@ async function loadYieldSupplementalCandidates(
     latestFamilyUpdatedAt = Math.max(latestFamilyUpdatedAt ?? 0, parsedFamily.updatedAt);
   }
 
-  if (familyCandidates.length > 0) {
+  if (validFamilyKeys.size > 0) {
     const missingOrDegradedFamily =
       degradedRequiredFamilyCaches > 0
       || requiredFamilyCacheRows < REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length;
-    let candidates = familyCandidates;
-    let fallbackMode: string | null = missingOrDegradedFamily ? "partial-family-cache" : null;
-    let updatedAt = latestFamilyUpdatedAt;
-
-    if (missingOrDegradedFamily) {
-      const cachedAggregate = await getCache(db, YIELD_SUPPLEMENTAL_CACHE_KEY);
-      const parsedAggregate = cachedAggregate
-        ? parseYieldSupplementalSourcesCache(cachedAggregate.value, cachedAggregate.updatedAt, startSec)
-        : null;
-      if (parsedAggregate && parsedAggregate.ageSeconds <= YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
-        const aggregateBackfill = parsedAggregate.candidates.filter((candidate) => {
-          const family = getSupplementalCandidateFamily(candidate.yield?.sourceKey);
-          return family == null || !validFamilyKeys.has(family);
-        });
-        if (aggregateBackfill.length > 0) {
-          candidates = [...familyCandidates, ...aggregateBackfill];
-          updatedAt = Math.max(updatedAt ?? 0, parsedAggregate.updatedAt);
-          fallbackMode = "partial-family-cache-aggregate-merge";
-        }
-      }
-    }
+    const candidates = familyCandidates;
+    const fallbackMode: string | null = missingOrDegradedFamily ? "partial-family-cache" : null;
+    const updatedAt = latestFamilyUpdatedAt;
 
     const ageSeconds = updatedAt == null ? null : Math.max(0, startSec - updatedAt);
     return {
@@ -134,55 +124,19 @@ async function loadYieldSupplementalCandidates(
     };
   }
 
-  const cached = await getCache(db, YIELD_SUPPLEMENTAL_CACHE_KEY);
-  if (!cached) {
-    return {
-      candidates: [],
-      meta: {
-        mode: "unavailable",
-        updatedAt: null,
-        ageSeconds: null,
-        sourceCount: 0,
-        fallbackMode: "missing-cache",
-      },
-    };
-  }
-
-  const parsed = parseYieldSupplementalSourcesCache(cached.value, cached.updatedAt, startSec);
-  if (!parsed) {
-    return {
-      candidates: [],
-      meta: {
-        mode: "unavailable",
-        updatedAt: cached.updatedAt,
-        ageSeconds: Math.max(0, startSec - cached.updatedAt),
-        sourceCount: 0,
-        fallbackMode: "invalid-cache",
-      },
-    };
-  }
-
-  if (parsed.ageSeconds > YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
-    return {
-      candidates: [],
-      meta: {
-        mode: "stale-cache",
-        updatedAt: parsed.updatedAt,
-        ageSeconds: parsed.ageSeconds,
-        sourceCount: parsed.sourceCount,
-        fallbackMode: "stale-cache",
-      },
-    };
-  }
-
   return {
-    candidates: parsed.candidates,
+    candidates: [],
     meta: {
-      mode: "cache",
-      updatedAt: parsed.updatedAt,
-      ageSeconds: parsed.ageSeconds,
-      sourceCount: parsed.sourceCount,
-      fallbackMode: null,
+      mode: staleFamilyCacheRows > 0 && invalidFamilyCacheRows === 0 ? "stale-cache" : "unavailable",
+      updatedAt: latestFamilyRowUpdatedAt,
+      ageSeconds: latestFamilyRowUpdatedAt == null ? null : Math.max(0, startSec - latestFamilyRowUpdatedAt),
+      sourceCount: 0,
+      fallbackMode:
+        familyCacheRows.size === 0
+          ? "missing-cache"
+          : invalidFamilyCacheRows > 0
+            ? "invalid-cache"
+            : "stale-cache",
     },
   };
 }

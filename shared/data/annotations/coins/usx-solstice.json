@@ -1,0 +1,4 @@
+[
+  {"date":"2025-09-30","kind":"governance","label":"USX launch on Solana — $160M day-one TVL","severity":"low","note":"2025-09-30 — Solstice launches USX on Solana with ~$160M day-one TVL"},
+  {"date":"2025-12-26","kind":"depeg","label":"USX depeg low ~$0.10 — thin Solana DEX liquidity","severity":"high","note":"2025-12-26 — Thin Solana DEX liquidity drives USX briefly to ~$0.10"}
+]

@@ -1,6 +1,6 @@
 import type { BlacklistReconciliationStatus } from "@shared/types/status";
 
-type ReconciliationRunRow = {
+export type ReconciliationRunRow = {
   run_id: string;
   manifest_id: string;
   manifest_sha256: string;

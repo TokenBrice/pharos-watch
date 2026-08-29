@@ -1,0 +1,5 @@
+[
+  {"date":"2022-01-27","kind":"governance","label":"Wonderland 0xSifu scandal — Abracadabra co-founder reputational hit","severity":"high","note":"2022-01-27 — Wonderland TIME treasury 0xSifu scandal exposed Abracadabra co-founder; major reputational hit on MIM issuer."},
+  {"date":"2022-05-12","kind":"depeg","label":"Terra/UST contagion — MIM depeg low ~$0.93","severity":"high","note":"2022-05-12 — Terra/UST collapse contagion; MIM depeg low ~$0.93."},
+  {"date":"2025-03-25","kind":"exploit","label":"GMX cauldron exploit — ~$13M MIM drained from Arbitrum","severity":"high","note":"2025-03-25 — GMX cauldron exploit drained ~$13M MIM from Arbitrum markets."}
+]

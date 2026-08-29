@@ -16,7 +16,12 @@ function makeFlow(overrides: Partial<MintBurnCoinFlow> = {}): MintBurnCoinFlow {
     symbol: "USDC",
     flowIntensity: 0,
     pressureShiftScore: null,
-    pressureShiftState: undefined,
+    pressureShiftState: "stable",
+    netFlowDirection24h: "inactive",
+    has24hActivity: false,
+    baselineDailyNetUsd: null,
+    baselineDailyAbsUsd: null,
+    baselineDataDays: null,
     netFlow24hUsd: 0,
     mintVolume24hUsd: 0,
     burnVolume24hUsd: 0,
@@ -27,7 +32,7 @@ function makeFlow(overrides: Partial<MintBurnCoinFlow> = {}): MintBurnCoinFlow {
     netFlow90dUsd: 0,
     largestEvent24h: null,
     ...overrides,
-  };
+  } as MintBurnCoinFlow;
 }
 
 const sort = (key: FlowTableSortKey, direction: "asc" | "desc" = "desc"): TableSortState<FlowTableSortKey> => ({

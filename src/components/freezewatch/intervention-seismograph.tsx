@@ -23,7 +23,7 @@ interface QuarterPoint {
 
 // Quarter-keyed annotations for market-wide intervention milestones that map
 // onto this seismograph's timeline. Unlike per-coin chart pins (which live in
-// shared/data/annotations/curated-annotations.ts, keyed by stablecoin id),
+// shared/data/annotations/coins/<stablecoin-id>.json),
 // these are macro/regulatory events with no single coin owner, so they stay
 // co-located with the only component that renders them.
 //

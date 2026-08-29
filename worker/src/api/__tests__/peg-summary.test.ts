@@ -1,6 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, it, expect, vi } from "vitest";
 import { PEG_CURRENCY_VALUES, type PegCurrency } from "@shared/types/core";
+import type { PegSummaryCoin } from "@shared/types/market";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
@@ -88,6 +89,49 @@ function makeDepegEventRow(overrides: Partial<{
     source: "live" as const,
     confirmation_sources: null,
     pending_reason: null,
+    ...overrides,
+  };
+}
+
+function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
+  return {
+    id: "usdt-tether",
+    symbol: "USDT",
+    name: "Tether",
+    pegType: "peggedUSD",
+    pegCurrency: "USD",
+    governance: "centralized",
+    currentDeviationBps: 12,
+    pegReference: {
+      valueUsd: 1,
+      source: "median",
+      contributorCount: 5,
+      asOf: nowSec - 1200,
+    },
+    pegScore: 99,
+    pegPct: 99.9,
+    severityScore: 7,
+    spreadPenalty: 2,
+    eventCount: 1,
+    worstDeviationBps: -120,
+    activeDepeg: false,
+    lastEventAt: nowSec - 86_400,
+    trackingSpanDays: 400,
+    historyCoverage: {
+      startedAt: nowSec - 400 * 86_400,
+      source: "audited-replay",
+      status: "verified",
+    },
+    recent90d: {
+      windowDays: 90,
+      observedDays: 90,
+      coverageLimited: false,
+      pegPct: 99.5,
+      incidentCount: 1,
+      thresholdCrossingCount: 2,
+      worstDeviationBps: -120,
+    },
+    methodologyVersion: "6.08",
     ...overrides,
   };
 }
@@ -722,33 +766,13 @@ describe("handlePegSummary", () => {
   });
 
   it("serves peg data and event counters from the peg-analytics cache when fresh", async () => {
-    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 });
     const stablecoinsValue = JSON.stringify({ peggedAssets: [asset] });
     const pegAnalyticsValue = JSON.stringify({
       computedAtSec: nowSec - 1200,
       depegEventsToday: 2,
       depegEventsYesterday: 5,
-      pegData: [
-        {
-          id: "usdt-tether",
-          symbol: "USDT",
-          name: "Tether",
-          pegType: "peggedUSD",
-          pegCurrency: "USD",
-          governance: "centralized",
-          currentDeviationBps: 12,
-          pegScore: 99,
-          pegPct: 99.9,
-          severityScore: 0,
-          spreadPenalty: 0,
-          eventCount: 1,
-          worstDeviationBps: -120,
-          activeDepeg: false,
-          lastEventAt: null,
-          trackingSpanDays: 400,
-          methodologyVersion: "6.08",
-        },
-      ],
+      pegData: [makeCachedPegCoin()],
     });
     const db = mockD1([
       {
@@ -770,7 +794,7 @@ describe("handlePegSummary", () => {
 
     const res = await handlePegSummary(db);
     const body = (await res.json()) as {
-      coins: Array<{ id: string; pegScore: number | null; currentDeviationBps: number | null }>;
+      coins: PegSummaryCoin[];
       summary: { depegEventsToday: number; depegEventsYesterday: number };
       methodology: { asOf: number };
     };
@@ -780,11 +804,137 @@ describe("handlePegSummary", () => {
     expect(body.summary.depegEventsToday).toBe(2);
     expect(body.summary.depegEventsYesterday).toBe(5);
     const usdt = body.coins.find((coin) => coin.id === "usdt-tether");
-    expect(usdt?.pegScore).toBe(99);
-    // Freshness keys to the older snapshot compute time, not the newer live
-    // stablecoins cache the deviations no longer reflect.
+    expect(usdt).toMatchObject({
+      currentDeviationBps: -200,
+      pegScore: 99,
+      pegPct: 99.9,
+      severityScore: 7,
+      spreadPenalty: 2,
+      eventCount: 1,
+      worstDeviationBps: -120,
+      activeDepeg: false,
+      lastEventAt: nowSec - 86_400,
+      trackingSpanDays: 400,
+      historyCoverage: {
+        startedAt: nowSec - 400 * 86_400,
+        source: "audited-replay",
+        status: "verified",
+      },
+      recent90d: {
+        windowDays: 90,
+        observedDays: 90,
+        coverageLimited: false,
+        pegPct: 99.5,
+        incidentCount: 1,
+        thresholdCrossingCount: 2,
+        worstDeviationBps: -120,
+      },
+    });
+    // Freshness keys to the older historical snapshot even though current
+    // deviation is coherent with the newer stablecoins price observation.
     expect(body.methodology.asOf).toBe(nowSec - 1200);
     expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(1200);
+  });
+
+  it("recomputes only current deviation from live prices and cached authoritative references", async () => {
+    const cases = [
+      {
+        id: "usdt-tether",
+        asset: makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 }),
+        peg: makeCachedPegCoin(),
+        expected: -200,
+      },
+      {
+        id: "eurc-circle",
+        asset: makeAsset({ id: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", price: 1.08 }),
+        peg: makeCachedPegCoin({
+          id: "eurc-circle",
+          symbol: "EURC",
+          name: "Euro Coin",
+          pegType: "peggedEUR",
+          pegCurrency: "EUR",
+          pegReference: { valueUsd: 1.2, source: "fx", contributorCount: 0, asOf: nowSec - 1200 },
+        }),
+        expected: -1000,
+      },
+      {
+        id: "xaut-tether",
+        asset: makeAsset({ id: "xaut-tether", symbol: "XAUT", pegType: "peggedGOLD", price: 3030 }),
+        peg: makeCachedPegCoin({
+          id: "xaut-tether",
+          symbol: "XAUT",
+          name: "Tether Gold",
+          pegType: "peggedGOLD",
+          pegCurrency: "GOLD",
+          pegReference: { valueUsd: 3000, source: "median", contributorCount: 2, asOf: nowSec - 1200 },
+        }),
+        expected: 100,
+      },
+      {
+        id: "cjpy-yamato",
+        asset: makeAsset({ id: "cjpy-yamato", symbol: "CJPY", pegType: "peggedJPY", price: 0.006 }),
+        peg: makeCachedPegCoin({
+          id: "cjpy-yamato",
+          symbol: "CJPY",
+          name: "Convertible JPY Token",
+          pegType: "peggedJPY",
+          pegCurrency: "JPY",
+          currentDeviationBps: null,
+          pegReference: null,
+          pegReferenceUnavailable: true,
+        }),
+        expected: null,
+      },
+      {
+        id: "usdc-circle",
+        asset: makeAsset({ id: "usdc-circle", symbol: "USDC", price: null }),
+        peg: makeCachedPegCoin({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }),
+        expected: null,
+      },
+      {
+        id: "fpi-frax",
+        asset: makeAsset({ id: "fpi-frax", symbol: "FPI", pegType: "peggedVAR", price: 1.2 }),
+        peg: makeCachedPegCoin({
+          id: "fpi-frax",
+          symbol: "FPI",
+          name: "Frax Price Index",
+          pegType: "peggedVAR",
+          pegCurrency: "VAR",
+          currentDeviationBps: null,
+          pegReference: null,
+          pegScore: null,
+        }),
+        expected: null,
+      },
+    ];
+    const stablecoinsValue = JSON.stringify({ peggedAssets: cases.map((entry) => entry.asset) });
+    const pegAnalyticsValue = JSON.stringify({
+      computedAtSec: nowSec - 1200,
+      depegEventsToday: 0,
+      depegEventsYesterday: 0,
+      pegData: cases.map((entry) => entry.peg),
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: nowSec }],
+        first: { key: "stablecoins", value: stablecoinsValue, updated_at: nowSec },
+      },
+      {
+        match: "cache",
+        matchBinds: ["peg-analytics"],
+        rows: [{ key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec }],
+        first: { key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec },
+      },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    const res = await handlePegSummary(db);
+    const body = (await readJsonResponse(res, 200)) as { coins: PegSummaryCoin[] };
+    expect(Object.fromEntries(
+      cases.map(({ id }) => [id, body.coins.find((coin) => coin.id === id)?.currentDeviationBps]),
+    )).toEqual(Object.fromEntries(cases.map(({ id, expected }) => [id, expected])));
   });
 
   it("falls back to direct compute when the peg-analytics cache read throws", async () => {

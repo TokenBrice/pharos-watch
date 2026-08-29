@@ -1,4 +1,4 @@
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   attachDdrPublicRowHash,
   computeDdrPublicRowHash,

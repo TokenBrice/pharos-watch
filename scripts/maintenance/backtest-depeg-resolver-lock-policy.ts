@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { isRecord } from "@shared/lib/type-guards";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -9,7 +9,11 @@ import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
 } from "@shared/lib/methodology-versions/depeg-resolver";
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import {
+  parseReportCliArgs,
+  runAsMain,
+  runReportCli,
+} from "../lib/report-cli";
 
 export const DDR_LOCK_READINESS_THRESHOLD = DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD;
 export const DDR_LOCK_BACKSTOP_DELAY_SEC = DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
@@ -321,35 +325,37 @@ export function builtinAcceptanceRows(): DdrLockPolicyBacktestRow[] {
   ];
 }
 
-function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    fixturePath: null,
-    reportPath: null,
-    format: "markdown",
-    generatedAt: null,
-  };
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--fixture") {
-      options.fixturePath = argv[++index] ?? null;
-    } else if (arg === "--report") {
-      options.reportPath = argv[++index] ?? null;
-    } else if (arg === "--json") {
-      options.format = "json";
-    } else if (arg === "--generated-at") {
-      options.generatedAt = argv[++index] ?? null;
-    } else if (arg === "--help" || arg === "-h") {
-      throw new Error("help");
-    } else {
-      throw new Error(`Unknown argument: ${arg}`);
-    }
-  }
-  if (options.fixturePath === null && options.reportPath === null) {
-    return options;
-  }
-  if (options.fixturePath === "") throw new Error("--fixture requires a path");
-  if (options.reportPath === "") throw new Error("--report requires a path");
-  return options;
+function usage(): string {
+  return "Usage: tsx scripts/maintenance/backtest-depeg-resolver-lock-policy.ts [--fixture rows.json] [--json] [--report out]";
+}
+
+export function parseArgs(argv: string[]): CliOptions {
+  return parseReportCliArgs(argv, {
+    createOptions: (): CliOptions => ({
+      fixturePath: null,
+      reportPath: null,
+      format: "markdown",
+      generatedAt: null,
+    }),
+    includeMarkdown: false,
+    includeGeneratedAt: true,
+    allowMissingGeneratedAt: true,
+    allowMissingReportPath: true,
+    usage,
+    helpBehavior: "throw",
+    options: [
+      {
+        flag: "--fixture",
+        kind: "value",
+        allowMissingValue: true,
+        apply: (options, value) => { options.fixturePath = value ?? null; },
+      },
+    ],
+    validate: (options) => {
+      if (options.fixturePath === "") throw new Error("--fixture requires a path");
+      if (options.reportPath === "") throw new Error("--report requires a path");
+    },
+  });
 }
 
 function loadRows(cwd: string, fixturePath: string | null): DdrLockPolicyBacktestRow[] {
@@ -401,40 +407,22 @@ export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()):
     options = parseArgs(argv);
   } catch (error) {
     if (error instanceof Error && error.message === "help") {
-      process.stdout.write(
-        "Usage: tsx scripts/maintenance/backtest-depeg-resolver-lock-policy.ts [--fixture rows.json] [--json] [--report out]\n",
-      );
+      process.stdout.write(`${usage()}\n`);
       return 0;
     }
     throw error;
   }
 
-  const rows = loadRows(cwd, options.fixturePath);
-  const result = buildDdrLockPolicyBacktest({
-    rows,
-    generatedAt: options.generatedAt ?? undefined,
+  return runReportCli(argv, {
+    parse: () => options,
+    cwd,
+    build: (parsedOptions) => buildDdrLockPolicyBacktest({
+      rows: loadRows(cwd, parsedOptions.fixturePath),
+      generatedAt: parsedOptions.generatedAt ?? undefined,
+    }),
+    renderMarkdown: renderDdrLockPolicyBacktestMarkdown,
+    evaluate: (result) => result.summary.failed === 0 ? [] : ["backtest failed"],
   });
-  const rendered =
-    options.format === "json" ? `${JSON.stringify(result, null, 2)}\n` : renderDdrLockPolicyBacktestMarkdown(result);
-
-  if (options.reportPath) {
-    const reportPath = resolve(cwd, options.reportPath);
-    if (!existsSync(dirname(reportPath))) mkdirSync(dirname(reportPath), { recursive: true });
-    writeFileSync(reportPath, rendered);
-  } else {
-    process.stdout.write(rendered);
-  }
-
-  return result.summary.failed === 0 ? 0 : 1;
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
-  runCli()
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    });
-}
+runAsMain(import.meta.url, runCli);

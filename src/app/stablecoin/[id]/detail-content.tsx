@@ -31,12 +31,10 @@ import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-a
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
-import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { revealAnchorId } from "@/lib/anchor-reveal";
-import { GOVERNANCE_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
-import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildDetailSharedModules, type DetailSharedModules } from "./detail-shared-modules";
 import { DetailHistoryExploreSections } from "./detail-history-explore-sections";
 import { DetailLiquidityActivitySections } from "./detail-liquidity-activity-sections";
@@ -80,7 +78,7 @@ function DetailIdentity({
   onOpenFeedback,
   viewModel,
 }: {
-  heroModel: ReturnType<typeof buildStablecoinDetailHeroViewModel>;
+  heroModel: ReadyDetailViewModel["hero"];
   heroRef: RefObject<HTMLDivElement | null>;
   onOpenFeedback: () => void;
   viewModel: ReadyDetailViewModel;
@@ -154,7 +152,7 @@ function DetailSummaryRail({
   transferReview,
   viewModel,
 }: {
-  heroModel: ReturnType<typeof buildStablecoinDetailHeroViewModel>;
+  heroModel: ReadyDetailViewModel["hero"];
   mechanismReview: MechanismReviewView | null;
   sharedModules: DetailSharedModules;
   transferReview: TransferReviewView | null;
@@ -227,34 +225,7 @@ export function DetailContent({
     const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
     if (hash) revealAnchorId(hash);
   }, []);
-  const resolvedMechanismArchetype = resolveMechanismArchetype(viewModel.coin, TRACKED_META_BY_ID);
-  const heroModel = buildStablecoinDetailHeroViewModel({
-    coin: viewModel.coin,
-    coinData: viewModel.coinData,
-    logoSrc: viewModel.logoSrc,
-    isNavToken: viewModel.isNavToken,
-    mcap: viewModel.mcap,
-    supply: viewModel.supply,
-    prevDay: viewModel.prevDay,
-    prevWeek: viewModel.prevWeek,
-    prevMonth: viewModel.prevMonth,
-    performanceVsUsd1y: viewModel.performanceVsUsd1y,
-    pegRef: viewModel.pegRef,
-    deviationBps: viewModel.deviationBps,
-    gaugeDeviationBps: viewModel.gaugeDeviationBps,
-    pegReferenceUnavailable: viewModel.pegReferenceUnavailable,
-    pegScoreResult: viewModel.pegScoreResult,
-    liquidityData: viewModel.liquidityData,
-    yieldRanking: viewModel.yieldRanking,
-    stressSignal: viewModel.stressSignal,
-    reportCard: viewModel.reportCard ?? null,
-    verdict: viewModel.verdict,
-    variantParent: viewModel.variantParent,
-    variantKind: viewModel.coin.variantKind ?? null,
-    resolvedMechanismArchetype,
-    mintAuthority: viewModel.mintAuthority,
-    redemptionBackstop: viewModel.redemptionBackstop ?? null,
-  });
+  const heroModel = viewModel.hero;
   const frozenNote = viewModel.coin.status === "frozen" && viewModel.coin.frozenAt
     ? <FrozenDataNote frozenAt={viewModel.coin.frozenAt} />
     : null;

@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
@@ -161,7 +162,7 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
       errors.push(...settled.value.errors);
       warnings.push(...(settled.value.warnings ?? []));
     } else {
-      const message = settled.reason instanceof Error ? settled.reason.message : String(settled.reason);
+      const message = toErrorMessage(settled.reason);
       errors.push(`${label} request failed: ${message}`);
       degraded = true;
     }

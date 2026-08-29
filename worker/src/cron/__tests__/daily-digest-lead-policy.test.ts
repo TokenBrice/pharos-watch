@@ -73,7 +73,7 @@ async function replayCollector(seeds: DepegEventSeed[], nowSec: number) {
     yesterdayTs: nowSec - (nowSec % 86_400) - 86_400,
   };
   const result = await collectActiveDepegs(ctx);
-  expect(result.degradedReason).toBeUndefined();
+  expect(result.degradedReasons).toEqual([]);
   return result.value;
 }
 

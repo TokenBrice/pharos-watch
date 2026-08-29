@@ -5,37 +5,32 @@ import { describe, expect, it } from "vitest";
 import type { CronStatus, StatusResponse } from "@shared/types";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
-import { TelegramBotStats } from "../telegram-bot-stats";
+import { makeCompleteTelegramBotStatus } from "@/test-utils/status-fixtures";
+import { PER_ALERT_METRICS, TelegramBotStats } from "../telegram-bot-stats";
 
 const NOW_SECONDS = 1_771_858_200;
 const LIFECYCLE_SNAPSHOT_AT = NOW_SECONDS - 1_800;
 
 function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
   return {
-    totalChats: 10,
-    alertEnabledChats: 8,
-    deliverableChats: 8,
-    subscribedChats: 6,
-    emptyAlertChats: 1,
-    mutedChatsWithSubscriptions: 2,
-    totalSubscriptions: 15,
-    explicitCoinSubscriptions: 11,
-    presetImpliedCoinSubscriptions: 4,
-    activePresetFollowers: 2,
-    avgSubscriptionsPerSubscribedChat: 2.5,
-    pendingDisambiguations: 1,
-    pendingDeliveries: 0,
-    lastSubscriberActivityAt: NOW_SECONDS - 300,
-    customPreferenceChats: 4,
-    quietHoursEnabledChats: 3,
-    alertTypeChats: {
-      dews: 5,
-      depeg: 4,
-      safety: 3,
-      launch: 2,
-      reserve: 1,
-      allTypes: 1,
-    },
+    ...makeCompleteTelegramBotStatus({
+      emptyAlertChats: 1,
+      mutedChatsWithSubscriptions: 2,
+      explicitCoinSubscriptions: 11,
+      presetImpliedCoinSubscriptions: 4,
+      pendingDisambiguations: 1,
+      lastSubscriberActivityAt: NOW_SECONDS - 300,
+      customPreferenceChats: 4,
+      quietHoursEnabledChats: 3,
+      alertTypeChats: {
+        dews: 5,
+        depeg: 4,
+        safety: 3,
+        launch: 2,
+        reserve: 1,
+        allTypes: 1,
+      },
+    }),
     topStablecoins: [
       {
         stablecoinId: "stablecoin-with-a-very-long-identifier-that-must-wrap-locally",
@@ -45,33 +40,8 @@ function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
         presetImpliedSubscribers: 2,
       },
     ],
-    oldestPendingDeliveryAgeSec: null,
-    oldestDuePendingAgeSec: null,
-    estimatedDrainTimeSec: 0,
-    pendingDeliveryBacklog: {
-      claimable: 0,
-      due: 0,
-      deferred: 0,
-      expired: 0,
-      nearTtl: 0,
-      executionUnknown: 0,
-      sentCleanup: 0,
-    },
-    retryErrorClassCounts: {},
     presetQueryFailures: 0,
     inactiveSubscribersCleanedThisWeek: 6,
-    webhookEffectUnknown: 0,
-    deliverySli: {
-      availability: "unavailable",
-      quality: "unavailable",
-      freshness: "unknown",
-      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
-      rollup: null,
-      error: {
-        code: "telegram_delivery_sli_query_failed",
-        message: "Telegram delivery SLI telemetry unavailable.",
-      },
-    },
     lifecycleSnapshot: {
       date: "2026-02-24",
       snapshotAt: LIFECYCLE_SNAPSHOT_AT,
@@ -93,7 +63,6 @@ function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
       quietHoursEnabledChats: 3,
       pendingDeliveries: 0,
     },
-    quality: { status: "complete", unavailableFields: [] },
   };
 }
 
@@ -148,7 +117,7 @@ function renderWorkbench(input?: {
     sectionError: input?.sectionError,
     nowSeconds: NOW_SECONDS,
   });
-  return render(<TelegramBotStats model={model} />);
+  return { ...render(<TelegramBotStats model={model} />), model };
 }
 
 
@@ -221,8 +190,8 @@ describe("TelegramBotStats", () => {
     );
   });
 
-  it("uses a semantic desktop table and labeled mobile rows for every alert type", () => {
-    renderWorkbench({
+  it("uses one descriptor for ordered field values at both breakpoints", () => {
+    const { model } = renderWorkbench({
       cron: dispatchCron(
         dispatchMetadata({
           perAlertType: {
@@ -235,16 +204,43 @@ describe("TelegramBotStats", () => {
 
     const mobile = screen.getByTestId("telegram-delivery-mobile");
     const desktop = screen.getByTestId("telegram-delivery-desktop");
+    const dewsRow = model.delivery.perAlertType.find((row) => row.type === "dews");
+    expect(dewsRow).toBeDefined();
+    if (!dewsRow) return;
+
+    const expectedKeys = PER_ALERT_METRICS.map((metric) => metric.key);
+    const expectedLabels = PER_ALERT_METRICS.map((metric) => metric.label);
+    const expectedValues = PER_ALERT_METRICS.map((metric) => metric.formatter(metric.accessor(dewsRow)));
+    const mobileDews = mobile.querySelector('[data-alert-type="dews"]');
+    const desktopTable = desktop.querySelector("table");
+    const desktopDews = desktopTable?.querySelector("tbody tr");
+    expect(mobileDews).toBeTruthy();
+    expect(desktopTable).toBeTruthy();
+    expect(desktopDews).toBeTruthy();
+    if (!mobileDews || !desktopTable || !desktopDews) return;
+
     expect(mobile.className).toContain("sm:hidden");
     expect(mobile.querySelectorAll("dl")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
-    expect(within(mobile).getAllByText("First send latency")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
+    expect([...mobileDews.querySelectorAll("[data-metric-key]")].map((element) => element.getAttribute("data-metric-key"))).toEqual(
+      expectedKeys,
+    );
+    expect([...mobileDews.querySelectorAll("dt")].map((element) => element.textContent)).toEqual(expectedLabels);
+    expect([...mobileDews.querySelectorAll("dd")].map((element) => element.textContent)).toEqual(expectedValues);
     expect(within(mobile).getAllByText("Unknown").length).toBeGreaterThan(0);
     expect(desktop.className).toContain("overflow-x-auto");
     expect(desktop.className).toContain("sm:block");
     expect(desktop.querySelector("table")?.className).toContain("table-fixed");
     expect(desktop.querySelectorAll("tbody tr")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
     expect(within(desktop).getByText("Alert type")).toBeTruthy();
-    expect(within(desktop).getByText("First latency")).toBeTruthy();
+    expect([...desktopTable.querySelectorAll("thead [data-metric-key]")].map((element) => element.getAttribute("data-metric-key"))).toEqual(
+      expectedKeys,
+    );
+    expect([...desktopTable.querySelectorAll("thead [data-metric-key]")].map((element) => element.textContent)).toEqual(
+      expectedLabels,
+    );
+    expect([...desktopDews.querySelectorAll("[data-metric-key]")].map((element) => element.textContent)).toEqual(
+      expectedValues,
+    );
   });
 
   it("wraps long diagnostics locally and exposes real recovery cross-links on failure", () => {

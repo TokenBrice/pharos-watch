@@ -1,87 +1,9 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
+import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
-
-function mintBurnD1(tables: MockTableConfig[] = []) {
-  return mockD1([
-    ...tables,
-    { match: "FROM mint_burn_sync_state", rows: [] },
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "SELECT MAX(started_at) as started_at FROM cron_runs", rows: [], first: { started_at: null } },
-    { match: "INSERT INTO cache (key, value, updated_at)", rows: [] },
-  ]);
-}
-
-// ---------------------------------------------------------------------------
-// Regression tests (shape assertions on literal objects)
-// ---------------------------------------------------------------------------
-
-describe("mint-burn-flows regression: per-coin vs aggregate shape", () => {
-  it("per-coin response does NOT have a coins array", async () => {
-    const perCoinResponse = {
-      stablecoinId: "usdt-tether",
-      symbol: "USDT",
-      mintVolumeUsd: 1000,
-      burnVolumeUsd: 500,
-      netFlowUsd: 500,
-      mintCount: 10,
-      burnCount: 5,
-      chains: [],
-      hourly: [],
-      updatedAt: 1000,
-    };
-
-    expect(perCoinResponse).not.toHaveProperty("coins");
-    expect(perCoinResponse).toHaveProperty("stablecoinId");
-  });
-
-  it("aggregate response DOES have a coins array", async () => {
-    const aggregateResponse = {
-      gauge: {
-        score: 0,
-        band: "NEUTRAL",
-        intensitySemantics: "signed-v2",
-        flightToQuality: false,
-        flightIntensity: 0,
-        trackedCoins: 4,
-        trackedMcapUsd: 1e11,
-      },
-      coins: [
-        {
-          stablecoinId: "usdt-tether",
-          symbol: "USDT",
-          flowIntensity: 0,
-          pressureShiftScore: 0,
-          pressureShiftState: "stable",
-          netFlowDirection24h: "minting",
-          has24hActivity: true,
-          baselineDailyNetUsd: 0,
-          baselineDailyAbsUsd: 1000000,
-          baselineDataDays: 30,
-          netFlow24hUsd: 100,
-          mintVolume24hUsd: 200,
-          burnVolume24hUsd: 100,
-          mintCount24h: 5,
-          burnCount24h: 3,
-          netFlow7dUsd: 500,
-          netFlow30dUsd: 1000,
-          netFlow90dUsd: 1000,
-          largestEvent24h: null,
-        },
-      ],
-      hourly: [],
-      updatedAt: 1000,
-    };
-
-    expect(aggregateResponse).toHaveProperty("coins");
-    expect(Array.isArray(aggregateResponse.coins)).toBe(true);
-    expect(aggregateResponse).toHaveProperty("gauge");
-    expect(aggregateResponse).not.toHaveProperty("stablecoinId");
-  });
-});
 
 // ---------------------------------------------------------------------------
 // Contract tests (handler-level, using D1 mock)
@@ -110,15 +32,11 @@ describe("handleMintBurnFlows contract tests", () => {
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100000000000 } }],
   });
 
-  const db = mintBurnD1([
-    { match: "mint_burn_hourly", rows: [hourlyRow] },
-    { match: "mint_burn_events", rows: [] },
-    {
-      match: "cache",
-      rows: [{ key: "stablecoins", value: stablecoinsCache, updated_at: nowSec }],
-      first: { key: "stablecoins", value: stablecoinsCache, updated_at: nowSec },
-    },
-  ]);
+  const db = mintBurnScenario({
+    nowSec,
+    rows: { hourly: [hourlyRow] },
+    stablecoinsCache: { value: stablecoinsCache, updatedAt: nowSec },
+  });
 
   it("aggregate mode returns shape matching MintBurnFlowsResponseSchema", async () => {
     const url = new URL("https://x/api/mint-burn-flows");
@@ -179,7 +97,10 @@ describe("handleMintBurnFlows contract tests", () => {
   });
 
   it("returns 503 when stablecoins cache is unavailable and no flow fallback cache exists", async () => {
-    const res = await handleMintBurnFlows(mintBurnD1(), new URL("https://x/api/mint-burn-flows"));
+    const res = await handleMintBurnFlows(
+      mintBurnScenario({ stablecoinsCache: null }),
+      new URL("https://x/api/mint-burn-flows"),
+    );
 
     expect(res.status).toBe(503);
     await expect(res.json()).resolves.toEqual({

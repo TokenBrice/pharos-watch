@@ -10,7 +10,7 @@ import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import { createOptionalSourceBudget, resolveRpcUrls } from "./sources-helpers";
 import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config";
 import type { ResolvedYield } from "./types";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;

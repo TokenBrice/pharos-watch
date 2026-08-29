@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { deriveComparisonCoins, deriveSupplySeries, deriveFlowSeries, deriveFlowCardData } from "@/lib/compare-derive";
+import {
+  buildCompareRadarCohortBaseline,
+  deriveComparisonCoins,
+  deriveSupplySeries,
+  deriveFlowSeries,
+  deriveFlowCardData,
+  type CompareRadarCardEntry,
+} from "@/lib/compare-derive";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinData } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
@@ -57,6 +64,81 @@ function makeFlowCoin(
     ...overrides,
   };
 }
+
+function makeSelectedRadarCards(
+  response: ReturnType<typeof makeReportCardsV9Response>,
+  selectedIds: string[],
+): CompareRadarCardEntry[] {
+  return selectedIds.map((id, index) => ({
+    card: response.cards.find((card) => card.id === id)!,
+    identity: response.safetyScoreIdentity,
+    color: COMPARE_COLORS[index],
+    symbol: id,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// buildCompareRadarCohortBaseline
+// ---------------------------------------------------------------------------
+
+describe("buildCompareRadarCohortBaseline", () => {
+  it("returns an empty all-cohort baseline until cards and a selection are available", () => {
+    expect(buildCompareRadarCohortBaseline(undefined, [], "peg")).toEqual({
+      effectiveCohort: "all",
+      series: [],
+      memberCount: 0,
+    });
+
+    const response = makeReportCardsV9Response();
+    expect(buildCompareRadarCohortBaseline(response.cards, [], "mechanism")).toEqual({
+      effectiveCohort: "all",
+      series: [],
+      memberCount: 0,
+    });
+  });
+
+  it("builds a peg cohort from the lead selected card and preserves baseline presentation fields", () => {
+    const response = makeReportCardsV9Response({
+      cards: [
+        makeCard("usdc-circle", "A"),
+        makeCard("usdt-tether", "A-"),
+        makeCard("pyusd-paypal", "B+"),
+        makeCard("eurc-circle", "B"),
+      ],
+    });
+    const selected = makeSelectedRadarCards(response, ["usdc-circle", "usdt-tether"]);
+
+    const result = buildCompareRadarCohortBaseline(response.cards, selected, "peg");
+
+    expect(result.effectiveCohort).toBe("peg");
+    expect(result.memberCount).toBe(3);
+    expect(result.series.map((entry) => entry.card.id)).toEqual([
+      "usdc-circle",
+      "usdt-tether",
+      "pyusd-paypal",
+    ]);
+    expect(result.series.every((entry) => entry.color === "#64748b")).toBe(true);
+    expect(result.series.every((entry) => entry.identity === response.safetyScoreIdentity)).toBe(true);
+  });
+
+  it("falls back to all rated cards when the requested cohort has fewer than three members", () => {
+    const response = makeReportCardsV9Response({
+      cards: [
+        makeCard("usde-ethena", "A"),
+        makeCard("susde-ethena", "A-"),
+        makeCard("usdc-circle", "B+"),
+        makeCard("eurc-circle", "B"),
+      ],
+    });
+    const selected = makeSelectedRadarCards(response, ["usde-ethena", "susde-ethena"]);
+
+    const result = buildCompareRadarCohortBaseline(response.cards, selected, "mechanism");
+
+    expect(result.effectiveCohort).toBe("all");
+    expect(result.memberCount).toBe(4);
+    expect(result.series.map((entry) => entry.card.id)).toEqual(response.cards.map((card) => card.id));
+  });
+});
 
 // ---------------------------------------------------------------------------
 // deriveComparisonCoins

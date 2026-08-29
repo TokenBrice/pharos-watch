@@ -21,12 +21,13 @@ import {
   isRecord,
   joinUrl,
   markdownValue,
+  parseReportCliArgs,
   readRequiredJsonFile,
   resolveGeneratedAt,
   runAsMain,
+  runReportCli,
   toPositiveInt,
-  writeOutputFile,
-} from "../lib/coverage-audit-cli";
+} from "../lib/report-cli";
 
 export const DEFAULT_DDRR_CALIBRATION_REPORT_PATH = "agents/ddrr-calibration-report.md";
 export const PROD_DDRR_SITE_DATA_URL = `${PROD_ORIGIN}/_site-data/depeg-resolver-review`;
@@ -917,86 +918,61 @@ export function renderDdrrCalibrationReportMarkdown(report: DdrrCalibrationRepor
   ].join("\n");
 }
 
+function usage(): string {
+  return [
+    "Usage: tsx scripts/maintenance/generate-ddrr-calibration-report.ts [options]",
+    "",
+    "Options:",
+    "  --prod                 Fetch production site-data (default when no --input/--url is supplied)",
+    "  --api-base <url>       Fetch <url>/api/depeg-resolver-review",
+    "  --url <url>            Fetch a custom DDRR response URL",
+    "  --input <path>         Read a saved DDRR response JSON file",
+    "  --json                 Emit JSON instead of Markdown",
+    "  --markdown             Emit Markdown (default)",
+    `  --report <path>        Output path (default: ${DEFAULT_DDRR_CALIBRATION_REPORT_PATH})`,
+    "  --stdout               Write to stdout instead of a report file",
+    "  --generated-at <iso>   Override report timestamp",
+    "  --limit <n>            Row limit for long report tables",
+  ].join("\n");
+}
+
 export function parseArgs(argv: readonly string[] = process.argv.slice(2)): DdrrCalibrationCliOptions {
-  const options: DdrrCalibrationCliOptions = {
-    inputPath: null,
-    apiBase: null,
-    url: null,
-    prod: false,
-    format: "markdown",
-    reportPath: DEFAULT_DDRR_CALIBRATION_REPORT_PATH,
-    stdout: false,
-    generatedAt: null,
-    sampleLimit: SAMPLE_LIMIT,
-  };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--input") {
-      const value = argv[index + 1];
-      if (!value) throw new Error("--input requires a path");
-      options.inputPath = value;
-      index += 1;
-    } else if (arg === "--api-base") {
-      const value = argv[index + 1];
-      if (!value) throw new Error("--api-base requires a URL");
-      options.apiBase = value;
-      index += 1;
-    } else if (arg === "--url") {
-      const value = argv[index + 1];
-      if (!value) throw new Error("--url requires a URL");
-      options.url = value;
-      index += 1;
-    } else if (arg === "--prod") {
-      options.prod = true;
-    } else if (arg === "--json") {
-      options.format = "json";
-    } else if (arg === "--markdown") {
-      options.format = "markdown";
-    } else if (arg === "--report") {
-      const value = argv[index + 1];
-      if (!value) throw new Error("--report requires a path");
-      options.reportPath = value;
-      index += 1;
-    } else if (arg === "--stdout") {
-      options.stdout = true;
-    } else if (arg === "--generated-at") {
-      const value = argv[index + 1];
-      if (!value) throw new Error("--generated-at requires an ISO timestamp or 'now'");
-      options.generatedAt = value;
-      index += 1;
-    } else if (arg === "--limit") {
-      options.sampleLimit = toPositiveInt(argv[index + 1] ?? "", "--limit");
-      index += 1;
-    } else if (arg === "--help" || arg === "-h") {
-      process.stdout.write(
-        [
-          "Usage: tsx scripts/maintenance/generate-ddrr-calibration-report.ts [options]",
-          "",
-          "Options:",
-          "  --prod                 Fetch production site-data (default when no --input/--url is supplied)",
-          "  --api-base <url>       Fetch <url>/api/depeg-resolver-review",
-          "  --url <url>            Fetch a custom DDRR response URL",
-          "  --input <path>         Read a saved DDRR response JSON file",
-          "  --json                 Emit JSON instead of Markdown",
-          "  --markdown             Emit Markdown (default)",
-          `  --report <path>        Output path (default: ${DEFAULT_DDRR_CALIBRATION_REPORT_PATH})`,
-          "  --stdout               Write to stdout instead of a report file",
-          "  --generated-at <iso>   Override report timestamp",
-          "  --limit <n>            Row limit for long report tables",
-        ].join("\n") + "\n",
-      );
-      process.exit(0);
-    } else {
-      throw new Error(`Unknown option: ${arg}`);
-    }
-  }
-
-  const sourceCount = [options.inputPath != null, options.apiBase != null, options.url != null, options.prod].filter(
-    Boolean,
-  ).length;
-  if (sourceCount > 1) throw new Error("Choose only one of --input, --api-base, --url, or --prod.");
-  return options;
+  return parseReportCliArgs(argv, {
+    createOptions: (): DdrrCalibrationCliOptions => ({
+      inputPath: null,
+      apiBase: null,
+      url: null,
+      prod: false,
+      format: "markdown",
+      reportPath: DEFAULT_DDRR_CALIBRATION_REPORT_PATH,
+      stdout: false,
+      generatedAt: null,
+      sampleLimit: SAMPLE_LIMIT,
+    }),
+    includeGeneratedAt: true,
+    generatedAtMissingMessage: "--generated-at requires an ISO timestamp or 'now'",
+    usage,
+    unknownArgumentMessage: (arg) => `Unknown option: ${arg}`,
+    options: [
+      { flag: "--prod", kind: "boolean", apply: (options) => { options.prod = true; } },
+      { flag: "--api-base", kind: "value", missingMessage: "--api-base requires a URL", apply: (options, value) => { options.apiBase = value!; } },
+      { flag: "--url", kind: "value", missingMessage: "--url requires a URL", apply: (options, value) => { options.url = value!; } },
+      { flag: "--input", kind: "value", missingMessage: "--input requires a path", apply: (options, value) => { options.inputPath = value!; } },
+      { flag: "--stdout", kind: "boolean", apply: (options) => { options.stdout = true; } },
+      {
+        flag: "--limit",
+        kind: "value",
+        allowMissingValue: true,
+        apply: (options, value) => { options.sampleLimit = toPositiveInt(value ?? "", "--limit"); },
+      },
+    ],
+    validate: (options) => {
+      const sourceCount = [options.inputPath != null, options.apiBase != null, options.url != null, options.prod].filter(
+        Boolean,
+      ).length;
+      if (sourceCount > 1) throw new Error("Choose only one of --input, --api-base, --url, or --prod.");
+    },
+  });
 }
 
 function unwrapResponsePayload(payload: unknown): unknown {
@@ -1046,24 +1022,22 @@ export async function runCli(
   cwd: string = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
-  const options = parseArgs(argv);
-  const generatedAt = resolveGeneratedAt({ generatedAt: options.generatedAt });
-  const { response, source } = await loadResponse(options, fetchImpl);
-  const report = buildDdrrCalibrationReport(response, {
-    generatedAt,
-    source,
-    sampleLimit: options.sampleLimit,
+  return runReportCli([...argv], {
+    parse: parseArgs,
+    cwd,
+    build: async (options) => {
+      const generatedAt = resolveGeneratedAt({ generatedAt: options.generatedAt });
+      const { response, source } = await loadResponse(options, fetchImpl);
+      return buildDdrrCalibrationReport(response, {
+        generatedAt,
+        source,
+        sampleLimit: options.sampleLimit,
+      });
+    },
+    renderMarkdown: renderDdrrCalibrationReportMarkdown,
+    shouldWriteToStdout: (options) => options.stdout || !options.reportPath,
+    writeMessage: (target) => `Wrote DDRR calibration report to ${target}`,
   });
-  const output =
-    options.format === "json" ? `${JSON.stringify(report, null, 2)}\n` : renderDdrrCalibrationReportMarkdown(report);
-
-  if (options.stdout || !options.reportPath) {
-    process.stdout.write(output);
-    return 0;
-  }
-  const target = writeOutputFile(options.reportPath, output, cwd);
-  process.stdout.write(`Wrote DDRR calibration report to ${target}\n`);
-  return 0;
 }
 
 runAsMain(import.meta.url, () => runCli());

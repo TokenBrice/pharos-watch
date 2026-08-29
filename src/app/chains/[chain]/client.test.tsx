@@ -113,7 +113,7 @@ describe("ChainProfileClient", () => {
 
     render(<ChainProfileClient chainId="ethereum" />);
 
-    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getByText(/refresh delayed/i)).toBeTruthy();
     expect(screen.getByText("Ethereum")).toBeTruthy();
   });
 

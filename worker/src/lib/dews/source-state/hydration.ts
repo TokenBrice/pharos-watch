@@ -11,7 +11,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { decodeJsonString } from "../../cache-json";
 import type { BlacklistPersistedRow } from "../../blacklist/shared";
-import { toErrorMessage } from "../../error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
 import {
   CONTRACT_CONFIGS,

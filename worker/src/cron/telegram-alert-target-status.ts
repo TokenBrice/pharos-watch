@@ -1,4 +1,4 @@
-import { batchExecute, buildInClause, chunkArray } from "../lib/db";
+import { batchExecute } from "../lib/db";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
@@ -112,31 +112,4 @@ export async function reconcileExpiredTelegramAlertJobTargets(
     signal,
   );
   return Number(result.meta?.changes ?? 0);
-}
-
-export async function loadTerminalTelegramAlertTargetKeys(
-  db: D1Database,
-  targetKeys: readonly string[],
-): Promise<Set<string>> {
-  const unique = Array.from(new Set(targetKeys));
-  const terminal = new Set<string>();
-  for (const keyChunk of chunkArray(unique)) {
-    const inClause = buildInClause(keyChunk);
-    const rows = await db
-      .prepare(
-        `SELECT pending_dedupe_key
-           FROM telegram_alert_job_targets
-          WHERE pending_dedupe_key IN (${inClause.sql})
-            AND (
-              status IN ('queued', 'sent', 'failed', 'expired')
-              OR effect_state IN ('sending', 'complete', 'execution_unknown')
-            )`,
-      )
-      .bind(...inClause.binds)
-      .all<{ pending_dedupe_key: string }>();
-    for (const row of rows.results ?? []) {
-      terminal.add(row.pending_dedupe_key);
-    }
-  }
-  return terminal;
 }

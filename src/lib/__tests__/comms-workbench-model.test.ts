@@ -1,35 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { CronStatus, StatusResponse } from "@shared/types";
-import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import type { CronStatus } from "@shared/types";
+import { makeCompleteTelegramBotStatus } from "@/test-utils/status-fixtures";
 import { buildCommsWorkbenchModel } from "../comms-workbench-model";
 
 const NOW_SECONDS = 1_700_001_000;
-
-function completeTelegramBot(): NonNullable<StatusResponse["telegramBot"]> {
-  const bot = makeHealthyStatusResponse().telegramBot!;
-  return {
-    ...bot,
-    explicitCoinSubscriptions: 12,
-    presetImpliedCoinSubscriptions: 3,
-    activePresetFollowers: 2,
-    pendingDeliveries: 0,
-    oldestPendingDeliveryAgeSec: null,
-    oldestDuePendingAgeSec: null,
-    estimatedDrainTimeSec: 0,
-    pendingDeliveryBacklog: {
-      claimable: 0,
-      due: 0,
-      deferred: 0,
-      expired: 0,
-      nearTtl: 0,
-      executionUnknown: 0,
-      sentCleanup: 0,
-    },
-    retryErrorClassCounts: {},
-    webhookEffectUnknown: 0,
-    quality: { status: "complete", unavailableFields: [] },
-  };
-}
 
 function dispatchCron(metadata: Record<string, unknown>, status: "ok" | "degraded" | "error" = "ok"): CronStatus {
   return {
@@ -69,7 +43,7 @@ function completeDispatchMetadata(overrides: Record<string, unknown> = {}): Reco
 describe("buildCommsWorkbenchModel", () => {
   it("keeps the operator priority order stable", () => {
     const model = buildCommsWorkbenchModel({
-      telegramBot: completeTelegramBot(),
+      telegramBot: makeCompleteTelegramBotStatus(),
       dispatchCron: dispatchCron(completeDispatchMetadata()),
       nowSeconds: NOW_SECONDS,
     });
@@ -93,7 +67,7 @@ describe("buildCommsWorkbenchModel", () => {
     expect(missing.audience.totalChats).toBeNull();
 
     const measuredZero = buildCommsWorkbenchModel({
-      telegramBot: completeTelegramBot(),
+      telegramBot: makeCompleteTelegramBotStatus(),
       dispatchCron: dispatchCron(completeDispatchMetadata()),
       nowSeconds: NOW_SECONDS,
     });
@@ -102,7 +76,7 @@ describe("buildCommsWorkbenchModel", () => {
     expect(measuredZero.delivery.retries.rateLimited).toBe(false);
 
     const missingMetadata = buildCommsWorkbenchModel({
-      telegramBot: completeTelegramBot(),
+      telegramBot: makeCompleteTelegramBotStatus(),
       dispatchCron: dispatchCron({}),
       nowSeconds: NOW_SECONDS,
     });
@@ -112,7 +86,7 @@ describe("buildCommsWorkbenchModel", () => {
   });
 
   it("uses shared age, drain, and near-TTL policy without classifying queue size by a client threshold", () => {
-    const bot = completeTelegramBot();
+    const bot = makeCompleteTelegramBotStatus();
     const model = buildCommsWorkbenchModel({
       telegramBot: {
         ...bot,
@@ -146,7 +120,7 @@ describe("buildCommsWorkbenchModel", () => {
   it("prioritizes permanent failures and retains retry, rate-limit, and latest-dispatch evidence", () => {
     const model = buildCommsWorkbenchModel({
       telegramBot: {
-        ...completeTelegramBot(),
+        ...makeCompleteTelegramBotStatus(),
         retryErrorClassCounts: { rate_limit: 4, gateway_timeout: 2 },
       },
       dispatchCron: dispatchCron(
@@ -191,7 +165,7 @@ describe("buildCommsWorkbenchModel", () => {
 
   it("keeps absent per-alert values unknown instead of manufacturing zeroes", () => {
     const model = buildCommsWorkbenchModel({
-      telegramBot: completeTelegramBot(),
+      telegramBot: makeCompleteTelegramBotStatus(),
       dispatchCron: dispatchCron(
         completeDispatchMetadata({
           perAlertType: {

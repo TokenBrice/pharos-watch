@@ -1,16 +1,4 @@
-import { coverageFeature as blacklistFeature } from "@/lib/coverage/blacklist";
-import { coverageFeature as dependencyFeature } from "@/lib/coverage/dependency";
-import { coverageFeature as dexFeature } from "@/lib/coverage/dex";
-import { coverageFeature as flowsFeature } from "@/lib/coverage/flows";
-import { coverageFeature as geniusFeature } from "@/lib/coverage/genius";
-import { coverageFeature as mintAuthorityFeature } from "@/lib/coverage/mint-authority";
-import { coverageFeature as micaFeature } from "@/lib/coverage/mica";
-import { coverageFeature as priceFeature } from "@/lib/coverage/price";
-import { coverageFeature as redemptionFeature } from "@/lib/coverage/redemption";
-import { coverageFeature as reservesFeature } from "@/lib/coverage/reserves";
-import { coverageFeature as safetyFeature } from "@/lib/coverage/safety";
-import type { CoverageLegendItem } from "@/lib/coverage/shared";
-import { coverageFeature as yieldFeature } from "@/lib/coverage/yield";
+import { COVERAGE_FEATURE_MODULES as modules } from "@/lib/coverage-feature-modules";
 import type { CoverageFeatureDefinition, CoverageFeatureKey } from "@/lib/coverage-types";
 
 export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
@@ -23,8 +11,9 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with ≥3 price sources`,
     headlineFilter: (row) => (row.statuses.price.sourceCount ?? 0) >= 3,
     href: "/depeg/",
-    statusKinds: priceFeature.statusKinds,
-    formatBreakdown: priceFeature.formatBreakdown,
+    statusKinds: modules.price.statusKinds,
+    legendItems: modules.price.legendItems,
+    formatBreakdown: modules.price.formatBreakdown,
   },
   {
     key: "safety",
@@ -32,8 +21,9 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "Safety",
     description: "Overall report-card grade on the Safety Scores surface.",
     href: "/safety-scores/",
-    statusKinds: safetyFeature.statusKinds,
-    formatBreakdown: safetyFeature.formatBreakdown,
+    statusKinds: modules.safety.statusKinds,
+    legendItems: modules.safety.legendItems,
+    formatBreakdown: modules.safety.formatBreakdown,
   },
   {
     key: "dex",
@@ -41,8 +31,10 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "DEX",
     description: "DEX liquidity observation and price verification confidence.",
     href: "/liquidity/",
-    statusKinds: dexFeature.statusKinds,
-    formatBreakdown: dexFeature.formatBreakdown,
+    legendLabel: "DEX Liquidity",
+    statusKinds: modules.dex.statusKinds,
+    legendItems: modules.dex.legendItems,
+    formatBreakdown: modules.dex.formatBreakdown,
   },
   {
     key: "reserves",
@@ -54,8 +46,10 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCountLabel: "Score-grade live",
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with score-grade live reserves`,
     headlineShareLabel: "Score-grade live reserve market-cap reach",
-    statusKinds: reservesFeature.statusKinds,
-    formatBreakdown: reservesFeature.formatBreakdown,
+    legendLabel: "Reserves",
+    statusKinds: modules.reserves.statusKinds,
+    legendItems: modules.reserves.legendItems,
+    formatBreakdown: modules.reserves.formatBreakdown,
   },
   {
     key: "redemption",
@@ -67,8 +61,10 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with strong redemption coverage`,
     headlineShareLabel: "Strong redemption market-cap reach",
     href: "/methodology/#safety-scores-methodology",
-    statusKinds: redemptionFeature.statusKinds,
-    formatBreakdown: redemptionFeature.formatBreakdown,
+    legendLabel: "Redemption",
+    statusKinds: modules.redemption.statusKinds,
+    legendItems: modules.redemption.legendItems,
+    formatBreakdown: modules.redemption.formatBreakdown,
   },
   {
     key: "yield",
@@ -76,8 +72,9 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "Yield",
     description: "Current presence in the Yield Intelligence rankings.",
     href: "/yield/",
-    statusKinds: yieldFeature.statusKinds,
-    formatBreakdown: yieldFeature.formatBreakdown,
+    statusKinds: modules.yield.statusKinds,
+    legendItems: modules.yield.legendItems,
+    formatBreakdown: modules.yield.formatBreakdown,
   },
   {
     key: "flows",
@@ -85,8 +82,9 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "Flows",
     description: "Configured issuance-chain mint/burn flow tracking and coverage state.",
     href: "/flows/",
-    statusKinds: flowsFeature.statusKinds,
-    formatBreakdown: flowsFeature.formatBreakdown,
+    statusKinds: modules.flows.statusKinds,
+    legendItems: modules.flows.legendItems,
+    formatBreakdown: modules.flows.formatBreakdown,
   },
   {
     key: "blacklist",
@@ -98,8 +96,10 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with resolved freezable status`,
     headlineShareLabel: "Resolved status market-cap reach",
     href: "/freezewatch/",
-    statusKinds: blacklistFeature.statusKinds,
-    formatBreakdown: blacklistFeature.formatBreakdown,
+    legendLabel: "Blacklist Status",
+    statusKinds: modules.blacklist.statusKinds,
+    legendItems: modules.blacklist.legendItems,
+    formatBreakdown: modules.blacklist.formatBreakdown,
   },
   {
     key: "mica",
@@ -111,8 +111,9 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with MiCA assessment`,
     headlineShareLabel: "MiCA-assessed market-cap reach",
     href: "/compliance/?regime=mica",
-    statusKinds: micaFeature.statusKinds,
-    formatBreakdown: micaFeature.formatBreakdown,
+    statusKinds: modules.mica.statusKinds,
+    legendItems: modules.mica.legendItems,
+    formatBreakdown: modules.mica.formatBreakdown,
   },
   {
     key: "genius",
@@ -124,8 +125,9 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with GENIUS assessment`,
     headlineShareLabel: "GENIUS-assessed market-cap reach",
     href: "/compliance/?regime=genius",
-    statusKinds: geniusFeature.statusKinds,
-    formatBreakdown: geniusFeature.formatBreakdown,
+    statusKinds: modules.genius.statusKinds,
+    legendItems: modules.genius.legendItems,
+    formatBreakdown: modules.genius.formatBreakdown,
   },
   {
     key: "dependency",
@@ -133,8 +135,9 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "Dependency",
     description: "Resolved dependency role from the report-card graph and dependency inputs.",
     href: "/dependency-map/",
-    statusKinds: dependencyFeature.statusKinds,
-    formatBreakdown: dependencyFeature.formatBreakdown,
+    statusKinds: modules.dependency.statusKinds,
+    legendItems: modules.dependency.legendItems,
+    formatBreakdown: modules.dependency.formatBreakdown,
   },
   {
     key: "mintAuthority",
@@ -145,25 +148,15 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCountLabel: "Reviewed authority",
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with reviewed mint authority`,
     headlineShareLabel: "Reviewed mint-authority market-cap reach",
-    statusKinds: mintAuthorityFeature.statusKinds,
-    formatBreakdown: mintAuthorityFeature.formatBreakdown,
+    statusKinds: modules.mintAuthority.statusKinds,
+    legendItems: modules.mintAuthority.legendItems,
+    formatBreakdown: modules.mintAuthority.formatBreakdown,
   },
 ] as const;
 
-export const COVERAGE_FEATURE_LEGEND_ITEMS: Record<CoverageFeatureKey, readonly CoverageLegendItem[]> = {
-  price: priceFeature.legendItems,
-  safety: safetyFeature.legendItems,
-  dex: dexFeature.legendItems,
-  reserves: reservesFeature.legendItems,
-  redemption: redemptionFeature.legendItems,
-  yield: yieldFeature.legendItems,
-  flows: flowsFeature.legendItems,
-  blacklist: blacklistFeature.legendItems,
-  mica: micaFeature.legendItems,
-  genius: geniusFeature.legendItems,
-  dependency: dependencyFeature.legendItems,
-  mintAuthority: mintAuthorityFeature.legendItems,
-};
+export const COVERAGE_FEATURE_LEGEND_ITEMS = Object.fromEntries(
+  COVERAGE_FEATURES.map((feature) => [feature.key, feature.legendItems]),
+) as Record<CoverageFeatureKey, CoverageFeatureDefinition["legendItems"]>;
 
 /**
  * Cross-cutting status kinds covered by general legend entries (NR / Data n/a / —).

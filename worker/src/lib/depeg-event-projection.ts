@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "./structured-log";
 import type { DepegEvent } from "@shared/types/market";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { isMissingTableError } from "./db";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export const EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL = `
   id NOT IN (

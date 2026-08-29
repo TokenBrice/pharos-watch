@@ -4,7 +4,7 @@ import { jsonResponse } from "../lib/api-response";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse } from "../lib/admin-job";
 import type { D1Database } from "@cloudflare/workers-types";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildBackfillDeleteStmt,
   loadSealedBackfillReplayConflicts,

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldDetailSection from "@/components/yield-detail-section";
 import {
@@ -10,11 +10,13 @@ import {
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import { makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
+import { makeYieldDetailResponse } from "./yield-detail.test-support";
 
-const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock } = vi.hoisted(() => ({
+const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock, isMobileMock } = vi.hoisted(() => ({
   useYieldRankingsMock: vi.fn(),
   useYieldHistoryMock: vi.fn(),
   replaceParamsMock: vi.fn(),
+  isMobileMock: vi.fn(),
 }));
 
 let sourcesParam = "";
@@ -29,6 +31,10 @@ vi.mock("@/hooks/use-url-filters", () => ({
     getParam: (key: string) => (key === "sources" ? sourcesParam : ""),
     replaceParams: replaceParamsMock,
   }),
+}));
+
+vi.mock("@/hooks/use-is-mobile", () => ({
+  useIsMobile: isMobileMock,
 }));
 
 vi.mock("@/components/yield-history-chart", () => ({
@@ -112,14 +118,7 @@ function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
 }
 
 function makeResponse(rankings: YieldRanking[] = []): YieldRankingsResponse {
-  return {
-    rankings,
-    riskFreeRate: 0.03,
-    scalingFactor: 1,
-    medianApy: 0.04,
-    updatedAt: 1_710_500_000,
-    provenance: null,
-  };
+  return makeYieldDetailResponse(rankings, { riskFreeRate: 0.03, scalingFactor: 1 });
 }
 
 describe("YieldDetailSection", () => {
@@ -127,6 +126,8 @@ describe("YieldDetailSection", () => {
     sourcesParam = "";
     useYieldRankingsMock.mockReset();
     useYieldHistoryMock.mockReset();
+    isMobileMock.mockReset();
+    isMobileMock.mockReturnValue(false);
     useYieldHistoryMock.mockReturnValue({
       data: { current: null, history: [], methodology: { version: "v8.14" } },
       meta: null,
@@ -155,6 +156,33 @@ describe("YieldDetailSection", () => {
 
     expect(screen.getByRole("heading", { name: "Yield Intelligence" })).toBeTruthy();
     expect(container.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("mounts one history chart in each viewport mode", async () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking()]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    const { container, rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(container.querySelectorAll("[data-testid='yield-history-chart']")).toHaveLength(1);
+
+    isMobileMock.mockReturnValue(true);
+    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(container.querySelectorAll("[data-testid='yield-history-chart']")).toHaveLength(0);
+
+    const disclosure = Array.from(container.querySelectorAll("details")).find((element) =>
+      element.querySelector("summary")?.textContent?.includes("APY trend"),
+    );
+    expect(disclosure).toBeTruthy();
+    if (!disclosure) return;
+    disclosure.open = true;
+    fireEvent(disclosure, new Event("toggle", { bubbles: false }));
+    await waitFor(() => {
+      expect(container.querySelectorAll("[data-testid='yield-history-chart']")).toHaveLength(1);
+    });
   });
 
   it("shows the unavailable-yet state when a yield-bearing asset has no ranking and no fetch error", () => {

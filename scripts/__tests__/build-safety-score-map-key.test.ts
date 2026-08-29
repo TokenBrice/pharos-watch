@@ -8,7 +8,7 @@ import {
   computeDemandOrbitZones,
   loadLogoDataUri,
   buildPsiSubtitle,
-  parsePsiResponse,
+  parseMapPsi,
   placeSubgradeRadialLanes,
   radiusForMcap,
   renderPsiStatus,
@@ -18,8 +18,11 @@ import {
 } from "../maintenance/build-safety-score-map";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import { validateAnnotationScene } from "../lib/map-annotations";
+import { makeSafetyMapPsiPayload } from "./build-safety-score-map.test-support";
 
 describe("Safety Map PSI footer", () => {
+  const psiPayload = (current: Record<string, unknown> | null) => makeSafetyMapPsiPayload(current);
+
   it("uses the canonical one-decimal PSI level and condition band", () => {
     expect(buildPsiSubtitle({ score: 93.8, band: "BEDROCK", basis: "24H AVG" })).toBe(
       "PSI 93.8 · BEDROCK · 24H AVG",
@@ -38,24 +41,30 @@ describe("Safety Map PSI footer", () => {
   );
 
   it("accepts the live PSI display fields and rejects incomplete rolling values", () => {
-    expect(parsePsiResponse({
-      current: {
+    expect(parseMapPsi(psiPayload({
         score: 94.3,
         band: "BEDROCK",
         avg24h: 93.8,
         avg24hBand: "BEDROCK",
         computedAt: 1_777_000_000,
-      },
-    }).current).toEqual({
+    }))).toEqual({
       score: 94.3,
       band: "BEDROCK",
       avg24h: 93.8,
       avg24hBand: "BEDROCK",
       computedAt: 1_777_000_000,
     });
-    expect(() => parsePsiResponse({
-      current: { score: 94.3, band: "BEDROCK", avg24h: 93.8, computedAt: 1_777_000_000 },
-    })).toThrow(/avg24h and current\.avg24hBand must appear together/);
+    expect(() => parseMapPsi(psiPayload({
+      score: 94.3,
+      band: "BEDROCK",
+      avg24h: 93.8,
+      computedAt: 1_777_000_000,
+    }))).toThrow(/avg24h and current\.avg24hBand must appear together/);
+  });
+
+  it("rejects canonical-envelope violations and a null current PSI", () => {
+    expect(() => parseMapPsi({ current: null })).toThrow(/PSI response is malformed/);
+    expect(() => parseMapPsi(psiPayload(null))).toThrow(/expected a current reading/);
   });
 
   it("labels the rolling display value and raw fallback explicitly", () => {

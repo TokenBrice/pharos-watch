@@ -68,7 +68,7 @@ has been completed.
 ### `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`
 
 - [x] Phase 2 wire-up: `useChartAnnotations` fetches `/api/events`, maps tape rows, clamps to range.
-- [x] Curated annotation layer at `shared/data/annotations/curated-annotations.ts`.
+- [x] Curated annotation layer at `shared/data/annotations/coins/*.json`, loaded by `shared/data/annotations/curated-annotations.ts`.
 - [x] ≥10 historical annotations seeded across top 4 coins (USDC / USDT / DAI / USDe). Coverage gate enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.
 - [ ] Named owner + cadence for ongoing curation. **Current: not yet named — single biggest atrophy risk for the annotation layer.**
 

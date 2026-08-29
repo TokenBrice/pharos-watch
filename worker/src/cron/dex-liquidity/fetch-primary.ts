@@ -33,7 +33,7 @@ import {
   type KnownPoolIdentityIndex,
 } from "./pool-identity";
 import { resolveTrackedStablecoinId } from "./token-resolution";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { shouldRetainCurveCompositePoolIdentity } from "../measured-execution/curve-composite-identities";

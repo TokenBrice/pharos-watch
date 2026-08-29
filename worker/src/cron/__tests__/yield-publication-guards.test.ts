@@ -4,12 +4,6 @@ import {
   getSourceRiskGoldenRow,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 
-
-import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
-
-
-
 import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
@@ -18,215 +12,30 @@ import {
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
 } from "../yield-helpers";
-import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
-import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
+import { buildHistoryKey } from "../yield-sync/evaluation";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
+import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
+import {
+  FIXED_NOW,
+  buildPayloadWithObservedAt,
+  makeBenchmarkMeta,
+  makeEvaluatedSource,
+  makeSafetySnapshotMeta,
+  makeYieldSourceMeta,
+} from "./yield-publication.test-support";
 
-
-
-// Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
-
-
-const FIXED_NOW = new Date("2026-03-26T12:00:00.000Z");
-
-const DEFAULT_YIELD_PUBLICATION_D1_TABLES: MockTableConfig[] = [
-  { match: "pharos:yield-sync:daily-history-materialize", rows: [] },
-  { match: "pharos:yield-sync:stale-yield-data-delete", rows: [] },
-  { match: "pharos:yield-sync:yield-data-existing-ids", rows: [], first: null },
-  { match: "pharos:yield-sync:orphan-yield-data-delete", rows: [] },
-  { match: "pharos:yield-sync:history-retention-delete", rows: [] },
-  { match: "pharos:yield-sync:daily-history-retention-delete", rows: [] },
-  { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
-  { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
-  { match: "pharos:yield-sync:ownership-handoff-delete", rows: [] },
-  { match: "ranked_linked_generations", rows: [] },
-  { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
-  { match: "INSERT OR REPLACE INTO yield_data", rows: [] },
-  { match: "INSERT OR IGNORE INTO yield_history", rows: [] },
-  { match: "INSERT OR REPLACE INTO yield_source_decisions", rows: [] },
-  { match: "INSERT OR REPLACE INTO yield_source_decision_alternatives", rows: [] },
-  { match: "INSERT OR REPLACE INTO yield_publication_generations", rows: [] },
-  { match: "UPDATE yield_publication_generations", rows: [] },
-];
-
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_YIELD_PUBLICATION_D1_TABLES]);
-}
-
-function makeBenchmarkMeta(): ParsedYieldBenchmarkMeta {
+function previousSnapshot(
+  rankings: readonly { id?: unknown; dataSource?: unknown; provenance?: unknown }[],
+  status: PreviousYieldPublicationSnapshot["status"] = "ok",
+): PreviousYieldPublicationSnapshot {
   return {
-    key: "USD",
-    label: "USD 3M T-Bill",
-    currency: "USD",
-    rate: 4.2,
-    recordDate: "2026-03-25",
-    fetchedAt: Math.floor(FIXED_NOW.getTime() / 1000),
-    ageSeconds: 0,
-    source: "fred-dgs3mo",
-    isFallback: false,
-    fallbackMode: null,
-    isProxy: false,
-    lastMarketRate: 4.2,
-    lastMarketRecordDate: "2026-03-25",
-    lastMarketFetchedAt: Math.floor(FIXED_NOW.getTime() / 1000),
-    lastMarketSource: "fred-dgs3mo",
+    status,
+    rankings,
+    malformed: status !== "missing" && status !== "ok",
   };
-}
-
-function makeYieldSourceMeta(): YieldSourceInputMeta {
-  return {
-    mode: "dex-cache",
-    updatedAt: Math.floor(FIXED_NOW.getTime() / 1000),
-    ageSeconds: 0,
-    poolCount: 1,
-    fallbackMode: null,
-  };
-}
-
-function makeSafetySnapshotMeta(): YieldSafetySnapshotMeta {
-  return {
-    kind: "ok",
-    coverageRatio: 1,
-    coveredCount: 1,
-    trackedCount: 1,
-    reason: null,
-  };
-}
-
-function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYieldSource {
-  const benchmarkMeta = makeBenchmarkMeta();
-  return {
-    id: "test-coin",
-    symbol: "TST",
-    sourceKey: "defillama:test-source",
-    yieldSource: "Test Source",
-    yieldType: "lending-vault",
-    currentApy: 4.8,
-    apyBase: 4.8,
-    apyReward: 0,
-    sourcePool: null,
-    sourceTvlUsd: 1_500_000,
-    sourceRisk: null,
-    sourceRiskPenalty: 1,
-    sourceRiskPenaltyReason: "missing-neutral",
-    sourceRiskPenaltyProvided: false,
-    sourceRiskAdjustedUtility: 28,
-    dataSource: "defillama",
-    exchangeRate: null,
-    sourceObservedAt: null,
-    comparisonAnchorObservedAt: null,
-    apy7d: 4.7,
-    apy30d: 4.6,
-    apyVarianceScore: 0.1,
-    stdDev30d: 0.2,
-    apyMin30d: 4.4,
-    apyMax30d: 4.9,
-    yieldStability: 0.9,
-    safetyScore: 82,
-    safetyGrade: "A-",
-    yieldToRisk: 3.2,
-    excessYield: 0.6,
-    benchmarkKey: "USD",
-    benchmarkLabel: benchmarkMeta.label!,
-    benchmarkCurrency: benchmarkMeta.currency!,
-    benchmarkRate: benchmarkMeta.rate,
-    benchmarkRecordDate: benchmarkMeta.recordDate,
-    benchmarkIsFallback: false,
-    benchmarkFallbackMode: null,
-    benchmarkSelectionMode: "native",
-    benchmarkIsProxy: false,
-    benchmarkMeta,
-    pharosYieldScore: 28,
-    pysNullReason: null,
-    sourceFreshness: "fresh",
-    benchmarkFreshness: "healthy",
-    calculationMode: "market-api",
-    evidenceClass: "curated-observation",
-    evidenceCompleteness: 1,
-    scoreQualification: "rated",
-    scoreQualified: true,
-    prevExchangeRate: null,
-    prevTvlUsd: 1_700_000,
-    sourceDepthRatio: null,
-    observationCount30d: null,
-    sourceSwitchCount30d: null,
-    anomalies: [],
-    warnings: [],
-    confidenceTier: "curated",
-    rejected: false,
-    usedLegacyHistory: false,
-    usedDefaultSafety: false,
-    safetyProvenance: "live-report-card",
-    safetyReason: null,
-    previousBestSourceKey: null,
-    ...overrides,
-  };
-}
-
-function buildPayloadWithObservedAt(sourceObservedAt: number, overrides: Partial<EvaluatedYieldSource> = {}) {
-  const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
-  const source = makeEvaluatedSource(overrides);
-  const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
-  const benchmark = makeBenchmarkMeta();
-  const benchmarks: ParsedYieldBenchmarkRegistry = {
-    USD: benchmark,
-    EUR: null,
-    CHF: null,
-    GBP: null,
-    JPY: null,
-    MXN: null,
-    BRL: null,
-    AUD: null,
-    CAD: null,
-    RUB: null,
-    TRY: null,
-    SGD: null,
-  };
-
-  return buildYieldRankingsPayloadFromEvaluatedSources({
-    evaluatedSources: [source],
-    bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
-    rankingProvenanceByKey: new Map([
-      [
-        buildHistoryKey(source.id, source.sourceKey),
-        {
-          sourceKey: source.sourceKey,
-          sourceObservedAt,
-          sourceAgeSeconds: Math.max(0, startSec - sourceObservedAt),
-          comparisonAnchorObservedAt,
-          comparisonAnchorAgeSeconds:
-            comparisonAnchorObservedAt == null ? null : Math.max(0, startSec - comparisonAnchorObservedAt),
-          confidenceTier: source.confidenceTier,
-          selectionMethod: "confidence-weighted" as const,
-          selectionReason: "test",
-          sourceSwitch: false,
-          previousBestSourceKey: null,
-          usedLegacyHistory: false,
-          usedDefaultSafety: false,
-          benchmarkKey: source.benchmarkKey,
-          benchmarkLabel: source.benchmarkLabel,
-          benchmarkCurrency: source.benchmarkCurrency,
-          benchmarkRate: source.benchmarkRate,
-          benchmarkRecordDate: source.benchmarkRecordDate,
-          benchmarkIsFallback: source.benchmarkIsFallback,
-          benchmarkFallbackMode: source.benchmarkFallbackMode,
-          benchmarkSelectionMode: source.benchmarkSelectionMode,
-          benchmarkIsProxy: source.benchmarkIsProxy,
-          anomalies: [],
-        },
-      ],
-    ]),
-    riskFreeRate: benchmark.rate,
-    riskFreeRateMeta: benchmark,
-    riskFreeRateRegistry: benchmarks,
-    dlPoolsMeta: makeYieldSourceMeta(),
-    safetySnapshot: makeSafetySnapshotMeta(),
-    medianApy: 4.5,
-    startSec,
-  });
 }
 
 describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
@@ -239,143 +48,180 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     vi.useRealTimers();
   });
 
-  it("does not add data-stale before the cadence-derived threshold", () => {
-    const thresholdSec = STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60);
+  type FreshnessBoundaryCase = {
+    label: string;
+    boundary: string;
+    sourceObservedAt: (nowSec: number) => number;
+    overrides: Parameters<typeof buildPayloadWithObservedAt>[1];
+    expectedStale: boolean;
+    expectedRole: string;
+  };
 
-    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
-  });
+  const freshnessBoundaryCases: FreshnessBoundaryCase[] = [
+    {
+      label: "does not add data-stale before the cadence-derived threshold",
+      boundary: "before threshold",
+      sourceObservedAt: (nowSec) => nowSec - STALE_THRESHOLD_MS / 1000 + 60,
+      overrides: {},
+      expectedStale: false,
+      expectedRole: "canonical-holder",
+    },
+    {
+      label: "adds data-stale once the cadence-derived threshold is exceeded",
+      boundary: "after threshold",
+      sourceObservedAt: (nowSec) => nowSec - STALE_THRESHOLD_MS / 1000 - 60,
+      overrides: {},
+      expectedStale: true,
+      expectedRole: "degraded-canonical",
+    },
+    {
+      label: "does not add data-stale for healthy price-derived daily snapshots",
+      boundary: "before threshold",
+      sourceObservedAt: (nowSec) => nowSec - PRICE_DERIVED_STALE_THRESHOLD_MS / 1000 + 60,
+      overrides: { dataSource: "price-derived", sourceKey: "price-derived" },
+      expectedStale: false,
+      expectedRole: "fallback-proxy",
+    },
+    {
+      label: "still adds data-stale when price-derived snapshots miss the extended threshold",
+      boundary: "after threshold",
+      sourceObservedAt: (nowSec) => nowSec - PRICE_DERIVED_STALE_THRESHOLD_MS / 1000 - 60,
+      overrides: { dataSource: "price-derived", sourceKey: "price-derived" },
+      expectedStale: true,
+      expectedRole: "fallback-proxy",
+    },
+    {
+      label: "does not add data-stale for healthy supplemental protocol-api rows",
+      boundary: "before threshold",
+      sourceObservedAt: (nowSec) => nowSec - SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000 + 60,
+      overrides: {
+        dataSource: "protocol-api",
+        sourceKey: "protocol-api:pendle:ethereum:0xpool",
+      },
+      expectedStale: false,
+      expectedRole: "canonical-holder",
+    },
+    {
+      label: "adds data-stale once supplemental protocol-api rows miss their cadence window",
+      boundary: "after threshold",
+      sourceObservedAt: (nowSec) => nowSec - SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000 - 60,
+      overrides: {
+        dataSource: "protocol-api",
+        sourceKey: "protocol-api:pendle:ethereum:0xpool",
+      },
+      expectedStale: true,
+      expectedRole: "degraded-canonical",
+    },
+    {
+      label: "keeps accepted slow NAV observations fresh through their three-day window",
+      boundary: "at threshold",
+      sourceObservedAt: (nowSec) => nowSec - SLOW_NAV_SOURCE_STALE_THRESHOLD_MS / 1000,
+      overrides: {
+        dataSource: "protocol-api",
+        sourceKey: "protocol-api:hashnote-usyc",
+      },
+      expectedStale: false,
+      expectedRole: "canonical-holder",
+    },
+    {
+      label: "keeps accepted slow NAV observations fresh through their three-day window",
+      boundary: "after threshold",
+      sourceObservedAt: (nowSec) => nowSec - SLOW_NAV_SOURCE_STALE_THRESHOLD_MS / 1000 - 1,
+      overrides: {
+        dataSource: "protocol-api",
+        sourceKey: "protocol-api:hashnote-usyc",
+      },
+      expectedStale: true,
+      expectedRole: "degraded-canonical",
+    },
+    {
+      label: "does not add data-stale for a fresh comparison anchor",
+      boundary: "before threshold",
+      sourceObservedAt: (nowSec) => nowSec,
+      overrides: {
+        dataSource: "onchain",
+        sourceKey: "onchain:test-coin",
+        sourceObservedAt: Math.floor(FIXED_NOW.getTime() / 1000),
+        comparisonAnchorObservedAt:
+          Math.floor(FIXED_NOW.getTime() / 1000) - COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000 + 60,
+      },
+      expectedStale: false,
+      expectedRole: "canonical-holder",
+    },
+    {
+      label: "adds data-stale when a fresh on-chain row uses an old comparison anchor",
+      boundary: "after threshold",
+      sourceObservedAt: (nowSec) => nowSec,
+      overrides: {
+        dataSource: "onchain",
+        sourceKey: "onchain:test-coin",
+        sourceObservedAt: Math.floor(FIXED_NOW.getTime() / 1000),
+        comparisonAnchorObservedAt:
+          Math.floor(FIXED_NOW.getTime() / 1000) - COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000 - 60,
+      },
+      expectedStale: true,
+      expectedRole: "degraded-canonical",
+    },
+    {
+      label: "keeps intentional price-derived anchors fresh through the 45-day source window",
+      boundary: "before threshold",
+      sourceObservedAt: (nowSec) => nowSec,
+      overrides: {
+        dataSource: "price-derived",
+        sourceKey: "price-derived",
+        sourceObservedAt: Math.floor(FIXED_NOW.getTime() / 1000),
+        comparisonAnchorObservedAt: Math.floor(FIXED_NOW.getTime() / 1000) - 30 * 24 * 60 * 60,
+      },
+      expectedStale: false,
+      expectedRole: "fallback-proxy",
+    },
+    {
+      label: "marks price-derived anchors stale after their 45-day source window",
+      boundary: "after threshold",
+      sourceObservedAt: (nowSec) => nowSec,
+      overrides: {
+        dataSource: "price-derived",
+        sourceKey: "price-derived",
+        sourceObservedAt: Math.floor(FIXED_NOW.getTime() / 1000),
+        comparisonAnchorObservedAt:
+          Math.floor(FIXED_NOW.getTime() / 1000) - LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000 - 60,
+      },
+      expectedStale: true,
+      expectedRole: "fallback-proxy",
+    },
+    {
+      label: "does not add data-stale for healthy supplemental onchain rows",
+      boundary: "before threshold",
+      sourceObservedAt: (nowSec) => nowSec - SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000 + 60,
+      overrides: {
+        dataSource: "onchain",
+        sourceKey: "aave-v3-onchain:ethereum:0xasset",
+      },
+      expectedStale: false,
+      expectedRole: "canonical-holder",
+    },
+  ];
 
-  it("adds data-stale once the cadence-derived threshold is exceeded", () => {
-    const thresholdSec = STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60);
-
-    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
-    expect(payload.rankings[0]?.sourceRole).toBe("degraded-canonical");
-    expect(payload.rankings[0]?.pharosYieldScore).toBeNull();
-    expect(payload.rankings[0]?.pysNullReason).toBe("source-stale");
-    expect(payload.rankings[0]?.provenance).toMatchObject({
-      sourceFreshness: "stale",
-      scoreQualification: "NR",
-      evidenceCompleteness: 0.8571,
-      scoreQualified: false,
-    });
-  });
-
-  it("does not add data-stale for healthy price-derived daily snapshots", () => {
-    const thresholdSec = PRICE_DERIVED_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60, {
-      dataSource: "price-derived",
-      sourceKey: "price-derived",
-    });
-
-    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
-  });
-
-  it("still adds data-stale when price-derived snapshots miss the extended threshold", () => {
-    const thresholdSec = PRICE_DERIVED_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60, {
-      dataSource: "price-derived",
-      sourceKey: "price-derived",
-    });
-
-    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
-  });
-
-  it("does not add data-stale for healthy supplemental protocol-api rows", () => {
-    const thresholdSec = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60, {
-      dataSource: "protocol-api",
-      sourceKey: "protocol-api:pendle:ethereum:0xpool",
-    });
-
-    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
-  });
-
-  it("adds data-stale once supplemental protocol-api rows miss their cadence window", () => {
-    const thresholdSec = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60, {
-      dataSource: "protocol-api",
-      sourceKey: "protocol-api:pendle:ethereum:0xpool",
-    });
-
-    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
-  });
-
-  it("keeps accepted slow NAV observations fresh through their three-day window", () => {
-    const thresholdSec = SLOW_NAV_SOURCE_STALE_THRESHOLD_MS / 1000;
-    const beforeBoundary = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec, {
-      dataSource: "protocol-api",
-      sourceKey: "protocol-api:hashnote-usyc",
-    });
-    const afterBoundary = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 1, {
-      dataSource: "protocol-api",
-      sourceKey: "protocol-api:hashnote-usyc",
-    });
-
-    expect(beforeBoundary.rankings[0]?.warningSignals).not.toContain("data-stale");
-    expect(afterBoundary.rankings[0]?.warningSignals).toContain("data-stale");
-  });
-
-  it("does not add data-stale for a fresh comparison anchor", () => {
-    const thresholdSec = COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000;
+  it.each(freshnessBoundaryCases)("$label — $boundary", (testCase) => {
     const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
-    const payload = buildPayloadWithObservedAt(nowSec, {
-      dataSource: "onchain",
-      sourceKey: "onchain:test-coin",
-      sourceObservedAt: nowSec,
-      comparisonAnchorObservedAt: nowSec - thresholdSec + 60,
+    const payload = buildPayloadWithObservedAt(testCase.sourceObservedAt(nowSec), testCase.overrides);
+    const ranking = payload.rankings[0];
+    const expectedSourceFreshness = testCase.expectedStale ? "stale" : "fresh";
+
+    expect(ranking).toMatchObject({
+      warningSignals: testCase.expectedStale
+        ? expect.arrayContaining(["data-stale"])
+        : expect.not.arrayContaining(["data-stale"]),
+      sourceRole: testCase.expectedRole,
+      pharosYieldScore: testCase.expectedStale ? null : 28,
+      pysNullReason: testCase.expectedStale ? "source-stale" : null,
+      provenance: expect.objectContaining({
+        sourceFreshness: expectedSourceFreshness,
+        scoreQualification: testCase.expectedStale ? "NR" : "rated",
+        scoreQualified: !testCase.expectedStale,
+        ...(testCase.expectedStale ? { evidenceCompleteness: 0.8571 } : {}),
+      }),
     });
-
-    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
-  });
-
-  it("adds data-stale when a fresh on-chain row uses an old comparison anchor", () => {
-    const thresholdSec = COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000;
-    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
-    const payload = buildPayloadWithObservedAt(nowSec, {
-      dataSource: "onchain",
-      sourceKey: "onchain:test-coin",
-      sourceObservedAt: nowSec,
-      comparisonAnchorObservedAt: nowSec - thresholdSec - 60,
-    });
-
-    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
-  });
-
-  it("keeps intentional price-derived anchors fresh through the 45-day source window", () => {
-    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
-    const payload = buildPayloadWithObservedAt(nowSec, {
-      dataSource: "price-derived",
-      sourceKey: "price-derived",
-      sourceObservedAt: nowSec,
-      comparisonAnchorObservedAt: nowSec - 30 * 24 * 60 * 60,
-    });
-
-    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
-  });
-
-  it("marks price-derived anchors stale after their 45-day source window", () => {
-    const thresholdSec = LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000;
-    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
-    const payload = buildPayloadWithObservedAt(nowSec, {
-      dataSource: "price-derived",
-      sourceKey: "price-derived",
-      sourceObservedAt: nowSec,
-      comparisonAnchorObservedAt: nowSec - thresholdSec - 60,
-    });
-
-    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
-  });
-
-  it("does not add data-stale for healthy supplemental onchain rows", () => {
-    const thresholdSec = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60, {
-      dataSource: "onchain",
-      sourceKey: "aave-v3-onchain:ethereum:0xasset",
-    });
-
-    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
   });
 
   it("populates measured source-risk fields and keeps unsupported fields neutral or null", () => {
@@ -456,37 +302,73 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
 });
 
 describe("validateYieldRankingsPayloadForPublish", () => {
+  it.each([
+    {
+      label: "missing",
+      snapshot: previousSnapshot([], "missing"),
+      currentRankings: 0,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "malformed JSON",
+      snapshot: previousSnapshot([], "malformed-json"),
+      currentRankings: 1,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "malformed payload",
+      snapshot: previousSnapshot([], "malformed-payload"),
+      currentRankings: 1,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "empty",
+      snapshot: previousSnapshot([]),
+      currentRankings: 0,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "small",
+      snapshot: previousSnapshot(Array.from({ length: 4 }, (_, index) => ({ id: `previous-${index}` }))),
+      currentRankings: 1,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "severe shrink",
+      snapshot: previousSnapshot(Array.from({ length: 10 }, (_, index) => ({ id: `previous-${index}` }))),
+      currentRankings: 1,
+      expected: { ok: false, validationFailures: 1, reason: "rankings-payload-shrunk" },
+    },
+  ])("keeps the $label previous snapshot decision stable", async ({ snapshot, currentRankings, expected }) => {
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
+    payload.rankings = currentRankings === 0 ? [] : [payload.rankings[0]!];
+
+    const result = await validateYieldRankingsPayloadForPublish(payload, snapshot);
+
+    expect(result).toEqual(expected);
+  });
+
   it("allows a valid replacement when the previous rankings cache is malformed", async () => {
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["yield-rankings"],
-        rows: [{ value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) }],
-        first: { value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) },
-      },
-    ]);
     const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
 
-    const result = await validateYieldRankingsPayloadForPublish(db, payload);
+    const result = await validateYieldRankingsPayloadForPublish(
+      payload,
+      previousSnapshot([], "malformed-json"),
+    );
 
     expect(result).toEqual({ ok: true, validationFailures: 0 });
   });
 
   it("blocks malformed previous-cache recovery when the replacement has no rows", async () => {
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["yield-rankings"],
-        rows: [{ value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) }],
-        first: { value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) },
-      },
-    ]);
     const payload = {
       ...buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000)),
       rankings: [],
     };
 
-    const result = await validateYieldRankingsPayloadForPublish(db, payload);
+    const result = await validateYieldRankingsPayloadForPublish(
+      payload,
+      previousSnapshot([], "malformed-json"),
+    );
 
     expect(result).toEqual({
       ok: false,
@@ -496,7 +378,6 @@ describe("validateYieldRankingsPayloadForPublish", () => {
   });
 
   it("blocks publish when ranking IDs are duplicated", async () => {
-    const db = mockD1();
     const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
     payload.rankings = [
       payload.rankings[0]!,
@@ -506,7 +387,7 @@ describe("validateYieldRankingsPayloadForPublish", () => {
       },
     ];
 
-    const result = await validateYieldRankingsPayloadForPublish(db, payload);
+    const result = await validateYieldRankingsPayloadForPublish(payload, previousSnapshot([], "missing"));
 
     expect(result).toEqual({
       ok: false,

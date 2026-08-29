@@ -51,6 +51,55 @@ function formatMilliseconds(value: number | null): string {
   return value == null ? "Unknown" : `${value.toLocaleString()}ms`;
 }
 
+export type PerAlertMetricDescriptor = {
+  key: "sent" | "enqueued" | "failed" | "blocked" | "firstSendLatencyMs";
+  label: string;
+  accessor: (row: CommsPerAlertDeliveryRow) => number | null;
+  formatter: (value: number | null) => string;
+  desktop: {
+    width: string;
+    alignment: "text-left" | "text-right";
+  };
+};
+
+export const PER_ALERT_METRICS = [
+  {
+    key: "sent",
+    label: "Sent",
+    accessor: (row) => row.sent,
+    formatter: formatCount,
+    desktop: { width: "w-[12%]", alignment: "text-right" },
+  },
+  {
+    key: "enqueued",
+    label: "Enqueued",
+    accessor: (row) => row.enqueued,
+    formatter: formatCount,
+    desktop: { width: "w-[14%]", alignment: "text-right" },
+  },
+  {
+    key: "failed",
+    label: "Failed",
+    accessor: (row) => row.failed,
+    formatter: formatCount,
+    desktop: { width: "w-[12%]", alignment: "text-right" },
+  },
+  {
+    key: "blocked",
+    label: "Blocked",
+    accessor: (row) => row.blocked,
+    formatter: formatCount,
+    desktop: { width: "w-[12%]", alignment: "text-right" },
+  },
+  {
+    key: "firstSendLatencyMs",
+    label: "First send latency",
+    accessor: (row) => row.firstSendLatencyMs,
+    formatter: formatMilliseconds,
+    desktop: { width: "w-[26%]", alignment: "text-right" },
+  },
+] as const satisfies readonly PerAlertMetricDescriptor[];
+
 function formatTimestamp(value: number | null): string {
   return value == null ? "Unknown" : new Date(value * 1_000).toLocaleString();
 }
@@ -400,28 +449,23 @@ function MobilePerAlertRow({ row }: { row: CommsPerAlertDeliveryRow }) {
     <div className="min-w-0 border-t border-border/60 py-3 first:border-t-0" data-alert-type={row.type}>
       <div className="text-sm font-medium text-foreground">{row.label}</div>
       <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 pt-2 text-xs">
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Sent</dt>
-          <dd className="font-mono tabular-nums">{formatCount(row.sent)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Enqueued</dt>
-          <dd className="font-mono tabular-nums">{formatCount(row.enqueued)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Failed</dt>
-          <dd className="font-mono tabular-nums">{formatCount(row.failed)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Blocked</dt>
-          <dd className="font-mono tabular-nums">{formatCount(row.blocked)}</dd>
-        </div>
-        <div className="col-span-2 min-w-0">
-          <dt className="text-muted-foreground">First send latency</dt>
-          <dd className="min-w-0 break-words font-mono tabular-nums [overflow-wrap:anywhere]">
-            {formatMilliseconds(row.firstSendLatencyMs)}
-          </dd>
-        </div>
+        {PER_ALERT_METRICS.map((metric) => (
+          <div
+            key={metric.key}
+            className={cn("min-w-0", metric.key === "firstSendLatencyMs" && "col-span-2")}
+            data-metric-key={metric.key}
+          >
+            <dt className="text-muted-foreground">{metric.label}</dt>
+            <dd
+              className={cn(
+                "font-mono tabular-nums",
+                metric.key === "firstSendLatencyMs" && "min-w-0 break-words [overflow-wrap:anywhere]",
+              )}
+            >
+              {metric.formatter(metric.accessor(row))}
+            </dd>
+          </div>
+        ))}
       </dl>
     </div>
   );
@@ -460,21 +504,21 @@ function PerAlertDelivery({ model }: { model: CommsWorkbenchModel }) {
                   <TableHead scope="col" className="h-auto w-[24%] whitespace-normal px-0 pb-2 pr-2 font-medium">
                     Alert type
                   </TableHead>
-                  <TableHead scope="col" className="h-auto w-[12%] whitespace-normal px-0 pb-2 text-right font-medium">
-                    Sent
-                  </TableHead>
-                  <TableHead scope="col" className="h-auto w-[14%] whitespace-normal px-0 pb-2 text-right font-medium">
-                    Enqueued
-                  </TableHead>
-                  <TableHead scope="col" className="h-auto w-[12%] whitespace-normal px-0 pb-2 text-right font-medium">
-                    Failed
-                  </TableHead>
-                  <TableHead scope="col" className="h-auto w-[12%] whitespace-normal px-0 pb-2 text-right font-medium">
-                    Blocked
-                  </TableHead>
-                  <TableHead scope="col" className="h-auto w-[26%] whitespace-normal px-0 pb-2 text-right font-medium">
-                    First latency
-                  </TableHead>
+                  {PER_ALERT_METRICS.map((metric) => (
+                    <TableHead
+                      key={metric.key}
+                      scope="col"
+                      aria-label={metric.label}
+                      data-metric-key={metric.key}
+                      className={cn(
+                        "h-auto whitespace-normal px-0 pb-2 font-medium",
+                        metric.desktop.width,
+                        metric.desktop.alignment,
+                      )}
+                    >
+                      {metric.label}
+                    </TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -486,21 +530,19 @@ function PerAlertDelivery({ model }: { model: CommsWorkbenchModel }) {
                     >
                       {row.label}
                     </TableHead>
-                    <TableCell className="whitespace-normal px-0 py-2 text-right font-mono">
-                      {formatCount(row.sent)}
-                    </TableCell>
-                    <TableCell className="whitespace-normal px-0 py-2 text-right font-mono">
-                      {formatCount(row.enqueued)}
-                    </TableCell>
-                    <TableCell className="whitespace-normal px-0 py-2 text-right font-mono">
-                      {formatCount(row.failed)}
-                    </TableCell>
-                    <TableCell className="whitespace-normal px-0 py-2 text-right font-mono">
-                      {formatCount(row.blocked)}
-                    </TableCell>
-                    <TableCell className="min-w-0 whitespace-normal px-0 py-2 text-right font-mono [overflow-wrap:anywhere]">
-                      {formatMilliseconds(row.firstSendLatencyMs)}
-                    </TableCell>
+                    {PER_ALERT_METRICS.map((metric) => (
+                      <TableCell
+                        key={metric.key}
+                        data-metric-key={metric.key}
+                        className={cn(
+                          "whitespace-normal px-0 py-2 font-mono",
+                          metric.desktop.alignment,
+                          metric.key === "firstSendLatencyMs" && "min-w-0 [overflow-wrap:anywhere]",
+                        )}
+                      >
+                        {metric.formatter(metric.accessor(row))}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))}
               </TableBody>

@@ -1,0 +1,4 @@
+[
+  {"date":"2022-04-02","kind":"exploit","label":"Frontier oracle exploit — $15.6M, INV price manipulation","severity":"high","note":"2022-04-02 — Frontier oracle exploit (~$15.6M); INV price manipulation via TWAP attack. Larger of the two 2022 issuer-damaging events."},
+  {"date":"2022-06-16","kind":"exploit","label":"Frontier flash-loan oracle exploit — ~$5.8M DOLA borrowed","severity":"med","href":"https://cointelegraph.com/news/inverse-finance-exploited-again-for-1-2m-in-flashloan-oracle-attack","note":"2022-06-16 — Second flash-loan oracle exploit on Frontier (~$5.8M)."}
+]

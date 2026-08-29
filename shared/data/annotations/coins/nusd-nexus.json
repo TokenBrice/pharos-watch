@@ -1,0 +1,4 @@
+[
+  {"date":"2021-08-29","kind":"governance","label":"Synapse mainnet launch — nUSD basket-backed bridge stable","severity":"med","note":"2021-08-29 — Synapse mainnet launches with nUSD cross-chain stable bridging"},
+  {"date":"2021-11-06","kind":"exploit","label":"Synapse Metapool exploit — ~$8M nUSD drained, LPs refunded","severity":"high","note":"2021-11-06 — Metapool virtual-price exploit drains ~$8M nUSD"}
+]

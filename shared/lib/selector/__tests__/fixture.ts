@@ -59,7 +59,6 @@ export function makeMergedRow(overrides: Partial<MergedRow> = {}): MergedRow {
     variantOf: null,
     isYieldBearing: false,
     pegCurrency: "USD",
-    lifecycle: "active",
     governance: "decentralized",
     canBeBlacklisted: false,
     mechanismArchetype: null,

@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildDewsStablecoinIdsDigest,
   readDewsPublishedGenerationResult,
@@ -271,7 +272,7 @@ export async function loadPublishedStressSignalGeneration(
   } catch (error) {
     return {
       status: "unavailable",
-      reason: `generation-read-failed:${error instanceof Error ? error.message : String(error)}`,
+      reason: `generation-read-failed:${toErrorMessage(error)}`,
     };
   }
 

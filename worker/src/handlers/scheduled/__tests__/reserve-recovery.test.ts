@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { CronProgressReporter, CronResult } from "../../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
@@ -13,27 +14,15 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
-  claimNextScheduledCheckpointRecovery: mocks.claim,
-  inspectScheduledCheckpointRecoveryEligibility: mocks.inspect,
-  prepareEligibleScheduledCheckpointRecoveries: mocks.prepare,
-  retireIncompatibleScheduledCheckpointRecoveries: mocks.retireIncompatible,
+  claimNextLiveReserveCheckpointRecovery: mocks.claim,
+  inspectLiveReserveCheckpointRecoveryEligibility: mocks.inspect,
+  prepareEligibleLiveReserveCheckpointRecoveries: mocks.prepare,
+  retireIncompatibleLiveReserveCheckpointRecoveries: mocks.retireIncompatible,
 }));
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: mocks.sweep,
 }));
 vi.mock("../hourly-live-reserves", () => ({
-  LIVE_RESERVE_CHILD_PREREQUISITES: {
-    "sync-live-reserves": [],
-    "sync-redemption-backstops": ["sync-live-reserves"],
-    "sync-kinesis-supply": [],
-    "reserve-post-sync-watchdog": ["sync-live-reserves"],
-  },
-  LIVE_RESERVE_SLOT_JOBS: [
-    "sync-live-reserves",
-    "sync-redemption-backstops",
-    "sync-kinesis-supply",
-    "reserve-post-sync-watchdog",
-  ],
   runFourHourlyReserveSyncSlot: mocks.runReserveSlot,
 }));
 vi.mock("../context", () => ({
@@ -51,6 +40,8 @@ const EMPTY_INSPECTION = {
   candidates: [],
 };
 
+let latestLeasedResult: CronResult | void;
+
 function runtime(mode: string | undefined): ScheduledRuntimeContext {
   const value = makeScheduledRuntime({
     db: {} as D1Database,
@@ -60,7 +51,13 @@ function runtime(mode: string | undefined): ScheduledRuntimeContext {
     scheduledTimeMs: 1_000_000,
     slotStartedAt: 1_000,
     invocationId: "recovery-poll",
-    runLeasedCron: vi.fn(async (_job, fn) => fn(new AbortController().signal, vi.fn())),
+    runLeasedCron: vi.fn(async (
+      _job: string,
+      fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
+    ) => {
+      latestLeasedResult = await fn(new AbortController().signal, vi.fn());
+      return latestLeasedResult;
+    }),
   });
   mocks.createRuntime.mockReturnValue(value);
   return value;
@@ -69,6 +66,7 @@ function runtime(mode: string | undefined): ScheduledRuntimeContext {
 describe("reserve recovery mode", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    latestLeasedResult = undefined;
     mocks.inspect.mockResolvedValue(EMPTY_INSPECTION);
     mocks.sweep.mockResolvedValue({ slotsReconciled: 0 });
     mocks.retireIncompatible.mockResolvedValue({
@@ -149,10 +147,32 @@ describe("reserve recovery mode", () => {
     const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
 
     expect(result.jobsErrored).toBe(0);
-    expect(mocks.claim).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      expectedQueueHash: expect.any(String),
-    }));
+    expect(mocks.claim).toHaveBeenCalledWith(expect.anything(), {
+      owner: "recovery-poll",
+      leaseSec: 900,
+    });
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
+    expect((latestLeasedResult as { metadata?: string }).metadata).toBe(JSON.stringify({
+      disposition: "recovery-executed",
+      mode: "recover",
+      checkpointsClaimed: 1,
+      incompatibleRetirement: {
+        observedAt: 1_000,
+        candidates: 0,
+        retired: 0,
+        skippedActiveChildLease: 0,
+        retiredCheckpoints: [],
+      },
+      originalScheduleKey: "fourHourlyReserveSync",
+      originalSlotStartedAt: 800,
+      recoveryAttemptNo: 2,
+      executionGeneration: 2,
+      sourceAttemptNo: 1,
+      childDispositionsAtClaim: {},
+      sweep: { slotsReconciled: 0 },
+      preparation: { inspection: EMPTY_INSPECTION, prepared: [] },
+      summary: { jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 },
+    }));
   });
 
   it("reports a contended recovery as degraded so the active checkpoint can retry", async () => {

@@ -196,6 +196,13 @@ type FetchSpyLike = {
 
 export type TelegramFetchSpy = Mock<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>;
 
+export type TelegramMembershipUser = {
+  id: number;
+  is_bot?: boolean;
+  first_name?: string;
+  [key: string]: unknown;
+};
+
 /**
  * The Telegram Bot API transport seam every webhook-side suite installs: a
  * global `fetch` spy that answers `{ ok: true }` unless a test says otherwise.
@@ -211,6 +218,23 @@ export function createTelegramFetchSpy(): { fetchSpy: TelegramFetchSpy; reset: (
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
   };
   return { fetchSpy, reset };
+}
+
+export function mockTelegramMembership(
+  fetchSpy: TelegramFetchSpy,
+  status: string,
+  user: TelegramMembershipUser = {
+    id: 7,
+    is_bot: false,
+    first_name: status === "administrator" ? "admin" : "member",
+  },
+): void {
+  fetchSpy.mockImplementation(async (url) => {
+    if (String(url).includes("getChatMember")) {
+      return new Response(JSON.stringify({ ok: true, result: { user, status } }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  });
 }
 
 export function telegramApiCalls(fetchSpy: FetchSpyLike, method: string): unknown[][] {

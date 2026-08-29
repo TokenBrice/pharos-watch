@@ -10,6 +10,7 @@ import {
   type FreshnessStatus,
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessLane } from "@shared/lib/api-freshness";
+import type { ApiMeta } from "@shared/types/api-meta";
 import type { CacheStatus } from "@shared/types/status";
 import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateState } from "./fx-rate-state";
 import {
@@ -21,7 +22,7 @@ import {
   type FreshnessSentinelValidationReason,
   validateFreshnessSentinelPayload,
 } from "./freshness-sentinels";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { readDewsPublishedGenerationResult } from "./dews-publication-pointer";
 import {
   API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
@@ -47,11 +48,7 @@ export interface CacheFreshnessDiagnostic {
   sentinelValidationReason?: FreshnessSentinelValidationReason;
 }
 
-export interface FreshnessMeta {
-  updatedAt: number;
-  ageSeconds: number;
-  status: FreshnessStatus;
-}
+export type FreshnessMeta = Pick<ApiMeta, "updatedAt" | "ageSeconds" | "status">;
 
 export type CronTimestampLookupStatus = "ok" | "missing" | "lookup_failed";
 

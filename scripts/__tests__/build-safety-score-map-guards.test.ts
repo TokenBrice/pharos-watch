@@ -5,6 +5,15 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { makeReportCardsV9Card } from "@shared/test-utils/report-cards-v9";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import {
+  makeSafetyMapPsiPayload,
+  makeSafetyMapRatedCard,
+  makeSafetyMapReportCardsResponse,
+  makeSafetyMapStablecoinsPayload,
+  withSafetyMapAdverseAttribution,
+} from "./build-safety-score-map.test-support";
 
 /**
  * Publication-safety guards for the Safety Score map generator (plan §11.2b).
@@ -40,25 +49,67 @@ let psiComputedAt = 0;
 let publicationStatus = "current";
 let server: Server;
 let baseUrl = "";
+let reportCardsPayloadOverride: unknown | undefined;
+let stablecoinsPayloadOverride: unknown | undefined;
+let psiPayloadOverride: unknown | undefined;
+
+function reportCardsPayload(): unknown {
+  const updatedAt = Math.max(asOfSec, Math.floor(Date.now() / 1000));
+  const canonicalCards: SafetyScoreV9CurrentCard[] = cards.map((card) => {
+    if (card.score === null) {
+      return makeReportCardsV9Card({
+        id: card.id,
+        score: null,
+        grade: card.grade as SafetyScoreV9CurrentCard["grade"],
+        qualityScore: null,
+        pegMultiplier: null,
+        pegAdjustedScore: null,
+        pillars: {
+          backing: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+          exit: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+          control: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+        },
+        weakestPillar: null,
+        nrReasons: [{ code: "missing-pillar", message: "Fixture is not rated.", field: null, origin: "asset" }],
+      });
+    }
+    const ratedCard = makeSafetyMapRatedCard(card);
+    if (card.grade !== "D" && card.grade !== "F") return ratedCard;
+    return withSafetyMapAdverseAttribution(ratedCard);
+  });
+  return makeSafetyMapReportCardsResponse({
+    cards: canonicalCards,
+    fixtureId: "safety-map-fixture",
+    methodologyVersion,
+    defaultUpdatedAt: updatedAt,
+    asOfSec,
+  });
+}
+
+function stablecoinsPayload(): unknown {
+  return makeSafetyMapStablecoinsPayload(assets);
+}
+
+function psiPayload(): unknown {
+  return makeSafetyMapPsiPayload({
+    score: 94.3,
+    band: "BEDROCK",
+    avg24h: 93.8,
+    avg24hBand: "BEDROCK",
+    computedAt: psiComputedAt,
+  }, psiComputedAt);
+}
 
 beforeAll(async () => {
   server = createServer((req, res) => {
     const path = (req.url ?? "").split("?")[0];
     const body =
       path === "/api/report-cards/v9"
-        ? { cards, methodology: { version: methodologyVersion }, asOfSec }
+        ? (reportCardsPayloadOverride ?? reportCardsPayload())
         : path === "/api/stablecoins"
-          ? { peggedAssets: assets }
+          ? (stablecoinsPayloadOverride ?? stablecoinsPayload())
           : path === "/api/stability-index"
-            ? {
-                current: {
-                  score: 94.3,
-                  band: "BEDROCK",
-                  avg24h: 93.8,
-                  avg24hBand: "BEDROCK",
-                  computedAt: psiComputedAt,
-                },
-              }
+            ? (psiPayloadOverride ?? psiPayload())
           : null;
     if (!body) {
       res.writeHead(404).end("{}");
@@ -137,7 +188,15 @@ interface RunResult {
  */
 async function runGenerator(
   fixture: { cards: Card[]; assets: Asset[]; asOfSec?: number; methodologyVersion?: string },
-  options: { args?: string[]; stopBeforeRender?: boolean; publicationStatus?: string; psiComputedAt?: number } = {},
+  options: {
+    args?: string[];
+    stopBeforeRender?: boolean;
+    publicationStatus?: string;
+    psiComputedAt?: number;
+    reportCardsPayload?: unknown;
+    stablecoinsPayload?: unknown;
+    psiPayload?: unknown;
+  } = {},
 ): Promise<RunResult> {
   cards = fixture.cards;
   assets = fixture.assets;
@@ -145,6 +204,9 @@ async function runGenerator(
   psiComputedAt = options.psiComputedAt ?? Math.floor(Date.now() / 1000) - 5 * 60;
   methodologyVersion = fixture.methodologyVersion ?? "9.19";
   publicationStatus = options.publicationStatus ?? "current";
+  reportCardsPayloadOverride = options.reportCardsPayload;
+  stablecoinsPayloadOverride = options.stablecoinsPayload;
+  psiPayloadOverride = options.psiPayload;
 
   const outDir = scratchDir("pharos-safety-map-test-");
   const pngPath = join(outDir, "map.png");
@@ -225,6 +287,34 @@ describe("safety-score map — freshness guard (§11.2b rule 1)", () => {
     });
     expect(run.status).toBe(1);
     expect(run.stderr).toMatch(/refusing to render a future-dated level/);
+  });
+});
+
+describe("safety-score map — canonical API payload schemas", () => {
+  it("rejects the former report-card subset DTO", async () => {
+    const fixture = universe();
+    const run = await runGenerator(fixture, {
+      reportCardsPayload: { cards: fixture.cards, methodology: { version: "9.19" }, asOfSec: Math.floor(Date.now() / 1000) - HOUR },
+    });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Report-card response is malformed/);
+  });
+
+  it("rejects the former stablecoin subset DTO", async () => {
+    const fixture = universe();
+    const run = await runGenerator(fixture, { stablecoinsPayload: { peggedAssets: fixture.assets } });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Stablecoin response is malformed/);
+  });
+
+  it("rejects the former PSI subset DTO", async () => {
+    const run = await runGenerator(universe(), {
+      psiPayload: {
+        current: { score: 94.3, band: "BEDROCK", computedAt: Math.floor(Date.now() / 1000) - 5 * 60 },
+      },
+    });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/PSI response is malformed/);
   });
 });
 
@@ -341,7 +431,7 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     return path;
   }
 
-  function validSnapshot(fixture: { cards: Card[]; assets: Asset[] }): unknown {
+  function validSnapshot(fixture: { cards: Card[]; assets: Asset[] }) {
     const byAsset = new Map(fixture.assets.map((asset) => [asset.id, asset]));
     const rated = fixture.cards.filter((card) => card.grade !== "NR");
     const tierOrder = ["A", "B", "C", "D", "F"] as const;
@@ -481,6 +571,63 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     const run = await runGenerator({ cards: nextCards, assets: prior.assets }, { args: ["--previous-snapshot", path] });
     expect(run.status).toBe(1);
     expect(run.stderr).toMatch(/Tier A count moved/);
+  });
+
+  it("tolerates a near-tie leader swap when the prior census explains the new leader", async () => {
+    const prior = universe({ count: 20 });
+    const body = validSnapshot(prior);
+    // Yesterday C1 narrowly led tier A over C0; today the live data has C0
+    // ahead again. The prior census knows C0 at its current supply, so this is
+    // ordinary market movement, not a broken join.
+    const leaders = body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders;
+    [leaders[0], leaders[1]] = [leaders[1], leaders[0]];
+    const path = snapshot(scratch, body);
+    const run = await runGenerator(prior, { args: ["--previous-snapshot", path], stopBeforeRender: true });
+    expect(run.stderr).not.toMatch(/leader/);
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it("tolerates a new leader from outside the recorded top-3 when the census explains it", async () => {
+    const prior = universe({ count: 20 });
+    const body = validSnapshot(prior);
+    // Yesterday's recorded top-3 omitted C0 entirely (it sat 4th); today it
+    // leads tier A. The prior census still carries coin-00 at its current
+    // supply, so the crossover is explained without any recorded-top-3 seat.
+    const leaders = body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders;
+    leaders.splice(0, leaders.length, ...leaders.filter((leader) => leader.symbol !== "C0"));
+    const path = snapshot(scratch, body);
+    const run = await runGenerator(prior, { args: ["--previous-snapshot", path], stopBeforeRender: true });
+    expect(run.stderr).not.toMatch(/leader/);
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it("refuses a leader the previous census never saw", async () => {
+    const prior = universe({ count: 20 });
+    const body = validSnapshot(prior);
+    // Rewrite yesterday's identity for coin-00 so today's tier A leader C0 is
+    // a coin the previous census has no record of.
+    body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders[0].symbol = "CX";
+    const row = body.coins.find((coin) => coin.id === "coin-00")!;
+    row.id = "coin-xx";
+    row.symbol = "CX";
+    const path = snapshot(scratch, body);
+    const run = await runGenerator(prior, { args: ["--previous-snapshot", path] });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Tier A leader changed to C0, absent from the previous census — refusing an unexplained leader shift/);
+  });
+
+  it("refuses a leader swap when the new leader's own supply moved more than 25%", async () => {
+    const prior = universe({ count: 20 });
+    const body = validSnapshot(prior);
+    const leaders = body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders;
+    [leaders[0], leaders[1]] = [leaders[1], leaders[0]];
+    // The prior census has the new leader at double its current supply, so the
+    // swap is no longer explained by bounded day-over-day movement.
+    body.coins.find((coin) => coin.id === "coin-00")!.mcap *= 2;
+    const path = snapshot(scratch, body);
+    const run = await runGenerator(prior, { args: ["--previous-snapshot", path] });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Tier A leader C0 supply moved from \d+ to \d+ \(>25%\) since the previous snapshot — refusing an unexplained leader shift/);
   });
 
   it("tolerates a single immaterial join flip and draws the coin at the size floor", async () => {

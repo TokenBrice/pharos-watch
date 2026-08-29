@@ -3,11 +3,16 @@
 import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import type { ScreenerRow } from "@/lib/screener-filters";
 
 import { ScreenerClient } from "./client";
 
 const mocks = vi.hoisted(() => ({
   QueryFreshnessNotices: vi.fn(),
+  ScreenerTable: vi.fn(),
   useDexLiquidity: vi.fn(),
   useHydrated: vi.fn(),
   usePegSummary: vi.fn(),
@@ -36,7 +41,10 @@ vi.mock("@/components/screener/screener-toolbar", () => ({
 }));
 
 vi.mock("@/components/screener/screener-table", () => ({
-  ScreenerTable: () => <div data-testid="screener-table" />,
+  ScreenerTable: (props: { rows: ScreenerRow[] }) => {
+    mocks.ScreenerTable(props);
+    return <div data-testid="screener-table" />;
+  },
 }));
 
 vi.mock("@/components/table-export-menu", () => ({
@@ -162,5 +170,53 @@ describe("ScreenerClient freshness notices", () => {
     expect(props.queries.some((query) => query.preset === "pegSummary" && query.hasData)).toBe(true);
     expect(props.queries.some((query) => query.preset === "stressSignals" && query.hasData)).toBe(true);
     expect(props.queries.some((query) => query.preset === "dexLiquidity" && query.hasData)).toBe(true);
+  });
+
+  it("projects screener safety fields from the canonical V9 table row", () => {
+    const response = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({
+          id: "usdc-circle",
+          evidence: { level: "insufficient", freshness: "stale", reasons: [] },
+        }),
+      ],
+    });
+    const canonical = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
+    expect(canonical.status).toBe("available");
+    if (canonical.status !== "available") return;
+
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin()] },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+    mocks.useReportCardsV9.mockReturnValue({
+      data: response,
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+
+    render(<ScreenerClient />);
+
+    const props = mocks.ScreenerTable.mock.calls[0]?.[0] as { rows: ScreenerRow[] } | undefined;
+    const row = props?.rows.find((candidate) => candidate.id === "usdc-circle");
+    const projected = canonical.value["usdc-circle"];
+    expect(row).toEqual(expect.objectContaining({
+      safetyGrade: projected?.grade,
+      safetyScore: projected?.score,
+      safetyBackingScore: projected?.pillars.backing.score,
+      safetyExitScore: projected?.pillars.exit.score,
+      safetyControlScore: projected?.pillars.control.score,
+      safetyEvidence: "limited",
+      safetyWeakestPillar: projected?.weakestPillar?.pillar ?? null,
+      safetyWeakestScore: projected?.weakestPillar?.score ?? null,
+      safetyBindingCapReason: projected?.bindingCapReason ?? null,
+    }));
   });
 });

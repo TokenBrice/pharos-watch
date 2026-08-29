@@ -149,7 +149,8 @@ The migration files and `worker/migrations/MANIFEST.md` are the exact schema and
 
 - `blacklist`, `unblacklist`, and `destroy` transitions;
 - stablecoin, chain, contract/config, transaction, block, and event-signature provenance;
-- native and justified event-time USD amounts;
+- authoritative `amount_native` and justified `amount_usd_at_event` values;
+- the deployed legacy `amount` column remains in place pending a separate coordinated schema cleanup; current ingestion and repair paths no longer write it;
 - amount source, resolution status, recovery attempts, provider, and bounded error diagnostics;
 - optional suppression reason for audit-only rows.
 

@@ -4,19 +4,14 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import {
-  LIVE_RESERVE_ADAPTER_DESCRIPTORS,
+  LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "../live-reserve-adapters";
 import { getReserveDisplayBadgeKindForAdapter } from "../live-reserve-display";
-import { LIVE_RESERVE_ADAPTER_KEYS } from "../../types/live-reserves";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../live-reserve-adapter-descriptors";
-import { ReserveEvidenceSourceOriginClassSchema } from "../report-card-evidence-journal";
 import {
   LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-  LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
   QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-  adapterParamsSchemas,
   baseLiveReserveConfigSchema,
 } from "../live-reserve-adapters";
 
@@ -287,7 +282,7 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
           config.adapter as keyof typeof INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES
         ];
       const declarationCap = (
-        LIVE_RESERVE_ADAPTER_DESCRIPTORS[config.adapter] as {
+        LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter] as {
           validation?: { maxSourceAgeSec?: number };
         }
       ).validation?.maxSourceAgeSec;
@@ -302,26 +297,6 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     expect(failures).toEqual([]);
   });
 
-  it("derives every compatibility projection from the descriptor registry", () => {
-    const keys = [...LIVE_RESERVE_ADAPTER_KEYS].sort();
-    expect(Object.keys(LIVE_RESERVE_ADAPTER_DESCRIPTORS).sort()).toEqual(keys);
-    expect(Object.keys(adapterParamsSchemas).sort()).toEqual(keys);
-    expect(Object.keys(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS).sort()).toEqual(keys);
-    expect(Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).sort()).toEqual(keys);
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS).toBe(LIVE_RESERVE_ADAPTER_DESCRIPTORS);
-
-    for (const adapterKey of LIVE_RESERVE_ADAPTER_KEYS) {
-      const descriptor = LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey];
-      expect(descriptor.key).toBe(adapterKey);
-      expect(adapterParamsSchemas[adapterKey]).toBe(descriptor.params);
-      expect(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[adapterKey]).toBe(descriptor.primaryInputKinds);
-      expect(ReserveEvidenceSourceOriginClassSchema.safeParse(descriptor.sourceOriginClass).success).toBe(
-        true,
-      );
-      expect(getReserveDisplayBadgeKindForAdapter(adapterKey)).toBe(descriptor.displayBadgeKind);
-    }
-  });
-
   it("classifies reviewed issuer feeds without changing their score-bearing evidence class", () => {
     const issuerAdapters = [
       "frax-balance-sheet",
@@ -332,11 +307,11 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     ] as const;
 
     for (const adapterKey of issuerAdapters) {
-      expect(LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey].sourceOriginClass).toBe("issuer-attested");
+      expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].sourceOriginClass).toBe("issuer-attested");
       expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].evidenceClass).toBe("independent");
       expect(getReserveDisplayBadgeKindForAdapter(adapterKey)).toBe("proof");
     }
-    expect(LIVE_RESERVE_ADAPTER_DESCRIPTORS["3jane-usd3"].sourceOriginClass).toBe("unknown");
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["3jane-usd3"].sourceOriginClass).toBe("unknown");
   });
 
   it("rejects unsupported adapter semantics", () => {

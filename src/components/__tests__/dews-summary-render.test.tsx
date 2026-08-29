@@ -38,7 +38,6 @@ describe("DEWSSummary radar logos", () => {
   it("renders stablecoin logos for alert-or-higher dots while leaving watch dots plain", () => {
     const { container } = render(
       <DEWSSummary
-        showHeader={false}
         logos={{
           "frax-frax": "/logos/frax.svg",
           "usdc-circle": "/logos/usdc.svg",
@@ -58,7 +57,6 @@ describe("DEWSSummary radar logos", () => {
   it("scales logo marks up by escalation tier", () => {
     const { container } = render(
       <DEWSSummary
-        showHeader={false}
         logos={{
           "frax-frax": "/logos/frax.svg",
           "usdc-circle": "/logos/usdc.svg",

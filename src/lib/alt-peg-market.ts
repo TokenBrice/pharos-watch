@@ -1,6 +1,7 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { compareFiniteDesc } from "@shared/lib/sort";
 import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
@@ -223,7 +224,7 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
         colorBgClass: pegMeta.bgColor,
       } satisfies AltPegDistributionRow;
     })
-    .sort((left, right) => right.marketCap - left.marketCap);
+    .sort(compareFiniteDesc<AltPegDistributionRow>((row) => row.marketCap));
 
   return {
     totalMarketCap,

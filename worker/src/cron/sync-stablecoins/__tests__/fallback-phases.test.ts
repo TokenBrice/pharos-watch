@@ -6,9 +6,15 @@ import {
   overlayFallbackCuratedAggregateSupply,
   resolveFreshCoinGeckoFallbackEntry,
 } from "../fallback-intake";
-import { restoreFallbackCacheState, runFallbackStalenessGate } from "../fallback-cache";
-import { runFallbackDepegFollowThrough } from "../fallback-publish";
+import { restoreFallbackCacheState } from "../fallback-cache";
 import { loadPreviousStablecoinsById } from "../shared";
+import { checkStablecoinsPriceStaleness } from "../runtime";
+import { buildFallbackStablecoinsSyncResult } from "../metadata";
+import {
+  buildFallbackStablecoinsPublicationPolicy,
+  runStablecoinsPostIntakePublication,
+} from "../publication";
+import { evaluateStablecoinActivePriceCoverage } from "../../../lib/stablecoin-publication-coverage";
 import type { PeggedAsset } from "../enrich-prices";
 import { makePeggedAsset } from "./_fixtures";
 
@@ -19,6 +25,15 @@ const fallbackMocks = vi.hoisted(() => ({
     providerDiagnostics: [],
   })),
   queueTrackedAdditionsNotice: vi.fn(async (..._args: unknown[]) => undefined),
+  validateAndWriteStablecoinsCache: vi.fn(async ({ syncStartSec }: { syncStartSec: number }) => ({
+    written: true,
+    skippedBecauseNewer: false,
+    cacheKey: "stablecoins",
+    syncStartSec,
+    responseReadyCacheError: null,
+  })),
+  commitReplayPriceCache: vi.fn(async (..._args: unknown[]) => null),
+  fillMissingSupplyHistory: vi.fn(async (..._args: unknown[]) => 0),
 }));
 
 const onchainSupplyMocks = vi.hoisted(() => ({
@@ -32,6 +47,16 @@ vi.mock("../post-enrichment", async (importOriginal) => ({
 
 vi.mock("../telegram-tracked-additions", () => ({
   queueTrackedAdditionsNotice: fallbackMocks.queueTrackedAdditionsNotice,
+}));
+
+vi.mock("../cache-publication", () => ({
+  validateAndWriteStablecoinsCache: fallbackMocks.validateAndWriteStablecoinsCache,
+  commitReplayPriceCache: fallbackMocks.commitReplayPriceCache,
+}));
+
+vi.mock("../phase-helpers", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../phase-helpers")>()),
+  fillMissingSupplyHistory: fallbackMocks.fillMissingSupplyHistory,
 }));
 
 vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
@@ -57,6 +82,30 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
     chains: [],
     ...overrides,
   });
+}
+
+async function evaluateFallbackStalenessFixture(input: {
+  db: D1Database;
+  assets: PeggedAsset[];
+  previousAssetsById: ReadonlyMap<string, PeggedAsset>;
+  previousCacheState: Parameters<typeof checkStablecoinsPriceStaleness>[0]["previousCacheState"];
+  syncStartSec?: number;
+  signal?: AbortSignal;
+}) {
+  const { syncStartSec: _syncStartSec, ...stalenessInput } = input;
+  const policy = buildFallbackStablecoinsPublicationPolicy(input.assets);
+  const labels = policy.labels;
+  const result = await checkStablecoinsPriceStaleness({
+    ...stalenessInput,
+    progressStage: labels.stalenessProgressStage,
+    progressMessage: labels.stalenessProgressMessage,
+    abortStage: labels.stalenessAbortStage,
+    warningLabel: labels.stalenessWarningLabel,
+    failureLabel: labels.stalenessFailureLabel,
+    blockedResultFactory: policy.blockedResultBuilder.staleness,
+  });
+  if (result.blockedResult) return result.blockedResult;
+  return result;
 }
 
 describe("CoinGecko fallback phases", () => {
@@ -230,7 +279,7 @@ describe("CoinGecko fallback phases", () => {
     ]);
 
     const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
-    const result = await runFallbackStalenessGate({
+    const result = await evaluateFallbackStalenessFixture({
       db,
       assets,
       previousAssetsById,
@@ -271,7 +320,7 @@ describe("CoinGecko fallback phases", () => {
     ]);
 
     const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
-    const result = await runFallbackStalenessGate({
+    const result = await evaluateFallbackStalenessFixture({
       db,
       assets,
       previousAssetsById,
@@ -300,7 +349,7 @@ describe("CoinGecko fallback phases", () => {
     ]);
 
     const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
-    const result = await runFallbackStalenessGate({
+    const result = await evaluateFallbackStalenessFixture({
       db,
       assets,
       previousAssetsById,
@@ -321,7 +370,7 @@ describe("CoinGecko fallback phases", () => {
     const controller = new AbortController();
     controller.abort("fallback abort");
 
-    const result = await runFallbackStalenessGate({
+    const result = await evaluateFallbackStalenessFixture({
       db: mockD1([]),
       assets: [makeAsset()],
       previousAssetsById: new Map(),
@@ -358,20 +407,71 @@ describe("CoinGecko fallback phases", () => {
     const previousAssetsById = new Map<string, PeggedAsset>([
       ["fixture-old", makeAsset({ id: "fixture-old", geckoId: "fixture-old" })],
     ]);
+    const expectedActivePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, undefined, {
+      previousCoverage: null,
+      previousAcceptedAssetsById: previousAssetsById,
+    });
 
-    const result = await runFallbackDepegFollowThrough({
+    const result = await runStablecoinsPostIntakePublication({
       db,
       assets,
       previousAssetsById,
+      previousCacheState: { state: "missing" },
+      previousActivePriceCoverage: null,
       syncStartSec: NOW_SEC,
+      priceCacheEntries: [],
+      providerDiagnostics: [],
       returnIfAborted: () => null,
       abortResult: () => ({ metadata: "{}" }),
+      metadata: {
+        path: "fallback",
+        input: {
+          enrichStats: {},
+          authoritativeOverrideCount: 0,
+          rejectedCount: 0,
+          cachedFallbackCount: 0,
+          nativePegCorrectionCount: 0,
+          nativePegFillCount: 0,
+        },
+      },
+      policy: buildFallbackStablecoinsPublicationPolicy(assets),
     });
 
-    expect(result).toMatchObject({
-      depegErrorCount: 0,
-      depegErrors: [],
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      depegPipelineSucceeded: true,
       providerDiagnostics: [],
+    });
+    const expectedResult = buildFallbackStablecoinsSyncResult({
+      assets,
+      enrichStats: {},
+      providerDiagnostics: [],
+      authoritativeOverrideCount: 0,
+      rejectedCount: 0,
+      cachedFallbackCount: 0,
+      nativePegCorrectionCount: 0,
+      nativePegFillCount: 0,
+      stalenessWarning: false,
+      stalenessSummary: null,
+      stalenessCheckFailed: false,
+      depegErrorCount: 0,
+      cacheKey: "stablecoins",
+      syncStartSec: NOW_SEC,
+      activePriceCoverage: expectedActivePriceCoverage,
+    });
+    expect(result.metadata).toBe(expectedResult.metadata);
+    expect(result.productivity).toEqual({
+      productive: true,
+      reason: "stablecoins-fallback-cache-published",
+      publications: [{
+        surface: "stablecoins",
+        generationId: `stablecoins:${NOW_SEC}`,
+        publishedAt: NOW_SEC,
+        candidateRows: 1,
+        publishedRows: 1,
+        expectedRows: 1,
+        artifactCacheKey: "stablecoins",
+        validationSummary: { publicationPath: "coingecko-fallback" },
+      }],
     });
     const noticeOrder = fallbackMocks.queueTrackedAdditionsNotice.mock.invocationCallOrder[0];
     const depegOrder = fallbackMocks.runDepegPipeline.mock.invocationCallOrder[0];
@@ -395,6 +495,8 @@ describe("CoinGecko fallback phases", () => {
       expect.any(Function),
       "fallback-",
       " (CG fallback)",
+      undefined,
+      undefined,
     );
   });
 });

@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { V9_MINIMUM_RATEABLE_ASSETS } from "@shared/types/safety-score-v9-coverage";
 import type {
   V9PublicationHealth,
@@ -149,7 +150,7 @@ function safeFailure(
   stage: SafetyScoreV9PublicationFailureStage,
 ): { code: string; message: string } {
   const name = error instanceof Error && error.name ? error.name : "Error";
-  const rawMessage = error instanceof Error ? error.message : String(error);
+  const rawMessage = toErrorMessage(error);
   return {
     code: `safety-score-v9-publication-${stage}-${name}`.slice(0, 160),
     message: (

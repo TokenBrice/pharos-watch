@@ -3,73 +3,62 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 
 // Stub MINT_BURN_CONFIGS with two critical configs on different chains so the
 // orchestrator must produce distinct chain contexts and emit events for both.
-vi.mock("../../lib/mint-burn-contracts", () => ({
-  MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT: 0,
-  MINT_BURN_CONFIGS: [
-    {
-      chain: {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        evmChainId: 1,
-        explorerUrl: "https://etherscan.io",
-        type: "evm",
-      },
-      stablecoinId: "usdt-tether",
-      symbol: "USDT",
-      contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      decimals: 6,
-      dustThreshold: 10_000,
-      startBlock: 21_900_000,
-      adapterKind: "mixed",
-      startBlockSource: "reviewed-contract-specific",
-      startBlockConfidence: "high",
-      tier: "critical",
-      events: [
-        {
-          signature: "Transfer(address,address,uint256)",
-          topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-          direction: "mint",
-          amountEncoding: "transfer-value",
-          filterTopic: {
-            index: 1,
-            value: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          },
+vi.mock("../../lib/mint-burn-contracts", async () => {
+  const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn");
+  return {
+    MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT: 0,
+    MINT_BURN_CONFIGS: [
+      makeMintBurnConfig({
+        asset: {
+          contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          tier: "critical",
         },
-      ],
-    },
-    {
-      chain: {
-        chainId: "arbitrum",
-        chainName: "Arbitrum",
-        evmChainId: 42_161,
-        explorerUrl: "https://arbiscan.io",
-        type: "evm",
-      },
-      stablecoinId: "usdai-usd-ai",
-      symbol: "USDai",
-      contractAddress: "0x2bd7d6b2e6bfcf61716bf5d7167e4c6b62a3f9c0",
-      decimals: 18,
-      dustThreshold: 10_000,
-      startBlock: 249_000_000,
-      adapterKind: "transfer-zero-address",
-      startBlockSource: "reviewed-contract-specific",
-      startBlockConfidence: "high",
-      tier: "critical",
-      events: [
-        {
-          signature: "Transfer(address,address,uint256)",
-          topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-          direction: "mint",
-          amountEncoding: "transfer-value",
-          filterTopic: {
-            index: 1,
-            value: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        adapter: "mixed",
+        events: [
+          {
+            signature: "Transfer(address,address,uint256)",
+            topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+            direction: "mint",
+            amountEncoding: "transfer-value",
+            filterTopic: {
+              index: 1,
+              value: "0x0000000000000000000000000000000000000000000000000000000000000000",
+            },
           },
+        ],
+      }),
+      makeMintBurnConfig({
+        chain: {
+          chainId: "arbitrum",
+          chainName: "Arbitrum",
+          evmChainId: 42_161,
+          explorerUrl: "https://arbiscan.io",
         },
-      ],
-    },
-  ],
-}));
+        asset: {
+          stablecoinId: "usdai-usd-ai",
+          symbol: "USDai",
+          contractAddress: "0x2bd7d6b2e6bfcf61716bf5d7167e4c6b62a3f9c0",
+          decimals: 18,
+          startBlock: 249_000_000,
+          tier: "critical",
+        },
+        adapter: "transfer-zero-address",
+        events: [
+          {
+            signature: "Transfer(address,address,uint256)",
+            topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+            direction: "mint",
+            amountEncoding: "transfer-value",
+            filterTopic: {
+              index: 1,
+              value: "0x0000000000000000000000000000000000000000000000000000000000000000",
+            },
+          },
+        ],
+      }),
+    ],
+  };
+});
 
 // Return distinct Alchemy URLs per chain so we can assert each chain was
 // queried via its own endpoint (proves chain-context.ts builds per-chain URLs).

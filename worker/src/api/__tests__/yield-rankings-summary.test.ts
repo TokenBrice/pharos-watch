@@ -69,6 +69,13 @@ function makePayload(): YieldRankingsResponse {
     scalingFactor: 8,
     medianApy: 5,
     updatedAt: UPDATED_AT,
+    publication: {
+      generationId: `yield-${UPDATED_AT}`,
+      updatedAt: UPDATED_AT,
+      cutoffAt: UPDATED_AT,
+      schemaVersion: 1,
+      status: "published",
+    },
   };
 }
 

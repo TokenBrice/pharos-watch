@@ -308,6 +308,94 @@ function assertCandidateIdentity(value, label) {
   return identity;
 }
 
+// The order is part of the replay contract: historical identity takes
+// precedence over capability matching, while phase-one is the final fallback.
+const COMPILER_PROFILES = [
+  {
+    name: "historical",
+    matches: (identity) =>
+      identity.evaluationBuildDigest === EXPECTED_BASELINE_BINDINGS.candidateIdentity.evaluationBuildDigest,
+    capabilities: ["canonical-chain-supply-distribution.v1"],
+    compiledFactSchemaVersion: 2,
+    compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
+    routeAdapterVersion: "v1",
+    chainSupplyAdapter: "fixed-input.usd-circulating-supply.v2",
+    researchOverlaysAdapter: "v9-fact-extension.review-overlays.v2",
+    includesReviewedTransfers: false,
+    includesShockCoverage: false,
+  },
+  {
+    name: "current",
+    matches: (identity, capabilities) =>
+      identity.evaluationBuildDigest === SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST &&
+      stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(capabilities),
+    capabilities: [
+      "canonical-chain-supply-distribution.v1",
+      "canonical-lock-mint-supply-attribution.v1",
+      "exit-route-modeled-confidence.v1",
+      "fact-gap-responsibility.v1",
+      "journaled-cdp-shock-coverage.v1",
+      "reviewed-deployment-unit-supply-attribution.v1",
+      "reviewed-transfer-deployments.v1",
+      "wrapper-local-facts.v1",
+    ],
+    compiledFactSchemaVersion: 3,
+    compilerAdapter: "exact-fixed-input-to-v9-facts.v2",
+    routeAdapterVersion: "v2",
+    chainSupplyAdapter: "fixed-input.usd-circulating-supply.v4",
+    researchOverlaysAdapter: "v9-fact-extension.review-overlays.v3",
+    includesReviewedTransfers: true,
+    includesShockCoverage: true,
+  },
+  {
+    name: "shock-coverage",
+    matches: (identity, capabilities) =>
+      stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(capabilities),
+    capabilities: [
+      "canonical-chain-supply-distribution.v1",
+      "exit-route-modeled-confidence.v1",
+      "journaled-cdp-shock-coverage.v1",
+      "reviewed-transfer-deployments.v1",
+    ],
+    compiledFactSchemaVersion: 2,
+    compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
+    routeAdapterVersion: "v2",
+    chainSupplyAdapter: "fixed-input.usd-circulating-supply.v2",
+    researchOverlaysAdapter: "v9-fact-extension.review-overlays.v3",
+    includesReviewedTransfers: true,
+    includesShockCoverage: true,
+  },
+  {
+    name: "transfer-fact",
+    matches: (identity, capabilities) =>
+      stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(capabilities),
+    capabilities: [
+      "canonical-chain-supply-distribution.v1",
+      "exit-route-modeled-confidence.v1",
+      "reviewed-transfer-deployments.v1",
+    ],
+    compiledFactSchemaVersion: 2,
+    compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
+    routeAdapterVersion: "v2",
+    chainSupplyAdapter: "fixed-input.usd-circulating-supply.v2",
+    researchOverlaysAdapter: "v9-fact-extension.review-overlays.v3",
+    includesReviewedTransfers: true,
+    includesShockCoverage: false,
+  },
+  {
+    name: "phase-one",
+    matches: () => true,
+    capabilities: ["canonical-chain-supply-distribution.v1", "exit-route-modeled-confidence.v1"],
+    compiledFactSchemaVersion: 2,
+    compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
+    routeAdapterVersion: "v2",
+    chainSupplyAdapter: "fixed-input.usd-circulating-supply.v2",
+    researchOverlaysAdapter: "v9-fact-extension.review-overlays.v2",
+    includesReviewedTransfers: false,
+    includesShockCoverage: false,
+  },
+];
+
 function assertCompilerIdentity(value, label) {
   const identity = requireExactKeys(
     value,
@@ -322,68 +410,25 @@ function assertCompilerIdentity(value, label) {
     ],
     `${label} compiler identity`,
   );
-  const historicalBaseline =
-    identity.evaluationBuildDigest === EXPECTED_BASELINE_BINDINGS.candidateIdentity.evaluationBuildDigest;
-  const phaseOneCapabilities = ["canonical-chain-supply-distribution.v1", "exit-route-modeled-confidence.v1"];
-  const transferFactCapabilities = [...phaseOneCapabilities, "reviewed-transfer-deployments.v1"];
-  const shockCoverageCapabilities = [
-    ...phaseOneCapabilities,
-    "journaled-cdp-shock-coverage.v1",
-    "reviewed-transfer-deployments.v1",
-  ];
-  const currentCapabilities = [
-    "canonical-chain-supply-distribution.v1",
-    "canonical-lock-mint-supply-attribution.v1",
-    "exit-route-modeled-confidence.v1",
-    "fact-gap-responsibility.v1",
-    "journaled-cdp-shock-coverage.v1",
-    "reviewed-deployment-unit-supply-attribution.v1",
-    "reviewed-transfer-deployments.v1",
-    "wrapper-local-facts.v1",
-  ];
-  const currentProduction =
-    identity.evaluationBuildDigest === SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST &&
-    stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(currentCapabilities);
-  const productionProfile = historicalBaseline
-    ? "historical"
-    : currentProduction
-      ? "current"
-      : stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(shockCoverageCapabilities)
-      ? "shock-coverage"
-      : stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(transferFactCapabilities)
-        ? "transfer-fact"
-        : "phase-one";
-  const expectedCapabilities =
-    productionProfile === "historical"
-      ? ["canonical-chain-supply-distribution.v1"]
-      : productionProfile === "current"
-        ? currentCapabilities
-      : productionProfile === "shock-coverage"
-        ? shockCoverageCapabilities
-        : productionProfile === "transfer-fact"
-          ? transferFactCapabilities
-          : phaseOneCapabilities;
+  const compilerProfile = COMPILER_PROFILES.find((profile) =>
+    profile.matches(identity, profile.capabilities),
+  );
   if (
     identity.schemaVersion !== 1 ||
     identity.fixedInputSchemaVersion !== 3 ||
     identity.factExtensionSchemaVersion !== 2 ||
-    identity.compiledFactSchemaVersion !== (productionProfile === "current" ? 3 : 2) ||
-    stableStringify(identity.compiledFactSchemaCapabilities) !== stableStringify(expectedCapabilities) ||
-    identity.compilerAdapter !==
-      (productionProfile === "current" ? "exact-fixed-input-to-v9-facts.v2" : "exact-fixed-input-to-v9-facts.v1")
+    identity.compiledFactSchemaVersion !== compilerProfile.compiledFactSchemaVersion ||
+    stableStringify(identity.compiledFactSchemaCapabilities) !== stableStringify(compilerProfile.capabilities) ||
+    identity.compilerAdapter !== compilerProfile.compilerAdapter
   ) {
     throw new Error(`${label} compiler identity does not match its closed production profile`);
   }
   requireDigest(identity.evaluationBuildDigest, `${label} compiler identity evaluationBuildDigest`);
-  return { identity, productionProfile };
+  return { identity, compilerProfile };
 }
 
-function assertProducerIdentity(value, label, productionProfile) {
-  const includesReviewedTransfers =
-    productionProfile === "current" ||
-    productionProfile === "transfer-fact" ||
-    productionProfile === "shock-coverage";
-  const includesShockCoverage = productionProfile === "current" || productionProfile === "shock-coverage";
+function assertProducerIdentity(value, label, compilerProfile) {
+  const { includesReviewedTransfers, includesShockCoverage } = compilerProfile;
   const identity = requireExactKeys(
     value,
     [
@@ -431,20 +476,14 @@ function assertProducerIdentity(value, label, productionProfile) {
     "researchOverlays",
   ];
   const freshness = requireExactKeys(identity.freshnessPolicySec, freshnessKeys, `${label} producer freshness policy`);
-  const routeAdapterVersion = productionProfile === "historical" ? "v1" : "v2";
   const expectedAdapters = {
     registry: "fixed-input.registry.v1",
-    dexExitRoutes: `fixed-input.dex-exit-observations.${routeAdapterVersion}`,
-    redemptionExitRoutes: `fixed-input.redemption-exit-observations.${routeAdapterVersion}`,
+    dexExitRoutes: `fixed-input.dex-exit-observations.${compilerProfile.routeAdapterVersion}`,
+    redemptionExitRoutes: `fixed-input.redemption-exit-observations.${compilerProfile.routeAdapterVersion}`,
     liveReserves: "fixed-input.live-reserves.v1",
-    chainSupply:
-      productionProfile === "current"
-        ? "fixed-input.usd-circulating-supply.v4"
-        : "fixed-input.usd-circulating-supply.v2",
+    chainSupply: compilerProfile.chainSupplyAdapter,
     peg: "fixed-input.peg-summary.v1",
-    researchOverlays: includesReviewedTransfers
-      ? "v9-fact-extension.review-overlays.v3"
-      : "v9-fact-extension.review-overlays.v2",
+    researchOverlays: compilerProfile.researchOverlaysAdapter,
     ...(includesShockCoverage ? { shockCoverage: "journal-registry.cdp-shock-coverage.v1" } : {}),
   };
   if (
@@ -688,11 +727,11 @@ function assertReplay(replay, label) {
   }
   const pipeline = replay.pipeline;
   const candidateIdentity = assertCandidateIdentity(pipeline.candidateIdentity, label);
-  const { identity: compilerIdentity, productionProfile } = assertCompilerIdentity(
+  const { identity: compilerIdentity, compilerProfile } = assertCompilerIdentity(
     pipeline.compilerFactSchemaIdentity,
     label,
   );
-  const producer = assertProducerIdentity(pipeline.producerCapabilityIdentity, label, productionProfile);
+  const producer = assertProducerIdentity(pipeline.producerCapabilityIdentity, label, compilerProfile);
   const computedBaseId = computeCalibrationBaseInputGenerationId(pipeline.fixedInput);
   if (fixedBaseId !== computedBaseId || pipeline.compiledFacts.baseInputGenerationId !== computedBaseId) {
     throw new Error(`${label} fixed-input generation does not match its score-bearing payload`);
@@ -745,11 +784,7 @@ function assertReplay(replay, label) {
     dexExitRoutes: pipeline.extension?.routeFreshness?.dexMaxAgeSec,
     redemptionExitRoutes: pipeline.extension?.routeFreshness?.redemptionMaxAgeSec,
     documentedTermsExitRoutes: pipeline.extension?.routeFreshness?.documentedTermsMaxAgeSec,
-    ...(productionProfile === "current" ||
-      productionProfile === "transfer-fact" ||
-      productionProfile === "shock-coverage"
-      ? { accessReviews: 31_536_000 }
-      : {}),
+    ...(compilerProfile.includesReviewedTransfers ? { accessReviews: 31_536_000 } : {}),
     liveReserves: pipeline.extension?.sources?.liveReserves?.maxAgeSec,
     chainSupply: pipeline.extension?.sources?.chainSupply?.maxAgeSec,
     peg: pipeline.extension?.sources?.peg?.maxAgeSec,

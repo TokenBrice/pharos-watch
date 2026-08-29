@@ -1,0 +1,7 @@
+[
+  {"date":"2023-05-03","kind":"governance","label":"crvUSD mainnet deployment (test-in-prod)","severity":"low","note":"2023-05-03 — crvUSD contracts first deployed on Ethereum mainnet"},
+  {"date":"2023-05-17","kind":"governance","label":"crvUSD public launch — LLAMMA mechanism live","severity":"low","note":"2023-05-17 — Public crvUSD UI launch; LLAMMA soft-liquidation mechanism live"},
+  {"date":"2023-08-03","kind":"depeg","label":"Vyper exploit fallout — crvUSD brief 0.35% depeg","severity":"med","note":"2023-08-03 — Curve Vyper exploit fallout; crvUSD briefly depegs ~0.35%"},
+  {"date":"2024-06-12","kind":"depeg","label":"UwU Lend exploit — crvUSD upward depeg, Egorov liquidated","severity":"high","href":"https://research.llamarisk.com/research/crvusd-incident-report-20240612","note":"2024-06-12 — UwU Lend exploit cascades; crvUSD upward depeg, Egorov $100M liquidation"},
+  {"date":"2025-06-26","kind":"depeg","label":"Resupply exploit — crvUSD ~3.2% depeg via Llamalend dependency","severity":"med","note":"2025-06-26 — Resupply (Curve-affiliated lending) exploited via empty-market donation attack on cvcrvUSD vault; crvUSD depegged ~3.2%."}
+]

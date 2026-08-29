@@ -3,6 +3,7 @@ import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { BlacklistGapMetrics } from "../../blacklist-gaps";
+import { makeBlacklistReconciliationStatusRow } from "../../../test-helpers/__shared/fixtures";
 import { getDataQuality } from "../data-quality";
 
 const NOW = 1_775_890_000;
@@ -47,17 +48,7 @@ function stablecoinsPayload(): string {
 }
 
 describe("getDataQuality repair debt", () => {
-  it("uses the DDR cache count when dual-written repair tasks are partial", async () => {
-    const ddrDebt = {
-      checkedAt: NOW - 300,
-      count: 3,
-      events: [
-        { eventId: 101, reason: "incident-conflict" },
-        { eventId: 102, reason: "incident-conflict" },
-        { eventId: 103, reason: "incident-conflict" },
-      ],
-      eventsTruncated: false,
-    };
+  it("derives DDR repair debt fields from canonical task rows", async () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -67,11 +58,6 @@ describe("getDataQuality repair debt", () => {
             value: stablecoinsPayload(),
             updated_at: NOW - 60,
           },
-          {
-            key: "ddr:repair-debt:v1",
-            value: JSON.stringify(ddrDebt),
-            updated_at: NOW - 300,
-          },
         ],
       },
       {
@@ -80,12 +66,38 @@ describe("getDataQuality repair debt", () => {
         first: { cnt: 0 },
       },
       {
+        match: "COUNT(*) OVER ()",
+        rows: [
+          {
+            subject_id: "101",
+            payload_json: JSON.stringify({ eventId: 101, reason: "incident-conflict" }),
+            updated_at: NOW - 300,
+            total_count: 3,
+            latest_updated_at: NOW - 300,
+          },
+          {
+            subject_id: "102",
+            payload_json: JSON.stringify({ eventId: 102, reason: "incident-conflict" }),
+            updated_at: NOW - 300,
+            total_count: 3,
+            latest_updated_at: NOW - 300,
+          },
+          {
+            subject_id: "103",
+            payload_json: JSON.stringify({ eventId: 103, reason: "incident-conflict" }),
+            updated_at: NOW - 300,
+            total_count: 3,
+            latest_updated_at: NOW - 300,
+          },
+        ],
+      },
+      {
         match: "FROM worker_repair_tasks",
         rows: [
           {
             kind: "ddr-repair-required-event",
-            open_count: 1,
-            oldest_created_at: NOW - 120,
+            open_count: 3,
+            oldest_created_at: NOW - 300,
             next_attempt_at: null,
           },
         ],
@@ -110,32 +122,7 @@ describe("getDataQuality repair debt", () => {
       },
       {
         match: "blacklist-reconciliation-status-latest",
-        rows: [
-          {
-            run_id: "run-1",
-            manifest_id: "night-watch-usdt-tron-2026-07-09",
-            manifest_sha256: "abc",
-            status: "verified",
-            time_travel_bookmark: "bookmark",
-            expected_event_count: 86,
-            present_event_count: 86,
-            missing_event_count: 0,
-            duplicate_identity_count: 0,
-            expected_destroyed_amount_raw: 8_874_287_612_325,
-            actual_destroyed_amount_raw: 8_874_287_612_325,
-            balance_replay_expected_count: 70,
-            balance_replay_matching_count: 70,
-            unresolved_manifest_gap_count: 0,
-            tron_cursor_after: 200,
-            tron_safe_head: 200,
-            arbitrum_min_cursor: 500,
-            arbitrum_min_safe_head: 500,
-            arbitrum_expected_config_count: 7,
-            arbitrum_at_safe_head_count: 7,
-            started_at: 100,
-            completed_at: 200,
-          },
-        ],
+        rows: [makeBlacklistReconciliationStatusRow()],
       },
     ]);
 
@@ -143,10 +130,22 @@ describe("getDataQuality repair debt", () => {
 
     expect(quality.ddrRepairDebtStatus).toBe("present");
     expect(quality.ddrRepairDebtCount).toBe(3);
+    expect(quality.ddrRepairDebtCheckedAt).toBe(NOW - 300);
+    expect(quality.ddrRepairDebtEvents).toEqual([
+      { eventId: 101, reason: "incident-conflict" },
+      { eventId: 102, reason: "incident-conflict" },
+      { eventId: 103, reason: "incident-conflict" },
+    ]);
+    expect(quality.ddrRepairDebtEventsTruncated).toBe(false);
+    expect(
+      db.getHistory().some(
+        (entry) => entry.sql.includes("FROM cache WHERE key = ?") && entry.binds[0] === "ddr:repair-debt:v1",
+      ),
+    ).toBe(false);
     expect(quality.repairDebt).toMatchObject({
       status: "present",
       openCount: 3,
-      source: "worker-repair-tasks+ddr-cache-fallback",
+      source: "worker-repair-tasks",
       byKind: {
         "ddr-repair-required-event": {
           openCount: 3,

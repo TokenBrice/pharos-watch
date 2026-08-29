@@ -15,7 +15,6 @@ import type {
 import {
   assertV9ReasonCodesRegistered,
   assertV9ValidatedPolicyEnvelope,
-  getV9ScoreBearingGatesPolicy,
   resolveV9ReasonPolicy,
 } from "./policy";
 import { isV9UncanonicalizedChainPoolRoute } from "./facts";
@@ -1252,7 +1251,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           severity: materialBridgeSeverity(
             route.tier,
             control.materialSupplyShare,
-            getV9ScoreBearingGatesPolicy(args.policy).control.materialBridgeHighShareThreshold,
+            args.policy.policy.semantic.control.materialBridgeHighShareThreshold,
           ),
           binding,
           reason: `Bridge control topology is ${route.tier}.`,

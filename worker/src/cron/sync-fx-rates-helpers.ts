@@ -15,7 +15,7 @@ import {
   inheritFxSourceMetadata,
 } from "../lib/fx-source-metadata";
 import { invertUnitsPerUsd } from "../lib/fx-config";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
 const CHAINLINK_REFERENCE_MAX_DIVERGENCE = 0.05;

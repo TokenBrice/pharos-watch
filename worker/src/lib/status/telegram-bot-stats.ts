@@ -5,7 +5,7 @@ import type {
   TelegramDeliverySliStatus,
 } from "@shared/types/status";
 import { formatIsoDate } from "@shared/lib/format";
-import { toErrorMessage } from "../error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   coerceCount,
   coerceNullableTimestamp,

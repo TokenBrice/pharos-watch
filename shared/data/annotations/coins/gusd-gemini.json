@@ -1,0 +1,4 @@
+[
+  {"date":"2018-09-09","kind":"regulatory","label":"GUSD launch — first NYDFS-approved fiat-backed stablecoin","severity":"med"},
+  {"date":"2023-06-27","kind":"governance","label":"MakerDAO cuts GUSD PSM ceiling from $500M to $110M","severity":"high","note":"2023-06-27 — MakerDAO PSM cap for GUSD slashed from $500M to $110M amid Gemini Earn/Genesis fallout; major shift in DeFi backing demand."}
+]

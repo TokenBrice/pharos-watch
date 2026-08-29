@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import FlowsPage from "@/app/flows/page";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -17,7 +18,19 @@ vi.mock("@/components/flow-chart", () => ({
 }));
 
 vi.mock("@/components/flow-table", () => ({
-  FlowTable: () => <div>table</div>,
+  FlowTable: ({ coins }: { coins: Array<{
+    pressureShiftScore: number | null;
+    pressureShiftState: string;
+    netFlowDirection24h: string;
+  }> }) => (
+    <div>
+      table {coins.map((coin) => (
+        <span key={`${coin.pressureShiftScore}|${coin.pressureShiftState}|${coin.netFlowDirection24h}`}>
+          {`${coin.pressureShiftScore}|${coin.pressureShiftState}|${coin.netFlowDirection24h}`}
+        </span>
+      ))}
+    </div>
+  ),
 }));
 
 vi.mock("@/components/flow-brrr-overview", () => ({
@@ -53,7 +66,7 @@ function buildFlowData(syncWarning: string | null) {
       trackedCoins: 1,
       trackedMcapUsd: 100_000_000_000,
     },
-    coins: [],
+    coins: [makeMintBurnFlowCoin()],
     hourly: [],
     updatedAt: Math.floor(Date.now() / 1000),
     windowHours: 24,
@@ -101,6 +114,16 @@ describe("FlowsPage", () => {
     expect(html).not.toContain("Data may be delayed");
   });
 
+  it("passes signed values and states to the flow table unchanged", () => {
+    mockUseMintBurnFlows.mockReturnValue(makeQueryResult({
+      data: buildFlowData(null),
+    }) as unknown as ReturnType<typeof useMintBurnFlows>);
+
+    const html = renderToStaticMarkup(<FlowsPage />);
+
+    expect(html).toContain("-42|worsening|burning");
+  });
+
   it("still shows the generic stale-data banner when no sync-specific warning exists", () => {
     mockUseMintBurnFlows.mockImplementation((hours = 24) => {
       if (hours === 168) {
@@ -115,6 +138,7 @@ describe("FlowsPage", () => {
           updatedAt: Math.floor(Date.now() / 1000) - 3_000,
           ageSeconds: 3_000,
           status: "degraded",
+          warning: '110 - "Response is stale"',
         },
       }) as unknown as ReturnType<typeof useMintBurnFlows>;
     });

@@ -4,7 +4,7 @@ import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { rethrowIfAborted } from "./abort";
-import { toErrorMessage } from "./error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 interface JsonRpcEnvelope<T> {
   result?: T;

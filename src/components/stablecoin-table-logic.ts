@@ -3,8 +3,6 @@ import { createTableComparator } from "@/lib/table-comparator";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter, OTHER_PEG_TAGS } from "@shared/lib/filter-tags";
-import { deriveDepegSignal } from "@shared/lib/depeg-signals";
-import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import {
   CLIENT_ACTIVE_IDS as ACTIVE_IDS,
@@ -167,13 +165,10 @@ export function sortStablecoins({
   filtered,
   sort,
   effectiveSortKey,
-  pegRates,
   pegScores,
   dexLiquidity,
   reportCards,
 }: SortStablecoinsParams): StablecoinData[] {
-  const metaById = TRACKED_META_BY_ID;
-
   const extractors: Record<StablecoinTableSortKey, (row: StablecoinData) => StablecoinSortValue> = {
     name: (r) => r.name.toLowerCase(),
     price: (r) => r.price ?? 0,
@@ -198,11 +193,11 @@ export function sortStablecoins({
     },
     mintAuthority: (r) => resolveMintAuthorityScoreDisplay(reportCards?.[r.id]?.mint).score,
     peg: (r) => {
-      const meta = metaById.get(r.id);
-      if (meta?.flags.navToken) return null;
-      const ref = getPegReference(r.pegType, pegRates, meta?.commodityOunces);
-      const signal = r.price == null || ref == null ? null : deriveDepegSignal(r.price, ref);
-      return signal?.absRawBps ?? null;
+      const pegSummary = pegScores?.get(r.id);
+      if (pegSummary?.pegReferenceUnavailable === true) return null;
+      return pegSummary?.currentDeviationBps == null
+        ? null
+        : Math.abs(pegSummary.currentDeviationBps);
     },
   };
   const extractSortValue = extractors[effectiveSortKey];

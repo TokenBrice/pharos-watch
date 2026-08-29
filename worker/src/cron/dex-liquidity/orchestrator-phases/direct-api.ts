@@ -44,7 +44,7 @@ import {
 import type { DexPriceObs, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, SymbolLookups } from "../types";
 import { mergeDexPriceObservationMap } from "./price-obs";
 import { DIRECT_API_FETCH_PHASE_CONCURRENCY, DIRECT_API_PROVIDER_TIMEOUT_MS } from "../direct-api-policy";
-import { toErrorMessage } from "../../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 
 export interface DirectApiFetcher {

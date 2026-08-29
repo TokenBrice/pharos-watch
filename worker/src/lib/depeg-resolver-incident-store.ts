@@ -1,3 +1,4 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { DDR_PUBLIC_PREDICTION_DELAY_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { executeAtomicBatch, runChunkedInRead } from "./db";
@@ -913,7 +914,7 @@ async function isIncidentSealed(db: D1Database, incidentKey: string): Promise<bo
 }
 
 function isSealedIncidentRepairGuardAbort(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = toErrorMessage(error);
   return (
     message.includes("sealed incident links require consumed repair authorization") ||
     message.includes("sealed incident current pointers/state require authorized revision")

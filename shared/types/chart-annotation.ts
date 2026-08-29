@@ -3,7 +3,8 @@
  *
  * `ChartAnnotation` is the runtime-neutral shape consumed by both:
  *   - the worker-tape branch (`useChartAnnotations` → `/api/events`)
- *   - the editorially curated branch (`shared/data/annotations/curated-annotations.ts`)
+ *   - the editorially curated branch (per-coin JSON assets loaded by
+ *     `shared/data/annotations/curated-annotations.ts`)
  *
  * Kept in `shared/types` so the static curated data can validate at build
  * time without pulling client-only modules.

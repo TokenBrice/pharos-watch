@@ -49,7 +49,7 @@ import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import type { DlListQuote, NavTelemetryQuote } from "../../lib/primary-price-collector";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { isUsableGeckoId } from "./enrich-prices-primary-shared";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 // crvUSD PriceAggregator contract. Consulted as a regular primary-consensus
 // source by the Curve oracle fetch path; kept local because the caller is

@@ -2,33 +2,16 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import { makeCompleteTelegramBotStatus, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { CommsSection } from "../comms-section";
 
 function makeCompleteCommsStatus() {
   const data = makeHealthyStatusResponse();
-  data.telegramBot = {
-    ...data.telegramBot!,
+  data.telegramBot = makeCompleteTelegramBotStatus({
     explicitCoinSubscriptions: 15,
     presetImpliedCoinSubscriptions: 0,
     activePresetFollowers: 0,
-    pendingDeliveries: 0,
-    oldestPendingDeliveryAgeSec: null,
-    oldestDuePendingAgeSec: null,
-    estimatedDrainTimeSec: 0,
-    pendingDeliveryBacklog: {
-      claimable: 0,
-      due: 0,
-      deferred: 0,
-      expired: 0,
-      nearTtl: 0,
-      executionUnknown: 0,
-      sentCleanup: 0,
-    },
-    retryErrorClassCounts: {},
-    webhookEffectUnknown: 0,
-    quality: { status: "complete", unavailableFields: [] },
-  };
+  });
   data.crons["dispatch-telegram-alerts"] = {
     ...data.crons["dispatch-telegram-alerts"]!,
     lastRun: {
