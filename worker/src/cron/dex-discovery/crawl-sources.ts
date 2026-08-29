@@ -13,6 +13,10 @@ import {
 import { crawlCoinGeckoTickersStage } from "./crawl-coingecko-tickers";
 import { crawlCurvePoolsStage } from "./crawl-curve-pools";
 import { crawlHorizonPoolsStage } from "./crawl-horizon-pools";
+import { crawlSorobanPoolsStage } from "./crawl-soroban-pools";
+import { crawlTezosPoolsStage } from "./crawl-tezos-pools";
+import { crawlIconBalancedPoolsStage } from "./crawl-icon-balanced-pools";
+import { crawlKavaSwapPoolsStage } from "./crawl-kava-swap-pools";
 import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
@@ -165,6 +169,88 @@ export async function crawlCoin(
 
   const horizonStage = await crawlHorizonPoolsStage({ coinTargets, context });
   providerChecks.push(...horizonStage.providerChecks);
+  if (horizonStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
+
+  const aquariusStage = await crawlSorobanPoolsStage({ coinTargets, context });
+  providerChecks.push(...aquariusStage.providerChecks);
+  if (aquariusStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
+
+  const tezosStage = await crawlTezosPoolsStage({ coinTargets, context });
+  providerChecks.push(...tezosStage.providerChecks);
+  if (tezosStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
+
+  const iconBalancedStage = await crawlIconBalancedPoolsStage({ coinTargets, context });
+  providerChecks.push(...iconBalancedStage.providerChecks);
+  if (iconBalancedStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
+
+  const kavaSwapStage = await crawlKavaSwapPoolsStage({ coinTargets, context });
+  providerChecks.push(...kavaSwapStage.providerChecks);
+  if (kavaSwapStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
 
   return await finalizeOwnRun({
     pools,

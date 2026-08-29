@@ -3,6 +3,12 @@ import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 
 const fetchDsTokenPairsWithStatusMock = vi.hoisted(() => vi.fn());
 const fetchDsTokenPoolsWithStatusMock = vi.hoisted(() => vi.fn());
+const censusStageMocks = vi.hoisted(() => ({
+  aquarius: vi.fn(),
+  tezos: vi.fn(),
+  iconBalanced: vi.fn(),
+  kavaSwap: vi.fn(),
+}));
 
 vi.mock("../../dex-liquidity/crawl-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../dex-liquidity/crawl-helpers")>();
@@ -49,6 +55,22 @@ vi.mock("../../../lib/dexscreener", () => ({
 vi.mock("../../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => {}),
+}));
+
+vi.mock("../crawl-soroban-pools", () => ({
+  crawlSorobanPoolsStage: censusStageMocks.aquarius,
+}));
+
+vi.mock("../crawl-tezos-pools", () => ({
+  crawlTezosPoolsStage: censusStageMocks.tezos,
+}));
+
+vi.mock("../crawl-icon-balanced-pools", () => ({
+  crawlIconBalancedPoolsStage: censusStageMocks.iconBalanced,
+}));
+
+vi.mock("../crawl-kava-swap-pools", () => ({
+  crawlKavaSwapPoolsStage: censusStageMocks.kavaSwap,
 }));
 
 import { crawlCoin } from "../crawl-sources";
@@ -106,6 +128,14 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchJsonWithRetry).mockReset();
     vi.mocked(shouldAttemptFetch).mockReset();
     vi.mocked(recordOutcome).mockReset();
+    censusStageMocks.aquarius.mockReset();
+    censusStageMocks.aquarius.mockResolvedValue({ providerChecks: [] });
+    censusStageMocks.tezos.mockReset();
+    censusStageMocks.tezos.mockResolvedValue({ providerChecks: [] });
+    censusStageMocks.iconBalanced.mockReset();
+    censusStageMocks.iconBalanced.mockResolvedValue({ providerChecks: [] });
+    censusStageMocks.kavaSwap.mockReset();
+    censusStageMocks.kavaSwap.mockResolvedValue({ providerChecks: [] });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
     vi.mocked(recordOutcome).mockResolvedValue(mockCircuitOutcomeRecord());
   });
@@ -856,6 +886,22 @@ describe("crawlCoin DexScreener hardening", () => {
         body: isCurve ? { data: { poolData: [] } } : { tickers: [] },
       };
     });
+    censusStageMocks.aquarius.mockImplementation(async () => {
+      events.push("aquarius");
+      return { providerChecks: [] };
+    });
+    censusStageMocks.tezos.mockImplementation(async () => {
+      events.push("tezos");
+      return { providerChecks: [] };
+    });
+    censusStageMocks.iconBalanced.mockImplementation(async () => {
+      events.push("icon-balanced");
+      return { providerChecks: [] };
+    });
+    censusStageMocks.kavaSwap.mockImplementation(async () => {
+      events.push("kava-swap");
+      return { providerChecks: [] };
+    });
 
     const result = await crawlCoin(
       createMockDb(),
@@ -872,9 +918,31 @@ describe("crawlCoin DexScreener hardening", () => {
       pools: [],
       unresolvedChains: [],
     });
-    expect(events).toEqual(["cg:eth", "gt", "ds:ethereum", "tickers", "curve"]);
+    expect(events).toEqual([
+      "cg:eth",
+      "gt",
+      "ds:ethereum",
+      "tickers",
+      "curve",
+      "aquarius",
+      "tezos",
+      "icon-balanced",
+      "kava-swap",
+    ]);
     expect(vi.mocked(fetchDsTokenPairsWithStatus).mock.calls.map(([chain]) => chain)).toEqual(["ethereum"]);
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Chain "plasma"'));
+  });
+
+  it("honors an early stop between the serial census stages", async () => {
+    censusStageMocks.tezos.mockResolvedValueOnce({ providerChecks: [], stoppedEarly: true });
+
+    const result = await crawlCoin(createMockDb(), "usdc-circle", [], "test-key", new Set());
+
+    expect(result).toMatchObject({ pools: [], unresolvedChains: [] });
+    expect(censusStageMocks.aquarius).toHaveBeenCalledTimes(1);
+    expect(censusStageMocks.tezos).toHaveBeenCalledTimes(1);
+    expect(censusStageMocks.iconBalanced).not.toHaveBeenCalled();
+    expect(censusStageMocks.kavaSwap).not.toHaveBeenCalled();
   });
 
   it("contains optional Curve timeouts without failing the coin crawl", async () => {

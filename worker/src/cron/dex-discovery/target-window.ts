@@ -27,10 +27,28 @@ const DEPLOYMENT_CRAWL_COST_MS = {
   dexscreener: RATE_LIMITS.DEXSCREENER_MS + 600,
   curve: 1_200,
   horizon: RATE_LIMITS.HORIZON_MS + 600,
+  // Aquarius is one bounded index request shared across this coin's Soroban targets.
+  aquarius: 8_000,
+  // TzKT's census reads holders and then reserves serially.
+  tezos: 16_000,
+  // Balanced reads the bounded pool-id range in serial JSON-RPC batches.
+  "icon-balanced": 8_000,
+  // Kava x/swap requires serial params and pool-list reads.
+  "kava-swap": 16_000,
 } as const;
 
 /** Provider stage order inside a coin crawl. */
-const COST_PROVIDER_ORDER = ["coingecko", "geckoterminal", "dexscreener", "curve", "horizon"] as const;
+const COST_PROVIDER_ORDER = [
+  "coingecko",
+  "geckoterminal",
+  "dexscreener",
+  "curve",
+  "horizon",
+  "aquarius",
+  "tezos",
+  "icon-balanced",
+  "kava-swap",
+] as const;
 
 export interface DiscoveryTargetWindow {
   targets: ContractDeployment[];

@@ -14,6 +14,10 @@ const DEX_DISCOVERY_PROVIDER_IDS = new Set([
   "dexscreener",
   "curve",
   "horizon",
+  "aquarius",
+  "tezos",
+  "icon-balanced",
+  "kava-swap",
 ]);
 
 /**

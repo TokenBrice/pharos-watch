@@ -161,6 +161,10 @@ export const LiquidityPoolSourceFamilySchema = z.enum([
   "dexscreener",
   "cg_tickers",
   "horizon",
+  "aquarius",
+  "tezos",
+  "icon-balanced",
+  "kava-swap",
   "direct_api",
 ]);
 export type LiquidityPoolSourceFamily = z.infer<typeof LiquidityPoolSourceFamilySchema>;
