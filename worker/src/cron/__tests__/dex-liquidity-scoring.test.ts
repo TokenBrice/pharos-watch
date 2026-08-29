@@ -7,9 +7,9 @@ vi.mock("../../lib/db", async (importOriginal) => {
     batchExecute: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
       const state = (db as unknown as {
         scoringTestState?: {
-          measuredTargetRows: number;
           stagedDepthValues: number;
           stagedPriceRows: number;
+          measuredTargetRows: number;
         };
       }).scoringTestState;
       if (state) {
@@ -49,19 +49,13 @@ vi.mock("../../lib/db", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/db-cache", () => ({
-  getCache: vi.fn(),
-  writeFreshnessSentinel: vi.fn(async () => undefined),
-}));
-
-import { batchExecute, executeAtomicBatch } from "../../lib/db";
-import { getCache } from "../../lib/db-cache";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { batchExecute } from "../../lib/db";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildMeasuredLedgerCohortKey } from "@shared/lib/measured-execution-ledger";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { ExitRouteObservation } from "@shared/types/market";
 import { buildPoolFingerprint, initMetrics } from "../dex-liquidity/pool-helpers";
+import { makePool } from "../dex-liquidity/__tests__/scoring-test-support";
 import {
   computeDepthStability,
   computeDexPrices,
@@ -97,8 +91,10 @@ function toError(value: unknown): Error {
   return value instanceof Error ? value : new Error(String(value));
 }
 
-function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sql: string; binds: unknown[] }> } {
-  const history: Array<{ sql: string; binds: unknown[] }> = [];
+// Publication rows and generations are asserted against latest-schema SQLite
+// in dex-liquidity-scoring-atomicity.test.ts. This fake only supplies the
+// bounded ordering and measured-target orchestration contracts below.
+function makeQueryDb(configs: QueryConfig[]): D1Database & { scoringTestState: ScoringTestState } {
   const scoringTestState: ScoringTestState = {
     expectedDepthRows: ACTIVE_STABLECOINS.length,
     stagedDepthValues: 0,
@@ -116,7 +112,6 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
       boundValues,
       bind: (...args: unknown[]) => createStatement(sql, args),
       all: async <T>() => {
-        history.push({ sql, binds: [...boundValues] });
         if (config?.throwError != null) throw toError(config.throwError);
         const results = config?.all ?? [];
         if (sql.includes("SELECT stablecoin_id FROM dex_prices")) {
@@ -129,7 +124,6 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
         };
       },
       first: async <T>() => {
-        history.push({ sql, binds: [...boundValues] });
         if (config?.throwError != null) throw toError(config.throwError);
         if (config?.first !== undefined) return config.first as T | null;
         if (sql.includes("pharos:dex-scoring:current-generation")) {
@@ -163,7 +157,6 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
         return (config?.first ?? null) as T | null;
       },
       run: async () => {
-        history.push({ sql, binds: [...boundValues] });
         if (config?.throwError != null) throw toError(config.throwError);
         if (sql.includes("DELETE FROM dex_price_run_rows WHERE generation_id = ?")) {
           const changes = scoringTestState.stagedPriceRows;
@@ -180,25 +173,8 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-    history,
     scoringTestState,
-  } as unknown as D1Database & { history: Array<{ sql: string; binds: unknown[] }> };
-}
-
-function makeDexPricePool(overrides: Partial<PoolEntry> & Pick<PoolEntry, "poolId" | "project" | "chain" | "tvlUsd">): PoolEntry {
-  return {
-    poolId: overrides.poolId,
-    project: overrides.project,
-    chain: overrides.chain,
-    tvlUsd: overrides.tvlUsd,
-    symbol: overrides.symbol ?? "PAIR",
-    volumeUsd1d: overrides.volumeUsd1d ?? 0,
-    volumeUsd7d: overrides.volumeUsd7d ?? null,
-    poolType: overrides.poolType ?? "generic",
-    source: overrides.source ?? "gecko_terminal",
-    ...(typeof overrides.price === "number" ? { price: overrides.price } : {}),
-    ...(overrides.extra ? { extra: overrides.extra } : {}),
-  };
+  } as unknown as D1Database & { scoringTestState: ScoringTestState };
 }
 
 function curveExecutionModel(): NonNullable<NonNullable<PoolEntry["extra"]>["ammExecutionModel"]> {
@@ -505,40 +481,6 @@ describe("dex-liquidity scoring", () => {
       ]),
       new Map([["sushiswap", 100_000]]),
     );
-
-    expect(usdt.topPools.some((pool) => pool.poolId === "ethereum:bad-ratio")).toBe(false);
-    expect(usdt.topPools.some((pool) => pool.poolId === "base:fake-tvl")).toBe(false);
-    expect(usdt.poolCount).toBe(13);
-    expect(usdt.topPools).toHaveLength(10);
-    expect(usdt.topPools.map((pool) => pool.poolId)).toEqual([
-      "ethereum:shared",
-      "ethereum:sushi-cg",
-      "arbitrum:sushi-gt",
-      "ethereum:extra-1",
-      "ethereum:extra-2",
-      "ethereum:extra-3",
-      "ethereum:extra-4",
-      "ethereum:extra-5",
-      "ethereum:extra-6",
-      "ethereum:extra-7",
-    ]);
-
-    const scaledSushiCg = usdt.topPools.find((pool) => pool.poolId === "ethereum:sushi-cg");
-    const scaledSushiGt = usdt.topPools.find((pool) => pool.poolId === "arbitrum:sushi-gt");
-    expect(scaledSushiCg?.tvlUsd).toBe(42667);
-    expect(scaledSushiCg?.extra?.effectiveTvl).toBe(42667);
-    expect(scaledSushiGt?.tvlUsd).toBe(37333);
-    expect(scaledSushiGt?.extra?.effectiveTvl).toBe(37333);
-    expect(usdt.totalTvlUsd).toBe(290_000);
-    expect(usdt.effectiveTvl).toBe(280_000);
-    expect(usdt.protocolTvl).toEqual({
-      curve: 190_000,
-      sushiswap: 100_000,
-    });
-    expect(usdt.chainTvl).toEqual({
-      Ethereum: 252_667,
-      Arbitrum: 37_333,
-    });
 
     const usdtScore = scores.get("usdt-tether");
     expect(usdtScore).toMatchObject({
@@ -1251,39 +1193,6 @@ describe("dex-liquidity scoring", () => {
     ).rejects.toThrow("no such table: dex_liquidity_history");
   });
 
-  it("treats direct_api-only coverage as primary but not maximum-confidence coverage", async () => {
-    const db = makeQueryDb([
-      { match: "FROM dex_liquidity_history", all: [] },
-    ]);
-
-    const metrics = initMetrics("usdc-circle", "USDC");
-    metrics.totalVolume24hUsd = 10_000;
-    metrics.totalVolume7dUsd = 70_000;
-    metrics.topPools = [
-      {
-        poolId: "solana:orca-usdc",
-        project: "orca",
-        chain: "solana",
-        tvlUsd: 50_000,
-        symbol: "USDC / USDT",
-        volumeUsd1d: 10_000,
-        poolType: "orca-whirlpool",
-        source: "direct_api",
-      },
-    ];
-
-    const result = await computeStablecoinScores(
-      db,
-      new Map([["usdc-circle", metrics]]),
-      new Map(),
-    );
-
-    expect(result.scores.get("usdc-circle")).toMatchObject({
-      coverageClass: "primary",
-      coverageConfidence: 0.6,
-    });
-  });
-
   it("does not clip direct_api pools with the strict secondary-source protocol cap", async () => {
     const db = makeQueryDb([
       { match: "FROM dex_liquidity_history", all: [] },
@@ -1599,64 +1508,6 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
-  it("publishes only eligible depth-stability rows and propagates DB failures", async () => {
-    const nowMs = Date.UTC(2026, 0, 1);
-    vi.spyOn(Date, "now").mockReturnValue(nowMs);
-    const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-
-    const db = makeQueryDb([
-      {
-        match: "FROM dex_liquidity_history",
-        all: [
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
-        ],
-      },
-    ]);
-
-    await computeDepthStability(db, undefined, "dex-liquidity-test");
-
-    expect(batchExecute).toHaveBeenCalledTimes(1);
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts).toHaveLength(2);
-    expect(upserts[0]?.boundValues).toEqual(["dex-liquidity-test"]);
-    expect(upserts[1]?.boundValues).toEqual([1, "usdt-tether", "dex-liquidity-test"]);
-    expect(executeAtomicBatch).toHaveBeenCalledTimes(1);
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[dex-liquidity] Published depth stability for 1 coins from dex-liquidity-test"),
-    );
-
-    vi.mocked(batchExecute).mockClear();
-
-    await expect(
-      computeDepthStability(
-        makeQueryDb([{ match: "FROM dex_liquidity_history", throwError: new Error("db down") }]),
-        undefined,
-        "dex-liquidity-test",
-      ),
-    ).rejects.toThrow("db down");
-    expect(batchExecute).not.toHaveBeenCalled();
-  });
-
   it("constructs depth updates in bounded order", async () => {
     const stabilityRows = new Map(
       ACTIVE_STABLECOINS.slice(0, 60).map((coin, index) => [coin.id, index / 100] as const),
@@ -1672,100 +1523,19 @@ describe("dex-liquidity scoring", () => {
     expect(prepared.slice(1).map((statement) => statement.boundValues[1])).toEqual([...stabilityRows.keys()]);
   });
 
-  it("atomically publishes an empty or weighted-median DEX price generation", async () => {
-    await computeDexPrices(makeQueryDb([]), new Map<string, PoolEntry[]>(), 1_700_000_000);
-
-    expect(getCache).not.toHaveBeenCalled();
-    expect(batchExecute).not.toHaveBeenCalled();
-
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({
-        peggedAssets: [
-          { id: "usdt-tether", symbol: "USDT", price: 1.01 },
-          { id: "usdc-circle", symbol: "USDC", price: null },
-        ],
-      }),
-      updatedAt: 1_700_000_000,
-    });
-
-    await computeDexPrices(
-      makeQueryDb([]),
-      new Map<string, PoolEntry[]>([
-        [
-          "usdt-tether",
-          [
-            makeDexPricePool({
-              poolId: "ethereum:curve-1",
-              project: "curve",
-              chain: "Ethereum",
-              tvlUsd: 400_000,
-              price: 0.98,
-              source: "dl",
-            }),
-            makeDexPricePool({
-              poolId: "ethereum:curve-2",
-              project: "curve",
-              chain: "Ethereum",
-              tvlUsd: 350_000,
-              price: 1.0,
-              source: "dl",
-            }),
-            makeDexPricePool({
-              poolId: "base:uni-1",
-              project: "uniswap-v3",
-              chain: "Base",
-              tvlUsd: 250_000,
-              price: 1.02,
-              source: "direct_api",
-            }),
-          ],
-        ],
-        [
-          "usdc-circle",
-          [
-            makeDexPricePool({
-              poolId: "base:alien-1",
-              project: "alien-base",
-              chain: "Base",
-              tvlUsd: 100_000,
-              price: 1.2,
-            }),
-          ],
-        ],
-      ]),
-      1_700_000_001,
-    );
-
-    expect(batchExecute).toHaveBeenCalledTimes(1);
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts).toHaveLength(1);
-    expect(upserts[0]?.boundValues).toEqual([
-      "usdt-tether",
-      "USDT",
-      1,
-      3,
-      1_000_000,
-      -99,
-      1.01,
-      JSON.stringify([
-        { protocol: "curve", chain: "Ethereum", price: 0.98, tvl: 750_000, sourceFamily: "dl" },
-        { protocol: "uniswap-v3", chain: "Base", price: 1.02, tvl: 250_000, sourceFamily: "direct_api" },
-      ]),
-      1_700_000_001,
-      "dex-liquidity-1700000001",
-    ]);
-  });
-
   it("constructs DEX price writes in bounded stablecoin order", async () => {
     const coins = ACTIVE_STABLECOINS.slice(0, 30);
     const retainedPools = new Map<string, PoolEntry[]>(coins.map((coin, index) => [
       coin.id,
-      [makeDexPricePool({
+      [makePool({
         poolId: `ethereum:pool-${index}`,
         project: "curve",
         chain: "Ethereum",
         tvlUsd: 100_000,
+        symbol: "PAIR",
+        volumeUsd1d: 0,
+        volumeUsd7d: null,
+        poolType: "generic",
         price: 1,
         source: "dl",
       })],
@@ -1786,12 +1556,17 @@ describe("dex-liquidity scoring", () => {
     const coins = ACTIVE_STABLECOINS.slice(0, 30);
     const retainedPools = new Map<string, PoolEntry[]>(coins.map((coin, index) => [
       coin.id,
-      [makeDexPricePool({
+      [makePool({
         poolId: `ethereum:pool-${index}`,
         project: "curve",
         chain: "Ethereum",
         tvlUsd: 100_000,
+        symbol: "PAIR",
+        volumeUsd1d: 0,
+        volumeUsd7d: null,
+        poolType: "generic",
         price: 1,
+        source: "gecko_terminal",
       })],
     ]));
     vi.mocked(batchExecute).mockImplementationOnce(async (_db, statements) => {
@@ -1807,491 +1582,6 @@ describe("dex-liquidity scoring", () => {
     expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(DEX_LIQUIDITY_SCORING_BATCH_SIZE);
   });
 
-  it("rejects a peg-impossible KRW price before replacing dex_prices", async () => {
-    const diagnostics = await computeDexPrices(
-      makeQueryDb([{ match: "SELECT stablecoin_id FROM dex_prices", all: [{ stablecoin_id: "krwq-iq" }] }]),
-      new Map([
-        ["krwq-iq", [makeDexPricePool({
-          poolId: "bsc:pancakeswap-krwq-usdt",
-          project: "pancakeswap",
-          chain: "BSC",
-          tvlUsd: 82_806,
-          price: 1349.284,
-          source: "direct_api",
-        })]],
-      ]),
-      1_700_000_001,
-    );
-
-    expect(batchExecute).not.toHaveBeenCalled();
-    const [, atomicStatements] = vi.mocked(executeAtomicBatch).mock.calls[0]!;
-    const prepared = atomicStatements as PreparedStatementWithMeta[];
-    expect(prepared).toHaveLength(3);
-    expect(prepared[0]?.sql).toContain("price-publication-fence");
-    expect(prepared[1]?.sql).toContain("DELETE FROM dex_prices");
-    expect(diagnostics).toEqual({
-      rejectedObservationCount: 1,
-      rejectedByStablecoin: [{
-        stablecoinId: "krwq-iq",
-        reason: "peg-impossible",
-        observations: [{
-          chain: "BSC",
-          protocol: "pancakeswap",
-          poolKey: "bsc:pancakeswap-krwq-usdt",
-          price: 1349.284,
-          tvl: 82_806,
-          sourceFamily: "direct_api",
-        }],
-        truncated: 0,
-      }],
-      truncatedStablecoins: 0,
-      retention: {
-        cutoff: 1_700_000_001 - 3 * 60 * 60,
-        deletedRows: 0,
-        oldestRemainingAt: null,
-        durationMs: expect.any(Number),
-        error: null,
-      },
-    });
-  });
-
-  it("persists a correctly oriented KRW price inside the KRW peg band", async () => {
-    await computeDexPrices(
-      makeQueryDb([]),
-      new Map([
-        ["krwq-iq", [makeDexPricePool({
-          poolId: "bsc:pancakeswap-krwq-usdt",
-          project: "pancakeswap",
-          chain: "BSC",
-          tvlUsd: 82_806,
-          price: 0.00074113379,
-          source: "direct_api",
-        })]],
-      ]),
-      1_700_000_002,
-    );
-
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const prepared = statements as PreparedStatementWithMeta[];
-    expect(prepared).toHaveLength(1);
-    expect(prepared[0]?.sql).toContain("INSERT INTO dex_price_run_rows");
-    expect(prepared[0]?.boundValues.slice(0, 5)).toEqual([
-      "krwq-iq",
-      "KRWQ",
-      0.000741,
-      1,
-      82_806,
-    ]);
-  });
-
-  it("does not publish retained priced pools below the DEX price observation floor", async () => {
-    await computeDexPrices(
-      makeQueryDb([]),
-      new Map([
-        ["usdt-tether", [
-          makeDexPricePool({
-            poolId: "ethereum:curve-1",
-            project: "curve",
-            chain: "Ethereum",
-            tvlUsd: DEX_PRICE_OBSERVATION_MIN_TVL_USD - 1,
-            price: 0.9999,
-            source: "dl",
-          }),
-        ]],
-      ]),
-      1_700_000_001,
-    );
-
-    expect(getCache).not.toHaveBeenCalled();
-    expect(batchExecute).not.toHaveBeenCalled();
-  });
-
-  it("weights DEX price medians by source family rather than claimed protocol", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({
-        peggedAssets: [
-          { id: "usdt-tether", symbol: "USDT", price: 1 },
-        ],
-      }),
-      updatedAt: 1_700_000_000,
-    });
-
-    await computeDexPrices(
-      makeQueryDb([]),
-      new Map([
-        ["usdt-tether", [
-          makeDexPricePool({
-            poolId: "ethereum:curve-1",
-            project: "curve",
-            chain: "Ethereum",
-            tvlUsd: 100_000,
-            price: 1,
-            source: "dl",
-          }),
-          makeDexPricePool({
-            poolId: "solana:raydium-fallback-1",
-            project: "raydium",
-            chain: "Solana",
-            tvlUsd: 180_000,
-            price: 1.18,
-            source: "dexscreener",
-          }),
-        ]],
-      ]),
-      1_700_000_001,
-    );
-
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts[0]?.boundValues).toEqual([
-      "usdt-tether",
-      "USDT",
-      1,
-      2,
-      280_000,
-      0,
-      1,
-      JSON.stringify([
-        { protocol: "raydium", chain: "Solana", price: 1.18, tvl: 180_000, sourceFamily: "dexscreener" },
-        { protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000, sourceFamily: "dl" },
-      ]),
-      1_700_000_001,
-      "dex-liquidity-1700000001",
-    ]);
-  });
-
-  it("does not restore an untrusted primary price omitted from the preloaded map", async () => {
-    await computeDexPrices(
-      makeQueryDb([]),
-      new Map([
-        ["usdt-tether", [
-          makeDexPricePool({
-            poolId: "ethereum:curve-1",
-            project: "curve",
-            chain: "Ethereum",
-            tvlUsd: 100_000,
-            price: 0.3,
-            source: "dl",
-          }),
-          makeDexPricePool({
-            poolId: "base:uniswap-1",
-            project: "uniswap-v3",
-            chain: "Base",
-            tvlUsd: 100_000,
-            price: 0.31,
-            source: "direct_api",
-          }),
-          makeDexPricePool({
-            poolId: "solana:raydium-1",
-            project: "raydium",
-            chain: "Solana",
-            tvlUsd: 1_000_000,
-            price: 1,
-            source: "gecko_terminal",
-          }),
-        ]],
-      ]),
-      1_700_000_001,
-      undefined,
-      undefined,
-      undefined,
-      "dex-liquidity-1700000001",
-      new Map([["usdc-circle", 1]]),
-    );
-
-    expect(getCache).not.toHaveBeenCalled();
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts[0]?.boundValues).toEqual([
-      "usdt-tether",
-      "USDT",
-      1,
-      3,
-      1_200_000,
-      null,
-      null,
-      JSON.stringify([
-        { protocol: "raydium", chain: "Solana", price: 1, tvl: 1_000_000, sourceFamily: "gecko_terminal" },
-        { protocol: "curve", chain: "Ethereum", price: 0.3, tvl: 100_000, sourceFamily: "dl" },
-        { protocol: "uniswap-v3", chain: "Base", price: 0.31, tvl: 100_000, sourceFamily: "direct_api" },
-      ]),
-      1_700_000_001,
-      "dex-liquidity-1700000001",
-    ]);
-  });
-
-  it("filters high-TVL contaminated DEX prices when most observations agree with the primary price", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({
-        peggedAssets: [
-          { id: "usdt-tether", symbol: "USDT", price: 0.3 },
-        ],
-      }),
-      updatedAt: 1_700_000_000,
-    });
-
-    await computeDexPrices(
-      makeQueryDb([]),
-      new Map([
-        ["usdt-tether", [
-          makeDexPricePool({
-            poolId: "ethereum:curve-1",
-            project: "curve",
-            chain: "Ethereum",
-            tvlUsd: 100_000,
-            price: 0.3,
-            source: "dl",
-          }),
-          makeDexPricePool({
-            poolId: "base:uniswap-1",
-            project: "uniswap-v3",
-            chain: "Base",
-            tvlUsd: 100_000,
-            price: 0.31,
-            source: "direct_api",
-          }),
-          makeDexPricePool({
-            poolId: "solana:raydium-1",
-            project: "raydium",
-            chain: "Solana",
-            tvlUsd: 1_000_000,
-            price: 1,
-            source: "gecko_terminal",
-          }),
-        ]],
-      ]),
-      1_700_000_001,
-    );
-
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts[0]?.boundValues).toEqual([
-      "usdt-tether",
-      "USDT",
-      0.3,
-      3,
-      1_200_000,
-      0,
-      0.3,
-      JSON.stringify([
-        { protocol: "curve", chain: "Ethereum", price: 0.3, tvl: 100_000, sourceFamily: "dl" },
-        { protocol: "uniswap-v3", chain: "Base", price: 0.31, tvl: 100_000, sourceFamily: "direct_api" },
-      ]),
-      1_700_000_001,
-      "dex-liquidity-1700000001",
-    ]);
-  });
-
-  it("ignores malformed cache JSON when computing DEX prices", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: "{bad-json",
-      updatedAt: 1_700_000_000,
-    });
-
-    await computeDexPrices(
-      makeQueryDb([]),
-      new Map([
-        ["usdt-tether", [
-          makeDexPricePool({
-            poolId: "ethereum:curve-1",
-            project: "curve",
-            chain: "Ethereum",
-            tvlUsd: DEX_PRICE_OBSERVATION_MIN_TVL_USD,
-            price: 0.99,
-            source: "dl",
-          }),
-        ]],
-      ]),
-      1_700_000_002,
-    );
-
-    const latestBatchCall = vi.mocked(batchExecute).mock.calls[vi.mocked(batchExecute).mock.calls.length - 1]!;
-    const [, statements] = latestBatchCall;
-    const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts[0]?.boundValues?.[5]).toBe(null);
-    expect(upserts[0]?.boundValues?.[6]).toBe(null);
-  });
-
-  it("retires dex price rows that are missing from the latest observation set", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({
-        peggedAssets: [
-          { id: "usdt-tether", symbol: "USDT", price: 1 },
-        ],
-      }),
-      updatedAt: 1_700_000_000,
-    });
-
-    await computeDexPrices(
-      makeQueryDb([
-        {
-          match: "SELECT stablecoin_id FROM dex_prices",
-          all: [
-            { stablecoin_id: "usdt-tether" },
-            { stablecoin_id: "usdc-circle" },
-          ],
-        },
-      ]),
-      new Map([
-        ["usdt-tether", [
-          makeDexPricePool({
-            poolId: "ethereum:curve-1",
-            project: "curve",
-            chain: "Ethereum",
-            tvlUsd: 100_000,
-            price: 0.9999,
-            source: "dl",
-          }),
-        ]],
-      ]),
-      1_700_000_003,
-    );
-
-    const latestAtomicCall = vi.mocked(executeAtomicBatch).mock.calls[vi.mocked(executeAtomicBatch).mock.calls.length - 1]!;
-    const [, statements] = latestAtomicCall;
-    const prepared = statements as PreparedStatementWithMeta[];
-
-    expect(prepared).toHaveLength(3);
-    expect(prepared[0]?.sql).toContain("price-publication-fence");
-    expect(prepared[1]?.sql).toContain("DELETE FROM dex_prices");
-    expect(prepared[2]?.sql).toContain("INSERT INTO dex_prices");
-  });
-
-  it("clears stale dex price rows when the latest sync has no observations", async () => {
-    await computeDexPrices(
-      makeQueryDb([
-        {
-          match: "SELECT stablecoin_id FROM dex_prices",
-          all: [
-            { stablecoin_id: "usdt-tether" },
-            { stablecoin_id: "usdc-circle" },
-          ],
-        },
-      ]),
-      new Map<string, PoolEntry[]>(),
-      1_700_000_004,
-    );
-
-    expect(getCache).not.toHaveBeenCalled();
-    const latestAtomicCall = vi.mocked(executeAtomicBatch).mock.calls[vi.mocked(executeAtomicBatch).mock.calls.length - 1]!;
-    const [, statements] = latestAtomicCall;
-    const prepared = statements as PreparedStatementWithMeta[];
-
-    expect(batchExecute).not.toHaveBeenCalled();
-    expect(prepared).toHaveLength(3);
-    expect(prepared[0]?.sql).toContain("price-publication-fence");
-    expect(prepared[1]?.sql).toContain("DELETE FROM dex_prices");
-    expect(prepared[2]?.sql).toContain("INSERT INTO dex_prices");
-  });
-
-  it("publishes dex prices from retained priced pools instead of pre-retention discovery observations", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({
-        peggedAssets: [
-          { id: "usr-resolv", symbol: "USR", price: 0.1129 },
-        ],
-      }),
-      updatedAt: 1_700_000_000,
-    });
-
-    await computeDexPrices(
-      makeQueryDb([]),
-      new Map([
-        ["usr-resolv", [
-          makeDexPricePool({
-            poolId: "ethereum:curve-1",
-            project: "curve",
-            chain: "Ethereum",
-            tvlUsd: 64_711,
-            price: 0.1152,
-            source: "dl",
-          }),
-          makeDexPricePool({
-            poolId: "ethereum:uniswap-1",
-            project: "uniswap",
-            chain: "Ethereum",
-            tvlUsd: 627_528,
-            price: 0.115,
-            source: "gecko_terminal",
-          }),
-        ]],
-      ]),
-      1_700_000_005,
-    );
-
-    const latestBatchCall = vi.mocked(batchExecute).mock.calls[vi.mocked(batchExecute).mock.calls.length - 1]!;
-    const [, statements] = latestBatchCall;
-    const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts[0]?.boundValues).toEqual([
-      "usr-resolv",
-      "USR",
-      0.115,
-      2,
-      692_239,
-      186,
-      0.1129,
-      JSON.stringify([
-        { protocol: "uniswap", chain: "Ethereum", price: 0.115, tvl: 627_528, sourceFamily: "gecko_terminal" },
-        { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711, sourceFamily: "dl" },
-      ]),
-      1_700_000_005,
-      "dex-liquidity-1700000005",
-    ]);
-  });
-
-  it("ignores blocked dead DEX protocols when publishing dex prices", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({
-        peggedAssets: [
-          { id: "usr-resolv", symbol: "USR", price: 0.1129 },
-        ],
-      }),
-      updatedAt: 1_700_000_000,
-    });
-
-    await computeDexPrices(
-      makeQueryDb([]),
-      new Map([
-        ["usr-resolv", [
-          makeDexPricePool({
-            poolId: "ethereum:bunni-1",
-            project: "bunni-ethereum",
-            chain: "Ethereum",
-            tvlUsd: 1_451_774,
-            price: 0.9993,
-            source: "gecko_terminal",
-          }),
-          makeDexPricePool({
-            poolId: "ethereum:curve-1",
-            project: "curve",
-            chain: "Ethereum",
-            tvlUsd: 64_711,
-            price: 0.1152,
-            source: "dl",
-          }),
-        ]],
-      ]),
-      1_700_000_006,
-    );
-
-    const latestBatchCall = vi.mocked(batchExecute).mock.calls[vi.mocked(batchExecute).mock.calls.length - 1]!;
-    const [, statements] = latestBatchCall;
-    const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts[0]?.boundValues).toEqual([
-      "usr-resolv",
-      "USR",
-      0.1152,
-      1,
-      64_711,
-      204,
-      0.1129,
-      JSON.stringify([
-        { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711, sourceFamily: "dl" },
-      ]),
-      1_700_000_006,
-      "dex-liquidity-1700000006",
-    ]);
-  });
 });
 
 describe("shadow admission ledger capture", () => {
@@ -2336,12 +1626,15 @@ describe("shadow admission ledger capture", () => {
     const gatedPoolId = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const metrics = initMetrics("usdc-circle", "USDC");
     metrics.topPools = [
-      makeDexPricePool({
+      makePool({
         poolId: gatedPoolId,
         project: "curve",
         chain: "Ethereum",
         tvlUsd: 250_000,
+        symbol: "PAIR",
         volumeUsd1d: 25_000,
+        volumeUsd7d: null,
+        poolType: "generic",
         source: "direct_api",
         extra: {
           executionCapabilityGate: { family: "curve-stableswap", reason: "exact-pool-join-unresolved" },

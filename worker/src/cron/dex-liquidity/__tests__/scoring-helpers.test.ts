@@ -9,22 +9,8 @@ import {
   rebuildMetricsFromPools,
 } from "../scoring-helpers";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
-import type { DexPriceObs, LiquiditySourceMixByFamily, PoolEntry } from "../types";
-
-function makePool(overrides: Partial<PoolEntry>): PoolEntry {
-  return {
-    poolId: "ethereum:0xabc",
-    project: "balancer-v3",
-    chain: "Ethereum",
-    tvlUsd: 5_000_000,
-    symbol: "USDC/USDT",
-    volumeUsd1d: 1_000_000,
-    volumeUsd7d: 7_000_000,
-    poolType: "balancer-stable",
-    source: "dl",
-    ...overrides,
-  } as PoolEntry;
-}
+import type { LiquiditySourceMixByFamily } from "../types";
+import { makeObs, makePool } from "./scoring-test-support";
 
 describe("isPlausibleDexObservationPrice guards peg", () => {
   it("rejects extreme off-peg prices for usdc-circle", () => {
@@ -60,16 +46,6 @@ function makeCoverageInput(
   };
 }
 
-function makeObs(overrides: Partial<DexPriceObs>): DexPriceObs {
-  return {
-    price: 1.0,
-    tvl: 1_000_000,
-    chain: "ethereum",
-    protocol: "uniswap-v3",
-    ...overrides,
-  };
-}
-
 describe("classifyCoverage", () => {
   it("returns primary when all TVL is from dl source", () => {
     const { coverageClass } = classifyCoverage(
@@ -79,10 +55,11 @@ describe("classifyCoverage", () => {
   });
 
   it("returns primary when all TVL is from direct_api source", () => {
-    const { coverageClass } = classifyCoverage(
+    const { coverageClass, coverageConfidence } = classifyCoverage(
       makeCoverageInput({ direct_api: { poolCount: 2, tvlUsd: 5_000_000 } }, 5_000_000),
     );
     expect(coverageClass).toBe("primary");
+    expect(coverageConfidence).toBe(0.6);
   });
 
   it("returns primary when TVL comes from mix of dl and direct_api only", () => {
