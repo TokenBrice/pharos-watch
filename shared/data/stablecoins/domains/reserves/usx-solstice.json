@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave8 GROK-RESEARCH phase1",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Grok wave8 GROK-RESEARCH phase1; Pharos reserve research refresh",
     "confidence": "verified",
     "sources": [
       {
@@ -36,9 +36,9 @@
         "url": "https://docs.solstice.finance/solstice-for-users/usx.md"
       }
     ],
-    "rationale": "Write-time re-open on 2026-07-28 reconfirmed dual independent sources: (1) solstice.finance/usx and docs.solstice.finance USX page both name the same three reserve categories—audited cash, tokenized Treasuries, and delta-neutral hedged positions in major digital assets—without category weights; (2) attestation-api.solstice.finance/dashboard returned collateralization 1.003922, total_reserves 525039528.63 USD, total_supply 522988257.04 USD, latest reserves.timeline point date 2026-07-22, delta_neutral true and overcollateralized true, with cryptographic SEV/merkle/zkp material, but no asset-level balances, category keys, or composition fields under reserves (keys limited to total_reserves, total_supply, timeline, verifiability, interval, delta_neutral, overcollateralized). The complete reserve is therefore retained as one conservatively high-risk aggregate rather than assigning unsupported constituents or weights. The slice name remains aligned to the solstice-attestation adapter row identity.",
-    "compositionBasis": "Current Solstice collateral disclosure and aggregate reserve-versus-supply attestation",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Re-opened 2026-08-29: the Solstice attestation API's latest reserve timeline point is dated 2026-08-28 and reports total reserves of $303,713,470.56 against total supply of $303,025,006.49 (approximately 100.2272% collateralization), with verifiability 100, delta-neutral true, and overcollateralized true. The endpoint supplies cryptographic SEV, Merkle, and ZK proof material but no asset-level balances, category keys, or current split. Solstice product and user documentation name audited cash, tokenized Treasuries, and delta-neutral hedged positions, without category weights. The reserve remains one aggregate slice; no category percentages are inferred from the aggregate solvency proof.",
+    "compositionBasis": "Current Solstice collateral disclosure and 2026-08-28 aggregate reserve-versus-supply attestation",
+    "compositionAsOf": "2026-08-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The current split among audited cash, tokenized Treasuries, and delta-neutral hedged positions is not published; underlying instruments, custodian shares, execution venues, and hedge counterparties are also undisclosed.",
     "knownUnknownExposurePct": 100,

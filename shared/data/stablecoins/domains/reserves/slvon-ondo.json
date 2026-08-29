@@ -5,8 +5,8 @@
       "name": "iShares Silver Trust (SLV) shares and cash in transit held for Ondo Global Markets",
       "pct": 100,
       "risk": "medium",
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "Ondo Global Markets (BVI) Limited; iShares Silver Trust (BlackRock) shares held at US-registered custodial broker-dealers",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock (iShares Silver Trust, SLV) via Ondo Global Markets",
       "riskFactors": [
         "market",
         "counterparty",
@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28; Pharos reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -27,19 +27,23 @@
         "url": "https://docs.ondo.finance/ondo-global-markets/overview"
       },
       {
-        "label": "SLVon trust and transparency",
+        "label": "Ondo Global Markets trust and transparency",
         "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
       },
       {
         "label": "Ondo Global Markets important notes",
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      },
+      {
+        "label": "Ondo current-price API warning (display feed; no official oracle published)",
+        "url": "https://docs.ondo.finance/api-reference/assets/get-current-price-for-an-asset"
       }
     ],
-    "rationale": "Ondo identifies SLVon as economic exposure to iShares Silver Trust and states that each Ondo tokenized stock is fully backed by the underlying security together with cash in transit. Ankura Trust Company independently verifies the existence and amount of underlying securities and reconciles investor liabilities to reserves daily. The current SLV share inventory and cash-in-transit weight are not published in the reviewed durable sources, so they remain an allocation uncertainty rather than unidentified reserve categories. Write-time re-open 2026-07-28: Ondo Global Markets trust-and-transparency docs still describe bankruptcy-remote tokenized stock structure and Ankura trust; overview/important-notes corroborate. SLVon is equity-tracking not a split cash reserve → modeled as 100% unknown-weight RWA equity exposure (ku=100 for constituent portfolio).",
-    "compositionBasis": "Ondo SLVon product disclosure and Ondo Global Markets backing and transparency documentation",
+    "rationale": "Re-opened 2026-08-29: Ondo's current Global Markets trust-and-transparency documentation states that tokenized stocks and ETFs are fully backed by the underlying security plus cash in transit, with daily holdings verification by Ankura Trust and custody at one or more US-registered broker-dealers. SLVon is the tokenized iShares Silver Trust (SLV) exposure. The reviewed Ondo API documentation says current price feeds are display-only and that an official oracle is still in development; no Chainlink or Chronicle NAV configuration is present for SLVon in the Pharos registry, and no current dated SLVon holdings report was retrieved from the public product page. The reserve remains one fund-share envelope because SLV shares versus cash-in-transit weights are undisclosed.",
+    "compositionBasis": "Ondo SLVon product, trust and transparency, and oracle guidance",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The aggregate basket is known to contain SLV shares and cash in transit, but their current weights are not published. Because the 100% reserve entry cannot be split between those categories, the full basket remains known-unknown for composition scoring; custodial broker-dealer identities and provider allocation are also undisclosed.",
+    "knownUnknownExposure": "The aggregate basket is known to contain SLV shares and cash in transit, but their current weights, custodial broker-dealer allocation, and a reproducible dated holdings report are not public in the reviewed sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

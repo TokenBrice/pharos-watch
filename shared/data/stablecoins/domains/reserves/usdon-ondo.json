@@ -19,36 +19,36 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 GROK-RESEARCH phase-1 reserve",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Grok wave-8 GROK-RESEARCH phase-1 reserve; Pharos reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Ondo Stocks available assets — What is USDon? (re-opened 2026-07-28)",
+        "label": "Ondo Stocks available assets — What is USDon?",
         "url": "https://docs.ondo.finance/ondo-stocks/available-assets"
       },
       {
-        "label": "Ondo Stocks investing and redeeming — cash or equivalents backing (re-opened 2026-07-28)",
+        "label": "Ondo Stocks investing and redeeming — cash or equivalents backing",
         "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming"
       },
       {
-        "label": "Ondo Stocks trust and transparency — Ankura scope and broker-dealers (re-opened 2026-07-28)",
+        "label": "Ondo Stocks trust and transparency — Ankura scope and broker-dealers",
         "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
       },
       {
-        "label": "DefiLlama stablecoin module 408 mint/redeem description (re-opened 2026-07-28)",
+        "label": "DefiLlama stablecoin module 408 mint/redeem description",
         "url": "https://stablecoins.llama.fi/stablecoin/408"
       },
       {
-        "label": "Ondo Global Markets available assets (alias path, re-opened 2026-07-28)",
+        "label": "Ondo Global Markets available assets",
         "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
       }
     ],
-    "rationale": "Re-verified 2026-07-28 by re-opening primary issuer docs and an independent aggregator. Ondo available-assets still states USDon is 'backed 1:1 by a US dollar in one of Ondo Stocks' brokerage accounts'; investing-and-redeeming still states each USDon is 'backed by a dollar of cash or equivalents at an Ondo Stocks brokerage account' with instant USDon settlement in the invest/redeem flow. DefiLlama module 408 independently restates 'backed 1:1 by US dollars held in Ondo Global Markets' brokerage accounts' with 1:1 USDC mint/redeem. Because the issuer does not disclose cash-versus-cash-equivalent instruments or weights, the aggregate remains assetClass other at 100% rather than assuming pure cash. Trust-and-transparency still scopes Ankura daily attestations and first-priority security interest to tokenized-stock securities/collateral and 'Ondo Stocks holdings' at US-registered custodial broker-dealers, not to a USDon-specific cash-balance report. No public USDon reserve balance, named broker for USDon cash, account reconciliation, or independent USDon cash attestation was found on re-open.",
-    "compositionBasis": "Ondo issuer product documentation for USDon cash-or-equivalent brokerage-account backing, re-opened 2026-07-28; DefiLlama module 408 mint/redeem description as independent corroboration",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Re-opened 2026-08-29: Ondo's current available-assets and investing-and-redeeming pages still state that each USDon is backed 1:1 by a U.S. dollar of cash or cash equivalents held in an Ondo Stocks brokerage account, with instant USDon settlement in the invest/redeem flow. DefiLlama module 408 independently describes 1:1 USDC-to-USDon mint/redeem and U.S.-dollar brokerage backing. The reviewed Ondo trust-and-transparency page describes daily Ankura attestations for Ondo tokenized stocks, but does not provide a USDon-specific holdings report or instrument allocation; that stock-report scope must not be generalized to USDon. No Chainlink or Chronicle NAV configuration is present for USDon in the Pharos registry. Cash versus cash-equivalent instruments, current balances, broker identity, and reserve reconciliation therefore remain unknown.",
+    "compositionBasis": "Ondo USDon cash-or-equivalent brokerage-account disclosure with independent DefiLlama corroboration",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current cash balances, brokerage identity for USDon settlement cash, cash-versus-cash-equivalent instrument weights, account reconciliation, provider allocation, custody terms for the USDon cash sleeve, and any USDon-specific reserve assurance remain undisclosed in the re-opened sources.",
+    "knownUnknownExposure": "Current cash balances, cash-versus-cash-equivalent instrument weights, brokerage identity, account reconciliation, custody terms, and a USDon-specific reserve assurance report are undisclosed in the reviewed sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

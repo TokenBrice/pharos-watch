@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (R11 revisit; collateral API still unreconciled)",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "PoR verification sweep 2026-08; Pharos reserve research refresh",
     "confidence": "manual-review",
     "sources": [
       {
@@ -37,7 +37,7 @@
         "url": "https://api.monetrix.xyz/data/api/transparency/overview"
       },
       {
-        "label": "Monetrix collateral API (fetched 2026-08-08, reconciled=false)",
+        "label": "Monetrix collateral API (fetched 2026-08-29; reconciled=false)",
         "url": "https://api.monetrix.xyz/data/api/collateral"
       },
       {
@@ -49,9 +49,9 @@
         "url": "https://api.monetrix.xyz/data/api/protocol/overview"
       }
     ],
-    "rationale": "Re-checked 2026-08-08: the Monetrix collateral API still explicitly returns backing.reconciled=false (totalUsd 2,566,520.77 vs supply 2,562,093.17, collateralizationPct 100.17, status FULL_BACKED). The spotUsd, marginUsd, and signed bufferUsd breakdown does not present a non-double-counted reserve equation, and the positions API continues to mix spot value, perpetual notional, and negative idle-USDC. No reconciled reserve composition suitable for stable reserve slices has been published, so the single unlinked strategy and custody envelope is retained.",
-    "compositionBasis": "Monetrix's documented USDC mint input plus live but explicitly unreconciled strategy, collateral, and supply telemetry",
-    "compositionAsOf": "2026-08-08",
+    "rationale": "Re-checked 2026-08-29: the Monetrix collateral API reports totalUsd $2,596,211.61 against USDM supply $2,589,297.66 (collateralization 100.2670%), but explicitly marks the backing breakdown reconciled=false. Its spotUsd $4,296,386.99, marginUsd $424,987.25, and bufferUsd -$1,703,430.67 fields mix spot value, margin, hedge, and buffer accounting and do not provide a non-double-counted reserve equation. The positions API likewise reports strategy notional rather than a reserve composition. Monetrix documents USDC as the mint input and a Hyperliquid delta-neutral strategy, but no current reconciled holdings, custody, or redemption-reserve allocation is published. The single unlinked strategy and custody envelope is retained.",
+    "compositionBasis": "Monetrix documented USDC mint input plus current but explicitly unreconciled collateral, strategy, and supply telemetry",
+    "compositionAsOf": "2026-08-29",
     "scope": "selected-slices",
     "knownUnknownExposure": "Current non-double-counted spot, margin, hedge, idle-liquidity, custody, and redemption-backing amounts are not published as a reconciled reserve composition.",
     "knownUnknownExposurePct": 100,

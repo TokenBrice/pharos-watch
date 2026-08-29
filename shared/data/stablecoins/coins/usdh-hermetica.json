@@ -62,6 +62,25 @@
     "url": "https://docs.hermetica.fi/usdh/how-it-works/backing",
     "provider": "Hermetica custodian attestations",
     "attestorTier": "self",
-    "cadence": "monthly"
+    "cadence": "monthly",
+    "latestReport": {
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-03",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Pharos reserve research",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Hermetica July 2026 custodian attestation",
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-july-2026"
+        },
+        {
+          "label": "Hermetica USDh backing design",
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
+        }
+      ]
+    }
   }
 }

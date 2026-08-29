@@ -101,12 +101,12 @@
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-08-08",
-      "publishedAt": "2026-08-08",
+      "periodEnd": "2026-08-29",
+      "publishedAt": "2026-08-29",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Accountable dashboard snapshot observed at the 2026-08-08 review",
+      "reviewer": "Pharos reserve research",
       "confidence": "verified",
       "sources": [
         {
