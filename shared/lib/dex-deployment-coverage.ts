@@ -6,10 +6,11 @@ export type DexDeploymentOutcome = "observed_pools" | "verified_no_pools" | "pro
 export type DexDiscoveryProvider = "coingecko" | "geckoterminal" | "dexscreener" | "curve" | "horizon";
 
 /**
- * The chains on which Curve counts as a registered token-pool discovery
- * provider. This is the single definition: `getDexDiscoveryProviders()` names
- * it in the persisted `providers` array that the deployment census validates
- * against, and the discovery crawl queries exactly these chains.
+ * The chains on which Curve's getPools/all endpoint is queried and counts as a
+ * registered token-pool discovery provider. This is the single definition:
+ * `getDexDiscoveryProviders()` names it in the persisted `providers` array
+ * that the deployment census validates against, and both Curve fetch paths
+ * derive their query list from it.
  *
  * Querying Curve outside this set produced evidence the census could not
  * attribute — a Curve `success` could flip a deployment to `verified_no_pools`
@@ -26,7 +27,11 @@ export const CURVE_NATIVE_DISCOVERY_CHAINS: ReadonlySet<string> = new Set([
   "sonic",
   "taiko",
   "zksync",
+  "optimism",
+  "avalanche",
+  "fantom",
   "kava",
+  "gnosis",
 ]);
 
 /** Native Horizon liquidity-pool discovery is currently scoped to classic Stellar assets. */

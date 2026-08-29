@@ -27,11 +27,9 @@ export async function crawlCurvePoolsStage(input: {
 }): Promise<CurvePoolsStageResult> {
   const targetsByChain = new Map<string, ContractDeployment[]>();
   for (const target of input.coinTargets) {
-    // Only chains where Curve is a registered discovery provider. The
-    // deployment census attributes outcomes to the provider list this set
-    // feeds, so a check produced outside it is evidence nothing can account
-    // for — and, on the five chains the liquidity stage covers but the registry
-    // does not, it was pure wasted request budget.
+    // Only chains where Curve is a registered discovery provider. This set is
+    // also the source of the liquidity stage's Curve fetch list, so a check
+    // produced here is always attributable to a named census provider.
     if (!CURVE_NATIVE_DISCOVERY_CHAINS.has(target.chain)) continue;
     const targets = targetsByChain.get(target.chain) ?? [];
     targets.push(target);

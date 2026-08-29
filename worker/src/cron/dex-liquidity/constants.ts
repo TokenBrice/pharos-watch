@@ -8,31 +8,16 @@
  * see ../../lib/dex-constants.ts
  */
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 
 export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 export const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
 export const CURVE_API_BASE = "https://api.curve.finance/v1/getPools/all";
-// Chains the Curve getPools/all endpoint serves and the join consumes. The
-// endpoint also covers optimism, avalanche, fantom, and kava (verified
-// 2026-07-19); it answers monad and plasma with an empty pool list (verified
-// 2026-07-29). New entries are appended so persisted payload indexes stay
-// aligned with earlier captures.
-export const CURVE_CHAINS = [
-  "ethereum",
-  "base",
-  "arbitrum",
-  "polygon",
-  "fraxtal",
-  "sonic",
-  "taiko",
-  "zksync",
-  "optimism",
-  "avalanche",
-  "fantom",
-  "kava",
-  "gnosis",
-] as const;
+// The shared census-provider set is the source of truth for Curve's fetch
+// list. Preserve its insertion order because payloads are index-aligned with
+// this array in fetch-primary and its persisted joins.
+export const CURVE_CHAINS = [...CURVE_NATIVE_DISCOVERY_CHAINS] as const;
 /**
  * Curve addresses Gnosis by its legacy `xdai` network name (verified
  * 2026-07-29: `/all/xdai` returns pool data, `/all/gnosis` returns an error).

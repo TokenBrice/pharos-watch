@@ -94,7 +94,12 @@ describe("DEX deployment outcomes", () => {
       providerChecks: [{ ...DEPLOYMENT, provider: "coingecko", status: "success" }],
       nowSec: 100,
     });
-    expect(empty[0]).toMatchObject({ outcome: "verified_no_pools", observedPoolCount: 0 });
+    expect(empty[0]).toMatchObject({
+      outcome: "verified_no_pools",
+      providers: ["coingecko", "geckoterminal", "dexscreener", "curve"],
+      reason: "A provider completed the direct-token query with no eligible pool",
+      observedPoolCount: 0,
+    });
 
     const curveObserved = classifyDexDeploymentOutcomes({
       stablecoinId: "test",
@@ -113,6 +118,20 @@ describe("DEX deployment outcomes", () => {
       nowSec: 100,
     });
     expect(inaccessible[0]).toMatchObject({ outcome: "provider_inaccessible", providers: ["horizon"] });
+
+    const neverRan = classifyDexDeploymentOutcomes({
+      stablecoinId: "test",
+      deployments: [DEPLOYMENT],
+      pools: [],
+      providerChecks: [],
+      nowSec: 100,
+    });
+    expect(neverRan[0]).toMatchObject({
+      outcome: "provider_inaccessible",
+      providers: ["coingecko", "geckoterminal", "dexscreener", "curve"],
+      reason: "No provider completed a query for this deployment in the bounded crawl",
+      observedPoolCount: 0,
+    });
   });
 
   it("classifies Soroban identities as unsupported method rather than Horizon outage", () => {
