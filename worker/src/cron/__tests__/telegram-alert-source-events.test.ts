@@ -17,7 +17,7 @@ import {
   suppressIncomparableTelegramSafetySourceEvent,
 } from "../telegram-alert-source-events";
 import type { TelegramAlertSnapshots } from "../telegram-alert-snapshots";
-import { persistTelegramAlertJobManifests } from "../telegram-alert-jobs";
+import { materializeTelegramTargetPlanPage } from "../telegram-alert-target-plans";
 import {
   loadHandledTelegramAlertItemsByChat,
   removeHandledTelegramAlertItems,
@@ -365,16 +365,54 @@ describe("Telegram alert source-event resolution", () => {
       disableNotification: false,
       alertType: "dews",
     });
-    await persistTelegramAlertJobManifests(
+    const owner = "lineage-test";
+    harness.sqlite.prepare(
+      `UPDATE telegram_alert_source_events
+          SET status = 'planned', target_plan_state = 'planning',
+              target_plan_owner = ?, target_plan_claim_expires_at = ?
+        WHERE source_event_id = ?`,
+    ).run(owner, NOW + 120, source.sourceEventId);
+    const claim = {
+      sourceEventId: source.sourceEventId,
+      owner,
+      generation: 0,
+      state: "planning" as const,
+      detectedAt: source.detectedAt,
+      expiresAt: source.expiresAt,
+      horizonAt: NOW,
+      highWaterChatId: null,
+      subscriberCursorChatId: null,
+      planningCursorChatId: null,
+    };
+    const authoritativeRoutes = [routed("direct-chat"), routed("global-chat")].map((entry) => ({
+      ...entry,
+      sourceEventId: source.sourceEventId,
+      preferenceGeneration: 0,
+      alertScope: [{ stablecoinId: "usdc-circle", family: "dews" as const }],
+    }));
+    await materializeTelegramTargetPlanPage(
       harness.db,
-      [routed("direct-chat"), routed("global-chat")],
+      claim,
+      0,
+      authoritativeRoutes.map((entry) => ({
+        subscriber: {
+          chatId: entry.chatId,
+          preferenceGeneration: 0,
+          lastActiveAt: entry.lastActiveAt,
+          initiallyEligible: true,
+        },
+        currentPreferenceGeneration: 0,
+        currentEligible: true,
+        routed: [entry],
+      })),
       NOW,
-      { sourceEventId: source.sourceEventId, sourceDetectedAt: source.detectedAt },
     );
-    harness.sqlite.exec(`
-      UPDATE telegram_alert_job_targets
-         SET status = 'sent', effect_state = 'complete', sent_at = ${NOW};
-    `);
+    harness.sqlite.prepare(
+      `UPDATE telegram_alert_job_targets
+          SET status = 'sent', effect_state = 'complete', sent_at = ?,
+              final_delivery_state = 'accepted', final_delivery_at = ?
+        WHERE source_event_id = ?`,
+    ).run(NOW, NOW, source.sourceEventId);
 
     const handled = await loadHandledTelegramAlertItemsByChat(harness.db, source.sourceEventId);
     expect(handled.get("direct-chat")).toEqual(new Set(["dews:usdc-circle"]));

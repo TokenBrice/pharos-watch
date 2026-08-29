@@ -53,7 +53,6 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyG
     reason: "durable source-event, job, target, effect, and status contracts",
     paths: ["worker/src/cron/telegram-alert-*.ts", "worker/migrations/**"],
     examples: [
-      "worker/src/cron/telegram-alert-jobs.ts",
       "worker/migrations/0183_telegram_fresh_target_effect_fencing.sql",
     ],
   },

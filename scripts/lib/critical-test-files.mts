@@ -51,7 +51,6 @@ export const CRITICAL_TEST_FILES: string[] = [
   "worker/src/cron/__tests__/dispatch-telegram-alerts-snooze-presets.test.ts",
   "worker/src/cron/__tests__/dispatch-telegram-routing.test.ts",
   "worker/src/cron/__tests__/telegram-alert-source-events.test.ts",
-  "worker/src/cron/__tests__/telegram-alert-target-effects.test.ts",
   "worker/src/cron/__tests__/telegram-authoritative-target-plan-contract.test.ts",
   "worker/src/cron/__tests__/telegram-authoritative-target-plans-sqlite.test.ts",
   "worker/src/cron/__tests__/telegram-pending-preference-revalidation.test.ts",
