@@ -203,34 +203,17 @@ vi.mock("../lib/budget-surface-telemetry", async (importOriginal) => {
 });
 vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/scheduled-recovery-checkpoint")>();
-  let latestCheckpoint: Record<string, unknown> | null = null;
+  // vi.mock factories are hoisted above static imports; the fixture must load inside the factory.
+  const { makeLiveReserveCheckpoint } = await import("../lib/__tests__/scheduled-recovery-checkpoint.test-support");
+  let latestCheckpoint: import("../lib/scheduled-recovery-checkpoint").ScheduledRecoveryCheckpoint | null = null;
   return {
     ...actual,
     beginLiveReserveCheckpoint: vi.fn(async (_db: D1Database, input: Record<string, unknown>) => {
-      latestCheckpoint = {
-        scheduleKey: "fourHourlyReserveSync",
-        slotStartedAt: input.slotStartedAt,
-        job: "sync-live-reserves",
-        attemptNo: 1,
-        executionGeneration: 1,
-        invocationId: input.invocationId,
-        workerVersion: input.workerVersion ?? null,
-        queueHash: "test",
-        state: "running",
-        nextItemKey: null,
-        currentItemKey: null,
-        currentDomainAttemptId: null,
-        itemsDone: 0,
-        itemsTotal: 0,
-        childDispositions: {},
-        recoveryOwner: null,
-        recoveryLeaseUntil: null,
-        sourceAttemptNo: null,
-        error: null,
-        createdAt: 0,
-        updatedAt: 0,
-        completedAt: null,
-      };
+      latestCheckpoint = makeLiveReserveCheckpoint({
+        slotStartedAt: input.slotStartedAt as number,
+        invocationId: input.invocationId as string,
+        workerVersion: (input.workerVersion as string | null) ?? null,
+      });
       return latestCheckpoint;
     }),
     loadLiveReserveCheckpoint: vi.fn(async () => latestCheckpoint == null ? null : {
@@ -248,8 +231,8 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
       latestCheckpoint = {
         ...latestCheckpoint,
         childDispositions: {
-          ...(latestCheckpoint.childDispositions as Record<string, unknown>),
-          [job]: disposition,
+          ...latestCheckpoint.childDispositions,
+          [job]: disposition as import("../lib/scheduled-recovery-checkpoint").ScheduledChildDisposition,
         },
       };
     }),
