@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
-import type { ApiRequestAttributionResponse, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
+import type { HealthResponse, StatusCause, StatusResponse } from "@shared/types";
 import {
   buildReliabilityWorkspaceModel,
   type ReliabilityWorkspaceInput,
 } from "@/lib/reliability-workspace-model";
 import {
   degraded,
+  makeApiRequestAttributionResponse,
   makeHealthyHealthResponse,
   makeHealthyStatusResponse,
   makeOperationalDependencyFailureStatusResponse,
 } from "@/test-utils/status-fixtures";
 
-function requestStats(): ApiRequestAttributionResponse {
-  return {
-    generatedAt: 1_700_000_000,
+function requestStats() {
+  return makeApiRequestAttributionResponse({
     window: {
       from: 1_699_913_600,
       to: 1_700_000_000,
@@ -24,33 +24,7 @@ function requestStats(): ApiRequestAttributionResponse {
       apiKeyLimit: 25,
       retentionDays: 35,
     },
-    totals: { siteRequests: 0, externalRequests: 0, totalRequests: 0, siteSharePct: 0, externalSharePct: 0 },
-    siteDelivery: {
-      totalSiteRequests: 0,
-      pagesCacheHits: 0,
-      pagesUpstreamFetches: 0,
-      pagesUpstreamTimeouts: 0,
-      pagesUpstreamErrors: 0,
-      publicApiSiteRequests: 0,
-    },
-    lanes: [],
-    routes: [],
-    buckets: [],
-    keyedPublicApi: {
-      keyedRequests: 0,
-      unkeyedRequests: 0,
-      totalRequests: 0,
-      keyedSharePct: 0,
-      unkeyedSharePct: 0,
-      totalKeys: 0,
-      returnedKeys: 0,
-      omittedKeys: 0,
-      omittedRequests: 0,
-      truncated: false,
-    },
-    apiKeys: [],
-    scope: { countsTotalSiteDemand: true, countsWorkerLoad: true, includesPagesProxyCacheHits: true },
-  };
+  });
 }
 
 function completeStatus(base = makeHealthyStatusResponse()): StatusResponse {

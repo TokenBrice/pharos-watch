@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { HealthResponse } from "@shared/types";
 import { countPublicImpactOpenCircuits, isPublicImpactCircuitKey } from "@shared/lib/public-health";
+import { makeHealthyHealthResponse } from "@/test-utils/status-fixtures";
 import {
   getImpactedPublicSurfaces,
   getPublicDivergenceNotice,
@@ -9,34 +10,7 @@ import {
   getPublicWorstCacheSummary,
 } from "@/lib/status/public-status";
 
-const BASE_HEALTH: HealthResponse = {
-  status: "healthy",
-  timestamp: 1_700_000_000,
-  warnings: [],
-  caches: {},
-  blacklist: {
-    totalEvents: 0,
-    missingAmounts: 0,
-    recentMissingAmounts: 0,
-    recentWindowSec: 86_400,
-    missingRatio: 0,
-  },
-  mintBurn: {
-    totalEvents: 0,
-    latestEventTs: null,
-    latestHourlyTs: null,
-    freshnessAgeSec: null,
-    majorStaleCount: 0,
-    staleMajorSymbols: [],
-    sync: {
-      lastSuccessfulSyncAt: 1_699_999_400,
-      freshnessStatus: "fresh",
-      warning: null,
-      criticalLaneHealthy: true,
-    },
-  },
-  circuits: {},
-};
+const BASE_HEALTH: HealthResponse = makeHealthyHealthResponse();
 
 describe("public status helpers", () => {
   it("renders active-price warnings with impacted assets without a public surface incident", () => {

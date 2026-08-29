@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { CronStatus, StatusResponse } from "@shared/types";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
+import { makeCompleteTelegramBotStatus } from "@/test-utils/status-fixtures";
 import { TelegramBotStats } from "../telegram-bot-stats";
 
 const NOW_SECONDS = 1_771_858_200;
@@ -12,30 +13,24 @@ const LIFECYCLE_SNAPSHOT_AT = NOW_SECONDS - 1_800;
 
 function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
   return {
-    totalChats: 10,
-    alertEnabledChats: 8,
-    deliverableChats: 8,
-    subscribedChats: 6,
-    emptyAlertChats: 1,
-    mutedChatsWithSubscriptions: 2,
-    totalSubscriptions: 15,
-    explicitCoinSubscriptions: 11,
-    presetImpliedCoinSubscriptions: 4,
-    activePresetFollowers: 2,
-    avgSubscriptionsPerSubscribedChat: 2.5,
-    pendingDisambiguations: 1,
-    pendingDeliveries: 0,
-    lastSubscriberActivityAt: NOW_SECONDS - 300,
-    customPreferenceChats: 4,
-    quietHoursEnabledChats: 3,
-    alertTypeChats: {
-      dews: 5,
-      depeg: 4,
-      safety: 3,
-      launch: 2,
-      reserve: 1,
-      allTypes: 1,
-    },
+    ...makeCompleteTelegramBotStatus({
+      emptyAlertChats: 1,
+      mutedChatsWithSubscriptions: 2,
+      explicitCoinSubscriptions: 11,
+      presetImpliedCoinSubscriptions: 4,
+      pendingDisambiguations: 1,
+      lastSubscriberActivityAt: NOW_SECONDS - 300,
+      customPreferenceChats: 4,
+      quietHoursEnabledChats: 3,
+      alertTypeChats: {
+        dews: 5,
+        depeg: 4,
+        safety: 3,
+        launch: 2,
+        reserve: 1,
+        allTypes: 1,
+      },
+    }),
     topStablecoins: [
       {
         stablecoinId: "stablecoin-with-a-very-long-identifier-that-must-wrap-locally",
@@ -45,33 +40,8 @@ function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
         presetImpliedSubscribers: 2,
       },
     ],
-    oldestPendingDeliveryAgeSec: null,
-    oldestDuePendingAgeSec: null,
-    estimatedDrainTimeSec: 0,
-    pendingDeliveryBacklog: {
-      claimable: 0,
-      due: 0,
-      deferred: 0,
-      expired: 0,
-      nearTtl: 0,
-      executionUnknown: 0,
-      sentCleanup: 0,
-    },
-    retryErrorClassCounts: {},
     presetQueryFailures: 0,
     inactiveSubscribersCleanedThisWeek: 6,
-    webhookEffectUnknown: 0,
-    deliverySli: {
-      availability: "unavailable",
-      quality: "unavailable",
-      freshness: "unknown",
-      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
-      rollup: null,
-      error: {
-        code: "telegram_delivery_sli_query_failed",
-        message: "Telegram delivery SLI telemetry unavailable.",
-      },
-    },
     lifecycleSnapshot: {
       date: "2026-02-24",
       snapshotAt: LIFECYCLE_SNAPSHOT_AT,
@@ -93,7 +63,6 @@ function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
       quietHoursEnabledChats: 3,
       pendingDeliveries: 0,
     },
-    quality: { status: "complete", unavailableFields: [] },
   };
 }
 

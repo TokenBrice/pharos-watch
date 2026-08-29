@@ -2,8 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ApiRequestAttributionResponse } from "@shared/types";
-import { degraded, makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import { degraded, makeApiRequestAttributionResponse, makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 vi.mock("@/components/status/reliability-impact-panel", () => ({
   ReliabilityImpactPanel: () => <div>Impact panel mounted</div>,
@@ -26,36 +25,9 @@ vi.mock("@/components/status/cache-freshness-table", () => ({
 
 import { ReliabilitySection } from "../reliability-section";
 
-const REQUEST_STATS = {
-  generatedAt: 1_700_000_000,
+const REQUEST_STATS = makeApiRequestAttributionResponse({
   window: { from: 1, to: 2, durationSec: 1, bucketSizeSec: 1, routeLimit: 1, apiKeyLimit: 1, retentionDays: 1 },
-  totals: { siteRequests: 0, externalRequests: 0, totalRequests: 0, siteSharePct: 0, externalSharePct: 0 },
-  siteDelivery: {
-    totalSiteRequests: 0,
-    pagesCacheHits: 0,
-    pagesUpstreamFetches: 0,
-    pagesUpstreamTimeouts: 0,
-    pagesUpstreamErrors: 0,
-    publicApiSiteRequests: 0,
-  },
-  lanes: [],
-  routes: [],
-  buckets: [],
-  keyedPublicApi: {
-    keyedRequests: 0,
-    unkeyedRequests: 0,
-    totalRequests: 0,
-    keyedSharePct: 0,
-    unkeyedSharePct: 0,
-    totalKeys: 0,
-    returnedKeys: 0,
-    omittedKeys: 0,
-    omittedRequests: 0,
-    truncated: false,
-  },
-  apiKeys: [],
-  scope: { countsTotalSiteDemand: true, countsWorkerLoad: true, includesPagesProxyCacheHits: true },
-} as ApiRequestAttributionResponse;
+});
 
 function completeData() {
   const base = makeHealthyStatusResponse();

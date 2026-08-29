@@ -22,6 +22,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 
 import { CRON_1MIN, CRON_STABILITY_INDEX, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+import { makeApiRequestAttributionResponse } from "@/test-utils/status-fixtures";
 import { useHealth, useStabilityIndex, useTelegramPulse } from "../api-hooks";
 import { useRequestSourceStats, useStatus } from "../admin-api-hooks";
 import { useEndpointProbes, usePublicEndpointProbes } from "../use-endpoint-probes";
@@ -138,7 +139,7 @@ function minimalStatusResponse() {
 }
 
 function minimalRequestSourceStatsResponse() {
-  return {
+  return makeApiRequestAttributionResponse({
     generatedAt: 1,
     window: {
       from: 1,
@@ -149,37 +150,7 @@ function minimalRequestSourceStatsResponse() {
       apiKeyLimit: 25,
       retentionDays: 30,
     },
-    totals: { siteRequests: 0, externalRequests: 0, totalRequests: 0, siteSharePct: 0, externalSharePct: 0 },
-    siteDelivery: {
-      totalSiteRequests: 0,
-      pagesCacheHits: 0,
-      pagesUpstreamFetches: 0,
-      pagesUpstreamTimeouts: 0,
-      pagesUpstreamErrors: 0,
-      publicApiSiteRequests: 0,
-    },
-    lanes: [],
-    routes: [],
-    buckets: [],
-    keyedPublicApi: {
-      keyedRequests: 0,
-      unkeyedRequests: 0,
-      totalRequests: 0,
-      keyedSharePct: 0,
-      unkeyedSharePct: 0,
-      totalKeys: 0,
-      returnedKeys: 0,
-      omittedKeys: 0,
-      omittedRequests: 0,
-      truncated: false,
-    },
-    apiKeys: [],
-    scope: {
-      countsTotalSiteDemand: true,
-      countsWorkerLoad: true,
-      includesPagesProxyCacheHits: true,
-    },
-  };
+  });
 }
 
 describe("query polling policy", () => {

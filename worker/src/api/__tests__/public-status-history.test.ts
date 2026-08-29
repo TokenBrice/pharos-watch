@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { PublicHealthAssessment } from "../../lib/public-health-assessment";
 import type { StatusCause } from "@shared/types/status";
+import { makePublicHealth } from "../../lib/__tests__/public-health.test-support";
 
 // Mock `assessPublicHealth` at the module level so tests can control the
 // publicHealth outcome without wiring up the full mint-burn / circuit /
@@ -12,96 +12,6 @@ vi.mock("../../lib/public-health-assessment", () => ({
 }));
 
 const { handlePublicStatusHistory } = await import("../public-status-history");
-
-/** Build a minimal `PublicHealthAssessment` suitable for a unit test. Most
- *  fields are stubbed to the shape the handler currently reads. The main
- *  knob is `overallStatus` — the handler only reads that one field for the
- *  public currentStatus after Workstream 4. */
-function stubPublicHealth(overallStatus: "healthy" | "degraded" | "stale"): PublicHealthAssessment {
-  return {
-    dbHealthy: true,
-    overallStatus,
-    warnings: [],
-    caches: {},
-    cacheImpactStatus: overallStatus,
-    worstCacheRatio: 0,
-    cacheFailures: [],
-    cacheDiagnostics: [],
-    cacheWarnings: [],
-    blacklist: {
-      totalEvents: 0,
-      missingAmounts: 0,
-      recentMissingAmounts: 0,
-      recentWindowSec: 0,
-      missingRatio: 0,
-    },
-    blacklistMetrics: null,
-    blacklistQueryError: null,
-    mintBurn: {
-      totalEvents: 0,
-      latestEventTs: null,
-      latestHourlyTs: null,
-      freshnessAgeSec: null,
-      majorStaleCount: 0,
-      staleMajorSymbols: [],
-      sync: {
-        lastSuccessfulSyncAt: null,
-        freshnessStatus: "fresh",
-        warning: null,
-        criticalLaneHealthy: true,
-      },
-    },
-    mintBurnImpactStatus: "healthy",
-    mintBurnQueryError: null,
-    mintBurnLastRunStatus: "ok",
-    mintBurnBootstrap: false,
-    circuits: {},
-    openCircuitCount: 0,
-    circuitImpactStatus: "healthy",
-    circuitQueryError: null,
-    d1Capacity: null,
-    d1CapacityImpactStatus: "healthy",
-    d1CapacityQueryError: null,
-    alertBroker: {
-      activeCount: 0,
-      pendingCount: 0,
-      criticalActiveCount: 0,
-      failedDeliveryCount: 0,
-      missingTargetCount: 0,
-      oldestActiveAt: null,
-      activeConditionKeys: [],
-      queryFailed: false,
-    },
-    alertBrokerImpactStatus: "healthy",
-    stablecoinPublication: {
-      status: "complete",
-      expectedActiveCount: 0,
-      presentActiveCount: 0,
-      waivedActiveCount: 0,
-      missingActiveIds: [],
-      waivedActiveIds: [],
-      expiredWaiverIds: [],
-      observedAt: null,
-    },
-    stablecoinPublicationImpactStatus: "healthy",
-    activePriceCoverage: {
-      status: "complete",
-      expectedActiveCount: 0,
-      presentActiveCount: 0,
-      pricedActiveCount: 0,
-      missingPriceCount: 0,
-      pricedActiveIds: [],
-      missingActiveIds: [],
-      affectedMarketCapUsd: 0,
-      missingActiveAssets: [],
-      alertEligibleCount: 0,
-      alertEligibleIds: [],
-      maxConsecutiveMissingGenerations: 0,
-      observedAt: null,
-    },
-    activePriceCoverageImpactStatus: "healthy",
-  };
-}
 
 type TransitionSeed = {
   id: number;
@@ -164,7 +74,7 @@ describe("handlePublicStatusHistory", () => {
     assessPublicHealthMock.mockReset();
     // Default to healthy so existing tests that don't care about the public
     // health outcome continue to work once the handler reads it.
-    assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
+    assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
   });
 
   afterEach(() => {
@@ -262,7 +172,7 @@ describe("handlePublicStatusHistory", () => {
         }],
       });
 
-      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
       const res = await handlePublicStatusHistory(db, request);
@@ -294,7 +204,7 @@ describe("handlePublicStatusHistory", () => {
         }],
       });
 
-      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("stale"));
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth("stale"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
       const res = await handlePublicStatusHistory(db, request);
@@ -337,7 +247,7 @@ describe("handlePublicStatusHistory", () => {
         }],
       });
 
-      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("degraded"));
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth("degraded"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
       const res = await handlePublicStatusHistory(db, request);
@@ -380,7 +290,7 @@ describe("handlePublicStatusHistory", () => {
         }],
       });
 
-      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
       const res = await handlePublicStatusHistory(db, request);
@@ -402,7 +312,7 @@ describe("handlePublicStatusHistory", () => {
         stateLastChangedAt: now - 3600,
       });
 
-      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
       const res = await handlePublicStatusHistory(db, request);
@@ -437,7 +347,7 @@ describe("handlePublicStatusHistory", () => {
           },
         ],
       });
-      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("degraded"));
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth("degraded"));
 
       const res = await handlePublicStatusHistory(
         db,
@@ -501,7 +411,7 @@ describe("handlePublicStatusHistory", () => {
         ],
       });
 
-      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
       const res = await handlePublicStatusHistory(db, request);
@@ -556,7 +466,7 @@ describe("handlePublicStatusHistory", () => {
         ],
       });
 
-      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
       const res = await handlePublicStatusHistory(db, request);

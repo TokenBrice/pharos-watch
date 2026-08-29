@@ -450,7 +450,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9.ts",
-      "sha256": "c8efa95d5d17b1b2c84ef483f1514e95e144219af9432a63783ecbc98f24146a"
+      "sha256": "e32f0031bd6766077f94c8a26f0e7720f4fbb3dc8a1f66b7df72cff7d9763822"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
@@ -601,7 +601,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "8424711a862f7cb92eb836b8a24563869718be25ac51fa15e654d2a403b281b2"
+  "digest": "7ea056a9679b1e965d1f9dbd649b9f46e69f0ea60edec261e9141a158885ac97"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

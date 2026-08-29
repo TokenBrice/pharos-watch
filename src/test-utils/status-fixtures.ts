@@ -1,7 +1,73 @@
-import type { EndpointProbeResult, HealthResponse, StatusResponse, StatusSectionKey } from "@shared/types";
+import type {
+  ApiRequestAttributionResponse,
+  EndpointProbeResult,
+  HealthResponse,
+  StatusResponse,
+  StatusSectionKey,
+} from "@shared/types";
 
 export const STATUS_FIXTURE_NOW_SECONDS = 1_700_000_000;
 export const STATUS_FIXTURE_NOW_MS = STATUS_FIXTURE_NOW_SECONDS * 1_000;
+
+export function makeCompleteTelegramBotStatus(
+  overrides: Partial<NonNullable<StatusResponse["telegramBot"]>> = {},
+): NonNullable<StatusResponse["telegramBot"]> {
+  return {
+    totalChats: 10,
+    alertEnabledChats: 8,
+    deliverableChats: 8,
+    subscribedChats: 6,
+    emptyAlertChats: 0,
+    mutedChatsWithSubscriptions: 0,
+    totalSubscriptions: 15,
+    explicitCoinSubscriptions: 12,
+    presetImpliedCoinSubscriptions: 3,
+    activePresetFollowers: 2,
+    avgSubscriptionsPerSubscribedChat: 2.5,
+    pendingDisambiguations: 0,
+    pendingDeliveries: 0,
+    oldestPendingDeliveryAgeSec: null,
+    oldestDuePendingAgeSec: null,
+    estimatedDrainTimeSec: 0,
+    pendingDeliveryBacklog: {
+      claimable: 0,
+      due: 0,
+      deferred: 0,
+      expired: 0,
+      nearTtl: 0,
+      executionUnknown: 0,
+      sentCleanup: 0,
+    },
+    retryErrorClassCounts: {},
+    webhookEffectUnknown: 0,
+    deliverySli: {
+      availability: "unavailable",
+      quality: "unavailable",
+      freshness: "unknown",
+      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+      rollup: null,
+      error: {
+        code: "telegram_delivery_sli_query_failed",
+        message: "Telegram delivery SLI telemetry unavailable.",
+      },
+    },
+    quality: { status: "complete", unavailableFields: [] },
+    lastSubscriberActivityAt: 1_699_999_000,
+    customPreferenceChats: 1,
+    quietHoursEnabledChats: 2,
+    alertTypeChats: {
+      dews: 3,
+      depeg: 4,
+      safety: 2,
+      launch: 1,
+      reserve: 1,
+      freeze: 1,
+      allTypes: 2,
+    },
+    topStablecoins: [],
+    ...overrides,
+  };
+}
 
 /**
  * Healthy baseline `StatusResponse` fixture used by admin section tests.
@@ -136,60 +202,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
       staleOnchainSupply: 0,
       onchainStaleRatio: 0,
     },
-    telegramBot: {
-      totalChats: 10,
-      alertEnabledChats: 8,
-      deliverableChats: 8,
-      subscribedChats: 6,
-      emptyAlertChats: 0,
-      mutedChatsWithSubscriptions: 0,
-      totalSubscriptions: 15,
-      explicitCoinSubscriptions: 12,
-      presetImpliedCoinSubscriptions: 3,
-      activePresetFollowers: 2,
-      avgSubscriptionsPerSubscribedChat: 2.5,
-      pendingDisambiguations: 0,
-      pendingDeliveries: 0,
-      oldestPendingDeliveryAgeSec: null,
-      oldestDuePendingAgeSec: null,
-      estimatedDrainTimeSec: 0,
-      pendingDeliveryBacklog: {
-        claimable: 0,
-        due: 0,
-        deferred: 0,
-        expired: 0,
-        nearTtl: 0,
-        executionUnknown: 0,
-        sentCleanup: 0,
-      },
-      retryErrorClassCounts: {},
-      webhookEffectUnknown: 0,
-      deliverySli: {
-        availability: "unavailable",
-        quality: "unavailable",
-        freshness: "unknown",
-        acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
-        rollup: null,
-        error: {
-          code: "telegram_delivery_sli_query_failed",
-          message: "Telegram delivery SLI telemetry unavailable.",
-        },
-      },
-      quality: { status: "complete", unavailableFields: [] },
-      lastSubscriberActivityAt: 1_699_999_000,
-      customPreferenceChats: 1,
-      quietHoursEnabledChats: 2,
-      alertTypeChats: {
-        dews: 3,
-        depeg: 4,
-        safety: 2,
-        launch: 1,
-        reserve: 1,
-        freeze: 1,
-        allTypes: 2,
-      },
-      topStablecoins: [],
-    },
+    telegramBot: makeCompleteTelegramBotStatus(),
     sectionErrors: {},
     datasetFreshness: {
       stablecoins: 1_699_999_000,
@@ -346,6 +359,67 @@ export function makeHealthyHealthResponse(): HealthResponse {
       },
     },
     circuits: {},
+  };
+}
+
+type ApiRequestAttributionResponseOverrides = {
+  generatedAt?: number;
+  window?: Partial<ApiRequestAttributionResponse["window"]>;
+  totals?: Partial<ApiRequestAttributionResponse["totals"]>;
+  siteDelivery?: Partial<ApiRequestAttributionResponse["siteDelivery"]>;
+  keyedPublicApi?: Partial<ApiRequestAttributionResponse["keyedPublicApi"]>;
+};
+
+export function makeApiRequestAttributionResponse(
+  overrides: ApiRequestAttributionResponseOverrides = {},
+): ApiRequestAttributionResponse {
+  return {
+    generatedAt: overrides.generatedAt ?? 1_700_000_000,
+    window: {
+      from: 1_699_913_600,
+      to: 1_700_000_000,
+      durationSec: 86_400,
+      bucketSizeSec: 3_600,
+      routeLimit: 5,
+      apiKeyLimit: 25,
+      retentionDays: 35,
+      ...overrides.window,
+    },
+    totals: {
+      siteRequests: 0,
+      externalRequests: 0,
+      totalRequests: 0,
+      siteSharePct: 0,
+      externalSharePct: 0,
+      ...overrides.totals,
+    },
+    siteDelivery: {
+      totalSiteRequests: 0,
+      pagesCacheHits: 0,
+      pagesUpstreamFetches: 0,
+      pagesUpstreamTimeouts: 0,
+      pagesUpstreamErrors: 0,
+      publicApiSiteRequests: 0,
+      ...overrides.siteDelivery,
+    },
+    lanes: [],
+    routes: [],
+    buckets: [],
+    keyedPublicApi: {
+      keyedRequests: 0,
+      unkeyedRequests: 0,
+      totalRequests: 0,
+      keyedSharePct: 0,
+      unkeyedSharePct: 0,
+      totalKeys: 0,
+      returnedKeys: 0,
+      omittedKeys: 0,
+      omittedRequests: 0,
+      truncated: false,
+      ...overrides.keyedPublicApi,
+    },
+    apiKeys: [],
+    scope: { countsTotalSiteDemand: true, countsWorkerLoad: true, includesPagesProxyCacheHits: true },
   };
 }
 
