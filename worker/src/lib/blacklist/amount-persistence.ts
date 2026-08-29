@@ -38,8 +38,7 @@ export function buildRecoveredBlacklistAmountPersistence(
   const statement = db
     .prepare(
       `UPDATE blacklist_events
-       SET amount = ?,
-           amount_native = ?,
+       SET amount_native = ?,
            amount_usd_at_event = ?,
            amount_source = ?,
            amount_status = CASE WHEN amount_status = 'permanently_unavailable' THEN amount_status ELSE ? END,
@@ -53,7 +52,6 @@ export function buildRecoveredBlacklistAmountPersistence(
        WHERE id = ?`,
     )
     .bind(
-      input.amount,
       input.amount,
       input.amountUsd,
       input.amountSource,

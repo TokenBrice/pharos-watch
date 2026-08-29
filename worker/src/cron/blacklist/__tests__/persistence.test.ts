@@ -34,6 +34,31 @@ function makeRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {
 }
 
 describe("insertBlacklistRows", () => {
+  it("writes amount_native once without the deployed legacy amount column", async () => {
+    const sqls: string[] = [];
+    const binds: unknown[][] = [];
+    const row = makeRow({ amount_native: 42.5 });
+    const db = {
+      prepare: vi.fn((sql: string) => {
+        sqls.push(sql);
+        return {
+          bind: (...values: unknown[]) => {
+            binds.push(values);
+            return {};
+          },
+        };
+      }),
+      batch: async () => [{ success: true, meta: { changes: 1 } }],
+    } as unknown as D1Database;
+
+    await expect(insertBlacklistRows(db, [row])).resolves.toBe(1);
+
+    expect(sqls[0]).toContain("amount_native, amount_usd_at_event");
+    expect(sqls[0]).not.toContain(" amount, ");
+    expect(sqls[0]).not.toContain("amount =");
+    expect(binds[0]?.filter((value) => value === row.amount_native)).toHaveLength(1);
+  });
+
   it("retries transient D1 overloads through batchExecute", async () => {
     let attempts = 0;
     const db = {

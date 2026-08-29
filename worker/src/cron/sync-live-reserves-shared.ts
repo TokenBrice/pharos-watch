@@ -3,7 +3,7 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapt
 import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./reserve-adapters/index";
 import type { ReserveSyncStateRecord } from "../lib/live-reserves-store";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { fnv1aHash } from "../lib/hash";
 
 export const CONFIGURED_COINS = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig);

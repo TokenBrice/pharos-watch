@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
-import { toErrorMessage } from "../../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
-  LIVE_RESERVE_ADAPTER_DESCRIPTORS,
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
-  LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
   LIVE_RESERVE_ADAPTER_STATUS_VALUES,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
@@ -74,9 +72,9 @@ describe("adapter registry completeness", () => {
     },
   );
 
-  it("worker fetcher keys match the shared descriptor registry exactly", () => {
+  it("worker fetcher keys match the shared adapter definitions exactly", () => {
     expect(Object.keys(LIVE_RESERVE_ADAPTER_FETCHERS).sort()).toEqual(
-      Object.keys(LIVE_RESERVE_ADAPTER_DESCRIPTORS).sort(),
+      Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).sort(),
     );
   });
 
@@ -90,7 +88,7 @@ describe("adapter registry completeness", () => {
     const validStatuses = new Set(LIVE_RESERVE_ADAPTER_STATUS_VALUES);
 
     for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
-      const provenance = LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].provenance;
+      const provenance = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].provenance;
       expect(validStatuses.has(provenance.status)).toBe(true);
       expect(provenance.rationale.trim().length).toBeGreaterThan(0);
     }
@@ -99,7 +97,7 @@ describe("adapter registry completeness", () => {
   it("parked and retired adapter entries declare parkedSince and nextReview", () => {
     const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
     for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
-      const provenance = LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].provenance as {
+      const provenance = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].provenance as {
         status: string;
         parkedSince?: string;
         nextReview?: string;
@@ -124,7 +122,7 @@ describe("adapter registry completeness", () => {
     );
 
     for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
-      const provenance = LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].provenance;
+      const provenance = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].provenance;
       if (configuredKeys.has(key)) {
         expect(provenance.status, `${key} is configured and should be marked active`).toBe("active");
       } else {
@@ -187,10 +185,10 @@ describe("adapter registry completeness", () => {
   });
 
   it.each(LIVE_RESERVE_ADAPTER_KEYS)("%s declares a non-empty set of valid primary input kinds", (key) => {
-    const kinds = LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[key];
+    const kinds = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].primaryInputKinds;
     expect(
       kinds,
-      `Missing primary input-kinds entry for "${key}" in LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS`,
+      `Missing primary input-kinds declaration for "${key}" in LIVE_RESERVE_ADAPTER_DEFINITIONS`,
     ).toBeDefined();
     expect(Array.isArray(kinds)).toBe(true);
     expect(kinds.length).toBeGreaterThan(0);

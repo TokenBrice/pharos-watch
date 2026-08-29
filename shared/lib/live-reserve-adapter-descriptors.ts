@@ -2,7 +2,6 @@ import type { LiveReserveEvidenceClass, ReserveDisplayBadgeKind } from "../types
 import type { ReserveEvidenceSourceOriginClass } from "../types/report-card-evidence-journal";
 import {
   LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS,
-  LIVE_RESERVE_ADAPTER_KEYS,
   type LiveReserveAdapterKey,
   type LiveReserveAdapterProvenance,
 } from "../types/live-reserve-adapter-declarations";
@@ -33,7 +32,7 @@ export function inferReserveDisplayBadgeKindFromEvidenceClass(
 
 type LiveReserveAdapterDeclarationMap = typeof LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS;
 
-export type LiveReserveAdapterDescriptorMap = {
+export type LiveReserveAdapterDefinitionMap = {
   [K in LiveReserveAdapterKey]: LiveReserveAdapterDeclarationMap[K] & {
     key: K;
     params: (typeof LIVE_RESERVE_PARAM_SCHEMAS)[LiveReserveAdapterDeclarationMap[K]["paramsSchema"]];
@@ -43,7 +42,7 @@ export type LiveReserveAdapterDescriptorMap = {
   };
 };
 
-export const LIVE_RESERVE_ADAPTER_DESCRIPTORS = Object.fromEntries(
+export const LIVE_RESERVE_ADAPTER_DEFINITIONS = Object.fromEntries(
   Object.entries(LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS).map(([key, declaration]) => {
     const provenance = "provenance" in declaration ? declaration.provenance : ACTIVE_PROVENANCE;
     const sourceOriginClass =
@@ -64,18 +63,4 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTORS = Object.fromEntries(
       },
     ];
   }),
-) as LiveReserveAdapterDescriptorMap;
-
-export const LIVE_RESERVE_ADAPTER_DEFINITIONS = LIVE_RESERVE_ADAPTER_DESCRIPTORS;
-
-export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = Object.fromEntries(
-  LIVE_RESERVE_ADAPTER_KEYS.map((key) => [key, LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].primaryInputKinds]),
-) as {
-  [K in LiveReserveAdapterKey]: LiveReserveAdapterDeclarationMap[K]["primaryInputKinds"];
-};
-
-export const adapterParamsSchemas = Object.fromEntries(
-  LIVE_RESERVE_ADAPTER_KEYS.map((key) => [key, LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].params]),
-) as {
-  [K in LiveReserveAdapterKey]: LiveReserveAdapterDescriptorMap[K]["params"];
-};
+) as LiveReserveAdapterDefinitionMap;

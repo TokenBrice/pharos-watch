@@ -6,8 +6,7 @@ import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
 import usdxlSource from "../../data/stablecoins/coins/usdxl-last.json";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
 import { hasReserveDisplayBadgeForAdapter } from "../live-reserve-display";
-import { LiveReservesConfigSchema } from "../live-reserve-adapters";
-import { LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS } from "../live-reserve-adapters";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS, LiveReservesConfigSchema } from "../live-reserve-adapters";
 import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import {
   ACTIVE_META_BY_ID,
@@ -1109,7 +1108,7 @@ describe("tracked stablecoin metadata", () => {
     const issues = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig).flatMap((coin) => {
       const config = coin.liveReservesConfig!;
       const parsed = LiveReservesConfigSchema.safeParse(config);
-      const allowedKinds = LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[config.adapter] as readonly string[];
+      const allowedKinds = LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter].primaryInputKinds as readonly string[];
       const invalidKinds = [
         config.inputs.primary.kind,
         ...(config.inputs.fallbacks ?? []).map((fallback) => fallback.kind),

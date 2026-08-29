@@ -1,7 +1,7 @@
 import type { LiveReserveEvidenceClass, ReserveDisplayBadgeKind } from "../types/live-reserve-core";
 import type { ReserveDisplayBadgeView } from "../types/live-reserves";
 import {
-  LIVE_RESERVE_ADAPTER_DESCRIPTORS,
+  LIVE_RESERVE_ADAPTER_DEFINITIONS,
   inferReserveDisplayBadgeKindFromEvidenceClass as inferBadgeKindFromEvidenceClass,
   type LiveReserveAdapterKey,
 } from "./live-reserve-adapter-descriptors";
@@ -13,7 +13,7 @@ const RESERVE_DISPLAY_BADGE_LABELS: Record<ReserveDisplayBadgeKind, string> = {
 };
 
 export function getReserveDisplayBadgeKindForAdapter(adapterKey: LiveReserveAdapterKey): ReserveDisplayBadgeKind {
-  return LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey].displayBadgeKind;
+  return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].displayBadgeKind;
 }
 
 function getReserveDisplayBadgeLabel(kind: ReserveDisplayBadgeKind): string {
@@ -34,5 +34,5 @@ export function inferReserveDisplayBadgeKindFromEvidenceClass(
 }
 
 export function hasReserveDisplayBadgeForAdapter(adapterKey: string): adapterKey is LiveReserveAdapterKey {
-  return Object.prototype.hasOwnProperty.call(LIVE_RESERVE_ADAPTER_DESCRIPTORS, adapterKey);
+  return Object.prototype.hasOwnProperty.call(LIVE_RESERVE_ADAPTER_DEFINITIONS, adapterKey);
 }
