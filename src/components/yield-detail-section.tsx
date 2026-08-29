@@ -139,6 +139,19 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const sourceTvl = view.sourceExplorer.selectedSource.sourceTvlUsd;
   const sourceDepthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens];
   const excessYield = ranking.excessYield;
+  const historyChart = (
+    <YieldHistoryChart
+      stablecoinId={stablecoinId}
+      defaultDays={30}
+      benchmarkRate={view.benchmarkRate}
+      benchmarkLabel={view.ranking.benchmarkLabel}
+      benchmarkIsFallback={view.benchmarkIsFallback}
+      medianApy={view.medianApy}
+      availableSources={view.historySources}
+      hideSourceSelector={view.historySources.length > 1}
+      externalSourceKeys={view.externalSourceKeys}
+    />
+  );
 
   return (
     <YieldDetailSectionFrame headerEnd={headerEnd}>
@@ -240,34 +253,10 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         {/* The chart folds behind a disclosure on phones (owner feedback: it
             dominated the mobile module while rarely being the key read). */}
         {isMobileViewport ? (
-          <ModuleDisclosure label="APY trend" deferredChildren={<div className="mt-2">
-          <YieldHistoryChart
-            stablecoinId={stablecoinId}
-            defaultDays={30}
-            benchmarkRate={view.benchmarkRate}
-            benchmarkLabel={view.ranking.benchmarkLabel}
-            benchmarkIsFallback={view.benchmarkIsFallback}
-            medianApy={view.medianApy}
-            availableSources={view.historySources}
-            hideSourceSelector={view.historySources.length > 1}
-            externalSourceKeys={view.externalSourceKeys}
-          />
-          </div>}>
+          <ModuleDisclosure label="APY trend" deferredChildren={<div className="mt-2">{historyChart}</div>}>
             <></>
           </ModuleDisclosure>
-        ) : (
-          <YieldHistoryChart
-            stablecoinId={stablecoinId}
-            defaultDays={30}
-            benchmarkRate={view.benchmarkRate}
-            benchmarkLabel={view.ranking.benchmarkLabel}
-            benchmarkIsFallback={view.benchmarkIsFallback}
-            medianApy={view.medianApy}
-            availableSources={view.historySources}
-            hideSourceSelector={view.historySources.length > 1}
-            externalSourceKeys={view.externalSourceKeys}
-          />
-        )}
+        ) : historyChart}
       </div>
 
 
