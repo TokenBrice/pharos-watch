@@ -14,10 +14,10 @@ import {
 } from "./normalization";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
-export const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
+const YIELD_SUPPLEMENTAL_FAMILY_CACHE_PREFIX = "yield:supplemental-sources:v1:";
 
 export function getYieldSupplementalFamilyCacheKey(family: SupplementalSourceFamilyKey): string {
-  return `${YIELD_SUPPLEMENTAL_CACHE_KEY}:${family}`;
+  return `${YIELD_SUPPLEMENTAL_FAMILY_CACHE_PREFIX}${family}`;
 }
 
 interface YieldSupplementalSourcesCachePayload {
@@ -93,7 +93,7 @@ function filterValidSupplementalCandidates(
   return { candidates, rejectedCount: rejected.length, rejectedExamples };
 }
 
-export function buildYieldSupplementalSourcesCache(
+export function buildYieldSupplementalFamilyCache(
   candidates: ResolvedYieldCandidate[],
   updatedAt = Math.floor(Date.now() / 1000),
 ): string {

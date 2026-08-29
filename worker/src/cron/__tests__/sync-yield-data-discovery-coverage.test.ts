@@ -29,13 +29,46 @@ import {
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
-import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
+import { buildDlStablecoinPoolsCache, buildYieldSupplementalFamilyCache, getYieldSupplementalFamilyCacheKey } from "../yield-sync/cache";
+import { loadYieldSyncState } from "../yield-sync/state-loading";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-families";
+import type { ResolvedYieldCandidate } from "../yield-sync/types";
 
 function dlPoolsCacheRow(
   pools: Parameters<typeof buildDlStablecoinPoolsCache>[0],
   updatedAt: number,
 ) {
   return cacheRow(buildDlStablecoinPoolsCache(pools, updatedAt), updatedAt);
+}
+
+function supplementalFamilyCacheRow(
+  candidates: ResolvedYieldCandidate[],
+  updatedAt: number,
+) {
+  return cacheRow(buildYieldSupplementalFamilyCache(candidates, updatedAt), updatedAt);
+}
+
+function supplementalCandidate(sourceKey: string, observedAt: number): ResolvedYieldCandidate {
+  return {
+    stablecoinId: "100",
+    symbol: "sDAI",
+    chain: "ethereum",
+    address: null,
+    yield: {
+      currentApy: 6.1,
+      apyBase: 6.1,
+      apyReward: null,
+      sourcePool: "fixture-pool",
+      sourceTvlUsd: 50_000_000,
+      dataSource: "protocol-api",
+      exchangeRate: null,
+      sourceKey,
+      yieldSource: "Fixture supplemental source",
+      yieldType: "lending-vault",
+      sourceObservedAt: observedAt,
+      comparisonAnchorObservedAt: null,
+    },
+  };
 }
 
 describe("syncYieldData", () => {
@@ -46,7 +79,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -125,7 +158,6 @@ describe("syncYieldData", () => {
             ],
           }, nowSec),
       "yield:supplemental-sources:v1:beefy": cacheRow("{bad json", nowSec),
-      "yield:supplemental-sources:v1": cacheRow("{bad aggregate", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -141,7 +173,7 @@ describe("syncYieldData", () => {
     expect(supplementalRow).toBeDefined();
   });
 
-  it("merges aggregate supplemental candidates for missing per-family caches", async () => {
+  it("ignores the legacy aggregate supplemental cache when a family cache is missing", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -225,11 +257,11 @@ describe("syncYieldData", () => {
 
     const result = await fixtureSyncYieldData(db);
 
-    expect(result.itemCount).toBe(2);
+    expect(result.itemCount).toBe(1);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       sourceCoverage?: { supplementalFallbackMode?: string | null };
     };
-    expect(metadata.sourceCoverage?.supplementalFallbackMode).toBe("partial-family-cache-aggregate-merge");
+    expect(metadata.sourceCoverage?.supplementalFallbackMode).toBe("partial-family-cache");
     const rows = getPublishedYieldRows(db);
     expect(
       rows.some(
@@ -238,7 +270,65 @@ describe("syncYieldData", () => {
     ).toBe(true);
     expect(
       rows.some((row) => row.stablecoin_id === "100" && row.source_key === "protocol-api:beefy:ethereum:beefy-sdai"),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      vi.mocked(fixtureGetCache).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1"),
+    ).toBe(false);
+  });
+
+  it("classifies mixed fresh, stale, missing, and empty families from valid family presence", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const freshCandidate = supplementalCandidate("protocol-api:morpho:fixture", nowSec);
+
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      [getYieldSupplementalFamilyCacheKey("morpho")]: supplementalFamilyCacheRow([freshCandidate], nowSec),
+      [getYieldSupplementalFamilyCacheKey("pendle")]: supplementalFamilyCacheRow([], nowSec),
+      [getYieldSupplementalFamilyCacheKey("yearnKong")]: supplementalFamilyCacheRow(
+        [supplementalCandidate("protocol-api:yearn:fixture", nowSec - 13 * 3600)],
+        nowSec - 13 * 3600,
+      ),
+      [getYieldSupplementalFamilyCacheKey("vaultsFyi")]: supplementalFamilyCacheRow([], nowSec),
+      [getYieldSupplementalFamilyCacheKey("compoundV3")]: supplementalFamilyCacheRow([], nowSec),
+      [getYieldSupplementalFamilyCacheKey("aaveV3")]: supplementalFamilyCacheRow([], nowSec),
+      [getYieldSupplementalFamilyCacheKey("roycoDawn")]: supplementalFamilyCacheRow([], nowSec),
+    });
+    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
+    expect(state.supplementalCandidates).toEqual([freshCandidate]);
+    expect(state.supplementalMeta).toMatchObject({
+      mode: "cache",
+      updatedAt: nowSec,
+      ageSeconds: 0,
+      sourceCount: 1,
+      fallbackMode: "partial-family-cache",
+    });
+  });
+
+  it("treats an all-empty current family snapshot as valid supplemental cache state", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const emptyFamilyCaches = Object.fromEntries(
+      SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [
+        getYieldSupplementalFamilyCacheKey(family),
+        supplementalFamilyCacheRow([], nowSec),
+      ]),
+    );
+    installYieldCacheReader(vi.mocked(fixtureGetCache), emptyFamilyCaches);
+    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
+    expect(state.supplementalCandidates).toEqual([]);
+    expect(state.supplementalMeta).toMatchObject({
+      mode: "cache",
+      updatedAt: nowSec,
+      ageSeconds: 0,
+      sourceCount: 0,
+      fallbackMode: null,
+    });
   });
 
   it("keeps a higher native wrapper APY ahead of a lower supplemental lending source that clears size gates", async () => {
@@ -256,7 +346,7 @@ describe("syncYieldData", () => {
               apyMean30d: 4.43603,
             }),
           ], nowSec),
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -315,7 +405,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -388,7 +478,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:aaveV3": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -446,7 +536,7 @@ describe("syncYieldData", () => {
               },
             ],
       }, nowSec),
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -502,7 +592,7 @@ describe("syncYieldData", () => {
     } as never);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1": cacheRow({
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",

@@ -142,6 +142,7 @@ import {
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
 import {
   loadSupplementalSourceFamilies,
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
 } from "../yield-sync/supplemental-source-families";
 import type { VaultsFyiSourceResult } from "../yield-sync/sources";
@@ -244,6 +245,17 @@ describe("syncYieldSupplemental", () => {
         },
       },
     });
+    expect(vi.mocked(setCacheIfNewer)).toHaveBeenCalledTimes(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length);
+    const cacheKeys = vi.mocked(setCacheIfNewer).mock.calls.map((call) => call[1]);
+    expect(cacheKeys).toEqual(
+      expect.arrayContaining(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => `yield:supplemental-sources:v1:${family}`)),
+    );
+    expect(progressUpdates.some((update) => update.stage === "aggregate-cache-write")).toBe(false);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata).not.toHaveProperty("cacheWriteSkipped");
+    expect(metadata).not.toHaveProperty("cacheWriteMode");
+    expect(metadata).not.toHaveProperty("casSkipped");
+    expect(metadata).not.toHaveProperty("cacheKey");
   });
 
   it("threads vaults.fyi runtime config into the supplemental source family loader without persisting the key", async () => {
@@ -312,11 +324,13 @@ describe("syncYieldSupplemental", () => {
     expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(3);
 
-    const cacheCall = vi.mocked(setCacheIfNewer).mock.calls[0];
-    expect(cacheCall?.[1]).toBe("yield:supplemental-sources:v1");
-    expect(
-      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:aaveV3"),
-    ).toBe(true);
+    const cacheCall = vi
+      .mocked(setCacheIfNewer)
+      .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:aaveV3");
+    expect(cacheCall?.[1]).toBe("yield:supplemental-sources:v1:aaveV3");
+    expect(vi.mocked(setCacheIfNewer).mock.calls.map((call) => call[1])).not.toContain(
+      "yield:supplemental-sources:v1",
+    );
 
     const payload = JSON.parse(String(cacheCall?.[2])) as {
       sourceCount: number;
@@ -751,7 +765,10 @@ describe("syncYieldSupplemental", () => {
 
     expect(result.itemCount).toBe(2);
 
-    const payload = JSON.parse(String(vi.mocked(setCacheIfNewer).mock.calls[0]?.[2])) as {
+    const aaveCacheCall = vi
+      .mocked(setCacheIfNewer)
+      .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:aaveV3");
+    const payload = JSON.parse(String(aaveCacheCall?.[2])) as {
       sourceCount: number;
       data: Array<{
         stablecoinId?: string;
@@ -844,7 +861,10 @@ describe("syncYieldSupplemental", () => {
 
     expect(result.itemCount).toBe(2);
 
-    const payload = JSON.parse(String(vi.mocked(setCacheIfNewer).mock.calls[0]?.[2])) as {
+    const beefyCacheCall = vi
+      .mocked(setCacheIfNewer)
+      .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:beefy");
+    const payload = JSON.parse(String(beefyCacheCall?.[2])) as {
       sourceCount: number;
       data: Array<{ yield: { sourceKey: string; currentApy: number } }>;
     };
@@ -933,7 +953,10 @@ describe("syncYieldSupplemental", () => {
 
     expect(result.itemCount).toBe(1);
 
-    const payload = JSON.parse(String(vi.mocked(setCacheIfNewer).mock.calls[0]?.[2])) as {
+    const beefyCacheCall = vi
+      .mocked(setCacheIfNewer)
+      .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:beefy");
+    const payload = JSON.parse(String(beefyCacheCall?.[2])) as {
       sourceCount: number;
       data: Array<{ yield: { sourceKey: string } }>;
     };
@@ -1071,7 +1094,10 @@ describe("syncYieldSupplemental", () => {
     expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(1);
 
-    const payload = JSON.parse(String(vi.mocked(setCacheIfNewer).mock.calls[0]?.[2])) as {
+    const beefyCacheCall = vi
+      .mocked(setCacheIfNewer)
+      .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:beefy");
+    const payload = JSON.parse(String(beefyCacheCall?.[2])) as {
       sourceCount: number;
       data: Array<{ yield: { sourceKey: string } }>;
     };

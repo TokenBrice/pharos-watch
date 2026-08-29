@@ -48,7 +48,7 @@ describe("createYieldProgressReporter", () => {
       itemsDone: 7,
       itemsTotal: 11,
       metadata: {
-        supplementalMode: "aggregate-cache",
+        supplementalMode: "cache",
         countTotals: {
           dlPools: 4,
           supplementalCandidates: 2,
@@ -64,7 +64,7 @@ describe("createYieldProgressReporter", () => {
       metadata: {
         providerFamily: "yield-source-cache",
         phase: "state-loaded",
-        supplementalMode: "aggregate-cache",
+        supplementalMode: "cache",
         countTotals: {
           dlPools: 4,
           supplementalCandidates: 2,

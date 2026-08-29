@@ -7,7 +7,7 @@ import {
   buildRiskFreeRatesCachePayload,
   serializeRiskFreeRateCache,
   buildDlStablecoinPoolsCache,
-  buildYieldSupplementalSourcesCache,
+  buildYieldSupplementalFamilyCache,
   parseYieldSupplementalSourcesCache,
 } from "../yield-sync/cache";
 
@@ -184,7 +184,7 @@ describe("parseYieldSupplementalSourcesCache", () => {
   });
 
   it("accepts nullable reward and source TVL fields for otherwise valid supplemental candidates", () => {
-    const raw = buildYieldSupplementalSourcesCache([
+    const raw = buildYieldSupplementalFamilyCache([
       {
         symbol: "sDAI",
         chain: "ethereum",
@@ -265,7 +265,7 @@ describe("parseYieldSupplementalSourcesCache", () => {
   });
 
   it("rejects supplemental cache payloads with future updatedAt", () => {
-    const raw = buildYieldSupplementalSourcesCache([
+    const raw = buildYieldSupplementalFamilyCache([
       {
         symbol: "sDAI",
         yield: {

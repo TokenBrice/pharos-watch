@@ -43,6 +43,7 @@ describe("syncYieldData", () => {
               apy: 3.25,
               apyBase: 3.25,
               apyReward: null,
+              apyMean30d: 3.25,
               stablecoin: true,
               exposure: "single",
               underlyingTokens: null,
@@ -57,6 +58,7 @@ describe("syncYieldData", () => {
             apy: 3.25,
             apyBase: 3.25,
             apyReward: null,
+            apyMean30d: 3.25,
             tvlUsd: 5_000_000,
             project: "aave-v3",
           }
@@ -98,6 +100,7 @@ describe("syncYieldData", () => {
               apy: 3.25,
               apyBase: 3.25,
               apyReward: null,
+              apyMean30d: 3.25,
               stablecoin: true,
               exposure: "single",
               underlyingTokens: null,

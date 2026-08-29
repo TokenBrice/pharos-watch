@@ -5,9 +5,8 @@ import { reportCronProgress } from "../lib/cron-progress";
 import type { VaultsFyiRuntimeConfig } from "../lib/env";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 import {
-  buildYieldSupplementalSourcesCache,
+  buildYieldSupplementalFamilyCache,
   getYieldSupplementalFamilyCacheKey,
-  YIELD_SUPPLEMENTAL_CACHE_KEY,
 } from "./yield-sync/cache";
 import {
   loadSupplementalSourceFamilies,
@@ -135,7 +134,8 @@ export async function syncYieldSupplemental(
     },
   });
   const { candidates: dedupedCandidates, droppedCount } = dedupeCandidates(candidates);
-  if (dedupedCandidates.length === 0) {
+  const emptySnapshot = dedupedCandidates.length === 0;
+  if (emptySnapshot) {
     await reportSupplementalProgress("empty-snapshot", "Supplemental yield source families produced no candidates", {
       itemsDone: 0,
       itemsTotal: rawCandidateCount,
@@ -149,47 +149,8 @@ export async function syncYieldSupplemental(
         sourceFamilySummaries,
       },
     });
-    return {
-      status: "degraded",
-      itemCount: 0,
-      metadata: JSON.stringify({
-        rowsRead: rawCandidateCount,
-        rowsWritten: 0,
-        rowsDropped: droppedCount,
-        sourceCoverage: {
-          rawSupplementalCandidates: rawCandidateCount,
-          dedupedSupplementalCandidates: 0,
-          supplementalCandidatesWritten: 0,
-          sourceFamilyCounts,
-          sourceFamilyInventoryCounts,
-          supplementalSourceAccounting,
-          sourceFamilySummaries,
-          optionalRpcTelemetry,
-        },
-        fallbackMode: "empty-snapshot",
-        cacheWriteSkipped: true,
-      }),
-    };
   }
 
-  await reportSupplementalProgress("aggregate-cache-write", "Publishing aggregate supplemental yield cache", {
-    itemsDone: 0,
-    itemsTotal: dedupedCandidates.length,
-    metadata: {
-      countTotals: {
-        rawSupplementalCandidates: rawCandidateCount,
-        dedupedSupplementalCandidates: dedupedCandidates.length,
-        rowsDropped: droppedCount,
-      },
-    },
-  });
-  const cacheResult = await setCacheIfNewer(
-    db,
-    YIELD_SUPPLEMENTAL_CACHE_KEY,
-    buildYieldSupplementalSourcesCache(dedupedCandidates, startSec),
-    startSec,
-    signal,
-  );
   const familyCacheResults: Record<
     SupplementalSourceFamilyKey,
     "published" | "skipped-newer" | "empty" | "empty-published"
@@ -197,6 +158,7 @@ export async function syncYieldSupplemental(
     SupplementalSourceFamilyKey,
     "published" | "skipped-newer" | "empty" | "empty-published"
   >;
+  let supplementalCandidatesWritten = 0;
 
   for (const family of familyResults) {
     if (family.status !== "ok") continue;
@@ -217,7 +179,7 @@ export async function syncYieldSupplemental(
     const familyCacheResult = await setCacheIfNewer(
       db,
       getYieldSupplementalFamilyCacheKey(family.key),
-      buildYieldSupplementalSourcesCache(dedupedFamilyCandidates, startSec),
+      buildYieldSupplementalFamilyCache(dedupedFamilyCandidates, startSec),
       startSec,
       signal,
     );
@@ -229,47 +191,44 @@ export async function syncYieldSupplemental(
         : familyCacheResult.written
           ? "published"
           : "skipped-newer";
+    if (familyCacheResult.written) supplementalCandidatesWritten += dedupedFamilyCandidates.length;
   }
   await reportSupplementalProgress("complete", "Published supplemental yield source caches", {
-    itemsDone: cacheResult.written ? dedupedCandidates.length : 0,
+    itemsDone: supplementalCandidatesWritten,
     itemsTotal: dedupedCandidates.length,
     metadata: {
       countTotals: {
         rawSupplementalCandidates: rawCandidateCount,
         dedupedSupplementalCandidates: dedupedCandidates.length,
-        rowsWritten: cacheResult.written ? dedupedCandidates.length : 0,
+        rowsWritten: supplementalCandidatesWritten,
         rowsDropped: droppedCount,
       },
-      cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
       familyCacheResults,
       sourceFamilyInventoryCounts,
       sourceFamilySummaries,
     },
   });
 
-  return {
-    itemCount: cacheResult.written ? dedupedCandidates.length : 0,
-    metadata: JSON.stringify({
-      rowsRead: rawCandidateCount,
-      rowsWritten: cacheResult.written ? dedupedCandidates.length : 0,
-      rowsDropped: droppedCount,
-      sourceCoverage: {
-        rawSupplementalCandidates: rawCandidateCount,
-        dedupedSupplementalCandidates: dedupedCandidates.length,
-        supplementalCandidatesWritten: cacheResult.written ? dedupedCandidates.length : 0,
-        sourceFamilyCounts,
-        sourceFamilyInventoryCounts,
-        supplementalSourceAccounting,
-        sourceFamilySummaries,
-        optionalRpcTelemetry,
-      },
-      fallbackMode: null,
-      cacheWriteSkipped: cacheResult.skippedBecauseNewer,
-      cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
-      casSkipped: cacheResult.skippedBecauseNewer,
-      cacheKey: YIELD_SUPPLEMENTAL_CACHE_KEY,
-      familyCacheResults,
-      syncStartSec: startSec,
-    }),
-  };
+  const metadata = JSON.stringify({
+    rowsRead: rawCandidateCount,
+    rowsWritten: supplementalCandidatesWritten,
+    rowsDropped: droppedCount,
+    sourceCoverage: {
+      rawSupplementalCandidates: rawCandidateCount,
+      dedupedSupplementalCandidates: dedupedCandidates.length,
+      supplementalCandidatesWritten,
+      sourceFamilyCounts,
+      sourceFamilyInventoryCounts,
+      supplementalSourceAccounting,
+      sourceFamilySummaries,
+      optionalRpcTelemetry,
+    },
+    fallbackMode: emptySnapshot ? "empty-snapshot" : null,
+    familyCacheResults,
+    syncStartSec: startSec,
+  });
+
+  return emptySnapshot
+    ? { status: "degraded", itemCount: 0, metadata }
+    : { itemCount: supplementalCandidatesWritten, metadata };
 }
