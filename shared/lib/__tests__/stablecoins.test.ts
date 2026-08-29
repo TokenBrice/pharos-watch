@@ -41,6 +41,7 @@ const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
   hasTrackedVariantMeta,
 });
 
+const EURR_PRE_LAUNCH_ID = "eurr-revolut";
 const EXPECTED_TRACKED_STABLECOIN_COUNT = 406;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -141,7 +142,7 @@ describe("tracked stablecoin metadata", () => {
       "brd-volpon",
       "krw1-bdacs",
       "rusd-revolut",
-      "eurr-revolut",
+      EURR_PRE_LAUNCH_ID,
       "brl-itau",
       "krw-imbank",
       "gynusd-gyndore",

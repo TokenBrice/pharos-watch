@@ -388,6 +388,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["brd-volpon", "BRD Stablecoin", "BRD", "pre-launch"],
   ["krw1-bdacs", "BDACS KRW1", "KRW1", "pre-launch"],
   ["rusd-revolut", "Revolut USD Stablecoin", "RUSD", "pre-launch"],
+  ["eurr-revolut", "Revolut Euro", "EURR", "pre-launch"],
   ["brl-itau", "Itau Unibanco BRL Stablecoin", "BRL-ITAU", "pre-launch"],
   ["krw-imbank", "iM Bank KRW Stablecoin", "KRW-iM", "pre-launch"],
   ["sofid-sofi", "SoFiUSD", "SOFID", "quarantined"],
