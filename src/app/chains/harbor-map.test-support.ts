@@ -20,7 +20,11 @@ export function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
       symbol: "USDC",
       share: 0.6,
     },
-    topStablecoins: overrides.topStablecoins,
+    topStablecoins: overrides.topStablecoins ?? [
+      { id: "usdc-circle", symbol: "USDC", share: 0.6, supplyUsd: 60 },
+      { id: "usdt-tether", symbol: "USDT", share: 0.25, supplyUsd: 25 },
+      { id: "dai-makerdao", symbol: "DAI", share: 0.15, supplyUsd: 15 },
+    ],
     dominanceShare: overrides.dominanceShare ?? 0.5,
     healthScore: overrides.healthScore === undefined ? 82 : overrides.healthScore,
     healthBand: overrides.healthBand === undefined ? "healthy" : overrides.healthBand,

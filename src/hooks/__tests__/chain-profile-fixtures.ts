@@ -21,6 +21,10 @@ export function makeChain(overrides: Partial<ChainSummary> = {}): ChainSummary {
       symbol: "USDC",
       share: 0.5,
     },
+    topStablecoins: [
+      { id: "usdc-circle", symbol: "USDC", share: 0.5, supplyUsd: 750_000_000 },
+      { id: "usdt-tether", symbol: "USDT", share: 0.5, supplyUsd: 750_000_000 },
+    ],
     dominanceShare: 0.32,
     healthScore: 84,
     healthBand: "robust",

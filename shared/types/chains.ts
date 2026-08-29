@@ -104,7 +104,7 @@ export const ChainSummarySchema = z.object({
   change30dPct: RatioSchema,
   stablecoinCount: z.number(),
   dominantStablecoin: ChainDominantStablecoinSchema,
-  topStablecoins: z.array(ChainTopStablecoinSchema).optional(),
+  topStablecoins: z.array(ChainTopStablecoinSchema),
   dominanceShare: z.number(),
   healthScore: z.number().nullable(),
   healthBand: HealthBandSchema.nullable(),
@@ -126,6 +126,18 @@ export const ChainsResponseSchema = z.object({
   healthMethodologyVersion: z.string(),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
   _meta: ChainsFreshnessMetaSchema.optional(),
+}).superRefine((response, ctx) => {
+  response.chains.forEach((chain, index) => {
+    if (chain.totalUsd <= 0) return;
+    const expectedCargoCount = Math.min(chain.stablecoinCount, 5);
+    if (chain.topStablecoins.length !== expectedCargoCount) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["chains", index, "topStablecoins"],
+        message: `Positive-supply chains must carry exactly ${expectedCargoCount} topStablecoins rows`,
+      });
+    }
+  });
 });
 
 export type ChainsResponse = z.infer<typeof ChainsResponseSchema>;

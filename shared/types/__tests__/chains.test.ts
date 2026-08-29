@@ -28,6 +28,12 @@ const validChainsPayload = {
           share: 0.6,
           supplyUsd: 600,
         },
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          share: 0.4,
+          supplyUsd: 400,
+        },
       ],
       dominanceShare: 0.8,
       healthScore: 82,
@@ -83,6 +89,23 @@ describe("ChainsResponseSchema", () => {
     expect(ChainsResponseSchema.safeParse({
       ...validChainsPayload,
       chains: [{ ...validChainsPayload.chains[0], healthBand: "excellent" }],
+    }).success).toBe(false);
+  });
+
+  it("rejects positive-supply chains with incomplete cargo", () => {
+    expect(ChainsResponseSchema.safeParse({
+      ...validChainsPayload,
+      chains: [{
+        ...validChainsPayload.chains[0],
+        topStablecoins: validChainsPayload.chains[0].topStablecoins.slice(0, 1),
+      }],
+    }).success).toBe(false);
+  });
+
+  it("rejects a non-finite global 7d ratio", () => {
+    expect(ChainsResponseSchema.safeParse({
+      ...validChainsPayload,
+      globalChange7dPct: Number.POSITIVE_INFINITY,
     }).success).toBe(false);
   });
 

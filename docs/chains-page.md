@@ -39,11 +39,11 @@ The leaderboard is public and indexable. The profile routes are statically gener
 - FAQ structured data emitted by the route's `FaqSection includeJsonLd`
 - a visible `ChainDirectory` section after the FAQ, listing every generated `/chains/[chain]/` profile route
 
-`src/app/chains/client.tsx` consumes `useChains()` plus `useStablecoins()` and renders:
+`src/app/chains/client.tsx` consumes `useChains()` and renders:
 
 - hero summary: total tracked stablecoin supply (the frost-blue "One Beam" figure, `.pharos-numeric text-frost-blue`), optional global 7d trend, chain count, and a top-chain dominance breakdown bar/legend. The page keeps its existing sequential bands rather than the shared `FeatureHeroSplit`, and intentionally retains the frost-tinted "Top N chains hold X%" concentration badge
 - explicit `Unattributed` residual in the dominance breakdown when the stablecoins cache has supply that DefiLlama does not attribute to a concrete chain
-- `NauticalChart`, fed by the chain snapshot plus `stablecoinsQuery.data?.peggedAssets` so the visual can attach top-stablecoin cargo/logos to each chain; the route-level harbor summary plates (`Largest port`, `Avg health`, `Fragile ports`, and health bands) render before the SVG so the chart can finish with the map itself
+- `NauticalChart`, fed directly by the chain snapshot, whose `topStablecoins` rows provide the top-stablecoin cargo/logos for each chain; the route-level harbor summary plates (`Largest port`, `Avg health`, `Fragile ports`, and health bands) render before the SVG so the chart can finish with the map itself
 - `SelectedHarborPanel`, synchronized from the harbor chart and leaderboard hover/focus, showing the selected chain's compact supply, tracked share, health band, stablecoin count, dominant cargo, top cargo marks, and 7-day wake directly after the harbor map; the panel reads existing chain snapshot fields and does not change Chain Health semantics
 - sortable leaderboard table rendered through `DataTableShell`
 - `QueryFreshnessNotices` (preset `"chains"`, which wraps the stale-data banner) plus `QueryErrorNotice` with retry in the no-data error state
@@ -106,6 +106,8 @@ The page contract is limited to presentation: the leaderboard exposes the compos
 `useChains()` reads `GET /api/chains` with the standard 15-minute cron-aligned query preset and the endpoint's 1800-second freshness budget.
 
 `GET /api/chains` returns body `_meta` freshness metadata plus HTTP freshness headers. When its supporting caches lag, the body `_meta.status` degrades instead of silently appearing fresh. `_meta.dependencies.reportCards` also tells the route whether a missing Chain Health score is due to stale/unavailable report-card inputs versus genuine score-coverage gaps.
+
+Every positive-supply chain in the response carries exactly `min(stablecoinCount, 5)` `topStablecoins` rows. The shared response schema rejects older or partial payloads that do not meet this contract, so the leaderboard does not merge a second stablecoins snapshot into the chain snapshot.
 
 `worker/src/api/chains.ts`:
 
