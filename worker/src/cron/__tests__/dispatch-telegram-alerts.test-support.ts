@@ -57,7 +57,7 @@ export interface TelegramDeliveryResult {
   blocked: boolean;
   retryable: boolean;
   permanentFailure: boolean;
-  statusCode: number;
+  statusCode: number | null;
   errorClass: string | null;
   delivery: string;
   retryAfterSec: number | null;

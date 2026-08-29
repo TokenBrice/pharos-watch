@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram-subscription-eligibility";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
+import { TELEGRAM_BOT_COMMANDS } from "@shared/lib/telegram-bot-registration";
+import { COMMAND_HANDLERS, type WebhookCommandHandler } from "../webhook-commands";
 import {
   fetchSpy,
   handleTelegramWebhook,
@@ -13,6 +15,7 @@ import {
   makeStablecoinsCacheValue,
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
+  mockTelegramMembership,
 } from "./telegram-webhook.test-support";
 
 
@@ -52,87 +55,85 @@ function pendingActionPayload(
 
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
-  it("handles /subscribe happy path with unique ticker", async () => {
-    const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [
-          {
-            stablecoin_id: "usdc-circle",
-            alert_dews: 1,
-            alert_depeg: 0,
-            alert_safety: 0,
-            dews_min_band: null,
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          },
-        ],
-      },
-    ]);
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews USDC"), "test-secret", "bot-token");
 
-    expect(sentMessageBody().text).toContain("Updated subscriptions");
-    expect(sentMessageBody().text).toContain("USDC");
-  });
+  it.each(TELEGRAM_BOT_COMMANDS.map(({ command }) => `/${command}`))(
+    "routes %s through its registered handler in a private chat",
+    async (command) => {
+      const handler = vi.fn<WebhookCommandHandler>().mockResolvedValue(undefined);
+      const previousHandler = COMMAND_HANDLERS[command];
+      COMMAND_HANDLERS[command] = handler;
+      try {
+        const db = makeTelegramWebhookDb();
+        const response = await handleTelegramWebhook(
+          db,
+          makeWebhookRequest(123, command),
+          "test-secret",
+          "bot-token",
+        );
 
-  it("handles /subscribe launch for a pre-launch ticker and includes Launch in the summary", async () => {
-    const launchTarget = resolveTicker("USDPT");
-    if (launchTarget.status !== "unique") {
-      throw new Error("Expected USDPT to resolve uniquely for launch subscription test");
+        expect(response.status).toBe(200);
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler.mock.calls[0]?.[0]).toMatchObject({
+          chatId: "123",
+          chatType: "private",
+        });
+      } finally {
+        COMMAND_HANDLERS[command] = previousHandler;
+      }
+    },
+  );
+
+  it.each([
+    {
+      label: "allows private mutating commands",
+      command: "/subscribe",
+      chatType: "private",
+      membership: null,
+      dispatches: true,
+    },
+    {
+      label: "denies group mutating commands to members",
+      command: "/subscribe",
+      chatType: "supergroup",
+      membership: "member",
+      dispatches: false,
+    },
+    {
+      label: "allows group mutating commands to administrators",
+      command: "/subscribe",
+      chatType: "supergroup",
+      membership: "administrator",
+      dispatches: true,
+    },
+    {
+      label: "allows group read-only commands to members",
+      command: "/status",
+      chatType: "supergroup",
+      membership: "member",
+      dispatches: true,
+    },
+  ] as const)("$label", async ({ command, chatType, membership, dispatches }) => {
+    const handler = vi.fn<WebhookCommandHandler>().mockResolvedValue(undefined);
+    const previousHandler = COMMAND_HANDLERS[command];
+    COMMAND_HANDLERS[command] = handler;
+    try {
+      if (membership) {
+        mockTelegramMembership(fetchSpy, membership, { id: 7, is_bot: false, first_name: membership });
+      }
+      const db = makeTelegramWebhookDb();
+      const commandText = chatType === "private" ? command : `${command}@PharosWatchBot`;
+      const response = await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(123, commandText, "test-secret", { chatType, fromId: 7 }),
+        "test-secret",
+        "bot-token",
+      );
+
+      expect(response.status).toBe(200);
+      expect(handler).toHaveBeenCalledTimes(dispatches ? 1 : 0);
+    } finally {
+      COMMAND_HANDLERS[command] = previousHandler;
     }
-
-    const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [
-          {
-            stablecoin_id: launchTarget.matches[0].id,
-            alert_dews: 0,
-            alert_depeg: 0,
-            alert_safety: 0,
-            alert_launch: 1,
-            dews_min_band: null,
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          },
-        ],
-      },
-    ]);
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe launch USDPT"), "test-secret", "bot-token");
-
-    const history = db.getHistory();
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("INSERT INTO telegram_subscriptions") && entry.binds[1] === launchTarget.matches[0].id,
-      ),
-    ).toBe(true);
-    const subscriptionsQuery = history.find((entry) => entry.sql.includes("FROM telegram_subscriptions"));
-    expect(subscriptionsQuery?.sql).toContain("alert_launch");
-    expect(sentMessageBody().text).toContain("Launch");
-    expect(sentMessageBody().text).toContain("USDPT");
-  });
-
-  it("gates /subscribe ... all behind a confirmation prompt", async () => {
-    const db = makeTelegramWebhookDb();
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews safety all"), "test-secret", "bot-token");
-
-    const history = db.getHistory();
-    // No global_alert_* upsert happens until the user taps Confirm.
-    expect(history.some((entry) => /UPDATE.*global_alert_dews/.test(entry.sql))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
-    const confirmInsert = history.find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
-    expect(confirmInsert).toBeDefined();
-    expect(confirmInsert!.binds).toContain("confirm-bulk");
-    const pending = JSON.parse(confirmInsert!.binds[2] as string) as { coinIds: string[]; presetIds: string[] };
-    expect(pending.coinIds).toEqual([]);
-    expect(pending.presetIds).toEqual([]);
-    const body = sentMessageBody();
-    expect(body.text).toContain("Confirm?");
-    expect(body.text).toMatch(/subscribe \d+ coins/);
-    expect(body.reply_markup).toBeDefined();
   });
 
   it("subscribe reserve all (after Confirm) writes the global reserve flag", async () => {
@@ -447,16 +448,6 @@ describe("handleTelegramWebhook", () => {
     );
 
     expect(sentMessageBody().text).toContain("Use either &quot;all&quot; or specific tickers/presets");
-  });
-
-  it("handles /subscribe with unknown ticker", async () => {
-    const db = makeTelegramWebhookDb();
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews XYZZY"), "test-secret", "bot-token");
-
-    const text = sentMessageBody().text;
-    expect(text).toContain("Ticker");
-    expect(text.toLowerCase()).toContain("not found");
-    expect(text).toContain("/presets");
   });
 
   it("handles /subscribe with ambiguous ticker (disambiguation)", async () => {
@@ -1096,59 +1087,6 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("Something went wrong");
   });
 
-  it("/status USDC replies with a compact card", async () => {
-    const db = makeTelegramWebhookDb([
-      { match: "SELECT action_type, action_payload", rows: [], first: null },
-      { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1700000000 }] },
-      { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
-      { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.9999, updated_at: 1700000000 }] },
-    ]);
-    const res = await handleTelegramWebhook(db, makeWebhookRequest(1, "/status USDC"), "test-secret", "bot-token");
-    expect(res.status).toBe(200);
-    const sent = sentMessageBody() as {
-      text: string;
-      reply_markup?: {
-        inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>>;
-      };
-    };
-    expect(sent.text).toContain("USDC");
-    expect(sent.text).toContain("CALM");
-    expect(sent.text).toContain("Safety: A");
-    expect(sent.text).toContain("Depeg: stable");
-    expect(sent.text).toContain("Price: $0.9999");
-    // P1-U11: discoverability buttons attached to the status card.
-    const buttons: Array<{ text: string; callback_data?: string; web_app?: { url: string } }> = (
-      sent.reply_markup?.inline_keyboard ?? []
-    ).flat();
-    expect(buttons.map((b) => b.text)).toEqual(["Why?", "Coverage", "Subscribe", "Open in app"]);
-    expect(buttons.slice(0, 3).map((b) => b.callback_data)).toEqual([
-      "why:usdc-circle",
-      "coverage:usdc-circle",
-      "quicksub:usdc-circle",
-    ]);
-    expect(buttons[3]?.web_app?.url).toBe("https://pharos.watch/pharoswatchbot/app/?startapp=coin_usdc-circle");
-    // Bot API limit: callback_data must stay ≤64 bytes.
-    for (const button of buttons) {
-      expect((button.callback_data ?? "").length).toBeLessThanOrEqual(64);
-    }
-  });
-
-  it("/status ambiguous ticker asks for exact coin id instead of numeric reply", async () => {
-    const ambiguous = resolveTicker("USDF");
-    if (ambiguous.status !== "ambiguous") {
-      throw new Error("Expected USDF to be ambiguous for status ambiguity test");
-    }
-
-    const db = makeTelegramWebhookDb([{ match: "SELECT action_type, action_payload", rows: [], first: null }]);
-    const res = await handleTelegramWebhook(db, makeWebhookRequest(1, "/status USDF"), "test-secret", "bot-token");
-
-    expect(res.status).toBe(200);
-    const body = sentMessageBody().text;
-    expect(body).toContain("Re-run /status with the exact Pharos coin id");
-    expect(body).toContain(`/status ${ambiguous.matches[0].id}`);
-    expect(body).not.toContain("Reply with the number");
-  });
-
   it("replies with retry message when preset resolution cache is missing", async () => {
     const db = makeTelegramWebhookDb([
       { match: "SELECT action_type, action_payload", rows: [], first: null },
@@ -1183,35 +1121,4 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("current membership was unavailable for preview");
   });
 
-  it("executes /subscribe with a small explicit ticker set without confirmation", async () => {
-    const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [
-          {
-            stablecoin_id: "usdc-circle",
-            alert_dews: 1,
-            alert_depeg: 0,
-            alert_safety: 0,
-            alert_launch: 0,
-            dews_min_band: null,
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          },
-        ],
-      },
-    ]);
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews USDC"), "test-secret", "bot-token");
-
-    const history = db.getHistory();
-    // Single coin is below threshold — no confirmation gate.
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("INSERT INTO telegram_pending_disambiguation") &&
-          (entry.binds as unknown[]).includes("confirm-bulk"),
-      ),
-    ).toBe(false);
-  });
 });

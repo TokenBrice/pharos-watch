@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { mockTelegramMembership } from "../../test-helpers/__shared/telegram";
 import {
   firstAckBody,
   firstSentMessageBody,
@@ -114,15 +115,7 @@ describe("handleCallbackQuery", () => {
         },
       ]);
       // Webhook auth fetches getChatMember from Telegram when cache misses.
-      fetchSpy.mockImplementation(async (url) => {
-        if (String(url).includes("getChatMember")) {
-          return new Response(
-            JSON.stringify({ ok: true, result: { user: { id: 7, is_bot: false, first_name: "m" }, status: "member" } }),
-            { status: 200 },
-          );
-        }
-        return new Response(JSON.stringify({ ok: true }), { status: 200 });
-      });
+      mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "m" });
       await handleCallbackQuery(db, "fake-token", {
         id: "cb-qs-group",
         data: "quicksub:usdc-circle",
@@ -144,18 +137,7 @@ describe("handleCallbackQuery", () => {
           first: null,
         },
       ]);
-      fetchSpy.mockImplementation(async (url) => {
-        if (String(url).includes("getChatMember")) {
-          return new Response(
-            JSON.stringify({
-              ok: true,
-              result: { user: { id: 7, is_bot: false, first_name: "admin" }, status: "administrator" },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response(JSON.stringify({ ok: true }), { status: 200 });
-      });
+      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
       await handleCallbackQuery(db, "fake-token", {
         id: "cb-qs-admin",
         data: "quicksub:usdc-circle",

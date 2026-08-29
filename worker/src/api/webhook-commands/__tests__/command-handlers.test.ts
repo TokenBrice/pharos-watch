@@ -5,6 +5,7 @@ import {
   lastSendMessageBody,
 } from "../../../test-helpers/__shared/telegram";
 import { PAUSE_SENTINEL_TS } from "../../../lib/telegram-constants";
+import { resolveTicker } from "../../../lib/telegram-alerts";
 import type { WebhookCommandContext } from "../context";
 import { handleCancel } from "../cancel";
 import { handleHealth } from "../health";
@@ -131,7 +132,7 @@ describe("webhook command handlers", () => {
     resetTelegramFetchSpy();
   });
 
-  it("/subscribe persists a direct coin follow and returns a subscription summary", async () => {
+  it("handles /subscribe happy path with unique ticker", async () => {
     const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [subscriptionRow()] }]);
     const ctx = makeContext({ db });
 
@@ -151,23 +152,87 @@ describe("webhook command handlers", () => {
     const body = latestSendMessageBody();
     expect(body.text).toContain("Updated subscriptions");
     expect(body.text).toContain("USDC (usdc-circle)");
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("INSERT INTO telegram_pending_disambiguation")
+            && entry.binds.includes("confirm-bulk"),
+        ),
+    ).toBe(false);
   });
 
-  it("/subscribe all stores a pending bulk confirmation instead of mutating subscriptions", async () => {
+  it("handles /subscribe with unknown ticker", async () => {
+    const db = mockD1();
+    const replyToChat = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ db, replyToChat });
+
+    await handleSubscribe(ctx, "dews XYZZY");
+
+    expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("Ticker"));
+    expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("not found"));
+    expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("/presets"));
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
+  });
+
+  it("handles /subscribe launch for a pre-launch ticker and includes Launch in the summary", async () => {
+    const launchTarget = resolveTicker("USDPT");
+    if (launchTarget.status !== "unique") {
+      throw new Error("Expected USDPT to resolve uniquely for launch subscription test");
+    }
+
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [
+          subscriptionRow({
+            stablecoin_id: launchTarget.matches[0].id,
+            alert_dews: 0,
+            alert_launch: 1,
+          }),
+        ],
+      },
+    ]);
+    const ctx = makeContext({ db });
+
+    await handleSubscribe(ctx, "launch USDPT");
+
+    const history = db.getHistory();
+    expect(
+      history.some(
+        (entry) =>
+          entry.sql.includes("INSERT INTO telegram_subscriptions") && entry.binds[1] === launchTarget.matches[0].id,
+      ),
+    ).toBe(true);
+    const subscriptionsQuery = history.find((entry) => entry.sql.includes("FROM telegram_subscriptions"));
+    expect(subscriptionsQuery?.sql).toContain("alert_launch");
+    const body = latestSendMessageBody();
+    expect(body.text).toContain("Launch");
+    expect(body.text).toContain("USDPT");
+  });
+
+  it("gates /subscribe ... all behind a confirmation prompt", async () => {
     const db = mockD1();
     const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
     const ctx = makeContext({ db, replyToChatWithMarkup });
 
-    await handleSubscribe(ctx, "dews all");
+    await handleSubscribe(ctx, "dews safety all");
 
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
+    const history = db.getHistory();
+    expect(history.some((entry) => /UPDATE.*global_alert_dews/.test(entry.sql))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
     const pendingInsert = db
       .getHistory()
       .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
     expect(pendingInsert?.binds).toContain("confirm-bulk");
+    const pending = JSON.parse(pendingInsert!.binds[2] as string) as { coinIds: string[]; presetIds: string[] };
+    expect(pending.coinIds).toEqual([]);
+    expect(pending.presetIds).toEqual([]);
     expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
     const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
     expect(message).toContain("Confirm?");
+    expect(message).toMatch(/subscribe \d+ coins/);
     const buttons = buttonsFromMarkup(options.replyMarkup);
     expect(buttons).toEqual([
       { text: "Confirm", callback_data: "confirm:bulk" },
@@ -203,7 +268,46 @@ describe("webhook command handlers", () => {
     ).toBe(true);
     const body = latestSendMessageBody();
     expect(body.text).toContain("Updated settings");
+    expect(body.text).toContain("DEWS&gt;=WARNING");
     expectMiniAppButton(buttonsFromBody(body), "Open in app", "coin_usdc-circle");
+  });
+
+  it("handles /set all for global alert flags", async () => {
+    const db = mockD1([{ match: "FROM telegram_subscribers", rows: [], first: subscriberRow({ global_alert_depeg: 0 }) }]);
+    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ db, replyToChatWithMarkup });
+
+    await handleSet(ctx, "all depeg off");
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("global_alert_depeg = excluded.global_alert_depeg"))).toBe(
+      true,
+    );
+    expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
+    const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
+    expect(message).toContain("Updated all-stablecoin alerts");
+    expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Open in app", "watchlist");
+  });
+
+  it("handles /set all depeg-step for global worsening alerts", async () => {
+    const db = mockD1([{
+      match: "FROM telegram_subscribers",
+      rows: [],
+      first: subscriberRow({ global_alert_depeg: 1, global_depeg_worsening_bps_step: 250 }),
+    }]);
+    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ db, replyToChatWithMarkup });
+
+    await handleSet(ctx, "all depeg-step 250");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("global_alert_depeg"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("global_depeg_worsening_bps_step = ?"))).toBe(true);
+    expect(history.some((entry) => entry.binds.includes(250))).toBe(true);
+    expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
+    const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
+    expect(message).toContain("Updated all-stablecoin alerts");
+    expect(message).toContain("Depeg +250bps");
+    expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Open in app", "watchlist");
   });
 
   it("/timezone persists a valid zone and hides quick-pick keyboards in groups", async () => {
@@ -219,6 +323,7 @@ describe("webhook command handlers", () => {
         .some((entry) => entry.sql.includes("timezone = excluded.timezone") && entry.binds.includes("Europe/Paris")),
     ).toBe(true);
     const [, privateOptions] = privateReplyWithMarkup.mock.calls[0]!;
+    expect(privateReplyWithMarkup.mock.calls[0]![0]).toContain("Timezone set to Europe/Paris");
     expectMiniAppButton(buttonsFromMarkup(privateOptions.replyMarkup), "Open in app", "quiet-hours");
 
     const groupReply = vi.fn().mockResolvedValue(undefined);
@@ -241,6 +346,41 @@ describe("webhook command handlers", () => {
     expect(groupReply.mock.calls[0]![0]).not.toContain("keyboard");
   });
 
+  it("/timezone rejects unknown zones without writing to D1", async () => {
+    const db = mockD1();
+    const replyToChat = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ db, replyToChat });
+
+    await handleTimezone(ctx, "Mars/Olympus_Mons");
+
+    const wrote = db
+      .getHistory()
+      .some((entry) => entry.sql.includes("INSERT INTO telegram_subscribers") && entry.binds.includes("Mars/Olympus_Mons"));
+    expect(wrote).toBe(false);
+    expect(replyToChat).toHaveBeenCalledWith(expect.stringContaining("Unknown timezone"));
+  });
+
+  it("/timezone with no argument shows current zone and an inline keyboard", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: subscriberRow({ timezone: "Europe/Paris" }),
+      },
+    ]);
+    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ db, replyToChatWithMarkup });
+
+    await handleTimezone(ctx, "");
+
+    const [message, options] = replyToChatWithMarkup.mock.calls[0]!;
+    expect(message).toContain("Current timezone: Europe/Paris");
+    const buttons = buttonsFromMarkup(options.replyMarkup);
+    expect(buttons.some((button) => button.callback_data === "tz:UTC")).toBe(true);
+    expect(buttons.some((button) => button.callback_data === "tz:Europe/Paris")).toBe(true);
+    expectMiniAppButton(buttons, "Open in app", "quiet-hours");
+  });
+
   it("/mute, /unmutehours, and /unsnooze write state and use the contextual Mini App label", async () => {
     const db = mockD1();
     const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
@@ -260,6 +400,19 @@ describe("webhook command handlers", () => {
             entry.binds.includes(7),
         ),
     ).toBe(true);
+    const muteUpsert = db.getHistory().find(
+      (entry) => entry.sql.includes("INSERT INTO telegram_subscribers") && entry.sql.includes("ON CONFLICT(chat_id)"),
+    );
+    expect(muteUpsert).toBeDefined();
+    const muteUpdateClause = muteUpsert!.sql.split("DO UPDATE SET")[1] ?? "";
+    expect(muteUpdateClause).not.toMatch(/\balert_dews\s*=\s*excluded\.alert_dews\b/);
+    expect(muteUpdateClause).not.toMatch(/\balert_depeg\s*=\s*excluded\.alert_depeg\b/);
+    expect(muteUpdateClause).not.toMatch(/\balert_safety\s*=\s*excluded\.alert_safety\b/);
+    expect(muteUpdateClause).not.toMatch(/\balert_launch\s*=\s*excluded\.alert_launch\b/);
+    expect(muteUpdateClause).not.toMatch(/\bglobal_alert_safety\s*=\s*excluded\./);
+    expect(muteUpdateClause).toContain("quiet_hours_enabled = excluded.quiet_hours_enabled");
+    expect(replyToChatWithMarkup.mock.calls[0]![0]).toContain("Quiet hours enabled");
+    expect(replyToChatWithMarkup.mock.calls[0]![0]).toContain("22:00–07:00 UTC");
     expect(
       db
         .getHistory()
@@ -269,6 +422,7 @@ describe("webhook command handlers", () => {
         ),
     ).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(true);
+    expect(replyToChatWithMarkup.mock.calls[2]![0]).toContain("Alert snooze cleared");
     for (const [, options] of replyToChatWithMarkup.mock.calls) {
       const buttons = buttonsFromMarkup(options.replyMarkup);
       expect(buttons.some((button) => button.text === "Open in app" && button.web_app?.url)).toBe(true);
@@ -450,6 +604,26 @@ describe("webhook command handlers", () => {
     const buttons = buttonsFromMarkup(options.replyMarkup);
     expectMiniAppButton(buttons, "Open control panel", "watchlist");
     expectMiniAppButton(buttons, "Browse presets", "presets");
+  });
+
+  it("shows global alert coverage in /list", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: subscriberRow({ global_alert_depeg: 1, global_alert_safety: 1 }),
+      },
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+    ]);
+    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeContext({ db, replyToChatWithMarkup });
+
+    await handleList(ctx, "");
+
+    const [message] = replyToChatWithMarkup.mock.calls[0]!;
+    expect(message).toContain("All stablecoins: Depeg, Safety (downgrades; 3-point drop when scored)");
+    expect(message).toContain("Coins (0):");
   });
 
   it("/list loads per-coin snooze state for subscription summaries", async () => {

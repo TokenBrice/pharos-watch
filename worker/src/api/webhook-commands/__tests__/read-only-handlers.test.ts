@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import type { StatusForCoin } from "../../telegram-webhook-status";
+import { resolveTicker } from "../../../lib/telegram-alerts";
 import {
   buildBriefMessage,
   buildCoverageMessage,
@@ -49,11 +50,11 @@ const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 const statusFixture: StatusForCoin = {
   stablecoinId: "usdc-circle",
-  priceUsd: 0.9997,
+  priceUsd: 0.9999,
   priceUpdatedAt: 1_700_000_000,
   supplyUsd: 12_300_000_000,
   stablecoinsUpdatedAt: 1_700_000_000,
-  dews: { band: "WATCH", score: 24, computedAt: 1_700_000_000 },
+  dews: { band: "CALM", score: 15, computedAt: 1_700_000_000 },
   safety: {
     grade: "A",
     score: 82,
@@ -164,11 +165,20 @@ describe("read-only webhook command handlers", () => {
     const [message, options] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]!;
     expect(message).toContain("<b>USDC</b>");
     expect(message).toContain("Price:");
+    expect(message).toContain("CALM");
+    expect(message).toContain("Safety: A");
+    expect(message).toContain("Depeg: stable");
+    expect(message).toContain("Price: $0.9999");
     const buttons = buttonsFromMarkup(options.replyMarkup);
+    expect(buttons.map((button) => button.text)).toEqual(["Why?", "Coverage", "Subscribe", "Open in app"]);
     expectCallbackButton(buttons, "Why?", "why:usdc-circle");
     expectCallbackButton(buttons, "Coverage", "coverage:usdc-circle");
     expectCallbackButton(buttons, "Subscribe", "quicksub:usdc-circle");
     expectMiniAppButton(buttons, "Open in app", "coin_usdc-circle");
+    expect(buttons[3]?.web_app?.url).toBe("https://pharos.watch/pharoswatchbot/app/?startapp=coin_usdc-circle");
+    for (const button of buttons) {
+      expect((button.callback_data ?? "").length).toBeLessThanOrEqual(64);
+    }
     expectNoD1Mutation(ctx.db);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -186,10 +196,19 @@ describe("read-only webhook command handlers", () => {
     expect(loadStatusForCoin).not.toHaveBeenCalled();
     expectNoD1Mutation(notFoundCtx.db);
 
+    const ambiguous = resolveTicker("USDF");
+    if (ambiguous.status !== "ambiguous") {
+      throw new Error("Expected USDF to be ambiguous for status guidance test");
+    }
     const ambiguousCtx = makeContext();
     await handleStatus(ambiguousCtx, "USDF");
     expect(ambiguousCtx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("matches"));
     expect(ambiguousCtx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("Re-run /status"));
+    expect(ambiguousCtx.replyToChat).toHaveBeenCalledWith(expect.stringContaining("exact Pharos coin id"));
+    expect(ambiguousCtx.replyToChat).toHaveBeenCalledWith(
+      expect.stringContaining(`/status ${ambiguous.matches[0]?.id ?? ""}`),
+    );
+    expect(ambiguousCtx.replyToChat).not.toHaveBeenCalledWith(expect.stringContaining("Reply with the number"));
     expect(loadStatusForCoin).not.toHaveBeenCalled();
     expectNoD1Mutation(ambiguousCtx.db);
   });
