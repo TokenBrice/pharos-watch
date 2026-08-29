@@ -29,7 +29,7 @@ npm run bootstrap:generated
 
 The legacy category shards (`usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json`) were emptied and then deleted. `npm run check:stablecoin-data` fails if any of those filenames reappears under `shared/data/stablecoins/`.
 
-The client, compliance, Telegram Mini App, legacy redirect, and report-card registry fingerprint projections are gitignored local/build artifacts generated from the merged catalog. `coins.client.generated.json` powers lightweight browser-facing metadata; `coins.compliance.generated.json` keeps GENIUS long-form evidence scoped to `/compliance/`; `coins.telegram-mini-app.generated.json` powers the Mini App registry; `legacy-llama-redirects.generated.json` maps old numeric DefiLlama stablecoin URLs. `report-card-registry-fingerprint.generated.ts` pins the canonical registry identity hash so Worker report-card requests never serialize and hash the full catalog at runtime.
+The client, compliance, Telegram Mini App, legacy redirect, report-card registry fingerprint, and client UI projections are gitignored local/build artifacts generated from the merged catalog. `coins.client.generated.json` powers lightweight browser-facing metadata; `coins.compliance.generated.json` keeps GENIUS long-form evidence scoped to `/compliance/`; `coins.telegram-mini-app.generated.json` powers the Mini App registry; `legacy-llama-redirects.generated.json` maps old numeric DefiLlama stablecoin URLs. The `stablecoin-client-projections` artifact emits separate lightweight modules for shell/homepage constants and command-palette tuples under `src/generated/`, keeping the full validated registry out of those client import paths. `report-card-registry-fingerprint.generated.ts` pins the canonical registry identity hash so Worker report-card requests never serialize and hash the full catalog at runtime.
 
 ## Editing Rules
 
@@ -38,7 +38,7 @@ The client, compliance, Telegram Mini App, legacy redirect, and report-card regi
 - The base file name and the JSON `id` must match exactly; `foo-issuer.json` must contain `"id": "foo-issuer"`.
 - Domain-owned research fields always live in a sidecar, never in the base coin. Follow [Stablecoin Research Sidecars](./process/stablecoin-research-sidecars.md); the domain directories are the current ownership inventory.
 - Sidecars are strict and must use the same `id` as the base coin. A field may exist in the base coin or in a sidecar, not both; duplicate fields fail catalog loading.
-- Run `npm run bootstrap:generated` after per-coin or sidecar edits to refresh the full, client, compliance, Telegram Mini App, and legacy redirect projections.
+- Run `npm run bootstrap:generated` after per-coin or sidecar edits to refresh the full, client, compliance, Telegram Mini App, legacy redirect, and client UI projections.
 - Preserve existing supply policy. Never replace DefiLlama list-endpoint supply with manual, on-chain, CMC, or DEX values. Assets without a usable DefiLlama path may use only an existing explicit, documented supplemental admission path that fails closed and cannot double-count supply.
 - Contract metadata belongs under each coin's `contracts` array. Use verified chain IDs and decimals from source metadata or explorers before adding them.
 - `marketAvailability` is descriptive editorial metadata, not a runtime price/supply source. It can record whether a stablecoin is market-traded, limited-trading, non-traded-utility, or legacy-or-wind-down when a coverage source exposes that distinction.

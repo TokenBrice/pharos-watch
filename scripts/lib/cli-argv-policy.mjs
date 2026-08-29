@@ -62,6 +62,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
   ]),
   exemptions: Object.freeze([
     exempt("scripts/build-data/build-client-registry.mjs", "build"),
+    exempt("scripts/build-data/generate-stablecoin-client-projections.ts", "build"),
     exempt("scripts/ci/check-clone-ratchet.ts", "build"),
     exempt("scripts/ci/check-cloudflare-account-state-drift.mjs", "read-only"),
     exempt("scripts/ci/check-critical-coverage.ts", "test"),

@@ -465,14 +465,14 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
 - Work the three coupling groups below. The build, tests, and generated-artifact gates fail on **every** addition (active or pre-launch) until they match the registry.
 - Use `npm run check:stablecoin-data` before moving on.
 
-### 4a. Hand-edited source that hard-codes the tracked set
+### 4a. Generated client projections
 
-| File | What to change | Applies to |
-| --- | --- | --- |
-| `src/lib/stablecoin-static-data.ts` | Status count constants (`TRACKED_STABLECOIN_COUNT`, `ACTIVE_STABLECOIN_COUNT`, `PRE_LAUNCH_STABLECOIN_COUNT`, …), the listing-class counters (`CORE_AGGREGATE_STABLECOIN_COUNT`, `ACTIVE_VARIANT_STABLECOIN_COUNT`, `ACTIVE_STABLE_VALUE_INVESTMENT_COUNT`), `ACTIVE_PEG_CURRENCY_COUNTS`, the `TRACKED_STABLECOIN_IDS` array (canonical order), and `NON_ACTIVE_STABLECOIN_ID_SET` for pre-launch, quarantined, delisted, and frozen entries | Every addition. Only the counter matching the derived listing class moves, so check which class Phase 1 resolved. |
-| `src/lib/command-palette-search-data.ts` | One `COMMAND_PALETTE_STABLECOINS` search row | Every addition |
-
-`src/lib/__tests__/stablecoin-static-data.test.ts` enforces both against the shared registry; it needs no edit of its own.
+Do not hand-edit `src/lib/stablecoin-static-data.ts` or `src/lib/command-palette-search-data.ts` when
+the tracked set changes. They are stable re-export boundaries for the two gitignored modules emitted
+under `src/generated/` by the `stablecoin-client-projections` compile-input artifact. The generator
+derives counts, active peg coverage, the active-ID set, homepage profiles, and command-palette tuples
+from the validated registries. `npm run bootstrap:generated` materializes both modules after catalog
+and listing-decision edits.
 
 ### 4b. Hardcoded catalog snapshots in tests
 
@@ -499,7 +499,8 @@ artifact inventory and each unit's command live in `GENERATED_ARTIFACT_REGISTRY`
 | `public/llms.txt` | `npx tsx scripts/maintenance/generate-llms-txt.ts` | Active-stablecoin count in the summary line plus one per-coin entry |
 | `public/datasets/stablecoin-cemetery.json` + `.csv` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Provenance pins the curated dead-stablecoin file and the frozen-row projection, so a live addition leaves it byte-identical; it moves only when a frozen or dead row changes |
 
-Also regenerate the gitignored projections, which are not committed but which the build, the
+Also regenerate the gitignored projections, including the client constants and command-palette
+tuples, which are not committed but which the build, the
 tests, and `check:stablecoin-data` all read. Run `npm run bootstrap:generated` rather than an
 individual generator: it executes every bootstrap-safe unit in `GENERATED_ARTIFACT_REGISTRY`
 (`scripts/lib/automation-registry.mjs`), which owns the artifact inventory and each unit's
