@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
@@ -71,6 +72,8 @@ const stablecoinsPayload = {
     { id: "usdc-circle", circulating: { peggedUSD: 3_000_000 } },
   ],
 };
+
+const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
 describe("generate-dependency-coverage-audit", () => {
   it("counts static graph coverage and reserve/dependency audit rows", () => {
@@ -660,6 +663,32 @@ describe("generate-dependency-coverage-audit", () => {
     expect(markdown).toContain("## depType Without coinId Warnings");
     expect(markdown).toContain("## L2BEAT Deployment Context");
     expect(markdown).toContain("Base Chain (base)");
+  });
+
+  it("preserves the empty-report Markdown golden", () => {
+    const markdown = renderDependencyCoverageAuditMarkdown(buildDependencyCoverageAudit({
+      activeCoins: [],
+      generatedAt: "2026-08-28T00:00:00.000Z",
+    }));
+
+    expect(sha256(markdown)).toBe("9d5d725a26bfda9229f7cd72bf5bf74f59b271167980706087afc7f0258d203e");
+  });
+
+  it("preserves clipped rows and the over-limit Markdown golden", () => {
+    const overLimitCoins = Array.from({ length: 51 }, (_, index) => {
+      const suffix = String(index + 1).padStart(2, "0");
+      return coin({ id: `candidate-${suffix}`, symbol: `C${suffix}` });
+    });
+    const markdown = renderDependencyCoverageAuditMarkdown(buildDependencyCoverageAudit({
+      activeCoins: overLimitCoins,
+      trackedCoins: overLimitCoins,
+      generatedAt: "2026-08-28T00:00:00.000Z",
+    }));
+
+    expect(sha256(markdown)).toBe("6e09c8711496db68d602ce1cdefdd78b6542bb1842db672d062f5b439282f9d9");
+    expect(markdown).toContain("coin | mcap | local rank\n--- | ---: | ---:");
+    expect(markdown).toContain("_Plus 1 more rows._");
+    expect(markdown).not.toContain("C51 (candidate-51)");
   });
 
   it("enforces zero-tolerance graph invariants and review gaps without requiring edge-count growth", () => {
