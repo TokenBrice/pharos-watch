@@ -308,8 +308,8 @@ bbdd0cb8933579fb83586d8fd8901acfbf52ba5a:worker/src/cron/dex-discovery/__tests__
 # Public on-chain identifiers in Wave-3 census provider test fixtures: Stellar
 # Soroban contract IDs (C... base32) and ICON SCORE hex addresses are chain
 # addresses, not credentials.
-e23f24119e8108382066bafc83ea406c48e1618e:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:13
-e23f24119e8108382066bafc83ea406c48e1618e:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:14
-e23f24119e8108382066bafc83ea406c48e1618e:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:16
-e23f24119e8108382066bafc83ea406c48e1618e:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:71
-e23f24119e8108382066bafc83ea406c48e1618e:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:211
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:13
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:14
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:16
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:71
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:211
