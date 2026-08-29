@@ -5,122 +5,92 @@ const ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
 
-vi.mock("../../lib/mint-burn-contracts", () => ({
-  buildMintBurnScope: vi.fn((configs: Array<{ chain: { chainId: string } }>) => ({
-    chainIds: [...new Set(configs.map((config) => config.chain.chainId))],
-    label: "Ethereum",
-  })),
-  MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT: 0,
-  getMintBurnConfigsForStablecoin: vi.fn((stablecoinId: string) =>
-    stablecoinId === "usdt-tether"
-      ? [{
-          chain: {
-            chainId: "ethereum",
-            chainName: "Ethereum",
-            evmChainId: 1,
-            explorerUrl: "https://etherscan.io",
-            type: "evm",
-          },
-          stablecoinId: "usdt-tether",
-          symbol: "USDT",
+vi.mock("../../lib/mint-burn-contracts", async () => {
+  const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn");
+  return {
+    buildMintBurnScope: vi.fn((configs: Array<{ chain: { chainId: string } }>) => ({
+      chainIds: [...new Set(configs.map((config) => config.chain.chainId))],
+      label: "Ethereum",
+    })),
+    MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT: 0,
+    getMintBurnConfigsForStablecoin: vi.fn((stablecoinId: string) =>
+      stablecoinId === "usdt-tether"
+        ? [makeMintBurnConfig({
+            asset: {
+              contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+              tier: "critical",
+            },
+            adapter: "mixed",
+          })]
+        : [],
+    ),
+    getMintBurnTrackedPairs: vi.fn(() => new Set([
+      "usdt-tether|ethereum",
+      "usdc-circle|ethereum",
+    ])),
+    MINT_BURN_CONFIGS: [
+      makeMintBurnConfig({
+        asset: {
           contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-          decimals: 6,
-          dustThreshold: 10_000,
-          startBlock: 21_900_000,
-          adapterKind: "mixed",
-          startBlockSource: "reviewed-contract-specific",
-          startBlockConfidence: "high",
           tier: "critical",
-          events: [],
-        }]
-      : [],
-  ),
-  getMintBurnTrackedPairs: vi.fn(() => new Set([
-    "usdt-tether|ethereum",
-    "usdc-circle|ethereum",
-  ])),
-  MINT_BURN_CONFIGS: [
-    {
-      chain: {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        evmChainId: 1,
-        explorerUrl: "https://etherscan.io",
-        type: "evm",
-      },
-      stablecoinId: "usdt-tether",
-      symbol: "USDT",
-      contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      decimals: 6,
-      dustThreshold: 10_000,
-      startBlock: 21_900_000,
-      adapterKind: "mixed",
-      startBlockSource: "reviewed-contract-specific",
-      startBlockConfidence: "high",
-      tier: "critical",
-      events: [
-        {
-          signature: "Transfer(address,address,uint256)",
-          topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-          direction: "mint",
-          amountEncoding: "transfer-value",
-          filterTopic: {
-            index: 1,
-            value: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          },
         },
-        {
-          signature: "Transfer(address,address,uint256)",
-          topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-          direction: "burn",
-          amountEncoding: "transfer-value",
-          filterTopic: {
-            index: 2,
-            value: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        adapter: "mixed",
+        events: [
+          {
+            signature: "Transfer(address,address,uint256)",
+            topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+            direction: "mint",
+            amountEncoding: "transfer-value",
+            filterTopic: {
+              index: 1,
+              value: "0x0000000000000000000000000000000000000000000000000000000000000000",
+            },
           },
-        },
-      ],
-      bridgeDetection: {
-        protocol: "ccip",
-        knownBridgePoolAddresses: ["0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79"],
-        knownBridgeRouterAddresses: ["0x80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
-        bridgeSignalTopics: ["0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd"],
-        bridgeSignalSelectors: ["0x96f4e9f9"],
-      },
-    },
-    {
-      chain: {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        evmChainId: 1,
-        explorerUrl: "https://etherscan.io",
-        type: "evm",
-      },
-      stablecoinId: "usdc-circle",
-      symbol: "USDC",
-      contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      decimals: 6,
-      dustThreshold: 10_000,
-      startBlock: 21_900_000,
-      adapterKind: "transfer-zero-address",
-      startBlockSource: "default-coverage-floor-2026-03-24",
-      startBlockConfidence: "low",
-      tier: "extended",
-      events: [
-        {
-          signature: "Transfer(address,address,uint256)",
-          topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-          direction: "mint",
-          amountEncoding: "transfer-value",
-          filterTopic: {
-            index: 1,
-            value: "0x0000000000000000000000000000000000000000000000000000000000000000",
+          {
+            signature: "Transfer(address,address,uint256)",
+            topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+            direction: "burn",
+            amountEncoding: "transfer-value",
+            filterTopic: {
+              index: 2,
+              value: "0x0000000000000000000000000000000000000000000000000000000000000000",
+            },
           },
+        ],
+        bridgeDetection: {
+          protocol: "ccip",
+          knownBridgePoolAddresses: ["0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79"],
+          knownBridgeRouterAddresses: ["0x80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
+          bridgeSignalTopics: ["0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd"],
+          bridgeSignalSelectors: ["0x96f4e9f9"],
         },
-      ],
-    },
-  ],
-}));
+      }),
+      makeMintBurnConfig({
+        asset: {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          startBlockSource: "default-coverage-floor-2026-03-24",
+          startBlockConfidence: "low",
+          tier: "extended",
+        },
+        adapter: "transfer-zero-address",
+        events: [
+          {
+            signature: "Transfer(address,address,uint256)",
+            topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+            direction: "mint",
+            amountEncoding: "transfer-value",
+            filterTopic: {
+              index: 1,
+              value: "0x0000000000000000000000000000000000000000000000000000000000000000",
+            },
+          },
+        ],
+      }),
+    ],
+  };
+});
 
 vi.mock("../../lib/alchemy-logs", () => ({
   buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/"),

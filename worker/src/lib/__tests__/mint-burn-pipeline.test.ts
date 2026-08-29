@@ -67,6 +67,7 @@ import {
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
 import type { AlchemyLogEntry } from "../alchemy-logs";
+import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn";
 
 function makeDb(): D1Database {
   return {
@@ -382,24 +383,9 @@ describe("mint-burn shared pipeline modules", () => {
 
     const counters = await classifyBridgeBurnRows(
       rows,
-      {
-        chain: {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          evmChainId: 1,
-          explorerUrl: "https://etherscan.io",
-          type: "evm",
-        },
-        stablecoinId: "usdt-tether",
-        symbol: "USDT",
-        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        decimals: 6,
-        dustThreshold: 10_000,
-        startBlock: 21_900_000,
-        adapterKind: "transfer-zero-address",
-        startBlockSource: "reviewed-contract-specific",
-        startBlockConfidence: "high",
-        events: [],
+      makeMintBurnConfig({
+        asset: { contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
+        adapter: "transfer-zero-address",
         bridgeDetection: {
           protocol: "ccip",
           knownBridgePoolAddresses: ["0xpool"],
@@ -407,7 +393,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalTopics: ["0xtopic"],
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
-      },
+      }),
       "https://eth-mainnet.g.alchemy.com/v2/",
       { count: 0, limit: 200 },
       new Map(),
@@ -445,24 +431,9 @@ describe("mint-burn shared pipeline modules", () => {
 
     await classifyBridgeBurnRows(
       rows,
-      {
-        chain: {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          evmChainId: 1,
-          explorerUrl: "https://etherscan.io",
-          type: "evm",
-        },
-        stablecoinId: "usdt-tether",
-        symbol: "USDT",
-        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        decimals: 6,
-        dustThreshold: 10_000,
-        startBlock: 21_900_000,
-        adapterKind: "transfer-zero-address",
-        startBlockSource: "reviewed-contract-specific",
-        startBlockConfidence: "high",
-        events: [],
+      makeMintBurnConfig({
+        asset: { contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
+        adapter: "transfer-zero-address",
         bridgeDetection: {
           protocol: "ccip",
           knownBridgePoolAddresses: ["0xpool"],
@@ -470,7 +441,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalTopics: ["0xtopic"],
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
-      },
+      }),
       "https://eth-mainnet.g.alchemy.com/v2/",
       { count: 0, limit: 200 },
       new Map(),
@@ -491,24 +462,9 @@ describe("mint-burn shared pipeline modules", () => {
 
     const counters = await classifyBridgeBurnRows(
       rows,
-      {
-        chain: {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          evmChainId: 1,
-          explorerUrl: "https://etherscan.io",
-          type: "evm",
-        },
-        stablecoinId: "usdt-tether",
-        symbol: "USDT",
-        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        decimals: 6,
-        dustThreshold: 10_000,
-        startBlock: 21_900_000,
-        adapterKind: "transfer-zero-address",
-        startBlockSource: "reviewed-contract-specific",
-        startBlockConfidence: "high",
-        events: [],
+      makeMintBurnConfig({
+        asset: { contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
+        adapter: "transfer-zero-address",
         bridgeDetection: {
           protocol: "ccip",
           knownBridgePoolAddresses: ["0xpool"],
@@ -516,7 +472,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalTopics: ["0xtopic"],
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
-      },
+      }),
       "https://eth-mainnet.g.alchemy.com/v2/",
       { count: 0, limit: 200 },
       new Map(),
