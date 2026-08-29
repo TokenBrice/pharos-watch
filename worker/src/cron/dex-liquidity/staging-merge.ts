@@ -663,7 +663,15 @@ export async function mergeStagedPools(
             ? "cg_tickers"
             : stagedPool.source === "horizon"
               ? "horizon"
-              : "gecko_terminal",
+              : stagedPool.source === "aquarius"
+                ? "aquarius"
+                : stagedPool.source === "tezos"
+                  ? "tezos"
+                  : stagedPool.source === "icon-balanced"
+                    ? "icon-balanced"
+                    : stagedPool.source === "kava-swap"
+                      ? "kava-swap"
+                      : "gecko_terminal",
       ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
       ...(stagedPool.source === "cg_tickers"
         ? {

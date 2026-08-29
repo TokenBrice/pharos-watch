@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Net stablecoin exposure (long stablecoin positions net of stablecoin borrowings)",
-      "pct": 99.99,
+      "pct": 99.989,
       "risk": "medium",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Avant Protocol market-neutral strategy contracts across Aave, Morpho, Kamino, Ethena, and other DeFi protocols",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Residual hedged crypto, altcoin and derivative exposure",
-      "pct": 0.01,
+      "pct": 0.011,
       "risk": "high",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Avant Protocol market-neutral strategy contracts",
@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve research (R02 refresh)",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Codex Avant current transparency review",
     "confidence": "verified",
     "sources": [
       {
@@ -38,38 +38,26 @@
         "url": "https://app.rwa.xyz/assets/avUSD"
       }
     ],
-    "rationale": "R02 refresh 2026-08-08: Avant publishes a live transparency API for avUSD that reports NAV, leverage, asset/liability totals, and a net breakdown by asset category as of 2026-08-04. The NAV of $123.4M is composed of a net stablecoin exposure of $123.39M (99.99%), $11.47M in Other altcoins, $3.76K in ETH & derivatives, $2.50K in AVAX & derivatives, $3.24 in BTC & derivatives, and -$11.46M in perpetual hedges. The Other and perpetual positions largely offset, leaving a residual non-stablecoin net exposure of ~$15K (0.01%). Because the stablecoin exposure is net of both long and short stablecoin positions and spans many stablecoins (USDe, USDT, USDC, PYUSD, USDG, syrupUSDT, syrupUSDC, etc.), it is treated as a stablecoin basket rather than a single linked stablecoin. The small residual hedged-crypto exposure captures the net of altcoin, derivative and perpetual positions.",
-    "compositionBasis": "Avant Protocol live transparency API net asset breakdown dated 2026-08-04; Avant docs describing avUSD as a receipt for USDC/USDT deposits deployed in market-neutral on-chain strategies.",
-    "compositionAsOf": "2026-08-04",
+    "rationale": "Re-opened 2026-08-29. Avant's transparency API latest balance-sheet snapshot is dated 2026-08-25 and reports net NAV $132,520,233.75. Its category breakdown reports net stablecoin exposure $132,505,616.90, positive Other $16,902,033.48, ETH/derivatives $4,855.66, AVAX/derivatives $2,754.29, BTC/derivatives $3.97, and perpetual hedges -$16,895,041.40. The residual non-stablecoin net exposure is $14,616.85. Percentages below normalize those two net categories to NAV (99.989% and 0.011%), without scaling gross or signed positions into fictitious reserves. The stablecoin category remains a basket because long and short positions are not published as a reconciled, holder-exitable allocation by tracked dependency.",
+    "compositionBasis": "Avant Protocol avUSD transparency API net asset breakdown dated 2026-08-25; category values normalized to reported net NAV",
+    "compositionAsOf": "2026-08-25",
     "scope": "full-composition",
-    "knownUnknownExposure": "The live API publishes category-level net exposures and gross long/short stablecoin values, but does not provide a clean supply-weighted split of net stablecoin exposure by individual tracked stablecoin, nor does it disclose off-chain custody terms, segregation, or bankruptcy remoteness.",
-    "knownUnknownExposurePct": 99.99,
+    "knownUnknownExposure": "The API publishes a net stablecoin category but does not provide a clean supply-weighted split by individual tracked stablecoin; gross long/short legs, strategy counterparties, and off-chain custody terms remain unresolved.",
+    "knownUnknownExposurePct": 99.989,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Net stablecoin exposure (long stablecoin positions net of stablecoin borrowings)",
-        "pct": 99.99,
+        "pct": 99.989,
         "disposition": "basket-needs-split",
-        "rationale": "The net stablecoin exposure is a basket of multiple long and short stablecoin positions across USDe, USDT, USDC, PYUSD, USDG, syrupUSDT, syrupUSDC and others. The issuer publishes gross long/short values but not a net allocation by individual tracked stablecoin that can be represented as reserve slices.",
-        "candidateCoinIds": [
-          "usde-ethena",
-          "usdt-tether",
-          "usdc-circle",
-          "pyusd-paypal",
-          "usdg-paxos",
-          "syrupusdt-maple",
-          "syrupusdc-maple",
-          "susde-ethena",
-          "ausd-agora",
-          "usdat-saturn"
-        ]
+        "rationale": "The API reports a net category spanning USDe, USDT, USDC, PYUSD, USDG, syrupUSDT, syrupUSDC, and other long/short positions, but no reconciled net allocation by tracked stablecoin."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Residual hedged crypto, altcoin and derivative exposure",
-        "pct": 0.01,
+        "pct": 0.011,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The residual is the net of altcoin, crypto-derivative and perpetual-hedge positions that largely offset; it is treated as an untracked exogenous hedged-crypto exposure."
+        "rationale": "The residual is the net of altcoin, crypto-derivative, and perpetual-hedge positions that largely offset; it is treated as untracked exogenous hedged-crypto exposure."
       }
     ]
   },

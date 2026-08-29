@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "BRL cash and cash equivalents",
-      "pct": 71.98,
+      "pct": 80.493287,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Named Brazilian banks, payment institutions, and brokerages",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Overnight repurchase agreements collateralized by Brazilian corporate debentures",
-      "pct": 28.02,
+      "pct": 19.506713,
       "risk": "low",
       "assetClass": "repo",
       "issuerOrObligor": "XP Investimentos; diversified corporate debentures as collateral",
@@ -22,18 +22,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "OpenAI Codex Safety Score V9 backing review",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
     "confidence": "verified",
     "sources": [
       {
-        "label": "UHY BRLA Transparency Report - June 30, 2026",
-        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3a47f28f0ae48040bbdafe358baa09b3"
+        "label": "UHY BRLA Transparency Report - July 31, 2026",
+        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3c67f28f-0ae4-80fb-bd17-f3ca9b5d3490"
+      },
+      {
+        "label": "BRLA transparency archive",
+        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
       }
     ],
-    "rationale": "UHY's NBC TO 3000 / ISAE 3000 reasonable-assurance report as of June 30, 2026 reports BRL 118,152,752.26 of cash or cash equivalents and BRL 46,000,000.00 of overnight repurchase agreements, for BRL 164,152,752.26 of reserve assets against BRL 155,072,436.15 of BRLA in circulation. Those reserve amounts normalize to 71.98% and 28.02%, and provide 105.86% coverage. The report itemizes cash across Stark Bank, Woovi, BTG Pactual, Itau Unibanco, and XP Investimentos; all repos are held with XP, collateralized by diversified Brazilian corporate debentures, and provide next-business-day liquidity.",
-    "compositionBasis": "UHY reasonable-assurance examination of Avenia's BRLA Transparency Report as of June 30, 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "UHY's independent auditors' reasonable-assurance report, dated August 24, 2026 and performed under NBC TO 3000/ISAE 3000, covers the assertion that the fair value of BRL reserve assets was at least the BRLA in circulation as of July 31, 2026 at 11:59:59 PM UTC. The report records BRL 101,510,433.68 of cash and equivalents and BRL 24,600,000.00 of overnight repurchase agreements, totaling BRL 126,110,433.68 against BRL 116,923,169.82 of BRLA in circulation; its opinion states the assertion is adequately presented. Cash balances are itemized across Stark Bank, Woovi, BTG Pactual, Itaú Unibanco, XP Investimentos, and Banco Inter, while the repos are with XP and collateralized by Brazilian corporate debentures with next-business-day liquidity. The normalized composition is 80.493287% cash and 19.506713% repos; the report does not identify each debenture issuer or establish reserve-account legal safeguards.",
+    "compositionBasis": "UHY reasonable-assurance examination of Avenia's BRLA Transparency Report as of July 31, 2026",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies every reserve category and names the cash and repo institutions. It does not identify each corporate debenture issuer or disclose reserve-account legal safeguards.",
     "knownUnknownExposurePct": 0,
@@ -41,14 +45,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "BRL cash and cash equivalents",
-        "pct": 71.98,
+        "pct": 80.493287,
         "disposition": "untracked-exogenous-asset",
         "rationale": "BRL cash and cash-equivalent balances are exogenous reserve assets rather than tracked stablecoins."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Overnight repurchase agreements collateralized by Brazilian corporate debentures",
-        "pct": 28.02,
+        "pct": 19.506713,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The overnight repo claims and their corporate-debenture collateral are exogenous reserve assets rather than tracked stablecoins."
       }

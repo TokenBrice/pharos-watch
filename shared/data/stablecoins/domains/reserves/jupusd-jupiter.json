@@ -35,13 +35,17 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Pharos reserve curation review 2026-08-29",
     "confidence": "verified",
     "sources": [
       {
-        "label": "JupUSD live reserve API",
+        "label": "JupUSD live reserve API data (re-opened 2026-08-29)",
         "url": "https://api.jupusd.money/api/data"
+      },
+      {
+        "label": "JupUSD timestamped reserve snapshots (latest observed 2026-08-26)",
+        "url": "https://api.jupusd.money/api/snapshots"
       },
       {
         "label": "Jupiter JupUSD documentation",
@@ -52,8 +56,8 @@
         "url": "https://developers.jup.ag/docs/jupusd"
       }
     ],
-    "rationale": "The exact July 14 JupUSD reserve capture reports 88.5% USDtb and 11.5% USDC. Jupiter documents both as accepted reserve collateral and says target weights can fluctuate around 90/10 as reserves are rebalanced.",
-    "compositionBasis": "JupUSD live reserve API holdings captured on July 14, 2026",
+    "rationale": "Re-reviewed 2026-08-29. The live JupUSD data endpoint currently returns positive USDtb and USDC holdings only; the response sums to 44,791,782.679719 USDtb and 3,552,440.966654 USDC (92.6518% / 7.3482% of the returned holdings). The timestamped snapshots endpoint also responds, with its newest observed entry at 2026-08-26T16:00:23.988Z and the same two reserve identities. Jupiter's documentation identifies USDtb and USDC as the reserve collateral. The runtime adapter owns these volatile live percentages; to avoid date-bumping a static composition from an undated API response, the curated July 14 snapshot rows and compositionAsOf remain unchanged. Both reviewed rows are mapped to tracked upstream stablecoins and the live response contains no unknown holding.",
+    "compositionBasis": "JupUSD live reserve API holdings; curated static snapshot captured 2026-07-14 (runtime feed remains the source of current percentages)",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
     "knownUnknownExposure": "Both direct reserve assets are identified and linked to tracked upstream stablecoins; their underlying reserve composition is reviewed on those assets.",

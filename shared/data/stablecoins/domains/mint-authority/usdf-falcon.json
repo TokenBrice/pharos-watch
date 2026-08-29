@@ -22,8 +22,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "USDf default admin Safe",
-      "observedAt": "2026-08-16",
-      "observedBlock": 25770829,
+      "observedAt": "2026-08-29",
+      "observedBlock": 25862870,
       "sources": [
         {
           "label": "Ethereum USDf transparent proxy",
@@ -36,6 +36,10 @@
         {
           "label": "Ethereum USDf ProxyAdmin",
           "url": "https://etherscan.io/address/0x3ef1127fdf81b553066dae0faea58785a2aa6e14#code"
+        },
+        {
+          "label": "Ethereum JSON-RPC current Safe reads",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
     },
@@ -64,23 +68,23 @@
             "0x276c580545293da6c7c0fdd12038cc75accbd211",
             "0xa76095b4a145055c3cc46ed64dd1bcf8a8544e6c"
           ],
-          "threshold": 4,
-          "enabledModules": [],
-          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
-          "observedBlock": 25770829,
-          "observedAt": "2026-08-16",
+          "observedBlock": 25862870,
+          "observedAt": "2026-08-29",
           "source": "onchain"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770829,
+        "observedAt": "2026-08-29",
+        "observedBlock": 25862870,
         "sources": [
           {
             "label": "Ethereum USDf contract",
             "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
+          },
+          {
+            "label": "Ethereum JSON-RPC current Safe reads",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25770829 on 2026-08-16, DEFAULT_ADMIN_ROLE on the USDf proxy remained held by Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. Current reads confirmed six owners, threshold 4, and no enabled Safe modules; getGuard() reverted and no current guard value is assumed. The Safe controls the token role-admin path and the zero-delay ProxyAdmin, so it can authorize or replace native minters and mint logic."
+        "evidence": "At Ethereum block 25862870 on 2026-08-29, DEFAULT_ADMIN_ROLE on the USDf proxy remained held by Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. Current Safe reads returned the six recorded owners and threshold 4, getModulesPaginated(0x1,100) returned an empty module list, and the guard and module-guard storage slots were zero. The Safe controls the token role-admin path and the zero-delay ProxyAdmin, so it can authorize or replace native minters and mint logic."
       },
       {
         "chain": "ethereum",
@@ -129,11 +133,15 @@
         {
           "label": "Falcon USDf minting mechanisms",
           "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-minting-mechanisms"
+        },
+        {
+          "label": "Ethereum JSON-RPC current Safe reads",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25770829 on 2026-08-16, the USDf proxy resolved to implementation 0x3adf34c09dac24e4baefb1b1df4c2992edc2b789 with ProxyAdmin 0x3ef1127fdf81b553066dae0faea58785a2aa6e14 owned by the reviewed 4-of-6 Safe. The Ethereum PreCollateralizedMinter remains the native MINTER_ROLE holder; its signed issuance path has no on-chain collateral balance check or supply cap. BSC, Base, and XDC BurnMintERC20 roles, pools, local unlimited-supply semantics, and CCIP route administration are bridge machinery and are recorded only in bridgeRouteRisk. The corrected native annotations remain partially-bounded-admin, unbounded, periodic reconciliation, and attestation-only supervision.",
-      "reviewer": "Codex Safety Score V9 data research; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16"
+      "evidence": "At Ethereum block 25770829 on 2026-08-16, the USDf proxy resolved to implementation 0x3adf34c09dac24e4baefb1b1df4c2992edc2b789 with ProxyAdmin 0x3ef1127fdf81b553066dae0faea58785a2aa6e14 owned by the reviewed 4-of-6 Safe. A current Ethereum read at block 25862870 on 2026-08-29 reconfirmed the same Safe's six owners, threshold 4, empty module list, and zero guard/module-guard slots. The Ethereum PreCollateralizedMinter remains the native MINTER_ROLE holder; its signed issuance path has no on-chain collateral balance check or supply cap. BSC, Base, and XDC BurnMintERC20 roles, pools, local unlimited-supply semantics, and CCIP route administration are bridge machinery and are recorded only in bridgeRouteRisk. The corrected native annotations remain partially-bounded-admin, unbounded, periodic reconciliation, and attestation-only supervision.",
+      "reviewer": "Codex Safety Score V9 data research; Sol economic-posture batch 2026-08-15; Safe-state re-review 2026-08-29",
+      "reviewedAt": "2026-08-29"
     }
   }
 }

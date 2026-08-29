@@ -39,7 +39,26 @@
     "url": "https://yuzu.accountable.capital/",
     "provider": "Accountable",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-08-28",
+      "publishedAt": "2026-08-29",
+      "assuranceMethod": "onchain-proof",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Pharos reserve research",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Yuzu Accountable dashboard API",
+          "url": "https://cache.accountable.capital/dashboard/yuzu"
+        },
+        {
+          "label": "Yuzu Accountable transparency documentation",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable"
+        }
+      ]
+    }
   },
   "links": [
     {

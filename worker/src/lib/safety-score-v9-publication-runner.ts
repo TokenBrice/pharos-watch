@@ -11,6 +11,7 @@ import {
 } from "./safety-score-v9-native-input";
 import {
   buildSafetyScoreV9PublicationFromNormalizedInput,
+  type SafetyScoreV9BridgeJoinDiagnostic,
 } from "./safety-score-v9-candidate";
 import {
   assessV9Publication,
@@ -66,6 +67,7 @@ export type SafetyScoreV9PublicationRunResult =
       outcome: "clean" | "partial";
       quarantines: readonly V9AssetQuarantine[];
       affectedAssetIds: readonly string[];
+      bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
     }
   | {
       status: "held";
@@ -80,6 +82,7 @@ export type SafetyScoreV9PublicationRunResult =
       coverageFloors: readonly V9PublicationCoverageFloor[];
       quarantines: readonly V9AssetQuarantine[];
       affectedAssetIds: readonly string[];
+      bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
     }
   | {
       status: "failed";
@@ -481,6 +484,7 @@ export async function runSafetyScoreV9Publication(
         coverageFloors,
         quarantines: pipeline.quarantines,
         affectedAssetIds: assessment.affectedAssetIds,
+        bridgeJoinDiagnostics: pipeline.bridgeJoinDiagnostics ?? [],
       };
     }
 
@@ -552,6 +556,7 @@ export async function runSafetyScoreV9Publication(
       outcome: partial ? "partial" : "clean",
       quarantines: pipeline.quarantines,
       affectedAssetIds: assessment.affectedAssetIds,
+      bridgeJoinDiagnostics: pipeline.bridgeJoinDiagnostics ?? [],
     };
   } catch (error) {
     const failureStage: SafetyScoreV9PublicationFailureStage =

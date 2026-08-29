@@ -203,6 +203,11 @@ function normalizePoolSource(source: unknown): LiquidityPoolSourceFamily | undef
     source === "gecko_terminal" ||
     source === "dexscreener" ||
     source === "cg_tickers" ||
+    source === "horizon" ||
+    source === "aquarius" ||
+    source === "tezos" ||
+    source === "icon-balanced" ||
+    source === "kava-swap" ||
     source === "direct_api"
   ) {
     return source;

@@ -75,6 +75,7 @@ const M0_MINTER_RECONCILIATION_WARN_RATIO = 0.005;
 // cadence of ~2h (observed 2026-08-20). Only a lag well beyond that cadence
 // indicates the total has stopped tracking known collateral updates.
 const M0_SNAPSHOT_LAG_DEGRADE_SEC = 6 * 60 * 60;
+const M0_TOTAL_COLLATERAL_SOURCE_KEY = "m0:eligible-collateral";
 
 function parseNumericValue(value: string | number | undefined): number | null {
   if (value == null) return null;
@@ -132,6 +133,7 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
 
   const slices = slicesFromValues([
     {
+      sourceKey: M0_TOTAL_COLLATERAL_SOURCE_KEY,
       name: "U.S. Treasury bills & cash (M0 eligible collateral)",
       value: totalUsd,
       risk: "very-low",

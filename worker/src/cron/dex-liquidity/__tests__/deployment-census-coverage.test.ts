@@ -356,7 +356,7 @@ describe("DEX placeholder deployment-census coverage", () => {
   });
 
   it("treats a Stellar Soroban identity as unsupported method rather than provider outage", () => {
-    const address = "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A";
+    const address = "CDE57N6XTUPBKYYDGQMXX7E7SLNOLFY3JEQB4MULSMR2AKTSAENGX2HC";
     const classification = classifyDexPlaceholderCoverage({
       deployments: [deployment("stellar", address)],
       outcomeRows: [],
@@ -375,6 +375,37 @@ describe("DEX placeholder deployment-census coverage", () => {
         providerInaccessibleCount: 1,
         unsupportedChainDeploymentCount: 1,
         unsupportedChains: ["stellar"],
+      },
+    });
+  });
+
+  it("keeps a completed-empty non-exhaustive census fail-closed", () => {
+    const address = "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A";
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: [deployment("stellar", address)],
+      outcomeRows: [
+        outcome({
+          chain: "stellar",
+          contract_address: address,
+          outcome: "provider_inaccessible",
+          provider_set_json: JSON.stringify(["aquarius"]),
+          reason: "Provider census is not exhaustive for this chain",
+        }),
+      ],
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification).toMatchObject({
+      state: "provider-outage",
+      coverage: {
+        status: "unknown",
+        unsupportedReasons: { deploymentCensusProviderOutage: 1 },
+      },
+      census: {
+        expectedDeploymentCount: 1,
+        reviewedDeploymentCount: 1,
+        verifiedNoPoolsCount: 0,
+        providerInaccessibleCount: 1,
       },
     });
   });

@@ -1666,8 +1666,17 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
           reasonCode: "missing-upgradeability-review",
           responsibility: "integration-missing",
         }),
+        expect.objectContaining({
+          reasonCode: "runtime-bridge-materiality-unavailable",
+          responsibility: "integration-missing",
+        }),
       ]),
     );
+    expect(alpha.evidence).toContainEqual(expect.objectContaining({
+      evidenceId: "alpha:supply-review-outcome",
+      disposition: "rejected",
+      rejection: expect.objectContaining({ code: "supply-review.missing-profile" }),
+    }));
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.unresolvedFacts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

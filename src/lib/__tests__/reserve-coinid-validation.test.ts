@@ -21,6 +21,22 @@ const KNOWN_TICKERS = [
 ];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
+    "buck-bucket-protocol::BUCK V1 Reservoir USDC and USDT balances::USDC",
+    "Bucket V1 Reservoir combines USDC and USDT balances, so no single coinId is representative.",
+  ],
+  [
+    "buck-bucket-protocol::BUCK V1 Reservoir USDC and USDT balances::USDT",
+    "Bucket V1 Reservoir combines USDC and USDT balances, so no single coinId is representative.",
+  ],
+  [
+    "buck-bucket-protocol::BUCK V2 PSM USDC and USDSUI balances::USDC",
+    "Bucket V2 PSM combines USDC and USDSUI balances, so no single coinId is representative.",
+  ],
+  [
+    "buck-bucket-protocol::BUCK V2 PSM USDC and USDSUI balances::USDS",
+    "Bucket V2 PSM combines USDC and USDSUI balances, so no single coinId is representative.",
+  ],
+  [
     "usdm-mega::USDC and USDtb reserve basket::USDC",
     "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDC coinId would overstate the dependency.",
   ],
@@ -67,10 +83,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "bnusd-balanced::Tail borrower collateral (sodaNEAR, sodaPOL, sodaXLM, bnUSD, sodaS, sodaINJ, sodaWBTC, sodaKAIA, sodaLL, sodaSUSDS dust)::USDS",
     "Substring artifact: the USDS match sits inside sodaSUSDS, a below-0.02% wrapped sUSDS tail position that carries no separate weight.",
-  ],
-  [
-    "uty-xsy::USDC deposits swept to custodial managed backing::USDC",
-    "The reviewed sources establish the USDC mint and redemption envelope but not the current assets or positions held after the custodial sweep.",
   ],
   [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::USDC",

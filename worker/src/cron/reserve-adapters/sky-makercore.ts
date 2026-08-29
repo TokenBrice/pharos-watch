@@ -52,6 +52,13 @@ interface ModuleSpec {
 // and surface the composition note in metadata.details.
 const SKY_PSM_COMPOSITION_NOTE =
   "Sky PSM pool aggregates USDC, USDT, USDP without per-stable breakdown from the module-groups API";
+const SKY_MODULE_SOURCE_KEY_PREFIX = "sky-makercore:module";
+const SKY_OTHER_MODULE_SOURCE_KEY = `${SKY_MODULE_SOURCE_KEY_PREFIX}:other-modules`;
+const SKY_UNKNOWN_MODULE_OBLIGOR = "Sky unknown module";
+
+function skyModuleSourceKey(group: string): string {
+  return `${SKY_MODULE_SOURCE_KEY_PREFIX}:${group}`;
+}
 // [audit S-099] These stay module-level constants rather than adapter params on purpose:
 // they are the canonical Sky LitePSM mainnet contracts, and fetchSkyLitePsmUsdcCapacity
 // verifies them on-chain each run via gem()/pocket() (returns null capacity on any mismatch),
@@ -98,9 +105,12 @@ function hasMalformedDebt(raw: string): boolean {
 export function adaptSkyModules(groups: SkyGroupResult[]): AdapterResult["slices"] {
   const knownValues: Array<{
     value: number;
+    sourceKey: string;
     name: string;
     risk: "very-low" | "low" | "medium" | "high" | "very-high";
     coinId?: string;
+    assetClass?: "other";
+    issuerOrObligor?: string;
   }> = [];
 
   let unknownDebtTotal = 0;
@@ -111,14 +121,21 @@ export function adaptSkyModules(groups: SkyGroupResult[]): AdapterResult["slices
 
     const spec = MODULE_MAP[g.group];
     if (spec) {
-      knownValues.push({ value: debt, ...spec });
+      knownValues.push({ value: debt, sourceKey: skyModuleSourceKey(g.group), ...spec });
     } else {
       unknownDebtTotal += debt;
     }
   }
 
   if (unknownDebtTotal > 0) {
-    knownValues.push({ value: unknownDebtTotal, name: "Other modules", risk: "high" });
+    knownValues.push({
+      value: unknownDebtTotal,
+      sourceKey: SKY_OTHER_MODULE_SOURCE_KEY,
+      name: "Other modules",
+      risk: "high",
+      assetClass: "other",
+      issuerOrObligor: SKY_UNKNOWN_MODULE_OBLIGOR,
+    });
   }
 
   return slicesFromValues(knownValues);

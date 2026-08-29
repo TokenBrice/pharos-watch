@@ -15,8 +15,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "bIB01 remains independently issuer-native and mintable on all seven authored token deployments; those native issuance rows stay canonical and outside Bridge Risk's bridge-control inventory. A separate six-chain BackedCCIPReceiver rail uses custody lock/release and Chainlink CCIP messaging against the native token addresses, with receiver owners, proxy upgrades, shared custody, router configuration, allowlists, and known router delivery contracts scored here. The CCIP DON/RMN/OCR validation domain is modeled separately because the reviewed record does not enumerate its validator roster, quorum, or controller. The shared custody address is a verified EOA, and each configured CCIP router is retained as a delivery contract rather than a validation authority; the delivery evidence is source-enriched, but the unresolved validation domain keeps this review blocked rather than cleared. The receiver source contains no bIB01 mint or burn path, and BSC has no current receiver deployment.",
-    "reviewedAt": "2026-08-28",
-    "reviewer": "Codex mint-bridge-boundary migration; bib01-backed verified finding; BRDG authority-model review 2026-08-28",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Codex mint-bridge-boundary migration; bib01-backed verified finding; BRDG authority-model review 2026-08-28; Safe-state re-review 2026-08-29",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -266,7 +266,24 @@
           "ccip-router:avalanche:0xf4c7e640eda248ef95972845a62bdc74237805db"
         ],
         "authorityType": "safe",
-        "modulesOrGuardsStatus": "unknown",
+        "threshold": 2,
+        "signerCount": 3,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x2860a2051a93113cb6e931022b658ed1dc68d444",
+            "0xe25b606f393b60adcb85cc127a2d79f78c9cb658",
+            "0xb6aa1f2e164f6160b1d3cf7307c9aa4aac7690f5"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 25862869,
+          "observedAt": "2026-08-29",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "lockboxOrEscrow": "BackedCCIPReceiver.send() transfers source bIB01 into the custody wallet and the destination receive path transfers the equivalent native token from that wallet to the recipient; the verified receiver source contains no bIB01 mint or burn.",
           "trustedPeerOrRemote": "getRouter() returned Ethereum 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, Polygon 0x849c5ed5a80f5b408dd4969b78c2c8fdf0565bfe, Arbitrum 0x141fa059441e0ca23ce184b6a78bafd2a517dde8, Gnosis 0x4aad6071085df840abd9baf1697d5d5992bdadce, and Avalanche 0xf4c7e640eda248ef95972845a62bdc74237805db. Source/destination allowlist values were not fully enumerated.",
@@ -276,8 +293,8 @@
         },
         "capDescription": "The receiver owner Safe administers the six-chain custody and CCIP route configuration; these powers govern transfer-rail machinery and do not replace any native issuer minter.",
         "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771145,
+        "observedAt": "2026-08-29",
+        "observedBlock": 25862869,
         "sources": [
           {
             "label": "Verified BackedCCIPReceiver implementation",
@@ -294,9 +311,13 @@
           {
             "label": "Chainlink CCIP documentation",
             "url": "https://docs.chain.link/ccip"
+          },
+          {
+            "label": "Ethereum JSON-RPC current Safe reads (2026-08-29)",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At the 2026-08-16 observations, owner() returned 0x49754062e35f7591b93cc4f9915965be89643a65 on Ethereum, Polygon, Arbitrum, Gnosis, and Avalanche. The receiver was unpaused and registered bIB01 as token id 8492551 REGULAR on all five routes. Safe signer, module, and guard state was not fully re-enumerated, so those controls remain manual-review evidence rather than a favorable Safe posture."
+        "evidence": "At pinned current EVM heads on 2026-08-29, owner() remained 0x49754062e35f7591b93cc4f9915965be89643a65 on Ethereum (block 25862869), Polygon (block 92883392), Arbitrum (block 499697912), Gnosis (block 47979445), and Avalanche (block 93984233). Ethereum, Polygon, Arbitrum, Gnosis, and Avalanche Safe reads returned threshold 2 and three owners 0x2860a2051a93113cb6e931022b658ed1dc68d444, 0xe25b606f393b60adcb85cc127a2d79f78c9cb658, and 0xb6aa1f2e164f6160b1d3cf7307c9aa4aac7690f5; getModulesPaginated(0x1,100) returned an empty module list and the guard/module-guard storage slots were zero on each route. The receiver was unpaused and registered bIB01 as 8492551 REGULAR on the prior route reads. Receiver rate-limit/allowlist semantics and the CCIP DON/RMN/OCR validation domain remain separate bounded facts."
       },
       {
         "id": "bib01-ccip-receiver-owner-safe-base",
@@ -320,7 +341,24 @@
           "ccip-router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd"
         ],
         "authorityType": "safe",
-        "modulesOrGuardsStatus": "unknown",
+        "threshold": 2,
+        "signerCount": 3,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x2860a2051a93113cb6e931022b658ed1dc68d444",
+            "0xe25b606f393b60adcb85cc127a2d79f78c9cb658",
+            "0xd49fbb0711e91ef730c23f0d2fef4e5c5bf96eb1"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 50620384,
+          "observedAt": "2026-08-29",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "lockboxOrEscrow": "BackedCCIPReceiver.send() transfers source bIB01 into the shared custody wallet and the destination receive path transfers the equivalent native token from that wallet to the recipient; the verified receiver source contains no bIB01 mint or burn.",
           "trustedPeerOrRemote": "getRouter() returned 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd at Base block 50068162. Source/destination allowlist values were not fully enumerated.",
@@ -330,8 +368,8 @@
         },
         "capDescription": "The Base receiver owner Safe administers custody and CCIP route configuration; these powers are transfer-rail controls and do not replace the Base native issuer minter.",
         "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50068162,
+        "observedAt": "2026-08-29",
+        "observedBlock": 50620384,
         "sources": [
           {
             "label": "Base BackedCCIPReceiver proxy",
@@ -346,7 +384,7 @@
             "url": "https://base-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Base block 50068162 on 2026-08-16, owner() returned Safe 0xd1966bd72695789ec9c245f0bf5a8512b56c1d80, getRouter() returned 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd, custodyWallet() returned the shared EOA 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad, and the receiver was unpaused with bIB01 registered as 8492551 REGULAR. Safe signer, module, and guard state remains unresolved."
+        "evidence": "At pinned Base block 50620384 on 2026-08-29, owner() remained Safe 0xd1966bd72695789ec9c245f0bf5a8512b56c1d80 and current Safe reads returned threshold 2 with three owners 0x2860a2051a93113cb6e931022b658ed1dc68d444, 0xe25b606f393b60adcb85cc127a2d79f78c9cb658, and 0xd49fbb0711e91ef730c23f0d2fef4e5c5bf96eb1. getModulesPaginated(0x1,100) returned an empty module list and the guard/module-guard storage slots were zero. getRouter() remained 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd, custodyWallet() remained the shared EOA 0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad, and the receiver was unpaused with bIB01 registered as 8492551 REGULAR on the prior route read. Receiver rate-limit/allowlist semantics remain bounded, as does the CCIP DON/RMN/OCR validation domain."
       },
       {
         "id": "bib01-ccip-receiver-proxy-admin",

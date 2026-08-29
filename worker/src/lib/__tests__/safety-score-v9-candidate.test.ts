@@ -286,6 +286,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       quarantines: full.quarantines,
       quarantineAffectedAssetIds:
         full.quarantineAffectedAssetIds,
+      bridgeJoinDiagnostics: full.bridgeJoinDiagnostics,
     });
     expect(() =>
       evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), V9_CANDIDATE_POLICY_V1),

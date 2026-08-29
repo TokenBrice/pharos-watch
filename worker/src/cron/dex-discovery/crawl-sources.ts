@@ -8,15 +8,19 @@ import {
   createDexScreenerDiscoveryRunState,
   crawlDexScreenerPoolsStage,
   finalizeDexScreenerDiscoveryRun,
-  selectDexScreenerTargets,
   type DexScreenerDiscoveryRunState,
 } from "./crawl-dexscreener-pools";
 import { crawlCoinGeckoTickersStage } from "./crawl-coingecko-tickers";
 import { crawlCurvePoolsStage } from "./crawl-curve-pools";
 import { crawlHorizonPoolsStage } from "./crawl-horizon-pools";
+import { crawlSorobanPoolsStage } from "./crawl-soroban-pools";
+import { crawlTezosPoolsStage } from "./crawl-tezos-pools";
+import { crawlIconBalancedPoolsStage } from "./crawl-icon-balanced-pools";
+import { crawlKavaSwapPoolsStage } from "./crawl-kava-swap-pools";
 import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
+import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 
 export interface CrawlResult {
   pools: StagedPool[];
@@ -30,6 +34,37 @@ function checkedDeploymentKeys(providerChecks: readonly DexDeploymentProviderChe
   return [
     ...new Set(providerChecks.map((check) => canonicalExitRouteAssetKey(check.chain, check.address))),
   ];
+}
+
+/**
+ * A successful provider check is the completion signal for a direct pool
+ * query. It intentionally includes a completed-empty response, while price
+ * observations and failed/degraded responses do not suppress the next pool
+ * provider. The key is the same chain-scoped identity used by the census.
+ */
+function completedPoolQueryKeys(
+  providerChecks: readonly DexDeploymentProviderCheck[],
+  providers: readonly DexDeploymentProviderCheck["provider"][],
+): Set<string> {
+  const providerSet = new Set(providers);
+  return new Set(
+    providerChecks
+      .filter((check) => check.status === "success" && providerSet.has(check.provider))
+      .map((check) => canonicalExitRouteAssetKey(check.chain, check.address)),
+  );
+}
+
+function selectDexScreenerFallbackTargets(
+  coinTargets: readonly ContractDeployment[],
+  providerChecks: readonly DexDeploymentProviderCheck[],
+): Array<readonly [string, string]> {
+  const completedEarlierQueries = completedPoolQueryKeys(providerChecks, ["coingecko", "geckoterminal"]);
+  return coinTargets
+    .filter(({ chain, address }) => {
+      if (!getDexDiscoveryProviders(chain, address).includes("dexscreener")) return false;
+      return !completedEarlierQueries.has(canonicalExitRouteAssetKey(chain, address));
+    })
+    .map(({ chain, address }) => [chain, address] as const);
 }
 
 export async function crawlCoin(
@@ -88,19 +123,20 @@ export async function crawlCoin(
     });
   }
 
+  const completedCoinGeckoQueries = completedPoolQueryKeys(coinGeckoStage.providerChecks, ["coingecko"]);
   const geckoTerminalStage = await crawlGeckoTerminalPoolsStage({
     coinTargets,
-    cgPriceObservationTargets: coinGeckoStage.priceObservationTargets,
+    // The stage option retains its historical name, but only completed
+    // CoinGecko pool queries may suppress GeckoTerminal. A price observation
+    // by itself is not pool-query completion.
+    cgPriceObservationTargets: completedCoinGeckoQueries,
     context,
   });
   providerChecks.push(...geckoTerminalStage.providerChecks);
 
   const dexScreenerStage = await crawlDexScreenerPoolsStage({
     db,
-    targets: selectDexScreenerTargets({
-      coinTargets,
-      discoveredPoolCount: pools.length,
-    }),
+    targets: selectDexScreenerFallbackTargets(coinTargets, providerChecks),
     context,
     runState: dexScreenerRunState,
   });
@@ -133,6 +169,88 @@ export async function crawlCoin(
 
   const horizonStage = await crawlHorizonPoolsStage({ coinTargets, context });
   providerChecks.push(...horizonStage.providerChecks);
+  if (horizonStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
+
+  const aquariusStage = await crawlSorobanPoolsStage({ coinTargets, context });
+  providerChecks.push(...aquariusStage.providerChecks);
+  if (aquariusStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
+
+  const tezosStage = await crawlTezosPoolsStage({ coinTargets, context });
+  providerChecks.push(...tezosStage.providerChecks);
+  if (tezosStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
+
+  const iconBalancedStage = await crawlIconBalancedPoolsStage({ coinTargets, context });
+  providerChecks.push(...iconBalancedStage.providerChecks);
+  if (iconBalancedStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
+
+  const kavaSwapStage = await crawlKavaSwapPoolsStage({ coinTargets, context });
+  providerChecks.push(...kavaSwapStage.providerChecks);
+  if (kavaSwapStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
 
   return await finalizeOwnRun({
     pools,

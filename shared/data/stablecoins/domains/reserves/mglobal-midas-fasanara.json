@@ -2,6 +2,7 @@
   "id": "mglobal-midas-fasanara",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:mglobal-midas-fasanara",
       "name": "Fasanara global private-credit / strategy portfolio",
       "pct": 100,
       "risk": "high",

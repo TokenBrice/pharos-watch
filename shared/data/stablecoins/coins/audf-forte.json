@@ -15,12 +15,31 @@
   "llamaId": "422",
   "geckoId": "forte-aud",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://www.forteaud.com/transparency",
-    "provider": "Forte transparency page (homepage claims published third-party audit reports of AUDF reserves but none exists anywhere on the site; the only PDF is a smart-contract audit, and MVAB Audit Pty Ltd appears nowhere in the site content)",
-    "attestorTier": "none",
-    "cadence": "none",
-    "attestorJurisdiction": "Australia"
+    "provider": "Horizon Nexus (Audit) Pty Ltd independent auditor's report on Forte's AUDF reserve bank-account balance",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Australia",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-16",
+      "assuranceMethod": "audit",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "Horizon Nexus (Audit) Pty Ltd — independent auditor's report signed 2026-06-16",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AUDF Reserves Report and Horizon Nexus independent auditor's report (31 May 2026 reserve date; signed 16 June 2026)",
+          "url": "https://vuvuzela-iguana-ecmf.squarespace.com/s/AUDF-Reserves-Report-May-2026.pdf"
+        },
+        {
+          "label": "Forte AUDF transparency page (observed 2026-08-29; no newer dated report published)",
+          "url": "https://www.forteaud.com/transparency"
+        }
+      ]
+    }
   },
   "links": [
     {

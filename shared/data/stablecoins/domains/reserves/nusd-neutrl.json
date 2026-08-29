@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Stablecoin reserves",
-      "pct": 56.28,
+      "pct": 57.53,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Undisclosed stablecoin issuers",
@@ -18,7 +18,7 @@
     },
     {
       "name": "JLP (Jupiter Perps LP token)",
-      "pct": 17.29,
+      "pct": 16.9557,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Jupiter Perpetuals protocol and liquidity providers",
@@ -33,7 +33,7 @@
     },
     {
       "name": "OTC aggregate positions",
-      "pct": 17.35,
+      "pct": 18.0081,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed OTC counterparties",
@@ -49,7 +49,7 @@
     },
     {
       "name": "Other reserve assets",
-      "pct": 5.52,
+      "pct": 3.5591,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed Neutrl reserve counterparties",
@@ -65,7 +65,7 @@
     },
     {
       "name": "Protocol Owned Liquidity",
-      "pct": 3.55,
+      "pct": 3.9404,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Neutrl protocol-owned liquidity",
@@ -80,7 +80,7 @@
     },
     {
       "name": "ETH collateral",
-      "pct": 0.01,
+      "pct": 0.0067,
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum network native asset held in Neutrl reserves",
@@ -92,12 +92,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos R04 reserve research",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Codex Neutrl Accountable reserve refresh",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Neutrl Accountable dashboard API (type_split snapshot 2026-08-08)",
+        "label": "Neutrl Accountable dashboard API (latest verifiable type_split snapshot)",
         "url": "https://cache.accountable.capital/dashboard/neutrl"
       },
       {
@@ -105,54 +105,54 @@
         "url": "https://accountable.neutrl.finance/"
       }
     ],
-    "rationale": "Re-opened 2026-08-08: Neutrl Accountable dashboard type_split snapshot (total reserves $56,860,690.76, supply $54,789,136.33, collateralization 103.78%) exposes six named reserve buckets. Curated slice names mirror the adapter renameMap verbatim. Weights refreshed to the 2026-08-08 capture: Stablecoin 56.28%, JLP 17.29%, OTC Aggregate 17.35%, Other 5.52%, Protocol Owned Liquidity 3.55%, ETH 0.01%. The stablecoin bucket remains an aggregate; the stablecoin_split API sub-buckets (USDe, USDT, USDC, sUSDS) are not used as primary slices because the configured adapter bucket is type_split.",
-    "compositionBasis": "Accountable type_split categories and weights captured 2026-08-08 from the issuer's live reserve API",
-    "compositionAsOf": "2026-08-08",
+    "rationale": "Re-opened 2026-08-29. The Neutrl Accountable endpoint returned its latest verifiable type_split snapshot timestamped 1786618957520 (2026-08-13T11:02:37.520Z): total reserves $54,437,465.43, total supply $53,680,782.11, and net reserve excess $756,683.33. The six source buckets are Stablecoin $31,317,867.09, JLP $9,230,249.65, OTC Aggregate $9,803,139.04, Other $1,937,498.13, Protocol Owned Liquidity $2,145,062.40, and ETH $3,649.13. Percentages below are normalized to the source total and retain the adapter's type_split bucket names; the endpoint does not provide a same-date constituent or custody schedule.",
+    "compositionBasis": "Accountable type_split categories and values from the latest verifiable Neutrl snapshot (source timestamp 2026-08-13), normalized to the reported reserve total",
+    "compositionAsOf": "2026-08-13",
     "scope": "full-composition",
-    "knownUnknownExposure": "Stablecoin constituents, OTC counterparties, JLP underlying positions, and the composition and custody of the Other and Protocol Owned Liquidity categories are not disclosed in the reviewed snapshot.",
-    "knownUnknownExposurePct": 99.99,
+    "knownUnknownExposure": "The stablecoin bucket is not split by issuer in the configured type_split feed; JLP underlying positions, OTC counterparties and terms, and the Other and Protocol Owned Liquidity contents and custody remain undisclosed. ETH is identified but remains an external cryptoasset dependency.",
+    "knownUnknownExposurePct": 99.9933,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Stablecoin reserves",
-        "pct": 56.28,
+        "pct": 57.53,
         "disposition": "basket-needs-split",
-        "rationale": "No constituent weights are available for a canonical dependency mapping."
+        "rationale": "The type_split feed identifies a stablecoin reserve value but does not provide current issuer-level constituents needed for tracked dependency links."
       },
       {
         "reserveIndex": 1,
         "reserveName": "JLP (Jupiter Perps LP token)",
-        "pct": 17.29,
+        "pct": 16.9557,
         "disposition": "insufficient-evidence",
-        "rationale": "The dashboard names the JLP category but does not expose the current underlying position or custody detail needed for a tracked dependency."
+        "rationale": "The dashboard names JLP but does not expose its current underlying position, valuation basis, or custody detail."
       },
       {
         "reserveIndex": 2,
         "reserveName": "OTC aggregate positions",
-        "pct": 17.35,
+        "pct": 18.0081,
         "disposition": "insufficient-evidence",
         "rationale": "The dashboard reports an aggregate OTC category without identifying current counterparties, contracts, or settlement terms."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Other reserve assets",
-        "pct": 5.52,
+        "pct": 3.5591,
         "disposition": "insufficient-evidence",
         "rationale": "The dashboard does not disclose the asset classes or providers included in the Other category."
       },
       {
         "reserveIndex": 4,
         "reserveName": "Protocol Owned Liquidity",
-        "pct": 3.55,
+        "pct": 3.9404,
         "disposition": "insufficient-evidence",
         "rationale": "The dashboard names protocol-owned liquidity but does not expose pool identities, underlying assets, or custody details."
       },
       {
         "reserveIndex": 5,
         "reserveName": "ETH collateral",
-        "pct": 0.01,
+        "pct": 0.0067,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The residual ETH bucket is external cryptoasset collateral, not a tracked stablecoin dependency."
+        "rationale": "The ETH bucket is external cryptoasset collateral, not a tracked stablecoin dependency."
       }
     ]
   },

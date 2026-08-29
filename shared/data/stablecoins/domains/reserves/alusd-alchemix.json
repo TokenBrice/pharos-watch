@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "DAI yield-token collateral",
-      "pct": 80.2267,
+      "pct": 80.2263,
       "risk": "low",
       "coinId": "dai-makerdao",
       "assetClass": "stablecoin",
@@ -17,7 +17,7 @@
     },
     {
       "name": "USDC yield-token collateral",
-      "pct": 15.9309,
+      "pct": 15.9306,
       "risk": "low",
       "coinId": "usdc-circle",
       "assetClass": "stablecoin",
@@ -31,7 +31,7 @@
     },
     {
       "name": "USDT yield-token collateral",
-      "pct": 0.3856,
+      "pct": 0.3867,
       "risk": "low",
       "coinId": "usdt-tether",
       "assetClass": "stablecoin",
@@ -45,7 +45,7 @@
     },
     {
       "name": "FRAX yield-token collateral",
-      "pct": 3.4568,
+      "pct": 3.4564,
       "risk": "low",
       "coinId": "frax-frax",
       "assetClass": "stablecoin",
@@ -59,8 +59,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi Code R08 reserve research",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Codex Alchemix pinned on-chain reserve review",
     "confidence": "verified",
     "sources": [
       {
@@ -78,11 +78,15 @@
       {
         "label": "Alchemix collateral de-pegging documentation",
         "url": "https://v2-docs.alchemix.fi/resources/guides/vault-losses-and-collateral-de-pegging"
+      },
+      {
+        "label": "Ethereum JSON-RPC endpoint used for pinned eth_call",
+        "url": "https://eth.drpc.org"
       }
     ],
-    "rationale": "At Ethereum block 25530459, the Ethereum AlchemistV2 expectedValue for every registered yield token was aggregated by its on-chain underlying token. The resulting controller-local mix was 80.2263% DAI, 15.9306% USDC, 0.3867% USDT, and 3.4564% FRAX, rounded to one decimal while preserving a 100% total. Each observed slice maps to its exact tracked stablecoin dependency. Re-read 2026-08-08: Alchemix docs still describe L2 xalUSD as backed by Ethereum-collateral; no issuer-published fresher Ethereum Alchemist composition or asset-wide reconciliation was found, so the prior on-chain snapshot remains the latest usable primary-source breakdown and the review is retained as selected-slice evidence rather than an asset-wide composition.",
-    "compositionBasis": "Ethereum AlchemistV2 getSupportedYieldTokens() and getYieldTokenParameters().expectedValue aggregated by underlying token at Ethereum block 25530459",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Re-opened 2026-08-29 at Ethereum finalized block 25627228 (hash 0xe5c7dd15a7c6c8261957493e6f1dcbb72ec18688afccf6ac981748edb2f824e2; timestamp 2026-07-27T22:46:47Z). AlchemistV2 getSupportedYieldTokens() and getYieldTokenParameters() were read through an independent Ethereum JSON-RPC endpoint, and every registered yield token's expectedValue was aggregated by its on-chain underlying token: 80.2263% DAI, 15.9306% USDC, 0.3867% USDT, and 3.4564% FRAX. Each observed slice maps to its exact tracked stablecoin dependency. This is still a selected controller-local snapshot: Alchemix's L2 xalUSD representations, bridge/transmuter balances, AMO state, and any asset-wide reconciliation remain outside this slice, so the review does not claim a complete current alUSD balance sheet.",
+    "compositionBasis": "Ethereum AlchemistV2 getSupportedYieldTokens() and getYieldTokenParameters().expectedValue aggregated by underlying token at Ethereum block 25627228",
+    "compositionAsOf": "2026-07-27",
     "scope": "selected-slices",
     "knownUnknownExposure": "All registered yield-token expected values in the observed Ethereum Alchemist were attributed to their on-chain underlying stablecoins; asset-wide L2, bridge, Transmuter, and AMO exposure remains unreconciled outside this selected slice.",
     "knownUnknownExposurePct": 0

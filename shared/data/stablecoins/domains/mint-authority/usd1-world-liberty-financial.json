@@ -416,7 +416,7 @@
         ],
         "label": "USD1 Tron native minter account",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
@@ -430,9 +430,13 @@
           {
             "label": "TronGrid constant-contract reads",
             "url": "https://api.trongrid.io/wallet/triggerconstantcontract"
+          },
+          {
+            "label": "TronGrid account contract probe",
+            "url": "https://api.trongrid.io/wallet/getcontract"
           }
         ],
-        "evidence": "At Tron block 85415575, TVzXQVFkMrKxCmzmzM7gjBM4W4Ls4FNQiL was returned as a native MINTER_ROLE member. The current TronGrid account response did not provide account metadata, so its EOA-versus-contract signer classification remains unknown; its direct native mint ability is verified."
+        "evidence": "At Tron block 85415575, TVzXQVFkMrKxCmzmzM7gjBM4W4Ls4FNQiL was returned as a native MINTER_ROLE member. TronGrid getcontract returned an empty object and TronScan's account record has no contractMap or permission keys, so this role holder is classified as an EOA rather than a contract; its direct native mint ability is verified."
       },
       {
         "chain": "tron",

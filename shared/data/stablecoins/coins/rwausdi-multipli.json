@@ -29,6 +29,32 @@
   },
   "llamaId": "340",
   "detailProvider": "defillama",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+    "provider": "AFI Protocol proof-of-reserves middleware",
+    "attestorTier": "self",
+    "cadence": "weekly",
+    "latestReport": {
+      "periodEnd": "2026-08-29",
+      "publishedAt": "2026-08-29",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Pharos reserve research",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "AFI rwaUSDi proof-of-reserves snapshot",
+          "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
+        },
+        {
+          "label": "AFI rwaUSDi periodic reserve reports",
+          "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
+        }
+      ]
+    }
+  },
   "links": [
     {
       "label": "Website",

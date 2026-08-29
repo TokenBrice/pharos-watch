@@ -605,6 +605,61 @@
           }
         ],
         "evidence": "At Ethereum block 25770633 (2026-08-16 22:31:23Z), the adapter proxy admin resolved to 0x1a7254f247346db01dc3666c10cb88828624ea14 and its verified role-based admin read returned code-empty EOA 0x519385ab42dfd123bcfe2fa0ec1bc2f013f72528. This bridge-representation upgrade/admin authority is retained under Bridge Risk and is not a native AUSD mint-authority control."
+      },
+      {
+        "id": "ausd-plasma-ausd0-oft-adapter-owner",
+        "label": "AUSD0 Plasma MintBurnOFTAdapter owner OneSig",
+        "routeRefs": [
+          "plasma:0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0x5a139ae4cc0c79f29f42ed4bda16422ba6a51589",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:plasma:0x38b8b7ca28e672018a299b20565aca8cf200c844",
+          "contract:plasma:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "multisig:plasma:0x5a139ae4cc0c79f29f42ed4bda16422ba6a51589"
+        ],
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified AUSD0MintBurnOFTAdapter is the Plasma token's MINTER_ROLE path and has no independent numeric bridge cap; its OneSig owner can change authenticated peers and messaging configuration.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "At Plasma block 29979305, the adapter's token() and minterBurner() both returned the Plasma AUSD0 proxy; inbound LayerZero delivery invokes this adapter to mint the representation and outbound transfers burn it.",
+          "trustedPeerOrRemote": "At Plasma block 29979305, the adapter endpoint() returned LayerZero Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and owner() returned OneSig 0x5a139ae4cc0c79f29f42ed4bda16422ba6a51589; this owner controls peer/delegate configuration.",
+          "attestorQuorum": "The adapter is LayerZero-delivery gated; the endpoint's DVN/verification quorum remains a separate external failure domain and is not collapsed into the OneSig identity.",
+          "pausersAdminsUpgraders": "The Plasma AUSD0 proxy's EIP-1967 implementation was 0xce8d6e32789fb340267523113280a9ec156a6a62 and admin slot held OneSig 0x80322ed132359bd1aa5a373cd348520cf045817c at block 29979305; the adapter owner is independently 3-of-5 OneSig.",
+          "onchainAmountBounds": "The verified adapter source calls the token's mint/burn interface only on authenticated LayerZero delivery. No adapter-local numeric cap was exposed; route conservation therefore depends on the canonical AUSD lock/mint accounting and LayerZero validation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 29979305,
+        "sources": [
+          {
+            "label": "Plasma AUSD0 token proxy and verified implementation",
+            "url": "https://plasmascan.to/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          },
+          {
+            "label": "Plasma AUSD0 MintBurnOFTAdapter verified source",
+            "url": "https://plasmascan.to/address/0x38b8b7ca28e672018a299b20565aca8cf200c844"
+          },
+          {
+            "label": "Plasma AUSD0 adapter owner OneSig",
+            "url": "https://plasmascan.to/address/0x5a139ae4cc0c79f29f42ed4bda16422ba6a51589"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At Plasma block 29979305, the verified AUSD0MintBurnOFTAdapter 0x38b8b7ca28e672018a299b20565aca8cf200c844 returned token()/minterBurner() = AUSD0 0x00000000efe302beaa2b3e6e1b18d08d69a9012a, endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, and owner() = OneSig 0x5a139ae4cc0c79f29f42ed4bda16422ba6a51589. The owner OneSig read at that block returned threshold 3 and totalSigners 5; the AUSD0 proxy implementation and admin slot were also read at the same block. This resolves the Plasma route's bridge mint controller and its multisig authority without inferring a token-wide cap."
       }
     ]
   }

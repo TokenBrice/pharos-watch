@@ -188,8 +188,8 @@ describe("moc-v3-buckets USDRIF promotion", () => {
     const result = await fetchUsdrifRifReserves(coin, config, new AbortController().signal, CONTEXT);
 
     expect(result.slices).toEqual([
-      expect.objectContaining({ name: "RIF collateral admitted to the RIF On Chain V3 RIF bucket", risk: "high" }),
-      expect.objectContaining({ name: "DOC collateral admitted to the RIF On Chain V3 DOC bucket", coinId: "doc-money-on-chain", depType: "collateral" }),
+      expect.objectContaining({ sourceKey: "moc-v3-buckets:usdrif:rif", name: "RIF collateral admitted to the RIF On Chain V3 RIF bucket", risk: "high" }),
+      expect.objectContaining({ sourceKey: "moc-v3-buckets:usdrif:doc", name: "DOC collateral admitted to the RIF On Chain V3 DOC bucket", coinId: "doc-money-on-chain", depType: "collateral" }),
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",

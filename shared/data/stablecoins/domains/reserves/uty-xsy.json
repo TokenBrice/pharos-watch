@@ -2,11 +2,62 @@
   "id": "uty-xsy",
   "reserves": [
     {
-      "name": "USDC deposits swept to custodial managed backing",
-      "pct": 100,
+      "name": "Base",
+      "pct": 52.6,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "YieldPoint custodian and undisclosed strategy counterparties",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Ethereum",
+      "pct": 34.9,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Avalanche",
+      "pct": 12.4,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Copper",
+      "pct": 0.1,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -20,31 +71,61 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex reserve composition audit",
-    "confidence": "probable",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "OpenAI Codex UTY reserve curation",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "YieldPoint core flows",
         "url": "https://docs.yieldpoint.io/protocol/architecture/flows"
       },
       {
-        "label": "XSY Accountable reserve dashboard",
-        "url": "https://accountable.xsy.fi/"
+        "label": "XSY protocol mechanics",
+        "url": "https://xsy-1.gitbook.io/xsy-main/protocol-mechanics"
+      },
+      {
+        "label": "XSY risk disclosures",
+        "url": "https://xsy-1.gitbook.io/xsy-main/risks"
+      },
+      {
+        "label": "XSY Accountable reserves_split API",
+        "url": "https://accountable.xsy.fi:10443/dashboard"
       }
     ],
-    "rationale": "Current YieldPoint flow documentation establishes that UTY is minted 1:1 against USDC on Base, the deposited USDC is immediately swept to a custodian wallet as off-chain managed backing, and redemption returns USDC after a seven-day asynchronous bonding period. Neither the current docs nor the public Accountable surface supports the historical 30% USDC, 35% long AVAX, and 35% short-perpetual weights, so those unsupported point-in-time percentages are replaced by one aggregate managed-backing envelope.",
-    "compositionBasis": "Current YieldPoint issuance and redemption flows plus the designated Accountable reserve surface; managed-asset composition undisclosed",
+    "rationale": "Re-opened 2026-08-29 against the Accountable reserves_split replay captured 2026-08-28: the existing adapter emitted the exact unkeyed names Base (52.6%), Ethereum (34.9%), Avalanche (12.4%), and Copper (0.1%). These are location/custody or settlement buckets, not asset classes, so every row is conservatively classified as assetClass other and uses the same YieldPoint (XSY) managed-strategy and undisclosed custody/venue-counterparty failure domain. YieldPoint's current flow documentation says USDC is minted 1:1 and swept to a custodian, while XSY's public mechanics describe strategy modules and give long-spot/short-perpetuals only as examples; the sources do not publish the current strategy assets, retained USDC, hedge notionals, margin, venue balances, custody-provider shares, or liquidation buffers. No UTY sourceKeyMap is configured, so the reviewed rows intentionally match the live names exactly and do not imply asset-level itemization.",
+    "compositionBasis": "Accountable reserves_split location/custody snapshot captured 2026-08-28 and normalized by the existing one-decimal live adapter, interpreted with current XSY/YieldPoint flow, strategy, and risk disclosures",
+    "compositionAsOf": "2026-08-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The USDC subscription and redemption asset is known, but current managed positions, retained USDC, strategy weights, venues, counterparties, hedge notionals, margin, and liquidation buffers remain undisclosed.",
+    "knownUnknownExposure": "The 100% figure reflects that all four published Accountable location envelopes remain unitemized at asset level and are therefore unresolved for reserve composition; it does not assert that the managed strategy is absent. XSY and Accountable do not itemize the strategy's retained USDC, long/short positions, margin, venue balances, custody-provider allocation, or liquidation buffers within any location bucket.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "USDC deposits swept to custodial managed backing",
-        "pct": 100,
+        "reserveName": "Base",
+        "pct": 52.6,
         "disposition": "insufficient-evidence",
-        "rationale": "The reviewed sources establish the USDC mint and redemption envelope but not the current assets or positions held after the custodial sweep."
+        "rationale": "Base is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Ethereum",
+        "pct": 34.9,
+        "disposition": "insufficient-evidence",
+        "rationale": "Ethereum is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Avalanche",
+        "pct": 12.4,
+        "disposition": "insufficient-evidence",
+        "rationale": "Avalanche is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Copper",
+        "pct": 0.1,
+        "disposition": "insufficient-evidence",
+        "rationale": "Copper is an Accountable custody/settlement bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
       }
     ]
   },

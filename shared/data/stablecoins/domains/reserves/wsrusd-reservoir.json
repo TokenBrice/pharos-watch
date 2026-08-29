@@ -2,13 +2,13 @@
   "id": "wsrusd-reservoir",
   "reserves": [
     {
-      "name": "Wrapped Savings rUSD shares backed by rUSD",
+      "name": "rUSD via Reservoir Savingcoin ERC-4626 wrapper",
       "pct": 100,
       "risk": "medium",
       "coinId": "rusd-reservoir",
       "depType": "wrapper",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Reservoir Protocol and the underlying rUSD reserve basket",
+      "issuerOrObligor": "Reservoir Savingcoin wrapper and the underlying rUSD reserve basket",
       "riskFactors": [
         "counterparty",
         "smart-contract",
@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "OpenAI Codex reserve review 2026-08-29",
     "confidence": "verified",
     "sources": [
       {
@@ -29,19 +29,27 @@
         "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
       },
       {
-        "label": "Blockscout verified wsrUSD Savingcoin source",
-        "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+        "label": "Blockscout verified Savingcoin source and constructor",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+      },
+      {
+        "label": "Ethereum RPC eth_call reads at block 25862838",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum block 25862838",
+        "url": "https://etherscan.io/block/25862838"
       },
       {
         "label": "Reservoir live reserves",
         "url": "https://app.reservoir.xyz/api/reserves/raw"
       }
     ],
-    "rationale": "The verified wsrUSD ERC-4626 wrapper reports rUSD as its underlying asset; asset() on 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 returned rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34 when re-read via public RPC on 2026-07-20, and Reservoir's product documentation re-fetched today confirms wsrUSD is minted with rUSD and redeemable for rUSD at any time up to available PSM liquidity. The direct wsrUSD reserve is therefore one 100% wrapper position linked to tracked asset rusd-reservoir; the underlying rUSD basket is inherited and is not duplicated here. The parent rUSD composition was re-aligned to the 2026-07-20 Reservoir API on this same date (USD1 bucket fell from 8.4% to 2.1%).",
-    "compositionBasis": "Verified wsrUSD ERC-4626 asset() relationship (public RPC read 2026-07-20) and Reservoir reserve documentation",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Re-reviewed 2026-08-29. Reservoir documents wsrUSD as a yield-bearing token minted and redeemed through rUSD. Blockscout's fully verified Savingcoin source shows the constructor sets the ERC-4626 asset to rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34, deposit burns rUSD, and withdrawal mints rUSD. At Ethereum block 25862838 (2026-08-29T18:55:35Z), public RPC eth_call reads on 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 returned asset() = rUSD, totalAssets() = 59,188,877.273403281494612532 rUSD, totalSupply() = 54,044,623.838858574104658730 wsrUSD, and rUSD.balanceOf(wrapper) = 0. The zero idle rUSD balance is expected from the verified burn/mint accounting and is not evidence of a different direct reserve. The direct composition is therefore one 100% linked rUSD wrapper position; the upstream rUSD reserve basket is inherited from rusd-reservoir and is not duplicated here. No claim is made that the wsrUSD contract escrows idle rUSD.",
+    "compositionBasis": "Verified Savingcoin ERC-4626 source/constructor and pinned Ethereum eth_call reads at block 25862838",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct dependency is fully identified as rUSD, but the underlying rUSD reserve composition, strategy allocation, and legal custody terms remain upstream facts tracked on the rusd-reservoir record.",
+    "knownUnknownExposure": "The direct underlying is fully identified as rUSD. The wrapper intentionally burns rUSD on deposit and mints it on withdrawal, so its idle rUSD balance is zero; reserve-basket and custody details remain upstream facts tracked on rusd-reservoir.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

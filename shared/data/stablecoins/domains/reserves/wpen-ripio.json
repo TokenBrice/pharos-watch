@@ -18,26 +18,25 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi T18 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Kimi T18 safety-v9 unknown-reduction w2; Pharos reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Ripio local stablecoins",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "label": "Ripio wFIAT product and attestation archive",
+        "url": "https://www.ripio.com/en/wfiat"
       },
       {
-        "label": "Ripio wFIAT product page",
-        "url": "https://www.ripio.com/en/wfiat"
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       },
       {
         "label": "Ripio wFIAT whitepaper",
         "url": "https://www.ripio.com/en/assets/wars/whitepaper"
       }
     ],
-    "rationale": "Re-checked 2026-07-30: Ripio's wFIAT and local-stablecoins pages describe wrapped local tokens as minted 1:1 against local-currency deposits with funds held in regulated liquid instruments, and now publish collateral attestations certified by local public accountants for wBRL, wCOP, wARS (second), and wMXN as of 2026-03-31 — each naming only a domestic bank account in the local currency. No wPEN-specific attestation, certified balance, instrument split, bank identity, or reserve-provider allocation is published on either page or in the wFIAT whitepaper, so the wPEN reserve remains identified only as Peruvian-sol cash and local-currency liquid instruments.",
-    "compositionBasis": "Ripio wFIAT local-stablecoin framework applied to wPEN; token-specific reserve allocation is undisclosed",
-    "compositionAsOf": "2026-08-08",
+    "rationale": "Re-opened 2026-08-29: Ripio's wFIAT and local-stablecoins pages describe wPEN as a wrapped Peruvian-sol token minted 1:1 from local-currency deposits held in regulated liquid instruments. The current wFIAT attestation archive publishes March 31, 2026 certifications for wARS, wBRL, wCOP, and wMXN, but no wPEN-specific certificate, reserve report, bank balance, or instrument split. Sibling-token attestations cannot be transferred to wPEN. The reserve therefore remains identified only as a Peruvian-sol cash and liquid-instrument envelope.",
+    "compositionBasis": "Ripio wFIAT local-stablecoin framework applied to wPEN; no wPEN-specific dated reserve report",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve currency and broad instrument class are identified, but current balances, instrument weights, bank identities, and token-specific attestation evidence are unavailable.",
     "knownUnknownExposurePct": 100,

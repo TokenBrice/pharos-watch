@@ -63,6 +63,7 @@ export interface ChainlinkNavParams {
   tokenAddress: string;
   assetLabel: string;
   assetRisk: ReserveSlice["risk"];
+  sourceKey?: string;
   /** "latestRoundData" (default) = standard AggregatorV3Interface;
    *  "getPrice" = Ondo-style oracle returning a single uint256 with 18 decimals.
    *  "getPriceData" = Ondo-style oracle returning uint256 price + uint256 timestamp.
@@ -194,6 +195,7 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
   return {
     slices: [
       {
+        ...(params.sourceKey ? { sourceKey: params.sourceKey } : {}),
         name: params.assetLabel,
         pct: 100,
         risk: params.assetRisk,

@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Pharos reserve curation review 2026-08-29",
     "confidence": "probable",
     "sources": [
       {
@@ -21,11 +21,11 @@
         "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf"
       },
       {
-        "label": "Transfero BRZ product disclosure",
-        "url": "https://transfero.com/brz"
+        "label": "Transfero BRZ product disclosure (published 2026-08-28; current page re-opened 2026-08-29)",
+        "url": "https://transfero.com/brz-stablecoin"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: the prior transfero.com/wp-content/.../daily-report.pdf URL returns 404. The live BRZ product page now links a Reserve report PDF at framerusercontent.com that still presents BRZ as redeemable 1:1 for reais, reports R$15,243,944.24 collateral against R$12,398,003.00 circulating, and states the reserve is held in custody at a financial institution authorized by the Central Bank of Brazil, dated March 31, 2024 18:00 BRT. The product page independently states each BRZ is backed 1:1 with BRL with redemption via regulated partners. No institution name, account terms, or newer composition report was found. Modeled as one 100% BRL bank-deposit slice.",
+    "rationale": "Re-reviewed 2026-08-29. Transfero's current BRZ page, published 2026-08-28, still states 1:1 BRL backing and links the same Reserve report PDF; the page shows R$15.2MM collateral and R$12.3MM circulating but gives no report date beyond the linked artifact. The reachable report is dated March 31, 2024 at 18:00 BRT, reports R$15,243,944.24 collateral against R$12,398,003.00 circulating, and says the reserve is held at an institution authorized by the Central Bank of Brazil without naming it. No newer composition or independent reconciliation was found. The one 100% BRL bank-deposit slice remains a historical disclosure and is outside the 31-day plus seven-day static-composition window; no current reserve claim is asserted.",
     "compositionBasis": "Transfero BRZ transparency report dated March 31, 2024 (re-hosted URL from live product page)",
     "compositionAsOf": "2024-03-31",
     "scope": "full-composition",
@@ -53,8 +53,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Pharos reserve curation review 2026-08-29",
     "confidence": "probable",
     "sources": [
       {

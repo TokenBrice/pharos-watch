@@ -2,6 +2,7 @@ import {
   getActiveDexCoverageWaiver,
   getDexDiscoveryProviders,
   getGeckoTerminalDiscoveryTarget,
+  isDexDiscoveryProviderExhaustive,
   type DexDeploymentOutcome,
 } from "@shared/lib/dex-deployment-coverage";
 import {
@@ -79,9 +80,19 @@ export function classifyDexDeploymentOutcomes(params: {
   providerChecks: DexDeploymentProviderCheck[];
   nowSec: number;
 }): DexDeploymentOutcomeWrite[] {
-  const successfulChecks = new Set(
+  const exhaustiveSuccessfulChecks = new Set(
     params.providerChecks
-      .filter((check) => check.status === "success")
+      .filter((check) => check.status === "success" && isDexDiscoveryProviderExhaustive(check.provider))
+      .map((check) => deploymentKey(check.chain, check.address)),
+  );
+  const nonExhaustiveSuccessfulEmptyChecks = new Set(
+    params.providerChecks
+      .filter(
+        (check) =>
+          check.status === "success" &&
+          !isDexDiscoveryProviderExhaustive(check.provider) &&
+          (check.observedPoolCount ?? 0) === 0,
+      )
       .map((check) => deploymentKey(check.chain, check.address)),
   );
   const failedChecks = new Set(
@@ -115,7 +126,7 @@ export function classifyDexDeploymentOutcomes(params: {
         observedAt: params.nowSec,
       };
     }
-    if (successfulChecks.has(key)) {
+    if (exhaustiveSuccessfulChecks.has(key)) {
       return {
         stablecoinId: params.stablecoinId,
         chain: deployment.chain,
@@ -123,6 +134,18 @@ export function classifyDexDeploymentOutcomes(params: {
         outcome: "verified_no_pools",
         providers,
         reason: "A provider completed the direct-token query with no eligible pool",
+        observedPoolCount: 0,
+        observedAt: params.nowSec,
+      };
+    }
+    if (nonExhaustiveSuccessfulEmptyChecks.has(key)) {
+      return {
+        stablecoinId: params.stablecoinId,
+        chain: deployment.chain,
+        address: deployment.address,
+        outcome: "provider_inaccessible",
+        providers,
+        reason: DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON,
         observedPoolCount: 0,
         observedAt: params.nowSec,
       };
@@ -180,6 +203,7 @@ const DEX_DISCOVERY_FAILED_CRAWL_REASON =
   "Bounded discovery crawl failed before a complete deployment census";
 const DEX_DISCOVERY_PROVIDER_OUTAGE_REASON =
   "All attempted token-pool provider queries failed";
+const DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON = "Provider census is not exhaustive for this chain";
 
 export function isRetryableDiscoveryInaccessibleReason(reason: string): boolean {
   return reason === DEX_DISCOVERY_BOUNDED_CRAWL_REASON || reason === DEX_DISCOVERY_FAILED_CRAWL_REASON;

@@ -81,7 +81,7 @@ describe("estimateDeploymentCrawlCostMs", () => {
     expect(estimateDeploymentCrawlCostMs("not-a-chain")).toBe(0);
   });
 
-  it("prices a native Horizon query for Stellar", () => {
+  it("prices native Horizon and Aquarius queries for Stellar", () => {
     expect(estimateDeploymentCrawlCostMs("stellar")).toBe(1_600);
     expect(
       estimateDeploymentCrawlCostMs(
@@ -94,7 +94,13 @@ describe("estimateDeploymentCrawlCostMs", () => {
         "stellar",
         "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A",
       ),
-    ).toBe(0);
+    ).toBe(8_000);
+  });
+
+  it("prices each newly registered census stage", () => {
+    expect(estimateDeploymentCrawlCostMs("tezos", "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW")).toBe(16_000);
+    expect(estimateDeploymentCrawlCostMs("icon", "cx88fd7df7ddff82f7cc735c871dc519838cb235bb")).toBe(8_000);
+    expect(estimateDeploymentCrawlCostMs("kava", "usdx")).toBeGreaterThan(16_000);
   });
 
   it("prices only EVM-shaped MANTRA deployments for GeckoTerminal", () => {

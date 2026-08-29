@@ -45,6 +45,61 @@ interface CrawlCoinGeckoPoolsStageOptions {
   dependencies?: CoinGeckoPoolsStageDependencies;
 }
 
+type CoinGeckoProviderCheck = DexDeploymentProviderCheck & {
+  /** Stable provider-local diagnostic class; the shared check type stays unchanged. */
+  error?: string;
+};
+
+interface CoinGeckoCheckClassification {
+  status: DexDeploymentProviderCheck["status"];
+  retryable?: true;
+  error?: string;
+}
+
+function errorName(error: unknown): string {
+  if (error && typeof error === "object" && "name" in error) {
+    const name = (error as { name?: unknown }).name;
+    if (typeof name === "string" && name) return name;
+  }
+  return typeof error;
+}
+
+function classifyCoinGeckoResult(
+  result: Awaited<ReturnType<typeof fetchCgTokenPoolsWithStatus>>,
+): CoinGeckoCheckClassification {
+  // The helper intentionally separates schema health from transport health.
+  // Keep malformed/schema-degraded responses non-retryable even if both flags
+  // are ever set on a partial response.
+  if (result.schemaDegraded) {
+    return {
+      status: result.transportOk ? "degraded" : "failure",
+      error: "coingecko-malformed-payload",
+    };
+  }
+  if (!result.transportOk) {
+    // fetchCgTokenPoolsWithStatus currently collapses HTTP 429/5xx and fetch
+    // failures into transportOk=false, so retain that provider-specific class
+    // rather than pretending the exact HTTP status is available here.
+    return {
+      status: "failure",
+      retryable: true,
+      error: "coingecko-transport-failure",
+    };
+  }
+  return { status: "success" };
+}
+
+function classifyCoinGeckoThrownError(error: unknown): CoinGeckoCheckClassification {
+  const name = errorName(error);
+  if (name === "SyntaxError") {
+    return { status: "degraded", error: "coingecko-malformed-payload" };
+  }
+  if (name === "TimeoutError" || name === "AbortError") {
+    return { status: "failure", retryable: true, error: "coingecko-timeout" };
+  }
+  return { status: "failure", retryable: true, error: "coingecko-fetch-error" };
+}
+
 export async function crawlCoinGeckoPoolsStage({
   db,
   coinTargets,
@@ -55,7 +110,7 @@ export async function crawlCoinGeckoPoolsStage({
   const priceObservationTargets = new Set<string>();
   const unresolvedChains: string[] = [];
   const apiKey = cgApiKey?.trim() ? cgApiKey : null;
-  const providerChecks: DexDeploymentProviderCheck[] = [];
+  const providerChecks: CoinGeckoProviderCheck[] = [];
 
   if (!apiKey) {
     logWorkerEventArgs("handler", "warn",
@@ -109,12 +164,13 @@ export async function crawlCoinGeckoPoolsStage({
         apiKey,
         { maxRetries: 0, timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain },
       );
-      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, result.transportOk);
+      const classification = classifyCoinGeckoResult(result);
+      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, classification.retryable !== true);
       providerChecks.push({
         chain,
         address,
         provider: "coingecko",
-        status: !result.transportOk ? "failure" : result.schemaDegraded ? "degraded" : "success",
+        ...classification,
       });
 
       for (const pool of result.pools) {
@@ -188,8 +244,14 @@ export async function crawlCoinGeckoPoolsStage({
     } catch (err) {
       if (context.signal?.aborted) throw err;
       logWorkerEventArgs("handler", "warn", `[dex-discovery] cg_onchain error for ${chain}:${address}`, err);
-      providerChecks.push({ chain, address, provider: "coingecko", status: "failure" });
-      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, false);
+      const classification = classifyCoinGeckoThrownError(err);
+      providerChecks.push({
+        chain,
+        address,
+        provider: "coingecko",
+        ...classification,
+      });
+      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, classification.retryable !== true);
     }
   }
 

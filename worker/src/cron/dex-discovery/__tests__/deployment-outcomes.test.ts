@@ -5,7 +5,10 @@ import {
   classifyDexDeploymentOutcomes,
   upsertDexDeploymentOutcomes,
 } from "../deployment-outcomes";
-import type { StagedPool } from "../types";
+import type { DexDeploymentProviderCheck, StagedPool } from "../types";
+
+const NEW_PROVIDER_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly DexDeploymentProviderCheck["provider"][];
+const NEW_SOURCE_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly StagedPool["source"][];
 
 const DEPLOYMENT = {
   chain: "ethereum",
@@ -18,6 +21,11 @@ const STELLAR_CLASSIC_DEPLOYMENT = {
   decimals: 7,
 };
 const STELLAR_SOROBAN_DEPLOYMENT = {
+  chain: "stellar",
+  address: "CDE57N6XTUPBKYYDGQMXX7E7SLNOLFY3JEQB4MULSMR2AKTSAENGX2HC",
+  decimals: 5,
+};
+const STELLAR_AQUARIUS_DEPLOYMENT = {
   chain: "stellar",
   address: "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A",
   decimals: 5,
@@ -77,6 +85,10 @@ function outcomeWrite(overrides: { chain: string; address: string }) {
 }
 
 describe("DEX deployment outcomes", () => {
+  it("keeps the new provider and staged-source unions aligned", () => {
+    expect(NEW_PROVIDER_TYPE_PINS).toEqual(NEW_SOURCE_TYPE_PINS);
+  });
+
   it("separates observed, verified empty, and inaccessible outcomes", () => {
     const observed = classifyDexDeploymentOutcomes({
       stablecoinId: "test",
@@ -94,7 +106,12 @@ describe("DEX deployment outcomes", () => {
       providerChecks: [{ ...DEPLOYMENT, provider: "coingecko", status: "success" }],
       nowSec: 100,
     });
-    expect(empty[0]).toMatchObject({ outcome: "verified_no_pools", observedPoolCount: 0 });
+    expect(empty[0]).toMatchObject({
+      outcome: "verified_no_pools",
+      providers: ["coingecko", "geckoterminal", "dexscreener", "curve"],
+      reason: "A provider completed the direct-token query with no eligible pool",
+      observedPoolCount: 0,
+    });
 
     const curveObserved = classifyDexDeploymentOutcomes({
       stablecoinId: "test",
@@ -113,6 +130,20 @@ describe("DEX deployment outcomes", () => {
       nowSec: 100,
     });
     expect(inaccessible[0]).toMatchObject({ outcome: "provider_inaccessible", providers: ["horizon"] });
+
+    const neverRan = classifyDexDeploymentOutcomes({
+      stablecoinId: "test",
+      deployments: [DEPLOYMENT],
+      pools: [],
+      providerChecks: [],
+      nowSec: 100,
+    });
+    expect(neverRan[0]).toMatchObject({
+      outcome: "provider_inaccessible",
+      providers: ["coingecko", "geckoterminal", "dexscreener", "curve"],
+      reason: "No provider completed a query for this deployment in the bounded crawl",
+      observedPoolCount: 0,
+    });
   });
 
   it("classifies Soroban identities as unsupported method rather than Horizon outage", () => {
@@ -129,6 +160,56 @@ describe("DEX deployment outcomes", () => {
         outcome: "provider_inaccessible",
         providers: [],
         reason: "No registered token-pool provider supports this chain",
+      }),
+    ]);
+  });
+
+  it("keeps completed-empty non-exhaustive venue censuses inaccessible", () => {
+    const cases = [
+      { deployment: STELLAR_AQUARIUS_DEPLOYMENT, provider: "aquarius" },
+      {
+        deployment: { chain: "icon", address: "cx88fd7df7ddff82f7cc735c871dc519838cb235bb", decimals: 18 },
+        provider: "icon-balanced",
+      },
+      { deployment: { chain: "kava", address: "usdx", decimals: 6 }, provider: "kava-swap" },
+    ] as const;
+
+    for (const { deployment, provider } of cases) {
+      const result = classifyDexDeploymentOutcomes({
+        stablecoinId: "test",
+        deployments: [deployment],
+        pools: [],
+        providerChecks: [{ ...deployment, provider, status: "success", observedPoolCount: 0 }],
+        nowSec: 100,
+      });
+      expect(result[0]).toMatchObject({
+        outcome: "provider_inaccessible",
+        providers: expect.arrayContaining([provider]),
+        reason: "Provider census is not exhaustive for this chain",
+        observedPoolCount: 0,
+      });
+    }
+  });
+
+  it("still certifies a completed-empty exhaustive Tezos census", () => {
+    const deployment = {
+      chain: "tezos",
+      address: "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW",
+      decimals: 12,
+    };
+    expect(
+      classifyDexDeploymentOutcomes({
+        stablecoinId: "test",
+        deployments: [deployment],
+        pools: [],
+        providerChecks: [{ ...deployment, provider: "tezos", status: "success", observedPoolCount: 0 }],
+        nowSec: 100,
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        outcome: "verified_no_pools",
+        providers: ["tezos"],
+        reason: "A provider completed the direct-token query with no eligible pool",
       }),
     ]);
   });
@@ -164,13 +245,13 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(50);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(38);
+    expect(outcomes).toHaveLength(40);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(29);
     expect(outcomes).toContainEqual(
       expect.objectContaining({
-        stablecoinId: "eurspkcc-spiko",
-        chain: "stellar",
-        address: STELLAR_SOROBAN_DEPLOYMENT.address,
+        stablecoinId: "usdn-noble",
+        chain: "noble",
+        address: "uusdn",
         providers: [],
       }),
     );

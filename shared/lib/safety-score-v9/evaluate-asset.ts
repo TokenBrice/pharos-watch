@@ -670,10 +670,11 @@ function controlPillar(
     if (reason.code === "selected-bridge-route-unresolved") {
       return gapsForStatus(asset.economicControlReview.bridge.status);
     }
-    if (
-      reason.code === "runtime-bridge-materiality-unavailable" &&
-      asset.supply.chainDistribution !== null
-    ) {
+    if (reason.code === "runtime-bridge-materiality-unavailable") {
+      const supplyReviewGaps = gapsForStatus(asset.supply.status).filter(
+        (gap) => gap.reasonCode === "runtime-bridge-materiality-unavailable",
+      );
+      if (supplyReviewGaps.length > 0) return supplyReviewGaps;
       const unresolvedBridgeGapIds = new Set(
         asset.controls
           .filter(
@@ -703,22 +704,12 @@ function controlPillar(
     ),
     reasons: canonicalReasons(
       result.reasons.flatMap((reason) => {
-        const aggregateSupplyResponsibility =
-          reason.code === "runtime-bridge-materiality-unavailable" &&
-          asset.supply.chainDistribution === null
-            ? "producer-failed"
-            : null;
-        const fallbackResponsibility =
-          aggregateSupplyResponsibility ??
-          V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code];
         return pillarReasonsForGaps(
           envelope,
           reason.code,
           `control:${reason.path}`,
-          aggregateSupplyResponsibility === null
-            ? causalGapsForReason(reason)
-            : [],
-          fallbackResponsibility,
+          causalGapsForReason(reason),
+          V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
           reason.label,
         );
       }),

@@ -4,7 +4,16 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 export interface StagedPool {
   poolId: string;
   stablecoinId: string;
-  source: "cg_onchain" | "gecko_terminal" | "dexscreener" | "cg_tickers" | "horizon";
+  source:
+    | "cg_onchain"
+    | "gecko_terminal"
+    | "dexscreener"
+    | "cg_tickers"
+    | "horizon"
+    | "aquarius"
+    | "tezos"
+    | "icon-balanced"
+    | "kava-swap";
   chain: string;
   protocol: string;
   dexId: string | null;
@@ -39,7 +48,16 @@ export type DexDeploymentProviderCheckStatus = "success" | "failure" | "degraded
 export interface DexDeploymentProviderCheck {
   chain: string;
   address: string;
-  provider: "coingecko" | "geckoterminal" | "dexscreener" | "curve" | "horizon";
+  provider:
+    | "coingecko"
+    | "geckoterminal"
+    | "dexscreener"
+    | "curve"
+    | "horizon"
+    | "aquarius"
+    | "tezos"
+    | "icon-balanced"
+    | "kava-swap";
   status: DexDeploymentProviderCheckStatus;
   observedPoolCount?: number;
   /** Timeout, 429, or other transport miss — do not persist as a hard provider outage. */

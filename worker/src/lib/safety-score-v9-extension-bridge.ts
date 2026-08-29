@@ -6,7 +6,10 @@ import { resolveChainId } from "@shared/lib/chains";
 import { normalizeDeploymentId } from "@shared/lib/deployment-id";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
-import type { V9FailureDomainRef } from "@shared/types/safety-score-v9-facts";
+import type {
+  V9BridgeJoinDiagnosticsV1,
+  V9FailureDomainRef,
+} from "@shared/types/safety-score-v9-facts";
 import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/core";
 import {
   COMMON_MODE_MATERIAL_SHARE_THRESHOLD,
@@ -585,12 +588,77 @@ function hasCompleteSubthresholdBridgeInventory(
   return true;
 }
 
+type BridgeJoinChainRows = Readonly<Record<string, { current: number }>>;
+
+function buildBridgeJoinDiagnostics(
+  profileRoutes: readonly BridgeRouteDeployment[],
+  chainRows: BridgeJoinChainRows | undefined,
+  supplyReview: ExtensionAsset["supplyReview"],
+  bridgeClaimControls: readonly ControlOverlay[],
+  applicabilityBranch: V9BridgeJoinDiagnosticsV1["applicabilityBranch"],
+): V9BridgeJoinDiagnosticsV1 {
+  const routeCountByChain = new Map<string, number>();
+  for (const route of profileRoutes) {
+    const chain = canonicalRouteChain(route.id);
+    if (chain === null) continue;
+    routeCountByChain.set(chain, (routeCountByChain.get(chain) ?? 0) + 1);
+  }
+
+  const canonicalSupplyChains = new Set<string>();
+  const unmatchedRowIdentities = new Set<string>();
+  for (const rawChain of Object.keys(chainRows ?? {}).sort(compareText)) {
+    const chain = resolveChainId(rawChain);
+    if (chain === null) {
+      unmatchedRowIdentities.add(rawChain);
+      continue;
+    }
+    canonicalSupplyChains.add(chain);
+    if ((routeCountByChain.get(chain) ?? 0) !== 1) unmatchedRowIdentities.add(rawChain);
+  }
+
+  const selectedRows = supplyReview?.selectedBridgeRoutes ?? [];
+  const fallbackCanonicalSupplyRows = new Set(
+    selectedRows
+      .filter((row) => row.reviewState === "selected-reviewed")
+      .map((row) => canonicalRouteChain(row.deploymentRouteKey))
+      .filter((chain): chain is string => chain !== null),
+  );
+  const canonicalSupplyRowCount =
+    chainRows === undefined ? fallbackCanonicalSupplyRows.size : canonicalSupplyChains.size;
+  const reviewedNativeRows = selectedRows.filter(
+    (row) => row.reviewState === "selected-reviewed" && row.reviewedRouteKind === "native",
+  );
+  const reviewedNativeSupplyShare = Math.min(
+    1,
+    reviewedNativeRows.reduce((sum, row) => sum + row.supplyShare, 0),
+  );
+
+  return {
+    profileRouteCount: profileRoutes.length,
+    canonicalSupplyRowCount,
+    unmatchedRowIdentities: [...unmatchedRowIdentities].sort(compareText),
+    reviewedNativeCoverage: {
+      reviewedRowCount: reviewedNativeRows.length,
+      canonicalSupplyRowCount,
+      supplyShare: reviewedNativeSupplyShare,
+      complete:
+        canonicalSupplyRowCount > 0 &&
+        unmatchedRowIdentities.size === 0 &&
+        reviewedNativeRows.length === canonicalSupplyRowCount &&
+        reviewedNativeSupplyShare >= 1 - 0.000001,
+    },
+    bridgeClaimControls: [...new Set(bridgeClaimControls.map((control) => control.controlKey))].sort(compareText),
+    applicabilityBranch,
+  };
+}
+
 export function adaptBridgeReview(
   meta: V9ExtensionRegistryMeta,
   supplyReview: ExtensionAsset["supplyReview"],
   deployedChainCount: number,
   evidence: ReviewEvidenceBuilder,
   clockSec: number,
+  chainRows?: BridgeJoinChainRows,
 ): {
   review: NonNullable<ExtensionAsset["economicControlReview"]>["bridge"];
   controls: ControlOverlay[];
@@ -632,16 +700,23 @@ export function adaptBridgeReview(
     payload: profile,
     maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
   });
+  const profileRoutes = profile.routes ?? [];
   if (reviewStale && (profile.controls?.length ?? 0) === 0) {
     return {
       review: {
         status: requiredStatus("v9.control.bridge-review", "stale", `bridge:${meta.id}`, evidenceKeys),
         routes: [],
+        diagnostics: buildBridgeJoinDiagnostics(
+          profileRoutes,
+          chainRows,
+          supplyReview,
+          [],
+          "applicable",
+        ),
       },
       controls: [],
     };
   }
-  const profileRoutes = profile.routes ?? [];
   const routesById = new Map(
     profileRoutes.map((route) => [normalizedBridgeDeploymentId(route.id), route]),
   );
@@ -897,6 +972,13 @@ export function adaptBridgeReview(
           evidenceKeys,
         ),
         routes: [],
+        diagnostics: buildBridgeJoinDiagnostics(
+          profileRoutes,
+          chainRows,
+          supplyReview,
+          bridgeClaimControls,
+          "native-only-not-applicable",
+        ),
       },
       controls,
     };
@@ -909,6 +991,13 @@ export function adaptBridgeReview(
     review: {
       status: requiredStatus("v9.control.bridge-review", state, `bridge:${meta.id}`, evidenceKeys),
       routes,
+      diagnostics: buildBridgeJoinDiagnostics(
+        profileRoutes,
+        chainRows,
+        supplyReview,
+        bridgeClaimControls,
+        "applicable",
+      ),
     },
     controls,
   };

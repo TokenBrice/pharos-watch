@@ -30,12 +30,18 @@ const SAMPLE_PAYLOAD = {
 };
 
 describe("adaptM0Collateral", () => {
-  it("keeps M0-backed curated tokenized collateral on the canonical low tier", () => {
+  it("keeps M0-backed curated aggregate collateral on the conservative classification", () => {
     for (const coinId of ["musd-metamask", "ctusd-citrea", "usdat-saturn"]) {
-      const tokenizedCollateral = TRACKED_META_BY_ID.get(coinId)?.reserves?.find(
-        ({ name }) => name === "Tokenized treasury collateral",
+      const aggregateCollateral = TRACKED_META_BY_ID.get(coinId)?.reserves?.find(
+        ({ name }) => name === "U.S. Treasury bills & cash (M0 eligible collateral)",
       );
-      expect(tokenizedCollateral, coinId).toMatchObject({ pct: 97.9, risk: "low" });
+      expect(aggregateCollateral, coinId).toMatchObject({
+        sourceKey: "m0:eligible-collateral",
+        pct: 100,
+        risk: "very-low",
+        assetClass: "other",
+        issuerOrObligor: "M0 permissioned minters and eligible collateral SPVs",
+      });
     }
   });
 
@@ -43,7 +49,12 @@ describe("adaptM0Collateral", () => {
     const result = adaptM0Collateral(SAMPLE_PAYLOAD);
 
     expect(result.slices).toEqual([
-      { name: "U.S. Treasury bills & cash (M0 eligible collateral)", pct: 100, risk: "very-low" },
+      {
+        sourceKey: "m0:eligible-collateral",
+        name: "U.S. Treasury bills & cash (M0 eligible collateral)",
+        pct: 100,
+        risk: "very-low",
+      },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("m0") ?? undefined }).valid).toBe(true);

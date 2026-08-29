@@ -455,25 +455,25 @@ describe("adaptAccountableDashboard", () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
 
     const result = await runAccountablePayload(config, {
-      collateralization: 0.993626,
-      ts: "1787868004418",
+      collateralization: 0.98699,
+      ts: "1788032164478",
       reserves: {
         interval: "live",
         verifiability: "100",
-        total_reserves: { value: 310_696_678.89, name: "Total Reserves" },
+        total_reserves: { value: 309_277_238.14, name: "Total Reserves" },
         reserves_split: [
-          { value: 185_788_309.66, name: "STRC" },
-          { value: 48_129_916.91, name: "Inventory" },
-          { value: 47_941_097.57, name: "Protocol Owned Liquidity" },
-          { value: 28_831_033.88, name: "Cash & Equivalents" },
-          { value: 6_320.88, name: "Other" },
+          { value: 182_766_520.57, name: "STRC" },
+          { value: 49_117_020.71, name: "Inventory" },
+          { value: 48_028_974.73, name: "Protocol Owned Liquidity" },
+          { value: 29_358_512.37, name: "Cash & Equivalents" },
+          { value: 6_209.75, name: "Other" },
         ],
       },
     });
 
     expect(result.warnings).toEqual([{
       code: "reserve-undercollateralized",
-      message: "Accountable dashboard reports 99.36% collateralization",
+      message: "Accountable dashboard reports 98.70% collateralization",
       severity: "warning",
       effect: "degraded",
     }]);
@@ -481,20 +481,20 @@ describe("adaptAccountableDashboard", () => {
       bucket: "reserves_split",
       breakdownCount: 5,
       mappedBucketCount: 5,
-      totalReserves: 310_696_678.89,
-      collateralization: 0.993626,
-      collateralizationRatio: 0.993626,
+      totalReserves: 309_277_238.14,
+      collateralization: 0.98699,
+      collateralizationRatio: 0.98699,
     });
     expect(result.slices).toEqual([
-      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 59.8, risk: "high" },
-      { name: "Inventory", pct: 15.5, risk: "high" },
-      { name: "Protocol Owned Liquidity", pct: 15.4, risk: "high" },
-      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 9.3, risk: "very-low" },
+      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 59.1, risk: "high" },
+      { name: "Inventory", pct: 15.9, risk: "high" },
+      { name: "Protocol Owned Liquidity", pct: 15.5, risk: "high" },
+      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 9.5, risk: "very-low" },
     ]);
     expect(apxusdReserves.reserves.map(({ name, pct, risk }) => ({ name, pct, risk }))).toEqual(result.slices);
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 7, 27, 23) / 1000,
+      now: Date.UTC(2026, 7, 29, 23) / 1000,
     }).valid).toBe(true);
   });
 

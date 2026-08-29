@@ -93,7 +93,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
-    "provider": "Wolf & Company, P.C. monthly AICPA attestation opinions covering the platform's backing assets, of which apxUSD is the collateralized base token (latest report June 2026 as of 2026-08-08; the Accountable dashboard names apxUSD but runs on Apyx-deployed infrastructure and is treated as secondary)",
+    "provider": "Wolf & Company, P.C. examines Preference Foundation's monthly securities-balance assertions (including STRC and STRCx); these reports corroborate the disclosed preferred-equity sleeve but do not reconcile all apxUSD reserve buckets or liabilities. The July 2026 opinion is linked from the attestation index and the reserve review.",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "United States"

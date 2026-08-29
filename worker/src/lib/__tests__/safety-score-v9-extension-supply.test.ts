@@ -10,7 +10,11 @@ import {
   ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9-extension-shared";
-import { buildSafetyScoreV9SupplyReview, safetyScoreV9RouteSupplyShare } from "../safety-score-v9-extension-supply";
+import {
+  buildSafetyScoreV9SupplyReview,
+  diagnoseSafetyScoreV9NullSupplyReviewOutcome,
+  safetyScoreV9RouteSupplyShare,
+} from "../safety-score-v9-extension-supply";
 import { deriveLockMintSupplyPartition, safetyScoreV9ChainRows } from "../safety-score-v9-supply-attribution";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
@@ -33,6 +37,108 @@ const ETH_ROUTE = {
 } as unknown as BridgeRoutes[number];
 
 describe("buildSafetyScoreV9SupplyReview", () => {
+  it("classifies null-review producer outcomes without synthesizing supply", () => {
+    const base = {
+      activeAssetIds: ["alpha"],
+      chainCirculatingById: {
+        alpha: {
+          Ethereum: { current: 60 },
+          "Future Network": { current: 40 },
+        },
+      },
+      supplyAttributionJournalById: {},
+    } as unknown as ReportCardsFixedInput;
+    const diagnose = (
+      fixedInput: ReportCardsFixedInput,
+      bridgeObservationState: "missing" | "stale" | "bounded-unknown" | "known",
+      chainInputStale = false,
+    ) => diagnoseSafetyScoreV9NullSupplyReviewOutcome({
+      fixedInput,
+      assetId: fixedInput.activeAssetIds[0]!,
+      bridgeObservationState,
+      reviewRouteCount: 2,
+      chainInputStale,
+    });
+
+    expect(diagnose(base, "missing")).toEqual({
+      state: "missing-profile",
+      responsibility: "integration-missing",
+      chainRowCount: 2,
+      canonicalizationFailureCount: 1,
+      reviewRouteCount: 2,
+      attributionRejectionCode: null,
+    });
+    expect(diagnose(base, "bounded-unknown")).toMatchObject({
+      state: "ambiguous-route-join",
+      responsibility: "integration-missing",
+    });
+    const invalidProfile = {
+      ...base,
+      supplyAttributionJournalById: {
+        alpha: [{
+          completedAtSec: 9_900,
+          admissionCode: "supply-attribution.admission.rejected-route-inventory",
+          rejectionCode: "route-inventory-unavailable",
+        }],
+      },
+    } as unknown as ReportCardsFixedInput;
+    expect(diagnose(invalidProfile, "bounded-unknown")).toMatchObject({
+      state: "ambiguous-route-join",
+      responsibility: "integration-missing",
+      attributionRejectionCode: "route-inventory-unavailable",
+    });
+    expect(diagnose(base, "stale")).toMatchObject({
+      state: "stale-review",
+      responsibility: "producer-failed",
+    });
+
+    const staleJournalHistory = {
+      ...base,
+      supplyAttributionJournalById: {
+        alpha: [
+          {
+            completedAtSec: 9_800,
+            admissionCode: "supply-attribution.admission.accepted",
+          },
+          {
+            completedAtSec: 9_900,
+            admissionCode: "supply-attribution.admission.rejected-stale",
+            rejectionCode: "safe-block-unavailable",
+          },
+        ],
+      },
+    } as unknown as ReportCardsFixedInput;
+    expect(diagnose(staleJournalHistory, "known")).toEqual({
+      state: "stale-review",
+      responsibility: "producer-failed",
+      chainRowCount: 2,
+      canonicalizationFailureCount: 1,
+      reviewRouteCount: 2,
+      attributionRejectionCode: "safe-block-unavailable",
+    });
+
+    const rejected = {
+      ...base,
+      activeAssetIds: ["wm-m0"],
+      chainCirculatingById: { "wm-m0": {} },
+      supplyAttributionJournalById: {
+        "wm-m0": [{
+          completedAtSec: 9_900,
+          admissionCode: "supply-attribution.admission.rejected-upstream",
+          rejectionCode: "chain-rpc-unavailable",
+        }],
+      },
+    } as unknown as ReportCardsFixedInput;
+    expect(diagnose(rejected, "bounded-unknown")).toEqual({
+      state: "attribution-rpc-rejection",
+      responsibility: "producer-failed",
+      chainRowCount: 0,
+      canonicalizationFailureCount: 0,
+      reviewRouteCount: 2,
+      attributionRejectionCode: "chain-rpc-unavailable",
+    });
+  });
+
   it("joins a reviewed deployment packet by exact wM route ID and retains zero supply", () => {
     const profile = wmRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
     const supplyUsdByChain: Record<string, number> = {

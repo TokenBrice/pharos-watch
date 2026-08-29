@@ -17,22 +17,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T42 unknown-reduction wave-2 2026-07-30",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Aura Partners AUDX Limited Assurance Report - June 2026",
-        "url": "https://www.audxtoken.com/_files/ugd/539754_f60cd94b9a5148cfafd351f6157c8036.pdf"
+        "label": "Aura Partners AUDX Independent Limited Assurance Report - July 2026",
+        "url": "https://www.audxtoken.com/_files/ugd/539754_d2b6ce0bfdd947bda8375fe3283a0491.pdf"
       },
       {
         "label": "AUDX reserve transparency archive",
         "url": "https://www.audxtoken.com/transparency"
       }
     ],
-    "rationale": "The June 30, 2026 report records AUD 3,231,280.83 in designated reserve bank accounts against AUDX 3,008,057.00 of reported supply (Polygon 1,321,016; Ethereum 1,435,040; Conflux 52,000; Redbelly 100,000; XDC 50,000; Ink 50,000; Solana 1), signed by the CEO on 2026-07-06 with an Aura Partners independent limited-assurance report under ASAE 3000/ASAE 3100. Aura Partners independently confirmed the reserve balances directly with the relevant financial institutions and reconciled them to the issued supply; the institutions and account-level allocation are not disclosed. The report confirms all reserves are held in segregated accounts, separate from operational and corporate funds, and unencumbered. Write-time re-open 2026-07-30: the transparency archive now lists monthly reports through 30 June 2026; the June PDF is the latest and still states reserves in designated bank accounts >= supply. The June report enumerates supply on Redbelly, Ink, and Solana, chains not present in the tracked contracts list.",
-    "compositionBasis": "AUDX reserve verification subject to Aura Partners limited assurance as of June 30, 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "The July 31, 2026 AUDX Reserve Verification Report records AUD 3,231,371.79 in designated TAU accounts against AUD 3,208,057.00 of AUDX in circulation. Aura Partners' independent limited-assurance report, dated August 20, 2026 and performed under ASAE 3000 and ASAE 3100, obtained independent confirmation of reserve balances directly from the relevant financial institution or institutions, inspected blockchain ledger data, and reconciled reserves to issued supply; its conclusion found no matter indicating that the supply was under-backed. Management states that all AUDX reserves are held in segregated, unencumbered accounts. The report does not name the financial institutions or disclose account-level allocation, so the single designated-bank-account category remains 100%.",
+    "compositionBasis": "Aura Partners independent limited assurance under ASAE 3000/3100 of the AUDX Reserve Verification Report as of July 31, 2026",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report establishes that the full reserve is held in designated bank accounts, but does not name the financial institutions or disclose provider shares and deposit terms.",
     "knownUnknownExposurePct": 0,

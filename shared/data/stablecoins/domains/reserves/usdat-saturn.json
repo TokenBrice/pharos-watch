@@ -2,26 +2,18 @@
   "id": "usdat-saturn",
   "reserves": [
     {
-      "name": "Tokenized treasury collateral",
-      "pct": 97.9,
-      "risk": "low",
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "M0 Protocol and underlying U.S. Treasury reserve providers",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract", "duration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Cash",
-      "pct": 2.1,
+      "sourceKey": "m0:eligible-collateral",
+      "name": "U.S. Treasury bills & cash (M0 eligible collateral)",
+      "pct": 100,
       "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "Undisclosed M0 reserve institutions",
-      "riskFactors": ["counterparty", "custody", "liquidity", "concentration"],
-      "liquidityHorizon": "immediate"
+      "assetClass": "other",
+      "issuerOrObligor": "M0 permissioned minters and eligible collateral SPVs",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
+    "reviewedAt": "2026-08-29",
     "reviewer": "Pharos reserve research",
     "confidence": "verified",
     "sources": [
@@ -38,26 +30,19 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "The M0 protocol API snapshot exposes 97.9% Tokenized treasury collateral and 2.1% Cash for the M0 reserve categories used by USDat, identical to the live m0 reserve-adapter row names and weights. These protocol-reserve categories are fully identified and classified; they are external reserve assets rather than tracked stablecoin dependencies.",
-    "compositionBasis": "Current M0 protocol category snapshot combined with Saturn USDat mechanics and transparency documentation",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Saturn documents USDat's M0-backed mechanics and transparency model. M0 now exposes only the on-chain-indexed Minter Gateway total: its off-chain CollateralCurrent composition feed was retired in August 2026, as recorded in the adapter comment in worker/src/cron/reserve-adapters/m0.ts. The reviewed composition therefore contains one 100% keyed aggregate classified as other because no current cash/Treasury split is published; the former 97.9% tokenized-Treasury / 2.1% cash snapshot is not treated as live. The aggregate is an external M0 reserve envelope rather than a tracked stablecoin dependency.",
+    "compositionBasis": "Current M0 Protocol API on-chain-indexed Minter Gateway total combined with Saturn USDat mechanics and transparency documentation",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "None. The M0 protocol reserve categories that back USDat are fully identified by the live adapter.",
+    "knownUnknownExposure": "The current M0 source exposes the full aggregate total but not its internal cash/Treasury allocation or minter-level provider shares; the retired 97.9/2.1 composition is not current.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Tokenized treasury collateral",
-        "pct": 97.9,
+        "reserveName": "U.S. Treasury bills & cash (M0 eligible collateral)",
+        "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "M0 protocol tokenized treasury collateral is an external reserve asset rather than a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Cash",
-        "pct": 2.1,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "M0 protocol cash is an external reserve asset rather than a tracked stablecoin dependency."
+        "rationale": "The current M0 aggregate does not identify a tracked reserve asset; the retired itemized feed cannot support an honest coinId link."
       }
     ]
   },

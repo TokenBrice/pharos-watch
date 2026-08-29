@@ -236,6 +236,7 @@ describe("adaptSkyModules", () => {
     const stableSlice = slices.find((s) => s.name.includes("Stablecoins"));
     expect(stableSlice).toBeDefined();
     expect(stableSlice!.risk).toBe("very-low");
+    expect(stableSlice!.sourceKey).toBe("sky-makercore:module:stablecoins");
     // The PSM is a mixed basket, so neither a single coinId nor its relational
     // depType can be authored until the slice is split into exact exposures.
     expect(stableSlice!.coinId).toBeUndefined();
@@ -244,6 +245,7 @@ describe("adaptSkyModules", () => {
     const sparkSlice = slices.find((s) => s.name.includes("Spark"));
     expect(sparkSlice).toBeDefined();
     expect(sparkSlice!.risk).toBe("low");
+    expect(sparkSlice!.sourceKey).toBe("sky-makercore:module:spark");
 
     const coreSlice = slices.find((s) => s.name.includes("Core"));
     expect(coreSlice).toBeDefined();

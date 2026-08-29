@@ -86,6 +86,7 @@ describe("adaptChainlinkNavResponse", () => {
     tokenAddress: "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b",
     assetLabel: "U.S. Treasury Bills",
     assetRisk: "very-low",
+    sourceKey: "chainlink-nav:test",
   };
 
   it("returns single 100% slice", () => {
@@ -94,6 +95,7 @@ describe("adaptChainlinkNavResponse", () => {
       params,
     );
     expect(result.slices).toHaveLength(1);
+    expect(result.slices[0].sourceKey).toBe("chainlink-nav:test");
     expect(result.slices[0].pct).toBe(100);
     expect(result.slices[0].name).toBe("U.S. Treasury Bills");
   });

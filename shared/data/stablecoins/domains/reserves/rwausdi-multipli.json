@@ -20,12 +20,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve re-verification",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Grok wave-8 reserve re-verification; Pharos reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "AFI rwaUSDi proof-of-reserves snapshot (re-opened 2026-07-28)",
+        "label": "AFI rwaUSDi proof-of-reserves snapshot",
         "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
       },
       {
@@ -33,13 +33,13 @@
         "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
       },
       {
-        "label": "Multipli rwaUSDi institutional-credit documentation (re-opened 2026-07-28)",
+        "label": "Multipli rwaUSDi institutional-credit documentation",
         "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
       }
     ],
-    "rationale": "Re-opened 2026-07-28: AFI proof payload still reports verifiedTotals totalReserves=1200000000.00 against totalLiabilities=390010160.00 (collateralRatio≈307.6843) with isCollateralized=true and no itemized holdings breakdown in the public proof. Multipli docs independently describe rwaUSDi as a KYB-gated institutional permissioned credit layer for private credit, structured finance, asset-backed lending, project finance, and market-neutral strategies with scheduled redemptions and periodic pricing. Because no current holdings, weights, borrowers, funds, or strategy counterparties are disclosed, the complete envelope remains one unresolved mixed basket; knownUnknownExposurePct=100 matches the 100% basket-needs-split disposition.",
+    "rationale": "Re-opened 2026-08-29: the AFI proof endpoint reports active rwaUSDi total reserves of $1,500,000,000.00 against total liabilities of $368,551,600.00 (collateral ratio 406.9986) and the periodic endpoint lists weekly solvency confirmations through 2026-08-23. The cryptographic proof verifies aggregate reserve and liability totals but exposes no itemized holdings, borrowers, funds, strategy counterparties, or weights. Multipli documentation independently describes a KYB-gated institutional credit layer spanning private credit, structured finance, project finance, asset-backed lending, and market-neutral strategies with scheduled redemptions. The complete envelope therefore remains one unresolved mixed basket rather than a fabricated allocation.",
     "compositionBasis": "AFI aggregate solvency proof plus Multipli's documented rwaUSDi eligible-asset envelope; current constituents and weights undisclosed",
-    "compositionAsOf": "2026-07-28",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
     "knownUnknownExposure": "Current asset classes, individual borrowers and funds, constituent weights, credit seniority, maturities, valuation marks, custody shares, strategy exposures, and redemption schedules are not exposed by the reviewed proof.",
     "knownUnknownExposurePct": 100,

@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "nTBILL has issuer-native NestVault issuance on Ethereum, Plume, and BNB Chain, plus a distinct Solana representation route. Solana USDC crosses Circle CCTP to Plume, the nTBILL shares settle through the Plume composer, and LayerZero OFT delivers the Solana SPL representation; redemptions reverse that path. The current route is scoreable as external validated-network exposure, while exact Solana peer/DVN, rate-limit, pause, and administrator state remains a reviewed evidence gap. Arbitrum has a live deployment but no current issuer-confirmed role and remains unresolved.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex migration FIX-01; Nest external verification 2026-08-16",
+    "summary": "nTBILL has verified issuer-native Nest BoringVault issuance on Ethereum, Plume, Arbitrum, and BNB Chain, plus a distinct Solana representation route. Solana USDC crosses Circle CCTP to Plume, the nTBILL shares settle through the Plume composer, and LayerZero OFT delivers nTBILL back to Solana; redemptions reverse that path. Arbitrum's exact nTBILL BoringVault, owner Safe, and auth-gated native enter path are verified on-chain even though the current Nest registry and integration guide omit Arbitrum from their supported-chain tables. The Solana route remains scoreable as external validated-network exposure, while exact Solana peer/DVN, rate-limit, pause, and administrator state remains a reviewed evidence gap.",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Codex route re-review; Nest Arbitrum verification 2026-08-29",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -126,25 +126,42 @@
         "id": "arbitrum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
         "destinationChain": "arbitrum",
         "contractAddress": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
-        "protocol": "Nest nTBILL vault",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Live code, owner(), and nonzero totalSupply() were confirmed at Arbitrum block 495251192, but the current Nest smart-contract registry and nTBILL integration guide omit Arbitrum and provide no current Arbitrum NestVault or issuer-supported mint-flow evidence. Canonicality and bridge role are unresolved; do not score this deployment as native or as a representation until Nest confirms its role.",
+        "protocol": "Nest nTBILL BoringVault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Arbitrum block 499694263 on 2026-08-29, the verified non-proxy BoringVault deployment returned name Nest Treasuries Vault, symbol nTBILL, decimals 6, and totalSupply 7,923,304. owner() returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, a deployed GnosisSafeL2 with threshold 3; authority() returned RolesAuthority 0x0a4f939b5d51157c58ba053275eaf77a782b4996, whose getRolesWithCapability() maps role 3 to enter(address,address,uint256,address,uint256). The verified BoringVault source implements enter() as an auth-gated asset deposit and share _mint path and exposes no bridge, OFT, peer, or remote-mint interface. This is therefore a reviewed native issuance route despite current Nest documentation omitting Arbitrum from its supported-chain tables; no cross-chain representation is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495251192,
+        "observedAt": "2026-08-29",
+        "observedBlock": 499694263,
+        "canonicalChain": "arbitrum",
         "sources": [
           {
-            "label": "nTBILL Arbitrum token",
-            "url": "https://arbiscan.io/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+            "label": "Arbitrum nTBILL verified BoringVault source",
+            "url": "https://arbitrum.blockscout.com/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9?tab=contract"
           },
           {
-            "label": "Nest docs",
-            "url": "https://docs.nest.credit/"
+            "label": "Arbitrum nTBILL owner Safe",
+            "url": "https://arbitrum.blockscout.com/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982?tab=contract"
+          },
+          {
+            "label": "Arbitrum nTBILL RolesAuthority",
+            "url": "https://arbitrum.blockscout.com/address/0x0a4f939b5d51157c58ba053275eaf77a782b4996?tab=contract"
+          },
+          {
+            "label": "Arbitrum One public JSON-RPC reads at block 499694263",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          },
+          {
+            "label": "Nest smart-contract registry (current; Arbitrum omitted)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "Nest nTBILL integration guide (current; Arbitrum omitted)",
+            "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
           }
         ]
       },

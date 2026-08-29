@@ -304,3 +304,12 @@ bbdd0cb8933579fb83586d8fd8901acfbf52ba5a:worker/src/cron/dex-discovery/__tests__
 # replaced with a builder in a follow-up commit, so the squash-merge diff to
 # main does not contain it and needs no entry.
 2fae13ddb881f6713326f1a85a1056986fe42a79:worker/src/lib/__tests__/telegram-watchlist-token.test.ts:generic-api-key:15
+
+# Public on-chain identifiers in Wave-3 census provider test fixtures: Stellar
+# Soroban contract IDs (C... base32) and ICON SCORE hex addresses are chain
+# addresses, not credentials.
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:13
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:14
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:16
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:71
+74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:211

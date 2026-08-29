@@ -742,6 +742,38 @@ describe("mergeStagedPools", () => {
     });
   });
 
+  it.each([
+    { source: "aquarius", chain: "stellar" },
+    { source: "tezos", chain: "tezos" },
+    { source: "icon-balanced", chain: "icon" },
+    { source: "kava-swap", chain: "kava" },
+  ] as const)("preserves $source as its explicit source family", async ({ source, chain }) => {
+    const now = 1710000000;
+    const stablecoinId = "usdt-tether";
+    const metrics = new Map();
+    const result = await mergeStagedPools(
+      createMockDb([
+        makeStagedPoolRow({
+          pool_id: `${chain}:${source}-pool`,
+          stablecoin_id: stablecoinId,
+          source,
+          chain,
+          protocol: source,
+          dex_id: source,
+          symbol: `${source}/USD`,
+          price_usd: null,
+          refreshed_at: now,
+        }),
+      ]),
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+    );
+
+    expect(result.mergedCount).toBe(1);
+    expect(metrics.get(stablecoinId)?.topPools[0]).toMatchObject({ source });
+  });
+
   it("retains exact pool attribution for the ten reviewed cross-asset fixtures", async () => {
     const now = 1710000000;
     const evmPoolAddress = "0x0000000000000000000000000000000000000456";

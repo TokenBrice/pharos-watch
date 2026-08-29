@@ -1,12 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import {
+  AQUARIUS_SUPPORTED_TOKEN_IDS,
   DEX_COVERAGE_WAIVERS,
+  DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS,
   getActiveDexCoverageWaiver,
   getDexDiscoveryProviders,
   getGeckoTerminalDiscoveryTarget,
   getHorizonDiscoveryAsset,
+  isAquariusSorobanDeployment,
+  isIconBalancedDiscoveryDeployment,
+  isKavaSwapDiscoveryDeployment,
+  isTezosDiscoveryDeployment,
 } from "../dex-deployment-coverage";
+import type { DexDiscoveryProvider } from "../dex-deployment-coverage";
+import type { LiquidityPoolSourceFamily } from "@shared/types/market";
+
+const NEW_DISCOVERY_PROVIDER_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly DexDiscoveryProvider[];
+const NEW_SOURCE_FAMILY_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly LiquidityPoolSourceFamily[];
 
 const REVIEW_AT_SEC = Date.UTC(2026, 6, 10) / 1000;
 
@@ -32,10 +43,45 @@ describe("DEX deployment coverage ownership", () => {
       }
     }
 
-    expect(unsupported).toHaveLength(50);
-    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(38);
-    expect(exclusivelyUnsupported).toHaveLength(3);
+    expect(unsupported).toHaveLength(40);
+    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(29);
+    expect(exclusivelyUnsupported).toHaveLength(2);
     expect(getDexDiscoveryProviders("stellar")).toEqual(["horizon"]);
+  });
+
+  it("pins the four new provider and source-family identities", () => {
+    expect(NEW_DISCOVERY_PROVIDER_TYPE_PINS).toHaveLength(4);
+    expect(NEW_SOURCE_FAMILY_TYPE_PINS).toHaveLength(4);
+    expect(Object.keys(AQUARIUS_SUPPORTED_TOKEN_IDS)).toHaveLength(8);
+    expect(DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS).toMatchObject({
+      aquarius: false,
+      tezos: true,
+      "icon-balanced": false,
+      "kava-swap": false,
+    });
+  });
+
+  it("registers the exact new provider deployment identities", () => {
+    const aquariusToken = Object.keys(AQUARIUS_SUPPORTED_TOKEN_IDS)[0]!;
+    const tezosAddress = "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW";
+    const iconAddress = "cx88fd7df7ddff82f7cc735c871dc519838cb235bb";
+
+    expect(isAquariusSorobanDeployment("stellar", `EUTBL-${aquariusToken}`)).toBe(true);
+    expect(getDexDiscoveryProviders("stellar", `EUTBL-${aquariusToken}`)).toEqual(["aquarius"]);
+    expect(isAquariusSorobanDeployment("stellar", "CDE57N6XTUPBKYYDGQMXX7E7SLNOLFY3JEQB4MULSMR2AKTSAENGX2HC")).toBe(false);
+    expect(isTezosDiscoveryDeployment("tezos", tezosAddress)).toBe(true);
+    expect(getDexDiscoveryProviders("tezos", tezosAddress)).toEqual(["tezos"]);
+    expect(getDexDiscoveryProviders("tezos", `${tezosAddress}x`)).toEqual([]);
+    expect(isIconBalancedDiscoveryDeployment("icon", iconAddress.toUpperCase())).toBe(true);
+    expect(getDexDiscoveryProviders("icon", iconAddress.toUpperCase())).toEqual(["icon-balanced"]);
+    expect(isKavaSwapDiscoveryDeployment("kava", " USDX ")).toBe(true);
+    expect(getDexDiscoveryProviders("kava", "usdx")).toEqual([
+      "coingecko",
+      "geckoterminal",
+      "dexscreener",
+      "curve",
+      "kava-swap",
+    ]);
   });
 
   it("registers only the exact supplemental GeckoTerminal deployment shapes", () => {
@@ -109,7 +155,7 @@ describe("DEX deployment coverage ownership", () => {
     expect(getDexDiscoveryProviders("stellar", classic)).toEqual(["horizon"]);
     expect(getHorizonDiscoveryAsset(classic, "EURC")).toBe(`EURC:${issuer}`);
     expect(getHorizonDiscoveryAsset(issuer, "EURC")).toBe(`EURC:${issuer}`);
-    expect(getDexDiscoveryProviders("stellar", soroban)).toEqual([]);
+    expect(getDexDiscoveryProviders("stellar", soroban)).toEqual(["aquarius"]);
     expect(getHorizonDiscoveryAsset(soroban, "EURSPKCC")).toBeNull();
   });
 

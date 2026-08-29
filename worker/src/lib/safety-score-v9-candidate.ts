@@ -6,7 +6,10 @@ import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacit
 import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
-import type { CompiledV9FactSetV3 } from "@shared/types/safety-score-v9-facts";
+import type {
+  CompiledV9FactSetV3,
+  V9BridgeJoinDiagnosticsV1,
+} from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { z } from "zod";
@@ -156,6 +159,7 @@ export interface SafetyScoreV9CandidatePipelineResult {
   candidateIdentity: Readonly<SafetyScoreV9CandidateIdentityV1>;
   quarantines: readonly V9AssetQuarantine[];
   quarantineAffectedAssetIds: readonly string[];
+  bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
 }
 
 export interface SafetyScoreV9PublicationResult {
@@ -164,7 +168,12 @@ export interface SafetyScoreV9PublicationResult {
   producerCapabilityDigest: string;
   quarantines: readonly V9AssetQuarantine[];
   quarantineAffectedAssetIds: readonly string[];
+  bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
 }
+
+export type SafetyScoreV9BridgeJoinDiagnostic = V9BridgeJoinDiagnosticsV1 & {
+  assetId: string;
+};
 
 function sortedUnique(values: Iterable<string>): string[] {
   return [...new Set(values)].sort(compareText);
@@ -511,6 +520,14 @@ function buildSafetyScoreV9CandidatePipeline(
     compiledFacts,
     compilation.quarantines,
   );
+  const bridgeJoinDiagnostics = extension.assets
+    .flatMap((asset) => {
+      const diagnostics = asset.economicControlReview?.bridge.diagnostics;
+      return diagnostics === undefined
+        ? []
+        : [{ assetId: asset.assetId, ...diagnostics }];
+    })
+    .sort((left, right) => compareText(left.assetId, right.assetId));
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
   const capabilityIdentity = producerCapabilityIdentity(fixedInput, extension);
@@ -577,6 +594,7 @@ function buildSafetyScoreV9CandidatePipeline(
       producerCapabilityDigest,
       quarantines: compilation.quarantines,
       quarantineAffectedAssetIds: affectedAssetIds,
+      bridgeJoinDiagnostics,
     };
   }
 
@@ -593,5 +611,6 @@ function buildSafetyScoreV9CandidatePipeline(
     candidateIdentity,
     quarantines: compilation.quarantines,
     quarantineAffectedAssetIds: affectedAssetIds,
+    bridgeJoinDiagnostics,
   };
 }

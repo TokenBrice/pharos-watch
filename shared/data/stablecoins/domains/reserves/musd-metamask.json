@@ -2,26 +2,18 @@
   "id": "musd-metamask",
   "reserves": [
     {
-      "name": "Tokenized treasury collateral",
-      "pct": 97.9,
-      "risk": "low",
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "M0 Protocol and underlying U.S. Treasury reserve providers",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "Cash",
-      "pct": 2.1,
+      "sourceKey": "m0:eligible-collateral",
+      "name": "U.S. Treasury bills & cash (M0 eligible collateral)",
+      "pct": 100,
       "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "Undisclosed Bridge/M0 reserve institutions",
-      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
-      "liquidityHorizon": "immediate"
+      "assetClass": "other",
+      "issuerOrObligor": "M0 permissioned minters and eligible collateral SPVs",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
+    "reviewedAt": "2026-08-29",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -42,11 +34,11 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "MetaMask states that mUSD is backed by short-term Treasury collateral, and the first-party M0 protocol API snapshot records 97.9% Tokenized treasury collateral and 2.1% Cash. Each slice is now classified with the asset class and obligor identity required by Safety Score V9. Minter-specific provider allocations and account-level custody terms remain undisclosed by Bridge/M0, but those are custody-profile gaps, not reserve-composition unknowns.",
-    "compositionBasis": "First-party M0 protocol API category snapshot for the collateral pool backing $M and its extensions",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "MetaMask states that mUSD is backed by short-term Treasury collateral. M0 now exposes only the on-chain-indexed Minter Gateway total: its off-chain CollateralCurrent composition feed was retired in August 2026, as recorded in the adapter comment in worker/src/cron/reserve-adapters/m0.ts. The reviewed composition therefore contains one 100% keyed aggregate classified as other because no current cash/Treasury split is published; the former 97.9% tokenized-Treasury / 2.1% cash snapshot is not treated as live. Minter-specific provider allocations and account-level custody terms remain undisclosed by Bridge/M0 and remain separate custody uncertainty.",
+    "compositionBasis": "Current first-party M0 Protocol API on-chain-indexed Minter Gateway total for the collateral pool backing $M and its extensions",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified reserve-category percentage remains. The minter/custodian identities behind the Treasury and cash legs are not itemized in public sources.",
+    "knownUnknownExposure": "The current M0 source exposes the full aggregate total but not its internal cash/Treasury allocation, minter-level provider shares, or mUSD-specific custody terms; the retired 97.9/2.1 composition is not current.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

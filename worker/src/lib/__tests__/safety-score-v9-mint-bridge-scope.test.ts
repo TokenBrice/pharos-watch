@@ -1,5 +1,6 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { parseStablecoinMetaAssets } from "@shared/lib/stablecoins/schema";
+import fusdRiskReview from "@shared/data/stablecoins/domains/risk-review/fusd-finchain.json";
 import type {
   BridgeRouteControl,
   BridgeRouteDeployment,
@@ -218,14 +219,16 @@ function representationSupplyReview(
 function adaptBridgeFixture(
   metadata: V9ExtensionRegistryMeta,
   supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> | null,
+  chainRows?: Readonly<Record<string, { current: number }>>,
+  clockSec = 10_000,
 ) {
-  const clockSec = 10_000;
   return adaptBridgeReview(
     metadata,
     supplyReview,
     2,
     new ReviewEvidenceBuilder(metadata.id, clockSec),
     clockSec,
+    chainRows,
   );
 }
 
@@ -1043,6 +1046,99 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.review.routes).toEqual([]);
     // The relocated control facts must survive in the umbrella inventory.
     expect(adapted.controls.length).toBeGreaterThan(0);
+  });
+
+  it("records the native-only bridge join decision for FUSD's four reviewed routes", () => {
+    const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
+    const routes = profile.routes ?? [];
+    expect(routes).toHaveLength(4);
+    const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
+      selectedBridgeRoutes: routes.map((candidate) => ({
+        deploymentRouteKey: candidate.id,
+        supplyUsd: 1,
+        supplyShare: 1 / routes.length,
+        reviewState: "selected-reviewed",
+        reviewedRouteKind: "native",
+      })),
+      selectedRouteSupplyShare: 1,
+      unknownRouteSupplyShare: 0,
+      unreviewedRouteSupplyShare: 0,
+      failureDomains: [],
+    };
+    const chainRows = Object.fromEntries(
+      routes.map((candidate) => [candidate.destinationChain, { current: 1 }]),
+    );
+    const adapted = adaptBridgeFixture(
+      meta("fusd-finchain", { bridgeRouteRisk: profile }),
+      supplyReview,
+      chainRows,
+      v9TestClockSec(),
+    );
+
+    expect(adapted.review.status.applicability.state).toBe("not-applicable");
+    expect(adapted.review.diagnostics).toEqual({
+      profileRouteCount: 4,
+      canonicalSupplyRowCount: 4,
+      unmatchedRowIdentities: [],
+      reviewedNativeCoverage: {
+        reviewedRowCount: 4,
+        canonicalSupplyRowCount: 4,
+        supplyShare: 1,
+        complete: true,
+      },
+      bridgeClaimControls: [],
+      applicabilityBranch: "native-only-not-applicable",
+    });
+  });
+
+  it("keeps the FUSD join applicable and names an unmatched raw chain label", () => {
+    const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
+    const routes = profile.routes ?? [];
+    const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
+      selectedBridgeRoutes: [
+        ...routes.map((candidate) => ({
+          deploymentRouteKey: candidate.id,
+          supplyUsd: 1,
+          supplyShare: 0.2,
+          reviewState: "selected-reviewed" as const,
+          reviewedRouteKind: "native" as const,
+        })),
+        {
+          deploymentRouteKey: "unmatched-chain:fusd-finchain:future-network",
+          supplyUsd: 1,
+          supplyShare: 0.2,
+          reviewState: "unmatched" as const,
+        },
+      ],
+      selectedRouteSupplyShare: 0.8,
+      unknownRouteSupplyShare: 0.2,
+      unreviewedRouteSupplyShare: 0,
+      failureDomains: [],
+    };
+    const chainRows = Object.fromEntries([
+      ...routes.map((candidate) => [candidate.destinationChain, { current: 1 }]),
+      ["Future Network", { current: 1 }],
+    ]);
+    const adapted = adaptBridgeFixture(
+      meta("fusd-finchain", { bridgeRouteRisk: profile }),
+      supplyReview,
+      chainRows,
+      v9TestClockSec(),
+    );
+
+    expect(adapted.review.status.applicability.state).toBe("required");
+    expect(adapted.review.diagnostics).toMatchObject({
+      profileRouteCount: 4,
+      canonicalSupplyRowCount: 4,
+      unmatchedRowIdentities: ["Future Network"],
+      reviewedNativeCoverage: {
+        reviewedRowCount: 4,
+        canonicalSupplyRowCount: 4,
+        supplyShare: 0.8,
+        complete: false,
+      },
+      applicabilityBranch: "applicable",
+    });
   });
 
   it("keeps a reviewed representation route bridge-applicable", () => {

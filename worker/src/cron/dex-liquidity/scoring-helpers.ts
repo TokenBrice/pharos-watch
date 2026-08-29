@@ -196,7 +196,11 @@ function shouldStrictlyCapSource(source: LiquidityMetrics["topPools"][number]["s
     source === "gecko_terminal" ||
     source === "dexscreener" ||
     source === "cg_tickers" ||
-    source === "horizon";
+    source === "horizon" ||
+    source === "aquarius" ||
+    source === "tezos" ||
+    source === "icon-balanced" ||
+    source === "kava-swap";
 }
 
 export function applyProtocolCaps(

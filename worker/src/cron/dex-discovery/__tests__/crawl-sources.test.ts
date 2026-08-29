@@ -3,6 +3,12 @@ import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 
 const fetchDsTokenPairsWithStatusMock = vi.hoisted(() => vi.fn());
 const fetchDsTokenPoolsWithStatusMock = vi.hoisted(() => vi.fn());
+const censusStageMocks = vi.hoisted(() => ({
+  aquarius: vi.fn(),
+  tezos: vi.fn(),
+  iconBalanced: vi.fn(),
+  kavaSwap: vi.fn(),
+}));
 
 vi.mock("../../dex-liquidity/crawl-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../dex-liquidity/crawl-helpers")>();
@@ -51,12 +57,29 @@ vi.mock("../../../lib/circuit-breaker", () => ({
   recordOutcome: vi.fn(async () => {}),
 }));
 
+vi.mock("../crawl-soroban-pools", () => ({
+  crawlSorobanPoolsStage: censusStageMocks.aquarius,
+}));
+
+vi.mock("../crawl-tezos-pools", () => ({
+  crawlTezosPoolsStage: censusStageMocks.tezos,
+}));
+
+vi.mock("../crawl-icon-balanced-pools", () => ({
+  crawlIconBalancedPoolsStage: censusStageMocks.iconBalanced,
+}));
+
+vi.mock("../crawl-kava-swap-pools", () => ({
+  crawlKavaSwapPoolsStage: censusStageMocks.kavaSwap,
+}));
+
 import { crawlCoin } from "../crawl-sources";
+import { crawlCoinGeckoPoolsStage } from "../crawl-coingecko-pools";
 import {
   createDexScreenerDiscoveryRunState,
   finalizeDexScreenerDiscoveryRun,
 } from "../crawl-dexscreener-pools";
-import { knownPoolIdKey } from "../staged-pool";
+import { createCrawlStageContext, knownPoolIdKey } from "../staged-pool";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
 import { dsRateLimit, fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { fetchCgTokenPoolsWithStatus } from "../../../lib/coingecko-onchain";
@@ -83,6 +106,16 @@ function createMockDb(): D1Database {
   } as unknown as D1Database;
 }
 
+function createCoinGeckoStageContext() {
+  return createCrawlStageContext({
+    stablecoinId: "usdc-circle",
+    knownPoolIds: new Set(),
+    nowSec: 1_800_000_000,
+    pools: [],
+    priceObs: [],
+  });
+}
+
 describe("crawlCoin DexScreener hardening", () => {
   beforeEach(() => {
     vi.mocked(crawlTokenPools).mockReset();
@@ -95,6 +128,14 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchJsonWithRetry).mockReset();
     vi.mocked(shouldAttemptFetch).mockReset();
     vi.mocked(recordOutcome).mockReset();
+    censusStageMocks.aquarius.mockReset();
+    censusStageMocks.aquarius.mockResolvedValue({ providerChecks: [] });
+    censusStageMocks.tezos.mockReset();
+    censusStageMocks.tezos.mockResolvedValue({ providerChecks: [] });
+    censusStageMocks.iconBalanced.mockReset();
+    censusStageMocks.iconBalanced.mockResolvedValue({ providerChecks: [] });
+    censusStageMocks.kavaSwap.mockReset();
+    censusStageMocks.kavaSwap.mockResolvedValue({ providerChecks: [] });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
     vi.mocked(recordOutcome).mockResolvedValue(mockCircuitOutcomeRecord());
   });
@@ -658,6 +699,89 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, false);
   });
 
+  it("marks CoinGecko transport failures retryable with a provider-specific class", async () => {
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+      transportOk: false,
+      schemaDegraded: false,
+      pools: [],
+    });
+
+    const result = await crawlCoinGeckoPoolsStage({
+      db: createMockDb(),
+      coinTargets: [{ chain: "ethereum", address: "0xabc", decimals: 6 }],
+      cgApiKey: "test-key",
+      context: createCoinGeckoStageContext(),
+    });
+
+    expect(result.providerChecks).toEqual([
+      {
+        chain: "ethereum",
+        address: "0xabc",
+        provider: "coingecko",
+        status: "failure",
+        retryable: true,
+        error: "coingecko-transport-failure",
+      },
+    ]);
+  });
+
+  it("keeps timeout and fetch exceptions retryable but malformed payloads non-retryable", async () => {
+    vi.mocked(fetchCgTokenPoolsWithStatus)
+      .mockRejectedValueOnce(new DOMException("request timed out", "TimeoutError"))
+      .mockRejectedValueOnce(new TypeError("network failed"))
+      .mockRejectedValueOnce(new SyntaxError("Unexpected token"))
+      .mockResolvedValueOnce({
+        transportOk: true,
+        schemaDegraded: true,
+        pools: [],
+      });
+
+    const result = await crawlCoinGeckoPoolsStage({
+      db: createMockDb(),
+      coinTargets: [
+        { chain: "ethereum", address: "0xabc", decimals: 6 },
+        { chain: "ethereum", address: "0xdef", decimals: 6 },
+        { chain: "ethereum", address: "0xghi", decimals: 6 },
+        { chain: "ethereum", address: "0xjkl", decimals: 6 },
+      ],
+      cgApiKey: "test-key",
+      context: createCoinGeckoStageContext(),
+    });
+
+    expect(result.providerChecks).toEqual([
+      {
+        chain: "ethereum",
+        address: "0xabc",
+        provider: "coingecko",
+        status: "failure",
+        retryable: true,
+        error: "coingecko-timeout",
+      },
+      {
+        chain: "ethereum",
+        address: "0xdef",
+        provider: "coingecko",
+        status: "failure",
+        retryable: true,
+        error: "coingecko-fetch-error",
+      },
+      {
+        chain: "ethereum",
+        address: "0xghi",
+        provider: "coingecko",
+        status: "degraded",
+        error: "coingecko-malformed-payload",
+      },
+      {
+        chain: "ethereum",
+        address: "0xjkl",
+        provider: "coingecko",
+        status: "degraded",
+        error: "coingecko-malformed-payload",
+      },
+    ]);
+  });
+
   it("keeps CoinGecko schema-degraded responses out of circuit failure accounting", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
@@ -681,7 +805,7 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
-  it("falls back to GeckoTerminal when CoinGecko onchain returns no usable price observation", async () => {
+  it("does not use a CoinGecko price observation as a separate completion signal", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
       schemaDegraded: false,
@@ -707,15 +831,10 @@ describe("crawlCoin DexScreener hardening", () => {
       new Set(),
     );
 
-    expect(crawlTokenPools).toHaveBeenCalledTimes(1);
+    expect(crawlTokenPools).not.toHaveBeenCalled();
   });
 
   it("preserves non-EVM token case in GeckoTerminal requests", async () => {
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
-      transportOk: true,
-      schemaDegraded: false,
-      pools: [],
-    });
     vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({ ok: true, pairs: [] });
     vi.mocked(crawlTokenPools).mockImplementationOnce(async (config) => {
       expect(config.tokens).toEqual([
@@ -733,7 +852,7 @@ describe("crawlCoin DexScreener hardening", () => {
       createMockDb(),
       "eusd-telcoin",
       [{ chain: "solana", address: "MintCase", decimals: 6 }],
-      "test-key",
+      null,
       new Set(),
     );
 
@@ -746,10 +865,13 @@ describe("crawlCoin DexScreener hardening", () => {
 
     vi.mocked(fetchCgTokenPoolsWithStatus).mockImplementation(async (network) => {
       events.push(`cg:${network}`);
-      return { transportOk: true, schemaDegraded: false, pools: [] };
+      return { transportOk: false, schemaDegraded: false, pools: [] };
     });
-    vi.mocked(crawlTokenPools).mockImplementation(async () => {
+    vi.mocked(crawlTokenPools).mockImplementation(async (config) => {
       events.push("gt");
+      for (const token of config.tokens) {
+        config.onRequestResult?.(token, token.ourChain === "ethereum" ? "failure" : "success");
+      }
       return { stoppedEarly: false };
     });
     vi.mocked(fetchDsTokenPairsWithStatus).mockImplementation(async (chain) => {
@@ -763,6 +885,22 @@ describe("crawlCoin DexScreener hardening", () => {
         response: new Response(null, { status: 200 }),
         body: isCurve ? { data: { poolData: [] } } : { tickers: [] },
       };
+    });
+    censusStageMocks.aquarius.mockImplementation(async () => {
+      events.push("aquarius");
+      return { providerChecks: [] };
+    });
+    censusStageMocks.tezos.mockImplementation(async () => {
+      events.push("tezos");
+      return { providerChecks: [] };
+    });
+    censusStageMocks.iconBalanced.mockImplementation(async () => {
+      events.push("icon-balanced");
+      return { providerChecks: [] };
+    });
+    censusStageMocks.kavaSwap.mockImplementation(async () => {
+      events.push("kava-swap");
+      return { providerChecks: [] };
     });
 
     const result = await crawlCoin(
@@ -780,8 +918,31 @@ describe("crawlCoin DexScreener hardening", () => {
       pools: [],
       unresolvedChains: [],
     });
-    expect(events).toEqual(["cg:eth", "gt", "ds:ethereum", "ds:plasma", "tickers", "curve"]);
+    expect(events).toEqual([
+      "cg:eth",
+      "gt",
+      "ds:ethereum",
+      "tickers",
+      "curve",
+      "aquarius",
+      "tezos",
+      "icon-balanced",
+      "kava-swap",
+    ]);
+    expect(vi.mocked(fetchDsTokenPairsWithStatus).mock.calls.map(([chain]) => chain)).toEqual(["ethereum"]);
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Chain "plasma"'));
+  });
+
+  it("honors an early stop between the serial census stages", async () => {
+    censusStageMocks.tezos.mockResolvedValueOnce({ providerChecks: [], stoppedEarly: true });
+
+    const result = await crawlCoin(createMockDb(), "usdc-circle", [], "test-key", new Set());
+
+    expect(result).toMatchObject({ pools: [], unresolvedChains: [] });
+    expect(censusStageMocks.aquarius).toHaveBeenCalledTimes(1);
+    expect(censusStageMocks.tezos).toHaveBeenCalledTimes(1);
+    expect(censusStageMocks.iconBalanced).not.toHaveBeenCalled();
+    expect(censusStageMocks.kavaSwap).not.toHaveBeenCalled();
   });
 
   it("contains optional Curve timeouts without failing the coin crawl", async () => {

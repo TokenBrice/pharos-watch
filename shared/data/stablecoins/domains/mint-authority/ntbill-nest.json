@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "nTBILL has reviewed native issuance on Ethereum, Plume, and BNB Chain through NestVault deposit entrypoints plus the still-authorized Ethereum Teller path. The shared Nest admin contract controls the issuance authority and the upgradeable NestVault proxies; Arbitrum has live code but no current issuer-confirmed native mint path and remains unresolved.",
+    "summary": "nTBILL has reviewed native issuance on Ethereum, Plume, Arbitrum, and BNB Chain. Ethereum, Plume, and BNB Chain use NestVault deposit entrypoints plus the still-authorized Ethereum Teller path; Arbitrum's verified non-proxy BoringVault directly exposes an owner-authorized enter mint path through its own Safe and RolesAuthority. The current Nest registry and nTBILL integration guide omit Arbitrum from their supported-chain tables, but the deployed source, owner Safe, and auth graph establish a native liability route. The shared Nest admin contract controls the supported NestVault authority and upgradeable proxies; the Solana CCTP/LayerZero representation remains Bridge Risk.",
     "controls": [
       {
         "label": "Nest Treasury Vault Teller (issuance/redemption)",
@@ -152,6 +152,62 @@
         "evidence": "Nest's current registry and nTBILL guide list the BNB Chain USDT NestVault as a native issuance entrypoint. At BSC block 116344431, the NestVault owner() was 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, its authority() was 0x0a4f939b5d51157c58ba053275eaf77a782b4996, RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true, and maxDeposit(address) returned uint256.max."
       },
       {
+        "label": "Nest nTBILL Arbitrum BoringVault owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "arbitrum",
+        "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "deploymentRefs": [
+          "arbitrum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f",
+            "0x98be74d3d5604904d0686eef9b4267f681f9520a",
+            "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
+            "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
+            "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
+            "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
+          ],
+          "threshold": 3,
+          "version": "1.3.0",
+          "observedBlock": 499694263,
+          "source": "onchain"
+        },
+        "capDescription": "The verified BoringVault enter() path permits an authorized caller to pass assetAmount=0 and an arbitrary shareAmount. Its owner Safe is always authorized by Auth.isAuthorized, so no collateral or numeric supply cap was evidenced for this direct mint path.",
+        "failureDomainKeys": [
+          "safe:arbitrum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+          "contract:arbitrum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+          "protocol:nest-boringvault"
+        ],
+        "observedAt": "2026-08-29",
+        "observedBlock": 499694263,
+        "sources": [
+          {
+            "label": "Arbitrum nTBILL verified BoringVault source",
+            "url": "https://arbitrum.blockscout.com/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9?tab=contract"
+          },
+          {
+            "label": "Arbitrum nTBILL owner Safe",
+            "url": "https://arbitrum.blockscout.com/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982?tab=contract"
+          },
+          {
+            "label": "Arbitrum nTBILL RolesAuthority",
+            "url": "https://arbitrum.blockscout.com/address/0x0a4f939b5d51157c58ba053275eaf77a782b4996?tab=contract"
+          },
+          {
+            "label": "Arbitrum One public JSON-RPC reads at block 499694263",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 499694263 on 2026-08-29, the verified non-proxy BoringVault at the authored nTBILL address returned owner 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (GnosisSafeL2, threshold 3 of 6), authority 0x0a4f939b5d51157c58ba053275eaf77a782b4996, and a RolesAuthority capability mapping role 3 to enter(address,address,uint256,address,uint256). The verified source shows enter() is auth-gated and mints shares, including when assetAmount is zero. This is a direct native mint path; it is not a bridge or OFT interface."
+      },
+      {
         "label": "Nest nTBILL shared admin contract (all EVM deployments)",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -263,9 +319,9 @@
       ]
     },
     "review": {
-      "evidence": "Mint Authority is scoped to Nest's native issuance on Ethereum, Plume, and BNB Chain; the Solana CCTP/LayerZero representation is bridge machinery and is reviewed separately. The current Nest registry and nTBILL integration guide identify the three EVM share deployments and their NestVault deposit paths. At Ethereum block 25770319, Plume block 87675658, and BSC block 116344431, the current NestVault owner() was 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, authority() was 0x0a4f939b5d51157c58ba053275eaf77a782b4996, RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true, and maxDeposit(address) returned uint256.max. The Ethereum Teller remains authorized for the share enter path and is retained with its 3-of-6 Safe owner; current canCall(manager, nTBILL, manage(address,bytes,uint256)) returned false, so the historical Manager is not counted as a current mint controller. Arbitrum has live code, owner, and nonzero supply but is omitted from the current issuer registry and has no verified current NestVault mint path, so its route remains unresolved rather than being treated as canonical. The nTBILL BoringVault share implementation remains immutable, but the current NestVault mint-critical contracts are transparent proxies: Ethereum and Plume use proxy admin 0xcec84cac23a659217f10ee2a9476d6c4a8901067 and BSC uses 0xc20142d79cbb882a4f6201f312bf1958610a5ec4; both ProxyAdmin owners read 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. Nest publishes issuer-operated NAV and composition data, but no recurring independent reconciliation of total nTBILL liabilities to the portfolio or prudential supervision of the wrapper issuer was found, so economicCapSemantics remains unbounded, reconciliation remains unknown, and supervision remains none.",
-      "reviewer": "Codex migration FIX-01; Nest external verification 2026-08-16",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Mint Authority is scoped to Nest's native issuance on Ethereum, Plume, Arbitrum, and BNB Chain; the Solana CCTP/LayerZero representation is bridge machinery and is reviewed separately. The current Nest registry and nTBILL integration guide identify the Ethereum, Plume, and BNB Chain share deployments and their NestVault deposit paths. At Ethereum block 25770319, Plume block 87675658, and BSC block 116344431, the current NestVault owner() was 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, authority() was 0x0a4f939b5d51157c58ba053275eaf77a782b4996, RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true, and maxDeposit(address) returned uint256.max. The Ethereum Teller remains authorized for the share enter path and is retained with its 3-of-6 Safe owner; current canCall(manager, nTBILL, manage(address,bytes,uint256)) returned false, so the historical Manager is not counted as a current mint controller. At Arbitrum block 499694263 on 2026-08-29, the authored nTBILL deployment is a verified non-proxy BoringVault with name Nest Treasuries Vault, symbol nTBILL, owner 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (GnosisSafeL2, threshold 3 of 6), authority 0x0a4f939b5d51157c58ba053275eaf77a782b4996, and role 3 mapped to enter(address,address,uint256,address,uint256). The verified source's owner-authenticated enter() path mints shares, including with assetAmount zero, and has no bridge/OFT interface, establishing native issuance despite the current documentation's Arbitrum omission. The nTBILL BoringVault share implementation remains immutable, but the current NestVault mint-critical contracts are transparent proxies: Ethereum and Plume use proxy admin 0xcec84cac23a659217f10ee2a9476d6c4a8901067 and BSC uses 0xc20142d79cbb882a4f6201f312bf1958610a5ec4; both ProxyAdmin owners read 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. Nest publishes issuer-operated NAV and composition data, but no recurring independent reconciliation of total nTBILL liabilities to the portfolio or prudential supervision of the wrapper issuer was found, so economicCapSemantics remains unbounded, reconciliation remains unknown, and supervision remains none.",
+      "reviewer": "Codex mint-authority route re-review; Nest Arbitrum verification 2026-08-29",
+      "reviewedAt": "2026-08-29",
       "disposition": "scoreable",
       "sources": [
         {
@@ -315,6 +371,22 @@
         {
           "label": "BNB Chain nTBILL NestVault proxy",
           "url": "https://bscscan.com/address/0x109df814e265cb62a1b366a4c0450b0a7af38a0c#code"
+        },
+        {
+          "label": "Arbitrum nTBILL verified BoringVault source",
+          "url": "https://arbitrum.blockscout.com/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9?tab=contract"
+        },
+        {
+          "label": "Arbitrum nTBILL owner Safe",
+          "url": "https://arbitrum.blockscout.com/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982?tab=contract"
+        },
+        {
+          "label": "Arbitrum nTBILL RolesAuthority",
+          "url": "https://arbitrum.blockscout.com/address/0x0a4f939b5d51157c58ba053275eaf77a782b4996?tab=contract"
+        },
+        {
+          "label": "Arbitrum One public JSON-RPC reads at block 499694263",
+          "url": "https://arbitrum-one-rpc.publicnode.com"
         }
       ]
     }

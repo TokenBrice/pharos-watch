@@ -106,17 +106,24 @@ describe("adaptSkyModules", () => {
     const byName = Object.fromEntries(slices.map((s) => [s.name, s]));
 
     expect(byName["Stablecoins (PSM)"].risk).toBe("very-low");
+    expect(byName["Stablecoins (PSM)"].sourceKey).toBe("sky-makercore:module:stablecoins");
     // Sky PSM aggregates multiple stables (USDC/USDT/USDP) without per-stable
     // breakdown; the slice is intentionally unattributed.
     expect(byName["Stablecoins (PSM)"].coinId).toBeUndefined();
     expect(byName["Stablecoins (PSM)"].depType).toBeUndefined();
 
     expect(byName["Spark (lending)"].risk).toBe("low");
+    expect(byName["Spark (lending)"].sourceKey).toBe("sky-makercore:module:spark");
     expect(byName["Grove (RWA)"].risk).toBe("low");
+    expect(byName["Grove (RWA)"].sourceKey).toBe("sky-makercore:module:grove");
     expect(byName["Obex"].risk).toBe("medium");
+    expect(byName["Obex"].sourceKey).toBe("sky-makercore:module:obex");
     expect(byName["Core (crypto vaults)"].risk).toBe("medium");
+    expect(byName["Core (crypto vaults)"].sourceKey).toBe("sky-makercore:module:core");
     expect(byName["Staking Engine"].risk).toBe("high");
+    expect(byName["Staking Engine"].sourceKey).toBe("sky-makercore:module:staked");
     expect(byName["Legacy RWA"].risk).toBe("low");
+    expect(byName["Legacy RWA"].sourceKey).toBe("sky-makercore:module:legacy-rwa");
   });
 
   it("stablecoins slice is the largest by percentage", () => {
@@ -170,6 +177,9 @@ describe("adaptSkyModules", () => {
     const otherSlice = slices.find((s) => s.name === "Other modules");
     expect(otherSlice).toBeDefined();
     expect(otherSlice!.risk).toBe("high");
+    expect(otherSlice!.sourceKey).toBe("sky-makercore:module:other-modules");
+    expect(otherSlice!.assetClass).toBe("other");
+    expect(otherSlice!.issuerOrObligor).toBe("Sky unknown module");
     expect(otherSlice!.pct).toBe(10);
   });
 });

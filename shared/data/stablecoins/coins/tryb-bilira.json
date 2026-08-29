@@ -18,17 +18,17 @@
     "cadence": "quarterly",
     "attestorJurisdiction": "Turkey",
     "latestReport": {
-      "periodEnd": "2026-05-21",
-      "publishedAt": "2026-05-21",
+      "periodEnd": "2026-08-17",
+      "publishedAt": "2026-08-17",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "SOL-3 adversarial verification",
+      "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Corpus independent TRYB assurance report - May 21, 2026",
-          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a325f5892dd1853f5b372cf_Bilira_Guvence_Raporu_May%C4%B1s_2026_ENG.pdf"
+          "label": "Corpus Denetim independent TRYB assurance report - August 17, 2026",
+          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf"
         },
         {
           "label": "BiLira audit reports index",
