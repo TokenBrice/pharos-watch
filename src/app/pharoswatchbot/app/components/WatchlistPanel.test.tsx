@@ -169,7 +169,7 @@ describe("WatchlistPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /\+500 bps/ }));
     fireEvent.click(screen.getByRole("button", { name: "Why USDC" }));
     fireEvent.click(screen.getByRole("button", { name: "Coverage USDC" }));
-    fireEvent.click(screen.getByText(/^Snooze USDC(?: · until .*)?$/).closest("summary")!);
+    fireEvent.click(screen.getByText(/^Snooze USDC/).closest("summary")!);
     fireEvent.click(screen.getByRole("button", { name: "Snooze USDC for 4h" }));
     fireEvent.click(screen.getByRole("button", { name: "Remove USDC" }));
     fireEvent.click(screen.getByRole("button", { name: "Undo remove USDC" }));
@@ -188,7 +188,7 @@ describe("WatchlistPanel", () => {
       subscriptions: [{ ...baseState.subscriptions[0], snoozeUntilTs: 9_000_000_000 }],
     };
     renderWatchlist({ state: coinSnoozed, onMutate });
-    fireEvent.click(screen.getByText(/^Snooze USDC(?: · until .*)?$/).closest("summary")!);
+    fireEvent.click(screen.getByText(/^Snooze USDC/).closest("summary")!);
     fireEvent.click(screen.getByRole("button", { name: "Clear USDC snooze" }));
     expect(onMutate).toHaveBeenLastCalledWith({ kind: "set-coin-snooze", stablecoinId: "usdc-circle", durationToken: "clear" });
 

@@ -326,6 +326,7 @@ const ALLOWED_KINDS = new Set<string>(CHART_ANNOTATION_KINDS);
 const ALLOWED_SEVERITIES = new Set(["low", "med", "high"]);
 const ALLOWED_FIELDS = new Set(["date", "kind", "label", "severity", "href", "note"]);
 const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape ISO timestamp; finite quantifiers, no backtracking ambiguity.
 const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 
 function invalid(coinId: string, index: number, message: string): never {
