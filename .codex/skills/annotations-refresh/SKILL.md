@@ -1,6 +1,6 @@
 ---
 name: annotations-refresh
-description: Drain the annotation-candidates queue (from `npm run candidates:annotations`) into shared/data/annotations/curated-annotations.ts. Use weekly during active event periods, monthly otherwise.
+description: Drain the annotation-candidates queue (from `npm run candidates:annotations`) into the per-coin JSON assets under shared/data/annotations/coins/. Use weekly during active event periods, monthly otherwise.
 user_invocable: true
 ---
 
@@ -9,8 +9,8 @@ user_invocable: true
 Editorial sweep of chart-annotation candidates. The producer
 (`scripts/maintenance/build-annotation-candidates.ts`) writes machine-found
 events to `agents/annotation-candidates.md`. This skill reads that queue and
-turns each row into a promote / drop / defer decision, updating
-`shared/data/annotations/curated-annotations.ts` for promoted rows.
+turns each row into a promote / drop / defer decision, updating the
+per-coin JSON file under `shared/data/annotations/coins/` for promoted rows.
 
 Promotion is always editorial. Do not auto-write annotations from the queue.
 
@@ -28,8 +28,9 @@ Promotion is always editorial. Do not auto-write annotations from the queue.
   carries a date, coin id, kind hint, severity hint, and a source pointer.
   The file footer `<!-- last_swept_at: YYYY-MM-DD -->` records the previous
   sweep date.
-- `shared/data/annotations/curated-annotations.ts` — current curated set.
-  Header comments enumerate the curation rules and severity vocabulary.
+- `shared/data/annotations/coins/<coin-id>.json` — current curated set,
+  one file per coin. `shared/data/annotations/curated-annotations.ts` is
+  the typed loader (validation rules + severity vocabulary in its header).
 - `shared/types/chart-annotation.ts` — `CHART_ANNOTATION_KINDS` and the
   `ChartAnnotation` shape (ts, kind, label ≤80 chars, severity?, href?).
 
@@ -42,7 +43,7 @@ empty" with the `last_swept_at` date and stop — no edits anywhere.
 
 1. Read `agents/annotation-candidates.md` from top to bottom. Group rows by
    date header so the older candidates surface first.
-2. Read `shared/data/annotations/curated-annotations.ts`. For each coin
+2. Read `shared/data/annotations/coins/<coin-id>.json` for each coin
    referenced in the queue, note the existing annotations so duplicates
    can be detected.
 3. Read `shared/types/chart-annotation.ts` to confirm the current
@@ -55,8 +56,9 @@ For each candidate, choose one of three actions:
 
 #### Promote
 
-Add an entry to `CURATED_ANNOTATIONS[<coin-id>]` in
-`shared/data/annotations/curated-annotations.ts`. Required when:
+Add an entry to `shared/data/annotations/coins/<coin-id>.json` (create
+the file and register its import in `curated-annotations.ts` if the coin
+has no annotations yet). Required when:
 
 - The event is a discrete, named occurrence (regulatory action, depeg
   pivot, launch, governance vote, methodology pivot, blacklist spike).
@@ -108,10 +110,10 @@ filing is rumored but not yet public). Re-evaluate next sweep.
 
 ### Step 3 — Apply the edits
 
-1. Edit `shared/data/annotations/curated-annotations.ts` with the
-   promoted rows. Use the existing entry style verbatim: inline
-   `// YYYY-MM-DD — short note` comment above each `ts:` line.
-2. Sort each coin's array by `ts` ascending if the new entry breaks the
+1. Edit `shared/data/annotations/coins/<coin-id>.json` with the promoted
+   rows. Entries use `{date: "YYYY-MM-DD", kind, label, severity?, href?,
+   note?}`; put the editorial rationale in `note`.
+2. Sort each coin's array by `date` ascending if the new entry breaks the
    order.
 3. Keep the labels ≤80 chars. If a long label is required, prefer a
    shorter `label` and put the long phrasing in the source-page title at

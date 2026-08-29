@@ -1,0 +1,6 @@
+[
+  {"date":"2023-07-15","kind":"governance","label":"GHO launch — Aave overcollateralized stablecoin","severity":"med","href":"https://cointelegraph.com/news/aave-protocol-launch-stablecoin-gho-ethereum-mainnet","note":"2023-07-15 — GHO launches on Ethereum mainnet after near-unanimous DAO vote"},
+  {"date":"2023-07-31","kind":"depeg","label":"Curve reentrancy contagion — GHO depeg low ~$0.96","severity":"high","href":"https://beincrypto.com/aave-stablecoin-gho-recovers-depeg-curve-hack/","note":"2023-07-31 — GHO drops to $0.96 during Curve reentrancy exploit window"},
+  {"date":"2023-10-01","kind":"governance","label":"GHO Liquidity Committee formed to manage peg","severity":"low","note":"2023-10 — GHO Liquidity Committee (GLC) formed to manage peg"},
+  {"date":"2024-04-01","kind":"governance","label":"GHO Stewards — flexible parameter governance","severity":"low","note":"2024-04 — GHO Stewards entity created for flexible parameter management"}
+]

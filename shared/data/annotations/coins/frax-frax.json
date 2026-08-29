@@ -1,0 +1,7 @@
+[
+  {"date":"2020-12-20","kind":"governance","label":"FRAX launch — first fractional-algorithmic stablecoin","severity":"low","note":"2020-12-20 — FRAX launches as first fractional-algorithmic stablecoin"},
+  {"date":"2022-09-07","kind":"governance","label":"Fraxlend launch — permissionless lending markets","severity":"low","note":"2022-09-07 — Fraxlend launches; permissionless lending markets for FRAX"},
+  {"date":"2023-02-23","kind":"governance","label":"FIP-188 — FRAX votes to fully collateralize (end algo backing)","severity":"med","note":"2023-02-23 — FIP-188 passes; FRAX moves to 100% collateral, ends algo backing"},
+  {"date":"2023-03-11","kind":"depeg","label":"USDC contagion via collateral — FRAX depeg low ~$0.88","severity":"high","note":"2023-03-11 — FRAX depegs to ~$0.88 via USDC-collateral contagion (SVB)"},
+  {"date":"2025-01-07","kind":"governance","label":"frxUSD rebrand — BlackRock BUIDL as enshrined custodian","severity":"med","note":"2025-01-07 — frxUSD rebrand; BlackRock BUIDL becomes enshrined custodian asset"}
+]

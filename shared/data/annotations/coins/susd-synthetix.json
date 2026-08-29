@@ -1,0 +1,4 @@
+[
+  {"date":"2025-04-18","kind":"governance","label":"SIP-420 lowers C-ratio to 200% — sUSD oversupply, depeg ~$0.68","severity":"high","href":"https://sips.synthetix.io/sips/sip-420/","note":"2025-04-18 — SIP-420 lowered C-ratio to 200%, causing sUSD oversupply and the first stage of the 2025 depeg saga."},
+  {"date":"2025-08-01","kind":"depeg","label":"sUSD ATL ~$0.21 — protocol-owned debt pool fallout","severity":"high","note":"2025-08-01 — sUSD all-time low ~$0.21 as protocol-owned debt mechanics played out post-SIP-420."}
+]

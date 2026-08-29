@@ -1,0 +1,4 @@
+[
+  {"date":"2024-02-19","kind":"governance","label":"USDe public mainnet launch","severity":"med","note":"2024-02-19 — USDe public mainnet launch"},
+  {"date":"2025-10-10","kind":"depeg","label":"Binance oracle glitch flash crash — USDe printed ~$0.65","severity":"high","note":"2025-10-10 — Binance perp oracle glitch during broader crypto crash; USDe printed ~$0.65 on Binance spot before recovering. Largest USDe peg stress to date."}
+]

@@ -1,0 +1,4 @@
+[
+  {"date":"2022-06-30","kind":"governance","label":"EURC launch on Ethereum","severity":"low","note":"2022-06-30 — Circle launches EURC (then EUROC) on Ethereum"},
+  {"date":"2024-07-01","kind":"regulatory","label":"Circle France EMI license — EURC MiCA-compliant","severity":"med","href":"https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica-eus-landmark-crypto-law","note":"2024-07-01 — Circle France obtains ACPR EMI license; EURC becomes MiCA-compliant"}
+]

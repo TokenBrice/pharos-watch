@@ -357,7 +357,7 @@ Automated backstops:
 
 Mint Authority coverage is currently a manual reviewed-or-waived gate because absence can be intentional for direct, non-variant assets. `npm run check:stablecoin-data` validates authored `mintAuthority` profiles against the schema and requires active variants to carry an explicit inherited/wrapper review, but it does not require every high-value direct coin to have one yet.
 
-The chart-annotation stream (`shared/data/annotations/curated-annotations.ts`) is not gated by CI because absence is editorially ambiguous (no event vs. unrecorded event). It is handled instead by the `agents/annotation-candidates.md` queue, the `npm run candidates:annotations` producer, the `annotations-refresh` skill, and the `npm run digest:curation` rollup. The orchestrator appends a `launch` candidate row to the queue when a coin enters Pharos via a recent launch (see Phase 5 step on recent-launch annotation candidates).
+The chart-annotation stream (`shared/data/annotations/coins/*.json`, loaded by `shared/data/annotations/curated-annotations.ts`) is not gated by CI because absence is editorially ambiguous (no event vs. unrecorded event). It is handled instead by the `agents/annotation-candidates.md` queue, the `npm run candidates:annotations` producer, the `annotations-refresh` skill, and the `npm run digest:curation` rollup. The orchestrator appends a `launch` candidate row to the queue when a coin enters Pharos via a recent launch (see Phase 5 step on recent-launch annotation candidates).
 
 ---
 
@@ -735,27 +735,34 @@ Use `tags` sparingly for editorial categorization, not for core classification.
 
 ### 6d. Historical chart annotations (optional)
 
-When a coin has notable historical events that the live tape can't recover (regulatory bans, market-wide shocks, mainnet launches, methodology pivots), curate them into `shared/data/annotations/curated-annotations.ts`. These render as dashed vertical markers on `PegDeviationChart` + `McapChart` when `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is on.
+When a coin has notable historical events that the live tape can't recover (regulatory bans, market-wide shocks, mainnet launches, methodology pivots), curate them into `shared/data/annotations/coins/<stablecoin-id>.json`. The typed loader at `shared/data/annotations/curated-annotations.ts` converts the ISO dates to Unix milliseconds for the runtime API. These render as dashed vertical markers on `PegDeviationChart` + `McapChart` when `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is on.
 
-Schema (mirrors `shared/types/chart-annotation.ts`):
+Authoring schema (the loader maps `date` to the runtime `ts` field; `note` is
+editorial metadata retained in the source asset):
 
-```ts
+```json
 {
-  ts: Date.UTC(YYYY, monthIdx, day), // months are 0-indexed
-  kind: "depeg" | "mint-burn-spike" | "blacklist-surge" | "exploit" | "governance" | "regulatory" | "methodology-change",
-  label: string, // ≤80 chars
-  severity?: "low" | "med" | "high",
-  href?: string, // primary source — issuer post-mortem, regulator filing, methodology changelog
+  "date": "YYYY-MM-DD",
+  "kind": "depeg",
+  "label": "...",
+  "severity": "med",
+  "href": "https://...",
+  "note": "..."
 }
 ```
+
+Use a full UTC ISO timestamp instead of the date-only form for sub-day
+precision. `kind` must be one of the values in `CHART_ANNOTATION_KINDS`,
+`label` is limited to 80 characters, `href` should be a primary source, and
+`note` retains the editorial rationale.
 
 Curation rules:
 
 - One entry per discrete event (don't collapse multi-day depegs).
 - Use the price-bottom / supply-pivot timestamp, not the press cycle.
 - Severity follows the tape vocabulary: `high` for grade-impacting events, `med` for non-fatal stress, `low` for context.
-- Add an inline `// YYYY-MM-DD — short note` comment on each `ts:` line so the date is legible at review time.
-- Sort each coin's array by `ts` ascending.
+- Keep the editorial rationale in the optional `note` field rather than a source comment.
+- Sort each coin's array by `date` ascending.
 - Do NOT invent dates. Drop a candidate rather than guess.
 
 Coverage policy: top-50 coins by market-cap target ≥1 annotation each when a meaningful historical event exists. Coins without notable events stay uncurated (empty / absent key is the correct state). The flag-flip gate for `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is ≥10 annotations across the top 4 coins by mcap (`usdc-circle`, `usdt-tether`, `dai-makerdao`, `usde-ethena`), enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.

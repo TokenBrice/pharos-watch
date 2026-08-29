@@ -1,0 +1,5 @@
+[
+  {"date":"2020-03-12","kind":"depeg","label":"Black Thursday market shock — USDC dip ~$0.97","severity":"med","note":"2020-03-12 — Black Thursday crypto-wide crash; USDC briefly to ~$0.97"},
+  {"date":"2023-03-11","kind":"depeg","label":"SVB reserve exposure — USDC depeg low ~$0.87","severity":"high","href":"https://www.circle.com/blog/an-update-on-usdc-and-silicon-valley-bank","note":"2023-03-11 — Single pin for the SVB cluster (closure 03-10 → depeg low 03-11 → federal backstop 03-13). The chart already shows the recovery."},
+  {"date":"2024-06-30","kind":"regulatory","label":"MiCA stablecoin regime in force — Circle EMI-authorized in EU","severity":"med","note":"2024-06-30 — MiCA stablecoin (ART/EMT) provisions take effect; Circle became the first global issuer with an EU EMI license a day later. Marks the start of regulated EU issuance for USDC."}
+]
