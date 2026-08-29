@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinData } from "@shared/types";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { buildStablecoinDetailHeroViewModel } from "../stablecoin-detail-hero-view-model";
 import { buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 import {
   makeBuildStablecoinDetailViewModelParams,
@@ -51,6 +54,48 @@ describe("stablecoin detail view-model builder", () => {
     if (viewModel.status !== "ready") return;
 
     expect(viewModel.reportCardUpdatedAt).toBe(1_700_000_123_000);
+  });
+
+  it("builds the ready hero through the pure hero projection", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether");
+    expect(coin).toBeDefined();
+
+    const viewModel = buildStablecoinDetailViewModel(
+      makeReadyDetailParams({ id: "usdt-tether", coin: coin! }),
+    );
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+
+    const expectedHero = buildStablecoinDetailHeroViewModel({
+      coin: viewModel.coin,
+      coinData: viewModel.coinData,
+      logoSrc: viewModel.logoSrc,
+      isNavToken: viewModel.isNavToken,
+      mcap: viewModel.mcap,
+      supply: viewModel.supply,
+      prevDay: viewModel.prevDay,
+      prevWeek: viewModel.prevWeek,
+      prevMonth: viewModel.prevMonth,
+      performanceVsUsd1y: viewModel.performanceVsUsd1y,
+      pegRef: viewModel.pegRef,
+      deviationBps: viewModel.deviationBps,
+      gaugeDeviationBps: viewModel.gaugeDeviationBps,
+      pegReferenceUnavailable: viewModel.pegReferenceUnavailable,
+      pegScoreResult: viewModel.pegScoreResult,
+      liquidityData: viewModel.liquidityData,
+      yieldRanking: viewModel.yieldRanking,
+      stressSignal: viewModel.stressSignal,
+      reportCard: viewModel.reportCard ?? null,
+      verdict: viewModel.verdict,
+      variantParent: viewModel.variantParent,
+      variantKind: viewModel.coin.variantKind ?? null,
+      resolvedMechanismArchetype: resolveMechanismArchetype(viewModel.coin, CLIENT_TRACKED_META_BY_ID),
+      mintAuthority: viewModel.mintAuthority,
+      redemptionBackstop: viewModel.redemptionBackstop ?? null,
+    });
+
+    expect(viewModel.hero).toEqual(expectedHero);
   });
 
   it("uses only compact mint-authority summaries for client detail presentation", () => {

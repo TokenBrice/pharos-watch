@@ -6,6 +6,7 @@ import {
 import {
   buildMintAuthorityDetailViewModel,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-hero-view-model";
 import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
 import {
   buildDetailFeatureSnapshot,
@@ -23,9 +24,7 @@ import { getReserves } from "@shared/lib/reserve-templates";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { deriveStablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 
-export {
-  buildStablecoinDetailHeroViewModel,
-} from "@/lib/stablecoin-detail-hero-view-model";
+export { buildStablecoinDetailHeroViewModel };
 export type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-hero-view-model";
 export type { BuildStablecoinDetailViewModelParams, StablecoinDetailSummary, StablecoinDetailViewModel } from "@/lib/stablecoin-detail-view-model-types";
 
@@ -54,6 +53,12 @@ export function buildStablecoinDetailViewModel({
   const resolvedSupplyHistory = supplyHistory.data ?? [];
   const market = buildDetailMarketSnapshot(coin, coinData, resolvedSupplyHistory, supplemental.nowMs ?? Date.now());
   const pegPrice = buildDetailPegPriceSnapshot(id, coin, coinData, listData, pegSummary.data);
+  const pegScoreResult = pegPrice.pegScoreResult
+    ? {
+        ...pegPrice.pegScoreResult,
+        eventCount: pegPrice.pegScoreResult.eventCount ?? 0,
+      }
+    : null;
   const liquidityData = dexLiquidity.data?.[id];
   const redemptionBackstop = redemptionBackstops.data?.coins?.[id];
   const reportCard = reportCards.data?.cards.find((candidate) => candidate.id === id);
@@ -66,6 +71,7 @@ export function buildStablecoinDetailViewModel({
   const variantRelationship = getClientVariantRelationship(id);
   const variantParent = getClientVariantParent(id);
   const childVariants = getClientVariants(id);
+  const resolvedMechanismArchetype = resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID);
   const mintAuthority = buildMintAuthorityDetailViewModel(
     coin,
     reportCard
@@ -78,13 +84,40 @@ export function buildStablecoinDetailViewModel({
   const verdict = deriveStablecoinVerdict({
     status: coin.status,
     reportCardGrade: reportCard?.grade ?? null,
-    pegScore: isNavToken ? null : pegPrice.pegScoreResult?.pegScore ?? null,
+    pegScore: isNavToken ? null : pegScoreResult?.pegScore ?? null,
     dewsBand: stressBand,
-    mechanismArchetype: resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID) ?? undefined,
+    mechanismArchetype: resolvedMechanismArchetype ?? undefined,
     governance: coin.flags.governance,
     yieldBearing: coin.flags.yieldBearing ?? false,
     navToken: isNavToken,
-    activeDepeg: !isNavToken && pegPrice.pegScoreResult?.activeDepeg === true,
+    activeDepeg: !isNavToken && pegScoreResult?.activeDepeg === true,
+  });
+  const hero = buildStablecoinDetailHeroViewModel({
+    coin,
+    coinData,
+    logoSrc,
+    isNavToken,
+    mcap: market.mcap,
+    supply: market.supply,
+    prevDay: market.prevDay,
+    prevWeek: market.prevWeek,
+    prevMonth: market.prevMonth,
+    performanceVsUsd1y: market.performanceVsUsd1y,
+    pegRef: pegPrice.pegRef,
+    deviationBps: pegPrice.deviationBps,
+    gaugeDeviationBps: pegPrice.gaugeDeviationBps,
+    pegReferenceUnavailable: pegPrice.pegReferenceUnavailable,
+    pegScoreResult,
+    liquidityData,
+    yieldRanking: featureAvailability.yieldRanking,
+    stressSignal: featureAvailability.stressSignal,
+    reportCard: reportCard ?? null,
+    verdict,
+    variantParent,
+    variantKind: coin.variantKind ?? null,
+    resolvedMechanismArchetype,
+    mintAuthority,
+    redemptionBackstop: redemptionBackstop ?? null,
   });
 
   return {
@@ -109,7 +142,7 @@ export function buildStablecoinDetailViewModel({
     gaugeDeviationBps: pegPrice.gaugeDeviationBps,
     pegReferenceUnavailable: pegPrice.pegReferenceUnavailable,
     isNavToken,
-    pegScoreResult: pegPrice.pegScoreResult,
+    pegScoreResult,
     consensusSources: pegPrice.consensusSources,
     agreeSources: pegPrice.agreeSources,
     dexPriceCheck: pegPrice.dexPriceCheck,
@@ -130,5 +163,6 @@ export function buildStablecoinDetailViewModel({
     featureStates,
     verdict,
     mintAuthority,
+    hero,
   };
 }

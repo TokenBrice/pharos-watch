@@ -272,6 +272,7 @@ function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
       label: "Uncategorized",
     },
     mintAuthority: { status: "not-reviewed" as const },
+    hero: { signalRailItems: [] } as never,
     handleRetryAll: vi.fn(),
     ...overrides,
   };
