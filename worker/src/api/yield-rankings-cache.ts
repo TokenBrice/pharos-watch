@@ -56,48 +56,28 @@ function buildYieldMethodology(asOf: number) {
   });
 }
 
-function resolveYieldPublicationMetadata(
-  payload: YieldRankingsResponse,
-  cached: { updatedAt: number },
-): YieldRankingsResponse["publication"] {
-  if (payload.publication) return payload.publication;
-
-  const generationIds = new Set(
-    payload.rankings
-      .map((row) => row.publicationGenerationId)
-      .filter((value): value is string => typeof value === "string" && value.length > 0),
+function hasYieldPublicationContract(payload: YieldRankingsResponse): boolean {
+  const publication = payload.publication;
+  return (
+    publication != null &&
+    typeof publication.generationId === "string" &&
+    publication.generationId.length > 0 &&
+    typeof publication.updatedAt === "number" &&
+    Number.isFinite(publication.updatedAt) &&
+    typeof publication.cutoffAt === "number" &&
+    Number.isFinite(publication.cutoffAt) &&
+    publication.schemaVersion === 1 &&
+    publication.status === "published"
   );
-  if (generationIds.size !== 1) return payload.publication;
-
-  const updatedAt = finiteNumber(payload.updatedAt) ?? cached.updatedAt;
-  return {
-    generationId: [...generationIds][0] ?? null,
-    updatedAt,
-    cutoffAt: updatedAt,
-    schemaVersion: 1,
-    status: "published",
-  };
 }
 
 function normalizeYieldRankingsContract(
   payload: YieldRankingsResponse,
   cached: { updatedAt: number },
 ): YieldRankingsResponse {
-  const publication = resolveYieldPublicationMetadata(payload, cached);
-  const generationId =
-    typeof publication?.generationId === "string" && publication.generationId.length > 0
-      ? publication.generationId
-      : null;
-
   return {
     ...payload,
-    ...(publication ? { publication } : {}),
     methodology: payload.methodology ?? buildYieldMethodology(finiteNumber(payload.updatedAt) ?? cached.updatedAt),
-    rankings: payload.rankings.map((row, index) => ({
-      ...row,
-      ...(row.publicationGenerationId === undefined && generationId ? { publicationGenerationId: generationId } : {}),
-      ...(row.publishedRank === undefined && generationId ? { publishedRank: index + 1 } : {}),
-    })),
   };
 }
 
@@ -666,6 +646,9 @@ function createYieldRankingsCacheHandler(
     schema: YieldRankingsResponseSchema,
     malformedMessage: "Cached yield-rankings payload is malformed",
     transform: async (payload, { db, cached }) => {
+      if (!hasYieldPublicationContract(payload as YieldRankingsResponse)) {
+        return errorResponse(503, "Cached yield-rankings payload is malformed");
+      }
       const validatedPayload = normalizeYieldRankingsContract(payload as YieldRankingsResponse, cached);
       try {
         const snapshot = await computeSafetyScoresSnapshot(db);

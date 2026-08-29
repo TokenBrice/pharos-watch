@@ -108,6 +108,8 @@ const v748RankingsPayload = {
         benchmarkIsProxy: false,
         anomalies: [],
       },
+      publicationGenerationId: `yield-${V748_RANKINGS_UPDATED_AT}`,
+      publishedRank: 1,
     },
   ],
   riskFreeRate: 4.13,
@@ -129,6 +131,13 @@ const v748RankingsPayload = {
   scalingFactor: 8,
   medianApy: 3.55,
   updatedAt: V748_RANKINGS_UPDATED_AT,
+  publication: {
+    generationId: `yield-${V748_RANKINGS_UPDATED_AT}`,
+    updatedAt: V748_RANKINGS_UPDATED_AT,
+    cutoffAt: V748_RANKINGS_UPDATED_AT,
+    schemaVersion: 1,
+    status: "published",
+  },
   provenance: {
     selectionMethod: "confidence-weighted",
     benchmark: {
@@ -354,6 +363,13 @@ describe("handleYieldRankings", () => {
       scalingFactor: 8,
       medianApy: 4.2,
       updatedAt,
+      publication: {
+        generationId: `yield-${updatedAt}`,
+        updatedAt,
+        cutoffAt: updatedAt,
+        schemaVersion: 1,
+        status: "published",
+      },
       provenance: {
         selectionMethod: "confidence-weighted",
         benchmark: {
@@ -670,32 +686,17 @@ describe("handleYieldRankings", () => {
     });
   });
 
-  it("parses a production-shaped v7.48 old rankings payload through the schema and handler", async () => {
-    expect(YieldRankingsResponseSchema.parse(v748RankingsPayload).rankings[0]?.publishedRank).toBeUndefined();
+  it("returns 503 when cached rankings lack the publication contract", async () => {
+    const { publication: _publication, ...legacyPayload } = v748RankingsPayload;
 
-    const db = makeCacheDb(v748RankingsPayload, V748_RANKINGS_UPDATED_AT);
+    const db = makeCacheDb(legacyPayload, V748_RANKINGS_UPDATED_AT);
     const res = await handleYieldRankings(db);
-    const body = await readJsonResponse(res, 200) as YieldRankingsResponse & { _meta: { ageSeconds: number } };
 
-    expect(body.rankings).toHaveLength(1);
-    expect(body.rankings[0]?.publishedRank).toBeUndefined();
-    // The canonical safety ladder (yield v8.33) assesses every external
-    // opportunity, so a legacy payload that published no source risk gains an
-    // explicitly *unrated* opportunity contract naming its missing evidence —
-    // and nothing else. No score is invented from the absence.
-    expect(body.rankings[0]?.sourceRisk).toEqual({
-      underlyingSafetyScore: 40,
-      opportunityRisk: {
-        opportunityClass: "lending",
-        underlyingSafetyScore: 40,
-        opportunitySafetyScore: null,
-        opportunitySafetyPenalty: null,
-        venueReviewed: false,
-        missingCriticalEvidence: ["venue-review"],
-      },
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: "Cached yield-rankings payload is malformed",
     });
-    expect(body.publication).toBeUndefined();
-    expect(body.methodology?.version).toBe(YIELD_METHODOLOGY_VERSION);
+    expect(computeSafetyScoresSnapshotMock).not.toHaveBeenCalled();
   });
 
   it("uses nested sourceRiskPenalty when live safety hydration recomputes PYS", async () => {
@@ -971,7 +972,7 @@ describe("handleYieldRankings", () => {
     });
   });
 
-  it("synthesizes publication metadata from generation-aware rows and preserves nested source risk", async () => {
+  it("preserves the explicit publication contract and nested source risk without row synthesis", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const rewardHeavyRisk = buildSourceRiskGoldenFixture("reward-heavy", {
       sourceRiskScore: 76,
@@ -979,15 +980,26 @@ describe("handleYieldRankings", () => {
       venueRiskTier: "medium",
     });
     const staleSourceRisk = buildSourceRiskGoldenFixture("stale-source-age");
+    const {
+      publicationGenerationId: _publicationGenerationId,
+      publishedRank: _publishedRank,
+      ...baseRow
+    } = v748RankingsPayload.rankings[0];
     const payload = {
       ...v748RankingsPayload,
+      publication: {
+        generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+        updatedAt,
+        cutoffAt: updatedAt,
+        schemaVersion: 1,
+        status: "published" as const,
+      },
       rankings: [
         {
-          ...v748RankingsPayload.rankings[0],
+          ...baseRow,
           id: "rated-coin",
           symbol: "RATE",
           name: "Rated Coin",
-          publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
           sourceRisk: rewardHeavyRisk,
           altSources: [
             {
@@ -1011,8 +1023,6 @@ describe("handleYieldRankings", () => {
       cutoffAt: updatedAt,
     });
     expect(body.rankings[0]).toMatchObject({
-      publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
-      publishedRank: 1,
       sourceRisk: {
         sourceRiskPenalty: rewardHeavyRisk.sourceRiskPenalty,
         sourceRiskScore: 76,
@@ -1021,6 +1031,8 @@ describe("handleYieldRankings", () => {
         venueRiskTier: "medium",
       },
     });
+    expect(body.rankings[0]?.publicationGenerationId).toBeUndefined();
+    expect(body.rankings[0]?.publishedRank).toBeUndefined();
     expect(body.rankings[0]?.altSources[0]?.sourceRisk).toMatchObject({
       sourceRiskPenalty: staleSourceRisk.sourceRiskPenalty,
       sourceAgeSeconds: staleSourceRisk.sourceAgeSeconds,
@@ -1327,6 +1339,13 @@ describe("handleYieldRankings", () => {
       scalingFactor: 8,
       medianApy: 4.2,
       updatedAt,
+      publication: {
+        generationId: `yield-${updatedAt}`,
+        updatedAt,
+        cutoffAt: updatedAt,
+        schemaVersion: 1,
+        status: "published",
+      },
       provenance: null,
     }, updatedAt);
 

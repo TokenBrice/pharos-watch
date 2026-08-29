@@ -15,6 +15,7 @@ import {
   materializeYieldHistoryDaily,
   pruneYieldTables,
 } from "../yield-sync/publication";
+import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
 import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
 import { publishYieldRowsAtomically } from "../yield-sync/publication-atomic-batch";
 import {
@@ -90,6 +91,7 @@ describe("publishYieldCoordinatorResults", () => {
     evaluatedSources?: EvaluatedYieldSource[];
     bestSourceKeyByCoin?: Map<string, string>;
     degradationReasons?: string[];
+    previousYieldPublicationSnapshot?: PreviousYieldPublicationSnapshot;
   }) {
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const source = makeEvaluatedSource();
@@ -108,6 +110,11 @@ describe("publishYieldCoordinatorResults", () => {
       rowsRejected: 0,
       divergenceFlags: 0,
       sourceSwitches: 0,
+      previousYieldPublicationSnapshot: overrides.previousYieldPublicationSnapshot ?? {
+        status: "missing",
+        rankings: [],
+        malformed: false,
+      },
     };
   }
 

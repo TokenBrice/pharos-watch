@@ -20,6 +20,14 @@ import {
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
+import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
+
+function dlPoolsCacheRow(
+  pools: Parameters<typeof buildDlStablecoinPoolsCache>[0],
+  updatedAt: number,
+) {
+  return cacheRow(buildDlStablecoinPoolsCache(pools, updatedAt), updatedAt);
+}
 
 function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
   return createFixtureMockD1([
@@ -62,7 +70,7 @@ describe("syncYieldData", () => {
     });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-sdai-zero",
               tvlUsd: 500_000_000,
@@ -129,7 +137,7 @@ describe("syncYieldData", () => {
     });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([], nowSec),
+      "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -191,7 +199,7 @@ describe("syncYieldData", () => {
     });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-sdai-zero",
               tvlUsd: 500_000_000,
@@ -804,7 +812,7 @@ describe("syncYieldData", () => {
     ], { createDb: fixtureMockD1 });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
         makeDlYieldPool({
           tvlUsd: 1_000_000_000,
           apy: 5.2,

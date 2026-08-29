@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { toYieldBenchmarkRegistry, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { buildYieldSourceProvenance } from "./provenance";
-import { toErrorMessage } from "../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   attachYieldPublicationMetadata,
   buildYieldPublicationGenerationId,
@@ -13,6 +13,7 @@ import {
   repairPublishedYieldGenerationFromCache,
   stageYieldPublicationGeneration,
   validateYieldRankingsPayloadForPublish,
+  type PreviousYieldPublicationSnapshot,
 } from "./publication";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import type { CronResult } from "../../lib/cron-logger";
@@ -83,6 +84,7 @@ export async function publishYieldCoordinatorResults(params: {
   rowsRejected: number;
   divergenceFlags: number;
   sourceSwitches: number;
+  previousYieldPublicationSnapshot: PreviousYieldPublicationSnapshot;
 }): Promise<
   | { ok: false; result: CronResult }
   | {
@@ -113,7 +115,10 @@ export async function publishYieldCoordinatorResults(params: {
   });
   throwIfAborted(params.signal);
 
-  const previewPublishability = await validateYieldRankingsPayloadForPublish(params.db, stagedRankingsPayload);
+  const previewPublishability = await validateYieldRankingsPayloadForPublish(
+    stagedRankingsPayload,
+    params.previousYieldPublicationSnapshot,
+  );
   if (!previewPublishability.ok) {
     params.degradationReasons.push(previewPublishability.reason ?? "schema-validation-failed");
     await finalizeYieldPublicationGeneration(params.db, {
@@ -157,6 +162,7 @@ export async function publishYieldCoordinatorResults(params: {
       dlPoolsMeta: params.dlPoolsMeta,
       generationId,
       rankingsPayload: publishedRankingsPayload,
+      previousYieldPublicationSnapshot: params.previousYieldPublicationSnapshot,
     });
   } catch (error) {
     rethrowIfAborted(error, params.signal);

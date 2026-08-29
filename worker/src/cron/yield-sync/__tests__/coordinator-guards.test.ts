@@ -1,24 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mocks = vi.hoisted(() => ({
-  getCache: vi.fn(),
-  readPreviousYieldRankingsCount: vi.fn(),
-}));
-
-vi.mock("../../../lib/db-cache", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/db-cache")>();
-  return { ...actual, getCache: mocks.getCache };
-});
-
-vi.mock("../publication", () => ({
-  readPreviousYieldRankingsCount: mocks.readPreviousYieldRankingsCount,
-}));
+import { describe, expect, it } from "vitest";
 
 import {
   detectYieldQualityMixRegression,
   guardPublishedYieldCoverage,
   summarizeYieldPublicationQualityMix,
 } from "../coordinator-guards";
+import type { PreviousYieldPublicationSnapshot } from "../publication";
 
 function ranking(
   id: string,
@@ -40,16 +27,16 @@ function discoveredRankings(count: number, prefix = "discovered") {
   return Array.from({ length: count }, (_, index) => ranking(`${prefix}-${index}`, "defillama-auto", "discovered"));
 }
 
-function seedPreviousCounts(totalCount: number) {
-  mocks.readPreviousYieldRankingsCount
-    .mockResolvedValueOnce({ count: 0, malformed: false })
-    .mockResolvedValueOnce({ count: 0, malformed: false })
-    .mockResolvedValueOnce({ count: totalCount, malformed: false });
+function previousSnapshot(
+  rankings: readonly ReturnType<typeof ranking>[],
+  status: PreviousYieldPublicationSnapshot["status"] = "ok",
+): PreviousYieldPublicationSnapshot {
+  return {
+    status,
+    rankings,
+    malformed: status !== "missing" && status !== "ok",
+  };
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("Yield publication quality-mix guard", () => {
   it("classifies direct/curated separately from modeled and fallback rows", () => {
@@ -69,47 +56,47 @@ describe("Yield publication quality-mix guard", () => {
     });
   });
 
-  it("rejects a major quality substitution while total count stays level", async () => {
-    const previousRankings = directRankings(10);
-    const currentRankings = [...directRankings(5), ...modeledRankings(5)];
-    seedPreviousCounts(previousRankings.length);
-    mocks.getCache.mockResolvedValue({
-      value: JSON.stringify({ rankings: previousRankings }),
-      updatedAt: 1,
-    });
-
+  it.each([
+    {
+      label: "major quality substitution",
+      previous: directRankings(10),
+      current: [...directRankings(5), ...modeledRankings(5)],
+      expectedMetadata: JSON.stringify({
+        reason: "published-source-quality-mix-regression",
+        qualityMixReasons: ["direct-curated-collapse", "fallback-modeled-substitution"],
+        previousPublishedDirectCuratedCount: 10,
+        currentPublishedDirectCuratedCount: 5,
+        publishedDirectCuratedCountDelta: -5,
+        minimumDirectCuratedCount: 6,
+        previousPublishedFallbackModeledCount: 0,
+        currentPublishedFallbackModeledCount: 5,
+        publishedFallbackModeledCountDelta: 5,
+        minimumFallbackModeledIncrease: 3,
+        previousPublishedRankingCount: 10,
+        currentPublishedRankingCount: 10,
+        publishedRankingCountDelta: 0,
+      }),
+    },
+    {
+      label: "conservative quality floor",
+      previous: directRankings(10),
+      current: [...directRankings(6), ...modeledRankings(4)],
+      expectedMetadata: null,
+    },
+  ])("keeps $label snapshot metadata stable", async ({ previous, current, expectedMetadata }) => {
     const guarded = await guardPublishedYieldCoverage({
-      db: {} as D1Database,
-      previewRankingsPayload: { rankings: currentRankings },
+      previousYieldPublicationSnapshot: previousSnapshot(previous),
+      previewRankingsPayload: { rankings: current },
       yieldCoinIdSet: new Set(),
       opportunityCoinIdSet: new Set(),
     });
 
-    expect(guarded.result?.status).toBe("degraded");
-    const metadata = JSON.parse(guarded.result?.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata).toMatchObject({
-      reason: "published-source-quality-mix-regression",
-      qualityMixReasons: ["direct-curated-collapse", "fallback-modeled-substitution"],
-      previousPublishedDirectCuratedCount: 10,
-      currentPublishedDirectCuratedCount: 5,
-      publishedDirectCuratedCountDelta: -5,
-      minimumDirectCuratedCount: 6,
-      previousPublishedFallbackModeledCount: 0,
-      currentPublishedFallbackModeledCount: 5,
-      publishedFallbackModeledCountDelta: 5,
-      minimumFallbackModeledIncrease: 3,
-      previousPublishedRankingCount: 10,
-      currentPublishedRankingCount: 10,
-      publishedRankingCountDelta: 0,
-    });
-    expect((metadata.qualityMixReasons as unknown[]).length).toBeLessThanOrEqual(2);
-  });
-
-  it("allows the conservative 60 percent quality floor", () => {
-    const previous = summarizeYieldPublicationQualityMix(directRankings(10));
-    const current = summarizeYieldPublicationQualityMix([...directRankings(6), ...modeledRankings(4)]);
-
-    expect(detectYieldQualityMixRegression(previous, current)).toBeNull();
+    if (expectedMetadata == null) {
+      expect(guarded.result).toBeNull();
+    } else {
+      expect(guarded.result?.status).toBe("degraded");
+      expect(guarded.result?.metadata).toBe(expectedMetadata);
+    }
   });
 
   it("does not fire when fallback/model substitution is below the material floor", () => {
@@ -128,5 +115,88 @@ describe("Yield publication quality-mix guard", () => {
     const current = summarizeYieldPublicationQualityMix(modeledRankings(9));
 
     expect(detectYieldQualityMixRegression(previous, current)).toBeNull();
+  });
+});
+
+describe("Yield publication coverage guard snapshots", () => {
+  it.each([
+    {
+      label: "missing",
+      snapshot: previousSnapshot([], "missing"),
+    },
+    {
+      label: "malformed JSON",
+      snapshot: previousSnapshot([], "malformed-json"),
+    },
+    {
+      label: "empty",
+      snapshot: previousSnapshot([]),
+    },
+    {
+      label: "small",
+      snapshot: previousSnapshot(directRankings(4)),
+    },
+  ])("keeps the $label baseline non-blocking", async ({ snapshot }) => {
+    const guarded = await guardPublishedYieldCoverage({
+      previousYieldPublicationSnapshot: snapshot,
+      previewRankingsPayload: { rankings: [] },
+      yieldCoinIdSet: new Set(),
+      opportunityCoinIdSet: new Set(),
+    });
+
+    expect(guarded.result).toBeNull();
+    expect(guarded.previousPublishedYieldBearingCount).toBe(0);
+    expect(guarded.previousPublishedOpportunityCount).toBe(0);
+    expect(guarded.previousPublishedRankingCount).toBe(snapshot.status === "ok" ? snapshot.rankings.length : 0);
+  });
+
+  it.each([
+    {
+      label: "severe total shrink",
+      previous: directRankings(10, "previous"),
+      current: directRankings(3, "current"),
+      yieldCoinIdSet: new Set<string>(),
+      opportunityCoinIdSet: new Set<string>(),
+      reason: "published-total-coverage-regression",
+      expectedMetadata: JSON.stringify({
+        reason: "published-total-coverage-regression",
+        previousPublishedYieldBearingCount: 0,
+        currentPublishedYieldBearingCount: 0,
+        previousPublishedOpportunityCount: 0,
+        currentPublishedOpportunityCount: 0,
+        previousPublishedRankingCount: 10,
+        currentPublishedRankingCount: 3,
+        publishedRankingCountDelta: -7,
+      }),
+    },
+    {
+      label: "yield-bearing cohort regression",
+      previous: directRankings(10, "yield"),
+      current: directRankings(5, "yield"),
+      yieldCoinIdSet: new Set(directRankings(10, "yield").map((row) => row.id)),
+      opportunityCoinIdSet: new Set<string>(),
+      reason: "published-yield-coverage-regression",
+      expectedMetadata: JSON.stringify({
+        reason: "published-yield-coverage-regression",
+        previousPublishedYieldBearingCount: 10,
+        currentPublishedYieldBearingCount: 5,
+        previousPublishedOpportunityCount: 0,
+        currentPublishedOpportunityCount: 0,
+        previousPublishedRankingCount: 10,
+        currentPublishedRankingCount: 5,
+        publishedRankingCountDelta: -5,
+      }),
+    },
+  ])("keeps $label metadata stable", async ({ previous, current, yieldCoinIdSet, opportunityCoinIdSet, reason, expectedMetadata }) => {
+    const guarded = await guardPublishedYieldCoverage({
+      previousYieldPublicationSnapshot: previousSnapshot(previous),
+      previewRankingsPayload: { rankings: current },
+      yieldCoinIdSet,
+      opportunityCoinIdSet,
+    });
+
+    expect(guarded.result?.status).toBe("degraded");
+    expect(guarded.result?.metadata).toBe(expectedMetadata);
+    expect(JSON.parse(guarded.result?.metadata ?? "{}")).toMatchObject({ reason });
   });
 });

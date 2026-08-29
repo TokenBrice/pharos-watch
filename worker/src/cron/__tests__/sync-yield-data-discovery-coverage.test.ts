@@ -29,6 +29,14 @@ import {
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
+import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
+
+function dlPoolsCacheRow(
+  pools: Parameters<typeof buildDlStablecoinPoolsCache>[0],
+  updatedAt: number,
+) {
+  return cacheRow(buildDlStablecoinPoolsCache(pools, updatedAt), updatedAt);
+}
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -240,7 +248,7 @@ describe("syncYieldData", () => {
     poolMap["100"] = "pool-sdai-native";
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               tvlUsd: 84_819_532,
               apy: 4.45953,
@@ -568,7 +576,7 @@ describe("syncYieldData", () => {
     } as never);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-placeholder",
               project: "aave-v3",
@@ -625,7 +633,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-u-venus",
               chain: "BSC",
@@ -712,7 +720,7 @@ describe("syncYieldData", () => {
     } as never);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-xaut-yo",
               project: "yo-protocol",
@@ -750,7 +758,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-u-venus",
               chain: "BSC",

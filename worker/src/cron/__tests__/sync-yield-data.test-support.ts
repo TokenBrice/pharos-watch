@@ -264,6 +264,12 @@ function makeYieldHistoryTables(historyRows: YieldHistoryFixtureRow[]): MockTabl
     { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
     { match: "pharos:yield-sync:ownership-handoff-delete", rows: [] },
     { match: "source_switch = 0", rows: [] },
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["yield-rankings"],
+      rows: [],
+      first: null,
+    },
     { match: "cache", rows: [] },
     { match: "yield_data", rows: [] },
     { match: "yield_history", rows: historyRows },

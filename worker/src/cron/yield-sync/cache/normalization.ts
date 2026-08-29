@@ -8,7 +8,7 @@ import {
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
 } from "../benchmarks";
-import { toErrorMessage } from "../../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 // ---------------------------------------------------------------------------
 // Coercion primitives shared by every cache submodule.

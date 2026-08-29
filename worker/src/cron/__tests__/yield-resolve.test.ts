@@ -16,6 +16,7 @@ import {
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
+import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import {
   appendOptionalYieldCandidate,
   appendPoolFamilyYieldSources,
@@ -35,9 +36,10 @@ describe("syncYieldData publication sentinels", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb();
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "yield-rankings": null,
+      "dl-stablecoin-pools": cacheRow(buildDlStablecoinPoolsCache([
         makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
-      ], nowSec),
+      ], nowSec), nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -75,10 +77,11 @@ describe("syncYieldData publication sentinels", () => {
       const nowSec = Math.floor(Date.now() / 1000);
       const db = makeDb();
       installYieldCacheReader(vi.mocked(fixtureGetCache), {
+        "yield-rankings": null,
         risk_free_rate: cacheRow("5.0", nowSec),
-        "dl-stablecoin-pools": cacheRow([
+        "dl-stablecoin-pools": cacheRow(buildDlStablecoinPoolsCache([
           makeDlYieldPool({ apy: 4.5, apyBase: 4.5, apyMean30d: 4.5 }),
-        ], nowSec),
+        ], nowSec), nowSec),
       });
       vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
       fixtureMockFetch([]);
@@ -99,9 +102,10 @@ describe("syncYieldData publication sentinels", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb();
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "yield-rankings": null,
+      "dl-stablecoin-pools": cacheRow(buildDlStablecoinPoolsCache([
         makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
-      ], nowSec),
+      ], nowSec), nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([

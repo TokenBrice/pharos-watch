@@ -21,36 +21,73 @@ const MAX_SOURCE_DECISION_ANOMALIES = 6;
 const MAX_SOURCE_DECISION_TEXT_LENGTH = 160;
 const MAX_SOURCE_DECISION_ALTERNATIVES_JSON_BYTES = 4_096;
 
-function countYieldRankings(
-  rankingsPayload: { rankings?: Array<{ id?: string }> },
-  options?: { allowedIds?: Set<string> },
-): { count: number; malformed: boolean } {
-  if (!Array.isArray(rankingsPayload.rankings)) {
-    return { count: 0, malformed: true };
-  }
-
-  const rankings = options?.allowedIds
-    ? rankingsPayload.rankings.filter(
-        (ranking) => typeof ranking.id === "string" && options.allowedIds?.has(ranking.id),
-      )
-    : rankingsPayload.rankings.filter((ranking) => typeof ranking.id === "string");
-  return { count: rankings.length, malformed: false };
+export interface PreviousYieldPublicationRanking {
+  id?: unknown;
+  dataSource?: unknown;
+  provenance?: unknown;
 }
 
-export async function readPreviousYieldRankingsCount(
+export type PreviousYieldPublicationSnapshotStatus =
+  | "missing"
+  | "malformed-json"
+  | "malformed-payload"
+  | "ok";
+
+export interface PreviousYieldPublicationSnapshot {
+  status: PreviousYieldPublicationSnapshotStatus;
+  rankings: readonly PreviousYieldPublicationRanking[];
+  malformed: boolean;
+}
+
+export async function loadPreviousYieldPublicationSnapshot(
   db: D1Database,
-  options?: { allowedIds?: Set<string>; allowMalformedRecovery?: boolean },
-): Promise<{ count: number; malformed: boolean }> {
+): Promise<PreviousYieldPublicationSnapshot> {
   const previousCache = await getCache(db, "yield-rankings");
-  const previousRankings = readCachedJson<{ rankings?: Array<{ id?: string }> }>(
+  const previousRankings = readCachedJson<{ rankings?: unknown }>(
     "yield-sync",
     "yield-rankings",
     previousCache,
   );
   if (previousRankings.status === "missing") {
-    return { count: 0, malformed: false };
+    return { status: "missing", rankings: [], malformed: false };
   }
   if (previousRankings.status === "malformed") {
+    return { status: "malformed-json", rankings: [], malformed: true };
+  }
+  const data = previousRankings.data;
+  if (data == null || typeof data !== "object" || Array.isArray(data) || !Array.isArray(data.rankings)) {
+    return { status: "malformed-payload", rankings: [], malformed: true };
+  }
+  if (data.rankings.some((ranking) => ranking == null || typeof ranking !== "object" || Array.isArray(ranking))) {
+    return { status: "malformed-payload", rankings: [], malformed: true };
+  }
+  return {
+    status: "ok",
+    rankings: data.rankings as PreviousYieldPublicationRanking[],
+    malformed: false,
+  };
+}
+
+function countYieldRankings(
+  rankings: readonly PreviousYieldPublicationRanking[],
+  options?: { allowedIds?: Set<string> },
+): { count: number; malformed: boolean } {
+  const countedRankings = options?.allowedIds
+    ? rankings.filter(
+        (ranking) => typeof ranking.id === "string" && options.allowedIds?.has(ranking.id),
+      )
+    : rankings.filter((ranking) => typeof ranking.id === "string");
+  return { count: countedRankings.length, malformed: false };
+}
+
+export function derivePreviousYieldRankingsCount(
+  snapshot: PreviousYieldPublicationSnapshot,
+  options?: { allowedIds?: Set<string>; allowMalformedRecovery?: boolean },
+): { count: number; malformed: boolean } {
+  if (snapshot.status === "missing") {
+    return { count: 0, malformed: false };
+  }
+  if (snapshot.status === "malformed-json") {
     if (options?.allowedIds || options?.allowMalformedRecovery) {
       // Let the later schema and absolute-coverage publish guards decide whether
       // a valid replacement can recover a malformed public cache.
@@ -58,7 +95,10 @@ export async function readPreviousYieldRankingsCount(
     }
     return { count: 0, malformed: true };
   }
-  return countYieldRankings(previousRankings.data, options);
+  if (snapshot.status === "malformed-payload") {
+    return { count: 0, malformed: true };
+  }
+  return countYieldRankings(snapshot.rankings, options);
 }
 
 function hasDuplicateRankingIds(rankings: Array<{ id: string }>): boolean {
@@ -241,8 +281,8 @@ function classifyDecisionRetention(input: {
 }
 
 export async function validateYieldRankingsPayloadForPublish(
-  db: D1Database,
   rankingsPayload: unknown,
+  previousYieldPublicationSnapshot: PreviousYieldPublicationSnapshot,
 ): Promise<{ ok: boolean; validationFailures: number; reason?: string }> {
   const validation = validatePayloadWithSchema(
     YieldRankingsResponseSchema,
@@ -261,7 +301,7 @@ export async function validateYieldRankingsPayloadForPublish(
     return { ok: false, validationFailures: 1, reason: "duplicate-ranking-ids" };
   }
 
-  const previousRankingsState = await readPreviousYieldRankingsCount(db);
+  const previousRankingsState = derivePreviousYieldRankingsCount(previousYieldPublicationSnapshot);
   if (previousRankingsState.malformed && currentRankings === 0) {
     logWorkerEventArgs("handler", "warn",
       "[sync-yield-data] Skipped yield-rankings cache write because malformed previous cache recovery payload is empty",
@@ -297,6 +337,7 @@ export async function persistEvaluatedYieldSources(
     dlPoolsMeta: YieldSourceInputMeta;
     generationId: string;
     rankingsPayload: unknown;
+    previousYieldPublicationSnapshot: PreviousYieldPublicationSnapshot;
   },
 ): Promise<
   | {
@@ -463,7 +504,10 @@ export async function persistEvaluatedYieldSources(
     }
   }
 
-  const publishability = await validateYieldRankingsPayloadForPublish(db, input.rankingsPayload);
+  const publishability = await validateYieldRankingsPayloadForPublish(
+    input.rankingsPayload,
+    input.previousYieldPublicationSnapshot,
+  );
   if (!publishability.ok) {
     return {
       ok: false,

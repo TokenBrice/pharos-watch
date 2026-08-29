@@ -5,6 +5,7 @@ import {
   buildYieldSafetySnapshotMeta,
 } from "./coordinator-metadata";
 import { buildPreviewYieldRankingsArtifacts } from "./coordinator-persist";
+import { loadPreviousYieldPublicationSnapshot } from "./publication";
 import type { YieldCoordinatorFetchContext } from "./coordinator-fetch-stage";
 import type { YieldCoordinatorNormalizeContext } from "./coordinator-normalize-stage";
 
@@ -50,6 +51,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     return { ok: false as const, result: trackedCoverageGuard };
   }
 
+  const previousYieldPublicationSnapshot = await loadPreviousYieldPublicationSnapshot(params.db);
   const safetySnapshotMeta = buildYieldSafetySnapshotMeta({
     kind: fetched.safetySnapshot.kind,
     coverageRatio: fetched.safetyCoverageRatio,
@@ -74,7 +76,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     startSec: fetched.startSec,
   });
   const publishedCoverageGuard = await guardPublishedYieldCoverage({
-    db: params.db,
+    previousYieldPublicationSnapshot,
     previewRankingsPayload,
     yieldCoinIdSet: fetched.yieldCoinIdSet,
     opportunityCoinIdSet: fetched.opportunityCoinIdSet,
@@ -128,6 +130,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
       safetySnapshotMeta,
       previewRankingsPayload,
       degradationReasons,
+      previousYieldPublicationSnapshot,
       previousPublishedYieldBearingCount: publishedCoverageGuard.previousPublishedYieldBearingCount,
       currentPublishedYieldBearingCount: publishedCoverageGuard.currentPublishedYieldBearingCount,
       previousPublishedOpportunityCount: publishedCoverageGuard.previousPublishedOpportunityCount,

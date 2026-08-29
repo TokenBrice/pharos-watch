@@ -12,7 +12,7 @@ import {
   summarizeInvalidRows,
   toNonNegativeInteger,
 } from "./normalization";
-import { toErrorMessage } from "../../../lib/error-utils";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 export const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
 
@@ -114,21 +114,6 @@ export function parseYieldSupplementalSourcesCache(
 ): ParsedYieldSupplementalSourcesCache | null {
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) {
-      const updatedAt = parseCachePayloadUpdatedAt(undefined, cacheUpdatedAt, nowSec);
-      if (updatedAt == null) {
-        logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected legacy supplemental sources cache with future updatedAt");
-        return null;
-      }
-      const { candidates } = filterValidSupplementalCandidates(parsed, nowSec);
-      return {
-        candidates,
-        updatedAt,
-        ageSeconds: nowSec - updatedAt,
-        sourceCount: candidates.length,
-      };
-    }
-
     if (isRecord(parsed) && Array.isArray(parsed.data)) {
       const { candidates } = filterValidSupplementalCandidates(parsed.data, nowSec);
       const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);

@@ -5,9 +5,15 @@ import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yiel
 import { deleteOrphanYieldRows, deleteStaleYieldRows, purgeYieldHistoryOwnershipHandoffs } from "./history";
 
 export {
-  readPreviousYieldRankingsCount,
+  derivePreviousYieldRankingsCount,
+  loadPreviousYieldPublicationSnapshot,
   persistEvaluatedYieldSources,
   validateYieldRankingsPayloadForPublish,
+} from "./publication-decision-persistence";
+export type {
+  PreviousYieldPublicationRanking,
+  PreviousYieldPublicationSnapshot,
+  PreviousYieldPublicationSnapshotStatus,
 } from "./publication-decision-persistence";
 export {
   attachYieldPublicationMetadata,

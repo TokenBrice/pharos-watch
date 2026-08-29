@@ -1,8 +1,10 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronResult } from "../../lib/cron-logger";
-import { getCache } from "../../lib/db-cache";
-import { readCachedJson } from "../../lib/api-cache-read";
-import { readPreviousYieldRankingsCount } from "./publication";
+import {
+  derivePreviousYieldRankingsCount,
+  type PreviousYieldPublicationRanking,
+  type PreviousYieldPublicationSnapshot,
+} from "./publication";
 
 const MIN_YIELD_COVERAGE_RATIO = 0.6;
 const MIN_YIELD_COINS_FOR_GUARD = 10;
@@ -11,10 +13,7 @@ const MIN_FALLBACK_MODELED_INCREASE = 3;
 const FALLBACK_MODELED_INCREASE_RATIO = 0.2;
 const QUALITY_MIX_REASON_LIMIT = 2;
 
-interface YieldQualityMixRanking {
-  dataSource?: unknown;
-  provenance?: unknown;
-}
+type YieldQualityMixRanking = Pick<PreviousYieldPublicationRanking, "dataSource" | "provenance">;
 
 export interface YieldPublicationQualityMix {
   directCuratedCount: number;
@@ -96,17 +95,6 @@ export function detectYieldQualityMixRegression(
   };
 }
 
-async function readPreviousYieldQualityMix(db: D1Database): Promise<YieldPublicationQualityMix | null> {
-  const previousCache = await getCache(db, "yield-rankings");
-  const parsed = readCachedJson<{ rankings?: YieldQualityMixRanking[] }>(
-    "yield-sync-quality-guard",
-    "yield-rankings",
-    previousCache,
-  );
-  if (parsed.status !== "ok" || !Array.isArray(parsed.data.rankings)) return null;
-  return summarizeYieldPublicationQualityMix(parsed.data.rankings);
-}
-
 function countPreviewRankings(
   payload: { rankings: Array<{ id: string }> },
   allowedIds?: Set<string>,
@@ -176,7 +164,7 @@ export function guardTrackedYieldCoverage(params: {
 }
 
 export async function guardPublishedYieldCoverage(params: {
-  db: D1Database;
+  previousYieldPublicationSnapshot: PreviousYieldPublicationSnapshot;
   previewRankingsPayload: {
     rankings: Array<{
       id: string;
@@ -195,13 +183,13 @@ export async function guardPublishedYieldCoverage(params: {
   previousPublishedRankingCount: number;
   currentPublishedRankingCount: number;
 }> {
-  const previousRankingsState = await readPreviousYieldRankingsCount(params.db, {
+  const previousRankingsState = derivePreviousYieldRankingsCount(params.previousYieldPublicationSnapshot, {
     allowedIds: params.yieldCoinIdSet,
   });
-  const previousOpportunityState = await readPreviousYieldRankingsCount(params.db, {
+  const previousOpportunityState = derivePreviousYieldRankingsCount(params.previousYieldPublicationSnapshot, {
     allowedIds: params.opportunityCoinIdSet,
   });
-  const previousTotalState = await readPreviousYieldRankingsCount(params.db, {
+  const previousTotalState = derivePreviousYieldRankingsCount(params.previousYieldPublicationSnapshot, {
     allowMalformedRecovery: true,
   });
   const currentPublishedYieldBearingCount = countPreviewRankings(params.previewRankingsPayload, params.yieldCoinIdSet);
@@ -306,7 +294,9 @@ export async function guardPublishedYieldCoverage(params: {
   }
 
   if (previousPublishedRankingCount >= MIN_YIELD_COINS_FOR_GUARD) {
-    const previousQualityMix = await readPreviousYieldQualityMix(params.db);
+    const previousQualityMix = params.previousYieldPublicationSnapshot.status === "ok"
+      ? summarizeYieldPublicationQualityMix(params.previousYieldPublicationSnapshot.rankings)
+      : null;
     if (previousQualityMix) {
       const currentQualityMix = summarizeYieldPublicationQualityMix(params.previewRankingsPayload.rankings);
       const qualityMixRegression = detectYieldQualityMixRegression(previousQualityMix, currentQualityMix);

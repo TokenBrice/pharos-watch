@@ -17,6 +17,7 @@ import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
+import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
 import {
   FIXED_NOW,
   buildPayloadWithObservedAt,
@@ -24,9 +25,18 @@ import {
   makeEvaluatedSource,
   makeSafetySnapshotMeta,
   makeYieldSourceMeta,
-  mockD1,
 } from "./yield-publication.test-support";
 
+function previousSnapshot(
+  rankings: readonly { id?: unknown; dataSource?: unknown; provenance?: unknown }[],
+  status: PreviousYieldPublicationSnapshot["status"] = "ok",
+): PreviousYieldPublicationSnapshot {
+  return {
+    status,
+    rankings,
+    malformed: status !== "missing" && status !== "ok",
+  };
+}
 
 describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
   beforeEach(() => {
@@ -292,37 +302,73 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
 });
 
 describe("validateYieldRankingsPayloadForPublish", () => {
+  it.each([
+    {
+      label: "missing",
+      snapshot: previousSnapshot([], "missing"),
+      currentRankings: 0,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "malformed JSON",
+      snapshot: previousSnapshot([], "malformed-json"),
+      currentRankings: 1,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "malformed payload",
+      snapshot: previousSnapshot([], "malformed-payload"),
+      currentRankings: 1,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "empty",
+      snapshot: previousSnapshot([]),
+      currentRankings: 0,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "small",
+      snapshot: previousSnapshot(Array.from({ length: 4 }, (_, index) => ({ id: `previous-${index}` }))),
+      currentRankings: 1,
+      expected: { ok: true, validationFailures: 0 },
+    },
+    {
+      label: "severe shrink",
+      snapshot: previousSnapshot(Array.from({ length: 10 }, (_, index) => ({ id: `previous-${index}` }))),
+      currentRankings: 1,
+      expected: { ok: false, validationFailures: 1, reason: "rankings-payload-shrunk" },
+    },
+  ])("keeps the $label previous snapshot decision stable", async ({ snapshot, currentRankings, expected }) => {
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
+    payload.rankings = currentRankings === 0 ? [] : [payload.rankings[0]!];
+
+    const result = await validateYieldRankingsPayloadForPublish(payload, snapshot);
+
+    expect(result).toEqual(expected);
+  });
+
   it("allows a valid replacement when the previous rankings cache is malformed", async () => {
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["yield-rankings"],
-        rows: [{ value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) }],
-        first: { value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) },
-      },
-    ]);
     const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
 
-    const result = await validateYieldRankingsPayloadForPublish(db, payload);
+    const result = await validateYieldRankingsPayloadForPublish(
+      payload,
+      previousSnapshot([], "malformed-json"),
+    );
 
     expect(result).toEqual({ ok: true, validationFailures: 0 });
   });
 
   it("blocks malformed previous-cache recovery when the replacement has no rows", async () => {
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["yield-rankings"],
-        rows: [{ value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) }],
-        first: { value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) },
-      },
-    ]);
     const payload = {
       ...buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000)),
       rankings: [],
     };
 
-    const result = await validateYieldRankingsPayloadForPublish(db, payload);
+    const result = await validateYieldRankingsPayloadForPublish(
+      payload,
+      previousSnapshot([], "malformed-json"),
+    );
 
     expect(result).toEqual({
       ok: false,
@@ -332,7 +378,6 @@ describe("validateYieldRankingsPayloadForPublish", () => {
   });
 
   it("blocks publish when ranking IDs are duplicated", async () => {
-    const db = mockD1();
     const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
     payload.rankings = [
       payload.rankings[0]!,
@@ -342,7 +387,7 @@ describe("validateYieldRankingsPayloadForPublish", () => {
       },
     ];
 
-    const result = await validateYieldRankingsPayloadForPublish(db, payload);
+    const result = await validateYieldRankingsPayloadForPublish(payload, previousSnapshot([], "missing"));
 
     expect(result).toEqual({
       ok: false,

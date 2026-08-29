@@ -76,6 +76,7 @@ export async function runYieldCoordinatorPersistStage(
     rowsRejected: normalized.rowsRejected,
     divergenceFlags: normalized.divergenceFlags,
     sourceSwitches: normalized.sourceSwitches,
+    previousYieldPublicationSnapshot: health.previousYieldPublicationSnapshot,
   });
   if (!publicationResult.ok) {
     await fetched.reportYieldProgress(
