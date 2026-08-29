@@ -52,7 +52,7 @@ export function buildStablecoinDetailViewModel({
   const isNavToken = coin.flags.navToken ?? false;
   const resolvedSupplyHistory = supplyHistory.data ?? [];
   const market = buildDetailMarketSnapshot(coin, coinData, resolvedSupplyHistory, supplemental.nowMs ?? Date.now());
-  const pegPrice = buildDetailPegPriceSnapshot(id, coin, coinData, listData, pegSummary.data);
+  const pegPrice = buildDetailPegPriceSnapshot(id, coin, pegSummary.data);
   const pegScoreResult = pegPrice.pegScoreResult
     ? {
         ...pegPrice.pegScoreResult,

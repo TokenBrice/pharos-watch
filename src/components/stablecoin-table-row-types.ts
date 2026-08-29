@@ -18,7 +18,6 @@ export interface StablecoinVirtualRowProps {
   variant?: StablecoinTableRowVariant;
   isVisible: (id: ColumnId) => boolean;
   logos?: Record<string, string>;
-  pegRates: Record<string, number>;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, V9SafetyTableRow>;

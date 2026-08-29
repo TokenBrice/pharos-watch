@@ -216,7 +216,6 @@ export function StablecoinTable({
       sortedRankById={rows.sortedRankById}
       densityConfig={rows.virtualDensityConfig}
       logos={logos}
-      pegRates={pegRates}
       pegScores={pegScores}
       dexLiquidity={dexLiquidity}
       reportCards={reportCards}

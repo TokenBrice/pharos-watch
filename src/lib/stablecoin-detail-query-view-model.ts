@@ -2,9 +2,7 @@ import type { SupplyHistoryPoint } from "@shared/types";
 import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import {
-  deriveDeviationBps,
   deriveGaugeDeviationBps,
-  derivePegReferenceContext,
   deriveSupplyFromMarketCap,
 } from "@/lib/stablecoin-detail-derive";
 import type {
@@ -22,7 +20,6 @@ import {
   getPrevMonthRawOrNull,
   getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type {
   BlacklistStablecoin,
@@ -30,7 +27,6 @@ import type {
   PegSummaryResponse,
   ReportCardsV9CurrentResponse,
   StablecoinData,
-  StablecoinListResponse,
   StablecoinMeta,
   StressSignalEntry,
   YieldRanking,
@@ -129,26 +125,17 @@ export function buildDetailMarketSnapshot(
 export function buildDetailPegPriceSnapshot(
   id: string,
   coin: StablecoinMeta,
-  coinData: StablecoinData,
-  listData: StablecoinListResponse,
   pegSummaryData?: PegSummaryResponse,
 ): DetailPegPriceSnapshot {
   const isNavToken = coin.flags.navToken ?? false;
-  const pegContext = derivePegReferenceContext({
-    assets: listData.peggedAssets ?? [],
-    pegType: coinData.pegType,
-    commodityOunces: coin.commodityOunces,
-    fallbackRates: listData.fxFallbackRates,
-    metaById: CLIENT_TRACKED_META_BY_ID,
-  });
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
-  const pegRef = pegScoreResult?.pegReference?.valueUsd ?? pegContext.pegReference;
-  const deviationBps = deriveDeviationBps(coinData.price, pegRef);
+  const pegRef = pegScoreResult?.pegReference?.valueUsd ?? null;
+  const deviationBps = pegScoreResult?.currentDeviationBps ?? null;
   return {
     pegRef,
     deviationBps,
     gaugeDeviationBps: deriveGaugeDeviationBps(deviationBps, isNavToken),
-    pegReferenceUnavailable: !isNavToken && (pegRef == null || pegScoreResult?.pegReferenceUnavailable === true),
+    pegReferenceUnavailable: !isNavToken && pegScoreResult?.pegReferenceUnavailable === true,
     pegScoreResult,
     consensusSources: pegScoreResult?.consensusSources ?? [],
     agreeSources: pegScoreResult?.agreeSources ?? [],

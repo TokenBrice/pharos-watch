@@ -1,4 +1,4 @@
-import { deriveDeviationBps } from "@/lib/stablecoin-detail-derive";
+import { deriveIndicativeDeviationBps } from "@/lib/stablecoin-detail-derive";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCompactUsd } from "@shared/lib/format";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
@@ -51,7 +51,7 @@ export function buildStablecoinLiveMetadata(
       health = { kind: "nav" };
     } else if (peg && asset.price != null) {
       const reference = getPegReference(peg, rates, meta?.commodityOunces);
-      const deviationBps = deriveDeviationBps(asset.price, reference);
+      const deviationBps = deriveIndicativeDeviationBps(asset.price, reference);
       if (deviationBps != null) {
         const bps = Math.abs(deviationBps);
         const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;

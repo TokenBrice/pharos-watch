@@ -64,7 +64,6 @@ interface StablecoinTableViewProps {
   sortedRankById: ReadonlyMap<string, number>;
   densityConfig: { rowHeight: number; iconSize: number };
   logos?: Record<string, string>;
-  pegRates: Record<string, number>;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, V9SafetyTableRow>;
@@ -270,7 +269,6 @@ function StablecoinRows(props: StablecoinTableViewProps) {
             variant={props.variant}
             isVisible={props.isVisible}
             logos={props.logos}
-            pegRates={props.pegRates}
             pegScores={props.pegScores}
             dexLiquidity={props.dexLiquidity}
             reportCards={props.reportCards}

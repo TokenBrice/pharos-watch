@@ -1,25 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
-  deriveDeviationBps,
+  deriveIndicativeDeviationBps,
   deriveGaugeDeviationBps,
-  derivePegReferenceContext,
   deriveSupplyFromMarketCap,
 } from "../stablecoin-detail-derive";
 
 describe("stablecoin detail derivations", () => {
-  describe("deriveDeviationBps", () => {
+  describe("deriveIndicativeDeviationBps", () => {
     it("computes basis points from price and peg reference", () => {
-      expect(deriveDeviationBps(1.0125, 1)).toBe(125);
-      expect(deriveDeviationBps(0.9975, 1)).toBe(-25);
+      expect(deriveIndicativeDeviationBps(1.0125, 1)).toBe(125);
+      expect(deriveIndicativeDeviationBps(0.9975, 1)).toBe(-25);
     });
 
     it("returns null when price is missing or either input is invalid", () => {
-      expect(deriveDeviationBps(null, 1)).toBeNull();
-      expect(deriveDeviationBps(undefined, 1)).toBeNull();
-      expect(deriveDeviationBps(Number.NaN, 1)).toBeNull();
-      expect(deriveDeviationBps(1.01, 0)).toBeNull();
-      expect(deriveDeviationBps(1.01, -1)).toBeNull();
-      expect(deriveDeviationBps(1.01, Number.NaN)).toBeNull();
+      expect(deriveIndicativeDeviationBps(null, 1)).toBeNull();
+      expect(deriveIndicativeDeviationBps(undefined, 1)).toBeNull();
+      expect(deriveIndicativeDeviationBps(Number.NaN, 1)).toBeNull();
+      expect(deriveIndicativeDeviationBps(1.01, 0)).toBeNull();
+      expect(deriveIndicativeDeviationBps(1.01, -1)).toBeNull();
+      expect(deriveIndicativeDeviationBps(1.01, Number.NaN)).toBeNull();
     });
 
     it("forces gauge deviation to zero for NAV tokens", () => {
@@ -43,34 +42,6 @@ describe("stablecoin detail derivations", () => {
       expect(deriveSupplyFromMarketCap(null, 1)).toBeNull();
       expect(deriveSupplyFromMarketCap(undefined, 1)).toBeNull();
       expect(deriveSupplyFromMarketCap(0, 1)).toBeNull();
-    });
-  });
-
-  describe("derivePegReferenceContext", () => {
-    it("uses live FX rates for thin fiat peg groups and reports the FX source", () => {
-      const assets = [
-        { id: "usdt-tether", symbol: "AAA", pegType: "peggedEUR", price: 1.25, circulating: { peggedEUR: 2_000_000 } },
-        { id: "usdc-circle", symbol: "BBB", pegType: "peggedEUR", price: 1.24, circulating: { peggedEUR: 3_000_000 } },
-      ];
-
-      const result = derivePegReferenceContext({
-        assets,
-        pegType: "peggedEUR",
-        fallbackRates: { peggedEUR: 1.1 },
-      });
-
-      expect(result.pegReference).toBe(1.1);
-      expect(result.pegRateSource).toBe("fx");
-    });
-
-    it("returns no reference when the peg type has no rate", () => {
-      const result = derivePegReferenceContext({
-        assets: [],
-        pegType: "peggedGOLD",
-      });
-
-      expect(result.pegReference).toBeNull();
-      expect(result.pegRateSource).toBeUndefined();
     });
   });
 });
@@ -97,29 +68,29 @@ describe("deriveSupplyFromMarketCap", () => {
   });
 });
 
-describe("deriveDeviationBps", () => {
+describe("deriveIndicativeDeviationBps", () => {
   it("returns 0 bps for exact peg", () => {
-    expect(deriveDeviationBps(1.0, 1.0)).toBe(0);
+    expect(deriveIndicativeDeviationBps(1.0, 1.0)).toBe(0);
   });
 
   it("returns positive bps for price above peg", () => {
-    expect(deriveDeviationBps(1.01, 1.0)).toBeCloseTo(100, 0);
+    expect(deriveIndicativeDeviationBps(1.01, 1.0)).toBeCloseTo(100, 0);
   });
 
   it("returns negative bps for price below peg", () => {
-    expect(deriveDeviationBps(0.99, 1.0)).toBeCloseTo(-100, 0);
+    expect(deriveIndicativeDeviationBps(0.99, 1.0)).toBeCloseTo(-100, 0);
   });
 
   it("returns null for invalid peg reference", () => {
-    expect(deriveDeviationBps(1.0, 0)).toBeNull();
-    expect(deriveDeviationBps(1.0, NaN)).toBeNull();
-    expect(deriveDeviationBps(3_000, null)).toBeNull();
+    expect(deriveIndicativeDeviationBps(1.0, 0)).toBeNull();
+    expect(deriveIndicativeDeviationBps(1.0, NaN)).toBeNull();
+    expect(deriveIndicativeDeviationBps(3_000, null)).toBeNull();
   });
 
   it("distinguishes an exact-peg zero from absent and invalid prices", () => {
-    expect(deriveDeviationBps(null, 1.0)).toBeNull();
-    expect(deriveDeviationBps(Number.NaN, 1.0)).toBeNull();
-    expect(deriveDeviationBps(1.0, 1.0)).toBe(0);
+    expect(deriveIndicativeDeviationBps(null, 1.0)).toBeNull();
+    expect(deriveIndicativeDeviationBps(Number.NaN, 1.0)).toBeNull();
+    expect(deriveIndicativeDeviationBps(1.0, 1.0)).toBe(0);
   });
 });
 

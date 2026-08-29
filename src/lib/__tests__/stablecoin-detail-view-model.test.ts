@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { StablecoinData } from "@shared/types";
+import type { PegSummaryCoin, PegSummaryResponse, StablecoinData } from "@shared/types";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildStablecoinDetailHeroViewModel } from "../stablecoin-detail-hero-view-model";
@@ -15,6 +15,7 @@ import {
   buildMintAuthorityDetailViewModel,
 } from "../stablecoin-detail-mint-authority-view-model";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
+import { buildDetailPegPriceSnapshot } from "../stablecoin-detail-query-view-model";
 
 function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
   return makeStablecoin({
@@ -26,7 +27,73 @@ function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): Stablecoin
   });
 }
 
+function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
+  return {
+    id: "usdt-tether",
+    symbol: "USDT",
+    name: "Tether",
+    pegType: "peggedUSD",
+    pegCurrency: "USD",
+    governance: "centralized",
+    currentDeviationBps: 0,
+    pegReference: { valueUsd: 1, source: "median", contributorCount: 5, asOf: 1_700_000_000 },
+    pegScore: 95,
+    pegPct: 100,
+    severityScore: 0,
+    spreadPenalty: 0,
+    eventCount: 0,
+    worstDeviationBps: null,
+    activeDepeg: false,
+    lastEventAt: null,
+    trackingSpanDays: 365,
+    methodologyVersion: "test",
+    ...overrides,
+  };
+}
+
 describe("stablecoin detail view-model builder", () => {
+  it.each([
+    ["USD", "usdt-tether", "peggedUSD", 1, -200, false],
+    ["non-USD", "eurc-circle", "peggedEUR", 1.2, -1000, false],
+    ["commodity", "xaut-tether", "peggedGOLD", 3000, 100, false],
+    ["unavailable reference", "eurc-circle", "peggedEUR", null, null, true],
+    ["unavailable price", "usdc-circle", "peggedUSD", 1, null, false],
+    ["NAV", "fpi-frax", "peggedVAR", null, null, false],
+  ] as const)("pins the %s Worker peg projection", (
+    _label,
+    id,
+    pegType,
+    pegReference,
+    currentDeviationBps,
+    pegReferenceUnavailable,
+  ) => {
+    const coin = TRACKED_META_BY_ID.get(id);
+    expect(coin).toBeDefined();
+    const pegSummaryCoin = makePegSummaryCoin({
+      id,
+      name: coin!.name,
+      symbol: coin!.symbol,
+      pegType,
+      pegCurrency: coin!.flags.pegCurrency,
+      currentDeviationBps,
+      pegReference: pegReference == null
+        ? null
+        : { valueUsd: pegReference, source: "median", contributorCount: 2, asOf: 1_700_000_000 },
+      ...(pegReferenceUnavailable ? { pegReferenceUnavailable: true } : {}),
+    });
+    const snapshot = buildDetailPegPriceSnapshot(
+      id,
+      coin!,
+      { coins: [pegSummaryCoin], summary: null, methodology: {} } as PegSummaryResponse,
+    );
+
+    expect(snapshot).toMatchObject({
+      pegRef: pegReference,
+      deviationBps: currentDeviationBps,
+      pegReferenceUnavailable,
+    });
+  });
+
   it("uses report-card snapshot freshness instead of the browser fetch timestamp", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether");
     expect(coin).toBeDefined();

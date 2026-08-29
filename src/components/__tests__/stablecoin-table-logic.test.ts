@@ -332,7 +332,7 @@ describe("sortStablecoins — price", () => {
 });
 
 describe("sortStablecoins — peg deviation", () => {
-  it("sorts by canonical raw bps even when displayed bps round to the same integer", () => {
+  it("sorts by the Worker current deviation", () => {
     const coins = [
       makeCoin("higher", "Higher", { price: 1.004949 }),
       makeCoin("lower", "Lower", { price: 1.004941 }),
@@ -343,12 +343,16 @@ describe("sortStablecoins — peg deviation", () => {
       sort: sortAsc("peg"),
       effectiveSortKey: "peg",
       pegRates: {},
+      pegScores: new Map([
+        ["higher", { id: "higher", currentDeviationBps: 50 } as never],
+        ["lower", { id: "lower", currentDeviationBps: 49 } as never],
+      ]),
     });
 
     expect(result.map((coin) => coin.id)).toEqual(["lower", "higher"]);
   });
 
-  it("treats missing and non-finite prices as absent peg signals", () => {
+  it("treats missing Worker deviations as absent peg signals", () => {
     const coins = [
       makeCoin("missing", "Missing", { price: null }),
       makeCoin("invalid", "Invalid", { price: Number.NaN }),
@@ -360,6 +364,11 @@ describe("sortStablecoins — peg deviation", () => {
       sort: sortAsc("peg"),
       effectiveSortKey: "peg",
       pegRates: {},
+      pegScores: new Map([
+        ["missing", { id: "missing", currentDeviationBps: null } as never],
+        ["invalid", { id: "invalid", currentDeviationBps: null } as never],
+        ["exact", { id: "exact", currentDeviationBps: 0 } as never],
+      ]),
     });
 
     expect(result[0]?.id).toBe("exact");

@@ -24,7 +24,6 @@ function StablecoinVirtualRowBase({
   const variant = row.variant ?? "default";
   const model = buildStablecoinTableRowModel({
     coin: row.coin,
-    pegRates: row.pegRates,
     pegScores: row.pegScores,
     dexLiquidity: row.dexLiquidity,
     reportCards: row.reportCards,
