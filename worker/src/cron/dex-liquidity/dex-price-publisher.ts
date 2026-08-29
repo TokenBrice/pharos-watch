@@ -1,5 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { weightedMedian } from "@shared/lib/stats";
+import { relativeBps } from "@shared/lib/depeg-signals";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { executeAtomicBatch } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
@@ -228,7 +229,7 @@ export async function computeDexPrices(
     const totalTvl = plausibleObservations.reduce((s, o) => s + o.tvl, 0);
     let deviationBps: number | null = null;
     if (primaryPrice != null && primaryPrice > 0) {
-      deviationBps = Math.round((medianPrice / primaryPrice - 1) * 10000);
+      deviationBps = relativeBps(medianPrice, primaryPrice)?.bps ?? null;
     }
 
     // Guard against retained pools whose prices are off-peg for the tracked stablecoin.

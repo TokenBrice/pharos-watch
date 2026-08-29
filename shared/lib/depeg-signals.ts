@@ -2,11 +2,14 @@ import type { DepegDirection } from "../types/market";
 
 export type { DepegDirection } from "../types/market";
 
-export interface DepegSignal {
+export interface RelativeBpsResult {
   bps: number;
   absBps: number;
-  rawBps?: number;
-  absRawBps?: number;
+  rawBps: number;
+  absRawBps: number;
+}
+
+export interface DepegSignal extends RelativeBpsResult {
   direction: DepegDirection;
 }
 
@@ -16,20 +19,26 @@ function toDirection(bps: number): DepegDirection {
   return bps >= 0 ? "above" : "below";
 }
 
-export function deriveDepegSignal(price: number, pegRef: number): DepegSignal | null {
-  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(pegRef) || pegRef <= 0) {
+export function relativeBps(value: number, reference: number): RelativeBpsResult | null {
+  if (!Number.isFinite(value) || value <= 0 || !Number.isFinite(reference) || reference <= 0) {
     return null;
   }
 
-  const rawBps = ((price / pegRef) - 1) * 10000;
+  const rawBps = ((value / reference) - 1) * 10000;
   const bps = Math.round(rawBps);
   return {
     bps,
     absBps: Math.abs(bps),
     rawBps,
     absRawBps: Math.abs(rawBps),
-    direction: toDirection(rawBps),
   };
+}
+
+export function deriveDepegSignal(price: number, pegRef: number): DepegSignal | null {
+  const relative = relativeBps(price, pegRef);
+  return relative == null
+    ? null
+    : { ...relative, direction: toDirection(relative.rawBps) };
 }
 
 export function coerceDepegDirection(

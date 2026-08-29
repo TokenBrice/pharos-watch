@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { relativeBps } from "@shared/lib/depeg-signals";
 import { formatCurrency } from "@shared/lib/format";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -38,9 +39,12 @@ export async function verifyDataCorrection(
     let verifiedLabel: VerificationResult["verifiedLabel"] = "verified: unconfirmed";
 
     if (price != null && price > 0 && pegRef != null) {
-      const dev = ((price - pegRef) / pegRef) * 100;
-      deviationStr = `${dev >= 0 ? "+" : ""}${dev.toFixed(3)}%`;
-      if (Math.abs(dev) * 100 >= thresholdBps) verifiedLabel = "verified: confirmed";
+      const deviation = relativeBps(price, pegRef);
+      if (deviation != null) {
+        const deviationPct = deviation.rawBps / 100;
+        deviationStr = `${deviation.rawBps >= 0 ? "+" : ""}${deviationPct.toFixed(3)}%`;
+        if (deviation.absRawBps >= thresholdBps) verifiedLabel = "verified: confirmed";
+      }
     }
 
     const verificationSummary = verifiedLabel === "verified: confirmed" ? "⚠️ Confirmed" : "✅ Unconfirmed";
