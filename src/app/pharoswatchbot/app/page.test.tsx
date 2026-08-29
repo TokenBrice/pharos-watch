@@ -79,6 +79,14 @@ function installMiniAppFetch(fetchImpl: ReturnType<typeof vi.fn>): void {
   }], { requireMatch: true });
 }
 
+function mockStateResponses(...states: TelegramMiniAppState[]): ReturnType<typeof vi.fn> {
+  const fetchMock = vi.fn();
+  for (const state of states) {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => state });
+  }
+  return fetchMock;
+}
+
 /**
  * Collapses the launch preamble shared by the happy-path Mini App tests: a
  * signed Telegram launch for `@watcher`, a stubbed `fetch`, and the render.
@@ -750,9 +758,7 @@ describe("PharosWatchBotMiniAppPage", () => {
         globalAlerts: { ...baseState.subscriber.globalAlerts, depegStepBps: 500 },
       },
     };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => nextState });
+    const fetchMock = mockStateResponses(baseState, nextState);
 
     renderMiniApp({ fetchImpl: fetchMock });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -768,9 +774,7 @@ describe("PharosWatchBotMiniAppPage", () => {
   });
 
   it("dispatches chat-level snooze for 4h", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -784,9 +788,7 @@ describe("PharosWatchBotMiniAppPage", () => {
   });
 
   it("dispatches a durable pause", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -907,9 +909,7 @@ describe("PharosWatchBotMiniAppPage", () => {
         { ...baseState.subscriptions[0], snoozeUntilTs: 9_000_000_000 },
       ],
     };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => coinSnoozed })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(coinSnoozed, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -924,9 +924,7 @@ describe("PharosWatchBotMiniAppPage", () => {
   });
 
   it("dispatches set-timezone from the settings picker", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -954,19 +952,17 @@ describe("PharosWatchBotMiniAppPage", () => {
         },
       },
     };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => enabledState })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          ...enabledState,
-          subscriber: {
-            ...enabledState.subscriber,
-            recap: { ...enabledState.subscriber.recap, deliveryHourLocal: 14 },
-          },
-        }),
-      });
+    const fetchMock = mockStateResponses(
+      baseState,
+      enabledState,
+      {
+        ...enabledState,
+        subscriber: {
+          ...enabledState.subscriber,
+          recap: { ...enabledState.subscriber.recap, deliveryHourLocal: 14 },
+        },
+      },
+    );
 
     renderMiniApp({ fetchImpl: fetchMock });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1082,9 +1078,7 @@ describe("PharosWatchBotMiniAppPage", () => {
 
   it("confirms unsubscribe-all once before dispatching", async () => {
     const showConfirm = vi.fn((_msg: string, cb: (ok: boolean) => void) => cb(true));
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock, launch: { showConfirm } });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1101,9 +1095,7 @@ describe("PharosWatchBotMiniAppPage", () => {
   });
 
   it("arms unsubscribe-all into an explicit Confirm/Cancel row when showConfirm is absent", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1147,9 +1139,7 @@ describe("PharosWatchBotMiniAppPage", () => {
   it("requires two-step confirmation for forget-me and shows the terminal screen", async () => {
     const showConfirm = vi.fn((_msg: string, cb: (ok: boolean) => void) => cb(true));
     const close = vi.fn();
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock, launch: { showConfirm, close } });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1184,10 +1174,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     const showConfirm = vi.fn((_msg: string, cb: (ok: boolean) => void) => cb(true));
     const stateAfterRemove: TelegramMiniAppState = { ...baseState, subscriptions: [] };
     const stateAfterUndo: TelegramMiniAppState = { ...baseState };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => stateAfterRemove })
-      .mockResolvedValueOnce({ ok: true, json: async () => stateAfterUndo });
+    const fetchMock = mockStateResponses(baseState, stateAfterRemove, stateAfterUndo);
 
     renderMiniApp({ fetchImpl: fetchMock, launch: { showConfirm } });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1209,9 +1196,7 @@ describe("PharosWatchBotMiniAppPage", () => {
   it("undo toast auto-dismisses after 5 seconds", async () => {
     const showConfirm = vi.fn((_msg: string, cb: (ok: boolean) => void) => cb(true));
     const stateAfterRemove: TelegramMiniAppState = { ...baseState, subscriptions: [] };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => stateAfterRemove });
+    const fetchMock = mockStateResponses(baseState, stateAfterRemove);
 
     vi.useFakeTimers({ shouldAdvanceTime: true });
     renderMiniApp({ fetchImpl: fetchMock, launch: { showConfirm } });
@@ -1236,10 +1221,7 @@ describe("PharosWatchBotMiniAppPage", () => {
       viewer: { ...baseState.viewer, chatType: "sender" },
       subscriber: { ...baseState.subscriber, exists: false },
     };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => initialState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(initialState, baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock, launch: { isVersionAtLeast, requestWriteAccess } });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1260,9 +1242,7 @@ describe("PharosWatchBotMiniAppPage", () => {
       viewer: { ...baseState.viewer, chatType: "private" },
       subscriber: { ...baseState.subscriber, exists: false },
     };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => initialState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(initialState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock, launch: { isVersionAtLeast, requestWriteAccess } });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1274,9 +1254,7 @@ describe("PharosWatchBotMiniAppPage", () => {
   it("probes checkHomeScreenStatus only after first mutation and renders the CTA when missed", async () => {
     const checkHomeScreenStatus = vi.fn((cb: (s: string) => void) => cb("missed"));
     const isVersionAtLeast = vi.fn((v: string) => v === "8.0");
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock, launch: { isVersionAtLeast, checkHomeScreenStatus } });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1292,9 +1270,7 @@ describe("PharosWatchBotMiniAppPage", () => {
   it("hides the Add-to-home-screen CTA when status is added", async () => {
     const checkHomeScreenStatus = vi.fn((cb: (s: string) => void) => cb("added"));
     const isVersionAtLeast = vi.fn((v: string) => v === "8.0");
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock, launch: { isVersionAtLeast, checkHomeScreenStatus } });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1380,9 +1356,7 @@ describe("PharosWatchBotMiniAppPage", () => {
 
   it("arms forget-me into an explicit Confirm/Cancel row when showConfirm is absent", async () => {
     // No showConfirm on the bridge → in-page Arm → Confirm/Cancel fallback.
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    const fetchMock = mockStateResponses(baseState, baseState);
 
     renderMiniApp({ fetchImpl: fetchMock, launch: { close: vi.fn() } });
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());

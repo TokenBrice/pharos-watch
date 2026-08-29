@@ -1,4 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import type { StablecoinData } from "@shared/types";
 import { buildStablecoinDetailViewModel } from "@/lib/stablecoin-detail-view-model";
 
 type BuildStablecoinDetailViewModelParams = Parameters<typeof buildStablecoinDetailViewModel>[0];
@@ -23,6 +25,14 @@ export type BuildStablecoinDetailViewModelOverrides = {
     reserves?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]["reserves"]>;
     nowMs?: number;
   };
+};
+
+export type ReadyDetailParamsOverrides = {
+  id: string;
+  coin: BuildStablecoinDetailViewModelParams["core"]["coin"];
+  asset?: Partial<StablecoinData>;
+  queries?: BuildStablecoinDetailViewModelOverrides["queries"];
+  supplemental?: BuildStablecoinDetailViewModelOverrides["supplemental"];
 };
 
 export function makeBuildStablecoinDetailViewModelParams(
@@ -131,4 +141,37 @@ export function makeBuildStablecoinDetailViewModelParams(
       nowMs: overrides.supplemental?.nowMs,
     },
   };
+}
+
+export function makeReadyDetailParams({
+  id,
+  coin,
+  asset,
+  queries,
+  supplemental,
+}: ReadyDetailParamsOverrides): BuildStablecoinDetailViewModelParams {
+  const readyAsset = makeStablecoin({
+    id,
+    name: coin.name,
+    symbol: coin.symbol,
+    circulating: { peggedUSD: 100 },
+    ...asset,
+  });
+
+  return makeBuildStablecoinDetailViewModelParams({
+    core: { id, coin },
+    queries: {
+      ...queries,
+      supplyHistory: {
+        data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }],
+        ...queries?.supplyHistory,
+      },
+      stablecoinList: {
+        data: { peggedAssets: [readyAsset], fxFallbackRates: {} },
+        dataUpdatedAt: 1,
+        ...queries?.stablecoinList,
+      },
+    },
+    supplemental,
+  });
 }
