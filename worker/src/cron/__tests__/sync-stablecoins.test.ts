@@ -375,6 +375,19 @@ describe("syncStablecoins", () => {
     const result = await syncStablecoins(db);
 
     expect(result.itemCount).toBe(60);
+    expect(result.productivity).toEqual({
+      productive: true,
+      reason: "stablecoins-cache-published",
+      publications: [{
+        surface: "stablecoins",
+        generationId: `stablecoins:${Math.floor(Date.now() / 1000)}`,
+        publishedAt: Math.floor(Date.now() / 1000),
+        candidateRows: 60,
+        publishedRows: 60,
+        expectedRows: 60,
+        artifactCacheKey: "stablecoins",
+      }],
+    });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.cacheWriteMode).toBe("published");
     expect(metadata.casSkipped).toBe(false);

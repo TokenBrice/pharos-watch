@@ -79,6 +79,7 @@ import {
   normalizeChainCirculating,
 } from "../sync-stablecoins/phase-helpers";
 import { runStablecoinsPricingStage } from "../sync-stablecoins/stages";
+import { loadStablecoinsPublicationContinuity } from "../sync-stablecoins/publication";
 import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { makePrimaryPriceResultFixture } from "../sync-stablecoins/__tests__/_fixtures";
 
@@ -169,6 +170,39 @@ describe("sync-stablecoins stage helpers", () => {
       priceObservedAt: syncStartSec - 15,
       priceObservedAtMode: "upstream",
     });
+  });
+
+  it("loads one prior active-price continuity snapshot for either intake lane", async () => {
+    const db = mockD1([{
+      match: "FROM cron_runs",
+      rows: [],
+      first: {
+        metadata: JSON.stringify({
+          activePriceCoverage: {
+            missingActiveIds: ["usdt-tether"],
+            missingActiveAssets: [{
+              stablecoinId: "usdt-tether",
+              symbol: "USDT",
+              consecutiveMissingGenerations: 3,
+              rejectionReason: "no-accepted-price",
+            }],
+          },
+        }),
+      },
+    }]);
+
+    const continuity = await loadStablecoinsPublicationContinuity(db, 1_800_000_000);
+
+    expect(continuity.previousActivePriceCoverage).toMatchObject({
+      missingActiveIds: ["usdt-tether"],
+      missingActiveAssets: [{
+        stablecoinId: "usdt-tether",
+        consecutiveMissingGenerations: 3,
+      }],
+    });
+    expect(continuity.previousMissingGenerationsById).toEqual(new Map([
+      ["usdt-tether", 3],
+    ]));
   });
 
   it("filters malformed assets while preserving structurally valid rows", () => {

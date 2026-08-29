@@ -1,14 +1,9 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { applyTrackedAssetOverrides, fillMissingSupplyHistory } from "./phase-helpers";
-import { buildSyncMetadata, loadPreviousStablecoinsById } from "./shared";
-import { checkStablecoinsPriceStaleness } from "./runtime";
-import type { CronResult } from "./shared";
+import { applyTrackedAssetOverrides } from "./phase-helpers";
+import { loadPreviousStablecoinsById } from "./shared";
 import type {
   FallbackCacheRestorationInput,
   FallbackCacheRestorationOutput,
-  FallbackStalenessInput,
-  FallbackStalenessOutput,
-  FallbackSupplyHistoryInput,
 } from "./fallback-types";
 
 export async function restoreFallbackCacheState(
@@ -34,75 +29,4 @@ export async function restoreFallbackCacheState(
   applyTrackedAssetOverrides(input.assets);
 
   return { previousAssetsById, previousCacheState };
-}
-
-export async function fillFallbackSupplyHistoryStage(
-  input: FallbackSupplyHistoryInput,
-): Promise<CronResult | null> {
-  try {
-    const fillAbort = input.returnIfAborted(input.signal, "fallback-fill-supply-history");
-    if (fillAbort) return fillAbort;
-    await fillMissingSupplyHistory(input.db, input.assets, input.signal);
-  } catch (error) {
-    if (input.signal?.aborted) return input.abortResult(input.signal, "fallback-fill-supply-history");
-    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] supply_history fallback failed:", error);
-  }
-
-  return null;
-}
-
-export async function runFallbackStalenessGate(
-  input: FallbackStalenessInput,
-): Promise<FallbackStalenessOutput | CronResult> {
-  const {
-    stalenessWarning,
-    stalenessSummary,
-    stalenessCheckFailed,
-    stalenessCheckFailureReason,
-    blockedResult,
-  } = await checkStablecoinsPriceStaleness({
-    previousAssetsById: input.previousAssetsById,
-    previousCacheState: input.previousCacheState,
-    assets: input.assets,
-    signal: input.signal,
-    reportProgress: input.reportProgress,
-    progressStage: "fallback-staleness-check",
-    progressMessage: "Checking fallback price staleness",
-    abortStage: "fallback-detect-price-staleness",
-    warningLabel: "(fallback)",
-    failureLabel: "Fallback staleness check",
-    blockedResultFactory: (summary) => ({
-      status: "degraded",
-      itemCount: input.assets.length,
-      metadata: buildSyncMetadata({
-        rowsRead: input.assets.length,
-        rowsWritten: 0,
-        rowsDropped: 0,
-        sourceCoverage: { defillama: false, coingeckoFallbackAssets: input.assets.length },
-        fallbackMode: "coingecko-supply-fallback-stale-blocked",
-        validationFailures: 1,
-        upstreamFetchOk: false,
-        payloadAccepted: false,
-        cacheWriteSucceeded: false,
-        depegPipelineSucceeded: false,
-        stalenessWarning: true,
-        priceStaleness: summary,
-        staleWriteBlocked: true,
-      }, {
-        cacheWriteMode: "no-write",
-        capabilities: {
-          stablecoinsCache: false,
-          depegPipeline: false,
-        },
-      }),
-    }),
-  });
-  if (blockedResult) return blockedResult;
-
-  return {
-    stalenessWarning,
-    stalenessSummary,
-    stalenessCheckFailed,
-    stalenessCheckFailureReason,
-  };
 }

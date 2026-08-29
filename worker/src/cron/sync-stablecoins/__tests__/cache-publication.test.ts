@@ -2,10 +2,62 @@ import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
-import { validateAndWriteStablecoinsCache } from "../cache-publication";
+import { commitReplayPriceCache, validateAndWriteStablecoinsCache } from "../cache-publication";
 import { normalizeStablecoinsPayload } from "../shared";
 
 describe("validateAndWriteStablecoinsCache", () => {
+  it("writes byte-identical canonical and replay-price payloads for main and fallback policies", async () => {
+    const syncStartSec = 1_777_000_000;
+    const fxFallbackRates = { EUR: 1.1 };
+    const priceCacheEntries = [{
+      id: "fixture-usd",
+      price: 1,
+      source: "coingecko",
+      confidence: "single-source" as const,
+      observedAt: syncStartSec - 30,
+      observedAtMode: "upstream" as const,
+      syncedAt: syncStartSec,
+      agreeSources: ["coingecko"],
+      consensusSources: ["coingecko"],
+    }];
+    const makeDb = () => mockD1([
+      { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
+      { match: "price_cache", rows: [], runMeta: { changes: 1 } },
+    ]);
+    const mainDb = makeDb();
+    const fallbackDb = makeDb();
+
+    for (const [db, validationContext, stagePrefix] of [
+      [mainDb, "main", undefined],
+      [fallbackDb, "fallback", "fallback-"],
+    ] as const) {
+      await validateAndWriteStablecoinsCache({
+        assets: [],
+        fxFallbackRates,
+        db,
+        syncStartSec,
+        validationContext,
+        returnIfAborted: () => null,
+        abortResult: () => ({ aborted: true, metadata: "aborted" }),
+      }, () => ({ metadata: "blocked" }));
+      await commitReplayPriceCache({
+        db,
+        entries: priceCacheEntries,
+        returnIfAborted: () => null,
+        stagePrefix,
+      });
+    }
+
+    const stablecoinsBody = (db: ReturnType<typeof makeDb>) => db.getHistory()
+      .find((entry) => entry.binds[0] === "stablecoins")?.binds[1];
+    const priceCacheWrites = (db: ReturnType<typeof makeDb>) => db.getHistory()
+      .filter((entry) => entry.sql.includes("price_cache"))
+      .map((entry) => ({ sql: entry.sql, binds: entry.binds }));
+    expect(stablecoinsBody(mainDb)).toBe(stablecoinsBody(fallbackDb));
+    expect(stablecoinsBody(mainDb)).toBe(JSON.stringify({ peggedAssets: [], fxFallbackRates }));
+    expect(priceCacheWrites(mainDb)).toEqual(priceCacheWrites(fallbackDb));
+  });
+
   it("normalizes every unusable price to explicit missing provenance", () => {
     const payload = normalizeStablecoinsPayload({
       peggedAssets: [

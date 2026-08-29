@@ -29,9 +29,10 @@ const NOW_SEC = 1_700_000_000;
 const subPhaseMocks = vi.hoisted(() => ({
   restoreFallbackCacheState: vi.fn(async () => ({
     previousAssetsById: new Map<string, PeggedAsset>(),
+    previousCacheState: { state: "missing" as const },
   })),
-  fillFallbackSupplyHistoryStage: vi.fn(async () => null),
-  runFallbackStalenessGate: vi.fn(async () => ({
+  checkStablecoinsPriceStaleness: vi.fn(async () => ({
+    state: "missing-previous-cache" as string,
     stalenessWarning: false,
     stalenessSummary: null,
     stalenessCheckFailed: false,
@@ -53,21 +54,25 @@ const subPhaseMocks = vi.hoisted(() => ({
     priceCacheEntries: [],
     providerDiagnostics: [],
   })),
-  publishFallbackStablecoinsCache: vi.fn(async ({ assets: _assets, syncStartSec }: { assets: PeggedAsset[]; syncStartSec: number }) => ({
+  fillMissingSupplyHistory: vi.fn(async () => 0),
+  validateAndWriteStablecoinsCache: vi.fn(async ({ syncStartSec }: { syncStartSec: number }) => ({
+    written: true,
+    skippedBecauseNewer: false,
     cacheKey: "stablecoins",
     syncStartSec,
+    responseReadyCacheError: null,
   })),
-  runFallbackDepegFollowThrough: vi.fn(async () => ({
+  commitReplayPriceCache: vi.fn(async () => null),
+  runDepegPipeline: vi.fn(async () => ({
     depegErrorCount: 0,
     depegErrors: [] as string[],
     providerDiagnostics: [] as unknown[],
   })),
+  queueTrackedAdditionsNotice: vi.fn(async () => undefined),
 }));
 
 vi.mock("../fallback-cache", () => ({
   restoreFallbackCacheState: subPhaseMocks.restoreFallbackCacheState,
-  fillFallbackSupplyHistoryStage: subPhaseMocks.fillFallbackSupplyHistoryStage,
-  runFallbackStalenessGate: subPhaseMocks.runFallbackStalenessGate,
 }));
 
 vi.mock("../fallback-fx", () => ({
@@ -77,24 +82,29 @@ vi.mock("../fallback-fx", () => ({
 vi.mock("../fallback-enrichment", () => ({
   runFallbackPriceEnrichmentPhase: subPhaseMocks.runFallbackPriceEnrichmentPhase,
 }));
-
-vi.mock("../fallback-publish", () => ({
-  publishFallbackStablecoinsCache: subPhaseMocks.publishFallbackStablecoinsCache,
-  runFallbackDepegFollowThrough: subPhaseMocks.runFallbackDepegFollowThrough,
-}));
 vi.mock("../supplemental-assets/onchain-supply", () => ({ fetchCuratedAggregateOnChainMcap: vi.fn(async () => null) }));
+vi.mock("../phase-helpers", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../phase-helpers")>()),
+  fillMissingSupplyHistory: subPhaseMocks.fillMissingSupplyHistory,
+}));
+vi.mock("../cache-publication", () => ({
+  validateAndWriteStablecoinsCache: subPhaseMocks.validateAndWriteStablecoinsCache,
+  commitReplayPriceCache: subPhaseMocks.commitReplayPriceCache,
+}));
+vi.mock("../post-enrichment", () => ({
+  isAbortResult: (result: { aborted?: boolean }) => result?.aborted === true,
+  runDepegPipeline: subPhaseMocks.runDepegPipeline,
+}));
+vi.mock("../telegram-tracked-additions", () => ({
+  queueTrackedAdditionsNotice: subPhaseMocks.queueTrackedAdditionsNotice,
+}));
 
 // runtime reporter is optional; stub to a no-op
 vi.mock("../runtime", () => ({
   returnIfAborted: () => null,
   abortResult: () => ({ metadata: "{}" }),
   reportStablecoinsStage: vi.fn(),
-  checkStablecoinsPriceStaleness: vi.fn(async () => ({
-    state: "missing-previous-cache",
-    stalenessWarning: false,
-    stalenessSummary: null,
-    stalenessCheckFailed: false,
-  })),
+  checkStablecoinsPriceStaleness: subPhaseMocks.checkStablecoinsPriceStaleness,
 }));
 
 import { syncViaCoingeckoFallback } from "../fallback";
@@ -194,7 +204,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
 
     // None of the heavy sub-phases should have been called
     expect(subPhaseMocks.restoreFallbackCacheState).not.toHaveBeenCalled();
-    expect(subPhaseMocks.publishFallbackStablecoinsCache).not.toHaveBeenCalled();
+    expect(subPhaseMocks.validateAndWriteStablecoinsCache).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------
@@ -316,7 +326,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
   // (g) depegErrorCount > 0 causes degraded status
   // -----------------------------------------------------------------------
   it("(g) propagates degraded status when depeg follow-through reports errors", async () => {
-    subPhaseMocks.runFallbackDepegFollowThrough.mockResolvedValueOnce({
+    subPhaseMocks.runDepegPipeline.mockResolvedValueOnce({
       depegErrorCount: 3,
       depegErrors: ["err1", "err2", "err3"],
       providerDiagnostics: [],
@@ -338,7 +348,8 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
   });
 
   it("(h) degrades published fallback metadata when the staleness check fails", async () => {
-    subPhaseMocks.runFallbackStalenessGate.mockResolvedValueOnce({
+    subPhaseMocks.checkStablecoinsPriceStaleness.mockResolvedValueOnce({
+      state: "check-failed",
       stalenessWarning: false,
       stalenessSummary: null,
       stalenessCheckFailed: true,

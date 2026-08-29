@@ -1,6 +1,5 @@
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type TrackedCoverageRestoreResult } from "./shared";
-import type { CacheValidationResult } from "./cache-publication";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
 import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
 import type { GtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
@@ -435,6 +434,84 @@ export function buildStablecoinsSyncResult(input: {
   };
 }
 
+export function buildFallbackStablecoinsSyncResult(input: {
+  assets: PeggedAsset[];
+  enrichStats: unknown;
+  providerDiagnostics: PricingProviderAttemptDiagnostic[];
+  authoritativeOverrideCount: number;
+  authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
+  rejectedCount: number;
+  cachedFallbackCount: number;
+  nativePegCorrectionCount: number;
+  nativePegFillCount: number;
+  stalenessWarning: boolean;
+  stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
+  stalenessCheckFailed: boolean;
+  stalenessCheckFailureReason?: string;
+  depegErrorCount: number;
+  cacheKey: string;
+  syncStartSec: number;
+  activePriceCoverage: StablecoinActivePriceCoverage;
+}): CronResult {
+  const publicationCoverage = evaluateStablecoinPublicationCoverage(
+    input.assets.map((asset) => String(asset.id)),
+    input.syncStartSec,
+  );
+  const persistedActivePriceCoverage = input.activePriceCoverage.missingActiveAssets.length > 20
+    ? compactStablecoinActivePriceCoverage(input.activePriceCoverage, 20)
+    : input.activePriceCoverage;
+  const priceSourceAttemptLedger = compactPriceSourceAttemptLedger(buildPriceSourceAttemptLedger({
+    missingActiveIds: input.activePriceCoverage.missingActiveIds,
+    providerDiagnostics: input.providerDiagnostics,
+    authoritativeOverrideStats: input.authoritativeOverrideStats,
+  }));
+
+  return {
+    status:
+      input.depegErrorCount > 0
+        || input.stalenessCheckFailed
+        || !publicationCoverage.complete
+        ? "degraded"
+        : "ok",
+    itemCount: input.assets.length,
+    metadata: buildSyncMetadata({
+      rowsRead: input.assets.length,
+      rowsWritten: input.assets.length,
+      rowsDropped: 0,
+      sourceCoverage: { defillama: false, coingeckoFallbackAssets: input.assets.length },
+      fallbackMode: "coingecko-supply-fallback",
+      validationFailures: 0,
+      enrichment: input.enrichStats,
+      providerDiagnostics: input.providerDiagnostics,
+      rejectedPrices: input.rejectedCount,
+      nativePegCorrections: input.nativePegCorrectionCount,
+      nativePegFills: input.nativePegFillCount,
+      cachedFallbackPrices: input.cachedFallbackCount,
+      authoritativeOverrides: input.authoritativeOverrideCount,
+      authoritativeOverrideStats: input.authoritativeOverrideStats,
+      stalenessWarning: input.stalenessWarning,
+      priceStaleness: input.stalenessSummary,
+      stalenessCheckFailed: input.stalenessCheckFailed,
+      stalenessCheckFailureReason: input.stalenessCheckFailureReason,
+      upstreamFetchOk: false,
+      payloadAccepted: true,
+      cacheWriteSucceeded: true,
+      cacheKey: input.cacheKey,
+      syncStartSec: input.syncStartSec,
+      depegPipelineSucceeded: input.depegErrorCount === 0,
+      activePublicationCoverage: publicationCoverage,
+      activePriceCoverage: persistedActivePriceCoverage,
+      priceSourceAttemptLedger,
+    }, {
+      cacheWriteMode: "published",
+      capabilities: {
+        stablecoinsCache: publicationCoverage.complete,
+        depegPipeline: input.depegErrorCount === 0,
+      },
+    }),
+  };
+}
+
 export function buildBlockedInvalidPayloadResult(input: CachePublicationMetadataBase & {
   itemCount: number;
   validationContext: "main" | "fallback";
@@ -491,23 +568,4 @@ export function buildSkippedNewerCacheResult(input: CachePublicationMetadataBase
       },
     }),
   };
-}
-
-export function buildStablecoinsUnwrittenCacheResult(input: {
-  cacheResult: CacheValidationResult;
-  rawAssetCount: number;
-  droppedMalformedAssets: number;
-}): CronResult {
-  if (!input.cacheResult.skippedBecauseNewer) {
-    return input.cacheResult.blockedResult!;
-  }
-  return buildSkippedNewerCacheResult({
-    rowsRead: input.rawAssetCount,
-    rowsDropped: input.droppedMalformedAssets,
-    sourceCoverage: { defillama: true },
-    fallbackMode: null,
-    cacheKey: input.cacheResult.cacheKey,
-    syncStartSec: input.cacheResult.syncStartSec,
-    upstreamFetchOk: true,
-  });
 }

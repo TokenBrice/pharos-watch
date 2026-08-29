@@ -1,8 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { buildSyncMetadata, type PreviousStablecoinsCacheState } from "./shared";
-import { detectPriceStaleness, fillMissingSupplyHistory } from "./phase-helpers";
-import { recordOutcome } from "../../lib/circuit-breaker";
-import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { detectPriceStaleness } from "./phase-helpers";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
@@ -93,26 +91,6 @@ export function abortResult(signal: AbortSignal | undefined, stage: string): Cro
 export function returnIfAborted(signal: AbortSignal | undefined, stage: string): CronResult | null {
   if (!signal?.aborted) return null;
   return abortResult(signal, stage);
-}
-
-export async function fillStablecoinsSupplyHistoryStage(
-  db: D1Database,
-  assets: PeggedAsset[],
-  signal?: AbortSignal,
-): Promise<CronResult | null> {
-  try {
-    const fillAbort = returnIfAborted(signal, "fill-supply-history");
-    if (fillAbort) return fillAbort;
-    const fillCount = await fillMissingSupplyHistory(db, assets, signal);
-    if (fillCount > 0) {
-      logWorkerEventArgs("handler", "info", `[sync-stablecoins] Filled ${fillCount} missing supply changes from supply_history`);
-    }
-  } catch (err) {
-    if (signal?.aborted) return abortResult(signal, "fill-supply-history");
-    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] supply_history fallback failed:", err);
-  }
-
-  return null;
 }
 
 function buildStalenessSummaryMetadata(staleness: {
@@ -232,12 +210,4 @@ export async function checkStablecoinsPriceStaleness(params: {
       stalenessCheckFailureReason: toErrorMessage(error),
     };
   }
-}
-
-export async function recordStablecoinsStalenessBlockOutcome(
-  db: D1Database,
-  check: Pick<StablecoinsStalenessCheckResult, "blockedReason">,
-): Promise<void> {
-  if (check.blockedReason !== "severe-staleness") return;
-  await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
 }
