@@ -6,9 +6,8 @@ import type {
 } from "../../types/safety-score-v9-facts";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { isV9CreditableNonAtomicRedemption, isV9ExitRouteOutputResolved } from "./exit";
-import { assertV9ValidatedPolicyEnvelope } from "./policy";
+import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "./policy";
 import { compareText, uniqueSorted } from "./primitives";
-import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "./score-bearing-gates-policy";
 
 export type V9TransferPosture = "permissionless" | "restrictable" | "permissioned" | "unknown";
 export type V9FreezeExposure = "none-known" | "upstream" | "direct" | "possible" | "unknown";
@@ -23,7 +22,7 @@ export type V9GovernancePosture = "immutable" | "distributed" | "concentrated" |
 
 /** D11: reviewed access evidence remains current for 365 days. */
 export const V9_ACCESS_EVIDENCE_MAX_AGE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.accessReviewMaxAgeSec;
+  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.accessReviewMaxAgeSec;
 
 export interface V9TransferAccessReview {
   status: V9FactStatusV2;

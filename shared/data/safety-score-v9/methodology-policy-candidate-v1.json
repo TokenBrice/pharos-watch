@@ -146,7 +146,32 @@
             "toLimit": 87
           }
         }
-      ]
+      ],
+      "withhold": {
+        "maxScoreExclusive": 55,
+        "minimumLimitedPillarCount": 2,
+        "requiresLimitedBacking": true
+      },
+      "danger": {
+        "withholdPegMultiplierFloor": 0.9,
+        "fGatePegMultiplierFloor": 0.8,
+        "preExitPegMultiplierFloor": 0.9,
+        "adverseAttributionPegMultiplierFloor": 0.9,
+        "activeDepegMinimumBpsExclusive": 0,
+        "withholdCentralizedMintSeverities": [
+          "high",
+          "critical"
+        ],
+        "fGateCentralizedMintSeverities": [
+          "critical"
+        ],
+        "preExitCentralizedMintSeverities": [
+          "critical"
+        ],
+        "dangerOnlyGrades": [
+          "F"
+        ]
+      }
     },
     "evidence": {
       "ceilings": {
@@ -242,7 +267,17 @@
           "routeAction": "exclude",
           "publicLabel": "Material evidence is stale"
         }
-      ]
+      ],
+      "evidenceExpiry": {
+        "reviewedResearchMaxAgeSec": 31536000,
+        "accessReviewMaxAgeSec": 31536000,
+        "researchOverlayMaxAgeSec": 31536000,
+        "mechanismOverlayMaxAgeSec": 31536000,
+        "issuerAttestedReserveMaxAgeSec": 31536000,
+        "reviewedReserveClassificationMaxAgeSec": 31536000,
+        "reviewedReserveCompositionMaxAgeSec": 2678400,
+        "reviewedReserveCompositionGraceSec": 604800
+      }
     },
     "materiality": {
       "serialRequiredPathsAlwaysBind": true,
@@ -893,6 +928,7 @@
         "external-lock-mint": 45,
         "opaque-or-unknown": 45
       },
+      "materialBridgeHighShareThreshold": 0.25,
       "boundedUnknownQuality": 45
     },
     "structural": {

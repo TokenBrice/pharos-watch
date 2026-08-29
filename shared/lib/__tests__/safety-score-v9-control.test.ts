@@ -13,7 +13,6 @@ import {
   type V9OracleControlReview,
 } from "../safety-score-v9/control";
 import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "../safety-score-v9/score-bearing-gates-policy";
 import {
   boundedUnknown,
   makeEconomicControlArgs as args,
@@ -1030,13 +1029,13 @@ describe("Safety Score v9 economic control", () => {
     expect(evaluateBridge(null)).toMatchObject({ binding: true, severity: "high" });
     // Opaque topology stays critical regardless of share.
     expect(evaluateBridge(0.15, "opaque-or-unknown")).toMatchObject({ binding: true, severity: "critical" });
-    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V923);
-    gates.control.materialBridgeHighShareThreshold = 0.15;
+    const changedPolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
+    changedPolicy.semantic.control.materialBridgeHighShareThreshold = 0.15;
     expect(
       evaluateBridge(
         0.15,
         "external-lock-mint",
-        loadV9MethodologyPolicy(V9_CANDIDATE_POLICY_V1.policy, gates),
+        loadV9MethodologyPolicy(changedPolicy),
       ),
     ).toMatchObject({ binding: true, severity: "high" });
   });

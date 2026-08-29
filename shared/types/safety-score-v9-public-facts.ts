@@ -31,11 +31,9 @@ export const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;
 // threshold can reject a correct publication once the policy moves.
 export const C_MINUS_MIN_SCORE =
   V9_GRADE_THRESHOLDS.find((threshold) => threshold.grade === "C-")?.min ?? 50;
-// Not derivable here. The score-bearing gates policy is a code constant in shared/lib, and
-// shared/types must not import shared/lib (see the note in api-key-requests.ts:73) — the whole
-// point of keeping the grade thresholds in this layer is to avoid that inversion. Deriving this
-// requires deciding where the gates policy lives, which belongs to the 9.23 provenance release
-// alongside the other outstanding score-bearing literals.
+// Not derivable here without importing the methodology data asset into the public-schema layer.
+// This remains a validation-only mirror; scoring reads the canonical danger floor from the parsed
+// policy envelope, while shared/types stays independent of shared/lib policy loading.
 export const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
 export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
   "bounded-mechanism-review",

@@ -1777,7 +1777,7 @@ interface TierSummary {
   count: number;
   mcap: number;
   share: number;
-  leaders: Array<{ symbol: string; score: number; mcap: number }>;
+  leaders: Array<{ id: string; symbol: string; score: number; mcap: number }>;
 }
 
 function summarizeMapCoins(coins: readonly MapCoin[]): TierSummary[] {
@@ -1795,7 +1795,7 @@ function summarizeMapCoins(coins: readonly MapCoin[]): TierSummary[] {
       leaders: [...tierCoins]
         .sort((a, b) => b.mcap - a.mcap || b.score - a.score || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
         .slice(0, 3)
-        .map((coin) => ({ symbol: mapLabel(coin.symbol), score: coin.score, mcap: coin.mcap })),
+        .map((coin) => ({ id: coin.id, symbol: mapLabel(coin.symbol), score: coin.score, mcap: coin.mcap })),
     };
   });
 }
@@ -2136,6 +2136,7 @@ function assertSaneDeltas(
     );
   }
 
+  const priorById = new Map(previous.coins.map((coin) => [coin.id, coin]));
   const currentByTier = new Map(current.tiers.map((tier) => [tier.tier, tier]));
   for (const tier of TIER_ORDER) {
     const priorCount = previous.counts.byTier[tier];
@@ -2157,23 +2158,28 @@ function assertSaneDeltas(
       throw new Error(`Tier ${tier} leader changed since the previous snapshot — refusing an unexplained leader shift`);
     }
     if (priorLeader != null && currentLeader != null) {
-      // A swap between near-tied neighbours is ordinary market movement (the
-      // 2026-08-29 BUIDL/USYC flip sat 0.6% apart and blocked the digest map),
-      // so a new leader is accepted when it already sat in the prior top-3 and
-      // its own supply moved within the same 25% tolerance. A leader from
-      // outside the recorded top-3 would need a one-day move the per-tier
-      // supply guards should never allow — that still reads as a broken join.
-      const priorEntry = priorTier.leaders.find((leader) => leader.symbol === currentLeader.symbol);
-      if (priorEntry == null) {
-        throw new Error(`Tier ${tier} leader changed to ${currentLeader.symbol}, absent from the previous snapshot's top ${priorTier.leaders.length} — refusing an unexplained leader shift`);
-      }
-      if (Math.abs(currentLeader.mcap - priorEntry.mcapUsd) > Math.max(1, priorEntry.mcapUsd * 0.25)) {
-        throw new Error(`Tier ${tier} leader ${currentLeader.symbol} supply moved from ${priorEntry.mcapUsd} to ${currentLeader.mcap} (>25%) since the previous snapshot — refusing an unexplained leader shift`);
+      if (priorLeader.symbol === currentLeader.symbol) {
+        if (Math.abs(currentLeader.mcap - priorLeader.mcapUsd) > Math.max(1, priorLeader.mcapUsd * 0.25)) {
+          throw new Error(`Tier ${tier} leader supply moved from ${priorLeader.mcapUsd} to ${currentLeader.mcap} (>25%) since the previous snapshot — refusing an unexplained leader shift`);
+        }
+      } else {
+        // A swap between near-tied coins is ordinary market movement (the
+        // 2026-08-29 BUIDL/USYC flip sat 0.6% apart, failed both scheduled
+        // runs, and blocked the digest map), so a new leader is accepted when
+        // the prior census already knew the coin and its own supply moved
+        // within the same 25% tolerance. A leader the prior census never saw
+        // still reads as a broken join or census fault and fails closed.
+        const priorCoin = priorById.get(currentLeader.id);
+        if (priorCoin == null) {
+          throw new Error(`Tier ${tier} leader changed to ${currentLeader.symbol}, absent from the previous census — refusing an unexplained leader shift`);
+        }
+        if (Math.abs(currentLeader.mcap - priorCoin.mcap) > Math.max(1, priorCoin.mcap * 0.25)) {
+          throw new Error(`Tier ${tier} leader ${currentLeader.symbol} supply moved from ${priorCoin.mcap} to ${currentLeader.mcap} (>25%) since the previous snapshot — refusing an unexplained leader shift`);
+        }
       }
     }
   }
 
-  const priorById = new Map(previous.coins.map((coin) => [coin.id, coin]));
   const currentById = new Map(current.coins.map((coin) => [coin.id, coin]));
   const allIds = new Set([...priorById.keys(), ...currentById.keys()]);
   // Census additions/removals are deliberately not join flips — they are

@@ -7,7 +7,7 @@ import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "@shared/lib/safety-score-v9/score-bearing-gates-policy";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -1499,7 +1499,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       // consistent with the D1 overlay standard and the mechanism-overlay
       // expiry gate (VER2-004). Registry-observed overlays stay current well
       // inside this window, so the current cohort is unaffected.
-      maxAgeSec: V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.researchOverlayMaxAgeSec,
+      maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.researchOverlayMaxAgeSec,
     },
   } satisfies SafetyScoreV9FactSetExtensionV2["sources"];
   const liveToFallbackAssetIds = new Set(fixedInput.liveToFallbackCoins);
@@ -1561,7 +1561,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         reserveRows,
         meta,
         clockSec,
-        V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedReserveClassificationMaxAgeSec,
+        V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveClassificationMaxAgeSec,
       );
       addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
       addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence, clockSec);

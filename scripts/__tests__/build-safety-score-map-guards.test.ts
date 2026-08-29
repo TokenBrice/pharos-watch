@@ -431,7 +431,7 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     return path;
   }
 
-  function validSnapshot(fixture: { cards: Card[]; assets: Asset[] }): unknown {
+  function validSnapshot(fixture: { cards: Card[]; assets: Asset[] }) {
     const byAsset = new Map(fixture.assets.map((asset) => [asset.id, asset]));
     const rated = fixture.cards.filter((card) => card.grade !== "NR");
     const tierOrder = ["A", "B", "C", "D", "F"] as const;
@@ -573,19 +573,13 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     expect(run.stderr).toMatch(/Tier A count moved/);
   });
 
-  interface SnapshotLeader { symbol: string; score: number; mcapUsd: number }
-  function tierLeaders(snapshotBody: unknown, tier: string): SnapshotLeader[] {
-    const body = snapshotBody as { mapSummary: { tiers: Array<{ tier: string; leaders: SnapshotLeader[] }> } };
-    return body.mapSummary.tiers.find((entry) => entry.tier === tier)!.leaders;
-  }
-
-  it("tolerates a leader swap between the prior top-3 when supplies moved within tolerance", async () => {
+  it("tolerates a near-tie leader swap when the prior census explains the new leader", async () => {
     const prior = universe({ count: 20 });
     const body = validSnapshot(prior);
     // Yesterday C1 narrowly led tier A over C0; today the live data has C0
-    // ahead again. Both coins sat in the recorded top-3 and neither supply
-    // moved 25%, so this is ordinary market movement, not a broken join.
-    const leaders = tierLeaders(body, "A");
+    // ahead again. The prior census knows C0 at its current supply, so this is
+    // ordinary market movement, not a broken join.
+    const leaders = body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders;
     [leaders[0], leaders[1]] = [leaders[1], leaders[0]];
     const path = snapshot(scratch, body);
     const run = await runGenerator(prior, { args: ["--previous-snapshot", path], stopBeforeRender: true });
@@ -593,24 +587,43 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
   });
 
-  it("refuses a leader that was absent from the previous snapshot's top-3", async () => {
+  it("tolerates a new leader from outside the recorded top-3 when the census explains it", async () => {
     const prior = universe({ count: 20 });
     const body = validSnapshot(prior);
-    for (const leader of tierLeaders(body, "A")) leader.symbol = `X${leader.symbol}`;
+    // Yesterday's recorded top-3 omitted C0 entirely (it sat 4th); today it
+    // leads tier A. The prior census still carries coin-00 at its current
+    // supply, so the crossover is explained without any recorded-top-3 seat.
+    const leaders = body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders;
+    leaders.splice(0, leaders.length, ...leaders.filter((leader) => leader.symbol !== "C0"));
+    const path = snapshot(scratch, body);
+    const run = await runGenerator(prior, { args: ["--previous-snapshot", path], stopBeforeRender: true });
+    expect(run.stderr).not.toMatch(/leader/);
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it("refuses a leader the previous census never saw", async () => {
+    const prior = universe({ count: 20 });
+    const body = validSnapshot(prior);
+    // Rewrite yesterday's identity for coin-00 so today's tier A leader C0 is
+    // a coin the previous census has no record of.
+    body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders[0].symbol = "CX";
+    const row = body.coins.find((coin) => coin.id === "coin-00")!;
+    row.id = "coin-xx";
+    row.symbol = "CX";
     const path = snapshot(scratch, body);
     const run = await runGenerator(prior, { args: ["--previous-snapshot", path] });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Tier A leader changed to C0, absent from the previous snapshot's top 3 — refusing an unexplained leader shift/);
+    expect(run.stderr).toMatch(/Tier A leader changed to C0, absent from the previous census — refusing an unexplained leader shift/);
   });
 
   it("refuses a leader swap when the new leader's own supply moved more than 25%", async () => {
     const prior = universe({ count: 20 });
     const body = validSnapshot(prior);
-    const leaders = tierLeaders(body, "A");
+    const leaders = body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders;
     [leaders[0], leaders[1]] = [leaders[1], leaders[0]];
-    // The prior record has the new leader at double its current supply, so the
+    // The prior census has the new leader at double its current supply, so the
     // swap is no longer explained by bounded day-over-day movement.
-    leaders.find((leader) => leader.symbol === "C0")!.mcapUsd *= 2;
+    body.coins.find((coin) => coin.id === "coin-00")!.mcap *= 2;
     const path = snapshot(scratch, body);
     const run = await runGenerator(prior, { args: ["--previous-snapshot", path] });
     expect(run.status).toBe(1);

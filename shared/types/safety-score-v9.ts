@@ -796,6 +796,35 @@ const V9FormulaPolicySchema = z
       .object({ pure: ScoreSchema, staked: ScoreSchema, vault: ScoreSchema })
       .strict(),
     assetPremiums: z.array(V9AssetPremiumPolicySchema).default([]),
+    withhold: z
+      .object({
+        maxScoreExclusive: z.number().finite().min(0).max(100),
+        minimumLimitedPillarCount: z.number().int().min(1).max(3),
+        requiresLimitedBacking: z.boolean(),
+      })
+      .strict(),
+    danger: z
+      .object({
+        withholdPegMultiplierFloor: z.number().finite().min(0).max(1),
+        fGatePegMultiplierFloor: z.number().finite().min(0).max(1),
+        preExitPegMultiplierFloor: z.number().finite().min(0).max(1),
+        adverseAttributionPegMultiplierFloor: z.number().finite().min(0).max(1),
+        activeDepegMinimumBpsExclusive: z.number().finite().nonnegative(),
+        withholdCentralizedMintSeverities: z.array(V9SeveritySchema).min(1),
+        fGateCentralizedMintSeverities: z.array(V9SeveritySchema).min(1),
+        preExitCentralizedMintSeverities: z.array(V9SeveritySchema).min(1),
+        dangerOnlyGrades: z.array(V9GradeSchema.exclude(["NR"])).min(1),
+      })
+      .strict()
+      .superRefine((danger, ctx) => {
+        if (danger.fGatePegMultiplierFloor > danger.withholdPegMultiplierFloor) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["fGatePegMultiplierFloor"],
+            message: "F-gate peg floor cannot exceed the withhold danger floor",
+          });
+        }
+      }),
   })
   .strict();
 
@@ -818,6 +847,18 @@ const V9EvidencePolicySchema = z
       })
       .strict(),
     dispositions: z.array(V9FactDispositionSchema),
+    evidenceExpiry: z
+      .object({
+        reviewedResearchMaxAgeSec: z.number().int().positive(),
+        accessReviewMaxAgeSec: z.number().int().positive(),
+        researchOverlayMaxAgeSec: z.number().int().positive(),
+        mechanismOverlayMaxAgeSec: z.number().int().positive(),
+        issuerAttestedReserveMaxAgeSec: z.number().int().positive(),
+        reviewedReserveClassificationMaxAgeSec: z.number().int().positive(),
+        reviewedReserveCompositionMaxAgeSec: z.number().int().positive(),
+        reviewedReserveCompositionGraceSec: z.number().int().positive(),
+      })
+      .strict(),
   })
   .strict();
 
@@ -1116,6 +1157,7 @@ const V9ControlPolicySchema = z
       }),
     oracleTierQuality: exactEnumScoreMapSchema(ORACLE_RISK_TIER_VALUES),
     bridgeTierQuality: exactEnumScoreMapSchema(BRIDGE_ROUTE_RISK_TIER_VALUES),
+    materialBridgeHighShareThreshold: z.number().finite().min(0).max(1),
     boundedUnknownQuality: ScoreSchema,
   })
   .strict();
@@ -1839,9 +1881,15 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
 });
 export type V9MethodologyPolicy = z.infer<typeof V9MethodologyPolicySchema>;
 
+type V9DigestMethodologySemantic = Omit<V9MethodologySemantic, "formula" | "evidence" | "control"> & {
+  formula: Omit<V9MethodologySemantic["formula"], "withhold" | "danger">;
+  evidence: Omit<V9MethodologySemantic["evidence"], "evidenceExpiry">;
+  control: Omit<V9MethodologySemantic["control"], "materialBridgeHighShareThreshold">;
+};
+
 export type V9MethodologySemanticPayload = {
   schemaVersion: 1;
-  semantic: V9MethodologySemantic;
+  semantic: V9DigestMethodologySemantic;
   reasonRegistry: V9ReasonRegistryEntry[];
 };
 

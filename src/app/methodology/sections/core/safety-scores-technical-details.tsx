@@ -4,8 +4,8 @@ import { SafetyScoresDimensionDetails } from "./safety-scores-dimension-details"
 import { SafetyScoresScoringDetails } from "./safety-scores-scoring-details";
 
 export function SafetyScoresTechnicalDetails() {
-  const formula = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
-  const gates = V9_CANDIDATE_POLICY_V1.scoreBearingGates;
+  const { releaseVersion, semantic } = V9_CANDIDATE_POLICY_V1.policy;
+  const { formula } = semantic;
   const gradeThresholds = formula.gradeThresholds
     .map((threshold) => `${threshold.grade} ${threshold.minScore}+`)
     .join(", ");
@@ -55,7 +55,7 @@ export function SafetyScoresTechnicalDetails() {
             { label: "Publication", value: "Global failure holds; attributable local failures quarantine to NR at ≥90% healthy" },
             {
               label: "Policy provenance",
-              value: `Score-bearing gates digest-bound since v${gates.methodologyVersion}; withhold below ${gates.withhold.maxScoreExclusive}, F-gate peg floor ${gates.danger.fGatePegMultiplierFloor}, material-bridge share ${gates.control.materialBridgeHighShareThreshold * 100}%`,
+              value: `Score-bearing gates digest-bound since v${releaseVersion}; withhold below ${formula.withhold.maxScoreExclusive}, F-gate peg floor ${formula.danger.fGatePegMultiplierFloor}, material-bridge share ${semantic.control.materialBridgeHighShareThreshold * 100}%`,
             },
           ]}
         />
