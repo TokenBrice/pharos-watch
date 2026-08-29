@@ -10,9 +10,12 @@ import { buildApiUrl } from "@/lib/api";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { RequestFailure, RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
-import type { SchemaLike } from "@shared/lib/schema-like";
-
-type FeedbackType = "bug" | "data-correction" | "feature-request";
+import {
+  FEEDBACK_TYPES,
+  FeedbackResponseSchema,
+  type FeedbackResponse,
+  type FeedbackType,
+} from "@shared/types/feedback";
 
 interface FeedbackModalProps {
   open: boolean;
@@ -22,8 +25,6 @@ interface FeedbackModalProps {
   stablecoinName?: string;
   pegValue?: string;
 }
-
-const FEEDBACK_TYPES: FeedbackType[] = ["bug", "data-correction", "feature-request"];
 
 const TYPE_LABELS: Record<FeedbackType, string> = {
   bug: "Bug Report",
@@ -35,29 +36,6 @@ const DESCRIPTION_HINTS: Record<FeedbackType, string> = {
   bug: "Describe what happened and what you expected instead.",
   "data-correction": "e.g. USDC shows $0.00 price since yesterday. CoinGecko shows $1.0001.",
   "feature-request": "Describe the feature and why it would be useful.",
-};
-
-interface FeedbackResponse {
-  ok: boolean;
-  error?: string;
-}
-
-const FeedbackResponseSchema: SchemaLike<FeedbackResponse> = {
-  safeParse(value) {
-    if (
-      !value ||
-      typeof value !== "object" ||
-      Array.isArray(value) ||
-      typeof (value as { ok?: unknown }).ok !== "boolean"
-    ) {
-      return { success: false, error: { issues: [{ path: [], message: "Expected feedback response" }] } };
-    }
-    const record = value as { ok: boolean; error?: unknown };
-    if (record.error !== undefined && typeof record.error !== "string") {
-      return { success: false, error: { issues: [{ path: ["error"], message: "Expected string" }] } };
-    }
-    return { success: true, data: { ok: record.ok, ...(record.error ? { error: record.error } : {}) } };
-  },
 };
 
 function feedbackRequestErrorMessage(error: unknown): string {
