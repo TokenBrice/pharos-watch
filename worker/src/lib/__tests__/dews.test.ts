@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { computeDEWS, piecewiseLinear, getThreatBand } from "../dews";
 import { clamp } from "@shared/lib/math";
 import type { DEWSInput } from "../dews";
+import { makeDewsInput } from "./dews.test-support";
 
 // --- piecewiseLinear tests ---
 
@@ -90,48 +91,6 @@ describe("getThreatBand", () => {
 
 // --- computeDEWS tests ---
 
-function baseInput(overrides: Partial<DEWSInput> = {}): DEWSInput {
-  return {
-    stablecoinId: "usdt-tether",
-    mcapUsd: 5e9,
-    pegType: "peggedUSD",
-    // Supply velocity
-    circulatingCurrent: 5e9,
-    circulatingPrevDay: 5e9,
-    circulatingPrevWeek: 5e9,
-    // Pool balance
-    weightedBalanceRatio: null,
-    avgPoolStress: null,
-    topPools: null,
-    // Liquidity erosion
-    liquidityScore: null,
-    liquidityScore7dAgo: null,
-    tvlCurrent: null,
-    tvl7dAgo: null,
-    // Price confidence
-    priceConfidence: "high",
-    prevPriceConfidence: null,
-    price: 1.0,
-    // Cross-source divergence
-    pegRef: 1.0,
-    dexPriceUsd: null,
-    // Blacklist activity
-    blacklistEvents24h: 0,
-    blacklistEvents7d: 0,
-    hasBlacklistTracking: false,
-    // Mint/burn flow
-    burnVolume24hUsd: null,
-    mintVolume24hUsd: null,
-    burnBaseline30dUsd: null,
-    flowDataAgeDays: 0,
-    // Yield anomaly
-    yieldWarnings: [],
-    // Systemic backdrop
-    psiScore: null,
-    ...overrides,
-  };
-}
-
 function computeDews(input: DEWSInput) {
   const result = computeDEWS(input);
   expect(result).not.toBeNull();
@@ -141,7 +100,7 @@ function computeDews(input: DEWSInput) {
 describe("computeDEWS", () => {
   it("returns CALM for a healthy large-cap coin with all signals available", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         weightedBalanceRatio: 0.97,
         avgPoolStress: 2,
         topPools: [],
@@ -159,7 +118,7 @@ describe("computeDEWS", () => {
 
   it("produces a non-zero score when supply and price are available", () => {
     // Supply always available (from cache), price always available
-    const result = computeDews(baseInput({ price: null, priceConfidence: null }));
+    const result = computeDews(makeDewsInput({ price: null, priceConfidence: null }));
     // S_price = 100 for null price, S_supply = 0 (no change)
     // Data-quality-only stress is capped at WATCH without market/liquidity evidence.
     expect(result.score).toBeGreaterThan(0);
@@ -170,7 +129,7 @@ describe("computeDEWS", () => {
 
   it("detects supply velocity stress", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         circulatingCurrent: 4.5e9, // -10% from prev day
         circulatingPrevDay: 5e9,
         circulatingPrevWeek: 5.5e9, // -18% from prev week
@@ -184,7 +143,7 @@ describe("computeDEWS", () => {
 
   it("marks supply unavailable when both prior supply anchors are missing", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         circulatingPrevDayAvailable: false,
         circulatingPrevWeekAvailable: false,
         weightedBalanceRatio: 0.98,
@@ -202,7 +161,7 @@ describe("computeDEWS", () => {
 
   it("keeps explicit zero prior supply anchors available", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         circulatingPrevDay: 0,
         circulatingPrevWeek: 0,
         circulatingPrevDayAvailable: true,
@@ -220,14 +179,14 @@ describe("computeDEWS", () => {
 
   it("dampens supply velocity for small coins", () => {
     const large = computeDews(
-      baseInput({
+      makeDewsInput({
         mcapUsd: 5e9,
         circulatingCurrent: 4.75e9,
         circulatingPrevDay: 5e9,
       }),
     );
     const small = computeDews(
-      baseInput({
+      makeDewsInput({
         mcapUsd: 10e6,
         circulatingCurrent: 9.5e6,
         circulatingPrevDay: 10e6,
@@ -238,7 +197,7 @@ describe("computeDEWS", () => {
 
   it("detects pool balance drift", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         weightedBalanceRatio: 0.45,
         avgPoolStress: 70,
         topPools: [{ tvlUsd: 5e6, balanceRatio: 0.3 }],
@@ -250,7 +209,7 @@ describe("computeDEWS", () => {
 
   it("treats NaN weightedBalanceRatio as unavailable", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         weightedBalanceRatio: NaN,
         avgPoolStress: 0,
         topPools: [],
@@ -261,7 +220,7 @@ describe("computeDEWS", () => {
 
   it("treats NaN avgPoolStress as unavailable", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         weightedBalanceRatio: 0.95,
         avgPoolStress: NaN,
         topPools: [],
@@ -272,7 +231,7 @@ describe("computeDEWS", () => {
 
   it("detects price confidence degradation", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         priceConfidence: "low",
         prevPriceConfidence: "high",
       }),
@@ -283,7 +242,7 @@ describe("computeDEWS", () => {
 
   it("detects cross-source price divergence", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         price: 0.995, // 50bps off peg
         dexPriceUsd: 0.99, // 100bps off peg
       }),
@@ -295,14 +254,14 @@ describe("computeDEWS", () => {
 
   it("dampens S_diverg for non-USD pegs", () => {
     const usd = computeDews(
-      baseInput({
+      makeDewsInput({
         pegType: "peggedUSD",
         price: 0.995,
         dexPriceUsd: 0.99,
       }),
     );
     const eur = computeDews(
-      baseInput({
+      makeDewsInput({
         pegType: "peggedEUR",
         price: 0.995,
         dexPriceUsd: 0.99,
@@ -313,7 +272,7 @@ describe("computeDEWS", () => {
 
   it("detects blacklist activity spike", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         hasBlacklistTracking: true,
         blacklistEvents24h: 15,
         blacklistEvents7d: 20,
@@ -324,13 +283,13 @@ describe("computeDEWS", () => {
   });
 
   it("marks blacklist unavailable for untracked coins", () => {
-    const result = computeDews(baseInput({ hasBlacklistTracking: false }));
+    const result = computeDews(makeDewsInput({ hasBlacklistTracking: false }));
     expect(result.signals.black.available).toBe(false);
   });
 
   it("integrates mint/burn flow signal when available", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         burnVolume24hUsd: 5e8,
         mintVolume24hUsd: 1e7,
         burnBaseline30dUsd: 1e8,
@@ -344,13 +303,13 @@ describe("computeDEWS", () => {
   });
 
   it("marks flow unavailable when no mint/burn data", () => {
-    const result = computeDews(baseInput());
+    const result = computeDews(makeDewsInput());
     expect(result.signals.flow.available).toBe(false);
   });
 
   it("treats a mature baseline with zero recent mint/burn flow as available", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         burnVolume24hUsd: 0,
         mintVolume24hUsd: 0,
         burnBaseline30dUsd: 5e8,
@@ -367,7 +326,7 @@ describe("computeDEWS", () => {
 
   it("marks flow unavailable when data too young (<7 days)", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         burnVolume24hUsd: 5e8,
         mintVolume24hUsd: 1e7,
         burnBaseline30dUsd: 1e8,
@@ -380,7 +339,7 @@ describe("computeDEWS", () => {
 
   it("computes yield anomaly signal from warning strings", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         yieldWarnings: ["yield-spike", "tvl-outflow"],
       }),
     );
@@ -391,7 +350,7 @@ describe("computeDEWS", () => {
 
   it("treats missing structured yield-risk fields as the legacy warning-only path", () => {
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         yieldWarnings: [],
         yieldSourceRisk: null,
         yieldRankChangeAttribution: null,
@@ -402,9 +361,9 @@ describe("computeDEWS", () => {
   });
 
   it("scores structured yield-risk and rank-attribution inputs when populated", () => {
-    const legacy = computeDews(baseInput({ yieldWarnings: [] }));
+    const legacy = computeDews(makeDewsInput({ yieldWarnings: [] }));
     const structured = computeDews(
-      baseInput({
+      makeDewsInput({
         yieldWarnings: [],
         yieldSourceRisk: {
           sourceRiskPenalty: 1.5,
@@ -438,7 +397,7 @@ describe("computeDEWS", () => {
 
   it("amplifies score when PSI indicates market stress", () => {
     const calm = computeDews(
-      baseInput({
+      makeDewsInput({
         circulatingCurrent: 4.5e9,
         circulatingPrevDay: 5e9,
         price: 0.99,
@@ -447,7 +406,7 @@ describe("computeDEWS", () => {
       }),
     );
     const stressed = computeDews(
-      baseInput({
+      makeDewsInput({
         circulatingCurrent: 4.5e9,
         circulatingPrevDay: 5e9,
         price: 0.99,
@@ -461,7 +420,7 @@ describe("computeDEWS", () => {
   it("returns score 0 when fewer than 2 signals available", () => {
     // Only supply is available (always available) — 1 signal
     const result = computeDews(
-      baseInput({
+      makeDewsInput({
         priceConfidence: "high",
         price: 1.0,
         // All optional signals unavailable by default
@@ -482,14 +441,14 @@ describe("computeDEWS", () => {
 
   it("smooths pool signal with previous reading", () => {
     const withoutSmoothing = computeDews(
-      baseInput({
+      makeDewsInput({
         weightedBalanceRatio: 0.45,
         avgPoolStress: 70,
         topPools: [{ tvlUsd: 5e6, balanceRatio: 0.3 }],
       }),
     );
     const withSmoothing = computeDews(
-      baseInput({
+      makeDewsInput({
         weightedBalanceRatio: 0.45,
         avgPoolStress: 70,
         topPools: [{ tvlUsd: 5e6, balanceRatio: 0.3 }],
@@ -502,7 +461,7 @@ describe("computeDEWS", () => {
 
   it("marks liquidity signal unavailable when liquidityScore7dAgo is null and tvl delta cannot be computed", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         liquidityScore: 72,
         liquidityScore7dAgo: null,
         tvlCurrent: null,
@@ -514,7 +473,7 @@ describe("computeDEWS", () => {
 
   it("keeps liquidity signal available when only one of the two 7d anchors is present", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         liquidityScore: 72,
         liquidityScore7dAgo: null,
         tvlCurrent: 1e9,
@@ -537,7 +496,7 @@ describe("DEWS scoring boundaries", () => {
 
   it("returns a score when only the always-available signals (supply + price = 0.40) are present", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         weightedBalanceRatio: null,
         avgPoolStress: null,
         liquidityScore: null,
@@ -556,7 +515,7 @@ describe("DEWS scoring boundaries", () => {
 
   it("returns a score at totalWeight === 0.55 (supply + price + diverg, just above threshold)", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         weightedBalanceRatio: null,
         avgPoolStress: null,
         liquidityScore: null,
@@ -572,8 +531,8 @@ describe("DEWS scoring boundaries", () => {
   });
 
   it("PSI amplifier is 1.0 at PSI === 75 exactly (no amplification)", () => {
-    const resultAt75 = computeDEWS(baseInput({ psiScore: 75 }));
-    const resultAtNull = computeDEWS(baseInput({ psiScore: null }));
+    const resultAt75 = computeDEWS(makeDewsInput({ psiScore: 75 }));
+    const resultAtNull = computeDEWS(makeDewsInput({ psiScore: null }));
     // Use tolerance of 1 in case clamp rounding differs on other fixtures
     // (per plan note). At the default baseline both branches evaluate to
     // the same integer, but we keep the tolerance to stay resilient.
@@ -582,7 +541,7 @@ describe("DEWS scoring boundaries", () => {
 
   it("flow signal is unavailable at flowBaselineDays === 6 and available at 7 when fresh", () => {
     const resultAt6 = computeDEWS(
-      baseInput({
+      makeDewsInput({
         burnVolume24hUsd: 1e6,
         mintVolume24hUsd: 0,
         burnBaseline30dUsd: 1e5,
@@ -592,7 +551,7 @@ describe("DEWS scoring boundaries", () => {
     );
     expect(resultAt6?.signals.flow.available).toBe(false);
     const resultAt7 = computeDEWS(
-      baseInput({
+      makeDewsInput({
         burnVolume24hUsd: 1e6,
         mintVolume24hUsd: 0,
         burnBaseline30dUsd: 1e5,
@@ -605,7 +564,7 @@ describe("DEWS scoring boundaries", () => {
 
   it("blacklist signal handles a zero 7d baseline without division by zero", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         hasBlacklistTracking: true,
         blacklistEvents24h: 3,
         blacklistEvents7d: 0,
@@ -618,7 +577,7 @@ describe("DEWS scoring boundaries", () => {
 
   it("caps supply plus null-price data quality at WATCH without market evidence", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         circulatingCurrent: 4e9,
         circulatingPrevDay: 5e9,
         circulatingPrevWeek: 5.5e9,
@@ -637,7 +596,7 @@ describe("DEWS scoring boundaries", () => {
 
   it("allows supply contraction plus market divergence to produce elevated risk", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         circulatingCurrent: 4e9,
         circulatingPrevDay: 5e9,
         circulatingPrevWeek: 5.5e9,
@@ -654,7 +613,7 @@ describe("DEWS scoring boundaries", () => {
 
   it("allows severe issuer-control evidence to elevate even when market data is sparse", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         price: null,
         priceConfidence: null,
         hasBlacklistTracking: true,
@@ -671,7 +630,7 @@ describe("DEWS scoring boundaries", () => {
 
   it("marks divergence unavailable when the peg reference is not trusted", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         pegType: "peggedEUR",
         pegRef: 0,
         pegReferenceAvailable: false,
@@ -689,7 +648,7 @@ describe("DEWS scoring boundaries", () => {
 
   it("surfaces available weight, effective weights, and top contributors", () => {
     const result = computeDEWS(
-      baseInput({
+      makeDewsInput({
         price: 0.94,
         dexPriceUsd: 0.94,
       }),

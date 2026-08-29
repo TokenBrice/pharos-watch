@@ -3,6 +3,7 @@ import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { BlacklistGapMetrics } from "../../blacklist-gaps";
+import { makeBlacklistReconciliationStatusRow } from "../../../test-helpers/__shared/fixtures";
 import { getDataQuality } from "../data-quality";
 
 const NOW = 1_775_890_000;
@@ -110,32 +111,7 @@ describe("getDataQuality repair debt", () => {
       },
       {
         match: "blacklist-reconciliation-status-latest",
-        rows: [
-          {
-            run_id: "run-1",
-            manifest_id: "night-watch-usdt-tron-2026-07-09",
-            manifest_sha256: "abc",
-            status: "verified",
-            time_travel_bookmark: "bookmark",
-            expected_event_count: 86,
-            present_event_count: 86,
-            missing_event_count: 0,
-            duplicate_identity_count: 0,
-            expected_destroyed_amount_raw: 8_874_287_612_325,
-            actual_destroyed_amount_raw: 8_874_287_612_325,
-            balance_replay_expected_count: 70,
-            balance_replay_matching_count: 70,
-            unresolved_manifest_gap_count: 0,
-            tron_cursor_after: 200,
-            tron_safe_head: 200,
-            arbitrum_min_cursor: 500,
-            arbitrum_min_safe_head: 500,
-            arbitrum_expected_config_count: 7,
-            arbitrum_at_safe_head_count: 7,
-            started_at: 100,
-            completed_at: 200,
-          },
-        ],
+        rows: [makeBlacklistReconciliationStatusRow()],
       },
     ]);
 

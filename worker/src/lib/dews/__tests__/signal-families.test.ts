@@ -9,44 +9,11 @@ import {
   computeSupplySignal,
   computeYieldSignal,
 } from "../signal-families";
-import type { DEWSInput } from "../types";
-
-function baseInput(overrides: Partial<DEWSInput> = {}): DEWSInput {
-  return {
-    stablecoinId: "usdt-tether",
-    mcapUsd: 1_000_000_000,
-    pegType: "peggedUSD",
-    circulatingCurrent: 1_000_000_000,
-    circulatingPrevDay: 1_000_000_000,
-    circulatingPrevWeek: 1_000_000_000,
-    weightedBalanceRatio: null,
-    avgPoolStress: null,
-    topPools: null,
-    liquidityScore: null,
-    liquidityScore7dAgo: null,
-    tvlCurrent: null,
-    tvl7dAgo: null,
-    priceConfidence: "high",
-    prevPriceConfidence: null,
-    price: 1,
-    pegRef: 1,
-    dexPriceUsd: null,
-    blacklistEvents24h: 0,
-    blacklistEvents7d: 0,
-    hasBlacklistTracking: false,
-    burnVolume24hUsd: null,
-    mintVolume24hUsd: null,
-    burnBaseline30dUsd: null,
-    flowDataAgeDays: 0,
-    yieldWarnings: [],
-    psiScore: null,
-    ...overrides,
-  };
-}
+import { makeDewsInput } from "../../__tests__/dews.test-support";
 
 describe("DEWS signal family curves", () => {
   it("pins supply availability and blended contraction interpolation", () => {
-    expect(computeSupplySignal(baseInput({
+    expect(computeSupplySignal(makeDewsInput({
       circulatingPrevDayAvailable: false,
       circulatingPrevWeekAvailable: false,
     }))).toEqual({
@@ -55,7 +22,9 @@ describe("DEWS signal family curves", () => {
       unavailableReason: "supply-history-anchors-missing",
     });
 
-    const result = computeSupplySignal(baseInput({
+    const result = computeSupplySignal(makeDewsInput({
+      // Keep the signal-family fixture's one-billion baseline explicit.
+      mcapUsd: 1_000_000_000,
       circulatingCurrent: 98,
       circulatingPrevDay: 100,
       circulatingPrevWeek: 100,
@@ -69,12 +38,12 @@ describe("DEWS signal family curves", () => {
   });
 
   it("pins pool blend, TVL floor, and smoothing behavior", () => {
-    expect(computePoolSignal(baseInput({ weightedBalanceRatio: null, avgPoolStress: 20 }))).toEqual({
+    expect(computePoolSignal(makeDewsInput({ weightedBalanceRatio: null, avgPoolStress: 20 }))).toEqual({
       value: 0,
       available: false,
     });
 
-    const result = computePoolSignal(baseInput({
+    const result = computePoolSignal(makeDewsInput({
       weightedBalanceRatio: 0.8,
       avgPoolStress: 40,
       topPools: [
@@ -90,14 +59,14 @@ describe("DEWS signal family curves", () => {
   });
 
   it("pins liquidity score and TVL erosion curves", () => {
-    expect(computeLiquiditySignal(baseInput({
+    expect(computeLiquiditySignal(makeDewsInput({
       liquidityScore: null,
       liquidityScore7dAgo: 100,
       tvlCurrent: 75,
       tvl7dAgo: 100,
     }))).toEqual({ value: 0, available: false });
 
-    const result = computeLiquiditySignal(baseInput({
+    const result = computeLiquiditySignal(makeDewsInput({
       liquidityScore: 80,
       liquidityScore7dAgo: 100,
       tvlCurrent: 75,
@@ -111,18 +80,18 @@ describe("DEWS signal family curves", () => {
   });
 
   it("pins price confidence scores and transition bonus exceptions", () => {
-    expect(computePriceSignal(baseInput({ price: null, priceConfidence: null }))).toEqual({
+    expect(computePriceSignal(makeDewsInput({ price: null, priceConfidence: null }))).toEqual({
       value: 100,
       available: true,
       confidence: null,
     });
-    expect(computePriceSignal(baseInput({ priceConfidence: "low", prevPriceConfidence: "high" })).value).toBe(75);
-    expect(computePriceSignal(baseInput({ priceConfidence: "single-source", prevPriceConfidence: "high" })).value).toBe(25);
-    expect(computePriceSignal(baseInput({ priceConfidence: "fallback" })).value).toBe(80);
+    expect(computePriceSignal(makeDewsInput({ priceConfidence: "low", prevPriceConfidence: "high" })).value).toBe(75);
+    expect(computePriceSignal(makeDewsInput({ priceConfidence: "single-source", prevPriceConfidence: "high" })).value).toBe(25);
+    expect(computePriceSignal(makeDewsInput({ priceConfidence: "fallback" })).value).toBe(80);
   });
 
   it("pins divergence curve anchors, non-USD damping, smoothing, and unavailable peg references", () => {
-    expect(computeDivergSignal(baseInput({
+    expect(computeDivergSignal(makeDewsInput({
       pegReferenceAvailable: false,
       pegReferenceUnavailableReason: "thin-reference",
     }))).toEqual({
@@ -131,15 +100,15 @@ describe("DEWS signal family curves", () => {
       unavailableReason: "thin-reference",
     });
 
-    const usd = computeDivergSignal(baseInput({ price: 0.9925 }));
+    const usd = computeDivergSignal(makeDewsInput({ price: 0.9925 }));
     expect(usd.available).toBe(true);
     expect(usd.value).toBeCloseTo(50, 5);
     expect(usd.primaryDevBps).toBe(75);
 
-    const eur = computeDivergSignal(baseInput({ pegType: "peggedEUR", price: 0.9925 }));
+    const eur = computeDivergSignal(makeDewsInput({ pegType: "peggedEUR", price: 0.9925 }));
     expect(eur.value).toBeCloseTo(35, 5);
 
-    const smoothed = computeDivergSignal(baseInput({ price: 0.9925, prevDivergValue: 10 }));
+    const smoothed = computeDivergSignal(makeDewsInput({ price: 0.9925, prevDivergValue: 10 }));
     expect(smoothed.value).toBeCloseTo(30, 5);
   });
 
@@ -147,12 +116,12 @@ describe("DEWS signal family curves", () => {
     // A zero/negative price is not "no divergence": the canonical derivation
     // returns null for it, and coercing that to 0 would report calm on a price
     // that cannot be a price.
-    expect(computeDivergSignal(baseInput({ price: 0 }))).toEqual({
+    expect(computeDivergSignal(makeDewsInput({ price: 0 }))).toEqual({
       value: 0,
       available: false,
       unavailableReason: "invalid-price",
     });
-    expect(computeDivergSignal(baseInput({ price: -1 }))).toEqual({
+    expect(computeDivergSignal(makeDewsInput({ price: -1 }))).toEqual({
       value: 0,
       available: false,
       unavailableReason: "invalid-price",
@@ -160,7 +129,7 @@ describe("DEWS signal family curves", () => {
 
     // A bad DEX price is dropped from the cross-source legs; the valid primary
     // deviation still reports rather than being diluted by a coerced zero.
-    const badDex = computeDivergSignal(baseInput({ price: 0.9925, dexPriceUsd: 0 }));
+    const badDex = computeDivergSignal(makeDewsInput({ price: 0.9925, dexPriceUsd: 0 }));
     expect(badDex.available).toBe(true);
     expect(badDex.primaryDevBps).toBe(75);
     expect(badDex.dexDevBps).toBe(0);
@@ -168,12 +137,12 @@ describe("DEWS signal family curves", () => {
   });
 
   it("pins blacklist count and spike multiplier curves", () => {
-    expect(computeBlacklistSignal(baseInput({ hasBlacklistTracking: false }))).toEqual({
+    expect(computeBlacklistSignal(makeDewsInput({ hasBlacklistTracking: false }))).toEqual({
       value: 0,
       available: false,
     });
 
-    const result = computeBlacklistSignal(baseInput({
+    const result = computeBlacklistSignal(makeDewsInput({
       hasBlacklistTracking: true,
       blacklistEvents24h: 10,
       blacklistEvents7d: 14,
@@ -187,7 +156,7 @@ describe("DEWS signal family curves", () => {
   });
 
   it("pins mint-burn flow fallbacks and burn pressure curves", () => {
-    expect(computeFlowSignal(baseInput({
+    expect(computeFlowSignal(makeDewsInput({
       burnVolume24hUsd: 1_000_000,
       mintVolume24hUsd: 0,
       burnBaseline30dUsd: 100_000,
@@ -199,7 +168,7 @@ describe("DEWS signal family curves", () => {
       baselineDays: 3,
       unavailableReason: "mint-burn-baseline-too-short",
     });
-    expect(computeFlowSignal(baseInput({
+    expect(computeFlowSignal(makeDewsInput({
       burnVolume24hUsd: 1_000_000,
       mintVolume24hUsd: 0,
       burnBaseline30dUsd: 100_000,
@@ -212,7 +181,7 @@ describe("DEWS signal family curves", () => {
       unavailableReason: "mint-burn-stale",
     });
 
-    const result = computeFlowSignal(baseInput({
+    const result = computeFlowSignal(makeDewsInput({
       burnVolume24hUsd: 2_000_000,
       mintVolume24hUsd: 0,
       burnBaseline30dUsd: 0,
@@ -229,9 +198,9 @@ describe("DEWS signal family curves", () => {
   });
 
   it("pins legacy yield warning scores", () => {
-    expect(computeYieldSignal(baseInput())).toEqual({ value: 0, available: false });
+    expect(computeYieldSignal(makeDewsInput())).toEqual({ value: 0, available: false });
 
-    const result = computeYieldSignal(baseInput({
+    const result = computeYieldSignal(makeDewsInput({
       yieldWarnings: ["yield-spike", "yield-divergence", "tvl-outflow"],
     }));
 
@@ -251,7 +220,7 @@ describe("DEWS signal family curves", () => {
     ["structured-rank-source-switch", { yieldRankChangeAttribution: { primaryDriver: "source-switch" } }, 20],
     ["structured-rank-source-risk", { yieldRankChangeAttribution: { primaryDriver: "source-risk" } }, 20],
   ] as const)("pins structured yield branch %s", (warning, override, value) => {
-    const result = computeYieldSignal(baseInput(override));
+    const result = computeYieldSignal(makeDewsInput(override));
 
     expect(result.available).toBe(true);
     expect(result.value).toBe(value);

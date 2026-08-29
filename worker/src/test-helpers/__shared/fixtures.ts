@@ -43,6 +43,31 @@ type BlacklistRow = {
   explorer_address_url: string;
 };
 
+type BlacklistReconciliationStatusRow = {
+  run_id: string;
+  manifest_id: string;
+  manifest_sha256: string;
+  status: "running" | "verified" | "failed";
+  time_travel_bookmark: string | null;
+  expected_event_count: number;
+  present_event_count: number;
+  missing_event_count: number;
+  duplicate_identity_count: number;
+  expected_destroyed_amount_raw: number;
+  actual_destroyed_amount_raw: number;
+  balance_replay_expected_count: number;
+  balance_replay_matching_count: number;
+  unresolved_manifest_gap_count: number;
+  tron_cursor_after: number | null;
+  tron_safe_head: number | null;
+  arbitrum_min_cursor: number | null;
+  arbitrum_min_safe_head: number | null;
+  arbitrum_expected_config_count: number;
+  arbitrum_at_safe_head_count: number;
+  started_at: number;
+  completed_at: number | null;
+};
+
 type DepegRow = {
   id: number;
   stablecoin_id: string;
@@ -216,6 +241,43 @@ export function makeBlacklistRow(overrides: Partial<BlacklistRow> = {}): Blackli
     amount_last_provider: null,
     explorer_tx_url: "https://etherscan.io/tx/0xtx1",
     explorer_address_url: "https://etherscan.io/address/0xabc123",
+  };
+  return { ...defaults, ...overrides };
+}
+
+type BlacklistReconciliationStatusOverrides = Partial<BlacklistReconciliationStatusRow> & {
+  bookmark?: string | null;
+};
+
+export function makeBlacklistReconciliationStatusRow({
+  run_id = "run-1",
+  bookmark = "bookmark",
+  status = "verified",
+  ...overrides
+}: BlacklistReconciliationStatusOverrides = {}): BlacklistReconciliationStatusRow {
+  const defaults: BlacklistReconciliationStatusRow = {
+    run_id,
+    manifest_id: "night-watch-usdt-tron-2026-07-09",
+    manifest_sha256: "abc",
+    status,
+    time_travel_bookmark: bookmark,
+    expected_event_count: 86,
+    present_event_count: 86,
+    missing_event_count: 0,
+    duplicate_identity_count: 0,
+    expected_destroyed_amount_raw: 8_874_287_612_325,
+    actual_destroyed_amount_raw: 8_874_287_612_325,
+    balance_replay_expected_count: 70,
+    balance_replay_matching_count: 70,
+    unresolved_manifest_gap_count: 0,
+    tron_cursor_after: 200,
+    tron_safe_head: 200,
+    arbitrum_min_cursor: 500,
+    arbitrum_min_safe_head: 500,
+    arbitrum_expected_config_count: 7,
+    arbitrum_at_safe_head_count: 7,
+    started_at: 100,
+    completed_at: 200,
   };
   return { ...defaults, ...overrides };
 }

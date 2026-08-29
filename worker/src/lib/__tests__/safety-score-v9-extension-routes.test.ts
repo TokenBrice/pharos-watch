@@ -15,6 +15,7 @@ import {
   buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
 } from "../safety-score-v9-extension-routes";
+import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 
 const NOW = Date.UTC(2026, 6, 13) / 1_000;
 const V9_FIXTURE_CLOCK = Date.UTC(2027, 0, 1) / 1_000;
@@ -34,52 +35,6 @@ function singleObservationDexLiquidity(route: ExitRouteObservation): Record<stri
       evidenceCounts: { "reserve-based-amm-simulation": 1 },
       unsupportedReasons: {},
     },
-  };
-}
-
-function supplyFullRow(overrides: Partial<RedemptionBackstopEntry> = {}): RedemptionBackstopEntry {
-  return {
-    stablecoinId: "usdc-circle",
-    score: null,
-    dexLiquidityScore: null,
-    accessScore: 40,
-    settlementScore: 65,
-    executionCertaintyScore: 60,
-    capacityScore: null,
-    outputAssetQualityScore: 100,
-    costScore: 40,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "atomic",
-    executionModel: "rules-based-nav",
-    outputAssetType: "stable-single",
-    provider: "supply-full-model",
-    sourceMode: "estimated",
-    resolutionState: "resolved",
-    routeStatus: "open",
-    routeStatusSource: "static-config",
-    holderEligibility: "verified-customer",
-    capacityConfidence: "documented-bound",
-    capacitySemantics: "eventual-only",
-    capacityProfile: {
-      immediateUsd: null,
-      eventualUsd: 100_000_000,
-      scoringUsd: null,
-      scoringHorizon: "eventual",
-      capacityProfileConfidence: "documented-bound",
-      modeledExitSizeUsd: 5_000_000,
-    },
-    feeConfidence: "fixed",
-    feeModelKind: "fixed-bps",
-    modelConfidence: "medium",
-    immediateCapacityUsd: null,
-    immediateCapacityRatio: null,
-    feeBps: 10,
-    queueEnabled: false,
-    methodologyVersion: "4.18",
-    updatedAt: NOW,
-    docs: { label: "Terms", url: "https://example.com/terms", reviewedAt: "2026-07-01" },
-    ...overrides,
   };
 }
 
@@ -208,7 +163,7 @@ function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput
 }
 
 function liveDirectRow(routeStatusSource: RedemptionBackstopEntry["routeStatusSource"]): RedemptionBackstopEntry {
-  const row = supplyFullRow();
+  const row = makeSupplyFullRedemption();
   const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation;
   return {
     ...row,
@@ -233,7 +188,7 @@ function liveDirectRow(routeStatusSource: RedemptionBackstopEntry["routeStatusSo
 
 describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   it("derives one retained route for a full-supply row without observations", () => {
-    const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(supplyFullRow()), "usdc-circle");
+    const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(makeSupplyFullRedemption()), "usdc-circle");
     expect(retained).toHaveLength(1);
     expect(retained[0]).toMatchObject({
       lane: "redemption",
@@ -249,7 +204,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("pairs every retained route with a matching route review", () => {
-    const fixedInput = fixedInputStub(supplyFullRow());
+    const fixedInput = fixedInputStub(makeSupplyFullRedemption());
     const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, "usdc-circle");
     const reviews = buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle");
     expect(reviews.map((review) => `${review.lane}:${review.routeId}`)).toEqual(
@@ -263,7 +218,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("keeps an unmarked documented-bound route scoreable under the existing projection", () => {
-    const row = supplyFullRow();
+    const row = makeSupplyFullRedemption();
     const fixedInput = fixedInputStub(row);
 
     expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]).toMatchObject({
@@ -276,7 +231,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("projects a bounded terms gap as diagnostic without mutating the frozen redemption row", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "xo-exodus",
       settlementModel: "same-day",
       feeBps: 0,
@@ -354,7 +309,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("preserves the captured redemption model-confidence rollup", () => {
-    const fixedInput = fixedInputStub(supplyFullRow({ modelConfidence: "high" }));
+    const fixedInput = fixedInputStub(makeSupplyFullRedemption({ modelConfidence: "high" }));
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
       lane: "redemption",
       executionCertainty: "bounded",
@@ -363,7 +318,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("projects reviewed fixed and minimum fees when captured rows omit feeBps", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "usdt-tether",
       feeBps: null,
       feeConfidence: "undisclosed-reviewed",
@@ -380,7 +335,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       ]),
     );
 
-    const fixedFeeRow = supplyFullRow({
+    const fixedFeeRow = makeSupplyFullRedemption({
       stablecoinId: "ousd-origin-protocol",
       feeBps: null,
     });
@@ -392,7 +347,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("projects conservative USDT-only reviewed constraints without changing the captured row", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "usdt-tether",
       settlementModel: "same-day",
       settlementDelaySec: undefined,
@@ -413,7 +368,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("projects an evidence-backed faster settlement into the scored SLA", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "msusd-main-street",
       settlementModel: "days",
       settlementDelaySec: undefined,
@@ -428,7 +383,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("does not re-widen an evidence-backed faster settlement horizon", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "msusd-main-street",
       settlementModel: "days",
       settlementDelaySec: undefined,
@@ -447,7 +402,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("expires a faster reviewed settlement back to the conservative captured horizon", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "msusd-main-street",
       settlementModel: "days",
       settlementDelaySec: undefined,
@@ -469,7 +424,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     const currentClock = Date.UTC(2026, 7, 26) / 1_000;
     const staleClock = Date.UTC(2027, 7, 26) / 1_000;
     const producerSettlement = resolveReviewedRedemptionSettlement(config, currentClock);
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId,
       settlementModel: producerSettlement,
       settlementDelaySec: 0,
@@ -488,7 +443,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("keeps pinned redemption fee and output valuation separate in the route review", () => {
-    const row = supplyFullRow({ stablecoinId: "fpi-frax", feeBps: null });
+    const row = makeSupplyFullRedemption({ stablecoinId: "fpi-frax", feeBps: null });
     const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!
       .observation;
     row.capacityProfile = {
@@ -610,7 +565,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("values a resolved stable-basket output at the weakest component's price", () => {
-    const row = supplyFullRow({ stablecoinId: "dai-makerdao" });
+    const row = makeSupplyFullRedemption({ stablecoinId: "dai-makerdao" });
     const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), "dai-makerdao")[0]!;
     row.capacityProfile = {
       ...row.capacityProfile!,
@@ -646,7 +601,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("admits reviewed unresolved-output ownership only after the review date", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "dusd-dtrinity",
       routeFamily: "stablecoin-redeem",
       accessModel: "permissionless-onchain",
@@ -685,7 +640,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("prices the dTRINITY vault-bridge receipt basket through each receipt's underlying", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "dusd-dtrinity",
       routeFamily: "stablecoin-redeem",
       accessModel: "permissionless-onchain",
@@ -753,7 +708,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("leaves an unresolved basket unresolved when a leg has no reviewed conversion", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "dllr-sovryn",
       routeFamily: "stablecoin-redeem",
       accessModel: "permissionless-onchain",
@@ -778,7 +733,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   it.each(["srusd-reservoir", "wsrusd-reservoir"] as const)(
     "values the composed %s redemption route through its final USDC output",
     (stablecoinId) => {
-      const row = supplyFullRow({
+      const row = makeSupplyFullRedemption({
         stablecoinId,
         routeFamily: "stablecoin-redeem",
         accessModel: "permissionless-onchain",
@@ -809,7 +764,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   );
 
   it("values a quiet scored tracked-stablecoin output at par", () => {
-    const row = supplyFullRow({
+    const row = makeSupplyFullRedemption({
       stablecoinId: "zys-zephyr-protocol",
       routeFamily: "stablecoin-redeem",
       accessModel: "permissionless-onchain",
@@ -857,7 +812,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("uses a complete source-bound producer valuation for CUSD when WTGXX has no peg row", () => {
-    const reviewedRow = supplyFullRow({
+    const reviewedRow = makeSupplyFullRedemption({
       stablecoinId: "cusd-cap",
       routeFamily: "basket-redeem",
       accessModel: "permissionless-onchain",
@@ -1152,7 +1107,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("derives nothing when the row already carries observations or is absent", () => {
-    const withObservation = supplyFullRow();
+    const withObservation = makeSupplyFullRedemption();
     const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(withObservation), "usdc-circle")[0]!;
     withObservation.capacityProfile = {
       ...withObservation.capacityProfile!,
