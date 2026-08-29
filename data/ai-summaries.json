@@ -2960,12 +2960,26 @@
     "factsAsOf": "2026-05-15"
   },
   "hkdap-anchorpoint": {
-    "title": "Hong Kong's First Licensed Dollar",
-    "text": "The first HKMA-licensed HKD stablecoin under the Stablecoins Ordinance; HKD-backed by HQLA in segregated accounts. HKDAP is what happens when Standard Chartered, Hong Kong's largest telco (HKT), and Animoca Brands form a joint venture to build the first stablecoin licensed under the HKMA's Stablecoins Ordinance — a regulatory framework that went from proposal to law faster than most jurisdictions manage a consultation paper. After the end-of-Q2 target passed with nothing in circulation and Caixin's reported July issuance came and went, the third window finally held: OSL Group announced itself an authorised distributor on August 11 2026, and HashKey Exchange followed a day later, reporting a completed mint-and-redemption cycle with fiat conversion in both directions. Two missed windows and then a token that actually moves is a better ending than most pre-launch issuers get. The asterisk is how quiet the launch is: Anchorpoint published nothing of its own — anchorpoint.hk still reads 'has not yet officially launched,' partner list empty — so the go-live is attested by its distributors rather than its issuer. Circulating supply, the first transaction's size, and the number of admitted clients are all undisclosed, no deployment contract address is published, CoinGecko carries only a preview listing with zero supply and no platforms, and DefiLlama does not list HKDAP at all. Access stops at institutions, corporates, and professional investors, with retail floated for no earlier than late 2026. A stablecoin whose supply nobody outside the distributor whitelist can verify is a launch in the legal sense and a pilot in every other one, which is why Pharos holds it pre-launch until a public supply and price path exists. The licensing playbook is built on segregated {{term:custody}}custody{{/term}}, HKMA-mandated {{term:attestation}}attestation{{/term}}, and a regulated {{term:redemption}}redemption{{/term}} path scoped for HKD-denominated {{term:rwa}}RWA{{/term}} settlement.",
-    "updatedAt": "2026-08-16",
+    "title": "The Proof Nobody Checks",
+    "text": "The first HKMA-licensed HKD stablecoin under the Stablecoins Ordinance, now live in an institution-only beta and finally measurable. After two missed launch windows, HKDAP went out on August 12 2026 attested by its distributors rather than its issuer — OSL Group and HashKey Exchange announced themselves as authorised, while anchorpoint.hk read \"has not yet officially launched.\" The opacity has since lifted on one front and collapsed on another. DefiLlama picked the token up on August 27, and the Ethereum deployment carries roughly 527,000 HKDAP, so supply is now independently verifiable for the first time. But on August 14 BlockSec published a review of that same contract, and the findings are hard to file under teething problems: the KYC proof argument is passed in and then discarded, so any proof — including an empty string — passes; de-registering a compromised KYC provider does not stop the wallets it onboarded from transacting; a single key can mint, burn, pause, or freeze, with two keys controlling every upgrade and role and no timelocks or multi-signature anywhere on the high-risk path. Debug logging left in the proxy fallback, an optimizer set to zero runs, and test files uploaded to Etherscan point to a pre-production build sitting on mainnet. That is an awkward pairing with a licence granted under a framework that went from proposal to law faster than most jurisdictions manage a consultation paper: the regulator vetted the issuer, not the bytecode. Pharos still holds HKDAP pre-launch, though the reason has changed — supply is no longer the missing piece, price is, with DefiLlama reporting null and CoinGecko carrying a preview listing with no market data. The licensing playbook rests on segregated {{term:custody}}custody{{/term}}, HKMA-mandated {{term:attestation}}attestation{{/term}}, and a regulated {{term:redemption}}redemption{{/term}} path scoped for HKD-denominated {{term:rwa}}RWA{{/term}} settlement — none of which is enforced by the contract that actually moves the tokens.",
+    "updatedAt": "2026-08-29",
     "authoredBy": "ai",
     "model": "claude-opus-5[1m]",
-    "factsAsOf": "2026-08-16"
+    "factsAsOf": "2026-08-29",
+    "sources": [
+      {
+        "label": "BlockSec: HKDAP stablecoin security review",
+        "url": "https://blocksec.com/blog/hkdap-stablecoin-security-review"
+      },
+      {
+        "label": "DefiLlama: HKDAP (stablecoin 437)",
+        "url": "https://stablecoins.llama.fi/stablecoin/437"
+      },
+      {
+        "label": "HKMA: stablecoin issuer licence grant (April 2026)",
+        "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
+      }
+    ]
   },
   "hkd-hsbc": {
     "title": "PayMe Gets a Blockchain",
@@ -3726,14 +3740,22 @@
     "factsAsOf": "2026-05-15"
   },
   "rusd-revolut": {
-    "title": "The Cyprus Licence Was the Easy Part",
-    "text": "Revolut's expected USD stablecoin remains pre-launch, with ticker, chain, and reserve model still unannounced. RUSD represents Revolut's expected USD stablecoin direction, sister to the already-tracked RGBP. The legal substrate was assembled in 2025: Revolut Digital Assets Europe took a MiCA CASP licence from CySEC on October 23 2025, and Revolut's existing Bank-of-Lithuania EMI provides the e-money-token issuer foundation that MiCA Title IV requires. The Cyprus announcement also unveiled 'Crypto 2.0' with '1:1 conversion between stablecoins and USD' as a flagship feature — close enough to a product tease that EU counsel described a 2026 Revolut stablecoin as plausible. The harder questions are downstream: ticker, chain choice, reserve and {{term:custody}}custody{{/term}} disclosure model, {{term:redemption}}redemption{{/term}} mechanics, and how Revolut navigates the UK Bank of England's proposed restrictions on cross-group stablecoin issuance that already constrain RGBP. Ticker, chain, reserve model, and first-issued variant remain unannounced.",
-    "updatedAt": "2026-05-15",
+    "title": "Shipped in Euro, Issued by Stripe",
+    "text": "Revolut's USD stablecoin is still unannounced, and the August 2026 launch of its euro sibling made the shape of any dollar token considerably clearer — mostly by invalidating the assumption everyone was working from. The legal substrate looked settled: a MiCA CASP licence from CySEC in October 2025, plus Revolut's Bank-of-Lithuania EMI supplying the e-money-token issuer foundation MiCA Title IV requires. Then Revolut shipped EURR on August 26 and the issuer of record turned out to be Bridge Building S.A. — the Luxembourg entity of Stripe-owned Bridge — under a CSSF licence, with Revolut Digital Assets Europe merely distributing. Europe's largest neobank, holding every licence it needed to issue in-house, chose to rent the issuance instead. That reframes RUSD: the nearest live precedent for a Revolut dollar is a third-party regulated-issuer relationship, which trades balance-sheet control and reserve-disclosure ownership for speed to market. It also means the interesting counterparty question for RUSD is no longer whether Vilnius signs off, but whether Revolut is content to have Stripe's infrastructure sitting between its 65 million users and their {{term:redemption}}redemption{{/term}} rights. Revolut's US path runs separately through an OCC charter application targeting a 2027 launch with stablecoin services from day one — third-party tokens, not confirmed own issuance. Ticker, chain, issuer entity, and reserve and {{term:custody}}custody{{/term}} disclosure model for a USD token all remain unannounced, and the euro launch is evidence that the last of those is the one worth watching.",
+    "updatedAt": "2026-08-29",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-opus-5[1m]",
+    "factsAsOf": "2026-08-29",
+    "sources": [
+      {
+        "label": "FinTech Futures: Revolut launches euro-backed stablecoin EURR",
+        "url": "https://www.fintechfutures.com/blockchain-crypto-digital-assets/revolut-launches-euro-backed-stablecoin-eurr"
+      },
+      {
+        "label": "Blockhead: Revolut launches EURR as it cuts off Tether across Europe",
+        "url": "https://www.blockhead.co/2026/08/27/revolut-launches-euro-stablecoin-eurr-as-it-cuts-off-tether-across-europe/"
+      }
+    ]
   },
   "brl-itau": {
     "title": "Brazil's Biggest Bank Waits for the Rulebook",
@@ -4360,6 +4382,28 @@
       {
         "label": "RAI Dollar docs — Audits & security",
         "url": "https://docs.raidollar.tech/docs/reference/audits"
+      }
+    ]
+  },
+  "eurr-revolut": {
+    "title": "The Neobank That Rented Its Own Coin",
+    "text": "EURR is live, and Pharos tracks it pre-launch anyway — a distinction that says more about market infrastructure than about the token. Revolut launched it on August 26 2026 as the first product of a stablecoin programme long assumed to be arriving in dollars or sterling, phased into Denmark, Poland, and Portugal with the rest of the EEA promised later in the year. The structural surprise is the issuer: not Revolut's Lithuanian EMI, which had every licence required, but Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge, holding an EMI licence and MiCA authorisation from the CSSF while Revolut Digital Assets Europe distributes under its CySEC permission. Europe's biggest neobank built the distribution and outsourced the balance sheet — the same Bridge Open Issuance model behind MoneyGram's and Deel's tokens, now wearing a consumer brand with 80 million customers behind it. The timing is not subtle either: EURR arrived as Revolut finished pulling Tether's USDt from European retail on August 31, so the euro rail it removed and the euro rail it added are the same shelf. Supply went from 366 to roughly 251,000 tokens in two days, which is a rollout, not yet adoption. What is missing is the part MiCA does not force into public view — reserve composition, custodians, and {{term:attestation}}attestation{{/term}} cadence are all undisclosed, and no accepted price source resolves the token, which is precisely why it sits here rather than in the tracked set. A stablecoin distributed by a bank, issued by a payments company, and priced by nobody is a fair snapshot of where regulated euro tokens currently are.",
+    "updatedAt": "2026-08-29",
+    "authoredBy": "ai",
+    "model": "claude-opus-5[1m]",
+    "factsAsOf": "2026-08-29",
+    "sources": [
+      {
+        "label": "FinTech Futures: Revolut launches euro-backed stablecoin EURR",
+        "url": "https://www.fintechfutures.com/blockchain-crypto-digital-assets/revolut-launches-euro-backed-stablecoin-eurr"
+      },
+      {
+        "label": "Blockhead: Revolut launches EURR as it cuts off Tether across Europe",
+        "url": "https://www.blockhead.co/2026/08/27/revolut-launches-euro-stablecoin-eurr-as-it-cuts-off-tether-across-europe/"
+      },
+      {
+        "label": "DefiLlama: Revolut Euro (stablecoin 436)",
+        "url": "https://stablecoins.llama.fi/stablecoin/436"
       }
     ]
   }

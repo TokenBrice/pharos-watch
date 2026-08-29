@@ -2,7 +2,7 @@
   "id": "hkdap-anchorpoint",
   "name": "HKDAP",
   "symbol": "HKDAP",
-  "oneLiner": "HKDAP is Anchorpoint's HKMA-licensed HKD stablecoin, live since August 2026 in an institution-only beta with no disclosed circulating supply.",
+  "oneLiner": "HKDAP is Anchorpoint's HKMA-licensed HKD stablecoin, live in an institution-only beta with ~HK$527k circulating and no public price path.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "HKD",
@@ -33,8 +33,15 @@
   "announcedDate": "2026-03",
   "expectedLaunchDate": "2026-H2",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. The original end-of-Q2 2026 phased rollout target closed on June 30, 2026 with no public circulating token. On July 21 2026 Caixin reported, citing people familiar with the plans, that Anchorpoint will launch HKDAP within the month with distribution through licensed exchanges OSL and HashKey, which are already testing payment and fund use cases. The July window then closed without a launch: on August 3 2026 Standard Chartered CEO (HK) Mary Huen said work continues since the April licence, public-blockchain testing is ongoing, and the HKDAP launch announcement is now expected within August 2026, with a B2B2C distributor model whose distributor list follows the formal launch. The August window was met: on August 11 2026 OSL Group announced it was among the first key authorised distributors under an HKDAP beta access programme, and on August 12 2026 HashKey Exchange joined as a distributor and reported completing an initial mint-and-redemption cycle including fiat conversion both ways. Access is restricted to institutions, corporate clients, and professional investors, with retail targeted no earlier than late 2026. Anchorpoint has published no launch press release of its own — anchorpoint.hk still reads 'has not yet officially launched' with an empty partner list — so the go-live is sourced from the distributors. Circulating supply, first-transaction value, admitted client count, and the deployment contract address all remain undisclosed; the CoinGecko entry anchorpoint-hkd-at-par is still a preview listing with zero supply and no platforms, and DefiLlama has no HKDAP entry, so Pharos holds HKDAP pre-launch until a runtime supply and price path exists.",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. The original end-of-Q2 2026 phased rollout target closed on June 30, 2026 with no public circulating token. On July 21 2026 Caixin reported, citing people familiar with the plans, that Anchorpoint will launch HKDAP within the month with distribution through licensed exchanges OSL and HashKey, which are already testing payment and fund use cases. The July window then closed without a launch: on August 3 2026 Standard Chartered CEO (HK) Mary Huen said work continues since the April licence, public-blockchain testing is ongoing, and the HKDAP launch announcement is now expected within August 2026, with a B2B2C distributor model whose distributor list follows the formal launch. The August window was met: on August 11 2026 OSL Group announced it was among the first key authorised distributors under an HKDAP beta access programme, and on August 12 2026 HashKey Exchange joined as a distributor and reported completing an initial mint-and-redemption cycle including fiat conversion both ways. Access is restricted to institutions, corporate clients, and professional investors, with retail targeted no earlier than late 2026. Anchorpoint has published no launch press release of its own — anchorpoint.hk still reads 'has not yet officially launched' with an empty partner list — so the go-live is sourced from the distributors. Anchorpoint disclosed neither the first-transaction value nor the admitted client count, but the deployment is now identified: HKDAP is an upgradeable ERC-20 at 0x87622385F960fcCB3121d6D0A9513bd1D9Bed6cA on Ethereum (6 decimals, name \"HKD At Par\"), carrying an on-chain total supply of 527,199.52 HKDAP as of August 29 2026. On August 14 2026 BlockSec published a contract review reporting that the KYC proof argument is discarded so any proof passes, that de-registering a compromised KYC provider does not stop wallets it onboarded, that a single key can mint, burn, pause, or freeze while two keys control all upgrades and roles, and that debug logging, a zero-run optimizer, and uploaded test files suggest a pre-production build was deployed to mainnet. DefiLlama began tracking HKDAP as stablecoin id 437 on August 27 2026, reporting circulating supply consistent with the on-chain figure. Supply is therefore now measurable, but no accepted source returns a price: the DefiLlama list price field is null, coins.llama.fi resolves neither the Ethereum contract nor the CoinGecko id, and anchorpoint-hkd-at-par remains a preview listing with zero supply and no platforms. Pharos holds HKDAP pre-launch until a fetchable price path exists.",
   "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://blocksec.com/blog/hkdap-stablecoin-security-review",
+      "title": "HKDAP Stablecoin Security Review: Live, Licensed, Not Ready",
+      "description": "BlockSec reviews the deployed HKDAP contract and finds discarded KYC proofs, ineffective provider revocation, single-key mint/burn/pause/freeze authority, and pre-production build artifacts on mainnet.",
+      "source": "BlockSec"
+    },
     {
       "type": "article",
       "url": "https://www.coindesk.com/business/2026/08/12/standard-chartered-led-anchorpoint-launches-hong-kong-dollar-stablecoin",
@@ -119,6 +126,20 @@
       "title": "HKDAP enters institutional beta; HashKey completes first mint and redemption",
       "description": "Anchorpoint begins the first phase of its HKDAP rollout with HashKey Exchange joining OSL Group as an authorised distributor. HashKey reports completing an initial minting and redemption cycle for eligible clients, including fiat conversion into and out of the stablecoin. Access is restricted to institutions, corporate clients, and professional investors; retail is targeted no earlier than late 2026. Circulating supply, first-transaction value, and admitted client count were not disclosed, and no deployment contract address was published.",
       "sourceUrl": "https://crypto.news/anchorpoint-names-hashkey-as-distributor-for-hkdap/"
+    },
+    {
+      "date": "2026-08-14",
+      "type": "audit",
+      "title": "BlockSec publishes HKDAP contract security review flagging KYC and key-control defects",
+      "description": "BlockSec reports that the KYC proof argument is passed in but discarded so any proof including an empty string passes, that an isActive logic error lets wallets onboarded by a de-registered KYC provider keep transacting, and that a single key can mint, burn, pause, or freeze while two keys control all upgrades and roles, with no timelocks or multi-signature requirements on high-risk operations. Debug logging left in the proxy fallback, an optimizer set to zero runs, and test files uploaded to Etherscan indicate a pre-production build was deployed to mainnet.",
+      "sourceUrl": "https://blocksec.com/blog/hkdap-stablecoin-security-review"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "milestone",
+      "title": "DefiLlama begins tracking HKDAP, giving the token its first public circulating-supply figure",
+      "description": "DefiLlama adds HKDAP as stablecoin id 437 (peggedHKD, fiat-backed), reporting circulating supply of roughly 527,200 HKDAP. The figure matches the on-chain total supply of the Ethereum deployment at 0x87622385F960fcCB3121d6D0A9513bd1D9Bed6cA. No price field is populated on the listing.",
+      "sourceUrl": "https://stablecoins.llama.fi/stablecoin/437"
     }
   ],
   "dateHistory": [

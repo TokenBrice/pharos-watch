@@ -2,13 +2,13 @@
   "id": "rusd-revolut",
   "name": "Revolut USD Stablecoin",
   "symbol": "RUSD",
-  "oneLiner": "RUSD is Revolut's pre-launch USD stablecoin proposal under MiCA rails (CySEC CASP + Lithuanian EMI); ticker, chains, and reserve disclosures still unannounced.",
+  "oneLiner": "RUSD is Revolut's still-unannounced USD stablecoin; its first live token, the euro EURR, is issued by Stripe's Bridge, not Revolut's own EMI.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Planned 1:1 USD-equivalent reserves held by Revolut's Lithuanian EMI under MiCA Title IV (EMT) safeguarding rules; exact composition (cash, MMF, segregated bank accounts) unannounced.",
-  "pegMechanism": "Planned MiCA-compliant electronic-money token issued by Revolut's Lithuanian EMI with 1:1 USD mint and redemption; distribution and chain selection unannounced.",
+  "collateral": "Planned 1:1 USD-equivalent reserves. Revolut's first live token, the euro EURR, is issued by Bridge Building S.A. under MiCA rather than by Revolut's Lithuanian EMI, so the reserve manager and safeguarding entity for any USD token are unannounced.",
+  "pegMechanism": "Planned MiCA-compliant electronic-money token with 1:1 USD mint and redemption; distribution and chain selection unannounced. Revolut's live euro token EURR uses Bridge Building S.A. as issuer of record on Ethereum, which is the nearest precedent for the USD path.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
@@ -31,8 +31,15 @@
   "announcedDate": "2025-10-23",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania — the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot — though that sandbox is specifically for a GBP token, not USD. Revolut received a full UK banking licence from the PRA (Mar 11 2026) and filed an OCC national bank charter application for Revolut Bank US, N.A. (Mar 5 2026, targeting a 2027 US launch with built-in stablecoin access). A Revolut-branded proprietary USD stablecoin has not been officially confirmed; the USD path runs through the Lithuanian EMI / MiCA EMT route, and Polymarket currently puts the probability at ~33% by year-end 2026. Specific ticker, chain selection, and reserve disclosure model remain unannounced.",
+  "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania — the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot — though that sandbox is specifically for a GBP token, not USD. Revolut received a full UK banking licence from the PRA (Mar 11 2026) and filed an OCC national bank charter application for Revolut Bank US, N.A. (Mar 5 2026, targeting a 2027 US launch with built-in stablecoin access). Revolut's stablecoin programme shipped on August 26 2026 — but in euro, not dollars. EURR launched on Ethereum in a phased rollout to Denmark, Poland, and Portugal, with Solana, Arbitrum, Optimism, Avalanche, Injective, TON, and Sui support planned, alongside the removal of Tether's USDt from Revolut's European retail offering by August 31 2026. Critically, EURR is issued by Bridge Building S.A., the Luxembourg entity of Stripe-owned Bridge, with Revolut Digital Assets Europe authorised through CySEC — not by Revolut's Lithuanian EMI, which earlier reporting had assumed would be the issuer of record. That correction matters for RUSD: the nearest live precedent for a Revolut dollar token is a third-party MiCA issuer relationship rather than in-house EMT issuance. A Revolut-branded proprietary USD stablecoin still has not been confirmed, and its ticker, chain selection, issuer entity, and reserve disclosure model all remain unannounced.",
   "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.fintechfutures.com/blockchain-crypto-digital-assets/revolut-launches-euro-backed-stablecoin-eurr",
+      "title": "Revolut launches euro-backed stablecoin EURR",
+      "description": "Revolut's first stablecoin ships in euro on Ethereum, issued by Stripe's Bridge under MiCA and phased to Denmark, Poland, and Portugal — leaving a Revolut USD token still unannounced.",
+      "source": "FinTech Futures"
+    },
     {
       "type": "article",
       "url": "https://www.coindesk.com/policy/2025/10/23/revolut-secures-mica-license-in-cyprus-expanding-regulated-crypto-services-across-europe",
@@ -103,6 +110,20 @@
       "title": "Revolut confirms its planned US national bank will offer stablecoin services alongside FDIC-insured accounts",
       "description": "Reuters reports Revolut Bank US, N.A. (OCC charter applicant) will offer stablecoin services alongside FDIC-insured products from day one, though own-issuance of a Revolut USD token remains unconfirmed; the USD path continues to run through the Lithuanian EMI / MiCA EMT route.",
       "sourceUrl": "https://www.theblock.co/post/403541/revoluts-us-bank-offer-stablecoin-services-fdic-insured-products-reuters"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "milestone",
+      "title": "Revolut launches EURR euro stablecoin issued by Stripe's Bridge, not its Lithuanian EMI",
+      "description": "Revolut ships the first token of its stablecoin programme as the euro-denominated EURR on Ethereum, phased to customers in Denmark, Poland, and Portugal with wider EEA availability planned later in 2026. The token is issued by Bridge Building S.A., the Luxembourg entity of Stripe-owned Bridge, under MiCA, with Revolut Digital Assets Europe authorised through CySEC — correcting the prior assumption that Revolut would issue e-money tokens from its own Lithuanian EMI. Support for Solana, Arbitrum, Optimism, Avalanche, Injective, TON, and Sui is planned, and Revolut applies no spread or fee on euro-to-EURR conversion. No USD-denominated equivalent was announced.",
+      "sourceUrl": "https://www.fintechfutures.com/blockchain-crypto-digital-assets/revolut-launches-euro-backed-stablecoin-eurr"
+    },
+    {
+      "date": "2026-08-31",
+      "type": "milestone",
+      "title": "Revolut completes removal of Tether USDt from its European retail offering",
+      "description": "Revolut finishes the phased withdrawal of USDt for European retail customers that began in July 2026, coinciding with the EURR rollout and leaving MiCA-compliant tokens as the euro-stablecoin option on the platform.",
+      "sourceUrl": "https://www.blockhead.co/2026/08/27/revolut-launches-euro-stablecoin-eurr-as-it-cuts-off-tether-across-europe/"
     }
   ]
 }

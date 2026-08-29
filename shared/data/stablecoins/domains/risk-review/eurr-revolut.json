@@ -1,0 +1,19 @@
+{
+  "id": "eurr-revolut",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "EURR token contract (Ethereum)",
+        "url": "https://etherscan.io/address/0x8e9c32a536ab623a2e0e9961bce6f5fe7504e084"
+      },
+      {
+        "label": "Blockhead: Revolut launches EURR, issued by Bridge Building S.A. under CSSF",
+        "url": "https://www.blockhead.co/2026/08/27/revolut-launches-euro-stablecoin-eurr-as-it-cuts-off-tether-across-europe/"
+      }
+    ],
+    "evidence": "Verified on-chain rather than inferred: EURR at 0x8e9c32a536ab623a2e0e9961bce6f5fe7504e084 is a minimal ERC-1967 proxy delegating to implementation 0xb6de5eabb9ffaf853235a6b96886fb87f73400a8, whose bytecode exposes pause/paused, mint, owner, and OpenZeppelin AccessControl role administration (hasRole, grantRole). No USDT/USDC-style isBlacklisted or blacklist selector is present, so per-address freezing is not exposed as a dedicated entry point, but the issuer can halt all transfers via pause and can introduce arbitrary freeze or seize logic through a proxy upgrade. Bridge Building S.A. issues under a Luxembourg EMI licence and MiCA authorisation from the CSSF, a regime that requires issuers to operate a compliance program capable of freezing and reissuing tokens.",
+    "reviewer": "Pharos pre-launch research",
+    "reviewedAt": "2026-08-29"
+  }
+}

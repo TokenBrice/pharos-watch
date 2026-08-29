@@ -29,8 +29,8 @@ describe("coverage audit byte goldens", () => {
       name: "reserve",
       build: () => buildReserveCoverageAudit({ generatedAt }),
       markdown: renderReserveCoverageAuditMarkdown,
-      markdownSha: "5047f33fc904975bb6c5642d6186b8ebed74b0125c1cc0d79eb49aee8984e6d9",
-      jsonSha: "5cae905f8dd1d2c61efe82597097c82eb5c11e422d105786c30bd89aef8c9f5d",
+      markdownSha: "0a7429e7d3274ffe61733817c82b44bc2c4fe01b0d84bc0e124b8dced253b050",
+      jsonSha: "e09c61578c75c023ab9f501948ddc39e7ab5a5052653a0ded5a16247b637509a",
     },
     {
       name: "l2beat",

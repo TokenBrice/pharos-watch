@@ -20,6 +20,7 @@ const HISTORICAL_V1_TOKEN = historicalV1Token({
   presetIds: ["usd-top25"],
 });
 const HISTORICAL_V2_TOKEN = "pw2.H4sIAAAAAAAAE6tWKlOyMtJRKlKyUkpOLEnMyU_XLTPUNU1KMTQzMrJQ0lFKUbJSKk0NTikOMAwNi0oy9DcrK1LSUSpQslIyLS01NHY0UKoFAGsVW_tGAAAA.9MSMq7cSLxtFSUOd";
+const HISTORICAL_V2_REGISTRY_VERSION = "catalog-v1-5bd16228";
 const HISTORICAL_CATALOG_V2_TOKEN = "pw2.H4sIAAAAAAAAE6tWKlOyMtJRKlKyUkpOLEnMyU_XLTPQzcgsLskvykxOzFHSUUpRslIKi0oy9DfL8VHSUSpQslJSqgUAa6vtEDkAAAA.qgXnJKhi4wIECgON";
 
 function base64url(json: string): string {
@@ -78,7 +79,7 @@ describe("watchlist token codec", () => {
 
   it("decodes every field from a fixed historical v2 token", async () => {
     const state: WatchlistTokenV2State = {
-      registryVersion: WATCHLIST_TOKEN_REGISTRY_VERSION,
+      registryVersion: HISTORICAL_V2_REGISTRY_VERSION,
       direct: [
         direct("usdc-circle", true),
         {
