@@ -11,10 +11,12 @@ import {
 import { buildInClause, isMissingTableError } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 
-export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "failed" | "cancelled";
+const DDR_REPAIR_TASK_STATES = ["open", "claimed", "deferred", "closed", "failed"] as const;
+export type RepairTaskState = (typeof DDR_REPAIR_TASK_STATES)[number];
 
-const ACTIVE_REPAIR_TASK_STATES: RepairTaskState[] = ["open", "claimed", "deferred", "failed"];
-const TERMINAL_REPAIR_TASK_STATES: RepairTaskState[] = ["closed", "cancelled"];
+const DDR_REPAIR_TASK_ACTIVE_STATE_SQL = "state IN ('open', 'claimed', 'deferred', 'failed')";
+const DDR_REPAIR_TASK_CLAIMABLE_STATE_SQL = "state IN ('open', 'deferred', 'failed')";
+const DDR_REPAIR_TASK_TERMINAL_STATE_SQL = "state = 'closed'";
 const DDR_REPAIR_TASK_KIND = "ddr-repair-required-event";
 const DDR_REPAIR_DEBT_EVENT_LIMIT = 25;
 export const DDR_REPAIR_RUNNER_BATCH_LIMIT_V1 = 5;
@@ -29,8 +31,8 @@ const DDR_REPAIR_RUNNER_CURRENT_REASON =
 
 /**
  * DDR is the only repair-task kind this lane has ever produced. `kind` stays a
- * table column (the status projection still groups by it) but is no longer a
- * parameter: every writer below stamps `DDR_REPAIR_TASK_KIND`.
+ * table column for task identity and fencing, but every writer below stamps
+ * `DDR_REPAIR_TASK_KIND`.
  */
 interface RepairTaskInput {
   subjectId: string;
@@ -45,7 +47,6 @@ export interface DdrRepairDebtTaskInput {
 }
 
 interface RepairDebtSummaryRow {
-  kind: string;
   open_count: number | null;
   oldest_created_at: number | null;
   next_attempt_at: number | null;
@@ -122,20 +123,8 @@ interface DdrRepairCandidateRow {
   current_event_ended_at: number | null;
 }
 
-function activeStateSql(): string {
-  return ACTIVE_REPAIR_TASK_STATES.map(() => "?").join(",");
-}
-
-function terminalStateSql(): string {
-  return TERMINAL_REPAIR_TASK_STATES.map(() => "?").join(",");
-}
-
-function claimableStateSql(): string {
-  return ["open", "deferred", "failed"].map(() => "?").join(",");
-}
-
-function dueOpenOrDeferredWhereSql(): string {
-  return `state IN (${claimableStateSql()}) AND (next_attempt_at IS NULL OR next_attempt_at <= ?)`;
+function dueClaimableWhereSql(): string {
+  return `${DDR_REPAIR_TASK_CLAIMABLE_STATE_SQL} AND (next_attempt_at IS NULL OR next_attempt_at <= ?)`;
 }
 
 function staleClaimWhereSql(): string {
@@ -186,7 +175,7 @@ async function upsertRepairTask(
         ON CONFLICT(task_id) DO UPDATE SET
           priority = excluded.priority,
           state = CASE
-            WHEN worker_repair_tasks.state IN ('closed', 'cancelled') THEN 'open'
+            WHEN worker_repair_tasks.state = 'closed' THEN 'open'
             ELSE worker_repair_tasks.state
           END,
           next_attempt_at = CASE
@@ -195,7 +184,7 @@ async function upsertRepairTask(
           END,
           payload_json = excluded.payload_json,
           closed_at = CASE
-            WHEN worker_repair_tasks.state IN ('closed', 'cancelled') THEN NULL
+            WHEN worker_repair_tasks.state = 'closed' THEN NULL
             ELSE worker_repair_tasks.closed_at
           END,
           updated_at = excluded.updated_at`,
@@ -295,45 +284,32 @@ export async function loadRepairDebtSummary(
   db: D1Database,
   nowSec: number,
 ): Promise<RepairDebtSummary> {
-  const rows = await db
+  const row = await db
     .prepare(
       `SELECT
-         kind,
          COUNT(*) AS open_count,
          MIN(created_at) AS oldest_created_at,
          MIN(next_attempt_at) AS next_attempt_at
        FROM worker_repair_tasks
-       WHERE state IN (${activeStateSql()})
-       GROUP BY kind
-       ORDER BY kind
-       LIMIT 50`,
+       WHERE kind = ?
+         AND ${DDR_REPAIR_TASK_ACTIVE_STATE_SQL}`,
     )
-    .bind(...ACTIVE_REPAIR_TASK_STATES)
-    .all<RepairDebtSummaryRow>();
+    .bind(DDR_REPAIR_TASK_KIND)
+    .first<RepairDebtSummaryRow>();
 
-  const byKind: RepairDebtSummary["byKind"] = {};
-  let openCount = 0;
-  let oldestAgeSec: number | null = null;
-  let nextRunnerDueAt: number | null = null;
-
-  for (const row of rows.results ?? []) {
-    const count = Math.max(0, Math.floor(Number(row.open_count ?? 0)));
-    const oldestCreatedAt = typeof row.oldest_created_at === "number" ? row.oldest_created_at : null;
-    const kindOldestAgeSec = oldestCreatedAt != null ? Math.max(0, nowSec - oldestCreatedAt) : null;
-    const kindNextDueAt = typeof row.next_attempt_at === "number" ? row.next_attempt_at : null;
-    byKind[row.kind] = {
-      openCount: count,
-      oldestAgeSec: kindOldestAgeSec,
-      nextRunnerDueAt: kindNextDueAt,
-    };
-    openCount += count;
-    if (kindOldestAgeSec != null) {
-      oldestAgeSec = oldestAgeSec == null ? kindOldestAgeSec : Math.max(oldestAgeSec, kindOldestAgeSec);
-    }
-    if (kindNextDueAt != null) {
-      nextRunnerDueAt = nextRunnerDueAt == null ? kindNextDueAt : Math.min(nextRunnerDueAt, kindNextDueAt);
-    }
-  }
+  const openCount = Math.max(0, Math.floor(Number(row?.open_count ?? 0)));
+  const oldestCreatedAt = typeof row?.oldest_created_at === "number" ? row.oldest_created_at : null;
+  const oldestAgeSec = oldestCreatedAt != null ? Math.max(0, nowSec - oldestCreatedAt) : null;
+  const nextRunnerDueAt = typeof row?.next_attempt_at === "number" ? row.next_attempt_at : null;
+  const byKind: RepairDebtSummary["byKind"] = openCount > 0
+    ? {
+        [DDR_REPAIR_TASK_KIND]: {
+          openCount,
+          oldestAgeSec,
+          nextRunnerDueAt,
+        },
+      }
+    : {};
 
   return {
     status: openCount > 0 ? "present" : "ok",
@@ -373,11 +349,11 @@ export async function loadDdrRepairDebtDetails(db: D1Database): Promise<DdrRepai
          MAX(updated_at) OVER () AS latest_updated_at
        FROM worker_repair_tasks
        WHERE kind = ?
-         AND state IN (${activeStateSql()})
+         AND ${DDR_REPAIR_TASK_ACTIVE_STATE_SQL}
        ORDER BY CAST(subject_id AS INTEGER), subject_id
        LIMIT ${DDR_REPAIR_DEBT_EVENT_LIMIT}`,
     )
-    .bind(DDR_REPAIR_TASK_KIND, ...ACTIVE_REPAIR_TASK_STATES)
+    .bind(DDR_REPAIR_TASK_KIND)
     .all<DdrRepairDebtDetailRow>();
 
   const resultRows = rows.results ?? [];
@@ -417,9 +393,9 @@ export async function pruneRepairTasks(
       .prepare(
         `DELETE FROM worker_repair_tasks
          WHERE updated_at < ?
-           AND state IN (${terminalStateSql()})`,
+           AND ${DDR_REPAIR_TASK_TERMINAL_STATE_SQL}`,
       )
-      .bind(cutoffSec, ...TERMINAL_REPAIR_TASK_STATES)
+      .bind(cutoffSec)
       .run(),
     3,
     signal,
@@ -437,9 +413,9 @@ async function inspectRepairRunnerBacklog(
       .prepare(
         `SELECT COUNT(*) AS due_count
              FROM worker_repair_tasks
-            WHERE ${dueOpenOrDeferredWhereSql()}`,
+            WHERE ${dueClaimableWhereSql()}`,
       )
-      .bind("open", "deferred", "failed", input.nowSec)
+      .bind(input.nowSec)
       .first<RepairRunnerInspectRow>(),
     db
       .prepare(
@@ -510,12 +486,12 @@ async function listDueRepairRunnerTasks(
     .prepare(
       `SELECT task_id, subject_id, payload_json
        FROM worker_repair_tasks
-       WHERE ((${dueOpenOrDeferredWhereSql()}) OR (${staleClaimWhereSql()}))
+       WHERE ((${dueClaimableWhereSql()}) OR (${staleClaimWhereSql()}))
          AND kind = ?
        ORDER BY priority ASC, created_at ASC, task_id ASC
        LIMIT ?`,
     )
-    .bind("open", "deferred", "failed", timestamp, timestamp, DDR_REPAIR_TASK_KIND, DDR_REPAIR_RUNNER_BATCH_LIMIT_V1)
+    .bind(timestamp, timestamp, DDR_REPAIR_TASK_KIND, DDR_REPAIR_RUNNER_BATCH_LIMIT_V1)
     .all<RepairRunnerTaskRow>();
   return result.results ?? [];
 }
@@ -538,7 +514,7 @@ async function claimRepairRunnerTask(
          WHERE task_id = ?
            AND kind = ?
            AND (
-             (${dueOpenOrDeferredWhereSql()})
+             (${dueClaimableWhereSql()})
              OR (${staleClaimWhereSql()})
            )`,
       )
@@ -549,9 +525,6 @@ async function claimRepairRunnerTask(
         timestamp,
         taskId,
         DDR_REPAIR_TASK_KIND,
-        "open",
-        "deferred",
-        "failed",
         timestamp,
         timestamp,
       )
@@ -1085,14 +1058,21 @@ async function executeDdrRepair(
                  AND repaired.source_fingerprint = ?
              )
              THEN 'closed'
-             ELSE 'repair_guard_rejected'
+             ELSE 'deferred'
            END,
              next_attempt_at = NULL,
              locked_by = NULL,
              locked_until = NULL,
              last_error = NULL,
              updated_at = ?,
-             closed_at = ?
+             closed_at = CASE WHEN EXISTS (
+               SELECT 1
+               FROM depeg_resolver_incidents repaired
+               WHERE repaired.incident_key = ?
+                 AND repaired.current_event_id = ?
+                 AND repaired.current_started_at = ?
+                 AND repaired.source_fingerprint = ?
+             ) THEN ? ELSE NULL END
          WHERE task_id = ?
            AND kind = ?
            AND state = 'claimed'
@@ -1105,6 +1085,10 @@ async function executeDdrRepair(
         candidate.target_started_at,
         candidate.source_fingerprint,
         timestamp,
+        candidate.incident_key,
+        candidate.target_event_id,
+        candidate.target_started_at,
+        candidate.source_fingerprint,
         timestamp,
         task.task_id,
         DDR_REPAIR_TASK_KIND,
@@ -1115,6 +1099,14 @@ async function executeDdrRepair(
   const results = await db.batch(statements);
   if (results.some((result) => Number(result.meta?.changes ?? 0) !== 1)) {
     throw new Error("DDR repair runner SQL guard rejected a claimed task");
+  }
+  const taskState = await db
+    .prepare("SELECT state FROM worker_repair_tasks WHERE task_id = ? AND kind = ?")
+    .bind(task.task_id, DDR_REPAIR_TASK_KIND)
+    .first<{ state: RepairTaskState }>();
+  if (taskState?.state === "deferred") return "deferred";
+  if (taskState?.state !== "closed") {
+    throw new Error("DDR repair runner task did not reach a declared terminal state");
   }
   return "closed";
 }
@@ -1128,6 +1120,9 @@ async function setRepairRunnerTaskState(
     error: string;
   },
 ): Promise<void> {
+  // A D1 batch can commit a deferred terminal update before the caller notices
+  // that an earlier guarded statement changed zero rows. Match that exact
+  // attempt marker so the catch can fence the failure without clobbering a new claim.
   await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -1140,8 +1135,21 @@ async function setRepairRunnerTaskState(
              updated_at = ?
          WHERE task_id = ?
            AND kind = ?
-           AND state = 'claimed'
-           AND locked_by = ?`,
+           AND (
+             (
+               state = 'claimed'
+               AND locked_by = ?
+               AND locked_until >= ?
+             )
+             OR (
+               state = 'deferred'
+               AND locked_by IS NULL
+               AND locked_until IS NULL
+               AND next_attempt_at IS NULL
+               AND last_attempt_at = ?
+               AND updated_at = ?
+             )
+           )`,
       )
       .bind(
         input.state,
@@ -1151,6 +1159,9 @@ async function setRepairRunnerTaskState(
         input.taskId,
         DDR_REPAIR_TASK_KIND,
         DDR_REPAIR_RUNNER_CREATED_BY,
+        input.timestamp,
+        input.timestamp,
+        input.timestamp,
       )
       .run(),
     3,
