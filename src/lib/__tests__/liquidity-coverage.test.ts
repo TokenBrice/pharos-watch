@@ -19,7 +19,9 @@ describe("liquidity coverage", () => {
     }
     // 51 -> 50 when the SILK quarantine (#892) removed silk-shade-protocol
     // from the active registry.
-    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(50);
+    // 50 -> 40 when wave-3 census providers (aquarius/tezos/icon-balanced/kava-swap)
+    // covered 10 formerly no-provider deployments.
+    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(40);
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {

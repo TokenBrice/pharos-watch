@@ -22,6 +22,8 @@
       "name": "Sky USDS staking",
       "pct": 14.720073,
       "risk": "high",
+      "coinId": "usds-sky",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Sky USDS staking vault and protocol",
       "riskFactors": [
@@ -210,6 +212,8 @@
       "name": "Sky PT sUSDS loop",
       "pct": 1.318023,
       "risk": "high",
+      "coinId": "usds-sky",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Sky sUSDS principal-token loop positions",
       "riskFactors": [

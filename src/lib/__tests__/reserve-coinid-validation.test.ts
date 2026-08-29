@@ -21,6 +21,22 @@ const KNOWN_TICKERS = [
 ];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
+    "buck-bucket-protocol::BUCK V1 Reservoir USDC and USDT balances::USDC",
+    "Bucket V1 Reservoir combines USDC and USDT balances, so no single coinId is representative.",
+  ],
+  [
+    "buck-bucket-protocol::BUCK V1 Reservoir USDC and USDT balances::USDT",
+    "Bucket V1 Reservoir combines USDC and USDT balances, so no single coinId is representative.",
+  ],
+  [
+    "buck-bucket-protocol::BUCK V2 PSM USDC and USDSUI balances::USDC",
+    "Bucket V2 PSM combines USDC and USDSUI balances, so no single coinId is representative.",
+  ],
+  [
+    "buck-bucket-protocol::BUCK V2 PSM USDC and USDSUI balances::USDS",
+    "Bucket V2 PSM combines USDC and USDSUI balances, so no single coinId is representative.",
+  ],
+  [
     "usdm-mega::USDC and USDtb reserve basket::USDC",
     "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDC coinId would overstate the dependency.",
   ],
