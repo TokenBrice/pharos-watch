@@ -162,7 +162,24 @@ describe("generate-public-datasets", () => {
     expect(stderr).toContain("preserving checked-in public dataset mirrors");
   });
 
-  it("uses the effective snapshot date after falling back to the latest snapshot", async () => {
+  it("uses today's immutable snapshot when it is already sealed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-16T12:30:00.000Z"));
+    mockFetchStrict([
+      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
+      {
+        match: "https://api.example.test/api/depeg-events?limit=1000",
+        body: { events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-16")] },
+      },
+    ]);
+
+    const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
+
+    expect(inputs.effectiveSnapshotDate).toBe("2026-05-16");
+    expect(inputs.envelope.snapshotDate).toBe("2026-05-16");
+  });
+
+  it("uses the latest immutable snapshot when today's snapshot is not yet sealed", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-16T12:30:00.000Z"));
     mockFetchStrict([
@@ -190,7 +207,7 @@ describe("generate-public-datasets", () => {
     expect(specs.find((spec) => spec.topic === "depeg-history")?.rows).toHaveLength(1);
   });
 
-  it("can build real mirrors from current live endpoints before snapshot routes exist", async () => {
+  it("fails current-date generation when no immutable snapshot exists", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-16T12:30:00.000Z"));
     mockFetchStrict([
@@ -200,54 +217,14 @@ describe("generate-public-datasets", () => {
         status: 404,
       },
       { match: "https://api.example.test/api/snapshots/index", body: { error: "not found" }, status: 404 },
-      {
-        match: "https://api.example.test/api/stablecoins",
-        body: { peggedAssets: makeEnvelope("2026-05-16").stablecoins },
-      },
-      {
-        match: "https://api.example.test/api/report-cards/v9",
-        body: {
-          cards: [
-            {
-              id: "usdc-circle",
-              grade: "A",
-              score: 98,
-            },
-          ],
-          updatedAt: 1_779_000_001,
-        },
-      },
-      {
-        match: "https://api.example.test/api/stress-signals",
-        body: {
-          signals: { "usdc-circle": { score: 4, band: "CALM" } },
-          updatedAt: 1_779_000_002,
-        },
-      },
-      {
-        match: "https://api.example.test/api/dex-liquidity",
-        body: { "usdc-circle": { liquidityScore: 95, coverageClass: "deep" } },
-      },
-      {
-        match: "https://api.example.test/api/depeg-events?limit=1000",
-        body: { events: [makeEvent("low-confidence"), makeCoverageSentinel("2026-05-16")] },
-      },
     ]);
 
-    const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
-    const specs = testExports.buildTopicSpecs(inputs.envelope, inputs.depegEvents, inputs.effectiveSnapshotDate);
-
-    expect(inputs.effectiveSnapshotDate).toBe("2026-05-16");
-    expect(inputs.asOfISO).toBe("2026-05-17T06:40:02.000Z");
-    expect(specs.find((spec) => spec.topic === "top-stablecoins")?.rows).toHaveLength(1);
-    const scoreRows = specs.find((spec) => spec.topic === "scores-latest")?.rows as Array<Record<string, unknown>>;
-    expect(scoreRows).toHaveLength(1);
-    expect(scoreRows[0]?.pegScore).toBeNull();
-    expect(scoreRows[0]?.safetyScore).toBe(98);
-    expect(specs.find((spec) => spec.topic === "depeg-history")?.rows).toHaveLength(1);
+    await expect(loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16")).rejects.toThrow(
+      "API-backed public dataset generation requires today's snapshot or the latest sealed snapshot",
+    );
   });
 
-  it("rejects live-endpoint fallback for a historical snapshot date", async () => {
+  it("requires the exact immutable snapshot for a historical snapshot date", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-18T12:30:00.000Z"));
     mockFetchStrict([
@@ -259,7 +236,7 @@ describe("generate-public-datasets", () => {
     ]);
 
     await expect(loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16")).rejects.toThrow(
-      "refusing live-endpoint fallback",
+      "API-backed public dataset generation requires the exact dated snapshot",
     );
   });
 
@@ -273,7 +250,7 @@ describe("generate-public-datasets", () => {
     }]);
 
     await expect(loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16")).rejects.toThrow(
-      "refusing live-endpoint fallback",
+      "API-backed public dataset generation requires the exact dated snapshot",
     );
     expect(warning).toHaveBeenCalledWith(
       expect.stringContaining("invalid public snapshot envelope"),
