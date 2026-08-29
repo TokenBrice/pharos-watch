@@ -20,6 +20,7 @@ import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
+  buildCompareRadarCohortBaseline,
   deriveComparisonCoins,
   deriveSupplySeries,
   deriveFlowSeries,
@@ -27,15 +28,33 @@ import {
 } from "@/lib/compare-derive";
 import type { StablecoinData } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import type { CompareRadarCohort } from "@/components/radar-chart-v9";
+import type { StaleQuery } from "@/components/stale-data-banner";
 
 interface UseCompareDataModelOptions {
   selectedIds: string[];
   flowHours: 24 | 168 | 720;
+  radarCohort: CompareRadarCohort;
+}
+
+function toFreshnessQuery(
+  preset: NonNullable<StaleQuery["preset"]>,
+  query: Pick<StaleQuery, "dataUpdatedAt" | "error" | "meta">,
+  hasData: boolean,
+): StaleQuery {
+  return {
+    preset,
+    dataUpdatedAt: query.dataUpdatedAt,
+    error: query.error,
+    hasData,
+    meta: query.meta,
+  };
 }
 
 export function useCompareDataModel({
   selectedIds,
   flowHours,
+  radarCohort,
 }: UseCompareDataModelOptions) {
   const listQuery = useStablecoins();
   const pegQuery = usePegSummary();
@@ -64,6 +83,18 @@ export function useCompareDataModel({
 
   const globalError = list.error ?? peg.error ?? bluechip.error ?? dex.error ?? reportCards.error
     ?? redemption.error ?? yieldRankings.error ?? stress.error;
+  const hasPrimaryData = !!listData?.peggedAssets?.length;
+
+  const freshnessQueries = useMemo<StaleQuery[]>(() => [
+    toFreshnessQuery("stablecoins", list, hasPrimaryData),
+    toFreshnessQuery("pegSummary", peg, !!pegSummary?.coins?.length),
+    toFreshnessQuery("dexLiquidity", dex, !!dexData),
+    toFreshnessQuery("reportCards", reportCards, !!reportCardsData?.cards?.length),
+    toFreshnessQuery("bluechip", bluechip, !!bluechip.data),
+    toFreshnessQuery("redemptionBackstops", redemption, !!redemption.data?.coins),
+    toFreshnessQuery("yieldRankings", yieldRankings, !!yieldRankings.data?.rankings?.length),
+    toFreshnessQuery("stressSignals", stress, !!stress.data?.signals),
+  ], [bluechip, dex, dexData, hasPrimaryData, list, peg, pegSummary, redemption, reportCards, reportCardsData, stress, yieldRankings]);
 
   const cardMap = useMemo(() => {
     if (!reportCardsData?.cards) return new Map<string, V9ConsumerCard>();
@@ -79,6 +110,7 @@ export function useCompareDataModel({
           card,
           identity: reportCardsData!.safetyScoreIdentity,
           color: COMPARE_COLORS[index % COMPARE_COLORS.length],
+          symbol: TRACKED_META_BY_ID.get(id)?.symbol ?? id,
         };
       })
       .filter((entry): entry is NonNullable<typeof entry> => entry != null);
@@ -177,6 +209,22 @@ export function useCompareDataModel({
   }, [flowCoinMap, selectedIds]);
 
   const detailLoading = detailQueries.some((query) => query.isLoading);
+  const cohortBaseline = useMemo(
+    () => buildCompareRadarCohortBaseline(reportCardsData?.cards, radarCards, radarCohort),
+    [radarCards, radarCohort, reportCardsData],
+  );
+
+  const retryFlowCoins = useCallback(() => {
+    flowCoinQueries.forEach((query) => void query.refetch());
+  }, [flowCoinQueries]);
+
+  const flowErrorNotice = flowCoinQueries.length > 0 && flowCoinQueries.every((query) => query.isError)
+    ? {
+        error: flowCoinQueries[0]?.error as Error | null,
+        hasData: false,
+        onRetry: retryFlowCoins,
+      }
+    : null;
 
   const handleRetry = useCallback(() => {
     return refetchQueryGroup([
@@ -209,26 +257,22 @@ export function useCompareDataModel({
   ]);
 
   return {
-    bluechip,
+    cohortBaseline,
     comparisonCoins,
     detailErrors,
     detailLoading,
-    detailQueries,
-    dex,
     flowCardData,
-    flowCoinQueries,
-    flowData,
+    flowErrorNotice,
+    flowScopeLabel: flowData?.scope?.label ?? "Configured issuance chains",
     flowSeries,
+    flowUpdatedAt: flowData?.updatedAt ?? null,
+    freshnessQueries,
     globalError,
-    list,
-    peg,
+    handleRetry,
+    hasPrimaryData,
     pegRates,
     radarCards,
-    reportCards,
-    redemption,
-    stress,
+    reportCardsResponse: reportCardsData,
     supplySeries,
-    yieldRankings,
-    handleRetry,
   };
 }

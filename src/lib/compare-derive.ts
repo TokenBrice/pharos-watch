@@ -18,8 +18,13 @@ import type {
   YieldRanking,
 } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
-import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import type {
+  V9ConsumerCard,
+  V9ConsumerIdentity,
+} from "@/lib/safety-score-v9-consumers";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
+import type { CompareRadarCohort } from "@/components/radar-chart-v9";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 export type ComparisonMeta = Pick<
   StablecoinClientMeta,
@@ -88,6 +93,19 @@ export interface FlowCardEntry {
   pressureShiftState: PressureShiftState;
 }
 
+export interface CompareRadarCardEntry {
+  card: V9ConsumerCard;
+  identity: V9ConsumerIdentity;
+  color: string;
+  symbol: string;
+}
+
+export interface CompareRadarCohortBaseline {
+  effectiveCohort: CompareRadarCohort;
+  series: Array<Omit<CompareRadarCardEntry, "symbol">>;
+  memberCount: number;
+}
+
 type PegCoinSlice = {
   id: string;
   pegScore?: number | null;
@@ -103,6 +121,47 @@ type FlowCoinSlice = {
   netFlowDirection24h?: NetFlowDirection24h | null;
   pressureShiftState?: PressureShiftState | null;
 };
+
+/**
+ * Build the radar median baseline for the selected cohort. Peg and mechanism
+ * cohorts with fewer than three rated members fall back to all rated cards.
+ */
+export function buildCompareRadarCohortBaseline(
+  cards: readonly V9ConsumerCard[] | null | undefined,
+  selectedRadarCards: readonly CompareRadarCardEntry[],
+  cohort: CompareRadarCohort,
+): CompareRadarCohortBaseline {
+  const allCards = cards ?? [];
+  if (allCards.length === 0 || selectedRadarCards.length === 0) {
+    return {
+      effectiveCohort: "all",
+      series: [],
+      memberCount: 0,
+    };
+  }
+
+  const leadMeta = TRACKED_META_BY_ID.get(selectedRadarCards[0].card.id);
+  const leadPeg = leadMeta?.flags.pegCurrency ?? null;
+  const leadMechanism = leadMeta?.mechanismArchetype ?? null;
+  const cohortCards =
+    cohort === "peg"
+      ? allCards.filter((card) => TRACKED_META_BY_ID.get(card.id)?.flags.pegCurrency === leadPeg)
+      : cohort === "mechanism"
+        ? allCards.filter((card) => TRACKED_META_BY_ID.get(card.id)?.mechanismArchetype === leadMechanism)
+        : allCards;
+  const useAllCards = cohort === "all" || cohortCards.length < 3;
+  const resolvedCards = useAllCards ? allCards : cohortCards;
+
+  return {
+    effectiveCohort: useAllCards ? "all" : cohort,
+    series: resolvedCards.map((card) => ({
+      card,
+      identity: selectedRadarCards[0].identity,
+      color: "#64748b",
+    })),
+    memberCount: resolvedCards.length,
+  };
+}
 
 /**
  * Build the comparison coin list from the asset map, meta registry, and
