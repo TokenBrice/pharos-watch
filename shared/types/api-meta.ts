@@ -33,20 +33,3 @@ export const ApiMetaEnvelopeSchema = z.union([
 export type ApiMeta = z.output<typeof ApiMetaSchema>;
 export type ApiMetaWarningOnly = z.output<typeof ApiMetaWarningOnlySchema>;
 export type ApiMetaEnvelope = z.output<typeof ApiMetaEnvelopeSchema>;
-
-export function resolveApiMetaAgeMilliseconds(
-  meta: ApiMetaEnvelope | null | undefined,
-  fallbackUpdatedAtMs: number,
-  nowMs: number,
-): { updatedAtMs: number; ageMs: number | null } {
-  const updatedAtMs = meta?.updatedAt != null && meta.updatedAt > 0
-    ? meta.updatedAt * 1000
-    : fallbackUpdatedAtMs;
-  const ageMs = meta?.ageSeconds != null
-    ? meta.ageSeconds * 1000
-    : updatedAtMs > 0
-      ? nowMs - updatedAtMs
-      : null;
-
-  return { updatedAtMs, ageMs };
-}

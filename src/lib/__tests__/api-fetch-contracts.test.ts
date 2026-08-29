@@ -661,7 +661,6 @@ describe("api contract validation policy", () => {
   });
 
   it("captures Warning header in apiFetchWithMeta", async () => {
-    // age 11000s with maxAge 900s → ratio 12.2 → stale (> FRESHNESS_RATIOS.DEGRADED)
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
@@ -675,7 +674,7 @@ describe("api contract validation policy", () => {
 
     const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
     expect(result.meta?.warning).toContain("Response is stale");
-    expect(result.meta?.status).toBe("stale");
+    expect(result.meta?.status).toBe("fresh");
   });
 
   it("keeps age metadata unknown for a freshness warning when no age source exists", async () => {
@@ -699,7 +698,33 @@ describe("api contract validation policy", () => {
     expect(result.meta).not.toHaveProperty("ageSeconds");
   });
 
-  it("downgrades fresh _meta to degraded when a Warning header is present", async () => {
+  it("combines warning-only body metadata with a header-derived producer clock", async () => {
+    vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        _meta: { status: "degraded", warning: "dependency unavailable" },
+        ok: true,
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          Age: "120",
+          "X-Data-Age": "30",
+        },
+      }),
+    );
+
+    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }));
+
+    expect(result.meta).toEqual({
+      updatedAt: Date.parse("2026-06-23T10:02:30.000Z") / 1000,
+      ageSeconds: 30,
+      status: "degraded",
+      warning: "dependency unavailable",
+    });
+  });
+
+  it("preserves producer status while attaching a Warning header", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -733,7 +758,7 @@ describe("api contract validation policy", () => {
     expect(result.meta).toEqual({
       updatedAt: 200,
       ageSeconds: 20,
-      status: "degraded",
+      status: "fresh",
       warning: '110 - "Response is degraded (20s old, max 600s)"',
       dependencies: {
         reportCards: {
@@ -820,7 +845,7 @@ describe("api contract validation policy", () => {
     });
   });
 
-  it("uses the caller-provided maxAgeSec when deriving freshness from X-Data-Age", async () => {
+  it("leaves X-Data-Age threshold classification to data health", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
@@ -834,6 +859,44 @@ describe("api contract validation policy", () => {
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 1800);
     expect(result.meta?.status).toBe("fresh");
     expect(result.meta?.ageSeconds).toBe(1122);
+  });
+
+  it("accounts for edge Age when X-Data-Age is the only producer clock", async () => {
+    vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          Age: "120",
+          "X-Data-Age": "30",
+        },
+      }),
+    );
+
+    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }));
+
+    expect(result.meta?.updatedAt).toBe(Date.parse("2026-06-23T10:02:30.000Z") / 1000);
+  });
+
+  it("does not apply edge Age when body _meta provides updatedAt", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
+        ok: true,
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          Age: "120",
+          "X-Data-Age": "30",
+        },
+      }),
+    );
+
+    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }));
+
+    expect(result.meta?.updatedAt).toBe(200);
   });
 
   it("derives X-Data-Age updatedAt from the server Date header when available", async () => {

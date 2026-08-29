@@ -647,7 +647,7 @@ Returns chain-level core stablecoin and cash-equivalent aggregates with Chain He
 | `change30dPct`             | `number`                             | 30d supply change as a decimal share (`0.084` = +8.4%), same units as `globalChange30dPct`                                         |
 | `stablecoinCount`          | `number`                             | Number of distinct stablecoins on this chain                                                                                       |
 | `dominantStablecoin`       | `{ id, symbol, share }`              | Largest stablecoin by supply on the chain                                                                                          |
-| `topStablecoins`           | `{ id, symbol, share, supplyUsd }[]` | Up to five largest stablecoins by supply on the chain; `share` is chain-local (0–1) and `supplyUsd` is USD-denominated             |
+| `topStablecoins`           | `{ id, symbol, share, supplyUsd }[]` | Exactly `min(stablecoinCount, 5)` rows for every positive-supply chain, containing the largest stablecoins by chain-local supply; `share` is chain-local (0–1) and `supplyUsd` is USD-denominated |
 | `dominanceShare`           | `number`                             | Bounded chain share of global supply; normalized when raw chain attribution exceeds it                                             |
 | `healthScore`              | `number \| null`                     | Chain Health Score 0–100, or `null` if insufficient data                                                                           |
 | `healthBand`               | `string \| null`                     | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19)       |
@@ -1238,7 +1238,7 @@ Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR reviews frozen publ
 
 ### `GET /api/peg-summary`
 
-Composite peg scores and aggregate statistics. Score history begins at each coin's reviewed coverage anchor or age-derived fallback. `coins` may include NAV / non-peg rows with `currentDeviationBps = null`; summary counters exclude them.
+Composite peg scores and aggregate statistics. Score history begins at each coin's reviewed coverage anchor or age-derived fallback. The response recomputes only `currentDeviationBps` from the current stablecoins-cache price and the peg snapshot's authoritative `pegReference`; peg-score and history fields retain the quarter-hourly snapshot observation. `coins` may include NAV / non-peg rows with `currentDeviationBps = null`; summary counters exclude them.
 
 **Cache:** producer-backed
 
@@ -1270,7 +1270,7 @@ Composite peg scores and aggregate statistics. Score history begins at each coin
 | `pegType`                   | `string`                                                   | DefiLlama peg type                                                                                                                                                                                                                                                                                                                                                  |
 | `pegCurrency`               | `string`                                                   | Peg currency code (`USD`, `EUR`, `GOLD`, etc.)                                                                                                                                                                                                                                                                                                                      |
 | `governance`                | `string`                                                   | `"centralized"`, `"centralized-dependent"`, `"decentralized"`                                                                                                                                                                                                                                                                                                       |
-| `currentDeviationBps`       | `number \| null`                                           | Live price deviation from peg (basis points, signed). `null` for NAV / non-fixed-peg rows, for coins with current supply below the live depeg-event floor, when price / peg-reference inputs are missing, or when `pegReferenceUnavailable` is set.                                                                                                                 |
+| `currentDeviationBps`       | `number \| null`                                           | Live price deviation from peg (basis points, signed), computed coherently from the current stablecoins-cache price and this row's authoritative snapshot `pegReference`. `null` for NAV / non-fixed-peg rows, for coins with current supply below the live depeg-event floor, when price / peg-reference inputs are missing, or when `pegReferenceUnavailable` is set.                                             |
 | `depegEventCoverageLimited` | `boolean`                                                  | Present when the coin's current supply is below the live depeg-event floor (`$1M`). Use this to distinguish "below coverage floor" from generic missing-price cases when `currentDeviationBps` is `null`.                                                                                                                                                           |
 | `pegReferenceUnavailable`   | `boolean \| undefined`                                     | Present (`true`) since v6.08 when the coin's peg reference lacks authority — a thin non-USD peer-median group with no live FX fallback — so `currentDeviationBps` is withheld as `null` instead of showing a self-referential deviation.                                                                                                                            |
 | `priceSource`               | `string`                                                   | Primary price source label used for current deviation (`defillama-list`, `coingecko`, composite agreement labels such as `binance+coingecko+kraken`, `protocol-redeem`, `defillama-contract`, `coinmarketcap`, `dexscreener`, `cached`, etc.). High-confidence consensus can expose the agreeing cluster label even when the published price is the cluster median. |
@@ -3059,6 +3059,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
 
 Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-coin net-flow + pressure-shift signals, and hourly timeseries. Updated every 30 minutes by the sync cron. Aggregate responses without `stablecoin` are served cache-first; the critical sync lane pre-publishes the default 24h and 168h windows after successful runs so public reads avoid rescanning hourly mint/burn aggregates.
 
+The live aggregate contract requires `gauge.intensitySemantics` to be `"signed-v2"` and includes the per-coin pressure, activity, and baseline fields on every coin. Frontend clients reject older midpoint-v1 response envelopes, so Worker and frontend rollback/publish pairings must stay within the same contract version.
+
 **Cache:** standard
 
 **Error responses:** `503` when the cached fallback payload is missing or malformed and live recomputation cannot satisfy the request. Malformed embedded freshness fields inside an otherwise valid cached payload no longer reset freshness to synthetic values; the API logs the corruption and falls back to the cache row timestamp.
@@ -3104,7 +3106,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `flightIntensity`      | `number`         | Flight-to-quality intensity (0–100). 0 when not active                                               |
 | `trackedCoins`         | `number`         | Number of stablecoins tracked for mint/burn flows                                                    |
 | `trackedMcapUsd`       | `number`         | Combined market cap of tracked coins (USD)                                                           |
-| `intensitySemantics`   | `string`         | Scoring semantics version identifier (currently `"signed-v2"`)                                       |
+| `intensitySemantics`   | `"signed-v2"`   | Required scoring semantics version identifier                                                        |
 | `classificationSource` | `string` | Source of flight-to-quality classification (`"safety-score-v9-publication"` or `"unavailable"`) |
 
 This payload is the single producer of the Bank Run Gauge. Internal consumers (daily digest) read the published `24`-hour aggregate and re-bin it rather than recomputing a composite — see [Mint/Burn Flows: Bank Run Gauge](./mint-burn-flows.md#bank-run-gauge-composite).

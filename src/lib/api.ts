@@ -1,12 +1,10 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { isRecord } from "@shared/lib/type-guards";
 import {
   ApiDependencyMetaSchema,
-  ApiMetaSchema,
+  ApiMetaEnvelopeSchema,
   ApiMetaWarningOnlySchema,
   type ApiDependencyMeta,
   type ApiMetaEnvelope,
@@ -46,12 +44,17 @@ export interface ApiRequestOptions {
 }
 
 function resolveResponseUpdatedAtSec(headers: Headers, ageSeconds: number): number {
+  const edgeAgeHeader = headers.get("Age");
+  const parsedEdgeAge = edgeAgeHeader ? Number(edgeAgeHeader) : 0;
+  const edgeAgeSeconds = Number.isFinite(parsedEdgeAge) && parsedEdgeAge >= 0
+    ? parsedEdgeAge
+    : 0;
   const dateHeader = headers.get("Date");
   const serverDateMs = dateHeader ? Date.parse(dateHeader) : Number.NaN;
   const referenceNowSec = Number.isFinite(serverDateMs)
-    ? Math.floor(serverDateMs / 1000)
+    ? Math.floor(serverDateMs / 1000) + edgeAgeSeconds
     : Math.floor(Date.now() / 1000);
-  return Math.max(0, Math.floor(referenceNowSec - ageSeconds));
+  return Math.max(0, Math.floor(referenceNowSec - ageSeconds - edgeAgeSeconds));
 }
 
 export async function apiRequest(path: string, init?: RequestInit, options?: ApiRequestOptions): Promise<Response> {
@@ -144,7 +147,7 @@ function normalizeApiMeta(value: unknown): ApiMeta | null {
     }
   }
 
-  const parsed = ApiMetaSchema.safeParse({
+  const parsed = ApiMetaEnvelopeSchema.safeParse({
     ...value,
     warning: typeof value.warning === "string" || value.warning === null ? value.warning : undefined,
     dependencies: Object.keys(dependencies).length > 0 ? dependencies : undefined,
@@ -250,7 +253,7 @@ export async function apiFetchWithMeta<T>(
   path: string,
   schema?: SchemaLike<T>,
   init?: RequestInit,
-  maxAgeSec = 900,
+  _maxAgeSec = 900,
   contractMode?: ApiContractMode,
   requestOptions?: ApiRequestOptions,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
@@ -274,8 +277,9 @@ export async function apiFetchWithMeta<T>(
   }
   const bodyWarning = getBodyWarning(data);
 
-  // Fallback: read X-Data-Age header (for array responses or non-cache-handler endpoints)
-  if (!meta) {
+  // Fill a missing producer clock from headers (for array responses,
+  // warning-only body metadata, or non-cache-handler endpoints).
+  if (meta?.updatedAt === undefined) {
     const ageHeader = res.headers.get("X-Data-Age");
     if (ageHeader) {
       const age = Number(ageHeader);
@@ -283,7 +287,8 @@ export async function apiFetchWithMeta<T>(
         meta = {
           updatedAt: resolveResponseUpdatedAtSec(res.headers, age),
           ageSeconds: age,
-          status: classifyFreshnessRatio(age / maxAgeSec),
+          status: meta?.status ?? "fresh",
+          ...(meta?.warning ? { warning: meta.warning } : {}),
         };
       }
     }
@@ -291,7 +296,6 @@ export async function apiFetchWithMeta<T>(
 
   const warningHeader = res.headers.get("Warning");
   if (warningHeader) {
-    const isFreshnessWarning = isFreshnessWarningHeader(warningHeader);
     if (meta) {
       meta =
         meta.updatedAt !== undefined && meta.ageSeconds !== undefined
@@ -299,11 +303,10 @@ export async function apiFetchWithMeta<T>(
               ...meta,
               updatedAt: meta.updatedAt,
               ageSeconds: meta.ageSeconds,
-              status: isFreshnessWarning && meta.status === "fresh" ? "degraded" : meta.status,
               warning: warningHeader,
             }
           : ApiMetaWarningOnlySchema.parse({ status: "degraded", warning: warningHeader });
-    } else if (isFreshnessWarning) {
+    } else {
       // Preserve warning context without inventing freshness timestamps.
       meta = ApiMetaWarningOnlySchema.parse({
         status: "degraded",
@@ -311,11 +314,10 @@ export async function apiFetchWithMeta<T>(
       });
     }
   }
-  if (bodyWarning && meta && !meta.warning) {
-    meta = {
-      ...meta,
-      warning: bodyWarning,
-    };
+  if (bodyWarning && !meta?.warning) {
+    meta = meta
+      ? { ...meta, warning: bodyWarning }
+      : ApiMetaWarningOnlySchema.parse({ status: "degraded", warning: bodyWarning });
   }
 
   // Validate the stripped body. A failure here is not recoverable by

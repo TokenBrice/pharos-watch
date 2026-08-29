@@ -1,7 +1,6 @@
 import type { ApiMeta } from "@/lib/api";
 import { ApiFetchError } from "@/lib/api";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
-import { resolveApiMetaAgeMilliseconds } from "@shared/types/api-meta";
 
 type DataHealthState = "fresh" | "degraded" | "stale" | "unavailable" | "error";
 
@@ -43,16 +42,18 @@ function isUnavailableError(error: unknown): boolean {
 }
 
 function pickBaseState(
-  meta: ApiMeta | null | undefined,
   ageMs: number | null,
   staleTime: number,
 ): Exclude<DataHealthState, "error"> {
-  if (meta?.status === "stale") return "stale";
-  if (meta?.status === "degraded") return "degraded";
   if (ageMs === null) return "unavailable";
   if (ageMs <= FRESHNESS_RATIOS.FRESH * staleTime) return "fresh";
   if (ageMs <= FRESHNESS_RATIOS.DEGRADED * staleTime) return "degraded";
   return "stale";
+}
+
+function hasServerDegradation(meta: ApiMeta | null | undefined): boolean {
+  if (meta?.warning) return true;
+  return Object.values(meta?.dependencies ?? {}).some((dependency) => dependency.status !== "fresh");
 }
 
 function getBaseMessage(state: Exclude<DataHealthState, "error">): string {
@@ -64,12 +65,19 @@ function getBaseMessage(state: Exclude<DataHealthState, "error">): string {
 
 export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
   const hasData = input.hasData ?? input.dataUpdatedAt > 0;
-  const { updatedAtMs, ageMs } = resolveApiMetaAgeMilliseconds(
-    input.meta,
-    input.dataUpdatedAt,
-    Date.now(),
-  );
-  const baseState = pickBaseState(input.meta, ageMs, input.staleTime);
+  const updatedAtMs = input.meta?.updatedAt != null && input.meta.updatedAt > 0
+    ? input.meta.updatedAt * 1000
+    : input.dataUpdatedAt;
+  const ageMs = updatedAtMs > 0 ? Math.max(0, Date.now() - updatedAtMs) : null;
+  const classifiedState = pickBaseState(ageMs, input.staleTime);
+  const hasDegradationFloor = hasServerDegradation(input.meta);
+  const baseState = !hasDegradationFloor
+    ? classifiedState
+    : classifiedState === "unavailable"
+      ? "degraded"
+      : STATE_PRIORITY[classifiedState] >= STATE_PRIORITY.degraded
+        ? classifiedState
+        : "degraded";
 
   if (input.error && !hasData) {
     if (isUnavailableError(input.error)) {

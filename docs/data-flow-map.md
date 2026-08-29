@@ -156,6 +156,8 @@ API hooks that use `useApiQuery` follow the interval supplied by their caller:
 
 Defined centrally in `src/hooks/use-api-query.ts`. Cron-backed hooks should pass the producer cadence unless a documented route-specific exception applies. The only current exception is `/api/health` (1-minute diagnostic polling, not cron-backed); `/api/usds-status` follows its daily producer cadence like every other cron-backed hook.
 
+Freshness badges use producer `updatedAt` as their canonical clock and classify `Date.now() - updatedAt` against that interval, so hydrated query data continues aging between refetches. Body `_meta` and freshness headers are normalized at the API transport boundary; HTTP `Age` contributes only when no producer timestamp is present, while warnings and non-fresh dependency status impose a degraded floor without replacing the client-side clock.
+
 ## Notes
 
 - **Core aggregate boundary**: `shared/data/stablecoins/listing-decisions.json` classifies the catalog, while `shared/lib/stablecoins/aggregate-registry.ts` projects active `core-stablecoin` and `cash-equivalent` entries for monetary aggregates. PSI, digest market/supply totals, current homepage market cap, chain totals/history, and non-USD share consume that projection. Depeg, DEWS, price, per-asset history, and digest risk-signal lanes continue monitoring every active listing, including variants and stable-value investments. Client ranking filters use the compact `listingClass` field in `coins.client.generated.json`, not the full decision ledger. New PSI and digest snapshots identify the aggregate boundary as `core-stablecoins-v1` so consumers can distinguish legacy rows.
