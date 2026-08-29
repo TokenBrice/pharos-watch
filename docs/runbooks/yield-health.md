@@ -72,7 +72,7 @@ Use Wrangler's D1 execute command from `worker/` for the SQL below, and keep eve
 ```sql
 SELECT key, updated_at, length(value) AS bytes
 FROM cache
-WHERE key IN ('yield-rankings', 'yield:supplemental-sources:v1', 'yield-coverage-audit')
+WHERE key IN ('yield-rankings', 'yield-coverage-audit')
    OR key LIKE 'yield:supplemental-sources:v1:%'
 ORDER BY key;
 ```
