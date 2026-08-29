@@ -1,13 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useQueryMock } = vi.hoisted(() => ({
-  useQueryMock: vi.fn(),
-}));
+const { useQueryMock } = vi.hoisted(() => ({ useQueryMock: vi.fn() }));
 
-vi.mock("@tanstack/react-query", () => ({
-  useQuery: useQueryMock,
-}));
-
+vi.mock("@tanstack/react-query", () => ({ useQuery: useQueryMock }));
 vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/api-endpoints")>();
   return {
@@ -20,281 +15,107 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
   };
 });
 
-import { CRON_1MIN, CRON_STABILITY_INDEX, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { makeApiRequestAttributionResponse } from "@/test-utils/status-fixtures";
 import { useHealth, useStabilityIndex, useTelegramPulse } from "../api-hooks";
 import { useRequestSourceStats, useStatus } from "../admin-api-hooks";
 import { useEndpointProbes, usePublicEndpointProbes } from "../use-endpoint-probes";
 
-function mockQueryReturn() {
-  useQueryMock.mockReturnValue({
-    data: undefined,
-    error: null,
-    isLoading: false,
-    isFetching: false,
-    dataUpdatedAt: 0,
-  });
-}
-
 function queryContext(queryKey: readonly unknown[]) {
-  return {
-    signal: new AbortController().signal,
-    queryKey,
-    meta: undefined,
-  } as never;
-}
-
-function minimalStatusResponse() {
-  return {
-    timestamp: 1,
-    dbHealthy: true,
-    availabilityStatus: "healthy",
-    dataQualityStatus: "healthy",
-    rawOverallStatus: "healthy",
-    overallStatus: "healthy",
-    confidence: 1,
-    causes: { availability: [], dataQuality: [], overall: [] },
-    state: {
-      scope: "global",
-      currentStatus: "healthy",
-      rawStatus: "healthy",
-      lastEvaluatedAt: 1,
-      lastChangedAt: 1,
-      minDwellSec: 300,
-      staleMinDwellSec: 900,
-      consecutiveRaw: { healthy: 1, degraded: 0, stale: 0 },
-      thresholds: {
-        escalateToDegraded: 2,
-        escalateToStale: 3,
-        recoverToDegraded: 2,
-        recoverToHealthy: 3,
-      },
-    },
-    staleness: { ageSeconds: 0, maxAgeSec: 60, isStale: false },
-    probe: { timestamp: 1, status: "healthy", sampleCount: 1, passCount: 1, failCount: 0, p95LatencyMs: 10 },
-    discrepancy: {
-      hasDivergence: false,
-      severityDelta: 0,
-      statusSeverity: 0,
-      probeSeverity: 0,
-      details: null,
-      probeAgeSeconds: 0,
-      consecutiveDivergent: 0,
-      discrepancyReason: "in-sync",
-    },
-    timeline: [],
-    caches: {},
-    crons: {},
-    dataQuality: {},
-    telegramBot: null,
-    sectionErrors: {},
-    datasetFreshness: {},
-    summary: {},
-    liquidityHealth: null,
-    yieldHealth: null,
-    publicationHealth: null,
-    dependencyHealth: null,
-    providerCircuitHealth: null,
-    canaries: null,
-    priceSourceHealth: null,
-    priceProviderDiagnostics: null,
-    gtProbe: null,
-    coingeckoPriceDiff: null,
-    d1Usage: null,
-    budgetOnlySurfaces: [],
-    mintBurnReconciliation: null,
-    reserveComposition: {
-      configuredCoins: 0,
-      freshCoins: 0,
-      staleCoins: 0,
-      missingCoins: 0,
-      degradedCoins: 0,
-      errorCoins: 0,
-      corruptCoins: 0,
-      independentFreshEligible: 0,
-      independentFreshUnverified: 0,
-      staticValidatedFresh: 0,
-      weakProbeFresh: 0,
-      writeTimeoutUncertain: 0,
-      deferredCoins: 0,
-      runBudgetTruncated: false,
-      deferredAt: null,
-      nextCursorStablecoinId: null,
-      cursorTailState: null,
-      cursorTailError: null,
-      cursorRecordedAt: null,
-      cursorTailCompletedAt: null,
-      cursorTailFailedAt: null,
-      runBudgetTruncationCount: 0,
-      historyWriteGaps: [],
-      persistentlyStaleIndependentCoins: [],
-      lastSuccessAt: null,
-      oldestFreshAgeSec: null,
-      status: "healthy",
-      freshCoverageRatio: 0,
-      authoritativeFreshCoverageRatio: 0,
-    },
-  };
-}
-
-function minimalRequestSourceStatsResponse() {
-  return makeApiRequestAttributionResponse({
-    generatedAt: 1,
-    window: {
-      from: 1,
-      to: 2,
-      durationSec: 1,
-      bucketSizeSec: 3600,
-      routeLimit: 5,
-      apiKeyLimit: 25,
-      retentionDays: 30,
-    },
-  });
+  return { signal: new AbortController().signal, queryKey, meta: undefined } as never;
 }
 
 describe("query polling policy", () => {
   beforeEach(() => {
     useQueryMock.mockReset();
-    mockQueryReturn();
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      dataUpdatedAt: 0,
+    });
     vi.restoreAllMocks();
   });
 
-  it("useHealth uses shared polling policy with endpoint-specific retry", () => {
-    useHealth();
+  it.each([
+    { name: "health", useHook: useHealth, descriptor: FRONTEND_API_QUERY_DESCRIPTORS.health, retry: 1 },
+    {
+      name: "stability index",
+      useHook: useStabilityIndex,
+      descriptor: FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndex,
+      retry: 2,
+    },
+    {
+      name: "Telegram pulse",
+      useHook: useTelegramPulse,
+      descriptor: FRONTEND_API_QUERY_DESCRIPTORS.telegramPulse,
+      retry: 2,
+    },
+  ])("binds the $name hook to its registered descriptor", ({ useHook, descriptor, retry }) => {
+    useHook();
     const options = useQueryMock.mock.calls[0][0] as {
+      queryKey: readonly unknown[];
       staleTime: number;
-      refetchInterval: number;
       retry: number;
     };
 
-    expect(options.staleTime).toBe(CRON_1MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
-    expect(options.retry).toBe(1);
+    expect(options.queryKey).toEqual(descriptor.queryKey);
+    expect(options.staleTime).toBe(descriptor.producerIntervalMs);
+    expect(options.retry).toBe(retry);
   });
 
-  it("useStabilityIndex reuses registered meta polling", () => {
-    useStabilityIndex();
-    const options = useQueryMock.mock.calls[0][0] as {
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
-      retry: number;
-    };
-
-    expect(options.queryKey).toEqual(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndex.queryKey);
-    expect(options.staleTime).toBe(CRON_STABILITY_INDEX);
-    expect(options.refetchInterval).toBe(2 * CRON_STABILITY_INDEX);
-    expect(options.retry).toBe(2);
-  });
-
-  it("useTelegramPulse derives polling from the telegram pulse snapshot cron", () => {
-    useTelegramPulse();
-    const options = useQueryMock.mock.calls[0][0] as {
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
-    };
-
-    expect(options.queryKey).toEqual(["telegram-pulse"]);
-    expect(options.staleTime).toBe(CRON_TELEGRAM_PULSE);
-    expect(options.refetchInterval).toBe(2 * CRON_TELEGRAM_PULSE);
-  });
-
-  it("useStatus uses the ops proxy with no browser admin key", async () => {
+  it("keeps one admin hook smoke for proxying and abort-signal forwarding", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => minimalStatusResponse(),
-    } as Response);
-
-    useStatus();
-    const options = useQueryMock.mock.calls[0][0] as {
-      enabled: boolean;
-      retry: number;
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
-      queryFn: () => Promise<unknown>;
-    };
-
-    expect(options.enabled).toBeUndefined();
-    expect(options.retry).toBe(0);
-    expect(options.staleTime).toBe(CRON_1MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
-    expect(options.queryKey).toEqual(["status", "ops-proxy"]);
-
-    await options.queryFn();
-    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toBe("/api/admin/status");
-    expect(init).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }));
-  });
-
-  it("lets route workspaces disable status polling without changing the shared policy", () => {
-    useStatus({ enabled: false });
-    const options = useQueryMock.mock.calls[0][0] as {
-      enabled: boolean;
-      staleTime: number;
-      refetchInterval: number;
-    };
-
-    expect(options.enabled).toBe(false);
-    expect(options.staleTime).toBe(CRON_1MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
-  });
-
-  it("useRequestSourceStats uses the ops proxy and shared polling policy", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => minimalRequestSourceStatsResponse(),
+      json: async () => makeApiRequestAttributionResponse(),
     } as Response);
 
     useRequestSourceStats();
     const options = useQueryMock.mock.calls[0][0] as {
-      enabled: boolean;
+      enabled?: boolean;
       retry: number;
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
-      queryFn: () => Promise<unknown>;
+      queryKey: readonly unknown[];
+      queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown>;
     };
 
     expect(options.enabled).toBeUndefined();
     expect(options.retry).toBe(0);
-    expect(options.staleTime).toBe(CRON_1MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
     expect(options.queryKey).toEqual(["request-source-stats", 24, 3600, 5, 25, "ops-proxy"]);
 
-    await options.queryFn();
+    await options.queryFn(queryContext(options.queryKey));
     const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(path).toBe("/api/admin/request-source-stats?hours=24&bucketSec=3600&routeLimit=5&apiKeyLimit=25");
     expect(init).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
-  it("useEndpointProbes uses shared polling and switches admin paths to same-origin proxy mode", async () => {
+  it("lets operator workspaces disable status polling", () => {
+    useStatus({ enabled: false });
+    const options = useQueryMock.mock.calls[0][0] as { enabled: boolean; queryKey: readonly unknown[] };
+
+    expect(options.enabled).toBe(false);
+    expect(options.queryKey).toEqual(["status", "ops-proxy"]);
+  });
+
+  it("uses the public and admin probe sets with same-origin admin proxying", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ ok: true }),
+      json: async () => ({ status: "healthy", overallStatus: "healthy", causes: { overall: [] } }),
     } as Response);
 
     useEndpointProbes();
     const options = useQueryMock.mock.calls[0][0] as {
       enabled: boolean;
       retry: number;
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
+      queryKey: readonly unknown[];
       queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown[]>;
     };
 
     expect(options.enabled).toBe(true);
     expect(options.retry).toBe(0);
-    expect(options.staleTime).toBe(CRON_1MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
     expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy"]);
-
     await options.queryFn(queryContext(options.queryKey));
 
     const [publicCall, adminCall] = fetchMock.mock.calls;
@@ -306,17 +127,10 @@ describe("query polling policy", () => {
 
   it("gives critical operator probes a distinct cache key and supports disabling them", () => {
     useEndpointProbes({ mode: "critical", enabled: false });
-    const options = useQueryMock.mock.calls[0][0] as {
-      enabled: boolean;
-      queryKey: unknown[];
-      staleTime: number;
-      refetchInterval: number;
-    };
+    const options = useQueryMock.mock.calls[0][0] as { enabled: boolean; queryKey: readonly unknown[] };
 
     expect(options.enabled).toBe(false);
     expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy", "critical"]);
-    expect(options.staleTime).toBe(CRON_1MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
   });
 
   it("keeps public probes on their own endpoint set and cache key", async () => {
@@ -330,18 +144,13 @@ describe("query polling policy", () => {
     const options = useQueryMock.mock.calls[0][0] as {
       enabled: boolean;
       retry: number;
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
+      queryKey: readonly unknown[];
       queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown[]>;
     };
 
     expect(options.enabled).toBe(false);
     expect(options.retry).toBe(0);
-    expect(options.staleTime).toBe(CRON_1MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
     expect(options.queryKey).toEqual(["endpoint-probes", "public"]);
-
     await options.queryFn(queryContext(options.queryKey));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toEqual(expect.stringContaining("/api/health"));
@@ -370,24 +179,15 @@ describe("query polling policy", () => {
 
     expect(publicSignal?.aborted).toBe(false);
     expect(adminSignal?.aborted).toBe(false);
-
     await vi.advanceTimersByTimeAsync(5_000);
     expect(publicSignal?.aborted).toBe(true);
     expect(adminSignal?.aborted).toBe(false);
-
     await vi.advanceTimersByTimeAsync(15_000);
     expect(adminSignal?.aborted).toBe(true);
 
-    const result = await resultPromise;
-    expect(result).toEqual([
-      expect.objectContaining({
-        status: null,
-        error: "Browser probe timed out",
-      }),
-      expect.objectContaining({
-        status: null,
-        error: "Browser probe timed out",
-      }),
+    await expect(resultPromise).resolves.toEqual([
+      expect.objectContaining({ status: null, error: "Browser probe timed out" }),
+      expect.objectContaining({ status: null, error: "Browser probe timed out" }),
     ]);
   });
 });

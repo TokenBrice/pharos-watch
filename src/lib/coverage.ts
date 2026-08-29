@@ -1,18 +1,7 @@
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
+import { COVERAGE_FEATURE_MODULES as modules } from "@/lib/coverage-feature-modules";
 import { COVERAGE_FEATURES } from "@/lib/coverage-features";
-import { coverageFeature as blacklistFeature } from "@/lib/coverage/blacklist";
-import { coverageFeature as dependencyFeature } from "@/lib/coverage/dependency";
-import { coverageFeature as dexFeature } from "@/lib/coverage/dex";
-import { coverageFeature as flowsFeature } from "@/lib/coverage/flows";
-import { coverageFeature as geniusFeature } from "@/lib/coverage/genius";
-import { coverageFeature as mintAuthorityFeature } from "@/lib/coverage/mint-authority";
-import { coverageFeature as micaFeature } from "@/lib/coverage/mica";
-import { coverageFeature as priceFeature } from "@/lib/coverage/price";
-import { coverageFeature as redemptionFeature } from "@/lib/coverage/redemption";
-import { coverageFeature as reservesFeature } from "@/lib/coverage/reserves";
-import { coverageFeature as safetyFeature } from "@/lib/coverage/safety";
-import { coverageFeature as yieldFeature } from "@/lib/coverage/yield";
 import type {
   CoverageFeatureDefinition,
   CoverageFeatureKey,
@@ -173,18 +162,18 @@ export function buildCoverageRow({
 }: BuildCoverageRowInput): CoverageRow {
   const hasData = (key: CoverageFeatureKey) => dataAvailability?.[key] !== false;
   const statuses = {
-    price: priceFeature.resolve(coin, hasPegCoverage, consensusSources, priceConfidence, hasData("price")),
-    safety: safetyFeature.resolve(safetyScore, hasData("safety")),
-    dex: dexFeature.resolve(dexCoverageClass, hasData("dex")),
-    reserves: reservesFeature.resolve(coin, liveReserveFresh, hasData("reserves")),
-    redemption: redemptionFeature.resolve(redemptionEntry, hasData("redemption")),
-    yield: yieldFeature.resolve(hasYieldCoverage, hasData("yield")),
-    flows: flowsFeature.resolve(flowCoverageStatus, hasData("flows")),
-    blacklist: blacklistFeature.resolve(coin, blacklistStatus),
-    mica: micaFeature.resolve(coin.mica),
-    genius: geniusFeature.resolve(coin.genius),
-    dependency: dependencyFeature.resolve(dependencyCoverage ?? hasDependencyCoverage, hasData("dependency")),
-    mintAuthority: mintAuthorityFeature.resolve(coin.mintAuthoritySummary, publishedMint, hasData("mintAuthority")),
+    price: modules.price.resolve(coin, hasPegCoverage, consensusSources, priceConfidence, hasData("price")),
+    safety: modules.safety.resolve(safetyScore, hasData("safety")),
+    dex: modules.dex.resolve(dexCoverageClass, hasData("dex")),
+    reserves: modules.reserves.resolve(coin, liveReserveFresh, hasData("reserves")),
+    redemption: modules.redemption.resolve(redemptionEntry, hasData("redemption")),
+    yield: modules.yield.resolve(hasYieldCoverage, hasData("yield")),
+    flows: modules.flows.resolve(flowCoverageStatus, hasData("flows")),
+    blacklist: modules.blacklist.resolve(coin, blacklistStatus),
+    mica: modules.mica.resolve(coin.mica),
+    genius: modules.genius.resolve(coin.genius),
+    dependency: modules.dependency.resolve(dependencyCoverage ?? hasDependencyCoverage, hasData("dependency")),
+    mintAuthority: modules.mintAuthority.resolve(coin.mintAuthoritySummary, publishedMint, hasData("mintAuthority")),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 
   return {

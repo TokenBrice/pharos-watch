@@ -12,7 +12,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { CoverageFeatureKey } from "@/lib/coverage";
-import { COVERAGE_FEATURE_LEGEND_ITEMS } from "@/lib/coverage-features";
+import { COVERAGE_FEATURES } from "@/lib/coverage-features";
 
 export type CoverageFilterKey =
   | "all"
@@ -563,45 +563,17 @@ const GENERAL_LEGEND_ITEMS: readonly LegendItem[] = [
   },
 ];
 
-const LEGEND_CATEGORY_LABELS: Record<LegendCategory, string> = {
-  general: "General",
-  price: "Price & Depeg",
-  safety: "Safety Score",
-  dex: "DEX Liquidity",
-  reserves: "Reserves",
-  redemption: "Redemption",
-  yield: "Yield",
-  flows: "Flows",
-  blacklist: "Blacklist Status",
-  mica: "MiCA",
-  genius: "GENIUS",
-  dependency: "Dependency",
-  mintAuthority: "Mint Authority",
-};
-
 const LEGEND_CATEGORY_ORDER: readonly LegendCategory[] = [
   "general",
-  "price",
-  "safety",
-  "dex",
-  "reserves",
-  "redemption",
-  "yield",
-  "flows",
-  "blacklist",
-  "mica",
-  "genius",
-  "dependency",
-  "mintAuthority",
+  ...COVERAGE_FEATURES.map((feature) => feature.key),
 ] as const;
 
-// Assembled at module load: general entries + per-feature entries derived from
-// COVERAGE_FEATURE_LEGEND_ITEMS, preserving the public LegendItem shape.
+// Assembled at module load from the feature registry, preserving the public LegendItem shape.
 const LEGEND_ITEMS: readonly LegendItem[] = [
   ...GENERAL_LEGEND_ITEMS,
   ...LEGEND_CATEGORY_ORDER.filter((category): category is CoverageFeatureKey => category !== "general").flatMap(
     (category) =>
-      COVERAGE_FEATURE_LEGEND_ITEMS[category].map((item) => ({
+      COVERAGE_FEATURES.find((feature) => feature.key === category)!.legendItems.map((item) => ({
         term: item.term,
         category,
         description: item.description,
@@ -614,7 +586,11 @@ export function getLegendGroups(): ReadonlyArray<{
   items: ReadonlyArray<LegendItem>;
 }> {
   return LEGEND_CATEGORY_ORDER.map((category) => ({
-    label: LEGEND_CATEGORY_LABELS[category],
+    label:
+      category === "general"
+        ? "General"
+        : COVERAGE_FEATURES.find((feature) => feature.key === category)!.legendLabel ??
+          COVERAGE_FEATURES.find((feature) => feature.key === category)!.label,
     items: LEGEND_ITEMS.filter((item) => item.category === category),
   })).filter((group) => group.items.length > 0);
 }

@@ -1,4 +1,5 @@
 import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
+import type { CoverageLegendItem } from "@/lib/coverage/shared";
 
 export type CoverageFeatureKey =
   | "price"
@@ -44,8 +45,11 @@ export interface CoverageFeatureDefinition {
   headlineShareLabel?: string;
   href?: string;
   external?: boolean;
+  /** Legend heading when it intentionally differs from the feature label. */
+  legendLabel?: string;
   /** Every status kind the feature's resolver can produce. */
   statusKinds: readonly string[];
+  legendItems: readonly CoverageLegendItem[];
   /** Per-feature breakdown formatter. Replaces the central switch in coverage.ts. */
   formatBreakdown: (
     rows: readonly CoverageRow[],
