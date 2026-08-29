@@ -4384,5 +4384,27 @@
         "url": "https://docs.raidollar.tech/docs/reference/audits"
       }
     ]
+  },
+  "eurr-revolut": {
+    "title": "The Neobank That Rented Its Own Coin",
+    "text": "EURR is live, and Pharos tracks it pre-launch anyway — a distinction that says more about market infrastructure than about the token. Revolut launched it on August 26 2026 as the first product of a stablecoin programme long assumed to be arriving in dollars or sterling, phased into Denmark, Poland, and Portugal with the rest of the EEA promised later in the year. The structural surprise is the issuer: not Revolut's Lithuanian EMI, which had every licence required, but Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge, holding an EMI licence and MiCA authorisation from the CSSF while Revolut Digital Assets Europe distributes under its CySEC permission. Europe's biggest neobank built the distribution and outsourced the balance sheet — the same Bridge Open Issuance model behind MoneyGram's and Deel's tokens, now wearing a consumer brand with 80 million customers behind it. The timing is not subtle either: EURR arrived as Revolut finished pulling Tether's USDt from European retail on August 31, so the euro rail it removed and the euro rail it added are the same shelf. Supply went from 366 to roughly 251,000 tokens in two days, which is a rollout, not yet adoption. What is missing is the part MiCA does not force into public view — reserve composition, custodians, and {{term:attestation}}attestation{{/term}} cadence are all undisclosed, and no accepted price source resolves the token, which is precisely why it sits here rather than in the tracked set. A stablecoin distributed by a bank, issued by a payments company, and priced by nobody is a fair snapshot of where regulated euro tokens currently are.",
+    "updatedAt": "2026-08-29",
+    "authoredBy": "ai",
+    "model": "claude-opus-5[1m]",
+    "factsAsOf": "2026-08-29",
+    "sources": [
+      {
+        "label": "FinTech Futures: Revolut launches euro-backed stablecoin EURR",
+        "url": "https://www.fintechfutures.com/blockchain-crypto-digital-assets/revolut-launches-euro-backed-stablecoin-eurr"
+      },
+      {
+        "label": "Blockhead: Revolut launches EURR as it cuts off Tether across Europe",
+        "url": "https://www.blockhead.co/2026/08/27/revolut-launches-euro-stablecoin-eurr-as-it-cuts-off-tether-across-europe/"
+      },
+      {
+        "label": "DefiLlama: Revolut Euro (stablecoin 436)",
+        "url": "https://stablecoins.llama.fi/stablecoin/436"
+      }
+    ]
   }
 }

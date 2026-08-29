@@ -382,6 +382,7 @@
     "brd-volpon": "core-stablecoin",
     "krw1-bdacs": "core-stablecoin",
     "rusd-revolut": "core-stablecoin",
+    "eurr-revolut": "core-stablecoin",
     "brl-itau": "core-stablecoin",
     "krw-imbank": "core-stablecoin",
     "sofid-sofi": "core-stablecoin",
