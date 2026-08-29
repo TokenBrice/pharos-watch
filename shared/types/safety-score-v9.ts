@@ -1236,32 +1236,21 @@ const V9MaterialityPolicySchema = z
     commonModeShareThreshold: z.number().finite().min(0).max(1),
     // Proven exposure at or above this threshold is high. Unknown or
     // unattributed exposure is also high regardless of its nominal bound.
-    commonModeHighShareThreshold: z.number().finite().min(0).max(1).optional(),
+    commonModeHighShareThreshold: z.number().finite().min(0).max(1),
     // Reviewed liquidity venues (dex-protocol common-mode) whose concentration is
     // not a capping signal. Non-mature venues use the proportional thresholds.
     matureVenues: z.array(z.string().min(1)),
-    // Retained schema-v1 policies may carry the former bridge allowlist. It is
-    // accepted only for replay compatibility and stripped before validation;
-    // current materiality semantics never consult it.
-    lowRiskBridgeTiers: z.array(z.string().min(1)).optional(),
   })
   .strict()
   .superRefine((materiality, ctx) => {
-    if (
-      materiality.commonModeHighShareThreshold !== undefined &&
-      materiality.commonModeShareThreshold >= materiality.commonModeHighShareThreshold
-    ) {
+    if (materiality.commonModeShareThreshold >= materiality.commonModeHighShareThreshold) {
       ctx.addIssue({
         code: "custom",
         path: ["commonModeHighShareThreshold"],
         message: "Common-mode high-share threshold must exceed the diagnostic-share threshold",
       });
     }
-  })
-  .transform(({ lowRiskBridgeTiers: _legacyBridgeTiers, ...materiality }) => ({
-    ...materiality,
-    commonModeHighShareThreshold: materiality.commonModeHighShareThreshold ?? materiality.commonModeShareThreshold,
-  }));
+  });
 
 const V9StructuralPolicySchema = z
   .object({
@@ -1389,15 +1378,9 @@ const V9_RATED_GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D",
 const V9MethodologyPolicyBaseSchema = z
   .object({
     schemaVersion: z.literal(1),
-    policyId: z.union([
-      z.literal("safety-score-v9"),
-      z.string().regex(/^safety-score-v9-[a-z0-9-]+$/),
-    ]),
-    lifecycle: z.enum(["candidate", "active", "retired"]),
-    releaseVersion: z
-      .string()
-      .regex(/^\d+\.\d+$/)
-      .nullable(),
+    policyId: z.literal("safety-score-v9"),
+    lifecycle: z.literal("active"),
+    releaseVersion: z.string().regex(/^\d+\.\d+$/),
     semantic: V9MethodologySemanticSchema,
     reasonRegistry: z.array(V9ReasonRegistryEntrySchema),
   })
@@ -1423,13 +1406,6 @@ function validateAscendingBreakpoints(
 }
 
 export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefine((policy, ctx) => {
-  if (policy.lifecycle === "candidate" && policy.releaseVersion !== null) {
-    addPolicyIssue(ctx, ["releaseVersion"], "Candidate policy cannot claim a release version");
-  }
-  if (policy.lifecycle !== "candidate" && policy.releaseVersion === null) {
-    addPolicyIssue(ctx, ["releaseVersion"], "Active or retired policy requires a release version");
-  }
-
   const formula = policy.semantic.formula;
   const weightTotal = Object.values(formula.pillarWeights).reduce((sum, value) => sum + value, 0);
   if (Math.abs(weightTotal - 1) > 1e-9) {

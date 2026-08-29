@@ -24,7 +24,6 @@ const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>
   "liquidity-diversification-floor": "liquidity diversification",
   "effective-exit-floor": "Exit",
   "supply-tvl-floor-1h": "one-hour exit depth",
-  "lifecycle-non-active": "lifecycle",
   "peg-currency-mismatch": "peg currency",
   "yield-native-only-violation": "native yield",
   "decentralization-required-violation": "decentralization",

@@ -370,18 +370,6 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy({ ...candidateClone(), assetIds: ["usdc"] })).toThrow();
   });
 
-  it("loads retained schema-v1 materiality fields through the conservative compatibility adapter", () => {
-    const retainedPolicy: unknown = structuredClone(candidateClone());
-    const materiality = (retainedPolicy as { semantic: { materiality: Record<string, unknown> } }).semantic.materiality;
-    delete materiality.commonModeHighShareThreshold;
-    materiality.commonModeShareThreshold = 0.15;
-    materiality.lowRiskBridgeTiers = ["canonical-rollup-bridge"];
-
-    const loaded = loadV9MethodologyPolicy(retainedPolicy);
-    expect(loaded.policy.semantic.materiality.commonModeHighShareThreshold).toBe(0.15);
-    expect("lowRiskBridgeTiers" in loaded.policy.semantic.materiality).toBe(false);
-  });
-
   it("requires exact signal, disposition, priority, and reason coverage", () => {
     const missingSignal = candidateClone();
     delete (missingSignal.semantic.structural.signalLimits as Partial<Record<string, unknown>>)["unsafe-backing"];

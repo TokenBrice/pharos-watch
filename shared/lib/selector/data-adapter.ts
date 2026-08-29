@@ -58,7 +58,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
 
   for (const meta of CLIENT_TRACKED_STABLECOINS) {
     const id = meta.id;
-    const lifecycle = (meta.status ?? "active") as MergedRow["lifecycle"];
+    const lifecycle = meta.status ?? "active";
     if (lifecycle !== "active") continue;
     if (args.pegCurrency != null && meta.flags.pegCurrency !== args.pegCurrency) continue;
 
@@ -97,7 +97,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       variantOf: meta.variantOf ?? null,
       isYieldBearing: Boolean(meta.flags.yieldBearing),
       pegCurrency: meta.flags.pegCurrency,
-      lifecycle,
       governance: meta.flags.governance,
       canBeBlacklisted: resolveBlacklistability(meta),
       mechanismArchetype: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
@@ -201,7 +200,8 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         protocolSlug: row.protocolSlug,
         variantOf: row.variantOf,
         isYieldBearing: row.isYieldBearing,
-        lifecycle: row.lifecycle,
+        // Keep this constant to preserve existing dataset content hashes after the row field is removed.
+        lifecycle: "active",
         governance: row.governance,
         canBeBlacklisted: row.canBeBlacklisted,
         mechanismArchetype: row.mechanismArchetype,
