@@ -74,6 +74,9 @@ export interface V9SafetyTableRow {
   grade: V9Grade;
   riskBucket: V9GradeRiskBucket;
   pillars: SafetyScoreV9Card["pillars"];
+  evidence: SafetyScoreV9Card["evidence"];
+  weakestPillar: SafetyScoreV9Card["weakestPillar"];
+  bindingCapReason: NonNullable<SafetyScoreV9Card["bindingCap"]>["reason"] | null;
   accessPosture: SafetyScoreV9Card["accessPosture"];
   freezeStatus: V9FreezeStatus;
   /**
@@ -106,6 +109,9 @@ export function buildV9SafetyTableRows(
       grade: card.grade,
       riskBucket: getV9GradeRiskBucket(card.grade),
       pillars: card.pillars,
+      evidence: card.evidence,
+      weakestPillar: card.weakestPillar,
+      bindingCapReason: card.bindingCap?.reason ?? null,
       accessPosture: card.accessPosture,
       freezeStatus: mapV9FreezeStatus(card),
       mint: readV9CardMintComponent(card),

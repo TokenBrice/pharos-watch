@@ -5,6 +5,12 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  makeReportCardsV9Card,
+  makeReportCardsV9Response,
+} from "@shared/test-utils/report-cards-v9";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
 /**
  * Publication-safety guards for the Safety Score map generator (plan §11.2b).
@@ -40,25 +46,127 @@ let psiComputedAt = 0;
 let publicationStatus = "current";
 let server: Server;
 let baseUrl = "";
+let reportCardsPayloadOverride: unknown | undefined;
+let stablecoinsPayloadOverride: unknown | undefined;
+let psiPayloadOverride: unknown | undefined;
+
+function reportCardsPayload(): unknown {
+  const updatedAt = Math.max(asOfSec, Math.floor(Date.now() / 1000));
+  const identity = {
+    model: "v9" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion,
+    policyId: "safety-score-v9",
+    policyDigest: "a".repeat(64),
+    evaluationBuildDigest: "b".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+    publicationGenerationId: "safety-map-fixture",
+  };
+  const canonicalCards: SafetyScoreV9CurrentCard[] = cards.map((card) => {
+    if (card.score === null) {
+      return makeReportCardsV9Card({
+        id: card.id,
+        score: null,
+        grade: card.grade as SafetyScoreV9CurrentCard["grade"],
+        qualityScore: null,
+        pegMultiplier: null,
+        pegAdjustedScore: null,
+        pillars: {
+          backing: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+          exit: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+          control: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+        },
+        weakestPillar: null,
+        nrReasons: [{ code: "missing-pillar", message: "Fixture is not rated.", field: null, origin: "asset" }],
+      });
+    }
+    const ratedCard = makeReportCardsV9Card({
+      id: card.id,
+      score: card.score,
+      grade: card.grade as SafetyScoreV9CurrentCard["grade"],
+      qualityScore: card.score,
+      pegMultiplier: 1,
+      pegAdjustedScore: card.score,
+    });
+    if (card.grade !== "D" && card.grade !== "F") return ratedCard;
+    return {
+      ...ratedCard,
+      scoreTrace: {
+        ...ratedCard.scoreTrace,
+        adverseAttribution: {
+          ...ratedCard.scoreTrace.adverseAttribution,
+          items: [{
+            source: "pillar-score" as const,
+            path: "pillar:backing:score",
+            message: "Measured backing pillar score is below the C- floor.",
+            responsibility: "measured-adverse" as const,
+          }],
+        },
+      },
+    };
+  });
+  return makeReportCardsV9Response(
+    {
+      safetyScoreIdentity: identity,
+      defaultUpdatedAt: updatedAt,
+      asOfSec,
+      source: {
+        candidateId: "safety-score-v9:v1:safety-map-fixture",
+        factSetDigest: "c".repeat(64),
+        resultDigest: "d".repeat(64),
+        sourceGenerations: { reportCards: "fixture" },
+      },
+    },
+    () => makeReportCardsV9Card(),
+    { cards: canonicalCards },
+  );
+}
+
+function stablecoinsPayload(): unknown {
+  return {
+    peggedAssets: assets.map((asset) => makeStablecoin({
+      id: asset.id,
+      name: asset.symbol,
+      symbol: asset.symbol,
+      circulating: asset.circulating ?? {},
+    })),
+  };
+}
+
+function psiPayload(): unknown {
+  return {
+    current: {
+      score: 94.3,
+      band: "BEDROCK",
+      avg24h: 93.8,
+      avg24hBand: "BEDROCK",
+      components: { severity: 0, breadth: 0, trend: 0 },
+      computedAt: psiComputedAt,
+      methodologyVersion: "psi-v1",
+    },
+    history: [],
+    methodology: {
+      version: "psi-v1",
+      versionLabel: "PSI v1",
+      currentVersion: "psi-v1",
+      currentVersionLabel: "PSI v1",
+      changelogPath: "/methodology/stability-index-changelog/",
+      asOf: psiComputedAt,
+      isCurrent: true,
+    },
+  };
+}
 
 beforeAll(async () => {
   server = createServer((req, res) => {
     const path = (req.url ?? "").split("?")[0];
     const body =
       path === "/api/report-cards/v9"
-        ? { cards, methodology: { version: methodologyVersion }, asOfSec }
+        ? (reportCardsPayloadOverride ?? reportCardsPayload())
         : path === "/api/stablecoins"
-          ? { peggedAssets: assets }
+          ? (stablecoinsPayloadOverride ?? stablecoinsPayload())
           : path === "/api/stability-index"
-            ? {
-                current: {
-                  score: 94.3,
-                  band: "BEDROCK",
-                  avg24h: 93.8,
-                  avg24hBand: "BEDROCK",
-                  computedAt: psiComputedAt,
-                },
-              }
+            ? (psiPayloadOverride ?? psiPayload())
           : null;
     if (!body) {
       res.writeHead(404).end("{}");
@@ -137,7 +245,15 @@ interface RunResult {
  */
 async function runGenerator(
   fixture: { cards: Card[]; assets: Asset[]; asOfSec?: number; methodologyVersion?: string },
-  options: { args?: string[]; stopBeforeRender?: boolean; publicationStatus?: string; psiComputedAt?: number } = {},
+  options: {
+    args?: string[];
+    stopBeforeRender?: boolean;
+    publicationStatus?: string;
+    psiComputedAt?: number;
+    reportCardsPayload?: unknown;
+    stablecoinsPayload?: unknown;
+    psiPayload?: unknown;
+  } = {},
 ): Promise<RunResult> {
   cards = fixture.cards;
   assets = fixture.assets;
@@ -145,6 +261,9 @@ async function runGenerator(
   psiComputedAt = options.psiComputedAt ?? Math.floor(Date.now() / 1000) - 5 * 60;
   methodologyVersion = fixture.methodologyVersion ?? "9.19";
   publicationStatus = options.publicationStatus ?? "current";
+  reportCardsPayloadOverride = options.reportCardsPayload;
+  stablecoinsPayloadOverride = options.stablecoinsPayload;
+  psiPayloadOverride = options.psiPayload;
 
   const outDir = scratchDir("pharos-safety-map-test-");
   const pngPath = join(outDir, "map.png");
@@ -225,6 +344,34 @@ describe("safety-score map — freshness guard (§11.2b rule 1)", () => {
     });
     expect(run.status).toBe(1);
     expect(run.stderr).toMatch(/refusing to render a future-dated level/);
+  });
+});
+
+describe("safety-score map — canonical API payload schemas", () => {
+  it("rejects the former report-card subset DTO", async () => {
+    const fixture = universe();
+    const run = await runGenerator(fixture, {
+      reportCardsPayload: { cards: fixture.cards, methodology: { version: "9.19" }, asOfSec: Math.floor(Date.now() / 1000) - HOUR },
+    });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Report-card response is malformed/);
+  });
+
+  it("rejects the former stablecoin subset DTO", async () => {
+    const fixture = universe();
+    const run = await runGenerator(fixture, { stablecoinsPayload: { peggedAssets: fixture.assets } });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Stablecoin response is malformed/);
+  });
+
+  it("rejects the former PSI subset DTO", async () => {
+    const run = await runGenerator(universe(), {
+      psiPayload: {
+        current: { score: 94.3, band: "BEDROCK", computedAt: Math.floor(Date.now() / 1000) - 5 * 60 },
+      },
+    });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/PSI response is malformed/);
   });
 });
 

@@ -52,14 +52,22 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { firefox, type Page } from "playwright";
 import sharp from "sharp";
+import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 import { formatScore } from "@shared/lib/format";
+import { getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import { GRADE_THRESHOLDS, scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/market";
 import { SAFETY_GRADE_VALUES } from "@shared/types/report-card-grade";
+import {
+  ReportCardsV9CurrentResponseSchema,
+  type ReportCardsV9CurrentResponse,
+} from "@shared/types/report-cards-v9";
+import { StabilityIndexResponseSchema, type StabilityIndexCurrent } from "@shared/types/stability";
 import { escapeXml } from "../lib/og-svg.mts";
 import {
   planAnnotations,
@@ -187,33 +195,9 @@ const LOGO_DARK_PLATE = "#111a29";
 const RENDERABLE_TEXT = /^[\x20-\x7e·–—°€£¥]*$/;
 const unsupportedGlyphs = new Set<string>();
 
-interface ApiCard {
-  id: string;
-  score: number | null;
-  grade: string;
-}
-
-interface ReportCardsResponse {
-  cards: ApiCard[];
-  methodology: { version: string };
-  asOfSec: number;
-  publicationHealth?: unknown;
-  updatedAt?: number;
-}
-
-interface StablecoinsResponse {
-  peggedAssets: Array<{ id: string; symbol: string; circulating?: Record<string, number> }>;
-}
-
-interface PsiResponse {
-  current: {
-    score: number;
-    band: ConditionBand;
-    avg24h?: number;
-    avg24hBand?: ConditionBand;
-    computedAt: number;
-  };
-}
+type MapReportCard = Pick<ReportCardsV9CurrentResponse["cards"][number], "id" | "score" | "grade">;
+type MapStablecoin = Pick<StablecoinListResponse["peggedAssets"][number], "id" | "symbol" | "circulating">;
+type MapPsiCurrent = Pick<StabilityIndexCurrent, "score" | "band" | "avg24h" | "avg24hBand" | "computedAt">;
 
 export type MapPsiBasis = "24H AVG" | "RAW";
 
@@ -303,147 +287,184 @@ async function fetchJson(apiPath: string, apiKey: string, baseUrl: string): Prom
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function parseCanonicalPayload<T>(label: string, schema: ZodType<T>, payload: unknown): T {
+  const parsed = schema.safeParse(payload);
+  if (parsed.success) return parsed.data;
+  throw new Error(formatCanonicalSchemaError(label, parsed.error));
 }
 
-function parseReportCardsResponse(payload: unknown): ReportCardsResponse {
-  if (!isRecord(payload) || !Array.isArray(payload.cards)) {
-    throw new Error("Report-card response is malformed — expected a cards array");
-  }
-  if (!isRecord(payload.methodology) || typeof payload.methodology.version !== "string" || payload.methodology.version.length === 0) {
-    throw new Error("Report-card response is malformed — methodology.version is missing");
-  }
-  if (typeof payload.asOfSec !== "number" || !Number.isFinite(payload.asOfSec) || !Number.isInteger(payload.asOfSec)) {
-    throw new Error("Report-card response is malformed — asOfSec must be a finite integer");
-  }
-  if (payload.updatedAt !== undefined && (typeof payload.updatedAt !== "number" || !Number.isFinite(payload.updatedAt))) {
-    throw new Error("Report-card response is malformed — updatedAt must be finite when present");
-  }
+function formatCanonicalSchemaError(label: string, error: { issues: readonly { path: readonly PropertyKey[]; message: string }[] }): string {
+  const issue = error.issues[0];
+  const path = issue?.path.length ? ` at ${issue.path.join(".")}` : "";
+  return `${label} response is malformed${path} — ${issue?.message ?? "canonical schema rejected it"}`;
+}
 
+/**
+ * Preserve the established operator-facing messages for map-specific bad-card
+ * inputs. The canonical schema is still attempted first; this only translates
+ * its rejection after the fact and never makes an invalid payload acceptable.
+ */
+function reportCardCompatibilityError(payload: unknown): string | null {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return null;
+  const root = payload as Record<string, unknown>;
+  if (!Array.isArray(root.cards)) return "Report-card response is malformed — expected a cards array";
+  const methodology = root.methodology;
+  if (typeof methodology !== "object" || methodology === null || Array.isArray(methodology)) {
+    return "Report-card response is malformed — methodology.version is missing";
+  }
+  const methodologyVersion = (methodology as Record<string, unknown>).version;
+  if (typeof methodologyVersion !== "string" || methodologyVersion.length === 0) {
+    return "Report-card response is malformed — methodology.version is missing";
+  }
+  const asOfSec = root.asOfSec;
+  if (typeof asOfSec !== "number" || !Number.isFinite(asOfSec) || !Number.isInteger(asOfSec)) {
+    return "Report-card response is malformed — asOfSec must be a finite integer";
+  }
+  const updatedAt = root.updatedAt;
+  if (updatedAt !== undefined && (typeof updatedAt !== "number" || !Number.isFinite(updatedAt))) {
+    return "Report-card response is malformed — updatedAt must be finite when present";
+  }
   const ids = new Set<string>();
-  const cards: ApiCard[] = [];
-  for (const [index, rawCard] of payload.cards.entries()) {
-    if (!isRecord(rawCard)) throw new Error(`Report-card response is malformed — cards[${index}] is not an object`);
-    const id = rawCard.id;
-    if (typeof id !== "string" || id.length === 0) throw new Error(`Report-card response is malformed — cards[${index}].id is missing`);
-    if (ids.has(id)) throw new Error(`Duplicate report-card id "${id}" — refusing to build an ambiguous map`);
-    ids.add(id);
-
-    const grade = rawCard.grade;
-    if (typeof grade !== "string" || !VALID_CARD_GRADES.has(grade)) {
-      throw new Error(`Unknown grade "${String(grade)}" for ${id} — the tier map (${TIER_ORDER.join("/")}) is out of date`);
+  for (const [index, rawCard] of root.cards.entries()) {
+    if (typeof rawCard !== "object" || rawCard === null || Array.isArray(rawCard)) {
+      return `Report-card response is malformed — cards[${index}] is not an object`;
     }
-    const score = rawCard.score;
+    const card = rawCard as Record<string, unknown>;
+    const id = card.id;
+    if (typeof id !== "string" || id.length === 0) {
+      return `Report-card response is malformed — cards[${index}].id is missing`;
+    }
+    if (ids.has(id)) return `Duplicate report-card id "${id}" — refusing to build an ambiguous map`;
+    ids.add(id);
+    const grade = card.grade;
+    if (typeof grade !== "string" || !VALID_CARD_GRADES.has(grade)) {
+      return `Unknown grade "${String(grade)}" for ${id} — the tier map (${TIER_ORDER.join("/")}) is out of date`;
+    }
+    const score = card.score;
     if (grade === "NR") {
-      if (score !== null) throw new Error(`Score/grade disagreement for ${id}: NR cards must have a null score`);
+      if (score !== null) return `Score/grade disagreement for ${id}: NR cards must have a null score`;
     } else {
       if (typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 100) {
-        throw new Error(`Invalid score for ${id}: expected a finite value in the 0-100 range`);
+        return `Invalid score for ${id}: expected a finite value in the 0-100 range`;
       }
       const expectedGrade = scoreToGrade(score);
       if (expectedGrade !== grade) {
-        throw new Error(`Score/grade disagreement for ${id}: score ${score} maps to ${expectedGrade}, not ${grade}`);
+        return `Score/grade disagreement for ${id}: score ${score} maps to ${expectedGrade}, not ${grade}`;
       }
     }
-    cards.push({ id, score: score as number | null, grade });
   }
+  return null;
+}
+
+export function parseMapReportCards(payload: unknown): {
+  cards: MapReportCard[];
+  methodologyVersion: string;
+  asOfSec: number;
+  updatedAt: number;
+  publicationHealth: ReportCardsV9CurrentResponse["publicationHealth"];
+} {
+  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(payload);
+  if (!parsed.success) {
+    const compatibilityError = reportCardCompatibilityError(payload);
+    throw new Error(compatibilityError ?? formatCanonicalSchemaError("Report-card", parsed.error));
+  }
+  const response = parsed.data;
+  const ids = new Set<string>();
+  const cards = response.cards.map((card) => {
+    if (ids.has(card.id)) throw new Error(`Duplicate report-card id "${card.id}" — refusing to build an ambiguous map`);
+    ids.add(card.id);
+    if (!VALID_CARD_GRADES.has(card.grade)) {
+      throw new Error(`Unknown grade "${card.grade}" for ${card.id} — the tier map (${TIER_ORDER.join("/")}) is out of date`);
+    }
+    if (card.grade === "NR") {
+      if (card.score !== null) throw new Error(`Score/grade disagreement for ${card.id}: NR cards must have a null score`);
+    } else {
+      if (card.score === null || !Number.isFinite(card.score) || card.score < 0 || card.score > 100) {
+        throw new Error(`Invalid score for ${card.id}: expected a finite value in the 0-100 range`);
+      }
+      const expectedGrade = scoreToGrade(card.score);
+      if (expectedGrade !== card.grade) {
+        throw new Error(`Score/grade disagreement for ${card.id}: score ${card.score} maps to ${expectedGrade}, not ${card.grade}`);
+      }
+    }
+    return { id: card.id, score: card.score, grade: card.grade };
+  });
 
   return {
     cards,
-    methodology: { version: payload.methodology.version },
-    asOfSec: payload.asOfSec,
-    ...(payload.publicationHealth !== undefined ? { publicationHealth: payload.publicationHealth } : {}),
-    ...(payload.updatedAt !== undefined ? { updatedAt: payload.updatedAt } : {}),
+    methodologyVersion: response.methodology.version,
+    asOfSec: response.asOfSec,
+    updatedAt: response.updatedAt,
+    publicationHealth: response.publicationHealth,
   };
 }
 
-function parseStablecoinsResponse(payload: unknown): StablecoinsResponse {
-  if (!isRecord(payload) || !Array.isArray(payload.peggedAssets)) {
-    throw new Error("Stablecoin response is malformed — expected a peggedAssets array");
-  }
+export function parseMapStablecoins(payload: unknown): { peggedAssets: MapStablecoin[] } {
+  const response = parseCanonicalPayload("Stablecoin", StablecoinListResponseSchema, payload);
   const ids = new Set<string>();
-  const peggedAssets: StablecoinsResponse["peggedAssets"] = [];
-  for (const [index, rawAsset] of payload.peggedAssets.entries()) {
-    if (!isRecord(rawAsset)) throw new Error(`Stablecoin response is malformed — peggedAssets[${index}] is not an object`);
-    const id = rawAsset.id;
-    const symbol = rawAsset.symbol;
-    if (typeof id !== "string" || id.length === 0 || typeof symbol !== "string" || symbol.length === 0) {
+  const peggedAssets = response.peggedAssets.map((asset, index) => {
+    if (asset.id.length === 0 || asset.symbol.length === 0) {
       throw new Error(`Stablecoin response is malformed — peggedAssets[${index}] needs id and symbol`);
     }
-    if (ids.has(id)) throw new Error(`Duplicate stablecoin id "${id}" — refusing to build an ambiguous supply join`);
-    ids.add(id);
-
-    const rawCirculating = rawAsset.circulating;
-    if (rawCirculating !== undefined && rawCirculating !== null) {
-      if (!isRecord(rawCirculating)) throw new Error(`Stablecoin response is malformed — ${id}.circulating is not an object`);
-      for (const [bucket, value] of Object.entries(rawCirculating)) {
-        if (typeof value !== "number" || !Number.isFinite(value)) {
-          throw new Error(`Invalid circulating supply for ${id}.${bucket} — expected a finite number`);
-        }
-        if (value < 0) {
-          throw new Error(`Negative circulating supply for ${id}.${bucket} — refusing to render a net-negative asset`);
-        }
+    if (ids.has(asset.id)) throw new Error(`Duplicate stablecoin id "${asset.id}" — refusing to build an ambiguous supply join`);
+    ids.add(asset.id);
+    for (const [bucket, value] of Object.entries(asset.circulating)) {
+      if (!Number.isFinite(value)) {
+        throw new Error(`Invalid circulating supply for ${asset.id}.${bucket} — expected a finite number`);
+      }
+      if (value < 0) {
+        throw new Error(`Negative circulating supply for ${asset.id}.${bucket} — refusing to render a net-negative asset`);
       }
     }
-    peggedAssets.push({
-      id,
-      symbol,
-      ...(rawCirculating !== undefined && rawCirculating !== null
-        ? { circulating: rawCirculating as Record<string, number> }
-        : {}),
-    });
-  }
+    return { id: asset.id, symbol: asset.symbol, circulating: asset.circulating };
+  });
   return { peggedAssets };
 }
 
-export function parsePsiResponse(payload: unknown): PsiResponse {
-  if (!isRecord(payload) || !isRecord(payload.current)) {
+export function parseMapPsi(payload: unknown): MapPsiCurrent {
+  const response = parseCanonicalPayload("PSI", StabilityIndexResponseSchema, payload);
+  if (response.current === null) {
     throw new Error("PSI response is malformed — expected a current reading");
   }
-  const { current } = payload;
-  const validateScore = (value: unknown, field: string): number => {
-    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100) {
+  const { current } = response;
+  const validateScore = (value: number, field: string): void => {
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
       throw new Error(`PSI response is malformed — ${field} must be finite and in the 0-100 range`);
     }
-    return value;
   };
-  const validateBand = (value: unknown, field: string): ConditionBand => {
-    if (typeof value !== "string" || !Object.hasOwn(PSI_HEX_COLORS, value)) {
+  const validateBand = (value: string, field: string): void => {
+    if (!Object.hasOwn(PSI_HEX_COLORS, value)) {
       throw new Error(`PSI response is malformed — ${field} is not a recognized condition band`);
     }
-    return value as ConditionBand;
   };
 
-  const score = validateScore(current.score, "current.score");
-  const band = validateBand(current.band, "current.band");
-  if (typeof current.computedAt !== "number" || !Number.isFinite(current.computedAt) || !Number.isInteger(current.computedAt)) {
+  validateScore(current.score, "current.score");
+  validateBand(current.band, "current.band");
+  if (!Number.isFinite(current.computedAt) || !Number.isInteger(current.computedAt)) {
     throw new Error("PSI response is malformed — current.computedAt must be a finite integer");
   }
   if ((current.avg24h === undefined) !== (current.avg24hBand === undefined)) {
     throw new Error("PSI response is malformed — current.avg24h and current.avg24hBand must appear together");
   }
-
+  if (current.avg24h !== undefined && current.avg24hBand !== undefined) {
+    validateScore(current.avg24h, "current.avg24h");
+    validateBand(current.avg24hBand, "current.avg24hBand");
+  }
   return {
-    current: {
-      score,
-      band,
-      ...(current.avg24h !== undefined
-        ? {
-            avg24h: validateScore(current.avg24h, "current.avg24h"),
-            avg24hBand: validateBand(current.avg24hBand, "current.avg24hBand"),
-          }
-        : {}),
-      computedAt: current.computedAt,
-    },
+    score: current.score,
+    band: current.band,
+    ...(current.avg24h !== undefined ? { avg24h: current.avg24h } : {}),
+    ...(current.avg24hBand !== undefined ? { avg24hBand: current.avg24hBand } : {}),
+    computedAt: current.computedAt,
   };
 }
 
-export function selectMapPsi(current: PsiResponse["current"]): MapPsi {
+export function selectMapPsi(current: MapPsiCurrent): MapPsi {
+  const displayed = getDisplayedPsi(current);
   return {
-    score: current.avg24h ?? current.score,
-    band: current.avg24hBand ?? current.band,
-    basis: current.avg24h !== undefined ? "24H AVG" : "RAW",
+    score: displayed.score,
+    band: displayed.band as ConditionBand,
+    basis: getDisplayedPsiBasis(current) === "rolling 24h avg" ? "24H AVG" : "RAW",
     computedAt: current.computedAt,
   };
 }
@@ -453,6 +474,9 @@ export function buildPsiSubtitle(psi: Pick<MapPsi, "score" | "band" | "basis">):
 }
 
 function formatUsdCompact(value: number): string {
+  // The shared formatter renders sub-$1K values as units, while this published
+  // artifact has always rounded every such value to K. Keep the local ladder
+  // until the shared option surface can express that byte-identically.
   if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
   if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(0)}M`;
@@ -1954,8 +1978,12 @@ function nonNegativeInteger(value: unknown, label: string, path: string): number
   return value as number;
 }
 
+function isSnapshotRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function parseSnapshotCoin(value: unknown, index: number, path: string): SnapshotCoin {
-  if (!isRecord(value)) malformedSnapshot(path, `coins[${index}] is not an object`);
+  if (!isSnapshotRecord(value)) malformedSnapshot(path, `coins[${index}] is not an object`);
   if (typeof value.id !== "string" || value.id.length === 0) malformedSnapshot(path, `coins[${index}].id is missing`);
   if (typeof value.symbol !== "string" || value.symbol.length === 0) malformedSnapshot(path, `coins[${index}].symbol is missing`);
   if (typeof value.grade !== "string" || !SAFETY_GRADE_VALUES.includes(value.grade as (typeof SAFETY_GRADE_VALUES)[number])) {
@@ -1978,14 +2006,14 @@ function parseSnapshotCoin(value: unknown, index: number, path: string): Snapsho
 }
 
 function parseSnapshotMapSummary(value: unknown, path: string): MapSummary {
-  if (!isRecord(value)) malformedSnapshot(path, "mapSummary is missing");
+  if (!isSnapshotRecord(value)) malformedSnapshot(path, "mapSummary is missing");
   if (typeof value.date !== "string" || value.date.length === 0) malformedSnapshot(path, "mapSummary.date is invalid");
   if (typeof value.asOfSec !== "number" || !Number.isFinite(value.asOfSec) || !Number.isInteger(value.asOfSec)) malformedSnapshot(path, "mapSummary.asOfSec is invalid");
   if (typeof value.methodologyVersion !== "string" || value.methodologyVersion.length === 0) malformedSnapshot(path, "mapSummary.methodologyVersion is invalid");
   const gradedCount = nonNegativeInteger(value.gradedCount, "mapSummary.gradedCount", path);
   const notRatedCount = nonNegativeInteger(value.notRatedCount, "mapSummary.notRatedCount", path);
   if (typeof value.totalMcapUsd !== "number" || !Number.isFinite(value.totalMcapUsd) || value.totalMcapUsd < 0) malformedSnapshot(path, "mapSummary.totalMcapUsd is invalid");
-  if (!isRecord(value.floorMcapByTier)) malformedSnapshot(path, "mapSummary.floorMcapByTier is missing");
+  if (!isSnapshotRecord(value.floorMcapByTier)) malformedSnapshot(path, "mapSummary.floorMcapByTier is missing");
   if (typeof value.floorMcapByTier.a !== "number" || !Number.isFinite(value.floorMcapByTier.a) || value.floorMcapByTier.a <= 0) malformedSnapshot(path, "mapSummary.floorMcapByTier.a is invalid");
   if (typeof value.floorMcapByTier.other !== "number" || !Number.isFinite(value.floorMcapByTier.other) || value.floorMcapByTier.other <= 0) malformedSnapshot(path, "mapSummary.floorMcapByTier.other is invalid");
   if (!Array.isArray(value.tiers) || value.tiers.length !== TIER_ORDER.length) malformedSnapshot(path, "mapSummary.tiers must contain every grade band");
@@ -1993,7 +2021,7 @@ function parseSnapshotMapSummary(value: unknown, path: string): MapSummary {
   const seenTiers = new Set<string>();
   const tiers: MapSummary["tiers"] = [];
   for (const [index, rawTier] of value.tiers.entries()) {
-    if (!isRecord(rawTier) || typeof rawTier.tier !== "string" || !TIER_ORDER.includes(rawTier.tier as Tier)) {
+    if (!isSnapshotRecord(rawTier) || typeof rawTier.tier !== "string" || !TIER_ORDER.includes(rawTier.tier as Tier)) {
       malformedSnapshot(path, `mapSummary.tiers[${index}].tier is invalid`);
     }
     const tier = rawTier.tier as Tier;
@@ -2005,7 +2033,7 @@ function parseSnapshotMapSummary(value: unknown, path: string): MapSummary {
     if (typeof rawTier.sharePct !== "number" || !Number.isFinite(rawTier.sharePct) || rawTier.sharePct < 0) malformedSnapshot(path, `mapSummary.tiers[${index}].sharePct is invalid`);
     if (!Array.isArray(rawTier.leaders) || rawTier.leaders.length > 3) malformedSnapshot(path, `mapSummary.tiers[${index}].leaders is invalid`);
     const leaders = rawTier.leaders.map((rawLeader, leaderIndex) => {
-      if (!isRecord(rawLeader) || typeof rawLeader.symbol !== "string" || rawLeader.symbol.length === 0) malformedSnapshot(path, `mapSummary.tiers[${index}].leaders[${leaderIndex}] is invalid`);
+      if (!isSnapshotRecord(rawLeader) || typeof rawLeader.symbol !== "string" || rawLeader.symbol.length === 0) malformedSnapshot(path, `mapSummary.tiers[${index}].leaders[${leaderIndex}] is invalid`);
       if (typeof rawLeader.score !== "number" || !Number.isFinite(rawLeader.score) || rawLeader.score < 0 || rawLeader.score > 100) malformedSnapshot(path, `mapSummary.tiers[${index}].leaders[${leaderIndex}].score is invalid`);
       if (typeof rawLeader.mcapUsd !== "number" || !Number.isFinite(rawLeader.mcapUsd) || rawLeader.mcapUsd < 0) malformedSnapshot(path, `mapSummary.tiers[${index}].leaders[${leaderIndex}].mcapUsd is invalid`);
       return { symbol: rawLeader.symbol, score: rawLeader.score, mcapUsd: rawLeader.mcapUsd };
@@ -2030,7 +2058,7 @@ function readPreviousSnapshot(path: string): PreviousSnapshot | null {
   try {
     raw = JSON.parse(readFileSync(resolve(path), "utf8"));
   } catch (err) {
-    const code = isRecord(err) && typeof err.code === "string" ? err.code : null;
+    const code = isSnapshotRecord(err) && typeof err.code === "string" ? err.code : null;
     if (code === "ENOENT") {
       console.warn(`[safety-score-map] Could not read --previous-snapshot ${path} (file not found) — delta guard skipped`);
       return null;
@@ -2038,16 +2066,16 @@ function readPreviousSnapshot(path: string): PreviousSnapshot | null {
     if (err instanceof SyntaxError) malformedSnapshot(path, "JSON could not be parsed");
     throw new Error(`[safety-score-map] Could not read --previous-snapshot ${path} (${err instanceof Error ? err.message : String(err)})`);
   }
-  if (!isRecord(raw)) malformedSnapshot(path, "root must be an object");
+  if (!isSnapshotRecord(raw)) malformedSnapshot(path, "root must be an object");
   if (raw.publicationStatus !== "current") malformedSnapshot(path, "publicationStatus must be current");
   const counts = raw.counts;
-  if (!isRecord(counts)) malformedSnapshot(path, "counts is missing");
+  if (!isSnapshotRecord(counts)) malformedSnapshot(path, "counts is missing");
   const graded = nonNegativeInteger(counts.graded, "counts.graded", path);
   const notRated = nonNegativeInteger(counts.notRated, "counts.notRated", path);
   const unjoined = nonNegativeInteger(counts.unjoined, "counts.unjoined", path);
   const missingLogos = nonNegativeInteger(counts.missingLogos, "counts.missingLogos", path);
   const rawByTier = counts.byTier;
-  if (!isRecord(rawByTier)) malformedSnapshot(path, "counts.byTier is missing");
+  if (!isSnapshotRecord(rawByTier)) malformedSnapshot(path, "counts.byTier is missing");
   const byTier = Object.fromEntries(TIER_ORDER.map((tier) => {
     if (!(tier in rawByTier)) malformedSnapshot(path, `counts.byTier.${tier} is missing`);
     return [tier, nonNegativeInteger(rawByTier[tier], `counts.byTier.${tier}`, path)];
@@ -2242,10 +2270,9 @@ async function main(): Promise<void> {
     fetchJson(API_PATHS.stablecoins(), apiKey, baseUrl),
     fetchJson(API_PATHS.stabilityIndex(), apiKey, baseUrl),
   ]);
-  const reportCards = parseReportCardsResponse(reportCardsResult.body);
-  const list = parseStablecoinsResponse(listResult.body);
-  const psiResponse = parsePsiResponse(psiResult.body);
-  const psi = selectMapPsi(psiResponse.current);
+  const reportCards = parseMapReportCards(reportCardsResult.body);
+  const list = parseMapStablecoins(listResult.body);
+  const psi = selectMapPsi(parseMapPsi(psiResult.body));
   if (reportCardsResult.publicationStatus !== "current") {
     throw new Error(`Report-card publication status is "${reportCardsResult.publicationStatus ?? "missing"}" — refusing to render a non-current capture`);
   }
@@ -2377,7 +2404,7 @@ async function main(): Promise<void> {
     notRatedCount,
     totalMcap,
     floorMcapByTier,
-    methodologyVersion: reportCards.methodology.version,
+    methodologyVersion: reportCards.methodologyVersion,
     dateLabel,
   });
 
@@ -2387,7 +2414,7 @@ async function main(): Promise<void> {
     logos,
     brandMark,
     psi,
-    methodologyVersion: reportCards.methodology.version,
+    methodologyVersion: reportCards.methodologyVersion,
     gradedCount: graded.length,
     asOfSec: reportCards.asOfSec,
     edition,
@@ -2465,7 +2492,7 @@ async function main(): Promise<void> {
   const mapSummary = buildMapSummary({
     date: runDate,
     asOfSec: reportCards.asOfSec,
-    methodologyVersion: reportCards.methodology.version,
+    methodologyVersion: reportCards.methodologyVersion,
     gradedCount: graded.length,
     notRatedCount,
     totalMcap,
@@ -2497,9 +2524,9 @@ async function main(): Promise<void> {
         publicationStatus: reportCardsResult.publicationStatus,
         asOfSec: reportCards.asOfSec,
         renderedAtSec,
-        methodologyVersion: reportCards.methodology.version,
-        ...(reportCards.updatedAt !== undefined ? { updatedAt: reportCards.updatedAt } : {}),
-        ...(reportCards.publicationHealth !== undefined ? { publicationHealth: reportCards.publicationHealth } : {}),
+        methodologyVersion: reportCards.methodologyVersion,
+        updatedAt: reportCards.updatedAt,
+        publicationHealth: reportCards.publicationHealth,
         counts,
         mapSummary,
         coins: graded.map((coin) => ({ id: coin.id, symbol: coin.symbol, score: coin.score, grade: coin.grade, mcap: coin.mcap })),
@@ -2518,7 +2545,7 @@ async function main(): Promise<void> {
         renderedAt: new Date(renderedAtSec * 1000).toISOString(),
         renderedAtSec,
         asOfSec: reportCards.asOfSec,
-        methodologyVersion: reportCards.methodology.version,
+        methodologyVersion: reportCards.methodologyVersion,
         counts,
         totalMcap,
         bytes: statSync(pngPath).size,
