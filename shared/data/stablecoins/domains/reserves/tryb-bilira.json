@@ -12,24 +12,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
     "confidence": "verified",
     "sources": [
       {
-        "label": "BiLira TRYB stablecoin disclosure",
-        "url": "https://www.bilira.co/en/product/tryb-stablecoin"
+        "label": "Corpus Denetim independent TRYB assurance report - August 17, 2026",
+        "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf"
       },
       {
-        "label": "BiLira audit reports",
+        "label": "BiLira audit reports index",
         "url": "https://www.bilira.co/en/audit-reports"
       }
     ],
-    "rationale": "BiLira states that a customer deposits Turkish lira to an affiliated bank account and BiLira mints an equivalent amount of TRYB. Its current disclosure states that TRYB is redeemable 1:1 for Turkish lira and that reserves are held in Turkish bank accounts; the issuer publishes recurring reports. The reviewed sources support a complete fiat-bank-reserve category but not a bank-by-bank allocation. Lockstep pin 2026-08-08: compositionAsOf anchored to the 21 May 2026 Corpus Denetim examination that latestReport records - the artefact verifies bank-held TRY reserves against supply, which is the record's single composition category; the issuer-disclosure read of 2026-07-14 is retained as corroboration.",
-    "compositionBasis": "Corpus Denetim examination as of 21 May 2026 (TRY reserves held in Turkish bank accounts), corroborated by issuer disclosure",
-    "compositionAsOf": "2026-05-21",
+    "rationale": "Corpus Denetim's independent auditor examination, signed August 17, 2026, covers the Reserve Account Information of BiLira Kripto Varlık Alım Satım Platformu as of August 17, 2026 at 12:00 GMT+3. It reports 61,600,302 TRYB tokens issued and outstanding and TL 66,400,788 held in custody accounts, concluding that the issued and outstanding tokens do not exceed the Turkish-lira balance. The auditor's opinion states that the reserve-account information is correctly stated in all material respects. The accompanying notes describe the complete reserve category as Turkish-lira balances in segregated accounts at federally insured Turkish-lira depository institutions, but the notes are outside the auditor's assurance and do not name the banks or provide their allocation. The curated composition therefore remains 100% TRY cash reserves.",
+    "compositionBasis": "Corpus Denetim independent auditor examination of BiLira's Reserve Account Report as of August 17, 2026",
+    "compositionAsOf": "2026-08-17",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete reserve category is disclosed as Turkish-lira bank reserves, but the reviewed sources do not name each reserve bank or publish its share.",
+    "knownUnknownExposure": "The complete reserve category is disclosed as Turkish-lira bank reserves, but the reviewed report does not name each reserve bank or publish its share; the accompanying notes are expressly outside the auditor's assurance.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

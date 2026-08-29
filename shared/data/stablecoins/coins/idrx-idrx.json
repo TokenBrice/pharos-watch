@@ -97,11 +97,32 @@
     }
   },
   "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://home.idrx.co/en/docs",
-    "provider": "IDRX documents portal (document API returns HTTP 500 as of 2026-08-08 so the table renders empty; no reserve attestor is named anywhere - referenced third parties are custodians/partners and CertiK is a smart-contract auditor)",
-    "attestorTier": "undisclosed",
-    "cadence": "undisclosed"
+    "type": "independent-audit",
+    "url": "https://home.idrx.co/en/docs/",
+    "provider": "KAP Jojo Sunarjo & Rekan (registered public accountant; June 2026 agreed-upon-procedures report, not an audit opinion)",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Indonesia",
+    "attestorLicense": "Registered Public Accountant licence 0444/KM.1/2013",
+    "latestReport": {
+      "periodEnd": "2026-06-19",
+      "publishedAt": "2026-07-07",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "Pharos reserve curation review 2026-08-29 (AUP; no audit opinion)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "IDRX Reserve Transparency Report (agreed-upon procedures; as of 2026-06-19; uploaded 2026-07-07)",
+          "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20June%202026.pdf"
+        },
+        {
+          "label": "IDRX transparency and audit documents index (observed 2026-08-29)",
+          "url": "https://home.idrx.co/en/docs/"
+        }
+      ]
+    }
   },
   "launchDate": "2023-05-23"
 }

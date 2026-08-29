@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve curation batch R10",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Pharos reserve curation review 2026-08-29",
     "confidence": "verified",
     "sources": [
       {
@@ -49,9 +49,9 @@
         "url": "https://securitize.io/primary-market/hl-scope"
       }
     ],
-    "rationale": "HLSCOPE is a tokenized feeder-fund interest: each token represents a pro-rata LP interest in Hamilton Lane SCOPE Securitize Tokenized Feeder, LP, whose sole material asset is an investment in the Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF. The reserve is therefore one 100% fund-share slice. The Main Fund's underlying loan-level composition is not a reserve split for HLSCOPE itself; it is the risk profile of the fund-share asset, already captured by the issuer/obligigor, risk factors, and liquidity horizon. The June 2026 Main Fund monthly report confirms the fund's NAV, senior-secured focus, and valuation cadence.",
-    "compositionBasis": "SEC Form D feeder identity; Hamilton Lane Main Fund PPM (feeder-to-master structure and liquidity rules); June 2026 Main Fund monthly report (NAV and strategy-level portfolio construction).",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "The current Hamilton Lane SCOPE strategy page displays Share Class Performance dated 31/07/2026 and states that valuations are calculated monthly by Hamilton Lane's valuation team and reviewed and approved by its valuation committee. The SEC Form D/A identifies Hamilton Lane SCOPE Securitize Tokenized Feeder, LP, while the December 2025 SCOPE PPM and Hamilton Lane's monthly report describe the underlying Luxembourg SCOPE fund and its NAV-based private-credit strategy. Together with the Securitize distribution page, these sources support representing HLSCOPE's reserve envelope as one 100% tokenized feeder LP interest. No underlying loan-level composition is asserted: the master-fund portfolio is risk context for that fund-interest slice, not additional HLSCOPE reserve slices. The July 31 page is the latest dated valuation disclosure located; it is manager-published and does not constitute an independent reserve audit.",
+    "compositionBasis": "SEC Form D/A feeder identity; December 2025 SCOPE PPM and Hamilton Lane/Securitize structure disclosures; Hamilton Lane SCOPE strategy page showing monthly valuation/performance dated 2026-07-31",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "No residual unknown exposure within the reserve composition: the entire reserve is the tokenized feeder LP interest. The underlying Main Fund loan-level weights and cash sleeve are look-through risk details, not reserve slices.",
     "knownUnknownExposurePct": 0
@@ -82,8 +82,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok T04 safety-v9 unknown-reduction w2 2026-07-30",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Pharos reserve curation review 2026-08-29",
     "confidence": "manual-review",
     "sources": [
       {

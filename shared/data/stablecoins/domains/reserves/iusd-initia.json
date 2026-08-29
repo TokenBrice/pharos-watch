@@ -19,32 +19,48 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-09",
-    "reviewer": "Kimi ACCESS-FREEZE AF06 (verified FV-A)",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "OpenAI Codex reserve review 2026-08-29",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Initia iusd-vault resources",
-        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+        "label": "Initia iUSD FAQ",
+        "url": "https://contents.initia.xyz/app/iusd-faq.json"
       },
       {
-        "label": "Initia iUSD/AUSD0 route resources",
-        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
+        "label": "Initia primary_fungible_store::balance view endpoint at block 21248472",
+        "url": "https://rest.initia.xyz/initia/move/v1/view/json"
       },
       {
-        "label": "Agora AUSD reserve report - May 31, 2026",
-        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+        "label": "Initia iUSD metadata resources at block 21248472",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e/resources"
+      },
+      {
+        "label": "Initia AUSD0 metadata resources at block 21248472",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef/resources"
+      },
+      {
+        "label": "Initia iUSD bank supply at block 21248472",
+        "url": "https://rest.initia.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=move%2F6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"
+      },
+      {
+        "label": "Initia block 21248472 header",
+        "url": "https://rest.initia.xyz/cosmos/base/tendermint/v1beta1/blocks/21248472"
       },
       {
         "label": "LayerZero AUSD deployment announcement",
         "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
+      },
+      {
+        "label": "Agora AUSD reserve report - May 31, 2026",
+        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
       }
     ],
-    "rationale": "Initia's official iusd-vault and AUSD0 OFT resources show that iUSD is minted 1:1 only after the local AUSD0 representation is delivered and deposited. This establishes the complete direct wrapper reserve as 100% Agora AUSD0/AUSD with no unidentified direct asset. Agora's own underlying reserve composition remains a separately tracked upstream dependency and is not misrepresented as an unknown slice of the iUSD wrapper. Write-time re-open 2026-07-28: Initia REST iusd-vault resources still resolve; LayerZero AUSD multi-chain announcement still describes AUSD OFT deployments; 100% AUSD wrapper direct reserve retained. Agora May 2026 reserve report remains upstream AUSD disclosure. Re-verified 2026-08-09 against Initia REST: the iUSD metadata object 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e reported fungible_asset::Supply.current = 2332748949795 (6 decimals) while the AUSD0 metadata object 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef reported 2332751507774, so essentially all AUSD0 on Initia sits in the iusd-vault sticky object 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a (ObjectCore owner 0x0) backing iUSD 1:1, and the vault ModuleStore still registers a single base token. No undisclosed remainder exists at the wrapper layer.",
-    "compositionBasis": "Complete direct wrapper composition from the official Initia vault/OFT relationship and documented 1:1 AUSD dependency",
-    "compositionAsOf": "2026-08-09",
+    "rationale": "Re-reviewed 2026-08-29. Initia's FAQ says iUSD is backed 1:1 by Agora AUSD and that supply expands on deposits and contracts on withdrawals. At interwoven-1 block 21248472 (hash oLp2oqBrLNW+e3Jbsmn+wta6wc9+Qum61EFE+Flexgo=; 2026-08-29T18:49:43.399544346Z), the current iUSD metadata object 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e has supply 2,511,330.584682 (6 decimals), and the bank supply endpoint reports the same amount. A pinned primary_fungible_store::balance view for owner vault object 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a and AUSD0 metadata 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef returns exactly 2,511,330.584682 AUSD0. AUSD0 total supply is 2,511,333.142661, leaving only 2.557979 AUSD0 outside the iUSD vault. The direct reserve is therefore one 100% AUSD0/AUSD wrapper position linked to ausd-agora; the upstream AUSD reserve composition is inherited and not duplicated as child slices.",
+    "compositionBasis": "Pinned Initia primary_fungible_store::balance and bank-supply reads at interwoven-1 block 21248472, plus official iUSD/AUSD and LayerZero documentation",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified direct reserve asset remains in the iUSD wrapper. Look-through risks and composition of Agora AUSD remain reviewed and propagated through the tracked upstream AUSD dependency.",
+    "knownUnknownExposure": "No unidentified direct reserve asset remains in the iUSD wrapper: the pinned vault balance equals the complete iUSD supply in AUSD0 at the reviewed block. AUSD reserve composition and bridge/custody risks remain upstream facts on the linked ausd-agora record.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

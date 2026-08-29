@@ -15,6 +15,28 @@
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund",
+    "provider": "Hamilton Lane SCOPE monthly NAV and performance disclosure (manager valuation team and committee)",
+    "attestorTier": "self",
+    "cadence": "monthly",
+    "latestReport": {
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-29",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "Pharos reserve curation review 2026-08-29",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Hamilton Lane SCOPE strategy page (Share Class Performance dated 31/07/2026; observed 2026-08-29)",
+          "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
+        }
+      ]
+    }
+  },
   "links": [
     {
       "label": "Website",

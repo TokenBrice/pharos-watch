@@ -73,7 +73,7 @@
   "reserveReview": {
     "reviewedAt": "2026-08-29",
     "reviewer": "OpenAI Codex UTY reserve curation",
-    "confidence": "verified",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "YieldPoint core flows",
@@ -96,35 +96,35 @@
     "compositionBasis": "Accountable reserves_split location/custody snapshot captured 2026-08-28 and normalized by the existing one-decimal live adapter, interpreted with current XSY/YieldPoint flow, strategy, and risk disclosures",
     "compositionAsOf": "2026-08-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 0% figure reflects that every published Accountable row has a reviewed non-link disposition; it does not assert asset-level knowledge. XSY and Accountable do not itemize the managed strategy's retained USDC, long/short positions, margin, venue balances, custody-provider allocation, or liquidation buffers within any location bucket.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The 100% figure reflects that all four published Accountable location envelopes remain unitemized at asset level and are therefore unresolved for reserve composition; it does not assert that the managed strategy is absent. XSY and Accountable do not itemize the strategy's retained USDC, long/short positions, margin, venue balances, custody-provider allocation, or liquidation buffers within any location bucket.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Base",
         "pct": 52.6,
-        "disposition": "not-applicable",
+        "disposition": "insufficient-evidence",
         "rationale": "Base is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Ethereum",
         "pct": 34.9,
-        "disposition": "not-applicable",
+        "disposition": "insufficient-evidence",
         "rationale": "Ethereum is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Avalanche",
         "pct": 12.4,
-        "disposition": "not-applicable",
+        "disposition": "insufficient-evidence",
         "rationale": "Avalanche is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Copper",
         "pct": 0.1,
-        "disposition": "not-applicable",
+        "disposition": "insufficient-evidence",
         "rationale": "Copper is an Accountable custody/settlement bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
       }
     ]

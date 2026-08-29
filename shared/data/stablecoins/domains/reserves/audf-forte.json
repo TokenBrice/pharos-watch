@@ -17,8 +17,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve curation batch R10",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Pharos reserve curation review 2026-08-29",
     "confidence": "verified",
     "sources": [
       {
@@ -38,8 +38,8 @@
         "url": "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf"
       }
     ],
-    "rationale": "Re-reviewed 2026-08-08 against the Horizon Nexus (Audit) Pty Ltd independent auditor's report on the AUDF Reserves Report as at 31 May 2026 11:59pm AEST. Management asserts AUD 5,136,311.71 of AUDF in circulation across Ethereum, Polygon, Base, Avalanche and Redbelly against an equal AUD cash balance in a single Australian-dollar reserve bank account; Horizon Nexus opines that the cash balance is prepared, in all material respects, in accordance with the stated accounting policies (signed Melbourne 1 June 2026). Notes state AUD reserves are owned/managed by Forte Securities Australia Pty Ltd, segregated from operational funds, and unencumbered. No other reserve asset classes are disclosed. Bank identity remains undisclosed.",
-    "compositionBasis": "Horizon Nexus independent audit of the AUDF reserve bank-account cash balance as of 2026-05-31",
+    "rationale": "Re-reviewed 2026-08-29. Forte's current transparency page still states that AUDF is 100% backed by AUD held with regulated financial institutions but publishes no newer dated reserve report. The latest reachable artifact is the AUDF Reserves Report for 31 May 2026, accompanied by Horizon Nexus (Audit) Pty Ltd's independent auditor's report signed in Melbourne on 16 June 2026. Horizon Nexus audits the reported AUD reserve bank-account balance of AUD 5,136,311.71 under Australian Auditing Standards; the report supports one 100% AUD bank-cash slice and states that the reserve is segregated and unencumbered, but it does not identify the bank or provide provider-level allocations. The compositionAsOf therefore remains 2026-05-31 and is outside the 31-day plus seven-day static-composition admission window as of this review; no current composition is asserted.",
+    "compositionBasis": "Horizon Nexus independent audit of the AUDF reserve bank-account cash balance as of 2026-05-31; Forte transparency page re-opened 2026-08-29",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete reserve asset class is identified as an AUD bank-account cash balance. The bank identity, provider concentration, and account terms remain undisclosed custody details.",
@@ -65,8 +65,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve curation batch R10",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Pharos reserve curation review 2026-08-29",
     "confidence": "probable",
     "sources": [
       {

@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "OpenAI Codex reserve review 2026-08-29",
     "confidence": "verified",
     "sources": [
       {
@@ -33,15 +33,27 @@
         "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
       },
       {
-        "label": "Pinned Astherus asUSDFEarn reference source",
+        "label": "Pinned asUSDFEarn reference source",
         "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol"
+      },
+      {
+        "label": "BNB Chain RPC eth_call reads at block 118819303",
+        "url": "https://bsc-rpc.publicnode.com"
+      },
+      {
+        "label": "BNB Chain block 118819303",
+        "url": "https://bscscan.com/block/118819303"
+      },
+      {
+        "label": "BNB Chain asUSDFEarn contract",
+        "url": "https://bscscan.com/address/0xdb57a53c428a9fafcbfeffb6dd80d0f427543695#code"
       }
     ],
-    "rationale": "Re-fetched the Aster docs on 2026-07-20: asUSDF is the yield-bearing asToken received by staking USDF on Aster Earn, NAV-accreting from the delta-neutral and funding-fee strategies that back USDF, with withdrawals returning USDF after the documented T+1 hour (two-hour) waiting period and no mint or withdrawal fee. The direct reserve is therefore 100% USDF held in the asUSDFEarn wrapper, a wrapper dependency on the tracked usdf-astherus record; the on-chain wrapper path (deposit USDF, mint calculated shares, no free-mint route) was verified at BSC block 110184782 in the 2026-07-15 mint-authority review. Upstream USDF composition (USDT at Ceffu plus Binance/MirrorX delta-neutral deployment) is inherited from the linked record and not duplicated here. Write-time re-open 2026-07-28: mint-asusdf.md states asUSDF is the yield-bearing token received by staking USDF; FAQ still describes USDF minted 1:1 with USDT held at Ceffu and delta-neutral strategies. GitHub asUSDFEarn.sol deposit path remains USDF-in/shares-out. Updated source URL to live docs slug earn/overview/mint-asusdf.",
-    "compositionBasis": "Aster issuer documentation of the asUSDF wrapper (fetched 2026-07-20) plus verified BSC wrapper contract mechanics",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Re-reviewed 2026-08-29. Aster documents asUSDF as the yield-bearing token received by staking USDF, with NAV set by the strategies backing USDF. At BNB Chain block 118819303 (hash 0xf3d8b1d6d144998ddd1f31562c07bda0b1614ef685a63b3ce01837001f621ac5; 2026-08-29T18:56:38Z), public RPC eth_call reads on asUSDFEarn 0xdb57a53c428a9fafcbfeffb6dd80d0f427543695 returned USDF() = 0x5a110fC00474038f6c02E89C707D638602EA44B5 and asUSDF() = 0x917AF46B3C3c6e1Bb7286B9F59637Fb7C65851Fb; USDF.balanceOf(asUSDFEarn) was 2,960,981.376879277 and asUSDF.totalSupply() was 2,778,084.534595421, with exchangePrice() = 1.065834078079115961. The verified wrapper source transfers deposited USDF into asUSDFEarn before minting calculated asUSDF shares, so the direct reserve is one 100% USDF wrapper position. The row links the tracked usdf-astherus parent; its upstream USDT custody and delta-neutral strategy exposures are inherited and not duplicated here.",
+    "compositionBasis": "Aster asUSDF documentation and pinned BNB Chain RPC eth_call reads against asUSDFEarn at block 118819303",
+    "compositionAsOf": "2026-08-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve asset is fully identified as USDF in the wrapper. Asset-level reserve, custody, and strategy risks beneath USDF are inherited from the linked usdf-astherus record rather than repeated here.",
+    "knownUnknownExposure": "No unidentified direct reserve asset remains at the asUSDF layer: the pinned wrapper storage identifies USDF. Underlying USDF custody and strategy exposures remain inherited from the linked usdf-astherus record rather than repeated here.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

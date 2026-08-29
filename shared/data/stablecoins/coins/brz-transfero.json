@@ -17,9 +17,28 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://transfero.com/brz-stablecoin",
-    "provider": "Transfero BRZ reserve disclosure (static self-published figure; only dated artefact is a self-produced transparency report as of 2024-03-31)",
+    "provider": "Transfero BRZ reserve disclosure (self-published report; no independent reserve attestor named)",
     "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "cadence": "ad-hoc",
+    "latestReport": {
+      "periodEnd": "2024-03-31",
+      "publishedAt": "2026-06-03",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "Pharos reserve curation review 2026-08-29 (report date 2024-03-31; re-hosted upload last-modified 2026-06-03)",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Transfero BRZ reserve report (as of 2024-03-31; current product page link)",
+          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf"
+        },
+        {
+          "label": "Transfero BRZ product disclosure (published 2026-08-28; observed 2026-08-29)",
+          "url": "https://transfero.com/brz-stablecoin"
+        }
+      ]
+    }
   },
   "launchDate": "2019-07-19",
   "links": [
