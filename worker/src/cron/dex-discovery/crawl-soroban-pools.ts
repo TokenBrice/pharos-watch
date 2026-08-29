@@ -23,7 +23,7 @@ const SOROBAN_CONTRACT_ID_RE = /^C[A-Z2-7]{55}$/;
 const SOROBAN_IDENTITY_RE = /^(?:[A-Z0-9]{1,12}-)?(C[A-Z2-7]{55})$/;
 
 /** A census row is not an exact-execution authorization for any AMM invariant. */
-export const SOROBAN_UNREVIEWED_POOL_TYPE = "soroban-amm-unclassified";
+const SOROBAN_UNREVIEWED_POOL_TYPE = "soroban-amm-unclassified";
 
 // Aquarius is the only currently usable public Soroban pool index here.
 // Soroswap/Phoenix indexes remain unregistered (the public Soroswap

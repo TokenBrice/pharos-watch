@@ -12,7 +12,7 @@ import { buildStageSignal, toStagedPool, type CrawlStageContext } from "./staged
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 
 /** Mainnet TzKT endpoint. TzKT's free API requires attribution in product copy. */
-export const TEZOS_TZKT_API = "https://api.tzkt.io";
+const TEZOS_TZKT_API = "https://api.tzkt.io";
 
 const TEZOS_PROVIDER = "tezos";
 const TEZOS_POOL_SOURCE = "tezos";

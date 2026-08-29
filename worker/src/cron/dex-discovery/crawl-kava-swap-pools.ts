@@ -52,10 +52,6 @@ export interface KavaSwapPoolsStageResult {
 }
 
 /** Canonical registry identity served by this adapter: native Kava `usdx`. */
-export const KAVA_SWAP_NATIVE_DEPLOYMENT = {
-  chain: KAVA_SWAP_CHAIN,
-  address: KAVA_SWAP_USDX_DENOM,
-} as const;
 
 export { isKavaSwapDiscoveryDeployment };
 
