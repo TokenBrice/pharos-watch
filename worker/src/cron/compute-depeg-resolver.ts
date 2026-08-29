@@ -1,7 +1,7 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { DdrResponse, DdrRow } from "@shared/types/depeg-resolver";
 import { logCronEvent, type CronResult } from "../lib/cron-logger";
 import { getCache, setCache } from "../lib/db-cache";
-import { persistDdrRepairDebt } from "../lib/ddr-repair-debt";
 import { syncDdrRepairDebtTasks } from "../lib/repair-tasks";
 import { loadDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
 import {
@@ -211,17 +211,11 @@ export async function computeDepegResolver(
   let v2PublicationAttempted = false;
   let v2PublicationSucceeded = false;
   let v2PublicationError: string | null = null;
-  let repairDebtPersistError: string | null = null;
   let repairTaskPersistError: string | null = null;
-  try {
-    await persistDdrRepairDebt(db, quarantinedEvents, nowSec, options.signal);
-  } catch (error) {
-    repairDebtPersistError = error instanceof Error ? error.message : String(error);
-  }
   try {
     await syncDdrRepairDebtTasks(db, quarantinedEvents, nowSec, options.signal);
   } catch (error) {
-    repairTaskPersistError = error instanceof Error ? error.message : String(error);
+    repairTaskPersistError = toErrorMessage(error);
   }
 
   const degradedResult = async (degradedReason: string): Promise<CronResult> => {
@@ -252,7 +246,6 @@ export async function computeDepegResolver(
         activeEvents: activeRows.length,
         repairRequiredEvents: quarantinedEvents,
         repairRequiredEventCount: quarantinedEvents.length,
-        repairDebtPersistError,
         repairTaskPersistError,
         v2PreLockIncidentsClosed,
         degraded: true,
@@ -376,7 +369,6 @@ export async function computeDepegResolver(
       activeEvents: rows.length,
       repairRequiredEvents: quarantinedEvents,
       repairRequiredEventCount: quarantinedEvents.length,
-      repairDebtPersistError,
       repairTaskPersistError,
       v2PreLockIncidentsClosed,
       assessmentWriteCount,

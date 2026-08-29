@@ -386,8 +386,8 @@ For event-backed domains, `datasetFreshness` follows the writer rather than the 
 - `blacklistGapStatus`: `ok | failed`
 - `activeDepegStatus`: `ok | failed`
 - `onchainSupplyQueryStatus`: `ok | failed | unavailable`
-- `repairDebt`: structured repair/backfill backlog summary (`status`, `openCount`, `oldestAgeSec`, `byKind`, `availabilityEscalated`, `nextRunnerDueAt`, `source`). It prefers `worker_repair_tasks` aggregates and falls back to `cache["ddr:repair-debt:v1"]` during the DDR dual-write rollout.
-- `ddrRepairDebtStatus` / `ddrRepairDebtCount` / `ddrRepairDebtEvents`: backward-compatible DDR-specific repair-debt fields sourced from the existing cache marker until the repair-task table has been observed for a full rollout cycle.
+- `repairDebt`: structured repair/backfill backlog summary (`status`, `openCount`, `oldestAgeSec`, `byKind`, `availabilityEscalated`, `nextRunnerDueAt`, `source`) from active `worker_repair_tasks` rows.
+- `ddrRepairDebtStatus` / `ddrRepairDebtCount` / `ddrRepairDebtEvents`: backward-compatible DDR-specific repair-debt fields derived from active DDR task rows (`subject_id` and `payload_json`).
 - `sourceFailures`: list of failed best-effort subqueries with machine-readable source keys and error messages
 
 This prevents `/status` from silently treating a broken stablecoins cache as `0 / 0` healthy price coverage.

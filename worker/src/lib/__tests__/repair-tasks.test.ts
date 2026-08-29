@@ -8,6 +8,7 @@ import {
   buildDdrRepairTaskId,
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
   DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
+  loadDdrRepairDebtDetails,
   loadRepairDebtSummary,
   pruneRepairTasks,
   runWorkerRepairTaskRunner,
@@ -158,7 +159,7 @@ describe("repair tasks", () => {
     expect(buildDdrRepairTaskId("42")).toBe("repair:ddr-repair-required-event:42");
   });
 
-  it("dual-writes current DDR repair debt and closes stale DDR tasks", async () => {
+  it("syncs current DDR repair tasks and closes stale DDR tasks", async () => {
     const db = mockRepairD1();
 
     const result = await syncDdrRepairDebtTasks(
@@ -281,6 +282,73 @@ describe("repair tasks", () => {
       availabilityEscalated: false,
       nextRunnerDueAt: NOW + 900,
       source: "worker-repair-tasks",
+    });
+  });
+
+  it("projects bounded DDR repair details from active task rows", async () => {
+    const db = mockRepairD1([
+      {
+        match: "COUNT(*) OVER ()",
+        rows: [
+          {
+            subject_id: "43",
+            payload_json: JSON.stringify({ eventId: 43, reason: "failed-repair" }),
+            updated_at: NOW - 120,
+            total_count: 3,
+            latest_updated_at: NOW - 60,
+          },
+          {
+            subject_id: "42",
+            payload_json: JSON.stringify({ eventId: 42, reason: "incident-conflict" }),
+            updated_at: NOW - 60,
+            total_count: 3,
+            latest_updated_at: NOW - 60,
+          },
+          {
+            subject_id: "44",
+            payload_json: JSON.stringify({ eventId: 44, reason: "deferred-repair" }),
+            updated_at: NOW - 180,
+            total_count: 3,
+            latest_updated_at: NOW - 60,
+          },
+        ],
+      },
+    ]);
+
+    const details = await loadDdrRepairDebtDetails(db);
+
+    expect(details).toEqual({
+      checkedAt: NOW - 60,
+      count: 3,
+      events: [
+        { eventId: 42, reason: "incident-conflict" },
+        { eventId: 43, reason: "failed-repair" },
+        { eventId: 44, reason: "deferred-repair" },
+      ],
+      eventsTruncated: false,
+    });
+    expect(db.getHistory()[0]?.binds).toEqual([
+      "ddr-repair-required-event",
+      "open",
+      "claimed",
+      "deferred",
+      "failed",
+    ]);
+  });
+
+  it("returns an empty DDR detail projection when no active task rows exist", async () => {
+    const db = mockRepairD1([
+      {
+        match: "COUNT(*) OVER ()",
+        rows: [],
+      },
+    ]);
+
+    await expect(loadDdrRepairDebtDetails(db)).resolves.toEqual({
+      checkedAt: null,
+      count: 0,
+      events: [],
+      eventsTruncated: false,
     });
   });
 

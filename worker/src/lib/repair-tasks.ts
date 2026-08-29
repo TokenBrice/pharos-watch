@@ -16,6 +16,7 @@ export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "fail
 const ACTIVE_REPAIR_TASK_STATES: RepairTaskState[] = ["open", "claimed", "deferred", "failed"];
 const TERMINAL_REPAIR_TASK_STATES: RepairTaskState[] = ["closed", "cancelled"];
 const DDR_REPAIR_TASK_KIND = "ddr-repair-required-event";
+const DDR_REPAIR_DEBT_EVENT_LIMIT = 25;
 export const DDR_REPAIR_RUNNER_BATCH_LIMIT_V1 = 5;
 const DDR_REPAIR_RUNNER_CLAIM_LEASE_SEC_V1 = 15 * 60;
 export const DDR_REPAIR_RUNNER_BACKOFF_SEC_V1 = 6 * 60 * 60;
@@ -48,6 +49,21 @@ interface RepairDebtSummaryRow {
   open_count: number | null;
   oldest_created_at: number | null;
   next_attempt_at: number | null;
+}
+
+export interface DdrRepairDebtDetails {
+  checkedAt: number | null;
+  count: number;
+  events: DdrRepairDebtTaskInput[];
+  eventsTruncated: boolean;
+}
+
+interface DdrRepairDebtDetailRow {
+  subject_id: string;
+  payload_json: string | null;
+  updated_at: number | null;
+  total_count: number | null;
+  latest_updated_at: number | null;
 }
 
 interface RepairRunnerInspectRow {
@@ -327,6 +343,67 @@ export async function loadRepairDebtSummary(
     availabilityEscalated: false,
     nextRunnerDueAt,
     source: "worker-repair-tasks",
+  };
+}
+
+function parseDdrRepairDebtEvent(row: DdrRepairDebtDetailRow): DdrRepairDebtTaskInput | null {
+  const eventId = Number(row.subject_id);
+  if (!Number.isSafeInteger(eventId)) return null;
+  if (typeof row.payload_json !== "string") return null;
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(row.payload_json);
+  } catch {
+    return null;
+  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const reason = (payload as Record<string, unknown>).reason;
+  return typeof reason === "string" ? { eventId, reason } : null;
+}
+
+export async function loadDdrRepairDebtDetails(db: D1Database): Promise<DdrRepairDebtDetails> {
+  const rows = await db
+    .prepare(
+      `SELECT
+         subject_id,
+         payload_json,
+         updated_at,
+         COUNT(*) OVER () AS total_count,
+         MAX(updated_at) OVER () AS latest_updated_at
+       FROM worker_repair_tasks
+       WHERE kind = ?
+         AND state IN (${activeStateSql()})
+       ORDER BY CAST(subject_id AS INTEGER), subject_id
+       LIMIT ${DDR_REPAIR_DEBT_EVENT_LIMIT}`,
+    )
+    .bind(DDR_REPAIR_TASK_KIND, ...ACTIVE_REPAIR_TASK_STATES)
+    .all<DdrRepairDebtDetailRow>();
+
+  const resultRows = rows.results ?? [];
+  const firstRow = resultRows[0];
+  const rawCount = Number(firstRow?.total_count ?? resultRows.length);
+  const count = Number.isFinite(rawCount) ? Math.max(0, Math.floor(rawCount)) : resultRows.length;
+  const checkedAtFromWindow = firstRow?.latest_updated_at;
+  const checkedAtFromRows = resultRows.reduce<number | null>((latest, row) => {
+    if (typeof row.updated_at !== "number" || !Number.isFinite(row.updated_at)) return latest;
+    return latest == null ? row.updated_at : Math.max(latest, row.updated_at);
+  }, null);
+  const checkedAt =
+    typeof checkedAtFromWindow === "number" && Number.isFinite(checkedAtFromWindow)
+      ? checkedAtFromWindow
+      : checkedAtFromRows;
+  const events = resultRows
+    .map(parseDdrRepairDebtEvent)
+    .filter((event): event is DdrRepairDebtTaskInput => event != null)
+    .sort((a, b) => a.eventId - b.eventId)
+    .slice(0, DDR_REPAIR_DEBT_EVENT_LIMIT);
+
+  return {
+    checkedAt,
+    count,
+    events,
+    eventsTruncated: count > events.length,
   };
 }
 

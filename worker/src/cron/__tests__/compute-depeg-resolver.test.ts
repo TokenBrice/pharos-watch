@@ -1043,12 +1043,7 @@ describe("computeDepegResolver", () => {
     const firstMarker = cacheWrites(firstDb, "ddr:quarantine-alerted-event-ids");
     expect(firstMarker).toHaveLength(1);
     expect(firstMarker[0].binds[1]).toBe("[42]");
-    const firstRepairDebt = cacheWrites(firstDb, "ddr:repair-debt:v1");
-    expect(firstRepairDebt).toHaveLength(1);
-    expect(JSON.parse(firstRepairDebt[0].binds[1] as string)).toMatchObject({
-      count: 1,
-      events: [{ eventId: 42, reason: "incident-conflict" }],
-    });
+    expect(cacheWrites(firstDb, "ddr:repair-debt:v1")).toHaveLength(0);
 
     // Second run with the same id: no re-alert, marker untouched.
     const secondDb = quarantineDb("[42]");

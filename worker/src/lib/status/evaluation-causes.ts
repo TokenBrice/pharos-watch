@@ -564,7 +564,7 @@ export function buildDataQualityCauses(input: {
       code: "ddr_repair_debt_unknown",
       layer: "data-quality",
       severity: "info",
-      message: "DDR repair-debt marker could not be read; repair backlog status is unknown.",
+      message: "DDR repair-debt task data could not be read; repair backlog status is unknown.",
     });
   }
 
