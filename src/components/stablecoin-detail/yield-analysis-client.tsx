@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { AlertTriangle, ArrowLeft, ArrowLeftRight } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,13 +15,13 @@ import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import {
-  computePysBreakdown,
   formatYieldWarningSignal,
   formatYieldWarningSignalDescription,
-  getPysColor,
 } from "@/lib/yield-constants";
-import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
-import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
+import {
+  buildYieldDetailModel,
+  type YieldDetailReadyModel,
+} from "@/components/yield-detail-section-model";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/lib/time";
@@ -219,26 +219,13 @@ function YieldPeerRail({ model, currentId }: { model: YieldPeerRailModel; curren
 function StablecoinYieldDetailHeader({
   staticCoin,
   logoSrc,
-  ranking,
-  sourceRiskDrivers,
-  scalingFactor,
+  model,
 }: {
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
-  ranking: YieldRanking | null;
-  sourceRiskDrivers: readonly YieldSourceRiskDriver[];
-  scalingFactor: number | null;
+  model: YieldDetailReadyModel | null;
 }) {
-  const pysBreakdown = ranking
-    ? computePysBreakdown(
-        ranking.apy30d,
-        ranking.safetyScore,
-        ranking.yieldStability,
-        ranking.benchmarkRate,
-        ranking.sourceRisk?.sourceRiskPenalty ?? null,
-      )
-    : null;
-  const pysColor = ranking ? getPysColor(ranking.pharosYieldScore) : "text-muted-foreground";
+  const ranking = model?.ranking ?? null;
 
   return (
     <section className="pharos-card-shell overflow-hidden px-4 py-4 sm:px-5">
@@ -263,7 +250,7 @@ function StablecoinYieldDetailHeader({
           </div>
         </div>
 
-        {ranking && pysBreakdown && scalingFactor !== null ? (
+        {ranking && model ? (
           <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3 sm:min-w-[280px]">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Pharos Yield Score
@@ -271,25 +258,49 @@ function StablecoinYieldDetailHeader({
             <PysBreakdown
               mode="inline"
               score={ranking.pharosYieldScore}
-              toneClass={pysColor}
+              toneClass={model.pysColor}
               apy30d={ranking.apy30d}
-              effectiveYield={pysBreakdown.effectiveYield}
-              benchmarkAdjustment={pysBreakdown.benchmarkAdjustment}
-              benchmarkSpread={pysBreakdown.benchmarkSpread}
+              effectiveYield={model.pysBreakdown.effectiveYield}
+              benchmarkAdjustment={model.pysBreakdown.benchmarkAdjustment}
+              benchmarkSpread={model.pysBreakdown.benchmarkSpread}
               benchmarkLabel={ranking.benchmarkLabel}
               benchmarkSelectionMode={ranking.benchmarkSelectionMode}
-              sourceRiskPenalty={pysBreakdown.sourceRiskPenalty}
-              adjustedRiskPenalty={pysBreakdown.adjustedRiskPenalty}
-              sustainabilityMult={pysBreakdown.sustainabilityMult}
+              sourceRiskPenalty={model.pysBreakdown.sourceRiskPenalty}
+              adjustedRiskPenalty={model.pysBreakdown.adjustedRiskPenalty}
+              sustainabilityMult={model.pysBreakdown.sustainabilityMult}
               grade={ranking.safetyGrade}
               safetyScore={ranking.safetyScore}
-              sourceRiskDrivers={sourceRiskDrivers}
-              scalingFactor={scalingFactor}
+              sourceRiskDrivers={model.sourceRiskDrivers}
+              scalingFactor={model.pysBreakdown.scalingFactor}
             />
           </div>
         ) : null}
       </div>
     </section>
+  );
+}
+
+function YieldAnalysisFrame({
+  id,
+  staticCoin,
+  logoSrc,
+  model,
+  children,
+}: YieldAnalysisClientProps & {
+  model: YieldDetailReadyModel | null;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-6">
+      <Button variant="ghost" asChild className="w-fit">
+        <Link href={buildStablecoinUrl(id)}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to {staticCoin.symbol} detail
+        </Link>
+      </Button>
+      <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} model={model} />
+      {children}
+    </div>
   );
 }
 
@@ -368,17 +379,33 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   const { getParam, replaceParams } = useUrlFilters();
 
   const coin = TRACKED_META_BY_ID.get(id);
-  const isPreLaunch = coin?.status === "pre-launch";
-  const isFrozen = coin?.status === "frozen";
-  const isInactiveListing = coin?.status === "quarantined" || coin?.status === "delisted";
   const shouldHaveYieldData = coin?.flags.yieldBearing ?? false;
-
-  const ranking = useMemo(
-    () => rankingsQuery.data?.rankings.find((row) => row.id === id) ?? null,
-    [rankingsQuery.data, id],
+  const sourcesParam = getParam("sources");
+  const requestedSourceKeys = useMemo(
+    () =>
+      sourcesParam
+        .split(",")
+        .map((key) => key.trim())
+        .filter(Boolean),
+    [sourcesParam],
   );
-
-  const sourceExplorer = useMemo(() => (ranking ? buildYieldSourceExplorerModel(ranking) : null), [ranking]);
+  const detailModel = useMemo(
+    () =>
+      buildYieldDetailModel(
+        rankingsQuery.data,
+        {
+          stablecoinId: id,
+          lifecycle: coin?.status ?? "active",
+          shouldHaveYieldData,
+          mode: "full-page",
+          inactiveReason: coin?.listingStatusReview?.reason,
+        },
+        requestedSourceKeys,
+      ),
+    [coin?.listingStatusReview?.reason, coin?.status, id, rankingsQuery.data, requestedSourceKeys, shouldHaveYieldData],
+  );
+  const readyModel = detailModel.status === "ready" ? detailModel : null;
+  const ranking = readyModel?.ranking ?? null;
 
   const peerRailModel = useMemo(
     () =>
@@ -412,21 +439,14 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   );
 
   const allSourceKeys = useMemo(() => {
-    if (!sourceExplorer) return undefined;
-    const keys = sourceExplorer.allSources.map((source) => source.sourceKey);
+    if (!readyModel) return undefined;
+    const keys = readyModel.historySources.map((source) => source.sourceKey);
     return keys.length > 1 ? keys : undefined;
-  }, [sourceExplorer]);
+  }, [readyModel]);
 
-  const sourcesParam = getParam("sources");
-  const overlaySourceKeys = useMemo(() => {
-    if (!sourcesParam || !sourceExplorer) return null;
-    const available = new Set(sourceExplorer.allSources.map((source) => source.sourceKey));
-    const requested = sourcesParam
-      .split(",")
-      .map((key) => key.trim())
-      .filter((key) => key && available.has(key));
-    return requested.length > 0 ? requested : null;
-  }, [sourcesParam, sourceExplorer]);
+  const overlaySourceKeys = sourcesParam && readyModel?.validatedSourceKeys.length
+    ? readyModel.validatedSourceKeys
+    : null;
 
   const chartSourceKeys = overlaySourceKeys ?? allSourceKeys;
   const showResetSources = overlaySourceKeys !== null;
@@ -436,141 +456,72 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     });
   };
 
-  const backLink = (
-    <Button variant="ghost" asChild className="w-fit">
-      <Link href={buildStablecoinUrl(id)}>
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to {staticCoin.symbol} detail
-      </Link>
-    </Button>
-  );
+  const lifecycleHasRanking =
+    detailModel.status === "pre-launch" || detailModel.status === "inactive" ? detailModel.hasRanking : false;
+  let stateBody: ReactNode = null;
 
   if (rankingsQuery.isLoading) {
-    return (
-      <div className="space-y-6">
-        {backLink}
-        <StablecoinYieldDetailHeader
-          staticCoin={staticCoin}
-          logoSrc={logoSrc}
-          ranking={null}
-          sourceRiskDrivers={[]}
-          scalingFactor={null}
-        />
+    stateBody = (
+      <>
         <Skeleton className="h-[420px] w-full rounded-xl" />
         <Skeleton className="h-[260px] w-full rounded-xl" />
-      </div>
+      </>
     );
-  }
-
-  if (rankingsQuery.error && !ranking) {
-    return (
-      <div className="space-y-6">
-        {backLink}
-        <StablecoinYieldDetailHeader
-          staticCoin={staticCoin}
-          logoSrc={logoSrc}
-          ranking={null}
-          sourceRiskDrivers={[]}
-          scalingFactor={null}
-        />
-        <QueryErrorNotice error={rankingsQuery.error instanceof Error ? rankingsQuery.error : null} hasData={false} />
-      </div>
+  } else if (rankingsQuery.error && !readyModel && !lifecycleHasRanking) {
+    stateBody = (
+      <QueryErrorNotice error={rankingsQuery.error instanceof Error ? rankingsQuery.error : null} hasData={false} />
     );
-  }
-
-  if (isPreLaunch) {
-    return (
-      <div className="space-y-6">
-        {backLink}
-        <StablecoinYieldDetailHeader
-          staticCoin={staticCoin}
-          logoSrc={logoSrc}
-          ranking={null}
-          sourceRiskDrivers={[]}
-          scalingFactor={null}
-        />
-        <EmptyStateCard
-          title="Pre-launch — no yield data yet"
-          message={`${staticCoin.name} is in pre-launch tracking. Yield history will appear here once the stablecoin is live and the cron has observed source data.`}
-        />
-      </div>
+  } else if (detailModel.status === "pre-launch") {
+    stateBody = (
+      <EmptyStateCard
+        title="Pre-launch — no yield data yet"
+        message={`${staticCoin.name} is in pre-launch tracking. Yield history will appear here once the stablecoin is live and the cron has observed source data.`}
+      />
     );
-  }
-
-  if (isInactiveListing) {
-    return (
-      <div className="space-y-6">
-        {backLink}
-        <StablecoinYieldDetailHeader
-          staticCoin={staticCoin}
-          logoSrc={logoSrc}
-          ranking={null}
-          sourceRiskDrivers={[]}
-          scalingFactor={null}
-        />
-        <EmptyStateCard
-          title="Yield tracking inactive"
-          message={coin?.listingStatusReview?.reason ?? "This asset is outside Pharos's active monitoring universe."}
-        />
-      </div>
+  } else if (detailModel.status === "inactive") {
+    stateBody = (
+      <EmptyStateCard
+        title="Yield tracking inactive"
+        message={detailModel.reason ?? "This asset is outside Pharos's active monitoring universe."}
+      />
     );
-  }
-
-  if (!ranking) {
-    const reason = isFrozen
+  } else if (!readyModel || !ranking) {
+    const reason = detailModel.status === "frozen"
       ? "This stablecoin is frozen — historical yield data is no longer being refreshed."
-      : shouldHaveYieldData
+      : detailModel.status === "unavailable" && detailModel.shouldHaveYieldData
         ? "Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet."
         : "This stablecoin doesn't currently have yield data tracked. The protocol may not expose a yield-bearing pool, or the source is not on the curated allowlist.";
+    stateBody = <EmptyStateCard title="No yield data available" message={reason} />;
+  }
+
+  if (stateBody) {
     return (
-      <div className="space-y-6">
-        {backLink}
-        <StablecoinYieldDetailHeader
-          staticCoin={staticCoin}
-          logoSrc={logoSrc}
-          ranking={null}
-          sourceRiskDrivers={[]}
-          scalingFactor={null}
-        />
-        <EmptyStateCard title="No yield data available" message={reason} />
-      </div>
+      <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} model={null}>
+        {stateBody}
+      </YieldAnalysisFrame>
     );
   }
 
-  const benchmarkIsFallback = ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback;
-  const benchmarkRate = ranking.benchmarkRate ?? rankingsQuery.data?.riskFreeRate ?? 0;
-  const medianApy = rankingsQuery.data?.medianApy ?? 0;
-  const historySources = sourceExplorer?.historySources ?? [];
+  if (!readyModel || !ranking) return null;
+
   const sourceSwitchCount30d = ranking.sourceRisk?.sourceSwitchCount30d ?? null;
-  const currentWarningSignals = ranking.warningSignals;
+  const currentWarningSignals = readyModel.warningSignals;
 
   return (
-    <div className="space-y-6">
-      {backLink}
-
-      <StablecoinYieldDetailHeader
-        staticCoin={staticCoin}
-        logoSrc={logoSrc}
-        ranking={ranking}
-        sourceRiskDrivers={sourceExplorer?.sourceRiskDrivers ?? []}
-        scalingFactor={rankingsQuery.data?.scalingFactor ?? null}
-      />
-
+    <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} model={readyModel}>
       {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} /> : null}
 
-      {sourceExplorer ? (
-        <YieldSourceRiskCard
-          sourceLabel={sourceExplorer.selectedSource.displayLabel}
-          sourceRisk={sourceExplorer.selectedSource.sourceRisk}
-          sourceTvlUsd={sourceExplorer.selectedSource.sourceTvlUsd}
-          sourceDepthLens={sourceExplorer.selectedSource.depthLens}
-          sourceRiskDrivers={sourceExplorer.selectedSource.sourceRiskDrivers}
-          sourceChanged={sourceExplorer.sourceSwitch.changed}
-          confidenceTier={sourceExplorer.selectedSource.confidenceTier}
-          sourceFreshness={ranking.provenance?.sourceFreshness}
-          warningSignals={ranking.warningSignals}
-        />
-      ) : null}
+      <YieldSourceRiskCard
+        sourceLabel={readyModel.sourceExplorer.selectedSource.displayLabel}
+        sourceRisk={readyModel.sourceExplorer.selectedSource.sourceRisk}
+        sourceTvlUsd={readyModel.sourceExplorer.selectedSource.sourceTvlUsd}
+        sourceDepthLens={readyModel.sourceExplorer.selectedSource.depthLens}
+        sourceRiskDrivers={readyModel.sourceExplorer.selectedSource.sourceRiskDrivers}
+        sourceChanged={readyModel.sourceExplorer.sourceSwitch.changed}
+        confidenceTier={readyModel.sourceExplorer.selectedSource.confidenceTier}
+        sourceFreshness={ranking.provenance?.sourceFreshness}
+        warningSignals={ranking.warningSignals}
+      />
 
       {apyChangeAttribution ? <YieldChangeAttributionCard attribution={apyChangeAttribution} /> : null}
 
@@ -581,15 +532,15 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
             APY across every retained source over time, plotted against the benchmark hurdle rate
-            {medianApy > 0 ? " and peer median." : "."}
+            {readyModel.medianApy > 0 ? " and peer median." : "."}
           </p>
           <YieldHistoryChart
             stablecoinId={id}
-            benchmarkRate={benchmarkRate}
+            benchmarkRate={readyModel.benchmarkRate}
             benchmarkLabel={ranking.benchmarkLabel}
-            benchmarkIsFallback={benchmarkIsFallback}
-            medianApy={medianApy}
-            availableSources={historySources}
+            benchmarkIsFallback={readyModel.benchmarkIsFallback}
+            medianApy={readyModel.medianApy}
+            availableSources={readyModel.historySources}
             hideSourceSelector
             externalSourceKeys={chartSourceKeys}
           />
@@ -686,10 +637,10 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
                 No source switches recorded in the past 90 days.
                 {sourceSwitchCount30d != null ? ` (30-day switch count: ${sourceSwitchCount30d}.)` : ""}
               </p>
-              {sourceExplorer?.sourceSwitch.changed ? (
+              {readyModel.sourceExplorer.sourceSwitch.changed ? (
                 <p>
                   Latest published snapshot switched away from{" "}
-                  {sourceExplorer.sourceSwitch.previousSourceDisplayLabel ?? "the previous source"}.
+                  {readyModel.sourceExplorer.sourceSwitch.previousSourceDisplayLabel ?? "the previous source"}.
                 </p>
               ) : null}
             </div>
@@ -729,6 +680,6 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           )}
         </CardContent>
       </Card>
-    </div>
+    </YieldAnalysisFrame>
   );
 }
