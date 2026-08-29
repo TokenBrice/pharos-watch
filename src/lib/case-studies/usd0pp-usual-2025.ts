@@ -5,8 +5,7 @@ import type { CaseStudy } from "./types";
  * a $0.87 early-exit floor against an implied 1:1 expectation. The repricing
  * cascades through Morpho lending markets that had hardcoded USD0++ at parity.
  * A governance/terms change, not an asset-quality failure. Annotations: see
- * shared/data/annotations/curated-annotations.ts keyed "usd0-usual" (2025-01-10,
- * 2025-01-13).
+ * shared/data/annotations/coins/usd0-usual.json (2025-01-10, 2025-01-13).
  */
 export const content: CaseStudy = {
   slug: "usd0pp-usual-2025",

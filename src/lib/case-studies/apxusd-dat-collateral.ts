@@ -8,7 +8,7 @@ import type { CaseStudy } from "./types";
  * labelled real-world, but the dominant leg is Bitcoin-correlated, so the
  * reserve weakened exactly when a dollar should hold. The incident opened in
  * Pharos's June 2 snapshot and is still unresolved. Annotations: see
- * shared/data/annotations/curated-annotations.ts keyed "apxusd-apyx" (2026-06-04).
+ * shared/data/annotations/coins/apxusd-apyx.json (2026-06-04).
  */
 export const content: CaseStudy = {
   slug: "apxusd-dat-collateral",
