@@ -548,6 +548,19 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     const wm = compiled.assets[0]!;
 
     expect(wm.supply.chainDistribution).toBeNull();
+    expect(wm.supply.status.observationState).toBe("bounded-unknown");
+    expect(wm.gaps).toContainEqual(expect.objectContaining({
+      reasonCode: "runtime-bridge-materiality-unavailable",
+      responsibility: "producer-failed",
+    }));
+    expect(wm.evidence).toContainEqual(expect.objectContaining({
+      evidenceId: "wm-m0:supply-review-outcome",
+      sourceId: "safety-score-v9-supply-review-producer",
+      disposition: "rejected",
+      rejection: expect.objectContaining({
+        code: "supply-review.attribution-rpc-rejection",
+      }),
+    }));
     expect(wm.gaps.map((gap) => gap.reasonCode)).toContain(
       "missing-bridge-routes",
     );

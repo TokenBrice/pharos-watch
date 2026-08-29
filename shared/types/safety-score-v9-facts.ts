@@ -856,10 +856,32 @@ const V9BridgeRouteControlReviewV2Schema = z
   })
   .strict();
 
+export const V9BridgeJoinDiagnosticsV1Schema = z
+  .object({
+    profileRouteCount: z.number().int().nonnegative(),
+    canonicalSupplyRowCount: z.number().int().nonnegative(),
+    unmatchedRowIdentities: CanonicalStringArraySchema,
+    reviewedNativeCoverage: z
+      .object({
+        reviewedRowCount: z.number().int().nonnegative(),
+        canonicalSupplyRowCount: z.number().int().nonnegative(),
+        supplyShare: FractionSchema,
+        complete: z.boolean(),
+      })
+      .strict(),
+    bridgeClaimControls: CanonicalStringArraySchema,
+    applicabilityBranch: z.enum(["native-only-not-applicable", "applicable"]),
+  })
+  .strict();
+export type V9BridgeJoinDiagnosticsV1 = z.infer<typeof V9BridgeJoinDiagnosticsV1Schema>;
+
 const V9BridgeControlReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     routes: canonicalArrayBy(V9BridgeRouteControlReviewV2Schema, (route) => route.controlKey),
+    // Optional so retained V2 facts remain parseable. Current bridge review
+    // producers emit this when a profile-backed applicability decision runs.
+    diagnostics: V9BridgeJoinDiagnosticsV1Schema.optional(),
   })
   .strict()
   .superRefine((review, ctx) => {

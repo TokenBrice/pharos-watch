@@ -27,6 +27,10 @@ import {
   safetyScoreV9ChainSupplyMaxAgeSec,
   safetyScoreV9ChainSupplyObservedAtSec,
 } from "./safety-score-v9-supply-attribution";
+import {
+  diagnoseSafetyScoreV9NullSupplyReviewOutcome,
+  type SafetyScoreV9NullSupplyReviewOutcome,
+} from "./safety-score-v9-extension-supply";
 
 export function deriveSafetyScoreV9PegScore(
   peg: { pegScore: number | null; activeDepeg: boolean; lastEventAt: number | null },
@@ -40,6 +44,118 @@ export function deriveSafetyScoreV9PegScore(
     windowSec: V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegHistoryWindowSec,
     quietHistoryFloor: V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegQuietHistoryFloor,
   });
+}
+
+function nullSupplyReviewOutcome(
+  context: AssetBuildContext,
+  chainInputStale: boolean,
+): SafetyScoreV9NullSupplyReviewOutcome | null {
+  if (context.asset.supplyReview !== null) return null;
+  const bridge = context.asset.economicControlReview?.bridge;
+  if (bridge?.status.applicability.state === "not-applicable") return null;
+  return diagnoseSafetyScoreV9NullSupplyReviewOutcome({
+    fixedInput: context.fixedInput,
+    assetId: context.asset.assetId,
+    bridgeObservationState:
+      bridge?.status.observationState === "unsupported"
+        ? "missing"
+        : bridge?.status.observationState ?? "missing",
+    reviewRouteCount: bridge?.routes.length ?? 0,
+    chainInputStale,
+  });
+}
+
+function addNullSupplyReviewOutcomeEvidence(
+  context: AssetBuildContext,
+  outcome: SafetyScoreV9NullSupplyReviewOutcome,
+): string {
+  const payloadSha256 = domainDigest("safety-score-v9.supply-review-outcome.v1", outcome);
+  const latestAttributionCompletedAtSec = Math.max(
+    0,
+    ...(context.fixedInput.supplyAttributionJournalById?.[context.asset.assetId] ?? []).map(
+      (record) => record.completedAtSec,
+    ),
+  );
+  const observedAtSec = Math.min(
+    context.fixedInput.clockSec,
+    Math.max(context.extension.sources.chainSupply.observedAtSec, latestAttributionCompletedAtSec),
+  );
+  return addEvidence(
+    context,
+    createV9EvidenceReference(
+      {
+        evidenceId: `${context.asset.assetId}:supply-review-outcome`,
+        sourceId: "safety-score-v9-supply-review-producer",
+        sourceGenerationId: `supply-review-outcome:v1:${payloadSha256}`,
+        disposition: "rejected",
+        observedAtSec,
+        contentSha256: payloadSha256,
+        rejection: {
+          code: `supply-review.${outcome.state}`,
+          reason:
+            `chainRows=${outcome.chainRowCount}; canonicalizationFailures=${outcome.canonicalizationFailureCount}; ` +
+            `reviewRoutes=${outcome.reviewRouteCount}; attribution=${outcome.attributionRejectionCode ?? "none"}`,
+          rejectedAtSec: context.fixedInput.clockSec,
+        },
+      },
+      context.fixedInput.clockSec,
+    ),
+  );
+}
+
+function nullSupplyReviewMessage(outcome: SafetyScoreV9NullSupplyReviewOutcome): string {
+  switch (outcome.state) {
+    case "missing-profile":
+      return "Circulating USD is known, but the required bridge profile is missing or invalid.";
+    case "ambiguous-route-join":
+      return "Circulating USD is known, but bridge routes do not form one canonical, unique attribution join.";
+    case "stale-review":
+      return "Circulating USD is known, but the supply review or its runtime chain input is stale.";
+    case "attribution-rpc-rejection":
+      return "Circulating USD is known, but the runtime attribution packet was rejected or unavailable.";
+  }
+}
+
+function staleSupplyStatus(
+  context: AssetBuildContext,
+  args: {
+    message: string;
+    evidenceId: string;
+    supplyReviewOutcome: SafetyScoreV9NullSupplyReviewOutcome | null;
+    supplyReviewOutcomeEvidenceId: string | null;
+  },
+): V9FactStatusV2 {
+  const evidenceRefIds = [
+    args.evidenceId,
+    ...(args.supplyReviewOutcomeEvidenceId === null ? [] : [args.supplyReviewOutcomeEvidenceId]),
+  ];
+  const staleSupply = missingLocalFact(context, {
+    componentKey: "chain-supply",
+    reasonCode: "missing-pillar-evidence",
+    ownerDomain: "evidence",
+    responsibility: "producer-failed",
+    policyRuleId: "v9.supply.current",
+    message: args.message,
+    observationState: "stale",
+    evidenceRefIds,
+  });
+  if (args.supplyReviewOutcome === null || args.supplyReviewOutcomeEvidenceId === null) {
+    return staleSupply.status;
+  }
+  const staleMateriality = missingLocalFact(context, {
+    componentKey: "bridge-materiality",
+    reasonCode: "runtime-bridge-materiality-unavailable",
+    ownerDomain: "control",
+    responsibility: "producer-failed",
+    policyRuleId: "v9.supply.bridge-materiality",
+    message: nullSupplyReviewMessage(args.supplyReviewOutcome),
+    observationState: "stale",
+    evidenceRefIds,
+  });
+  return {
+    ...staleSupply.status,
+    gapIds: [...staleSupply.status.gapIds, ...staleMateriality.status.gapIds],
+  };
 }
 
 export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
@@ -362,18 +478,31 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
       );
     }
   }
+  const supplyReviewOutcome = review === null
+    ? nullSupplyReviewOutcome(context, evidence.freshness.state === "stale")
+    : null;
+  const supplyReviewOutcomeEvidenceId = supplyReviewOutcome === null
+    ? null
+    : addNullSupplyReviewOutcomeEvidence(context, supplyReviewOutcome);
   const status =
     evidence.freshness.state === "stale"
-      ? missingLocalFact(context, {
-          componentKey: "chain-supply",
-          reasonCode: "missing-pillar-evidence",
-          ownerDomain: "evidence",
-          responsibility: "producer-failed",
-          policyRuleId: "v9.supply.current",
+      ? staleSupplyStatus(context, {
           message: "The aggregate circulating observation is past the supplemental carry-forward ceiling.",
-          observationState: "stale",
-          evidenceRefIds: [evidenceId],
-        }).status
+          evidenceId,
+          supplyReviewOutcome,
+          supplyReviewOutcomeEvidenceId,
+        })
+      : supplyReviewOutcome !== null && supplyReviewOutcomeEvidenceId !== null
+        ? missingLocalFact(context, {
+            componentKey: "bridge-materiality",
+            reasonCode: "runtime-bridge-materiality-unavailable",
+            ownerDomain: "control",
+            responsibility: supplyReviewOutcome.responsibility,
+            policyRuleId: "v9.supply.bridge-materiality",
+            message: nullSupplyReviewMessage(supplyReviewOutcome),
+            observationState: "bounded-unknown",
+            evidenceRefIds: [evidenceId, supplyReviewOutcomeEvidenceId],
+          }).status
       : createV9FactStatus({
           applicability: requiredV9Applicability("v9.supply.current"),
           observationState: "known",
@@ -497,6 +626,12 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
   );
   const evidence = context.evidence.get(evidenceId)!;
   const review = context.asset.supplyReview;
+  const supplyReviewOutcome = review === null
+    ? nullSupplyReviewOutcome(context, evidence.freshness.state === "stale")
+    : null;
+  const supplyReviewOutcomeEvidenceId = supplyReviewOutcome === null
+    ? null
+    : addNullSupplyReviewOutcomeEvidence(context, supplyReviewOutcome);
   const supplyByChainId = new Map<string, number>();
   let unattributedSupplyUsd = 0;
   for (const chain of chains) {
@@ -521,34 +656,36 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
   };
   let status: V9FactStatusV2;
   if (evidence.freshness.state === "stale") {
-    status = missingLocalFact(context, {
-      componentKey: "chain-supply",
-      reasonCode: "missing-pillar-evidence",
-      ownerDomain: "evidence",
-      responsibility: "producer-failed",
-      policyRuleId: "v9.supply.current",
+    status = staleSupplyStatus(context, {
       message: "The chain supply observation is stale.",
-      observationState: "stale",
-      evidenceRefIds: [evidenceId],
-    }).status;
-  } else if (review === null) {
+      evidenceId,
+      supplyReviewOutcome,
+      supplyReviewOutcomeEvidenceId,
+    });
+  } else if (review === null && supplyReviewOutcome !== null && supplyReviewOutcomeEvidenceId !== null) {
     status = missingLocalFact(context, {
       componentKey: "bridge-materiality",
       reasonCode: "runtime-bridge-materiality-unavailable",
       ownerDomain: "control",
-      responsibility: "integration-missing",
+      responsibility: supplyReviewOutcome.responsibility,
       policyRuleId: "v9.supply.bridge-materiality",
-      message: "Circulating USD is known, but bridge-route materiality has not been reviewed.",
+      message: nullSupplyReviewMessage(supplyReviewOutcome),
       observationState: "bounded-unknown",
-      evidenceRefIds: [evidenceId],
+      evidenceRefIds: [evidenceId, supplyReviewOutcomeEvidenceId],
     }).status;
-  } else {
+  } else if (review !== null) {
     // A known supply fact asserts the route-review accounting covers the whole
     // circulating base: reviewed-selected + selected-unresolved + unknown must
     // conserve to 1, and the selected rows must reconcile to those shares.
     // Accepting under-accounted shares silently suppresses the
     // material-bridge-supply-unmatched control reason (VER-007).
     assertSupplyReviewSharesReconcile(context.asset.assetId, circulatingUsd, review);
+    status = createV9FactStatus({
+      applicability: requiredV9Applicability("v9.supply.current"),
+      observationState: "known",
+      evidenceRefIds: [evidenceId],
+    });
+  } else {
     status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.supply.current"),
       observationState: "known",

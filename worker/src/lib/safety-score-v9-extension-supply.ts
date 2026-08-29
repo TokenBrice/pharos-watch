@@ -12,7 +12,10 @@ import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "./safety-score-v
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { V9ExtensionRegistryMeta } from "./safety-score-v9-extension-shared";
 import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
-import { safetyScoreV9ChainRows } from "./safety-score-v9-supply-attribution";
+import {
+  safetyScoreV9ChainRows,
+  safetyScoreV9SupplyAttributionExpectedAssetIds,
+} from "./safety-score-v9-supply-attribution";
 import { normalizeReviewedDeploymentAddress } from "./safety-score-v9-supply-attribution-contract";
 import {
   exactInputBoundTransferMaterialityPacket,
@@ -38,6 +41,93 @@ const INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET = new Set(
 export interface BuildSafetyScoreV9SupplyReviewOptions {
   meta?: V9ExtensionRegistryMeta;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
+}
+
+export type SafetyScoreV9NullSupplyReviewOutcomeState =
+  | "missing-profile"
+  | "ambiguous-route-join"
+  | "stale-review"
+  | "attribution-rpc-rejection";
+
+export interface SafetyScoreV9NullSupplyReviewOutcome {
+  state: SafetyScoreV9NullSupplyReviewOutcomeState;
+  responsibility: "integration-missing" | "producer-failed";
+  chainRowCount: number;
+  canonicalizationFailureCount: number;
+  reviewRouteCount: number;
+  attributionRejectionCode: string | null;
+}
+
+const STALE_ATTRIBUTION_REJECTION_CODES = new Set([
+  "safe-block-unavailable",
+  "transparency-stale",
+  "finalized-block-unavailable",
+  "observation-stale",
+]);
+const INTEGRATION_ATTRIBUTION_REJECTION_CODES = new Set([
+  "route-inventory-unavailable",
+  "deployment-identity-unavailable",
+  "deployment-identity-mismatch",
+  "transparency-source-config-unavailable",
+]);
+
+/**
+ * Projects the exact null-review cause into score-bearing generation metadata.
+ * Missing/invalid bridge profiles and non-unique/canonicalization joins belong
+ * to integration; stale runtime input and rejected/missing attribution packets
+ * belong to the producer. No branch manufactures a route or a supply share.
+ */
+export function diagnoseSafetyScoreV9NullSupplyReviewOutcome(input: {
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
+  assetId: string;
+  bridgeObservationState: "missing" | "stale" | "bounded-unknown" | "known";
+  reviewRouteCount: number;
+  chainInputStale: boolean;
+}): SafetyScoreV9NullSupplyReviewOutcome {
+  const chainRows = safetyScoreV9ChainRows(input.fixedInput, input.assetId);
+  const chainLabels = Object.keys(chainRows);
+  const latestAttributionRecord = [
+    ...(input.fixedInput.supplyAttributionJournalById?.[input.assetId] ?? []),
+  ].sort((left, right) => right.completedAtSec - left.completedAtSec)[0];
+  const attributionRejectionCode =
+    latestAttributionRecord?.admissionCode !== "supply-attribution.admission.accepted"
+      ? latestAttributionRecord?.rejectionCode ?? latestAttributionRecord?.admissionCode ?? null
+      : null;
+  const base = {
+    chainRowCount: chainLabels.length,
+    canonicalizationFailureCount: chainLabels.filter((chain) => resolveChainId(chain) === null).length,
+    reviewRouteCount: input.reviewRouteCount,
+    attributionRejectionCode,
+  };
+
+  if (input.bridgeObservationState === "missing") {
+    return { state: "missing-profile", responsibility: "integration-missing", ...base };
+  }
+  if (
+    input.chainInputStale ||
+    input.bridgeObservationState === "stale" ||
+    (attributionRejectionCode !== null && STALE_ATTRIBUTION_REJECTION_CODES.has(attributionRejectionCode))
+  ) {
+    return { state: "stale-review", responsibility: "producer-failed", ...base };
+  }
+  if (
+    attributionRejectionCode !== null &&
+    INTEGRATION_ATTRIBUTION_REJECTION_CODES.has(attributionRejectionCode)
+  ) {
+    return { state: "ambiguous-route-join", responsibility: "integration-missing", ...base };
+  }
+  const expectsRuntimeAttribution =
+    safetyScoreV9SupplyAttributionExpectedAssetIds(input.fixedInput).includes(input.assetId) ||
+    (SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS.includes(input.assetId) && chainLabels.length === 0);
+  if (attributionRejectionCode !== null || expectsRuntimeAttribution) {
+    return {
+      state: "attribution-rpc-rejection",
+      responsibility: "producer-failed",
+      ...base,
+      attributionRejectionCode: attributionRejectionCode ?? "generation-outcome-missing",
+    };
+  }
+  return { state: "ambiguous-route-join", responsibility: "integration-missing", ...base };
 }
 
 function canonicalChainKey(raw: string): string {

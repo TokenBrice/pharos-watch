@@ -1164,6 +1164,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   } else if (bridge.status.observationState === "missing") {
     addReason("missing-bridge-routes", "deployment-control", "bridge");
   } else if (bridge.status.observationState !== "known" && !boundedBridgeGapIsImmaterial) {
+    // Ownership is shape-specific: missing/invalid profiles and ambiguous joins
+    // are integration-missing; stale chain input and rejected runtime capture
+    // are producer-failed. The fact compiler persists that causal supply gap,
+    // so this evaluator emits only the common reason code.
     addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
   } else {
     // A bounded section whose unattributed supply is immaterial keeps its reason

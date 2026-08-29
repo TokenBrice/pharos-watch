@@ -1577,11 +1577,19 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           transferMaterialityGeneration: options.transferMaterialityGeneration ?? null,
         },
       );
-      const deployedChainCount = Object.keys(safetyScoreV9ChainRows(fixedInput, assetId)).length;
+      const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
+      const deployedChainCount = Object.keys(chainRows).length;
       const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
       const mint = adaptMintReview(meta, prepared.dependency, supplyReview, reviewEvidence, clockSec);
       const oracle = adaptOracleReview(meta, archetype, reviewEvidence, clockSec);
-      const bridge = adaptBridgeReview(meta, supplyReview, deployedChainCount, reviewEvidence, clockSec);
+      const bridge = adaptBridgeReview(
+        meta,
+        supplyReview,
+        deployedChainCount,
+        reviewEvidence,
+        clockSec,
+        chainRows,
+      );
       const incidentControlRoute = routeSafetyScoreV9ControlIncidents(
         mint.controls,
         mint.review,

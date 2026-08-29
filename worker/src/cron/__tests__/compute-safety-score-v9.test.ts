@@ -270,6 +270,7 @@ describe("computeSafetyScoreV9", () => {
         outcome: "partial",
         quarantines: [],
         affectedAssetIds: ["wm-m0"],
+        bridgeJoinDiagnostics: [],
       };
     });
 
@@ -317,6 +318,7 @@ describe("computeSafetyScoreV9", () => {
         outcome: "clean",
         quarantines: [],
         affectedAssetIds: [],
+        bridgeJoinDiagnostics: [],
       };
     });
 

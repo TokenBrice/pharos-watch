@@ -55,6 +55,7 @@ describe("Safety Score V9 publication runner", () => {
       producerCapabilityDigest: "2".repeat(64),
       quarantines: [],
       quarantineAffectedAssetIds: [],
+      bridgeJoinDiagnostics: [],
     });
     mocks.loadHealth.mockReset().mockResolvedValue(null);
     mocks.loadPublication.mockReset().mockResolvedValue(null);
@@ -118,6 +119,7 @@ describe("Safety Score V9 publication runner", () => {
         producerCapabilityDigest: "2".repeat(64),
         quarantines: [],
         quarantineAffectedAssetIds: [],
+        bridgeJoinDiagnostics: [],
       };
     });
 
@@ -195,6 +197,7 @@ describe("Safety Score V9 publication runner", () => {
         { assetId: "alpha", code: "fact-build-failed" },
       ],
       quarantineAffectedAssetIds: ["alpha"],
+      bridgeJoinDiagnostics: [],
     });
     mocks.assess.mockReturnValue({
       decision: "publish",
@@ -344,6 +347,7 @@ describe("Safety Score V9 publication runner", () => {
         { assetId: "alpha", code: "fact-build-failed" },
       ],
       quarantineAffectedAssetIds: ["alpha"],
+      bridgeJoinDiagnostics: [],
     });
     mocks.loadPublication.mockRejectedValue(new Error("read failed"));
 
