@@ -3,7 +3,7 @@ import { z } from "zod";
 export const FEEDBACK_TYPES = ["bug", "data-correction", "feature-request"] as const;
 export type FeedbackType = (typeof FEEDBACK_TYPES)[number];
 
-export const FeedbackTypeSchema = z.enum(FEEDBACK_TYPES, {
+const FeedbackTypeSchema = z.enum(FEEDBACK_TYPES, {
   message: "Invalid feedback type",
 });
 
@@ -30,7 +30,6 @@ export const FeedbackWireFieldsSchema = z.object({
   // that send it must acknowledge the terms explicitly at the Worker edge.
   acceptedTerms: z.boolean().optional(),
 });
-export type FeedbackWireFields = z.infer<typeof FeedbackWireFieldsSchema>;
 
 export const FeedbackResponseSchema = z.object({
   ok: z.boolean(),

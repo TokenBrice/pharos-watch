@@ -53,7 +53,7 @@ export type CompactPriceSourceAttempt = readonly [
   replaySafe: boolean,
 ];
 
-export function buildPriceSourceAttemptLedger(input: {
+function buildPriceSourceAttemptLedger(input: {
   missingActiveIds: readonly string[];
   providerDiagnostics: readonly PricingProviderAttemptDiagnostic[];
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
@@ -73,7 +73,7 @@ export function buildPriceSourceAttemptLedger(input: {
   };
 }
 
-export function compactPriceSourceAttemptLedger(ledger: PriceSourceAttemptLedger): Omit<PriceSourceAttemptLedger, "records"> & {
+function compactPriceSourceAttemptLedger(ledger: PriceSourceAttemptLedger): Omit<PriceSourceAttemptLedger, "records"> & {
   records: CompactPriceSourceAttempt[];
 } {
   return {

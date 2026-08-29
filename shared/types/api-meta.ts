@@ -31,5 +31,4 @@ export const ApiMetaEnvelopeSchema = z.union([
 ]);
 
 export type ApiMeta = z.output<typeof ApiMetaSchema>;
-export type ApiMetaWarningOnly = z.output<typeof ApiMetaWarningOnlySchema>;
 export type ApiMetaEnvelope = z.output<typeof ApiMetaEnvelopeSchema>;
