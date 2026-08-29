@@ -140,9 +140,22 @@ describe("api contract validation policy", () => {
     ).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
-  it("returns meta + parsed data on strict endpoint when valid", async () => {
+  it("field-compares a current Worker freshness envelope", async () => {
     const bodyWithMeta = {
-      _meta: { updatedAt: 200, ageSeconds: 20, status: "degraded" },
+      _meta: {
+        updatedAt: 200,
+        ageSeconds: 20,
+        status: "degraded",
+        warning: null,
+        dependencies: {
+          reportCards: {
+            updatedAt: 180,
+            ageSeconds: 40,
+            status: "fresh",
+            reason: null,
+          },
+        },
+      },
       summary: null,
       coins: [],
     };
@@ -160,7 +173,7 @@ describe("api contract validation policy", () => {
     );
 
     expect(result.data).toEqual({ summary: null, coins: [] });
-    expect(result.meta).toEqual({ updatedAt: 200, ageSeconds: 20, status: "degraded" });
+    expect(result.meta).toEqual(bodyWithMeta._meta);
   });
 
   it("drops malformed dependency metadata while preserving valid _meta", async () => {
@@ -187,8 +200,13 @@ describe("api contract validation policy", () => {
 
     const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, 600, "warn");
 
-    expect(result.meta?.dependencies).toEqual({
-      price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
+    expect(result.meta).toEqual({
+      updatedAt: 200,
+      ageSeconds: 20,
+      status: "fresh",
+      dependencies: {
+        price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
+      },
     });
   });
 
@@ -833,7 +851,7 @@ describe("api contract validation policy", () => {
 
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 1800);
 
-    expect(result.meta).toMatchObject({
+    expect(result.meta).toEqual({
       updatedAt: Date.parse("2026-06-23T09:59:30.000Z") / 1000,
       ageSeconds: 30,
       status: "fresh",

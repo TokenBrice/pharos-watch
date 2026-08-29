@@ -92,6 +92,29 @@ describe("deriveDataHealth", () => {
     expect(health.dataUpdatedAt).toBe((Math.floor((now - 2 * 60 * 60_000) / 1000)) * 1000);
   });
 
+  it("preserves warning-only degraded state without inventing an age", () => {
+    const health = deriveDataHealth({
+      label: "Daily Digest",
+      dataUpdatedAt: 0,
+      staleTime: 24 * 60 * 60_000,
+      hasData: true,
+      meta: {
+        status: "degraded",
+        warning: '110 - "Response is degraded"',
+      },
+    });
+
+    expect(health).toMatchObject({
+      state: "degraded",
+      dataUpdatedAt: 0,
+      ageMs: null,
+      meta: {
+        status: "degraded",
+        warning: '110 - "Response is degraded"',
+      },
+    });
+  });
+
   it("returns unavailable on 503 error with no data", () => {
     const health = deriveDataHealth({
       label: "Digests",

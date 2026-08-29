@@ -1,6 +1,7 @@
 import type { ApiMeta } from "@/lib/api";
 import { ApiFetchError } from "@/lib/api";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { resolveApiMetaAgeMilliseconds } from "@shared/types/api-meta";
 
 type DataHealthState = "fresh" | "degraded" | "stale" | "unavailable" | "error";
 
@@ -63,14 +64,11 @@ function getBaseMessage(state: Exclude<DataHealthState, "error">): string {
 
 export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
   const hasData = input.hasData ?? input.dataUpdatedAt > 0;
-  const updatedAtMs = input.meta?.updatedAt != null && input.meta.updatedAt > 0
-    ? input.meta.updatedAt * 1000
-    : input.dataUpdatedAt;
-  const ageMs = input.meta?.ageSeconds != null
-    ? input.meta.ageSeconds * 1000
-    : updatedAtMs > 0
-      ? Date.now() - updatedAtMs
-      : null;
+  const { updatedAtMs, ageMs } = resolveApiMetaAgeMilliseconds(
+    input.meta,
+    input.dataUpdatedAt,
+    Date.now(),
+  );
   const baseState = pickBaseState(input.meta, ageMs, input.staleTime);
 
   if (input.error && !hasData) {

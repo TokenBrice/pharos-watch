@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiMetaSchema } from "../api-meta";
+import { ApiMetaEnvelopeSchema, ApiMetaSchema } from "../api-meta";
 
 describe("ApiMetaSchema", () => {
   it("parses freshness metadata with dependency status details", () => {
@@ -27,5 +27,15 @@ describe("ApiMetaSchema", () => {
       ageSeconds: 300,
       status: "unavailable",
     }).success).toBe(false);
+  });
+
+  it("parses the explicit warning-only envelope without timestamps", () => {
+    expect(ApiMetaEnvelopeSchema.parse({
+      status: "degraded",
+      warning: '110 - "Response is degraded"',
+    })).toEqual({
+      status: "degraded",
+      warning: '110 - "Response is degraded"',
+    });
   });
 });

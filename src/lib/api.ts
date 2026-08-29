@@ -4,7 +4,13 @@ import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { isRecord } from "@shared/lib/type-guards";
-import type { ApiDependencyMeta, ApiMeta as ApiMetaWithAge } from "@shared/types/api-meta";
+import {
+  ApiDependencyMetaSchema,
+  ApiMetaSchema,
+  ApiMetaWarningOnlySchema,
+  type ApiDependencyMeta,
+  type ApiMetaEnvelope,
+} from "@shared/types/api-meta";
 import type { StablecoinReservesResponse } from "@shared/types";
 import { buildRequestUrl } from "@/lib/api-url";
 import { formatSchemaLikeIssues, type SchemaLike } from "@shared/lib/schema-like";
@@ -12,15 +18,7 @@ import { normalizeRequestTimeoutMs, resolveRequestSignal } from "@/lib/request-l
 
 export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/api-url";
 
-export type ApiMeta =
-  | ApiMetaWithAge
-  | {
-      status: ApiMetaWithAge["status"];
-      warning: string;
-      updatedAt?: undefined;
-      ageSeconds?: undefined;
-      dependencies?: ApiMetaWithAge["dependencies"];
-    };
+export type ApiMeta = ApiMetaEnvelope;
 
 export type ApiContractMode = "strict" | "warn";
 
@@ -126,27 +124,17 @@ function getBodyWarning(data: unknown): string | null {
 
 function normalizeApiDependencyMeta(value: unknown): ApiDependencyMeta | null {
   if (!isRecord(value)) return null;
-  const status = value.status;
-  if (status !== "fresh" && status !== "degraded" && status !== "stale" && status !== "unavailable") {
-    return null;
-  }
-  return {
-    status,
+  const parsed = ApiDependencyMetaSchema.safeParse({
+    ...value,
     updatedAt: typeof value.updatedAt === "number" || value.updatedAt === null ? value.updatedAt : undefined,
     ageSeconds: typeof value.ageSeconds === "number" || value.ageSeconds === null ? value.ageSeconds : undefined,
     reason: typeof value.reason === "string" || value.reason === null ? value.reason : undefined,
-  };
+  });
+  return parsed.success ? parsed.data : null;
 }
 
-function normalizeApiMeta(value: unknown): ApiMetaWithAge | null {
+function normalizeApiMeta(value: unknown): ApiMeta | null {
   if (!isRecord(value)) return null;
-  const status = value.status;
-  if (status !== "fresh" && status !== "degraded" && status !== "stale") {
-    return null;
-  }
-  if (typeof value.updatedAt !== "number" || typeof value.ageSeconds !== "number") {
-    return null;
-  }
 
   const dependencies: Record<string, ApiDependencyMeta> = {};
   if (isRecord(value.dependencies)) {
@@ -156,13 +144,12 @@ function normalizeApiMeta(value: unknown): ApiMetaWithAge | null {
     }
   }
 
-  return {
-    updatedAt: value.updatedAt,
-    ageSeconds: value.ageSeconds,
-    status,
+  const parsed = ApiMetaSchema.safeParse({
+    ...value,
     warning: typeof value.warning === "string" || value.warning === null ? value.warning : undefined,
     dependencies: Object.keys(dependencies).length > 0 ? dependencies : undefined,
-  };
+  });
+  return parsed.success ? parsed.data : null;
 }
 
 async function buildFetchError(path: string, res: Response): Promise<ApiFetchError> {
@@ -313,10 +300,10 @@ export async function apiFetchWithMeta<T>(
       };
     } else if (isFreshnessWarning) {
       // Preserve warning context without inventing freshness timestamps.
-      meta = {
+      meta = ApiMetaWarningOnlySchema.parse({
         status: "degraded",
         warning: warningHeader,
-      };
+      });
     }
   }
   if (bodyWarning && meta && !meta.warning) {
