@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
+  loadPreviousStressSignalCurrentRows,
   loadStressSignalCurrentRowForCoin,
   loadStressSignalCurrentRows,
   loadPublishedStressSignalGeneration,
+  loadTelegramDewsCurrentRows,
   mergeNewestStressSignalRows,
   type StressSignalCurrentRow,
 } from "../stress-signals-current-rows";
@@ -483,6 +485,198 @@ describe("stress-signal current-row helpers", () => {
 
     expect(loaded).toBeNull();
     expect(db.getHistory()).toHaveLength(1);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("fails closed when the exact published generation reads zero rows", async () => {
+    const completedAt = nowSec - 60;
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: 2,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdt-tether", "usdc-circle"]),
+      }),
+      updated_at: completedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [completedAt],
+        rows: [],
+      },
+    ], { requireMatch: true });
+
+    await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
+      status: "unavailable",
+      reason: `published generation ${completedAt} has no rows`,
+    });
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("returns rows without exact-coverage proof for a legacy pointer", async () => {
+    const completedAt = nowSec - 60;
+    const rows = [row("usdt-tether", completedAt)];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+      }),
+      updated_at: completedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [completedAt],
+        rows: rows.map((entry) => ({ ...entry })),
+      },
+    ], { requireMatch: true });
+
+    await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
+      status: "ok",
+      computedAt: completedAt,
+      rows,
+      exactCoverageVerified: false,
+    });
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("serves the telegram lane through its own exact published query set", async () => {
+    const completedAt = nowSec - 60;
+    const rows = [row("usdt-tether", completedAt)];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: rows.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((entry) => entry.stablecoin_id)),
+      }),
+      updated_at: completedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:telegram-dispatch:dews-published-exact",
+        matchBinds: [completedAt],
+        rows: rows.map((entry) => ({ ...entry })),
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadTelegramDewsCurrentRows(db, nowSec, { staleAfterSec: 300 });
+
+    expect(loaded).toEqual(rows);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("serves previous stress rows through their own exact published query set", async () => {
+    const completedAt = nowSec - 60;
+    const rows = [row("usdt-tether", completedAt)];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: rows.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((entry) => entry.stablecoin_id)),
+      }),
+      updated_at: completedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:dews:previous-stress-published-exact",
+        matchBinds: [completedAt],
+        rows: rows.map((entry) => ({ ...entry })),
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadPreviousStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
+
+    expect(loaded).toEqual(rows);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("reports the pointer state when the publication pointer is missing", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [],
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadPublishedStressSignalGeneration(db, nowSec);
+
+    expect(loaded.status).toBe("unavailable");
+    expect(loaded.status === "unavailable" && loaded.reason).toContain("missing");
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("reports a bounded reason when the exact generation read throws", async () => {
+    const completedAt = nowSec - 60;
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: 1,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdt-tether"]),
+      }),
+      updated_at: completedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [completedAt],
+        rows: [],
+        throwError: new Error("D1 exhausted"),
+      },
+    ], { requireMatch: true });
+
+    await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
+      status: "unavailable",
+      reason: "generation-read-failed:D1 exhausted",
+    });
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 });
