@@ -80,6 +80,7 @@ function parseNonNegativeInteger(value: unknown): string | null {
 function parseSwapFeeBasisPoints(value: unknown): number | null {
   if (
     typeof value !== "string" ||
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape decimal check; finite quantifiers, no backtracking ambiguity.
     !/^(?:0|[1-9]\d*)(?:\.\d+)?$/u.test(value)
   ) {
     return null;

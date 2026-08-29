@@ -46,6 +46,7 @@ export const CURVE_NATIVE_DISCOVERY_CHAINS: ReadonlySet<string> = new Set([
 /** Native Horizon liquidity-pool discovery is currently scoped to classic Stellar assets. */
 const HORIZON_DISCOVERY_CHAINS: ReadonlySet<string> = new Set(["stellar"]);
 
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored bounded optional code prefix plus fixed-width base32 contract id; linear, no backtracking ambiguity.
 const AQUARIUS_SOROBAN_IDENTITY_RE = /^(?:[A-Za-z0-9]{1,12}-)?(C[A-Z2-7]{55})$/;
 
 /** The exact eight Spiko Soroban token ids currently covered by Aquarius. */

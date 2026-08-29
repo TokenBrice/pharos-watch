@@ -19,6 +19,7 @@ export const AQUARIUS_TICKERS_URL = "https://amm-api.aqua.network/api/tickers/";
 const AQUARIUS_REQUEST_TIMEOUT_MS = 8_000;
 const AQUARIUS_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const SOROBAN_CONTRACT_ID_RE = /^C[A-Z2-7]{55}$/;
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored bounded optional code prefix plus fixed-width base32 contract id; linear, no backtracking ambiguity.
 const SOROBAN_IDENTITY_RE = /^(?:[A-Z0-9]{1,12}-)?(C[A-Z2-7]{55})$/;
 
 /** A census row is not an exact-execution authorization for any AMM invariant. */
