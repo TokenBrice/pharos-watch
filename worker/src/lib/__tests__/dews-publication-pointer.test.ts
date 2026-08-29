@@ -97,6 +97,39 @@ describe("DEWS publication pointer reader", () => {
     });
   });
 
+  it.each([
+    ["a non-object payload", "null", nowSec - 60, "payload is not an object"],
+    ["a foreign source", pointerPayload(nowSec - 60, { source: "other" }), nowSec - 60, "payload source is not compute-dews"],
+    ["a non-integer timestamp", pointerPayload(nowSec - 60, { updatedAt: 1.5 }), 1.5, "payload updatedAt is not an integer"],
+    ["a negative timestamp", pointerPayload(-5, { updatedAt: -5 }), -5, "payload updatedAt is negative"],
+    ["an unsupported coverage version", pointerPayload(nowSec - 60, { coverageVersion: 99 }), nowSec - 60, "payload coverageVersion is unsupported"],
+    ["a non-positive expected row count", pointerPayload(nowSec - 60, { coverageVersion: 2, expectedRowCount: 0 }), nowSec - 60, "payload expectedRowCount is not a positive integer"],
+    ["unparseable JSON", "{nope", nowSec - 60, "payload is not valid JSON"],
+  ] as const)("rejects %s", async (_label, value, cacheUpdatedAt, reason) => {
+    const db = mockD1([pointerMatch(value, cacheUpdatedAt)], { requireMatch: true });
+
+    const result = await readDewsPublishedGenerationResult(db, nowSec);
+
+    expect(result.status).toBe("invalid-pointer");
+    expect(result.status === "invalid-pointer" && result.reason).toContain(reason);
+  });
+
+  it("does not touch the ledger when reconciling a non-ok pointer", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: [pointerKey],
+        rows: [],
+        first: null,
+      },
+    ], { requireMatch: true });
+
+    await expect(reconcileDewsPublishedGenerationLedger(db, nowSec)).resolves.toEqual({
+      status: "no-pointer",
+    });
+    expect(db.getHistory()).toHaveLength(1);
+  });
+
   it("distinguishes a missing pointer from invalid pointers", async () => {
     const db = mockD1([
       {

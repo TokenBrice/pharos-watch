@@ -558,6 +558,55 @@ describe("computeDepegResolver", () => {
     expect(payload.rows[0].prediction.lockTrigger).toBe("readiness_backstop");
   });
 
+  it("marks the public snapshot degraded when the manifest write fails after sealing", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent({ started_at: NOW_SEC - 72 * 3600 });
+    const { stores, sealed } = storesFor();
+    let created: typeof sealed | null = null;
+
+    stores.sealPublicNoCall = vi.fn(async (_db, input) => {
+      const rowHash = computeDdrPublicRowHash(input.sealedPayload);
+      created = {
+        ...sealed,
+        eligibleAt: input.eligibleAt,
+        lockedAt: input.lockedAt,
+        eventAgeAtLockSec: input.eventAgeAtLockSec,
+        lockTiming: input.lockTiming,
+        policyDelaySec: input.policyDelaySec,
+        rowHash,
+        sealedPayload: attachDdrPublicRowHash(input.sealedPayload, rowHash),
+      };
+      return created;
+    });
+    stores.loadSealedPublicPredictions = vi.fn(async () => (created ? [created] : []));
+    stores.writePublicationManifest = vi.fn(async () => {
+      throw new Error("D1 manifest write exhausted");
+    });
+    const db = resolverDb([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      ...healthyDewsPublicationTables(),
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    await computeDepegResolver({
+      db,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      syncCapabilities: { depegPipeline: true },
+      storeContracts: stores,
+    });
+
+    const payload = readDdrSnapshotPayload(db);
+    expect(payload._meta.degraded).toBe(true);
+    expect(payload._meta.degradedReason).toContain("publication-retry-pending:");
+  });
+
   it("projects first-published sealed no-calls as invalidated when errata exist", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);
