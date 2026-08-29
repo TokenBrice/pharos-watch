@@ -24,7 +24,8 @@ import {
   fixtureSafetyScoresModule,
   fixtureYieldConfigModule,
   fixturePublicationModule,
-  type ChainRpcConfig,
+  makeEthereumRpcHandler,
+  makeEthereumRpcMap,
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
@@ -812,87 +813,54 @@ describe("syncYieldData", () => {
 
     let activeRpcCalls = 0;
     let maxActiveRpcCalls = 0;
-    fixtureMockFetch([{ match: () => true, respond: async (request) => {
-        const url = request.url;
-
-        if (url.includes("yields.llama.fi")) {
-          return new Response(
-            JSON.stringify({
-              data: [
-                makeDlYieldPool({
-                  pool: "pool-lusd-aave",
-                  project: "aave-v3",
-                  symbol: "LUSD",
-                  tvlUsd: 12_000_000,
-                  apy: 0.75,
-                  apyBase: 0.75,
-                  apyMean30d: 0.74,
-                  underlyingTokens: ["0x5f98805a4e8be255a32880fdec7f6728c6568ba0"],
-                }),
-              ],
+    const rpcHandler = makeEthereumRpcHandler([
+      {
+        selector: "0x9bf2f1ac",
+        value: "0x0000000000000000000000000000000000000000000a88622849a78584de759b",
+      },
+      {
+        selector: "0xb140384b",
+        value: "0x0000000000000000000000000000000000000000001998cb5c5ea77bc8dc9000",
+      },
+    ]);
+    fixtureMockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            makeDlYieldPool({
+              pool: "pool-lusd-aave",
+              project: "aave-v3",
+              symbol: "LUSD",
+              tvlUsd: 12_000_000,
+              apy: 0.75,
+              apyBase: 0.75,
+              apyMean30d: 0.74,
+              underlyingTokens: ["0x5f98805a4e8be255a32880fdec7f6728c6568ba0"],
             }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-
-        if (url.includes("/simple/price?ids=liquity&vs_currencies=usd")) {
-          return new Response(JSON.stringify({ liquity: { usd: 0.280527 } }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-
-        if (url.includes("rpc.example/eth")) {
+          ],
+        },
+      },
+      {
+        match: "/simple/price?ids=liquity&vs_currencies=usd",
+        body: { liquity: { usd: 0.280527 } },
+      },
+      {
+        match: "rpc.example/eth",
+        respond: async (request) => {
           activeRpcCalls += 1;
           maxActiveRpcCalls = Math.max(maxActiveRpcCalls, activeRpcCalls);
-          await Promise.resolve();
           try {
-            const body = JSON.parse(await request.clone().text()) as {
-              params?: Array<{ data?: string } | string>;
-            };
-            const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
-
-            if (callData === "0x9bf2f1ac") {
-              return new Response(
-                JSON.stringify({
-                  result: "0x0000000000000000000000000000000000000000000a88622849a78584de759b",
-                }),
-                { status: 200, headers: { "Content-Type": "application/json" } },
-              );
-            }
-
-            if (callData === "0xb140384b") {
-              return new Response(
-                JSON.stringify({
-                  result: "0x0000000000000000000000000000000000000000001998cb5c5ea77bc8dc9000",
-                }),
-                { status: 200, headers: { "Content-Type": "application/json" } },
-              );
-            }
+            return await rpcHandler(request);
           } finally {
             activeRpcCalls -= 1;
           }
-        }
-
-        return new Response(JSON.stringify({ error: "Not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
-      },
-    }]);
-
-    const testChainRpcs = new Map<string, ChainRpcConfig>([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://rpc.example/eth",
-          explorerUrl: "https://etherscan.io",
         },
-      ],
+      },
     ]);
+
+    const testChainRpcs = makeEthereumRpcMap();
+    vi.mocked(fixtureGetChainRpc).mockReturnValue(testChainRpcs.get("ethereum"));
     const result = await fixtureSyncYieldData(db, undefined, testChainRpcs);
 
     expect(result.itemCount).toBe(2);

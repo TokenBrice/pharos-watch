@@ -1,5 +1,6 @@
 import { vi } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import type { MockRegistryStablecoin } from "../../test-helpers/cron/mock-registry";
 import {
   mockCircuitBreaker,
   mockCircuitOutcomeRecord,
@@ -8,71 +9,93 @@ import {
   mockRegistry,
 } from "../../test-helpers/cron";
 
+// --- Shared fixture factories ---
+
+export type StablecoinFixtureOverrides = Pick<MockRegistryStablecoin, "id"> &
+  Partial<Omit<MockRegistryStablecoin, "id">>;
+
+
+export function makeStablecoinFixture(overrides: StablecoinFixtureOverrides): MockRegistryStablecoin {
+  const defaultFlags: Record<string, unknown> = {
+    pegCurrency: "USD",
+    backing: "fiat-backed",
+    yieldBearing: false,
+    navToken: false,
+    governance: "centralized",
+  };
+  const {
+    flags: overrideFlags,
+    ...rest
+  } = overrides;
+  return {
+    id: "fixture-coin",
+    name: "Fixture Coin",
+    symbol: "FIX",
+    geckoId: "fixture-coin",
+    flags: { ...defaultFlags, ...overrideFlags },
+    ...rest,
+  };
+}
+
+export function makeYieldTestRegistry(
+  stablecoins: StablecoinFixtureOverrides[],
+  trackedMetaById?: Map<string, unknown>,
+) {
+  const fixtures = stablecoins.map(makeStablecoinFixture);
+  return {
+    stablecoins: fixtures,
+    trackedMetaById: trackedMetaById ?? new Map(fixtures.map((coin) => [coin.id, coin])),
+  };
+}
+
 // --- Module-level mocks ---
 
-// Stub the stablecoins list — one yield-bearing, two non-yield-bearing
+// Stub the stablecoins list — one yield-bearing, three non-yield-bearing.
 vi.mock("@shared/lib/stablecoins/registry", () =>
-  mockRegistry({
-    stablecoins: [
-      {
-        id: "100",
-        name: "sDAI",
-        symbol: "sDAI",
-        geckoId: "savings-dai",
-        flags: {
-          pegCurrency: "USD",
-          backing: "crypto-backed",
-          yieldBearing: true,
-          navToken: true,
-          governance: "decentralized",
-        },
-        yieldConfig: {
-          yieldSource: "DSR",
-          yieldType: "nav-appreciation",
-        },
+  mockRegistry(makeYieldTestRegistry([
+    {
+      id: "100",
+      name: "sDAI",
+      symbol: "sDAI",
+      geckoId: "savings-dai",
+      flags: {
+        backing: "crypto-backed",
+        yieldBearing: true,
+        navToken: true,
+        governance: "decentralized",
       },
-      {
-        id: "usdc-circle",
-        name: "USD Coin",
-        symbol: "USDC",
-        geckoId: "usd-coin",
-        flags: {
-          pegCurrency: "USD",
-          backing: "fiat-backed",
-          yieldBearing: false,
-          navToken: false,
-          governance: "centralized",
-        },
+      yieldConfig: {
+        yieldSource: "DSR",
+        yieldType: "nav-appreciation",
       },
-      {
-        id: "u-united-stables",
-        name: "United Stables",
-        symbol: "U",
-        geckoId: "united-stables",
-        flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
-          yieldBearing: false,
-          navToken: false,
-          governance: "centralized",
-        },
+    },
+    {
+      id: "usdc-circle",
+      name: "USD Coin",
+      symbol: "USDC",
+      geckoId: "usd-coin",
+    },
+    {
+      id: "u-united-stables",
+      name: "United Stables",
+      symbol: "U",
+      geckoId: "united-stables",
+      flags: {
+        backing: "rwa-backed",
       },
-      {
-        id: "lusd-liquity",
-        name: "Liquity USD",
-        symbol: "LUSD",
-        geckoId: "liquity-usd",
-        flags: {
-          pegCurrency: "USD",
-          backing: "crypto-backed",
-          yieldBearing: false,
-          navToken: false,
-          governance: "decentralized",
-        },
-        contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
+    },
+    {
+      id: "lusd-liquity",
+      name: "Liquity USD",
+      symbol: "LUSD",
+      geckoId: "liquity-usd",
+      flags: {
+        backing: "crypto-backed",
+        governance: "decentralized",
       },
-    ],
-  }),
+      contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
+    },
+  ])),
 );
 
 // Stub fetch-retry to delegate to global fetch
@@ -200,15 +223,130 @@ const mutableTrackedMetaById = TRACKED_META_BY_ID as Map<string, (typeof ACTIVE_
 
 // --- Helpers ---
 
-function makeDb() {
-  return mockD1([
+export type YieldHistoryFixtureRow = {
+  stablecoin_id: string;
+  source_key: string;
+  recorded_at: number;
+  is_best: number;
+  apy: number;
+  source_tvl_usd: number | null;
+  data_source: string;
+  yield_source: string | null;
+  yield_type: string | null;
+  exchange_rate: number | null;
+  [key: string]: unknown;
+};
+
+type RequiredYieldHistoryFields = Pick<
+  YieldHistoryFixtureRow,
+  "stablecoin_id" | "source_key" | "recorded_at" | "is_best" | "apy"
+>;
+
+export function makeYieldHistoryRow(
+  overrides: RequiredYieldHistoryFields & Partial<Omit<YieldHistoryFixtureRow, keyof RequiredYieldHistoryFields>>,
+): YieldHistoryFixtureRow {
+  return {
+    stablecoin_id: overrides.stablecoin_id,
+    source_key: overrides.source_key,
+    recorded_at: overrides.recorded_at,
+    is_best: overrides.is_best,
+    apy: overrides.apy,
+    source_tvl_usd: null,
+    data_source: "defillama",
+    yield_source: null,
+    yield_type: null,
+    exchange_rate: null,
+    ...overrides,
+  };
+}
+
+function makeYieldHistoryTables(historyRows: YieldHistoryFixtureRow[]): MockTableConfig[] {
+  return [
+    { match: "pharos:yield-sync:daily-history-materialize", rows: [] },
+    { match: "pharos:yield-sync:stale-yield-data-delete", rows: [] },
+    { match: "pharos:yield-sync:yield-data-existing-ids", rows: [], first: null },
+    { match: "pharos:yield-sync:orphan-yield-data-delete", rows: [] },
+    { match: "pharos:yield-sync:history-retention-delete", rows: [] },
+    { match: "pharos:yield-sync:daily-history-retention-delete", rows: [] },
+    { match: "WITH ranked_linked_generations AS", rows: [] },
+    { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
+    { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
+    { match: "pharos:yield-sync:ownership-handoff-delete", rows: [] },
+    { match: "source_switch = 0", rows: [] },
     { match: "cache", rows: [] },
     { match: "yield_data", rows: [] },
-    { match: "yield_history", rows: [] },
+    { match: "yield_history", rows: historyRows },
     { match: "supply_history", rows: [] },
     { match: "depeg_events", rows: [] },
     { match: "dex_liquidity", rows: [] },
+  ];
+}
+
+export function makeYieldHistoryDb(
+  historyRows: YieldHistoryFixtureRow[] = [],
+  options: {
+    additionalTables?: MockTableConfig[];
+    createDb?: (tables: MockTableConfig[]) => MockD1Database;
+  } = {},
+): MockD1Database {
+  const createDb = options.createDb ?? mockD1;
+  return createDb([
+    ...(options.additionalTables ?? []),
+    ...makeYieldHistoryTables(historyRows),
   ]);
+}
+
+export type EthereumRpcResponse = {
+  selector: string;
+  value?: string;
+  upstreamError?: string;
+};
+
+export function makeEthereumRpcHandler(
+  responses: EthereumRpcResponse | EthereumRpcResponse[],
+): (request: Request) => Promise<Response> {
+  const cases = Array.isArray(responses) ? responses : [responses];
+  return async (request) => {
+    const body = JSON.parse(await request.clone().text()) as {
+      params?: Array<{ data?: string } | string>;
+    };
+    const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
+    const response = cases.find((candidate) => callData?.startsWith(candidate.selector));
+    if (!response) {
+      return new Response(JSON.stringify({ error: "Not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(
+      JSON.stringify(
+        response.upstreamError == null
+          ? { result: response.value ?? "0x" }
+          : { error: { message: response.upstreamError } },
+      ),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+}
+
+export function makeEthereumRpcMap(overrides: Partial<ChainRpcConfig> = {}): Map<string, ChainRpcConfig> {
+  return new Map([
+    [
+      "ethereum",
+      {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example/eth",
+        explorerUrl: "https://etherscan.io",
+        ...overrides,
+      },
+    ],
+  ]);
+}
+
+function makeDb() {
+  return makeYieldHistoryDb();
 }
 
 function makeStablecoinsCacheValue(): string {
@@ -250,15 +388,11 @@ function makeStablecoinsCacheValue(): string {
 }
 
 function makeCacheWriteFailureDb(error: Error) {
-  return mockD1([
-    { match: "INSERT INTO cache (key, value, updated_at)", rows: [], throwError: error },
-    { match: "cache", rows: [] },
-    { match: "yield_data", rows: [] },
-    { match: "yield_history", rows: [] },
-    { match: "supply_history", rows: [] },
-    { match: "depeg_events", rows: [] },
-    { match: "dex_liquidity", rows: [] },
-  ]);
+  return makeYieldHistoryDb([], {
+    additionalTables: [
+      { match: "INSERT INTO cache (key, value, updated_at)", rows: [], throwError: error },
+    ],
+  });
 }
 
 type MockHistoryDb = {

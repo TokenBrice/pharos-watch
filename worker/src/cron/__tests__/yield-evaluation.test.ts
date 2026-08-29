@@ -388,6 +388,52 @@ describe("evaluateYieldSources", () => {
     expect(clean?.sourceRiskPenaltyReason).toBe("provided");
     expect(clean?.sourceRiskAdjustedUtility).toBeGreaterThan(fragile?.sourceRiskAdjustedUtility ?? 0);
   });
+  it("rejects discovered source that diverges >35% from canonical reference", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:native",
+            currentApy: 5,
+            dataSource: "defillama",
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama-auto:coin-a:divergent",
+            currentApy: 15,
+            dataSource: "defillama-auto",
+          }),
+        },
+      ],
+    }));
+
+    const divergent = result.evaluatedSources.find(
+      (source) => source.sourceKey === "defillama-auto:coin-a:divergent",
+    );
+    expect(result.divergenceFlags).toBe(1);
+    expect(divergent).toMatchObject({
+      rejected: true,
+      anomalies: expect.arrayContaining(["diverges-from-canonical"]),
+    });
+  });
+  it("computes excessYield = apy30d - riskFreeRate for each source", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          currentApy: 6,
+        }),
+      }],
+    }));
+
+    expect(result.evaluatedSources[0]?.excessYield).toBeCloseTo(1.8, 6);
+  });
 
   it("keeps fixed-yield PT rows as alternatives when a holder-yield source exists", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
