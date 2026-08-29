@@ -3,6 +3,7 @@ import type { DigestInputData } from "@shared/types/digest";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { compareFiniteDesc } from "@shared/lib/sort";
 import { ACTIVE_DEPEG_PROMPT_LIMIT, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import {
   admitLiquidityShift,
@@ -22,8 +23,8 @@ import { SECONDS } from "../../lib/time-constants";
 import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
 import {
   collectorDegraded,
+  collectorResult,
   collectorOk,
-  markCollectorDegraded,
   type CollectorContext,
   type CollectorResult,
 } from "./collectors-shared";
@@ -221,7 +222,7 @@ export async function collectSupplyVelocity(
   try {
     const top10 = ctx.coreAggregateStablecoinAssets
       .map((coin) => ({ id: coin.id, symbol: coin.symbol, mcap: getCirculatingRaw(coin) }))
-      .sort((a, b) => b.mcap - a.mcap)
+      .sort(compareFiniteDesc<{ id: string; symbol: string; mcap: number }>((coin) => coin.mcap))
       .slice(0, 10);
 
     if (top10.length > 0) {
@@ -288,8 +289,7 @@ export async function collectSupplyVelocity(
 
 export async function collectResolvedDepegs(
   ctx: CollectorContext,
-  degradedReasons?: string[],
-): Promise<DigestInputData["resolvedDepegs"]> {
+): Promise<CollectorResult<DigestInputData["resolvedDepegs"]>> {
   try {
     const cutoff48h = ctx.nowSec - SECONDS.TWO_DAYS;
     const resolvedRows = await ctx.db
@@ -330,19 +330,19 @@ export async function collectResolvedDepegs(
       .slice(0, 5);
 
     if (candidates.length > 0) {
-      return candidates;
+      return collectorOk(candidates);
     }
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query resolved depegs:", error);
-    markCollectorDegraded(degradedReasons, "resolved-depegs-query");
+    return collectorDegraded(undefined, "resolved-depegs-query");
   }
-  return undefined;
+  return collectorOk(undefined);
 }
 
 export async function collectMintBurnFlows(
   ctx: CollectorContext,
-  degradedReasons?: string[],
-): Promise<DigestInputData["mintBurnFlows"]> {
+): Promise<CollectorResult<DigestInputData["mintBurnFlows"]>> {
+  const degradedReasons: string[] = [];
   try {
     // The Bank Run Gauge has one producer: the mint/burn flows API publishes it
     // over the tracked-pair universe with tracked-chain mcap weighting. The
@@ -353,16 +353,16 @@ export async function collectMintBurnFlows(
       // A never-published gauge is the old "no flow rows yet" case and stays
       // silent; a malformed or expired publication means the producer broke.
       if (published.reason !== "missing") {
-        markCollectorDegraded(degradedReasons, `mint-burn-gauge-${published.reason}`);
+        degradedReasons.push(`mint-burn-gauge-${published.reason}`);
       }
-      return undefined;
+      return collectorResult(undefined, degradedReasons);
     }
     const { gauge } = published;
     if (gauge.stale) {
-      markCollectorDegraded(degradedReasons, "mint-burn-gauge-stale");
+      degradedReasons.push("mint-burn-gauge-stale");
     }
     const gaugeScore = gauge.score;
-    if (gaugeScore === null) return undefined;
+    if (gaugeScore === null) return collectorResult(undefined, degradedReasons);
 
     const ftqFlows = await computeDigestMintBurnFtqFlows(
       ctx.db,
@@ -371,7 +371,7 @@ export async function collectMintBurnFlows(
     const { safeNet24h, riskyNet24h } = ftqFlows;
     const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
     if (ftqFlows.kind === "unavailable") {
-      markCollectorDegraded(degradedReasons, `mint-burn-ftq:${ftqFlows.reason}`);
+      degradedReasons.push(`mint-burn-ftq:${ftqFlows.reason}`);
     }
 
     const topPressure = gauge.coins
@@ -388,7 +388,7 @@ export async function collectMintBurnFlows(
       .slice(0, 3)
       .map((chain) => ({ chainId: chain.chainId, netUsd: chain.net24hUsd }));
 
-    return {
+    return collectorResult({
       gaugeScore,
       gaugeBand: getGaugeBand(gaugeScore),
       classificationSource:
@@ -400,18 +400,18 @@ export async function collectMintBurnFlows(
       flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
       topPressure,
       topChains,
-    };
+    }, degradedReasons);
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect mint-burn flows:", error);
-    markCollectorDegraded(degradedReasons, "mint-burn-gauge-read");
+    degradedReasons.push("mint-burn-gauge-read");
+    return collectorResult(undefined, degradedReasons);
   }
-  return undefined;
 }
 
 export async function collectLiquidityShifts(
   ctx: CollectorContext,
-  degradedReasons?: string[],
-): Promise<DigestInputData["liquidityShifts"]> {
+): Promise<CollectorResult<DigestInputData["liquidityShifts"]>> {
+  const degradedReasons: string[] = [];
   try {
     const lookbackStart = ctx.yesterdayTs - 2 * SECONDS.ONE_DAY;
     const rows = await ctx.db
@@ -499,14 +499,14 @@ export async function collectLiquidityShifts(
     // Surface the drop so the prompt's data-quality block and the status page
     // record that a liquidity story was withheld rather than never existed.
     for (const rejection of rejections) {
-      markCollectorDegraded(degradedReasons, `liquidity-shift-${rejection}`);
+      degradedReasons.push(`liquidity-shift-${rejection}`);
     }
 
     shifts.sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd);
-    return shifts.length > 0 ? shifts.slice(0, 5) : undefined;
+    return collectorResult(shifts.length > 0 ? shifts.slice(0, 5) : undefined, degradedReasons);
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect liquidity shifts:", error);
-    markCollectorDegraded(degradedReasons, "liquidity-shifts-query");
+    degradedReasons.push("liquidity-shifts-query");
+    return collectorResult(undefined, degradedReasons);
   }
-  return undefined;
 }

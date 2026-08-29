@@ -13,10 +13,13 @@ import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-sourc
 import { digestSafetyContextFromSource } from "../../lib/digest-safety-context";
 import { SECONDS } from "../../lib/time-constants";
 import {
+  collectorDegraded,
+  collectorOk,
+  collectorResult,
   logCollectorParseFailure,
-  markCollectorDegraded,
   type CollectorContext,
   type CanonicalSafetyGradeRow,
+  type CollectorResult,
   type SafetyScoresResult,
 } from "./collectors-shared";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
@@ -59,22 +62,20 @@ function projectV9Cap(
 export async function collectSafetyScores(
   ctx: CollectorContext,
   mentionedSymbols: Set<string>,
-  degradedReasons: string[],
-): Promise<SafetyScoresResult> {
+): Promise<CollectorResult<SafetyScoresResult>> {
   try {
     const source = await loadActiveSafetyScoreSource(ctx.db);
     const safetyContext = digestSafetyContextFromSource(source);
     if (source.kind !== "v9") {
-      markCollectorDegraded(degradedReasons, "safety-canonical-snapshot");
       logWorkerEventArgs("handler", "error",
         `[daily-digest] Canonical Safety Score V9 unavailable (${source.reason}): ${source.detail}`,
       );
-      return {
+      return collectorDegraded({
         safetyScores: undefined,
         safetyGrades: undefined,
         safetyIdentity: undefined,
         safetyContext,
-      };
+      }, "safety-canonical-snapshot");
     }
 
     const allGrades: CanonicalSafetyGradeRow[] = source.snapshot.cards
@@ -120,7 +121,7 @@ export async function collectSafetyScores(
     for (const grade of allGrades) {
       gradeDistribution[grade.grade] = (gradeDistribution[grade.grade] ?? 0) + 1;
     }
-    return {
+    return collectorOk({
       safetyScores: {
         model: "v9",
         mentionedCoins: reportCoins.map((grade) => ({
@@ -141,11 +142,10 @@ export async function collectSafetyScores(
       safetyGrades: allGrades,
       safetyIdentity: source.snapshot.safetyScoreIdentity,
       safetyContext,
-    };
+    });
   } catch (error) {
-    markCollectorDegraded(degradedReasons, "safety-canonical-snapshot");
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to load canonical safety scores:", error);
-    return {
+    return collectorDegraded({
       safetyScores: undefined,
       safetyGrades: undefined,
       safetyIdentity: undefined,
@@ -156,18 +156,18 @@ export async function collectSafetyScores(
         publishedAt: null,
         reason: "source-load-failed",
       },
-    };
+    }, "safety-canonical-snapshot");
   }
 }
 
 export async function collectDewsStress(
   ctx: CollectorContext,
-  degradedReasons?: string[],
-): Promise<DigestInputData["dewsStress"]> {
+): Promise<CollectorResult<DigestInputData["dewsStress"]>> {
+  const degradedReasons: string[] = [];
   try {
     const publishedDews = await loadPublishedStressSignalGeneration(ctx.db, ctx.nowSec);
     if (publishedDews.status !== "ok") {
-      markCollectorDegraded(degradedReasons, "dews-published-generation");
+      degradedReasons.push("dews-published-generation");
       logWorkerEvent({
         scope: "lib",
         level: "error",
@@ -176,7 +176,7 @@ export async function collectDewsStress(
         message: "Published DEWS generation unavailable",
         metadata: { reason: publishedDews.reason },
       });
-      return undefined;
+      return collectorResult(undefined, degradedReasons);
     }
 
     const todayRows = publishedDews.rows.filter((row) => ctx.trackedStablecoinIds.has(row.stablecoin_id));
@@ -224,7 +224,7 @@ export async function collectDewsStress(
             }
           }
         } catch (error) {
-          markCollectorDegraded(degradedReasons, malformedSignalsReason);
+          degradedReasons.push(malformedSignalsReason);
           logCollectorParseFailure("dews-stress", "signals_json", error, { stablecoinId: today.stablecoin_id });
         }
 
@@ -258,7 +258,7 @@ export async function collectDewsStress(
                 value: Math.round(signal.value),
               }));
           } catch (error) {
-            markCollectorDegraded(degradedReasons, malformedSignalsReason);
+            degradedReasons.push(malformedSignalsReason);
             logCollectorParseFailure("dews-stress", "signals_json", error, { stablecoinId: row.stablecoin_id });
           }
 
@@ -282,27 +282,27 @@ export async function collectDewsStress(
         })
         .slice(0, 5);
 
-      return {
+      return collectorResult({
         bandCounts,
         yesterdayBandCounts,
         bandChanges: bandChanges.slice(0, 5),
         elevatedCoins,
-      };
+      }, degradedReasons);
     }
   } catch (error) {
-    markCollectorDegraded(degradedReasons, "dews-stress-query");
+    degradedReasons.push("dews-stress-query");
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect DEWS stress signals:", error);
+    return collectorResult(undefined, degradedReasons);
   }
-  return undefined;
+  return collectorResult(undefined, degradedReasons);
 }
 
 export async function collectGradeTransitions(
   ctx: CollectorContext,
   safetyGrades: CanonicalSafetyGradeRow[] | undefined,
   safetyIdentity: SafetyScoreV9PublicationIdentity | undefined,
-  degradedReasons?: string[],
-): Promise<DigestInputData["gradeTransitions"]> {
-  if (!safetyGrades || !safetyIdentity) return undefined;
+): Promise<CollectorResult<DigestInputData["gradeTransitions"]>> {
+  if (!safetyGrades || !safetyIdentity) return collectorOk(undefined);
   try {
     const cutoff48h = ctx.nowSec - 2 * 24 * 60 * 60;
     const policyClause = "AND policy_id = ? AND policy_digest = ?";
@@ -381,7 +381,7 @@ export async function collectGradeTransitions(
 
     if (candidates.length > 0) {
       const gradeMap = new Map(safetyGrades.map((grade) => [grade.id, grade]));
-      return candidates.map((row) => {
+      return collectorOk(candidates.map((row) => {
         const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === row.stablecoin_id)!;
         const currentGrade = gradeMap.get(row.stablecoin_id);
         const rowIdentity = safetyScoreHistoryIdentityFromV2Row(row);
@@ -411,19 +411,19 @@ export async function collectGradeTransitions(
           caps: currentGrade?.caps ?? [],
           bindingCap: currentGrade?.bindingCap ?? null,
         };
-      });
+      }));
     }
   } catch (error) {
-    markCollectorDegraded(degradedReasons, "grade-transitions-query");
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect grade transitions:", error);
+    return collectorDegraded(undefined, "grade-transitions-query");
   }
-  return undefined;
+  return collectorOk(undefined);
 }
 
 export async function collectYieldAnomalies(
   ctx: CollectorContext,
-  degradedReasons?: string[],
-): Promise<DigestInputData["yieldAnomalies"]> {
+): Promise<CollectorResult<DigestInputData["yieldAnomalies"]>> {
+  const degradedReasons: string[] = [];
   try {
     const rows = await ctx.db
       .prepare(
@@ -454,7 +454,7 @@ export async function collectYieldAnomalies(
         try {
           warnings = JSON.parse(row.warning_signals) as string[];
         } catch (error) {
-          markCollectorDegraded(degradedReasons, "yield-warning-signals-json");
+          degradedReasons.push("yield-warning-signals-json");
           logCollectorParseFailure("yield-anomalies", "warning_signals", error, { stablecoinId: row.stablecoin_id });
         }
         if (warnings.length === 0) return null;
@@ -475,10 +475,10 @@ export async function collectYieldAnomalies(
       .sort((a, b) => b.mcapUsd * b.warnings.length - a.mcapUsd * a.warnings.length)
       .slice(0, 5);
 
-    return candidates.length > 0 ? candidates : undefined;
+    return collectorResult(candidates.length > 0 ? candidates : undefined, degradedReasons);
   } catch (error) {
-    markCollectorDegraded(degradedReasons, "yield-anomalies-query");
+    degradedReasons.push("yield-anomalies-query");
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect yield anomalies:", error);
-    return undefined;
+    return collectorResult(undefined, degradedReasons);
   }
 }

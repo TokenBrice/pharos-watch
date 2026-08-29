@@ -14,6 +14,13 @@ describe("toTimestampMs", () => {
     expect(toTimestampMs("1700000000")).toBe(1_700_000_000_000);
   });
 
+  it("keeps the 10^10 unit boundary and accepts signed/decimal numeric text", () => {
+    expect(toTimestampMs(9_999_999_999)).toBe(9_999_999_999_000);
+    expect(toTimestampMs(10_000_000_000)).toBe(10_000_000_000);
+    expect(toTimestampMs("-1.5")).toBe(-1_500);
+    expect(toTimestampMs("+1700000000")).toBe(1_700_000_000_000);
+  });
+
   it("parses ISO date strings", () => {
     expect(toTimestampMs("2023-11-14T22:13:20.000Z")).toBe(1_700_000_000_000);
   });

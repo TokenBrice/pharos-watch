@@ -4,12 +4,18 @@ import { round1 } from "@shared/lib/math";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { SECONDS } from "../../lib/time-constants";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
-import { logCollectorParseFailure, markCollectorDegraded, type CollectorContext } from "./collectors-shared";
+import {
+  collectorDegraded,
+  collectorOk,
+  collectorResult,
+  logCollectorParseFailure,
+  type CollectorContext,
+  type CollectorResult,
+} from "./collectors-shared";
 
 export async function collectTotalMcapAth(
   ctx: CollectorContext,
-  degradedReasons?: string[],
-): Promise<DigestInputData["totalMcapAth"]> {
+): Promise<CollectorResult<DigestInputData["totalMcapAth"]>> {
   try {
     const row = await ctx.db
       .prepare(
@@ -22,42 +28,41 @@ export async function collectTotalMcapAth(
          LIMIT 1`,
       )
       .first<{ ath_value: number | null; ath_date: number | null }>();
-    if (!row || row.ath_value == null || row.ath_date == null || row.ath_value <= 0) return undefined;
+    if (!row || row.ath_value == null || row.ath_date == null || row.ath_value <= 0) return collectorOk(undefined);
     const dayTs = bucketUnixSecondsToUtcDay(row.ath_date);
-    return {
+    return collectorOk({
       value: row.ath_value,
       date: dayTs,
       daysAgo: Math.max(0, Math.round((ctx.todayTs - dayTs) / SECONDS.ONE_DAY)),
-    };
+    });
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect total mcap ATH:", error);
-    markCollectorDegraded(degradedReasons, "total-mcap-ath-query");
-    return undefined;
+    return collectorDegraded(undefined, "total-mcap-ath-query");
   }
 }
 
 export async function collectPsiContributors(
   ctx: CollectorContext,
-  degradedReasons?: string[],
-): Promise<DigestInputData["psiContributors"]> {
+): Promise<CollectorResult<DigestInputData["psiContributors"]>> {
+  const degradedReasons: string[] = [];
   try {
     const latestSample = await ctx.db
       .prepare("SELECT input_snapshot, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ input_snapshot: string; stored_at: number }>();
-    if (!latestSample || typeof latestSample.input_snapshot !== "string") return undefined;
+    if (!latestSample || typeof latestSample.input_snapshot !== "string") return collectorOk(undefined);
     // A stale sample's per-coin attribution presented as current is worse
     // than no attribution at all; drop it and record the degradation.
     if (ctx.nowSec - latestSample.stored_at > 2 * SECONDS.ONE_HOUR) {
-      markCollectorDegraded(degradedReasons, "psi-contributors-stale");
-      return undefined;
+      degradedReasons.push("psi-contributors-stale");
+      return collectorResult(undefined, degradedReasons);
     }
 
     const snapshot = JSON.parse(latestSample.input_snapshot) as {
       contributors?: { id: string; symbol: string; bps: number; mcapUsd: number; ageDays: number; factor: number }[];
     };
-    if (!snapshot.contributors || snapshot.contributors.length === 0) return undefined;
+    if (!snapshot.contributors || snapshot.contributors.length === 0) return collectorOk(undefined);
 
-    return snapshot.contributors
+    return collectorResult(snapshot.contributors
       .filter(
         (contributor) =>
           typeof contributor.bps === "number" &&
@@ -75,11 +80,11 @@ export async function collectPsiContributors(
         marketImpact: round1(((Math.abs(contributor.bps) * contributor.mcapUsd) / 1e9) * contributor.factor),
       }))
       .sort((a, b) => b.marketImpact - a.marketImpact)
-      .slice(0, 3);
+      .slice(0, 3), degradedReasons);
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect PSI contributors:", error);
-    markCollectorDegraded(degradedReasons, "psi-contributors-query");
-    return undefined;
+    degradedReasons.push("psi-contributors-query");
+    return collectorResult(undefined, degradedReasons);
   }
 }
 
@@ -88,8 +93,8 @@ export async function collectHistoricalContext(
   displayScore: number | null,
   displayBand: string | null,
   biggestSupplyChange: DigestInputData["biggestSupplyChange"],
-  degradedReasons?: string[],
-): Promise<DigestInputData["historicalContext"]> {
+): Promise<CollectorResult<DigestInputData["historicalContext"]>> {
+  const degradedReasons: string[] = [];
   try {
     const histDepth = await ctx.db.prepare("SELECT COUNT(*) as cnt FROM stability_index").first<{ cnt: number }>();
 
@@ -183,19 +188,20 @@ export async function collectHistoricalContext(
         }
       }
 
-      return { psiPrecedent, psiBandStreak, digestTrackingDays, supplyMoverContext };
+      return collectorResult({ psiPrecedent, psiBandStreak, digestTrackingDays, supplyMoverContext }, degradedReasons);
     }
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect historical context:", error);
-    markCollectorDegraded(degradedReasons, "historical-context-query");
+    degradedReasons.push("historical-context-query");
+    return collectorResult(undefined, degradedReasons);
   }
-  return undefined;
+  return collectorResult(undefined, degradedReasons);
 }
 
 export async function collectCrossDayTrends(
   ctx: CollectorContext,
-  degradedReasons?: string[],
-): Promise<DigestInputData["crossDayTrends"]> {
+): Promise<CollectorResult<DigestInputData["crossDayTrends"]>> {
+  const degradedReasons: string[] = [];
   try {
     const rows = await ctx.db
       .prepare(
@@ -209,7 +215,7 @@ export async function collectCrossDayTrends(
       .all<{ generated_at: number; input_data: string }>();
 
     const entries = rows.results ?? [];
-    if (entries.length < 3) return undefined;
+    if (entries.length < 3) return collectorOk(undefined);
 
     const psiTrajectory: { date: string; score: number; band: string }[] = [];
     const mcapTrajectory: { date: string; mcapUsd: number }[] = [];
@@ -232,7 +238,7 @@ export async function collectCrossDayTrends(
           gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
         }
       } catch (error) {
-        markCollectorDegraded(degradedReasons, "cross-day-trend-input-json");
+        degradedReasons.push("cross-day-trend-input-json");
         logCollectorParseFailure("cross-day-trends", "input_data", error, { generatedAt: row.generated_at });
       }
     }
@@ -244,14 +250,14 @@ export async function collectCrossDayTrends(
     mcapTrajectory.reverse();
     gaugeTrajectory.reverse();
 
-    return {
+    return collectorResult({
       psiTrajectory,
       mcapTrajectory,
       gaugeTrajectory: gaugeTrajectory.length >= 3 ? gaugeTrajectory : null,
-    };
+    }, degradedReasons);
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect cross-day trends:", error);
-    markCollectorDegraded(degradedReasons, "cross-day-trends-query");
+    degradedReasons.push("cross-day-trends-query");
+    return collectorResult(undefined, degradedReasons);
   }
-  return undefined;
 }

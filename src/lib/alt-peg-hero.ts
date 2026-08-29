@@ -8,6 +8,7 @@ import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } fro
 import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SKY_COHORT_SIZE_CEIL } from "@/lib/alt-peg-sizing";
 import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { compareFiniteDesc } from "@shared/lib/sort";
 
 export interface HeroCoin {
   id: string;
@@ -110,7 +111,7 @@ function placeSkyCohort(kind: SkyCohortKind, coins: HeroCoin[], rank?: number): 
   const template = EMPTY_SKY.find((c) => c.kind === kind)!;
   if (coins.length === 0) return template;
 
-  const sorted = [...coins].sort((a, b) => b.marketCap - a.marketCap);
+  const sorted = [...coins].sort(compareFiniteDesc<HeroCoin>((coin) => coin.marketCap));
   const layout = SKY_LAYOUT[kind];
   const placed: PlacedCoin[] = sorted.map((coin, index) => {
     const sizePx = coinEmblemSize(coin.marketCap, { ceil: SKY_COHORT_SIZE_CEIL });

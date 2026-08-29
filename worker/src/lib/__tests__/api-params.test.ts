@@ -327,6 +327,18 @@ describe("timestamp and day query parsers", () => {
     expect(parseTimestampSecondsParam("2025-01-01T00:00:00Z")).toBe(1_735_689_600);
   });
 
+  it("keeps the worker's 10^12 unit boundary", () => {
+    expect(parseTimestampSecondsParam("10000000000")).toBe(10_000_000_000);
+    expect(parseTimestampSecondsParam("999999999999")).toBe(999_999_999_999);
+    expect(parseTimestampSecondsParam("1000000000000")).toBe(1_000_000_000);
+  });
+
+  it("rejects signed and decimal numeric text", () => {
+    expect(parseTimestampSecondsParam("-1700000000")).toBeNull();
+    expect(parseTimestampSecondsParam("+1700000000")).toBeNull();
+    expect(parseTimestampSecondsParam("1700000000.5")).toBeNull();
+  });
+
   it("returns null for missing or malformed timestamps", () => {
     expect(parseTimestampSecondsParam(null)).toBeNull();
     expect(parseTimestampSecondsParam("  ")).toBeNull();

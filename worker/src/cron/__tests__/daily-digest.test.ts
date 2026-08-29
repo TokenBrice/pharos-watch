@@ -624,11 +624,10 @@ describe("collectSafetyScores", () => {
       snapshot,
     });
 
-    const degradedReasons: string[] = [];
-    const result = await collectSafetyScores(makeCollectorCtx(mockD1([])), new Set(["USDT"]), degradedReasons);
+    const result = await collectSafetyScores(makeCollectorCtx(mockD1([])), new Set(["USDT"]));
 
-    expect(result.safetyContext).toMatchObject({ status: "available", expectedModel: "v9", identity: snapshot.safetyScoreIdentity });
-    expect(result.safetyScores).toMatchObject({
+    expect(result.value.safetyContext).toMatchObject({ status: "available", expectedModel: "v9", identity: snapshot.safetyScoreIdentity });
+    expect(result.value.safetyScores).toMatchObject({
       model: "v9",
       provenance: {
         ...snapshot.safetyScoreIdentity,
@@ -643,9 +642,9 @@ describe("collectSafetyScores", () => {
         bindingCap: { kind: "redemption-access", limit: 82 },
       }],
     });
-    expect(result.safetyScores).not.toHaveProperty("medianGrade");
-    expect(result.safetyGrades).toHaveLength(1);
-    expect(degradedReasons).toEqual([]);
+    expect(result.value.safetyScores).not.toHaveProperty("medianGrade");
+    expect(result.value.safetyGrades).toHaveLength(1);
+    expect(result.degradedReasons).toEqual([]);
   });
 });
 
@@ -654,7 +653,7 @@ describe("collectGradeTransitions", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const todayTs = nowSec - (nowSec % 86_400);
     vi.mocked(loadActiveSafetyScoreSource).mockReset().mockResolvedValueOnce(canonicalSafetySource([{ id: "usdt-tether", overallGrade: "A", overallScore: 88 }]));
-    const safetyResult = await collectSafetyScores(makeCollectorCtx(mockD1([])), new Set(["USDT"]), []);
+    const safetyResult = await collectSafetyScores(makeCollectorCtx(mockD1([])), new Set(["USDT"]));
     const db = mockD1([
       { match: "GROUP BY recorded_at HAVING COUNT(*) > 15", rows: [] },
       {
@@ -662,14 +661,12 @@ describe("collectGradeTransitions", () => {
         rows: [{ history_id: "safety-score-history:v2:test", stablecoin_id: "usdt-tether", recorded_at: todayTs, model: "v9", identity_schema_version: 1, methodology_version: "9.0", policy_id: "safety-score-v9", policy_digest: "a".repeat(64), evaluation_build_digest: "b".repeat(64), base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`, model_publication_generation_id: "report-cards:v9:1", transition_kind: "organic-grade-change", grade: "A-", score: 80, prev_grade: "A", prev_score: 85 }],
       },
     ]);
-    const degradedReasons: string[] = [];
+    const result = await collectGradeTransitions(makeCollectorCtx(db), safetyResult.value.safetyGrades, safetyResult.value.safetyIdentity);
 
-    const result = await collectGradeTransitions(makeCollectorCtx(db), safetyResult.safetyGrades, safetyResult.safetyIdentity, degradedReasons);
-
-    expect(result).toHaveLength(1);
-    expect(result![0]).toMatchObject({ symbol: "USDT", fromGrade: "A", toGrade: "A-", safetyScoreIdentity: { model: "v9", methodologyVersion: "9.0", publicationGenerationId: "report-cards:v9:1" } });
+    expect(result.value).toHaveLength(1);
+    expect(result.value?.[0]).toMatchObject({ symbol: "USDT", fromGrade: "A", toGrade: "A-", safetyScoreIdentity: { model: "v9", methodologyVersion: "9.0", publicationGenerationId: "report-cards:v9:1" } });
     expect((db as MockD1Database).getHistory().some((entry) => entry.sql.includes("safety_grade_history"))).toBe(false);
-    expect(degradedReasons).toEqual([]);
+    expect(result.degradedReasons).toEqual([]);
   });
 });
 
@@ -681,7 +678,6 @@ describe("collectMintBurnFlows", () => {
   });
 
   it("omits the block without degrading when no gauge has been published yet", async () => {
-    const degradedReasons: string[] = [];
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       matchBinds: ["mint-burn-flows:v3:aggregate:24"],
@@ -689,40 +685,37 @@ describe("collectMintBurnFlows", () => {
       first: null,
     }]);
 
-    const result = await collectMintBurnFlows(makeCollectorCtx(db), degradedReasons);
+    const result = await collectMintBurnFlows(makeCollectorCtx(db));
 
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toEqual([]);
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toEqual([]);
   });
 
   it("degrades when the published gauge is malformed", async () => {
-    const degradedReasons: string[] = [];
     const db = mockD1([publishedGaugeTable({ value: '{"gauge":{"score":"nope"}}' })]);
 
-    const result = await collectMintBurnFlows(makeCollectorCtx(db), degradedReasons);
+    const result = await collectMintBurnFlows(makeCollectorCtx(db));
 
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toEqual(["mint-burn-gauge-malformed"]);
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toEqual(["mint-burn-gauge-malformed"]);
   });
 
   it("degrades when the published gauge predates the current digest cycle", async () => {
-    const degradedReasons: string[] = [];
     const db = mockD1([publishedGaugeTable({ ageSec: 25 * 3600 })]);
 
-    const result = await collectMintBurnFlows(makeCollectorCtx(db), degradedReasons);
+    const result = await collectMintBurnFlows(makeCollectorCtx(db));
 
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toEqual(["mint-burn-gauge-expired"]);
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toEqual(["mint-burn-gauge-expired"]);
   });
 
   it("still re-bins a stale publication but records the staleness", async () => {
-    const degradedReasons: string[] = [];
     const db = mockD1([publishedGaugeTable({ ageSec: 3 * 3600 })]);
 
-    const result = await collectMintBurnFlows(makeCollectorCtx(db), degradedReasons);
+    const result = await collectMintBurnFlows(makeCollectorCtx(db));
 
-    expect(result?.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
-    expect(degradedReasons).toEqual(["mint-burn-gauge-stale"]);
+    expect(result.value?.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
+    expect(result.degradedReasons).toEqual(["mint-burn-gauge-stale"]);
   });
 
   it.each([
@@ -733,23 +726,23 @@ describe("collectMintBurnFlows", () => {
 
     const result = await collectMintBurnFlows(makeCollectorCtx(db));
 
-    expect(result?.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
-    expect(result?.gaugeBand).toBe("HEALTHY");
-    expect(result?.flightToQuality).toEqual({
+    expect(result.value?.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
+    expect(result.value?.gaugeBand).toBe("HEALTHY");
+    expect(result.value?.flightToQuality).toEqual({
       active: false,
       // PAXG is outside the digest's core aggregate universe but inside the
       // published gauge universe, so its net flow reaches the FTQ split.
       safeNetUsd: 150_000_000,
       riskyNetUsd: -3_000_000,
     });
-    expect(result?.topPressure.map((row) => row.symbol)).toEqual(["USDT", "USDC"]);
+    expect(result.value?.topPressure.map((row) => row.symbol)).toEqual(["USDT", "USDC"]);
     // One canonical loader serves both the digest collectors and the FTQ
     // classifier, so the suite's healthy source classifies here. The
     // fail-closed FTQ arms are covered by
     // daily-digest/__tests__/mint-burn-ftq.test.ts.
-    expect(result?.classificationSource).toBe("safety-score-v9-publication");
-    expect(result?.classificationReason).toBeNull();
-    expect(result?.topChains).toEqual([
+    expect(result.value?.classificationSource).toBe("safety-score-v9-publication");
+    expect(result.value?.classificationReason).toBeNull();
+    expect(result.value?.topChains).toEqual([
       { chainId: "ethereum", netUsd: 150_000_000 },
       { chainId: "arbitrum", netUsd: -3_000_000 },
     ]);
@@ -761,7 +754,7 @@ describe("collectMintBurnFlows", () => {
       biggestSupplyChange: null,
       stabilityIndex: null,
       yesterdayIndex: null,
-      mintBurnFlows: result!,
+      mintBurnFlows: result.value!,
     });
     expect(prompt).toContain("Top chains by net flow");
     expect(
@@ -1109,12 +1102,12 @@ describe("collectPsiContributors", () => {
     const result = await collectPsiContributors(ctx);
 
     expect(result).toBeDefined();
-    expect(result!.length).toBe(3);
+    expect(result!.value!.length).toBe(3);
     // Should be sorted by marketImpact descending
-    expect(result![0].marketImpact).toBeGreaterThanOrEqual(result![1].marketImpact);
-    expect(result![1].marketImpact).toBeGreaterThanOrEqual(result![2].marketImpact);
+    expect(result!.value![0].marketImpact).toBeGreaterThanOrEqual(result!.value![1].marketImpact);
+    expect(result!.value![1].marketImpact).toBeGreaterThanOrEqual(result!.value![2].marketImpact);
     // USDT should be first: |10| * 100B / 1e9 * 1.5 = 1500
-    expect(result![0].symbol).toBe("USDT");
+    expect(result!.value![0].symbol).toBe("USDT");
   });
 
   it("returns undefined when no input_snapshot exists", async () => {
@@ -1128,7 +1121,7 @@ describe("collectPsiContributors", () => {
 
     const ctx = makeCollectorCtx(db);
     const result = await collectPsiContributors(ctx);
-    expect(result).toBeUndefined();
+    expect(result.value).toBeUndefined();
   });
 
   it("returns undefined when contributors array is empty", async () => {
@@ -1142,7 +1135,7 @@ describe("collectPsiContributors", () => {
 
     const ctx = makeCollectorCtx(db);
     const result = await collectPsiContributors(ctx);
-    expect(result).toBeUndefined();
+    expect(result.value).toBeUndefined();
   });
 
   it("drops a stale sample and records the degradation instead of presenting old attribution", async () => {
@@ -1159,10 +1152,9 @@ describe("collectPsiContributors", () => {
       },
     ]);
 
-    const degradedReasons: string[] = [];
-    const result = await collectPsiContributors(makeCollectorCtx(db), degradedReasons);
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toContain("psi-contributors-stale");
+    const result = await collectPsiContributors(makeCollectorCtx(db));
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toContain("psi-contributors-stale");
   });
 
   it("marks the collector degraded when the query throws", async () => {
@@ -1174,14 +1166,13 @@ describe("collectPsiContributors", () => {
       },
     ]);
 
-    const degradedReasons: string[] = [];
-    const result = await collectPsiContributors(makeCollectorCtx(db), degradedReasons);
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toContain("psi-contributors-query");
+    const result = await collectPsiContributors(makeCollectorCtx(db));
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toContain("psi-contributors-query");
   });
 });
 
-describe("silent-failure collectors mark degradedReasons", () => {
+describe("silent-failure collectors return degradedReasons", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
@@ -1193,18 +1184,16 @@ describe("silent-failure collectors mark degradedReasons", () => {
 
   it("collectResolvedDepegs records resolved-depegs-query on failure", async () => {
     const db = mockD1([{ match: "depeg_events", rows: [], throwError: new Error("boom") }]);
-    const degradedReasons: string[] = [];
-    const result = await collectResolvedDepegs(makeCollectorCtx(db), degradedReasons);
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toContain("resolved-depegs-query");
+    const result = await collectResolvedDepegs(makeCollectorCtx(db));
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toContain("resolved-depegs-query");
   });
 
   it("collectLiquidityShifts records liquidity-shifts-query on failure", async () => {
     const db = mockD1([{ match: "dex_liquidity", rows: [], throwError: new Error("boom") }]);
-    const degradedReasons: string[] = [];
-    const result = await collectLiquidityShifts(makeCollectorCtx(db), degradedReasons);
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toContain("liquidity-shifts-query");
+    const result = await collectLiquidityShifts(makeCollectorCtx(db));
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toContain("liquidity-shifts-query");
   });
 });
 
@@ -1256,11 +1245,11 @@ describe("collectYieldAnomalies", () => {
 
     expect(result).toBeDefined();
     // DAI should be filtered out (mcap $5M < $10M threshold)
-    expect(result!.length).toBe(2);
-    expect(result!.every((r) => r.mcapUsd >= 10_000_000)).toBe(true);
+    expect(result!.value!.length).toBe(2);
+    expect(result!.value!.every((r) => r.mcapUsd >= 10_000_000)).toBe(true);
     // Should be sorted by mcap * warnings.length descending
-    expect(result![0].symbol).toBe("USDT");
-    expect(result![0].warnings).toEqual(["spike", "divergence"]);
+    expect(result!.value![0].symbol).toBe("USDT");
+    expect(result!.value![0].warnings).toEqual(["spike", "divergence"]);
     const yieldSql = db.getHistory().find((entry) => entry.sql.includes("FROM yield_data"))?.sql;
     expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
   });
@@ -1294,7 +1283,7 @@ describe("collectYieldAnomalies", () => {
 
       const result = await collectYieldAnomalies(makeCollectorCtx(createSqliteD1(sqlite)));
 
-      expect(result?.map((row) => row.symbol)).toEqual(["USDC"]);
+      expect(result.value?.map((row) => row.symbol)).toEqual(["USDC"]);
     } finally {
       sqlite.close();
     }
@@ -1319,7 +1308,7 @@ describe("collectYieldAnomalies", () => {
 
     const ctx = makeCollectorCtx(db);
     const result = await collectYieldAnomalies(ctx);
-    expect(result).toBeUndefined();
+    expect(result.value).toBeUndefined();
   });
 
   it("returns at most 5 results", async () => {
@@ -1342,7 +1331,7 @@ describe("collectYieldAnomalies", () => {
 
     const result = await collectYieldAnomalies(ctx);
     expect(result).toBeDefined();
-    expect(result!.length).toBe(5);
+    expect(result!.value!.length).toBe(5);
   });
 });
 
@@ -1385,13 +1374,13 @@ describe("collectLiquidityShifts", () => {
     // USDT: delta=10 (>=8, mcap $100B) -> included
     // USDC: delta=2 (<8) -> excluded
     // DAI: delta=20 (>=8, but mcap $5M < $10M) -> excluded
-    expect(result!.length).toBe(1);
-    expect(result![0].symbol).toBe("USDT");
-    expect(result![0].scoreDelta).toBe(10);
-    expect(result![0].currentScore).toBe(85);
-    expect(result![0].previousScore).toBe(75);
-    expect(result![0].coverageClass).toBe("primary");
-    expect(result![0].tvlChangePct).toBeCloseTo(0.0417, 4);
+    expect(result!.value!.length).toBe(1);
+    expect(result!.value![0].symbol).toBe("USDT");
+    expect(result!.value![0].scoreDelta).toBe(10);
+    expect(result!.value![0].currentScore).toBe(85);
+    expect(result!.value![0].previousScore).toBe(75);
+    expect(result!.value![0].coverageClass).toBe("primary");
+    expect(result!.value![0].tvlChangePct).toBeCloseTo(0.0417, 4);
   });
 
   it("returns undefined when no shifts exceed threshold", async () => {
@@ -1412,7 +1401,7 @@ describe("collectLiquidityShifts", () => {
 
     const ctx = makeCollectorCtx(db);
     const result = await collectLiquidityShifts(ctx);
-    expect(result).toBeUndefined();
+    expect(result.value).toBeUndefined();
   });
 
   it("keeps a comparable collapse so the editorial layer can judge corroboration", async () => {
@@ -1431,13 +1420,12 @@ describe("collectLiquidityShifts", () => {
       },
     ]);
 
-    const degradedReasons: string[] = [];
-    const result = await collectLiquidityShifts(makeCollectorCtx(db), degradedReasons);
+    const result = await collectLiquidityShifts(makeCollectorCtx(db));
 
     // A real 91% drain must survive collection; suppression is the candidate
     // layer's call, because only it can see prices, flows, and supply.
-    expect(result![0].tvlChangePct).toBeCloseTo(-0.9097, 4);
-    expect(degradedReasons).toEqual([]);
+    expect(result.value![0].tvlChangePct).toBeCloseTo(-0.9097, 4);
+    expect(result.degradedReasons).toEqual([]);
   });
 
   it("drops a pair that straddles a methodology version change", async () => {
@@ -1456,11 +1444,10 @@ describe("collectLiquidityShifts", () => {
       },
     ]);
 
-    const degradedReasons: string[] = [];
-    const result = await collectLiquidityShifts(makeCollectorCtx(db), degradedReasons);
+    const result = await collectLiquidityShifts(makeCollectorCtx(db));
 
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toContain("liquidity-shift-methodology-basis-change");
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toContain("liquidity-shift-methodology-basis-change");
   });
 
   it("drops fallback-sourced rows the public API already marks untrendworthy", async () => {
@@ -1479,11 +1466,10 @@ describe("collectLiquidityShifts", () => {
       },
     ]);
 
-    const degradedReasons: string[] = [];
-    const result = await collectLiquidityShifts(makeCollectorCtx(db), degradedReasons);
+    const result = await collectLiquidityShifts(makeCollectorCtx(db));
 
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toContain("liquidity-shift-non-trendworthy-coverage");
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toContain("liquidity-shift-non-trendworthy-coverage");
   });
 });
 
@@ -1540,15 +1526,15 @@ describe("collectCrossDayTrends", () => {
 
     expect(result).toBeDefined();
     // PSI trajectory should be reversed to chronological
-    expect(result!.psiTrajectory.length).toBe(5);
-    expect(result!.psiTrajectory[0].score).toBe(88); // oldest first
-    expect(result!.psiTrajectory[4].score).toBe(92); // newest last
+    expect(result!.value!.psiTrajectory.length).toBe(5);
+    expect(result!.value!.psiTrajectory[0].score).toBe(88); // oldest first
+    expect(result!.value!.psiTrajectory[4].score).toBe(92); // newest last
     // mcap trajectory
-    expect(result!.mcapTrajectory.length).toBe(5);
-    expect(result!.mcapTrajectory[0].mcapUsd).toBe(196e9);
+    expect(result!.value!.mcapTrajectory.length).toBe(5);
+    expect(result!.value!.mcapTrajectory[0].mcapUsd).toBe(196e9);
     // gauge trajectory: only 3 entries have gauge data, exactly 3 points
-    expect(result!.gaugeTrajectory).toBeDefined();
-    expect(result!.gaugeTrajectory!.length).toBe(3);
+    expect(result!.value!.gaugeTrajectory).toBeDefined();
+    expect(result!.value!.gaugeTrajectory!.length).toBe(3);
   });
 
   it("returns null gauge trajectory when fewer than 3 gauge points", async () => {
@@ -1586,9 +1572,9 @@ describe("collectCrossDayTrends", () => {
     const result = await collectCrossDayTrends(ctx);
 
     expect(result).toBeDefined();
-    expect(result!.psiTrajectory.length).toBe(4);
+    expect(result!.value!.psiTrajectory.length).toBe(4);
     // Only 1 gauge point -> should be null
-    expect(result!.gaugeTrajectory).toBeNull();
+    expect(result!.value!.gaugeTrajectory).toBeNull();
   });
 
   it("returns undefined when fewer than 3 digest entries", async () => {
@@ -1627,7 +1613,7 @@ describe("collectCrossDayTrends", () => {
 
     const ctx = makeCollectorCtx(db);
     const result = await collectCrossDayTrends(ctx);
-    expect(result).toBeUndefined();
+    expect(result.value).toBeUndefined();
   });
 });
 
@@ -1659,7 +1645,7 @@ describe("collectHistoricalContext", () => {
 
     const result = await collectHistoricalContext(makeCollectorCtx(db), 91.2, "BEDROCK", { id: "usdt-tether", symbol: "USDT", name: "Tether USD", changeUsd: 5_000_000, currentMcap: 100_000_000 });
 
-    expect(result).toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 } });
+    expect(result.value).toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 } });
   });
 });
 
@@ -1705,12 +1691,10 @@ describe("collectDewsStress — topSignals enrichment", () => {
         ],
       },
     ]);
-    const degradedReasons: string[] = [];
+    const result = await collectDewsStress(makeCollectorCtx(db));
 
-    const result = await collectDewsStress(makeCollectorCtx(db), degradedReasons);
-
-    expect(result).toBeUndefined();
-    expect(degradedReasons).toContain("dews-published-generation");
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toContain("dews-published-generation");
   });
 
   it("returns topSignals on elevated coins when signals_json is provided", async () => {
@@ -1741,8 +1725,8 @@ describe("collectDewsStress — topSignals enrichment", () => {
     const result = await collectDewsStress(ctx);
 
     expect(result).toBeDefined();
-    expect(result!.elevatedCoins.length).toBe(1);
-    const elevated = result!.elevatedCoins[0];
+    expect(result!.value!.elevatedCoins.length).toBe(1);
+    const elevated = result!.value!.elevatedCoins[0];
     expect(elevated.symbol).toBe("USDT");
     expect(elevated.topSignals).toBeDefined();
     expect(elevated.topSignals!.length).toBe(3); // top 3
@@ -1780,16 +1764,15 @@ describe("collectDewsStress — topSignals enrichment", () => {
       }]),
       { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: history },
     ]);
-    const degradedReasons: string[] = [];
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     try {
-      const result = await collectDewsStress(makeCollectorCtx(db), degradedReasons);
+      const result = await collectDewsStress(makeCollectorCtx(db));
       expect(result).toBeDefined();
-      expect(result!.elevatedCoins.length).toBe(1);
-      if (expectedTopDriver) expect(result!.bandChanges[0].topDriver).toBe(expectedTopDriver);
-      else expect(result!.elevatedCoins[0].topSignals).toEqual([]);
-      if (degradedReason) expect(degradedReasons).toContain(degradedReason);
+      expect(result!.value!.elevatedCoins.length).toBe(1);
+      if (expectedTopDriver) expect(result!.value!.bandChanges[0].topDriver).toBe(expectedTopDriver);
+      else expect(result!.value!.elevatedCoins[0].topSignals).toEqual([]);
+      if (degradedReason) expect(result!.degradedReasons).toContain(degradedReason);
     } finally {
       warnSpy.mockRestore();
     }
@@ -1847,16 +1830,16 @@ describe("collectDewsStress — topSignals enrichment", () => {
 
     expect(result).toBeDefined();
     // bandChanges must recover the top driver from the nested signals map.
-    expect(result!.bandChanges.length).toBe(2);
-    expect(result!.bandChanges[0].topDriver).toBe("pool balance drift");
-    expect(result!.bandCounts.calm).toBeGreaterThanOrEqual(1);
-    expect(result!.bandChanges.find((change) => change.symbol === "USDC")).toMatchObject({
+    expect(result!.value!.bandChanges.length).toBe(2);
+    expect(result!.value!.bandChanges[0].topDriver).toBe("pool balance drift");
+    expect(result!.value!.bandCounts.calm).toBeGreaterThanOrEqual(1);
+    expect(result!.value!.bandChanges.find((change) => change.symbol === "USDC")).toMatchObject({
       from: "WATCH",
       to: "ALERT",
     });
     // elevatedCoins must surface non-empty topSignals — previously the Object.entries
     // iteration hit {signals,amplifiers} and filtered everything out.
-    const elevated = result!.elevatedCoins[0];
+    const elevated = result!.value!.elevatedCoins[0];
     expect(elevated.topSignals!.length).toBe(3);
     expect(elevated.topSignals![0].name).toBe("pool balance drift");
   });
@@ -1898,7 +1881,7 @@ describe("collectDewsStress — topSignals enrichment", () => {
 
     const flat = await collectDewsStress(makeCollectorCtx(flatDb));
     const wrapped = await collectDewsStress(makeCollectorCtx(wrappedDb));
-    expect(wrapped!.elevatedCoins[0].topSignals).toEqual(flat!.elevatedCoins[0].topSignals);
+    expect(wrapped!.value!.elevatedCoins[0].topSignals).toEqual(flat!.value!.elevatedCoins[0].topSignals);
   });
 });
 
