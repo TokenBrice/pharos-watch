@@ -18696,6 +18696,90 @@
           "quality": "limited"
         }
       }
+    },
+    {
+      "assetId": "zeusd-zoth",
+      "archetype": "cdp",
+      "reviewedAt": "2026-08-29",
+      "sources": [
+        {
+          "label": "Zoth current ZeUSD mechanics (retrieved 2026-08-29)",
+          "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd.md"
+        },
+        {
+          "label": "Zoth Safe LTV formula and risk-input design (retrieved 2026-08-29)",
+          "url": "https://docs.zoth.io/zoth/tech-center/ltv-mechanism.md"
+        },
+        {
+          "label": "Zoth ZeDP position-owner redemption documentation (retrieved 2026-08-29)",
+          "url": "https://docs.zoth.io/zoth/products/zeusd-debt-position-zedp.md"
+        },
+        {
+          "label": "Zoth contract deployment page: current V2 and deprecated V1 boundary (retrieved 2026-08-29)",
+          "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments.md"
+        },
+        {
+          "label": "Zoth ZeUSD risk and liquidation disclosures (retrieved 2026-08-29)",
+          "url": "https://docs.zoth.io/zoth/resources-1/zeusd-risks-and-mitigation-strategies.md"
+        },
+        {
+          "label": "Tracked ZeUSD V1 Router verified implementation (Blockscout API, retrieved 2026-08-29)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xea25b537209ec4aefbc7252c6a49b132639ea677"
+        },
+        {
+          "label": "Tracked ZeUSD V1 CollateralVault verified implementation (Blockscout API, retrieved 2026-08-29)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfdfc611e17298DF89c0FF6EF9c5059a4Bd9602b1"
+        },
+        {
+          "label": "Ethereum PublicNode RPC reads pinned at block 25862611 (2026-08-29T18:09:47Z)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Pinned Ethereum block 25862611 (retrieved 2026-08-29)",
+          "url": "https://eth.blockscout.com/block/25862611"
+        }
+      ],
+      "notes": "Reviewed 2026-08-29 against the current Zoth docs, the separately labeled deprecated V1 deployment, verified V1 source, and pinned Ethereum reads at block 25862611 (2026-08-29T18:09:47Z). The current docs give a Safe LTV formula and describe Zoth-initiated liquidation or reinvestment, but do not establish that those current V2 claims are the enforcement of the tracked V1 stack. The V1 CollateralVault source stores one LTV and one sub-vault per registered collateral; the pinned V1 configuration has 99% LTV on seven records and 85% on the USD0++ record. The V1 Router source has mint and burn only, no liquidation or auction callable, and its depositsPaused() read is true. Its burn path requires the ZeDP position owner, burns the exact recorded ZeUSD debt, and starts the withdrawal flow; this is position-owner burn-to-withdraw, not a general ZeUSD-holder redemption. The pinned CollateralVault read found eight registered records and six collateral addresses represented in 233 live ZeDP positions; STBT and wSTBT share one sub-vault, several sub-vaults report paused/emergency state, and the USD0++ sub-vault status views revert. Summing all 233 position metadata records gives 66,872,749.307839 recorded ZeUSD debt, while the canonical token totalSupply read is 27,645,937.189696; the mixed legacy/bridged state and incomplete direct sub-vault inventory are not a complete value-reconciled balance sheet, so no ratio is inferred. Zoth's RWA quality, diversification, and issuer-described contingency actions are not committed recapitalization. The reviewed docs and verified V1 Router/Vault source disclose no dedicated insurance or stability pool, bad-debt waterfall, deficit allocation, or recapitalization obligation.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "A system collateralization ratio is not reproducible for the tracked deprecated V1 deployment: the verified contracts expose no aggregate collateral/debt balance-sheet accessor, and the pinned exhaustive position read spans paused or emergency branches plus a registered USD0++ sub-vault whose status views revert. The 233 live ZeDP records and direct token balances do not form a complete, value-reconciled collateral inventory; token totalSupply and list/configured prices are not substituted for that missing read.",
+          "sourceUrl": "https://ethereum-rpc.publicnode.com"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The tracked V1 Router and CollateralVault verified implementations expose no liquidation or auction entrypoint and no dedicated stability, insurance, or debt-offset pool. The router is depositsPaused at the pinned block. Current documentation about issuer-initiated liquidation or reinvestment does not establish committed V1 liquidation capital, so no capacity ratio is measurable.",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xea25b537209ec4aefbc7252c6a49b132639ea677"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "quality": "limited"
+        },
+        "backstop": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Zoth risk and mechanics disclosures describe RWA quality, diversification, and contingency/liquidation actions, but publish no reserve surplus, insurance fund, committed shortfall capital, or legally binding recapitalization obligation for tracked V1. Issuer discretion and the quality of RWA collateral are not a backstop commitment.",
+          "sourceUrl": "https://docs.zoth.io/zoth/resources-1/zeusd-risks-and-mitigation-strategies.md"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed current/deprecated deployment disclosures and verified V1 Router source publish no source-backed global shutdown, bad-debt waterfall, deficit allocation, socialization, or recapitalization procedure. The pause switch blocks V1 deposits and burns but is not evidence of a bad-debt waterfall.",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xea25b537209ec4aefbc7252c6a49b132639ea677"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
     }
   ]
 }

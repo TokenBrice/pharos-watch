@@ -2,13 +2,13 @@
   "id": "usdr-ring",
   "name": "Ring USD",
   "symbol": "USDR",
-  "oneLiner": "USDR is Ring Protocol's centrally managed synthetic dollar minted against protocol-controlled crypto collateral, with no public redemption route documented.",
+  "oneLiner": "USDR is Ring Protocol's centrally controlled synthetic-dollar token; its backing composition and holder-exercisable redemption path are not publicly documented.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
-  "pegMechanism": "USDR is collateralized by a Protocol Controlled Value (PCV) reserve funded through bonding-curve issuance; PCV is allocated to liquidity and the token can be over- or under-collateralized depending on reserve conditions; no holder-exercisable redemption route is source-reviewed for Pharos backstop scoring",
+  "collateral": "Undisclosed. Ring's current docs do not identify USDR reserve assets or allocations; the verified USDR/Core contracts expose no reserve ledger or PCV linkage. CoinGecko's circular-liquidity description is secondary and uncorroborated; archived RUSD PCV docs refer to different legacy addresses.",
+  "pegMechanism": "Undisclosed for the tracked deployment. The verified AssetToken permits role-gated minting and burning through Core but exposes no bonding-curve, PCV, reserve, or holder-redemption function. CoinGecko claims circular liquidity and instant redemptions, while archived Ring docs describe an older RUSD PCV/bonding-curve design; neither is a current source mapping that mechanism to the tracked USDR deployment.",
   "mechanismArchetype": "algorithmic",
   "detailProvider": "coingecko",
   "geckoId": "ring-usd",
