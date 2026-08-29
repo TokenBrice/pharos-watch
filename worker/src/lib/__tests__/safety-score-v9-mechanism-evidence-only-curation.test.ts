@@ -48,6 +48,9 @@ const REVIEW_DATE_OVERRIDES: Partial<Record<keyof typeof EVIDENCE_ONLY_TARGETS, 
   "pgold-pleasing": "2026-08-11",
   "usdgo-osl": "2026-08-11",
   "xaum-matrixdock": "2026-08-11",
+  "eurq-quantoz": "2026-08-29",
+  "idrt-rupiah-token": "2026-08-29",
+  "usdq-quantoz": "2026-08-29",
 };
 
 describe("Safety Score V9 evidence-only mechanism curation", () => {

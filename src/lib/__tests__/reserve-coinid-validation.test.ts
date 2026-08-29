@@ -69,10 +69,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Substring artifact: the USDS match sits inside sodaSUSDS, a below-0.02% wrapped sUSDS tail position that carries no separate weight.",
   ],
   [
-    "uty-xsy::USDC deposits swept to custodial managed backing::USDC",
-    "The reviewed sources establish the USDC mint and redemption envelope but not the current assets or positions held after the custodial sweep.",
-  ],
-  [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::USDC",
     "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
   ],
