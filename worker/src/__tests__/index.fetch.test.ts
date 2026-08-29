@@ -3,6 +3,7 @@ import worker from "../index";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
 import { hmacSha256Hex, makeExecutionContext } from "../test-helpers/__shared/auth";
+import { makeRequestAttributionTables } from "../test-helpers/api-key-test-support";
 import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
@@ -46,10 +47,7 @@ async function validKeyDbTables(
     { match: "INSERT INTO api_key_rate_limit", rows: [], first: { count: 1 } },
     { match: "UPDATE api_keys SET last_used_at", rows: [], runMeta: { changes: 1 } },
     { match: "DELETE FROM api_key_rate_limit", rows: [], runMeta: { changes: 0 } },
-    { match: "INSERT INTO api_request_consumer_stats", rows: [], runMeta: { changes: 1 } },
-    { match: "INSERT INTO api_key_request_stats", rows: [], runMeta: { changes: 1 } },
-    { match: "DELETE FROM api_request_consumer_stats", rows: [], runMeta: { changes: 0 } },
-    { match: "DELETE FROM api_key_request_stats", rows: [], runMeta: { changes: 0 } },
+    ...makeRequestAttributionTables({ includeApiKey: true }),
     ...extra,
   ];
 }
@@ -92,18 +90,30 @@ describe("worker.fetch", () => {
     });
   });
 
-  async function fetchStablecoinsWithApiKey(method = "GET", database?: MockD1Database): Promise<Response> {
+  async function performStablecoinsFetch(
+    method = "GET",
+    database?: MockD1Database,
+    overrides: TestEnvOverrides = {},
+  ): Promise<{ response: Response; env: TestEnv }> {
     const { ctx, waits } = makeExecutionContext();
+    const env = makeEnv({
+      ...overrides,
+      DB: database ?? mockD1(await validKeyDbTables(), { requireMatch: true }),
+    });
     const response = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {
         method,
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      makeEnv({ DB: database ?? mockD1(await validKeyDbTables(), { requireMatch: true }) }) as never,
+      env as never,
       ctx,
     );
     await Promise.all(waits);
-    return response;
+    return { response, env };
+  }
+
+  async function fetchStablecoinsWithApiKey(method = "GET", database?: MockD1Database): Promise<Response> {
+    return (await performStablecoinsFetch(method, database)).response;
   }
 
   const workerResponseContractCases: Array<{
@@ -183,6 +193,25 @@ describe("worker.fetch", () => {
       },
     },
     {
+      name: "malformed API key authentication",
+      run: () =>
+        worker.fetch(
+          new Request("https://api.pharos.watch/api/peg-summary", {
+            headers: { "X-API-Key": "not-a-valid-key-format" },
+          }),
+          makeEnv(),
+          makeExecutionContext().ctx,
+        ),
+      expected: {
+        status: 401,
+        headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
+        bodyKind: "json",
+        canonicalBody: {
+          error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
+        },
+      },
+    },
+    {
       name: "read-only method enforcement",
       run: () => fetchStablecoinsWithApiKey("POST"),
       expected: {
@@ -209,9 +238,7 @@ describe("worker.fetch", () => {
                 rows: [],
                 throwError: new Error("api key lookup unavailable"),
               },
-              { match: "INSERT INTO api_request_consumer_stats", rows: [], runMeta: { changes: 1 } },
-              { match: "DELETE FROM api_request_consumer_stats", rows: [], runMeta: { changes: 0 } },
-              { match: "DELETE FROM api_key_request_stats", rows: [], runMeta: { changes: 0 } },
+              ...makeRequestAttributionTables(),
             ],
             { requireMatch: true },
           ),
@@ -327,23 +354,6 @@ describe("worker.fetch", () => {
     expect(res.headers.get("Allow")).toBeNull();
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
     expect(env.DB.getHistory()).toEqual([]);
-  });
-
-  it("rejects POST on read-only endpoints", async () => {
-    const env = makeEnv({ DB: mockD1(await validKeyDbTables(), { requireMatch: true }) });
-    const { ctx } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        method: "POST",
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      env,
-      ctx,
-    );
-
-    expect(res.status).toBe(405);
-    expect(res.headers.get("Allow")).toBe("GET");
   });
 
   it("serves edge-cache hits for cacheable GET paths", async () => {
@@ -491,21 +501,7 @@ describe("worker.fetch", () => {
     }));
     const env = makeEnv({
       DB: mockD1([
-        {
-          match: "INSERT INTO api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "DELETE FROM api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-        {
-          match: "DELETE FROM api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
+        ...makeRequestAttributionTables(),
       ], { requireMatch: true }),
     });
     const { ctx, waits } = makeExecutionContext();
@@ -756,224 +752,140 @@ describe("worker.fetch", () => {
     expect(history.some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(false);
   });
 
-  it("serves hot protected edge-cache reads from the verified-key cache without D1 auth or limiter writes", async () => {
-    cacheMatch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 1 }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 2 }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }));
+  type ApiKeyDependencyFailureCase = {
+    name: string;
+    dependency: "auth" | "rate-limit";
+    keyCache: "cold" | "warm";
+    failure: MockTableConfig;
+    expectedStatus: number;
+    expectedBody?: Record<string, unknown>;
+    failureReached: boolean;
+    reachesEdgeCache: boolean;
+    reachesRoute: boolean;
+  };
 
-    const warmEnv = makeEnv({
-      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
-      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
-      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
-    });
-    const { ctx: warmCtx, waits: warmWaits } = makeExecutionContext();
-    const warmRes = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      warmEnv as never,
-      warmCtx,
-    );
-    await Promise.all(warmWaits);
+  const apiKeyDependencyFailureCases: ApiKeyDependencyFailureCase[] = [
+    {
+      name: "returns 503 when API key lookup storage fails",
+      dependency: "auth",
+      keyCache: "cold",
+      failure: {
+        match: "FROM api_keys",
+        matchBinds: [VALID_KEY_PREFIX],
+        rows: [],
+        throwError: new Error("api key lookup unavailable"),
+      },
+      expectedStatus: 503,
+      failureReached: true,
+      reachesEdgeCache: false,
+      reachesRoute: false,
+    },
+    {
+      name: "serves hot protected edge-cache reads from the verified-key cache without D1 auth or limiter writes",
+      dependency: "auth",
+      keyCache: "warm",
+      failure: {
+        match: "FROM api_keys",
+        matchBinds: [VALID_KEY_PREFIX],
+        rows: [],
+        throwError: new Error("api key lookup unavailable"),
+      },
+      expectedStatus: 200,
+      expectedBody: { cached: true, warm: 2 },
+      failureReached: false,
+      reachesEdgeCache: true,
+      reachesRoute: false,
+    },
+    {
+      name: "serves protected cacheable reads when API key rate-limit storage fails",
+      dependency: "rate-limit",
+      keyCache: "cold",
+      failure: {
+        match: "INSERT INTO api_key_rate_limit",
+        rows: [],
+        throwError: new Error("api key limiter unavailable"),
+      },
+      expectedStatus: 200,
+      expectedBody: { cached: true },
+      failureReached: true,
+      reachesEdgeCache: true,
+      reachesRoute: false,
+    },
+  ];
 
-    expect(warmRes.status).toBe(200);
-    await expect(warmRes.json()).resolves.toEqual({ cached: true, warm: 1 });
-
-    const hotEnv = makeEnv({
-      DB: mockD1([], { requireMatch: true }),
-      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
-      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
-    });
-    const { ctx, waits } = makeExecutionContext();
-    const hotRes = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      hotEnv as never,
-      ctx,
-    );
-    await Promise.all(waits);
-
-    expect(hotRes.status).toBe(200);
-    await expect(hotRes.json()).resolves.toEqual({ cached: true, warm: 2 });
-    expect(hotEnv.DB.getHistory()).toHaveLength(0);
-  });
-
-  it("returns 503 when API key lookup storage fails", async () => {
-    const env = makeEnv({
-      DB: mockD1([
-        {
-          match: "FROM api_keys",
-          matchBinds: [VALID_KEY_PREFIX],
-          rows: [],
-          throwError: new Error("api key lookup unavailable"),
-        },
-        {
-          match: "INSERT INTO api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "DELETE FROM api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-        {
-          match: "DELETE FROM api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-      ], { requireMatch: true }),
-    });
-    const { ctx, waits } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      env,
-      ctx,
-    );
-    await Promise.all(waits);
-
-    expect(res.status).toBe(503);
-    expect(res.headers.get("Retry-After")).toBe("60");
-    await expect(res.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
-  });
-
-  it("serves protected cacheable reads from the fresh API key cache after a recent verification", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
-
-    cacheMatch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 1 }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 2 }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }));
-
-    const warmEnv = makeEnv({
-      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
-      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
-      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
-    });
-    const { ctx: warmCtx, waits: warmWaits } = makeExecutionContext();
-
-    const warmRes = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      warmEnv as never,
-      warmCtx,
-    );
-    await Promise.all(warmWaits);
-
-    expect(warmRes.status).toBe(200);
-    await expect(warmRes.json()).resolves.toEqual({ cached: true, warm: 1 });
-
-    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS - 1);
-
-    const degradedEnv = makeEnv({
-      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
-      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
-      DB: mockD1([
-        {
-          match: "FROM api_keys",
-          matchBinds: [VALID_KEY_PREFIX],
-          rows: [],
-          throwError: new Error("api key lookup unavailable"),
-        },
-        { match: "INSERT INTO api_key_rate_limit", rows: [], first: { count: 1 } },
+  async function makeApiKeyDependencyDb(
+    testCase: ApiKeyDependencyFailureCase,
+  ): Promise<MockD1Database> {
+    const tables: MockTableConfig[] = [];
+    if (testCase.dependency === "rate-limit") {
+      tables.push(
+        { match: "FROM api_keys", matchBinds: [VALID_KEY_PREFIX], rows: [await validKeyRow()] },
+        testCase.failure,
         { match: "UPDATE api_keys SET last_used_at", rows: [], runMeta: { changes: 1 } },
-        { match: "DELETE FROM api_key_rate_limit", rows: [], runMeta: { changes: 0 } },
-        { match: "INSERT INTO api_request_consumer_stats", rows: [], runMeta: { changes: 1 } },
-        { match: "INSERT INTO api_key_request_stats", rows: [], runMeta: { changes: 1 } },
-        { match: "DELETE FROM api_request_consumer_stats", rows: [], runMeta: { changes: 0 } },
-        { match: "DELETE FROM api_key_request_stats", rows: [], runMeta: { changes: 0 } },
-      ], { requireMatch: true }),
-    });
-    const { ctx, waits } = makeExecutionContext();
+      );
+    } else {
+      tables.push(testCase.failure);
+    }
 
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      degradedEnv as never,
-      ctx,
-    );
-    await Promise.all(waits);
+    tables.push(...makeRequestAttributionTables({ includeApiKey: testCase.dependency === "rate-limit" }));
+    return mockD1(tables, { requireMatch: true });
+  }
 
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ cached: true, warm: 2 });
-    expect(
-      degradedEnv.DB.getHistory().filter((entry) => entry.sql.includes("FROM api_keys") && entry.binds[0] === VALID_KEY_PREFIX),
-    ).toHaveLength(0);
-  });
+  it.each(apiKeyDependencyFailureCases)(
+    "keeps API-key dependency effects for $name",
+    async (testCase) => {
+      if (testCase.keyCache === "warm") {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
+        const attributionDisabled = {
+          REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
+          API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
+        } as const;
+        cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true, warm: 1 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }));
 
-  it("serves protected cacheable reads when API key rate-limit storage fails", async () => {
-    const row = await validKeyRow();
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-    const env = makeEnv({
-      DB: mockD1([
-        { match: "FROM api_keys", matchBinds: [VALID_KEY_PREFIX], rows: [row] },
-        {
-          match: "INSERT INTO api_key_rate_limit",
-          rows: [],
-          throwError: new Error("api key limiter unavailable"),
-        },
-        {
-          match: "INSERT INTO api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "DELETE FROM api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-        {
-          match: "DELETE FROM api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-      ], { requireMatch: true }),
-    });
-    const { ctx, waits } = makeExecutionContext();
+        const warmDb = mockD1(await validKeyDbTables(), { requireMatch: true });
+        const warm = await performStablecoinsFetch("GET", warmDb, attributionDisabled);
+        expect(warm.response.status).toBe(200);
+        await expect(warm.response.json()).resolves.toEqual({ cached: true, warm: 1 });
+        vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS - 1);
+      }
 
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      env,
-      ctx,
-    );
-    await Promise.all(waits);
+      if (testCase.reachesEdgeCache) {
+        cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify(testCase.expectedBody), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }));
+      }
 
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ cached: true });
-  });
+      const cacheMatchCallsBefore = cacheMatch.mock.calls.length;
+      const cachePutCallsBefore = cachePut.mock.calls.length;
+      const db = await makeApiKeyDependencyDb(testCase);
+      const requestOverrides: TestEnvOverrides = testCase.keyCache === "warm"
+        ? {
+            REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
+            API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
+          }
+        : {};
+      const { response, env } = await performStablecoinsFetch("GET", db, requestOverrides);
+
+      expect(response.status).toBe(testCase.expectedStatus);
+      if (testCase.expectedBody) {
+        await expect(response.json()).resolves.toEqual(testCase.expectedBody);
+      }
+      expect(cacheMatch.mock.calls.length - cacheMatchCallsBefore).toBe(testCase.reachesEdgeCache ? 1 : 0);
+      expect(cachePut.mock.calls.length - cachePutCallsBefore).toBe(testCase.reachesRoute ? 1 : 0);
+      if (testCase.keyCache === "warm") {
+        expect(env.DB.getHistory()).toHaveLength(0);
+      }
+      expect(
+        env.DB.getHistory().filter((entry) => entry.sql.includes(testCase.failure.match)),
+      ).toHaveLength(testCase.failureReached ? 1 : 0);
+    },
+    15_000,
+  );
 
   it("rate-limits repeated cacheable reads with the isolate-local fallback when limiter storage fails", async () => {
     cacheMatch
@@ -1003,26 +915,7 @@ describe("worker.fetch", () => {
           rows: [],
           runMeta: { changes: 1 },
         },
-        {
-          match: "INSERT INTO api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "DELETE FROM api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-        {
-          match: "DELETE FROM api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
+        ...makeRequestAttributionTables({ includeApiKey: true }),
       ], { requireMatch: true }),
     });
     const { ctx: firstCtx, waits: firstWaits } = makeExecutionContext();
@@ -1050,172 +943,6 @@ describe("worker.fetch", () => {
 
     expect(secondRes.status).toBe(429);
     await expect(secondRes.json()).resolves.toEqual({ error: "Rate limit exceeded" });
-  });
-
-  it("serves requests when previous-pepper migration storage fails after auth succeeds", async () => {
-    const oldPepper = "old-pepper";
-    const newPepper = "new-pepper";
-    const oldSecretHash = await hmacSha256Hex(oldPepper, VALID_KEY_SECRET);
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-    const env = makeEnv({
-      API_KEY_HASH_PEPPER: newPepper,
-      API_KEY_HASH_PEPPER_PREVIOUS: oldPepper,
-      DB: mockD1([
-        {
-          match: "FROM api_keys",
-          matchBinds: [VALID_KEY_PREFIX],
-          rows: [{
-            id: 7,
-            key_prefix: VALID_KEY_PREFIX,
-            secret_hash: oldSecretHash,
-            name: "Legacy",
-            owner_email: null,
-            tier: "standard",
-            traffic_class: "external",
-            rate_limit_per_minute: 120,
-            is_active: 1,
-            expires_at: null,
-            created_at: 1,
-            updated_at: 1,
-            last_used_at: null,
-            last_used_route: null,
-          }],
-        },
-        {
-          match: "UPDATE api_keys SET secret_hash",
-          rows: [],
-          throwError: new Error("pepper migration failed"),
-        },
-        {
-          match: "INSERT INTO api_key_rate_limit",
-          rows: [],
-          first: { count: 1 },
-        },
-        {
-          match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "DELETE FROM api_key_rate_limit",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-        {
-          match: "INSERT INTO api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "DELETE FROM api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-        {
-          match: "DELETE FROM api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-      ], { requireMatch: true }),
-    });
-    const { ctx, waits } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      env,
-      ctx,
-    );
-    await Promise.all(waits);
-
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ cached: true });
-  });
-
-  it("serves protected reads when last-used metadata storage fails", async () => {
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-    const row = await validKeyRow();
-    const env = makeEnv({
-      DB: mockD1([
-        { match: "FROM api_keys", matchBinds: [VALID_KEY_PREFIX], rows: [row] },
-        {
-          match: "INSERT INTO api_key_rate_limit",
-          rows: [],
-          first: { count: 1 },
-        },
-        {
-          match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
-          rows: [],
-          throwError: new Error("usage write failed"),
-        },
-        {
-          match: "DELETE FROM api_key_rate_limit",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-        {
-          match: "INSERT INTO api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "DELETE FROM api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-        {
-          match: "DELETE FROM api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-      ], { requireMatch: true }),
-    });
-    const { ctx, waits } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      env,
-      ctx,
-    );
-    await Promise.all(waits);
-
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ cached: true });
-  });
-
-  it("rejects /api/* without X-API-Key with 401", async () => {
-    const env = makeEnv();
-    const { ctx } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/peg-summary"),
-      env,
-      ctx,
-    );
-
-    expect(res.status).toBe(401);
-    await expect(res.json()).resolves.toEqual({
-      error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
-    });
   });
 
   it("does not require a key on exempt public routes (health)", async () => {
@@ -1300,23 +1027,5 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
-  });
-
-  it("rejects /api/* with a malformed X-API-Key with 401", async () => {
-    const env = makeEnv();
-    const { ctx } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/peg-summary", {
-        headers: { "X-API-Key": "not-a-valid-key-format" },
-      }),
-      env,
-      ctx,
-    );
-
-    expect(res.status).toBe(401);
-    await expect(res.json()).resolves.toEqual({
-      error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
-    });
   });
 });

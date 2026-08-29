@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { hmacSha256Hex } from "../../test-helpers/__shared/auth";
 import { makeApiKeyRow } from "../../test-helpers/__shared/fixtures";
+import { makeApiKeyMutationTables } from "../../test-helpers/api-key-test-support";
 import {
   API_KEY_AUTH_CACHE_MAX_ENTRIES,
   API_KEY_AUTH_CACHE_TTL_MS,
@@ -273,34 +274,17 @@ describe("api key helpers", () => {
   it("updates expiry metadata and preserves explicit null on update", async () => {
     const db = mockD1(
       [
-        {
-          match: "key_prefix,\n       secret_hash,\n       name",
-          matchBinds: [7],
-          first: makeApiKeyRow({
+        ...makeApiKeyMutationTables({
+          existingRow: {
             owner_email: "ops@pharos.watch",
             expires_at: 1_800,
-          }),
-          rows: [],
-        },
-        {
-          match: "UPDATE api_keys",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO api_key_audit_log",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "key_prefix,\n       name,\n       owner_email",
-          matchBinds: [7],
-          first: makeApiKeyRow({
+          },
+          postMutationRow: {
             owner_email: "ops@pharos.watch",
+            expires_at: null,
             updated_at: 2_000,
-          }),
-          rows: [],
-        },
+          },
+        }),
       ],
       { requireMatch: true },
     );
@@ -349,38 +333,20 @@ describe("api key helpers", () => {
   it("preserves the current expiry when rotating a key", async () => {
     const db = mockD1(
       [
-        {
-          match: "key_prefix,\n       secret_hash,\n       name",
-          matchBinds: [7],
-          first: makeApiKeyRow({
+        ...makeApiKeyMutationTables({
+          existingRow: {
             owner_email: "ops@pharos.watch",
             expires_at: 5_000,
             last_used_at: 100,
             last_used_route: "/api/stablecoins",
-          }),
-          rows: [],
-        },
-        {
-          match: "UPDATE api_keys",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO api_key_audit_log",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "key_prefix,\n       name,\n       owner_email",
-          matchBinds: [7],
-          first: makeApiKeyRow({
+          },
+          postMutationRow: {
             key_prefix: "fedcba9876543210",
             owner_email: "ops@pharos.watch",
             expires_at: 5_000,
             updated_at: 2_000,
-          }),
-          rows: [],
-        },
+          },
+        }),
       ],
       { requireMatch: true },
     );

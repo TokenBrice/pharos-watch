@@ -16,6 +16,7 @@ import {
   handleApiKeys,
   handleCredentialLifecycleSummary,
 } from "./api-keys.test-helpers";
+import { makeApiKeyMutationTables, makeRequestAttributionTables } from "../../test-helpers/api-key-test-support";
 import { resetApiKeyStateForTests } from "../../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../../lib/request-source-attribution";
 
@@ -168,34 +169,15 @@ describe("api key handlers", () => {
   it("updates expiresAt through the admin handler", async () => {
     const db = mockD1(
       [
-        {
-          match: "key_prefix,\n       secret_hash,\n       name",
-          matchBinds: [7],
-          first: makeApiKeyRow({
+        ...makeApiKeyMutationTables({
+          existingRow: {
             owner_email: "ops@pharos.watch",
-          }),
-          rows: [],
-        },
-        {
-          match: "UPDATE api_keys",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO api_key_audit_log",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "key_prefix,\n       name,\n       owner_email",
-          matchBinds: [7],
-          first: makeApiKeyRow({
-            owner_email: "ops@pharos.watch",
+          },
+          postMutationRow: {
             expires_at: 5_000,
             updated_at: 2_000,
-          }),
-          rows: [],
-        },
+          },
+        }),
       ],
       { requireMatch: true },
     );
@@ -252,36 +234,18 @@ describe("api key handlers", () => {
   it("preserves the current expiry when rotating a key", async () => {
     const db = mockD1(
       [
-        {
-          match: "FROM api_keys",
-          matchBinds: [7],
-          first: makeApiKeyRow({
+        ...makeApiKeyMutationTables({
+          existingRow: {
             owner_email: "ops@pharos.watch",
             expires_at: 5_000,
-          }),
-          rows: [],
-        },
-        {
-          match: "UPDATE api_keys",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO api_key_audit_log",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "key_prefix,\n       name,\n       owner_email",
-          matchBinds: [7],
-          first: makeApiKeyRow({
+          },
+          postMutationRow: {
             key_prefix: "fedcba9876543210",
             owner_email: "ops@pharos.watch",
             expires_at: 5_000,
             updated_at: 2_000,
-          }),
-          rows: [],
-        },
+          },
+        }),
       ],
       { requireMatch: true },
     );
@@ -306,28 +270,10 @@ describe("api key handlers", () => {
   it("reports rotation readback failure as unknown without exposing a replacement token", async () => {
     const db = mockD1(
       [
-        {
-          match: "key_prefix,\n       name,\n       owner_email",
-          matchBinds: [7],
-          first: null,
-          rows: [],
-        },
-        {
-          match: "key_prefix,\n       secret_hash,\n       name",
-          matchBinds: [7],
-          first: makeApiKeyRow({ owner_email: "ops@pharos.watch" }),
-          rows: [],
-        },
-        {
-          match: "UPDATE api_keys",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO api_key_audit_log",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
+        ...makeApiKeyMutationTables({
+          existingRow: { owner_email: "ops@pharos.watch" },
+          postMutationRow: null,
+        }),
       ],
       { requireMatch: true },
     );
@@ -367,21 +313,7 @@ describe("api key handlers", () => {
           }),
           rows: [],
         },
-        {
-          match: "INSERT INTO api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "DELETE FROM api_request_consumer_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
-        {
-          match: "DELETE FROM api_key_request_stats",
-          rows: [],
-          runMeta: { changes: 0 },
-        },
+        ...makeRequestAttributionTables(),
       ],
       { requireMatch: true },
     );
