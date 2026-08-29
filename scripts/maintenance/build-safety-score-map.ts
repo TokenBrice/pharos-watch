@@ -2151,13 +2151,25 @@ function assertSaneDeltas(
     if (mcapDelta > Math.max(1, priorTier.mcapUsd * 0.25)) {
       throw new Error(`Tier ${tier} supply moved from ${priorTier.mcapUsd} to ${currentTier.mcap} (>25%) since the previous snapshot — refusing an unexplained supply shift`);
     }
-    const priorLeader = previous.mapSummary.tiers.find((entry) => entry.tier === tier)!.leaders[0];
+    const priorLeader = priorTier.leaders[0];
     const currentLeader = currentTier.leaders[0];
-    if ((priorLeader == null) !== (currentLeader == null) || (priorLeader != null && currentLeader != null && priorLeader.symbol !== currentLeader.symbol)) {
+    if ((priorLeader == null) !== (currentLeader == null)) {
       throw new Error(`Tier ${tier} leader changed since the previous snapshot — refusing an unexplained leader shift`);
     }
-    if (priorLeader != null && currentLeader != null && Math.abs(currentLeader.mcap - priorLeader.mcapUsd) > Math.max(1, priorLeader.mcapUsd * 0.25)) {
-      throw new Error(`Tier ${tier} leader supply moved from ${priorLeader.mcapUsd} to ${currentLeader.mcap} (>25%) since the previous snapshot — refusing an unexplained leader shift`);
+    if (priorLeader != null && currentLeader != null) {
+      // A swap between near-tied neighbours is ordinary market movement (the
+      // 2026-08-29 BUIDL/USYC flip sat 0.6% apart and blocked the digest map),
+      // so a new leader is accepted when it already sat in the prior top-3 and
+      // its own supply moved within the same 25% tolerance. A leader from
+      // outside the recorded top-3 would need a one-day move the per-tier
+      // supply guards should never allow — that still reads as a broken join.
+      const priorEntry = priorTier.leaders.find((leader) => leader.symbol === currentLeader.symbol);
+      if (priorEntry == null) {
+        throw new Error(`Tier ${tier} leader changed to ${currentLeader.symbol}, absent from the previous snapshot's top ${priorTier.leaders.length} — refusing an unexplained leader shift`);
+      }
+      if (Math.abs(currentLeader.mcap - priorEntry.mcapUsd) > Math.max(1, priorEntry.mcapUsd * 0.25)) {
+        throw new Error(`Tier ${tier} leader ${currentLeader.symbol} supply moved from ${priorEntry.mcapUsd} to ${currentLeader.mcap} (>25%) since the previous snapshot — refusing an unexplained leader shift`);
+      }
     }
   }
 

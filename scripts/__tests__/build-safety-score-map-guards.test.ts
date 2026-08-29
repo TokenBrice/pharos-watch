@@ -573,6 +573,50 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     expect(run.stderr).toMatch(/Tier A count moved/);
   });
 
+  interface SnapshotLeader { symbol: string; score: number; mcapUsd: number }
+  function tierLeaders(snapshotBody: unknown, tier: string): SnapshotLeader[] {
+    const body = snapshotBody as { mapSummary: { tiers: Array<{ tier: string; leaders: SnapshotLeader[] }> } };
+    return body.mapSummary.tiers.find((entry) => entry.tier === tier)!.leaders;
+  }
+
+  it("tolerates a leader swap between the prior top-3 when supplies moved within tolerance", async () => {
+    const prior = universe({ count: 20 });
+    const body = validSnapshot(prior);
+    // Yesterday C1 narrowly led tier A over C0; today the live data has C0
+    // ahead again. Both coins sat in the recorded top-3 and neither supply
+    // moved 25%, so this is ordinary market movement, not a broken join.
+    const leaders = tierLeaders(body, "A");
+    [leaders[0], leaders[1]] = [leaders[1], leaders[0]];
+    const path = snapshot(scratch, body);
+    const run = await runGenerator(prior, { args: ["--previous-snapshot", path], stopBeforeRender: true });
+    expect(run.stderr).not.toMatch(/leader/);
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it("refuses a leader that was absent from the previous snapshot's top-3", async () => {
+    const prior = universe({ count: 20 });
+    const body = validSnapshot(prior);
+    for (const leader of tierLeaders(body, "A")) leader.symbol = `X${leader.symbol}`;
+    const path = snapshot(scratch, body);
+    const run = await runGenerator(prior, { args: ["--previous-snapshot", path] });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Tier A leader changed to C0, absent from the previous snapshot's top 3 — refusing an unexplained leader shift/);
+  });
+
+  it("refuses a leader swap when the new leader's own supply moved more than 25%", async () => {
+    const prior = universe({ count: 20 });
+    const body = validSnapshot(prior);
+    const leaders = tierLeaders(body, "A");
+    [leaders[0], leaders[1]] = [leaders[1], leaders[0]];
+    // The prior record has the new leader at double its current supply, so the
+    // swap is no longer explained by bounded day-over-day movement.
+    leaders.find((leader) => leader.symbol === "C0")!.mcapUsd *= 2;
+    const path = snapshot(scratch, body);
+    const run = await runGenerator(prior, { args: ["--previous-snapshot", path] });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Tier A leader C0 supply moved from \d+ to \d+ \(>25%\) since the previous snapshot — refusing an unexplained leader shift/);
+  });
+
   it("tolerates a single immaterial join flip and draws the coin at the size floor", async () => {
     const path = snapshot(scratch, validSnapshot(universe({ count: 20 })));
     const run = await runGenerator(universe({ count: 20, unjoined: 1 }), {
