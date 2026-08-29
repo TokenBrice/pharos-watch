@@ -3,6 +3,7 @@ import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { PegSummaryCoin, PegSummaryResponse, StablecoinData } from "@shared/types";
+import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildStablecoinDetailHeroViewModel } from "../stablecoin-detail-hero-view-model";
@@ -28,27 +29,12 @@ function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): Stablecoin
 }
 
 function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
-  return {
+  return makePegSummaryCoinBase({
     id: "usdt-tether",
     symbol: "USDT",
     name: "Tether",
-    pegType: "peggedUSD",
-    pegCurrency: "USD",
-    governance: "centralized",
-    currentDeviationBps: 0,
-    pegReference: { valueUsd: 1, source: "median", contributorCount: 5, asOf: 1_700_000_000 },
-    pegScore: 95,
-    pegPct: 100,
-    severityScore: 0,
-    spreadPenalty: 0,
-    eventCount: 0,
-    worstDeviationBps: null,
-    activeDepeg: false,
-    lastEventAt: null,
-    trackingSpanDays: 365,
-    methodologyVersion: "test",
     ...overrides,
-  };
+  });
 }
 
 describe("stablecoin detail view-model builder", () => {

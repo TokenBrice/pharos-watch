@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildStablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { PegSummaryCoin } from "@shared/types";
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 
 function makeCoin(price: number | null) {
   return makeStablecoin({
@@ -15,30 +15,6 @@ function makeCoin(price: number | null) {
     supplySource: "defillama",
     chains: ["Ethereum"],
   });
-}
-
-function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
-  return {
-    id: "usdc-circle",
-    symbol: "USDC",
-    name: "USD Coin",
-    pegType: "peggedUSD",
-    pegCurrency: "USD",
-    governance: "centralized",
-    currentDeviationBps: 0,
-    pegReference: { valueUsd: 1, source: "median", contributorCount: 5, asOf: 1_700_000_000 },
-    pegScore: 95,
-    pegPct: 100,
-    severityScore: 0,
-    spreadPenalty: 0,
-    eventCount: 0,
-    worstDeviationBps: null,
-    activeDepeg: false,
-    lastEventAt: null,
-    trackingSpanDays: 365,
-    methodologyVersion: "test",
-    ...overrides,
-  };
 }
 
 function build(price: number | null, currentDeviationBps: number | null) {

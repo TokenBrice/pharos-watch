@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import FlowsPage from "@/app/flows/page";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -65,27 +66,7 @@ function buildFlowData(syncWarning: string | null) {
       trackedCoins: 1,
       trackedMcapUsd: 100_000_000_000,
     },
-    coins: [{
-      stablecoinId: "usdc-circle",
-      symbol: "USDC",
-      flowIntensity: -42,
-      pressureShiftScore: -42,
-      pressureShiftState: "worsening",
-      netFlowDirection24h: "burning",
-      has24hActivity: true,
-      baselineDailyNetUsd: 1_000_000,
-      baselineDailyAbsUsd: 2_000_000,
-      baselineDataDays: 30,
-      netFlow24hUsd: -3_000_000,
-      mintVolume24hUsd: 1_000_000,
-      burnVolume24hUsd: 4_000_000,
-      mintCount24h: 1,
-      burnCount24h: 2,
-      netFlow7dUsd: -5_000_000,
-      netFlow30dUsd: -8_000_000,
-      netFlow90dUsd: -10_000_000,
-      largestEvent24h: null,
-    }],
+    coins: [makeMintBurnFlowCoin()],
     hourly: [],
     updatedAt: Math.floor(Date.now() / 1000),
     windowHours: 24,

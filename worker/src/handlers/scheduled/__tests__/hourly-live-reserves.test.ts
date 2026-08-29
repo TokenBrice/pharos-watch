@@ -23,35 +23,16 @@ vi.mock("../../../lib/db-cache", () => ({
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => {}),
 }));
-vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
-  beginLiveReserveCheckpoint: vi.fn(async () => ({
-    scheduleKey: "fourHourlyReserveSync",
-    slotStartedAt: 0,
-    job: "sync-live-reserves",
-    attemptNo: 1,
-    executionGeneration: 1,
-    invocationId: "test-checkpoint",
-    workerVersion: null,
-    queueHash: "test",
-    state: "running",
-    nextItemKey: null,
-    currentItemKey: null,
-    currentDomainAttemptId: null,
-    itemsDone: 0,
-    itemsTotal: 0,
-    childDispositions: {},
-    recoveryOwner: null,
-    recoveryLeaseUntil: null,
-    sourceAttemptNo: null,
-    error: null,
-    createdAt: 0,
-    updatedAt: 0,
-    completedAt: null,
-  })),
-  loadLiveReserveCheckpoint: vi.fn(),
-  setLiveReserveCheckpointChildDisposition: vi.fn(async () => {}),
-  finishLiveReserveCheckpoint: vi.fn(async () => {}),
-}));
+vi.mock("../../../lib/scheduled-recovery-checkpoint", async () => {
+  // vi.mock factories are hoisted above static imports; the fixture must load inside the factory.
+  const { makeLiveReserveCheckpoint } = await import("../../../lib/__tests__/scheduled-recovery-checkpoint.test-support");
+  return {
+    beginLiveReserveCheckpoint: vi.fn(async () => makeLiveReserveCheckpoint()),
+    loadLiveReserveCheckpoint: vi.fn(),
+    setLiveReserveCheckpointChildDisposition: vi.fn(async () => {}),
+    finishLiveReserveCheckpoint: vi.fn(async () => {}),
+  };
+});
 vi.mock("../preflight-skip", () => ({
   logSkippedCronRun: vi.fn(async () => undefined),
 }));
@@ -61,6 +42,8 @@ import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops
 import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves-store";
+import { emptyReserveCompositionOverview } from "../../../lib/live-reserves-store-shared";
+import { makeLiveReserveCheckpoint } from "../../../lib/__tests__/scheduled-recovery-checkpoint.test-support";
 import { getCache, setCache } from "../../../lib/db-cache";
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";
 import { SNAPSHOT_KEYS } from "../../../cron/telegram-alert-snapshots";
@@ -84,34 +67,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       fallbackCoins: [],
     } as never);
     vi.mocked(getMaxSyncAge).mockResolvedValue(0);
-    vi.mocked(computeReserveCompositionOverview).mockResolvedValue({
-      configuredCoins: 0,
-      freshCoins: 0,
-      staleCoins: 0,
-      missingCoins: 0,
-      degradedCoins: 0,
-      errorCoins: 0,
-      corruptCoins: 0,
-      independentFreshEligible: 0,
-      independentFreshUnverified: 0,
-      staticValidatedFresh: 0,
-      weakProbeFresh: 0,
-      writeTimeoutUncertain: 0,
-      deferredCoins: 0,
-      runBudgetTruncated: false,
-      deferredAt: null,
-      nextCursorStablecoinId: null,
-      cursorTailState: null,
-      cursorTailError: null,
-      cursorRecordedAt: null,
-      cursorTailCompletedAt: null,
-      cursorTailFailedAt: null,
-      runBudgetTruncationCount: 0,
-      historyWriteGaps: [],
-      persistentlyStaleIndependentCoins: [],
-      lastSuccessAt: null,
-      oldestFreshAgeSec: null,
-    });
+    vi.mocked(computeReserveCompositionOverview).mockResolvedValue(emptyReserveCompositionOverview());
     vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(recoveryCheckpoint());
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -145,30 +101,17 @@ describe("runFourHourlyReserveSyncSlot", () => {
     childDispositions: ScheduledRecoveryCheckpoint["childDispositions"] = {},
     attemptNo = 2,
   ): ScheduledRecoveryCheckpoint {
-    return {
-      scheduleKey: "fourHourlyReserveSync",
-      slotStartedAt: 0,
-      job: "sync-live-reserves",
+    return makeLiveReserveCheckpoint({
       attemptNo,
       executionGeneration: attemptNo,
       invocationId: `recovery-owner-${attemptNo}`,
       workerVersion: "preview-v1",
-      queueHash: "test",
       state: "recovering",
-      nextItemKey: null,
-      currentItemKey: null,
-      currentDomainAttemptId: null,
-      itemsDone: 0,
-      itemsTotal: 0,
       childDispositions,
       recoveryOwner: `recovery-owner-${attemptNo}`,
       recoveryLeaseUntil: 1_000,
       sourceAttemptNo: attemptNo - 1,
-      error: null,
-      createdAt: 0,
-      updatedAt: 0,
-      completedAt: null,
-    };
+    });
   }
 
   it("keeps reserve-dependent sidecars pending and still runs independent Kinesis after a reserve failure", async () => {

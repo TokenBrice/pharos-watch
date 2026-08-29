@@ -3,6 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MintBurnFlowsResponse } from "@shared/types";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
+import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 const { useRegisteredApiQueryMock } = vi.hoisted(() => ({
   useRegisteredApiQueryMock: vi.fn(),
@@ -24,29 +25,7 @@ const currentPayload = {
     trackedCoins: 1,
     trackedMcapUsd: 100_000_000,
   },
-  coins: [
-    {
-      stablecoinId: "usdc-circle",
-      symbol: "USDC",
-      flowIntensity: -42,
-      pressureShiftScore: -42,
-      pressureShiftState: "worsening",
-      netFlowDirection24h: "burning",
-      has24hActivity: true,
-      baselineDailyNetUsd: 1_000_000,
-      baselineDailyAbsUsd: 2_000_000,
-      baselineDataDays: 30,
-      netFlow24hUsd: -3_000_000,
-      mintVolume24hUsd: 1_000_000,
-      burnVolume24hUsd: 4_000_000,
-      mintCount24h: 1,
-      burnCount24h: 2,
-      netFlow7dUsd: -5_000_000,
-      netFlow30dUsd: -8_000_000,
-      netFlow90dUsd: -10_000_000,
-      largestEvent24h: null,
-    },
-  ],
+  coins: [makeMintBurnFlowCoin()],
   chains: [],
   hourly: [],
   updatedAt: 1_700_000_000,
