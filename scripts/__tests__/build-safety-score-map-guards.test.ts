@@ -5,12 +5,15 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  makeReportCardsV9Card,
-  makeReportCardsV9Response,
-} from "@shared/test-utils/report-cards-v9";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeReportCardsV9Card } from "@shared/test-utils/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import {
+  makeSafetyMapPsiPayload,
+  makeSafetyMapRatedCard,
+  makeSafetyMapReportCardsResponse,
+  makeSafetyMapStablecoinsPayload,
+  withSafetyMapAdverseAttribution,
+} from "./build-safety-score-map.test-support";
 
 /**
  * Publication-safety guards for the Safety Score map generator (plan §11.2b).
@@ -52,16 +55,6 @@ let psiPayloadOverride: unknown | undefined;
 
 function reportCardsPayload(): unknown {
   const updatedAt = Math.max(asOfSec, Math.floor(Date.now() / 1000));
-  const identity = {
-    model: "v9" as const,
-    schemaVersion: 1 as const,
-    methodologyVersion,
-    policyId: "safety-score-v9",
-    policyDigest: "a".repeat(64),
-    evaluationBuildDigest: "b".repeat(64),
-    baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
-    publicationGenerationId: "safety-map-fixture",
-  };
   const canonicalCards: SafetyScoreV9CurrentCard[] = cards.map((card) => {
     if (card.score === null) {
       return makeReportCardsV9Card({
@@ -80,81 +73,31 @@ function reportCardsPayload(): unknown {
         nrReasons: [{ code: "missing-pillar", message: "Fixture is not rated.", field: null, origin: "asset" }],
       });
     }
-    const ratedCard = makeReportCardsV9Card({
-      id: card.id,
-      score: card.score,
-      grade: card.grade as SafetyScoreV9CurrentCard["grade"],
-      qualityScore: card.score,
-      pegMultiplier: 1,
-      pegAdjustedScore: card.score,
-    });
+    const ratedCard = makeSafetyMapRatedCard(card);
     if (card.grade !== "D" && card.grade !== "F") return ratedCard;
-    return {
-      ...ratedCard,
-      scoreTrace: {
-        ...ratedCard.scoreTrace,
-        adverseAttribution: {
-          ...ratedCard.scoreTrace.adverseAttribution,
-          items: [{
-            source: "pillar-score" as const,
-            path: "pillar:backing:score",
-            message: "Measured backing pillar score is below the C- floor.",
-            responsibility: "measured-adverse" as const,
-          }],
-        },
-      },
-    };
+    return withSafetyMapAdverseAttribution(ratedCard);
   });
-  return makeReportCardsV9Response(
-    {
-      safetyScoreIdentity: identity,
-      defaultUpdatedAt: updatedAt,
-      asOfSec,
-      source: {
-        candidateId: "safety-score-v9:v1:safety-map-fixture",
-        factSetDigest: "c".repeat(64),
-        resultDigest: "d".repeat(64),
-        sourceGenerations: { reportCards: "fixture" },
-      },
-    },
-    () => makeReportCardsV9Card(),
-    { cards: canonicalCards },
-  );
+  return makeSafetyMapReportCardsResponse({
+    cards: canonicalCards,
+    fixtureId: "safety-map-fixture",
+    methodologyVersion,
+    defaultUpdatedAt: updatedAt,
+    asOfSec,
+  });
 }
 
 function stablecoinsPayload(): unknown {
-  return {
-    peggedAssets: assets.map((asset) => makeStablecoin({
-      id: asset.id,
-      name: asset.symbol,
-      symbol: asset.symbol,
-      circulating: asset.circulating ?? {},
-    })),
-  };
+  return makeSafetyMapStablecoinsPayload(assets);
 }
 
 function psiPayload(): unknown {
-  return {
-    current: {
-      score: 94.3,
-      band: "BEDROCK",
-      avg24h: 93.8,
-      avg24hBand: "BEDROCK",
-      components: { severity: 0, breadth: 0, trend: 0 },
-      computedAt: psiComputedAt,
-      methodologyVersion: "psi-v1",
-    },
-    history: [],
-    methodology: {
-      version: "psi-v1",
-      versionLabel: "PSI v1",
-      currentVersion: "psi-v1",
-      currentVersionLabel: "PSI v1",
-      changelogPath: "/methodology/stability-index-changelog/",
-      asOf: psiComputedAt,
-      isCurrent: true,
-    },
-  };
+  return makeSafetyMapPsiPayload({
+    score: 94.3,
+    band: "BEDROCK",
+    avg24h: 93.8,
+    avg24hBand: "BEDROCK",
+    computedAt: psiComputedAt,
+  }, psiComputedAt);
 }
 
 beforeAll(async () => {

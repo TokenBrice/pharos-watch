@@ -190,6 +190,12 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
     if (error && shouldHaveYieldData) {
       return { status: "error", shouldHaveYieldData, error: error instanceof Error ? error : null };
     }
+    if (model.status === "pre-launch" || model.status === "inactive" || model.status === "frozen") {
+      // Full-page-only lifecycle outcomes cannot occur in embedded mode
+      // (builder gates them on mode === "full-page"); keep the embedded
+      // section's prior policy if that ever changes.
+      return { status: "unavailable", shouldHaveYieldData };
+    }
     return model;
   }
 

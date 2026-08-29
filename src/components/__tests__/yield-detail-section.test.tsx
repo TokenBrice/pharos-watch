@@ -10,6 +10,7 @@ import {
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import { makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
+import { makeYieldDetailResponse } from "./yield-detail.test-support";
 
 const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock, isMobileMock } = vi.hoisted(() => ({
   useYieldRankingsMock: vi.fn(),
@@ -117,14 +118,7 @@ function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
 }
 
 function makeResponse(rankings: YieldRanking[] = []): YieldRankingsResponse {
-  return {
-    rankings,
-    riskFreeRate: 0.03,
-    scalingFactor: 1,
-    medianApy: 0.04,
-    updatedAt: 1_710_500_000,
-    provenance: null,
-  };
+  return makeYieldDetailResponse(rankings, { riskFreeRate: 0.03, scalingFactor: 1 });
 }
 
 describe("YieldDetailSection", () => {

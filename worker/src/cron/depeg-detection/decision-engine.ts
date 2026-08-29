@@ -60,6 +60,7 @@ interface DecisionContext {
   now: number;
   asset: DepegAssetDecisionInput["asset"];
   price: number;
+  primarySignal: DepegSignal;
   bps: number;
   absBps: number;
   rawAbsBps: number;
@@ -395,6 +396,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       trackedCoinId,
       now,
       asset,
+      primarySignal,
       price,
       bps,
       absBps,
@@ -528,7 +530,7 @@ function decideExistingEvent(
     existing,
     nativeSignal: ctx.nativeSignal,
     nativePegPrice: ctx.nativePegPrice,
-    primarySignal: { bps, absBps, direction },
+    primarySignal: ctx.primarySignal,
     primaryPrice: price,
     primaryTrust,
     dexSupportsDirection,

@@ -18,27 +18,10 @@ import {
 } from "../maintenance/build-safety-score-map";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import { validateAnnotationScene } from "../lib/map-annotations";
+import { makeSafetyMapPsiPayload } from "./build-safety-score-map.test-support";
 
 describe("Safety Map PSI footer", () => {
-  const psiPayload = (current: Record<string, unknown> | null) => ({
-    current: current === null
-      ? null
-      : {
-          components: { severity: 0, breadth: 0, trend: 0 },
-          methodologyVersion: "psi-v1",
-          ...current,
-        },
-    history: [],
-    methodology: {
-      version: "psi-v1",
-      versionLabel: "PSI v1",
-      currentVersion: "psi-v1",
-      currentVersionLabel: "PSI v1",
-      changelogPath: "/methodology/stability-index-changelog/",
-      asOf: 1_777_000_000,
-      isCurrent: true,
-    },
-  });
+  const psiPayload = (current: Record<string, unknown> | null) => makeSafetyMapPsiPayload(current);
 
   it("uses the canonical one-decimal PSI level and condition band", () => {
     expect(buildPsiSubtitle({ score: 93.8, band: "BEDROCK", basis: "24H AVG" })).toBe(

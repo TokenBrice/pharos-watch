@@ -4,41 +4,20 @@ import {
   type YieldDetailModelMode,
   type YieldDetailRegistryStatus,
 } from "@/components/yield-detail-section-model";
-import {
-  makeAltYieldSource,
-  makeYieldProvenance,
-  makeYieldRanking,
-} from "@shared/test-utils/yield-ranking-fixtures";
 import type { StablecoinStatus, YieldRanking, YieldRankingsResponse } from "@shared/types";
+import { makeYieldDetailRanking, makeYieldDetailResponse } from "./yield-detail.test-support";
 
 function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
-  return makeYieldRanking({
+  return makeYieldDetailRanking({
     id: "model-coin",
     symbol: "MODEL",
     name: "Model Coin",
-    yieldSource: "Primary Source",
-    yieldSourceUrl: "https://example.com/primary",
-    altSources: [
-      makeAltYieldSource({
-        sourceKey: "alt-source",
-        yieldSource: "Alt Source",
-        yieldSourceUrl: "https://example.com/alt",
-      }),
-    ],
-    provenance: makeYieldProvenance({ sourceKey: "primary-source", confidenceTier: "curated" }),
     ...overrides,
   });
 }
 
 function makeResponse(rankings: YieldRanking[] = []): YieldRankingsResponse {
-  return {
-    rankings,
-    riskFreeRate: 0.031,
-    scalingFactor: 8,
-    medianApy: 0.04,
-    updatedAt: 1_710_500_000,
-    provenance: null,
-  };
+  return makeYieldDetailResponse(rankings);
 }
 
 function registryStatus(
@@ -160,7 +139,7 @@ describe("buildYieldDetailModel", () => {
     const model = buildYieldDetailModel(
       makeResponse([
         makeRanking({
-          benchmarkRate: null,
+          benchmarkRate: undefined,
           benchmarkSelectionMode: "fallback-usd",
           benchmarkIsFallback: true,
         }),

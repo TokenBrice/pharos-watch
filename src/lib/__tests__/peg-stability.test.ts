@@ -1,21 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DAY_SECONDS } from "@/lib/constants";
+import { makePegEvent as makeEvent, type TestPegEvent } from "@shared/test-utils/peg-fixtures";
 import { computePegStability } from "../peg-stability";
-
-type TestPegEvent = {
-  startedAt: number;
-  endedAt: number | null;
-  peakDeviationBps: number;
-};
-
-function makeEvent(
-  overrides: Partial<TestPegEvent> & Pick<TestPegEvent, "startedAt" | "peakDeviationBps">,
-): TestPegEvent {
-  return {
-    endedAt: null,
-    ...overrides,
-  };
-}
 
 const NOW = 1_700_000_000;
 

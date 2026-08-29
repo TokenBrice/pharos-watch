@@ -3,12 +3,8 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-client";
+import { makeYieldDetailRanking, makeYieldDetailResponse } from "@/components/__tests__/yield-detail.test-support";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
-import {
-  makeAltYieldSource,
-  makeYieldProvenance,
-  makeYieldRanking,
-} from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
 
 const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock } = vi.hoisted(() => ({
@@ -67,37 +63,20 @@ vi.mock("@/components/yield-source-risk-card", () => ({
 }));
 
 function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
-  return makeYieldRanking({
+  return makeYieldDetailRanking({
     id: "usdn-smardex",
     symbol: "USDN",
     name: "SMARDEX USDN",
-    yieldSource: "Primary Source",
-    yieldSourceUrl: "https://example.com/primary",
     benchmarkLabel: "SOFR",
-    benchmarkRate: null,
+    benchmarkRate: undefined,
     benchmarkSelectionMode: "fallback-usd",
     benchmarkIsFallback: true,
-    altSources: [
-      makeAltYieldSource({
-        sourceKey: "alt-source",
-        yieldSource: "Alt Source",
-        yieldSourceUrl: "https://example.com/alt",
-      }),
-    ],
-    provenance: makeYieldProvenance({ sourceKey: "primary-source", confidenceTier: "curated" }),
     ...overrides,
   });
 }
 
 function makeResponse(rankings: YieldRanking[] = []): YieldRankingsResponse {
-  return {
-    rankings,
-    riskFreeRate: 0.031,
-    scalingFactor: 8,
-    medianApy: 0.04,
-    updatedAt: 1_710_500_000,
-    provenance: null,
-  };
+  return makeYieldDetailResponse(rankings);
 }
 
 function staticCoin(

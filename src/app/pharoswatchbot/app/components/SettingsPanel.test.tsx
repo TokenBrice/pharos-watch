@@ -73,7 +73,7 @@ describe("SettingsPanel", () => {
     const onMutate = vi.fn();
     renderSettings({ onMutate });
 
-    const compactPicker = screen.getByLabelText("Timezone") as HTMLSelectElement;
+    const compactPicker = screen.getByLabelText("Timezone") as unknown as HTMLSelectElement;
     const datalist = document.getElementById("telegram-mini-app-timezone-options");
     expect(compactPicker.options.length).toBeLessThan(20);
     expect(datalist?.querySelectorAll("option").length).toBeGreaterThan(compactPicker.options.length);
@@ -110,7 +110,7 @@ describe("SettingsPanel", () => {
     rendered.rerender({ state: honolulu });
     rendered.rerender({ state: paris });
 
-    const compactPicker = screen.getByLabelText("Timezone") as HTMLSelectElement;
+    const compactPicker = screen.getByLabelText("Timezone") as unknown as HTMLSelectElement;
     expect(Array.from(compactPicker.options).some((option) => option.text === "Recent: Pacific/Honolulu")).toBe(true);
   });
 

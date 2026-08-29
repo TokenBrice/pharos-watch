@@ -17,6 +17,14 @@ import {
   fixtureYieldHelpersModule,
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
+
+function dlPoolsCacheRow(
+  pools: Parameters<typeof buildDlStablecoinPoolsCache>[0],
+  updatedAt: number,
+) {
+  return cacheRow(buildDlStablecoinPoolsCache(pools, updatedAt), updatedAt);
+}
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -25,7 +33,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             {
               pool: "pool-placeholder",
               chain: "Ethereum",
@@ -80,7 +88,7 @@ describe("syncYieldData", () => {
               },
             ],
       }, nowSec),
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             {
               pool: "pool-placeholder",
               chain: "Ethereum",
@@ -117,7 +125,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([], nowSec - 6 * 3600),
+      "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec - 6 * 3600),
       risk_free_rate: cacheRow({
             rate: 3.71,
             recordDate: "2025-06-13",
@@ -150,7 +158,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([], nowSec - 49 * 3600),
+      "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec - 49 * 3600),
       risk_free_rate: cacheRow({
             rate: 3.71,
             recordDate: "2025-06-10",
@@ -220,7 +228,7 @@ describe("syncYieldData", () => {
     nativePoolMap["100"] = "pool-sdai-native";
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             {
               pool: "pool-sdai-native",
               chain: "Ethereum",
@@ -318,7 +326,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "dl-stablecoin-pools": cacheRow([
+      "dl-stablecoin-pools": dlPoolsCacheRow([
             {
               pool: "pool-sdai-cached",
               chain: "Ethereum",

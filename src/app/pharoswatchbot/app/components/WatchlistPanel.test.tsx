@@ -227,8 +227,8 @@ describe("WatchlistPanel", () => {
     renderWatchlist({ onPreviewBulk, onConfirmBulk });
 
     await applyOneBulkChange(onPreviewBulk, onConfirmBulk);
-    expect(screen.getByText("Bulk edit applied. Undo is available briefly.")).toBeTruthy();
+    await screen.findByText("Bulk edit applied. Undo is available briefly.");
     await act(async () => { vi.advanceTimersByTime(5_001); });
-    expect(screen.queryByText("Bulk edit applied. Undo is available briefly.")).toBeNull();
+    await waitFor(() => expect(screen.queryByText("Bulk edit applied. Undo is available briefly.")).toBeNull());
   });
 });

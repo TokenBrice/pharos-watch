@@ -238,17 +238,28 @@ describe("useMiniAppMutations", () => {
   });
 
   it("keeps native two-step confirmation and forget-me terminal state in the hook", async () => {
-    const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
+    const confirmationCallbacks: Array<(confirmed: boolean) => void> = [];
+    const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => {
+      confirmationCallbacks.push(callback);
+    });
     const webApp = makeWebApp({ showConfirm });
     apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot());
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp })));
-    const preset = { id: "usd-top25", label: "USD Top 25", alertTypes: { dews: true, depeg: true, safety: false }, depegStepBps: 250 };
+    const preset = { id: "usd-top25" as const, label: "USD Top 25", alertTypes: { dews: true, depeg: true, safety: false }, depegStepBps: 250 as const };
 
     act(() => { result.current.unsubscribeAll(); });
+    expect(showConfirm).toHaveBeenCalledTimes(1);
+    act(() => { confirmationCallbacks.shift()?.(true); });
     await waitFor(() => expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(1));
     act(() => { result.current.unfollowPreset(preset); });
+    expect(showConfirm).toHaveBeenCalledTimes(2);
+    act(() => { confirmationCallbacks.shift()?.(true); });
     await waitFor(() => expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2));
     act(() => { result.current.forgetMe(); });
+    expect(showConfirm).toHaveBeenCalledTimes(3);
+    act(() => { confirmationCallbacks.shift()?.(true); });
+    await waitFor(() => expect(showConfirm).toHaveBeenCalledTimes(4));
+    act(() => { confirmationCallbacks.shift()?.(true); });
     await waitFor(() => expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(3));
 
     expect(showConfirm).toHaveBeenCalledTimes(4);
@@ -261,6 +272,6 @@ describe("useMiniAppMutations", () => {
     expect(apiMocks.postMiniAppSnapshot.mock.calls[0]?.[1]).toEqual({ initData: "signed-init-data", operation: { kind: "unsubscribe-all" } });
     expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1]).toEqual({ initData: "signed-init-data", operation: { kind: "unfollow-preset", presetId: "usd-top25" } });
     expect(apiMocks.postMiniAppSnapshot.mock.calls[2]?.[1]).toEqual({ initData: "signed-init-data", operation: { kind: "forget-me" } });
-    expect(result.current.forgottenView).toBe(true);
+    await waitFor(() => expect(result.current.forgottenView).toBe(true));
   });
 });

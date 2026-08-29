@@ -293,11 +293,16 @@ export async function apiFetchWithMeta<T>(
   if (warningHeader) {
     const isFreshnessWarning = isFreshnessWarningHeader(warningHeader);
     if (meta) {
-      meta = {
-        ...meta,
-        status: isFreshnessWarning && meta.status === "fresh" ? "degraded" : meta.status,
-        warning: warningHeader,
-      };
+      meta =
+        meta.updatedAt !== undefined && meta.ageSeconds !== undefined
+          ? {
+              ...meta,
+              updatedAt: meta.updatedAt,
+              ageSeconds: meta.ageSeconds,
+              status: isFreshnessWarning && meta.status === "fresh" ? "degraded" : meta.status,
+              warning: warningHeader,
+            }
+          : ApiMetaWarningOnlySchema.parse({ status: "degraded", warning: warningHeader });
     } else if (isFreshnessWarning) {
       // Preserve warning context without inventing freshness timestamps.
       meta = ApiMetaWarningOnlySchema.parse({

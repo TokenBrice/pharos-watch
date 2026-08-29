@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { makePegEvent as makeEvent, type TestPegEvent } from "@shared/test-utils/peg-fixtures";
 import {
   computePegScore,
   computePegScoreWithWindow,
@@ -9,21 +10,6 @@ import {
 
 const NOW = Math.floor(Date.now() / 1000);
 const DAY = 86400;
-
-type TestPegEvent = {
-  startedAt: number;
-  endedAt: number | null;
-  peakDeviationBps: number;
-};
-
-function makeEvent(
-  overrides: Partial<TestPegEvent> & Pick<TestPegEvent, "startedAt" | "peakDeviationBps">,
-): TestPegEvent {
-  return {
-    endedAt: null,
-    ...overrides,
-  };
-}
 
 describe("coinTrackingStart", () => {
   const fourYearsAgo = NOW - PEG_SCORE_LOOKBACK_SEC;
