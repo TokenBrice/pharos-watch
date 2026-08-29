@@ -25,8 +25,7 @@ export {
 } from "./cache/defillama-pool-cache";
 
 export {
-  YIELD_SUPPLEMENTAL_CACHE_KEY,
   getYieldSupplementalFamilyCacheKey,
-  buildYieldSupplementalSourcesCache,
+  buildYieldSupplementalFamilyCache,
   parseYieldSupplementalSourcesCache,
 } from "./cache/supplemental-cache-keys";

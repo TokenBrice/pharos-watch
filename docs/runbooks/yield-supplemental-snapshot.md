@@ -11,7 +11,7 @@ The slower supplemental source snapshot is missing, malformed, empty, or older t
 
 ## Impact
 
-Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes a fresh aggregate snapshot or a fresh per-family snapshot. Stale or missing supplemental cache does not by itself degrade the post-V9 publisher.
+Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes fresh per-family snapshots. A fresh all-empty family snapshot is valid current state and yields zero supplemental candidates; stale or missing supplemental cache does not by itself degrade the post-V9 publisher.
 
 ## First Checks
 
@@ -24,8 +24,7 @@ Core yield publication should remain available. Optional protocol-API and option
 ```sql
 SELECT key, updated_at, length(value) AS bytes, substr(value, 1, 1200) AS value_prefix
 FROM cache
-WHERE key = 'yield:supplemental-sources:v1'
-   OR key LIKE 'yield:supplemental-sources:v1:%'
+WHERE key LIKE 'yield:supplemental-sources:v1:%'
 ORDER BY key;
 ```
 
@@ -46,9 +45,9 @@ ORDER BY rows DESC;
 
 ## Common Causes
 
-- All supplemental families emitted zero candidates, so the cron refused to overwrite the previous aggregate cache.
-- One per-family cache is malformed or stale. The post-V9 publisher should still load other fresh family caches and report `sourceCoverage.supplementalFallbackMode` as `partial-family-cache`, or `partial-family-cache-aggregate-merge` when the still-fresh aggregate cache backfills the degraded family, instead of dropping all optional coverage. Only the required families raise that flag; a degraded audit-only `vaultsFyi` family cache leaves it `null`.
-- One successful per-family run emitted zero candidates. That family may intentionally publish an empty per-family cache to clear a previous non-empty family snapshot without overwriting the aggregate cache.
+- All supplemental families emitted zero candidates. The cron publishes explicit empty rows for successful families; the loader treats the all-empty current snapshot as valid with zero supplemental candidates.
+- One per-family cache is malformed or stale. The post-V9 publisher should still load other fresh family caches and report `sourceCoverage.supplementalFallbackMode` as `partial-family-cache` instead of dropping all optional coverage. Only the required families raise that flag; a degraded audit-only `vaultsFyi` family cache leaves it `null`.
+- One successful per-family run emitted zero candidates. That family may intentionally publish an empty per-family cache to clear a previous non-empty family snapshot.
 - Optional protocol APIs timed out inside the family budget.
 - Optional RPC families exhausted their family budget or missed many chain targets.
 - The cache payload became malformed or older than the supplemental freshness window.
@@ -56,24 +55,24 @@ ORDER BY rows DESC;
 
 ## Remediation
 
-- If the latest supplemental run is a single `empty-snapshot`, keep serving the previous snapshot and wait for the next 4-hour run unless optional coverage is business-critical for an incident.
+- If the latest supplemental run is a single `empty-snapshot`, verify that successful family rows were published. The resulting all-empty family snapshot is valid and should remain available with zero supplemental candidates until the next 4-hour run.
 - If `sync-yield-supplemental` metadata shows one family dominating misses or budget exhaustion, inspect `sourceCoverage.sourceFamilySummaries` first. It gives compact per-family status, raw/emitted counts, audit inventory counts, budget/cap flags, miss reasons, chain breakdowns, and bounded missing-target examples. `sourceCoverage.sourceFamilyCounts` is candidate-oriented; audit-only inventory such as vaults.fyi lives in `sourceCoverage.sourceFamilyInventoryCounts`. Do not move heavy family fetches onto the post-V9 publisher.
 - If the job is stale due to a stuck lease, clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-supplemental`, and verify the next four-hour run.
 - If the cache is malformed, preserve the malformed value for debugging and let a later successful supplemental run replace it.
 
 ## Abort Conditions
 
-- Do not write an empty aggregate supplemental snapshot over the last good aggregate cache.
+- Do not recreate, write, or use the retained aggregate supplemental row as a fallback; coordinated cleanup is a separate operation.
 - Do not increase Worker connection pressure by moving supplemental readers into `sync-yield-data`.
 - Do not hand-create supplemental candidate rows in `yield_data`; the post-V9 publisher owns evaluation and arbitration.
 
 ## Validation
 
 - `sync-yield-supplemental` has a recent run with `rowsWritten > 0` or a documented `skipped-newer`, and `sourceCoverage.sourceFamilySummaries` explains any empty, failed, or budget-exhausted family.
-- `cache['yield:supplemental-sources:v1']` and any `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A per-family row with `sourceCount: 0` is valid when that family completed successfully with no deduplicated candidates. A single malformed family row should not block other fresh family rows.
-- The next `sync-yield-data` metadata shows `supplementalSourceMode: "cache"` and a non-zero `supplementalSourceCount`.
+- The `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A per-family row with `sourceCount: 0` is valid when that family completed successfully with no deduplicated candidates. A single malformed family row should not block other fresh family rows; all eight current empty rows are valid state.
+- The next `sync-yield-data` metadata shows `supplementalSourceMode: "cache"`; `supplementalSourceCount` may be zero when the current family snapshot is explicitly all-empty.
 - Public rankings/source board show expected optional family rows or alternatives.
 
 ## Rollback Notes
 
-The supplemental lane rollback is last-good aggregate-cache retention. All-family empty aggregate snapshots are intentionally not published; successful zero-candidate per-family snapshots may publish to clear stale family-owned rows. If a code deploy caused persistent malformed snapshots or zero aggregate candidates, roll back the Worker version and allow the next supplemental cycle to repopulate the cache.
+The supplemental lane rollback retains family rows for failed/malformed families while successful zero-candidate family snapshots may clear stale family-owned rows. The legacy aggregate row is not part of rollback authority. If a code deploy caused persistent malformed snapshots or unexpected zero-candidate family output, roll back the Worker version and allow the next supplemental cycle to repopulate the family caches.
