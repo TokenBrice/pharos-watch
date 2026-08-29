@@ -35,7 +35,6 @@ interface TwitterDeliveryErrorShape {
 export interface TwitterDigestPostResult {
   tweetId: string;
   mediaAttached: boolean;
-  mediaError: string | null;
 }
 
 export type TwitterDigestLedgerResult =

@@ -50,6 +50,38 @@ export type DigestSafetyMapResolution =
   | { kind: "available"; imageUrl: string; manifest: SafetyMapManifest }
   | { kind: "unavailable"; reason: string };
 
+/**
+ * Fail-closed withholding state for the daily digest. When today's map is not
+ * published, `generateDailyDigest` writes this intent instead of posting a
+ * text-only edition; the digest-trigger-poll slot retries until the map is
+ * live. A date rollover with the intent still pending means that day's digest
+ * deliberately stayed unsent.
+ */
+export const DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY = "digest:safety-map-deferral";
+
+export interface DigestSafetyMapDeferral {
+  date: string;
+  reason: string;
+  firstDeferredAtSec: number;
+  attempts: number;
+}
+
+export function parseDigestSafetyMapDeferral(value: string): DigestSafetyMapDeferral | null {
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (!decoded || typeof decoded !== "object") return null;
+  const { date, reason, firstDeferredAtSec, attempts } = decoded as Partial<DigestSafetyMapDeferral>;
+  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (typeof reason !== "string" || reason.length === 0) return null;
+  if (typeof firstDeferredAtSec !== "number" || !Number.isInteger(firstDeferredAtSec) || firstDeferredAtSec < 0) return null;
+  if (typeof attempts !== "number" || !Number.isInteger(attempts) || attempts < 0) return null;
+  return { date, reason, firstDeferredAtSec, attempts };
+}
+
 function parseManifest(value: unknown): SafetyMapManifest | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Partial<SafetyMapManifest>;

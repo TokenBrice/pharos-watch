@@ -329,7 +329,7 @@ export function makeDailyDigestTables(): MockTableConfig[] {
 }
 
 export interface DailyDigestDeliveryMocks {
-  twitter: { tweetId: string; mediaAttached: boolean; mediaError: string | null };
+  twitter: { tweetId: string; mediaAttached: boolean };
   telegramEnqueue: EnqueueTelegramDigestEditionResult;
   telegramDelivery: TelegramDigestDeliveryResult;
   appendices: PreparedTelegramDigestAppendices;
@@ -363,7 +363,7 @@ export function makeDailyDigestScenario(
   const tables = dbOptions.transformTables?.(baseTables) ?? baseTables;
   const commitSuccess = options.appendicesCommitSuccess ?? (async () => undefined);
   const deliveryMocks: DailyDigestDeliveryMocks = {
-    twitter: { tweetId: "1", mediaAttached: true, mediaError: null },
+    twitter: { tweetId: "1", mediaAttached: true },
     telegramEnqueue: { created: true, payloadMatched: true, editionKey: "daily:2026-03-06", state: "pending", chunks: ["stored daily payload"] },
     telegramDelivery: { editionKey: "daily:2026-03-06", state: "sent", outcome: "sent", chunksSent: 1, nextChunkIndex: 1, chunkCount: 1, errorClass: null, retryAfterSec: null },
     appendices: {

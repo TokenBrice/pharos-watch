@@ -28,7 +28,8 @@ vi.mock("../telegram-digest-transport", async (importOriginal) => {
 
 vi.mock("../../lib/circuit-breaker", async () => (await import("./daily-digest.test-support")).mockDailyDigestCircuitBreakerModule());
 
-import { generateDailyDigest } from "../daily-digest";
+import { generateDailyDigest, resumeDailyDigestDelivery } from "../daily-digest";
+import { DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY } from "../../lib/digest-safety-map";
 
 import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
 
@@ -715,7 +716,7 @@ describe("generateDailyDigest", () => {
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
   });
 
-  it("posts text-only and records degraded telemetry when the daily map is unavailable", async () => {
+  it("withholds the digest entirely when the daily map is unavailable", async () => {
     vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce({
       kind: "unavailable",
       reason: "manifest-not-today",
@@ -730,21 +731,113 @@ describe("generateDailyDigest", () => {
       { botToken: "tg-token", chatId: "tg-chat" },
     );
 
+    // Fail closed: no LLM call, no stored row, no social post — only the
+    // deferral intent for the digest-trigger-poll retry loop.
     expect(result.status).toBe("degraded");
-    expect(result.metadata).toContain("safety-map-manifest-not-today");
-    expect(postDigestTweet).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      expect.any(Object),
-      expect.any(Number),
-      null,
-      undefined,
-    );
-    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+    expect(result.metadata).toBe("deferred: safety-map-manifest-not-today");
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(getInsertDigestBinds(db as MockD1Database)).toBeUndefined();
+    expect(postDigestTweet).not.toHaveBeenCalled();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
+  it("withholds a forced run too when the daily map is unavailable", async () => {
+    vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce({
+      kind: "unavailable",
+      reason: "image-http-404",
+    });
+    const db = baselineScenario.db;
+
+    const result = await generateDailyDigest(
       db,
-      expect.objectContaining({ imageUrl: null }),
+      "anthropic-key",
+      { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" },
+      true,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    // Force bypasses only the recency check, never the map gate: a mapless
+    // social edition must not be producible through any code path.
+    expect(result.metadata).toBe("deferred: safety-map-image-http-404");
+    expect(postDigestTweet).not.toHaveBeenCalled();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
+  it("resumes stored-edition delivery with the map attached and clears the deferral", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT digest_text, digest_title, digest_extended, input_data FROM daily_digest",
+        rows: [],
+        first: {
+          digest_text: "Stored digest body.",
+          digest_title: "Stored Title",
+          digest_extended: "Stored extended body.",
+          input_data: JSON.stringify({ totalMcapUsd: 100e9 }),
+        },
+      },
+      { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }], first: { cnt: 187 } },
+      {
+        match: "SELECT state FROM telegram_digest_outbox",
+        rows: [],
+        first: { state: "sent" },
+      },
+      { match: "INSERT OR IGNORE INTO cache", rows: [] },
+      { match: "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?", rows: [] },
+      { match: "DELETE FROM cache", rows: [] },
+    ]);
+
+    const result = await resumeDailyDigestDelivery(
+      db,
+      { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" },
+      { botToken: "tg-token", chatId: "tg-chat" },
+      {
+        kind: "available",
+        imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+        manifest: { date: "2026-03-06", asOfSec: 1_772_796_000, renderedAtSec: 1_772_798_400, edition: "daily", bytes: { png: 1_000_000 } },
+      },
+    );
+
+    expect(result).toEqual({
+      kind: "resumed",
+      tweetStatus: "ok",
+      // The already-enqueued Telegram edition stays owned by the outbox drain.
+      telegramStatus: "outbox-sent",
+      deliveryComplete: true,
+    });
+    expect(postDigestTweet).toHaveBeenCalledWith(
+      "Stored Title",
+      "Stored digest body.",
+      expect.any(Object),
+      187,
+      "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
       undefined,
     );
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(
+      (db as MockD1Database).getHistory().some((entry) =>
+        entry.sql.includes("DELETE FROM cache") && entry.binds.includes(DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY),
+      ),
+    ).toBe(true);
+  });
+
+  it("reports an unresolved resume when no publishable digest row exists today", async () => {
+    const db = mockD1([
+      { match: "SELECT digest_text, digest_title, digest_extended, input_data FROM daily_digest", rows: [], first: null },
+    ]);
+
+    const result = await resumeDailyDigestDelivery(
+      db,
+      { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" },
+      null,
+      {
+        kind: "available",
+        imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+        manifest: { date: "2026-03-06", asOfSec: 1_772_796_000, renderedAtSec: 1_772_798_400, edition: "daily", bytes: { png: 1_000_000 } },
+      },
+    );
+
+    expect(result).toEqual({ kind: "no-publishable-digest" });
+    expect(postDigestTweet).not.toHaveBeenCalled();
   });
 
   it("omits map prose but keeps the valid attachment when Safety Score context is unavailable", async () => {

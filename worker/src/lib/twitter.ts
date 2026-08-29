@@ -233,6 +233,10 @@ async function uploadTweetImage(imageUrl: string, creds: TwitterCreds): Promise<
 /**
  * Build tweet text from digest and post it.
  * The caller is responsible for catching errors.
+ *
+ * A mapped edition is all-or-nothing: when `imageUrl` is set, a media upload
+ * failure aborts the tweet (after one bounded retry) instead of degrading to a
+ * text-only post — the digest delivery contract requires the Safety Score map.
  */
 export async function postDigestTweet(
   digestTitle: string,
@@ -241,19 +245,29 @@ export async function postDigestTweet(
   editionNumber?: number | null,
   imageUrl?: string | null,
   mapHook?: string | null,
-): Promise<{ tweetId: string; mediaAttached: boolean; mediaError: string | null }> {
+): Promise<{ tweetId: string; mediaAttached: boolean }> {
   let mediaId: string | undefined;
-  let mediaError: string | null = null;
   if (imageUrl) {
     try {
       mediaId = await uploadTweetImage(imageUrl, creds);
     } catch (error) {
-      mediaError = toErrorMessage(error);
-      logWorkerEventArgs("lib", "warn", `[twitter] Safety map attachment omitted: ${mediaError}`);
+      logWorkerEventArgs("lib", "warn", `[twitter] Safety map upload failed, retrying once: ${toErrorMessage(error)}`);
+      try {
+        mediaId = await uploadTweetImage(imageUrl, creds);
+      } catch (retryError) {
+        // No tweet was attempted, so this abort is a known non-post: tag it
+        // definitive so the delivery ledger keeps the bounded retry path open
+        // instead of freezing the day in execution_unknown.
+        throw new TwitterPostError(
+          `Safety map upload failed; mapped digest tweet aborted: ${toErrorMessage(retryError)}`,
+          "definitive_failure",
+          null,
+        );
+      }
     }
   }
   const tweetText = buildTweetText(digestTitle, digestText, editionNumber, mediaId ? mapHook : null);
   const tweetId = await postTweet(tweetText, creds, mediaId);
   logWorkerEventArgs("lib", "info", `[twitter] Posted digest tweet (${tweetText.length} chars${mediaId ? ", safety map attached" : ""})`);
-  return { tweetId, mediaAttached: Boolean(mediaId), mediaError };
+  return { tweetId, mediaAttached: Boolean(mediaId) };
 }

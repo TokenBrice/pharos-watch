@@ -96,7 +96,7 @@ The workflow runs on two daily schedules, 04:20 and 06:20 UTC, and also supports
 
 `functions/safety-scores/map.png.ts` serves `/safety-scores/map.png` from KV. `GET` and `HEAD` only; HEAD answers exactly as GET does minus the body, because several social platforms probe an image URL with HEAD before fetching it.
 
-`functions/safety-scores/map.json.ts` serves the manifest commit marker at `/safety-scores/map.json` with `no-store`. The daily digest reads this bounded endpoint to validate publication date and data freshness without adding the Pages KV namespace to the API Worker. Missing, malformed, or unreachable manifest state fails closed as an omitted attachment.
+`functions/safety-scores/map.json.ts` serves the manifest commit marker at `/safety-scores/map.json` with `no-store`. The daily digest reads this bounded endpoint to validate publication date and data freshness without adding the Pages KV namespace to the API Worker. Missing, malformed, or unreachable manifest state fails closed: the digest is withheld until a fresh map publishes (see the digest map gate below).
 
 `?date=YYYY-MM-DD` selects the dated archive, validated against a strict pattern; anything else is a 400. The Function never lists the namespace and never accepts a caller-supplied key fragment beyond the date. The archive lives on a query parameter rather than a nested path segment so it cannot shadow the static `/safety-scores/map/` page; Cloudflare includes the query string in the default cache key, so the two remain distinct cache entries.
 
@@ -106,9 +106,9 @@ Cache headers differ by resource: `latest.png` gets a short edge TTL with a long
 
 The page at `src/app/safety-scores/map/page.tsx` embeds the image with a download link and prose on how to read it. `src/app/safety-scores/map/poster.tsx` swaps in an explanatory panel on image error, so both the local-development state (no Pages Function exists under `next dev`) and the post-kill-switch state read as deliberate rather than broken.
 
-## Digest Degradation Contract
+## Digest Map Gate (Fail Closed)
 
-The digest includes the map **iff all four hold**:
+The digest ships with the map **iff all four hold**:
 
 1. `safety-map:latest.json` exists,
 2. `manifest.date` is today (UTC), and
@@ -119,9 +119,7 @@ It embeds the **dated** URL, never `latest.png`. Telegram and X cache by URL, so
 
 When available, X downloads the PNG, uploads it through the OAuth 1.0a media endpoint, and references the returned media id on the digest post. Telegram stores the canonical dated link inside the immutable outbox payload and requests a large link preview above the message. This preserves Telegram's exact-payload replay and accepted-chunk cursor contracts without creating a separate photo send.
 
-In any other state the digest omits the map section entirely — no stale link, no placeholder — and emits a structured internal ops warning plus a `safety-map-*` degraded reason. An X media-upload failure falls back to the normal text-only tweet and records `safety-map-twitter-attachment`; it never suppresses the digest.
-
-**The digest never fails, blocks, or delays on the map**, in any state, including the namespace being unreachable.
+In any other state the digest is withheld, not posted text-only: `generateDailyDigest` defers before generating (no row, no LLM call, no post), records a `digest:safety-map-deferral` intent, and the `digestTriggerPoll` slot retries every five minutes until the map publishes — see [digest-pipeline.md](./digest-pipeline.md#distribution). A day whose map never publishes rolls over with its digest deliberately unsent (`daily_digest_unsent_safety_map_never_published`). An X media-upload failure after the gate passed retries once and then aborts the tweet as a retryable definitive failure; it never falls back to a text-only post.
 
 ## Kill Switch
 
@@ -132,7 +130,7 @@ Three levers, in increasing order of what has already escaped:
 
    The purge is not optional. `latest.png` is served with `s-maxage=300, stale-while-revalidate=86400`, so a deleted key can keep being served from the edge for up to a day. Dated keys are `immutable` and will not re-validate at all until purged.
 
-   Deleting `safety-map:latest.json` is a **different** lever with a different scope: the Function never reads the manifest, so the image keeps serving. What the manifest controls is the digest's omit rule (see the degradation contract above). Delete the manifest to stop the map appearing in the digest; delete the PNG keys to stop it appearing on the site. To stop both, delete all three.
+   Deleting `safety-map:latest.json` is a **different** lever with a different scope: the Function never reads the manifest, so the image keeps serving. What the manifest controls is the digest's map gate (see above) — and because that gate fails closed, deleting the manifest also **holds the daily digest itself** until a fresh map publishes or the date rolls over unsent. Delete the manifest to pull the map (and the digest) from social channels; delete the PNG keys to stop it appearing on the site. To stop both, delete all three.
 3. **A bad image is already live and scraped.** Re-render, overwrite the keys, and run `.github/workflows/purge-pages-zone-cache.yml`. Social CDNs that already hold the dated URL are not recallable — this is why the digest embeds dated URLs, so the next post simply supersedes.
 
 ## Related

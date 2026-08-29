@@ -1162,7 +1162,8 @@ describe("worker.scheduled", () => {
     );
     await Promise.all(waits);
 
-    expect(cronMocks.getCache).toHaveBeenCalledTimes(1);
+    // Idle poll reads the force-run intent and the safety-map deferral key.
+    expect(cronMocks.getCache).toHaveBeenCalledTimes(2);
     expect(cronMocks.generateDailyDigest).not.toHaveBeenCalled();
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
   });

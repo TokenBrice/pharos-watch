@@ -3,6 +3,11 @@ import type { ScheduledRuntimeContext } from "../context";
 
 vi.mock("../../../cron/daily-digest", () => ({
   generateDailyDigest: vi.fn(),
+  resumeDailyDigestDelivery: vi.fn(),
+}));
+vi.mock("../../../lib/digest-safety-map", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/digest-safety-map")>()),
+  resolveDigestSafetyMap: vi.fn(),
 }));
 vi.mock("../../../lib/runtime-credentials", () => ({
   buildTwitterCreds: vi.fn(() => null),
@@ -20,7 +25,11 @@ vi.mock("../../../lib/telegram-digest-outbox", () => ({
   drainTelegramDigestOutbox: vi.fn(),
 }));
 
-import { generateDailyDigest } from "../../../cron/daily-digest";
+import { generateDailyDigest, resumeDailyDigestDelivery } from "../../../cron/daily-digest";
+import {
+  DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY,
+  resolveDigestSafetyMap,
+} from "../../../lib/digest-safety-map";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { buildTelegramCreds, buildTwitterCreds } from "../../../lib/runtime-credentials";
@@ -68,6 +77,9 @@ describe("runDigestTriggerPollSlot", () => {
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     runLeasedCron = vi.fn();
     vi.mocked(buildTelegramCreds).mockReturnValue(null);
+    // Default: the shared leased path re-resolves the map; unavailable keeps
+    // force-run tests on the plain generation branch.
+    vi.mocked(resolveDigestSafetyMap).mockResolvedValue({ kind: "unavailable", reason: "manifest-http-404" });
     vi.mocked(drainTelegramDigestOutbox).mockResolvedValue({
       due: 0,
       attempted: 0,
@@ -441,5 +453,109 @@ describe("runDigestTriggerPollSlot", () => {
       surface: "digest-trigger-poll",
       outcome: "degraded",
     }));
+  });
+
+  describe("safety-map deferral retries", () => {
+    const AVAILABLE_MAP = {
+      kind: "available" as const,
+      imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-08-29",
+      manifest: {
+        date: "2026-08-29",
+        asOfSec: 1_787_990_000,
+        renderedAtSec: 1_787_991_000,
+        edition: "daily" as const,
+        bytes: { png: 1_000_000 },
+      },
+    };
+
+    function mockCaches(values: Record<string, string>) {
+      vi.mocked(getCache).mockImplementation(async (_db, key) => {
+        const value = values[String(key)];
+        return value ? { value, updatedAt: 0 } : null;
+      });
+    }
+
+    function deferralPayload(overrides: Partial<{ date: string; reason: string; firstDeferredAtSec: number; attempts: number }> = {}): string {
+      return JSON.stringify({
+        date: "2026-08-29",
+        reason: "manifest-not-today",
+        firstDeferredAtSec: 1_787_990_000,
+        attempts: 1,
+        ...overrides,
+      });
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-08-29T09:00:00Z"));
+    });
+
+    it("keeps waiting while today's map is still unavailable", async () => {
+      mockCaches({ [DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY]: deferralPayload() });
+      vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce({ kind: "unavailable", reason: "manifest-not-today" });
+
+      await runDigestTriggerPollSlot(buildRuntime());
+
+      expect(runLeasedCron).not.toHaveBeenCalled();
+      expect(deleteCache).not.toHaveBeenCalled();
+      expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        skippedReason: "safety-map-still-unavailable",
+      }));
+    });
+
+    it("retires a rolled-over deferral as a deliberately unsent day", async () => {
+      mockCaches({ [DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY]: deferralPayload({ date: "2026-08-28" }) });
+
+      await runDigestTriggerPollSlot(buildRuntime());
+
+      expect(resolveDigestSafetyMap).not.toHaveBeenCalled();
+      expect(runLeasedCron).not.toHaveBeenCalled();
+      expect(deleteCache).toHaveBeenCalledWith(expect.anything(), DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY);
+      expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        outcome: "error",
+        error: "daily-digest-unsent:safety-map-never-published",
+      }));
+    });
+
+    it("generates the digest once the map publishes and no row exists yet", async () => {
+      mockCaches({ [DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY]: deferralPayload() });
+      vi.mocked(resolveDigestSafetyMap).mockResolvedValue(AVAILABLE_MAP);
+      vi.mocked(resumeDailyDigestDelivery).mockResolvedValueOnce({ kind: "no-publishable-digest" });
+      vi.mocked(generateDailyDigest).mockResolvedValueOnce({ itemCount: 1, metadata: "ok" });
+      runLeasedCron.mockImplementation(async (_name: string, fn: (signal?: AbortSignal) => Promise<CronResult>) => fn());
+
+      await runDigestTriggerPollSlot(buildRuntime());
+
+      expect(resumeDailyDigestDelivery).toHaveBeenCalledWith(
+        expect.anything(),
+        null,
+        null,
+        AVAILABLE_MAP,
+        undefined,
+        undefined,
+      );
+      // force=false: the recency guard still applies to the deferred rerun.
+      expect(vi.mocked(generateDailyDigest).mock.calls[0]?.[3]).toBe(false);
+    });
+
+    it("resumes stored-edition delivery instead of regenerating when a row exists", async () => {
+      mockCaches({ [DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY]: deferralPayload() });
+      vi.mocked(resolveDigestSafetyMap).mockResolvedValue(AVAILABLE_MAP);
+      vi.mocked(resumeDailyDigestDelivery).mockResolvedValueOnce({
+        kind: "resumed",
+        tweetStatus: "ok",
+        telegramStatus: "outbox-drain",
+        deliveryComplete: true,
+      });
+      runLeasedCron.mockImplementation(async (_name: string, fn: (signal?: AbortSignal) => Promise<CronResult>) => fn());
+
+      await runDigestTriggerPollSlot(buildRuntime());
+
+      expect(generateDailyDigest).not.toHaveBeenCalled();
+      expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        outcome: "ok",
+        metadata: expect.objectContaining({ deferralPending: true }),
+      }));
+    });
   });
 });
