@@ -440,7 +440,7 @@
           "contract:ethereum:0xa07d8cc424421cc2bce0544a65481376f010a438",
           "contract:base:0x55380fe7a1910dff29a47b622057ab4139da42c5"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "The Base OFT mints only on authenticated LayerZero delivery; the paired Ethereum FxUSDOFTAdaptor locks canonical fxUSD before that delivery and releases it only after the representation burns on return.",
           "trustedPeerOrRemote": "At Base block 50065524, the OFT endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c and peers(30101) returned the Ethereum FxUSDOFTAdaptor. The OFT lzReceive path accepts delivery from the endpoint and the configured peer.",

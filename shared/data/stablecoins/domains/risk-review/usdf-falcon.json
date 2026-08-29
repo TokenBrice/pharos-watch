@@ -62,8 +62,8 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Ethereum is the only proven native USDf issuance route and remains in Mint Authority. Chainlink CCIP uses an Ethereum Lock/Release escrow pool plus BSC, Base, and XDC Burn/Mint representations; their local mint/burn roles, pool administration, peer configuration, rate limits, and shared 4-of-6 Safe are Bridge Risk, with normal supply movement dependent on external CCIP validation and conserved lock/burn accounting.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex Safety Score V9 bridge review",
+    "reviewedAt": "2026-08-29",
+    "reviewer": "Codex Safety Score V9 bridge review; Safe-state re-review 2026-08-29",
     "confidence": "verified",
     "protocols": [
       {
@@ -328,19 +328,19 @@
           "enabledModules": [],
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
-          "observedBlock": 25770829,
-          "observedAt": "2026-08-16",
+          "observedBlock": 25862840,
+          "observedAt": "2026-08-29",
           "source": "onchain"
         },
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "lockboxOrEscrow": "At Ethereum block 25770829 on 2026-08-16, LockReleaseTokenPool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78 had typeAndVersion() = LockReleaseTokenPool 1.5.1, getToken() = the native USDf proxy, and owner() = the reviewed 4-of-6 Safe. It escrows canonical USDf for CCIP and is not a native USDf minter.",
           "trustedPeerOrRemote": "The Ethereum pool's reviewed remote-pool mapping covers BSC 0x4b66431f9e5f5cd026ae48e617902207b43048d4, Base/XDC 0x33570299e0d73f07c82d005de75de54cf4582fcc, and the separately untracked Solana pool from the current Chainlink directory. The authored EVM routes are restricted to the reviewed EVM mappings.",
           "rateLimits": "At the current EVM pool reads, EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate; getRateLimitAdmin() returned zero on the Ethereum pool. The pool owner remains the route administrator for supported CCIP lane configuration.",
           "pausersAdminsUpgraders": "The Safe owns the Ethereum LockRelease pool and its bridge administration, including router, remote-pool, and route configuration. Native USDf mint authority and the Ethereum token ProxyAdmin remain separately recorded in Mint Authority."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770829,
+        "observedAt": "2026-08-29",
+        "observedBlock": 25862840,
         "sources": [
           {
             "label": "Chainlink USDf CCIP directory",
@@ -355,7 +355,7 @@
             "url": "https://etherscan.io/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
           }
         ],
-        "evidence": "At Ethereum block 25770829 on 2026-08-16, LockReleaseTokenPool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78 was the canonical CCIP escrow and owner() returned Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. getToken() returned the native USDf proxy and the pool does not call the native token's privileged mint path. The pool's remote mappings, router, and lane configuration are bridge-route controls; the normal route locks native USDf and relies on CCIP validation for remote burn/mint accounting."
+        "evidence": "At Ethereum block 25862840 on 2026-08-29, LockReleaseTokenPool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78 remained the canonical CCIP escrow and owner() remained Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. Current Safe reads returned threshold 4 with the six owners already recorded, getModulesPaginated(0x1,100) returned an empty module list, and the guard and module-guard storage slots were zero. getToken() remained the native USDf proxy and the pool does not call the token's privileged mint path. Its remote mappings, router, and lane configuration remain bridge-route controls; normal movement still relies on CCIP validation for remote burn/mint accounting."
       },
       {
         "id": "usdf-falcon-bsc-burn-mint-pool",
@@ -540,11 +540,11 @@
           "enabledModules": [],
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
-          "observedBlock": 25770829,
-          "observedAt": "2026-08-16",
+          "observedBlock": 25862840,
+          "observedAt": "2026-08-29",
           "source": "onchain"
         },
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "The shared Safe owns the reviewed Ethereum LockRelease pool and the BSC, Base, and XDC BurnMintTokenPools. Those pools' current remote mappings point back to the Ethereum LockRelease pool; the Safe can change the remote-pool mappings and router configuration.",
           "rateLimits": "Current EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate on the reviewed pools. The pool owner Safe can change per-lane rate-limit configuration; the Ethereum pool reported getRateLimitAdmin() = zero.",
@@ -555,8 +555,8 @@
         "bypassSurfaces": [
           "Chainlink CCIP DON/RMN validator configuration and message execution are external failure domains and were not independently enumerated in this review."
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770829,
+        "observedAt": "2026-08-29",
+        "observedBlock": 25862840,
         "sources": [
           {
             "label": "Chainlink USDf CCIP directory",
@@ -581,9 +581,13 @@
           {
             "label": "XDC USDf default-admin Safe",
             "url": "https://xdcscan.com/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
+          },
+          {
+            "label": "XDC JSON-RPC current Safe reads",
+            "url": "https://erpc.xinfin.network"
           }
         ],
-        "evidence": "At the reviewed 2026-08-16 block heads (Ethereum 25770829, BSC 116358048, Base 50066251, and XDC 106142724), the same Safe address 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7 had the same six owners and 4-of-6 threshold on each reviewed EVM deployment; current module reads were empty, while getGuard() calls reverted and no current guard value is assumed. It held DEFAULT_ADMIN_ROLE on each destination BurnMintERC20 and owned the local CCIP BurnMintTokenPools, giving it the ability to administer representation roles, pool owners, remote mappings, routers, and rate limits. The BSC, Base, and XDC representation controls previously present in Mint Authority are retained here as bridge risk; the Ethereum Safe's native issuance powers remain separately scored in Mint Authority."
+        "evidence": "At current EVM heads on 2026-08-29 (Ethereum 25862840, BSC 118819235, Base 50620210, and XDC 106610399), the same Safe address 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7 still returned the six recorded owners and threshold 4 on every route. getModulesPaginated(0x1,100) returned an empty module list and the guard and module-guard storage slots were zero on all four deployments. The Safe held DEFAULT_ADMIN_ROLE on each destination BurnMintERC20 and owned the local CCIP BurnMintTokenPools, giving it representation-role, pool-owner, remote-mapping, router, and rate-limit administration. These powers remain Bridge Risk controls; the Ethereum Safe's native issuance powers stay separately recorded in Mint Authority, while Chainlink CCIP DON/RMN validation remains an external failure domain."
       }
     ]
   }

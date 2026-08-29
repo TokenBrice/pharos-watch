@@ -725,7 +725,7 @@
           "contract:codex:0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa",
           "contract:codex:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "The Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57 locks canonical KRWQ before the Codex OFT mints and releases conserved inventory after the representation burns on return.",
           "trustedPeerOrRemote": "At Codex block 29011114, endpoint() returned LayerZero Endpoint V2 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa and peers(30101) returned the Ethereum OFT Adapter. The endpoint is the only caller accepted by the OFT delivery path for representation minting.",
@@ -772,7 +772,7 @@
           "contract:morph-l2:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
           "contract:morph-l2:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
         ],
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "The Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57 locks canonical KRWQ before the Morph OFT mints and releases conserved inventory after the representation burns on return.",
           "trustedPeerOrRemote": "At Morph block 25379231, endpoint() returned LayerZero Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and peers(30101) returned the Ethereum OFT Adapter. The endpoint is the only caller accepted by the OFT delivery path for representation minting.",

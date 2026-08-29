@@ -4,23 +4,38 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "BtcUSD's canonical issuance is confined to the Bifrost native BtcUSD deployment: the BTCFi BtcUSD CDP handler 0x682143652b6e305730dd12b0dc7c38d5048fb647 holds the token's keccak(\"Minter\") role and mints against deposited BTC-variant collateral, while token owner/default admin 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5 can authorize additional minters but cannot mint directly. Base is a Bifrost Bridge representation and its owner/admin/proxy controls are authored under Bridge Risk. Bifrost AccessControl membership is non-enumerable through the reviewed public RPC and the native token/CDP implementation is not source-verified; those role-enumeration and source gaps keep this review at manual-review.",
+    "summary": "BtcUSD's canonical issuance is confined to the Bifrost native BtcUSD deployment: the BTCFi BtcUSD CDP handler 0x682143652b6e305730dd12b0dc7c38d5048fb647 holds the token's keccak(\"Minter\") role and mints against deposited BTC-variant collateral, while token owner/default admin 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5 can authorize additional minters but cannot mint directly. At Bifrost block 38078242, the handler's custom delegated target is pinned to 0x79eb3f72d930971a815d45f185961e39023799e8 and its owner slot to 0xf357a08c8d4a385cebddb517a44b210a0f6b3393; the owner-gated initialize path can replace that target immediately without a timelock. Base is a Bifrost Bridge representation and its owner/admin/proxy controls are authored under Bridge Risk. Bifrost AccessControl membership and the handler/target source remain unverified, so this review stays at manual-review despite the custom upgrade path being resolved.",
     "upgradeability": {
-      "model": "unknown",
+      "model": "custom",
       "deploymentRefs": [
         "bifrost:0x6906ccda405926fc3f04240187dd4fad5df6d555"
       ],
-      "canChangeMintLogic": "unknown",
-      "observedAt": "2026-08-28",
-      "observedBlock": 38025166,
+      "proxyAddresses": [
+        "0x682143652b6e305730dd12b0dc7c38d5048fb647"
+      ],
+      "implementationAddresses": [
+        "0x79eb3f72d930971a815d45f185961e39023799e8"
+      ],
+      "adminAddresses": [
+        "0xf357a08c8d4a385cebddb517a44b210a0f6b3393"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "BTCFi BtcUSD handler owner EOA",
+      "observedAt": "2026-08-29",
+      "observedBlock": 38078242,
       "sources": [
         {
-          "label": "BtcUSD Bifrost token on Bifrost explorer",
-          "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6906ccda405926fc3f04240187dd4fad5df6d555"
+          "label": "Bifrost handler explorer (unverified)",
+          "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x682143652b6e305730dd12b0dc7c38d5048fb647"
+        },
+        {
+          "label": "Bifrost delegated target explorer (unverified)",
+          "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x79eb3f72d930971a815d45f185961e39023799e8"
         },
         {
           "label": "Bifrost public EVM RPC",
-          "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+          "url": "https://public-01.mainnet.bifrostnetwork.com/rpc"
         }
       ]
     },
@@ -37,14 +52,65 @@
         ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-29",
+        "observedBlock": 38078242,
         "sources": [
           {
             "label": "BtcUSD Bifrost token on Bifrost explorer",
             "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6906ccda405926fc3f04240187dd4fad5df6d555"
+          },
+          {
+            "label": "Bifrost public EVM RPC",
+            "url": "https://public-01.mainnet.bifrostnetwork.com/rpc"
+          },
+          {
+            "label": "Bifrost handler owner explorer record",
+            "url": "https://explorer-backend.mainnet.thebifrost.io/api/v2/addresses/0xf357a08c8d4a385cebddb517a44b210a0f6b3393"
           }
         ],
-        "evidence": "2026-07-20 via the Bifrost public EVM RPC: the native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 is a 13.9KB non-proxy contract whose owner() returns this EOA (no contract code). eth_call to mint(address,uint256) from this owner reverted AccessControlUnauthorizedAccount, so it is not a direct minter. However, hasRole(DEFAULT_ADMIN_ROLE, owner) returned true, getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE, and eth_call to grantRole(MINTER_ROLE, owner) from this owner succeeded. It can therefore authorize minters, while current MINTER_ROLE membership remains unenumerable because getRoleMemberCount reverts and the token source/CDP controller is unverified."
+        "evidence": "At Bifrost block 38078242, native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 owner() returned this EOA; hasRole(DEFAULT_ADMIN_ROLE, owner) and grantRole(MINTER_ROLE, owner) simulation both succeeded, while hasRole(MINTER_ROLE, owner) and mint(address,uint256) from this owner were false/reverted. The Bifrost explorer backend identifies the address as an EOA (is_contract=false); current MINTER_ROLE membership remains unenumerable because getRoleMemberCount is unavailable."
+      },
+      {
+        "chain": "bifrost",
+        "address": "0xf357a08c8d4a385cebddb517a44b210a0f6b3393",
+        "label": "BTCFi BtcUSD handler owner EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "bifrost:0x6906ccda405926fc3f04240187dd4fad5df6d555"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-29",
+        "observedBlock": 38078242,
+        "failureDomainKeys": [
+          "eoa:bifrost:0xf357a08c8d4a385cebddb517a44b210a0f6b3393",
+          "contract:bifrost:0x682143652b6e305730dd12b0dc7c38d5048fb647"
+        ],
+        "sources": [
+          {
+            "label": "Bifrost handler explorer (unverified)",
+            "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x682143652b6e305730dd12b0dc7c38d5048fb647"
+          },
+          {
+            "label": "Bifrost public EVM RPC",
+            "url": "https://public-01.mainnet.bifrostnetwork.com/rpc"
+          },
+          {
+            "label": "Bifrost handler initialization transaction",
+            "url": "https://explorer-backend.mainnet.thebifrost.io/api/v2/transactions/0x1f5faa7aa262c3b381ff4f6ec6dae8a9823369fb7afc5d0c04405d49c6202105"
+          },
+          {
+            "label": "Bifrost handler ownership transfer transaction",
+            "url": "https://explorer-backend.mainnet.thebifrost.io/api/v2/transactions/0xada637ce4bdc3b37a0c8de23b21f0af71c2e3df63976407477b55f7ffb8de2dd"
+          },
+          {
+            "label": "Bifrost borrow internal trace",
+            "url": "https://explorer-backend.mainnet.thebifrost.io/api/v2/transactions/0xbf384797100859c1225a0204f43e5438f4be9410acfd5445f9650070241a242f/internal-transactions"
+          }
+        ],
+        "evidence": "At Bifrost block 38078242, handler storage slot 0 returned 0xf357a08c8d4a385cebddb517a44b210a0f6b3393 and slot 0x0a returned 0x79eb3f72d930971a815d45f185961e39023799e8. Its 5,266-byte unverified runtime contains the fallback/proxy DELEGATECALL path through slot 0x0a; the target has 22,060 bytes of direct runtime code and no DELEGATECALL instruction. The handler and target EIP-1967 implementation, admin, and beacon slots were all zero. The owner-gated initialize(uint256,address,address,address,address,address,string,address,address) path writes slot 0x0a: eth_call from the current owner succeeded, while the same call from 0x0000000000000000000000000000000000000001 reverted with O. The explorer initialization transaction at block 13183999 supplied this target, and the ownershipTransfer transaction at block 25389119 changed the handler owner to this EOA. No timelock or delay executor is present, so this is an immediate custom mint-logic replacement authority."
       },
       {
         "chain": "bifrost",
@@ -59,8 +125,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The handler mints BtcUSD only through the BTCFi CDP borrow path against deposited BTC-variant collateral, bounded by collateral balances, the 50% maximum LTV, and oracle pricing; it holds no role-admin capability.",
-        "observedAt": "2026-07-27",
-        "observedBlock": 37087890,
+        "observedAt": "2026-08-29",
+        "observedBlock": 38078242,
         "failureDomainKeys": [
           "protocol:btcfi",
           "contract:bifrost:0x682143652b6e305730dd12b0dc7c38d5048fb647"
@@ -72,19 +138,23 @@
           },
           {
             "label": "Bifrost public EVM RPC",
-            "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+            "url": "https://public-01.mainnet.bifrostnetwork.com/rpc"
+          },
+          {
+            "label": "Bifrost borrow internal trace",
+            "url": "https://explorer-backend.mainnet.thebifrost.io/api/v2/transactions/0xbf384797100859c1225a0204f43e5438f4be9410acfd5445f9650070241a242f/internal-transactions"
           }
         ],
-        "evidence": "BTCFi's own getAvailableBtcfiHandlers API identifies this contract (chainId 3068) as the BtcUSD token handler. At Bifrost block 37087890 (2026-07-27): hasRole(keccak256(\"Minter\") = 0x6e58ad548d72b425ea94c15f453bf26caddb061d82b2551db7fdd3cefe0e9940, this contract) returned true on the native BtcUSD token, and an eth_call simulation of mint(address,uint256) from this address succeeded while identical simulations from the token owner EOA and the four collateral handler contracts reverted with AccessControlUnauthorizedAccount(account, Minter). The handler has 5,266 bytes of direct runtime code and a zero EIP-1967 implementation slot, but instruction-aware scanning found DELEGATECALL opcodes outside PUSH data in its unverified runtime. Those observations exclude a standard EIP-1967 proxy only; they do not resolve the delegated target or who can change it."
+        "evidence": "BTCFi's own getAvailableBtcfiHandlers API identifies this contract (chainId 3068) as the BtcUSD token handler. At Bifrost block 38078242, hasRole(MINTER_ROLE, this contract) returned true on the native BtcUSD token and an eth_call simulation of mint(address,uint256) from this address to a nonzero recipient returned success. The explorer trace for a successful borrow at block 38009958 shows the handler DELEGATECALLing 0x79eb3f72d930971a815d45f185961e39023799e8 and the delegated target calling the collateral and SI handlers. The collateral-backed borrow path remains bounded by the reviewed 50% maximum LTV and oracle pricing, but its unverified implementation source leaves the full accounting invariant unverified."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Bifrost block 37710739 (2026-08-16), native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 owner() returned 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; hasRole(DEFAULT_ADMIN_ROLE, owner) returned true, hasRole(keccak256(\"Minter\"), owner) returned false, a direct mint simulation from the owner reverted, getRoleAdmin(Minter) returned DEFAULT_ADMIN_ROLE, and a grantRole(Minter, owner) simulation returned success. BTCFi's supported-handler API identifies 0x682143652b6e305730dd12b0dc7c38d5048fb647 as the BtcUSD CDP handler; hasRole(Minter, handler) returned true and a mint simulation from the handler succeeded. Bifrost AccessControl membership is not enumerable through the reviewed public RPC: getRoleMemberCount reverts and historical role-grant logs were unavailable, so another native Minter cannot be excluded. The native token and CDP implementation are not source-verified, leaving the full collateral/accounting invariant and hidden native mint paths unverified. The native default admin can authorize a minter outside the handler's collateral math; therefore authorityPosture remains unbounded-or-compromised, economicCapSemantics remains unbounded, reconciliation remains unknown, and supervision remains none. At Bifrost block 38025166 on 2026-08-28, the token and current CDP handler had direct runtime bytecode (13,966 and 5,266 bytes), and their EIP-1967 implementation, admin, and beacon slots were all zero. Instruction-aware scanning found no DELEGATECALL, CALLCODE, CREATE, CREATE2, or SELFDESTRUCT instruction in the token runtime, but found DELEGATECALL opcodes outside PUSH data in the unverified handler runtime. This excludes a standard proxy for both deployments and supports token-code immutability, but it does not identify the handler's delegated targets or prove that the full native mint path cannot be changed. Upgradeability therefore remains unknown rather than being promoted from a standard-slot check.",
-      "reviewer": "P2 mint-free cohort; Kimi data review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15; Codex mint-bridge-boundary review; Codex lane 1 control-plane upgradeability audit",
-      "reviewedAt": "2026-08-28",
+      "evidence": "At Bifrost block 38078242, native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 owner() returned 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; hasRole(DEFAULT_ADMIN_ROLE, owner) and a grantRole(MINTER_ROLE, owner) simulation succeeded, while hasRole(MINTER_ROLE, owner) was false and mint(address,uint256) from that owner reverted. The BTCFi supported-handler API identifies 0x682143652b6e305730dd12b0dc7c38d5048fb647 as the BtcUSD CDP handler; hasRole(MINTER_ROLE, handler) returned true and a mint simulation from the handler succeeded. AccessControl membership remains non-enumerable because getRoleMemberCount is unavailable, and the handler and delegated target are not source-verified, so the full collateral/accounting invariant remains unverified. The same pinned block's handler storage slot 0 returned 0xf357a08c8d4a385cebddb517a44b210a0f6b3393 and slot 0x0a returned 0x79eb3f72d930971a815d45f185961e39023799e8; the 5,266-byte handler has a custom DELEGATECALL path through slot 0x0a, while the 22,060-byte target has no DELEGATECALL instruction. Handler and target EIP-1967 implementation, admin, and beacon slots were zero. Owner-gated initialize from the current owner succeeded and the same call from a non-owner reverted; the explorer initialization transaction at block 13183999 supplied this target and ownershipTransfer at block 25389119 set the current handler owner. The successful borrow trace at block 38009958 shows handler DELEGATECALL to this target and downstream collateral/SI calls. The custom target/admin chain is therefore pinned with an immediate (zero-delay) owner-controlled mint-logic replacement; authorityPosture remains unbounded-or-compromised and confidence manual-review because role enumeration, source verification, and accounting invariants remain open.",
+      "reviewer": "P2 mint-free cohort; Kimi data review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15; Codex mint-bridge-boundary review; Codex lane 1 control-plane upgradeability audit; Codex Bifrost custom-handler upgrade trace 2026-08-29",
+      "reviewedAt": "2026-08-29",
       "disposition": "scoreable",
       "sources": [
         {
@@ -101,9 +171,30 @@
         },
         {
           "label": "Bifrost public EVM RPC",
-          "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+          "url": "https://public-01.mainnet.bifrostnetwork.com/rpc"
+        },
+        {
+          "label": "Bifrost handler explorer (unverified)",
+          "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x682143652b6e305730dd12b0dc7c38d5048fb647"
+        },
+        {
+          "label": "Bifrost delegated target explorer (unverified)",
+          "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x79eb3f72d930971a815d45f185961e39023799e8"
+        },
+        {
+          "label": "Bifrost handler initialization transaction",
+          "url": "https://explorer-backend.mainnet.thebifrost.io/api/v2/transactions/0x1f5faa7aa262c3b381ff4f6ec6dae8a9823369fb7afc5d0c04405d49c6202105"
+        },
+        {
+          "label": "Bifrost handler ownership transfer transaction",
+          "url": "https://explorer-backend.mainnet.thebifrost.io/api/v2/transactions/0xada637ce4bdc3b37a0c8de23b21f0af71c2e3df63976407477b55f7ffb8de2dd"
+        },
+        {
+          "label": "Bifrost borrow internal trace",
+          "url": "https://explorer-backend.mainnet.thebifrost.io/api/v2/transactions/0xbf384797100859c1225a0204f43e5438f4be9410acfd5445f9650070241a242f/internal-transactions"
         }
-      ]
+      ],
+      "sourceFreeRationale": "Explorer marks both the handler and its delegated target as unverified, so this follow-up relies on reproducible pinned RPC storage/bytecode reads plus explorer transaction records rather than verified Solidity. The custom chain is nonetheless directly evidenced: slot 0x0a selects the target, slot 0 selects the owner, initialize is owner-gated and writes slot 0x0a, and the borrow trace observes handler-to-target DELEGATECALL. No EIP-1967 proxy slot, queue, or timelock delay was found. This resolves the upgrade-control fact only; AccessControl role enumeration, target source, and full collateral/accounting invariants remain manual-review questions."
     }
   }
 }

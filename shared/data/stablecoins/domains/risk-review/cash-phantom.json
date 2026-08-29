@@ -167,8 +167,8 @@
           "caps": "Bridge applies a 20,000,000-CASH per-call limit and the OFTStore route has a separate allowance; governance can change both.",
           "pausersAdminsUpgraders": "The OFTStore participates in Bridge-program-controlled destination minting; current pause and frozen-receiver state remains pending."
         },
-        "capDescription": "At the fixed 2026-07-13 cutoff, the OFTStore bridge minter had 999,999,997.993 CASH allowance. This is a bridge route allowance, not independent native issuance.",
-        "canRaiseCap": "unknown",
+        "capDescription": "At the fixed 2026-07-13 cutoff, the OFTStore bridge minter had 999,999,997.993 CASH allowance. Bridge governance can reset this allowance and its per-call/maximum route limits, so cap mutability is known; this is a bridge route allowance, not independent native issuance.",
+        "canRaiseCap": true,
         "observedAt": "2026-07-13",
         "observedBlock": 432714278,
         "sources": [

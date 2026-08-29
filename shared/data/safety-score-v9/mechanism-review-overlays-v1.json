@@ -3211,7 +3211,7 @@
     {
       "assetId": "usdq-quantoz",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-29",
       "sources": [
         {
           "label": "Quantoz transparency disclosure (segregated bankruptcy-remote reserve assertion)",
@@ -3220,13 +3220,17 @@
         {
           "label": "Quantoz EURQ and USDQ product disclosure (DNB-licensed EMI and par redemption)",
           "url": "https://www.quantoz.com/products/eurq-usdq"
+        },
+        {
+          "label": "Quantoz USDQ MiCA white paper v1.2 notified to AFM and amended 2025-03-24 (bankruptcy-remote foundation and holder redemption)",
+          "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/682b6aef67d8ffc437e0befc_USDQ-Whitepaper-24032025.pdf"
         }
       ],
-      "notes": "Quantoz self-reports that DNB-licensed Quantoz Payments issues USDQ with at-par holder redemption and a segregated, bankruptcy-remote reserve structure containing cash and government bonds. Without a token-specific safeguarding agreement or current independent itemized report, this supports limited claim and segregation only. The reviewed current pages refer generically to Tier 1 partners but do not name actual reserve banks or custodians, allocations, anti-rehypothecation, or replacement mechanics, so custody continuity remains uncurated.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. assuranceAndReconciliation = unavailable: The reviewed Quantoz USDQ disclosure surface at https://www.quantoz.com/transparency does not publish a current dated reserve-to-liability reconciliation by a named independent attestor, or reproducible itemized issuer data corroborated by a qualifying external anchor. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. custodyContinuity = unavailable: The reviewed Quantoz USDQ disclosure surface at https://www.quantoz.com/transparency does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization.",
+      "notes": "Re-reviewed 2026-08-29. The USDQ MiCA white paper v1.2, notified to AFM on 2024-10-10 and amended on 2025-03-24, states that each USDQ is backed by one US dollar reserve held by Stichting Quantoz in a bankruptcy-remote setup and gives registered EEA account holders at-par redemption. This dated regulatory filing supports adequate claimAndSegregation. The product and transparency pages identify only generic Tier 1 institutions and publish no current itemized independent reserve-to-liability report, named providers, allocations, or continuity mechanics; assuranceAndReconciliation and custodyContinuity remain unavailable.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "quality": "limited"
+          "quality": "adequate"
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
@@ -3743,7 +3747,7 @@
     {
       "assetId": "eurq-quantoz",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-29",
       "sources": [
         {
           "label": "Quantoz EURQ and USDQ product disclosure",
@@ -3752,13 +3756,17 @@
         {
           "label": "Quantoz transparency disclosure",
           "url": "https://quantoz.com/transparency"
+        },
+        {
+          "label": "Quantoz EURQ MiCA white paper v1.2 notified to AFM and amended 2025-03-24 (bankruptcy-remote foundation and holder redemption)",
+          "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/682b6bf9f6f14084a0cb87ac_EURQ-Whitepaper-24032025.pdf"
         }
       ],
-      "notes": "Quantoz's Dutch EMI and MiCA disclosures describe at-par EURQ redemption and segregated euro reserves. Without a current itemized independent reserve report or token-specific safeguarding instrument, this supports limited claim and segregation only. The reviewed transparency material does not name current reserve banks or custodians, provider allocations, or failure continuity, so custody continuity remains uncurated.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. assuranceAndReconciliation = unavailable: The reviewed Quantoz EURQ disclosure surface at https://quantoz.com/transparency does not publish a current dated reserve-to-liability reconciliation by a named independent attestor, or reproducible itemized issuer data corroborated by a qualifying external anchor. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. custodyContinuity = unavailable: The reviewed Quantoz EURQ disclosure surface at https://quantoz.com/transparency does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization.",
+      "notes": "Re-reviewed 2026-08-29. The EURQ MiCA white paper v1.2, notified to AFM on 2024-10-10 and amended on 2025-03-24, states that each EURQ is backed by one euro reserve held by Stichting Quantoz in a bankruptcy-remote setup and gives registered EEA account holders at-par redemption. This dated regulatory filing supports adequate claimAndSegregation. The product and transparency pages identify only generic Tier 1 institutions and publish no current itemized independent reserve-to-liability report, named providers, allocations, or continuity mechanics; assuranceAndReconciliation and custodyContinuity remain unavailable.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "quality": "limited"
+          "quality": "adequate"
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
@@ -4501,10 +4509,10 @@
     {
       "assetId": "xaut-tether",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-29",
       "sources": [
         {
-          "label": "BDO XAUT ISAE 3000R reasonable-assurance report as of June 30, 2026",
+          "label": "BDO XAUT ISAE 3000R reasonable-assurance report as of June 30, 2026 (report dated 2026-07-31)",
           "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
         },
         {
@@ -4516,7 +4524,7 @@
           "url": "https://gold.tether.to/faq"
         }
       ],
-      "notes": "Refreshed 2026-08-08 against the latest BDO ISAE 3000R reasonable-assurance report, dated 2026-07-31 and measured at 2026-06-30 23:59 UTC. BDO performed inventory procedures, used specialist inventory/quality reports, verified management's accounting-to-blockchain liability reconciliations, and concluded that the report was fairly presented. The report records 707,747.139 fine troy ounces of LBMA Good Delivery gold against 707,747.090000 XAUT in circulation, states that the Swiss-vaulted Gold Reserves are owned by XAUT holders rather than TG Commodities, and describes undivided ownership rights in specified bars. The FAQ documents whole-bar physical redemption subject to account, lot-size, and Swiss-delivery conditions. The allocated-commodity profile preserves the distinction between holder title/allocation and bankruptcy treatment: no independent legal opinion tests treatment in an issuer or custodian insolvency, so bankruptcy remoteness remains limited. Custody continuity remains issuer-undisclosed because the reviewed sources refer only to unnamed custodian(s) and do not identify the Swiss vault operator, provider shares, reserve-wide rehypothecation controls, insurance terms, substitute-custodian arrangements, or insolvency-continuity mechanics. Quarterly BDO reasonable assurance supports adequate, not strong, assurance cadence while the point-in-time inventory and blockchain-liability reconciliation remain strong.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
+      "notes": "Re-reviewed 2026-08-29 against BDO's ISAE 3000R reasonable-assurance report dated 2026-07-31 for the 2026-06-30 23:59 UTC reporting point. BDO verified inventory procedures, specialist inventory and quality reports, and management accounting-to-blockchain liability reconciliations, and concluded the Tether Gold-Reserves Report was fairly presented: 707,747.139 fine troy ounces of LBMA Good Delivery gold against 707,747.090000 XAUT in circulation. This dated independent reconciliation supports adequate assuranceAndReconciliation only. The BDO report and FAQ do not identify the Swiss custodian, provider shares, rehypothecation or insurance terms, successor custody, or insolvency continuity; title and physical redemption remain at their existing limited grades.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
@@ -4753,7 +4761,7 @@
     {
       "assetId": "audx-aussie-dollar-token",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-29",
       "sources": [
         {
           "label": "AUDX binding platform terms updated 2025-06-24",
@@ -4768,11 +4776,15 @@
           "url": "https://www.audxtoken.com/_files/ugd/539754_f60cd94b9a5148cfafd351f6157c8036.pdf"
         },
         {
+          "label": "Aura Partners AUDX limited-assurance report as of 2026-07-31 (report dated 2026-08-20)",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_d2b6ce0bfdd947bda8375fe3283a0491.pdf"
+        },
+        {
           "label": "AUDX monthly transparency archive",
           "url": "https://www.audxtoken.com/transparency"
         }
       ],
-      "notes": "Re-reviewed 2026-08-08. AUDX's binding terms and PDS describe client beneficial ownership and a statutory trust/client-money arrangement. Aura Partners' report, signed in July 2026 for 2026-06-30, directly confirmed designated reserve accounts and reconciled AUD 3,231,280.83 of reserves to AUDX 3,008,057 of supply. Claim and segregation remains limited because reserve institutions are unnamed and no public insolvency-priority filing beyond issuer legal documents was established. The report supplies adequate monthly independent limited assurance with full assets-and-liabilities reconciliation; strong is not assigned because the canonical all-three test is not met by named custody and enforceable legal pins. The terms, PDS, report, and archive do not name the active financial institutions or publish provider-level continuity mechanics.",
+      "notes": "Re-reviewed 2026-08-29 against Aura Partners' independent limited-assurance report dated 2026-08-20 for the 2026-07-31 23:59 AEDT reporting point. Aura obtained independent reserve-institution confirmation, checked on-chain supply, and reconciled AUD 3,231,371.79 of designated reserves to AUDX supply of AUD 3,208,057, supporting adequate assuranceAndReconciliation only. AUDX terms and PDS continue to support limited claimAndSegregation; the report confirms designated accounts but names no institutions, provider allocations, anti-rehypothecation controls, or failure and successor-custody mechanics, so custodyContinuity remains unavailable.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -5386,7 +5398,7 @@
     {
       "assetId": "idrt-rupiah-token",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-29",
       "sources": [
         {
           "label": "Rupiah Token official site (issuer PT Rupiah Token Indonesia; IDRT issuance and redemption)",
@@ -5395,6 +5407,10 @@
         {
           "label": "Independent Accountant Report on Applying Agreed-upon Procedures of the Management Report for Rupiah Token Circulation and its Bank Balance for Token Collateral as of January 31, 2026",
           "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf"
+        },
+        {
+          "label": "Independent Accountant July 2026 IDRT circulation and bank-collateral AUP report (as of 2026-07-31; dated 2026-08-21)",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_July_31_2026_2975b84148.pdf"
         }
       ],
       "metrics": {},
@@ -5411,7 +5427,7 @@
           "sourceUrl": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf"
         }
       },
-      "notes": "PT Rupiah Token Indonesia issues IDRT with KYC-gated direct issuance and redemption against rupiah bank balances. The reviewed independent accountant's ISRS-4400-style agreed-upon-procedures report as of January 31, 2026 covers IDRT circulation and the bank balance held as token collateral, reconciling per-token-type circulation to collateral bank balances. Claim and segregation is limited: the issuer's 1:1 collateral commitment is self-reported and no reviewed document establishes holder beneficial ownership, a trust, or bankruptcy-remote segregation of the collateral accounts. Assurance and reconciliation is limited: the AUP independently reconciles circulation to bank collateral balances but expressly provides no assurance opinion, and the January 2026 report is the latest reviewed. Custody continuity is deliberately left uncurated: the reviewed material does not name the collateral banks, provider shares, anti-rehypothecation terms, or failure and replacement arrangements.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. custodyContinuity = unavailable: The reviewed Rupiah Token disclosure surface at https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization."
+      "notes": "Re-reviewed 2026-08-29 against the independent accountant's July 2026 agreed-upon-procedures report, dated 2026-08-21 for the 2026-07-31 reporting point. The report compared IDRT, IDRTB, BSC, and Polygon circulation with the corresponding bank statements and time-deposit certificates, found no differences, and confirmed a 1:1 collateral ratio. Because the engagement expressly gives no audit opinion or other assurance, this dated full-scope reconciliation supports limited assuranceAndReconciliation only. The issuer's holder-claim disclosure remains limited, and the report does not name the active reserve institutions, allocations, or failure and successor-custody mechanics, so custodyContinuity remains unavailable."
     },
     {
       "assetId": "qcad-stablecorp",
@@ -9163,10 +9179,10 @@
     {
       "assetId": "bnusd-balanced",
       "archetype": "cdp",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-29",
       "sources": [
         {
-          "label": "Balanced bnUSD product page and Stability Fund design",
+          "label": "Balanced bnUSD product page and Stability Fund design (checked 2026-08-29)",
           "url": "https://balanced.network/stablecoin/"
         },
         {
@@ -9194,7 +9210,7 @@
           "url": "https://rpc.soniclabs.com"
         }
       ],
-      "notes": "Reviewed 2026-08-08 and refreshed to the newer verified reserve-review measurement at Sonic block 76,778,944 (2026-07-30T21:18:20Z). Facilitator-bucket bnUSD supply was 1,408,507.20 and the complete 82-borrower collateral inventory was valued through the pool oracle at $2,918,934.98, producing collateralizationRatio 2.072361. Directly readable LTV, liquidation-threshold, bonus, and cap parameters plus complete onchain/API reconciliation support strong collateralizationParameters. Aave-style third-party liquidations and the listed liquidator support adequate liquidationMechanics. The Stability Fund's documented 1:1 swap design supports adequate backstop, though current capacity is unmeasured. A single shared hub pool cross-collateralizes reserves and branches, so branchIsolation is limited. Contract-level redemption of bnUSD for borrower collateral supports adequate structuralRedemption. The money-market docs, Balanced product/mechanics pages, deployments, and audit index still disclose no shutdown, bad-debt allocation, deficit-elimination, or wind-down path, so shutdownAndBadDebt is unavailable. liquidationCapacityRatio is not applicable because there is no dedicated liquidation pool; liquidators use open-market capital. No runtime inheritance applies: the coin directly resolves to cdp and variantOf is null.",
+      "notes": "Re-reviewed 2026-08-29 against the current Balanced bnUSD stablecoin/how pages, SODAX money-market documentation and audit index, and the existing pinned Sonic capture at block 76,778,944 (2026-07-30T21:18:20Z). That capture reconciles 82 borrower positions and reports collateralizationRatio 2.072361; the documented parameters and open-market liquidations support strong collateralizationParameters and adequate liquidationMechanics. Balanced describes the Stability Fund as USDC/USDT 1:1 peg-arbitrage swaps, not a committed borrower-loss absorber or bad-debt waterfall, so backstop is limited with capacity unmeasured. No shutdown, wind-down, deficit-elimination, or bad-debt allocation procedure is published; shutdownAndBadDebt remains unavailable. Branch isolation remains limited and structural redemption remains adequate.",
       "metrics": {
         "collateralizationRatio": 2.072361,
         "liquidationCapacityRatio": null
@@ -9214,7 +9230,7 @@
           "quality": "adequate"
         },
         "backstop": {
-          "quality": "adequate"
+          "quality": "limited"
         },
         "branchIsolation": {
           "quality": "limited"
@@ -13617,7 +13633,7 @@
     {
       "assetId": "tgbp-tokenised",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-08-29",
       "sources": [
         {
           "label": "BCP Technologies tGBP terms: holder redemption right, segregated reserve accounts, eligible reserve assets, and third-party institution risk",
@@ -13628,17 +13644,20 @@
           "url": "https://www.tokenisedgbp.com/transparency"
         },
         {
-          "label": "Andersen LLP independent accountants report for tGBP reserves as of 2026-06-30",
+          "label": "Andersen LLP independent accountants AUP report for tGBP reserves as of 2026-06-30 (published 2026-07-14; no assurance opinion)",
           "url": "https://hypzwtzgiiobtwtrskfq.supabase.co/storage/v1/object/public/Website%20Files/Independent%20Accounts%20Report%20-%20BCP%20Technologies%20Ltd%20-%20%2030%20June%202026.pdf"
         }
       ],
-      "notes": "BCP Technologies' binding tGBP terms state that reserves are held with regulated financial institutions in segregated accounts separate from BCP corporate funds, on behalf of and for the exclusive benefit of users, and that tGBP represents a right to redeem an equivalent GBP value through a BCP account. The terms also say BCP controls and manages the accounts, reserve assets may include bank deposits, money-market funds, and UK Treasuries, and BCP is not liable for insolvency or liquidity problems at reserve institutions. This issuer-documented segregation and redemption claim supports claimAndSegregation at limited under D1's 'self-reported disclosures only' line; no independent trust, safeguarding agreement, or bankruptcy-remoteness opinion was published. custodyContinuity is limited under the same D1 line: the terms describe regulated financial institutions and banking partners, and Andersen's 2026-06-30 agreed-upon-procedures report observed that identified reserve assets covered circulating tGBP throughout June, but neither source names a reserve bank, securities custodian, or fund custodian. D1 adequate is not met because its conjunctive requirement is documented segregation/custody plus a recent attestation naming custodians. The Andersen report expressly disclaims audit, review, or other assurance and does not establish internal controls, solvency, or liquidity. What was NOT established: custodian identities or allocation shares; multiple-provider continuity or replacement arrangements; reserve-wide non-rehypothecation; a holder trust, statutory safeguarding regime, or bankruptcy-remoteness protection; itemized reserve composition and amounts; and an assurance opinion over the reserve balance.",
+      "notes": "Re-reviewed 2026-08-29. Andersen LLP's dated independent agreed-upon-procedures report, published 2026-07-14 for the 2026-06-30 reporting point, observed that tGBP circulation did not exceed the cash and other eligible reserve assets identified by BCP and that those reserves were maintained through June. The report expressly provides no audit, review, or other assurance opinion; under the mechanism evidence standard this supports limited assuranceAndReconciliation, not adequate or strong. BCP's binding terms continue to support limited claimAndSegregation and custodyContinuity; they do not name reserve institutions, allocations, anti-rehypothecation, or provider-failure succession.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
         },
         "custodyContinuity": {
+          "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
           "quality": "limited"
         }
       }
