@@ -160,6 +160,7 @@ const cronMocks = vi.hoisted(() => ({
   }),
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => undefined),
+  recordScheduledWorkerVersionFirstSeen: vi.fn(async () => undefined),
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => undefined),
   reconcileTelegramCommandRegistration: vi.fn(async () => ({ attempted: false })),
@@ -316,6 +317,10 @@ vi.mock("../lib/db-cache", () => ({
   savePriceCache: vi.fn(async () => undefined),
 }));
 
+vi.mock("../lib/worker-version-first-seen", () => ({
+  recordScheduledWorkerVersionFirstSeen: cronMocks.recordScheduledWorkerVersionFirstSeen,
+}));
+
 vi.mock("../lib/cron-logger", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/cron-logger")>();
   return {
@@ -385,6 +390,52 @@ import {
 describe("worker.scheduled", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cronMocks.recordScheduledWorkerVersionFirstSeen.mockImplementation(async () => undefined);
+  });
+
+  it("attempts the worker-version marker write once per isolate", async () => {
+    const markerWrite = vi.fn(async () => undefined);
+    let attemptedInIsolate = false;
+    cronMocks.recordScheduledWorkerVersionFirstSeen.mockImplementation(async () => {
+      if (attemptedInIsolate) return;
+      attemptedInIsolate = true;
+      await markerWrite();
+    });
+    const env = makeScheduledEnv();
+
+    for (const [cron, scheduledTime] of [
+      ["9 * * * *", Date.parse("2026-08-30T12:09:00Z")],
+      ["24 * * * *", Date.parse("2026-08-30T12:24:00Z")],
+    ] as const) {
+      const { ctx, waits } = makeExecutionContext();
+      await worker.scheduled({ cron, scheduledTime } as ScheduledEvent, env, ctx);
+      await Promise.all(waits);
+    }
+
+    expect(cronMocks.recordScheduledWorkerVersionFirstSeen).toHaveBeenCalledTimes(2);
+    expect(markerWrite).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledTimes(2);
+  }, 30_000);
+
+  it("continues the scheduled lane when the worker-version marker write fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    cronMocks.recordScheduledWorkerVersionFirstSeen.mockRejectedValueOnce(new Error("D1 marker unavailable"));
+    const env = makeScheduledEnv();
+    const { ctx, waits } = makeExecutionContext();
+
+    await expect(worker.scheduled(
+      {
+        cron: "9 * * * *",
+        scheduledTime: Date.parse("2026-08-30T12:09:00Z"),
+      } as ScheduledEvent,
+      env,
+      ctx,
+    )).resolves.toBeUndefined();
+    await Promise.all(waits);
+
+    expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("smokes every configured scheduled trigger without live provider fetches", async () => {
@@ -428,6 +479,12 @@ describe("worker.scheduled", () => {
       }
 
       expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledTimes(schedules.length);
+      expect(cronMocks.recordScheduledWorkerVersionFirstSeen).toHaveBeenCalledTimes(schedules.length);
+      expect(cronMocks.recordScheduledWorkerVersionFirstSeen).toHaveBeenCalledWith(
+        db,
+        "test-worker-version",
+        expect.any(Number),
+      );
       expect(cronMocks.runScheduledSlotWithFence.mock.calls.map((call) => call[1])).toEqual(
         schedules.map(([scheduleKey]) => scheduleKey),
       );

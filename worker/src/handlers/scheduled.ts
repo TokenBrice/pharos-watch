@@ -10,6 +10,7 @@ import {
   type ScheduledSlotExecutionOptions,
 } from "../lib/scheduled-slot-fence";
 import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
+import { recordScheduledWorkerVersionFirstSeen } from "../lib/worker-version-first-seen";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
 import type { ScheduledSlotSummary } from "./scheduled/slot-summary";
 
@@ -161,6 +162,15 @@ export async function handleScheduledEvent(
     slotStartedAt,
     slotBudgetStartedAtMs,
   });
+  try {
+    await recordScheduledWorkerVersionFirstSeen(
+      env.DB,
+      runtime.workerVersion,
+      Math.floor(slotBudgetStartedAtMs / 1000),
+    );
+  } catch (error) {
+    logWorkerEventArgs("handler", "warn", "[cron-slot] Failed to record worker version first-seen time:", error);
+  }
 
   let slotResult;
   try {

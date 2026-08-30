@@ -107,6 +107,30 @@ export async function getCacheUpdatedAt(db: D1Database, key: string): Promise<nu
   return row?.updated_at ?? null;
 }
 
+export async function setCacheIfAbsent(
+  db: D1Database,
+  key: string,
+  value: string,
+  updatedAt: number,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  throwIfAborted(signal);
+  const result = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+           ON CONFLICT(key) DO NOTHING`,
+        )
+        .bind(key, value, updatedAt)
+        .run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  return (result.meta.changes ?? 0) > 0;
+}
+
 export interface CacheEntryWrite {
   key: string;
   value: string;
