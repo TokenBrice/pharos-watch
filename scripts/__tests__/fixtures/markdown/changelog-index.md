@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-08-24 to 2026-08-30
+
+Safety Score V9 reaches 9.45, the orbital Safety Map ships, and four new swap census providers close chain gaps.
+
+- **Exit-capacity truth**: Safety Score v9.44 and v9.45 separated a measured zero from an unproven settlement bound: an open queue with no proven completion bound now floors Exit under the unverified ceiling instead of grading F.
+- **Reserve evidence gates**: V9 9.4 through 9.43 split reserve classification from composition freshness, let an audited composition survive a stale feed on its own rung, and bounded Tether's feed by its actual disclosure cadence.
+- **Redemption backstop v4.4**: The standalone redemption route now publishes unestablished capacity and stays unrated when an open queue's settlement bound is unproven; paused routes keep their measured impairment.
+- **Orbital Safety Map**: The daily Safety Score map became a supply-ranked orbital galaxy poster with readable logo floors and integrated tier counts, promoted into the overview hero and rendered deterministically across tier changes.
+- **Swap census coverage**: Aquarius, Tezos/TzKT, ICON Balanced, and Kava Swap census providers joined DEX discovery, cutting provider-inaccessible deployments from 50 to 40, alongside a curation drive across reserve, mint, and bridge sidecars.
+- **Production recovery**: Pricing moved 6.208 to 6.213: Pyth retired, the DexScreener breaker unlatched on partial success, VUSD and HCHF recovered, and delisted NAV vaults now price through their protocol-redeem route.
+- **Leaner codebase**: Three consolidation batches removed roughly 41.7k net lines of duplicated hooks, dead worker pipelines, and retired migrations, with digests and methodology outputs byte-identical throughout.
+- **Docs and gate parity**: The methodology, route, infrastructure, and process docs were re-verified against runtime and corrected, while the local PR gate gained darwin Gitleaks binaries so secret scans stop failing only in CI.
+
 ## 2026-08-17 to 2026-08-23
 
 The Safety Score map ships daily, Liquidity Score v6 lands, and the yield surface stops blanking.
