@@ -479,6 +479,7 @@ async function claimScheduledSlotExecution(
           generation: existing.execution_generation + 1,
           state: "running",
         },
+        workerVersion,
       );
       staleSlotTakeover.reconciliation = reconciliation;
       await runWithOverloadRetry(() =>
