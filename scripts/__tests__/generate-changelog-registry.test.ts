@@ -16,9 +16,9 @@ const ENTRY_FILES = collectChangelogEntryFiles(
 
 describe("changelog registry generator", () => {
   it("includes every dated entry in the current ascending order with byte parity", () => {
-    expect(ENTRY_FILES).toHaveLength(25);
+    expect(ENTRY_FILES).toHaveLength(26);
     expect(ENTRY_FILES[0]).toBe("2026-03-08.ts");
-    expect(ENTRY_FILES[ENTRY_FILES.length - 1]).toBe("2026-08-23.ts");
+    expect(ENTRY_FILES[ENTRY_FILES.length - 1]).toBe("2026-08-30.ts");
 
     const dates = ENTRY_FILES.map((fileName) => fileName.slice(0, -3));
     const current = readFileSync(INDEX_PATH, "utf8");
