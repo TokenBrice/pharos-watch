@@ -53,11 +53,11 @@ The command name, composition, and default invocation are owned by the root [`pa
 
 ### Build And Generated Artifacts
 
-Use the generated-artifact commands in `package.json` for generation, freshness checks, bootstrap, and staged-artifact synchronization. `scripts/lib/automation-registry.mjs` is the authority for artifact dependencies, lifecycle, output paths, checkability, and automatic staging. Build and release behavior is documented in [Testing](./testing.md#ci-pipeline) and [Deployment Process](./deployment-process.md#ci-deploy-sequence); OG asset maintenance is documented in [OG Images](./og-images.md).
+Use the generated-artifact commands in `package.json` for generation, freshness checks, bootstrap, and staged-artifact synchronization. `scripts/lib/automation-registry.mjs` is the authority for artifact dependencies, lifecycle, output paths, checkability, and automatic staging. Build and release behavior is documented in [Testing](./testing.md#ci-pipeline) and [Deployment Process](./deployment-process.md#ci-deploy-sequence); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
 ### PR And Release Gates
 
-Use `npm run check:pr -- --base=<ref>` for the adaptive local PR contract and the focused check commands in `package.json` for diagnosis. [Testing](./testing.md#ci-pipeline) owns lane membership and check selection. The workflows under `.github/workflows/` own the actual protected-PR and production release sequence; [Deployment Process](./deployment-process.md) owns operator procedure, rollback, and acceptance. A local script or green local check does not authorize or perform a production release.
+Use `npm run check:pr -- --base=<ref>` for the adaptive local PR contract and the focused check commands in `package.json` for diagnosis. [Testing](./testing.md#ci-pipeline) owns lane membership and check selection. The workflows under `.github/workflows/` own the actual protected-PR and production release sequence; [Deployment Process](./deployment-process.md) owns operator procedure, rollback, and acceptance. A local script or green local check does not authorize or perform a production release. Boundary exceptions are documented in [Worker Import Boundary Waivers](./process/boundary-waivers.md).
 
 ### Smoke And Operations
 
@@ -65,7 +65,7 @@ Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` c
 
 ### Curation Audits
 
-Use the `audit:*`, `candidates:*`, and `calibrate:*` commands in `package.json`. These reports are advisory unless an owning methodology document or CI command explicitly says otherwise. Stablecoin curation procedures live in [Stablecoin Data](./stablecoin-data.md), while feature-specific interpretation lives in the matching methodology or pipeline doc. Keep review queues and research reports under `agents/` unless a reviewed source or durable methodology change belongs in the verified docs corpus.
+Use the `audit:*`, `candidates:*`, and `calibrate:*` commands in `package.json`. These reports are advisory unless an owning methodology document or CI command explicitly says otherwise. Stablecoin curation procedures live in [Stablecoin Data](./stablecoin-data.md), while feature-specific interpretation lives in the matching methodology or pipeline doc. Keep review queues and research reports under `agents/` unless a reviewed source or durable methodology change belongs in the verified docs corpus. Protocol evidence refreshes are governed by [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) and [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md).
 
 ### One-Time And Operator Tools
 

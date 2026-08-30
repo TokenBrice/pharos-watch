@@ -31,7 +31,7 @@ The lighthouse metaphor is useful only when it communicates data. Decorative nov
 - Frost blue is the brand accent and a selective point of emphasis, not the default color for every metric.
 - Health, warning, error, freshness, and score colors must represent state consistently in both themes.
 - Never rely on color alone. Pair it with text, position, shape, iconography, or another redundant channel.
-- JavaScript chart colors come from the shared runtime maps described in [design-tokens.md](./design-tokens.md), not local hex constants.
+- JavaScript chart colors normally come from the shared runtime maps described in [design-tokens.md](./design-tokens.md), not local hex constants. Intentional local canonical palettes are the market-cap delta colors in `src/components/mcap-chart.tsx`, `PEG_BAND_HEX` in `src/components/peg-deviation-chart.tsx`, and `ANNOTATION_HEX_COLORS` in `src/components/chart-primitives/annotations.tsx`.
 
 ## Page Shells
 

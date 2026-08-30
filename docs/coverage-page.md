@@ -158,7 +158,7 @@ If a feature gains richer user-facing states, update the relevant resolver under
 - The status legend remains an inline disclosure above the matrix; there is no separate full-page explainer block.
 - Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, redemption-backstops, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view.
 
-The page should continue to render meaningfully when some live datasets are temporarily unavailable. In that case, the matrix still renders with structural coverage where possible and uses the shared stale-data banner to surface data-health issues.
+The page should continue to render meaningfully when some live datasets are temporarily unavailable. Structural coverage survives partial feature-query failures, but an unavailable stablecoins snapshot shows the error card and withholds the matrix.
 
 ## Structured Data Contract
 

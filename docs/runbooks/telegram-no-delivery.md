@@ -2,7 +2,7 @@
 
 ## Symptom
 
-Users report missing alerts despite a recent DEWS/depeg/safety/launch event, or admin status shows a non-zero `eventsDetected` family count (`dews`, `depeg`, `safety`, `launch`, `reserve`) but `messagesSent == 0` across consecutive dispatch runs.
+Users report missing alerts despite a recent DEWS/depeg/safety/launch/reserve event, or admin status shows a non-zero `eventsDetected` family count (`dews`, `depeg`, `safety`, `launch`, `reserve`) but `messagesSent == 0` across consecutive dispatch runs. Freeze alerts use a dedicated outbox: inspect its metadata fields `freezeObserved`, `freezeQueued`, and `freezeSkippedNoAudience`; do not expect freeze to appear in generic `eventsDetected` counters.
 
 Detection signals:
 
@@ -44,7 +44,7 @@ Detection signals:
 3. **Single user blocked.** If `consecutive_block_count >= 2`, the user must `/start` again. The flag resets on the next successful send. Confirm they have not blocked the bot in Telegram itself.
 4. **Single user snoozed/quiet-hours.** Advise `/unsnooze` or `/unmutehours`. No operator action.
 5. **Pending queue full / overflow.** Follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
-6. **No subscribers for the alert type.** Verify `/api/status` -> `telegramBot.alertTypeChats.<type>` is non-zero for the affected alert type.
+6. **No subscribers for the alert type.** For `dews`, `depeg`, `safety`, `launch`, and `reserve`, verify `/api/status` -> `telegramBot.alertTypeChats.<type>` is non-zero for the affected alert type. For freeze alerts, inspect the dedicated outbox metadata fields `freezeObserved`, `freezeQueued`, and `freezeSkippedNoAudience`, then check `/api/status` -> `telegramBot.alertTypeChats.freeze`; do not use generic `eventsDetected` counters for freeze.
 7. **Webhook drift.** Inspect `/api/status.budgetOnlySurfaces` for `telegram-registration-reconciliation`. Every tokened tick checks all four units and reports per-unit `skipped`, `succeeded`, or `failed`; a missing bot token is an error signal across registration/transport, not a healthy skip. Force `npx tsx scripts/maintenance/register-telegram.ts --action webhook` only when the webhook unit is failing and automatic repair cannot wait.
 8. **Replay one proven historical target.** No longer available: `POST /api/admin-telegram-resend` was retired on 2026-08-09 and there is no other operator replay path. Alert payloads remain readable in `telegram_alert_job_targets` and `telegram_alert_dead_letters` for reconstruction of what a user missed, but hand-enqueuing a pending row bypasses the plan/digest verification the endpoint performed and must not be used as a substitute. If replay is genuinely required, revert the endpoint's removal commit rather than improvising.
 9. **Announce a maintenance window or recovery to subscribers.** Dry-run `POST /api/admin-telegram-broadcast` with the narrowest scope and a known private `canaryChatId`. Go live only when `deliveryEstimate.hasMaterialTtlReserve` is true. Live execution sends every chunk to the canary first and enqueues low-priority `admin_broadcast` rows only after the canary succeeds; there is no backlog-risk override. Follow [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md).

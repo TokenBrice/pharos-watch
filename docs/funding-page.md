@@ -35,9 +35,9 @@ Row shape for donations is defined in `shared/lib/funding/types.ts` (`Donation`)
 
 - **No cron, no D1, no API.** The page imports both JSON files at build time and renders server-side. Static export is trivially CDN-cacheable.
 - **No chart.** Until ≥6 months of donation history exist, a bar chart adds visual weight without showing anything meaningful. Revisit when the trailing window is populated.
-- **No historical-pricing pipeline at runtime.** The `funding-update` skill prices each donation once at append time using CoinGecko `/coins/{id}/history` for native assets and $1 for stablecoins; the source is recorded in `price_note` on each row.
+- **No historical-pricing pipeline at runtime.** The `funding-update` skill prices each donation once at append time: CoinGecko `/coins/{id}/history` applies to native ETH/WETH, native MATIC, and WBTC; stablecoins use $1 after a canonical contract check; other tokens require a user-supplied USD value and price source. The source is recorded in `price_note` on each row.
 - **No ENS resolver module.** ENS reverse + forward-verify runs once per new address during the skill's run; results are frozen into `display` on the row.
-- **No spam filter module.** Unknown-token pricing requires a manual USD value from the user, which naturally gates out spoofed-ticker spam.
+- **Human spam review, no standalone runtime module.** The maintained `funding-update` workflow asks the user to confirm candidate rows, performs ERC-20 contract-address checks while pricing, and rejects familiar stablecoin tickers at unknown contracts as spoofed tokens; manual pricing is not the spam gate.
 
 Automation is intentionally deferred while the review volume remains small. Any future runtime pipeline would require its own API, operations, and privacy contracts rather than being implied by this page doc.
 

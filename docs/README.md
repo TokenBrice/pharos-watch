@@ -33,6 +33,25 @@ Route-specific contracts use descriptive filenames such as `homepage.md`, `*-pag
 rg -n '/route-name/|src/app/route-name' docs
 ```
 
+## Route Contracts
+
+- [api-page.md](./api-page.md) - public API access and reference pages
+- [cemetery-and-compare.md](./cemetery-and-compare.md) - cemetery and compare surfaces
+- [portfolio-page.md](./portfolio-page.md) - personal stablecoin risk workspace
+- [upcoming-page.md](./upcoming-page.md) - pre-launch stablecoin tracker
+
+## Cross-Cutting Contracts
+
+- [pharos-urn.md](./pharos-urn.md) - stable citation identifiers and JSON-LD integration
+
+## Process References
+
+- [process/boundary-waivers.md](./process/boundary-waivers.md) - reviewed worker import exceptions
+- [process/d1-baseline-squash-plan.md](./process/d1-baseline-squash-plan.md) - migration baseline consolidation
+- [process/font-assets.md](./process/font-assets.md) - font production and licensing
+- [process/protocol-api-mechanism-refresh.md](./process/protocol-api-mechanism-refresh.md) - protocol mechanism evidence refresh
+- [process/shock-coverage-refresh.md](./process/shock-coverage-refresh.md) - automated CDP shock coverage refresh
+
 ## Methodology History
 
 Versioned methodology history is authored once under `shared/data/methodology-changelogs/`. The registry in `shared/lib/methodology-versions/registry.ts` powers public changelog routes and Markdown exports. ADR-3 in [architecture.md](./architecture.md#architectural-decision-records) owns the list of what a methodology change must update, including the runtime version source.
@@ -43,6 +62,7 @@ Historical Markdown timeline files are intentionally not maintained.
 
 - Keep durable behavior and non-obvious invariants; omit restatements of component trees and implementation order that source makes obvious.
 - Do not hardcode volatile inventory counts or exhaustive file lists. Link to the owning registry or generate the view.
+- Give any doc at or above roughly 50 KB or 400 lines a top `Agent navigation` block (short heading list with grep hints) so agents section-read instead of loading it wholesale; the ~1,500-line rule for `docs/api-reference.md` stays the hard case.
 - Keep temporary audits, calibration captures, screenshots, and handoffs under ignored `/agents/` paths.
 - Put repeatable operating policy in `docs/process/` and incident remediation in `docs/runbooks/`.
 - Add a new document only when no existing owner can hold the durable material cleanly.

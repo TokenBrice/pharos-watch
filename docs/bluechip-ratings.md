@@ -31,14 +31,15 @@ Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`; do not copy it
 
 `syncBluechip()` in `worker/src/cron/sync-bluechip.ts`:
 
-1. Skips work when the `bluechip-ratings` cache is newer than 6 hours, then returns `status: "degraded"` with `reason: "bluechip-circuit-open"` and fetches nothing when the shared Bluechip circuit breaker is open.
-2. Iterates the configured slug mappings in batches of 3, with a 500ms inter-batch delay.
-3. Fetches `backend.bluechip.org/coin-data/{slug}` with the shared Worker `USER_AGENT`.
-4. Discards 404s, empty payloads, and rows without a `grade`.
-5. Normalizes each successful row into `BluechipRating`, accepting Bluechip category blocks that are omitted or explicitly `null`.
-6. Strips HTML from SMIDGE category summaries before persistence.
-7. Treats malformed/non-JSON `200` responses as slug-scoped `json-parse-failed` misses so one bad payload does not abort the full daily refresh.
-8. Writes the merged map back with `setCacheIfNewer()`.
+1. Skips work when the `bluechip-ratings` cache is newer than 6 hours and returns no `status` with metadata reason `cache-fresh`.
+2. If `shouldAttemptFetch()` returns false because the shared Bluechip circuit breaker is open, returns `status: "degraded"` with metadata reason `bluechip-circuit-open` and performs no fetch.
+3. Iterates the configured slug mappings in batches of 3, with a 500ms inter-batch delay.
+4. Fetches `backend.bluechip.org/coin-data/{slug}` with the shared Worker `USER_AGENT`.
+5. Discards 404s, empty payloads, and rows without a `grade`.
+6. Normalizes each successful row into `BluechipRating`, accepting Bluechip category blocks that are omitted or explicitly `null`.
+7. Strips HTML from SMIDGE category summaries before persistence.
+8. Treats malformed/non-JSON `200` responses as slug-scoped `json-parse-failed` misses so one bad payload does not abort the full daily refresh.
+9. Writes the merged map back with `setCacheIfNewer()`.
 
 Failure behavior:
 - If zero ratings are fetched, the cron returns `status: "degraded"` and preserves the previous cache.

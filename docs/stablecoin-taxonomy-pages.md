@@ -27,7 +27,7 @@ It is not a second screener. Cohort membership, ordering, and counts are build-t
 
 The page models and hub route configs live in `src/lib/stablecoin-taxonomy.ts`. The three axis hubs share one template — `buildStablecoinTaxonomyHubMetadata(route)` and `createStablecoinTaxonomyHubPage(route)` in `src/app/stablecoins/taxonomy-page.tsx` — so a hub route file carries no page-specific markup, only its `STABLECOIN_TAXONOMY_HUB_ROUTES` entry.
 
-Every cohort page is a `createStaticSlugRoute(...)` route (`src/lib/static-slug-page.ts`): `generateStaticParams` enumerates the page model, and a slug outside it renders `notFound()` with `robots: { index: false }` metadata rather than an empty cohort.
+Every cohort page is a `createStaticSlugRoute(...)` route (`src/lib/static-slug-page.ts`): `generateStaticParams` enumerates the page model, and a slug outside it renders `notFound()` rather than an empty cohort.
 
 Peg has no `/stablecoins/peg/` hub. Peg slugs sit directly under `/stablecoins/`, sharing that path segment with `backing`, `governance`, and `infrastructure`, so a peg slug may never collide with an axis segment.
 
@@ -38,7 +38,7 @@ Peg has no `/stablecoins/peg/` hub. Peg slugs sit directly under `/stablecoins/`
 - Cohorts are filtered from `ACTIVE_STABLECOINS` (`shared/lib/stablecoins/registry.ts`); the peg axis uses the client mirror `CLIENT_ACTIVE_STABLECOINS` (`shared/lib/stablecoins/client-registry.ts`). A lifecycle change alone — pre-launch, quarantined, delisted, frozen — rewrites cohort membership, counts, and titles across this family with no edit to any route file.
 - The hub's A–Z profile directory is the deliberate exception: it iterates `TRACKED_STABLECOINS`, so non-active profiles stay linked from `/stablecoins/`.
 - Empty-cohort handling is asymmetric. `BACKING_TAXONOMY_PAGES` ends with `.filter((page) => page.coins.length > 0)`, so a backing cohort that empties silently drops its route from `generateStaticParams`, the hub, and the sitemap. `GOVERNANCE_TAXONOMY_PAGES` and `INFRASTRUCTURE_TAXONOMY_PAGES` are not filtered: an emptied governance or infrastructure cohort still publishes an indexed page with a zero-coin title. Removing the last coin from those axes is a content decision, not a no-op.
-- Every axis sorts cohorts by descending member count, so hub card order is data-driven rather than authored.
+- Backing, governance, and infrastructure axes sort cohorts by descending member count, so hub card order is data-driven rather than authored.
 - Slugs are owned by `GOVERNANCE_SLUGS` / `BACKING_SLUGS` / `INFRASTRUCTURE_SLUGS` in `src/lib/stablecoin-taxonomy-urls.ts` and by `PEG_SLUGS` in `src/lib/peg-landing.ts`, which is restricted to pegs with at least one tracked coin. Build these hrefs elsewhere through `buildGovernanceTaxonomyUrl(...)`, `buildBackingTaxonomyUrl(...)`, `buildInfrastructureTaxonomyUrl(...)`, and `buildPegLandingUrl(...)` instead of string templates.
 - The live table on a cohort page is driven by `page.filterTag`, which must be the same tag `shared/lib/filter-tags.ts` assigns to member coins. A cohort whose `filterTag` drifts from the tag builder renders an empty table under a non-zero cohort count.
 

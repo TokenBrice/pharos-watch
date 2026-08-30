@@ -32,7 +32,7 @@ The script prints two artifacts:
 - Append the snapshot entry to `frozen-snapshots.json`.
 - In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings (`causeOfDeath`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`) with finalized copy.
 - Keep the core tracked metadata fields intact (`id`, `name`, `symbol`, and `flags`). Frozen archive pages and cemetery exports still read the tracked metadata source; the freeze transition adds lifecycle fields rather than replacing the coin with a dead-stablecoin-only record.
-- Run `npm run bootstrap:generated`, then `npm run check:generated-artifacts`, to refresh and verify the gitignored aggregate, report-card registry fingerprint, legacy redirect map, and client registry projections. Do not edit generated projections by hand.
+- Run `npm run bootstrap:generated`, then `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts`, then `npm run check:generated-artifacts`, to refresh and verify the gitignored aggregate, report-card registry fingerprint, legacy redirect map, and client registry projections. Do not edit generated projections by hand.
 
 The schema enforces the invariant: both `frozenAt` and `obituary` are required when `status === "frozen"`, and both fields are disallowed when `status` is anything else.
 
@@ -70,7 +70,8 @@ npm run check:frozen-invariants
 npm run lint
 npm test -- --run
 cd worker && npx tsc --noEmit && cd ..
-npm run prebuild  # regenerates generated registries and the cemetery dataset
+npm run prebuild  # regenerates compile-input artifacts only
+npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts  # regenerates the maintenance-only cemetery dataset
 ```
 
 ### 5. Update docs

@@ -67,7 +67,7 @@ If you add a new methodology changelog route, follow the existing pattern:
 
 1. Add the structured entries under `shared/data/methodology-changelogs/` and register them through `shared/lib/methodology-versions/registry.ts`.
 2. Add or update the domain version source and `shared/lib/methodology-versions/constants.ts`.
-3. Add the public route in `src/app/methodology/*-changelog/page.tsx` using `createStandardMethodologyChangelogRoute(...)` (the standard factory used by every non-scoring route); `createMethodologyChangelogRoute(...)` is reserved for the `scoring-changelog` special case with custom authored content.
+3. Update the display configuration in the dynamic route `src/app/methodology/[slug]/page.tsx`; its slug map and `generateStaticParams()` derive from `METHODOLOGY_CHANGELOG_REGISTRY`, so no per-lane `*-changelog/page.tsx` route or changelog factory is needed.
 4. Wire the new anchor/path into `src/lib/methodology-context.ts` if any cards/tooltips deep-link to it.
 
 If the Chain Health methodology changes, follow the single update contract in [chain-health.md](./chain-health.md#update-contract).
@@ -95,7 +95,7 @@ For the safety-score changelog specifically, update both:
 
 ## Methodology-Context Anchors
 
-`src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form sections live under the `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`. In addition, three single-topic sub-anchors are exposed so per-metric labels (added in the May 2026 detail-page work) can target them without re-rendering a full top-level section:
+`src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form page exposes the 14 top-level `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`. The `blacklistTracker` context key maps to `#blacklist-tracker-methodology`, while `bluechip` and `proofOfReserves` both map to `#safety-scores-methodology`; there are no separate single-topic methodology sub-anchors:
 
 Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, and the V9 mint component) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which appends the inline `vX.Y` methodology version as a small superscript and routes the badge through the unified `MethodologyHint` tooltip. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip. The mint component keeps a terminal `v1.3` version badge and closing note for context — its section passes no `changelogPath`, so there is no "Version history" link, and in-app mint tooltips carry the Safety Score version and scoring-changelog path instead; it is not a live standalone scoring lane.
 

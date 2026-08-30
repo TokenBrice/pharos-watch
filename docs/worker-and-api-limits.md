@@ -10,6 +10,8 @@ This document intentionally focuses on:
 
 It intentionally does **not** treat vendor pricing-plan quotas as source of truth. Cloudflare, CoinGecko, Alchemy, Etherscan, Anthropic, X, and similar providers can change those independently of this repo. Re-check official vendor docs or your live account dashboard before making spend-sensitive or capacity-sensitive changes.
 
+> **Agent navigation** — Grep the heading you need: Primary Sources · Worker Runtime · Cron Budgeting · Upstream Fetch Budgets · Request Timeouts Worth Preserving · Anthropic / Digest Runtime · Design Guidance.
+
 ---
 
 ## Primary Sources
@@ -72,7 +74,7 @@ The scheduler is structured around that conservative repo constraint:
 
 Treat any new fetch-heavy work added to an existing trigger slot as competing for the same trigger-wide outbound connection budget. A trigger at `5/6` must be treated as full for new fetch-heavy work unless the change also reduces existing peak usage or moves work to a different slot.
 
-Current state: `halfHourlyOffset` is the only modeled `5/6` slot and is full for new fetch-heavy work. It contains the hourly `:10` `sync-dex-liquidity-stage`, whose nested direct-API phase can reach that static peak while staying below both the platform header-wait ceiling and the repo budget. Active measured execution is reduced to three EVM lanes (`3/6`), while shadow EVM and native diagnostic work runs daily. The D1-only `sync-dex-liquidity` consumer and exit-route turnover watchdog remain in a serial `1/6` chain: prices publish hourly at `:16`, liquidity scores and the watchdog run on even-hour `:16`, and `:46` reuses the current generation without rewriting DEX surfaces.
+Current state: `halfHourlyOffset` is the only modeled `5/6` slot and is full for new fetch-heavy work. It contains the hourly `:10` `sync-dex-liquidity-stage`, whose nested direct-API phase can reach that static peak while staying below both the platform header-wait ceiling and the repo budget. Active measured execution is reduced to three EVM lanes (`3/6`), while the shadow EVM lane runs daily. The D1-only `sync-dex-liquidity` consumer and exit-route turnover watchdog remain in a serial `1/6` chain: prices publish hourly at `:16`, liquidity scores and the watchdog run on even-hour `:16`, and `:46` reuses the current generation without rewriting DEX surfaces.
 
 For `sync-stablecoins`, failed upstream responses must still be consumed or canceled before later passes start. That rule bounds unread bytes, completes transport cleanup, and keeps fetch phases deterministic; it is not a claim that an unread body still occupies Cloudflare's header-wait slot. The late fallback phase remains `CoinMarketCap` -> `Jupiter` -> `DexScreener`.
 

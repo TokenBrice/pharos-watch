@@ -10,13 +10,15 @@ Every important visual channel must have a stated meaning. Color is never the on
 
 ## Architecture
 
-Separate data transformation from rendering:
+For new visualizations, and for existing visualizations being brought into compliance, the standard is to separate data transformation from rendering:
 
 1. A pure TypeScript view model validates inputs, aggregates values, chooses scales, clamps geometry, and returns presentation-ready fields.
 2. A React layer renders SVG/DOM from that view model and owns focus, pointer interaction, labels, and selection callbacks.
 3. CSS owns static styling and motion, including reduced-motion behavior.
 
 Runtime-neutral thresholds, labels, and palettes belong in `shared/lib/` when both frontend and Worker code consume them. Route-local geometry can remain beside the route or component.
+
+Existing exceptions are documented rather than treated as the standard: `HomeAltHeroChart` still computes sampling, scales, and SVG geometry in the component (`src/components/home-alt-hero-chart.tsx`), and `BlacklistChart` still derives peak quarters and chart series in-component (`src/components/blacklist-chart.tsx`).
 
 Selection shared with sibling panels belongs in the route client, not hidden inside the scene.
 
@@ -52,7 +54,7 @@ Choose the SVG role from its behavior:
 
 Interactive marks need a semantic role or native interactive element, an accessible name containing the entity and relevant value, visible focus, and keyboard activation equivalent to pointer activation. Selection controls expose their state.
 
-Every visualization requires an equivalent accessible data surface. This may be an adjacent table, an always-present summary, a detail panel, a screen-reader-only structure, or a small-screen list. It does not have to be a duplicated fallback list, but it must expose the same decision-relevant facts when the graphic cannot be perceived or operated.
+Every data-reading visualization requires an equivalent accessible data surface. This may be an adjacent table, an always-present summary, a detail panel, a screen-reader-only structure, or a small-screen list. It does not have to be a duplicated fallback list, but it must expose the same decision-relevant facts when the graphic cannot be perceived or operated. Decorative-summary visualizations may be exceptions when they are not intended to be a complete data-reading surface. The homepage hero cohort chart (`HomeAltHeroChart`) is the current decorative-summary exception: it exposes an SVG role/name and a pointer tooltip (`src/components/home-alt-hero-chart.tsx`), but no equivalent accessible data surface; do not use this exception as a model for data-reading charts.
 
 Do not announce decorative labels or duplicate the same data through several live regions. Inline text placed over complex graphics needs sufficient contrast or a stable backing surface.
 
@@ -122,12 +124,12 @@ Add lightweight component tests for the behavior the DOM owns:
 ## Review Checklist
 
 - The chosen chart or metaphor is simpler than the alternatives for this relationship.
-- A pure view model owns transformation and geometry.
+- New or compliance-targeted visualizations use a pure view model for transformation and geometry.
 - Magnitudes have an appropriate scale plus tested bounds.
 - Color is redundant with another channel.
 - The SVG root role matches whether descendants are interactive.
 - Keyboard, touch, and focus behavior match pointer behavior.
-- An equivalent accessible data surface exposes decision-relevant facts.
+- Data-reading visualizations expose an equivalent accessible data surface; any decorative-summary exception is explicitly documented.
 - Motion is optional and reduced-motion leaves a complete static state.
 - Loading, empty, stale, and error states are explicit.
 - Narrow screens and zoom retain readable labels and usable controls.

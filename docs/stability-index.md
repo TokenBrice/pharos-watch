@@ -28,11 +28,11 @@ Clamped to [0, 100], rounded to 1 decimal place.
 | **Stress Breadth** | 0–5 | `min(5, dewsStressBreadth)` | DEWS-derived market-cap-weighted stress signal: each coin in ALERT+ band contributes `sqrt(mcap / $1B) × 1.5`, not a simple count |
 | **Trend** | −5 to +5 | `clamp(-5, 5, mcap_7d_change_pct)` | 7-day total market cap momentum |
 
-Severity and breadth iterate over **active depegs in the core aggregate universe only** (unique coins currently outside their peg threshold), with depreciation applied to chronic depegs. The core aggregate universe contains active core stablecoins and active cash equivalents. Tracked variants and stable-value investment products remain readable elsewhere in Pharos but do not enter PSI as independent monetary supply.
+Severity and breadth iterate over all open `depeg_events` rows in the core aggregate universe when a usable current or replay price and peg reference are available; they do not apply a peg-threshold filter. Multiple rows for one coin are deduplicated before contribution, with depreciation applied to chronic depegs. The core aggregate universe contains active core stablecoins and active cash equivalents. Tracked variants and stable-value investment products remain readable elsewhere in Pharos but do not enter PSI as independent monetary supply.
 
 ### Severity scaling
 
-- `K = 60` scaling constant, calibrated so a 10bps USDT wobble drops the score ~30 points. Multiplied by `factor` for depreciation.
+- `K = 60` scaling constant, calibrated so a 10bps USDT wobble drops the score ~37 points. Multiplied by `factor` for depreciation.
 - **log₂ amplifier** makes mega-cap depegs disproportionately impactful: USDT ($145B) gets 7.2×, USDC ($60B) gets 5.9×, a $50M coin gets 0.07×
 - **Cap at 68** prevents a single catastrophic event from consuming the entire score range
 

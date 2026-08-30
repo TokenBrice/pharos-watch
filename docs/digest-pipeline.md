@@ -2,6 +2,8 @@
 
 Daily AI-generated stablecoin market recap, distributed to the web, Twitter/X, and Telegram.
 
+> **Agent navigation** — Grep the heading you need: Overview · Generation · Storage · API Endpoints · Distribution · Weekly Recap · Frontend · Static Generation Pipeline · Environment Variables.
+
 ---
 
 ## Overview
@@ -215,7 +217,7 @@ An idle `digestTriggerPoll` with no pending force-run intent is a neutral condit
 
 ## Distribution
 
-The daily digest ships with the Safety Score map or not at all — the pipeline fails closed rather than posting a text-only social edition. Before any generation work (including the LLM call), `generateDailyDigest` reads `/safety-scores/map.json` and HEAD-probes today's dated PNG. A same-day manifest with data under 24 hours old passes the gate; any unavailable or stale state withholds the whole run — no digest row, no LLM spend, no post — and records a `digest:safety-map-deferral` intent plus a `daily_digest_safety_map_deferred` warning. The `digestTriggerPoll` slot re-checks that intent every five minutes: while the map stays unpublished it waits; once the map is live it either generates the digest (no row for today yet) or resumes the stored edition's delivery via `resumeDailyDigestDelivery` (row exists but a channel is unresolved — the send-marker ledger keeps Twitter duplicate-safe, and a Telegram edition already in the outbox is left to the drain). A day whose map never publishes rolls over with its digest deliberately unsent, retired with a `daily_digest_unsent_safety_map_never_published` error event. `force` (manual trigger) bypasses only the recent-digest recency check, never the map gate. Delivery success or another terminal channel state clears the deferral intent; retryable states (`failed:`, circuit-open, in-flight, and the safety-identity withholds) keep it alive.
+When Twitter/X or Telegram is configured, the daily digest ships with the Safety Score map or not at all — the pipeline fails closed rather than posting a text-only social edition. Web-only runs skip this map gate. Before any generation work (including the LLM call), `generateDailyDigest` reads `/safety-scores/map.json` and HEAD-probes today's dated PNG. A same-day manifest with data under 24 hours old passes the gate; any unavailable or stale state withholds the whole run — no digest row, no LLM spend, no post — and records a `digest:safety-map-deferral` intent plus a `daily_digest_safety_map_deferred` warning. The `digestTriggerPoll` slot re-checks that intent every five minutes: while the map stays unpublished it waits; once the map is live it either generates the digest (no row for today yet) or resumes the stored edition's delivery.
 
 After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. The manifest's optional `mapSummary` enables deterministic channel prose only when its complete typed shape is valid and the digest has an available canonical Safety Score context. An absent, partial, malformed, or capture-mismatched summary still permits the image attachment but emits no map prose. Twitter/X persists a same-day delivery ledger (see below).
 

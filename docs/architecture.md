@@ -1,5 +1,7 @@
 # Architecture — Curated File Tree & Routing Model
 
+> **Agent navigation** — Grep the heading you need: API Endpoints · Route Definition Model · Telegram Subsystem Tables · Telegram Alert Cron Job · File Tree Guide · Frontend Runtime And SEO Surface · CSS Build Pipeline · Coverage Subsystem · Worker Coding Conventions · TypeScript Target Constraints · Architectural Decision Records · Stablecoin lifecycle phases · Funding page.
+
 ## API Endpoints
 
 Curated architecture-significant routes. Start with the [Documentation Index](./README.md) for the full docs map, or go straight to the [API Reference](./api-reference.md) for the exhaustive HTTP contract.
@@ -120,7 +122,7 @@ Worker does not need a CORS allowlist change for the split.
 
 ### Pages Function endpoints (not Worker API)
 
-These are same-origin Pages Functions backed by Pages-only bindings (KV, D1). They do not appear in the Worker API catalogue and are not part of the `api.pharos.watch` surface.
+These are same-origin Pages Functions backed by bindings that vary by function (ASSETS, KV, D1, Access/service-token configuration). They do not appear in the Worker API catalogue and are not part of the `api.pharos.watch` surface.
 
 | Endpoint                           | Description                                                                                                                                                                                                                                                                                                         |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

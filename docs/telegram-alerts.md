@@ -108,7 +108,7 @@ The Telegram subscriber, disambiguation, and delivery-queue tables are part of `
 | `telegram_alert_planning_subscribers` | Frozen subscriber cohort and one durable planning decision per chat | source/generation/chat identity, captured preference generation/activity, initial eligibility, current planned generation, `target_planned`/ineligible/newly-eligible/missing/expired outcome |
 | `telegram_alert_target_plan_pages` / `telegram_alert_target_plans` / `telegram_alert_target_plan_items` | Cursorable rendered manifest before transport handoff | immutable page bounds and expected/materialized counts; ordered versioned plan JSON plus digest/chunk counts; normalized source-item coverage |
 | `telegram_alert_target_expiry_progress` | Bounded source-expiry reconciliation | processed and remaining subscriber/page/plan/target counts, running/complete state and timestamps |
-| `telegram_legacy_overflow_state` | Historical only: dropped from production on 2026-08-10; the pre-next-squash baseline still creates an inert copy on fresh databases, but runtime does not read or write it | Retired importer state only |
+| `telegram_legacy_overflow_state` | Historical only: dropped from production on 2026-08-10 | Retired importer state only |
 | `telegram_alert_job_target_items` | Queryable source-item coverage for each consolidated target chunk | composite `job_id, target_key, item_key`, `source_event_id`, `created_at` |
 | `telegram_alert_dead_letters` | Expired, cancelled, or permanently failed pending-send audit trail | `pending_id`, `chat_id`, `source_type`, `alert_type`, `created_at`, `expired_at`, `attempts`, `last_error_class`, `reason`, `dedupe_key`, copied risk provenance fields |
 | `telegram_processed_updates` / `telegram_webhook_operation_mutations` | Retry-safe webhook operation intent, atomic local-mutation proof, and outbound-effect claims | `update_id`, timestamps/type/chat/status, versioned `intent_kind`/`intent_payload`, `mutation_applied_at`, `effect_state`, `effect_kind`, `effect_ordinal`, effect timestamps, `claim_owner`, `claim_generation`, `error_class` |
@@ -124,7 +124,7 @@ Pre-squash migration `0117_telegram_global_alert_indexes.sql`, now part of `work
 
 `/unsubscribe all` clears per-coin subscriptions, preset follows, and all-stablecoin alert flags, which stops alerts for that chat. It does not immediately erase the `telegram_subscribers` row, processed-update idempotency rows, delivery diagnostics, or historical aggregate counters needed for abuse prevention, retry safety, and operations.
 
-`telegram_subscribers` rows are auto-pruned after 180 days of inactivity only when they have no meaningful alert state. The `telegram-inactive-cleanup` job runs on the daily 03:00 UTC lane behind a 7-day cache guard (`cache` key `cron:telegram-inactive-cleanup:last-run`) and removes an old subscriber when all global alert flags are off, no preset follows, pending alerts, or pending disambiguation remain, and every per-coin row is inert. A per-coin row is inert only when all alert flags and explicit-override markers are off and its snooze and tuning fields are empty; marker-backed explicit-off choices therefore continue to retain the profile. Live per-coin and preset follows are never expired for inactivity, and the job does not send a re-engagement warning to profiles that are ineligible for deletion. The scan uses `idx_telegram_subscribers_last_active_at` and each eligible chat is removed via a batched cascade DELETE; the job caps at 100 deletions per run so a large backlog cannot push the daily slot past its per-statement budget. The most recent run's `item_count` in the trailing 7-day window is surfaced as `TelegramBotStats.inactiveSubscribersCleanedThisWeek`.
+`telegram_subscribers` rows are auto-pruned after 180 days of inactivity only when they have no meaningful alert state. The `telegram-inactive-cleanup` job runs on the daily 03:00 UTC lane behind a 7-day cache guard (`cache` key `cron:telegram-inactive-cleanup:last-run`) and removes an old subscriber when all global alert flags are off, no preset follows, pending alerts, or pending disambiguation remain, no enabled personalized recap preference exists, and every per-coin row is inert. A per-coin row is inert only when all alert flags and explicit-override markers are off and its snooze and tuning fields are empty; marker-backed explicit-off choices therefore continue to retain the profile. Live per-coin and preset follows are never expired for inactivity, and the job does not send a re-engagement warning to profiles that are ineligible for deletion. The scan uses `idx_telegram_subscribers_last_active_at` and each eligible chat is removed via a batched cascade DELETE; the job caps at 100 deletions per run so a large backlog cannot push the daily slot past its per-statement budget. The most recent run's `item_count` in the trailing 7-day window is surfaced as `TelegramBotStats.inactiveSubscribersCleanedThisWeek`.
 
 Pending disambiguation rows expire with their command TTL. Pending alert rows leave the live queue when sent, expired, preference-cancelled, or permanently failed; dead-letter rows keep delivery-failure and cancellation audit context without being a live subscription. Expired pending-alert cleanup normally writes a dead-letter copy before deleting the live row; if that dead-letter write fails, the cleanup logs an error-level bypass event and still removes the expired live row so a persistent audit-table failure cannot grow the live delivery queue without bound. Users can also issue `/forget` for an immediate two-step deletion of their subscriber data plus chat-owned planning snapshots, rendered target plans, dedicated freeze targets, alert-job target rows and their chat-prefixed item lineage, dead-letter rows, transport-failure observations, and cache residue (command cooldown/flood rows, chat-member/admin diagnostics, group welcome markers, legacy re-engagement-warning markers, cached dispatch overflow plans, and nested burst-summary markers); `/unsubscribe all` plus inactivity pruning remains the lighter-touch alternative.
 
@@ -148,9 +148,9 @@ retained.
 
 | Binding | Required | Used by |
 |---------|----------|---------|
-| `TELEGRAM_BOT_TOKEN` | Yes | Webhook replies, digest posting (including appended cemetery / tracking notices), subscriber alert fan-out |
+| `TELEGRAM_BOT_TOKEN` | No | Webhook replies, digest posting (including appended cemetery / tracking notices), subscriber alert fan-out; Telegram transport lanes are skipped or degraded when unset |
 | `TELEGRAM_BOT_TOKEN_PREVIOUS` | No | Optional bot-token rotation overlap for signed Mini App `initData`; sends and webhook registration use the current token |
-| `TELEGRAM_WEBHOOK_SECRET` | Yes | Telegram webhook secret validation for `POST /api/telegram-webhook` via `X-Telegram-Bot-Api-Secret-Token` |
+| `TELEGRAM_WEBHOOK_SECRET` | No | Webhook registration and validation for `POST /api/telegram-webhook` via `X-Telegram-Bot-Api-Secret-Token`; active only when Telegram credentials are configured |
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | No | Temporary overlap secret accepted by `POST /api/telegram-webhook` during secret rotation; registration still emits only `TELEGRAM_WEBHOOK_SECRET` |
 | `TELEGRAM_CHAT_ID` | No | Daily digest channel posting, including appended cemetery and tracking notices |
 
@@ -266,7 +266,7 @@ Successful cards are shared-cacheable through Telegram for 30 seconds; empty ans
 
 `worker/src/api/telegram-webhook.ts` now acts as a thin ingress coordinator. Command parsing, message formatting, and D1 persistence live in the adjacent `telegram-webhook-*` helper modules so command behavior can be tested without editing the transport entrypoint.
 
-The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token`. During rotation it accepts either `TELEGRAM_WEBHOOK_SECRET` or `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
+The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token`. During rotation it accepts either `TELEGRAM_WEBHOOK_SECRET` or `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets, missing bot token, and malformed JSON return `200 ok` without side effects so Telegram does not keep retrying. Non-command messages also return `200 ok` without side effects only when no active pending flow exists; pending/setup handlers run first and can clear expired rows or execute a disambiguation selection from plain text.
 
 In group and supergroup chats, commands must be addressed to the bot, for example `/subscribe@PharosWatchBot dews usd-top25`. Unaddressed slash commands and commands addressed to the public channel handle are ignored so Pharos does not intercept another bot's group command surface. Plain numeric replies for an active disambiguation prompt do not need a bot mention, but the reply must come from the same Telegram user who started the pending selection when `initiator_user_id` is available; unrelated group text from other users is ignored. Pending text replies are counted by the same ingress flood cap as commands and callbacks.
 
@@ -435,7 +435,7 @@ Global all-stablecoin depeg follows can also carry a severity threshold through 
 
 ### Ticker Resolution
 
-Ticker parsing lives in `worker/src/lib/telegram-alerts.ts` and is built from `TRACKED_STABLECOINS`.
+Ticker parsing lives in `worker/src/lib/telegram-alerts-parser.ts`; `worker/src/lib/telegram-alerts.ts` is the stable two-line re-export barrel. It is built from `TRACKED_STABLECOINS`.
 
 - Resolution is symbol-first and case-insensitive.
 - Preset aliases are matched before ticker resolution in the shared target parser.
@@ -544,7 +544,7 @@ If the cached safety snapshot is missing a coin, the dispatcher suppresses the a
 
 The separate `alert:dews-alertable-snapshot` cache key prevents duplicate same-band DEWS alerts when a coin silently dips to `WATCH` or `CALM` and then returns to the same alert band. Example: `ALERT → WATCH` produces no message and does not reset the alert dedupe baseline, so a later `WATCH → ALERT` does not resend the same `ALERT` notification.
 
-The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `worker/src/lib/telegram-alerts.ts`.
+The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `worker/src/lib/telegram-alerts-formatting.ts`.
 
 ### Burst Summary Mode (C128)
 

@@ -38,6 +38,7 @@ Operational consequence:
 
 - raw cache-backed surfaces can still contain a shadow asset if the upstream sync emits it
 - public list/table UX filters those assets back out by tracked ID
+- Public DEWS/radar surfaces can still surface PSI shadow assets: `shared/lib/psi-eligible-client.ts` includes them in `CLIENT_PSI_ELIGIBLE_META_BY_ID`, and `src/components/dews-alert-feed.tsx` resolves/renders them in the public alert queue with `buildStablecoinUrl` links; tracked list/table/taxonomy surfaces still exclude them
 
 ---
 
