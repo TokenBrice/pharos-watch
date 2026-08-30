@@ -51,9 +51,15 @@ export const POSTMAN_FOLDER_BY_PRIMARY_TAG = {
   Reserves: "Risk and market structure",
 } as const satisfies Record<PublicApiArtifactTag, PostmanFolderName>;
 
-type DefinedPublicArtifact<T> = Omit<T, "postman"> & {
-  postman: PostmanRequestConfig | readonly PostmanRequestConfig[];
-} & Pick<PublicApiArtifactEndpoint, "path" | "security">;
+type MaterializedPostman<T> = T extends { readonly postman: readonly PostmanRequestInput[] }
+  ? readonly PostmanRequestConfig[]
+  : PostmanRequestConfig;
+
+type DefinedPublicArtifact<T> = T extends PublicArtifactInput<EndpointKey>
+  ? Omit<T, "postman"> & {
+      postman: MaterializedPostman<T>;
+    } & Pick<PublicApiArtifactEndpoint, "path" | "security">
+  : never;
 
 export function definePublicArtifact<const T extends PublicArtifactInput<EndpointKey>>(
   artifact: T,
@@ -88,5 +94,5 @@ export function definePublicArtifact<const T extends PublicArtifactInput<Endpoin
       (_match, name: string) => `{${name === "id" ? "stablecoinId" : name}}`,
     ),
     ...(definition.publicApiAccess === "exempt" ? { security: "none" } : {}),
-  } as DefinedPublicArtifact<T>;
+  } as unknown as DefinedPublicArtifact<T>;
 }
