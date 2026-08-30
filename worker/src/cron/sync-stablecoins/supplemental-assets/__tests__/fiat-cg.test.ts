@@ -3,6 +3,7 @@ import { mockRegistry } from "../../../../test-helpers/cron";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
+const resolveVaultNavSupplyPriceMock = vi.fn();
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
   stablecoins: [
@@ -58,12 +59,17 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
 }));
 
+vi.mock("../../../../lib/authoritative-price-sources", () => ({
+  resolveVaultNavSupplyPrice: (...args: unknown[]) => resolveVaultNavSupplyPriceMock(...args),
+}));
+
 import { fetchFiatCoinGeckoTokens } from "../fiat-cg";
 
 describe("fetchFiatCoinGeckoTokens", () => {
   beforeEach(() => {
     fetchWithRetryMock.mockReset();
     probeTrackedTokenSupplyMock.mockReset();
+    resolveVaultNavSupplyPriceMock.mockReset().mockResolvedValue(null);
   });
 
   it("prefers curated aggregate on-chain supply over stale CoinGecko market cap for ftUSD", async () => {
@@ -128,5 +134,66 @@ describe("fetchFiatCoinGeckoTokens", () => {
       ([probeMeta]) => probeMeta != null && typeof probeMeta === "object" && "id" in probeMeta && probeMeta.id === "susds-sky",
     );
     expect(susdsProbeCalls).toHaveLength(0);
+  });
+
+  it("admits a NAV token from the protocol-redeem supply fallback without publishing a price", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ coins: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
+      input.chain === "ethereum" ? 3_000_000_000_000_000_000_000_000n : null,
+    );
+    resolveVaultNavSupplyPriceMock.mockResolvedValue({
+      price: 1.04,
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: Math.floor(Date.now() / 1000) - 60,
+      observedAtMode: "local_fetch",
+      metadata: { inheritedFrom: "usdc-circle" },
+    });
+    const previousAssetsById = new Map([["usdc-circle", { id: "usdc-circle", name: "USDC", symbol: "USDC" }]]);
+
+    const result = await fetchFiatCoinGeckoTokens(
+      { susds: { usd_market_cap: 0 } },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      previousAssetsById,
+    );
+
+    expect(resolveVaultNavSupplyPriceMock).toHaveBeenCalledWith("susds-sky", previousAssetsById, undefined, undefined);
+    const susds = result.find((asset) => asset.id === "susds-sky");
+    expect(susds).toMatchObject({
+      id: "susds-sky",
+      price: null,
+      circulating: { peggedUSD: 3_120_000 },
+    });
+    expect(susds?.priceSource).toBeUndefined();
+  });
+
+  it("keeps the NAV token out when the supply fallback resolves nothing", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ coins: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const previousAssetsById = new Map([["usdc-circle", { id: "usdc-circle", name: "USDC", symbol: "USDC" }]]);
+
+    const result = await fetchFiatCoinGeckoTokens(
+      { susds: { usd_market_cap: 0 } },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      previousAssetsById,
+    );
+
+    expect(result).toEqual([]);
+    expect(resolveVaultNavSupplyPriceMock).toHaveBeenCalledTimes(1);
   });
 });

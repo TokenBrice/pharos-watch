@@ -1,4 +1,7 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { logWorkerEventArgs } from "../structured-log";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../circuit-breaker";
+import { readVaultRateCache, writeVaultRateCache } from "./rate-cache";
 import { CIRCUIT_SOURCE } from "../constants";
 import {
   buildCachedRateLiveOverride,
@@ -265,3 +268,55 @@ export const previewRedeemProvider = createVaultNavProvider({
   methodLabel: "previewRedeem",
   logLabel: "previewRedeem",
 });
+
+/**
+ * Pre-intake supply-valuation NAV price for a tracked supplemental vault token
+ * whose market price sources are gone (e.g. a CoinGecko delisting). The fiat-cg
+ * supply lane needs an observed price to admit on-chain supply, but intake runs
+ * before this run's enrichment prices exist, so the parent row comes from the
+ * previous published payload. This reuses the exact protocol-redeem route —
+ * parent-trust gate (incl. its 30-minute synced-at ceiling), live
+ * convertToAssets read, and the bounded cached-rate degradation lane — so no
+ * freshness policy is bypassed. The result values supply only; the live
+ * override stage re-prices the published row in the same run.
+ */
+export async function resolveVaultNavSupplyPrice(
+  stablecoinId: string,
+  previousAssetsById: ReadonlyMap<string, PeggedAsset>,
+  db?: D1Database,
+  signal?: AbortSignal,
+): Promise<CurrentPriceOverride | null> {
+  const config = ERC4626_NAV_VAULTS_BY_ID.get(stablecoinId);
+  if (!config) return null;
+  const parentAsset = previousAssetsById.get(config.parentId);
+  if (!parentAsset) return null;
+  if (db && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM))) return null;
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const context: LivePriceContext = {
+    assetsById: new Map([[config.parentId, { ...parentAsset }]]),
+    vaultRateCache: db ? await readVaultRateCache(db, nowSec) : undefined,
+    vaultRateWrites: new Map(),
+  };
+  const stub: PeggedAsset = { id: stablecoinId, name: stablecoinId, symbol: stablecoinId };
+  try {
+    const override = await erc4626NavProvider.fetchLivePrice!(stub, context, signal);
+    if (db) {
+      if (override) await recordOutcomeSafe(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM, true);
+      if (context.vaultRateWrites!.size > 0) {
+        await writeVaultRateCache(db, context.vaultRateWrites!, nowSec);
+      }
+    }
+    return override && "price" in override ? override : null;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM, false);
+    logWorkerEventArgs(
+      "lib",
+      "warn",
+      `[authoritative-price-sources] ${stablecoinId} NAV supply-price fallback failed:`,
+      error,
+    );
+    return null;
+  }
+}

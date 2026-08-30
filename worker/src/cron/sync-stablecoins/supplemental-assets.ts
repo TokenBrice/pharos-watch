@@ -80,6 +80,7 @@ export async function fetchSupplementalTrackedTokens(
   chainRpcs?: Map<string, ChainRpcConfig>,
   fxFallbackRates?: Record<string, number>,
   db?: D1Database,
+  previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
 ): Promise<{
   goldTokens: PeggedAsset[];
   silverTokens: PeggedAsset[];
@@ -91,7 +92,7 @@ export async function fetchSupplementalTrackedTokens(
   // pair, and fiat-cg's on-chain fallbacks must not stack in one trigger.
   const goldTokens = await fetchGoldTokens(cgData, signal, db, chainRpcs);
   const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey, db, chainRpcs);
-  const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db);
+  const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db, previousAssetsById);
 
   return { goldTokens, silverTokens, fiatCgTokens };
 }

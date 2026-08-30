@@ -207,6 +207,7 @@ export async function loadStablecoinsIntake(
     input.chainRpcs,
     input.fxFallbackRates,
     input.db,
+    previousAssetsById,
   );
 
   const [dlFetchResult, supplementalTokens] = await Promise.all([

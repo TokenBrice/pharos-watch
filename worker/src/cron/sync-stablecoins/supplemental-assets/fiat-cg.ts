@@ -5,6 +5,7 @@ import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
+import { resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
@@ -26,6 +27,7 @@ export async function fetchFiatCoinGeckoTokens(
   chainRpcs?: Map<string, ChainRpcConfig>,
   fxFallbackRates?: Record<string, number>,
   db?: D1Database,
+  previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
 ): Promise<PeggedAsset[]> {
   if (FIAT_CG_METAS.length === 0) return [];
   throwIfAborted(signal);
@@ -67,8 +69,24 @@ export async function fetchFiatCoinGeckoTokens(
         // NAV/yield-bearing assets need an observed market price; do not par-value them or use an FX reference.
         const navLikeAsset = meta.flags.navToken || meta.flags.yieldBearing;
         const usdPegDefault = !navLikeAsset && meta.flags.pegCurrency === "USD" ? 1.0 : undefined;
+        // NAV assets that lost every market price source (e.g. a CoinGecko
+        // delisting) fall back to the authoritative protocol-redeem NAV route
+        // for supply valuation only; the published price stays with the live
+        // override stage. Fail-closed: no trusted NAV -> the coin stays out.
+        let navSupplyPrice: number | undefined;
+        if (navLikeAsset && !priceResolution && previousAssetsById) {
+          const navOverride = await resolveVaultNavSupplyPrice(meta.id, previousAssetsById, db, signal);
+          if (navOverride) {
+            navSupplyPrice = navOverride.price;
+            logWorkerEventArgs(
+              "handler",
+              "info",
+              `[fiat-cg] ${meta.symbol} supply valued from ${navOverride.source} NAV fallback (no market price source)`,
+            );
+          }
+        }
         const priceForSupply = navLikeAsset
-          ? priceResolution?.price
+          ? priceResolution?.price ?? navSupplyPrice
           : priceResolution?.price ?? pegReferencePrice ?? usdPegDefault;
 
         if (isZephyrScannerAssetId(meta.id)) {

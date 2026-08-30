@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.213",
+    title: "NAV supply valuation from the protocol-redeem route",
+    date: "2026-08-30",
+    effectiveAt: 1788076800,
+    summary:
+      "Supplemental NAV/yield-bearing vault tokens that lose every market price source can value their on-chain supply through the existing protocol-redeem vault route instead of dropping out of publication.",
+    impact: [
+      "`sbold-k3-capital` and `eearn-ember` re-enter active publication after CoinGecko and DefiLlama dropped their market rows: intake now resolves `convertToAssets(1 share)` x the trusted tracked parent price (BOLD and USDC respectively) for supply valuation only",
+      "The pre-intake resolver reuses the unchanged parent-trust gate against the previous published payload's parent row, the live on-chain rate read, and the bounded 24-hour cached-rate degradation lane; no freshness policy is relaxed",
+      "The resolved NAV never publishes as the asset's price - the row enters with a missing price and the live protocol-redeem override stage re-prices it in the same run",
+      "NAV/yield-bearing assets remain never par-valued: without a trusted NAV the asset stays out of the payload and continues to report as dropped tracked coverage",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.212",
     title: "Reviewed exact-address request-cap reservation",
     date: "2026-08-27",

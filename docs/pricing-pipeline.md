@@ -31,7 +31,7 @@ Every published main and CoinGecko-supply-fallback `sync-stablecoins` run writes
 
 ## Versioning
 
-- **Current methodology version:** `v6.212`
+- **Current methodology version:** `v6.213`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -393,6 +393,16 @@ Some tracked stablecoins trade at low enough volume that CoinGecko's upstream `l
 1. Try `resolveSupplementalPrice` first (the standard 15-minute gate).
 2. If there is no `geckoId` but the asset has one unambiguous supported supply contract, try the same DefiLlama coins endpoint with an exact `chain:contract` key. Accepted quotes must include a matching DefiLlama symbol, confidence of at least `0.8`, a fresh upstream timestamp, and pass the shared peg-aware reasonableness bounds before publishing as `source: "defillama-contract"` or normalizing the same on-chain total-supply fallback.
 3. If that returns null but `cgData[geckoId].usd` is a positive finite number, build a resolution with `source: "coingecko-low-volume"`, `priceConfidence: "fallback"`, and `priceObservedAtMode: "upstream"` when CG returned `last_updated_at` (otherwise `"local_fetch"`).
+4. NAV/yield-bearing assets (`flags.navToken || flags.yieldBearing`) are never par-valued and never use an FX
+   reference for supply valuation. When all three price lanes return null, an asset with a registered vault NAV route
+   resolves a supply-valuation-only price through `resolveVaultNavSupplyPrice`
+   (`worker/src/lib/authoritative-price-sources/erc4626-nav.ts`): the exact protocol-redeem route — parent-trust gate
+   on the previous published payload's parent row (30-minute synced-at ceiling), live `convertToAssets(1 share)` read,
+   and the bounded 24-hour `protocol-redeem-cached-rate` degradation lane — reused pre-intake. The resolved price
+   values on-chain total supply only; the row publishes with `price: null` and the live override stage re-prices it in
+   the same run. Without a trusted NAV the asset stays out of the payload (fail-closed), which is what surfaced the
+   2026-08-30 `sbold-k3-capital`/`eearn-ember` publication-coverage degradation after CoinGecko and DefiLlama dropped
+   their market rows.
 
 The fallback enrichment pipeline also has a narrow `coingecko-low-volume` pass for selected tracked assets with audited usable CoinGecko rows. That pass runs only after DefiLlama contract, CMC, Jupiter, and DexScreener fallback recovery fail. It is explicitly allowlisted for `deuro-deuro`, `usdn-smardex`, `cadm-mento`, `tryb-bilira`, `btcusd-btcfi`, `dllr-sovryn`, `gbpm-mento`, `audm-mento`, `copm-mento`, `chfm-mento`, and `hchf-hedera-swiss-franc`; it preserves the row's admitted supply source and can only fill missing price fields, so it cannot overwrite a price that primary consensus or an earlier fallback already accepted.
 
