@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { cacheControlForDegradedPayload, jsonFreshResponse } from "../lib/api-response";
+import { jsonFreshDegradedResponse } from "../lib/api-response";
 import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildInClause, chunkArray } from "../lib/db";
@@ -552,49 +552,29 @@ export const handleDepegResolver = async (db: D1Database): Promise<Response> => 
     if (!contract.ok) {
       const manifestFallback = await manifestFallbackResponse(db, contract.reason);
       if (manifestFallback) {
-        return jsonFreshResponse(manifestFallback, {
-          cacheControl: cacheControlForDegradedPayload(manifestFallback),
-          updatedAt: manifestFallback._meta.computedAt,
-          maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-        });
+        return jsonFreshDegradedResponse(manifestFallback, manifestFallback._meta.computedAt, API_FRESHNESS_MAX_AGE_SEC.depegResolver);
       }
       logWorkerEventArgs("api", "warn", `[depeg-resolver] cache contract invalid; serving degraded reason=${contract.reason}`);
       const nowSec = Math.floor(Date.now() / 1000);
       const payload = await decorateDdrResponse(db, degradedResponse(contract.reason));
-      return jsonFreshResponse(payload, {
-        cacheControl: cacheControlForDegradedPayload(payload),
-        updatedAt: nowSec,
-        maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-      });
+      return jsonFreshDegradedResponse(payload, nowSec, API_FRESHNESS_MAX_AGE_SEC.depegResolver);
     }
     const latestManifest = await loadLatestPublicationManifest(db);
     const manifestContract = cacheMatchesLatestManifest(cached.payload, latestManifest);
     if (!manifestContract.ok) {
       const manifestFallback = await manifestFallbackResponse(db, manifestContract.reason);
       if (manifestFallback) {
-        return jsonFreshResponse(manifestFallback, {
-          cacheControl: cacheControlForDegradedPayload(manifestFallback),
-          updatedAt: manifestFallback._meta.computedAt,
-          maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-        });
+        return jsonFreshDegradedResponse(manifestFallback, manifestFallback._meta.computedAt, API_FRESHNESS_MAX_AGE_SEC.depegResolver);
       }
       logWorkerEventArgs("api", "warn", `[depeg-resolver] cache manifest mismatch; serving degraded reason=${manifestContract.reason}`);
       const nowSec = Math.floor(Date.now() / 1000);
       const payload = await decorateDdrResponse(db, degradedResponse(manifestContract.reason));
-      return jsonFreshResponse(payload, {
-        cacheControl: cacheControlForDegradedPayload(payload),
-        updatedAt: nowSec,
-        maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-      });
+      return jsonFreshDegradedResponse(payload, nowSec, API_FRESHNESS_MAX_AGE_SEC.depegResolver);
     }
     const nowSec = Math.floor(Date.now() / 1000);
     const basePayload = nowSec > cached.payload._meta.expiresAt ? await staleSnapshotResponse(db, cached.payload) : cached.payload;
     const payload = await decorateDdrResponse(db, basePayload);
-    return jsonFreshResponse(payload, {
-      cacheControl: cacheControlForDegradedPayload(payload),
-      updatedAt: cached.payload._meta.computedAt,
-      maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-    });
+    return jsonFreshDegradedResponse(payload, cached.payload._meta.computedAt, API_FRESHNESS_MAX_AGE_SEC.depegResolver);
   }
 
   // No usable snapshot yet (e.g. before first cron run, or after a methodology bump):
@@ -603,9 +583,5 @@ export const handleDepegResolver = async (db: D1Database): Promise<Response> => 
   logWorkerEventArgs("api", "warn", `[depeg-resolver] snapshot unavailable; serving degraded reason=${cached.reason}`);
   const nowSec = Math.floor(Date.now() / 1000);
   const payload = await decorateDdrResponse(db, degradedResponse(cached.reason));
-  return jsonFreshResponse(payload, {
-    cacheControl: cacheControlForDegradedPayload(payload),
-    updatedAt: nowSec,
-    maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-  });
+  return jsonFreshDegradedResponse(payload, nowSec, API_FRESHNESS_MAX_AGE_SEC.depegResolver);
 };

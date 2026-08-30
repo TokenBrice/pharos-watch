@@ -263,6 +263,10 @@ export function formatIsoDate(seconds: number): string {
   return formatUtcDateOnly(new Date(seconds * 1000));
 }
 
+export function formatIsoTimestamp(seconds: number): string {
+  return new Date(seconds * 1000).toISOString();
+}
+
 export function formatEventDate(timestamp: number): string {
   if (!Number.isFinite(timestamp)) return "N/A";
   const date = new Date(timestamp * 1000);

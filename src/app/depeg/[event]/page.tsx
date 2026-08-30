@@ -10,7 +10,7 @@ import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
-import { formatDeviationBps } from "@shared/lib/format";
+import { formatDeviationBps, formatIsoTimestamp } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -248,19 +248,17 @@ export default async function DepegEventPage(
   const newer = sameCoinIdx > 0 ? sameCoin[sameCoinIdx - 1] : null;
   const older = sameCoinIdx >= 0 && sameCoinIdx < sameCoin.length - 1 ? sameCoin[sameCoinIdx + 1] : null;
 
-  const startedIso = new Date(event.startedAt * 1000).toISOString();
   const modifiedAtSeconds = isCollision
     ? Math.max(event.endedAt ?? event.startedAt, DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS)
     : (event.endedAt ?? event.startedAt);
-  const modifiedIso = new Date(modifiedAtSeconds * 1000).toISOString();
 
   const newsArticleJsonLd = buildArticleJsonLd({
     type: "NewsArticle",
     id: canonicalUrl,
     headline: heroTitle,
     description: heroDescription,
-    datePublished: startedIso,
-    dateModified: modifiedIso,
+    datePublished: formatIsoTimestamp(event.startedAt),
+    dateModified: formatIsoTimestamp(modifiedAtSeconds),
     image: [`${SITE_URL}/og-editorial-depeg.png`],
     mainEntityOfPage: canonicalUrl,
     identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],

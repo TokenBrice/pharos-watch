@@ -7,7 +7,7 @@ import {
   DDRR_PUBLIC_WARNING,
   type DdrrResponse,
 } from "@shared/types/depeg-resolver-review";
-import { cacheControlForDegradedPayload, jsonFreshResponse } from "../lib/api-response";
+import { jsonFreshDegradedResponse } from "../lib/api-response";
 import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { buildEmptyDdrrSummary } from "../lib/depeg-resolver-review-response";
 import { loadDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
@@ -59,19 +59,11 @@ export const handleDepegResolverReview = async (db: D1Database): Promise<Respons
       const payload = nowSec > cached.payload._meta.expiresAt
         ? staleSnapshotResponse(cached.payload)
         : cached.payload;
-      return jsonFreshResponse(payload, {
-        cacheControl: cacheControlForDegradedPayload(payload),
-        updatedAt: cached.payload._meta.computedAt,
-        maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
-      });
+      return jsonFreshDegradedResponse(payload, cached.payload._meta.computedAt, API_FRESHNESS_MAX_AGE_SEC.depegResolverReview);
     }
 
     logWorkerEventArgs("api", "warn", `[depeg-resolver-review] snapshot unavailable; serving degraded reason=${cached.reason}`);
     const nowSec = Math.floor(Date.now() / 1000);
     const payload = degradedResponse(cached.reason);
-    return jsonFreshResponse(payload, {
-      cacheControl: cacheControlForDegradedPayload(payload),
-      updatedAt: nowSec,
-      maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
-    });
+    return jsonFreshDegradedResponse(payload, nowSec, API_FRESHNESS_MAX_AGE_SEC.depegResolverReview);
   };
