@@ -16,7 +16,7 @@ export const meta = {
 //  - internal doc link targets              (check:verified-doc-links, passing)
 //  - methodology version STRINGS            (check:doc-sync, passing) e.g. "v8.0"
 //  - AGENTS.md <-> CLAUDE.md sync            (check:generated-artifacts -- --only=agents-doc, passing)
-//  - the generated quick-reference block in api-reference.md (check:docs-api-reference: current)
+//  - the generated API artifacts (`npm run check:generated-artifacts -- --only=api-reference,openapi,postman`, current)
 // The workflow targets SEMANTIC / BEHAVIORAL claims that no CI guards.
 // ---------------------------------------------------------------------------
 

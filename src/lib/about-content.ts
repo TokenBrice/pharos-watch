@@ -77,7 +77,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "On-chain Reads & Events",
     sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including MegaETH public RPC, EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> CHFAU StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
+      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including MegaETH public RPC, EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> CHFAU StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation, Starknet RPC reads, and DFINITY ICRC REST indexer reads for ICP), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
   },
   {
     label: "Ratings & Reference",
@@ -116,7 +116,7 @@ export const DATA_PIPELINE_STEPS = [
     ariaLabel: "Step 2: Cloudflare Worker + D1",
     title: "Cloudflare Worker + D1",
     description:
-      "Staggered 5-minute, 15-minute, 30-minute, hourly, multi-hour, daily, and monthly lanes normalize the data, preserve independent protocol evidence in DEX price challenges, and cache the results for the public API.",
+      "Staggered 5-minute, 15-minute, 30-minute, hourly, multi-hour, daily, and monthly lanes normalize the data, preserve independent protocol evidence in DEX price challenges before bounded TVL coverage selection, and cache the results for the public API.",
   },
   {
     step: 3,

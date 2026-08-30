@@ -337,12 +337,12 @@ Successful responses return `StablecoinReservesResponse` with one of these modes
 | Mode                | Meaning                                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------ |
 | `live`              | Fresh live snapshot from `reserve_composition`                                             |
-| `live-stale`        | Live snapshot exists, but is older than 48 hours                                           |
+| `live-stale`        | Live snapshot exists, but its stored fetch time—or, for `metadata.freshnessMode === "verified"`, its upstream `metadata.sourceTimestamp`—is older than 48 hours |
 | `curated-fallback`  | Live snapshot unavailable; falling back to curated `StablecoinMeta.reserves`               |
 | `template-fallback` | Live snapshot unavailable; falling back to reserve templates from `getReserves()`          |
 | `unavailable`       | Coin is live-enabled, but neither live data nor fallback reserve presentation is available |
 
-`live` / `live-stale` only apply when the stored snapshot matches the latest successful sync state and passes strict integrity validation. Orphaned partial writes or corrupt stored snapshots fail closed to the fallback modes.
+`live` / `live-stale` only apply when the stored snapshot matches the latest successful sync state by `fetched_at` / `attempt_id` and passes strict integrity validation. Staleness uses the stored fetch time and, for verified metadata, the upstream source timestamp. Orphaned partial writes or corrupt stored snapshots fail closed to the fallback modes.
 
 `StablecoinReservesResponseSchema` in `shared/types/live-reserves.ts` is the runtime contract for successful `200` responses and is used by the frontend reserve API client. Adapter-specific `metadata`, `metadata.details`, and nested redemption telemetry remain passthrough so feed telemetry can evolve without breaking consumers.
 

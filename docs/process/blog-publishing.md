@@ -58,10 +58,10 @@ what shipped, what's next, and why.
   Twitter metadata as well as the article and hub card. A post without one
   falls back to the shared `public/og-blog.png` card with the "Blog" kicker.
   Cover images are authored assets; Pharos does not generate per-post cards.
-- **llms.txt (optional):** `scripts/maintenance/generate-llms-txt.ts` can list
-  the `/blog/` hub and `/feed/blog.xml`; if you add them, regenerate and run
-  `npm run check:generated-artifacts -- --only=llms-txt`. Keep it to the hub — do not add per-post entries, so
-  publishing never forces an llms.txt regen.
+- **llms.txt:** `public/llms.txt` currently omits the `/blog/` hub and
+  `/feed/blog.xml`; adding them would require a change to
+  `scripts/maintenance/generate-llms-txt.ts` first. Publishing never forces an
+  llms.txt regeneration.
 - **Discovery** is wired once and needs no per-post work: the sitemap, the
   sitemap-tree page, and the RSS feed enumerate posts straight from the
   registry; the nav Reference group, footer, command palette, and the feed

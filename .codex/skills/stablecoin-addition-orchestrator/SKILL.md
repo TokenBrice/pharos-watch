@@ -6,7 +6,7 @@ user_invocable: true
 
 # Stablecoin Addition Orchestrator
 
-Run the complete workflow in `docs/process/adding-a-stablecoin.md`. This skill does not replace the specialist skills; it makes sure they are used in the right order and that completion is not claimed while required artifacts or gates are missing.
+Run the complete workflow in `docs/process/adding-a-stablecoin.md`. This skill does not replace the specialist skills; it makes sure they are used in the right order and that completion is not claimed while required artifacts or gates are missing. Before using methodology terminology, read `shared/lib/methodology-versions/current-version.json`; this skill defers to the current Safety Score methodology.
 
 ## Core Rule
 
@@ -31,32 +31,32 @@ Use `stablecoin-runtime-price-marketcap-gate` before editing active metadata. Pr
 
 3. **Build the research packet**
 - **Field routing:** research domains live in sidecars under `shared/data/stablecoins/domains/` (reserves, mint-authority, compliance, risk-review). Author domain-owned fields there from the start, creating the sidecar when absent; they must not enter the base file. Route per `docs/process/stablecoin-research-sidecars.md`.
-- Use `stablecoin-info-fetch` for identity, collateral, peg mechanism, jurisdiction, links, IDs, PoR, and basic contracts.
-- Use `coingecko-id-verif` before saving or changing `geckoId`.
-- Use `contract-populate` or `contract-enrich` for verified contract coverage.
-- Use `reserve-research` for curated `reserves[]`.
-- Use `resilience-classify` for only the resilience overrides that differ from defaults.
+- Resolve the current specialist skill for each responsibility from the `.codex/skills/` directory listing. This sequence is responsibility-based, not an exhaustive roster; `docs/process/adding-a-stablecoin.md` is authoritative for the current steps and gates.
+- Identity, collateral, peg mechanism, jurisdiction, links, IDs, proof of reserves, and basic contracts come first.
+- Verify the CoinGecko ID before saving or changing it.
+- Populate verified contract coverage.
+- Curate `reserves[]`.
+- Add only resilience overrides that differ from defaults.
 - Author the `blacklistabilityReview` — required on **every** coin, including pre-launch; `check:stablecoin-data` fails without it (see the Phase 3 field rules in `docs/process/adding-a-stablecoin.md`).
-- Use `mica-research` and `genius-research` for the compliance fields when the coin is plausibly in EU or U.S. GENIUS scope; leave the fields undefined for the clearly out-of-scope long tail.
+- Research the compliance fields when the coin is plausibly in EU or U.S. GENIUS scope; leave them undefined for the clearly out-of-scope long tail.
 - For Mint Authority, use Phase 5f in `docs/process/adding-a-stablecoin.md`; the local scanner (`tsx scripts/maintenance/audit-mint-authority.ts --coin <id>`) is a candidate producer only and must not be copied directly into metadata.
-- Use `write-ai-summaries` for `data/ai-summaries.json`.
-- Use `pre-launch-update` only for pre-launch milestones, phase, featured content, and promotion checks.
+- Maintain `data/ai-summaries.json`.
+- Handle pre-launch milestones, phase, featured content, and promotion checks.
 
 3.5. **Editorial coverage gate** — before Phase 4 saves the per-coin JSON, run the required-or-waived gate from Phase 3.5 of `docs/process/adding-a-stablecoin.md`. The field table there (`oneLiner`, `mechanismArchetype`, `proofOfReserves.attestorTier`, the `mintAuthority` coverage decision, `data/ai-summaries.json`) and the CI backstop list are canonical — read the doc rather than relying on any copy here.
 
 Each missing field must either be filled (by re-calling the appropriate specialist skill from step 3) or recorded as an intentional gap in the Phase 5 coverage notes with a one-line reason. Do not declare success while a required field is missing without a recorded gap. The CI backstops cover the non-Mint-Authority editorial fields; the Mint Authority coverage decision itself is manual.
 
-4. **Apply registry and static edits**
+4. **Apply registry and generated artifacts**
 - Add/update exactly one per-coin JSON file under `shared/data/stablecoins/coins/`.
 - Update `shared/data/stablecoins/canonical-order.json`.
 - Add the ID and derived class to `shared/data/stablecoins/listing-decisions.json`.
-- Regenerate `shared/data/stablecoins/coins.generated.json`.
-- Update the coupled static files per the Phase 4 registry editing checklist in `docs/process/adding-a-stablecoin.md` — `src/lib/stablecoin-static-data.ts` (counts, `TRACKED_STABLECOIN_IDS`, `NON_ACTIVE_STABLECOIN_ID_SET`), `src/lib/command-palette-search-data.ts`, and the hardcoded expectations in `shared/lib/__tests__/stablecoins.test.ts`. The build fails on every addition until these match.
+- Run `npm run bootstrap:generated` to regenerate `shared/data/stablecoins/coins.generated.json` and the client projections. Do not hand-edit the stable re-export boundaries; follow the current Phase 4b test tripwires and Phase 4c checked-in artifact checklist in `docs/process/adding-a-stablecoin.md`.
 - Add `data/logos.json` and `data/ai-summaries.json` entries, or record explicit skipped reasons.
 
 5. **Record downstream coverage decisions**
 - For each branch, mark `added`, `not applicable`, or `intentional gap`: logo/summary, live reserves, yield, redemption backstop, mint/burn, Mint Authority, Bluechip, price/discovery, history backfill.
-- **Safety Score V9 scoreability:** a bare new coin publishes as NR, not low-scored — mechanism components and mint facts stay `missing` until a hand-authored mechanism review overlay exists (`docs/process/mechanism-overlay-evidence-standard.md`); nothing auto-picks a new coin up, the measurement producers iterate curated allowlists. Record the outcome as overlay authored or an intentional NR-until-overlay gap. Caution: `shared/data/safety-score-v9/mechanism-review-overlays-v1.json` is identity-bound — authoring an overlay rotates the V9 evaluation-build identity, so land it as a deliberate, reviewed change.
+- **Current Safety Score methodology scoreability:** a bare new coin publishes as NR, not low-scored — mechanism components and mint facts stay `missing` until a hand-authored mechanism review overlay exists (`docs/process/mechanism-overlay-evidence-standard.md`); nothing auto-picks a new coin up, the measurement producers iterate curated allowlists. Record the outcome as overlay authored or an intentional NR-until-overlay gap. Caution: `shared/data/safety-score-v9/mechanism-review-overlays-v1.json` is identity-bound — authoring an overlay rotates the evaluation-build identity, so land it as a deliberate, reviewed change.
 - If a new data source is added, update the about page and relevant methodology/docs.
 - If the coin is active and entered Pharos via a recent launch (status transitioned from `pre-launch` within the last 90 days, or DefiLlama first observation is within 90 days), append a `launch` candidate row to `agents/annotation-candidates.md` so the chart-annotation editorial loop catches it.
 
@@ -76,13 +76,13 @@ Before saying the addition is complete, report:
 - price path and market-cap path, or pre-launch exemption
 - generated aggregate status
 - canonical-order and listing-decisions status
-- coupled static files updated (static-data counts/IDs, command-palette row, and test expectations)
+- generated projections materialized, with the Phase 4b test tripwires and Phase 4c checked-in artifacts handled
 - `blacklistabilityReview` present with matching reviewed status
 - compliance fields (`mica`/`genius`) authored or intentionally left undefined
 - logo and summary status
 - editorial coverage decisions per the Phase 3.5 field table (the doc is canonical) — each marked filled or recorded intentional gap with reason
 - Mint Authority status: reviewed `mintAuthority` profile, intentional gap with reason, or not applicable
-- V9 scoreability outcome: mechanism overlay authored, or intentional NR-until-overlay gap
+- Current Safety Score methodology scoreability outcome: mechanism overlay authored, or intentional NR-until-overlay gap
 - downstream coverage decision notes
 - post-deploy backfill run or explicitly deferred
 - `agents/annotation-candidates.md` updated for recent-launch coins (or marked N/A)

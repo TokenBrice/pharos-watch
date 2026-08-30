@@ -21,6 +21,9 @@ Computed daily by `worker/src/lib/depeg-lifecycle.ts` inside the digest cron's
 active-depeg collector, over **all** open events (not the top-8 digest slice).
 Rows without a live price are never flagged — a stale stored peak must not
 trigger a freeze review. Thresholds owner-ratified 2026-07-18.
+The 21- and 30-day thresholds use a rounded-hourly age that is then floored
+into days, so they are not exact elapsed-day boundaries and can trip up to
+~1 hour early.
 
 | Flag | Condition | Meaning |
 |------|-----------|---------|

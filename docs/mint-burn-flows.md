@@ -425,10 +425,13 @@ Auth/idempotency, scope parameters, batch progression, counters, and errors are 
 **Route:** `/flows`
 **File:** `src/app/flows/page.tsx`
 
-Three sections:
+Four sections, followed by a Timeline link:
 1. **Hero Overview** — net-direction hero with the baseline-relative Bank Run Gauge, a literal 24h Minting Pressure gauge, and flight-to-quality badge. Headline copy is derived from aggregate `Net Flow 24h` direction plus the Bank Run Gauge pressure state; it does not imply cross-asset breadth unless a separate breadth signal is added.
 2. **Per-Coin Flows** — sortable table with `Pressure vs 30D`, net 24h/7d, mint/burn volumes, and largest USD-valued event
 3. **Aggregate Flows** — Recharts composed chart (mint area, burn area, net flow line) with 24h/7d/30d toggle
+4. **Flow Interpretation + Mint/Burn Flow FAQ** — explanatory guidance and the mint/burn FAQ
+
+The page then links to the Timeline for all mint/burn events.
 
 ### Hooks
 

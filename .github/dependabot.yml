@@ -57,3 +57,12 @@ updates:
       default-days: 7
     open-pull-requests-limit: 1
     rebase-strategy: "disabled"
+    groups:
+      # Dependabot treats each `uses:` path as its own dependency, so a
+      # multi-step action such as github/codeql-action/{init,analyze}
+      # would otherwise bump one path per PR. Against the limit of 1 that
+      # leaves the halves on different versions, which CodeQL rejects at
+      # run time. One grouped PR keeps every pinned action in step.
+      actions:
+        patterns:
+          - "*"

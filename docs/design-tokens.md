@@ -110,7 +110,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 
 | File                         | Exports                                                                     | Purpose                                                                  |
 | ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `src/lib/chart-colors.ts`    | `CHART_PALETTE`, `CHART_BLUE`, `CHART_GREEN`, `CHART_ORANGE`, `CHART_RED`, `CHART_SLATE`, `CHART_AMBER`, `CHART_TEAL`, `CHART_HEIGHT`, `RECHARTS_TOOLTIP_STYLES` | Shared chart fill/stroke colors, chart-height utility, and tooltip styles (also has module-private `TOKEN` map) |
+| `src/lib/chart-colors.ts`    | `CHART_PALETTE`, `CHART_BLUE`, `CHART_GREEN`, `CHART_ORANGE`, `CHART_RED`, `CHART_SLATE`, `CHART_SLATE_SOFT`, `CHART_SLATE_STRONG`, `CHART_AMBER`, `CHART_TEAL`, `CHART_HEIGHT`, `RECHARTS_TOOLTIP_STYLES` | Shared chart fill/stroke colors, chart-height utility, and tooltip styles (also has module-private `TOKEN` map) |
 | `src/lib/severity-colors.ts` | `deviationColorClass()`, `deviationBorderClass()`, `deviationBgClass()`, `deviationIconName()`, `TIER_TEXT` / `TIER_PILL`, `getScoreTier()`, `getScoreColor()`, `pegScoreColor()`, `getDurabilityColor()` | Peg-deviation and score-tier Tailwind class helpers (text classes are light/dark aware) |
 
 `chart-colors.ts` uses the same hex values as the `--chart-*-hex` CSS custom properties in `semantic.css`; `severity-colors.ts` emits Tailwind class strings only. Some runtime-only exports, such as signal colors and brand helpers, live only in the JS maps.
@@ -127,7 +127,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 ### Don't
 
 - Reference primitives (`--p-blue-500`) directly in components, except when a documented local visualization intentionally needs a primitive ramp before a semantic token exists
-- Hardcode hex values in chart components — use the JS token maps
+- Hardcode hex values in chart components — use the JS token maps, except for intentional local canonical palettes: market-cap delta colors in `src/components/mcap-chart.tsx`, `PEG_BAND_HEX` in `src/components/peg-deviation-chart.tsx`, and `ANNOTATION_HEX_COLORS` in `src/components/chart-primitives/annotations.tsx`.
 - Edit shadcn/ui primitives in `src/components/ui/` to use tokens
 - Define one-off color variables in individual component files
 

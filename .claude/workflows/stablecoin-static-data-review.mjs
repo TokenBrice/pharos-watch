@@ -14,14 +14,10 @@ export const meta = {
 // ---------------------------------------------------------------------------
 // Repo-relative corpus locations. Keep enumeration inside the checkout so a
 // predictable /tmp scratch file cannot inject coin IDs or paths into prompts.
+// Sidecar domains are discovered from the owning directory at runtime.
 // ---------------------------------------------------------------------------
 const BASE = 'shared/data/stablecoins/coins'
-const DOMAIN_DIRS = {
-  reserves: 'shared/data/stablecoins/domains/reserves',
-  'mint-authority': 'shared/data/stablecoins/domains/mint-authority',
-  compliance: 'shared/data/stablecoins/domains/compliance',
-  'risk-review': 'shared/data/stablecoins/domains/risk-review',
-}
+const DOMAIN_ROOT = 'shared/data/stablecoins/domains'
 const TODAY = args && args.date
 const CHUNK = 5
 
@@ -154,6 +150,19 @@ function enumerateJsonIds(dir) {
     .map((entry) => assertSafeId(basename(entry.name, '.json'), `${dir} file name`))
     .sort((a, b) => a.localeCompare(b))
 }
+
+function enumerateDomainDirs(root) {
+  if (!existsSync(root)) return []
+  return readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => {
+      const domain = assertSafeId(entry.name, `${root} directory name`)
+      return [domain, join(root, domain)]
+    })
+    .sort(([a], [b]) => a.localeCompare(b))
+}
+
+const DOMAIN_DIRS = Object.fromEntries(enumerateDomainDirs(DOMAIN_ROOT))
 
 function truncateText(value) {
   const s = typeof value === 'string' ? value : JSON.stringify(value ?? '')

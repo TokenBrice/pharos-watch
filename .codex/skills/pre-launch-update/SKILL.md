@@ -103,7 +103,7 @@ Approval is **per coin**, not bulk. For each coin with proposed changes, wait fo
 4. Add new featured content to `featuredContent[]`
 5. Update AI summaries in `data/ai-summaries.json` only for coins that meet the Material Change Definition (follow `write-ai-summaries` voice guidelines)
 6. Verify:
-   - `npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects` — regenerates the aggregate and all dependent stablecoin projections from the approved source edit. **Required.**
+   - `npm run bootstrap:generated` — regenerates the aggregate and all bootstrap-safe stablecoin projections from the approved source edit. **Required.**
    - `npm run check:stablecoin-data` — validates the zod schema for the tracked registry (including pre-launch entries). **Required.**
    - If the approved changes will be published, use `pharos-release-runner` after the focused checks. GitHub's required `PR gate` is authoritative; the heavy local merge gate is optional rehearsal work.
    - `npm run build` alone is not sufficient — it does not enforce the pre-launch schema.
@@ -114,7 +114,9 @@ A coin is ready-to-promote only if **all three** of the following hold.
 
 Before recommending promotion, also run `stablecoin-runtime-price-marketcap-gate` and record the accepted active runtime path. A promoted asset must have both a fetchable current price and a fetchable market-cap / circulating-supply path.
 
-State the Safety Score V9 consequences in the promotion report: a freshly promoted coin scores under launch-age track-record ceilings (`trackRecordCeilings` in `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` — the policy file wins) and typically publishes as NR until reserve/custody/reconciliation evidence is curated. Do not imply it will grade like an established asset on day one.
+Before using methodology terminology, read `shared/lib/methodology-versions/current-version.json`.
+
+State the current Safety Score methodology consequences in the promotion report: a freshly promoted coin scores under launch-age track-record ceilings (`trackRecordCeilings` in `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` — the policy file wins) and typically publishes as NR until reserve/custody/reconciliation evidence is curated. Do not imply it will grade like an established asset on day one.
 
 1. **Listed externally with real supply:**
    - DefiLlama: entry on `https://stablecoins.llama.fi/stablecoins` with non-zero `circulating`, **OR**

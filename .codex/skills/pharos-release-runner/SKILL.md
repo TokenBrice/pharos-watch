@@ -20,7 +20,7 @@ Do not use this for a pure review with no requested commit/push, or while anothe
 
 - Default to `main` for inspection. Direct pushes are protected. A request to push, publish, release, or take work to production authorizes the necessary release branch and protected-main PR; do not attempt a direct `main` push or ask again solely because branch protection requires a PR.
 - Preserve unrelated dirty files. Never stash, reset, checkout, or delete work you did not create unless instructed.
-- Commit before publishing. The required `PR gate` check owns the authoritative release gate; the repo pre-commit hook only regenerates and stages the committed generated artifacts affected by the staged files, and aborts rather than staging an artifact whose sources still have unstaged working-tree edits.
+- Commit before publishing. The required `PR gate` check owns the authoritative release gate; the repo pre-commit hook only regenerates and stages committed generated artifacts marked `autoStage` that the staged files affect, and aborts rather than staging an artifact whose sources still have unstaged working-tree edits.
 - The pushed state must match the validated state. Re-run `git status --short --branch` after long builds or generators.
 - Use the exact `.nvmrc` runtime directly in the shell. Do not use a temporary `npx node@...` wrapper: nested `npx --no-install` and workspace commands must inherit the same runtime.
 - Distinguish deployment proof from operational acceptance. Worker activation and a Pages release marker prove that the intended artifact is live; cron, memory, scheduler, migration, and ingestion changes require the first relevant production execution before an operational-success claim.
@@ -82,11 +82,10 @@ git status --short --branch
 
 #### Keep Generated Artifacts With Their Source Commit
 
-The pre-commit hook runs `npm run sync:staged-artifacts`, which regenerates and stages the committed generated artifacts affected by the staged files, so a source commit and its derived output land together. Bypass it only with `PHAROS_SKIP_ARTIFACT_HOOK=1`.
+The pre-commit hook runs `npm run sync:staged-artifacts`, which regenerates and stages the committed generated artifacts marked `autoStage` that staged files affect, so a source commit and its derived output land together. Bypass it only with `PHAROS_SKIP_ARTIFACT_HOOK=1`.
 
 1. Stage the source change with a clean working tree for the affected inputs; the hook aborts instead of staging an artifact whose sources still have unstaged edits.
-2. Regenerate the deliberately excluded artifacts yourself: the network-derived `llms-txt`, `public-datasets`, and `homepage-bootstrap` outputs plus the OG builders.
-3. When the final source commit stack is stable, run `npm run check:generated-artifacts` to converge the entire registry rather than fixing artifacts one failure at a time.
+2. Inspect the hook's `manual` output and the current `GENERATED_ARTIFACT_REGISTRY` selection for affected artifacts; regenerate manual artifacts deliberately when this commit should carry them. Do not rely on a hard-coded roster.
 
 `sitemap-dates` and `docs-metadata` are gitignored build-time artifacts materialized by `npm run bootstrap:generated:history` and by `prebuild` in the release. They need no commit and are skipped by `--check` runs.
 

@@ -97,7 +97,7 @@ Each "big move" is a concrete, user-facing shipping fact.
 For each cluster, one `SummaryItem`:
 
 - **`label`** (2–4 words, noun phrase): "Broader coverage", "Yield intelligence overhaul", "Stronger pipelines" — never "We broadened coverage".
-- **`tag`** (always set explicitly — don't rely on the card's `inferTag()` fallback):
+- **`tag`** (always set explicitly — don't rely on the card's `inferTag()` fallback; allowed values live in `src/data/changelogs/types.ts`, and the source file wins):
   - `feature` — new capabilities, scoring updates, integrations
   - `security` — auth, hardening, audit remediation
   - `coverage` — stablecoin additions, reserve expansion, data sources

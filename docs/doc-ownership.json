@@ -302,6 +302,66 @@
       "sources": ["src/app/layout.tsx", "src/app/api/**", "functions/_middleware.ts", "functions/_site-data/**", "functions/admin/**", "functions/admin-api/**", "functions/lib/*-env.ts", "shared/lib/runtime-origins.ts", "shared/lib/site-csp.ts", "public/_headers", "public/_routes.json"],
       "docs": ["docs/security-governance.md", "docs/incident-response/safe-browsing-flag.md", "docs/operator-origin-access.md"],
       "notes": ["Inline script signatures, token-in-URL discipline, host gating, and origin allowlists govern Safe Browsing classifier risk and operator-origin access; update playbooks when touching these surfaces.", "CSP nonce middleware, the shared CSP builder, and the managed static fallback headers route here; a change to any of them must keep docs/security-governance.md#csp-posture and `npm run check:site-csp-sync` in agreement."]
+    },
+    {
+      "name": "api-access-pages",
+      "sources": ["src/app/api/**", "src/app/about/api/**", "src/components/api-key-request-*.tsx", "src/components/api-reference-*.tsx", "src/hooks/use-api-key-request-form-state.ts", "src/lib/api-reference-doc.ts"],
+      "docs": ["docs/api-page.md", "docs/api-endpoint-authoring.md", "docs/api-reference.md"],
+      "notes": ["The /api access flow and /about/api reference shell share the canonical API reference parser and registered endpoint contract."]
+    },
+    {
+      "name": "cemetery-and-compare",
+      "sources": ["src/app/cemetery/**", "src/app/compare/**", "src/app/feed/cemetery.xml/**", "src/components/cemetery-*.tsx", "src/components/compare/**", "src/components/comparison-*.tsx", "src/hooks/use-compare-*.ts", "src/lib/compare-*.ts", "shared/lib/cemetery-merged.ts", "shared/lib/dead-stablecoins.ts", "shared/data/dead-stablecoins.json", "worker/src/lib/tape-projectors/cemetery.ts", "scripts/maintenance/generate-cemetery-dataset.ts", "public/datasets/stablecoin-cemetery.*"],
+      "docs": ["docs/cemetery-and-compare.md", "docs/stablecoin-detail-page.md", "docs/README.md"],
+      "notes": ["Cemetery and compare share static route generation, canonical stablecoin identity, and the public cemetery dataset export."]
+    },
+    {
+      "name": "pharos-urn",
+      "sources": ["shared/lib/citation/urn.ts", "src/lib/pharos-urn-json-ld.ts", "src/lib/*-json-ld.ts", "src/app/depeg/[event]/page.tsx", "src/app/methodology/[slug]/page.tsx", "src/components/methodology-changelog-page.tsx", "src/lib/compare-pages.ts"],
+      "docs": ["docs/pharos-urn.md", "docs/stablecoin-detail-page.md", "docs/cemetery-and-compare.md", "docs/methodology-page.md"],
+      "notes": ["The shared formatter/parser and JSON-LD bridge define URN syntax; route and dataset JSON-LD consumers publish identifiers."]
+    },
+    {
+      "name": "portfolio-route",
+      "sources": ["src/app/portfolio/**", "src/components/portfolio-empty-state.tsx", "src/hooks/use-portfolio.ts", "src/lib/portfolio-codec.ts", "src/lib/safety-score-v9-consumers.ts", "src/lib/logos.ts", "src/lib/page-metadata.ts", "data/logos.json"],
+      "docs": ["docs/portfolio-page.md", "docs/report-cards.md"],
+      "notes": ["Portfolio holdings remain browser-local while the route projects canonical V9 grades and dependency exposure."]
+    },
+    {
+      "name": "worker-import-boundaries",
+      "sources": ["eslint.config.mjs", "scripts/ci/check-frozen-invariants.ts"],
+      "docs": ["docs/process/boundary-waivers.md", "docs/testing.md", "docs/scripts.md"],
+      "notes": ["The ESLint boundary rules and their sole reviewed frontend-to-worker waiver are maintained together."]
+    },
+    {
+      "name": "d1-baseline-squash",
+      "sources": ["worker/migrations/**", "scripts/ci/check-worker-migrations.ts"],
+      "docs": ["docs/process/d1-baseline-squash-plan.md", "docs/deployment-process.md", "docs/worker-infrastructure.md", "worker/migrations/MANIFEST.md"],
+      "notes": ["Baseline consolidation must preserve migration manifest parity and the backward-compatible deploy ordering."]
+    },
+    {
+      "name": "font-assets",
+      "sources": ["src/assets/fonts/**", "data/fonts/glyphs-allowlist.txt", "scripts/maintenance/subset-fonts.mjs", "scripts/maintenance/install-whyte-fonts.ts", "src/lib/fonts/**", "worker/assets/fonts/**"],
+      "docs": ["docs/process/font-assets.md", "docs/design-context.md", "docs/design-language.md"],
+      "notes": ["Tracked webfonts, subset inputs, licensed local-only assets, and runtime loaders form one font production contract."]
+    },
+    {
+      "name": "protocol-api-mechanism-refresh",
+      "sources": [".github/workflows/protocol-api-mechanism-refresh.yml", "scripts/maintenance/measure-protocol-api-mechanism-metrics.ts", "scripts/lib/mechanism-measurement/**", "shared/data/safety-score-v9/mechanism-measurements/**"],
+      "docs": ["docs/process/protocol-api-mechanism-refresh.md", "docs/report-cards.md", "docs/scripts.md", "docs/deployment-process.md"],
+      "notes": ["Protocol API captures are producer-only append-only evidence and never grant score authority."]
+    },
+    {
+      "name": "shock-coverage-refresh",
+      "sources": [".github/workflows/shock-coverage-refresh.yml", "scripts/maintenance/measure-cdp-shock-coverage.ts", "scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts", "scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts", "scripts/ci/check-shock-coverage-freshness.ts", "scripts/lib/mechanism-measurement/**", "shared/lib/safety-score-v9/archetypes/cdp.ts", "shared/data/safety-score-v9/methodology-policy-candidate-v1.json", "shared/data/safety-score-v9/mechanism-measurements/**"],
+      "docs": ["docs/process/shock-coverage-refresh.md", "docs/report-cards.md", "docs/scripts.md", "docs/deployment-process.md"],
+      "notes": ["The automated CDP refresh, replay attestations, registry projection, and V9 freshness guard are one score-bearing contract."]
+    },
+    {
+      "name": "upcoming-route",
+      "sources": ["src/app/upcoming/**", "src/components/upcoming-client.tsx", "src/components/upcoming-horizon-hero.tsx", "src/components/horizon-constellation.tsx", "src/components/home-alt-upcoming-horizon-constellation.tsx", "src/lib/pre-launch.ts", "src/lib/logos.ts", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "shared/lib/stablecoins/registry.ts", "data/logos.json", "data/ai-summaries.json"],
+      "docs": ["docs/upcoming-page.md", "docs/stablecoin-detail-page.md", "docs/README.md"],
+      "notes": ["The public pre-launch tracker projects registry metadata and static assets without calling the Worker API."]
     }
   ]
 }

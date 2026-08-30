@@ -24,7 +24,7 @@ Route contract for `/portfolio/`, the noindex personal stablecoin risk workspace
 The interactive page depends on three local/runtime sources:
 
 1. `useReportCardsV9()` for canonical stablecoin grades, pillar scores, and dependency routes.
-2. `useLogos()` for static logo assets from `data/logos.json`.
+2. `logosById` from `src/lib/logos.ts` for static logo assets from `data/logos.json`.
 3. `usePortfolio()` for holdings state and browser persistence.
 
 The client derives the amount-weighted V9 aggregate and modeled dependency-route count with `buildV9PortfolioProjection(...)`. That projection is informational and is not an asset Safety Score.

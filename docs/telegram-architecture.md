@@ -6,6 +6,8 @@ This is the load-bearing structural doc for PharosWatchBot's worker-side code. I
 
 This document makes the subsystem boundaries explicit. Future changes either stay inside a named seam or revise the ownership and dependency rules here.
 
+> **Agent navigation** — Grep the heading you need: Seam overview · 1. Ingress · 2. Command parsing · 3. Callback routing · 4. Action handlers · 5. Dispatch / fan-out · 6. Queue / rate-limit / retry · 7. State / persistence · 8. Outbound transport · 9. Mini App surface · Common modules · Structural change policy · Architectural tension flagged but not prescribed.
+
 ---
 
 ## Seam overview
@@ -269,7 +271,7 @@ The provenance correction required no D1 migration because these two tables and 
   - `telegram_alert_planning_subscribers` — detection-time subscriber cohort and durable per-chat planning outcomes (Dispatch)
   - `telegram_alert_target_plan_pages` / `telegram_alert_target_plans` / `telegram_alert_target_plan_items` — rendered manifest, immutable page bounds, target counts, and source-item lineage (Dispatch)
   - `telegram_alert_target_expiry_progress` — bounded source-expiry reconciliation debt (Dispatch)
-  - `telegram_legacy_overflow_state` — historical terminal audit for the retired one-time cache import; the importer is gone and the table was dropped from production on 2026-08-10. The pre-next-squash baseline still creates an inert copy on a fresh database, but no runtime reads or writes it.
+  - `telegram_legacy_overflow_state` — historical only; the retired one-time cache importer and its table were removed from production on 2026-08-10.
   - `telegram_alert_job_target_items` — normalized source-item coverage for consolidated target chunks (Dispatch)
   - `telegram_freeze_alert_events` / `telegram_freeze_alert_targets` — dedicated freeze source events and their frozen per-chat cohort (Dispatch)
   - `telegram_alert_dead_letters` — terminal failure audit (Queue)

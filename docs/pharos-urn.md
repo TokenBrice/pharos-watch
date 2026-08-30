@@ -59,7 +59,7 @@ Pages with permanently immutable URLs (digests, depeg events, cemetery entries) 
 
 ## JSON-LD integration
 
-The URN is added to each coin surface's JSON-LD as an `identifier` `PropertyValue` via `src/lib/pharos-urn-json-ld.ts` (`buildPharosUrnJsonLdIdentifier`), already wired into the `Thing` and `Dataset` nodes in `src/lib/stablecoin-detail-json-ld.ts`. The canonical URL stays in `@id`; the URN is **only** an `identifier` property — never bake the URN scheme into the JSON-LD `@id` field.
+Only the regular active, frozen, quarantined, and delisted coin builders add the URN as an `identifier` `PropertyValue` via `src/lib/pharos-urn-json-ld.ts` (`buildPharosUrnJsonLdIdentifier`); in `src/lib/stablecoin-detail-json-ld.ts` it is wired into both the `Thing` and `Dataset` nodes. The separate `buildPreLaunchStablecoinJsonLd` builder emits no identifier. The canonical URL stays in `@id`; the URN is **only** an `identifier` property — never bake the URN scheme into the JSON-LD `@id` field.
 
 ```jsonc
 {

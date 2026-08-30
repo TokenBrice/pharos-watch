@@ -47,112 +47,15 @@ Do not multiply list endpoint values by price; that would double-convert them.
 
 ## Price Enrichment Pipeline
 
-### Primary Price Fetch
+Pricing implementation is owned by [pricing-pipeline.md](./pricing-pipeline.md). This page keeps only the cross-domain boundary: how price selection participates in supply normalization, cache publication, and downstream integrity checks.
 
-Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from multiple sources and runs N-source weighted consensus to determine the best price for each asset:
+- [Primary Consensus](./pricing-pipeline.md#primary-consensus) — source inventory, weighted consensus, and provenance
+- [Provider-Specific Normalization](./pricing-pipeline.md#provider-specific-normalization) — provider quirks, freshness, and admission rules
+- [Authoritative Overrides](./pricing-pipeline.md#authoritative-overrides) — protocol/NAV and tracked-base price replacements
+- [Fallback Enrichment](./pricing-pipeline.md#fallback-enrichment) — recovery passes for assets still missing a usable price
+- [Active Price Coverage Health](./pricing-pipeline.md#active-price-coverage-health) and [Confidence Model](./pricing-pipeline.md#confidence-model) — publication coverage and downstream trust semantics
 
-**Sources** (each behind its own circuit breaker):
-
-| Source | Weight | Module | Notes |
-|--------|--------|--------|-------|
-| CoinGecko `/simple/price` | 2 | built-in | Primary market data |
-| CoinGecko ticker | 2 | `worker/src/lib/cg-ticker.ts` | Curated ticker corroboration surface for tracked exchange pairs |
-| DefiLlama stablecoins list | 1 | built-in | Independent typed DL-list quote with explicit freshness provenance |
-| Binance spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (single batch call) |
-| Kraken spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Alias-safe explicit pair mapping |
-| Bitstamp spot tickers | 1 | `worker/src/lib/cex-tickers.ts` | Lower-weight all-tickers corroboration venue |
-| Coinbase spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (per-symbol) |
-| RedStone oracle | 1 | `worker/src/lib/redstone.ts` | Per-venue breakdown + agreement % for exact-case tracked symbols in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, attributed only to configured canonical stablecoin IDs |
-| Curve on-chain `get_dy()` | 3 | `worker/src/lib/curve-onchain.ts` | StableSwap implied prices from explicit direct, one-hop, and opt-in chained-hop configs |
-| Curve oracle (`crvusd-curve`) | 3 | `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Additional primary-consensus voice for crvUSD |
-| DEX promoted prices | 1 | `worker/src/lib/depeg-helpers.ts` | Aggregate DEX voice when no overlapping promoted protocol-level DEX source is admitted |
-| Promoted protocol-level DEX prices | 2-3 | `worker/src/lib/depeg-helpers.ts` | One aggregated source per registered protocol, including Uniswap V3/V4; freshness now preserved per source from `price_sources_json` |
-| Exact-address augmentation providers | 1 | `worker/src/lib/address-price-providers/index.ts` | Configurable exact-address adapters for targeted recovery. Production currently enables only CoinGecko Onchain; DexScreener, DexPaprika, Alchemy Prices, Moralis, and Solana Birdeye adapters remain supported but disabled in this registry. |
-
-Pyth Hermes was retired from the live primary source roster on 2026-08-26 after Pyth's API-key mandate made the free tier unavailable for API access. The runtime no longer requests Pyth or reads `pythFeedId`; the retired registry key is retained only for rendering historical price provenance.
-
-Dead or explicitly blocked DEX ids are removed upstream from DEX crawl intake, pool scoring, challenger publication, and `dex_prices` publication. The current runtime blocklist includes Retro variants and Bunni variants, so those venues cannot leak into primary consensus through the DEX bridge or pool challenge.
-
-Pool-challenge snapshots retain the highest-TVL qualifying pool from each protocol before filling toward the 95% qualifying-TVL coverage target, subject to the existing 50-row hard cap. This preserves independent protocol evidence when one venue dominates an asset's DEX liquidity, without changing the pool TVL floor or replacement thresholds.
-
-**Consensus algorithm** (`worker/src/lib/price-consensus.ts`):
-
-- Collects all available source prices for each asset
-- Groups sources into agreement clusters within a configurable threshold (default 50 bps for pegged tokens, 500 bps for NAV tokens)
-- Picks the largest agreeing cluster; for 2+ source winners, publishes the cluster median and keeps the best member internally for provenance
-- If no 2+ cluster forms, picks the best trusted fallback source for publication
-- **≥2 sources agree** → `priceConfidence: "high"`
-- **Single source only** → `priceConfidence: "single-source"`
-- **Sources disagree** → `priceConfidence: "low"`, best trusted fallback source used
-- **All sources down** → skip, falls through to enrichment pipeline
-
-Cluster selection breaks ties by size, then total cluster weight, then strongest source trust tier, then tighter spread, then peg proximity, and finally a stable source label. The internal selected source inside the winning cluster is chosen by weight, trust tier, reference proximity, and finally source key, but that selected source is no longer forced to be the published high-confidence price.
-
-Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (`defillama`, `coingecko-fallback`, `onchain-total-supply`, or `onchain-circulating-supply`). The `onchain-total-supply` path is used for supplemental assets whose circulating supply is derived from an on-chain total-supply probe instead of an upstream market-cap field, and for the curated DefiLlama zero-supply repairs that would otherwise publish an active asset with no market cap; `onchain-circulating-supply` uses the same live probe but subtracts configured protocol inventory balances before USD normalization. Preview-only plain-par fiat CoinGecko assets can use those paths with an existing FX reference for USD normalization while still keeping `price = null`; NAV/yield-bearing assets require an observed quote and do not use a par or FX substitute for the on-chain fallback. Solana total-supply fallback now reuses the same shared multi-endpoint probe used by the reserve-adapter path, so supplemental Solana assets do not depend on a narrower RPC list than the rest of the worker.
-
-#### Consensus source provenance
-After N-source consensus, each asset receives a `consensusSources: string[]` field listing all source names that returned a valid price for that coin during the sync cycle. For enrichment-pass fallbacks, this is a single-element array. Direct protocol-redeem overrides and high-confidence inherited overrides replace it with `["protocol-redeem"]`; scoped inheritance from a fresh replay-safe single-source parent instead keeps the parent's single source so publication guardrails retain the soft upstream provenance.
-
-### Provider-Specific Normalization
-
-Primary pricing also includes a few source-specific normalization rules that are easy to miss when reading the high-level algorithm:
-
-- **Coinbase** uses uppercased product symbols.
-- **RedStone** uses exact-case tracked symbols only. The worker filters requests through `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, sends them in sequential batches of 10, retries any batch-dropped symbol individually once, and keys usable quotes by the configured canonical stablecoin id rather than by bare symbol.
-- **RedStone admission** now requires at least 2 venues and at least 60% venue agreement before the quote can enter primary consensus.
-- **Breaker accounting for sparse responses** is data-aware: RedStone only counts as a successful breaker outcome when it returns at least one usable price, while Jupiter treats documented V3 sparse no-quote rows as healthy empty coverage because they indicate provider reachability but no usable quote for that mint.
-- **CEX freshness semantics** are explicit: Binance and Kraken use local-fetch observation times; Bitstamp and Coinbase publish upstream-observed timestamps when the upstream response provides them. Registry metadata records whether each feed is last-trade-only or exposes bid/ask-style spot data.
-- **Exact-address augmentation** only queries canonical chain+address deployments from `asset.address`, `contracts`, or `tradedContracts` for assets with missing prices, low confidence, previous active-price coverage misses, previous source depth below 3, or an accepted observation that expires before the next generation. Its recovery scheduler treats a current price as already publishable only when the price is positive and carries a concrete source plus observation-time provenance; bare numeric prices and `missing` / `unknown` source markers stay in the missing cohort. Alert-eligible persistent active gaps are pinned first, followed by current missing rows, recently missing rows, expiring observations, priced rows with at most two previous sources, and remaining eligible priced rows. Durable fairness cursors rotate only inside each cohort, so a cursor cannot move breadth-oriented priced work ahead of unresolved active assets. Reviewed provider-specific overrides can narrow one asset/provider to an exact current metadata deployment; they never synthesize an address, and a stale deployment or unsupported provider chain yields no target. CoinGecko Onchain reserves one bounded network request for eligible exact reviewed overrides before its ordinary network round-robin. The current VUSD override uses the verified CoinGecko Onchain `iota-evm` token deployment while leaving its canonical contracts and supply paths unchanged. `ADDRESS_PRICE_PROVIDERS_ENABLED` owns the deployed adapter set; production currently enables only `coingecko-onchain-address`. Other supported adapters remain dormant in this registry, while DexScreener continues separately in the pricing-fallback and DEX-discovery lanes. These sources are soft, non-replay-safe, and non-depeg-authoritative; symbol search is retired.
-- **Pancake V3 orientation and DEX persistence:** `DexApiPool.price` is token0 per token1, which Pancake's subgraph exposes as `token1Price`. After duplicate collapse, every DEX observation must pass the peg-aware plausibility validator before it can participate in aggregate selection or keep a `dex_prices` row alive. This rejects inverse or decimal-broken records before D1 persistence rather than relying only on final publication validation.
-
-These rules live in the named provider modules plus `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`, `worker/src/lib/address-price-providers/index.ts`, `worker/src/cron/dex-liquidity/fetch-pancakeswap.ts`, and `worker/src/cron/dex-liquidity/scoring.ts`.
-
-### Authoritative Price Source Registry
-
-After the CG/DL primary pass is applied, `syncStablecoins()` can still replace market-derived prices for specific redeemable assets when a shared authoritative-price provider exposes a better executable mark than secondary-market liquidity.
-
-The registry lives under `worker/src/lib/authoritative-price-sources/` and supports two capabilities:
-
-- **Live override** — used by `syncStablecoins()` to replace the current cached price
-- **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets
-
-- **Current scope:** see [Pricing Pipeline](./pricing-pipeline.md#current-scope) for the asset-by-asset registry. The current code covers direct redeem quotes, scoped redemption-par references, tracked-base inheritance, fee-adjusted tracked-base inheritance, ERC-4626 NAV wrappers, Aave `previewRedeem`, Idle CDO virtual-price tranches, Kava USDX oracle state, the exact thin AZND Curve route, and the funded public Citrea JUSD bridge path. `crvusd-curve` was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3.
-- **Source:** direct `eth_call` redemption/NAV quotes or tracked-base inheritance when a redeemable wrapper should shadow another tracked asset:
-  - Cap `getBurnAmount(address,uint256)` for `cUSD -> USDC`
-  - infiniFi `RedeemController.receiptToAsset(uint256)` for `iUSD -> USDC`
-  - USDAI inherits the tracked `PYUSD` live price and historical market replay because the base token is treated as an instantly redeemable PYUSD wrapper rather than a free-floating market-priced asset
-  - Initia iUSD and Movement USDCx inherit their tracked parent prices; M, USDK, XO, USDN, and USDnr inherit tracked M0-unit pricing because Pharos models them as M0 units or extension units rather than independently discovered secondary-market price surfaces
-  - WEUSD inherits the tracked `USDC` live price and historical replay with the documented 1% redemption-fee haircut
-  - Direct-redeem rows such as SOFID, USBD, USDQ, CHFAU, CADD, JPYm, ZARm, and XOFm can publish `protocol-redeem` parity when active supply is observable; non-USD live parity requires a fresh/static FX reference and falls back to normal market/native-peg history until historical FX replay exists
-  - ERC-4626, Aave savings, and Idle CDO wrappers read the contract's asset-per-share value and multiply it by a trusted tracked parent price; ERC-4626 NAV wrappers are prioritized ahead of lower-priority RPC-backed override families inside the live override budget
-- **Deterministic route admission:** each asset-specific adapter pins its market, bridge, vault, exchange, tokens, decimals, and dependencies. It then requires fresh protocol or block state plus route-specific capacity, executable-notional, impact, agreement, or public-redemption checks. Missing dependencies or any identity, freshness, depth, code-hash, capacity, transport, or quote failure returns no override. Thin fallback routes such as AZND remain non-replay-safe, non-depeg-authoritative, and subject to soft-source corroboration guardrails by themselves.
-- **Scheduling:** the 10-second live-override stage processes all current missing-price candidates before already-priced candidates and interleaves provider families within each partition. The scheduler uses the same publishable-price definition as exact-address augmentation, so numeric values that would not survive publication metadata checks remain eligible for missing-only recovery routes such as AZND. Each started candidate also has a bounded fairness cap inside the shared stage budget, with longer caps only on heavier audited routes. This keeps one slow provider call from skipping the remaining active recovery candidates.
-- **Circuit isolation:** Kava USDX, Citrea JUSD, and thin AZND Curve use `kava-pricefeed`, `jusd-citrea-bridge`, and `aznd-curve-pool` circuits rather than sharing one grouped `protocol-redeem` circuit. A failure burst in one specialty route therefore does not suppress unrelated authoritative providers. These single-asset breakers stay visible in admin provider diagnostics but are excluded from the source-wide public circuit count; exact active-price coverage reports any missing asset output. The retired `mento-broker` and `usx-stable-pools` cache keys are filtered from active circuit diagnostics.
-- **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption or by an instantly redeemable base asset
-- **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when a direct protocol/NAV quote or high-confidence inherited parent validates against peg bounds. Scoped inherited prices from fresh replay-safe single-source parents keep the parent source and `single-source` confidence so they do not bypass weak-source publication guardrails.
-
-### Enrichment Pipeline
-
-`enrichMissingPrices()` in `worker/src/cron/sync-stablecoins/enrich-prices.ts` now delegates to the ordered fallback-pass manifest in `worker/src/cron/sync-stablecoins/enrich-prices-fallback.ts` for assets still missing prices after primary fetch. The orchestration is centralized in one pass list instead of one ad hoc block per provider:
-
-1. **Pass 1:** Canonical tracked contract identity -> DefiLlama coins API, but only quotes that pass peg-aware validation can claim the asset. Coin IDs are encoded as one URL path segment so slash-bearing identifiers such as Osmosis IBC denoms cannot invalidate the whole batch.
-2. **Pass 1b:** Tracked alternate deployment fallback (tries exact tracked deployment ids via DefiLlama coins API under the same validation gate)
-3. **Pass 2:** CoinMarketCap category batch (`cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`), followed when needed by one `v3/cryptocurrency/quotes/latest` request for at most 25 rotated unresolved configured slugs. A truncated category response records the unseen tail but ignores category rows, so unresolved configured slugs must pass the exact targeted quote lane instead of publishing from a partial category page. The targeted path requires exact slug/symbol identity, active status, a supplied configured-contract match for assets with known contracts, a quote no older than one hour, positive 24-hour volume, and peg-aware validation. Accepted targeted rows may replay from the provider-local verified cache during the next three 15-minute generations, preserving the original upstream timestamp and expiring at one hour. Neither request retries; success or `429` writes the shared D1 cooldown.
-4. **Pass 3:** Jupiter Price API for tracked Solana mints (sends `JUPITER_API_KEY` as `x-api-key` when configured, checks quoted block freshness against one cached current slot from a bounded three-endpoint sequential RPC fallback, remains liquidity-gated and peg-aware when a quote exists; sparse V3 no-quote rows are treated as healthy empty coverage rather than provider failure; agreeing low-depth Solana primary prices can receive `jupiter` as a bounded soft candidate without replacing the selected price)
-5. **Pass 4:** DexScreener exact token-address pool lookups when a resolvable chain+address exists. Successful exact-address enrichments publish `priceSource = "dexscreener-exact"`. The older symbol-search fallback is retired after production Worker probes repeatedly failed without resolving prices. The pass makes at most one same-chain request containing up to 30 exact addresses, with no retries, a 5s request timeout, and a 45s total pass budget. Candidate chains rotate each quarter-hour, and later visits rotate the bounded address window within a large chain cohort. HTTP 429 responses and provider WAF code 1015 are hard refusals that stop the remaining crawl; for the isolated discovery run's aggregate breaker, any earlier successful request still heals the run outcome, while a zero-success refusal records failure.
-6. **Pass 5:** Allowlisted low-volume CoinGecko recovery for selected tracked assets that still have no price. `LOW_VOLUME_CG_FALLBACK_IDS` in `worker/src/cron/sync-stablecoins/enrich-prices-coingecko-low-volume-pass.ts` owns the exact cohort and its active-registry guard. Successful rows publish `priceSource = "coingecko-low-volume"` with `priceConfidence = "fallback"`; the pass leaves each row's admitted supply source unchanged and does not become replay-safe cached continuity.
-
-Note: the isolated `sync-dex-discovery` job uses DexScreener's complete single-token pool endpoint (`/token-pairs/v1/{chainId}/{tokenAddress}`) for staged pool/price observations. The pricing fallback keeps the separate batch token endpoint (`/tokens/v1/{chainId}/{addresses}`) so it can cover up to 30 exact addresses in one request. `sync-dex-liquidity-stage` later consumes the fresh discovery rows without repeating the contract fanout, and price enrichment no longer falls back to symbol search. A discovery run with one or more successful requests records aggregate breaker success even if a later request receives 429/1015; a run with no successful requests records failure.
-
-**Price validation ordering:** sync-time price validation runs before replay-cache staging so that unreasonable enriched prices never enter `price_cache`. This prevents a single bad API response from poisoning replay continuity across multiple sync cycles. The worker now distinguishes between authoritative primary validation, fallback enrichment validation, DEX observation validation, and historical-backfill validation instead of using one identical rule for every context. The DefiLlama-down CoinGecko full-supply fallback path now follows the same price guardrails: authoritative live overrides run before enrichment, invalid CoinGecko spot prices are pre-rejected, valid fallback-run prices can refresh `price_cache` only after canonical publication succeeds, cached-price fallback can heal newly missing prices, and pending-depeg confirmation still runs after fallback detection. Single-source fallback/search-family address-provider quotes also need stronger corroboration before publishing fixed-peg depeg-sized prices, so weak address prints can fall through to later exact-contract enrichment.
-
-### Coverage Health And Replay Continuity
-
-`activePriceCoverage` is computed after the final price-selection and validation stages for both the main and CoinGecko-supply-fallback sync paths. It compares the final rows to the exact active registry and treats every absent row or non-finite/non-positive price as missing. Cron metadata records counts, exact IDs, affected positive circulating USD, current per-gap provenance, consecutive missing generations, rejection class, and last accepted source/time. Incomplete coverage surfaces as an `/api/health` warning once a gap is alert-eligible, but never degrades the reported health status — only missing coverage evidence (`status: "unknown"`) degrades — and it does not downgrade a successfully completed `sync-stablecoins` execution or suppress an otherwise valid cache publication; consumers can still inspect supply and lifecycle data while the pricing incident remains explicit. After two consecutive published generations, the Worker emits a structured event and sends the shared webhook an asset-specific alert, using a successful-delivery-only 24-hour cooldown. This price contract is separate from exact active-row publication coverage and has no waivers.
-
-For sources that emit asset-level lifecycle telemetry, `priceSourceAttemptLedger` retains the adapter, source, exact target or slug, attempted/skipped result, rejection class, timestamps, and replay eligibility for assets still missing at publication. The ledger is bounded to 100 records and has a compact tuple form that survives the 64 KiB cron metadata guard. Aggregate sources without asset-attributable telemetry remain represented by source-level diagnostics rather than synthetic per-asset claims.
-
-Replay continuity is a recovery path, not a source of fresh prices. Only validated replay-safe prices above `low`/`fallback` confidence are staged, and only after canonical publication succeeds. A missing row may reuse a cache entry for at most six hours, further reduced to the smallest `maxTrustedAgeSec` among all component sources; a composite containing any non-replay-safe source is ineligible. Replayed rows publish as `cached` with fallback confidence and still pass current peg, temporal-jump, and previous-trusted-price validation. Extending the global ceiling to hide an unresolved provider outage is not supported.
+Retired provider keys remain renderable only for historical provenance; the runtime does not query them.
 
 ## Data Integrity Guardrails
 

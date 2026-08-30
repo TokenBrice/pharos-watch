@@ -11,6 +11,7 @@ When a stablecoin team offers to collaborate, turn their entry's open data point
 
 - The coin's base entry `shared/data/stablecoins/coins/<id>.json` and every existing domain sidecar under `shared/data/stablecoins/domains/{reserves,mint-authority,compliance,risk-review}/<id>.json`.
 - The live report card: `GET https://api.pharos.watch/api/report-cards/v9` with header `X-API-Key` (local key: `PHAROS_API_KEY` in the ignored root `.env.local`; never print the value). Filter `.cards[] | select(.id == "<id>")`.
+- Read `shared/lib/methodology-versions/current-version.json` before interpreting report-card fields; the current Safety Score methodology and that source file win over remembered versions.
 - Wrapper/risk-review fact vocabulary (`custodyEscrow`, `withdrawalTerms`, `leverage`, …): `shared/types/safety-score-v9-wrapper.ts`.
 
 ## Gap inventory

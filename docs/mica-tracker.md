@@ -158,7 +158,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 **Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in the `NAV_GROUPS` entry keyed `"risk"` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The mobile header, desktop top nav, and command palette auto-index from `NAV_GROUPS`.
 
-**Detail-page surfacing:** the hero passport strip (`src/lib/stablecoin-detail-passport.ts`) carries the MiCA/Historical MiCA field, and `RegulatoryStandingCard` renders the per-regime facts it links to (`#jurisdiction`). Coins without a curated regime profile render nothing — no passport field and no Regulatory standing card; nothing is faked on-page. GENIUS has no on-page module yet, so its passport field links off-page to `/compliance/?regime=genius` instead of `#jurisdiction`.
+**Detail-page surfacing:** the hero passport strip (`src/lib/stablecoin-detail-passport.ts`) carries the MiCA/Historical MiCA field, and `RegulatoryStandingCard` renders the per-regime facts it links to (`#jurisdiction`), now including GENIUS facts and the researched GENIUS obligations checklist on detail pages. Coins without a curated regime profile render nothing — no passport field and no Regulatory standing card; nothing is faked on-page. The GENIUS passport chip still links off-page to `/compliance/?regime=genius` rather than `#jurisdiction`.
 
 **Static export / SEO:** route is statically pre-rendered and included in the sitemap; run `npm run seo:check` after crawlability changes. No `next.config.ts` change.
 

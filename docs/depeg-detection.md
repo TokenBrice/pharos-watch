@@ -203,7 +203,7 @@ Validation gates (skip if any fail):
 - Must be in `PSI_ELIGIBLE_STABLECOINS`
 - Not a NAV token (`meta.flags.navToken`)
 - Price valid: non-null, is a number, not NaN, > 0
-- Supply >= $1M (via `sumPegBuckets`) for live event recording; if an existing open event later falls below this floor while the coin remains tracked, the live row closes with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery
+- Supply >= $1M (via `getCirculatingRaw()`, whose internal `sumPegBuckets` helper sums circulating buckets) for live event recording; if an existing open event later falls below this floor while the coin remains tracked, the live row closes with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references use the live FX rate whenever it is available. A peer median is only a fallback when at least 3 live contributors remain; thin peer medians and empty live peer sets fail closed for that cycle
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh native-currency quote before mutating live state; a native quote inside the recovery band or pointing the other way vetoes the derived USD/FX onset for that cycle, while a threshold-crossing native quote can initiate a pending candidate when the primary USD-vs-reference path is still inside threshold
@@ -559,7 +559,7 @@ severityScore = 100 - sum of per-event penalties
   per-event penalty = max(durationPenalty, magnitudeFloor)
     durationPenalty = (peakBps/100) * (durationDays/30) * recencyWeight   (durationDays capped at 90)
     magnitudeFloor  = (peakBps/2000) * recencyWeight
-spreadPenalty = min(15, (stddev of peaks / 1000) * 15)
+spreadPenalty = min(15, (stddev of (|peakBps| × eventSeverityWeight) / 1000) * 15)
 activeDepegPenalty = if ongoing: min(50, max(5, |peakBps| / 50))
 
 pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPenalty - spreadPenalty)))
