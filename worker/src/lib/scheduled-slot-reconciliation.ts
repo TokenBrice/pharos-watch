@@ -108,10 +108,10 @@ const CHILD_LEASE_HEARTBEAT_STALE_SEC = 5 * 60;
 // Keep the deploy-interruption alignment window below the measured cadence so
 // even one later slot heartbeat disproves that the slot and child died together.
 const DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC = 15;
-// The measured-execution slot heartbeats every 45 seconds. A replacement
-// version first observed later than that cannot explain the joint heartbeat
-// stop and must not neutralize an earlier invocation failure.
-const DEPLOY_INTERRUPTION_FIRST_SEEN_MAX_DELAY_SEC = 45;
+// The measured-execution slot heartbeats every 45 seconds. Allow one cadence
+// plus 15 seconds of timestamp/write slack; anything later cannot prove the
+// replacement version landed on top of the joint heartbeat stop.
+const DEPLOY_INTERRUPTION_FIRST_SEEN_MAX_DELAY_SEC = 60;
 const DEPLOY_INTERRUPTION_FIRST_SEEN_EARLY_SLACK_SEC = 15;
 
 export async function hasActiveChildLeaseForScheduledSlot(

@@ -558,7 +558,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
   });
 
   it.each([
-    ["was first seen well after the joint death", 120],
+    ["was first seen five minutes after the joint death", 5 * 60],
     ["has no first-seen row", null],
   ])("keeps a joint slot and child death abandoned when the reconciler version %s", async (_reason, firstSeenDelaySec) => {
     const { sqlite, db } = createMigratedDb();

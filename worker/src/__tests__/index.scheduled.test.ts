@@ -390,6 +390,52 @@ import {
 describe("worker.scheduled", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cronMocks.recordScheduledWorkerVersionFirstSeen.mockImplementation(async () => undefined);
+  });
+
+  it("attempts the worker-version marker write once per isolate", async () => {
+    const markerWrite = vi.fn(async () => undefined);
+    let attemptedInIsolate = false;
+    cronMocks.recordScheduledWorkerVersionFirstSeen.mockImplementation(async () => {
+      if (attemptedInIsolate) return;
+      attemptedInIsolate = true;
+      await markerWrite();
+    });
+    const env = makeScheduledEnv();
+
+    for (const [cron, scheduledTime] of [
+      ["9 * * * *", Date.parse("2026-08-30T12:09:00Z")],
+      ["24 * * * *", Date.parse("2026-08-30T12:24:00Z")],
+    ] as const) {
+      const { ctx, waits } = makeExecutionContext();
+      await worker.scheduled({ cron, scheduledTime } as ScheduledEvent, env, ctx);
+      await Promise.all(waits);
+    }
+
+    expect(cronMocks.recordScheduledWorkerVersionFirstSeen).toHaveBeenCalledTimes(2);
+    expect(markerWrite).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledTimes(2);
+  }, 30_000);
+
+  it("continues the scheduled lane when the worker-version marker write fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    cronMocks.recordScheduledWorkerVersionFirstSeen.mockRejectedValueOnce(new Error("D1 marker unavailable"));
+    const env = makeScheduledEnv();
+    const { ctx, waits } = makeExecutionContext();
+
+    await expect(worker.scheduled(
+      {
+        cron: "9 * * * *",
+        scheduledTime: Date.parse("2026-08-30T12:09:00Z"),
+      } as ScheduledEvent,
+      env,
+      ctx,
+    )).resolves.toBeUndefined();
+    await Promise.all(waits);
+
+    expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("smokes every configured scheduled trigger without live provider fetches", async () => {
