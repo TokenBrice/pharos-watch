@@ -141,7 +141,7 @@ Typical files:
 - `shared/data/methodology-changelogs/yield-methodology/`
 - `docs/status-dashboard.md` and `docs/runbooks/yield-health.md` for status
   surface changes
-- `docs/about-page.md` and `src/app/about/content.ts` for new external source
+- `docs/about-page.md` and `src/lib/about-content.ts` for new external source
   providers
 - `src/app/methodology/sections/monitoring/yield-intelligence-section.tsx`
   for methodology UI copy

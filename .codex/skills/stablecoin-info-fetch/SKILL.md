@@ -12,6 +12,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - Read the current entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view).
 - Treat the runtime stablecoin re-export as import-only; tracked metadata edits belong in the JSON registry and must match `shared/lib/stablecoins/schema.ts`.
 - **Field routing:** domain-owned research always belongs in `shared/data/stablecoins/domains/<domain>/<id>.json`; create the sidecar when absent (`mintAuthority` → mint-authority domain; reserves and risk-review fields, `mica`/`genius` → their domains). Keep those fields out of the base file. See `docs/process/stablecoin-research-sidecars.md`.
+- Read `shared/lib/methodology-versions/current-version.json` before using score terminology; the current Safety Score methodology and that source file win over remembered versions.
 - If the asset is dead/cemetery-only, use `shared/data/dead-stablecoins.json` and `DeadStablecoinAssetSchema` instead of this tracked-metadata workflow.
 - Read `shared/lib/chains/index.ts` if contracts may change.
 - Read `docs/classification.md` or `docs/data-pipeline.md` only when those rules are directly relevant.
@@ -65,7 +66,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 
 8. Patch the owning base or sidecar JSON with minimal edits. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned.
 
-9. Converge the aggregate and dependent projections with `npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects`, then run `npm run check:stablecoin-data`; client-projected fields such as `geckoId` and `reserves` flow into `coins.client.generated.json`, while the global client registry intentionally omits `proofOfReserves`. For full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
+9. Converge the aggregate and dependent projections with `npm run bootstrap:generated`, then run `npm run check:stablecoin-data`; client-projected fields such as `geckoId` and `reserves` flow into `coins.client.generated.json`, while the global client registry intentionally omits `proofOfReserves`. For full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
 
 ## Guardrails
 
@@ -75,4 +76,4 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - If sources conflict, keep the current value unless a stronger primary source clearly wins.
 - Mint Authority is descriptive and unscored. Missing reviewed data means the detail section is omitted; it must not be treated as safe.
 - Verified Safe or multisig Mint Authority controls need threshold, signer count, and modules/guards status. If modules or guards are unknown, cap verified or probable confidence at `manual-review`.
-- Adding a chain deployment to `contracts` on an active multi-chain asset creates a Safety Score V9 exit/control evidence gap unless matching `bridgeRouteRisk.routes` rows exist (risk-review sidecar) — author or flag them; do not silently expand the deployment footprint.
+- Adding a chain deployment to `contracts` on an active multi-chain asset creates a current Safety Score methodology exit/control evidence gap unless matching `bridgeRouteRisk.routes` rows exist (risk-review sidecar) — author or flag them; do not silently expand the deployment footprint.

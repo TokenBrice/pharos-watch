@@ -70,17 +70,19 @@ has no annotations yet). Required when:
 
 Entry shape (mirror existing file rules):
 
-```ts
+```json
 {
-  ts: Date.UTC(YYYY, monthIdx, day), // months 0-indexed; comment with ISO date and short note
-  kind: "depeg" | "regulatory" | "governance" | "mint-burn-spike" | "blacklist-surge" | "methodology-change" | "exploit", // mirror of CHART_ANNOTATION_KINDS — the source file wins
-  label: string, // ≤80 chars, SR-only legend text
-  severity?: "low" | "med" | "high",
-  href?: string, // primary source URL
+  "date": "YYYY-MM-DD",
+  "kind": "depeg",
+  "label": "Short factual label",
+  "severity": "med",
+  "href": "https://example.com/primary-source",
+  "note": "Optional editorial rationale"
 }
 ```
+Author `date` as a string (omit optional `severity`, `href`, or `note` when not needed); the loader in `shared/data/annotations/curated-annotations.ts:340-375` converts it to runtime `ts`.
 
-Place each new entry inside the per-coin array in `ts` ascending order.
+Place each new entry inside the per-coin array in `date` ascending order.
 
 Queue rows with kind hint `launch` have no matching enum kind — existing
 launch annotations curate under `governance` (e.g. the USDe/USDS mainnet

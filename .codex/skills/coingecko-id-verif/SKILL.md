@@ -27,7 +27,7 @@ python3 .codex/skills/coingecko-id-verif/scripts/verify.py --all
 - `NO_ETH_ADDRESS`: has a `geckoId` but no Ethereum contract exists to use as ground truth
 - `NO_GECKO_ID`: neither a `geckoId` nor an Ethereum contract; discover the slug manually (`stablecoin-info-fetch`)
 
-4. If you change `geckoId`, patch the matching entry in `shared/data/stablecoins/coins/*.json`, converge the stablecoin projections with `npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects`, rerun the single-coin check, run `stablecoin-runtime-price-marketcap-gate` for active additions/promotions, and then follow the relevant validation gate.
+4. If you change `geckoId`, patch the matching entry in `shared/data/stablecoins/coins/*.json`, converge the stablecoin projections with `npm run bootstrap:generated`, rerun the single-coin check, run `stablecoin-runtime-price-marketcap-gate` for active additions/promotions, and then follow the relevant validation gate.
 
 ## Notes
 

@@ -7,11 +7,12 @@ description: Add explicit resilience overrides (`collateralQuality`, `custodyMod
 
 Use this skill to identify coins whose resilience defaults are wrong and to add only the override fields that differ from inference.
 
-**What these fields drive today:** the Selector's ranking and "what to watch" explanations (`shared/lib/selector/`) and the DDR depeg-duration resolver's verdict strata (`shared/lib/depeg-resolver/`). They do **not** feed Safety Score V9 — published safety grades will not move from these overrides, so do not promise or expect grade changes.
+**What these fields drive today:** the Selector's ranking and "what to watch" explanations (`shared/lib/selector/`) and the DDR depeg-duration resolver's verdict strata (`shared/lib/depeg-resolver/`). They do **not** feed the current Safety Score methodology — published safety grades will not move from these overrides, so do not promise or expect grade changes.
 
 ## Read First
 
 - Read `inferResilienceDefaults()` in `shared/lib/report-card-policy.ts` for the default inference these overrides correct.
+- Read `shared/lib/methodology-versions/current-version.json` before describing scores; use the current Safety Score methodology and let that source file win over remembered versions.
 - This skill is only for `collateralQuality` and `custodyModel`. Leave `governanceQuality` alone unless the user explicitly asked for it.
 
 ## Workflow
@@ -30,7 +31,7 @@ Use this skill to identify coins whose resilience defaults are wrong and to add 
 - `collateralQuality`: what is the riskiest significant backing component?
 - `custodyModel`: is collateral onchain, institutionally custodied, or effectively exchange/counterparty held?
 
-6. Apply only fields that differ from defaults in the matching per-coin JSON file, keeping the diff minimal. Then converge the aggregate and dependent projections with `npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects` and run `npm run check:stablecoin-data`; for full additions, follow the full validation sequence in Phase 7 of `docs/process/adding-a-stablecoin.md`.
+6. Apply only fields that differ from defaults in the matching per-coin JSON file, keeping the diff minimal. Then converge the aggregate and dependent projections with `npm run bootstrap:generated` and run `npm run check:stablecoin-data`; for full additions, follow the full validation sequence in Phase 7 of `docs/process/adding-a-stablecoin.md`.
 
 ## Tiers
 

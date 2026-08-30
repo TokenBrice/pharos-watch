@@ -1,11 +1,11 @@
 export const meta = {
   name: 'compliance-research',
-  description: 'Broad MiCA + GENIUS compliance data pass for tracked stablecoins: landscape sweep, per-coin research, independent adversarial verify, and a reconciled corrections manifest (safe-to-auto-apply vs flagged) plus high-confidence gap proposals. Editorial data only — the orchestrator applies the manifest deterministically.',
+  description: 'Broad MiCA + GENIUS compliance data pass for tracked stablecoins: landscape sweep, per-coin research, independent adversarial verify, and a reconciled corrections manifest (validation/apply candidates vs flagged) plus high-confidence gap proposals. Editorial data only — the caller must merge candidates and run the real schema check before any write.',
   phases: [
     { title: 'Landscape', detail: 'GENIUS rulemaking + EU register/delisting sweep -> shared context for every per-coin agent' },
     { title: 'Discover gaps', detail: 'two agents shortlist prominent in-scope coins missing a regime profile' },
     { title: 'Research', detail: 'one agent per coin: re-verify/refresh genius + mica vs live regulator sources (sonnet)' },
-    { title: 'Verify', detail: 'independent adversarial verifier per coin: reconcile, gate safe-to-auto-apply, flag consequential calls (sonnet)' },
+    { title: 'Verify', detail: 'independent adversarial verifier per coin: reconcile validation/apply candidates, flag consequential calls (sonnet)' },
   ],
 }
 
@@ -50,8 +50,8 @@ const CONSERVATISM = [
 // ---------------------------------------------------------------------------
 // Structured output schemas. Proposed/final compliance objects are returned as
 // JSON STRINGS (proposedJson / finalJson) so the freeform regime object is not
-// fought by JSON-schema rigidity; the orchestrator parses + validates them via
-// the real Zod (check:stablecoin-data) after a deterministic merge.
+// fought by JSON-schema rigidity; the caller must merge candidates and run the
+// real Zod check (check:stablecoin-data) before any write.
 // ---------------------------------------------------------------------------
 
 const REGIME_PROPOSAL = {
@@ -64,7 +64,7 @@ const REGIME_PROPOSAL = {
     consequentialReason: { type: 'string' },
     confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
     summary: { type: 'string', description: 'one-line: current vs proposed and why' },
-    proposedJson: { type: 'string', description: 'FULL schema-valid regime object as compact JSON text; "" if no-change/remove/unable-to-verify' },
+    proposedJson: { type: 'string', description: 'FULL proposed regime object as compact JSON text for caller validation; "" if no-change/remove/unable-to-verify' },
     sources: { type: 'array', items: { type: 'string' }, description: 'source URLs actually consulted with what each showed' },
   },
   required: ['assessed', 'changeKind', 'consequential', 'confidence', 'summary', 'proposedJson'],
@@ -89,7 +89,7 @@ const REGIME_VERDICT = {
     verdict: { type: 'string', enum: ['confirm-no-change', 'apply-correction', 'flag-for-approval', 'reject-proposal', 'unable-to-verify', 'not-applicable'] },
     safeToAutoApply: { type: 'boolean' },
     isNewRow: { type: 'boolean' },
-    finalJson: { type: 'string', description: 'schema-valid FINAL regime object as compact JSON text to write; "" if nothing should be written' },
+    finalJson: { type: 'string', description: 'proposed regime object as compact JSON text for caller validation/merge before writing; "" if nothing should be written' },
     changeSummary: { type: 'string' },
     issues: { type: 'array', items: { type: 'string' } },
   },
@@ -270,7 +270,7 @@ function researchPrompt(coin) {
     `STEP 1: Read the base coin JSON at ${coin.baseFile} for identity and jurisdiction. Check whether the compliance sidecar at ${coin.complianceFile} exists and read it when present; that sidecar owns current genius/mica data and is the write target for any proposed regime object. Also read docs/genius-tracker.md and docs/mica-tracker.md if you need the full criteria.${coin.sourceHint && coin.sourceHint !== coin.baseFile && coin.sourceHint !== coin.complianceFile ? ` The caller also supplied this legacy source hint: ${coin.sourceHint}.` : ''}`,
     `STEP 2: Assess these regimes: ${regimes.join(', ')}. ${gapLine}`,
     'STEP 3: For EACH regime, research the issuer against authoritative sources and decide: no-change (current data is correct & sourced), correct (refine fields/sources/enums), add-new-row (gap, warranted), remove-row (current row is wrong/unwarranted), or unable-to-verify (sources unreachable / inconclusive — make NO change, explain).',
-    'OUTPUT per regime: set assessed (does the regime apply?), changeKind, consequential (true for new/upgraded authorization claims, status escalations, removals, or downgrades of an existing strong claim), confidence, a one-line summary (current vs proposed + why), proposedJson = the FULL schema-valid regime object as compact JSON text (only when changeKind is correct/add-new-row; otherwise ""), and sources (URLs consulted + what each showed).',
+    'OUTPUT per regime: set assessed (does the regime apply?), changeKind, consequential (true for new/upgraded authorization claims, status escalations, removals, or downgrades of an existing strong claim), confidence, a one-line summary (current vs proposed + why), proposedJson = the FULL proposed regime object as compact JSON text for caller validation (only when changeKind is correct/add-new-row; otherwise ""), and sources (URLs consulted + what each showed).',
     'If proposing a write, set reviewer="Pharos compliance research" and reviewedAt="' + DATE + '" inside the genius object (the mica object has no reviewer/date fields). Preserve still-correct existing fields; do not drop good data.',
     GENIUS_RULES,
     MICA_RULES,
@@ -285,10 +285,10 @@ function verifyPrompt(coin, research) {
     `Today is ${DATE}. You are the INDEPENDENT ADVERSARIAL VERIFIER for the compliance audit of "${coin.name}" (${coin.symbol}), id="${coin.id}". Your job is to be skeptical and protect against fabricated or overstated regulatory claims.`,
     `STEP 1: Read ${coin.baseFile} for identity/jurisdiction and the compliance sidecar ${coin.complianceFile} when it exists for current genius/mica data. The compliance sidecar is the write target for any final regime object.`,
     'STEP 2: Here is the researcher\'s proposal (JSON):\n' + JSON.stringify(research),
-    'STEP 3: For EACH regime, independently check the proposal. Re-verify the HIGHEST-STAKES claims against primary sources yourself (especially any authorization/approval/authorized status and any new row). Confirm every reference URL resolves and names THIS token\'s issuer (not a same-name affiliate). Confirm the proposed object satisfies ALL Zod cross-field rules and enum constraints. Default to REJECT for any unsupported upgrade.',
-    'STEP 4: Produce a verdict per regime: confirm-no-change | apply-correction | flag-for-approval | reject-proposal | unable-to-verify | not-applicable. Set finalJson = the FINAL schema-valid regime object to write (compact JSON text), or "" if nothing should be written.',
-    'safeToAutoApply = TRUE only if ALL hold: (a) finalJson is schema-valid; (b) it edits an EXISTING row (isNewRow=false); (c) it does NOT escalate to a stronger authorization claim than currently present (mica authorized/pending; genius ppsi-approved/state-qualified/official-application-pending) unless that claim was ALREADY present and equally/better sourced; (d) it does NOT remove a row or downgrade an existing strong claim; (e) changes are limited to refined/added/corrected references, refined descriptive fields (issuerEntity, licensingRegulator, notes, applicabilityBasis, disclosure flags backed by a URL), more-conservative enum corrections, or date refresh. Anything else -> safeToAutoApply=FALSE and add a flag with action.',
-    'isNewRow = true when the final object would create a row that does not currently exist (gap-fill) — these are NEVER safeToAutoApply; flag them with action="needs-approval".',
+    'STEP 3: For EACH regime, independently check the proposal. Re-verify the HIGHEST-STAKES claims against primary sources yourself (especially any authorization/approval/authorized status and any new row). Confirm every reference URL resolves and names THIS token\'s issuer (not a same-name affiliate). Review the proposed fields against the known Zod cross-field rules and enum constraints; the caller owns the real schema check before any write. Default to REJECT for any unsupported upgrade.',
+    'STEP 4: Produce a verdict per regime: confirm-no-change | apply-correction | flag-for-approval | reject-proposal | unable-to-verify | not-applicable. Set finalJson = the FINAL candidate regime object for caller validation/merge before writing (compact JSON text), or "" if nothing should be written.',
+    'Treat safeToAutoApply as an advisory candidate flag, never as permission to write. Set it TRUE only if ALL hold: (a) finalJson is a non-empty candidate for caller validation; (b) it edits an EXISTING row (isNewRow=false); (c) it does NOT escalate to a stronger authorization claim than currently present (mica authorized/pending; genius ppsi-approved/state-qualified/official-application-pending) unless that claim was ALREADY present and equally/better sourced; (d) it does NOT remove a row or downgrade an existing strong claim; (e) changes are limited to refined/added/corrected references, refined descriptive fields (issuerEntity, licensingRegulator, notes, applicabilityBasis, disclosure flags backed by a URL), more-conservative enum corrections, or date refresh. Anything else -> safeToAutoApply=FALSE and add a flag with action. Every candidate still requires caller merge plus the real schema check before any write.',
+    'isNewRow = true when the final object would create a row that does not currently exist (gap-fill) — always flag it with action="needs-approval".',
     'For confirm-no-change set finalJson="" and safeToAutoApply=false. For unable-to-verify set finalJson="" and add a flag action="needs-more-research".',
     'changeSummary: concise human-readable current->final for the reviewer. issues: concrete problems found in the proposal.',
     GENIUS_RULES,
@@ -346,7 +346,7 @@ const verifyResults = [...auditVerify.filter(Boolean), ...gap.gapVerify]
 // ===========================================================================
 // Assemble manifest from verify verdicts.
 // ===========================================================================
-const changes = [] // writable / proposed regime objects
+const changes = [] // validation/apply candidate regime objects
 const flags = []
 const summaryRows = []
 
@@ -382,7 +382,7 @@ for (const v of verifyResults) {
 const safeChanges = changes.filter((c) => c.safeToAutoApply)
 const flaggedChanges = changes.filter((c) => !c.safeToAutoApply)
 
-log(`Done. ${verifyResults.length} coins verified. Safe auto-applicable: ${safeChanges.length}. Flagged (needs approval): ${flaggedChanges.length}. Flags: ${flags.length}. Gap rows: ${gapItems.length}. Regime-state recs: ${regimeStateNotes.length}.`)
+log(`Done. ${verifyResults.length} coins verified. Apply candidates: ${safeChanges.length}. Flagged candidates (needs approval): ${flaggedChanges.length}. Flags: ${flags.length}. Gap rows: ${gapItems.length}. Regime-state recs: ${regimeStateNotes.length}.`)
 
 return {
   date: DATE,

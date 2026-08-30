@@ -38,7 +38,7 @@ The `mica` object (exact field names): `status`, `tokenType`, `authorizationType
 
 ```bash
 export PATH="$PWD/node_modules/.bin:$PATH"
-npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects
+npm run bootstrap:generated
 npm run check:stablecoin-data
 ```
 

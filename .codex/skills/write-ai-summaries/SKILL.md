@@ -72,7 +72,7 @@ It writes `agents/ai-summary-candidates.{md,json}` and never edits summaries. Pr
 3. Preserve still-correct claims and the existing title unless the title itself is stale. Do not rewrite sound prose for variety.
 4. Re-run the producer and confirm refreshed entries no longer appear as `high` or `medium`.
 
-DEWS bands and exact event counts are especially volatile; describe tendencies unless the current value is the editorial point. Overall letter grades may be cited, but exact numeric scores should be exceptional. Grade vocabulary is Safety Score V9: the producer reconciles the overall grade and the three pillar grades (backing, exit, economic control) — retired V8 dimension names (peg stability, liquidity, resilience, decentralization, dependency risk) are flagged as stale on the next producer run, so never write new prose in those terms.
+DEWS bands and exact event counts are especially volatile; describe tendencies unless the current value is the editorial point. Overall letter grades may be cited, but exact numeric scores should be exceptional. Grade vocabulary follows the current Safety Score methodology; read `shared/lib/methodology-versions/current-version.json` before using methodology terminology. The producer reconciles the overall grade and the three pillar grades (backing, exit, economic control) — retired dimension names (peg stability, liquidity, resilience, decentralization, dependency risk) are flagged as stale on the next producer run, so never write new prose in those terms.
 
 For AI-drafted entries set `authoredBy`, `model`, `updatedAt`, and `factsAsOf` to the actual authoring context. Set `reviewedBy` and `reviewedAt` only after the named reviewer has approved the batch; never pre-stamp owner review.
 

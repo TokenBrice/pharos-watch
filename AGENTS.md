@@ -25,7 +25,7 @@ Local dev-server: http://localhost:3000/
 - Methodology changes update every target ADR-3 lists in `docs/architecture.md`, the runtime version source included. Versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
 - When committing, use a descriptive and informative subject plus a useful body that explains what changed and why. Group pending work into logical/thematic commits; avoid empty, generic, or placeholder commit messages.
 - Do not create a branch, worktree, or PR unless explicitly asked. A request to push, publish, release, or take work to production authorizes the required protected-main branch/PR path; never attempt a direct `main` push or stop only to re-ask about that required mechanism.
-- Before pushing, run focused checks. GitHub Actions owns the authoritative release gate. The pre-commit hook regenerates and stages the committed generated artifacts your staged sources affect, so they land in the source commit rather than a trailing chore commit.
+- Before pushing, run focused checks. GitHub Actions owns the authoritative release gate. The pre-commit hook regenerates and stages the committed generated artifacts marked `autoStage` that your staged sources affect, so they land in the source commit rather than a trailing chore commit.
 - For larger committed batches, use `npm run check:pr -- --base=<ref>` for the adaptive PR contract. Use `npm run check:release` only when an explicit local production-build rehearsal is useful.
 - A green deploy proves Worker activation and/or a Pages release marker, not runtime health. For cron, scheduler, memory, migration, or ingestion-risk changes, observe the first relevant production execution before claiming operational success.
 

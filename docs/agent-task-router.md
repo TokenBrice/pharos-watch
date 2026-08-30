@@ -12,6 +12,14 @@ From the repository root, run:
 node --import tsx scripts/ci/pharos-change-contract.ts
 ```
 
+Before editing a clean tree, pass each planned path with repeatable `--file <path>` options so the contract can route the task before files are changed:
+
+```bash
+node --import tsx scripts/ci/pharos-change-contract.ts \
+  --file worker/src/cron/sync-yield-data.ts \
+  --file docs/worker-and-api-limits.md
+```
+
 Use `--staged` when the intended change is staged but not committed. The command reports:
 
 - matched task families and risk
