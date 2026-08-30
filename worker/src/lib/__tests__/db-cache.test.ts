@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getPriceCache, readCacheWithPolicy, savePriceCache } from "../db-cache";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { getPriceCache, readCacheWithPolicy, savePriceCache, setCacheIfAbsent } from "../db-cache";
 
 interface FullPriceCacheRow {
   asset_id: string;
@@ -13,6 +14,19 @@ interface FullPriceCacheRow {
   agree_sources_json: string | null;
   consensus_sources_json: string | null;
 }
+
+describe("setCacheIfAbsent", () => {
+  it("preserves the first value and timestamp on a key conflict", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+
+    expect(await setCacheIfAbsent(db, "write-once", "first", 100)).toBe(true);
+    expect(await setCacheIfAbsent(db, "write-once", "second", 200)).toBe(false);
+    expect(sqlite.prepare(
+      "SELECT value, updated_at FROM cache WHERE key = 'write-once'",
+    ).get()).toEqual({ value: "first", updated_at: 100 });
+    sqlite.close();
+  });
+});
 
 function makeDb(options: {
   fullRows?: FullPriceCacheRow[];

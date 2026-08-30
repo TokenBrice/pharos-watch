@@ -160,6 +160,7 @@ const cronMocks = vi.hoisted(() => ({
   }),
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => undefined),
+  recordScheduledWorkerVersionFirstSeen: vi.fn(async () => undefined),
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => undefined),
   reconcileTelegramCommandRegistration: vi.fn(async () => ({ attempted: false })),
@@ -316,6 +317,10 @@ vi.mock("../lib/db-cache", () => ({
   savePriceCache: vi.fn(async () => undefined),
 }));
 
+vi.mock("../lib/worker-version-first-seen", () => ({
+  recordScheduledWorkerVersionFirstSeen: cronMocks.recordScheduledWorkerVersionFirstSeen,
+}));
+
 vi.mock("../lib/cron-logger", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/cron-logger")>();
   return {
@@ -428,6 +433,12 @@ describe("worker.scheduled", () => {
       }
 
       expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledTimes(schedules.length);
+      expect(cronMocks.recordScheduledWorkerVersionFirstSeen).toHaveBeenCalledTimes(schedules.length);
+      expect(cronMocks.recordScheduledWorkerVersionFirstSeen).toHaveBeenCalledWith(
+        db,
+        "test-worker-version",
+        expect.any(Number),
+      );
       expect(cronMocks.runScheduledSlotWithFence.mock.calls.map((call) => call[1])).toEqual(
         schedules.map(([scheduleKey]) => scheduleKey),
       );

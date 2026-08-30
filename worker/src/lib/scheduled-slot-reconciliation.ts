@@ -7,6 +7,7 @@ import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { recordProducerOutcome } from "./producer-history";
 import { cronEventCacheKey, logCronEvent } from "./cron-logger";
+import { getWorkerVersionFirstSeenAt } from "./worker-version-first-seen";
 
 
 export interface StaleSlotExecutionArtifact {
@@ -102,6 +103,16 @@ export function getExpectedJobsForScheduledSlot(slotKey: string): readonly strin
 // this bound a dead child's lease keeps its slot un-reconcilable for the whole
 // TTL after an OOM kill.
 const CHILD_LEASE_HEARTBEAT_STALE_SEC = 5 * 60;
+// Slot policies heartbeat every 30-60 seconds (45 seconds for measured
+// execution), while the fence clamps custom cadences to at least 15 seconds.
+// Keep the deploy-interruption alignment window below the measured cadence so
+// even one later slot heartbeat disproves that the slot and child died together.
+const DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC = 15;
+// The measured-execution slot heartbeats every 45 seconds. A replacement
+// version first observed later than that cannot explain the joint heartbeat
+// stop and must not neutralize an earlier invocation failure.
+const DEPLOY_INTERRUPTION_FIRST_SEEN_MAX_DELAY_SEC = 45;
+const DEPLOY_INTERRUPTION_FIRST_SEEN_EARLY_SLACK_SEC = 15;
 
 export async function hasActiveChildLeaseForScheduledSlot(
   db: D1Database,
@@ -224,17 +235,32 @@ async function insertSyntheticStaleCronRun(
   const startedAt = progress.started_at || slot.started_at || slot.slot_started_at;
   const activeDurationMs = Math.max(0, progress.updated_at - startedAt) * 1000;
   const reconciliationDelayMs = Math.max(0, nowSec - progress.updated_at) * 1000;
-  // Progress timestamps are second-resolution. A zero-duration child has no
-  // progress beyond its startup second, so a known version change is strong
-  // evidence that the isolate was interrupted by deployment before it could
-  // do useful work.
-  // Keep the neutral classification fail-closed when either version is absent
-  // or unchanged: those cases can still be an in-place kill or a real fault.
-  const interruptedByWorkerDeploy =
+  // Progress timestamps are second-resolution. Treat a version change as a
+  // deploy interruption only when the old slot's own heartbeat also stopped
+  // with the child. A later slot heartbeat proves the isolate survived the
+  // child failure; missing or ambiguous timestamps remain abandoned.
+  const slotHeartbeatStoppedWithChild =
+    Number.isSafeInteger(slot.updated_at)
+    && slot.updated_at > 0
+    && Number.isSafeInteger(progress.updated_at)
+    && progress.updated_at > 0
+    && slot.updated_at < nowSec - CHILD_LEASE_HEARTBEAT_STALE_SEC
+    && Math.abs(slot.updated_at - progress.updated_at) <= DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC;
+  const correlatedDeathWithVersionDrift =
     progress.updated_at === startedAt
     && slot.worker_version != null
     && reconcilerWorkerVersion != null
-    && slot.worker_version !== reconcilerWorkerVersion;
+    && slot.worker_version !== reconcilerWorkerVersion
+    && slotHeartbeatStoppedWithChild;
+  const reconcilerWorkerVersionFirstSeenAt = correlatedDeathWithVersionDrift
+    ? await getWorkerVersionFirstSeenAt(db, reconcilerWorkerVersion)
+    : null;
+  const interruptedByWorkerDeploy =
+    correlatedDeathWithVersionDrift
+    && reconcilerWorkerVersionFirstSeenAt != null
+    && reconcilerWorkerVersionFirstSeenAt >= progress.updated_at - DEPLOY_INTERRUPTION_FIRST_SEEN_EARLY_SLACK_SEC
+    && reconcilerWorkerVersionFirstSeenAt <= progress.updated_at + DEPLOY_INTERRUPTION_FIRST_SEEN_MAX_DELAY_SEC
+    && reconcilerWorkerVersionFirstSeenAt <= nowSec;
   const status = interruptedByWorkerDeploy ? "skipped_neutral" : "error";
   const outcome = interruptedByWorkerDeploy ? "skipped_neutral" : "abandoned";
   const error = interruptedByWorkerDeploy ? null : "scheduled slot heartbeat stale; child job progress abandoned";
@@ -258,6 +284,7 @@ async function insertSyntheticStaleCronRun(
     // time of death) vs in-place kill (e.g. OOM) decidable from this row.
     slotWorkerVersion: slot.worker_version ?? null,
     reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
+    reconciledByWorkerVersionFirstSeenAt: reconcilerWorkerVersionFirstSeenAt,
   });
   const idempotencyKey = ["scheduled-slot-stale", slot.slot_key, slot.slot_started_at, progress.job, startedAt].join(
     ":",
