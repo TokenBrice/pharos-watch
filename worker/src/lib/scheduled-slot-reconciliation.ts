@@ -7,7 +7,10 @@ import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { recordProducerOutcome } from "./producer-history";
 import { cronEventCacheKey, logCronEvent } from "./cron-logger";
-import { getWorkerVersionFirstSeenAt } from "./worker-version-first-seen";
+import {
+  getWorkerVersionActivatedAt,
+  getWorkerVersionFirstSeenAt,
+} from "./worker-version-first-seen";
 
 
 export interface StaleSlotExecutionArtifact {
@@ -108,11 +111,11 @@ const CHILD_LEASE_HEARTBEAT_STALE_SEC = 5 * 60;
 // Keep the deploy-interruption alignment window below the measured cadence so
 // even one later slot heartbeat disproves that the slot and child died together.
 const DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC = 15;
-// The measured-execution slot heartbeats every 45 seconds. Allow one cadence
-// plus 15 seconds of timestamp/write slack; anything later cannot prove the
-// replacement version landed on top of the joint heartbeat stop.
-const DEPLOY_INTERRUPTION_FIRST_SEEN_MAX_DELAY_SEC = 60;
-const DEPLOY_INTERRUPTION_FIRST_SEEN_EARLY_SLACK_SEC = 15;
+// A dead child's second-resolution heartbeat may appear up to 15 seconds
+// before Cloudflare's deployment timestamp because of clock/write skew. Once
+// activated, Cloudflare may take up to two minutes to recycle an old isolate.
+const DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC = 15;
+const DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC = 120;
 
 export async function hasActiveChildLeaseForScheduledSlot(
   db: D1Database,
@@ -223,6 +226,18 @@ async function canPersistSyntheticProducerOutcome(
   return row == null || row.idempotency_key === input.idempotencyKey;
 }
 
+async function readWorkerVersionMarker(
+  read: () => Promise<number | null>,
+): Promise<number | null> {
+  try {
+    return await read();
+  } catch {
+    // Marker reads are classification evidence, not a reason to leave the
+    // durable child artifacts unreconciled. An unavailable marker fails closed.
+    return null;
+  }
+}
+
 async function insertSyntheticStaleCronRun(
   db: D1Database,
   slot: StaleSlotExecutionArtifact,
@@ -246,21 +261,31 @@ async function insertSyntheticStaleCronRun(
     && progress.updated_at > 0
     && slot.updated_at < nowSec - CHILD_LEASE_HEARTBEAT_STALE_SEC
     && Math.abs(slot.updated_at - progress.updated_at) <= DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC;
+  const slotWorkerVersion = slot.worker_version?.trim() || null;
+  const currentWorkerVersion = reconcilerWorkerVersion?.trim() || null;
+  const hasWorkerVersionDrift =
+    slotWorkerVersion != null
+    && currentWorkerVersion != null
+    && slotWorkerVersion !== currentWorkerVersion;
   const correlatedDeathWithVersionDrift =
     progress.updated_at === startedAt
-    && slot.worker_version != null
-    && reconcilerWorkerVersion != null
-    && slot.worker_version !== reconcilerWorkerVersion
+    && hasWorkerVersionDrift
     && slotHeartbeatStoppedWithChild;
+  // First-seen is retained as forensic evidence only. The deploy workflow's
+  // activation marker is the classification boundary because it is written
+  // at version activation rather than at the first scheduled execution.
   const reconcilerWorkerVersionFirstSeenAt = correlatedDeathWithVersionDrift
-    ? await getWorkerVersionFirstSeenAt(db, reconcilerWorkerVersion)
+    ? await readWorkerVersionMarker(() => getWorkerVersionFirstSeenAt(db, currentWorkerVersion))
     : null;
-  const interruptedByWorkerDeploy =
-    correlatedDeathWithVersionDrift
-    && reconcilerWorkerVersionFirstSeenAt != null
-    && reconcilerWorkerVersionFirstSeenAt >= progress.updated_at - DEPLOY_INTERRUPTION_FIRST_SEEN_EARLY_SLACK_SEC
-    && reconcilerWorkerVersionFirstSeenAt <= progress.updated_at + DEPLOY_INTERRUPTION_FIRST_SEEN_MAX_DELAY_SEC
-    && reconcilerWorkerVersionFirstSeenAt <= nowSec;
+  const reconcilerWorkerVersionActivatedAt = correlatedDeathWithVersionDrift
+    ? await readWorkerVersionMarker(() => getWorkerVersionActivatedAt(db, currentWorkerVersion))
+    : null;
+  const activationWithinDeathWindow =
+    reconcilerWorkerVersionActivatedAt != null
+    && progress.updated_at >= reconcilerWorkerVersionActivatedAt - DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC
+    && progress.updated_at <= reconcilerWorkerVersionActivatedAt + DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC
+    && reconcilerWorkerVersionActivatedAt <= nowSec;
+  const interruptedByWorkerDeploy = correlatedDeathWithVersionDrift && activationWithinDeathWindow;
   const status = interruptedByWorkerDeploy ? "skipped_neutral" : "error";
   const outcome = interruptedByWorkerDeploy ? "skipped_neutral" : "abandoned";
   const error = interruptedByWorkerDeploy ? null : "scheduled slot heartbeat stale; child job progress abandoned";
@@ -282,9 +307,10 @@ async function insertSyntheticStaleCronRun(
     // Dead isolate's version rides the worker_version column; recording the
     // reconciler's version alongside makes deploy-eviction (versions differ at
     // time of death) vs in-place kill (e.g. OOM) decidable from this row.
-    slotWorkerVersion: slot.worker_version ?? null,
+    slotWorkerVersion: slotWorkerVersion,
     reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
     reconciledByWorkerVersionFirstSeenAt: reconcilerWorkerVersionFirstSeenAt,
+    reconciledByWorkerVersionActivatedAt: reconcilerWorkerVersionActivatedAt,
   });
   const idempotencyKey = ["scheduled-slot-stale", slot.slot_key, slot.slot_started_at, progress.job, startedAt].join(
     ":",
