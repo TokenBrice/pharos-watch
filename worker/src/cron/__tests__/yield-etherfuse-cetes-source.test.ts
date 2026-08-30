@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchEtherfuseCetesSource } from "../yield-sync/sources";
 
@@ -35,13 +34,10 @@ const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="appli
 })}</script></body></html>`;
 
 describe("fetchEtherfuseCetesSource", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("publishes Etherfuse CETES current issuance as the canonical protocol source", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "app.etherfuse.com/bonds/cetes",
         body: ETHERFUSE_CETES_HTML,
@@ -70,7 +66,7 @@ describe("fetchEtherfuseCetesSource", () => {
   });
 
   it("returns null when Etherfuse does not expose a usable CETES rate", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "app.etherfuse.com/bonds/cetes",
         body: "<html></html>",

@@ -1,4 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseChainlinkLatestRoundData } from "../../../lib/chainlink-round-data";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../../lib/evm-selectors";
 import {
@@ -43,27 +44,23 @@ function encodeUint256Result(value: bigint): `0x${string}` {
   return `0x${encodeUint256Word(value)}`;
 }
 
-function ondoConfig() {
+function makeChainlinkNavConfig(
+  overrides: {
+    semantics?: "single-asset" | "collateral-mix";
+    params?: Record<string, unknown>;
+  } = {},
+): LiveReservesConfig {
   return {
-    adapter: "chainlink-nav" as const,
+    adapter: "chainlink-nav",
     version: 1,
-    semantics: "single-asset" as const,
+    semantics: overrides.semantics ?? "single-asset",
     inputs: {
-      primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
+      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
     },
     params: {
       oracleAddress: ORACLE_ADDRESS,
       tokenAddress: TOKEN_ADDRESS,
-      assetLabel: "Ondo T-Bills",
-      assetRisk: "very-low" as const,
-      oracleMethod: "getPriceData" as const,
-      redemptionCapacity: {
-        managerAddress: MANAGER_ADDRESS,
-        usdcAddress: USDC_ADDRESS,
-        routerAddress: ROUTER_ADDRESS,
-        sourceAddress: SOURCE_ADDRESS,
-        pauseSelector: "0xb235d468",
-      },
+      ...overrides.params,
     },
   };
 }
@@ -230,21 +227,13 @@ describe("fetchChainlinkNavCore", () => {
       return null;
     });
 
-    const config = {
-      adapter: "chainlink-nav" as const,
-      version: 1,
-      semantics: "single-asset" as const,
-      inputs: {
-        primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
-      },
+    const config = makeChainlinkNavConfig({
       params: {
-        oracleAddress: ORACLE_ADDRESS,
-        tokenAddress: TOKEN_ADDRESS,
         assetLabel: "Re7-managed DeFi yield strategy NAV",
-        assetRisk: "high" as const,
+        assetRisk: "high",
         maxOracleAgeSec,
       },
-    };
+    });
 
     await expect(fetchChainlinkNavCore(
       {} as never,
@@ -274,21 +263,13 @@ describe("fetchChainlinkNavCore", () => {
       return null;
     });
 
-    const config = {
-      adapter: "chainlink-nav" as const,
-      version: 1,
-      semantics: "single-asset" as const,
-      inputs: {
-        primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
-      },
+    const config = makeChainlinkNavConfig({
       params: {
-        oracleAddress: ORACLE_ADDRESS,
-        tokenAddress: TOKEN_ADDRESS,
         assetLabel: "Ondo T-Bills",
-        assetRisk: "very-low" as const,
-        oracleMethod: "getPriceData" as const,
+        assetRisk: "very-low",
+        oracleMethod: "getPriceData",
       },
-    };
+    });
 
     const result = await fetchChainlinkNavCore(
       {} as never,
@@ -345,7 +326,20 @@ describe("fetchChainlinkNavCore", () => {
 
     const result = await fetchChainlinkNavCore(
       {} as never,
-      ondoConfig() as never,
+      makeChainlinkNavConfig({
+        params: {
+          assetLabel: "Ondo T-Bills",
+          assetRisk: "very-low",
+          oracleMethod: "getPriceData",
+          redemptionCapacity: {
+            managerAddress: MANAGER_ADDRESS,
+            usdcAddress: USDC_ADDRESS,
+            routerAddress: ROUTER_ADDRESS,
+            sourceAddress: SOURCE_ADDRESS,
+            pauseSelector: "0xb235d468",
+          },
+        },
+      }) as never,
       new AbortController().signal,
       { nowSec: updatedAt + 60 },
     );
@@ -389,7 +383,20 @@ describe("fetchChainlinkNavCore", () => {
 
     const result = await fetchChainlinkNavCore(
       {} as never,
-      ondoConfig() as never,
+      makeChainlinkNavConfig({
+        params: {
+          assetLabel: "Ondo T-Bills",
+          assetRisk: "very-low",
+          oracleMethod: "getPriceData",
+          redemptionCapacity: {
+            managerAddress: MANAGER_ADDRESS,
+            usdcAddress: USDC_ADDRESS,
+            routerAddress: ROUTER_ADDRESS,
+            sourceAddress: SOURCE_ADDRESS,
+            pauseSelector: "0xb235d468",
+          },
+        },
+      }) as never,
       new AbortController().signal,
       { nowSec: updatedAt + 60 },
     );
@@ -421,21 +428,14 @@ describe("fetchChainlinkNavCore", () => {
       return null;
     });
 
-    const config = {
-      adapter: "chainlink-nav" as const,
-      version: 1,
-      semantics: "collateral-mix" as const,
-      inputs: {
-        primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
-      },
+    const config = makeChainlinkNavConfig({
+      semantics: "collateral-mix",
       params: {
-        oracleAddress: ORACLE_ADDRESS,
-        tokenAddress: TOKEN_ADDRESS,
         assetLabel: "Ondo T-Bills",
-        assetRisk: "very-low" as const,
-        oracleMethod: "getAssetPrice" as const,
+        assetRisk: "very-low",
+        oracleMethod: "getAssetPrice",
       },
-    };
+    });
 
     const result = await fetchChainlinkNavCore(
       {} as never,

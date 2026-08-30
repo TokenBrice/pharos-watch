@@ -1,17 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectFreezeBlocked } from "../freeze";
+import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds } from "./test-support";
 
 const SEC = 1_700_000_000;
 const MATCH_BLACKLIST_EVENTS = "FROM blacklist_events";
-const TAPE_WRITE_TABLES: MockTableConfig[] = [
-  { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
-];
-
-function mockTapeD1(tables: MockTableConfig[] = []): MockD1Database {
-  return mockD1([...tables, ...TAPE_WRITE_TABLES]);
-}
 
 function blacklistRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -26,24 +19,6 @@ function blacklistRow(overrides: Record<string, unknown> = {}): Record<string, u
     rowid: 1,
     ...overrides,
   };
-}
-
-function extractInsertBinds(db: MockD1Database): unknown[][] {
-  return db
-    .getHistory()
-    .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO tape_events"))
-    .map((entry) => entry.binds);
-}
-
-function extractCacheWriteBinds(db: MockD1Database, cursorKey: string): unknown[][] {
-  return db
-    .getHistory()
-    .filter(
-      (entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-        entry.binds[0] === `tape-projector:cursor:${cursorKey}`,
-    )
-    .map((entry) => entry.binds);
 }
 
 describe("freeze projector", () => {
@@ -65,11 +40,11 @@ describe("freeze projector", () => {
     const result = await projectFreezeBlocked(db, { maxRows: 2 });
 
     expect(result).toEqual({ projected: 3, advanced: SEC });
-    expect(extractInsertBinds(db).map((binds) => binds[13])).toEqual([
+    expect(tapeInsertBinds(db).map((binds) => binds[13])).toEqual([
       "freeze-a",
       "freeze-b",
       "freeze-c",
     ]);
-    expect(extractCacheWriteBinds(db, "freeze.blocked")[0]?.[1]).toBe(String(SEC));
+    expect(tapeCacheWriteBinds(db, "freeze.blocked")[0]?.[1]).toBe(String(SEC));
   });
 });

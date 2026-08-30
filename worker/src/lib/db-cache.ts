@@ -133,8 +133,20 @@ export async function setCachesAt(
   await executeCacheBatches(db, entries.map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt }, mode)), signal);
 }
 
+async function setCacheAt(
+  db: D1Database,
+  key: string,
+  value: string,
+  updatedAt: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  throwIfAborted(signal);
+  await runWithOverloadRetry(() => prepareCacheUpsert(db, { key, value, updatedAt }).run(), 3, signal);
+  throwIfAborted(signal);
+}
+
 export async function setCache(db: D1Database, key: string, value: string, signal?: AbortSignal): Promise<void> {
-  return setCachesAt(db, [{ key, value }], Math.floor(Date.now() / 1000), { signal });
+  await setCacheAt(db, key, value, Math.floor(Date.now() / 1000), signal);
 }
 export async function setCacheMany(db: D1Database, entries: readonly CacheEntryWrite[], signal?: AbortSignal): Promise<void> {
   return setCachesAt(db, entries, Math.floor(Date.now() / 1000), { signal });
@@ -181,7 +193,7 @@ export async function writeCacheWithPolicy<T>(
   signal?: AbortSignal,
 ): Promise<void> {
   if (policy.storage !== "d1-kv") throw new Error(`cache policy ${policy.schemaId} is not backed by D1 key/value cache`);
-  return setCachesAt(db, [{ key: policy.key, value: policy.encode(value) }], updatedAt, { signal });
+  await setCacheAt(db, policy.key, policy.encode(value), updatedAt, signal);
 }
 
 

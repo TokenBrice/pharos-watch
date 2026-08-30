@@ -2,11 +2,23 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createContagionSnapshotMock,
+  createDepegEventsMock,
+  createHeroCardMock,
+  createLogosMock,
+  createNextLinkMock,
+  createNoopComponentMock,
+  createStablecoinLogoMock,
+  createViewModelMock,
+  makeFrozenViewModel,
+  obituary,
+} from "./client-test-support";
 import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
-import type { StablecoinMeta, StablecoinObituary } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types";
 
 const { useStablecoinDetailViewModelMock } = vi.hoisted(() => ({
   useStablecoinDetailViewModelMock: vi.fn(),
@@ -16,43 +28,25 @@ vi.mock("next/dynamic", () => ({
   default: () => () => <div data-testid="dynamic-detail-section" />,
 }));
 
-vi.mock("next/link", async () => {
-  const { createNextLinkMock } = await import("@/test-utils/frontend");
-  return createNextLinkMock();
-});
+vi.mock("next/link", async () => createNextLinkMock());
 
-vi.mock("@/hooks/use-stablecoin-detail-view-model", () => ({
-  useStablecoinDetailViewModel: useStablecoinDetailViewModelMock,
-}));
+vi.mock("@/hooks/use-stablecoin-detail-view-model", () => createViewModelMock(useStablecoinDetailViewModelMock));
 
-vi.mock("@/hooks/use-depeg-events", () => ({
-  useInfiniteDepegEvents: () => ({ data: { total: 0 } }),
-}));
+vi.mock("@/hooks/use-depeg-events", () => createDepegEventsMock());
 
-vi.mock("@/lib/logos", () => ({
-  logosById: {},
-}));
+vi.mock("@/lib/logos", () => createLogosMock());
 
-vi.mock("@/components/stablecoin-logo", () => ({
-  StablecoinLogo: ({ name }: { name: string }) => <span>{name}</span>,
-}));
+vi.mock("@/components/stablecoin-logo", () => createStablecoinLogoMock());
 
-vi.mock("@/components/stale-data-banner", () => ({
-  StaleDataBanner: () => null,
-}));
+vi.mock("@/components/stale-data-banner", () => createNoopComponentMock("StaleDataBanner"));
 
-vi.mock("@/components/query-error-notice", () => ({
-  QueryErrorNotice: () => null,
-}));
+vi.mock("@/components/query-error-notice", () => createNoopComponentMock("QueryErrorNotice"));
 
 vi.mock("@/components/longform-scrollspy-nav", () => ({
   LongformScrollspyNav: () => <nav data-testid="scrollspy" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/hero-card", () => ({
-  HeroCard: () => <div data-testid="hero-card" />,
-  HeroDesktopIdentityToolbar: () => <div data-testid="hero-identity-toolbar" />,
-}));
+vi.mock("@/components/stablecoin-detail/hero-card", () => createHeroCardMock());
 
 vi.mock("@/components/stablecoin-detail/reserve-panel", () => ({
   ReservePanel: () => null,
@@ -66,127 +60,21 @@ vi.mock("@/components/dews-detail", () => ({
   DEWSDetail: () => null,
 }));
 
-vi.mock("@/components/coin-notice", () => ({
-  CoinNotices: () => null,
-}));
+vi.mock("@/components/coin-notice", () => createNoopComponentMock("CoinNotices"));
 
-vi.mock("@/components/tape-for-coin-teaser", () => ({
-  TapeForCoinTeaser: () => null,
-}));
+vi.mock("@/components/tape-for-coin-teaser", () => createNoopComponentMock("TapeForCoinTeaser"));
 
-vi.mock("@/components/feedback-modal", () => ({
-  FeedbackModal: () => null,
-}));
+vi.mock("@/components/feedback-modal", () => createNoopComponentMock("FeedbackModal"));
 
-vi.mock("@/components/exploit-notice-banner", () => ({
-  ExploitNoticeBanner: () => null,
-}));
+vi.mock("@/components/exploit-notice-banner", () => createNoopComponentMock("ExploitNoticeBanner"));
 
-vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
-  RecentBlacklistBanner: () => null,
-}));
+vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => createNoopComponentMock("RecentBlacklistBanner"));
 
-vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => ({
-  ContagionSnapshot: ({ variantRelationshipCard }: { variantRelationshipCard?: import("react").ReactNode }) => (
-    <div data-testid="contagion-snapshot-mock">{variantRelationshipCard}</div>
-  ),
-}));
+vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => createContagionSnapshotMock());
 
 vi.mock("@/components/report-card", () => ({
   ReportCardDetail: () => <div data-testid="report-card" />,
 }));
-
-const obituary: StablecoinObituary = {
-  causeOfDeath: "abandoned",
-  deathDate: "2026-04",
-  epitaph: "Sunset by issuer.",
-  obituary: "Wound down following protocol-level losses.",
-  sourceUrl: "https://example.com/shutdown",
-  sourceLabel: "Issuer announcement",
-};
-
-function makeFrozenViewModel(coin: StablecoinMeta) {
-  const frozenCoin: StablecoinMeta = {
-    ...coin,
-    status: "frozen",
-    frozenAt: "2026-04-27",
-    obituary,
-  };
-  return {
-    status: "ready" as const,
-    id: frozenCoin.id,
-    coin: frozenCoin,
-    summary: null,
-    logoSrc: undefined,
-    reportCard: null,
-    reportCardsResponse: undefined,
-    reportCardUpdatedAt: null,
-    variantParent: null,
-    variantSiblings: [],
-    childVariants: [],
-    isVariant: false,
-    hasVariants: false,
-    coinData: {
-      id: frozenCoin.id,
-      name: frozenCoin.name,
-      symbol: frozenCoin.symbol,
-      pegType: "peggedUSD",
-      price: 1,
-      circulating: { peggedUSD: 100 },
-      circulatingPrevDay: { peggedUSD: 99 },
-      circulatingPrevWeek: { peggedUSD: 98 },
-      circulatingPrevMonth: { peggedUSD: 97 },
-      chainCirculating: {},
-      chains: ["ethereum"],
-    },
-    mcap: 100,
-    supply: 100,
-    prevDay: 99,
-    prevWeek: 98,
-    prevMonth: 97,
-    performanceVsUsd1y: null,
-    pegRef: 1,
-    deviationBps: 0,
-    gaugeDeviationBps: 0,
-    pegReferenceUnavailable: false,
-    isNavToken: false,
-    pegScoreResult: null,
-    consensusSources: [],
-    agreeSources: [],
-    dexPriceCheck: null,
-    liquidityData: undefined,
-    yieldRanking: null,
-    hasYieldSection: false,
-    stressSignal: null,
-    redemptionBackstop: undefined,
-    hasFlows: false,
-    hasBlacklist: false,
-    blacklistSymbol: null,
-    supplyHistory: [],
-    earliestTrackingDate: null,
-    reserves: null,
-    reserveFetchError: null,
-    refetchReserves: null,
-    isFetchingReserves: false,
-    supplyError: null,
-    staleQueries: [],
-    featureStates: {
-      liquidity: { status: "empty", dataUpdatedAt: 0, error: null },
-      yield: { status: "unsupported", dataUpdatedAt: 0, error: null },
-      stress: { status: "empty", dataUpdatedAt: 0, error: null },
-      flows: { status: "unsupported", dataUpdatedAt: 0, error: null },
-      blacklist: { status: "unsupported", dataUpdatedAt: 0, error: null },
-      reserves: { status: "empty", dataUpdatedAt: 0, error: null },
-    },
-    verdict: {
-      archetype: "frozen-archive",
-      label: "Frozen Archive",
-    },
-    mintAuthority: { status: "not-reviewed" as const },
-    hero: { signalRailItems: [] } as never,
-    handleRetryAll: vi.fn(),
-  };
-}
 
 describe("StablecoinDetailClient (frozen)", () => {
   beforeEach(() => {

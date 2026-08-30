@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetchRetry } from "../../test-helpers/cron";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchCurveScrvusdCurrentRateSource } from "../yield-sync/sources";
 
@@ -25,7 +24,7 @@ function uint256Hex(value: bigint): string {
 }
 
 function stubScrvusdRpc(values: Record<string, bigint>) {
-  mockFetch([{
+  mockYieldSourceRoutes([{
     match: "rpc.example/eth",
     respond: async (request) => {
       const body = await request.clone().json() as {
@@ -49,10 +48,7 @@ function stubScrvusdRpc(values: Record<string, bigint>) {
 }
 
 describe("fetchCurveScrvusdCurrentRateSource", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("computes current APY from the Yearn V3 profit-unlock rate", async () => {
     stubScrvusdRpc({

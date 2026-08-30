@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import type { ApiKeySelfServeEnv } from "../../api/api-key-requests/types";
 import type { FeedbackEnv } from "../../api/feedback";
 import type { TelegramCreds } from "../../lib/telegram";
-import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
+import { makeScheduledEnv } from "../../test-helpers/scheduled-runtime.test-support";
 import { buildRouteContext } from "../../handlers/http/context";
 import { DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS, getDynamicRouteMatch } from "../dynamic-routes";
 import { getRouteDependencies } from "../registry";
@@ -67,8 +67,7 @@ describe("route context typing", () => {
   it("hydrates only the requested dependency fields at runtime", () => {
     const request = new Request("https://api.pharos.watch/api/status");
     const url = new URL(request.url);
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
+    const env = makeScheduledEnv({
       COINGECKO_API_KEY: "cg-demo",
       GITHUB_PAT: "ghp_demo",
       FEEDBACK_IP_SALT: "salt",

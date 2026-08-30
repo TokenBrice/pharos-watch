@@ -1,5 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleBackfillYieldHistory } from "../backfill-yield-history";
@@ -28,31 +29,6 @@ vi.mock("../../lib/yield-source-adapters/zephyr", () => ({
 
 import { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
 
-function makeDb(capturedStatements: Array<{ sql: string; args: unknown[] }> = []): D1Database {
-  const stmt = (_sql: string) => ({
-    bind: (...args: unknown[]) => {
-      capturedStatements.push({ sql: _sql, args });
-      return {
-        all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-        first: async <T>() => null as T | null,
-        run: async () => ({ success: true, meta: { changes: 1 } }),
-      };
-    },
-    all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-    first: async <T>() => null as T | null,
-    run: async () => ({ success: true, meta: { changes: 1 } }),
-  });
-
-  return {
-    prepare: (sql: string) => stmt(sql),
-    batch: async (stmts: D1PreparedStatement[]) => (
-      stmts.map(() => ({ success: true, meta: { changes: 1 } }))
-    ),
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
-}
-
 describe("handleBackfillYieldHistory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -66,15 +42,15 @@ describe("handleBackfillYieldHistory", () => {
   });
 
   it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillYieldHistory({ db: makeDb(), url: makeApiUrl("/api/backfill-yield-history?batch=999999&batchSize=100"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
+    const res = await handleBackfillYieldHistory({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-yield-history?batch=999999&batchSize=100"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
 
     expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("inserts Zephyr yield history row", async () => {
-    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const db = mockD1([], { allowUnmatched: true });
 
-    const res = await handleBackfillYieldHistory({ db: makeDb(capturedStatements), url: makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol", { adminKey: "secret" }) });
+    const res = await handleBackfillYieldHistory({ db, url: makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol", { adminKey: "secret" }) });
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -85,10 +61,10 @@ describe("handleBackfillYieldHistory", () => {
     expect(body.rowsInserted).toBe(1);
     expect(body.coinResults[0]).toEqual({ id: "zys-zephyr-protocol", symbol: "ZYS", inserted: true });
 
-    const insertStmt = capturedStatements.find((stmt) =>
+    const insertStmt = db.getHistory().find((stmt) =>
       stmt.sql.includes("INSERT OR IGNORE INTO yield_history"),
     );
-    expect(insertStmt?.args).toEqual([
+    expect(insertStmt?.binds).toEqual([
       "zys-zephyr-protocol",
       "protocol-api:zys-zephyr-protocol",
       1_730_000_000,

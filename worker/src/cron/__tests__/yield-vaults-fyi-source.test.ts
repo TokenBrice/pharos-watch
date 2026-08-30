@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { mockRegistry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -37,7 +38,6 @@ import {
 } from "../yield-sync/vaults-fyi";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -109,8 +109,7 @@ describe("fetchVaultsFyiSources", () => {
   const openDatabases: DatabaseSync[] = [];
 
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
+    cleanupYieldSourceTest();
     for (const sqlite of openDatabases.splice(0)) sqlite.close();
   });
 
@@ -146,7 +145,7 @@ describe("fetchVaultsFyiSources", () => {
       bucket,
       creditsEstimated: 100,
     }));
-    mockFetch([{ match: () => true, respond: () => response({ data: [detailedVault()] }) }]);
+    mockYieldSourceRoutes([{ match: () => true, respond: () => response({ data: [detailedVault()] }) }]);
 
     const result = await fetchVaultsFyiSources({
       db,
@@ -183,7 +182,7 @@ describe("fetchVaultsFyiSources", () => {
 
   it("fails closed without fetching when the paid credit ledger is corrupt", async () => {
     const { db, writes } = creditLedgerDb("{not-json");
-    const fetchSpy = mockFetch([], { requireMatch: true });
+    const fetchSpy = mockYieldSourceRoutes([], { requireMatch: true });
     const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const result = await fetchVaultsFyiSources({
@@ -309,7 +308,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("skips without fetching when disabled", async () => {
-    const fetchSpy = mockFetch([], { requireMatch: true });
+    const fetchSpy = mockYieldSourceRoutes([], { requireMatch: true });
 
     await expect(
       fetchVaultsFyiSources({
@@ -368,7 +367,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("runs a cheap audit-only inventory probe when enabled without rankable vaults", async () => {
-    mockFetch([{ match: () => true, respond: (request) => {
+    mockYieldSourceRoutes([{ match: () => true, respond: (request) => {
       const url = request.url;
       expect(url).toContain("/v2/detailed-vaults?");
       expect(url).toContain("page=0");
@@ -406,7 +405,7 @@ describe("fetchVaultsFyiSources", () => {
     const rows = Array.from({ length: 4 }, (_, index) =>
       detailedVault({ address: `0x${String(index + 1).padStart(40, "0")}` }),
     );
-    mockFetch([{ match: () => true, respond: () => response({ data: rows }) }]);
+    mockYieldSourceRoutes([{ match: () => true, respond: () => response({ data: rows }) }]);
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig(),
@@ -428,7 +427,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("emits exact address-matched allowlisted candidates from exact detailed-vault requests and drops symbol-only spoofed assets", async () => {
-    const fetchSpy = mockFetch([{ match: () => true, respond: (request) => {
+    const fetchSpy = mockYieldSourceRoutes([{ match: () => true, respond: (request) => {
       const url = request.url;
       expect(url).not.toContain("test-placeholder-key");
       expect(request.headers.get("x-api-key")).toBe("test-placeholder-key");
@@ -491,7 +490,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("stops before a detail fetch when the local per-run credit cap is too low", async () => {
-    const fetchSpy = mockFetch([], { requireMatch: true });
+    const fetchSpy = mockYieldSourceRoutes([], { requireMatch: true });
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({
@@ -515,7 +514,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("does not spend credits when all rankable allowlist entries are malformed", async () => {
-    const fetchSpy = mockFetch([], { requireMatch: true });
+    const fetchSpy = mockYieldSourceRoutes([], { requireMatch: true });
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({ rankableVaults: ["not-a-vault-entry"] }),
@@ -535,7 +534,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it.each([403, 429])("fails open as skipped on provider quota HTTP %s without emitting candidates", async (status) => {
-    mockFetch([{ match: () => true, respond: () => response({ error: "quota" }, status) }]);
+    mockYieldSourceRoutes([{ match: () => true, respond: () => response({ error: "quota" }, status) }]);
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({ rankableVaults: ["mainnet:vault-a"] }),

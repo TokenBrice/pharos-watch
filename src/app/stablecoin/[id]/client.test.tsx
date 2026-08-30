@@ -3,6 +3,17 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createContagionSnapshotMock,
+  createDepegEventsMock,
+  createHeroCardMock,
+  createLogosMock,
+  createNextLinkMock,
+  createNoopComponentMock,
+  createStablecoinLogoMock,
+  createViewModelMock,
+  makeReadyViewModel,
+} from "./client-test-support";
 import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
@@ -106,38 +117,23 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
-vi.mock("next/link", async () => {
-  const { createNextLinkMock } = await import("@/test-utils/frontend");
-  return createNextLinkMock();
-});
+vi.mock("next/link", async () => createNextLinkMock());
 
-vi.mock("@/hooks/use-stablecoin-detail-view-model", () => ({
-  useStablecoinDetailViewModel: useStablecoinDetailViewModelMock,
-}));
+vi.mock("@/hooks/use-stablecoin-detail-view-model", () => createViewModelMock(useStablecoinDetailViewModelMock));
 
 vi.mock("@/hooks/use-near-viewport", () => ({
   useNearViewport: useNearViewportMock,
 }));
 
-vi.mock("@/hooks/use-depeg-events", () => ({
-  useInfiniteDepegEvents: () => ({ data: { total: 0 } }),
-}));
+vi.mock("@/hooks/use-depeg-events", () => createDepegEventsMock());
 
-vi.mock("@/lib/logos", () => ({
-  logosById: {},
-}));
+vi.mock("@/lib/logos", () => createLogosMock());
 
-vi.mock("@/components/stablecoin-logo", () => ({
-  StablecoinLogo: ({ name }: { name: string }) => <span>{name}</span>,
-}));
+vi.mock("@/components/stablecoin-logo", () => createStablecoinLogoMock());
 
-vi.mock("@/components/stale-data-banner", () => ({
-  StaleDataBanner: () => null,
-}));
+vi.mock("@/components/stale-data-banner", () => createNoopComponentMock("StaleDataBanner"));
 
-vi.mock("@/components/query-error-notice", () => ({
-  QueryErrorNotice: () => null,
-}));
+vi.mock("@/components/query-error-notice", () => createNoopComponentMock("QueryErrorNotice"));
 
 vi.mock("@/components/longform-scrollspy-nav", () => ({
   LongformScrollspyNav: (props: { className?: string; railLabel?: string; variant?: "banner" | "rail" }) => {
@@ -153,10 +149,7 @@ vi.mock("@/components/longform-scrollspy-nav", () => ({
   },
 }));
 
-vi.mock("@/components/stablecoin-detail/hero-card", () => ({
-  HeroCard: () => <div data-testid="hero-card" />,
-  HeroDesktopIdentityToolbar: () => <div data-testid="hero-identity-toolbar" />,
-}));
+vi.mock("@/components/stablecoin-detail/hero-card", () => createHeroCardMock());
 
 vi.mock("@/components/stablecoin-detail/price-transparency-card", () => ({
   PriceTransparencyCard: () => <div data-testid="price-transparency-card" />,
@@ -168,115 +161,19 @@ vi.mock("@/components/stablecoin-detail/redemption-backstop-card", () => ({
   ),
 }));
 
-vi.mock("@/components/ai-summary", () => ({
-  AiSummary: () => null,
-}));
+vi.mock("@/components/ai-summary", () => createNoopComponentMock("AiSummary"));
 
-vi.mock("@/components/coin-notice", () => ({
-  CoinNotices: () => null,
-}));
+vi.mock("@/components/coin-notice", () => createNoopComponentMock("CoinNotices"));
 
-vi.mock("@/components/tape-for-coin-teaser", () => ({
-  TapeForCoinTeaser: () => null,
-}));
+vi.mock("@/components/tape-for-coin-teaser", () => createNoopComponentMock("TapeForCoinTeaser"));
 
-vi.mock("@/components/feedback-modal", () => ({
-  FeedbackModal: () => null,
-}));
+vi.mock("@/components/feedback-modal", () => createNoopComponentMock("FeedbackModal"));
 
-vi.mock("@/components/exploit-notice-banner", () => ({
-  ExploitNoticeBanner: () => null,
-}));
+vi.mock("@/components/exploit-notice-banner", () => createNoopComponentMock("ExploitNoticeBanner"));
 
-vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
-  RecentBlacklistBanner: () => null,
-}));
+vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => createNoopComponentMock("RecentBlacklistBanner"));
 
-vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => ({
-  // Render the `variantRelationshipCard` child so tests can still assert it
-  // exists outside the overview section; suppress the inner contagion graph
-  // which would otherwise pull in the live V9 report-cards query.
-  ContagionSnapshot: ({ variantRelationshipCard }: { variantRelationshipCard?: import("react").ReactNode }) => (
-    <div data-testid="contagion-snapshot-mock">{variantRelationshipCard}</div>
-  ),
-}));
-
-function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
-  const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-  return {
-    status: "ready" as const,
-    id: coin.id,
-    coin,
-    summary: null,
-    logoSrc: undefined,
-    reportCard: null,
-    reportCardsResponse: undefined,
-    reportCardUpdatedAt: null,
-    variantParent: null,
-    variantSiblings: [],
-    childVariants: [TRACKED_META_BY_ID.get("susds-sky")!, TRACKED_META_BY_ID.get("stusds-sky")!],
-    isVariant: false,
-    hasVariants: true,
-    coinData: {
-      id: coin.id,
-      name: coin.name,
-      symbol: coin.symbol,
-      pegType: "peggedUSD",
-      price: 1,
-      circulating: { peggedUSD: 100 },
-      circulatingPrevDay: { peggedUSD: 99 },
-      circulatingPrevWeek: { peggedUSD: 98 },
-      circulatingPrevMonth: { peggedUSD: 97 },
-      chainCirculating: {},
-      chains: ["ethereum"],
-    },
-    mcap: 100,
-    supply: 100,
-    prevDay: 99,
-    prevWeek: 98,
-    prevMonth: 97,
-    performanceVsUsd1y: null,
-    pegRef: 1,
-    deviationBps: 0,
-    gaugeDeviationBps: 0,
-    isNavToken: false,
-    pegScoreResult: null,
-    consensusSources: [],
-    agreeSources: [],
-    dexPriceCheck: null,
-    liquidityData: undefined,
-    yieldRanking: null,
-    hasYieldSection: false,
-    stressSignal: null,
-    redemptionBackstop: undefined,
-    hasFlows: false,
-    hasBlacklist: false,
-    supplyHistory: [],
-    earliestTrackingDate: null,
-    reserves: null,
-    reserveFetchError: null,
-    refetchReserves: null,
-    isFetchingReserves: false,
-    supplyError: null,
-    staleQueries: [],
-    featureStates: {
-      liquidity: { status: "empty", dataUpdatedAt: 0, error: null },
-      yield: { status: "unsupported", dataUpdatedAt: 0, error: null },
-      stress: { status: "empty", dataUpdatedAt: 0, error: null },
-      flows: { status: "unsupported", dataUpdatedAt: 0, error: null },
-      blacklist: { status: "unsupported", dataUpdatedAt: 0, error: null },
-      reserves: { status: "empty", dataUpdatedAt: 0, error: null },
-    },
-    verdict: {
-      archetype: "uncategorized",
-      label: "Uncategorized",
-    },
-    mintAuthority: { status: "not-reviewed" as const },
-    hero: { signalRailItems: [] } as never,
-    handleRetryAll: vi.fn(),
-    ...overrides,
-  };
-}
+vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => createContagionSnapshotMock());
 
 describe("StablecoinDetailClient", () => {
   beforeEach(() => {

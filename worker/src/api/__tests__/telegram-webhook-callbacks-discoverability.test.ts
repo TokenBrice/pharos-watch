@@ -5,9 +5,10 @@ import {
   firstSentMessageBody,
   fetchSpy,
   handleCallbackQuery,
+  makeCallbackQuery,
   lastAckBody,
   lastSentMessageBody,
-  mockD1,
+  mockTelegramD1,
   resetCallbackTest,
   sendAuditedTelegramReply,
 } from "./telegram-webhook-callbacks.test-support";
@@ -30,13 +31,8 @@ beforeEach(resetCallbackTest);
 describe("handleCallbackQuery", () => {
   describe("P1-U11 discoverability callbacks", () => {
     it("why:<id> sends the safety Why explainer and acks", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-why",
-        data: "why:usdc-circle",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("why:usdc-circle", { id: "cb-why", from: { id: 999, username: "alice" }, message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const sendBody = firstSentMessageBody();
       expect(sendBody.text).toContain("usdc-circle Safety Score");
@@ -53,13 +49,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("coverage:<id> sends a coverage card with no subscription writes", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-cov",
-        data: "coverage:usdc-circle",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coverage:usdc-circle", { id: "cb-cov", from: { id: 999, username: "alice" }, message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const body = firstSentMessageBody();
       expect(body.text).toContain("USDC coverage");
@@ -75,13 +66,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("why and coverage callbacks keep discovery buttons in group chats without mini-app buttons", async () => {
-      const whyDb = mockD1([]);
-      await handleCallbackQuery(whyDb, "fake-token", {
-        id: "cb-why-group",
-        data: "why:usdc-circle",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: -42, type: "group" }, message_id: 1 },
-      });
+      const whyDb = mockTelegramD1([]);
+      await handleCallbackQuery(whyDb, "fake-token", makeCallbackQuery("why:usdc-circle", { id: "cb-why-group", from: { id: 999, username: "alice" }, message: { chat: { id: -42, type: "group" }, message_id: 1 } }));
       const whyButtons = (firstSentMessageBody().reply_markup?.inline_keyboard ?? []).flat();
       expect(whyButtons).toEqual(expect.arrayContaining([
         expect.objectContaining({ text: "Why?", callback_data: "why:usdc-circle" }),
@@ -90,13 +76,8 @@ describe("handleCallbackQuery", () => {
       ]));
       expect(whyButtons.some((button) => button.web_app)).toBe(false);
 
-      const coverageDb = mockD1([]);
-      await handleCallbackQuery(coverageDb, "fake-token", {
-        id: "cb-cov-group",
-        data: "coverage:usdc-circle",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: -42, type: "group" }, message_id: 1 },
-      });
+      const coverageDb = mockTelegramD1([]);
+      await handleCallbackQuery(coverageDb, "fake-token", makeCallbackQuery("coverage:usdc-circle", { id: "cb-cov-group", from: { id: 999, username: "alice" }, message: { chat: { id: -42, type: "group" }, message_id: 1 } }));
       const coverageButtons = (lastSentMessageBody().reply_markup?.inline_keyboard ?? []).flat();
       expect(coverageButtons).toEqual(expect.arrayContaining([
         expect.objectContaining({ text: "Why?", callback_data: "why:usdc-circle" }),
@@ -107,21 +88,12 @@ describe("handleCallbackQuery", () => {
     });
 
     it("quicksub:<id> in a group refuses non-admin without writing to D1", async () => {
-      const db = mockD1([
-        {
-          match: "FROM cache WHERE key = ?",
-          rows: [],
-          first: null,
-        },
-      ]);
+      const db = mockTelegramD1([], {
+        fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
+      });
       // Webhook auth fetches getChatMember from Telegram when cache misses.
       mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "m" });
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-qs-group",
-        data: "quicksub:usdc-circle",
-        from: { id: 7, username: "tapping_user" },
-        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("quicksub:usdc-circle", { id: "cb-qs-group", from: { id: 7, username: "tapping_user" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
       const history = db.getHistory();
       expect(history.some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
@@ -130,20 +102,11 @@ describe("handleCallbackQuery", () => {
     });
 
     it("quicksub:<id> in a group with admin tapping writes the subscription", async () => {
-      const db = mockD1([
-        {
-          match: "FROM cache WHERE key = ?",
-          rows: [],
-          first: null,
-        },
-      ]);
-      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-qs-admin",
-        data: "quicksub:usdc-circle",
-        from: { id: 7, username: "admin_user" },
-        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
+      const db = mockTelegramD1([], {
+        fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
       });
+      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("quicksub:usdc-circle", { id: "cb-qs-admin", from: { id: 7, username: "admin_user" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
       const history = db.getHistory();
       const subscriberUpsert = history.find((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
@@ -154,13 +117,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("unknown stablecoin id in why/coverage/quicksub callbacks falls through to a graceful ack", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-bad",
-        data: "quicksub:not-a-real-coin",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("quicksub:not-a-real-coin", { id: "cb-bad", from: { id: 999, username: "alice" }, message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const history = db.getHistory();
       expect(history.some((h) => /\bINSERT\b/i.test(h.sql))).toBe(false);
@@ -168,13 +126,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("status:<id> sends the current status card and acks", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-status-ok",
-        data: "status:usdc-circle",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("status:usdc-circle", { id: "cb-status-ok", from: { id: 999, username: "alice" }, message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const sendBody = lastSentMessageBody();
       expect(sendBody.text).toContain("USDC");
@@ -189,14 +142,13 @@ describe("handleCallbackQuery", () => {
       ["coverage", "Coverage sent."],
       ["quicksub", "Subscribed to DEWS + depeg for USDC."],
     ])("%s:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async (action, acknowledgement) => {
-      const db = mockD1([]);
+      const db = mockTelegramD1([]);
       vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
-      await handleCallbackQuery(db, "fake-token", {
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery(`${action}:usdc-circle`, {
         id: `cb-${action}-fail`,
-        data: `${action}:usdc-circle`,
         from: { id: 999, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      }).catch(() => undefined);
+        message: { chat: { id: 42, type: "private" }, message_id: 1 }
+      })).catch(() => undefined);
 
       expect(firstAckBody().text).toBe(acknowledgement);
     });

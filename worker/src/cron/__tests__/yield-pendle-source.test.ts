@@ -1,20 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchPendleMarketSources } from "../yield-sync/sources";
 
 describe("fetchPendleMarketSources", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("extracts stablecoin market yields from Pendle REST API", async () => {
     const futureExpiry = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "api-v2.pendle.finance",
         body: {
@@ -57,7 +53,7 @@ describe("fetchPendleMarketSources", () => {
 
   it("filters out non-stablecoin markets", async () => {
     const futureExpiry = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "api-v2.pendle.finance",
         body: {
@@ -90,7 +86,7 @@ describe("fetchPendleMarketSources", () => {
   });
 
   it("filters expired and implausibly high implied APY markets", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "api-v2.pendle.finance",
         body: {

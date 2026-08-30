@@ -3,8 +3,9 @@ import {
   firstAckBody,
   fetchSpy,
   handleCallbackQuery,
+  makeCallbackQuery,
   lastAckBody,
-  mockD1,
+  mockTelegramD1,
   resetCallbackTest,
 } from "./telegram-webhook-callbacks.test-support";
 
@@ -29,13 +30,8 @@ describe("handleCallbackQuery", () => {
   describe("coinsnooze (P1-U10)", () => {
     it("coinsnooze:<id>:4h upserts alert_snooze_until_ts on the matching subscription row", async () => {
       const before = Math.floor(Date.now() / 1000);
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-coinsnooze",
-        data: "coinsnooze:usdc-circle:4h",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42 }, message_id: 999 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:usdc-circle:4h", { id: "cb-coinsnooze", message: { chat: { id: 42 }, message_id: 999 } }));
 
       const upsert = db
         .getHistory()
@@ -56,19 +52,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("coinsnooze D1 write failure records a failure usage event", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "INSERT INTO telegram_subscriptions",
           rows: [],
           throwError: new Error("d1 boom"),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-coinsnooze-fail",
-        data: "coinsnooze:usdc-circle:4h",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:usdc-circle:4h", { id: "cb-coinsnooze-fail" }));
 
       const usageRow = db
         .getHistory()
@@ -85,13 +76,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("coinsnooze rejects an unknown stablecoin id without touching D1", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-coinsnooze-bad",
-        data: "coinsnooze:not-a-coin:1h",
-        from: { id: 1 },
-        message: { chat: { id: 42 }, message_id: 999 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:not-a-coin:1h", { id: "cb-coinsnooze-bad", from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 } }));
 
       const history = db.getHistory();
       expect(history.some((h) => /INSERT INTO telegram_subscriptions/.test(h.sql))).toBe(false);
@@ -101,13 +87,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("coinsnooze rejects an unknown duration token without touching D1", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-coinsnooze-bad-dur",
-        data: "coinsnooze:usdc-circle:12h",
-        from: { id: 1 },
-        message: { chat: { id: 42 }, message_id: 999 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:usdc-circle:12h", { id: "cb-coinsnooze-bad-dur", from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 } }));
 
       const history = db.getHistory();
       expect(history.some((h) => /INSERT INTO telegram_subscriptions/.test(h.sql))).toBe(false);

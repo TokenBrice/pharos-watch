@@ -7,41 +7,6 @@ import { handleBlacklist } from "../blacklist";
 describe("handleBlacklist", () => {
   const row = makeBlacklistRow();
 
-  function makeDbWithDataBindCapture(capture: (args: unknown[]) => void): D1Database {
-    const stmt = (sql: string) => ({
-      bind: (...args: unknown[]) => {
-        if (sql.includes("FROM blacklist_events") && !sql.includes("COUNT(")) {
-          capture(args);
-        }
-        return {
-          all: async <T>() => ({
-            results: (sql.includes("COUNT") ? [{ total: 0 }] : []) as T[],
-            success: true,
-            meta: {},
-          }),
-          first: async <T>() => null as T | null,
-          run: async () => ({ success: true, meta: {} }),
-        };
-      },
-      all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-      first: async <T>() => null as T | null,
-      run: async () => ({ success: true, meta: {} }),
-    });
-
-    return {
-      prepare: (sql: string) => stmt(sql),
-      batch: async (stmts: { all: () => Promise<unknown> }[]) => {
-        const results = [];
-        for (const statement of stmts) {
-          results.push(await statement.all());
-        }
-        return results as unknown[];
-      },
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
-  }
-
   it("returns an inexact lower-bound total by default without running COUNT(*)", async () => {
     const db = mockD1([
       { match: "blacklist_events", rows: [row] },
@@ -174,12 +139,10 @@ describe("handleBlacklist", () => {
   });
 
   it("normalizes stablecoin filters before binding", async () => {
-    let dataBinds: unknown[] = [];
-    const db = makeDbWithDataBindCapture((args) => {
-      dataBinds = args;
-    });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=usdt"));
+    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
     expect(res.status).toBe(200);
     expect(dataBinds).toContain("USDT");
     expect(dataBinds).not.toContain("usdt");
@@ -192,12 +155,10 @@ describe("handleBlacklist", () => {
   });
 
   it("accepts chainId filters and normalizes them before binding", async () => {
-    let dataBinds: unknown[] = [];
-    const db = makeDbWithDataBindCapture((args) => {
-      dataBinds = args;
-    });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chainId=Ethereum"));
+    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
     expect(res.status).toBe(200);
     expect(dataBinds).toContain("ethereum");
     expect(dataBinds).not.toContain("Ethereum");
@@ -228,12 +189,10 @@ describe("handleBlacklist", () => {
   });
 
   it("accepts valid eventType filters before pagination", async () => {
-    let dataBinds: unknown[] = [];
-    const db = makeDbWithDataBindCapture((args) => {
-      dataBinds = args;
-    });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?eventType=destroy"));
+    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
     expect(res.status).toBe(200);
     expect(dataBinds).toContain("destroy");
   });
@@ -251,12 +210,10 @@ describe("handleBlacklist", () => {
   });
 
   it("binds address search filters case-insensitively", async () => {
-    let dataBinds: unknown[] = [];
-    const db = makeDbWithDataBindCapture((args) => {
-      dataBinds = args;
-    });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?q=0xAbC"));
+    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
     expect(res.status).toBe(200);
     expect(dataBinds).toContain("%0xabc%");
   });
@@ -307,12 +264,10 @@ describe("handleBlacklist", () => {
   });
 
   it("maps limit=0 to default limit 1000", async () => {
-    let dataBinds: unknown[] = [];
-    const db = makeDbWithDataBindCapture((args) => {
-      dataBinds = args;
-    });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?limit=0"));
+    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
     expect(res.status).toBe(200);
     // Cursor-capable feeds request one look-ahead row to decide nextCursor.
     expect(dataBinds).toContain(1001);
@@ -322,11 +277,12 @@ describe("handleBlacklist", () => {
     const rejected = await handleBlacklist(mockD1([], { requireMatch: true }), new URL("https://x/api/blacklist?offset=25001"));
     expect(rejected.status).toBe(400);
 
-    let dataBinds: unknown[] = [];
+    const acceptedDb = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
     const accepted = await handleBlacklist(
-      makeDbWithDataBindCapture((args) => { dataBinds = args; }),
+      acceptedDb,
       new URL("https://x/api/blacklist?offset=25000"),
     );
+    const dataBinds = acceptedDb.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
     expect(accepted.status).toBe(200);
     expect(dataBinds).toContain(25_000);
   });

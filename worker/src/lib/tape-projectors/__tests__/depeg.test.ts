@@ -1,18 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
-import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectDepegOpened, projectDepegResolved } from "../depeg";
+import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds } from "./test-support";
 
 const SEC = 1_700_000_000;
 const MATCH_DEPEG_EVENTS = "FROM depeg_events";
-const TAPE_WRITE_TABLES: MockTableConfig[] = [
-  { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
-];
-
-function mockTapeD1(tables: MockTableConfig[] = []): MockD1Database {
-  return mockD1([...tables, ...TAPE_WRITE_TABLES]);
-}
 
 function depegRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -31,24 +24,6 @@ function depegRow(overrides: Record<string, unknown> = {}): Record<string, unkno
     close_reason: null,
     ...overrides,
   };
-}
-
-function extractInsertBinds(db: MockD1Database): unknown[][] {
-  return db
-    .getHistory()
-    .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO tape_events"))
-    .map((entry) => entry.binds);
-}
-
-function extractCacheWriteBinds(db: MockD1Database, cursorKey: string): unknown[][] {
-  return db
-    .getHistory()
-    .filter(
-      (entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-        entry.binds[0] === `tape-projector:cursor:${cursorKey}`,
-    )
-    .map((entry) => entry.binds);
 }
 
 describe("depeg projector", () => {
@@ -70,13 +45,13 @@ describe("depeg projector", () => {
     const result = await projectDepegOpened(db, { maxRows: 2 });
 
     expect(result).toEqual({ projected: 3, advanced: SEC });
-    expect(extractInsertBinds(db).map((binds) => binds[13])).toEqual(["1", "2", "3"]);
-    expect(extractInsertBinds(db).map((binds) => binds[16])).toEqual([
+    expect(tapeInsertBinds(db).map((binds) => binds[13])).toEqual(["1", "2", "3"]);
+    expect(tapeInsertBinds(db).map((binds) => binds[16])).toEqual([
       getDepegDewsMethodologyVersionAt(SEC),
       getDepegDewsMethodologyVersionAt(SEC),
       getDepegDewsMethodologyVersionAt(SEC),
     ]);
-    expect(extractCacheWriteBinds(db, "depeg.opened")[0]?.[1]).toBe(String(SEC));
+    expect(tapeCacheWriteBinds(db, "depeg.opened")[0]?.[1]).toBe(String(SEC));
   });
 
   it("expands a full resolved batch through same-ended_at rows before advancing the watermark", async () => {
@@ -97,12 +72,12 @@ describe("depeg projector", () => {
     const result = await projectDepegResolved(db, { maxRows: 2 });
 
     expect(result).toEqual({ projected: 3, advanced: SEC + 900 });
-    expect(extractInsertBinds(db).map((binds) => binds[13])).toEqual(["10", "11", "12"]);
-    expect(extractInsertBinds(db).map((binds) => binds[16])).toEqual([
+    expect(tapeInsertBinds(db).map((binds) => binds[13])).toEqual(["10", "11", "12"]);
+    expect(tapeInsertBinds(db).map((binds) => binds[16])).toEqual([
       getDepegDewsMethodologyVersionAt(SEC + 900),
       getDepegDewsMethodologyVersionAt(SEC + 900),
       getDepegDewsMethodologyVersionAt(SEC + 900),
     ]);
-    expect(extractCacheWriteBinds(db, "depeg.resolved")[0]?.[1]).toBe(String(SEC + 900));
+    expect(tapeCacheWriteBinds(db, "depeg.resolved")[0]?.[1]).toBe(String(SEC + 900));
   });
 });

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetchRetry } from "../../test-helpers/cron";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchBasedollarSpSource } from "../yield-sync/sources";
 
@@ -119,10 +119,7 @@ const DEFAULT_BRANCH_VALUES: readonly BranchValues[] = [
 ];
 
 describe("fetchBasedollarSpSource", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("computes the deposit-weighted interest-only APR across all branches", async () => {
     stubBasedollarRpc(DEFAULT_BRANCH_VALUES);

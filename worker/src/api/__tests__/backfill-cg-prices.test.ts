@@ -1,5 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { mockFetchRetry } from "../../test-helpers/cron/mock-fetch-retry";
@@ -19,33 +20,6 @@ vi.mock("../../lib/fetch-retry", () => mockFetchRetry({
   )),
 }));
 
-function makeDb(existingRows: Array<{ snapshot_date: number; price: number | null; circulating_usd: number }> = []): D1Database {
-  const stmt = (sql: string) => ({
-    bind: (..._args: unknown[]) => ({
-      all: async <T>() => {
-        if (sql.includes("SELECT snapshot_date, price, circulating_usd FROM supply_history")) {
-          return { results: existingRows as T[], success: true, meta: {} };
-        }
-        return { results: [] as T[], success: true, meta: {} };
-      },
-      first: async <T>() => null as T | null,
-      run: async () => ({ success: true, meta: { changes: 1 } }),
-    }),
-    all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-    first: async <T>() => null as T | null,
-    run: async () => ({ success: true, meta: { changes: 1 } }),
-  });
-
-  return {
-    prepare: (sql: string) => stmt(sql),
-    batch: async (stmts: D1PreparedStatement[]) => (
-      stmts.map(() => ({ success: true, meta: { changes: 1 } }))
-    ),
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
-}
-
 describe("handleBackfillCgPrices", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,13 +33,19 @@ describe("handleBackfillCgPrices", () => {
   });
 
   it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillCgPricesTrusted({ db: makeDb(), url: makeApiUrl("/api/backfill-cg-prices?batch=999999&batchSize=100") });
+    const res = await handleBackfillCgPricesTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-cg-prices?batch=999999&batchSize=100") });
     expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("fills NULL prices for existing supply rows", async () => {
     const snapshotDate = Math.floor(1_700_000_000 / 86400) * 86400;
-    const res = await handleBackfillCgPricesTrusted({ db: makeDb([{ snapshot_date: snapshotDate, price: null, circulating_usd: 100_000_000 }]), url: makeApiUrl("/api/backfill-cg-prices?stablecoin=usdt-tether") });
+    const db = mockD1([
+      {
+        match: "SELECT snapshot_date, price, circulating_usd FROM supply_history",
+        rows: [{ snapshot_date: snapshotDate, price: null, circulating_usd: 100_000_000 }],
+      },
+    ], { allowUnmatched: true });
+    const res = await handleBackfillCgPricesTrusted({ db, url: makeApiUrl("/api/backfill-cg-prices?stablecoin=usdt-tether") });
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -81,7 +61,13 @@ describe("handleBackfillCgPrices", () => {
 
   it("accepts PSI-only shadow assets for price backfills", async () => {
     const snapshotDate = Math.floor(1_700_000_000 / 86400) * 86400;
-    const res = await handleBackfillCgPricesTrusted({ db: makeDb([{ snapshot_date: snapshotDate, price: null, circulating_usd: 15_000_000_000 }]), url: makeApiUrl("/api/backfill-cg-prices?stablecoin=ust-terra") });
+    const db = mockD1([
+      {
+        match: "SELECT snapshot_date, price, circulating_usd FROM supply_history",
+        rows: [{ snapshot_date: snapshotDate, price: null, circulating_usd: 15_000_000_000 }],
+      },
+    ], { allowUnmatched: true });
+    const res = await handleBackfillCgPricesTrusted({ db, url: makeApiUrl("/api/backfill-cg-prices?stablecoin=ust-terra") });
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;

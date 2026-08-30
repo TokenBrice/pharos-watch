@@ -1,22 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchHashnoteUsycSource } from "../yield-sync/sources";
 import { RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config";
 
 describe("fetchHashnoteUsycSource", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("derives APY from USYC price reports", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const sevenDaysAgoSec = nowSec - 7 * 86400;
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "usyc.hashnote.com/api/price-reports",
         body: {
@@ -63,7 +59,7 @@ describe("fetchHashnoteUsycSource", () => {
   });
 
   it("returns null on HTTP error", async () => {
-    mockFetch([{ match: "usyc.hashnote.com", status: 500, body: "" }]);
+    mockYieldSourceRoutes([{ match: "usyc.hashnote.com", status: 500, body: "" }]);
     await expect(fetchHashnoteUsycSource()).resolves.toBeNull();
   });
 
@@ -71,7 +67,7 @@ describe("fetchHashnoteUsycSource", () => {
     const staleNowSec = 1_780_000_000;
     vi.useFakeTimers();
     vi.setSystemTime(staleNowSec * 1000);
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "usyc.hashnote.com/api/price-reports",
         body: {

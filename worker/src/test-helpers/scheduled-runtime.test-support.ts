@@ -3,6 +3,17 @@ import type { ScheduledRuntimeContext } from "../handlers/scheduled/context";
 import { createWorkerEnv } from "./__shared/worker-env";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
+/** Build the common environment used by scheduled-handler tests. */
+export function makeScheduledEnv(
+  overrides: Parameters<typeof createWorkerEnv>[0] = {},
+): ReturnType<typeof createWorkerEnv> {
+  return createWorkerEnv({
+    DB: {} as D1Database,
+    CORS_ORIGIN: "https://pharos.watch",
+    ...overrides,
+  });
+}
+
 /** Make a mocked memory-lane lease execute its callback immediately. */
 export function mockSuccessfulCronLease(
   leaseMock: ReturnType<typeof vi.fn>,

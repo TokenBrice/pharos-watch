@@ -1,19 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchYearnKongSources } from "../yield-sync/sources";
 
 describe("fetchYearnKongSources", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("extracts stablecoin vault APYs from Kong GraphQL", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
         body: {
@@ -51,7 +47,7 @@ describe("fetchYearnKongSources", () => {
   });
 
   it("skips retired vaults", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
         body: {
@@ -75,7 +71,7 @@ describe("fetchYearnKongSources", () => {
   });
 
   it("labels non-Yearn vaults as Kong", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
         body: {
@@ -101,7 +97,7 @@ describe("fetchYearnKongSources", () => {
   });
 
   it("uses current net APY instead of monthly net APY", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
         body: {
@@ -128,7 +124,7 @@ describe("fetchYearnKongSources", () => {
   });
 
   it("maps Staked yBOLD to sBOLD as a native K3 source", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
         body: {

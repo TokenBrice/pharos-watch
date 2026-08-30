@@ -6,7 +6,7 @@ import {
   type V9ReasonCode,
 } from "./safety-score-v9";
 import { compareText } from "./safety-score-v9-fact-primitives";
-import { V9_ACCESS_POSTURE_FIELDS, V9_EVIDENCE_RESPONSIBILITIES } from "./safety-score-v9-vocabulary";
+import { V9_ACCESS_POSTURE_FIELDS, V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "./safety-score-v9-vocabulary";
 import { V9AccessFreezeExposureSchema, V9AccessGovernanceSchema, V9AccessPostureFieldSchema } from "./safety-score-v9-vocabulary";
 import { V9AccessPrimaryExitSchema, V9AccessTransferSchema } from "./safety-score-v9-vocabulary";
 
@@ -16,7 +16,7 @@ import { V9_GRADE_THRESHOLDS } from "./safety-score-v9-grade";
 export { BaseInputGenerationIdSchema, Sha256Schema } from "./safety-schema-primitives";
 export const ScoreSchema = z.number().finite().min(0).max(100);
 export const V9PolicyVersionSchema = z.string().regex(/^\d+\.\d+$/);
-export const RESPONSIBILITIES = V9_EVIDENCE_RESPONSIBILITIES;
+export const RESPONSIBILITIES = V9_PUBLIC_EVIDENCE_RESPONSIBILITIES;
 export const SCORE_TOLERANCE = 0.0002;
 export const EXIT_SCORE_TOLERANCE = 0.03;
 export const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;

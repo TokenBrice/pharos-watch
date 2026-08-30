@@ -1,19 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchBeefySources } from "../yield-sync/sources";
 
 describe("fetchBeefySources", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("joins APY and vault metadata for stablecoin single-asset vaults", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       { match: "api.beefy.finance/apy", body: { "aave-usdc": 0.037 } },
       { match: "api.beefy.finance/tvl", body: { "43114": { "aave-usdc": 12_500_000 } } },
       {
@@ -55,7 +51,7 @@ describe("fetchBeefySources", () => {
   });
 
   it("skips EOL vaults", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       { match: "api.beefy.finance/apy", body: { "old-usdc": 0.05 } },
       { match: "api.beefy.finance/tvl", body: { "1": { "old-usdc": 1_000_000 } } },
       {
@@ -83,7 +79,7 @@ describe("fetchBeefySources", () => {
   });
 
   it("skips multi-asset LP vaults", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       { match: "api.beefy.finance/apy", body: { "curve-usdc-usdt": 0.06 } },
       { match: "api.beefy.finance/tvl", body: { "1": { "curve-usdc-usdt": 1_000_000 } } },
       {
@@ -111,7 +107,7 @@ describe("fetchBeefySources", () => {
   });
 
   it("skips vaults without enough Beefy TVL to pass size gates", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       { match: "api.beefy.finance/apy", body: { "aave-usdc": 0.037 } },
       { match: "api.beefy.finance/tvl", body: { "1": { "aave-usdc": 99_999 } } },
       {

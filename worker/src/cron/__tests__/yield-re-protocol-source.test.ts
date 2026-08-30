@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchReProtocolReusdSource } from "../yield-sync/sources";
 
@@ -14,12 +13,11 @@ describe("fetchReProtocolReusdSource", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
+    cleanupYieldSourceTest();
   });
 
   it("publishes the latest valid reUSD observation when both Re products are present", async () => {
-    mockFetch([{
+    mockYieldSourceRoutes([{
       match: "api.re.xyz/price",
       body: {
         success: true,
@@ -53,7 +51,7 @@ describe("fetchReProtocolReusdSource", () => {
   });
 
   it("does not substitute reUSDe when the reUSD series is absent", async () => {
-    mockFetch([{
+    mockYieldSourceRoutes([{
       match: "api.re.xyz/price",
       body: {
         success: true,
@@ -65,7 +63,7 @@ describe("fetchReProtocolReusdSource", () => {
   });
 
   it("fails closed when reUSD observations are stale", async () => {
-    mockFetch([{
+    mockYieldSourceRoutes([{
       match: "api.re.xyz/price",
       body: {
         success: true,
@@ -77,7 +75,7 @@ describe("fetchReProtocolReusdSource", () => {
   });
 
   it("fails closed on malformed or out-of-envelope observations", async () => {
-    mockFetch([{
+    mockYieldSourceRoutes([{
       match: "api.re.xyz/price",
       body: {
         success: true,

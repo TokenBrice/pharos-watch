@@ -3,7 +3,8 @@ import {
   firstAckBody,
   fetchSpy,
   handleCallbackQuery,
-  mockD1,
+  makeCallbackQuery,
+  mockTelegramD1,
   resetCallbackTest,
 } from "./telegram-webhook-callbacks.test-support";
 
@@ -51,13 +52,8 @@ describe("handleCallbackQuery", () => {
 
     it("manage:page:0 edits the message with the first page of unsub buttons", async () => {
       const subs = [makeSubRow("usdc-circle"), makeSubRow("dai-makerdao")];
-      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: subs }]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-manage-0",
-        data: "manage:page:0",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 100 },
-      });
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: subs }]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("manage:page:0", { id: "cb-manage-0", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
 
       const body = editMessageBody();
       expect(body.text).toContain("Manage watchlist");
@@ -80,13 +76,8 @@ describe("handleCallbackQuery", () => {
         "lusd-liquity",
         "susd-synthetix",
       ];
-      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: ids.map(makeSubRow) }]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-manage-1",
-        data: "manage:page:1",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 100 },
-      });
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: ids.map(makeSubRow) }]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("manage:page:1", { id: "cb-manage-1", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
 
       const body = editMessageBody();
       const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
@@ -98,26 +89,16 @@ describe("handleCallbackQuery", () => {
     });
 
     it("manage:page in a group allows non-admin read-only pagination", async () => {
-      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [makeSubRow("usdc-circle")] }]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-manage-group",
-        data: "manage:page:0",
-        from: { id: 7, username: "member" },
-        message: { chat: { id: -42, type: "supergroup" }, message_id: 100 },
-      });
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: [makeSubRow("usdc-circle")] }]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("manage:page:0", { id: "cb-manage-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 100 } }));
 
       expect(editMessageBody().text).toContain("Manage watchlist");
       expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
     });
 
     it("rejects malformed manage page numbers without loading subscriptions", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-manage-bad",
-        data: "manage:page:1.5",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 100 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("manage:page:1.5", { id: "cb-manage-bad", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
 
       expect(db.getHistory().some((h) => h.sql.includes("FROM telegram_subscriptions"))).toBe(false);
       expect(firstAckBody().text).toBe("Action not recognized.");
@@ -126,13 +107,8 @@ describe("handleCallbackQuery", () => {
     it("unsub:<id> deletes the subscription and re-renders the same page", async () => {
       // First call (DELETE batch). Second SELECT after delete returns the remaining row.
       const remaining = [makeSubRow("dai-makerdao")];
-      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-unsub",
-        data: "unsub:usdc-circle",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 100 },
-      });
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:usdc-circle", { id: "cb-unsub", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
 
       const history = db.getHistory();
       const deleteRow = history.find((h) => /DELETE FROM telegram_subscriptions/.test(h.sql));
@@ -148,13 +124,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("unsub:<id> clears the inline keyboard when the last subscription is removed", async () => {
-      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-unsub-empty",
-        data: "unsub:usdc-circle",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 100 },
-      });
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:usdc-circle", { id: "cb-unsub-empty", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
 
       const body = editMessageBody();
       expect(body.text).toContain("No coin subscriptions");
@@ -162,10 +133,12 @@ describe("handleCallbackQuery", () => {
     });
 
     it("unsub:<id> in a group refuses non-admin without deleting", async () => {
-      const db = mockD1([
-        { match: "FROM cache WHERE key = ?", rows: [], first: null },
-        { match: "FROM telegram_subscriptions", rows: [] },
-      ]);
+      const db = mockTelegramD1([], {
+        fallbackTables: [
+          { match: "FROM cache WHERE key = ?", rows: [], first: null },
+          { match: "FROM telegram_subscriptions", rows: [] },
+        ],
+      });
       fetchSpy.mockImplementation(async (url) => {
         if (String(url).includes("getChatMember")) {
           return new Response(
@@ -175,12 +148,7 @@ describe("handleCallbackQuery", () => {
         }
         return new Response(JSON.stringify({ ok: true }), { status: 200 });
       });
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-unsub-group",
-        data: "unsub:usdc-circle",
-        from: { id: 7, username: "tapping_user" },
-        message: { chat: { id: -42, type: "supergroup" }, message_id: 100 },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:usdc-circle", { id: "cb-unsub-group", from: { id: 7, username: "tapping_user" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 100 } }));
 
       const history = db.getHistory();
       expect(history.some((h) => /DELETE FROM telegram_subscriptions/.test(h.sql))).toBe(false);
@@ -197,12 +165,10 @@ describe("handleCallbackQuery", () => {
         makeSubRow("frax-frax"),
         makeSubRow("tusd-trueusd"),
       ];
-      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
       // The tapped message came from page 1 — its keyboard included `manage:page:0` Prev.
-      await handleCallbackQuery(db, "fake-token", {
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:lusd-liquity", {
         id: "cb-unsub-shift",
-        data: "unsub:lusd-liquity",
-        from: { id: 1, username: "alice" },
         message: {
           chat: { id: 42, type: "private" },
           message_id: 100,
@@ -212,8 +178,8 @@ describe("handleCallbackQuery", () => {
               [{ text: "◀ Prev", callback_data: "manage:page:0" }],
             ],
           },
-        } as unknown as Parameters<typeof handleCallbackQuery>[2]["message"],
-      });
+        } as unknown as Parameters<typeof handleCallbackQuery>[2]["message"]
+      }));
 
       const body = editMessageBody();
       const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
@@ -236,11 +202,9 @@ describe("handleCallbackQuery", () => {
         "xaut-tether",
         "aeur-anchored-coins",
       ].map(makeSubRow);
-      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
-      await handleCallbackQuery(db, "fake-token", {
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:usdc-circle", {
         id: "cb-unsub-relabel",
-        data: "unsub:usdc-circle",
-        from: { id: 1, username: "alice" },
         message: {
           chat: { id: 42, type: "private" },
           message_id: 100,
@@ -253,15 +217,15 @@ describe("handleCallbackQuery", () => {
               ],
             ],
           },
-        } as unknown as Parameters<typeof handleCallbackQuery>[2]["message"],
-      });
+        } as unknown as Parameters<typeof handleCallbackQuery>[2]["message"]
+      }));
 
       expect(editMessageBody().text).toContain("Page 2/3");
     });
   });
 
   it("confirm:bulk replies with an expiry toast when pending TTL has elapsed", async () => {
-    const db = mockD1([
+    const db = mockTelegramD1([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -283,12 +247,7 @@ describe("handleCallbackQuery", () => {
         },
       },
     ]);
-    await handleCallbackQuery(db, "fake-token", {
-      id: "cb-expired",
-      data: "confirm:bulk",
-      from: { id: 999, username: "requester" },
-      message: { chat: { id: 123, type: "private" }, message_id: 1 },
-    });
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-expired", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
     expect(ackCall).toBeDefined();
