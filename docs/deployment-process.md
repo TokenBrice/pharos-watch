@@ -101,7 +101,8 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - runs only when `worker_required=true`, on `ubuntu-latest`, with the protected `production` environment;
    - installs the lockfile workspace, runs `npm run check:migrations`, proves the strict Worker bundle with `npm run check:worker-package`, and only then applies remote D1 migrations;
    - deploys once with `cd worker && npx --no-install wrangler deploy --strict --message ...`; Wrangler synchronizes the checked-in Worker configuration and triggers as part of that supported path;
-   - queries `wrangler deployments status --json` once and requires the SHA-tagged deployment to be the sole active version at 100% traffic;
+   - queries `wrangler deployments status --json` and requires the SHA-tagged deployment to be the sole active version at 100% traffic, then matches that deployment in `wrangler deployments list --json`;
+   - writes `worker-version-activated:<version_id>` once into the existing D1 `cache` table using the matched Cloudflare deployment's `created_on` as both the JSON activation time and `updated_at`. Missing/invalid deployment history or a marker-write failure is logged as a warning and does not fail the deployment; reconciliation therefore remains fail-closed for that version;
    - fails visibly on migration, deploy, or activation-proof failure. It does not preview-upload, poll deployment status, make a custom-domain request from shared GitHub egress, run browser/ops/transport checks, or automatically roll back.
 3. `pages-release`
    - calls the reusable Pages workflow only when `pages_required=true`;

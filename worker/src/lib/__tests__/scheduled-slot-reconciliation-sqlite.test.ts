@@ -9,6 +9,45 @@ function createMigratedDb(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
 }
 
+function seedZeroDurationDeployInterruptedCase(
+  sqlite: DatabaseSync,
+  nowSec: number,
+  markers: { firstSeenAt: number | null; activatedAt: number | null },
+): number {
+  const slotStartedAt = nowSec - 3_600;
+  sqlite.prepare(
+    `INSERT INTO cron_slot_executions (
+     slot_key, slot_started_at, state, result_status, execution_owner,
+     started_at, finished_at, updated_at, metadata, execution_generation,
+     invocation_id, worker_version
+   ) VALUES ('halfHourlyMeasuredExecution', ?, 'running', NULL, 'slot-owner', ?, NULL, ?, NULL, 1,
+             'old-invocation', 'worker-old')`,
+  ).run(slotStartedAt, slotStartedAt, slotStartedAt);
+  sqlite.prepare(
+    `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+     VALUES ('sync-cl-exit-depth', 'child-owner', ?, ?, ?)`,
+  ).run(nowSec - 60, nowSec - 1_800, nowSec - 1_800);
+  sqlite.prepare(
+    `INSERT INTO cron_run_progress (
+     job, started_at, updated_at, stage, items_done, items_total,
+     message, lease_owner, metadata, slot_started_at
+   ) VALUES ('sync-cl-exit-depth', ?, ?, 'lease-acquired', 0, NULL, 'Lease acquired', 'child-owner', NULL, ?)`,
+  ).run(slotStartedAt, slotStartedAt, slotStartedAt);
+  if (markers.firstSeenAt != null) {
+    sqlite.prepare(
+      `INSERT INTO cache (key, value, updated_at)
+       VALUES ('worker-version-first-seen:worker-new', ?, ?)`,
+    ).run(JSON.stringify({ workerVersion: "worker-new", firstSeenAt: markers.firstSeenAt }), markers.firstSeenAt);
+  }
+  if (markers.activatedAt != null) {
+    sqlite.prepare(
+      `INSERT INTO cache (key, value, updated_at)
+       VALUES ('worker-version-activated:worker-new', ?, ?)`,
+    ).run(JSON.stringify({ workerVersion: "worker-new", activatedAt: markers.activatedAt }), markers.activatedAt);
+  }
+  return slotStartedAt;
+}
+
 describe("scheduled slot reconciliation against the current D1 schema", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -429,28 +468,13 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     sqlite.close();
   });
 
-  it("keeps a zero-duration child abandoned when its slot heartbeat continued before a deploy", async () => {
+  it("classifies a correlated zero-duration child as neutral only with an in-window activation marker", async () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
-    const slotStartedAt = nowSec - 3_600;
-    sqlite.prepare(
-      `INSERT INTO cron_slot_executions (
-       slot_key, slot_started_at, state, result_status, execution_owner,
-       started_at, finished_at, updated_at, metadata, execution_generation,
-       invocation_id, worker_version
-     ) VALUES ('halfHourlyMeasuredExecution', ?, 'running', NULL, 'slot-owner', ?, NULL, ?, NULL, 1,
-               'old-invocation', 'worker-old')`,
-    ).run(slotStartedAt, slotStartedAt, slotStartedAt + 45);
-    sqlite.prepare(
-      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
-       VALUES ('sync-cl-exit-depth', 'child-owner', ?, ?, ?)`,
-    ).run(nowSec - 60, nowSec - 1_800, nowSec - 1_800);
-    sqlite.prepare(
-      `INSERT INTO cron_run_progress (
-       job, started_at, updated_at, stage, items_done, items_total,
-       message, lease_owner, metadata, slot_started_at
-     ) VALUES ('sync-cl-exit-depth', ?, ?, 'lease-acquired', 0, NULL, 'Lease acquired', 'child-owner', NULL, ?)`,
-    ).run(slotStartedAt, slotStartedAt, slotStartedAt);
+    const slotStartedAt = seedZeroDurationDeployInterruptedCase(sqlite, nowSec, {
+      firstSeenAt: nowSec - 3_600 + 5,
+      activatedAt: nowSec - 3_600 - 60,
+    });
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
@@ -464,130 +488,35 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       `SELECT status, error
          FROM cron_runs
         WHERE job = 'sync-cl-exit-depth'`,
-    ).get()).toEqual({
-      status: "error",
-      error: "scheduled slot heartbeat stale; child job progress abandoned",
-    });
-    expect(sqlite.prepare(
-      `SELECT outcome, error
-         FROM worker_producer_history
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get()).toEqual({
-      outcome: "abandoned",
-      error: "scheduled slot heartbeat stale; child job progress abandoned",
-    });
+    ).get()).toEqual({ status: "skipped_neutral", error: null });
     const runRow = sqlite.prepare(
       `SELECT metadata
          FROM cron_runs
         WHERE job = 'sync-cl-exit-depth'`,
     ).get() as { metadata: string } | undefined;
     expect(JSON.parse(String(runRow?.metadata ?? "{}"))).toMatchObject({
-      failureCategory: "platform-abandoned",
-      childDisposition: "abandoned",
-      interruptedByWorkerVersionChange: false,
-    });
-    sqlite.close();
-  });
-
-  it("classifies a zero-duration stale child as neutral when its slot heartbeat stopped with it before a deploy", async () => {
-    const { sqlite, db } = createMigratedDb();
-    const nowSec = 1_772_004_000;
-    const slotStartedAt = nowSec - 3_600;
-    sqlite.prepare(
-      `INSERT INTO cron_slot_executions (
-       slot_key, slot_started_at, state, result_status, execution_owner,
-       started_at, finished_at, updated_at, metadata, execution_generation,
-       invocation_id, worker_version
-     ) VALUES ('halfHourlyMeasuredExecution', ?, 'running', NULL, 'slot-owner', ?, NULL, ?, NULL, 1,
-               'old-invocation', 'worker-old')`,
-    ).run(slotStartedAt, slotStartedAt, slotStartedAt);
-    sqlite.prepare(
-      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
-       VALUES ('sync-cl-exit-depth', 'child-owner', ?, ?, ?)`,
-    ).run(nowSec - 60, nowSec - 1_800, nowSec - 1_800);
-    sqlite.prepare(
-      `INSERT INTO cache (key, value, updated_at)
-       VALUES ('worker-version-first-seen:worker-new', '{}', ?)`,
-    ).run(slotStartedAt + 5);
-    sqlite.prepare(
-      `INSERT INTO cron_run_progress (
-       job, started_at, updated_at, stage, items_done, items_total,
-       message, lease_owner, metadata, slot_started_at
-     ) VALUES ('sync-cl-exit-depth', ?, ?, 'lease-acquired', 0, NULL, 'Lease acquired', 'child-owner', NULL, ?)`,
-    ).run(slotStartedAt, slotStartedAt, slotStartedAt);
-
-    const summary = await sweepStaleScheduledSlotExecutions(db, {
-      nowSec,
-      staleAfterSec: 1_200,
-      slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: "worker-new",
-    });
-
-    expect(summary).toMatchObject({
-      slotsReconciled: 1,
-      syntheticCronRuns: 1,
-      progressRowsCleared: 1,
-      leasesCleared: 1,
-    });
-    expect(sqlite.prepare(
-      `SELECT status, error
-         FROM cron_runs
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get()).toEqual({ status: "skipped_neutral", error: null });
-    expect(sqlite.prepare(
-      `SELECT outcome, error, productive
-         FROM worker_producer_history
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get()).toEqual({ outcome: "skipped_neutral", error: null, productive: 0 });
-    const runRow = sqlite.prepare(
-      `SELECT metadata
-         FROM cron_runs
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get() as { metadata: string } | undefined;
-    const metadata = JSON.parse(String(runRow?.metadata ?? "{}")) as Record<string, unknown>;
-    expect(metadata).toMatchObject({
       failureCategory: "platform-interrupted",
       childDisposition: "interrupted-by-deploy",
       interruptedByWorkerVersionChange: true,
-      activeDurationMs: 0,
-      slotWorkerVersion: "worker-old",
-      reconciledByWorkerVersion: "worker-new",
       reconciledByWorkerVersionFirstSeenAt: slotStartedAt + 5,
+      reconciledByWorkerVersionActivatedAt: slotStartedAt - 60,
     });
     sqlite.close();
   });
 
   it.each([
-    ["was first seen five minutes after the joint death", 5 * 60],
-    ["has no first-seen row", null],
-  ])("keeps a joint slot and child death abandoned when the reconciler version %s", async (_reason, firstSeenDelaySec) => {
+    ["has an activation marker 45 seconds after the child death", 45, 5],
+    ["dies after the 120-second isolate-drain window", -121, 5],
+    ["has only the diagnostic first-seen marker", null, 5],
+    ["has neither marker", null, null],
+  ] as const)("keeps a correlated zero-duration child abandoned when it %s", async (_reason, activationDelaySec, firstSeenDelaySec) => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
     const slotStartedAt = nowSec - 3_600;
-    sqlite.prepare(
-      `INSERT INTO cron_slot_executions (
-       slot_key, slot_started_at, state, result_status, execution_owner,
-       started_at, finished_at, updated_at, metadata, execution_generation,
-       invocation_id, worker_version
-     ) VALUES ('halfHourlyMeasuredExecution', ?, 'running', NULL, 'slot-owner', ?, NULL, ?, NULL, 1,
-               'old-invocation', 'worker-old')`,
-    ).run(slotStartedAt, slotStartedAt, slotStartedAt);
-    sqlite.prepare(
-      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
-       VALUES ('sync-cl-exit-depth', 'child-owner', ?, ?, ?)`,
-    ).run(nowSec - 60, nowSec - 1_800, nowSec - 1_800);
-    sqlite.prepare(
-      `INSERT INTO cron_run_progress (
-       job, started_at, updated_at, stage, items_done, items_total,
-       message, lease_owner, metadata, slot_started_at
-     ) VALUES ('sync-cl-exit-depth', ?, ?, 'lease-acquired', 0, NULL, 'Lease acquired', 'child-owner', NULL, ?)`,
-    ).run(slotStartedAt, slotStartedAt, slotStartedAt);
-    if (firstSeenDelaySec != null) {
-      sqlite.prepare(
-        `INSERT INTO cache (key, value, updated_at)
-         VALUES ('worker-version-first-seen:worker-new', '{}', ?)`,
-      ).run(slotStartedAt + firstSeenDelaySec);
-    }
+    seedZeroDurationDeployInterruptedCase(sqlite, nowSec, {
+      firstSeenAt: firstSeenDelaySec == null ? null : slotStartedAt + firstSeenDelaySec,
+      activatedAt: activationDelaySec == null ? null : slotStartedAt + activationDelaySec,
+    });
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
@@ -616,6 +545,8 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       interruptedByWorkerVersionChange: false,
       reconciledByWorkerVersionFirstSeenAt:
         firstSeenDelaySec == null ? null : slotStartedAt + firstSeenDelaySec,
+      reconciledByWorkerVersionActivatedAt:
+        activationDelaySec == null ? null : slotStartedAt + activationDelaySec,
     });
     sqlite.close();
   });

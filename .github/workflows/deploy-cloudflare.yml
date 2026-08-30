@@ -105,13 +105,20 @@ jobs:
           cd worker
           && npx --no-install wrangler deploy --strict
           --message "GitHub Actions deploy ${GITHUB_SHA}"
-      - name: Verify active Worker deployment
+      - id: verify-worker-deployment
+        name: Verify active Worker deployment
         run: |
           status_file="${RUNNER_TEMP}/worker-deployment-status.json"
+          deployments_file="${RUNNER_TEMP}/worker-deployments.json"
+          deployment_history_available=true
           (cd worker && npx --no-install wrangler deployments status --json) > "${status_file}"
+          if ! (cd worker && npx --no-install wrangler deployments list --json) > "${deployments_file}"; then
+            deployment_history_available=false
+            echo "::warning::Cloudflare deployment history was unavailable; the activation marker will be skipped."
+          fi
 
-          DEPLOYMENT_STATUS_FILE="${status_file}" node <<'NODE'
-          const { readFileSync } = require("node:fs");
+          DEPLOYMENT_HISTORY_AVAILABLE="${deployment_history_available}" DEPLOYMENT_STATUS_FILE="${status_file}" DEPLOYMENTS_FILE="${deployments_file}" node <<'NODE'
+          const { appendFileSync, readFileSync } = require("node:fs");
           const deployment = JSON.parse(readFileSync(process.env.DEPLOYMENT_STATUS_FILE, "utf8"));
           const versions = Array.isArray(deployment.versions) ? deployment.versions : [];
           const message = deployment.annotations?.["workers/message"] ?? "";
@@ -132,10 +139,60 @@ jobs:
             );
           }
 
+          let deployments = [];
+          if (process.env.DEPLOYMENT_HISTORY_AVAILABLE === "true") {
+            try {
+              const parsed = JSON.parse(readFileSync(process.env.DEPLOYMENTS_FILE, "utf8"));
+              deployments = Array.isArray(parsed) ? parsed : [];
+            } catch {
+              console.log("::warning::Cloudflare deployment history JSON was unavailable; the activation marker will be skipped.");
+            }
+          }
+          const listedDeployment = deployments.find((candidate) => candidate?.id === deployment.id);
+          const listedVersions = Array.isArray(listedDeployment?.versions) ? listedDeployment.versions : [];
+          const listedVersionMatches = listedVersions.some(
+            (candidate) => candidate?.version_id === version.version_id,
+          );
+          const activationAtMs = typeof listedDeployment?.created_on === "string"
+            ? Date.parse(listedDeployment.created_on)
+            : Number.NaN;
+          const activationAtSec = Number.isFinite(activationAtMs) && listedVersionMatches
+            ? Math.floor(activationAtMs / 1000)
+            : null;
+
           console.log(
             `[worker-deployment] OK deployment=${deployment.id} version=${version.version_id} traffic=100%`,
           );
+          appendFileSync(process.env.GITHUB_OUTPUT, `worker_version=${version.version_id}\n`);
+          if (Number.isSafeInteger(activationAtSec) && activationAtSec > 0) {
+            appendFileSync(process.env.GITHUB_OUTPUT, `worker_activation_at=${activationAtSec}\n`);
+            console.log(
+              `[worker-deployment] Cloudflare activation created_on=${listedDeployment.created_on} epoch=${activationAtSec}`,
+            );
+          } else {
+            console.log(
+              `::warning::Cloudflare deployment ${deployment.id} had no valid matching created_on; the activation marker will be skipped.`,
+            );
+          }
           NODE
+      - name: Record Worker activation marker
+        env:
+          WORKER_ACTIVATED_AT: ${{ steps.verify-worker-deployment.outputs.worker_activation_at }}
+          WORKER_VERSION: ${{ steps.verify-worker-deployment.outputs.worker_version }}
+        run: |
+          if [[ ! "${WORKER_VERSION}" =~ ^[A-Za-z0-9._:-]+$ ]]; then
+            echo "::warning::Skipping Worker activation marker: invalid verified version identity."
+            exit 0
+          fi
+          if [[ ! "${WORKER_ACTIVATED_AT}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::warning::Skipping Worker activation marker: Cloudflare created_on timestamp is unavailable."
+            exit 0
+          fi
+
+          marker_sql="INSERT INTO cache (key, value, updated_at) VALUES ('worker-version-activated:${WORKER_VERSION}', json_object('workerVersion', '${WORKER_VERSION}', 'activatedAt', ${WORKER_ACTIVATED_AT}, 'source', 'cloudflare-deployment.created_on'), ${WORKER_ACTIVATED_AT}) ON CONFLICT(key) DO NOTHING"
+          if ! (cd worker && npx --no-install wrangler d1 execute stablecoin-db --remote --command "${marker_sql}"); then
+            echo "::warning::Worker activation marker write failed for ${WORKER_VERSION}; deploy remains successful and classification will fail closed."
+          fi
       - name: Summarize Worker release
         if: always()
         run: |

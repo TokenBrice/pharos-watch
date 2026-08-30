@@ -84,6 +84,27 @@ describe("CI workflow scope", () => {
     expect(migrationStep).toBeGreaterThan(packageStep);
   });
 
+  it("timestamps the Worker activation marker from Cloudflare deployment history", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as {
+      jobs: Record<string, {
+        steps?: Array<{ id?: string; name?: string; env?: Record<string, string>; run?: string }>;
+      }>;
+    };
+    const steps = workflow.jobs["deploy-worker"].steps ?? [];
+    const verify = steps.find((step) => step.id === "verify-worker-deployment");
+    const marker = steps.find((step) => step.name === "Record Worker activation marker");
+
+    expect(verify?.run).toContain("wrangler deployments list --json");
+    expect(verify?.run).toContain("listedDeployment.created_on");
+    expect(verify?.run).toContain("worker_activation_at=${activationAtSec}");
+    expect(marker?.env?.WORKER_ACTIVATED_AT).toBe(
+      "${{ steps.verify-worker-deployment.outputs.worker_activation_at }}",
+    );
+    expect(marker?.run).toContain("cloudflare-deployment.created_on");
+    expect(marker?.run).toContain("ON CONFLICT(key) DO NOTHING");
+    expect(marker?.run).not.toContain("unixepoch()");
+  });
+
   it("records read-only post-deploy acceptance for successfully deployed surfaces", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as {
       jobs: Record<string, {

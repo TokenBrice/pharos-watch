@@ -5,7 +5,7 @@ Triggered by synthetic `cron_runs` rows written by `worker/src/lib/scheduled-slo
 - `scheduled slot abandoned before child job started`
 - `scheduled slot heartbeat stale; child job progress abandoned`
 
-Both carry `metadata.reason = "stale-slot-reconciled"` and `metadata.failureCategory = "platform-abandoned"`.
+Ordinary stale-child rows carry `metadata.reason = "stale-slot-reconciled"` and `metadata.failureCategory = "platform-abandoned"`. A zero-duration child can instead be recorded as `status = "skipped_neutral"` with `metadata.failureCategory = "platform-interrupted"` only when correlated slot/child death, version drift, and the CI-owned `worker-version-activated:<version>` marker all satisfy the bounded activation window. The scheduled `worker-version-first-seen:<version>` marker is diagnostic only and cannot produce the neutral classification by itself.
 
 Also triggered by a `degraded` run of `cron-duration-watchdog` (`worker/src/cron/cron-duration-watchdog.ts`), which reads the last 7 days and names what tripped it in `metadata.breaching` — split into `runtimeBreaching` (job names) and `slotAbandonmentBreaching` (schedule keys). Any one of these is enough:
 
@@ -24,7 +24,7 @@ Loss concentrates on the **tail of a serial job chain**. Chains are defined in `
 
 ## First checks
 
-1. **Is it a deploy eviction or an in-place kill?** Compare `metadata.slotWorkerVersion` with `metadata.reconciledByWorkerVersion`. Different versions mean the isolate was evicted by a deploy and the event is expected and self-limiting. **Equal versions mean an in-place kill** (CPU class, memory, or a D1 stall) and needs the checks below.
+1. **Is it an evidenced deploy interruption or an in-place kill?** Compare `metadata.slotWorkerVersion` with `metadata.reconciledByWorkerVersion`, then verify the child death is no earlier than 15 seconds before and no later than 120 seconds after `metadata.reconciledByWorkerVersionActivatedAt`. Different versions are necessary but not sufficient: a missing or out-of-window activation marker remains an abandoned error. **Equal versions or missing activation evidence** means the event needs the checks below (CPU class, memory, or a D1 stall).
 
    ```bash
    npx --no-install wrangler d1 execute stablecoin-db --remote --command \
