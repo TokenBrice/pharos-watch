@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { KVNamespace } from "@cloudflare/workers-types";
+import type { KVNamespace } from "@shared/types/cloudflare-runtime";
 import type { SafetyMapContext } from "../lib/safety-map";
 import { makeKV } from "./helpers/mock-kv";
 import { onRequest } from "../safety-scores/map.json.ts";

@@ -1,4 +1,4 @@
-import type { D1Database } from "@cloudflare/workers-types";
+import type { D1Database } from "@shared/types/cloudflare-runtime";
 import {
   REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
   REQUEST_ATTRIBUTION_RETENTION_DAYS,
