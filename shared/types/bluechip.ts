@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { BluechipGrade } from "./core";
 import { BluechipGradeSchema } from "./core";
 
 export const BluechipSmidgeSchema = z.object({

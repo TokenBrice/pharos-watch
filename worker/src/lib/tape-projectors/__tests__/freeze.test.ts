@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { projectFreezeBlocked } from "../freeze";
 import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds } from "./test-support";
 

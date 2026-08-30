@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
-import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { projectDepegOpened, projectDepegResolved } from "../depeg";
 import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds } from "./test-support";
 

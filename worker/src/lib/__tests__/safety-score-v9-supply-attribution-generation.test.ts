@@ -381,6 +381,12 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     expect(generation.observedAssetIds).toEqual(["xaut-tether"]);
   });
 
+  it("rejects malformed serialized generation cache values", () => {
+    expect(() =>
+      parseSafetyScoreV9SupplyAttributionGeneration("{"),
+    ).toThrow("Malformed supply attribution generation cache");
+  });
+
   it("re-derives accepted raw observations against the current aggregate", () => {
     const applied = applySafetyScoreV9SupplyAttributionGeneration(
       fixtures.target,

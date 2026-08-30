@@ -154,7 +154,6 @@ const YEARN_V3_TOTAL_IDLE_SELECTOR = "0x9aa7df94";
 const YEARN_V3_GET_DEFAULT_QUEUE_SELECTOR = "0xa9bbf1cc";
 const YEARN_V3_STRATEGIES_SELECTOR = "0x39ebf823";
 const YEARN_V3_MAX_REDEEM_SELECTOR = "0xd905777e";
-const YEARN_V3_IS_SHUTDOWN_SELECTOR = "0xbf86d690";
 const MAX_YEARN_V3_QUEUE_LENGTH = 10;
 // K3 sBOLD calcFragments() -> (totalBold, boldAmount, collValue, collInBold).
 // Word index 1 (boldAmount) is the compounded BOLD across the vault's Liquity V2

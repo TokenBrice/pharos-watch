@@ -25,7 +25,6 @@ import {
   projectBlacklistable,
   projectMintAuthority,
   sortScreenerRows,
-  type ScreenerFilters,
   type ScreenerRow,
   type ScreenerSortKey,
 } from "@/lib/screener-filters";

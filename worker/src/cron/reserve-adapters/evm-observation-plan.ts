@@ -1,11 +1,13 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
-import type { Abi, AbiStateMutability } from "abitype";
 import type {
-  ContractFunctionArgs,
-  ContractFunctionName,
-  ContractFunctionReturnType,
-} from "viem";
+  Abi,
+  AbiFunction,
+  AbiParametersToPrimitiveTypes,
+  AbiStateMutability,
+  ExtractAbiFunction,
+  ExtractAbiFunctionNames,
+} from "abitype";
 import { decodeFunctionResult, encodeFunctionData } from "viem/utils";
 import type { EvmRpcOptions } from "../../lib/evm-rpc";
 import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
@@ -181,7 +183,60 @@ type AbiObservationValue<
   AbiType extends Abi | readonly unknown[],
   FunctionName extends ContractFunctionName<AbiType>,
   Args extends ContractFunctionArgs<AbiType, AbiStateMutability, FunctionName>,
-> = ContractFunctionReturnType<AbiType, AbiStateMutability, FunctionName, Args>;
+> = AbiType extends Abi
+  ? Abi extends AbiType
+    ? unknown
+    : AbiParametersToPrimitiveTypes<
+        AbiFunctionForArgs<AbiType, FunctionName, Args>["outputs"],
+        "outputs",
+        true
+      > extends infer Types
+      ? Types extends readonly []
+        ? void
+        : Types extends readonly [infer Type]
+          ? Type
+          : Types
+      : unknown
+  : unknown;
+
+type AbiFunctionForArgs<
+  AbiType extends Abi | readonly unknown[],
+  FunctionName extends ContractFunctionName<AbiType>,
+  Args extends ContractFunctionArgs<AbiType, AbiStateMutability, FunctionName>,
+> = ExtractAbiFunction<AbiType extends Abi ? AbiType : Abi, FunctionName, AbiStateMutability> extends infer Function
+  ? Function extends AbiFunction
+    ? (readonly [] extends Args ? readonly [] : Args) extends AbiParametersToPrimitiveTypes<
+        Function["inputs"],
+        "inputs",
+        true
+      >
+      ? Function
+      : never
+    : never
+  : never;
+
+type ContractFunctionName<
+  AbiType extends Abi | readonly unknown[],
+  Mutability extends AbiStateMutability = AbiStateMutability,
+> = ExtractAbiFunctionNames<AbiType extends Abi ? AbiType : Abi, Mutability> extends infer FunctionName extends string
+  ? [FunctionName] extends [never]
+    ? string
+    : FunctionName
+  : string;
+
+type ContractFunctionArgs<
+  AbiType extends Abi | readonly unknown[],
+  Mutability extends AbiStateMutability,
+  FunctionName extends ContractFunctionName<AbiType, Mutability>,
+> = AbiParametersToPrimitiveTypes<
+  ExtractAbiFunction<AbiType extends Abi ? AbiType : Abi, FunctionName, Mutability>["inputs"],
+  "inputs",
+  true
+> extends infer Args
+  ? [Args] extends [never]
+    ? readonly unknown[]
+    : Args
+  : readonly unknown[];
 
 export function abiObservation<
   const Label extends string,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   cacheControlForDegradedPayload,
   errorResponse,
+  jsonFreshDegradedResponse,
   jsonFreshResponse,
   jsonResponse,
   jsonResponseWithHeaders,
@@ -113,6 +114,23 @@ describe("cacheControlForDegradedPayload", () => {
   it("switches degraded payloads to no-store", () => {
     expect(cacheControlForDegradedPayload({ _meta: { degraded: false } })).toBe("public, s-maxage=300, max-age=60");
     expect(cacheControlForDegradedPayload({ _meta: { degraded: true } })).toBe("no-store");
+  });
+});
+
+describe("jsonFreshDegradedResponse", () => {
+  it.each([
+    { degraded: false, cacheControl: "public, s-maxage=300, max-age=60" },
+    { degraded: true, cacheControl: "no-store" },
+  ])("returns freshness headers with $cacheControl caching", async ({ degraded, cacheControl }) => {
+    const updatedAt = Math.floor(Date.now() / 1_000) - 5;
+    const payload = { ok: true, _meta: { degraded } };
+
+    const res = jsonFreshDegradedResponse(payload, updatedAt, 60);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe(cacheControl);
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(0);
+    await expect(res.json()).resolves.toEqual(payload);
   });
 });
 

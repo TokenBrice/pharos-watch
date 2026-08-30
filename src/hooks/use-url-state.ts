@@ -8,19 +8,21 @@ type UseUrlStateOptions<T> = { enabled?: boolean; clear?: "schema" | { key: keyo
 
 export function useUrlState<T>(schema: UrlStateSchema<T>, options?: UseUrlStateOptions<T>) {
   const { searchParams, replaceParams } = useUrlFilters();
-  const clearKey = typeof options?.clear === "object" ? options.clear.key : null;
-  const state = useMemo(() => options?.enabled === false
-    ? options.fallback ?? decodeState("", schema)
-    : decodeState(searchParams, schema), [options?.enabled, options?.fallback, schema, searchParams]);
+  const enabled = options?.enabled;
+  const fallback = options?.fallback;
+  const clear = options?.clear;
+  const state = useMemo(() => enabled === false
+    ? fallback ?? decodeState("", schema)
+    : decodeState(searchParams, schema), [enabled, fallback, schema, searchParams]);
   const replaceState = useCallback(
     (next: T) => {
       replaceParams((params) => replaceEncodedUrlState(
         params, encodeState(next, schema),
-        clearKey === null
+        typeof clear !== "object"
           ? { clear: "all", schemaKeys: Object.keys(schema) }
-          : { clear: "key", key: clearKey },
+          : { clear: "key", key: clear.key },
       ));
-    }, [clearKey, replaceParams, schema],
+    }, [clear, replaceParams, schema],
   );
   const patchState = useCallback(
     (patch: Partial<T>) => replaceState({ ...state, ...patch }), [replaceState, state],

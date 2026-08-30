@@ -381,7 +381,7 @@ function mechanismContext(asset: V9AssetFactsV3, componentKey: string): unknown 
   return { reviewStatus: asset.mechanismRiskReview.status, componentKey: match?.[0] ?? requested, component: match?.[1] ?? null };
 }
 
-function contextForPath(descriptor: WorkTypeDescriptor, path: GapPath): WorkTypeDescriptor["context"] {
+function contextForPath(path: GapPath): WorkTypeDescriptor["context"] {
   if (path.kind === "collateral-exposure") return (asset) => asset.reserveExposures.find((row) => row.exposureKey === path.exposureKey) ?? null;
   if (path.kind === "optional-exit") return (asset) => asset.exitRoutes.find((row) => row.routeKey === path.routeKey) ?? null;
   if (path.kind === "deployment-control") return (asset) => asset.controls.find((row) => row.controlKey === path.controlKey) ?? null;
@@ -416,7 +416,7 @@ export function descriptorForReason(reason: string, path?: GapPath): WorkTypeDes
     if (path.componentKey.startsWith("access:")) descriptor = V9_MISSING_DATA_WORK_TYPES.ACCESS_REVIEW;
   }
   if (!descriptor) throw new Error(`Missing agent work-type definition for ${reason} at ${JSON.stringify(path)}`);
-  return path ? { ...descriptor, context: contextForPath(descriptor, path) } : descriptor;
+  return path ? { ...descriptor, context: contextForPath(path) } : descriptor;
 }
 
 export function workTypeForDescriptor(descriptor: WorkTypeDescriptor): WorkType {

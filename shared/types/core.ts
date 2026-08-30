@@ -281,10 +281,8 @@ export const MINT_AUTHORITY_RECONCILIATION_VALUES = [
   "not-applicable",
   "unknown",
 ] as const;
-export type MintAuthorityReconciliation = (typeof MINT_AUTHORITY_RECONCILIATION_VALUES)[number];
 
 export const MINT_AUTHORITY_SUPERVISION_VALUES = ["prudential", "attestation-only", "none", "unknown"] as const;
-export type MintAuthoritySupervision = (typeof MINT_AUTHORITY_SUPERVISION_VALUES)[number];
 
 export const MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES = [
   "none-detected",

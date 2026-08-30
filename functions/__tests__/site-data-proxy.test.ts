@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeTestD1Database } from "@shared/test-utils/mock-d1";
 import { onRequest } from "../_site-data/[[path]].ts";
+import * as requestAttribution from "../lib/request-attribution";
 import { resetSiteDataRequestAttributionStateForTests } from "../lib/request-attribution";
 import { MAX_PROXY_RESPONSE_BODY_BYTES } from "../lib/upstream-proxy";
 import {
@@ -507,6 +508,27 @@ describe("site-data proxy", () => {
         ),
     ).toBe(true);
     expect(warn).toHaveBeenCalledWith("[site-data-proxy] upstream fetch failed (Error): network down");
+  });
+
+  it("keeps the upstream response when site-data attribution recording fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const record = vi.spyOn(requestAttribution, "recordSiteDataRequest")
+      .mockRejectedValueOnce(new Error("attribution unavailable"));
+    installSiteDataFetch("/api/stablecoins", { ok: true });
+
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      })),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(record).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledWith(
+      "[site-data-proxy] Failed to record site-data attribution:",
+      expect.any(Error),
+    );
   });
 
   it("times out when headers arrive but the upstream body stalls", async () => {

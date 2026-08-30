@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   DependencyTypeSchema,
   V9DependencyEconomicRoleSchema,
-  type V9DependencyEconomicRole,
 } from "./dependency-types";
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
 import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema } from "./safety-score-v9-backing";

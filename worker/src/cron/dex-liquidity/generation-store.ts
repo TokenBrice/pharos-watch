@@ -111,6 +111,8 @@ export function createDexGenerationStore<ChildRowsKey extends string = "deletedC
      FROM ${spec.manifestTable}
      WHERE ${candidateWhere("", spec.prune.childExtraWhere)}
      ORDER BY ${spec.prune.childOrderBy} LIMIT ?`;
+      // SAFETY: spec.childTable/manifestTable/columns are closed literal unions from
+      // DexGenerationStoreSpec; callers cannot supply arbitrary SQL identifiers.
       const childRows = await runWithOverloadRetry(
         () => db.prepare(
           `DELETE FROM ${spec.childTable}
@@ -127,6 +129,8 @@ export function createDexGenerationStore<ChildRowsKey extends string = "deletedC
      WHERE ${candidateWhere("candidate", spec.prune.manifestExtraWhere?.("candidate"))}
      ORDER BY ${spec.prune.manifestOrderBy}
      LIMIT ?`;
+      // SAFETY: spec.manifestTable and column names are closed literal unions from
+      // DexGenerationStoreSpec; callers cannot supply arbitrary SQL identifiers.
       const manifestRows = await runWithOverloadRetry(
         () => db.prepare(
           `DELETE FROM ${spec.manifestTable}
@@ -148,6 +152,8 @@ export function createDexGenerationStore<ChildRowsKey extends string = "deletedC
                WHERE row.${spec.columns.generationId} = ${qualifiedColumn(oldestAlias, spec.columns.generationId)}
             )`
         : "";
+      // SAFETY: oldestTable/oldestColumn derive solely from DexGenerationStoreSpec's
+      // closed literal-union identifiers and a fixed alias; no caller-supplied SQL.
       const oldest = await runWithOverloadRetry(
         () => db
           .prepare(`SELECT MIN(${oldestColumn}) AS oldest_remaining_at FROM ${oldestTable}${oldestWhere}`)

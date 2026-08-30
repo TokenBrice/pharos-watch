@@ -11,6 +11,7 @@ import {
   completeTelegramAlertSourceEvent,
   expireTelegramAlertSourceEvent,
   loadOldestIncompleteTelegramAlertSourceEvent,
+  loadTelegramSourcePresetSubscribersForChats,
   loadTelegramAlertSourceEvent,
   persistTelegramAlertSourceEvent,
   resolveTelegramAlertSourcePresetPages,
@@ -189,6 +190,39 @@ describe("Telegram alert source-event resolution", () => {
     expect(reconciled.baseline.safety?.safetyScoreIdentity).toEqual(V9_IDENTITY);
   });
 
+  it("keeps queued safety work when source and current identities are comparable", async () => {
+    const source = await buildTelegramAlertSourceEvent({
+      events: {
+        ...events(),
+        safetyChanges: [{
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          oldGrade: "B",
+          newGrade: "A",
+          oldScore: 78,
+          newScore: 91,
+        }],
+        safetyIds: ["usdc-circle"],
+        safetyScoreIdentity: V9_IDENTITY,
+      },
+      baseline: {
+        ...baseline(),
+        safety: {
+          generation: "safety-v9-candidate-v9.0-alert-source-v1",
+          safetyScoreIdentity: V9_IDENTITY,
+          snapshot: {},
+        },
+      },
+      detectedAt: NOW,
+    });
+
+    expect(suppressIncomparableTelegramSafetySourceEvent(source, {
+      generation: "safety-v9-candidate-v9.0-alert-source-v1",
+      safetyScoreIdentity: V9_IDENTITY,
+      snapshot: {},
+    })).toBe(source);
+  });
+
   it("rejects newly persisted safety events without model provenance", async () => {
     await expect(buildTelegramAlertSourceEvent({
       events: {
@@ -206,6 +240,43 @@ describe("Telegram alert source-event resolution", () => {
       baseline: baseline(),
       detectedAt: NOW,
     })).rejects.toThrow("exact Safety Score identity");
+  });
+
+  it.each([
+    {
+      field: "event_payload",
+      value: JSON.stringify({ ...events(), dewsIds: "not-an-array" }),
+      message: "invalid event array",
+    },
+    {
+      field: "event_payload",
+      value: JSON.stringify({ ...events(), suppressedMethodologyChanges: "unknown" }),
+      message: "invalid methodology metadata",
+    },
+    {
+      field: "event_payload",
+      value: JSON.stringify({ ...events(), safetyScoreIdentity: { model: "v9" } }),
+      message: "invalid safety identity",
+    },
+  ])("rejects persisted source events with $message", async ({ field, value, message }) => {
+    const harness = createHarness();
+    const source = await persistedSource(harness);
+    harness.sqlite.prepare(
+      `UPDATE telegram_alert_source_events SET ${field} = ? WHERE source_event_id = ?`,
+    ).run(value, source.sourceEventId);
+
+    await expect(loadTelegramAlertSourceEvent(harness.db, source.sourceEventId)).rejects.toThrow(message);
+  });
+
+  it("rejects persisted source events with an unsupported schema version", async () => {
+    const harness = createHarness();
+    const source = await persistedSource(harness);
+    harness.sqlite.prepare(
+      "UPDATE telegram_alert_source_events SET schema_version = 99 WHERE source_event_id = ?",
+    ).run(source.sourceEventId);
+
+    await expect(loadTelegramAlertSourceEvent(harness.db, source.sourceEventId))
+      .rejects.toThrow("Unsupported Telegram source event schema version 99");
   });
 
   it("holds the baseline through preset resolution failure and resumes the immutable event", async () => {
@@ -271,6 +342,124 @@ describe("Telegram alert source-event resolution", () => {
       { page_index: 0, status: "complete" },
       { page_index: 1, status: "complete" },
     ]);
+  });
+
+  it("merges duplicate preset followers for one chat using the strictest preference", async () => {
+    const harness = createHarness();
+    insertPresetFollower(harness.sqlite, "duplicate-preset-chat");
+    for (const [presetId, step] of [["usd-top10", null], ["usd-top50", 30], ["mcap-ge-100m", null]] as const) {
+      harness.sqlite.prepare(
+        `INSERT INTO telegram_preset_subscriptions (
+           chat_id, preset_id, alert_dews, depeg_worsening_bps_step, created_at, updated_at
+         ) VALUES (?, ?, 1, ?, ?, ?)`,
+      ).run("duplicate-preset-chat", presetId, step, NOW, NOW);
+    }
+    const source = await persistedSource(harness);
+
+    const resolved = await resolveTelegramAlertSourcePresetPages(harness.db, source, NOW, {
+      getStablecoinsCacheResult: async () => stablecoinsResult(),
+    });
+
+    if (resolved.presetResults.dews.kind !== "ok") throw new Error("expected merged DEWS followers");
+    expect(resolved.presetResults.dews.rows.get("usdc-circle")).toMatchObject([{
+      chat_id: "duplicate-preset-chat",
+      depeg_worsening_bps_step: 30,
+    }]);
+  });
+
+  it("leaves a page pending when membership persistence fails", async () => {
+    const harness = createHarness();
+    insertPresetFollower(harness.sqlite, "membership-persist-failure");
+    const source = await persistedSource(harness);
+    let batchCalls = 0;
+    const failingDb = {
+      ...harness.db,
+      batch: async () => {
+        batchCalls += 1;
+        if (batchCalls <= 3) throw new Error("membership persistence unavailable");
+        return harness.db.batch([]);
+      },
+    } as unknown as D1Database;
+
+    const result = await resolveTelegramAlertSourcePresetPages(failingDb, source, NOW, {
+      getStablecoinsCacheResult: async () => stablecoinsResult(),
+    });
+
+    expect(result).toMatchObject({ allComplete: false, queryFailures: 1, resolutionFailures: 0 });
+    expect(harness.sqlite.prepare(
+      "SELECT status, last_error_class FROM telegram_alert_source_resolution_pages WHERE source_event_id = ?",
+    ).get(source.sourceEventId)).toEqual({ status: "pending", last_error_class: "persistence_failed" });
+  });
+
+  it("reports follower-page query failures without completing the page", async () => {
+    const harness = createHarness();
+    insertPresetFollower(harness.sqlite, "follower-query-failure");
+    const source = await persistedSource(harness);
+    const failingDb = {
+      ...harness.db,
+      prepare: (sql: string) => {
+        if (sql.includes("FROM telegram_preset_subscriptions preset")) {
+          return {
+            bind: () => ({
+              all: async () => { throw new Error("follower query unavailable"); },
+            }),
+          } as unknown as D1PreparedStatement;
+        }
+        return harness.db.prepare(sql);
+      },
+    } as D1Database;
+
+    const result = await resolveTelegramAlertSourcePresetPages(failingDb, source, NOW, {
+      getStablecoinsCacheResult: async () => stablecoinsResult(),
+    });
+
+    expect(result).toMatchObject({ allComplete: false, queryFailures: 1 });
+    expect(harness.sqlite.prepare(
+      "SELECT status, last_error_class FROM telegram_alert_source_resolution_pages WHERE source_event_id = ?",
+    ).get(source.sourceEventId)).toEqual({ status: "pending", last_error_class: "query_failed" });
+  });
+
+  it("loads source-scoped preset followers and reports read failures", async () => {
+    const harness = createHarness();
+    insertPresetFollower(harness.sqlite, "source-scoped-chat");
+    const source = await persistedSource(harness);
+    const resolved = await resolveTelegramAlertSourcePresetPages(harness.db, source, NOW, {
+      getStablecoinsCacheResult: async () => stablecoinsResult(),
+    });
+    expect(resolved.allComplete).toBe(true);
+
+    const loaded = await loadTelegramSourcePresetSubscribersForChats(
+      harness.db,
+      source.sourceEventId,
+      "dews",
+      ["source-scoped-chat"],
+      NOW,
+    );
+    expect(loaded.kind).toBe("ok");
+    if (loaded.kind === "ok") {
+      expect(loaded.rows.get("usdc-circle")?.map((row) => row.chat_id)).toEqual(["source-scoped-chat"]);
+    }
+
+    const failingDb = {
+      ...harness.db,
+      prepare: (sql: string) => {
+        if (sql.includes("FROM telegram_alert_source_resolution_targets target")) {
+          return {
+            bind: () => ({
+              all: async () => { throw new Error("source-scoped read unavailable"); },
+            }),
+          } as unknown as D1PreparedStatement;
+        }
+        return harness.db.prepare(sql);
+      },
+    } as D1Database;
+    await expect(loadTelegramSourcePresetSubscribersForChats(
+      failingDb,
+      source.sourceEventId,
+      "dews",
+      ["source-scoped-chat"],
+      NOW,
+    )).resolves.toMatchObject({ kind: "query-failed" });
   });
 
   it("leaves a page pending after a normalized-target batch fault and safely re-queries it", async () => {
@@ -521,5 +710,15 @@ describe("Telegram alert source-event resolution", () => {
     ).get(source.sourceEventId)).toEqual({ status: "expired", last_error_class: "source_event_expired" });
     expect(harness.sqlite.prepare("SELECT value FROM cache WHERE key = 'alert:dews-snapshot'").get())
       .toEqual({ value: JSON.stringify({ "usdc-circle": "ALERT" }) });
+  });
+
+  it("refuses to complete a source event whose baseline was not committed", async () => {
+    const harness = createHarness();
+    const source = await persistedSource(harness);
+
+    await expect(completeTelegramAlertSourceEvent(harness.db, source.sourceEventId, NOW))
+      .rejects.toThrow("completed before its baseline was committed");
+    expect((await loadTelegramAlertSourceEvent(harness.db, source.sourceEventId))?.status)
+      .toBe("resolving");
   });
 });

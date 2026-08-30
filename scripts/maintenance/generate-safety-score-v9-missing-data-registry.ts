@@ -4,7 +4,6 @@ import { z } from "zod";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
-import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import {
   V9EvidenceGapQueueV2Schema,
   type V9EvidenceGapQueueEntryV2,

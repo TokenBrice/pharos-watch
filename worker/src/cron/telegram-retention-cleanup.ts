@@ -448,6 +448,10 @@ function makeSimpleRetentionDeleteStep(
     timestampColumn: (typeof SIMPLE_RETENTION_COLUMNS)[number];
   },
 ): TelegramRetentionDeleteStep {
+  if (!SIMPLE_RETENTION_TABLES.includes(table)) throw new Error(`Unsupported Telegram retention table: ${table}`);
+  if (!SIMPLE_RETENTION_COLUMNS.includes(timestampColumn)) {
+    throw new Error(`Unsupported Telegram retention timestamp column: ${timestampColumn}`);
+  }
   return {
     name,
     sql: `DELETE FROM ${table} WHERE ${timestampColumn} < ? AND rowid IN (SELECT rowid FROM ${table} WHERE ${timestampColumn} < ? ORDER BY ${timestampColumn} ASC, rowid ASC LIMIT ?)`,
@@ -467,6 +471,10 @@ function makeSourceChildRetentionDeleteStep(
     childPredicate?: (typeof SOURCE_CHILD_RETENTION_PREDICATES)[number];
   },
 ): TelegramRetentionDeleteStep {
+  if (!SOURCE_CHILD_RETENTION_TABLES.includes(table)) throw new Error(`Unsupported Telegram retention table: ${table}`);
+  if (childPredicate && !SOURCE_CHILD_RETENTION_PREDICATES.includes(childPredicate)) {
+    throw new Error(`Unsupported Telegram retention child predicate: ${childPredicate}`);
+  }
   return {
     name,
     sql: `DELETE FROM ${table}
