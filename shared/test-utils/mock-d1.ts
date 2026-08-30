@@ -1,3 +1,5 @@
+import type { D1Database, D1PreparedStatement } from "@shared/types/cloudflare-runtime";
+
 /**
  * Lightweight D1 mock for API contract tests.
  * Returns canned row data based on SQL matching and optional bind matching.

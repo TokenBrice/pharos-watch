@@ -9,12 +9,6 @@ updates:
     open-pull-requests-limit: 3
     rebase-strategy: "disabled"
     ignore:
-      # 5.20260821.1+ injects global Node-compat shims (declare const
-      # Buffer: any, process, setImmediate) that collide with @types/node
-      # in the root typecheck project shared by functions/ and scripts/.
-      # The worker workspace pins its own copy and orders resolution via
-      # tsconfig "types", so only the root copy is held back.
-      - dependency-name: "@cloudflare/workers-types"
       - dependency-name: "eslint"
         update-types:
           - "version-update:semver-major"
@@ -34,6 +28,7 @@ updates:
           - "patch"
   - package-ecosystem: "npm"
     directory: "/worker"
+    # Worker types float freely now that the root carries no copy.
     schedule:
       interval: "weekly"
     cooldown:

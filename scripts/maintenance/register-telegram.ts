@@ -1,5 +1,4 @@
 #!/usr/bin/env tsx
-/// <reference types="@cloudflare/workers-types" />
 /**
  * Manual recovery tool for forcing Telegram Bot API state outside the
  * Worker's 15-minute reconciliation loop. Replaces three shell scripts that

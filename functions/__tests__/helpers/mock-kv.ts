@@ -1,4 +1,4 @@
-import type { KVNamespace, KVNamespaceGetOptions } from "@cloudflare/workers-types";
+import type { KVNamespace, KVNamespaceGetOptions } from "@shared/types/cloudflare-runtime";
 
 export interface RecordedPutCall {
   key: string;

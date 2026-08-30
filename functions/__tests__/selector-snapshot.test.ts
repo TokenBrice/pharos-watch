@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { D1Database, D1PreparedStatement, D1Result, KVNamespace } from "@cloudflare/workers-types";
+import type { D1Database, D1PreparedStatement, D1Result, KVNamespace } from "@shared/types/cloudflare-runtime";
 import { makeKV, type TestKVNamespace } from "./helpers/mock-kv";
 import { makePagesProxyContext } from "./helpers/pages-context";
 import {

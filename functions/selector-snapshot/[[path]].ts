@@ -1,4 +1,4 @@
-import type { D1Database, KVNamespace } from "@cloudflare/workers-types";
+import type { D1Database, KVNamespace } from "@shared/types/cloudflare-runtime";
 import {
   SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES,
   SELECTOR_SNAPSHOT_TTL_SECONDS,

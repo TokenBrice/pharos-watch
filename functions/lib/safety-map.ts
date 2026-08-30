@@ -1,4 +1,4 @@
-import type { KVNamespace } from "@cloudflare/workers-types";
+import type { KVNamespace } from "@shared/types/cloudflare-runtime";
 
 export interface SafetyMapEnv {
   SELECTOR_SNAPSHOTS?: KVNamespace;

@@ -1,4 +1,4 @@
-import type { D1Database } from "@cloudflare/workers-types";
+import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
 import { getConfiguredValue, hasConfiguredValue } from "@shared/lib/env-utils";
 import { SITE_API_ORIGIN as CANONICAL_SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
