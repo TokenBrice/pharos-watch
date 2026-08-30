@@ -10,7 +10,7 @@ import {
   hasWorkerDeployImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mts";
-import { splitNullDelimited } from "../lib/changed-files.mts";
+import { collectGitPaths } from "../lib/changed-files.mts";
 import { CORE_RULES, DEFAULT_BASE_DOCS, PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -775,44 +775,16 @@ function buildWarnings(changedFiles: readonly string[]): string[] {
   return warnings;
 }
 
-function getRepoChangedFiles({
+export function readChangedFiles({
   baseRef,
   execFile = execFileSync as GitExec,
   headRef,
   staged = false,
 }: ChangedFileOptions = {}): string[] {
-  if (baseRef || headRef) {
-    const base = baseRef || "origin/main";
-    const head = headRef || "HEAD";
-    const raw = execFile("git", ["diff", "--name-only", "-z", `${base}...${head}`], {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-    });
-    return splitNullDelimited(raw);
-  }
-
-  if (staged) {
-    const raw = execFile("git", ["diff", "--name-only", "--cached", "-z"], { cwd: REPO_ROOT, encoding: "utf8" });
-    return splitNullDelimited(raw);
-  }
-
-  const trackedRaw = execFile("git", ["diff", "--name-only", "-z", "HEAD", "--"], {
-    cwd: REPO_ROOT,
-    encoding: "utf8",
-  });
-  const untrackedRaw = execFile("git", ["ls-files", "--others", "--exclude-standard", "-z"], {
-    cwd: REPO_ROOT,
-    encoding: "utf8",
-  });
-  return [...splitNullDelimited(trackedRaw), ...splitNullDelimited(untrackedRaw)];
-}
-
-export function readChangedFiles(options: ChangedFileOptions = {}): string[] {
-  try {
-    return normalizeChangedFiles(getRepoChangedFiles(options));
-  } catch {
-    return [];
-  }
+  const mode = baseRef || headRef
+    ? { kind: "range" as const, base: baseRef || "origin/main", head: headRef || "HEAD" }
+    : staged ? { kind: "staged" as const } : { kind: "working" as const, includeUntracked: true };
+  return normalizeChangedFiles(collectGitPaths(mode, { cwd: REPO_ROOT, failure: "empty", execFile }));
 }
 
 function formatBullets(values: readonly string[], { limit = 8 }: { limit?: number } = {}): string {

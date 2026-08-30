@@ -7,24 +7,19 @@ import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { CopyButton } from "@/components/copy-button";
 import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
+import { LaunchDriftBadge, LaunchMilestoneBadge, LaunchPhaseBadge } from "@/components/pre-launch-badge";
 import { TermText } from "@/components/term-text";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { clampScore } from "@shared/lib/math";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import {
-  LAUNCH_PHASE_LABELS,
-  PHASE_BADGE,
-  MILESTONE_TYPE_LABELS,
-  MILESTONE_TYPE_BADGE,
-  DRIFT_STATUS_BADGE,
-  DRIFT_STATUS_LABEL,
   getDriftStatus,
   formatFuzzyDate,
   parseFuzzyDate,
   dateScore,
 } from "@/lib/pre-launch";
-import type { StablecoinMeta, LaunchPhase, LaunchMilestone, FeaturedContent } from "@shared/types";
+import type { StablecoinMeta, LaunchMilestone, FeaturedContent } from "@shared/types";
 import { formatLongDate } from "@shared/lib/format";
 
 // ---------------------------------------------------------------------------
@@ -74,16 +69,6 @@ function formatSummaryUpdatedAt(updatedAt: string): string {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-function LaunchPhaseBadge({ phase }: { phase: LaunchPhase }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PHASE_BADGE[phase]}`}
-    >
-      {LAUNCH_PHASE_LABELS[phase]}
-    </span>
-  );
-}
 
 function TimelineBar({ announcedDate, expectedLaunchDate }: { announcedDate: string; expectedLaunchDate: string }) {
   const start = parseFuzzyDate(announcedDate);
@@ -163,11 +148,7 @@ function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
             <div className="min-w-0 flex-1 pb-4">
               <div className="flex flex-wrap items-baseline gap-2">
                 <span className="pharos-numeric text-xs text-muted-foreground">{dateDisplay}</span>
-                <span
-                  className={`inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none ${MILESTONE_TYPE_BADGE[m.type]}`}
-                >
-                  {MILESTONE_TYPE_LABELS[m.type]}
-                </span>
+                <LaunchMilestoneBadge type={m.type} />
               </div>
               <p className="mt-1 text-sm font-medium text-foreground">{m.title}</p>
               {m.description && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{m.description}</p>}
@@ -297,7 +278,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Pre-launch</span>
           <span className="text-sm text-muted-foreground">Pharos hasn&apos;t ingested data for this one yet.</span>
-          {coin.launchPhase && <LaunchPhaseBadge phase={coin.launchPhase} />}
+          {coin.launchPhase && <LaunchPhaseBadge phase={coin.launchPhase} size="detail" />}
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           Pharos can still tell you how this asset is supposed to work, when it expects to launch, and what sources to
@@ -336,13 +317,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {(() => {
         const drift = getDriftStatus(coin.dateHistory, coin.expectedLaunchDate);
         const hasDrift = coin.dateHistory && coin.dateHistory.length > 0;
-        const driftBadge = hasDrift ? (
-          <span
-            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${DRIFT_STATUS_BADGE[drift]}`}
-          >
-            {DRIFT_STATUS_LABEL[drift]}
-          </span>
-        ) : null;
+        const driftBadge = hasDrift ? <LaunchDriftBadge status={drift} size="detail" /> : null;
         const dateTrail =
           hasDrift && coin.expectedLaunchDate ? (
             <p className="mt-2 text-xs text-muted-foreground/70">

@@ -13,25 +13,44 @@ interface ChangedFileOptions {
   head?: string;
 }
 
-function normalizePath(path: string) {
-  return path.trim().replaceAll("\\", "/").replace(/^\.\//, "");
-}
+type GitPathMode =
+  | { kind: "range"; base: string; head: string; noRenames?: boolean; diffFilter?: string }
+  | { kind: "staged"; diffFilter?: string }
+  | { kind: "working"; includeUntracked?: boolean; diffFilter?: string };
 
-/**
- * Split NUL-delimited `git ... -z` output into raw path segments.
- *
- * Every git invocation that feeds a path list must pass `-z` and parse with
- * this: newline-splitting silently truncates paths containing a newline (git
- * quotes them without `-z`, which then fails to match any real file) and
- * splits them into two bogus entries.
- *
- * @param {string | Buffer | null | undefined} output
- * @returns {string[]}
- */
 export function splitNullDelimited(output: string | Buffer | null | undefined): string[] {
   return String(output ?? "")
     .split("\0")
     .filter(Boolean);
+}
+
+export function normalizeRepoPaths(paths: Iterable<string>): string[] {
+  return [...paths].map((path) => path.trim().replaceAll("\\", "/").replace(/^\.\//, "")).filter(Boolean);
+}
+
+export function collectGitPaths(
+  mode: GitPathMode,
+  { cwd, failure = "throw", execFile = execFileSync as GitDiffExec }: { cwd?: string; failure?: "throw" | "empty"; execFile?: GitDiffExec } = {},
+): string[] {
+  const options = cwd ? { cwd, encoding: "utf8" as const } : { encoding: "utf8" as const };
+  const diffArgs = ["diff"];
+  if (mode.kind === "staged") diffArgs.push("--cached");
+  diffArgs.push("--name-only");
+  if (mode.kind === "range" && mode.noRenames) diffArgs.push("--no-renames");
+  if (mode.diffFilter) diffArgs.push(`--diff-filter=${mode.diffFilter}`);
+  diffArgs.push("-z");
+  if (mode.kind === "range") diffArgs.push(`${mode.base}...${mode.head}`);
+  if (mode.kind === "working" && mode.includeUntracked) diffArgs.push("HEAD", "--");
+
+  try {
+    const paths = splitNullDelimited(execFile("git", diffArgs, options as { cwd: string; encoding: "utf8" }));
+    if (mode.kind === "working" && mode.includeUntracked)
+      paths.push(...splitNullDelimited(execFile("git", ["ls-files", "--others", "--exclude-standard", "-z"], options as { cwd: string; encoding: "utf8" })));
+    return normalizeRepoPaths(paths);
+  } catch (error) {
+    if (failure === "empty") return [];
+    throw error;
+  }
 }
 
 export function parseChangedFileArgs(argv: readonly string[] = [], env: NodeJS.ProcessEnv = process.env) {
@@ -74,13 +93,10 @@ export function collectChangedFiles({
   execFile = execFileSync as GitDiffExec,
   head = "HEAD",
 }: ChangedFileOptions = {}) {
-  const output = execFile(
-    "git",
-    ["diff", "--name-only", "--diff-filter=ACMR", "-z", `${base}...${head}`],
-    { cwd, encoding: "utf8" },
-  );
-
-  return [...new Set(splitNullDelimited(output).map(normalizePath).filter(Boolean))].sort();
+  return [...new Set(collectGitPaths(
+    { kind: "range", base, head, diffFilter: "ACMR" },
+    { cwd, execFile },
+  ))].sort();
 }
 
 /**
@@ -91,11 +107,8 @@ export function collectStagedFiles({
   cwd = process.cwd(),
   execFile = execFileSync as GitDiffExec,
 }: Pick<ChangedFileOptions, "cwd" | "execFile"> = {}) {
-  const output = execFile(
-    "git",
-    ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
-    { cwd, encoding: "utf8" },
-  );
-
-  return [...new Set(splitNullDelimited(output).map(normalizePath).filter(Boolean))].sort();
+  return [...new Set(collectGitPaths(
+    { kind: "staged", diffFilter: "ACMR" },
+    { cwd, execFile },
+  ))].sort();
 }

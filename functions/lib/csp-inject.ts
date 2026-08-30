@@ -10,6 +10,7 @@ import {
 } from "@shared/lib/site-csp";
 import { NOINDEX_HEADER_VALUE } from "./noindex";
 import { isHtmlResponse } from "./proxy-utils";
+import { cloneResponseWithPolicy } from "./response-policy";
 
 export interface InjectHtmlCspOptions {
   method: string;
@@ -27,22 +28,22 @@ export async function injectHtmlCsp(response: Response, options: InjectHtmlCspOp
   if (!isHtmlResponse(response)) return response;
 
   const nonce = createCspNonce();
-  const headers = new Headers(response.headers);
-  headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce, options.cspOptions));
-  headers.set("Cloudflare-CDN-Cache-Control", "no-store");
-  headers.set("CDN-Cache-Control", "no-store");
-  headers.delete("Content-Length");
-  if (options.cspOptions?.telegramMiniApp) {
-    headers.delete("X-Frame-Options");
-    headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE);
-  }
-  options.mutateHeaders?.(headers);
+  const mutateHeaders = (headers: Headers): void => {
+    headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce, options.cspOptions));
+    headers.set("Cloudflare-CDN-Cache-Control", "no-store");
+    headers.set("CDN-Cache-Control", "no-store");
+    headers.delete("Content-Length");
+    if (options.cspOptions?.telegramMiniApp) {
+      headers.delete("X-Frame-Options");
+      headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE);
+    }
+    options.mutateHeaders?.(headers);
+  };
 
   if (options.method === "HEAD") {
-    return new Response(null, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
+    return cloneResponseWithPolicy(response, {
+      method: options.method,
+      mutateHeaders,
     });
   }
 
@@ -51,11 +52,11 @@ export async function injectHtmlCsp(response: Response, options: InjectHtmlCspOp
   // `response.text()` yields the decoded body, so any inherited upstream
   // Content-Encoding is now stale. Return decoded HTML and let Cloudflare's edge
   // compression handle the final transport encoding for Pages Functions.
-  headers.delete("Content-Encoding");
-
-  return new Response(html, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
+  return cloneResponseWithPolicy(response, {
+    body: html,
+    mutateHeaders: (headers) => {
+      mutateHeaders(headers);
+      headers.delete("Content-Encoding");
+    },
   });
 }

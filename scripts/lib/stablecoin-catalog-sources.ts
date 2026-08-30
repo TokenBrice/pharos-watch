@@ -288,6 +288,20 @@ export function loadStablecoinDomainSidecarEntries(rootDir = process.cwd()): Sta
   });
 }
 
+export function listPerCoinStablecoinSourceFiles(rootDir = process.cwd()): Array<{ id: string; file: string }> {
+  const absoluteDir = resolve(rootDir, PER_COIN_SOURCE_DIR);
+  // Repo-owned catalog helpers only enumerate the checked-in per-coin source directory.
+  if (!existsSync(absoluteDir)) return [];
+
+  return readdirSync(absoluteDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((entry) => ({
+      id: stablecoinIdFromJsonFileName(entry.name),
+      file: `${PER_COIN_SOURCE_DIR}/${entry.name}`,
+    }));
+}
+
 export function loadPerCoinStablecoinEntries(rootDir = process.cwd()): StablecoinSourceEntry[] {
   const absoluteDir = resolve(rootDir, PER_COIN_SOURCE_DIR);
   const sidecars = loadStablecoinDomainSidecarEntries(rootDir);
@@ -303,28 +317,22 @@ export function loadPerCoinStablecoinEntries(rootDir = process.cwd()): Stablecoi
 
   const sidecarsById = groupSidecarsById(sidecars);
 
-  // Repo-owned catalog helpers only enumerate the checked-in per-coin source directory.
-  const baseEntries = readdirSync(absoluteDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((entry) => {
-      const relativePath = `${PER_COIN_SOURCE_DIR}/${entry.name}`;
-      const expectedId = stablecoinIdFromJsonFileName(entry.name);
-      // Every base file uses the permissive source schema first; full catalog
-      // validation runs after its sidecar fields, if any, are merged back in.
-      const coin = parseSingleAsset(relativePath, rootDir);
-      if (coin.id !== expectedId) {
-        throw new Error(
-          `[stablecoin-assets] ${relativePath}: coin id "${coin.id}" must match file id "${expectedId}"`,
-        );
-      }
+  const baseEntries = listPerCoinStablecoinSourceFiles(rootDir).map(({ id: expectedId, file: relativePath }) => {
+    // Every base file uses the permissive source schema first; full catalog
+    // validation runs after its sidecar fields, if any, are merged back in.
+    const coin = parseSingleAsset(relativePath, rootDir);
+    if (coin.id !== expectedId) {
+      throw new Error(
+        `[stablecoin-assets] ${relativePath}: coin id "${coin.id}" must match file id "${expectedId}"`,
+      );
+    }
 
-      return {
-        coin,
-        file: relativePath,
-        id: coin.id,
-      };
-    });
+    return {
+      coin,
+      file: relativePath,
+      id: coin.id,
+    };
+  });
 
   const baseIds = new Set(baseEntries.map((entry) => entry.id));
   for (const sidecar of sidecars) {

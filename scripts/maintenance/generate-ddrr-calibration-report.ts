@@ -28,6 +28,7 @@ import {
   runReportCli,
   toPositiveInt,
 } from "../lib/report-cli";
+import { renderMarkdownRows } from "../lib/markdown-report";
 
 export const DEFAULT_DDRR_CALIBRATION_REPORT_PATH = "agents/ddrr-calibration-report.md";
 export const PROD_DDRR_SITE_DATA_URL = `${PROD_ORIGIN}/_site-data/depeg-resolver-review`;
@@ -732,43 +733,34 @@ function renderRecommendationList(recommendations: readonly DdrrCalibrationRecom
 }
 
 function renderFactorTable(rows: readonly DdrrFactorAttributionRow[], limit: number): string[] {
-  if (rows.length === 0) return ["_No matching factor rows._"];
-  const lines = [
-    "| Factor | Severity | Class | Rows | Coins | Scored | Misses | False terminal rate | Recommendation | Samples |",
-    "|---|---:|---|---:|---:|---:|---|---:|---|---|",
-  ];
-  for (const row of rows.slice(0, limit)) {
-    lines.push(
-      [
-        markdownValue(row.factorCode),
-        row.severity,
-        markdownValue(row.labelClass),
-        row.rowCount,
-        row.coinCount,
-        row.scoredCount,
-        markdownValue(verdictMissSummary(row)),
-        formatPercent(row.falseTerminalRate),
-        row.recommendation,
-        markdownValue(row.sampleIncidentKeys.slice(0, 4).join(", ")),
-      ]
-        .join(" | ")
-        .replace(/^/, "| ")
-        .replace(/$/, " |"),
-    );
-  }
-  return lines;
+  return renderMarkdownRows({
+    headings: ["Factor", "Severity", "Class", "Rows", "Coins", "Scored", "Misses", "False terminal rate", "Recommendation", "Samples"],
+    rows,
+    cells: (row) => [
+      row.factorCode,
+      row.severity,
+      row.labelClass,
+      row.rowCount,
+      row.coinCount,
+      row.scoredCount,
+      verdictMissSummary(row),
+      formatPercent(row.falseTerminalRate),
+      row.recommendation,
+      row.sampleIncidentKeys.slice(0, 4).join(", "),
+    ],
+    alignments: ["left", "right", "left", "right", "right", "right", "left", "right", "left", "left"],
+    empty: "_No matching factor rows._",
+    limit,
+    pipeStyle: "wrapped",
+  });
 }
 
 function renderDurationTable(rows: readonly DdrrDurationCalibrationSegment[]): string[] {
-  if (rows.length === 0) return ["_No scored duration rows._"];
-  const lines = [
-    "| Segment | Rows | Coins | Inside IQR | Faster | Slower | Median signed | Coin-dedup median signed | Median abs | Bias | Recommendation |",
-    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|",
-  ];
-  for (const row of rows) {
-    lines.push(
-      [
-        markdownValue(row.segment),
+  return renderMarkdownRows({
+    headings: ["Segment", "Rows", "Coins", "Inside IQR", "Faster", "Slower", "Median signed", "Coin-dedup median signed", "Median abs", "Bias", "Recommendation"],
+    rows,
+    cells: (row) => [
+        row.segment,
         row.rowCount,
         row.coinCount,
         row.insideBandCount,
@@ -779,13 +771,11 @@ function renderDurationTable(rows: readonly DdrrDurationCalibrationSegment[]): s
         formatHours(row.medianAbsoluteErrorSec),
         row.bias,
         row.recommendation,
-      ]
-        .join(" | ")
-        .replace(/^/, "| ")
-        .replace(/$/, " |"),
-    );
-  }
-  return lines;
+    ],
+    alignments: ["left", "right", "right", "right", "right", "right", "right", "right", "right", "left", "left"],
+    empty: "_No scored duration rows._",
+    pipeStyle: "wrapped",
+  });
 }
 
 function formatPercentagePoints(value: number | null): string {

@@ -9,12 +9,10 @@ import {
 } from "@shared/lib/classification";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { LaunchDriftBadge, LaunchPhaseBadge } from "@/components/pre-launch-badge";
 import { UpcomingHorizonHero } from "@/components/upcoming-horizon-hero";
 import {
   LAUNCH_PHASE_LABELS,
-  PHASE_BADGE,
-  DRIFT_STATUS_BADGE,
-  DRIFT_STATUS_LABEL,
   getDriftStatus,
   dateScore,
   formatFuzzyDate,
@@ -336,11 +334,7 @@ export function UpcomingClient({
                 {/* Badges */}
                 <div className="mt-3 flex flex-wrap gap-1">
                   {coin.launchPhase && (
-                    <span
-                      className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-medium leading-none ${PHASE_BADGE[coin.launchPhase]}`}
-                    >
-                      {LAUNCH_PHASE_LABELS[coin.launchPhase]}
-                    </span>
+                    <LaunchPhaseBadge phase={coin.launchPhase} />
                   )}
                   <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-[10px] leading-none text-muted-foreground">
                     {PEG_LABELS_SHORT[coin.flags.pegCurrency]}
@@ -368,11 +362,7 @@ export function UpcomingClient({
                     </span>
                   )}
                   {drift !== "on-track" && (
-                    <span
-                      className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-medium leading-none ${DRIFT_STATUS_BADGE[drift]}`}
-                    >
-                      {DRIFT_STATUS_LABEL[drift]}
-                    </span>
+                    <LaunchDriftBadge status={drift} />
                   )}
                   {coin.milestones && coin.milestones.length > 0 && (
                     <span className="text-[10px] text-muted-foreground/70">

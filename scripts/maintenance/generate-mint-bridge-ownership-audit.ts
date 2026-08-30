@@ -1,19 +1,10 @@
 #!/usr/bin/env tsx
 
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
-import type { StablecoinMeta } from "@shared/types";
-import {
-  STABLECOIN_SOURCE_DOMAIN_FIELDS,
-  STABLECOIN_SOURCE_DOMAIN_VALUES,
-} from "@shared/lib/stablecoins/schema";
 import {
   validateMintBridgeOwnership,
   type MintBridgeOwnershipViolation,
 } from "@shared/lib/stablecoins/mint-bridge-ownership";
-
-const COINS_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
-const DOMAINS_DIR = join(process.cwd(), "shared/data/stablecoins/domains");
+import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 
 interface AssetAudit {
   assetId: string;
@@ -26,53 +17,9 @@ interface AuditReport {
   assets: AssetAudit[];
 }
 
-function readJson(path: string): Record<string, unknown> {
-  return JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
-}
-
-function loadSidecarPatches(): Map<string, Record<string, unknown>> {
-  const patches = new Map<string, Record<string, unknown>>();
-
-  for (const domain of STABLECOIN_SOURCE_DOMAIN_VALUES) {
-    const domainDir = join(DOMAINS_DIR, domain);
-    let files: string[];
-    try {
-      files = readdirSync(domainDir).filter((file) => file.endsWith(".json"));
-    } catch {
-      continue;
-    }
-
-    for (const file of files) {
-      const raw = readJson(join(domainDir, file));
-      const id = typeof raw.id === "string" ? raw.id : file.slice(0, -".json".length);
-      const patch = patches.get(id) ?? {};
-      for (const field of STABLECOIN_SOURCE_DOMAIN_FIELDS[domain]) {
-        if (Object.prototype.hasOwnProperty.call(raw, field)) {
-          patch[String(field)] = raw[field];
-        }
-      }
-      patches.set(id, patch);
-    }
-  }
-
-  return patches;
-}
-
-function loadMergedAssets(): StablecoinMeta[] {
-  const patches = loadSidecarPatches();
-  return readdirSync(COINS_DIR)
-    .filter((file) => file.endsWith(".json"))
-    .sort((left, right) => left.localeCompare(right))
-    .map((file) => {
-      const raw = readJson(join(COINS_DIR, file));
-      const id = typeof raw.id === "string" ? raw.id : file.slice(0, -".json".length);
-      return { ...raw, ...(patches.get(id) ?? {}) } as unknown as StablecoinMeta;
-    });
-}
-
 function buildReport(): AuditReport {
-  const assets = loadMergedAssets()
-    .map((meta) => ({ assetId: meta.id, violations: validateMintBridgeOwnership(meta) }))
+  const assets = loadPerCoinStablecoinEntries()
+    .map(({ coin }) => ({ assetId: coin.id, violations: validateMintBridgeOwnership(coin) }))
     .filter((asset) => asset.violations.length > 0)
     .sort((left, right) => left.assetId.localeCompare(right.assetId));
 
