@@ -1,12 +1,9 @@
 import { MICA_STATUS_DESCRIPTIONS } from "@shared/lib/mica";
 import type { MicaProfile } from "@shared/types";
-import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/coverage-types";
+import type { CoverageStatus } from "@/lib/coverage-types";
 import {
-  breakdownItem,
-  createBreakdownCounter,
   createPresetStatus,
-  defineCoverageFeature,
-  statusKindsFromPresets,
+  definePresetCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -79,21 +76,6 @@ function resolveMica(profile?: Pick<MicaProfile, "status" | "tokenType" | "compe
   return context.length > 0 ? { ...status, detail: `${status.detail} ${context.join(" ")}` } : status;
 }
 
-function formatMica(
-  _rows: readonly CoverageRow[],
-  breakdownMap: ReadonlyMap<string, number>,
-): CoverageBreakdownItem[] {
-  const get = createBreakdownCounter(breakdownMap);
-  return [
-    breakdownItem("authorized", "authorized", get("authorized")),
-    breakdownItem("pending", "pending", get("pending")),
-    breakdownItem("transitional", "transitional", get("transitional")),
-    breakdownItem("non-compliant", "non-compliant", get("non-compliant")),
-    breakdownItem("out-of-scope", "out-of-scope", get("out-of-scope")),
-    breakdownItem("unassessed", "not assessed", get("unassessed")),
-  ];
-}
-
 const MICA_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Authorized",
@@ -128,9 +110,16 @@ const MICA_LEGEND: readonly CoverageLegendItem[] = [
   },
 ];
 
-export const coverageFeature = defineCoverageFeature({
-  statusKinds: statusKindsFromPresets(MICA_STATUS_PRESETS),
+export const coverageFeature = definePresetCoverageFeature({
+  presets: MICA_STATUS_PRESETS,
+  breakdown: [
+    { key: "authorized", label: "authorized" },
+    { key: "pending", label: "pending" },
+    { key: "transitional", label: "transitional" },
+    { key: "non-compliant", label: "non-compliant" },
+    { key: "out-of-scope", label: "out-of-scope" },
+    { key: "unassessed", label: "not assessed" },
+  ],
   legendItems: MICA_LEGEND,
   resolve: resolveMica,
-  formatBreakdown: formatMica,
 });

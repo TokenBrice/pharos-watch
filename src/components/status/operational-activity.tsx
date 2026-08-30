@@ -12,6 +12,7 @@ import {
   type OperationalActivitySource,
 } from "@/lib/operational-history-model";
 import { cn } from "@/lib/utils";
+import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { StatusPill } from "./severity-pill";
 
 export interface OperationalActivitySourceState<TEntry> {
@@ -41,7 +42,7 @@ function outcomeClassName(outcome: OperationalActivityEntry["outcome"]): string 
   if (outcome === "error") return "bg-red-500/15 text-red-700 dark:text-red-300";
   if (outcome === "unknown") return "bg-amber-500/15 text-amber-800 dark:text-amber-200";
   if (outcome === "ok") return "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300";
-  return "bg-muted text-muted-foreground";
+  return OPERATIONAL_PILL_CLASS.unknown;
 }
 
 function SourceStatus<TEntry>({ label, state }: { label: string; state: OperationalActivitySourceState<TEntry> }) {
@@ -132,7 +133,7 @@ function ActivityRow({ entry, nowSeconds }: { entry: OperationalActivityEntry; n
         <div className="shrink-0 text-left text-xs text-muted-foreground lg:text-right">
           <p>{formatElapsedSeconds(Math.max(0, nowSeconds - entry.at))} ago</p>
           <time dateTime={new Date(entry.at * 1000).toISOString()} className="mt-1 block font-mono tabular-nums">
-            {new Date(entry.at * 1000).toLocaleString()}
+            {formatStatusTimestamp(entry.at)}
           </time>
         </div>
       </div>

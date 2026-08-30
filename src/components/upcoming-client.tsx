@@ -21,8 +21,8 @@ import {
 } from "@/lib/pre-launch";
 import { stripTermMarkup } from "@/lib/term-markup";
 import type { LaunchPhase, StablecoinMeta } from "@shared/types";
-import { decodeState, encodeState, type UrlStateSchema } from "@/lib/url-state";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+import { type UrlStateSchema } from "@/lib/url-state";
+import { useUrlState } from "@/hooks/use-url-state";
 
 export type UpcomingCoin = Pick<
   StablecoinMeta,
@@ -113,48 +113,25 @@ export function UpcomingClient({
   logos: Readonly<Record<string, string | undefined>>;
   teasers: Record<string, string>;
 }) {
-  const { searchParams, replaceParams } = useUrlFilters();
   const schema = useMemo(() => createUpcomingUrlSchema(coins), [coins]);
-  const filters = useMemo(() => decodeState(searchParams, schema), [schema, searchParams]);
+  const { state: filters, patchState: writeFilters } = useUrlState(schema);
   const phaseFilter = useMemo(() => new Set(filters.phase), [filters.phase]);
   const pegFilter = useMemo(() => new Set(filters.peg), [filters.peg]);
   const backingFilter = useMemo(() => new Set(filters.backing), [filters.backing]);
 
-  const writeFilters = useCallback(
-    (next: UpcomingUrlState) => {
-      const encoded = encodeState(next, schema);
-      replaceParams((params) => {
-        for (const key of Object.keys(schema)) params.delete(key);
-        for (const [key, value] of new URLSearchParams(encoded)) params.set(key, value);
-      });
-    },
-    [replaceParams, schema],
-  );
+  const togglePhase = useCallback((phase: LaunchPhase) => {
+    writeFilters({ phase: Array.from(toggleSet(phaseFilter, phase)) });
+  }, [phaseFilter, writeFilters]);
 
-  const togglePhase = useCallback(
-    (phase: LaunchPhase) => {
-      writeFilters({ ...filters, phase: Array.from(toggleSet(phaseFilter, phase)) });
-    },
-    [filters, phaseFilter, writeFilters],
-  );
+  const togglePeg = useCallback((peg: string) => {
+    writeFilters({ peg: Array.from(toggleSet(pegFilter, peg)) });
+  }, [pegFilter, writeFilters]);
 
-  const togglePeg = useCallback(
-    (peg: string) => {
-      writeFilters({ ...filters, peg: Array.from(toggleSet(pegFilter, peg)) });
-    },
-    [filters, pegFilter, writeFilters],
-  );
+  const toggleBacking = useCallback((backing: string) => {
+    writeFilters({ backing: Array.from(toggleSet(backingFilter, backing)) });
+  }, [backingFilter, writeFilters]);
 
-  const toggleBacking = useCallback(
-    (backing: string) => {
-      writeFilters({ ...filters, backing: Array.from(toggleSet(backingFilter, backing)) });
-    },
-    [backingFilter, filters, writeFilters],
-  );
-
-  const clearFilters = useCallback(() => {
-    writeFilters({ ...filters, phase: [], peg: [], backing: [] });
-  }, [filters, writeFilters]);
+  const clearFilters = useCallback(() => writeFilters({ phase: [], peg: [], backing: [] }), [writeFilters]);
 
   const allPegs = useMemo(() => [...new Set(coins.map((coin) => coin.flags.pegCurrency))], [coins]);
   const allBackings = useMemo(() => [...new Set(coins.map((coin) => coin.flags.backing))], [coins]);
@@ -308,7 +285,7 @@ export function UpcomingClient({
                 <button type="button"
                   key={opt.key}
                   aria-pressed={sortKey === opt.key}
-                  onClick={() => writeFilters({ ...filters, sort: opt.key })}
+                  onClick={() => writeFilters({ sort: opt.key })}
                   className={neutralToggleClass(sortKey === opt.key)}
                 >
                   {opt.label}

@@ -1,11 +1,9 @@
 "use client";
 
 import { Braces, Building2, KeyRound, Landmark, Layers3, UserRound, type LucideIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { EvidenceRailCard } from "@/components/stablecoin-detail/evidence-rail-card";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { ControlPostureView } from "@/lib/control-posture";
 import { cn } from "@/lib/utils";
 import { CONTROL_POSTURE_ORDER, CONTROL_POSTURE_STYLES } from "@shared/lib/classification";
@@ -54,28 +52,14 @@ function ControlPostureMap({ activeKey }: { activeKey: GovernanceQuality }) {
 export function ControlPostureCard({ view, frameless }: { view?: ControlPostureView | null; frameless?: boolean }) {
   if (!view) return null;
 
-  return (
-    <RailCard
-      frameless={frameless}
-      title="Control posture"
-      ariaLabel="Control posture"
-      trailing={
-        <Badge variant="outline" className={cn("text-[11px] font-medium", view.badgeClassName)}>
-          {view.label}
-        </Badge>
-      }
-    >
-      <div className="space-y-3 px-4 pb-4">
-        <ControlPostureMap activeKey={view.key} />
-        <FactGrid aria-label="Control posture facts" items={view.facts} className="grid-cols-2" />
-        <p className="text-xs leading-relaxed text-muted-foreground">{view.summary}</p>
-        <ModuleDisclosure label="Classification details">
-          <div className="space-y-2 pb-1 pt-2 text-xs leading-relaxed text-muted-foreground">
-            {view.details.map((detail) => <p key={detail}>{detail}</p>)}
-          </div>
-        </ModuleDisclosure>
-        <EvidenceFooter topic="controlPosture" showVersion={false} />
-      </div>
-    </RailCard>
-  );
+  return <EvidenceRailCard frameless={frameless} title="Control posture" badge={{ label: view.label, className: cn("text-[11px] font-medium", view.badgeClassName) }} evidence={{ topic: "controlPosture", showVersion: false }}>
+      <ControlPostureMap activeKey={view.key} />
+      <FactGrid aria-label="Control posture facts" items={view.facts} className="grid-cols-2" />
+      <p className="text-xs leading-relaxed text-muted-foreground">{view.summary}</p>
+      <ModuleDisclosure label="Classification details">
+        <div className="space-y-2 pb-1 pt-2 text-xs leading-relaxed text-muted-foreground">
+          {view.details.map((detail) => <p key={detail}>{detail}</p>)}
+        </div>
+      </ModuleDisclosure>
+    </EvidenceRailCard>;
 }

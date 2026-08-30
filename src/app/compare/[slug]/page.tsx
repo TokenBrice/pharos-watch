@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowRight, Bell, Code2, Rss, Star } from "lucide-react";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import { FaqSection } from "@/components/faq-section";
@@ -25,22 +24,11 @@ import {
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
 import { PEG_SLUGS } from "@/lib/peg-landing";
-import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
+import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 
-export function generateStaticParams() {
-  return buildSlugStaticParams("slug", STATIC_COMPARISON_PAGES);
-}
-
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  return buildSlugPageMetadata(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG, "Comparison Not Found", "/og-compare.png");
-}
-
-export default async function StaticComparisonPage({ params }: { params: Promise<{ slug: string }> }) {
-  const page = await resolveSlugPage(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG);
-  if (!page) notFound();
-
+function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number]) {
   const comparisonRows = buildComparisonAtAGlanceRows(page);
   const faqItems = buildComparisonFaqItems(page);
   const researchLinks = buildComparisonResearchLinks(page);
@@ -272,3 +260,15 @@ export default async function StaticComparisonPage({ params }: { params: Promise
     </FeaturePageShell>
   );
 }
+
+const route = createStaticSlugRoute({
+  paramKey: "slug",
+  pages: STATIC_COMPARISON_PAGES, pageBySlug: STATIC_COMPARISON_PAGE_BY_SLUG,
+  missingTitle: "Comparison Not Found", missingMetadata: { title: "Comparison Not Found", robots: { index: false } },
+  ogImage: "/og-compare.png",
+  render: StaticComparisonContent,
+});
+
+export const generateStaticParams = route.generateStaticParams;
+export const generateMetadata = route.generateMetadata;
+export default route.Page;

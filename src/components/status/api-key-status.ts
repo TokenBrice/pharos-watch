@@ -1,3 +1,5 @@
+import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
+
 export type ApiKeyStatus = "inactive" | "expired" | "active";
 
 export interface ApiKeyStatusInput {
@@ -17,11 +19,10 @@ export function getApiKeyStatus(key: ApiKeyStatusInput, nowSeconds: number): Api
 
 export function apiKeyStatusBadgeClassName(status: ApiKeyStatus): string {
   if (status === "active") {
-    return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
+    return OPERATIONAL_PILL_CLASS.ok;
   }
   if (status === "expired") {
-    return "bg-red-500/15 text-red-700 dark:text-red-400";
+    return OPERATIONAL_PILL_CLASS.error;
   }
-  return "bg-muted text-muted-foreground";
+  return OPERATIONAL_PILL_CLASS.unknown;
 }
-

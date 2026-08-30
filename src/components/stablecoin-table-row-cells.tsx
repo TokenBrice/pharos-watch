@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { TableCell } from "@/components/table";
 import { DeviationIcon } from "@/components/severity-icon";
 import { MintAuthorityScoreBadge } from "@/components/mint-authority-score-badge";
+import { RowSparkline } from "@/components/row-sparkline";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { StablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
 import type { StablecoinTableRowCellProps } from "@/components/stablecoin-table-row-types";
@@ -27,31 +28,26 @@ interface RowCellsProps {
 }
 
 function MiniSparkline({ values }: { values: number[] }) {
-  if (values.length < 2 || values.every((value) => value === 0)) return null;
-  const min = values.reduce((current, value) => Math.min(current, value), Infinity);
-  const max = values.reduce((current, value) => Math.max(current, value), -Infinity);
-  const range = max - min || 1;
-  const points = values
-    .map((value, index) => {
-      const x = (index / (values.length - 1)) * 40;
-      const y = 16 - ((value - min) / range) * 16;
-      return `${x},${y}`;
-    })
-    .join(" ");
+  if (values.every((value) => value === 0)) return null;
   const trending = values[values.length - 1] >= values[0];
 
-  return (
-    <svg width={40} height={16} viewBox="0 0 40 16" className="inline-block align-middle mr-1" aria-hidden="true">
-      <polyline
-        points={points}
-        fill="none"
-        stroke={trending ? "var(--p-green-500, #22c55e)" : "var(--p-red-500, #ef4444)"}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+  return <RowSparkline
+    data={values}
+    width={40}
+    height={16}
+    inset={{ top: 0, right: 0, bottom: 0, left: 0 }}
+    strokeWidth={1.5}
+    yRangeMode="flat-unit"
+    pointPrecision={null}
+    nonScalingStroke={false}
+    minPoints={2}
+    fill={false}
+    decorative
+    positiveColor={trending ? "var(--p-green-500, #22c55e)" : "var(--p-red-500, #ef4444)"}
+    ariaLabel="7-day circulating supply trend"
+    className="mr-1"
+    emptyContent={null}
+  />;
 }
 
 function PinnedCell({ row, model }: RowCellsProps) {

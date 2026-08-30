@@ -18,8 +18,8 @@ import type { PegCurrency } from "@shared/types";
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
 import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { decodeState, encodeState, type UrlStateSchema } from "@/lib/url-state";
-import { replaceEncodedUrlState } from "@/lib/replace-encoded-url-state";
+import { type UrlStateSchema } from "@/lib/url-state";
+import { useUrlState } from "@/hooks/use-url-state";
 import { SummaryBand } from "./timeline-feed-sections";
 import { TimelineFeed } from "./timeline-feed";
 import { useTimelineFeedData } from "./use-timeline-feed-data";
@@ -102,11 +102,8 @@ function decodeTimelineFilters(urlState: TimelineUrlState): TapeFilterState {
 }
 
 export function TimelineClient() {
-  const { searchParams, replaceParams, setParam, setParams } = useUrlFilters();
-  const urlState = useMemo(
-    () => decodeState(searchParams, TIMELINE_URL_SCHEMA),
-    [searchParams],
-  );
+  const { setParam, setParams } = useUrlFilters();
+  const { state: urlState, patchState } = useUrlState(TIMELINE_URL_SCHEMA);
   const filters = useMemo(() => decodeTimelineFilters(urlState), [urlState]);
   const setTimelineParam = useCallback(
     (key: string, value: string) => {
@@ -114,16 +111,8 @@ export function TimelineClient() {
         setParam(key, value);
         return;
       }
-      const nextState = { ...urlState, [key]: value } as TimelineUrlState;
-      const encoded = encodeState(nextState, TIMELINE_URL_SCHEMA);
-      replaceParams((params) => {
-        replaceEncodedUrlState(params, encoded, {
-          clear: "all",
-          schemaKeys: Object.keys(TIMELINE_URL_SCHEMA),
-        });
-      });
-    },
-    [replaceParams, setParam, urlState],
+      patchState({ [key]: value } as Partial<TimelineUrlState>);
+    }, [patchState, setParam],
   );
   const logos = logosById;
   const [nowMs] = useState(() => Date.now());

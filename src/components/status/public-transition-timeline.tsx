@@ -4,6 +4,7 @@ import { PUBLIC_STATUS_HISTORY_WINDOWS } from "@shared/types/status";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { getStatusTone } from "@/lib/status-dashboard-model";
+import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 
 const TYPE_LABELS: Record<string, string> = {
   degrade: "Degradation",
@@ -79,7 +80,7 @@ export function PublicTransitionTimeline({
                 return (
                   <TableRow key={transition.id} className="border-b last:border-0">
                     <TableCell className="py-2.5 pharos-numeric text-xs text-muted-foreground">
-                      {new Date(transition.at * 1000).toLocaleString(undefined, { timeZoneName: "short" })}
+                      {formatStatusTimestamp(transition.at, { timeZoneName: "short" })}
                     </TableCell>
                     <TableCell className="py-2.5">
                       <span className="font-mono tabular-nums text-xs">

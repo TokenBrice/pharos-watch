@@ -1,17 +1,10 @@
 import type { LiquidityCoverageClass } from "@shared/types";
-import type {
-  CoverageBreakdownItem,
-  CoverageRow,
-  CoverageStatus,
-} from "@/lib/coverage-types";
+import type { CoverageStatus } from "@/lib/coverage-types";
 import {
-  breakdownItem,
   createDataUnavailableStatus,
-  createBreakdownCounter,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
-  defineCoverageFeature,
-  statusKindsFromPresets,
+  definePresetCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -79,19 +72,6 @@ function resolveDex(
   return createPresetStatus(DEX_STATUS_PRESETS[coverageClass ?? "unknown"] ?? DEX_STATUS_PRESETS.unknown);
 }
 
-function formatDex(
-  _rows: readonly CoverageRow[],
-  breakdownMap: ReadonlyMap<string, number>,
-): CoverageBreakdownItem[] {
-  const get = createBreakdownCounter(breakdownMap);
-  return [
-    breakdownItem("primary", "primary", get("primary")),
-    breakdownItem("mixed", "mixed", get("mixed")),
-    breakdownItem("fallback", "fallback", get("fallback")),
-    breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", get(DATA_UNAVAILABLE_KIND)),
-  ];
-}
-
 const DEX_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Primary / Mixed / Fallback",
@@ -106,9 +86,15 @@ const DEX_LEGEND: readonly CoverageLegendItem[] = [
   },
 ] as const;
 
-export const coverageFeature = defineCoverageFeature({
-  statusKinds: [...statusKindsFromPresets(DEX_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
+export const coverageFeature = definePresetCoverageFeature({
+  presets: DEX_STATUS_PRESETS,
+  extraStatusKinds: [DATA_UNAVAILABLE_KIND],
+  breakdown: [
+    { key: "primary", label: "primary" },
+    { key: "mixed", label: "mixed" },
+    { key: "fallback", label: "fallback" },
+    { key: DATA_UNAVAILABLE_KIND, label: "data n/a" },
+  ],
   legendItems: DEX_LEGEND,
   resolve: resolveDex,
-  formatBreakdown: formatDex,
 });

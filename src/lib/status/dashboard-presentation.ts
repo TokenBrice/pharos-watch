@@ -21,18 +21,42 @@ export const STATUS_TONE = {
 
 export const STATUS_PRIORITY = { healthy: 0, degraded: 1, stale: 2 } as const;
 
-function formatLocaleTimestampMs(ms: number): string {
-  return new Date(ms).toLocaleString(undefined, { timeZoneName: "short" });
+export type OperationalTone = "ok" | "warning" | "error" | "unknown";
+
+export const OPERATIONAL_PILL_CLASS: Record<OperationalTone, string> = {
+  ok: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  warning: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  error: "bg-red-500/15 text-red-700 dark:text-red-400",
+  unknown: "bg-muted text-muted-foreground",
+};
+
+type StatusTimeZoneName = Intl.DateTimeFormatOptions["timeZoneName"];
+
+function formatLocaleTimestampMs(ms: number, timeZoneName?: StatusTimeZoneName): string {
+  return timeZoneName
+    ? new Date(ms).toLocaleString(undefined, { timeZoneName })
+    : new Date(ms).toLocaleString();
 }
 
-export function formatTimestampSeconds(seconds: number | null | undefined): string {
+export function formatTimestampSeconds(
+  seconds: number | null | undefined,
+  options?: { timeZoneName?: StatusTimeZoneName },
+): string {
   if (seconds == null) return "—";
-  return formatLocaleTimestampMs(seconds * 1000);
+  return formatLocaleTimestampMs(seconds * 1000, options ? options.timeZoneName : "short");
+}
+
+export function formatStatusTimestamp(
+  epochSeconds: number | null | undefined,
+  { fallback = "—", timeZoneName }: { fallback?: string; timeZoneName?: StatusTimeZoneName } = {},
+): string {
+  if (epochSeconds == null) return fallback;
+  return formatTimestampSeconds(epochSeconds, { timeZoneName });
 }
 
 export function formatTimestampMs(ms: number): string {
   if (!ms) return "—";
-  return formatLocaleTimestampMs(ms);
+  return formatLocaleTimestampMs(ms, "short");
 }
 
 export function formatTransitionLabel(transition: StatusResponse["timeline"][number] | null): string {
@@ -47,16 +71,16 @@ export function getStatusTone(status: StatusResponse["overallStatus"]) {
 export const STATUS_OK_PILL_CLASS = STATUS_TONE.healthy.badgeClassName;
 
 export function getSeverityBadgeClass(severity: StatusCause["severity"]): string {
-  if (severity === "critical") return "bg-red-500/15 text-red-700 dark:text-red-400";
-  if (severity === "warning") return "bg-amber-500/15 text-amber-700 dark:text-amber-400";
-  return "bg-muted text-muted-foreground";
+  if (severity === "critical") return OPERATIONAL_PILL_CLASS.error;
+  if (severity === "warning") return OPERATIONAL_PILL_CLASS.warning;
+  return OPERATIONAL_PILL_CLASS.unknown;
 }
 
 export function getIssueKindBadgeClass(kind: DashboardIssueKind): string {
-  if (kind === "impacting") return "bg-red-500/15 text-red-700 dark:text-red-400";
-  if (kind === "warning") return "bg-amber-500/15 text-amber-700 dark:text-amber-400";
+  if (kind === "impacting") return OPERATIONAL_PILL_CLASS.error;
+  if (kind === "warning") return OPERATIONAL_PILL_CLASS.warning;
   if (kind === "maintenance") return "bg-blue-500/15 text-blue-700 dark:text-blue-400";
-  return "bg-muted text-muted-foreground";
+  return OPERATIONAL_PILL_CLASS.unknown;
 }
 
 export function getNoticeTone(tone: DashboardNotice["tone"]): string {

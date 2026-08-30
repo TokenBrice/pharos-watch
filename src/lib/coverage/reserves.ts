@@ -1,19 +1,12 @@
 import { getReserveDisplayBadgeKindForAdapter } from "@shared/lib/live-reserve-display";
 import { getReserves } from "@shared/lib/reserve-templates";
 import type { StablecoinMeta } from "@shared/types";
-import type {
-  CoverageBreakdownItem,
-  CoverageRow,
-  CoverageStatus,
-} from "@/lib/coverage-types";
+import type { CoverageStatus } from "@/lib/coverage-types";
 import {
-  breakdownItem,
   createDataUnavailableStatus,
-  createBreakdownCounter,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
-  defineCoverageFeature,
-  statusKindsFromPresets,
+  definePresetCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -146,22 +139,6 @@ function resolveReserve(
   return createPresetStatus(RESERVES_STATUS_PRESETS.curated);
 }
 
-function formatReserves(
-  _rows: readonly CoverageRow[],
-  breakdownMap: ReadonlyMap<string, number>,
-): CoverageBreakdownItem[] {
-  const get = createBreakdownCounter(breakdownMap);
-  return [
-    breakdownItem("live", "score-grade", get("live")),
-    breakdownItem("live-configured", "configured", get("live-configured")),
-    breakdownItem("checking", "checking", get("checking")),
-    breakdownItem("curated-validated", "curated-validated", get("curated-validated")),
-    breakdownItem("proof", "proof", get("proof")),
-    breakdownItem("curated", "curated", get("curated")),
-    breakdownItem("estimated", "estimated", get("estimated")),
-  ];
-}
-
 const RESERVES_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Score-grade",
@@ -198,9 +175,18 @@ const RESERVES_LEGEND: readonly CoverageLegendItem[] = [
   },
 ] as const;
 
-export const coverageFeature = defineCoverageFeature({
-  statusKinds: [...statusKindsFromPresets(RESERVES_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
+export const coverageFeature = definePresetCoverageFeature({
+  presets: RESERVES_STATUS_PRESETS,
+  extraStatusKinds: [DATA_UNAVAILABLE_KIND],
+  breakdown: [
+    { key: "live", label: "score-grade" },
+    { key: "live-configured", label: "configured" },
+    { key: "checking", label: "checking" },
+    { key: "curated-validated", label: "curated-validated" },
+    { key: "proof", label: "proof" },
+    { key: "curated", label: "curated" },
+    { key: "estimated", label: "estimated" },
+  ],
   legendItems: RESERVES_LEGEND,
   resolve: resolveReserve,
-  formatBreakdown: formatReserves,
 });

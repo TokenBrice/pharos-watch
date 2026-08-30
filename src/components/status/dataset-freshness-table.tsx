@@ -4,6 +4,7 @@ import { DataTableShell, type DataTableColumn } from "@/components/data-table-sh
 import { TableCell, TableRow } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { StatusPill } from "./severity-pill";
 
 type DatasetKey = keyof StatusResponse["datasetFreshness"];
@@ -67,30 +68,30 @@ function getBand(
   if (ageSeconds == null) {
     return {
       label: "missing",
-      className: "bg-muted text-muted-foreground",
+      className: OPERATIONAL_PILL_CLASS.unknown,
     };
   }
   if (expectedFreshnessSec == null) {
     return {
       label: "unknown",
-      className: "bg-muted text-muted-foreground",
+      className: OPERATIONAL_PILL_CLASS.unknown,
     };
   }
   if (ageSeconds > expectedFreshnessSec * 6) {
     return {
       label: "late",
-      className: "bg-red-500/15 text-red-700 dark:text-red-400",
+      className: OPERATIONAL_PILL_CLASS.error,
     };
   }
   if (ageSeconds > expectedFreshnessSec * 4) {
     return {
       label: "aging",
-      className: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+      className: OPERATIONAL_PILL_CLASS.warning,
     };
   }
   return {
     label: "on time",
-    className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+    className: OPERATIONAL_PILL_CLASS.ok,
   };
 }
 
@@ -148,7 +149,7 @@ export function DatasetFreshnessTable({
               <TableRow key={row.key} className="border-b last:border-0">
                 <TableCell className="py-2">{row.label}</TableCell>
                 <TableCell className="py-2 text-xs text-muted-foreground">
-                  {row.updatedAt ? new Date(row.updatedAt * 1000).toLocaleString() : "—"}
+                  {formatStatusTimestamp(row.updatedAt, { fallback: "—" })}
                 </TableCell>
                 <TableCell className="py-2">
                   {row.ageSeconds != null ? formatElapsedSeconds(row.ageSeconds) : "—"}

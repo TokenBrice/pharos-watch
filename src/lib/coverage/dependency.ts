@@ -1,17 +1,10 @@
-import type {
-  CoverageBreakdownItem,
-  CoverageRow,
-  CoverageStatus,
-} from "@/lib/coverage-types";
+import type { CoverageStatus } from "@/lib/coverage-types";
 import type { DependencyCoverageFact, DependencyCoverageKind } from "@/lib/dependency-coverage-facts";
 import {
-  breakdownItem,
-  createBreakdownCounter,
   createDataUnavailableStatus,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
-  defineCoverageFeature,
-  statusKindsFromPresets,
+  definePresetCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -119,21 +112,6 @@ function resolveDependency(
   return { ...createPresetStatus(preset), detail: formatDetail(fact, preset.detail) };
 }
 
-function formatDependency(
-  _rows: readonly CoverageRow[],
-  breakdownMap: ReadonlyMap<string, number>,
-): CoverageBreakdownItem[] {
-  const get = createBreakdownCounter(breakdownMap);
-  return [
-    breakdownItem("both", "both", get("both")),
-    breakdownItem("dependent", "dependent", get("dependent")),
-    breakdownItem("upstream", "upstream", get("upstream")),
-    breakdownItem("resolved-none", "resolved none", get("resolved-none")),
-    breakdownItem("gaps", "gaps", get("unmapped-gap")),
-    breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", get(DATA_UNAVAILABLE_KIND)),
-  ];
-}
-
 const DEPENDENCY_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Both",
@@ -162,9 +140,17 @@ const DEPENDENCY_LEGEND: readonly CoverageLegendItem[] = [
   },
 ] as const;
 
-export const coverageFeature = defineCoverageFeature({
-  statusKinds: [...statusKindsFromPresets(DEPENDENCY_PRESETS), DATA_UNAVAILABLE_KIND],
+export const coverageFeature = definePresetCoverageFeature({
+  presets: DEPENDENCY_PRESETS,
+  extraStatusKinds: [DATA_UNAVAILABLE_KIND],
+  breakdown: [
+    { key: "both", label: "both" },
+    { key: "dependent", label: "dependent" },
+    { key: "upstream", label: "upstream" },
+    { key: "resolved-none", label: "resolved none" },
+    { key: "gaps", label: "gaps", count: (_rows, breakdownMap) => breakdownMap.get("unmapped-gap") ?? 0 },
+    { key: DATA_UNAVAILABLE_KIND, label: "data n/a" },
+  ],
   legendItems: DEPENDENCY_LEGEND,
   resolve: resolveDependency,
-  formatBreakdown: formatDependency,
 });

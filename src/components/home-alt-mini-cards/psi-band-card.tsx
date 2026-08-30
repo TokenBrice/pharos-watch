@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { QueryStateNotice } from "@/components/query-state-notice";
+import { RowSparkline } from "@/components/row-sparkline";
 import { useStabilityIndex } from "@/hooks/api-hooks";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { resolveQueryViewState } from "@/lib/query-view-state";
@@ -11,36 +12,29 @@ import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { buildPsiChartData } from "@shared/lib/psi-view-model";
 
 function StabilityAreaChart({ values, color }: { values: number[]; color: string }): React.JSX.Element | null {
-  if (values.length < 2) return null;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const stepX = 100 / (values.length - 1);
-  const points = values
-    .map((v, i) => {
-      const x = (i * stepX).toFixed(2);
-      const y = (38 - ((v - min) / range) * 34).toFixed(2);
-      return `${x},${y}`;
-    })
-    .join(" ");
   return (
-    <svg viewBox="0 0 100 40" className="block h-full w-full" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="stability-area-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.32} />
-          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-        </linearGradient>
-      </defs>
-      <polygon points={`${points} 100,40 0,40`} fill="url(#stability-area-fill)" stroke="none" />
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <RowSparkline
+      data={values}
+      width={100}
+      height={40}
+      inset={{ top: 4, right: 0, bottom: 2, left: 0 }}
+      strokeWidth={1.5}
+      yRangeMode="flat-unit"
+      nonScalingStroke={false}
+      fillStyle={{
+        kind: "vertical-gradient",
+        id: "stability-area-fill",
+        startOpacity: 0.32,
+        endOpacity: 0.02,
+        baselineY: 40,
+      }}
+      minPoints={2}
+      positiveColor={color}
+      decorative
+      ariaLabel="Stability Index history"
+      className="block h-full w-full"
+      emptyContent={null}
+    />
   );
 }
 

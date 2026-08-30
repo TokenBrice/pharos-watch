@@ -1,10 +1,8 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { CollapsibleProse } from "@/components/stablecoin-detail/collapsible-prose";
-import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { EvidenceRailCard } from "@/components/stablecoin-detail/evidence-rail-card";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
-import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { BridgeRouteRiskClientSummary } from "@/lib/stablecoin-detail-bridge-client";
 import { cn } from "@/lib/utils";
 
@@ -26,28 +24,11 @@ export function BridgingCard({ summary, frameless }: { summary?: BridgeRouteRisk
       : []),
   ];
 
-  return (
-    <RailCard
-      frameless={frameless}
-      title="Bridging"
-      ariaLabel="Bridging"
-      trailing={
-        <Badge variant="outline" className={cn("text-[11px] font-medium", summary.tierToneClass)}>
-          {summary.tierLabel}
-        </Badge>
-      }
-    >
-      <div className="space-y-3 px-4 pb-4">
-        {/* 63 of 272 reviewed bridge summaries run past 400 characters (DAI ~2,000). */}
-        <CollapsibleProse text={summary.summary} className="text-xs" variant="rail" />
-        {/* No `grid-cols-3` override: it stranded the fourth fact
-            (`Third-party`) alone on a second row. Auto-fit wraps 4 as 2×2. */}
-        <FactGrid aria-label="Bridge route facts" items={facts} />
-        <EvidenceFooter
-          sources={summary.sources.map((source) => ({ label: source.label, url: source.url }))}
-          trailing={summary.reviewedAt ? `Reviewed ${summary.reviewedAt}` : undefined}
-        />
-      </div>
-    </RailCard>
-  );
+  return <EvidenceRailCard frameless={frameless} title="Bridging" badge={{ label: summary.tierLabel, className: cn("text-[11px] font-medium", summary.tierToneClass) }} evidence={{ sources: summary.sources.map((source) => ({ label: source.label, url: source.url })), trailing: summary.reviewedAt ? `Reviewed ${summary.reviewedAt}` : undefined }}>
+      {/* 63 of 272 reviewed bridge summaries run past 400 characters (DAI ~2,000). */}
+      <CollapsibleProse text={summary.summary} className="text-xs" variant="rail" />
+      {/* No `grid-cols-3` override: it stranded the fourth fact
+          (`Third-party`) alone on a second row. Auto-fit wraps 4 as 2×2. */}
+      <FactGrid aria-label="Bridge route facts" items={facts} />
+    </EvidenceRailCard>;
 }
