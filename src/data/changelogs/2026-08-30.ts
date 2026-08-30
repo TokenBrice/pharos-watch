@@ -12,21 +12,21 @@ export const entry: ChangelogEntry = {
       tag: "feature",
       description:
         "Safety Score v9.44 and v9.45 separated a measured zero from an unproven settlement bound: an open queue with no proven completion bound now floors Exit under the unverified ceiling instead of grading F.",
-      href: "/methodology/scoring-changelog",
+      href: "/methodology/scoring-changelog/",
     },
     {
       label: "Reserve evidence gates",
       tag: "feature",
       description:
         "V9 9.4 through 9.43 split reserve classification from composition freshness, let an audited composition survive a stale feed on its own rung, and bounded Tether's feed by its actual disclosure cadence.",
-      href: "/methodology/scoring-changelog",
+      href: "/methodology/scoring-changelog/",
     },
     {
       label: "Redemption backstop v4.4",
       tag: "feature",
       description:
         "The standalone redemption route now publishes unestablished capacity and stays unrated when an open queue's settlement bound is unproven; paused routes keep their measured impairment.",
-      href: "/methodology/redemption-backstop-changelog",
+      href: "/methodology/redemption-backstop-changelog/",
     },
     {
       label: "Orbital Safety Map",
@@ -45,7 +45,7 @@ export const entry: ChangelogEntry = {
       tag: "infra",
       description:
         "Pricing moved 6.208 to 6.213: Pyth retired, the DexScreener breaker unlatched on partial success, VUSD and HCHF recovered, and delisted NAV vaults now price through their protocol-redeem route.",
-      href: "/methodology/pricing-pipeline-changelog",
+      href: "/methodology/pricing-pipeline-changelog/",
     },
     {
       label: "Leaner codebase",
