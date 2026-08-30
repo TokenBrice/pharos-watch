@@ -54,7 +54,11 @@ export function venueRiskTierOf(entry: YieldRiskConfigEntry): YieldVenueRiskTier
   return deriveVenueRiskTier(venueRiskWeightedOf(entry));
 }
 
-export const YIELD_RISK_CONFIG = {
+function defineYieldRiskConfig<const T extends Record<string, Omit<YieldRiskConfigEntry, "reviewCadence">>>(entries: T): { [K in keyof T]: T[K] & { reviewCadence: typeof YIELD_RISK_CONFIG_REVIEW_CADENCE } } {
+  return Object.fromEntries(Object.entries(entries).map(([k, e]) => [k, { ...e, reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE }])) as never;
+}
+
+export const YIELD_RISK_CONFIG = defineYieldRiskConfig({
   // Battle-tested money market since Aave V1 (2020) / V3 (2022); multi-billion-USD TVL
   // across 10+ chains; multiple independent audits and formal verification; mature
   // governance with safety-module stake. Low venue risk.
@@ -62,7 +66,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 1, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
     confidence: "verified",
     reviewedAt: "2026-05-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Aave V3 is a mature, multi-billion-USD lending venue with repeated independent audits, formal verification, and an active governance + safety-module stake.",
     evidence: [
@@ -79,7 +82,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 1, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
     confidence: "verified",
     reviewedAt: "2026-05-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Compound III (Comet) is an isolated-asset lending market with a multi-year audit history, billions in TVL, and active COMP governance; the Comet codebase narrowed the protocol surface area relative to V2.",
     evidence: [
@@ -96,7 +98,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 1 },
     confidence: "verified",
     reviewedAt: "2026-07-01",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "SparkLend is an Aave V3 fork operated by the Sky (formerly MakerDAO) ecosystem; it inherits the upstream Aave V3 audit surface, runs significant TVL, and is governed through the Sky framework.",
     evidence: [
@@ -110,7 +111,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 1, operational: 1 },
     confidence: "verified",
     reviewedAt: "2026-07-01",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Spark Savings wrappers route yield through the Sky/Spark savings stack rather than an external credit venue; the reviewed surface inherits Sky governance, issuer-level rate setting, and Spark operational controls.",
     evidence: [
@@ -123,7 +123,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-07-01",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Maple is an institutional credit venue whose lender pools depend on delegate underwriting, borrower performance, and loan recovery mechanics; that credit-underwriting surface is materially broader than low-risk money-market venues.",
     evidence: [
@@ -136,7 +135,6 @@ export const YIELD_RISK_CONFIG = {
     scores: YEARN_VENUE_SCORES,
     confidence: "verified",
     reviewedAt: "2026-07-01",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Yearn is a mature strategy-vault venue with long production history and repeated audits; vault strategy risk remains, but the reviewed stablecoin vault surface is operationally established.",
     evidence: [
@@ -149,7 +147,6 @@ export const YIELD_RISK_CONFIG = {
     scores: YEARN_VENUE_SCORES,
     confidence: "verified",
     reviewedAt: "2026-07-01",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Yearn Finance maps to the same mature strategy-vault family as Yearn; stablecoin vault risk is reviewed as low after accounting for its production history, audit cadence, and vault-level accounting.",
     evidence: [
@@ -162,7 +159,6 @@ export const YIELD_RISK_CONFIG = {
     scores: MORPHO_VENUE_SCORES,
     confidence: "verified",
     reviewedAt: "2026-06-09",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Morpho sources are reviewed as medium to align with Morpho Blue where vault and market parameters shift risk to market creators and allocators despite the audited lending primitive.",
     evidence: [
@@ -175,7 +171,6 @@ export const YIELD_RISK_CONFIG = {
     scores: MORPHO_VENUE_SCORES,
     confidence: "verified",
     reviewedAt: "2026-06-09",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Morpho v1 belongs to the reviewed Morpho lending venue family and inherits allocator, market-parameter, and integration risk that is broader than mature canonical money markets.",
     evidence: [
@@ -191,7 +186,6 @@ export const YIELD_RISK_CONFIG = {
     scores: MORPHO_VENUE_SCORES,
     confidence: "verified",
     reviewedAt: "2026-05-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Morpho Blue is an immutable singleton lending primitive launched in January 2024 with multiple audits; design choices reduce ongoing governance surface but limit remediation, and the product is still in its younger TVL cohort versus Aave/Compound.",
     evidence: [
@@ -206,7 +200,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-09",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Pendle is a mature yield-tokenization venue with isolated markets and a long audit trail; reviewed stablecoin principal/yield markets are low venue risk when market and maturity data remain observable.",
     evidence: [
@@ -219,7 +212,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-09",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Beefy is a multi-chain strategy-vault aggregator; reviewed yield rows inherit additional strategy, chain, bridge, and integration risk beyond canonical lending venues.",
     evidence: [
@@ -234,7 +226,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 5, fundsManagement: 5, liquidity: 4, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Clearpool is uncollateralized institutional credit; a sub-4-signer multisig with no timelock and direct lender default exposure place it in the high venue-risk tier.",
     evidence: [
@@ -248,7 +239,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 4, fundsManagement: 5, liquidity: 4, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Goldfinch is uncollateralized RWA credit with realized multi-million-dollar loan losses; strong audits do not offset offchain borrower-default exposure.",
     evidence: [
@@ -262,7 +252,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 4, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-07-01",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "3Jane is an unsecured on-chain credit venue whose core risk is uncollateralized lending against off-chain cash flows with off-chain legal recovery; a 3-of-5 multisig with anonymous signers and heavy off-chain credit operations keep it in the high tier despite real audit coverage. Aligned to Yearn's published USD3 risk report (3.5/5 'Medium — enhanced monitoring', 2026-07-01 cross-check).",
     evidence: [
@@ -277,7 +266,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 1, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-07-01",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Centrifuge is mature, heavily-audited RWA tokenization; the medium tier reflects offchain asset-performance exposure and redemption/epoch gating rather than contract risk.",
     evidence: [
@@ -291,7 +279,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Flux Finance is a Compound V2 fork lending against tokenized Treasuries; overcollateralized but admin-upgradeable with permissioned liquidations.",
     evidence: [
@@ -305,7 +292,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-07-01",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Cap routes a 1:1-reserve stablecoin into restaking-backed credit to whitelisted institutional operators; strong audits offset by youth and operator credit risk.",
     evidence: [
@@ -319,7 +305,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Avantis is a perp-DEX LP vault where depositors backstop leveraged traders' PnL; single audit, upgradeable, and market (not credit) principal risk.",
     evidence: [
@@ -334,7 +319,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 1, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 1 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Euler v2 is a hardened modular relaunch with an exemplary post-2023 security program and full prior-exploit recovery; low venue risk.",
     evidence: [
@@ -348,7 +332,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Gearbox is a well-audited leverage/credit-account protocol; the leverage and curator-credit model lifts funds and liquidity risk above plain money markets.",
     evidence: [
@@ -362,7 +345,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Curve LlamaLend is battle-tested but the complex LLAMMA soft-liquidation design and a 2025 bad-debt event keep funds/liquidity risk at low-medium.",
     evidence: [
@@ -376,7 +358,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-07-01",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Fluid's capital-efficient shared liquidity layer concentrates cross-module risk; Guardian pause powers and a recent bad-debt sweep put it at low-medium.",
     evidence: [
@@ -390,7 +371,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Dolomite is well-audited but a 2/3 (sub-4-signer) multisig with a sub-48h timelock and very broad asset support drive its centralization risk up to medium.",
     evidence: [
@@ -404,7 +384,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Exactly is a multiply-audited fixed+variable-rate lender with timelocked governance; smaller scale and maturity-pool fragmentation keep it at low.",
     evidence: [
@@ -418,7 +397,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Fraxlend v2 is an audited isolated-pair lender; the FRAX-priced-at-$1 assumption and a 2025 WFRAX bad-debt event lift funds/liquidity risk to low-medium.",
     evidence: [
@@ -432,7 +410,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 1, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Aave v4 carries best-in-class audits but fresh Mar-2026 hub-and-spoke code plus a live Dec-2025 governance crisis raise centralization/operational risk; still low overall.",
     evidence: [
@@ -446,7 +423,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 1, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Compound v2 is battle-tested with 2-day-timelock governance; legacy/deprecated status (superseded by Compound III) is the only material lift, keeping it low.",
     evidence: [
@@ -460,7 +436,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Felix is an audited Liquity-v2 fork on Hyperliquid; youth, single-chain concentration, and HYPE/LST collateral with USDC oracle dependency place it at medium.",
     evidence: [
@@ -474,7 +449,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 1, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Frankencoin is an immutable, oracle-free CHF stablecoin with strong decentralization; slower auction-based liquidation of volatile collateral keeps funds/liquidity risk at low.",
     evidence: [
@@ -489,7 +463,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 1, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 1 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Kamino is the strongest-record Solana lender in the set; oracle and large-supplier concentration are the only soft risks, keeping it low.",
     evidence: [
@@ -503,7 +476,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "JustLend is a mature Tron lender with a timelocked DAO; concentrated voting power and Tron/USDD ecosystem exposure temper but do not lift it above low.",
     evidence: [
@@ -517,7 +489,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "BENQI is an established Avalanche lender with a strong audit cadence and a QI safety module; multisig-only admin keeps it at low.",
     evidence: [
@@ -531,7 +502,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 5, fundsManagement: 3, liquidity: 3, operational: 4 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Aries Markets is the top Aptos lender but a sub-4-signer multisig with no timelock, anonymous team, and a ~90% TVL collapse place it in the high tier.",
     evidence: [
@@ -545,7 +515,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 3, operational: 3 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Scallop is a solid Sui lender with three reputable audits and a bounty; an undisclosed multisig config and thinner Sui liquidity keep it at low-medium.",
     evidence: [
@@ -559,7 +528,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Echelon is a fast-growing Aptos lender with isolated markets and Chainlink oracles; a very young DAO and unitemized audits keep it at medium.",
     evidence: [
@@ -573,7 +541,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 3, operational: 3 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Blend is an immutable, governance-minimized Stellar lending primitive with backstop insurance; thin-chain liquidity is the main residual risk, keeping it at low.",
     evidence: [
@@ -587,7 +554,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Jupiter Lend is a deep, well-audited Solana lender but young, with rehypothecation undercutting isolation claims; timelocked admin keeps it at low-medium.",
     evidence: [
@@ -601,7 +567,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 4 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "HyperLend is a well-audited but young Aave-fork on the thin, exploit-prone HyperEVM; admin opacity and kHYPE concentration place it at medium.",
     evidence: [
@@ -615,7 +580,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 4, centralization: 4, fundsManagement: 3, liquidity: 4, operational: 4 },
     confidence: "low",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Curvance is a brand-new Monad lender with tiny TVL and unitemized audits; scored conservatively across the board for lack of track record, placing it high.",
     evidence: [
@@ -629,7 +593,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 4, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 3 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Sovryn is a mature Bitcoin-DeFi lender, but a prior partially-unrecovered lending exploit and thin Rootstock liquidity place it at medium.",
     evidence: [
@@ -644,7 +607,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 3, fundsManagement: 5, liquidity: 4, operational: 3 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "TrueFi is uncollateralized DeFi credit; trust-based borrower accounting and realized default history put it in the high tier despite a DAO-timelocked admin.",
     evidence: [
@@ -658,7 +620,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 5, centralization: 5, fundsManagement: 4, liquidity: 5, operational: 5 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Radiant Capital suffered a ~$50M unrecovered Oct-2024 exploit and is in wind-down; it scores near-worst across audits, centralization, liquidity, and operational.",
     evidence: [
@@ -672,7 +633,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 2, fundsManagement: 5, liquidity: 5, operational: 3 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Wildcat is undercollateralized credit with borrower-defined terms; its low protocol-admin surface is outweighed by maximal funds/liquidity trust risk, placing it high.",
     evidence: [
@@ -686,7 +646,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Gains Network (gTrade) is a leveraged-perps vault, not a money market; a 14-day timelock and overcollateralization buffer keep it at low-medium.",
     evidence: [
@@ -700,7 +659,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Venus Core Pool is an established overcollateralized BNB-chain money market; its 2025 $27M incident was user phishing (fully recovered), not a contract flaw — low venue risk.",
     evidence: [
@@ -714,7 +672,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Moonwell is an overcollateralized multichain Compound-fork; a Mar-2026 governance-attack vector lifts centralization to 3, keeping it at low.",
     evidence: [
@@ -728,7 +685,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Silo v2 is overcollateralized isolated-pair lending with immutable per-market silos; permissionless market creation and thin newer markets raise funds/liquidity risk to medium.",
     evidence: [
@@ -742,7 +698,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Sturdy v2 is an overcollateralized two-tier silo + aggregator design; a v1 hack history, manager trust, and no bad-debt reserves keep it at medium.",
     evidence: [
@@ -756,7 +711,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Vesper is a yield aggregator (not a money market) routing into external protocols; composed strategy risk and a 2021 oracle-hack history put it at medium.",
     evidence: [
@@ -770,7 +724,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Convex is a Curve LP-boosting / veCRV staking layer (NOT a lending/credit venue); immutable contracts, never exploited, with blue-chip Curve LP underlying — low venue risk.",
     evidence: [
@@ -784,7 +737,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 4, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Liqwid is the mature Cardano lending leader with a no-admin DAO design; thin eUTXO liquidity and LQ-heavy collateral are the main residual risks, keeping it at low.",
     evidence: [
@@ -798,7 +750,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Lista Lending is a well-audited Binance-adjacent BNB-chain CDP/isolated lender with a documented timelock and deep liquidity — the lowest-risk venue in the Wave 2 set.",
     evidence: [
@@ -812,7 +763,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 4, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Loopscale recovered fully from an Apr-2025 ~$5.8M oracle exploit but remains young, tokenless, and team-controlled with exotic collateral — high tier.",
     evidence: [
@@ -826,7 +776,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "NAVI is the largest Sui lender with strong Move audits; team-retained mint/freeze controls and young-chain risk cap it at low.",
     evidence: [
@@ -840,7 +789,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 3 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Zest is the largest Stacks BTC lender with a timelocked multisig; novel unproven BitVM vaults and thin Bitcoin-L2 liquidity raise it to medium.",
     evidence: [
@@ -854,7 +802,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 4, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Resupply (Convex/Yearn sub-DAO) recovered fully from a Jun-2025 ~$9.6M oracle exploit; composable stablecoin-CDP collateral and the preventable flaw keep it at medium.",
     evidence: [
@@ -868,7 +815,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "TermMax is a well-audited 4-of-6-multisig fixed-rate isolated lender; tokenized-equity/RWA collateral and maturity lockups raise it to medium.",
     evidence: [
@@ -882,7 +828,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 4, operational: 3 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Upshift is an institutional credit-vault provider lending to KYC'd market makers via a prime broker; a sub-4-signer multisig, no timelock, and offchain counterparty exposure put it high.",
     evidence: [
@@ -896,7 +841,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 3, operational: 3 },
     confidence: "partial",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "Tectonic is a mature audited Compound-fork on Cronos; overcollateralized but single-chain concentration and an opaque admin threshold keep it at medium.",
     evidence: [
@@ -910,7 +854,6 @@ export const YIELD_RISK_CONFIG = {
     scores: { audits: 2, centralization: 3, fundsManagement: 4, liquidity: 2, operational: 2 },
     confidence: "verified",
     reviewedAt: "2026-06-15",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
     rationale:
       "OpenEden USDO is a regulated T-bill-backed stablecoin venue; strong ratings/custody are offset by offchain RWA dependency and centralized issuer mint/redeem control — medium.",
     evidence: [
@@ -920,7 +863,7 @@ export const YIELD_RISK_CONFIG = {
       "24/7 instant TBILL mint/redeem ~$277M TVL; T-bill settlement adds some latency",
     ],
   },
-} satisfies Record<string, YieldRiskConfigEntry>;
+});
 
 export type YieldRiskConfigProtocol = keyof typeof YIELD_RISK_CONFIG;
 

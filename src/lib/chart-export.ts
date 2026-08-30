@@ -1,3 +1,5 @@
+import { formatUtcDateOnly } from "@shared/lib/format";
+
 export async function downloadChartPng(
   elementRef: React.RefObject<HTMLElement | null>,
   filename: string,
@@ -10,7 +12,7 @@ export async function downloadChartPng(
     });
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = `${filename}-${new Date().toISOString().split("T")[0]}.png`;
+    a.download = `${filename}-${formatUtcDateOnly(new Date())}.png`;
     a.click();
     return true;
   } catch (err) {

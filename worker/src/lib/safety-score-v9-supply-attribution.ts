@@ -58,7 +58,7 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
   notBeforeSec?: number;
 }
 
-function aggregateSupplyUsd(
+export function aggregateSupplyUsd(
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   assetId: string,
 ): number {

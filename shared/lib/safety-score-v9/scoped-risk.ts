@@ -1,4 +1,4 @@
-import { compareText } from "../../types/safety-score-v9-fact-primitives";
+import { assertScore, compareText } from "./primitives";
 
 export type V9EconomicLossScope = "access-only" | "deployment" | "reserve-claim" | "global-claim";
 
@@ -40,12 +40,6 @@ export interface V9ScopedRiskResolution {
 
 interface V9CoalescedScopedRiskSignal extends V9ScopedRiskSignal {
   sourceSignalKeys: readonly string[];
-}
-
-function assertScore(value: number, field: string): void {
-  if (!Number.isFinite(value) || value < 0 || value > 100) {
-    throw new Error(`Safety Score v9 ${field} must be between 0 and 100`);
-  }
 }
 
 function applyV9AllocatedScopedRiskAdjustments(

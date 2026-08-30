@@ -1,3 +1,4 @@
+import { chunkArray } from "./collections";
 import { findDynamicEndpointDescriptor, getEndpointDefinition } from "./api-endpoints";
 import { PHAROS_WEB_ACCEPT_MARKER } from "./request-source-marker";
 import { SITE_ORIGIN } from "./runtime-origins";
@@ -159,8 +160,7 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
       const entries = Array.from(buffered.values());
       buffered.clear();
 
-      for (let index = 0; index < entries.length; index += options.batchSize) {
-        const chunk = entries.slice(index, index + options.batchSize);
+      for (const [chunkIndex, chunk] of chunkArray(entries, options.batchSize).entries()) {
         const statements = chunk.map((entry) => db
           .prepare(options.insertSql)
           .bind(...options.bindInsertParams(entry)));
@@ -169,7 +169,7 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
         } catch (error) {
           // D1 batches are atomic. Restore the failed chunk and untouched tail,
           // but not chunks that already committed before this failure.
-          for (const entry of entries.slice(index)) {
+          for (const entry of entries.slice(chunkIndex * options.batchSize)) {
             const key = options.buildKey(entry);
             const newerEntry = buffered.get(key);
             if (newerEntry) {

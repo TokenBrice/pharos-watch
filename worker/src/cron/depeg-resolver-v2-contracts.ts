@@ -8,14 +8,12 @@ import type {
   DdrFirstPublicationMembership as StoreDdrFirstPublicationMembership,
   DdrPublicationManifest as StoreDdrPublicationManifest,
   DdrPublicPredictionLockTiming,
-  DdrPublicPredictionOutcomeKind,
   DdrSealedPublicPrediction as StoreDdrSealedPublicPrediction,
 } from "../lib/depeg-resolver-publication-store";
 
 export const DDR_PUBLICATION_SNAPSHOT_KIND = "ddr_public";
 
 export type DdrDirection = DdrIncidentDirection;
-export type DdrOutcomeKind = DdrPublicPredictionOutcomeKind;
 export type DdrLockTiming = DdrPublicPredictionLockTiming;
 export type DdrLockAction =
   | "pending"

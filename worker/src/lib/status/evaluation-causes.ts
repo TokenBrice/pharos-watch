@@ -5,10 +5,10 @@ import {
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { formatPercentFromRatio } from "@shared/lib/format";
 import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { STATUS_RESERVE_HIGH_DEFERRED_RATIO, STATUS_RESERVE_REPEATED_TRUNCATION_COUNT } from "./evaluation-state";
-import { formatRatio } from "./format";
 import { getSourceFailureMessage } from "./section-errors";
 
 function formatPersistentStaleIndependentFeeds(
@@ -574,8 +574,8 @@ export function buildDataQualityCauses(input: {
       layer: "data-quality",
       severity: "critical",
       message:
-        `Missing price ratio is stale (${formatRatio(input.missingPriceRatio)} > ` +
-        `${formatRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioStale)}).`,
+        `Missing price ratio is stale (${formatPercentFromRatio(input.missingPriceRatio)} > ` +
+        `${formatPercentFromRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioStale)}).`,
       metric: "missingPriceRatio",
       value: input.missingPriceRatio,
       threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale,
@@ -586,8 +586,8 @@ export function buildDataQualityCauses(input: {
       layer: "data-quality",
       severity: "warning",
       message:
-        `Missing price ratio is degraded (${formatRatio(input.missingPriceRatio)} > ` +
-        `${formatRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded)}).`,
+        `Missing price ratio is degraded (${formatPercentFromRatio(input.missingPriceRatio)} > ` +
+        `${formatPercentFromRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded)}).`,
       metric: "missingPriceRatio",
       value: input.missingPriceRatio,
       threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded,
@@ -600,8 +600,8 @@ export function buildDataQualityCauses(input: {
       layer: "data-quality",
       severity: "info",
       message:
-        `Missing price ratio is elevated (${formatRatio(input.missingPriceRatio)} ≥ ` +
-        `${formatRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated)}); not degrading status but worth watching.`,
+        `Missing price ratio is elevated (${formatPercentFromRatio(input.missingPriceRatio)} ≥ ` +
+        `${formatPercentFromRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated)}); not degrading status but worth watching.`,
       metric: "missingPriceRatio",
       value: input.missingPriceRatio,
       threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated,
@@ -617,7 +617,7 @@ export function buildDataQualityCauses(input: {
       layer: "data-quality",
       severity: "critical",
       message:
-        `Blacklist amount gaps exceed stale thresholds (ratio=${formatRatio(input.blacklistMissingRatio)}, ` +
+        `Blacklist amount gaps exceed stale thresholds (ratio=${formatPercentFromRatio(input.blacklistMissingRatio)}, ` +
         `recent=${input.blacklistRecentMissing}).`,
       metric: "blacklistMissingRatio",
       value: input.blacklistMissingRatio,
@@ -632,7 +632,7 @@ export function buildDataQualityCauses(input: {
       layer: "data-quality",
       severity: "warning",
       message:
-        `Recent or elevated blacklist amount gaps detected (ratio=${formatRatio(input.blacklistMissingRatio)}, ` +
+        `Recent or elevated blacklist amount gaps detected (ratio=${formatPercentFromRatio(input.blacklistMissingRatio)}, ` +
         `recent=${input.blacklistRecentMissing}).`,
       metric: "blacklistMissingRatio",
       value: input.blacklistMissingRatio,
@@ -687,7 +687,7 @@ export function buildDataQualityCauses(input: {
   if (input.reserveComposition.runBudgetTruncated) {
     const pressureReasons = [
       reserveDeferredRatio >= STATUS_RESERVE_HIGH_DEFERRED_RATIO
-        ? `high deferred share ${formatRatio(reserveDeferredRatio)}`
+        ? `high deferred share ${formatPercentFromRatio(reserveDeferredRatio)}`
         : null,
       reserveTruncationCount >= STATUS_RESERVE_REPEATED_TRUNCATION_COUNT
         ? `${reserveTruncationCount} consecutive truncation(s)`
@@ -759,8 +759,8 @@ export function buildDataQualityCauses(input: {
       layer: "data-quality",
       severity: "warning",
       message:
-        `Live reserve coverage is degraded (${formatRatio(input.reserveComposition.freshCoverageRatio)} fresh, ` +
-        `${formatRatio(input.reserveComposition.authoritativeFreshCoverageRatio)} authoritative). ` +
+        `Live reserve coverage is degraded (${formatPercentFromRatio(input.reserveComposition.freshCoverageRatio)} fresh, ` +
+        `${formatPercentFromRatio(input.reserveComposition.authoritativeFreshCoverageRatio)} authoritative). ` +
         `${input.reserveComposition.errorCoins} error, ${input.reserveComposition.missingCoins} missing, ` +
         `${input.reserveComposition.staleCoins} stale, ${input.reserveComposition.degradedCoins} degraded, ` +
         `${input.reserveComposition.corruptCoins} corrupt live reserve feed(s).` +

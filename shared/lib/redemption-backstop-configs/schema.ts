@@ -18,6 +18,7 @@ import {
 } from "../../types";
 import type { RedemptionDocSource } from "../../types";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
+import { formatUtcDateOnly } from "../format";
 import { isRedemptionSettlementFaster } from "./settlement";
 
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
@@ -510,5 +511,5 @@ export const RedemptionBackstopConfigSchema = z
 export type RedemptionBackstopConfig = z.infer<typeof RedemptionBackstopConfigSchema>;
 
 export function currentUtcDate(): string {
-  return new Date().toISOString().slice(0, 10);
+  return formatUtcDateOnly(new Date());
 }

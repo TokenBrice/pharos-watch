@@ -6,7 +6,7 @@ import {
   type V9WrapperLocalFactKey,
   type V9WrapperRiskAssessment,
 } from "../../types/safety-score-v9-wrapper";
-import { compareText } from "./primitives";
+import { assertScore, compareText } from "./primitives";
 
 export type { V9WrapperForm } from "../../types/safety-score-v9-wrapper";
 
@@ -93,12 +93,6 @@ function effectiveAssessment(
 
 function roundPoints(value: number): number {
   return Math.round(value * 10_000) / 10_000;
-}
-
-function assertScore(value: number, field: string): void {
-  if (!Number.isFinite(value) || value < 0 || value > 100) {
-    throw new Error(`Safety Score v9 ${field} must be between 0 and 100`);
-  }
 }
 
 function unavailableDisposition(

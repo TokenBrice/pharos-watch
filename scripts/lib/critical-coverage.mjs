@@ -1,5 +1,6 @@
 import { relative } from "node:path";
 
+import { formatUtcDateOnly } from "@shared/lib/format.ts";
 import { isValidDateOnly } from "./date-helpers.mts";
 import { collectSourceFilesUnderRoot } from "./source-files.mts";
 
@@ -479,10 +480,10 @@ export function collectCriticalCoverageWaiverReviewQueue(
   } = {},
 ) {
   const candidateSet = candidateFiles ? new Set(candidateFiles) : null;
-  const todayString = toUtcDateOnly(today);
+  const todayString = formatUtcDateOnly(today);
   const lookahead = new Date(`${todayString}T00:00:00.000Z`);
   lookahead.setUTCDate(lookahead.getUTCDate() + lookaheadDays);
-  const lookaheadString = toUtcDateOnly(lookahead);
+  const lookaheadString = formatUtcDateOnly(lookahead);
   const due = [];
   const upcoming = [];
 
@@ -535,8 +536,4 @@ function isHighStakesCoverageCandidate(file) {
     HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
     HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS.some((pattern) => pattern.test(file))
   );
-}
-
-function toUtcDateOnly(date) {
-  return date.toISOString().slice(0, 10);
 }

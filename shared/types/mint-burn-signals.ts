@@ -20,19 +20,3 @@ type ActiveNetFlowDirection24h = Exclude<NetFlowDirection24h, "inactive">;
 export type CoinFlowCompositeState =
   | "inactive"
   | `${ActiveNetFlowDirection24h}-${PressureShiftState}`;
-
-export const COIN_FLOW_COMPOSITE_STATE_VALUES = [
-  "minting-improving",
-  "minting-stable",
-  "minting-worsening",
-  "minting-nr",
-  "burning-improving",
-  "burning-stable",
-  "burning-worsening",
-  "burning-nr",
-  "flat-improving",
-  "flat-stable",
-  "flat-worsening",
-  "flat-nr",
-  "inactive",
-] as const satisfies readonly CoinFlowCompositeState[];

@@ -32,7 +32,6 @@ import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
   type DexMeasuredExecutionBudgetStopReason,
   type DexMeasuredExecutionRpcBudget,
-  type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import {
   canonicalEvmAddress,
@@ -477,15 +476,6 @@ export interface CurveStableSwapNgRequest {
   blockObservedAt: number;
   endpointAddress: `0x${string}`;
   runtimeEvidence?: CurveStableSwapNgRuntimeEvidence;
-}
-
-export interface CurveStableSwapNgBatchOutcome {
-  targetId: string;
-  inputUsd: number;
-  blockNumber: number;
-  eligibility: CurveStableSwapNgEligibility;
-  point?: DexMeasuredRawQuotePoint;
-  failureReason?: CurveStableSwapNgQuoteFailure;
 }
 
 export function resolveCurveStableSwapNgTokenIndices(

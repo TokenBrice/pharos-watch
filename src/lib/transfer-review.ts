@@ -1,5 +1,6 @@
 import transferReviewOverlays from "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";
 import { CHAIN_META } from "@shared/lib/chains";
+import { titleCaseSlug } from "@/lib/title-case-slug";
 
 /**
  * Build-time extraction of the per-deployment transfer review behind the scored
@@ -66,13 +67,6 @@ const SCOPE_LABELS: Record<string, string> = {
   additional: "Additional",
 };
 
-function titleCase(slug: string): string {
-  return slug
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 const REVIEWS_BY_ASSET_ID: ReadonlyMap<string, OverlayEntryShape> = new Map(
   Object.values(transferReviewOverlays.reviews as unknown as Record<string, OverlayEntryShape>)
     .map((review) => [review.assetId, review]),
@@ -91,11 +85,11 @@ export function buildTransferReviewView(assetId: string): TransferReviewView | n
     deployments.push({
       key: `${deployment.chainId}:${deployment.contractOrTokenId}`,
       chainId: deployment.chainId,
-      chainName: CHAIN_META[deployment.chainId]?.name ?? titleCase(deployment.chainId),
+      chainName: CHAIN_META[deployment.chainId]?.name ?? titleCaseSlug(deployment.chainId),
       scope: deployment.scope,
-      scopeLabel: SCOPE_LABELS[deployment.scope] ?? titleCase(deployment.scope),
+      scopeLabel: SCOPE_LABELS[deployment.scope] ?? titleCaseSlug(deployment.scope),
       posture: deployment.posture,
-      postureLabel: POSTURE_LABELS[deployment.posture] ?? titleCase(deployment.posture),
+      postureLabel: POSTURE_LABELS[deployment.posture] ?? titleCaseSlug(deployment.posture),
       evidence,
       sources: (deployment.sources ?? []).filter((source) => source.label.trim() && source.url.trim()),
     });

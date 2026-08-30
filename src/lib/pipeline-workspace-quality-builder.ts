@@ -1,4 +1,4 @@
-import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
+import { formatPercentFromRatio } from "@shared/lib/format";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import {
   STATUS_BLACKLIST_THRESHOLDS,
@@ -7,16 +7,12 @@ import {
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
 import type { DataQuality, StatusResponse } from "@shared/types";
+import { formatAge } from "@/lib/pipeline-workspace-format";
 import { worstSeverity } from "@/lib/status/workspace-mode";
 import type { PipelineQualityModel, PipelineQualityRow, PipelineSeverity } from "@/lib/pipeline-workspace-model";
 
 function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function formatAge(ageSeconds: number | null, suffix = "since last sample"): string {
-  if (ageSeconds == null) return "Last sample not reported";
-  return `${formatElapsedSeconds(ageSeconds)} ${suffix}`;
 }
 
 function thresholdState(value: number, warning: number, stale: number, inclusive = false): PipelineSeverity {
@@ -207,4 +203,3 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
     },
   };
 }
-

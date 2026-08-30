@@ -9,6 +9,12 @@ import { stableJsonStringifyChunksV1 } from "../stable-json";
 export { compareText };
 export { clampScore } from "../math";
 
+export function assertScore(value: number, field: string): void {
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    throw new Error(`Safety Score v9 ${field} must be between 0 and 100`);
+  }
+}
+
 export function uniqueSorted<T extends string>(values: readonly T[]): T[] {
   return [...new Set(values)].sort(compareText);
 }

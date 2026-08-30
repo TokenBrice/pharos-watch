@@ -15,7 +15,6 @@ import {
   buildReserveCompositionHistoryRepairStatement,
   buildReserveCompositionHistoryInsertStatement,
   buildReserveCompositionFinalizeSuccessStatement,
-  buildReserveCompositionUpsertStatement,
   buildReserveSuccessAuthoritativeReadbackStatement,
   buildReserveSyncAttemptHistoryRepairStatement,
   buildReserveSyncAttemptHistoryInsertStatement,
@@ -30,13 +29,6 @@ export interface LiveReserveArtifactCleanupResult {
   syncStateDeleted: number;
   compositionDeleted: number;
   breakerCacheDeleted: number;
-}
-
-export async function upsertReserveComposition(
-  db: D1Database,
-  record: ReserveCompositionRecord,
-): Promise<void> {
-  await runWithOverloadRetry(() => buildReserveCompositionUpsertStatement(db, record).run());
 }
 
 export async function beginReserveSyncAttempt(

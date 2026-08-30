@@ -883,7 +883,7 @@ describe("syncLiveReserves", () => {
       entry.sql.includes("INSERT INTO reserve_composition (")
     ));
     expect(compositionInsert).toBeDefined();
-    // metadata is the 6th bound column per buildReserveCompositionUpsertStatement (0-indexed 5).
+    // metadata is the 6th bound column in reserve_composition (0-indexed 5).
     const metadataJson = compositionInsert!.binds[5] as string;
     const metadata = JSON.parse(metadataJson) as { durationMs?: number };
     expect(typeof metadata.durationMs).toBe("number");

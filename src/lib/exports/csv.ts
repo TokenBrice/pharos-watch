@@ -1,18 +1,10 @@
 import { formatDatedExportFilename, triggerFileDownload } from "./download";
 import type { ExportPreamble } from "./preamble";
 import { formatPreambleCsv } from "./preamble";
-import { buildCsv as buildSharedCsv, buildCsvBody } from "@shared/lib/csv";
+import { buildCsv, buildCsvBody } from "@shared/lib/csv";
 import type { CsvColumn } from "@shared/lib/csv";
 
 export type { CsvColumn };
-
-/**
- * Build the CSV string (header + rows). Pure: no DOM access.
- * Mirrors `downloadCsv` field-escaping rules exactly.
- */
-function buildCsv<T>(data: T[], columns: CsvColumn<T>[]): string {
-  return buildSharedCsv(data, columns);
-}
 
 /**
  * Build the CSV body (preamble + header + rows). Pure: no DOM access.

@@ -1,5 +1,7 @@
+import { formatUtcDateOnly } from "@shared/lib/format";
+
 export function formatDatedExportFilename(filename: string, extension: string): string {
-  return `${filename}-${new Date().toISOString().split("T")[0]}.${extension}`;
+  return `${filename}-${formatUtcDateOnly(new Date())}.${extension}`;
 }
 
 export function triggerFileDownload(content: BlobPart[], mime: string, filename: string): void {

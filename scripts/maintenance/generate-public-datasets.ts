@@ -37,6 +37,7 @@ import { fileURLToPath } from "node:url";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
 import type { DepegEvent } from "@shared/types/market";
 import { getMechanismArchetypeLabel } from "@shared/lib/classification/mechanism-archetypes";
+import { formatUtcDateOnly } from "@shared/lib/format";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-dews";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/liquidity-score";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
@@ -114,16 +115,12 @@ interface ReportCardScore {
   grade?: string;
 }
 
-function isoDateUtc(now: Date): string {
-  return now.toISOString().slice(0, 10);
-}
-
 function isHistoricalSnapshotDate(snapshotDate: string): boolean {
-  return snapshotDate !== isoDateUtc(new Date());
+  return snapshotDate !== formatUtcDateOnly(new Date());
 }
 
 function resolveSnapshotDate(): string {
-  return process.env.PUBLIC_DATASETS_DATE?.trim() || isoDateUtc(new Date());
+  return process.env.PUBLIC_DATASETS_DATE?.trim() || formatUtcDateOnly(new Date());
 }
 
 async function safeFetchJson<T>(url: string): Promise<T | null> {
@@ -662,7 +659,7 @@ function writePublicDatasetCurrentModule(
 function pruneOldSnapshots(topicDir: string, snapshotDate: string): number {
   if (!existsSync(topicDir)) return 0;
   const cutoffMs = new Date(`${snapshotDate}T00:00:00Z`).getTime() - RETENTION_DAYS * 86_400_000;
-  const cutoffDate = isoDateUtc(new Date(cutoffMs));
+  const cutoffDate = formatUtcDateOnly(new Date(cutoffMs));
   let removed = 0;
   for (const name of readdirSync(topicDir)) {
     const match = /^(\d{4}-\d{2}-\d{2})\.(csv|json|ndjson)$/.exec(name);
