@@ -428,4 +428,67 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     });
     sqlite.close();
   });
+
+  it("classifies a zero-duration stale child as neutral when deployment changed the worker version", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    const slotStartedAt = nowSec - 3_600;
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+       slot_key, slot_started_at, state, result_status, execution_owner,
+       started_at, finished_at, updated_at, metadata, execution_generation,
+       invocation_id, worker_version
+     ) VALUES ('halfHourlyMeasuredExecution', ?, 'running', NULL, 'slot-owner', ?, NULL, ?, NULL, 1,
+               'old-invocation', 'worker-old')`,
+    ).run(slotStartedAt, slotStartedAt, slotStartedAt);
+    sqlite.prepare(
+      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+       VALUES ('sync-cl-exit-depth', 'child-owner', ?, ?, ?)`,
+    ).run(nowSec - 60, nowSec - 1_800, nowSec - 1_800);
+    sqlite.prepare(
+      `INSERT INTO cron_run_progress (
+       job, started_at, updated_at, stage, items_done, items_total,
+       message, lease_owner, metadata, slot_started_at
+     ) VALUES ('sync-cl-exit-depth', ?, ?, 'lease-acquired', 0, NULL, 'Lease acquired', 'child-owner', NULL, ?)`,
+    ).run(slotStartedAt, slotStartedAt, slotStartedAt);
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, {
+      nowSec,
+      staleAfterSec: 1_200,
+      slotKey: "halfHourlyMeasuredExecution",
+      reconcilerWorkerVersion: "worker-new",
+    });
+
+    expect(summary).toMatchObject({
+      slotsReconciled: 1,
+      syntheticCronRuns: 1,
+      progressRowsCleared: 1,
+      leasesCleared: 1,
+    });
+    expect(sqlite.prepare(
+      `SELECT status, error
+         FROM cron_runs
+        WHERE job = 'sync-cl-exit-depth'`,
+    ).get()).toEqual({ status: "skipped_neutral", error: null });
+    expect(sqlite.prepare(
+      `SELECT outcome, error, productive
+         FROM worker_producer_history
+        WHERE job = 'sync-cl-exit-depth'`,
+    ).get()).toEqual({ outcome: "skipped_neutral", error: null, productive: 0 });
+    const runRow = sqlite.prepare(
+      `SELECT metadata
+         FROM cron_runs
+        WHERE job = 'sync-cl-exit-depth'`,
+    ).get() as { metadata: string } | undefined;
+    const metadata = JSON.parse(String(runRow?.metadata ?? "{}")) as Record<string, unknown>;
+    expect(metadata).toMatchObject({
+      failureCategory: "platform-interrupted",
+      childDisposition: "interrupted-by-deploy",
+      interruptedByWorkerVersionChange: true,
+      activeDurationMs: 0,
+      slotWorkerVersion: "worker-old",
+      reconciledByWorkerVersion: "worker-new",
+    });
+    sqlite.close();
+  });
 });

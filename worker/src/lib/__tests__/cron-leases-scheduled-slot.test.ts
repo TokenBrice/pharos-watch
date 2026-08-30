@@ -168,6 +168,7 @@ describe("runScheduledSlotWithFence", () => {
           finished_at: null,
           updated_at: now - 1800,
           metadata: null,
+          worker_version: "worker-v1",
         },
       ],
       leases: [
@@ -196,6 +197,7 @@ describe("runScheduledSlotWithFence", () => {
       slotStartedAt,
       owner: "slot-owner-b",
       staleAfterSec: 1200,
+      workerVersion: "worker-v2",
     });
 
     expect(result.status).toBe("ok");
@@ -208,6 +210,10 @@ describe("runScheduledSlotWithFence", () => {
         error: "scheduled slot heartbeat stale; child job progress abandoned",
       }),
     ]);
+    expect(JSON.parse(db.getRuns()[0]?.metadata ?? "{}")).toMatchObject({
+      slotWorkerVersion: "worker-v1",
+      reconciledByWorkerVersion: "worker-v2",
+    });
     expect(db.getProgress("sync-yield-data")).toBeUndefined();
     expect(db.getLease("sync-yield-data")).toBeUndefined();
     const slot = db.getSlot("hourlyYieldSync", slotStartedAt);

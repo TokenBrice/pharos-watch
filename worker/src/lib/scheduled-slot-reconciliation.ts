@@ -224,10 +224,25 @@ async function insertSyntheticStaleCronRun(
   const startedAt = progress.started_at || slot.started_at || slot.slot_started_at;
   const activeDurationMs = Math.max(0, progress.updated_at - startedAt) * 1000;
   const reconciliationDelayMs = Math.max(0, nowSec - progress.updated_at) * 1000;
-  const error = "scheduled slot heartbeat stale; child job progress abandoned";
+  // Progress timestamps are second-resolution. A zero-duration child has no
+  // progress beyond its startup second, so a known version change is strong
+  // evidence that the isolate was interrupted by deployment before it could
+  // do useful work.
+  // Keep the neutral classification fail-closed when either version is absent
+  // or unchanged: those cases can still be an in-place kill or a real fault.
+  const interruptedByWorkerDeploy =
+    progress.updated_at === startedAt
+    && slot.worker_version != null
+    && reconcilerWorkerVersion != null
+    && slot.worker_version !== reconcilerWorkerVersion;
+  const status = interruptedByWorkerDeploy ? "skipped_neutral" : "error";
+  const outcome = interruptedByWorkerDeploy ? "skipped_neutral" : "abandoned";
+  const error = interruptedByWorkerDeploy ? null : "scheduled slot heartbeat stale; child job progress abandoned";
   const metadata = JSON.stringify({
     reason: "stale-slot-reconciled",
-    failureCategory: "platform-abandoned",
+    failureCategory: interruptedByWorkerDeploy ? "platform-interrupted" : "platform-abandoned",
+    childDisposition: interruptedByWorkerDeploy ? "interrupted-by-deploy" : "abandoned",
+    interruptedByWorkerVersionChange: interruptedByWorkerDeploy,
     slotKey: slot.slot_key,
     slotStartedAt: slot.slot_started_at,
     slotOwner: slot.execution_owner,
@@ -268,7 +283,7 @@ async function insertSyntheticStaleCronRun(
            (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key,
             schedule_key, producer_path, producer_kind, invocation_id, worker_version,
             productive, publication_count, calendar_period)
-         SELECT ?, ?, ?, 'error', ?, NULL, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL
+         SELECT ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL
           WHERE NOT EXISTS (
             SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
           )
@@ -291,6 +306,7 @@ async function insertSyntheticStaleCronRun(
         progress.job,
         startedAt,
         activeDurationMs,
+        status,
         error,
         metadata,
         slot.slot_started_at,
@@ -329,11 +345,14 @@ async function insertSyntheticStaleCronRun(
     // Preserve the last durable child heartbeat as the logical terminal time.
     // Reconciliation time stays in metadata and must not outrank a newer run.
     completedAt: progress.updated_at,
-    outcome: "abandoned",
+    outcome,
     itemCount: null,
     metadata,
     error,
-    productivity: { productive: false, reason: "platform-abandoned" },
+    productivity: {
+      productive: false,
+      reason: interruptedByWorkerDeploy ? "platform-interrupted-by-deploy" : "platform-abandoned",
+    },
   });
   return inserted;
 }
