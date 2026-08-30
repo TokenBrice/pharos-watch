@@ -1,22 +1,28 @@
 import { z } from "zod";
 import { CanonicalTextSchema } from "./safety-schema-primitives";
+import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
 
 export function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-export function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string) {
+export function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string, minLength = 0, duplicateNoun = "key") {
   return z
     .array(schema)
+    .min(minLength)
     .superRefine((values, ctx) => {
       const keys = values.map(keyOf);
       const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
-      if (duplicate !== undefined) ctx.addIssue({ code: "custom", message: `Duplicate canonical key: ${duplicate}` });
+      if (duplicate !== undefined) ctx.addIssue({ code: "custom", message: `Duplicate canonical ${duplicateNoun}: ${duplicate}` });
     })
     .transform((values) => [...values].sort((left, right) => compareText(keyOf(left), keyOf(right))));
 }
 
-const CanonicalStringArraySchema = canonicalArrayBy(CanonicalTextSchema, (value) => value);
+export function canonicalTextArray(minLength = 0, duplicateNoun = "key") {
+  return canonicalArrayBy(CanonicalTextSchema, (value) => value, minLength, duplicateNoun);
+}
+
+const CanonicalStringArraySchema = canonicalTextArray();
 
 const V9FactApplicabilitySchema = z.discriminatedUnion("state", [
   z
@@ -49,14 +55,7 @@ export type V9FactApplicability = z.infer<typeof V9FactApplicabilitySchema>;
 export const V9ObservationStateSchema = z.enum(["known", "missing", "stale", "unsupported", "bounded-unknown"]);
 export type V9ObservationState = z.infer<typeof V9ObservationStateSchema>;
 
-export const V9EvidenceResponsibilitySchema = z.enum([
-  "measured-adverse",
-  "issuer-undisclosed",
-  "integration-missing",
-  "producer-failed",
-  "method-unsupported",
-  "published-evidence-expired",
-]);
+export { V9EvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
 export type V9EvidenceResponsibility = z.infer<typeof V9EvidenceResponsibilitySchema>;
 
 export const V9FactStatusV2Schema = z

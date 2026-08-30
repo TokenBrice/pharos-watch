@@ -1,5 +1,5 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineBatch, defineRecordEntries, finalizeBackstopRegistry } from "./factory";
+import { defineBatch, defineConfigFamily, defineRecordEntries, finalizeBackstopRegistry } from "./factory";
 import {
   collateralRedeemBase,
   documentedBoundSupplyFull,
@@ -37,7 +37,6 @@ const MENTO_V3_FPMM_DOC = sourceRef("Mento V3 FPMM mechanics", "https://docs.men
   "fees",
   "settlement",
 ]);
-const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_DIRECT_REDEMPTION_AT);
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/collateral-redeem.ts";
 const BASE_COLLATERAL_REDEEM_IDS = [
   "bold-liquity",
@@ -59,12 +58,20 @@ function defineCollateralRecordEntries(configs: Record<string, RedemptionBacksto
   });
 }
 
+function defineLiveCollateralConfig(overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig {
+  return { ...collateralRedeemBase, capacityModel: { kind: "reserve-sync-metadata" }, ...overrides };
+}
+
+function defineCollateralConfig(overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig { return { ...collateralRedeemBase, ...overrides }; }
+
+function defineReviewedCollateralConfig(reviewedAt: string, overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig {
+  return { ...collateralRedeemBase, ...documentedBoundSupplyFull(reviewedAt), ...overrides };
+}
+
 // JPYm/CHFm: live telemetry now reads the coin's Mento V3 FPMM pool USDm
 // balance as direct redemption capacity; the underlying CDP fee mechanics
 // (and its costModel) are unchanged, per reviewed docs.
-const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = {
-  ...collateralRedeemBase,
-  capacityModel: { kind: "reserve-sync-metadata" },
+const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = defineLiveCollateralConfig({
   reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
   outputAssetType: "stable-single",
   outputAssets: ["cusd-celo"],
@@ -99,13 +106,11 @@ const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = {
     "The pool's swap fee is also read live: the verified FPMM implementation behind both pool proxies stores lpFee() and protocolFee() in basis points on a 10,000 denominator and charges their sum symmetrically in getAmountOut(), with setLPFee/setProtocolFee reverting FeeTooHigh above 200 bps combined. Both pools read 20 + 10 = 30 bps on 2026-08-12.",
     "Output declared 2026-07-19: Mento V3 CDP docs name USDm as the collateral asset of the FX-stable CDP/FPMM path, so the redemption pays USDm (tracked cusd-celo), mirroring the jpym-mento precedent; declaration was previously blocked on cusd-celo being untracked.",
   ],
-};
+});
 
 // cUSD (USDm), cEUR (EURm), and the 8 local-FX stables all redeem through a
 // Mento Broker/BiPoolManager pool against a stable or USDm counter asset.
-const mentoBrokerPoolRedeemConfig: RedemptionBackstopConfig = {
-  ...collateralRedeemBase,
-  capacityModel: { kind: "reserve-sync-metadata" },
+const mentoBrokerPoolRedeemConfig: RedemptionBackstopConfig = defineLiveCollateralConfig({
   reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
   outputAssetType: "stable-single",
   outputAssets: ["cusd-celo"],
@@ -139,274 +144,15 @@ const mentoBrokerPoolRedeemConfig: RedemptionBackstopConfig = {
     "Live reserve sync now enumerates the coin's Mento Broker/BiPoolManager pool (getExchangeIds/getPoolExchange) each run and reports the current counter-asset bucket depth and pool spread as direct redemption capacity and fee, replacing the prior documented-bound/eventual-only model.",
     "Output declared 2026-07-19: the coin's Broker/BiPoolManager pool pairs the FX stable against USDm (verified on-chain: every FX exchange settles in the USDm token, the rebranded cUSD), so the redemption pays USDm (tracked cusd-celo); declaration was previously blocked on cusd-celo being untracked.",
   ],
-};
+});
 
-const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
-  ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
-  ...defineBatch(
-    ["jpym-mento"],
-    { ...mentoFpmmPoolRedeemConfig, outputAssets: ["cusd-celo"] },
+const MENTO_ROUTE_CONFIGS = defineConfigFamily(
+  [
     {
-      sourceFilePath: SOURCE_FILE_PATH,
-    },
-  ),
-  ...defineBatch(["chfm-mento"], mentoFpmmPoolRedeemConfig, {
-    sourceFilePath: SOURCE_FILE_PATH,
-  }),
-  ...defineBatch(
-    ["audm-mento", "brlm-mento", "cadm-mento", "copm-mento", "ghsm-mento", "kesm-mento", "zarm-mento"],
-    mentoBrokerPoolRedeemConfig,
-    { sourceFilePath: SOURCE_FILE_PATH },
-  ),
-  ...defineCollateralRecordEntries({
-    "bold-liquity": {
-      ...collateralRedeemBase,
-      outputAssets: ["asset:weth", "asset:wsteth", "asset:reth"],
-      capacityModel: { kind: "reserve-sync-metadata" },
-      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-      reviewedAt: "2026-03-22",
-      docs: [
-        sourceRef("Liquity V2 redemption docs", "https://docs.liquity.org/v2-faq/redemptions-and-delegation", [
-          "route",
-          "capacity",
-          "fees",
-        ]),
-        sourceRef("Liquity v2 repository", "https://github.com/liquity/bold", ["route", "capacity", "fees"]),
-      ],
-      notes: [
-        "Fresh live reserve metadata reads Liquity v2 ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
-      ],
-    },
-    "bd-basedollar": {
-      ...collateralRedeemBase,
-      outputAssetType: "mixed-collateral",
-      outputAssets: ["asset:weth", "asset:wsteth", "asset:reth", "asset:cbbtc", "asset:cbeth"],
-      capacityModel: { kind: "reserve-sync-metadata" },
-      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-      reviewedAt: "2026-08-21",
-      docs: [
-        sourceRef(
-          "Base Dollar redemption mechanics",
-          "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/README.md#bold-redemptions",
-          ["route", "capacity", "fees", "access", "settlement"],
-        ),
-        sourceRef(
-          "Base Dollar production deployment",
-          "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json",
-          ["route", "capacity"],
-        ),
-        sourceRef(
-          "Base Dollar CollateralRegistry",
-          "https://basescan.org/address/0x7551ebfc8340b7f91874942be9c653733d4fb04f#code",
-          ["route", "fees", "access", "settlement"],
-        ),
-      ],
-      notes: [
-        "Fresh live reserve metadata reads all five Base Dollar ActivePool branch debts as the current direct redemption-capacity bound; an unavailable or degraded on-chain snapshot leaves the route unrated instead of falling back to full supply.",
-        "Base Dollar's launch branches settle redemptions in WETH, wstETH, rETH, wrapped cbBTC, and cbETH; the wrapped cbBTC branch is normalized to the underlying cbBTC price while preserving the branch's 18-decimal accounting token.",
-      ],
-    },
-    "lusd-liquity": {
-      ...collateralRedeemBase,
-      outputAssets: ["asset:eth"],
-      capacityModel: { kind: "reserve-sync-metadata" },
-      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-      reviewedAt: "2026-03-22",
-      docs: [
-        sourceRef("Liquity redemption docs", "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions", [
-          "route",
-          "capacity",
-          "fees",
-        ]),
-        sourceRef("Liquity v1 contract addresses", "https://docs.liquity.org/liquity-v1/documentation/resources", [
-          "capacity",
-        ]),
-      ],
-      notes: [
-        "Fresh live reserve metadata reads Liquity v1 TroveManager system debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
-      ],
-    },
-    "feusd-felix": {
-      ...collateralRedeemBase,
-      outputAssetType: "mixed-collateral",
-      outputAssets: ["asset:whype", "asset:feubtc", "asset:khype", "asset:wsthype"],
-      capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      costModel: fixedFee(0, "Felix docs describe redemption as fee-free"),
-    },
-    "meusd-mezo": {
-      ...collateralRedeemBase,
-      outputAssets: ["asset:btc"],
-      capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      costModel: fixedFee(75, "75 bps standard; 0 bps when redeeming against your own debt"),
-      docs: [
-        sourceRef("Mezo MUSD overview", "https://mezo.org/docs/users/musd/", ["route", "capacity", "fees"]),
-        sourceRef("Mezo MUSD redemption guide", "https://mezo.org/docs/developers/musd/musd-redemptions", [
-          "route",
-          "capacity",
-          "fees",
-          "access",
-        ]),
-      ],
-      notes: [
-        "Fresh live reserve metadata reads Mezo ActivePool debt as the current direct redemption-capacity bound, paired with BTC collateral value, TCR/MCR route status, and the on-chain redemption-rate read.",
-      ],
-    },
-    "nect-beraborrow": {
-      ...collateralRedeemBase,
-      capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-      docs: [
-        sourceRef(
-          "Beraborrow NECT peg docs",
-          "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions/usdnect-peg",
-          ["route", "capacity", "fees"],
-        ),
-      ],
-      notes: [
-        "Fresh live reserve metadata reads Beraborrow's Liquity v2-style ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
-      ],
-    },
-    "fxusd-f-x-protocol": {
-      ...collateralRedeemBase,
-      outputAssets: ["asset:wsteth", "asset:wbtc"],
-      capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      costModel: fixedFee(50, "Protocol docs list a 50 bps redemption fee"),
-      docs: [
-        sourceRef("f(x) docs", "https://fxprotocol.gitbook.io/fx-docs", ["route", "capacity", "fees"]),
-        sourceRef("f(x) app", "https://fx.aladdin.club", ["capacity"]),
-      ],
-      notes: [
-        "Tracked metadata describes direct oracle-priced collateral redemption when fxUSD trades below peg; current model scores that primary onchain redemption rail rather than Curve secondary liquidity",
-      ],
-    },
-    "usdaf-asymmetry": {
-      ...collateralRedeemBase,
-      capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      outputAssets: ["asset:wbtc", "asset:tbtc", "asset:susds", "asset:sfrxusd", "asset:scrvusd", "asset:ysybold"],
-      outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-    },
-    "usdq-quill": {
-      ...collateralRedeemBase,
-      capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      outputAssets: ["asset:weth", "asset:wsteth", "asset:weeth", "asset:scr"],
-      outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-    },
-    "cdp-enosys": {
-      ...collateralRedeemBase,
-      outputAssets: ["asset:fxrp", "asset:wflr"],
-      capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_FOLLOWUP_REMEDIATION_AT,
-      outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-      docs: [
-        sourceRef(
-          "Flare Enosys Loans launch update",
-          "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare",
-          ["route", "capacity", "fees", "access", "settlement"],
-        ),
-      ],
-      notes: [
-        "Modeled as a Liquity V2-style collateral redemption route on Flare; lowest-rate troves are redeemed first when CDP trades below peg.",
-        "Fresh live reserve metadata reads Enosys ActivePool branch debt and collateral balances on Flare as the current direct redemption-capacity bound.",
-      ],
-    },
-    "ausdt-tether-alloy": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull("2026-04-20"),
-      accessModel: "whitelisted-onchain",
-      outputAssetType: "bluechip-collateral",
-      costModel: fixedFee(
-        25,
-        "Alloy CMPVault MINT_OPENING_RETURN_FEE() returns 0xfa, which is 25 bps on the contract's 1e5 fee scale; docs identify this parameter as the return fee",
-      ),
-      docs: [
-        sourceRef("Alloy vault docs", "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults", [
-          "route",
-          "capacity",
-        ]),
-        sourceRef(
-          "Alloy aUSDT mint docs",
-          "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults/ausdmnt",
-          ["route", "fees"],
-        ),
-        sourceRef("Alloy Ethereum deployments", "https://dev.alloy.tether.to/deployments/ethereum-mainnet", [
-          "capacity",
-        ]),
-      ],
-      notes: [
-        "A holder needs Alloy verification and usable CMP collateral access to exercise the onchain return path; route scoring reflects whitelisted collateral redemption rather than public fiat redemption",
-        "Live reserve sync reads the current XAUT vault balance and aUSDT total supply, but current redemption capacity is still modeled as documented eventual system redeemability until Alloy exposes per-account/current redeemable-capacity telemetry",
-      ],
-    },
-    "ussd-sonic-labs": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
-      capacityModel: { kind: "reserve-sync-metadata" },
-      outputAssetType: "stable-single",
-      outputAssets: ["frxusd-frax"],
-      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
-      costModel: fixedFee(0, "The verified Sonic BrandedCustodian returned redeemFee() = 0 at Sonic block 77432523."),
-      docs: [
-        sourceRef("Sonic USSD docs", "https://docs.soniclabs.com/sonic/ussd", [
-          "route",
-          "capacity",
-          "access",
-          "settlement",
-        ]),
-        sourceRef(
-          "USSD BrandedCustodian verified contract",
-          "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code",
-          ["route", "capacity", "fees", "settlement"],
-        ),
-        sourceRef("Sonic USSD page", "https://www.soniclabs.com/ussd", ["route", "capacity", "settlement"]),
-      ],
-      notes: [
-        "Sonic's public page describes a broader upstream supported-USD-asset set, but the deployed direct holder route is the USSD BrandedCustodian. At Sonic block 77432523 its custodianTkn() returned Sonic frxUSD (0x80Eede496655FB9047dd39d9f418d5483ED600df).",
-        "Fresh reserve telemetry reads the BrandedCustodian's totalAssets() (its frxUSD balance) as the live executable exit bound; when the read is unavailable the route is left unrated instead of assuming full-supply immediacy.",
-        "Re-read 2026-08-12 at Sonic block 77432523: totalAssets() and frxUSD.balanceOf(custodian) both returned 2,081,316.47, confirming the escrow read measures the asset the redemption pays out; redeemFee() was still 0 and paused() reverts, so the verified source exposes no pause surface.",
-      ],
-    },
-    "reusd-resupply": {
-      ...collateralRedeemBase,
-      capacityModel: {
-        kind: "reserve-sync-metadata",
-      },
-      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
-      outputAssetType: "mixed-collateral",
-      outputAssets: ["asset:crvusd", "asset:frxusd"],
-      costModel: fixedFee(100, "Communal redemption model with 1% fee establishing a price floor"),
-      docs: [
-        sourceRef("Resupply stability mechanics", "https://docs.resupply.fi/resupply-protocol/stability-mechanics", [
-          "route",
-          "capacity",
-          "fees",
-        ]),
-        sourceRef(
-          "Resupply collateralized debt positions",
-          "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions",
-          ["route", "capacity"],
-        ),
-        sourceRef("Resupply app", "https://resupply.fi/redeem", ["route", "capacity", "settlement"]),
-      ],
-      notes: [
-        "Fresh Resupply pair telemetry reads RedemptionHandler.getMaxRedeemableDebt() and the permissionless guard state as the current executable capacity bound; when the guard is closed, the route stays visible but does not enter or uplift V9 Exit",
-        "Output declared 2026-07-19: Resupply docs state all reUSD collateral backing consists of crvUSD supplied to Curve Lend or frxUSD supplied to Frax Lend, and the redeemer chooses which pools to redeem against, so the payout is the chosen pools' crvUSD/frxUSD-denominated lending collateral.",
-      ],
-    },
-    "cusd-celo": {
-      ...collateralRedeemBase,
+      id: "cusd-celo",
       outputAssets: ["usdc-circle", "usdt-tether"],
-      capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
-      outputAssetType: "stable-basket",
+      outputAssetType: "stable-basket" as const,
       costModel: documentedVariableFee(
         "Mento broker pool spread, set on-chain per pool (PoolConfig.spread, currently 5 bps on USDm stable pools per MGP-13); live telemetry supplies the current bps",
         "formula",
@@ -426,12 +172,11 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Live reserve sync now enumerates USDm's Mento Broker/BiPoolManager pools (getExchangeIds/getPoolExchange) each run, summing the matched USDC/USDT counter-asset bucket depths as direct redemption capacity and reporting the current pool spread as fee.",
       ],
     },
-    "ceur-celo": {
-      ...collateralRedeemBase,
+    {
+      id: "ceur-celo",
       outputAssets: ["cusd-celo"],
-      capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
-      outputAssetType: "stable-single",
+      outputAssetType: "stable-single" as const,
       costModel: documentedVariableFee(
         "Mento broker pool spread, set on-chain per pool (PoolConfig.spread, currently 5 bps on USDm stable pools per MGP-13); live telemetry supplies the current bps",
         "formula",
@@ -451,12 +196,11 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Live reserve sync now enumerates EURm's Mento Broker/BiPoolManager USDm/EURm pool (getExchangeIds/getPoolExchange) each run, reporting the USDm counter-asset bucket depth as direct redemption capacity and the current pool spread as fee.",
       ],
     },
-    "gbpm-mento": {
-      ...collateralRedeemBase,
+    {
+      id: "gbpm-mento",
       outputAssets: ["cusd-celo"],
-      capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
-      outputAssetType: "stable-single",
+      outputAssetType: "stable-single" as const,
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       docs: [
         sourceRef("Mento CDP docs", "https://docs.mento.org/mento-v3/dive-deeper/cdp", [
@@ -485,15 +229,250 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Live reserve sync now reads the branch's ActivePool debt against GBPm total supply each run, reporting the resulting ratio as direct redemption capacity, and CollateralRegistry.getRedemptionRateWithDecay() as the current redemption fee.",
       ],
     },
-    "usdp-parallel": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull("2026-08-12"),
+  ],
+  ({ id: _id, ...row }) => defineLiveCollateralConfig(row),
+);
+
+const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
+  ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
+  ...defineBatch(
+    ["jpym-mento"],
+    { ...mentoFpmmPoolRedeemConfig, outputAssets: ["cusd-celo"] },
+    {
+      sourceFilePath: SOURCE_FILE_PATH,
+    },
+  ),
+  ...defineBatch(["chfm-mento"], mentoFpmmPoolRedeemConfig, {
+    sourceFilePath: SOURCE_FILE_PATH,
+  }),
+  ...defineBatch(
+    ["audm-mento", "brlm-mento", "cadm-mento", "copm-mento", "ghsm-mento", "kesm-mento", "zarm-mento"],
+    mentoBrokerPoolRedeemConfig,
+    { sourceFilePath: SOURCE_FILE_PATH },
+  ),
+  ...defineCollateralRecordEntries({
+    "bold-liquity": defineLiveCollateralConfig({
+      outputAssets: ["asset:weth", "asset:wsteth", "asset:reth"],
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      reviewedAt: "2026-03-22",
+      docs: [
+        sourceRef("Liquity V2 redemption docs", "https://docs.liquity.org/v2-faq/redemptions-and-delegation", [
+          "route",
+          "capacity",
+          "fees",
+        ]),
+        sourceRef("Liquity v2 repository", "https://github.com/liquity/bold", ["route", "capacity", "fees"]),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads Liquity v2 ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
+      ],
+    }),
+    "bd-basedollar": defineLiveCollateralConfig({
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:weth", "asset:wsteth", "asset:reth", "asset:cbbtc", "asset:cbeth"],
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      reviewedAt: "2026-08-21",
+      docs: [
+        sourceRef(
+          "Base Dollar redemption mechanics",
+          "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/README.md#bold-redemptions",
+          ["route", "capacity", "fees", "access", "settlement"],
+        ),
+        sourceRef(
+          "Base Dollar production deployment",
+          "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json",
+          ["route", "capacity"],
+        ),
+        sourceRef(
+          "Base Dollar CollateralRegistry",
+          "https://basescan.org/address/0x7551ebfc8340b7f91874942be9c653733d4fb04f#code",
+          ["route", "fees", "access", "settlement"],
+        ),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads all five Base Dollar ActivePool branch debts as the current direct redemption-capacity bound; an unavailable or degraded on-chain snapshot leaves the route unrated instead of falling back to full supply.",
+        "Base Dollar's launch branches settle redemptions in WETH, wstETH, rETH, wrapped cbBTC, and cbETH; the wrapped cbBTC branch is normalized to the underlying cbBTC price while preserving the branch's 18-decimal accounting token.",
+      ],
+    }),
+    "lusd-liquity": defineLiveCollateralConfig({
+      outputAssets: ["asset:eth"],
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      reviewedAt: "2026-03-22",
+      docs: [
+        sourceRef("Liquity redemption docs", "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions", [
+          "route",
+          "capacity",
+          "fees",
+        ]),
+        sourceRef("Liquity v1 contract addresses", "https://docs.liquity.org/liquity-v1/documentation/resources", [
+          "capacity",
+        ]),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads Liquity v1 TroveManager system debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
+      ],
+    }),
+    "feusd-felix": defineLiveCollateralConfig({
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:whype", "asset:feubtc", "asset:khype", "asset:wsthype"],
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+      costModel: fixedFee(0, "Felix docs describe redemption as fee-free"),
+    }),
+    "meusd-mezo": defineLiveCollateralConfig({
+      outputAssets: ["asset:btc"],
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+      costModel: fixedFee(75, "75 bps standard; 0 bps when redeeming against your own debt"),
+      docs: [
+        sourceRef("Mezo MUSD overview", "https://mezo.org/docs/users/musd/", ["route", "capacity", "fees"]),
+        sourceRef("Mezo MUSD redemption guide", "https://mezo.org/docs/developers/musd/musd-redemptions", [
+          "route",
+          "capacity",
+          "fees",
+          "access",
+        ]),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads Mezo ActivePool debt as the current direct redemption-capacity bound, paired with BTC collateral value, TCR/MCR route status, and the on-chain redemption-rate read.",
+      ],
+    }),
+    "nect-beraborrow": defineLiveCollateralConfig({
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      docs: [
+        sourceRef(
+          "Beraborrow NECT peg docs",
+          "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions/usdnect-peg",
+          ["route", "capacity", "fees"],
+        ),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads Beraborrow's Liquity v2-style ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
+      ],
+    }),
+    "fxusd-f-x-protocol": defineLiveCollateralConfig({
+      outputAssets: ["asset:wsteth", "asset:wbtc"],
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+      costModel: fixedFee(50, "Protocol docs list a 50 bps redemption fee"),
+      docs: [
+        sourceRef("f(x) docs", "https://fxprotocol.gitbook.io/fx-docs", ["route", "capacity", "fees"]),
+        sourceRef("f(x) app", "https://fx.aladdin.club", ["capacity"]),
+      ],
+      notes: [
+        "Tracked metadata describes direct oracle-priced collateral redemption when fxUSD trades below peg; current model scores that primary onchain redemption rail rather than Curve secondary liquidity",
+      ],
+    }),
+    "usdaf-asymmetry": defineLiveCollateralConfig({
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+      outputAssets: ["asset:wbtc", "asset:tbtc", "asset:susds", "asset:sfrxusd", "asset:scrvusd", "asset:ysybold"],
+      outputAssetType: "mixed-collateral",
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+    }),
+    "usdq-quill": defineLiveCollateralConfig({
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+      outputAssets: ["asset:weth", "asset:wsteth", "asset:weeth", "asset:scr"],
+      outputAssetType: "mixed-collateral",
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+    }),
+    "cdp-enosys": defineLiveCollateralConfig({
+      outputAssets: ["asset:fxrp", "asset:wflr"],
+      reviewedAt: REVIEWED_FOLLOWUP_REMEDIATION_AT,
+      outputAssetType: "mixed-collateral",
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      docs: [
+        sourceRef(
+          "Flare Enosys Loans launch update",
+          "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare",
+          ["route", "capacity", "fees", "access", "settlement"],
+        ),
+      ],
+      notes: [
+        "Modeled as a Liquity V2-style collateral redemption route on Flare; lowest-rate troves are redeemed first when CDP trades below peg.",
+        "Fresh live reserve metadata reads Enosys ActivePool branch debt and collateral balances on Flare as the current direct redemption-capacity bound.",
+      ],
+    }),
+    "ausdt-tether-alloy": defineReviewedCollateralConfig("2026-04-20", {
+      accessModel: "whitelisted-onchain",
+      outputAssetType: "bluechip-collateral",
+      costModel: fixedFee(
+        25,
+        "Alloy CMPVault MINT_OPENING_RETURN_FEE() returns 0xfa, which is 25 bps on the contract's 1e5 fee scale; docs identify this parameter as the return fee",
+      ),
+      docs: [
+        sourceRef("Alloy vault docs", "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults", [
+          "route",
+          "capacity",
+        ]),
+        sourceRef(
+          "Alloy aUSDT mint docs",
+          "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults/ausdmnt",
+          ["route", "fees"],
+        ),
+        sourceRef("Alloy Ethereum deployments", "https://dev.alloy.tether.to/deployments/ethereum-mainnet", [
+          "capacity",
+        ]),
+      ],
+      notes: [
+        "A holder needs Alloy verification and usable CMP collateral access to exercise the onchain return path; route scoring reflects whitelisted collateral redemption rather than public fiat redemption",
+        "Live reserve sync reads the current XAUT vault balance and aUSDT total supply, but current redemption capacity is still modeled as documented eventual system redeemability until Alloy exposes per-account/current redeemable-capacity telemetry",
+      ],
+    }),
+    "ussd-sonic-labs": defineLiveCollateralConfig({
+      outputAssetType: "stable-single",
+      outputAssets: ["frxusd-frax"],
+      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+      costModel: fixedFee(0, "The verified Sonic BrandedCustodian returned redeemFee() = 0 at Sonic block 77432523."),
+      docs: [
+        sourceRef("Sonic USSD docs", "https://docs.soniclabs.com/sonic/ussd", [
+          "route",
+          "capacity",
+          "access",
+          "settlement",
+        ]),
+        sourceRef(
+          "USSD BrandedCustodian verified contract",
+          "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code",
+          ["route", "capacity", "fees", "settlement"],
+        ),
+        sourceRef("Sonic USSD page", "https://www.soniclabs.com/ussd", ["route", "capacity", "settlement"]),
+      ],
+      notes: [
+        "Sonic's public page describes a broader upstream supported-USD-asset set, but the deployed direct holder route is the USSD BrandedCustodian. At Sonic block 77432523 its custodianTkn() returned Sonic frxUSD (0x80Eede496655FB9047dd39d9f418d5483ED600df).",
+        "Fresh reserve telemetry reads the BrandedCustodian's totalAssets() (its frxUSD balance) as the live executable exit bound; when the read is unavailable the route is left unrated instead of assuming full-supply immediacy.",
+        "Re-read 2026-08-12 at Sonic block 77432523: totalAssets() and frxUSD.balanceOf(custodian) both returned 2,081,316.47, confirming the escrow read measures the asset the redemption pays out; redeemFee() was still 0 and paused() reverts, so the verified source exposes no pause surface.",
+      ],
+    }),
+    "reusd-resupply": defineLiveCollateralConfig({
+      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:crvusd", "asset:frxusd"],
+      costModel: fixedFee(100, "Communal redemption model with 1% fee establishing a price floor"),
+      docs: [
+        sourceRef("Resupply stability mechanics", "https://docs.resupply.fi/resupply-protocol/stability-mechanics", [
+          "route",
+          "capacity",
+          "fees",
+        ]),
+        sourceRef(
+          "Resupply collateralized debt positions",
+          "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions",
+          ["route", "capacity"],
+        ),
+        sourceRef("Resupply app", "https://resupply.fi/redeem", ["route", "capacity", "settlement"]),
+      ],
+      notes: [
+        "Fresh Resupply pair telemetry reads RedemptionHandler.getMaxRedeemableDebt() and the permissionless guard state as the current executable capacity bound; when the guard is closed, the route stays visible but does not enter or uplift V9 Exit",
+        "Output declared 2026-07-19: Resupply docs state all reUSD collateral backing consists of crvUSD supplied to Curve Lend or frxUSD supplied to Frax Lend, and the redeemer chooses which pools to redeem against, so the payout is the chosen pools' crvUSD/frxUSD-denominated lending collateral.",
+      ],
+    }),
+    ...MENTO_ROUTE_CONFIGS,
+    "usdp-parallel": defineLiveCollateralConfig({
       // Live-only since v4.35: the escrow-balance adapter sums the
       // Parallelizer's per-collateral getIssuedByCollateral reads (verified
       // proportional basket redemption, so the sum is the honest bound); when
       // the read is unavailable the route is left unrated instead of assuming
       // full-supply immediacy.
       capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
+      reviewedAt: "2026-08-12",
       outputAssetType: "mixed-collateral",
       outputAssets: [
         "asset:frxusd",
@@ -528,10 +507,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       notes: [
         "Output declared 2026-07-19: Parallel V3 docs state stablecoins can be burnt at oracle value for any asset in the backing (or redeemed pro-rata across it), and the implementation page lists the current per-chain backing set — frxUSD, sfrxUSD, USDe, sUSDe (Ethereum); USDS, sUSDS (Base); USDe, sUSDe (HyperEVM); USDC and the ygamiUSDC Silo Vault (Avalanche). The declared set is the full documented backing including the untracked ygamiUSDC vault token; the set is DAO-mutable.",
       ],
-    },
-    "hyusd-hylo": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    }),
+    "hyusd-hylo": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
       routeStatus: "unknown",
       outputAssetType: "mixed-collateral",
       reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
@@ -553,10 +530,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Hylo's current architecture page distinguishes V1's SOL-only LST pool from V2's independent SOL, BTC, and USDC collateral pools, and its routing page says redemptions select among pools using dynamic fees.",
         "No primary source reviewed identifies which architecture and complete pool/output set is active for the tracked hyUSD deployment. The route is therefore unknown and outputAssets is intentionally unset so neither the legacy SOL-only nor the V2 multi-asset claim can score.",
       ],
-    },
-    "fusd-freedom-dollar": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    }),
+    "fusd-freedom-dollar": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
       outputAssets: ["asset:zano"],
       executionModel: "rules-based-nav",
       outputAssetType: "bluechip-collateral",
@@ -575,11 +550,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       notes: [
         "Freedom Dollar is modeled as decentralized protocol conversion into ZANO reserve value rather than issuer fiat redemption.",
       ],
-    },
-    "satusd-river": {
-      ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
-      capacityModel: { kind: "reserve-sync-metadata" },
+    }),
+    "satusd-river": defineLiveCollateralConfig({
       reviewedAt: "2026-08-27",
       unresolvedOutputDisposition: "issuer-undisclosed",
       costModel: documentedVariableFee(
@@ -605,9 +577,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "No static fee bound is declared: `maxRedemptionFee` is a per-branch governance parameter constrained only by `maxRedemptionFee <= DECIMAL_PRECISION` (100%), so the documented ceiling is two orders of magnitude above the 200 bps admissible bound. The live adapter instead reads each branch's `getRedemptionRateWithDecay()` in the same run, so the current cost comes from telemetry rather than from a reviewed ceiling.",
         "Fresh reserve telemetry reads per-chain trove debt through the Satoshi app's `getGlobalSystemBalances()` as the executable exit bound, after checking that `debtToken()` still round-trips to this coin's own satUSD deployment and that the global TCR clears each branch MCR. The prior documented-bound full-supply model is dropped with no fallback: satUSD is largely bridged or Smart-Vault-minted rather than trove-backed, so total supply never described what the redemption engine could honor, and an unavailable read now leaves the route unrated instead of restoring that figure.",
       ],
-    },
-    "doc-money-on-chain": {
-      ...collateralRedeemBase,
+    }),
+    "doc-money-on-chain": defineCollateralConfig({
       outputAssets: ["asset:btc"],
       capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.95, confidence: "documented-bound" },
       reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
@@ -632,10 +603,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Fresh reserve telemetry reads MoCState.freeDoc() — the DOC amount currently redeemable through redeemFreeDoc — identity-bound to the tracked DOC token through the MoC connector; the 95% documented ratio applies only when the live read is unavailable.",
         "Verified 2026-08-12: MoCState 0xb9C42EFc8ec54490a37cA91c423F7285Fa01e257 returned freeDoc() = 2,874,833.75, its connector() and the connector's docToken() resolved to the tracked Rootstock DOC deployment, and the probe's pause target read false. The documented fallback stays because DOC is also deployed on Arbitrum and Ethereum while only the Rootstock-local balance is redeemable, and Rootstock exposes a single public RPC.",
       ],
-    },
-    "usbd-bima": {
-      ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
+    }),
+    "usbd-bima": defineReviewedCollateralConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
       outputAssets: ["asset:btc"],
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(
@@ -651,10 +620,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       notes: [
         "Docs also describe a PSM against USDC, USDP, and GUSD, but the primary modeled exit is direct redemption into BTC-derivative vault collateral",
       ],
-    },
-    "deuro-deuro": {
-      ...collateralRedeemBase,
-      capacityModel: { kind: "reserve-sync-metadata" },
+    }),
+    "deuro-deuro": defineLiveCollateralConfig({
       reviewedAt: "2026-08-12",
       outputAssetType: "stable-basket",
       unresolvedOutputAssetKeys: [
@@ -704,17 +671,15 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "The basket remains unresolved under the July 2026 completeness rule. EURS, EURC, EURR, EUROP, and EURI map to exact tracked deployments; EURT, VEUR, EURA, and the legacy Ethereum EURE token at 0x3231...273f do not, so publishing only the five tracked members would falsely resolve the nine-member route.",
         "Blockscout verified six bridge deployments as StablecoinBridge with the fee-free burn path; Sourcify exact runtime/creation matches verified the three deployments absent from Blockscout source (EURR, EUROP, EURA).",
       ],
-    },
-    "cjpy-yamato": {
-      ...collateralRedeemBase,
+    }),
+    "cjpy-yamato": defineLiveCollateralConfig({
       outputAssets: ["asset:eth"],
-      ...documentedBoundSupplyFull("2026-08-12"),
+      reviewedAt: "2026-08-12",
       // Live-only since v4.34: the Yamato adapter reads the priority
       // registry's redeemable cap each run (converted JPY -> ETH -> USD
       // through the protocol oracle and the shared ETH/USD reference); when
       // the read is unavailable the route is left unrated instead of
       // assuming full-supply immediacy.
-      capacityModel: { kind: "reserve-sync-metadata" },
       outputAssetType: "bluechip-collateral",
       costModel: documentedVariableFee(
         "Yamato docs describe on-chain CJPY-for-ETH redemption against the riskiest pledge; fee structure is set by protocol mechanics rather than a single fixed bps number",
@@ -726,10 +691,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       notes: [
         "On-chain redemption redeems 1 CJPY for 1 JPY worth of ETH from the riskiest pledge, providing a permissionless hard floor",
       ],
-    },
-    "uusd-youves": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    }),
+    "uusd-youves": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
       outputAssets: ["asset:xtz", "asset:tzbtc", "asset:sirs", "asset:usdt"],
       settlementModel: "days",
       executionModel: "rules-based-nav",
@@ -759,12 +722,10 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Youves is modeled through the holder conversion right, not borrower repayment: uUSD holders can announce conversion and sell locked uUSD against eligible collateral after the 24-hour window unless a minter volunteers sooner",
         "Vaults above the holder conversion barrier cannot be selected, so the route is a documented stress-floor mechanism with execution constraints rather than an instant redeem-all buffer",
       ],
-    },
-    "fpi-frax": {
-      ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
+    }),
+    "fpi-frax": defineLiveCollateralConfig({
       outputAssets: ["asset:frax"],
-      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(
         "CPI-indexed redemption price grows on-chain per second at 12-month US CPI-U rate; 100% collateral ratio maintained via AMOs",
@@ -781,10 +742,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Tracked metadata describes FPI as redeemable against a fully collateralized FRAX-backed system with the redemption price moving on-chain with CPI rather than staying fixed at $1",
         "Fresh FPI collateral telemetry uses the FRAX-denominated stable buckets of FPI's collateral as live proxy redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
       ],
-    },
-    "hbd-hive": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_HIVE_HBD_AT),
+    }),
+    "hbd-hive": defineReviewedCollateralConfig(REVIEWED_HIVE_HBD_AT, {
       outputAssets: ["asset:hive"],
       settlementModel: "days",
       executionModel: "rules-based-nav",
@@ -796,10 +755,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "HBD is modeled as a protocol conversion route rather than a fiat issuer rail: holders can convert HBD through Hive mechanics, but the output and haircut behavior depend on protocol debt-ratio conditions",
       ],
       docs: [sourceRef("Hive HBD", "https://hive.io/hbd/", ["route", "capacity", "fees", "settlement"])],
-    },
-    "djed-coti": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    }),
+    "djed-coti": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
       outputAssets: ["asset:ada"],
       outputAssetType: "mixed-collateral",
       executionModel: "rules-based-nav",
@@ -817,10 +774,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       notes: [
         "Modeled as Cardano protocol collateral redemption into ADA reserves, with SHEN reserve-ratio constraints rather than issuer fiat redemption.",
       ],
-    },
-    "zsd-zephyr-protocol": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    }),
+    "zsd-zephyr-protocol": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
       outputAssets: ["asset:zeph"],
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
@@ -853,10 +808,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Fee bound declared 2026-08-12: the pinned source computes `conversion_fee = exchange_128 / 1000` in the REDEEM_STABLE branch, a fixed 10 bps deduction enforced by consensus rather than a governance-settable parameter. The branch is gated on `hf_version >= HF_VERSION_V5` (5) and Zephyr mainnet has run hard fork 11 since block 536000 (June 2025), so 10 bps is the fee in force today; the pre-HF5 200 bps path is unreachable. This mirrors the ZYS bound shipped in v4.33 from the same consensus source.",
         "The fee bound is separate from the reserve-ratio haircut: below full collateralization the protocol keeps redemption enabled but pays out at reserve divided by circulating ZSD, which the capacity model rather than the cost model represents.",
       ],
-    },
-    "usdn-smardex": {
-      ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    }),
+    "usdn-smardex": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
       outputAssets: ["asset:wsteth"],
       settlementModel: "days",
       executionModel: "rules-based-nav",
@@ -874,11 +827,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       notes: [
         "Modeled as a collateral redemption route into wstETH-backed vault value; protocol imbalance and validation windows can delay or restrict execution.",
       ],
-    },
-    "hchf-hedera-swiss-franc": {
-      ...collateralRedeemBase,
+    }),
+    "hchf-hedera-swiss-franc": defineReviewedCollateralConfig("2026-08-13", {
       outputAssets: ["asset:hbar"],
-      ...documentedBoundSupplyFull("2026-08-13"),
       costModel: documentedVariableFee(
         "HLiquity documents a dynamic redemption fee based on the amount redeemed relative to total HCHF supply; the fee is paid in HBAR",
         "formula",
@@ -914,9 +865,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "supply-full is the eventual system bound, not a guaranteed hot buffer: same-block capacity depends on current open Troves and their collateral.",
         "The fee is dynamic and should be read from the deployed contract's current fee state/formula rather than treated as a fixed numeric charge.",
       ],
-    },
-    "euro3-3a-dao": {
-      ...collateralRedeemBase,
+    }),
+    "euro3-3a-dao": defineCollateralConfig({
       outputAssetType: "mixed-collateral",
       outputAssets: [
         "asset:wmatic",
@@ -985,7 +935,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "The current live Polygon and Linea reads returned redemptionRate 0 (0 bps), while the factory and protocol materials expose a governance-adjustable fee, so the zero-fee observation is not treated as permanent.",
         "The reviewed deployments are Polygon and Linea; Base was not present in the official registries checked and is intentionally not implied by this config.",
       ],
-    },
+    }),
   }),
 ];
 

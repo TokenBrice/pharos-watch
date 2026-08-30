@@ -14,6 +14,22 @@ const EvmAddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 const EvmWordSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 const EvmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
 
+const OptionalEvmRpcFields = {
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+} as const;
+const RequiredSourceUrlsFields = { sourceUrls: z.array(AbsoluteUrlSchema).min(1) } as const;
+const OptionalSourceUrlsFields = { sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional() } as const;
+const NonemptySourceUrlsFields = { sourceUrls: z.array(AbsoluteUrlSchema).nonempty() } as const;
+const TrackedExposureFields = {
+  risk: LiveReserveRiskSchema,
+  coinId: z.string().optional(),
+  depType: LiveReserveDependencyTypeSchema.optional(),
+} as const;
+const StringAddressFields = { address: z.string() } as const;
+const EvmAddressFields = { address: EvmAddressSchema } as const;
+const OptionalOracleFreshnessFields = { maxOracleAgeSec: z.number().positive().optional() } as const;
+
 const stringRecordSchema = z.record(z.string(), z.string());
 const riskRecordSchema = z.record(z.string(), LiveReserveRiskSchema);
 const depTypeRecordSchema = z.record(z.string(), LiveReserveDependencyTypeSchema);
@@ -22,8 +38,7 @@ const noParamsSchema = z.object({}).strict();
 
 const usd1BundleOracleParamsSchema = z
   .object({
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -103,7 +118,7 @@ const usdgoAssuranceParamsSchema = z
 
 const mocV3BucketSchema = z
   .object({
-    address: EvmAddressSchema,
+    ...EvmAddressFields,
     expectedProxyCodeHash: EvmWordSchema,
     expectedImplementationAddress: EvmAddressSchema,
     expectedImplementationCodeHash: EvmWordSchema,
@@ -127,28 +142,28 @@ const mocV3BucketsParamsSchema = z
     branchMaterialityPct: z.number().positive().max(100),
     canonicalUsdrif: z
       .object({
-        address: EvmAddressSchema,
+        ...EvmAddressFields,
         expectedProxyCodeHash: EvmWordSchema,
         decimals: z.number().int().nonnegative().max(36),
       })
       .strict(),
     rifToken: z
       .object({
-        address: EvmAddressSchema,
+        ...EvmAddressFields,
         expectedCodeHash: EvmWordSchema,
         decimals: z.number().int().nonnegative().max(36),
       })
       .strict(),
     docToken: z
       .object({
-        address: EvmAddressSchema,
+        ...EvmAddressFields,
         expectedCodeHash: EvmWordSchema,
         decimals: z.number().int().nonnegative().max(36),
       })
       .strict(),
     rifBucket: mocV3BucketSchema,
     docBucket: mocV3BucketSchema,
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+    ...RequiredSourceUrlsFields,
   })
   .strict()
   .superRefine((params, ctx) => {
@@ -183,8 +198,7 @@ const btcfiParamsSchema = z
 
 const fxParamsSchema = z
   .object({
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -209,9 +223,8 @@ const fraxFpiCollateralParamsSchema = z
     outputTrackedAssetId: z.literal("frax-frax"),
     minOutputPriceUsd: z.number().finite().positive(),
     maxOutputPriceUsd: z.number().finite().positive(),
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...RequiredSourceUrlsFields,
+    ...OptionalEvmRpcFields,
   })
   .strict()
   .superRefine((params, ctx) => {
@@ -238,8 +251,7 @@ const blastUsdbYieldManagerParamsSchema = z
     supplyTokenAddress: z.string(),
     supplyRpcUrl: AbsoluteUrlSchema,
     fallbackSupplyRpcUrl: AbsoluteUrlSchema.optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -256,9 +268,8 @@ const chainlinkNavParamsSchema = z
       .regex(/^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._:/-]*$/)
       .optional(),
     oracleMethod: z.enum(["latestRoundData", "getPrice", "getPriceData", "getAssetPrice"]).optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
-    maxOracleAgeSec: z.number().positive().optional(),
+    ...OptionalEvmRpcFields,
+    ...OptionalOracleFreshnessFields,
     redemptionCapacity: z
       .object({
         managerAddress: EvmAddressSchema,
@@ -278,9 +289,8 @@ const chronicleNavParamsSchema = z
     tokenAddress: EvmAddressSchema,
     assetLabel: z.string(),
     assetRisk: LiveReserveRiskSchema,
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
-    maxOracleAgeSec: z.number().positive().optional(),
+    ...OptionalEvmRpcFields,
+    ...OptionalOracleFreshnessFields,
   })
   .strict();
 
@@ -292,11 +302,10 @@ const usdaiHubParamsSchema = z
     redemptionCapacity: z
       .object({
         holderEligibility: RedemptionHolderEligibilitySchema,
-        sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+        ...NonemptySourceUrlsFields,
       })
       .strict(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -325,7 +334,7 @@ const xdaiBridgeParamsSchema = z
     legacyWarningPct: z.number().finite().nonnegative().optional(),
     legacyMaterialityPct: z.number().finite().positive().max(100).optional(),
     maxWithdrawDivergencePct: z.number().finite().nonnegative().max(100).optional(),
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+    ...OptionalSourceUrlsFields,
   })
   .strict()
   .superRefine((params, ctx) => {
@@ -381,19 +390,16 @@ const superstateLiquidityParamsSchema = chainlinkNavParamsSchema
 
 const capVaultAssetSchema = z
   .object({
-    address: z.string(),
+    ...StringAddressFields,
     name: z.string(),
-    risk: LiveReserveRiskSchema,
-    coinId: z.string().optional(),
-    depType: LiveReserveDependencyTypeSchema.optional(),
+    ...TrackedExposureFields,
     priceUsd: z.number().positive().optional(),
   })
   .strict();
 
 const capVaultParamsSchema = z
   .object({
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
     assets: z.array(capVaultAssetSchema).optional(),
   })
   .strict();
@@ -412,9 +418,8 @@ const chainlinkPorParamsSchema = z
     assetLabel: z.string(),
     assetRisk: LiveReserveRiskSchema,
     reserveUnit: z.enum(["USD", "XAU", "XAG", "SHARES"]).optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
-    maxOracleAgeSec: z.number().positive().optional(),
+    ...OptionalEvmRpcFields,
+    ...OptionalOracleFreshnessFields,
     issuerCirculationProbe: chainlinkPorIssuerCirculationProbeSchema.optional(),
   })
   .strict();
@@ -433,8 +438,7 @@ const collateralPositionsRedemptionBridgeSchema = z
     tokenAddress: z.string(),
     tokenDecimals: z.number().int().nonnegative(),
     priceAddress: z.string().optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -454,9 +458,8 @@ const collateralPositionsRedemptionBridgeBasketSchema = z
     dEuroAddress: EvmAddressSchema,
     eurUsdPriceAddress: EvmAddressSchema,
     bridges: z.array(collateralPositionsRedemptionBasketBridgeSchema).nonempty().max(16),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
-    sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+    ...OptionalEvmRpcFields,
+    ...NonemptySourceUrlsFields,
   })
   .strict();
 
@@ -514,25 +517,22 @@ const curatedValidatedRedemptionCapacitySchema = z
       .optional(),
     decimals: z.number().int().min(0).max(36),
     holderEligibility: RedemptionHolderEligibilitySchema,
-    sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+    ...NonemptySourceUrlsFields,
   })
   .strict();
 
 const curatedValidatedParamsSchema = z
   .object({
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
     redemptionCapacity: curatedValidatedRedemptionCapacitySchema.optional(),
   })
   .strict();
 
 const reserveProtocolDtfAssetSchema = z
   .object({
-    address: z.string(),
+    ...StringAddressFields,
     name: z.string(),
-    risk: LiveReserveRiskSchema,
-    coinId: z.string().optional(),
-    depType: LiveReserveDependencyTypeSchema.optional(),
+    ...TrackedExposureFields,
     blacklistable: z.boolean().optional(),
   })
   .strict();
@@ -540,32 +540,28 @@ const reserveProtocolDtfAssetSchema = z
 const reserveProtocolDtfParamsSchema = z
   .object({
     assets: z.array(reserveProtocolDtfAssetSchema).optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
 const resupplyUnderlyingSchema = z
   .object({
-    address: z.string(),
+    ...StringAddressFields,
     name: z.string(),
-    risk: LiveReserveRiskSchema,
-    coinId: z.string().optional(),
-    depType: LiveReserveDependencyTypeSchema.optional(),
+    ...TrackedExposureFields,
   })
   .strict();
 
 const resupplyPairSchema = z
   .object({
     key: z.string(),
-    address: z.string(),
+    ...StringAddressFields,
   })
   .strict();
 
 const resupplyPairsParamsSchema = z
   .object({
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
     redemptionHandlerAddress: z.string().optional(),
     pairs: z.array(resupplyPairSchema).min(1),
     underlyings: z.array(resupplyUnderlyingSchema).min(1),
@@ -575,9 +571,7 @@ const resupplyPairsParamsSchema = z
 const reserveSliceDescriptorSchema = z
   .object({
     name: z.string(),
-    risk: LiveReserveRiskSchema,
-    coinId: z.string().optional(),
-    depType: LiveReserveDependencyTypeSchema.optional(),
+    ...TrackedExposureFields,
     expectedAssetAddress: z.string().optional(),
   })
   .strict();
@@ -701,7 +695,7 @@ const fraxtalHopWithdrawableRedemptionLiquiditySchema = z
     maxOracleToleranceSec: z.number().int().positive(),
     maxOraclePriceDeviationBps: z.number().finite().nonnegative(),
     maxRedemptionFeeBps: z.number().finite().nonnegative(),
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+    ...RequiredSourceUrlsFields,
   })
   .strict();
 
@@ -718,8 +712,7 @@ const erc4626SingleAssetParamsSchema = z
         fraxtalHopWithdrawableRedemptionLiquiditySchema,
       ])
       .optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -760,11 +753,10 @@ const escrowBalancePauseCheckSchema = z
 
 const escrowBalanceSharedParamsShape = {
   slice: reserveSliceDescriptorSchema,
-  sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+  ...RequiredSourceUrlsFields,
   holderEligibility: RedemptionHolderEligibilitySchema.optional(),
   settlementDelaySec: z.number().int().nonnegative().optional(),
-  rpcUrl: AbsoluteUrlSchema.optional(),
-  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  ...OptionalEvmRpcFields,
 };
 
 // One pinned escrow/reserve contract whose redemption capacity is readable as a
@@ -829,9 +821,8 @@ const m0WrapperUnderlyingParamsSchema = z
     pausedSelector: EvmSelectorSchema.optional(),
     canSwapViaPathSelector: EvmSelectorSchema.optional(),
     slice: reserveSliceDescriptorSchema,
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalSourceUrlsFields,
+    ...OptionalEvmRpcFields,
     additionalDeployments: z.array(m0WrapperAdditionalDeploymentSchema).min(1).optional(),
   })
   .strict();
@@ -854,35 +845,31 @@ const liquityNativeActivePoolParamsSchema = z
     borrowerOperationsAddress: z.string().optional(),
     redemptionRateSelector: EvmSelectorSchema.optional(),
     redemptionRateDecimals: z.number().int().nonnegative().optional(),
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalSourceUrlsFields,
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
 const originVaultAssetSchema = z
   .object({
-    address: z.string(),
+    ...StringAddressFields,
     decimals: z.number().int().nonnegative(),
     name: z.string(),
-    risk: LiveReserveRiskSchema,
-    coinId: z.string().optional(),
-    depType: LiveReserveDependencyTypeSchema.optional(),
+    ...TrackedExposureFields,
   })
   .strict();
 
 const originVaultBalancesParamsSchema = z
   .object({
     vaultAddress: z.string(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
     assets: z.array(originVaultAssetSchema).min(1),
   })
   .strict();
 
 const pusdVaultAssetSchema = z
   .object({
-    address: z.string(),
+    ...StringAddressFields,
     decimals: z.number().int().nonnegative(),
   })
   .strict();
@@ -892,9 +879,8 @@ const pusdVaultParamsSchema = z
     vaultAddress: z.string(),
     assets: z.array(pusdVaultAssetSchema).min(1),
     slice: reserveSliceDescriptorSchema,
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalSourceUrlsFields,
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -930,30 +916,27 @@ const evmBranchBalanceBranchSchema = z
     token: z
       .object({
         chain: z.string(),
-        address: z.string(),
+        ...StringAddressFields,
         decimals: z.number().int().nonnegative(),
       })
       .strict(),
     priceToken: z
       .object({
         chain: z.string(),
-        address: z.string(),
+        ...StringAddressFields,
       })
       .strict()
       .optional(),
-    risk: LiveReserveRiskSchema,
-    coinId: z.string().optional(),
-    depType: LiveReserveDependencyTypeSchema.optional(),
+    ...TrackedExposureFields,
     priceUsd: z.number().positive().optional(),
   })
   .strict();
 
 const evmBranchBalancesParamsSchema = z
   .object({
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
     branches: z.array(evmBranchBalanceBranchSchema).min(1),
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+    ...OptionalSourceUrlsFields,
     redemptionRateProbe: redemptionRateProbeSchema.optional(),
     /**
      * When provided, the adapter calls `debtSelector` on `debtContract` (or the
@@ -973,14 +956,14 @@ const evmBranchBalancesParamsSchema = z
           .array(
             z
               .object({
-                address: EvmAddressSchema,
+                ...EvmAddressFields,
                 decimals: z.number().int().nonnegative().max(36),
               })
               .strict(),
           )
           .min(1)
           .max(32),
-        sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+        ...RequiredSourceUrlsFields,
       })
       .strict()
       .superRefine((params, ctx) => {
@@ -1061,7 +1044,7 @@ const liquityV2BranchesParamsSchema = evmBranchBalancesParamsSchema
 
 const ghoGsmModuleSchema = z
   .object({
-    address: z.string(),
+    ...StringAddressFields,
     label: z.string(),
     coinId: z.string().optional(),
     depType: LiveReserveDependencyTypeSchema.optional(),
@@ -1071,8 +1054,7 @@ const ghoGsmModuleSchema = z
 
 const ghoParamsSchema = z
   .object({
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
     gsmModules: z.array(ghoGsmModuleSchema).min(1),
     ghoTokenAddress: z.string().optional(),
   })
@@ -1082,8 +1064,7 @@ const liquityV1ParamsSchema = z
   .object({
     troveManagerAddress: z.string(),
     slice: reserveSliceDescriptorSchema,
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
     redemptionRateProbe: redemptionRateProbeSchema.optional(),
   })
   .strict();
@@ -1093,8 +1074,7 @@ const yamatoParamsSchema = z
     yamatoAddress: z.string(),
     priceFeedAddress: z.string().optional(),
     slice: reserveSliceDescriptorSchema.optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -1111,7 +1091,7 @@ const jupusdParamsSchema = z
 // runtime and matches by these addresses rather than hardcoding exchangeIds.
 const mentoBrokerPoolCounterAssetSchema = z
   .object({
-    address: z.string(),
+    ...StringAddressFields,
     label: z.string().optional(),
   })
   .strict();
@@ -1127,9 +1107,8 @@ const mentoBrokerPoolRedemptionParamsSchema = z
   .object({
     kind: z.literal("broker-pool"),
     pools: z.array(mentoBrokerPoolEntrySchema).min(1),
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalSourceUrlsFields,
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -1142,9 +1121,8 @@ const mentoLiquityV2CrRedemptionParamsSchema = z
     troveManagerAddress: z.string(),
     activePoolAddress: z.string(),
     tokenAddress: z.string(),
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalSourceUrlsFields,
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -1155,9 +1133,8 @@ const mentoFpmmPoolRedemptionParamsSchema = z
     kind: z.literal("fpmm-pool"),
     poolAddress: z.string(),
     usdmTokenAddress: z.string(),
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalSourceUrlsFields,
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -1212,7 +1189,7 @@ const singleAssetRedemptionCapacitySchema = z
     /** ERC20 the route pays out; its `redeemer` balance is the capacity. */
     payoutToken: z
       .object({
-        address: EvmAddressSchema,
+        ...EvmAddressFields,
         decimals: z.number().int().min(0).max(36),
       })
       .strict(),
@@ -1242,18 +1219,15 @@ const singleAssetRedemptionCapacitySchema = z
     /** Getter returning the redemption fee already denominated in bps. */
     feeBpsSelector: EvmSelectorSchema.optional(),
     holderEligibility: RedemptionHolderEligibilitySchema,
-    sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+    ...NonemptySourceUrlsFields,
   })
   .strict();
 
 const singleAssetParamsSchema = z
   .object({
     label: z.string(),
-    risk: LiveReserveRiskSchema,
-    coinId: z.string().optional(),
-    depType: LiveReserveDependencyTypeSchema.optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...TrackedExposureFields,
+    ...OptionalEvmRpcFields,
     probe: singleAssetProbeSchema.optional(),
     reserveProbe: singleAssetProbeSchema.optional(),
     supplyProbe: singleAssetProbeSchema.optional(),
@@ -1266,12 +1240,10 @@ const singleAssetParamsSchema = z
 
 const parallelizerBalanceAssetSchema = z
   .object({
-    address: EvmAddressSchema,
+    ...EvmAddressFields,
     decimals: z.number().int().nonnegative().max(36),
     name: z.string().min(1),
-    risk: LiveReserveRiskSchema,
-    coinId: z.string().optional(),
-    depType: LiveReserveDependencyTypeSchema.optional(),
+    ...TrackedExposureFields,
   })
   .strict();
 
@@ -1289,7 +1261,7 @@ const parallelizerBalanceDeploymentSchema = z
 const parallelizerBalancesParamsSchema = z
   .object({
     deployments: z.array(parallelizerBalanceDeploymentSchema).min(1).max(8),
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+    ...RequiredSourceUrlsFields,
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
     settlementDelaySec: z.number().int().nonnegative().optional(),
   })
@@ -1297,13 +1269,11 @@ const parallelizerBalancesParamsSchema = z
 
 const abracadabraCauldronSchema = z
   .object({
-    address: z.string(),
+    ...StringAddressFields,
     collateralSymbol: z.string(),
     collateralAddress: z.string(),
     collateralDecimals: z.number().int().nonnegative(),
-    risk: LiveReserveRiskSchema,
-    coinId: z.string().optional(),
-    depType: LiveReserveDependencyTypeSchema.optional(),
+    ...TrackedExposureFields,
     // Reserved for future V2/V3/V4 selector nuance; currently unused by the adapter.
     version: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(),
   })
@@ -1311,8 +1281,7 @@ const abracadabraCauldronSchema = z
 
 const abracadabraParamsSchema = z
   .object({
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...OptionalEvmRpcFields,
     // BentoBox / DegenBox contract that backs the configured cauldrons. Used to
     // convert per-cauldron `totalCollateralShare` into underlying token amounts
     // via `toAmount(token, share, false)`.

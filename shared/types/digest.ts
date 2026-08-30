@@ -9,22 +9,6 @@ import {
   type SafetyScoreV9PublicationIdentity,
 } from "./safety-score-publication";
 
-export type DigestSafetyContext =
-  | {
-      status: "available";
-      expectedModel: SafetyScorePublicationIdentity["model"];
-      identity: SafetyScorePublicationIdentity;
-      publishedAt: number;
-      reason: null;
-    }
-  | {
-      status: "unavailable";
-      expectedModel: SafetyScorePublicationIdentity["model"];
-      identity: null;
-      publishedAt: null;
-      reason: string;
-    };
-
 export const DigestSafetyContextSchema = z
   .discriminatedUnion("status", [
     z
@@ -55,6 +39,7 @@ export const DigestSafetyContextSchema = z
       });
     }
   });
+export type DigestSafetyContext = z.output<typeof DigestSafetyContextSchema>;
 
 export interface DigestV8SafetyCoin {
   symbol: string;

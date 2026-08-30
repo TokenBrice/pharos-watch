@@ -312,26 +312,7 @@ export type MintAuthorityControl = import("./stablecoin-meta-schemas").MintAutho
 export type MintAuthorityReview = import("./stablecoin-meta-schemas").MintAuthorityReview;
 export type MintAuthorityScopedQuestion = import("./stablecoin-meta-schemas").MintAuthorityScopedQuestion;
 export type MintAuthorityNoLocalIssuanceException = import("./stablecoin-meta-schemas").MintAuthorityNoLocalIssuanceException;
-export interface MintAuthorityProfile {
-  mintPath: MintAuthorityMintPath;
-  authorityPosture: MintAuthorityPosture;
-  confidence: MintAuthorityConfidence;
-  summary: string;
-  inheritedFrom?: string;
-  upgradeability?: MintAuthorityUpgradeability;
-  mintIncidents?: Array<{
-    date: string;
-    status: "active" | "resolved";
-    resolvedAt?: string;
-    summary: string;
-    sources: StablecoinLink[];
-  }>;
-  controls?: MintAuthorityControl[];
-  economicCapSemantics?: MintAuthorityEconomicCapSemantics;
-  reconciliation?: MintAuthorityReconciliation;
-  supervision?: MintAuthoritySupervision;
-  review: MintAuthorityReview;
-}
+export type MintAuthorityProfile = import("./stablecoin-meta-schemas").MintAuthorityProfile;
 export type BlacklistabilityReview = import("./stablecoin-meta-schemas").BlacklistabilityReview;
 export type Jurisdiction = import("./stablecoin-meta-schemas").Jurisdiction;
 

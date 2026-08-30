@@ -29,7 +29,7 @@ import {
   type V9ScopedRiskSignal,
 } from "./scoped-risk";
 import { clampScore } from "../math";
-import { compareText } from "./primitives";
+import { canonicalUniqueBy, compareText } from "./primitives";
 
 export type { V9AggregationStrategy } from "./aggregation";
 
@@ -185,39 +185,31 @@ function floorTo(value: number, decimals: number): number {
 function canonicalAdverseAttribution(
   values: readonly V9AdverseAttribution[],
 ): V9AdverseAttribution[] {
-  return [
-    ...new Map(
-      values.map((value) => [
-        `${value.source}\u0000${value.path}\u0000${value.message}`,
-        value,
-      ]),
-    ).values(),
-  ].sort(
+  return canonicalUniqueBy(
+    values,
+    (value) => `${value.source}\u0000${value.path}\u0000${value.message}`,
     (left, right) =>
       compareText(left.source, right.source) ||
       compareText(left.path, right.path) ||
       compareText(left.message, right.message),
+    "last",
   );
 }
 
 function canonicalBoundedUncertaintyAttribution(
   values: readonly V9BoundedUncertaintyAttribution[],
 ): V9BoundedUncertaintyAttribution[] {
-  return [
-    ...new Map(
-      values.map((value) => [
-        [
-          value.source,
-          value.code,
-          value.path,
-          value.message,
-          value.responsibility,
-          value.boundedness,
-        ].join("\u0000"),
-        value,
-      ]),
-    ).values(),
-  ].sort(
+  return canonicalUniqueBy(
+    values,
+    (value) =>
+      [
+        value.source,
+        value.code,
+        value.path,
+        value.message,
+        value.responsibility,
+        value.boundedness,
+      ].join("\u0000"),
     (left, right) =>
       compareText(left.source, right.source) ||
       compareText(left.code, right.code) ||
@@ -225,6 +217,7 @@ function canonicalBoundedUncertaintyAttribution(
       compareText(left.message, right.message) ||
       compareText(left.responsibility, right.responsibility) ||
       compareText(left.boundedness, right.boundedness),
+    "last",
   );
 }
 
@@ -1130,14 +1123,12 @@ function scoreV9InputWithCaps(
   // Identical (source, kind, limit) candidates collapse to one trace row; the
   // deterministically first reason survives so repeated shared-path signals do
   // not flood the published cap list.
-  const dedupedCandidates = [
-    ...new Map(
-      [...normalizedCandidates]
-        .sort((left, right) => compareCapCandidates(left, right, policy))
-        .reverse()
-        .map((cap) => [`${cap.source}\u0000${cap.kind}\u0000${cap.limit}`, cap]),
-    ).values(),
-  ].reverse();
+  const dedupedCandidates = canonicalUniqueBy(
+    [...normalizedCandidates].sort((left, right) => compareCapCandidates(left, right, policy)),
+    (cap) => `${cap.source}\u0000${cap.kind}\u0000${cap.limit}`,
+    (left, right) => compareCapCandidates(left, right, policy),
+    "first",
+  );
   // Caps bind in the QUANTIZED score space: a cap constrains the published
   // score whenever the rounded uncapped score would exceed the floored cap
   // limit, even if the raw score sits below the fractional limit (VER-001).

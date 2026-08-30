@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import { CacheStatusSchema, StatusHealthOrUnknownSchema, StatusHealthValueSchema } from "./schema-primitives";
 
 export { StatusHealthValueSchema } from "./schema-primitives";
@@ -7,69 +7,60 @@ export type CacheStatus = z.infer<typeof CacheStatusSchema>;
 export type StatusHealthValue = z.infer<typeof StatusHealthValueSchema>;
 export type StatusHealthOrUnknown = z.infer<typeof StatusHealthOrUnknownSchema>;
 
-export interface StatusCause {
-  code: string;
-  layer: "availability" | "data-quality" | "system";
-  severity: "info" | "warning" | "critical";
-  message: string;
-  metric?: string;
-  value?: number;
-  threshold?: number;
+export const StatusCauseSchema = z.object({
+  code: z.string(),
+  layer: z.enum(["availability", "data-quality", "system"]),
+  severity: z.enum(["info", "warning", "critical"]),
+  message: z.string(),
+  metric: z.string().optional(),
+  value: z.number().optional(),
+  threshold: z.number().optional(),
   /**
    * Optional operator-facing runbook link. Populated only for cause codes
    * that have a documented runbook — UI renders the link only when present.
    */
-  runbookUrl?: string;
-}
+  runbookUrl: z.string().optional(),
+});
+export type StatusCause = z.output<typeof StatusCauseSchema>;
 
-export interface StatusStateInfo {
-  scope: "global";
-  currentStatus: StatusHealthValue;
-  rawStatus: StatusHealthValue;
-  lastEvaluatedAt: number;
-  lastChangedAt: number;
-  minDwellSec: number;
-  staleMinDwellSec: number;
-  consecutiveRaw: {
-    healthy: number;
-    degraded: number;
-    stale: number;
-  };
-  thresholds: {
-    escalateToDegraded: number;
-    escalateToStale: number;
-    recoverToDegraded: number;
-    recoverToHealthy: number;
-  };
-}
+export const StatusStateInfoSchema = z.object({
+  scope: z.literal("global"),
+  currentStatus: StatusHealthValueSchema,
+  rawStatus: StatusHealthValueSchema,
+  lastEvaluatedAt: z.number(),
+  lastChangedAt: z.number(),
+  minDwellSec: z.number(),
+  staleMinDwellSec: z.number(),
+  consecutiveRaw: z.object({
+    healthy: z.number(),
+    degraded: z.number(),
+    stale: z.number(),
+  }),
+  thresholds: z.object({
+    escalateToDegraded: z.number(),
+    escalateToStale: z.number(),
+    recoverToDegraded: z.number(),
+    recoverToHealthy: z.number(),
+  }),
+});
+export type StatusStateInfo = z.output<typeof StatusStateInfoSchema>;
 
-export interface StatusStaleness {
-  ageSeconds: number;
-  maxAgeSec: number;
-  isStale: boolean;
-}
+export const StatusStalenessSchema = z.object({
+  ageSeconds: z.number(),
+  maxAgeSec: z.number(),
+  isStale: z.boolean(),
+});
+export type StatusStaleness = z.output<typeof StatusStalenessSchema>;
 
-export interface StatusProbeSummary {
-  timestamp: number | null;
-  status: StatusHealthOrUnknown;
-  sampleCount: number;
-  passCount: number;
-  failCount: number;
-  bootstrapMissCount?: number;
-  p95LatencyMs: number | null;
-  internal?: StatusProbePlaneSummary | null;
-  external?: StatusProbePlaneSummary | null;
-  internalExternalDiscrepancy?: StatusProbeComparison | null;
-}
-
-export interface StatusProbePlaneSummary {
-  status: StatusHealthOrUnknown;
-  sampleCount: number;
-  passCount: number;
-  failCount: number;
-  p95LatencyMs: number | null;
-  origins: string[];
-}
+export const StatusProbePlaneSummarySchema = z.object({
+  status: StatusHealthOrUnknownSchema,
+  sampleCount: z.number(),
+  passCount: z.number(),
+  failCount: z.number(),
+  p95LatencyMs: z.number().nullable(),
+  origins: z.array(z.string()),
+});
+export type StatusProbePlaneSummary = z.output<typeof StatusProbePlaneSummarySchema>;
 
 export const STATUS_PROBE_COMPARISON_REASON_VALUES = [
   "in-sync",
@@ -80,46 +71,63 @@ export const STATUS_PROBE_COMPARISON_REASON_VALUES = [
 ] as const;
 export type StatusProbeComparisonReason = (typeof STATUS_PROBE_COMPARISON_REASON_VALUES)[number];
 
-export interface StatusProbeComparison {
-  hasDivergence: boolean;
-  severityDelta: number;
-  internalStatus: StatusProbePlaneSummary["status"];
-  externalStatus: StatusProbePlaneSummary["status"];
-  reason: StatusProbeComparisonReason;
-  details: string | null;
-}
+export const StatusProbeComparisonSchema = z.object({
+  hasDivergence: z.boolean(),
+  severityDelta: z.number(),
+  internalStatus: StatusHealthOrUnknownSchema,
+  externalStatus: StatusHealthOrUnknownSchema,
+  reason: z.enum(STATUS_PROBE_COMPARISON_REASON_VALUES),
+  details: z.string().nullable(),
+});
+export type StatusProbeComparison = z.output<typeof StatusProbeComparisonSchema>;
 
 export const STATUS_DISCREPANCY_REASON_VALUES = ["in-sync", "probe-stale", "probe-disagrees", "probe-missing"] as const;
 export type StatusDiscrepancyReason = (typeof STATUS_DISCREPANCY_REASON_VALUES)[number];
 
-export interface StatusDiscrepancy {
-  hasDivergence: boolean;
-  severityDelta: number;
-  statusSeverity: number;
-  probeSeverity: number;
-  details: string | null;
-  probeAgeSeconds: number | null;
-  consecutiveDivergent: number;
+export const StatusDiscrepancySchema = z.object({
+  hasDivergence: z.boolean(),
+  severityDelta: z.number(),
+  statusSeverity: z.number(),
+  probeSeverity: z.number(),
+  details: z.string().nullable(),
+  probeAgeSeconds: z.number().nullable(),
+  consecutiveDivergent: z.number(),
   /**
    * Machine-readable classification so UI and alert logic can branch without
    * parsing `details`. Disambiguates "probe never ran" vs "probe ran but
    * disagrees" vs "probe is stale".
    */
-  discrepancyReason: StatusDiscrepancyReason;
-}
+  discrepancyReason: z.enum(STATUS_DISCREPANCY_REASON_VALUES),
+});
+export type StatusDiscrepancy = z.output<typeof StatusDiscrepancySchema>;
 
-export interface StatusTransition {
-  id: number;
-  scope: "global";
-  from: StatusHealthValue | null;
-  to: StatusHealthValue;
-  rawStatus: StatusHealthValue;
-  transitionType: "degrade" | "recover" | "init";
-  reason: string;
-  confidence: number;
-  causes: StatusCause[];
-  at: number;
-}
+export const StatusTransitionSchema = z.object({
+  id: z.number(),
+  scope: z.literal("global"),
+  from: StatusHealthValueSchema.nullable(),
+  to: StatusHealthValueSchema,
+  rawStatus: StatusHealthValueSchema,
+  transitionType: z.enum(["degrade", "recover", "init"]),
+  reason: z.string(),
+  confidence: z.number(),
+  causes: z.array(StatusCauseSchema),
+  at: z.number(),
+});
+export type StatusTransition = z.output<typeof StatusTransitionSchema>;
+
+export const StatusProbeSummarySchema = z.object({
+  timestamp: z.number().nullable(),
+  status: StatusHealthOrUnknownSchema,
+  sampleCount: z.number(),
+  passCount: z.number(),
+  failCount: z.number(),
+  bootstrapMissCount: z.number().optional(),
+  p95LatencyMs: z.number().nullable(),
+  internal: StatusProbePlaneSummarySchema.nullable().optional(),
+  external: StatusProbePlaneSummarySchema.nullable().optional(),
+  internalExternalDiscrepancy: StatusProbeComparisonSchema.nullable().optional(),
+});
+export type StatusProbeSummary = z.output<typeof StatusProbeSummarySchema>;
 
 export interface DataQuality {
   stablecoinsCacheStatus: "ok" | "degraded" | "error";

@@ -1,19 +1,6 @@
 import { z } from "zod";
-import { compareText } from "./safety-score-v9-fact-primitives";
+import { canonicalTextArray, compareText } from "./safety-score-v9-fact-primitives";
 import { CanonicalTextSchema } from "./safety-schema-primitives";
-
-function canonicalTextArray(minLength = 0) {
-  return z
-    .array(CanonicalTextSchema)
-    .min(minLength)
-    .superRefine((values, ctx) => {
-      const duplicate = values.find((value, index) => values.indexOf(value) !== index);
-      if (duplicate !== undefined) {
-        ctx.addIssue({ code: "custom", message: `Duplicate canonical value: ${duplicate}` });
-      }
-    })
-    .transform((values) => [...values].sort(compareText));
-}
 
 export const V9WrapperFormSchema = z.enum(["pure", "native-staked", "strategy-vault"]);
 export type V9WrapperForm = z.infer<typeof V9WrapperFormSchema>;
@@ -54,7 +41,7 @@ const V9WrapperIncidentPostureSchema = z
     incidentId: CanonicalTextSchema,
     scope: V9WrapperIncidentScopeSchema,
     assessment: V9WrapperRiskAssessmentSchema,
-    evidenceRefIds: canonicalTextArray(1),
+    evidenceRefIds: canonicalTextArray(1, "value"),
   })
   .strict();
 
@@ -76,8 +63,8 @@ const V9WrapperLocalDimensionFactSchema = z
   .object({
     disposition: V9WrapperFactDispositionSchema,
     assessment: V9WrapperRiskAssessmentSchema.nullable(),
-    signals: canonicalTextArray(1),
-    evidenceRefIds: canonicalTextArray(),
+    signals: canonicalTextArray(1, "value"),
+    evidenceRefIds: canonicalTextArray(0, "value"),
     incidentPostures: z
       .array(V9WrapperIncidentPostureSchema)
       .superRefine((postures, ctx) => {
@@ -146,8 +133,8 @@ const V9WrapperRiskTransferFactSchema = z
     disposition: V9WrapperFactDispositionSchema,
     mechanism: V9WrapperRiskTransferMechanismSchema,
     maximumParentLossAbsorptionPoints: z.number().finite().min(0).max(100),
-    signals: canonicalTextArray(1),
-    evidenceRefIds: canonicalTextArray(),
+    signals: canonicalTextArray(1, "value"),
+    evidenceRefIds: canonicalTextArray(0, "value"),
   })
   .strict()
   .superRefine((fact, ctx) => {
@@ -185,7 +172,7 @@ const V9NotWrapperLocalFactsSchema = z
   .object({
     schemaVersion: z.literal(1),
     applicability: z.literal("not-wrapper"),
-    evidenceRefIds: canonicalTextArray(),
+    evidenceRefIds: canonicalTextArray(0, "value"),
   })
   .strict();
 
@@ -195,8 +182,8 @@ const V9ApplicableWrapperLocalFactsSchema = z
     applicability: z.literal("wrapper"),
     form: V9WrapperFormSchema,
     formDisposition: V9WrapperFactDispositionSchema,
-    formSignals: canonicalTextArray(1),
-    formEvidenceRefIds: canonicalTextArray(),
+    formSignals: canonicalTextArray(1, "value"),
+    formEvidenceRefIds: canonicalTextArray(0, "value"),
     facts: V9WrapperLocalDimensionsSchema,
     riskTransfer: V9WrapperRiskTransferFactSchema,
   })

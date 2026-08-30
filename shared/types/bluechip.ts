@@ -2,15 +2,6 @@ import { z } from "zod";
 import type { BluechipGrade } from "./core";
 import { BluechipGradeSchema } from "./core";
 
-export interface BluechipSmidge {
-  stability: string | null;
-  management: string | null;
-  implementation: string | null;
-  decentralization: string | null;
-  governance: string | null;
-  externals: string | null;
-}
-
 export const BluechipSmidgeSchema = z.object({
   stability: z.string().nullable(),
   management: z.string().nullable(),
@@ -19,16 +10,7 @@ export const BluechipSmidgeSchema = z.object({
   governance: z.string().nullable(),
   externals: z.string().nullable(),
 });
-
-export interface BluechipRating {
-  grade: BluechipGrade;
-  slug: string;
-  collateralization: number;
-  smartContractAudit: boolean;
-  dateOfRating: string;
-  dateLastChange: string | null;
-  smidge: BluechipSmidge;
-}
+export type BluechipSmidge = z.output<typeof BluechipSmidgeSchema>;
 
 export const BluechipRatingSchema = z.object({
   grade: BluechipGradeSchema,
@@ -39,6 +21,7 @@ export const BluechipRatingSchema = z.object({
   dateLastChange: z.string().nullable(),
   smidge: BluechipSmidgeSchema,
 });
+export type BluechipRating = z.output<typeof BluechipRatingSchema>;
 
-export type BluechipRatingsMap = Record<string, BluechipRating>;
 export const BluechipRatingsMapSchema = z.record(z.string(), BluechipRatingSchema);
+export type BluechipRatingsMap = z.output<typeof BluechipRatingsMapSchema>;

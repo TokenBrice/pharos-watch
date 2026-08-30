@@ -1,4 +1,5 @@
 import {
+  cloneRedemptionBackstopConfig,
   documentedBoundSupplyFull,
   fixedFee,
   sourceRef,
@@ -26,8 +27,45 @@ export {
 
 /** Scaffold for the one-coin modules in this directory: applies the shared
  *  `stablecoinRedeemBase` defaults so each module only states its overrides. */
-export function defineStablecoinRedeemConfig(overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig {
-  return { ...stablecoinRedeemBase, ...overrides };
+export function defineStablecoinRedeemConfig(overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig { return { ...stablecoinRedeemBase, ...overrides }; }
+
+export function defineReviewedStablecoinRedeemConfig(reviewedAt: string, overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig {
+  return defineStablecoinRedeemConfig({ ...documentedBoundSupplyFull(reviewedAt), ...overrides });
+}
+
+type ReserveSyncFallback = Omit<
+  Extract<RedemptionBackstopConfig["capacityModel"], { kind: "reserve-sync-metadata" }>,
+  "kind"
+>;
+
+type Erc4626InstantOptions = {
+  symbol: string;
+  reviewedAt: string;
+  docs: NonNullable<RedemptionBackstopConfig["docs"]>;
+  fallback?: number | ReserveSyncFallback;
+  outputAssets?: RedemptionBackstopConfig["outputAssets"];
+  feeDescription: string;
+  notes?: string[];
+} & Partial<Pick<RedemptionBackstopConfig, "accessModel" | "settlementModel" | "executionModel" | "outputAssetType" | "routeExitCorrelation" | "totalScoreCap" | "v9RouteReviewTerms">>;
+
+export function erc4626InstantConfig({ symbol, reviewedAt, docs, fallback, outputAssets, feeDescription, notes, ...optional }: Erc4626InstantOptions): RedemptionBackstopConfig {
+  return cloneRedemptionBackstopConfig(defineStablecoinRedeemConfig({
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      ...(fallback !== undefined ? (typeof fallback === "number" ? { fallbackRatio: fallback } : fallback) : {}),
+    },
+    executionModel: "rules-based-nav",
+    ...optional,
+    ...(outputAssets !== undefined ? { outputAssets: [...outputAssets] } : {}),
+    costModel: fixedFee(0, feeDescription),
+    reviewedAt,
+    docs: docs.map(({ label, url, supports }) => sourceRef(label, url, supports ? [...supports] : undefined)),
+    notes: notes
+      ? [...notes]
+      : [
+          `Fresh ERC-4626 reserve telemetry reads the vault's idle ${symbol} balance as current direct redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.`,
+        ],
+  }));
 }
 
 /** steakUSDC and steakUSDT use the identical Steakhouse Prime Instant config, differing

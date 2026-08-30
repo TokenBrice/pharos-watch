@@ -6,105 +6,15 @@ import {
   SCORE_TOLERANCE,
   V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET,
 } from "./safety-score-v9-public-facts";
-import { V9ReasonCodeSchema, type V9ReasonCode } from "./safety-score-v9";
-
-interface V9CardCap {
-  kind: string;
-  limit: number;
-  source: string;
-  reason: string;
-  binding: boolean;
-}
-
-interface V9CardPillar {
-  score: number | null;
-  reasons: readonly { code: V9ReasonCode; path: string | null; message: string }[];
-}
-
-interface V9SerialDependency {
-  upstreamAssetId: string;
-  score: number | null;
-  blocked: boolean;
-}
-
-interface V9WrapperParentLimit {
-  parentScore: number;
-  limit: number;
-  factsComplete: boolean;
-  fallbackDiscount: number;
-  localRiskDiscount: number;
-  form: string;
-  missingFacts: readonly { factClass: string; disposition: string }[];
-  adjustments: readonly { factKey: string; discountPoints: number }[];
-}
-
-interface V9ScoreAdjustment {
-  capRelief: { source: string; kind: string; toLimit: number };
-  publishedScoreBefore: number;
-}
-
-interface V9ScoreTraceBase {
-  stages: {
-    weightedPillarMean: number | null;
-    pegMultiplier: number | null;
-    preCapScore: number | null;
-    publishedScore: number | null;
-  };
-  wrapperParentLimit: V9WrapperParentLimit | null;
-  aggregation: {
-    weakestPillar: string;
-    weakestScore: number;
-    weightedPillarMean: number;
-  } | null;
-  adverseAttribution: {
-    items: readonly { source: string; path: string; message: string }[];
-  };
-  boundedUncertaintyAttribution: {
-    items: readonly {
-      source: string;
-      code: V9ReasonCode;
-      path: string;
-      message: string;
-      responsibility: string;
-    }[];
-  };
-  evidenceResponsibility: {
-    summaries: readonly {
-      responsibility: string;
-      factCount: number;
-      criticalFactCount: number;
-      reasonCodes: readonly V9ReasonCode[];
-    }[];
-  };
-}
-
-type V9CardScoreTrace =
-  | V9ScoreTraceBase
-  | (V9ScoreTraceBase & { scoreAdjustments: readonly V9ScoreAdjustment[] });
-
-interface SafetyScoreV9CardRefinementInput {
-  score: number | null;
-  grade: string;
-  qualityScore: number | null;
-  pegMultiplier: number | null;
-  pegAdjustedScore: number | null;
-  pillars: { backing: V9CardPillar; exit: V9CardPillar; control: V9CardPillar };
-  weakestPillar: { pillar: string; score: number } | null;
-  caps: readonly V9CardCap[];
-  bindingCap: V9CardCap | null;
-  dependencies: { serial: readonly V9SerialDependency[]; cycleBlocked: boolean };
-  scoreTrace?: V9CardScoreTrace;
-}
-
-interface V9CardWithDependencies {
-  dependencies: { serial: readonly V9SerialDependency[] };
-}
+import { V9ReasonCodeSchema } from "./safety-score-v9";
+import type { SafetyScoreV9CardRefinementInput, SafetyScoreV9CardWithDependencies } from "./safety-score-v9-public-shapes";
+import type { SafetyScoreV9SerialDependencyInput } from "./safety-score-v9-public-shapes";
 
 export function attributedSerialParent(
-  card: V9CardWithDependencies,
+  card: SafetyScoreV9CardWithDependencies,
   path: string,
   message: string,
-): V9SerialDependency | null {
+): SafetyScoreV9SerialDependencyInput | null {
   const parent = [...card.dependencies.serial]
     .sort((left, right) => right.upstreamAssetId.length - left.upstreamAssetId.length)
     .find((dependency) => {

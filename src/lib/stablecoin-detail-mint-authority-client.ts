@@ -122,7 +122,7 @@ function buildControlSummary(value: unknown): MintAuthorityClientControlSummary 
 }
 
 export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAuthorityClientSummary | null {
-  const profile = isRecord(coin.mintAuthority) ? coin.mintAuthority : null;
+  const profile: Record<string, unknown> | null = isRecord(coin.mintAuthority) ? coin.mintAuthority : null;
   if (!profile) return null;
 
   const mintPath = enumValue(stringValue(profile.mintPath), MINT_AUTHORITY_MINT_PATH_VALUES);
