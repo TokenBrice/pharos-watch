@@ -42,6 +42,7 @@ export type {
   HistoricalPriceResolution,
   HistoricalSupplySnapshot,
 } from "./helpers";
+export { resolveVaultNavSupplyPrice } from "./erc4626-nav";
 
 const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   capCusdProvider,
