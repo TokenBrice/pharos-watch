@@ -1,5 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 
 stubCryptoForAuth();
@@ -22,31 +23,6 @@ import {
 
 const mutableActiveIds = ACTIVE_IDS as Set<string>;
 
-function makeDb(): D1Database {
-  const stmt = (sql: string) => ({
-    bind: (..._args: unknown[]) => ({
-      all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-      first: async <T>() => {
-        if (sql.includes("SELECT last_block FROM mint_burn_sync_state")) {
-          return { last_block: 21_899_999 } as T;
-        }
-        return null as T | null;
-      },
-      run: async () => ({ success: true, meta: { changes: 1 } }),
-    }),
-    all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-    first: async <T>() => null as T | null,
-    run: async () => ({ success: true, meta: { changes: 1 } }),
-  });
-
-  return {
-    prepare: (sql: string) => stmt(sql),
-    batch: async () => [],
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
-}
-
 describe("handleBackfillMintBurn", () => {
   const originalActiveIds = new Set(ACTIVE_IDS);
 
@@ -57,7 +33,7 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("auto-selects a config when configKey is omitted", async () => {
-    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -79,7 +55,7 @@ describe("handleBackfillMintBurn", () => {
   it("skips inactive configs during automatic selection", async () => {
     mutableActiveIds.delete("usdt-tether");
 
-    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +75,7 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("returns 404 for an unknown configKey", async () => {
-    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -111,7 +87,7 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("rejects malformed JSON bodies", async () => {
-    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -123,7 +99,7 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("rejects non-object JSON bodies", async () => {
-    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -146,7 +122,7 @@ describe("handleBackfillMintBurn", () => {
       }),
     });
 
-    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
+    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
     const body = (await readJsonResponse(response, 200)) as {
       done: boolean;
@@ -178,7 +154,7 @@ describe("handleBackfillMintBurn", () => {
       }),
     });
 
-    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
+    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
     const body = (await readJsonResponse(response, 200)) as {
       done: boolean;
@@ -209,7 +185,7 @@ describe("handleBackfillMintBurn", () => {
       }),
     });
 
-    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
+    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
     const body = (await readJsonResponse(response, 200)) as { done: boolean; chunksProcessed: number };
     expect(body.chunksProcessed).toBe(1);
@@ -292,67 +268,7 @@ describe("handleBackfillMintBurn", () => {
       .mockReset()
       .mockResolvedValue(new Map([[TX_HASH, txContext]]));
 
-    // Smart DB stub: records UPDATE and mint_burn_hourly statements as they run.
-    const flowTypeUpdates: Array<{ sql: string; binds: unknown[] }> = [];
-    const burnTypeUpdates: Array<{ sql: string; binds: unknown[] }> = [];
-    const hourlyRecalcs: Array<{ sql: string; binds: unknown[] }> = [];
-
-    type BoundStmt = {
-      sql: string;
-      binds: unknown[];
-      all: <T>() => Promise<{ results: T[]; success: true; meta: Record<string, unknown> }>;
-      first: <T>() => Promise<T | null>;
-      run: () => Promise<{ success: true; meta: { changes: number } }>;
-    };
-
-    const makeBoundStmt = (sql: string, binds: unknown[]): BoundStmt => {
-      const isFlowUpdate =
-        sql.includes("UPDATE mint_burn_events") && sql.includes("flow_type = ?");
-      const isBurnUpdate =
-        sql.includes("UPDATE mint_burn_events") && sql.includes("burn_type = ?");
-      const isHourlyRecalc =
-        sql.includes("mint_burn_hourly") &&
-        (sql.includes("INSERT OR REPLACE") || sql.includes("DELETE FROM"));
-      return {
-        sql,
-        binds,
-        all: async () => ({ results: [], success: true, meta: {} }),
-        first: async <T>() => {
-          if (sql.includes("SELECT last_block FROM mint_burn_sync_state")) {
-            return { last_block: BLOCK_NUMBER - 1 } as T;
-          }
-          return null as T | null;
-        },
-        run: async () => {
-          if (isFlowUpdate) flowTypeUpdates.push({ sql, binds });
-          if (isBurnUpdate) burnTypeUpdates.push({ sql, binds });
-          if (isHourlyRecalc) hourlyRecalcs.push({ sql, binds });
-          return { success: true, meta: { changes: 1 } };
-        },
-      };
-    };
-
-    const db = {
-      prepare: (sql: string) => ({
-        bind: (...args: unknown[]) => makeBoundStmt(sql, args),
-        all: async () => ({ results: [], success: true, meta: {} }),
-        first: async () => null,
-        run: async () => ({ success: true, meta: { changes: 0 } }),
-      }),
-      batch: async (stmts: Array<{ sql?: string; run?: () => Promise<unknown> }>) => {
-        const results: unknown[] = [];
-        for (const stmt of stmts) {
-          if (typeof stmt.run === "function") {
-            results.push(await stmt.run());
-          } else {
-            results.push({ success: true, meta: { changes: 0 } });
-          }
-        }
-        return results;
-      },
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    const db = mockD1([], { allowUnmatched: true });
 
     const response = await handleBackfillMintBurn({ db, url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
@@ -376,7 +292,8 @@ describe("handleBackfillMintBurn", () => {
     expect(body.reclassified.burnTypeChanges).toBe(0);
     // The classifier output ("bridge_transfer") must reach the UPDATE, and the
     // affected hour bucket must be queued for recalculation.
-    expect(flowTypeUpdates.some((u) => u.binds.includes("bridge_transfer"))).toBe(true);
-    expect(hourlyRecalcs.length).toBeGreaterThanOrEqual(1);
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("UPDATE mint_burn_events") && entry.binds.includes("bridge_transfer"))).toBe(true);
+    expect(history.filter((entry) => entry.sql.includes("mint_burn_hourly") && (entry.sql.includes("INSERT OR REPLACE") || entry.sql.includes("DELETE FROM"))).length).toBeGreaterThanOrEqual(1);
   });
 });

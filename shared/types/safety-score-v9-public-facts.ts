@@ -6,6 +6,9 @@ import {
   type V9ReasonCode,
 } from "./safety-score-v9";
 import { compareText } from "./safety-score-v9-fact-primitives";
+import { V9_ACCESS_POSTURE_FIELDS, V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "./safety-score-v9-vocabulary";
+import { V9AccessFreezeExposureSchema, V9AccessGovernanceSchema, V9AccessPostureFieldSchema } from "./safety-score-v9-vocabulary";
+import { V9AccessPrimaryExitSchema, V9AccessTransferSchema } from "./safety-score-v9-vocabulary";
 
 import { V9_GRADE_THRESHOLDS } from "./safety-score-v9-grade";
 
@@ -13,15 +16,7 @@ import { V9_GRADE_THRESHOLDS } from "./safety-score-v9-grade";
 export { BaseInputGenerationIdSchema, Sha256Schema } from "./safety-schema-primitives";
 export const ScoreSchema = z.number().finite().min(0).max(100);
 export const V9PolicyVersionSchema = z.string().regex(/^\d+\.\d+$/);
-const AccessPostureFieldSchema = z.enum(["transfer", "freezeExposure", "primaryExit", "governance"]);
-export const RESPONSIBILITIES = [
-  "integration-missing",
-  "issuer-undisclosed",
-  "measured-adverse",
-  "method-unsupported",
-  "producer-failed",
-  "published-evidence-expired",
-] as const;
+export const RESPONSIBILITIES = V9_PUBLIC_EVIDENCE_RESPONSIBILITIES;
 export const SCORE_TOLERANCE = 0.0002;
 export const EXIT_SCORE_TOLERANCE = 0.03;
 export const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;
@@ -167,24 +162,17 @@ export type SafetyScoreV9Cap = z.infer<typeof SafetyScoreV9CapSchema>;
 
 export const SafetyScoreV9AccessPostureSchema = z
   .object({
-    transfer: z.enum(["permissionless", "restrictable", "permissioned", "unknown"]),
-    freezeExposure: z.enum(["none-known", "upstream", "direct", "possible", "unknown"]),
-    primaryExit: z.enum([
-      "permissionless",
-      "eligibility-gated",
-      "issuer-discretionary",
-      "none",
-      "undisclosed",
-      "unknown",
-    ]),
-    governance: z.enum(["immutable", "distributed", "concentrated", "single-entity", "unknown"]),
-    unknownFields: z.array(AccessPostureFieldSchema),
+    transfer: V9AccessTransferSchema,
+    freezeExposure: V9AccessFreezeExposureSchema,
+    primaryExit: V9AccessPrimaryExitSchema,
+    governance: V9AccessGovernanceSchema,
+    unknownFields: z.array(V9AccessPostureFieldSchema),
     signals: z.array(z.string().min(1)),
     reasons: SafetyScoreV9PublicReasonListSchema,
   })
   .strict()
   .superRefine((posture, ctx) => {
-    const expectedUnknown = (["transfer", "freezeExposure", "primaryExit", "governance"] as const)
+    const expectedUnknown = V9_ACCESS_POSTURE_FIELDS
       .filter((field) => posture[field] === "unknown")
       .sort(compareText);
     if (JSON.stringify(posture.unknownFields) !== JSON.stringify(expectedUnknown)) {

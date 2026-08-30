@@ -10,6 +10,7 @@ import type {
   CommsWorkbenchModel,
 } from "@/lib/comms-workbench-model";
 import { cn } from "@/lib/utils";
+import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 
 interface TelegramBotStatsProps {
   model: CommsWorkbenchModel;
@@ -99,10 +100,6 @@ export const PER_ALERT_METRICS = [
     desktop: { width: "w-[26%]", alignment: "text-right" },
   },
 ] as const satisfies readonly PerAlertMetricDescriptor[];
-
-function formatTimestamp(value: number | null): string {
-  return value == null ? "Unknown" : new Date(value * 1_000).toLocaleString();
-}
 
 function formatBoolean(value: boolean | null): string {
   return value == null ? "Unknown" : value ? "Yes" : "No";
@@ -405,7 +402,7 @@ function LatestDispatch({ model }: { model: CommsWorkbenchModel }) {
       </h3>
       <dl className="mt-2 min-w-0 divide-y divide-border/40">
         <MetricRow label="Outcome" value={formatStatus(dispatch.status)} valueClassName="capitalize" />
-        <MetricRow label="Started" value={formatTimestamp(dispatch.startedAt)} />
+        <MetricRow label="Started" value={formatStatusTimestamp(dispatch.startedAt, { fallback: "Unknown" })} />
         <MetricRow label="Run age" value={formatDuration(dispatch.ageSec)} />
         <MetricRow label="Duration" value={formatMilliseconds(dispatch.durationMs)} />
         <MetricRow label="Messages sent" value={formatCount(dispatch.messagesSent)} />
@@ -640,14 +637,20 @@ function AudienceCoverage({ model }: { model: CommsWorkbenchModel }) {
         <div className="mt-3 grid min-w-0 gap-x-6 lg:grid-cols-2">
           <dl className="min-w-0 divide-y divide-border/40">
             <MetricRow label="Pending disambiguations" value={formatCount(audience.pendingDisambiguations)} />
-            <MetricRow label="Last subscriber activity" value={formatTimestamp(audience.lastSubscriberActivityAt)} />
+            <MetricRow
+              label="Last subscriber activity"
+              value={formatStatusTimestamp(audience.lastSubscriberActivityAt, { fallback: "Unknown" })}
+            />
             <MetricRow label="Preset query failures" value={formatCount(audience.presetQueryFailures)} />
             <MetricRow label="Webhook effects Unknown" value={formatCount(audience.webhookEffectUnknown)} />
             <MetricRow label="Inactive cleaned, 7d" value={formatCount(audience.inactiveSubscribersCleanedThisWeek)} />
           </dl>
           <dl className="min-w-0 divide-y divide-border/40">
             <MetricRow label="Lifecycle date" value={audience.lifecycle.date ?? "Unknown"} />
-            <MetricRow label="Snapshot captured" value={formatTimestamp(audience.lifecycle.snapshotAt)} />
+            <MetricRow
+              label="Snapshot captured"
+              value={formatStatusTimestamp(audience.lifecycle.snapshotAt, { fallback: "Unknown" })}
+            />
             <MetricRow label="Snapshot age" value={formatDuration(audience.lifecycle.ageSec)} />
             <MetricRow label="Snapshot stale" value={formatBoolean(audience.lifecycle.stale)} />
             <MetricRow label="Active watchers" value={formatCount(audience.lifecycle.activeWatchers)} />

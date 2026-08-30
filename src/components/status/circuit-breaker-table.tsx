@@ -1,10 +1,10 @@
 import type { CircuitRecord } from "@shared/types";
-import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { type DataTableColumn } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
-import { formatTimestampSeconds } from "@/lib/status-dashboard-model";
-import { LazyDetails } from "./lazy-details";
+import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { PublicSignalCard } from "./public-signal-card";
+import { PrioritySplitTable } from "./priority-split-table";
 
 interface CircuitBreakerTableProps {
   circuits: Record<string, CircuitRecord> | undefined;
@@ -47,10 +47,10 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
       </TableCell>
       <TableCell className="py-2 pharos-numeric">{circuit.consecutiveFailures}</TableCell>
       <TableCell className="py-2 font-mono text-xs text-muted-foreground">
-        {formatTimestampSeconds(circuit.lastFailureAt)}
+        {formatStatusTimestamp(circuit.lastFailureAt, { fallback: "—", timeZoneName: "short" })}
       </TableCell>
       <TableCell className="py-2 font-mono text-xs text-muted-foreground">
-        {formatTimestampSeconds(circuit.lastSuccessAt)}
+        {formatStatusTimestamp(circuit.lastSuccessAt, { fallback: "—", timeZoneName: "short" })}
       </TableCell>
     </TableRow>
   );
@@ -65,44 +65,19 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
         show cached data until the source recovers.
       </p>
       <div className="mt-4">
-        {tripped.length > 0 && (
-          <DataTableShell
-            tableId="circuit-breakers-tripped"
-            testId="circuit-breakers-tripped-table"
-            columns={CIRCUIT_BREAKER_COLUMNS}
-            chrome="content"
-            density="compact"
-            tableProps={{ "aria-label": "Tripped circuit breakers" }}
-            headerClassName=""
-            headerRowClassName="border-b text-left text-muted-foreground"
-          >
-            {tripped.map(renderRow)}
-          </DataTableShell>
-        )}
-        {healthy.length > 0 && (
-          <LazyDetails
-            className={tripped.length > 0 ? "mt-4" : undefined}
-            summary={
-              <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm text-muted-foreground">
-                {healthy.length} healthy breaker{healthy.length !== 1 ? "s" : ""}
-              </summary>
-            }
-          >
-            <DataTableShell
-              tableId="circuit-breakers-healthy"
-              testId="circuit-breakers-healthy-table"
-              columns={CIRCUIT_BREAKER_COLUMNS}
-              chrome="content"
-              containerClassName="mt-2"
-              density="compact"
-              tableProps={{ "aria-label": "Healthy circuit breakers" }}
-              headerClassName=""
-              headerRowClassName="border-b text-left text-muted-foreground"
-            >
-              {healthy.map(renderRow)}
-            </DataTableShell>
-          </LazyDetails>
-        )}
+        <PrioritySplitTable
+          primaryRows={tripped}
+          secondaryRows={healthy}
+          columns={CIRCUIT_BREAKER_COLUMNS}
+          idPrefix="circuit-breakers"
+          primaryAriaLabel="Tripped circuit breakers"
+          secondaryAriaLabel="Healthy circuit breakers"
+          secondaryNoun="breaker"
+          renderRow={renderRow}
+          primaryTableId="circuit-breakers-tripped"
+          secondaryTableId="circuit-breakers-healthy"
+          headerRowClassName="border-b text-left text-muted-foreground"
+        />
       </div>
     </PublicSignalCard>
   );

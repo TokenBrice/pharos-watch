@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { afterEach, describe, expect, it } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import { fetchMidasMmevNavOracleSource } from "../yield-sync/midas-mmev-nav-oracle";
+import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 
 const MIDAS_MMEV_NAV_ORACLE = "0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61";
 const NOW_SEC = 1_780_000_000;
@@ -38,8 +38,8 @@ function mockMidasRpc(params: {
   decimals?: bigint;
   answer: bigint;
   updatedAt: number;
-}): ReturnType<typeof mockFetch> {
-  const fetchSpy = mockFetch([
+}): ReturnType<typeof mockYieldSourceRoutes> {
+  const fetchSpy = mockYieldSourceRoutes([
     {
       match: "https://rpc.ethereum.test",
       respond: async (request) => {
@@ -72,10 +72,7 @@ function mockMidasRpc(params: {
 }
 
 describe("fetchMidasMmevNavOracleSource", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("emits a deterministic NAV-appreciation candidate from a fresh mMEV oracle round", async () => {
     const updatedAt = NOW_SEC - 60 * 60;

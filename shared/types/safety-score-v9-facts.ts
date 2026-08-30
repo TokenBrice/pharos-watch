@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   DependencyTypeSchema,
   V9DependencyEconomicRoleSchema,
-  type V9DependencyEconomicRole,
 } from "./dependency-types";
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
 import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema } from "./safety-score-v9-backing";
@@ -202,17 +201,19 @@ export const V9FactGapV3Schema = z
 export type V9FactGapV3 = z.infer<typeof V9FactGapV3Schema>;
 
 
-const V9EffectiveDependencyEdgeV2Schema = z
-  .object({
-    edgeKey: CanonicalTextSchema,
-    upstreamAssetId: CanonicalTextSchema,
-    dependencyType: DependencyTypeSchema,
-    pathKind: z.enum(["serial-dependency", "collateral-exposure"]),
-    weight: PositiveFractionSchema,
-    economicRole: z.enum(["serial-claim", "basket-exposure"]),
-    evidenceRefIds: CanonicalStringArraySchema,
-    failureDomains: CanonicalFailureDomainsSchema,
-  })
+const V9EffectiveDependencyEdgeBaseSchema = z.object({
+  edgeKey: CanonicalTextSchema,
+  upstreamAssetId: CanonicalTextSchema,
+  dependencyType: DependencyTypeSchema,
+  weight: PositiveFractionSchema,
+  evidenceRefIds: CanonicalStringArraySchema,
+  failureDomains: CanonicalFailureDomainsSchema,
+});
+
+const V9EffectiveDependencyEdgeV2Schema = V9EffectiveDependencyEdgeBaseSchema.extend({
+  pathKind: z.enum(["serial-dependency", "collateral-exposure"]),
+  economicRole: z.enum(["serial-claim", "basket-exposure"]),
+})
   .strict()
   .superRefine((edge, ctx) => {
     const serial = edge.dependencyType === "wrapper" || edge.dependencyType === "mechanism";
@@ -244,16 +245,10 @@ const V9EffectiveDependenciesBaseFields = {
 };
 
 function validateDependencyEnvelope(
-  dependencies: {
-    source: "live-reserve" | "live-unmapped" | "curated-reserve" | "manual" | "none" | "variant";
-    fallbackReason: "live-unmapped-to-curated-reserve" | "live-unmapped-to-manual" | "live-cycle-to-curated" | null;
-    diagnostics: {
-      graphState: "valid" | "cycle" | "invalid" | "unresolved";
-      issueCodes: readonly string[];
-      sccMemberAssetIds: readonly string[];
-    };
-    edges: readonly { economicRole: V9DependencyEconomicRole; weight: number }[];
-  },
+  dependencies: Pick<
+    V9EffectiveDependenciesV2 | V9EffectiveDependenciesV3,
+    "source" | "fallbackReason" | "diagnostics" | "edges"
+  >,
   ctx: z.RefinementCtx,
 ): void {
   if (dependencies.source === "none" && dependencies.edges.length > 0) {
@@ -299,17 +294,10 @@ const V9EffectiveDependenciesV2Schema = z
   .superRefine(validateDependencyEnvelope);
 export type V9EffectiveDependenciesV2 = z.infer<typeof V9EffectiveDependenciesV2Schema>;
 
-const V9EffectiveDependencyEdgeV3Schema = z
-  .object({
-    edgeKey: CanonicalTextSchema,
-    upstreamAssetId: CanonicalTextSchema,
-    dependencyType: DependencyTypeSchema,
-    pathKind: z.enum(["serial-dependency", "collateral-exposure", "local-component"]),
-    weight: PositiveFractionSchema,
-    economicRole: V9DependencyEconomicRoleSchema,
-    evidenceRefIds: CanonicalStringArraySchema,
-    failureDomains: CanonicalFailureDomainsSchema,
-  })
+const V9EffectiveDependencyEdgeV3Schema = V9EffectiveDependencyEdgeBaseSchema.extend({
+  pathKind: z.enum(["serial-dependency", "collateral-exposure", "local-component"]),
+  economicRole: V9DependencyEconomicRoleSchema,
+})
   .strict()
   .superRefine((edge, ctx) => {
     const expectedPathKind =

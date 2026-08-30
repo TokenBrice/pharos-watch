@@ -26,80 +26,36 @@ type LiveReserveAdapterConfigValidationPolicy = {
   allowedVersions: readonly number[];
 };
 
-const CONFIG_COLLATERAL_V1 = {
-  allowedSemantics: ["collateral-mix"],
-  allowedVersions: [1],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+function configPolicy<
+  const Semantics extends readonly LiveReserveSemantics[],
+  const Versions extends readonly number[],
+>(allowedSemantics: Semantics, allowedVersions: Versions) {
+  return { allowedSemantics, allowedVersions };
+}
 
-const CONFIG_COLLATERAL_V2 = {
-  allowedSemantics: ["collateral-mix"],
-  allowedVersions: [2],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_COLLATERAL_V2_V3 = {
-  allowedSemantics: ["collateral-mix"],
-  allowedVersions: [2, 3],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_COLLATERAL_V1_V2 = {
-  allowedSemantics: ["collateral-mix"],
-  allowedVersions: [1, 2],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_ATTESTATION_V1 = {
-  allowedSemantics: ["attestation-mix"],
-  allowedVersions: [1],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_ATTESTATION_V1_V2 = {
-  allowedSemantics: ["attestation-mix"],
-  allowedVersions: [1, 2],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_ATTESTATION_V2 = {
-  allowedSemantics: ["attestation-mix"],
-  allowedVersions: [2],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_PROTOCOL_V1 = {
-  allowedSemantics: ["protocol-reserve"],
-  allowedVersions: [1],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_PROTOCOL_V2 = {
-  allowedSemantics: ["protocol-reserve"],
-  allowedVersions: [2],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_SINGLE_ASSET_V1 = {
-  allowedSemantics: ["single-asset"],
-  allowedVersions: [1],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_SINGLE_ASSET_V2 = {
-  allowedSemantics: ["single-asset"],
-  allowedVersions: [2],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_SINGLE_ASSET_V1_V2 = {
-  allowedSemantics: ["single-asset"],
-  allowedVersions: [1, 2],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
-
-const CONFIG_ACCOUNTABLE = {
-  allowedSemantics: ["collateral-mix", "protocol-reserve"],
-  allowedVersions: [1],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+const CONFIG_COLLATERAL_V1 = configPolicy(["collateral-mix"], [1]);
+const CONFIG_COLLATERAL_V2 = configPolicy(["collateral-mix"], [2]);
+const CONFIG_COLLATERAL_V2_V3 = configPolicy(["collateral-mix"], [2, 3]);
+const CONFIG_COLLATERAL_V1_V2 = configPolicy(["collateral-mix"], [1, 2]);
+const CONFIG_ATTESTATION_V1 = configPolicy(["attestation-mix"], [1]);
+const CONFIG_ATTESTATION_V1_V2 = configPolicy(["attestation-mix"], [1, 2]);
+const CONFIG_ATTESTATION_V2 = configPolicy(["attestation-mix"], [2]);
+const CONFIG_PROTOCOL_V1 = configPolicy(["protocol-reserve"], [1]);
+const CONFIG_PROTOCOL_V2 = configPolicy(["protocol-reserve"], [2]);
+const CONFIG_SINGLE_ASSET_V1 = configPolicy(["single-asset"], [1]);
+const CONFIG_SINGLE_ASSET_V2 = configPolicy(["single-asset"], [2]);
+const CONFIG_SINGLE_ASSET_V1_V2 = configPolicy(["single-asset"], [1, 2]);
+const CONFIG_ACCOUNTABLE = configPolicy(["collateral-mix", "protocol-reserve"], [1]);
 
 // DUSD's reviewed Machine configuration treats position accounting older than
 // three hours as stale. Match that contract guard instead of the generic
 // dashboard window now that Makina snapshots expose the oldest position time.
 const MAKINA_POSITION_SOURCE_MAX_AGE_SEC = 3 * 60 * 60;
 
-const CONFIG_CURATED_VALIDATED = {
-  allowedSemantics: ["attestation-mix", "collateral-mix", "single-asset"],
-  allowedVersions: [1, 2],
-} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+const CONFIG_CURATED_VALIDATED = configPolicy(
+  ["attestation-mix", "collateral-mix", "single-asset"],
+  [1, 2],
+);
 
 const UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS = [
   "unverified",
@@ -137,6 +93,86 @@ type LiveReserveAdapterDescriptorDeclaration = {
   provenance?: LiveReserveAdapterProvenance;
   displayBadgeKind?: ReserveDisplayBadgeKind;
 };
+
+type AdapterProfile = Omit<LiveReserveAdapterDescriptorDeclaration, "paramsSchema">;
+
+function declareAdapter<
+  const SchemaKey extends string,
+  const Profile extends AdapterProfile,
+  const Overrides extends Partial<AdapterProfile> = Record<never, never>,
+>(paramsSchema: SchemaKey, profile: Profile, overrides?: Overrides) {
+  return {
+    paramsSchema,
+    ...profile,
+    ...overrides,
+  };
+}
+
+const ONCHAIN_SINGLE_ASSET_V1 = {
+  primaryInputKinds: ["onchain-evm"],
+  sourceModel: "single-bucket",
+  evidenceClass: "independent",
+  sharedSourceMode: "none",
+  configValidation: CONFIG_SINGLE_ASSET_V1,
+  redemptionTelemetry: { capacity: "direct", fee: "none" },
+  validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+} as const satisfies AdapterProfile;
+
+const ONCHAIN_SINGLE_ASSET_V2 = {
+  ...ONCHAIN_SINGLE_ASSET_V1,
+  configValidation: CONFIG_SINGLE_ASSET_V2,
+  redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+} as const satisfies AdapterProfile;
+
+const HTTP_DASHBOARD_COLLATERAL_V1 = {
+  primaryInputKinds: ["http-json"],
+  sourceModel: "dynamic-mix",
+  evidenceClass: "independent",
+  sharedSourceMode: "none",
+  configValidation: CONFIG_COLLATERAL_V1,
+  redemptionTelemetry: { capacity: "none", fee: "none" },
+  validation: {
+    maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+    maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+    allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+  },
+} as const satisfies AdapterProfile;
+
+const HTTP_DISCLOSURE_ATTESTATION_V1 = {
+  primaryInputKinds: ["http-html"],
+  sourceModel: "dynamic-mix",
+  evidenceClass: "independent",
+  sharedSourceMode: "none",
+  configValidation: CONFIG_ATTESTATION_V1,
+  redemptionTelemetry: { capacity: "none", fee: "none" },
+  validation: {
+    maxSourceAgeSec: MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+    allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+  },
+} as const satisfies AdapterProfile;
+
+const HTTP_DISCLOSURE_ATTESTATION_V2 = {
+  ...HTTP_DISCLOSURE_ATTESTATION_V1,
+  sourceOriginClass: "independent-assurance",
+  configValidation: CONFIG_ATTESTATION_V2,
+  validation: {
+    maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+    allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+  },
+} as const satisfies AdapterProfile;
+
+const HTTP_PROTOCOL_V1 = {
+  primaryInputKinds: ["http-json"],
+  sourceModel: "single-bucket",
+  evidenceClass: "weak-live-probe",
+  sharedSourceMode: "none",
+  configValidation: CONFIG_PROTOCOL_V1,
+  redemptionTelemetry: { capacity: "none", fee: "none" },
+  validation: {
+    maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+    allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+  },
+} as const satisfies AdapterProfile;
 
 export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "3jane-usd3": {
@@ -182,19 +218,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "anzen-usdz": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: "none",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
+  "anzen-usdz": declareAdapter("none", ONCHAIN_SINGLE_ASSET_V2, {
     sourceOriginClass: "onchain-observation",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V2,
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
-    validation: {
-      allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
-    },
-  },
+  }),
   "moc-v3-buckets": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "mocV3Buckets",
@@ -208,20 +234,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
   },
-  asymmetry: {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+  asymmetry: declareAdapter("none", HTTP_DASHBOARD_COLLATERAL_V1, {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
+  }),
   "attestation-pdf-index": {
     primaryInputKinds: ["http-html"],
     paramsSchema: "attestationPdfIndex",
@@ -235,20 +250,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
-  "audx-independent-assurance": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: "audxAssurance",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "independent-assurance",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-    },
-  },
+  "audx-independent-assurance": declareAdapter(
+    "audxAssurance",
+    HTTP_DISCLOSURE_ATTESTATION_V2,
+  ),
   "blast-usdb-yield-manager": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "blastUsdbYieldManager",
@@ -313,19 +318,16 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS },
   },
-  "circle-transparency": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: "circleTransparency",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+  "circle-transparency": declareAdapter(
+    "circleTransparency",
+    HTTP_DISCLOSURE_ATTESTATION_V1,
+    {
+      validation: {
+        maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
+        allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+      },
     },
-  },
+  ),
   "collateral-positions-api": {
     primaryInputKinds: ["http-json"],
     paramsSchema: "collateralPositions",
@@ -366,17 +368,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // redemption block and is not an unused-telemetry candidate.
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
   },
-  "usdai-hub": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: "usdaiHub",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
+  "usdai-hub": declareAdapter("usdaiHub", ONCHAIN_SINGLE_ASSET_V1, {
     sourceOriginClass: "onchain-observation",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
-  },
+  }),
   "dola-inverse": {
     primaryInputKinds: ["http-json"],
     paramsSchema: "none",
@@ -393,46 +388,21 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "erc4626-single-asset": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: "erc4626SingleAsset",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
+  "erc4626-single-asset": declareAdapter("erc4626SingleAsset", ONCHAIN_SINGLE_ASSET_V1, {
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
-  },
-  "escrow-balance": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: "escrowBalance",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
+  }),
+  "escrow-balance": declareAdapter("escrowBalance", ONCHAIN_SINGLE_ASSET_V1, {
     // The single read or bounded all-or-nothing sum measures the escrow or
     // issuance state the redemption is actually paid against, so the result is
     // direct capacity rather than a backing proxy.
     redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
-  },
-  ethena: {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+  }),
+  ethena: declareAdapter("none", HTTP_DASHBOARD_COLLATERAL_V1, {
     // The adapter reads the EthenaMinting contract's own USDT/USDC balances,
     // which redemptions are paid out of, so capacity is a direct measurement
     // rather than a proxy for the collateral basket.
     redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
+  }),
   "evm-branch-balances": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "evmBranchBalances",
@@ -456,20 +426,16 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
   },
-  "europ-independent-assurance": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: "europAssurance",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "independent-assurance",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+  "europ-independent-assurance": declareAdapter(
+    "europAssurance",
+    HTTP_DISCLOSURE_ATTESTATION_V2,
+    {
+      validation: {
+        maxSourceAgeSec: QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+        allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+      },
     },
-  },
+  ),
   "xdai-bridge": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "xdaiBridge",
@@ -481,33 +447,15 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
-  falcon: {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+  falcon: declareAdapter("none", HTTP_DASHBOARD_COLLATERAL_V1, {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
-  "fdusd-transparency": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: "none",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+  }),
+  "fdusd-transparency": declareAdapter("none", HTTP_DISCLOSURE_ATTESTATION_V1, {
     validation: {
       maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
-  },
+  }),
   "flying-tulip-ftusd": {
     primaryInputKinds: ["http-json"],
     paramsSchema: "none",
@@ -589,20 +537,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
-  infinifi: {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+  infinifi: declareAdapter("none", HTTP_DASHBOARD_COLLATERAL_V1, {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
+  }),
   jupusd: {
     primaryInputKinds: ["http-json"],
     paramsSchema: "jupusd",
@@ -626,16 +563,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
-  "liquity-v1": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: "liquityV1",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V2,
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
-  },
+  "liquity-v1": declareAdapter("liquityV1", ONCHAIN_SINGLE_ASSET_V2),
   "liquity-native-active-pool": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "liquityNativeActivePool",
@@ -669,16 +597,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "m0-wrapper-underlying": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: "m0WrapperUnderlying",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
-  },
+  "m0-wrapper-underlying": declareAdapter("m0WrapperUnderlying", ONCHAIN_SINGLE_ASSET_V1),
   "makina-strategy": {
     primaryInputKinds: ["http-json"],
     paramsSchema: "makinaStrategy",
@@ -754,29 +673,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
-  "pusd-vault": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: "pusdVault",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
-  },
-  "quantoz-transparency": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: "quantozTransparency",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-    },
-  },
+  "pusd-vault": declareAdapter("pusdVault", ONCHAIN_SINGLE_ASSET_V1),
+  "quantoz-transparency": declareAdapter(
+    "quantozTransparency",
+    HTTP_DISCLOSURE_ATTESTATION_V1,
+  ),
   "re-metrics": {
     primaryInputKinds: ["http-html"],
     paramsSchema: "none",
@@ -860,29 +761,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "sgho-wrapper": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: "erc4626SingleAsset",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
-  },
-  "solstice-attestation": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
-    sourceModel: "single-bucket",
-    evidenceClass: "weak-live-probe",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_PROTOCOL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
+  "sgho-wrapper": declareAdapter("erc4626SingleAsset", ONCHAIN_SINGLE_ASSET_V1),
+  "solstice-attestation": declareAdapter("none", HTTP_PROTOCOL_V1),
   "single-asset": {
     primaryInputKinds: ["http-json", "onchain-evm"],
     paramsSchema: "singleAsset",
@@ -950,33 +830,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "straitsx-independent-assurance": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: "straitsxAssurance",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "independent-assurance",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-    },
-  },
-  "river-protocol-info": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
-    sourceModel: "single-bucket",
-    evidenceClass: "weak-live-probe",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_PROTOCOL_V1,
+  "straitsx-independent-assurance": declareAdapter(
+    "straitsxAssurance",
+    HTTP_DISCLOSURE_ATTESTATION_V2,
+  ),
+  "river-protocol-info": declareAdapter("none", HTTP_PROTOCOL_V1, {
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
+  }),
   // NOTE(owner-review): evidenceClass "independent" mirrors the frax-balance-sheet
   // issuer-balance-sheet precedent (live total assets/liabilities + freshness,
   // configured static composition), but the totals here are Tether's own
@@ -1022,20 +882,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
-  "usdgo-transparency": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: "usdgoAssurance",
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "independent-assurance",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-    },
-  },
+  "usdgo-transparency": declareAdapter("usdgoAssurance", HTTP_DISCLOSURE_ATTESTATION_V2),
   "usdh-native-markets": {
     primaryInputKinds: ["http-html"],
     paramsSchema: "none",
@@ -1112,29 +959,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  yamato: {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: "yamato",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
-  },
-  "zephyr-scanner": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
-    sourceModel: "single-bucket",
-    evidenceClass: "weak-live-probe",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_PROTOCOL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
+  yamato: declareAdapter("yamato", ONCHAIN_SINGLE_ASSET_V1),
+  "zephyr-scanner": declareAdapter("none", HTTP_PROTOCOL_V1),
 } as const satisfies Record<string, LiveReserveAdapterDescriptorDeclaration>;
 
 export type LiveReserveAdapterKey = keyof typeof LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS;

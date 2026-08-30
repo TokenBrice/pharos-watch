@@ -1,34 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
 import { writeDewsPublishedGeneration } from "../../dews-publication-pointer";
 import { projectDewsEscalated, projectDewsDeescalated, projectDewsBandTransitions } from "../dews";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { mockTapeD1, tapeInsertBindsForType } from "./test-support";
 
 const SEC = 1_700_000_000;
-const TAPE_WRITE_TABLES: MockTableConfig[] = [
-  { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
-];
-
-function mockD1(tables: MockTableConfig[] = []): MockD1Database {
-  return createMockD1([...tables, ...TAPE_WRITE_TABLES]);
-}
 
 const MATCH_FETCH_SAMPLES = "WHERE computed_at > ?";
 const MATCH_PRIOR_BAND = "pharos:tape:dews-prior-band-seek";
-
-function extractInsertBinds(db: MockD1Database): unknown[][] {
-  return db
-    .getHistory()
-    .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO tape_events"))
-    .map((entry) => entry.binds);
-}
-
-function extractInsertBindsForType(db: MockD1Database, type: string): unknown[][] {
-  return extractInsertBinds(db).filter((binds) => binds[1] === type);
-}
 
 function baseTables(samples: Record<string, unknown>[], priors: Record<string, unknown>[] = []): MockTableConfig[] {
   return [
@@ -61,7 +43,7 @@ function seedStressSignal(
 describe("dews projector", () => {
   it("emits dews.escalated with severity scaled to the new band", async () => {
     // Two consecutive samples for one coin: CALM → ALERT.
-    const db = mockD1(
+    const db = mockTapeD1(
       baseTables([
         {
           stablecoin_id: "usdt-tether",
@@ -79,7 +61,7 @@ describe("dews projector", () => {
     ) as MockD1Database;
 
     await projectDewsEscalated(db);
-    const inserts = extractInsertBindsForType(db, "dews.escalated");
+    const inserts = tapeInsertBindsForType(db, "dews.escalated");
     expect(inserts).toHaveLength(1);
     // bind order: eventId, type, severity, ts, ...
     expect(inserts[0]![2]).toBe("warning"); // ALERT → warning
@@ -90,7 +72,7 @@ describe("dews projector", () => {
     // One sample in the new batch; the prior band is seeded from before the
     // watermark via the per-coin "prior band" lookup. Seed the watermark cache
     // so `since > 0`, which is required for prior-band lookup.
-    const db = mockD1([
+    const db = mockTapeD1([
       {
         match: "FROM cache WHERE key",
         rows: [{ key: "tape-projector:cursor:dews.escalated", value: String(SEC - 1) }],
@@ -120,7 +102,7 @@ describe("dews projector", () => {
     ]) as MockD1Database;
 
     await projectDewsEscalated(db);
-    const inserts = extractInsertBindsForType(db, "dews.escalated");
+    const inserts = tapeInsertBindsForType(db, "dews.escalated");
     expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("critical"); // DANGER → critical
     const priorQuery = db.getHistory().find((entry) => entry.sql.includes(MATCH_PRIOR_BAND));
@@ -130,7 +112,7 @@ describe("dews projector", () => {
   });
 
   it("emits dews.deescalated with severity=info", async () => {
-    const db = mockD1(
+    const db = mockTapeD1(
       baseTables([
         {
           stablecoin_id: "dai-makerdao",
@@ -148,13 +130,13 @@ describe("dews projector", () => {
     ) as MockD1Database;
 
     await projectDewsDeescalated(db);
-    const inserts = extractInsertBindsForType(db, "dews.deescalated");
+    const inserts = tapeInsertBindsForType(db, "dews.deescalated");
     expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("info");
   });
 
   it("emits nothing when consecutive samples share a band", async () => {
-    const db = mockD1(
+    const db = mockTapeD1(
       baseTables([
         {
           stablecoin_id: "usdt-tether",
@@ -173,13 +155,13 @@ describe("dews projector", () => {
 
     await projectDewsEscalated(db);
     await projectDewsDeescalated(db);
-    expect(extractInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
-    expect(extractInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
+    expect(tapeInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
+    expect(tapeInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
   });
 
   it("produces a stable eventId across re-runs (idempotency)", async () => {
     function buildDb(): MockD1Database {
-      return mockD1(
+      return mockTapeD1(
         baseTables([
           {
             stablecoin_id: "usdt-tether",
@@ -201,8 +183,8 @@ describe("dews projector", () => {
     const dbB = buildDb();
     await projectDewsEscalated(dbA);
     await projectDewsEscalated(dbB);
-    const a = extractInsertBindsForType(dbA, "dews.escalated");
-    const b = extractInsertBindsForType(dbB, "dews.escalated");
+    const a = tapeInsertBindsForType(dbA, "dews.escalated");
+    const b = tapeInsertBindsForType(dbB, "dews.escalated");
     expect(a).toHaveLength(1);
     expect(b).toHaveLength(1);
     // eventId stable → unique-index absorbs duplicates on re-insert.
@@ -210,18 +192,18 @@ describe("dews projector", () => {
   });
 
   it("emits no events when there are no new samples", async () => {
-    const db = mockD1(baseTables([])) as MockD1Database;
+    const db = mockTapeD1(baseTables([])) as MockD1Database;
     const escalated = await projectDewsEscalated(db);
     const deescalated = await projectDewsDeescalated(db);
     expect(escalated.projected).toBe(0);
     expect(deescalated.projected).toBe(0);
-    expect(extractInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
-    expect(extractInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
+    expect(tapeInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
+    expect(tapeInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
   });
 
   it("classifies escalations and deescalations independently", async () => {
     // Same batch has one escalation (coin A) and one deescalation (coin B).
-    const db = mockD1(
+    const db = mockTapeD1(
       baseTables([
         { stablecoin_id: "a-issuer", computed_at: SEC,        score: 10, band: "CALM"    },
         { stablecoin_id: "a-issuer", computed_at: SEC + 900,  score: 60, band: "WARNING" },
@@ -233,8 +215,8 @@ describe("dews projector", () => {
     await projectDewsEscalated(db);
     await projectDewsDeescalated(db);
 
-    const escalated = extractInsertBindsForType(db, "dews.escalated");
-    const deescalated = extractInsertBindsForType(db, "dews.deescalated");
+    const escalated = tapeInsertBindsForType(db, "dews.escalated");
+    const deescalated = tapeInsertBindsForType(db, "dews.deescalated");
     expect(escalated).toHaveLength(1);
     expect(escalated[0]![2]).toBe("severe"); // WARNING → severe
     expect(deescalated).toHaveLength(1);
@@ -244,7 +226,7 @@ describe("dews projector", () => {
   it("single-pass band-transition projector emits both directions from one scan", async () => {
     // Same batch as the independent test: one escalation (coin A), one
     // deescalation (coin B). A single fetchSamplesSince call covers both.
-    const db = mockD1(
+    const db = mockTapeD1(
       baseTables([
         { stablecoin_id: "a-issuer", computed_at: SEC,        score: 10, band: "CALM"    },
         { stablecoin_id: "a-issuer", computed_at: SEC + 900,  score: 60, band: "WARNING" },
@@ -260,8 +242,8 @@ describe("dews projector", () => {
       .getHistory()
       .filter((entry) => entry.sql.includes(MATCH_FETCH_SAMPLES));
     expect(sampleScans).toHaveLength(1); // single scan, not one per variant
-    const escalated = extractInsertBindsForType(db, "dews.escalated");
-    const deescalated = extractInsertBindsForType(db, "dews.deescalated");
+    const escalated = tapeInsertBindsForType(db, "dews.escalated");
+    const deescalated = tapeInsertBindsForType(db, "dews.deescalated");
     expect(escalated).toHaveLength(1);
     expect(escalated[0]![2]).toBe("severe"); // WARNING → severe
     expect(deescalated).toHaveLength(1);
@@ -358,7 +340,7 @@ describe("dews projector", () => {
   });
 
   it("single-pass projector preserves already-advanced divergent watermarks", async () => {
-    const db = mockD1([
+    const db = mockTapeD1([
       {
         match: "FROM cache WHERE key",
         rows: [
@@ -394,15 +376,15 @@ describe("dews projector", () => {
   });
 
   it("single-pass projector emits nothing for an empty batch", async () => {
-    const db = mockD1(baseTables([])) as MockD1Database;
+    const db = mockTapeD1(baseTables([])) as MockD1Database;
     const result = await projectDewsBandTransitions(db);
     expect(result.projected).toBe(0);
-    expect(extractInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
-    expect(extractInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
+    expect(tapeInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
+    expect(tapeInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
   });
 
   it("keeps dry-run projection read-only instead of reconciling the pointer ledger", async () => {
-    const db = mockD1([
+    const db = mockTapeD1([
       {
         match: "FROM cache WHERE key",
         rows: [{

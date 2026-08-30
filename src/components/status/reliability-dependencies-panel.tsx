@@ -2,17 +2,18 @@ import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } fr
 import { ReliabilityCopyDiagnostics } from "@/components/status/reliability-copy-diagnostics";
 import { StatusPill } from "@/components/status/severity-pill";
 import type { ReliabilityDependenciesModel } from "@/lib/reliability-workspace-model";
+import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 
 function stateClass(state: string): string {
   if (state === "stale" || state === "open" || state === "error") return "bg-red-500/15 text-red-700 dark:text-red-300";
   if (state === "degraded" || state === "half-open") return "bg-amber-500/15 text-amber-800 dark:text-amber-300";
   if (state === "healthy" || state === "closed" || state === "ok")
     return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
-  return "bg-muted text-muted-foreground";
+  return OPERATIONAL_PILL_CLASS.unknown;
 }
 
 function timeLabel(timestamp: number | null): string {
-  return timestamp ? new Date(timestamp * 1_000).toLocaleString() : "Unknown";
+  return formatStatusTimestamp(timestamp, { fallback: "Unknown" });
 }
 
 export function ReliabilityDependenciesPanel({ model }: { model: ReliabilityDependenciesModel }) {

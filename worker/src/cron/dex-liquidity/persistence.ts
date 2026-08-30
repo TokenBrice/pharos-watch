@@ -16,6 +16,7 @@ import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
+import { createDexGenerationStore } from "./generation-store";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -79,6 +80,44 @@ const DEX_LIQUIDITY_PUBLISH_CURRENT_SET_SQL = DEX_LIQUIDITY_ROW_COLUMNS.filter((
   .join(",\n  ");
 const DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER =
   "(publication_generation_id IS NULL OR publication_generation_id IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))";
+
+const dexLiquidityGenerationStore = createDexGenerationStore({
+  manifestTable: "dex_liquidity_publication_generations",
+  childTable: "dex_liquidity_run_rows",
+  columns: { generationId: "generation_id", state: "state", createdAt: "started_at", failureReason: "failure_reason", failedAt: "failed_at" },
+  terminalStates: ["staged", "published", "failed"],
+  failureState: "failed",
+  failureReasonMaxLength: 240,
+  failureTransitionWhere: ({ state }) => `${state} != 'published'`,
+  retentionSeconds: DEX_LIQUIDITY_GENERATION_RETENTION_SEC,
+  maxGenerationsPerRun: DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN,
+  resultKeys: { child: "deletedRunRows", manifest: "deletedGenerationRows" },
+  prune: {
+    childExtraWhere: `AND EXISTS (
+      SELECT 1 FROM dex_liquidity_run_rows candidate_row
+       WHERE candidate_row.generation_id = dex_liquidity_publication_generations.generation_id
+    )
+    AND generation_id NOT IN (
+      SELECT publication_generation_id
+        FROM dex_liquidity
+       WHERE stablecoin_id = '__global__'
+         AND publication_state = 'published'
+         AND publication_generation_id IS NOT NULL
+    )`,
+    manifestExtraWhere: (alias) => `AND ${alias}.generation_id NOT IN (
+      SELECT publication_generation_id
+        FROM dex_liquidity
+       WHERE publication_generation_id IS NOT NULL
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM dex_liquidity_run_rows r
+       WHERE r.generation_id = ${alias}.generation_id
+    )`,
+    childOrderBy: "started_at ASC",
+    manifestOrderBy: "candidate.started_at ASC, candidate.generation_id ASC",
+    oldestRequiresChildRows: true,
+  },
+});
 
 type ActiveStablecoinMeta = (typeof ACTIVE_STABLECOINS)[number];
 
@@ -434,24 +473,6 @@ async function stageDexLiquidityPublicationGeneration(
   );
 }
 
-async function markDexLiquidityPublicationGenerationFailed(
-  db: D1Database,
-  generationId: string,
-  nowSec: number,
-  reason: string,
-): Promise<void> {
-  await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `UPDATE dex_liquidity_publication_generations
-         SET state = 'failed', failed_at = ?, failure_reason = ?
-         WHERE generation_id = ? AND state != 'published'`,
-      )
-      .bind(nowSec, reason.slice(0, 240), generationId)
-      .run(),
-  );
-}
-
 async function loadCandidateGenerationCoverage(
   db: D1Database,
   generationId: string,
@@ -579,11 +600,11 @@ async function publishDexLiquidityGeneration(
   );
   throwIfAborted(params.signal);
   const currentRows = current?.current_row_count ?? 0;
-  if (currentRows !== params.expectedRowCount) {
-    throw new Error(
-      `DEX liquidity generation ${params.generationId} published ${currentRows}/${params.expectedRowCount} current rows`,
-    );
-  }
+  dexLiquidityGenerationStore.assertTransition(
+    currentRows,
+    params.expectedRowCount,
+    `DEX liquidity generation ${params.generationId} published ${currentRows}/${params.expectedRowCount} current rows`,
+  );
   return currentRows;
 }
 
@@ -592,99 +613,7 @@ export async function pruneOldDexLiquidityGenerations(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<DexLiquidityGenerationRetentionResult> {
-  const startedAtMs = Date.now();
-  const cutoff = nowSec - DEX_LIQUIDITY_GENERATION_RETENTION_SEC;
-  const result: DexLiquidityGenerationRetentionResult = {
-    cutoff,
-    deletedRows: 0,
-    deletedRunRows: 0,
-    deletedGenerationRows: 0,
-    oldestRemainingAt: null,
-    durationMs: 0,
-    error: null,
-  };
-  try {
-    const runRows = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `DELETE FROM dex_liquidity_run_rows
-         WHERE generation_id IN (
-           SELECT generation_id
-           FROM dex_liquidity_publication_generations
-           WHERE started_at < ?
-             AND state IN ('staged', 'published', 'failed')
-             AND EXISTS (
-               SELECT 1 FROM dex_liquidity_run_rows candidate_row
-               WHERE candidate_row.generation_id = dex_liquidity_publication_generations.generation_id
-             )
-             AND generation_id NOT IN (
-               SELECT publication_generation_id
-               FROM dex_liquidity
-               WHERE stablecoin_id = '__global__'
-                 AND publication_state = 'published'
-                 AND publication_generation_id IS NOT NULL
-             )
-           ORDER BY started_at ASC LIMIT ?
-         )`,
-        )
-        .bind(cutoff, DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN)
-        .run(),
-      3,
-      signal,
-    );
-    result.deletedRunRows = Number(runRows.meta?.changes ?? 0);
-
-    const generations = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `DELETE FROM dex_liquidity_publication_generations
-         WHERE rowid IN (
-           SELECT candidate.rowid
-             FROM dex_liquidity_publication_generations candidate
-            WHERE candidate.started_at < ?
-              AND candidate.state IN ('staged', 'published', 'failed')
-              AND candidate.generation_id NOT IN (
-                SELECT publication_generation_id
-                  FROM dex_liquidity
-                 WHERE publication_generation_id IS NOT NULL
-              )
-              AND NOT EXISTS (
-                SELECT 1 FROM dex_liquidity_run_rows r
-                 WHERE r.generation_id = candidate.generation_id
-              )
-            ORDER BY candidate.started_at ASC, candidate.generation_id ASC
-            LIMIT ?
-         )`,
-        )
-        .bind(cutoff, DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN)
-        .run(),
-      3,
-      signal,
-    );
-    result.deletedGenerationRows = Number(generations.meta?.changes ?? 0);
-
-    const oldest = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `SELECT MIN(generation.started_at) AS oldest_remaining_at
-             FROM dex_liquidity_publication_generations generation
-            WHERE EXISTS (
-              SELECT 1 FROM dex_liquidity_run_rows row
-               WHERE row.generation_id = generation.generation_id
-            )`,
-        )
-        .first<{ oldest_remaining_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    result.error = toErrorMessage(error).slice(0, 500);
-  }
-  result.deletedRows = result.deletedRunRows + result.deletedGenerationRows;
-  result.durationMs = Math.max(0, Date.now() - startedAtMs);
-  return result;
+  return dexLiquidityGenerationStore.prune(db, { nowSec, signal });
 }
 
 async function pruneOldDexLiquidityHistory(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<number> {
@@ -1068,7 +997,7 @@ export async function persistScores(
   } catch (err) {
     if (!signal?.aborted) {
       try {
-        await markDexLiquidityPublicationGenerationFailed(db, generationId, nowSec, toErrorMessage(err));
+        await dexLiquidityGenerationStore.markFailed(db, generationId, err, { failedAt: nowSec });
       } catch {
         // Best-effort diagnostics only; preserve the original publication error.
       }

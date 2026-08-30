@@ -2,9 +2,10 @@ import { describe, expect, it, beforeEach } from "vitest";
 import {
   fetchSpy,
   handleCallbackQuery,
+  makeCallbackQuery,
   lastAckBody,
   lastSentMessageBody,
-  mockD1,
+  mockTelegramD1,
   resetCallbackTest,
 } from "./telegram-webhook-callbacks.test-support";
 
@@ -68,7 +69,7 @@ beforeEach(resetCallbackTest);
 describe("handleCallbackQuery", () => {
   describe("setup wizard", () => {
     it("setup:branch:recommended writes confirm-state and previews usd-top25", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
@@ -81,12 +82,7 @@ describe("handleCallbackQuery", () => {
           first: { value: makeCacheStablecoins(), updated_at: 1_700_000_000 },
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-rec",
-        data: "setup:branch:recommended",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42 }, message_id: 1 },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:recommended", { id: "cb-rec", from: { id: 999, username: "alice" }, message: { chat: { id: 42 }, message_id: 1 } }));
 
       const history = db.getHistory();
       const persist = history.filter(
@@ -104,19 +100,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:branch:custom shows the alert-type toggle keyboard", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
           first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-custom",
-        data: "setup:branch:custom",
-        from: { id: 999 },
-        message: { chat: { id: 42 } },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:custom", { id: "cb-custom", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const body = lastSentMessageBody();
       const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
@@ -129,19 +120,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:branch:skip clears state and sends the legacy /start message", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
           first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-skip",
-        data: "setup:branch:skip",
-        from: { id: 999 },
-        message: { chat: { id: 42 } },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:skip", { id: "cb-skip", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const history = db.getHistory();
       expect(history.some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
@@ -150,19 +136,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:branch:skip lets group non-admins exit their own wizard without an admin lookup", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
           first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "7" }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-skip-group",
-        data: "setup:branch:skip",
-        from: { id: 7, username: "member" },
-        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:skip", { id: "cb-skip-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
       expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
       expect(db.getHistory().some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
@@ -171,7 +152,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:type-toggle:safety flips selection", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
@@ -182,12 +163,7 @@ describe("handleCallbackQuery", () => {
           }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-toggle",
-        data: "setup:type-toggle:safety",
-        from: { id: 999 },
-        message: { chat: { id: 42 } },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:type-toggle:safety", { id: "cb-toggle", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const persist = db.getHistory().filter((h) => h.sql.includes("INSERT INTO telegram_pending_disambiguation"));
       const payload = String(persist[persist.length - 1].binds[2] ?? "");
@@ -195,19 +171,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:next refuses when no alert types are selected", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
           first: pendingRowFromSetup({ step: "custom-types", alertTypes: [], target: null }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-next-empty",
-        data: "setup:next",
-        from: { id: 999 },
-        message: { chat: { id: 42 } },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:next", { id: "cb-next-empty", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       // No sendMessage on this path — only an ack with a hint.
       expect(fetchSpy.mock.calls.filter((c) => String(c[0]).includes("sendMessage")).length).toBe(0);
@@ -216,7 +187,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:next on custom-types step shows the target picker", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
@@ -227,12 +198,7 @@ describe("handleCallbackQuery", () => {
           }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-next",
-        data: "setup:next",
-        from: { id: 999 },
-        message: { chat: { id: 42 } },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:next", { id: "cb-next", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const body = lastSentMessageBody();
       const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
@@ -242,7 +208,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:target:usd-top10 advances to confirm-custom with preview", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
@@ -259,12 +225,7 @@ describe("handleCallbackQuery", () => {
           first: { value: makeCacheStablecoins(), updated_at: 1_700_000_000 },
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-target",
-        data: "setup:target:usd-top10",
-        from: { id: 999 },
-        message: { chat: { id: 42 } },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:target:usd-top10", { id: "cb-target", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const persist = db.getHistory().filter((h) => h.sql.includes("INSERT INTO telegram_pending_disambiguation"));
       const payload = String(persist[persist.length - 1].binds[2] ?? "");
@@ -275,7 +236,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:confirm on recommended path writes preset provenance without direct coin rows", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
@@ -291,14 +252,10 @@ describe("handleCallbackQuery", () => {
           rows: [],
           first: { value: makeCacheStablecoins(), updated_at: 1_700_000_000 },
         },
-        { match: "FROM telegram_subscriptions", rows: [] },
-      ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-confirm",
-        data: "setup:confirm",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42 } },
+      ], {
+        fallbackTables: [{ match: "FROM telegram_subscriptions", rows: [] }],
       });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm", { id: "cb-confirm", from: { id: 999, username: "alice" }, message: { chat: { id: 42 } } }));
 
       const history = db.getHistory();
       expect(history.some((h) => h.sql.includes("INSERT INTO telegram_subscribers"))).toBe(true);
@@ -308,7 +265,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:confirm with target=all writes only global alert flags", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
@@ -319,12 +276,7 @@ describe("handleCallbackQuery", () => {
           }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-confirm-all",
-        data: "setup:confirm",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42 } },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm", { id: "cb-confirm-all", from: { id: 999, username: "alice" }, message: { chat: { id: 42 } } }));
 
       const history = db.getHistory();
       const subscriberUpsert = history.find(
@@ -335,19 +287,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:cancel clears the pending row and sends a cancellation message", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
           first: pendingRowFromSetup({ step: "custom-types", alertTypes: ["dews"], target: null }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-cancel",
-        data: "setup:cancel",
-        from: { id: 999 },
-        message: { chat: { id: 42 } },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel", { id: "cb-cancel", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const history = db.getHistory();
       expect(history.some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
@@ -355,7 +302,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:cancel lets group non-admins cancel their own wizard without an admin lookup", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
@@ -365,12 +312,7 @@ describe("handleCallbackQuery", () => {
           ),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-cancel-group",
-        data: "setup:cancel",
-        from: { id: 7, username: "member" },
-        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel", { id: "cb-cancel-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
       expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
       expect(db.getHistory().some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
@@ -379,19 +321,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:cancel does not clear unrelated pending rows when no active wizard exists", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
           first: pendingRowFromForget({ action_type: "confirm-bulk", initiator_user_id: "999" }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-cancel-unrelated",
-        data: "setup:cancel",
-        from: { id: 7, username: "member" },
-        message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel", { id: "cb-cancel-unrelated", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
       expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
       expect(db.getHistory().some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
@@ -400,19 +337,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:branch:recommended from a non-initiator user is refused", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
           rows: [],
           first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "111" }),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-other",
-        data: "setup:branch:recommended",
-        from: { id: 222 },
-        message: { chat: { id: 42, type: "private" } },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:recommended", { id: "cb-other", from: { id: 222 }, message: { chat: { id: 42, type: "private" } } }));
 
       // Should not have invoked the preset cache lookup or persisted any new state.
       const history = db.getHistory();

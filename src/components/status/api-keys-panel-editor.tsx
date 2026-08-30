@@ -12,6 +12,7 @@ import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { StatusPill } from "./severity-pill";
 import { cn } from "@/lib/utils";
 import { apiKeyAccessibleIdentity } from "./api-key-presentation";
+import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 
 type CreateKeyPatch = Partial<CreateKeyState>;
 type EditableKeyPatch = Partial<EditableKeyState>;
@@ -245,7 +246,7 @@ function ApiKeyAuditHistory({
                   dateTime={new Date(entry.createdAt * 1000).toISOString()}
                   className="font-mono text-[11px] tabular-nums text-muted-foreground"
                 >
-                  {new Date(entry.createdAt * 1000).toLocaleString()}
+                  {formatStatusTimestamp(entry.createdAt)}
                 </time>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">Actor: {entry.actor}</p>

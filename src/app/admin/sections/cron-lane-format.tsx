@@ -7,6 +7,7 @@ import type {
   FormattedCronDuration,
 } from "@/lib/cron-workbench-model";
 import { getLastSuccessfulRun } from "@/lib/status/cron-run-utils";
+import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 
 /**
  * Presentation vocabulary shared by the cron workbench surfaces: state labels,
@@ -30,13 +31,13 @@ export const CRON_STATE_LABELS: Readonly<Record<CronWorkbenchState, string>> = {
 
 export function getCronStatusColor(status: string | undefined): string {
   const statusColors: Readonly<Record<string, string>> = CRON_STATUS_COLORS;
-  return status == null ? "bg-muted text-muted-foreground" : (statusColors[status] ?? "bg-muted text-muted-foreground");
+  return status == null ? OPERATIONAL_PILL_CLASS.unknown : (statusColors[status] ?? OPERATIONAL_PILL_CLASS.unknown);
 }
 
 export function getStateBadgeClass(state: CronWorkbenchState): string {
   if (state === "unhealthy") return "bg-red-500/15 text-red-800 dark:text-red-300";
   if (state === "degraded") return "bg-amber-500/15 text-amber-800 dark:text-amber-300";
-  if (state === "skipped") return "bg-muted text-muted-foreground";
+  if (state === "skipped") return OPERATIONAL_PILL_CLASS.unknown;
   if (state === "running") return "bg-sky-500/15 text-sky-800 dark:text-sky-300";
   if (state === "unknown") return "bg-slate-500/15 text-slate-800 dark:text-slate-300";
   return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300";
@@ -63,8 +64,7 @@ export function formatLastGood(row: CronWorkbenchRow, nowSeconds: number): strin
 }
 
 export function formatTimestamp(timestampSeconds: number | null | undefined): string {
-  if (timestampSeconds == null) return "Unknown";
-  return new Date(timestampSeconds * 1000).toLocaleString(undefined, { timeZoneName: "short" });
+  return formatStatusTimestamp(timestampSeconds, { fallback: "Unknown", timeZoneName: "short" });
 }
 
 export function formatDurationValue(

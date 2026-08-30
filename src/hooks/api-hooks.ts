@@ -2,32 +2,17 @@
 
 import { useQuery, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
 import {
-  type BluechipRatingsMap,
-  type DailyDigestResponse,
-  type DdrResponse,
-  type DdrrResponse,
   type DexLiquidityHistoryPoint,
-  type DexLiquidityMap,
-  type DigestArchiveResponse,
   type DigestSnapshotResponse,
-  type HealthResponse,
-  type PegSummaryResponse,
   type ReportCardsV9CurrentResponse,
-  type RedemptionBackstopsResponse,
   type SafetyScoreHistoryResponse,
   type SafetyScoreHistoryV2Response,
   type StabilityContributor,
-  type StabilityIndexResponse,
-  type StablecoinChartPoint,
-  type StressSignalsAllResponse,
   type StressSignalDetailResponse,
-  type UsdsStatusResponse,
   type YieldAdapterManifestResponse,
   type YieldHistoryResponse,
-  type YieldRankingsResponse,
 } from "@shared/types";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
-import type { TelegramPulse } from "@shared/types/status";
 import {
   createApiQueryFn,
   createApiPollingQueryOptions,
@@ -38,10 +23,7 @@ import {
   type PollingQueryControlOptions,
   unwrapApiQueryWithMetaResult,
 } from "./use-api-query";
-import {
-  FRONTEND_API_QUERY_DESCRIPTORS,
-  type NonUsdSharePoint as RegistryNonUsdSharePoint,
-} from "@/lib/api-query-descriptors";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import type { FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor } from "@/lib/api-query-contract";
 import type { ApiMeta } from "@/lib/api";
 
@@ -60,6 +42,8 @@ export type MetaApiQueryOptions<T> = UseQueryOptions<
   readonly unknown[]
 >;
 type RegisteredApiQueryOptions<T> = PlainApiQueryOptions<T> | MetaApiQueryOptions<T>;
+type RegisteredApiQueryResult<T, TMode extends FrontendApiQueryDescriptor<T>["responseMode"]> =
+  TMode extends "meta" ? ApiQueryWithMetaResult<T> : UseQueryResult<T, Error>;
 
 /**
  * Narrow the union returned by `createRegisteredApiPollingQueryOptions` for a
@@ -92,6 +76,26 @@ export function useRegisteredApiQuery<T>(
   return descriptor.responseMode === "meta"
     ? unwrapApiQueryWithMetaResult(query as UseQueryResult<QueryWithMetaEnvelope<T>, Error>)
     : (query as UseQueryResult<T, Error>);
+}
+
+function bindRegisteredApiQuery<T, TMode extends FrontendApiQueryDescriptor<T>["responseMode"]>(
+  descriptor: FrontendApiQueryDescriptor<T, TMode>,
+): () => RegisteredApiQueryResult<T, TMode>;
+function bindRegisteredApiQuery<T, TMode extends FrontendApiQueryDescriptor<T>["responseMode"]>(
+  descriptor: FrontendApiQueryDescriptor<T, TMode>,
+  defaults: QueryControlOverrides | undefined,
+): (overrides?: QueryControlOverrides) => RegisteredApiQueryResult<T, TMode>;
+function bindRegisteredApiQuery<T, TMode extends FrontendApiQueryDescriptor<T>["responseMode"]>(
+  descriptor: FrontendApiQueryDescriptor<T, TMode>,
+  defaults?: QueryControlOverrides,
+) {
+  const useQueryDescriptor = useRegisteredApiQuery as (
+    descriptor: FrontendApiQueryDescriptor<T, TMode>,
+    overrides?: QueryControlOverrides,
+  ) => RegisteredApiQueryResult<T, TMode>;
+  return function useBoundRegisteredApiQuery(overrides?: QueryControlOverrides) {
+    return useQueryDescriptor(descriptor, { ...defaults, ...overrides });
+  };
 }
 
 /**
@@ -129,17 +133,9 @@ function createRegisteredStaticQueryOptions<T>(
   return createStaticQueryOptions(descriptor.queryKey, createApiQueryFn<T>(descriptor.path, descriptor.schema), opts);
 }
 
-export function useBluechipRatings() {
-  return useRegisteredApiQuery<BluechipRatingsMap | null>(FRONTEND_API_QUERY_DESCRIPTORS.bluechipRatings);
-}
-
-export function useDailyDigest() {
-  return useRegisteredApiQuery<DailyDigestResponse>(FRONTEND_API_QUERY_DESCRIPTORS.dailyDigest);
-}
-
-export function useDexLiquidity(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<DexLiquidityMap>(FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidity, overrides);
-}
+export const useBluechipRatings = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.bluechipRatings);
+export const useDailyDigest = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.dailyDigest);
+export const useDexLiquidity = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidity, undefined);
 
 export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
   return useQuery<DexLiquidityHistoryPoint[], Error>(dexLiquidityHistoryQueryOptions(stablecoinId, days));
@@ -153,9 +149,7 @@ export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days = 90)
   );
 }
 
-export function useDigestArchive() {
-  return useRegisteredApiQuery<DigestArchiveResponse>(FRONTEND_API_QUERY_DESCRIPTORS.digestArchive);
-}
+export const useDigestArchive = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.digestArchive);
 
 // Digest snapshots are immutable by date — static cache, no polling needed
 export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotResponse, Error> {
@@ -167,13 +161,8 @@ export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotRe
   );
 }
 
-export function useHealth(overrides?: QueryControlOverrides): UseQueryResult<HealthResponse, Error> {
-  return useRegisteredApiQuery<HealthResponse>(FRONTEND_API_QUERY_DESCRIPTORS.health, { retry: 1, ...overrides });
-}
-
-export function usePegSummary() {
-  return useRegisteredApiQuery<PegSummaryResponse>(FRONTEND_API_QUERY_DESCRIPTORS.pegSummary);
-}
+export const useHealth = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.health, { retry: 1 });
+export const usePegSummary = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.pegSummary);
 
 /** Canonical V9 query. Its model-specific key and disabled previous-data
  * retention prevent an earlier-policy payload from surviving a refetch. */
@@ -184,23 +173,13 @@ export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
   });
 }
 
-export function useDepegResolver(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<DdrResponse>(FRONTEND_API_QUERY_DESCRIPTORS.depegResolver, {
-    keepPreviousData: true,
-    ...overrides,
-  });
-}
-
-export function useDepegResolverReview(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<DdrrResponse>(FRONTEND_API_QUERY_DESCRIPTORS.depegResolverReview, {
-    keepPreviousData: true,
-    ...overrides,
-  });
-}
-
-export function useRedemptionBackstops() {
-  return useRegisteredApiQuery<RedemptionBackstopsResponse>(FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops);
-}
+export const useDepegResolver = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.depegResolver, {
+  keepPreviousData: true,
+});
+export const useDepegResolverReview = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.depegResolverReview, {
+  keepPreviousData: true,
+});
+export const useRedemptionBackstops = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops);
 
 export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
   return useRegisteredApiQuery<SafetyScoreHistoryResponse>(
@@ -216,31 +195,15 @@ export function useSafetyScoreHistoryV2(stablecoinId: string, days = 3650) {
   );
 }
 
-export function useStablecoinCharts() {
-  return useRegisteredApiQuery<StablecoinChartPoint[]>(FRONTEND_API_QUERY_DESCRIPTORS.stablecoinCharts);
-}
-
-export function useNonUsdShare() {
-  return useRegisteredApiQuery<RegistryNonUsdSharePoint[]>(FRONTEND_API_QUERY_DESCRIPTORS.nonUsdShare);
-}
-
-export function useStabilityIndex() {
-  return useRegisteredApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndex);
-}
-
-export function useStabilityIndexDetail() {
-  return useRegisteredApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexDetail);
-}
+export const useStablecoinCharts = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stablecoinCharts);
+export const useNonUsdShare = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.nonUsdShare);
+export const useStabilityIndex = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndex);
+export const useStabilityIndexDetail = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexDetail);
 
 // Public /pharoswatchbot telemetry contract. Keep rendered fields and
 // docs/telegram-alerts.md in sync with worker/src/api/telegram-pulse.ts.
-export function useTelegramPulse() {
-  return useRegisteredApiQuery<TelegramPulse>(FRONTEND_API_QUERY_DESCRIPTORS.telegramPulse);
-}
-
-export function useUsdsStatus() {
-  return useRegisteredApiQuery<UsdsStatusResponse | null>(FRONTEND_API_QUERY_DESCRIPTORS.usdsStatus);
-}
+export const useTelegramPulse = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.telegramPulse);
+export const useUsdsStatus = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.usdsStatus);
 
 export function useYieldHistory(
   stablecoinId: string,
@@ -260,15 +223,12 @@ export function useYieldHistory(
   );
 }
 
-export function useYieldRankings(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<YieldRankingsResponse>(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings, overrides);
-}
+export const useYieldRankings = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings, undefined);
 
-export function useYieldRankingsSummary() {
-  return useRegisteredApiQuery<YieldRankingsSummaryResponse>(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary, {
+export const useYieldRankingsSummary: () => ApiQueryWithMetaResult<YieldRankingsSummaryResponse> =
+  bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary, {
     keepPreviousData: true,
   });
-}
 
 export function useYieldAdapterManifest() {
   return useQuery<YieldAdapterManifestResponse, Error>(
@@ -276,9 +236,7 @@ export function useYieldAdapterManifest() {
   );
 }
 
-export function useStressSignals(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<StressSignalsAllResponse>(FRONTEND_API_QUERY_DESCRIPTORS.stressSignals, overrides);
-}
+export const useStressSignals = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stressSignals, undefined);
 
 export function useStressSignalDetail(stablecoinId: string, days = 30) {
   return useRegisteredApiQuery<StressSignalDetailResponse>(

@@ -5,9 +5,9 @@ import { BaseInputGenerationIdSchema, Sha256Schema } from "./safety-schema-primi
  * Persisted identity for the retired V8 projection and the compatible private
  * fixed-input format still consumed by the V9 compiler.
  */
-export const SafetyScoreV8PublicationIdentitySchema = z
+const SafetyScoreIdentityBaseSchema = z
   .object({
-    model: z.literal("v8"),
+    model: z.string(),
     schemaVersion: z.literal(1),
     methodologyVersion: z.string().trim().min(1),
     evaluationBuildDigest: Sha256Schema,
@@ -15,6 +15,10 @@ export const SafetyScoreV8PublicationIdentitySchema = z
     publicationGenerationId: z.string().trim().min(1),
   })
   .strict();
+
+export const SafetyScoreV8PublicationIdentitySchema = SafetyScoreIdentityBaseSchema.extend({
+  model: z.literal("v8"),
+});
 
 export type SafetyScoreV8PublicationIdentity = z.infer<typeof SafetyScoreV8PublicationIdentitySchema>;
 
@@ -33,32 +37,18 @@ export type SafetyScoreV8PublicationIdentity = z.infer<typeof SafetyScoreV8Publi
  * this identity (`model` + `schemaVersion` + `evaluationBuildDigest`), and ids
  * cannot collide across projections because they are sha256 over content.
  */
-export const SafetyScoreV9InputIdentitySchema = z
-  .object({
-    model: z.literal("v9-input"),
-    schemaVersion: z.literal(1),
-    methodologyVersion: z.string().trim().min(1),
-    evaluationBuildDigest: Sha256Schema,
-    baseInputGenerationId: BaseInputGenerationIdSchema,
-    publicationGenerationId: z.string().trim().min(1),
-  })
-  .strict();
+export const SafetyScoreV9InputIdentitySchema = SafetyScoreIdentityBaseSchema.extend({
+  model: z.literal("v9-input"),
+});
 
 export type SafetyScoreV9InputIdentity = z.infer<typeof SafetyScoreV9InputIdentitySchema>;
 
 /** Exact identity required for an active Safety Score V9 publication. */
-export const SafetyScoreV9PublicationIdentitySchema = z
-  .object({
-    model: z.literal("v9"),
-    schemaVersion: z.literal(1),
-    methodologyVersion: z.string().trim().min(1),
-    policyId: z.string().trim().min(1),
-    policyDigest: Sha256Schema,
-    evaluationBuildDigest: Sha256Schema,
-    baseInputGenerationId: BaseInputGenerationIdSchema,
-    publicationGenerationId: z.string().trim().min(1),
-  })
-  .strict();
+export const SafetyScoreV9PublicationIdentitySchema = SafetyScoreIdentityBaseSchema.extend({
+  model: z.literal("v9"),
+  policyId: z.string().trim().min(1),
+  policyDigest: Sha256Schema,
+});
 
 export type SafetyScoreV9PublicationIdentity = z.infer<typeof SafetyScoreV9PublicationIdentitySchema>;
 

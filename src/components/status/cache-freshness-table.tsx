@@ -2,11 +2,12 @@ import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/sta
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
-import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { type DataTableColumn } from "@/components/data-table-shell";
+import { PrioritySplitTable } from "./priority-split-table";
 import { TableCell, TableRow } from "@/components/table";
-import { LazyDetails } from "./lazy-details";
 import { StatusPill } from "./severity-pill";
 import { PublicSignalCard } from "./public-signal-card";
+import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;
@@ -47,20 +48,20 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
       return {
         label: `stale (>${STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x)`,
         ratio,
-        className: "bg-red-500/15 text-red-700 dark:text-red-400",
+        className: OPERATIONAL_PILL_CLASS.error,
       };
     }
     if (status === "degraded") {
       return {
         label: `degraded (>${STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x)`,
         ratio,
-        className: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+        className: OPERATIONAL_PILL_CLASS.warning,
       };
     }
     return {
       label: "ok",
       ratio,
-      className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+      className: OPERATIONAL_PILL_CLASS.ok,
     };
   };
 
@@ -133,8 +134,8 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
           <StatusPill
             className={
               modeLabel === "cached-fallback"
-                ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                : "bg-muted text-muted-foreground"
+                ? OPERATIONAL_PILL_CLASS.warning
+                : OPERATIONAL_PILL_CLASS.unknown
             }
           >
             {modeLabel}
@@ -160,46 +161,19 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
           basis is the max-age used by `X-Data-Age` / `_meta`; generic freshness `Warning` starts after{" "}
           {FRESHNESS_RATIOS.FRESH.toFixed(0)}x that basis.
         </div>
-        <div>
-          {unhealthy.length > 0 && (
-            <DataTableShell
-              tableId="cache-freshness-unhealthy"
-              testId="cache-freshness-unhealthy-table"
-              columns={CACHE_FRESHNESS_COLUMNS}
-              chrome="content"
-              density="compact"
-              tableProps={{ "aria-label": "Unhealthy cache freshness" }}
-              headerClassName=""
-              headerRowClassName="border-b text-left text-muted-foreground"
-            >
-              {unhealthy.map(renderRow)}
-            </DataTableShell>
-          )}
-          {ok.length > 0 && (
-            <LazyDetails
-              className={unhealthy.length > 0 ? "mt-4" : undefined}
-              summary={
-                <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm text-muted-foreground">
-                  {ok.length} healthy cache{ok.length !== 1 ? "s" : ""}
-                </summary>
-              }
-            >
-              <DataTableShell
-                tableId="cache-freshness-healthy"
-                testId="cache-freshness-healthy-table"
-                columns={CACHE_FRESHNESS_COLUMNS}
-                chrome="content"
-                density="compact"
-                containerClassName="mt-2"
-                tableProps={{ "aria-label": "Healthy cache freshness" }}
-                headerClassName=""
-                headerRowClassName="border-b text-left text-muted-foreground"
-              >
-                {ok.map(renderRow)}
-              </DataTableShell>
-            </LazyDetails>
-          )}
-        </div>
+        <PrioritySplitTable
+          primaryRows={unhealthy}
+          secondaryRows={ok}
+          columns={CACHE_FRESHNESS_COLUMNS}
+          idPrefix="cache-freshness"
+          primaryAriaLabel="Unhealthy cache freshness"
+          secondaryAriaLabel="Healthy cache freshness"
+          secondaryNoun="cache"
+          renderRow={renderRow}
+          primaryTableId="cache-freshness-unhealthy"
+          secondaryTableId="cache-freshness-healthy"
+          headerRowClassName="border-b text-left text-muted-foreground"
+        />
       </div>
     </PublicSignalCard>
   );

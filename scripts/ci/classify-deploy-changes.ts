@@ -11,7 +11,7 @@ import {
   hasWorkerReleaseImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mts";
-import { splitNullDelimited } from "../lib/changed-files.mts";
+import { collectGitPaths, splitNullDelimited } from "../lib/changed-files.mts";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
@@ -110,55 +110,34 @@ export function classifyDeployChanges({
   execFile = execFileSync as GitExec,
   headSha,
 }: ClassifyDeployChangesOptions = {}): DeployClassification {
+  const fullDeploy = (reason: string): DeployClassification => ({
+    changedFiles: [],
+    criticalCoverageChanged: true,
+    deployRequired: true,
+    docsOnly: false,
+    pagesChanged: true,
+    pagesDeployRequired: true,
+    playwrightFirefoxRequired: true,
+    reason,
+    workerChanged: true,
+    workerDeployRequired: true,
+  });
   if (eventName !== "push") {
-    return {
-      changedFiles: [],
-      criticalCoverageChanged: true,
-      deployRequired: true,
-      docsOnly: false,
-      pagesChanged: true,
-      pagesDeployRequired: true,
-      playwrightFirefoxRequired: true,
-      reason: `Non-push event (${eventName ?? "unknown"}) runs the full deploy workflow`,
-      workerChanged: true,
-      workerDeployRequired: true,
-    };
+    return fullDeploy(`Non-push event (${eventName ?? "unknown"}) runs the full deploy workflow`);
   }
 
   if (!baseSha || ZERO_SHA.test(baseSha) || !headSha) {
-    return {
-      changedFiles: [],
-      criticalCoverageChanged: true,
-      deployRequired: true,
-      docsOnly: false,
-      pagesChanged: true,
-      pagesDeployRequired: true,
-      playwrightFirefoxRequired: true,
-      reason: "Missing push diff base/head; falling back to full deploy path",
-      workerChanged: true,
-      workerDeployRequired: true,
-    };
+    return fullDeploy("Missing push diff base/head; falling back to full deploy path");
   }
 
   let changedFiles = [];
   try {
-    const raw = execFile("git", ["diff", "--name-only", "--no-renames", "-z", `${baseSha}...${headSha}`], {
-      encoding: "utf8",
-    });
-    changedFiles = normalizeChangedFiles(raw);
+    changedFiles = collectGitPaths(
+      { kind: "range", base: baseSha, head: headSha, noRenames: true },
+      { execFile },
+    );
   } catch {
-    return {
-      changedFiles: [],
-      criticalCoverageChanged: true,
-      deployRequired: true,
-      docsOnly: false,
-      pagesChanged: true,
-      pagesDeployRequired: true,
-      playwrightFirefoxRequired: true,
-      reason: `Failed to diff ${baseSha}...${headSha}; falling back to full deploy path`,
-      workerChanged: true,
-      workerDeployRequired: true,
-    };
+    return fullDeploy(`Failed to diff ${baseSha}...${headSha}; falling back to full deploy path`);
   }
 
   return classifyChangedFiles(changedFiles, {

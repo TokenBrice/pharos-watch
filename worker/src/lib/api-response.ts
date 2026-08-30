@@ -112,6 +112,10 @@ export function cacheControlForDegradedPayload(payload: { _meta: { degraded: boo
   return payload._meta.degraded ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard;
 }
 
+export function jsonFreshDegradedResponse(payload: { _meta: { degraded: boolean } }, updatedAt: number, maxAgeSec: number): Response {
+  return jsonFreshResponse(payload, { cacheControl: cacheControlForDegradedPayload(payload), updatedAt, maxAgeSec });
+}
+
 export async function respondWithFreshSnapshot<T extends { updatedAt: number }>(args: {
   load: () => Promise<T>;
   cacheControl: string;

@@ -1,5 +1,6 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { formatPercentFromRatio } from "@shared/lib/format";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -241,18 +242,14 @@ function reconcileCollateralization(
   };
 }
 
-function formatRatioPct(ratio: number): string {
-  return `${(ratio * 100).toFixed(2)}%`;
-}
-
 /** Suffix appended to the undercollateralization warning so the headline percentage can never be
  *  read as gross liability coverage without the denominator it was computed on. */
 function collateralizationBasisSuffix(reconciliation: CollateralizationReconciliation): string {
   switch (reconciliation.basis) {
     case "net-of-protocol-owned":
-      return ` net of protocol-owned reserves (gross reserves/supply ${formatRatioPct(reconciliation.grossRatio!)})`;
+      return ` net of protocol-owned reserves (gross reserves/supply ${formatPercentFromRatio(reconciliation.grossRatio!)})`;
     case "unreconciled":
-      return ` on an unreconciled denominator (gross reserves/supply ${formatRatioPct(reconciliation.grossRatio!)})`;
+      return ` on an unreconciled denominator (gross reserves/supply ${formatPercentFromRatio(reconciliation.grossRatio!)})`;
     default:
       return "";
   }

@@ -1,10 +1,8 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { CollapsibleProse } from "@/components/stablecoin-detail/collapsible-prose";
-import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { EvidenceRailCard } from "@/components/stablecoin-detail/evidence-rail-card";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
-import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { BlacklistabilityClientSummary } from "@/lib/stablecoin-detail-blacklistability-client";
 import { cn } from "@/lib/utils";
 
@@ -23,31 +21,14 @@ export function FreezeSeizureCard({ summary, frameless }: { summary?: Blacklista
     ...(summary.upstreamLabel ? [{ key: "upstream", label: "Upstream", value: summary.upstreamLabel }] : []),
   ];
 
-  return (
-    <RailCard
-      frameless={frameless}
-      title="Freeze & seizure"
-      ariaLabel="Freeze and seizure"
-      trailing={
-        <Badge variant="outline" className={cn("text-[11px] font-medium", summary.statusToneClass)}>
-          {summary.statusLabel}
-        </Badge>
-      }
-    >
-      <div className="space-y-3 px-4 pb-4">
-        <p className="text-xs leading-relaxed text-muted-foreground">{summary.statusNote}</p>
-        {/* Access-review evidence routinely runs past 400 characters (on-chain
-            slot reads at a fixed block), so it folds to a lead. */}
-        <CollapsibleProse text={summary.evidence} className="text-xs" variant="rail" />
-        <FactGrid aria-label="Freeze and seizure facts" items={facts} className="grid-cols-2" />
-        {summary.sourceFreeRationale ? (
-          <p className="text-xs leading-relaxed text-muted-foreground">{summary.sourceFreeRationale}</p>
-        ) : null}
-        <EvidenceFooter
-          sources={summary.sources.map((source) => ({ label: source.label, url: source.url }))}
-          trailing={summary.reviewedAt ? `Reviewed ${summary.reviewedAt}` : undefined}
-        />
-      </div>
-    </RailCard>
-  );
+  return <EvidenceRailCard frameless={frameless} title="Freeze & seizure" ariaLabel="Freeze and seizure" badge={{ label: summary.statusLabel, className: cn("text-[11px] font-medium", summary.statusToneClass) }} evidence={{ sources: summary.sources.map((source) => ({ label: source.label, url: source.url })), trailing: summary.reviewedAt ? `Reviewed ${summary.reviewedAt}` : undefined }}>
+      <p className="text-xs leading-relaxed text-muted-foreground">{summary.statusNote}</p>
+      {/* Access-review evidence routinely runs past 400 characters (on-chain
+          slot reads at a fixed block), so it folds to a lead. */}
+      <CollapsibleProse text={summary.evidence} className="text-xs" variant="rail" />
+      <FactGrid aria-label="Freeze and seizure facts" items={facts} className="grid-cols-2" />
+      {summary.sourceFreeRationale ? (
+        <p className="text-xs leading-relaxed text-muted-foreground">{summary.sourceFreeRationale}</p>
+      ) : null}
+    </EvidenceRailCard>;
 }

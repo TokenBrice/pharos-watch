@@ -13,8 +13,12 @@ import {
 import { isRequestSourceAttributionDisabled, recordSiteDataRequest } from "../lib/request-attribution";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 import { resolveSiteApiOrigin, validatePagesSiteDataProxyEnv, type SiteDataProxyEnv } from "../lib/site-api-env";
-import { DEFAULT_PROXY_TIMEOUT_MS } from "../lib/upstream-proxy";
-import { runPagesProxy, type PagesProxyContext } from "../lib/pages-proxy-harness";
+import {
+  createProxyRequest,
+  rejectInvalidProxyEnvironment,
+  runPagesProxy,
+  type PagesProxyContext,
+} from "../lib/pages-proxy-harness";
 import { resolveSiteDataRequestedPath } from "../lib/proxy-paths";
 
 const FORWARDED_REQUEST_HEADERS = ["Accept", "If-None-Match", "If-Modified-Since"] as const;
@@ -99,17 +103,12 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
       return isSiteDataAllowedMethod(request.method) ? null : methodNotAllowed();
     },
     validateEnv: ({ env }) => {
-      const envIssues = validatePagesSiteDataProxyEnv(env);
-      for (const issue of envIssues) {
-        console.warn(`[site-data-proxy] ${issue.message}`);
-      }
-      return envIssues.some(
-        (issue) => issue.code === "site-api-origin-missing"
-          || issue.code === "site-api-origin-invalid"
-          || issue.code === "site-api-secret-missing",
-      )
-        ? jsonError(500, "Site API proxy is not configured")
-        : null;
+      return rejectInvalidProxyEnvironment({
+        issues: validatePagesSiteDataProxyEnv(env),
+        fatalCodes: ["site-api-origin-missing", "site-api-origin-invalid", "site-api-secret-missing"],
+        logPrefix: "site-data-proxy",
+        publicMessage: "Site API proxy is not configured",
+      });
     },
     resolveUpstreamPath: ({ params }) => {
       const requestedPath = resolveSiteDataRequestedPath(params);
@@ -124,17 +123,15 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
         return jsonError(500, "Site API proxy is not configured");
       }
 
-      const requestUrl = new URL(request.url);
-      const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
-      return {
-        upstreamUrl: upstreamUrl.toString(),
+      return createProxyRequest({
+        request,
+        origin: upstreamOrigin,
+        path: upstreamPath,
+        search: new URL(request.url).search,
         method: "GET",
         headers: upstreamHeaders,
-        timeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
-        timeoutReason: new DOMException("Site API upstream timed out", "TimeoutError"),
-        timeoutMessage: "Site API upstream timed out",
-        fetchFailedMessage: "Site API upstream fetch failed",
-      };
+        label: "Site API",
+      });
     },
     onFetchError: async (proxyContext, upstreamPath, errorKind, response) => {
       await queueSiteDataTelemetry(

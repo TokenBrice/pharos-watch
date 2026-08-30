@@ -3,13 +3,10 @@ import {
   GENIUS_STATUS_SHORT_LABELS,
 } from "@shared/lib/genius";
 import type { GeniusClientProfile } from "@shared/types/stablecoin-client-meta";
-import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/coverage-types";
+import type { CoverageStatus } from "@/lib/coverage-types";
 import {
-  breakdownItem,
-  createBreakdownCounter,
   createPresetStatus,
-  defineCoverageFeature,
-  statusKindsFromPresets,
+  definePresetCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -90,23 +87,6 @@ function resolveGenius(profile?: GeniusClientProfile | null): CoverageStatus {
   return createPresetStatus(GENIUS_STATUS_PRESETS[profile.authorizationStatus]);
 }
 
-function formatGenius(
-  _rows: readonly CoverageRow[],
-  breakdownMap: ReadonlyMap<string, number>,
-): CoverageBreakdownItem[] {
-  const get = createBreakdownCounter(breakdownMap);
-  return [
-    breakdownItem("ppsi-approved", "ppsi approved", get("ppsi-approved")),
-    breakdownItem("state-qualified", "state qualified", get("state-qualified")),
-    breakdownItem("official-application-pending", "filing pending", get("official-application-pending")),
-    breakdownItem("issuer-announced-intent", "issuer intent", get("issuer-announced-intent")),
-    breakdownItem("no-public-authorization-found", "none found", get("no-public-authorization-found")),
-    breakdownItem("not-applicable", "not applicable", get("not-applicable")),
-    breakdownItem("unknown", "unknown", get("unknown")),
-    breakdownItem("unassessed", "not assessed", get("unassessed")),
-  ];
-}
-
 const GENIUS_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "PPSI Approved",
@@ -151,9 +131,18 @@ const GENIUS_LEGEND: readonly CoverageLegendItem[] = [
   },
 ];
 
-export const coverageFeature = defineCoverageFeature({
-  statusKinds: statusKindsFromPresets(GENIUS_STATUS_PRESETS),
+export const coverageFeature = definePresetCoverageFeature({
+  presets: GENIUS_STATUS_PRESETS,
+  breakdown: [
+    { key: "ppsi-approved", label: "ppsi approved" },
+    { key: "state-qualified", label: "state qualified" },
+    { key: "official-application-pending", label: "filing pending" },
+    { key: "issuer-announced-intent", label: "issuer intent" },
+    { key: "no-public-authorization-found", label: "none found" },
+    { key: "not-applicable", label: "not applicable" },
+    { key: "unknown", label: "unknown" },
+    { key: "unassessed", label: "not assessed" },
+  ],
   legendItems: GENIUS_LEGEND,
   resolve: resolveGenius,
-  formatBreakdown: formatGenius,
 });

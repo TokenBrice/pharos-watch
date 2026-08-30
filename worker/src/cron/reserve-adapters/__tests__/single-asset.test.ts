@@ -23,6 +23,23 @@ import {
 
 const signal = AbortSignal.timeout(5000);
 
+function makeSingleAssetConfig(
+  overrides: {
+    primary?: LiveReservesConfig["inputs"]["primary"];
+    params?: Record<string, unknown>;
+  } = {},
+): LiveReservesConfig {
+  return {
+    adapter: "single-asset",
+    version: 1,
+    semantics: "single-asset",
+    inputs: {
+      primary: overrides.primary ?? { kind: "http-json", url: "https://example.com/api" },
+    },
+    params: overrides.params ?? {},
+  };
+}
+
 function makeCoin(contracts?: Array<{ chain: string; address: string }>): StablecoinMeta {
   return { id: "test-coin", name: "Test", ticker: "TST", contracts } as unknown as StablecoinMeta;
 }
@@ -34,17 +51,13 @@ beforeEach(() => {
 describe("fetchSingleAssetReserves", () => {
   it("returns 100% slice in http-json mode when probe returns non-zero", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({ total_supply: "1000000" });
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
+    const config = makeSingleAssetConfig({
       params: {
         label: "ETH collateral",
         risk: "low",
         probe: { kind: "json-path", path: ["total_supply"] },
       },
-    };
+    });
 
     const result = await fetchSingleAssetReserves(makeCoin(), config, signal);
     expect(result.slices).toEqual([
@@ -61,11 +74,7 @@ describe("fetchSingleAssetReserves", () => {
 
   it("preserves optional coinId and depType in the slice", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({ value: "42" });
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
+    const config = makeSingleAssetConfig({
       params: {
         label: "USDC backing",
         risk: "very-low",
@@ -73,7 +82,7 @@ describe("fetchSingleAssetReserves", () => {
         depType: "wrapper",
         probe: { kind: "json-path", path: ["value"] },
       },
-    };
+    });
 
     const result = await fetchSingleAssetReserves(makeCoin(), config, signal);
     expect(result.slices).toEqual([
@@ -81,37 +90,15 @@ describe("fetchSingleAssetReserves", () => {
     ]);
   });
 
-  it("throws on zero probe value in http-json mode", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({ total_supply: "0" });
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
+  it.each(["0", "0.0"])("throws on '%s' probe value in http-json mode", async (probeValue) => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({ total_supply: probeValue });
+    const config = makeSingleAssetConfig({
       params: {
         label: "ETH collateral",
         risk: "low",
         probe: { kind: "json-path", path: ["total_supply"] },
       },
-    };
-
-    await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
-      .rejects.toThrow("zero/empty");
-  });
-
-  it("throws on '0.0' probe value in http-json mode", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({ total_supply: "0.0" });
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
-      params: {
-        label: "ETH collateral",
-        risk: "low",
-        probe: { kind: "json-path", path: ["total_supply"] },
-      },
-    };
+    });
 
     await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
       .rejects.toThrow("zero/empty");
@@ -119,39 +106,17 @@ describe("fetchSingleAssetReserves", () => {
 
   it("throws when http-json mode has no probe configured", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({ value: "100" });
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
-      params: { label: "Test", risk: "low" },
-    };
+    const config = makeSingleAssetConfig({ params: { label: "Test", risk: "low" } });
 
     await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
       .rejects.toThrow("params.probe/reserveProbe or params.supplyProbe");
   });
 
-  it("throws on invalid risk value", async () => {
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
-      params: { label: "Test", risk: "invalid-risk" },
-    };
-
-    await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
-      .rejects.toThrow("single-asset adapter params invalid");
-  });
-
-  it("throws when label is missing", async () => {
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
-      params: { risk: "low" },
-    };
+  it.each([
+    { name: "invalid risk value", params: { label: "Test", risk: "invalid-risk" } },
+    { name: "label is missing", params: { risk: "low" } },
+  ])("throws when $name", async ({ params }) => {
+    const config = makeSingleAssetConfig({ params });
 
     await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
       .rejects.toThrow("single-asset adapter params invalid");
@@ -159,13 +124,10 @@ describe("fetchSingleAssetReserves", () => {
 
   it("returns 100% slice in onchain mode when probe succeeds", async () => {
     vi.mocked(probeOnchainTotalSupply).mockResolvedValue(1000000n);
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+    const config = makeSingleAssetConfig({
+      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
       params: { label: "ETH collateral", risk: "low" },
-    };
+    });
 
     const result = await fetchSingleAssetReserves(
       makeCoin([{ chain: "ethereum", address: "0x1234" }]),
@@ -186,11 +148,8 @@ describe("fetchSingleAssetReserves", () => {
   it("includes live redemption fee metadata when a probe is configured", async () => {
     vi.mocked(probeOnchainTotalSupply).mockResolvedValue(1000000n);
     vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(50);
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+    const config = makeSingleAssetConfig({
+      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
       params: {
         label: "ETH collateral",
         risk: "low",
@@ -199,7 +158,7 @@ describe("fetchSingleAssetReserves", () => {
           selector: "0xc52861f2",
         },
       },
-    };
+    });
 
     const result = await fetchSingleAssetReserves(
       makeCoin([{ chain: "ethereum", address: "0x1234" }]),
@@ -222,11 +181,7 @@ describe("fetchSingleAssetReserves", () => {
       supply_total: "100000000",
       asOf: "2026-03-20T12:00:00Z",
     });
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
+    const config = makeSingleAssetConfig({
       params: {
         label: "Treasury reserve",
         risk: "very-low",
@@ -235,7 +190,7 @@ describe("fetchSingleAssetReserves", () => {
         timestampProbe: { kind: "json-path", path: ["asOf"] },
         reserveSourceLabel: "Issuer reserve dashboard",
       },
-    };
+    });
 
     const result = await fetchSingleAssetReserves(makeCoin(), config, signal);
     expect(result.metadata).toMatchObject({
@@ -257,11 +212,7 @@ describe("fetchSingleAssetReserves", () => {
       supply_total: "100000000",
       asOf: "2026-03-20T12:00:00Z",
     });
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
+    const config = makeSingleAssetConfig({
       params: {
         label: "Treasury reserve",
         risk: "very-low",
@@ -269,7 +220,7 @@ describe("fetchSingleAssetReserves", () => {
         supplyProbe: { kind: "json-path", path: ["supply_total"] },
         timestampProbe: { kind: "json-path", path: ["asOf"] },
       },
-    };
+    });
 
     const result = await fetchSingleAssetReserves(makeCoin(), config, signal);
     expect(result.metadata?.collateralizationRatio).toBe(0.99);
@@ -288,18 +239,14 @@ describe("fetchSingleAssetReserves", () => {
         timestamp: "1774874195",
       },
     });
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
+    const config = makeSingleAssetConfig({
       params: {
         label: "Treasury reserve",
         risk: "very-low",
         probe: { kind: "json-path", path: ["data", "price"] },
         timestampProbe: { kind: "json-path", path: ["data", "timestamp"] },
       },
-    };
+    });
 
     const result = await fetchSingleAssetReserves(makeCoin(), config, signal);
     expect(result.metadata).toMatchObject({
@@ -312,44 +259,29 @@ describe("fetchSingleAssetReserves", () => {
     });
   });
 
-  it("throws when on-chain probe fails", async () => {
-    vi.mocked(probeOnchainTotalSupply).mockRejectedValue(
-      new Error("single-asset could not find a ethereum contract for test-coin"),
-    );
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+  it.each([
+    {
+      name: "on-chain probe fails",
+      error: "single-asset could not find a ethereum contract for test-coin",
+      coin: makeCoin([{ chain: "arbitrum", address: "0xABCD" }]),
       params: { label: "Collateral", risk: "medium" },
-    };
-
-    await expect(fetchSingleAssetReserves(
-      makeCoin([{ chain: "arbitrum", address: "0xABCD" }]),
-      config,
-      signal,
-    )).rejects.toThrow("could not find a ethereum contract");
-  });
-
-  it("throws when on-chain probe returns zero supply", async () => {
-    vi.mocked(probeOnchainTotalSupply).mockRejectedValue(
-      new Error("single-asset totalSupply probe failed for test-coin"),
-    );
-    const config: LiveReservesConfig = {
-      adapter: "single-asset",
-      version: 1,
-      semantics: "single-asset",
-      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      expected: "could not find a ethereum contract",
+    },
+    {
+      name: "on-chain probe returns zero supply",
+      error: "single-asset totalSupply probe failed for test-coin",
+      coin: makeCoin([{ chain: "ethereum", address: "0x1234" }]),
       params: { label: "ETH collateral", risk: "low" },
-    };
+      expected: "totalSupply probe failed",
+    },
+  ])("throws when $name", async ({ error, coin, params, expected }) => {
+    vi.mocked(probeOnchainTotalSupply).mockRejectedValue(new Error(error));
+    const config = makeSingleAssetConfig({
+      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      params,
+    });
 
-    await expect(
-      fetchSingleAssetReserves(
-        makeCoin([{ chain: "ethereum", address: "0x1234" }]),
-        config,
-        signal,
-      ),
-    ).rejects.toThrow("totalSupply probe failed");
+    await expect(fetchSingleAssetReserves(coin, config, signal)).rejects.toThrow(expected);
   });
 });
 

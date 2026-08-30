@@ -1,6 +1,9 @@
-import { getEndpointDefinitionByKey, type EndpointKey } from "@shared/lib/api-endpoints/definitions";
+import { type EndpointKey } from "@shared/lib/api-endpoints/definitions";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { definePublicArtifact, type PublicArtifactInput } from "./public-api-artifact-catalog-builders";
 import type { PublicApiResponseSchemaName } from "./public-api-response-schemas";
+
+export { OPENAPI_JSON_VALUE_ENDPOINT_KEYS } from "./public-api-artifact-catalog-builders";
 
 export type QueryParamType = "string" | "integer" | "number" | "boolean";
 
@@ -66,19 +69,6 @@ export const PUBLIC_API_ARTIFACT_TAGS = [
   "Status",
   "Reserves",
 ] as const;
-
-/**
- * Existing public endpoints whose response is still documented as JsonValue.
- * New endpoints fail closed in publicArtifact() until they either register a
- * canonical Zod response schema or are deliberately added to this debt list.
- */
-export const OPENAPI_JSON_VALUE_ENDPOINT_KEYS = new Set<EndpointKey>([
-  // `snapshot-day` alone stays generic, deliberately. Its producer envelope spans the
-  // historical V8 shape and a very large inline V9 union, so a faithful schema would be
-  // enormous and brittle while documenting little. The other five endpoints that used to
-  // sit here are now typed in public-api-response-schemas.ts.
-  "snapshot-day",
-]);
 
 export const POSTMAN_FOLDERS: readonly { name: PostmanFolderName; description: string }[] = [
   {
@@ -193,31 +183,6 @@ export const LIMIT_PARAM = {
   description: "Maximum number of records to return.",
 } as const satisfies PublicApiArtifactParameter;
 
-type PublicArtifactInput<Key extends EndpointKey> = Omit<PublicApiArtifactEndpoint, "path" | "security"> & { key: Key };
-
-function publicArtifact<const T extends PublicArtifactInput<EndpointKey>>(
-  artifact: T,
-): T & Pick<PublicApiArtifactEndpoint, "path" | "security"> {
-  const definition = getEndpointDefinitionByKey(artifact.key);
-  if (!definition || definition.adminRequired || definition.methods.length !== 1 || definition.methods[0] !== "GET") {
-    throw new Error(`Public artifact endpoint "${artifact.key}" must use a non-admin GET definition`);
-  }
-  const intentionallyGeneric = OPENAPI_JSON_VALUE_ENDPOINT_KEYS.has(artifact.key);
-  if ((artifact.responseSchema === undefined) !== intentionallyGeneric) {
-    throw new Error(
-      `Public artifact endpoint "${artifact.key}" must have exactly one response contract: a canonical Zod response schema or an explicit JsonValue debt entry`,
-    );
-  }
-  return {
-    ...artifact,
-    path: definition.path.replace(
-      /:([A-Za-z][A-Za-z0-9]*)/g,
-      (_match, name: string) => `{${name === "id" ? "stablecoinId" : name}}`,
-    ),
-    ...(definition.publicApiAccess === "exempt" ? { security: "none" } : {}),
-  } as T & Pick<PublicApiArtifactEndpoint, "path" | "security">;
-}
-
 const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "health",
@@ -226,7 +191,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     tags: ["Health"],
     responseSchema: "HealthResponse",
     postman: {
-      folder: "Getting started",
       noAuth: true,
     },
   },
@@ -237,7 +201,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     tags: ["Stablecoins"],
     responseSchema: "StablecoinListResponse",
     postman: {
-      folder: "Getting started",
       name: "Stablecoins list",
     },
   },
@@ -248,9 +211,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Full per-coin analytics dossier for a canonical Pharos stablecoin ID.",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
-    postman: {
-      folder: "Getting started",
-    },
   },
   {
     key: "stablecoin-summary",
@@ -259,9 +219,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Lightweight per-coin price and aggregate supply snapshot.",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
-    postman: {
-      folder: "Getting started",
-    },
   },
   {
     key: "stablecoin-reserves",
@@ -271,7 +228,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     responseSchema: "StablecoinReservesResponse",
     parameters: [STABLECOIN_ID_PARAM],
     postman: {
-      folder: "Getting started",
       path: "/api/stablecoin-reserves/{{reserveStablecoinId}}",
     },
   },
@@ -281,9 +237,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Historical total supply chart data.",
     tags: ["Stablecoins", "History"],
     responseSchema: "StablecoinChartResponse",
-    postman: {
-      folder: "Getting started",
-    },
   },
   {
     key: "peg-summary",
@@ -291,9 +244,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggregate peg-monitoring summary.",
     tags: ["Peg Monitoring"],
     responseSchema: "PegSummaryResponse",
-    postman: {
-      folder: "Risk and market structure",
-    },
   },
   {
     key: "depeg-events",
@@ -336,7 +286,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Risk and market structure",
       query: { stablecoin: "{{stablecoinId}}", limit: "{{limit}}", offset: "0" },
     },
   },
@@ -422,7 +371,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Risk and market structure",
       query: { limit: "50" },
     },
   },
@@ -432,9 +380,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Sky/USDS protocol status, including whether the freeze module is currently active.",
     tags: ["Risk"],
     responseSchema: "UsdsStatusResponse",
-    postman: {
-      folder: "Risk and market structure",
-    },
   },
   {
     key: "bluechip-ratings",
@@ -442,9 +387,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Safety ratings from bluechip.org for covered stablecoins.",
     tags: ["Risk"],
     responseSchema: "BluechipRatingsResponse",
-    postman: {
-      folder: "Risk and market structure",
-    },
   },
   {
     key: "dex-liquidity",
@@ -452,9 +394,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata.",
     tags: ["Liquidity"],
     responseSchema: "DexLiquidityResponse",
-    postman: {
-      folder: "Risk and market structure",
-    },
   },
   {
     key: "dex-liquidity-history",
@@ -475,9 +414,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Canonical V9 Safety Score report-card contract sourced from the accepted V9 publication.",
     tags: ["Risk"],
     responseSchema: "ReportCardsV9Response",
-    postman: {
-      folder: "Risk and market structure",
-    },
   },
   {
     key: "depeg-resolver",
@@ -486,9 +422,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       "Per active confirmed depeg: a mechanistic resolution outlook (terminal vs recoverable) and a stratified empirical duration estimate with per-horizon resolution likelihood.",
     tags: ["Risk", "Peg Monitoring"],
     responseSchema: "DdrResponse",
-    postman: {
-      folder: "Risk and market structure",
-    },
   },
   {
     key: "depeg-resolver-review",
@@ -497,9 +430,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       "Review of stored DDR predictions against later depeg-event outcomes, including recovery-likelihood accuracy and observed-minus-predicted recovery duration error.",
     tags: ["Risk", "Peg Monitoring"],
     responseSchema: "DdrrResponse",
-    postman: {
-      folder: "Risk and market structure",
-    },
   },
   {
     key: "redemption-backstops",
@@ -507,9 +437,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Modeled issuer/protocol redemption routes and effective-exit scoring for configured assets.",
     tags: ["Risk", "Reserves"],
     responseSchema: "RedemptionBackstopsResponse",
-    postman: {
-      folder: "Risk and market structure",
-    },
   },
   {
     key: "stress-signals",
@@ -519,7 +446,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     responseSchema: "StressSignalsResponse",
     parameters: [STABLECOIN_QUERY_PARAM, DAYS_PARAM],
     postman: {
-      folder: "Risk and market structure",
       query: { stablecoin: "{{stablecoinId}}", days: "{{days}}" },
     },
   },
@@ -538,7 +464,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Risk and market structure",
       name: "Stability index",
       query: { detail: "true" },
       description: "Latest Pharos Stability Index with detail payload and history.",
@@ -608,7 +533,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Flows, blacklist, yield, and chains",
       query: {
         stablecoin: "{{blacklistStablecoinSymbol}}",
         chain: "Ethereum",
@@ -629,9 +553,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Blacklist summary statistics, chart data, chain options, manifest-derived coverage metadata, and freeze-ledger data-quality context. Prefer tracked freeze-ledger fields over legacy active-state fields for public frozen exposure.",
     tags: ["Blacklist"],
     responseSchema: "BlacklistSummaryResponse",
-    postman: {
-      folder: "Flows, blacklist, yield, and chains",
-    },
   },
   {
     key: "mint-burn-flows",
@@ -641,7 +562,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     responseSchema: "MintBurnFlowsResponse",
     parameters: [STABLECOIN_QUERY_PARAM, HOURS_PARAM],
     postman: {
-      folder: "Flows, blacklist, yield, and chains",
       query: { stablecoin: "{{stablecoinId}}", hours: "168" },
     },
   },
@@ -709,7 +629,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Flows, blacklist, yield, and chains",
       query: {
         stablecoin: "{{stablecoinId}}",
         direction: "",
@@ -738,7 +657,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Flows, blacklist, yield, and chains",
       query: { projection: "" },
     },
   },
@@ -749,9 +667,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state, and methodology version.",
     tags: ["Yield"],
     responseSchema: "YieldAdapterManifestResponse",
-    postman: {
-      folder: "Flows, blacklist, yield, and chains",
-    },
   },
   {
     key: "yield-history",
@@ -798,9 +713,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description: "Chain-level stablecoin aggregates with Chain Health Scores.",
     tags: ["Chains"],
     responseSchema: "ChainsResponse",
-    postman: {
-      folder: "Flows, blacklist, yield, and chains",
-    },
   },
   {
     key: "non-usd-share",
@@ -810,7 +722,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     tags: ["Market Structure", "History"],
     parameters: [NON_USD_SHARE_DAYS_PARAM],
     postman: {
-      folder: "Flows, blacklist, yield, and chains",
       query: { days: "{{days}}" },
     },
   },
@@ -822,7 +733,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     responseSchema: "SupplyHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SUPPLY_HISTORY_DAYS_PARAM],
     postman: {
-      folder: "Historical data",
       order: 0,
       query: { stablecoin: "{{stablecoinId}}", days: "365" },
     },
@@ -861,7 +771,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     tags: ["Digest"],
     responseSchema: "DailyDigestResponse",
     postman: {
-      folder: "Historical data",
       order: 5,
       description: "Latest AI-generated market digest.",
     },
@@ -873,7 +782,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     tags: ["Digest"],
     responseSchema: "DigestArchiveResponse",
     postman: {
-      folder: "Historical data",
       order: 6,
     },
   },
@@ -893,7 +801,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Historical data",
       order: 7,
       query: { date: "{{digestDate}}" },
     },
@@ -904,10 +811,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Public snapshot index",
     description: "Listing of available daily public snapshots with content hashes and methodology versions.",
     tags: ["Digest"],
-    postman: {
-      folder: "Historical data",
-      order: 8,
-    },
+    postman: { order: 8 },
   },
   {
     key: "snapshot-day",
@@ -925,7 +829,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Historical data",
       order: 9,
       path: "/api/snapshots/{{snapshotDate}}.json",
     },
@@ -954,7 +857,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Historical data",
       order: 10,
       path: "/api/snapshot/{{snapshotDate}}/stablecoin/{{stablecoinId}}",
     },
@@ -975,7 +877,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       },
     ],
     postman: {
-      folder: "Status",
       query: { window: "7d", limit: "{{limit}}" },
     },
   },
@@ -991,7 +892,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
 ] as const satisfies readonly PublicArtifactInput<EndpointKey>[];
 
-export const PUBLIC_API_ARTIFACT_ENDPOINTS = PUBLIC_API_ARTIFACT_INPUTS.map(publicArtifact);
+export const PUBLIC_API_ARTIFACT_ENDPOINTS = PUBLIC_API_ARTIFACT_INPUTS.map((input) => definePublicArtifact(input));
 
 export const PUBLIC_STATIC_POSTMAN_REQUESTS = [
   {

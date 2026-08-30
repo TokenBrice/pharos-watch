@@ -2,7 +2,11 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import {
+  insertPendingDepeg,
+  makePendingDepegRow,
+  openLatestSchemaFixture,
+} from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { DEPEG_PENDING_MIN_AGE_SEC } from "../../lib/constants";
 import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
@@ -15,16 +19,9 @@ const brlMeta: StablecoinMeta = {
   flags: { backing: "rwa-backed", pegCurrency: "BRL", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
 };
 
-function fixture(): { sqlite: DatabaseSync; db: D1Database } { const value = createLatestSchemaSqlite(); openDbs.push(value.sqlite); return value; }
-function row(overrides: Partial<PendingDepegRow> = {}): PendingDepegRow {
-  const firstSeenAt = overrides.first_seen_at ?? NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC - 60;
-  const firstSeenBps = overrides.first_seen_bps ?? -200;
-  const firstPrice = overrides.first_price ?? 0.98;
-  return { id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below", first_seen_bps: firstSeenBps, first_seen_at: firstSeenAt, first_price: firstPrice, last_seen_bps: firstSeenBps, last_seen_at: firstSeenAt + DEPEG_PENDING_MIN_AGE_SEC, last_price: firstPrice, peak_seen_bps: null, peak_price: null, peg_reference: 1, reason: "large-cap", updated_at: firstSeenAt, ...overrides };
-}
-function seed(sqlite: DatabaseSync, value: PendingDepegRow): void {
-  sqlite.prepare(`INSERT INTO depeg_pending (id, stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference, reason, last_seen_bps, last_seen_at, last_price, peak_seen_bps, peak_price, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(value.id, value.stablecoin_id, value.symbol, value.peg_type, value.direction, value.first_seen_bps, value.first_seen_at, value.first_price, value.peg_reference, value.reason ?? "large-cap", value.last_seen_bps, value.last_seen_at, value.last_price, value.peak_seen_bps, value.peak_price, value.updated_at ?? value.last_seen_at ?? value.first_seen_at);
-}
+function fixture(): { sqlite: DatabaseSync; db: D1Database } { return openLatestSchemaFixture({ openDatabases: openDbs }); }
+const row = makePendingDepegRow;
+const seed = insertPendingDepeg;
 
 type Spec = {
   label: string;

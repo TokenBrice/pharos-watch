@@ -15,7 +15,6 @@ import {
   formatUsd,
   isRecord,
   loadCoverageAuditSiteDataInputs,
-  markdownValue,
   parseCoverageAuditCliArgs,
   readRequiredJsonFile,
   resolveGeneratedAt,
@@ -25,6 +24,7 @@ import {
   type UnknownRecord,
 } from "../lib/coverage-audit-cli";
 import { runAsMain } from "../lib/coverage-audit-cli";
+import { renderMarkdownRows } from "../lib/markdown-report";
 import {
   DEFAULT_SOURCE_QUALITY_NOTE,
   REVIEWED_LIVE_RESERVE_SOURCE_NOTES,
@@ -533,25 +533,22 @@ function renderNullableCount(value: number | null): string {
 }
 
 function renderCuratedOnlyCandidates(rows: readonly CuratedOnlyReserveCandidateRow[]): string[] {
-  const clipped = rows.slice(0, CURATED_ONLY_CANDIDATE_LIMIT);
-  if (clipped.length === 0) return ["_None._"];
-  return [
-    "coin | mcap | rank | quality | score-grade plausible | source / adapter note",
-    "--- | ---: | ---: | --- | --- | ---",
-    ...clipped.map((row) =>
-      [
+  return renderMarkdownRows({
+    headings: ["coin", "mcap", "rank", "quality", "score-grade plausible", "source / adapter note"],
+    rows,
+    cells: (row) => [
         `${row.symbol} (${row.coinId})`,
         formatUsd(row.marketCapUsd),
         row.rank,
         row.sourceQuality,
         row.scoreGradePlausible ? "yes" : "no",
         `${row.sourceUrl ?? "unreviewed"}; ${row.expectedAdapterFamily}; ${row.freshnessEvidence}`,
-      ]
-        .map(markdownValue)
-        .join(" | "),
-    ),
-    ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
-  ];
+    ],
+    alignments: ["left", "right", "right", "left", "left", "left"],
+    empty: "_None._",
+    limit: CURATED_ONLY_CANDIDATE_LIMIT,
+    overflow: (hidden) => `_Plus ${hidden} more rows._`,
+  });
 }
 
 function renderEvidenceGapRows(rows: readonly ReserveEvidenceGapRow[]): string[] {
@@ -559,21 +556,18 @@ function renderEvidenceGapRows(rows: readonly ReserveEvidenceGapRow[]): string[]
 }
 
 function renderOpaqueReserveSlices(rows: readonly OpaqueReserveSliceRow[]): string[] {
-  if (rows.length === 0) return ["_None._"];
-  return [
-    "coin | slice | pct | review disposition",
-    "--- | --- | ---: | ---",
-    ...rows.map((row) =>
-      [
+  return renderMarkdownRows({
+    headings: ["coin", "slice", "pct", "review disposition"],
+    rows,
+    cells: (row) => [
         `${row.symbol} (${row.coinId})`,
         `#${row.reserveIndex} ${row.reserveName}`,
         `${row.pct.toFixed(2)}%`,
         row.disposition ?? "unreviewed",
-      ]
-        .map(markdownValue)
-        .join(" | "),
-    ),
-  ];
+    ],
+    alignments: ["left", "left", "right", "left"],
+    empty: "_None._",
+  });
 }
 
 export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit): string {

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { CHART_GREEN, CHART_RED, CHART_SLATE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
+import { RowSparkline } from "@/components/row-sparkline";
 
 /* Compact PYS history sparkline.
    Reads optional `pysAtPublish` snapshots persisted per published row, draws a
@@ -25,8 +26,6 @@ const MIN_POINTS_REQUIRED = 7;
 const FLAT_DELTA_TOLERANCE = 1;
 const SVG_WIDTH = 300;
 const SVG_HEIGHT = 24;
-const SVG_PAD_X = 1;
-const SVG_PAD_Y = 2;
 
 interface PreparedSeries {
   /** Non-null points inside the window, sorted ascending by ts. */
@@ -101,44 +100,28 @@ export function PysHistorySparkline({
 
   const first = series.points[0];
   const last = series.points[series.points.length - 1];
-  const range = Math.max(series.max - series.min, 1);
-  const tsSpan = Math.max(last.ts - first.ts, 1);
-  const plotWidth = SVG_WIDTH - SVG_PAD_X * 2;
-  const plotHeight = SVG_HEIGHT - SVG_PAD_Y * 2;
-
-  const polylinePoints = series.points
-    .map((p) => {
-      const x = SVG_PAD_X + ((p.ts - first.ts) / tsSpan) * plotWidth;
-      const y = SVG_PAD_Y + (1 - (p.pys - series.min) / range) * plotHeight;
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(" ");
-
+  const rowData = series.points.map((point) => point.pys);
+  const rowXValues = series.points.map((point) => point.ts);
   const stroke = getTrendColor(first.pys, last.pys);
   const delta = last.pys - first.pys;
   const ariaLabel = `${windowDays}-day PYS history: starts at ${first.pys.toFixed(0)}, ends at ${last.pys.toFixed(0)}, ranges ${series.min.toFixed(0)} to ${series.max.toFixed(0)}`;
 
   return (
     <div className={cn("flex flex-col gap-0.5", className)} data-testid="pys-sparkline">
-      <svg
-        role="img"
-        aria-label={ariaLabel}
-        viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-        preserveAspectRatio="none"
-        width="100%"
+      <RowSparkline
+        data={rowData}
+        xValues={rowXValues}
+        width={SVG_WIDTH}
         height={SVG_HEIGHT}
-        className="block"
-      >
-        <polyline
-          points={polylinePoints}
-          fill="none"
-          stroke={stroke}
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
+        inset={{ top: 2, right: 1, bottom: 2, left: 1 }}
+        strokeWidth={1.5}
+        yRangeMode="min-unit"
+        minPoints={MIN_POINTS_REQUIRED}
+        fill={false}
+        positiveColor={stroke}
+        ariaLabel={ariaLabel}
+        className="block w-full"
+      />
       <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
         PYS {last.pys.toFixed(0)} ({formatSignedDelta(delta)})
       </span>

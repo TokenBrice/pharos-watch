@@ -21,6 +21,7 @@ import {
   type IncidentTransitionView,
 } from "@/lib/incident-history-view-model";
 import { cn } from "@/lib/utils";
+import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { FilterSelect } from "@/components/status/page-primitives";
 import { SeverityPill, StatusPill } from "./severity-pill";
 
@@ -48,13 +49,9 @@ interface TransitionTimelineProps {
   evidenceScope?: "loaded-window" | "recent-status-fallback";
 }
 
-function formatTimestamp(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleString();
-}
-
 function severityPill(severity: IncidentSeverity) {
   return severity === "unknown" ? (
-    <StatusPill className="bg-muted text-muted-foreground">unknown</StatusPill>
+    <StatusPill className={OPERATIONAL_PILL_CLASS.unknown}>unknown</StatusPill>
   ) : (
     <SeverityPill severity={severity} />
   );
@@ -66,7 +63,7 @@ function publicImpactPill(publicImpact: IncidentPublicImpact) {
       className={cn(
         publicImpact === "impacting" && "bg-red-500/15 text-red-700 dark:text-red-300",
         publicImpact === "not-impacting" && "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
-        publicImpact === "unknown" && "bg-muted text-muted-foreground",
+        publicImpact === "unknown" && OPERATIONAL_PILL_CLASS.unknown,
       )}
     >
       {PUBLIC_IMPACT_LABELS[publicImpact]}
@@ -82,7 +79,9 @@ function TransitionDuration({ row }: { row: IncidentTransitionView }) {
         {row.ongoing ? "Current state" : "State duration"}: {formatElapsedSeconds(row.durationSec)}
       </p>
       {row.resolution === "resolved" && row.resolvedAt != null ? (
-        <p className="whitespace-normal text-muted-foreground">Resolved at {formatTimestamp(row.resolvedAt)}</p>
+        <p className="whitespace-normal text-muted-foreground">
+          Resolved at {formatStatusTimestamp(row.resolvedAt)}
+        </p>
       ) : row.resolution === "unresolved" ? (
         <p className="whitespace-normal text-amber-700 dark:text-amber-300">Resolution not present in loaded history</p>
       ) : (
@@ -340,7 +339,7 @@ export function TransitionTimeline({
                       className="whitespace-normal py-2 text-left text-xs font-normal text-muted-foreground"
                     >
                       <time dateTime={new Date(transition.at * 1000).toISOString()}>
-                        {formatTimestamp(transition.at)}
+                        {formatStatusTimestamp(transition.at)}
                       </time>
                     </TableHead>
                     <TableCell className="py-2 align-top text-xs">

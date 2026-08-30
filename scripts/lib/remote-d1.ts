@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { chunkArray } from "@shared/lib/collections";
 
 const DEFAULT_SQL_BATCH_SIZE = 200;
 const DEFAULT_MAX_BUFFER = 50 * 1024 * 1024;
@@ -76,10 +77,10 @@ export function createD1Client(databaseName: string, options: D1ClientOptions = 
     },
     queryRaw,
     executeStatements(statements: string[], prefix: string): void {
-      for (let index = 0; index < statements.length; index += resolvedOptions.batchSize) {
+      for (const batch of chunkArray(statements, resolvedOptions.batchSize)) {
         executeSqlFile(
           databaseName,
-          statements.slice(index, index + resolvedOptions.batchSize),
+          batch,
           prefix,
           resolvedOptions,
         );

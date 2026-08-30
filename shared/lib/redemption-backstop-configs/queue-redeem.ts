@@ -1,6 +1,7 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import { defineRecordEntries, finalizeBackstopRegistry } from "./factory";
 import {
+  cloneRedemptionBackstopConfig,
   documentedBoundSupplyFull,
   documentedVariableFee,
   undisclosedReviewedFee,
@@ -23,7 +24,10 @@ const REVIEWED_WRAPPER_QUEUE_AT = REVIEWED_WRAPPER_WAVE_AT;
 const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
 const REVIEWED_CONFIG_ONLY_GAPS_AT = "2026-05-17";
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
-const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_QUEUE_REDEMPTION_AT);
+
+function defineQueueRedeemConfig(overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig { return { ...queueRedeemBase, ...overrides }; }
+
+function defineReviewedQueueRedeemConfig(reviewedAt: string, overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig { return { ...queueRedeemBase, ...documentedBoundSupplyFull(reviewedAt), ...overrides }; }
 
 /** syrupUSDC and syrupUSDT share this 3-element docs[]; their cost/notes prose
  *  diverges and stays inline at each entry. */
@@ -57,6 +61,7 @@ function erc4626ReserveTelemetryQueueConfig(options: {
   costModel: RedemptionBackstopConfig["costModel"];
   docs: NonNullable<RedemptionBackstopConfig["docs"]>;
   notes?: string[];
+  v9RouteReviewTerms?: RedemptionBackstopConfig["v9RouteReviewTerms"];
   telemetrySubject: string;
   settlementConstraint: string;
 }): RedemptionBackstopConfig {
@@ -71,11 +76,12 @@ function erc4626ReserveTelemetryQueueConfig(options: {
     costModel,
     docs,
     notes = [],
+    v9RouteReviewTerms,
     telemetrySubject,
     settlementConstraint,
   } = options;
 
-  return {
+  return cloneRedemptionBackstopConfig({
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(reviewedAt),
     capacityModel: { kind: "reserve-sync-metadata" },
@@ -87,17 +93,16 @@ function erc4626ReserveTelemetryQueueConfig(options: {
     ...(totalScoreCap ? { totalScoreCap } : {}),
     costModel,
     docs,
+    ...(v9RouteReviewTerms ? { v9RouteReviewTerms } : {}),
     notes: [
       ...notes,
       `Fresh ERC-4626 reserve telemetry reads ${telemetrySubject} as the current redeemable bound while ${settlementConstraint} still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.`,
     ],
-  };
+  });
 }
 
 const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
-  "alusd-alchemix": {
-    ...queueRedeemBase,
-    ...reviewedQueueRedemptionSupplyFull,
+  "alusd-alchemix": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     outputAssets: ["dai-makerdao"],
     settlementModel: "days",
     costModel: documentedVariableFee("1:1 via the Transmuter; no separate redemption fee is disclosed"),
@@ -112,18 +117,16 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     notes: [
       "Alchemix documents the Transmuter as the 1:1 alUSD redemption rail, with claims settling as underlying collateral is repaid and harvested from yield strategies rather than as an instant stablecoin buffer",
     ],
-  },
-  "iusd-infinifi": {
-    ...queueRedeemBase,
+  }),
+  "iusd-infinifi": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle"],
     capacityModel: {
       kind: "reserve-sync-metadata",
       fallbackRatio: 0.15,
     },
     costModel: fixedFee(0, "Tracked protocol metadata describes 1:1 mint/redeem against USDC with no fees"),
-  },
-  "dusd-dialectic": {
-    ...queueRedeemBase,
+  }),
+  "dusd-dialectic": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     holderEligibility: "issuer-discretionary",
@@ -168,10 +171,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Settlement is available only in Ethereum USDC after the operator frees accounting-token liquidity; there is no committed alternate settlement asset, and the operator may cease the Machine without notice.",
       "Fresh Makina route telemetry computes usable queue capacity as max(0, the Machine's idle Ethereum USDC minus the USDC liability of DUSD shares locked in the AsyncRedeemer). If that same-block onchain proof fails validation, the route remains missing-capacity rather than falling back to AUM, full supply, deployed positions, or a static ratio.",
     ],
-  },
-  "acred-apollo-securitize": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
+  }),
+  "acred-apollo-securitize": defineReviewedQueueRedeemConfig(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT, {
     accessModel: "issuer-api",
     settlementModel: "queued",
     executionModel: "rules-based-nav",
@@ -201,9 +202,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Securitize launch materials describe ACRED as offering native redemptions at daily NAV for qualifying Securitize Markets investors, while public RWA.xyz metadata lists quarterly redemption timing; Pharos therefore models the route as queued documented-bound NAV redemption rather than immediate liquidity",
       "Output declared 2026-07-19: the current Securitize ACRED fund page lists redemption off-ramps as USDC and USDG (proceeds paid at NAV on the quarterly repurchase cycle), so the nav placeholder type was replaced with the documented stablecoin basket; the queued settlement model is unchanged.",
     ],
-  },
-  "usdf-falcon": {
-    ...queueRedeemBase,
+  }),
+  "usdf-falcon": defineQueueRedeemConfig({
     outputAssetType: "stable-basket",
     outputAssets: ["usdt-tether", "usdc-circle", "fdusd-first-digital"],
     accessModel: "whitelisted-onchain",
@@ -231,7 +231,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Fresh live reserve metadata scores against Falcon's current stablecoin reserve bucket; redeemed assets are still credited only after the documented 7-day cooldown",
       "If the Falcon transparency API snapshot is unavailable or stale, the route is intentionally left unrated rather than falling back to a static heuristic buffer",
     ],
-  },
+  }),
   "syrupusdc-maple": erc4626ReserveTelemetryQueueConfig({
     reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     accessModel: "whitelisted-onchain",
@@ -262,8 +262,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     telemetrySubject: "the pool's idle USDT balance",
     settlementConstraint: "the FIFO queue",
   }),
-  "reusd-re-protocol": {
-    ...queueRedeemBase,
+  "reusd-re-protocol": defineQueueRedeemConfig({
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "dai-makerdao", "susde-ethena", "usde-ethena"],
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.2, confidence: "documented-bound" },
@@ -285,10 +284,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Tracked metadata describes atomic redemption when instant liquidity is available and queue settlement otherwise",
       "Fresh Re Metrics reserve telemetry reads the current instant redemption vault balances as the direct bounded capacity; if that payload is unavailable, the reviewed 20% fallback matches the prior tracked instant-redemption buffer rather than assuming the full reUSD reserve stack is immediately withdrawable",
     ],
-  },
-  "susdai-usd-ai": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull("2026-04-04"),
+  }),
+  "susdai-usd-ai": defineReviewedQueueRedeemConfig("2026-04-04", {
     costModel: undisclosedReviewedFee(
       "USD.AI documents sUSDai unstaking as a queued withdrawal into USDai with fixed 30-day processing windows; public docs reviewed do not publish a numeric redemption fee or a quantified instant-liquidity bound",
     ),
@@ -300,9 +297,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Current route models sUSDai as an eventual queued exit back into USDai rather than as an immediate stablecoin redemption rail",
       "Issuer docs describe a limited instant-liquidity buffer, but Pharos does not assign a numeric immediate-capacity bound until a trustworthy public figure exists",
     ],
-  },
-  "asusdf-astherus": {
-    ...queueRedeemBase,
+  }),
+  "asusdf-astherus": defineQueueRedeemConfig({
     capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound", basis: "strategy-buffer" },
     reviewedAt: "2026-05-14",
     settlementModel: "same-day",
@@ -322,10 +318,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "asUSDF is the yield-bearing asToken wrapper over USDF; withdrawals return USDF after the documented T+1 hour / two-hour waiting period.",
       "Downstream par-exit quality then depends on USDF's own USDT redemption route.",
     ],
-  },
-  "susd1plus-lorenzo": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_CONFIG_ONLY_GAPS_AT),
+  }),
+  "susd1plus-lorenzo": defineReviewedQueueRedeemConfig(REVIEWED_CONFIG_ONLY_GAPS_AT, {
     settlementModel: "days",
     executionModel: "rules-based-nav",
     costModel: fixedFee(
@@ -347,7 +341,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "sUSD1+ holders submit withdrawal requests through the Lorenzo OTF flow; published terms describe weekly review cycles and typical 7-14 day settlement.",
       "Executed redemptions automatically convert sUSD1+ into USD1 at processing-day NAV, so the route is modeled as queued eventual redeemability rather than an immediate stablecoin buffer.",
     ],
-  },
+  }),
   "susde-ethena": erc4626ReserveTelemetryQueueConfig({
     reviewedAt: REVIEWED_WRAPPER_QUEUE_AT,
     accessModel: "whitelisted-onchain",
@@ -381,8 +375,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     telemetrySubject: "the staking contract's USDe holdings",
     settlementConstraint: "the documented 7-day cooldown",
   }),
-  "syusd-aegis": {
-    ...erc4626ReserveTelemetryQueueConfig({
+  "syusd-aegis": erc4626ReserveTelemetryQueueConfig({
       reviewedAt: REVIEWED_WRAPPER_QUEUE_AT,
       settlementModel: "days",
       costModel: fixedFee(0, "Aegis docs describe sYUSD staking and unstaking with 0% protocol fee"),
@@ -401,7 +394,6 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ],
       telemetrySubject: "the staking vault's YUSD holdings",
       settlementConstraint: "the cooldown",
-    }),
     v9RouteReviewTerms: {
       settlementDelaySec: 604_800,
       reviewedAt: "2026-08-24",
@@ -413,10 +405,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         ),
       ],
     },
-  },
-  "witry-brix": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_CONFIG_ONLY_GAPS_AT),
+  }),
+  "witry-brix": defineReviewedQueueRedeemConfig(REVIEWED_CONFIG_ONLY_GAPS_AT, {
     unresolvedOutputAssetKeys: ["asset:itry"],
     unresolvedOutputDisposition: "reviewed-external",
     accessModel: "whitelisted-onchain",
@@ -445,7 +435,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "iTRY redemption is whitelist-gated and serviced first by the FastAccessVault DLF liquidity buffer, with custodian-managed redemption when immediate DLF liquidity is insufficient.",
       "The exact wrapper output remains unresolved for scoring because iTRY has no tracked Pharos stablecoin id; asset:itry is retained as a diagnostic identity.",
     ],
-  },
+  }),
   "stkgho-umbrella-aave": erc4626ReserveTelemetryQueueConfig({
     reviewedAt: REVIEWED_PHASE_4_COVERAGE_AT,
     costModel: fixedFee(
@@ -481,9 +471,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     telemetrySubject: "the staking contract's idle GHO-denominated holdings",
     settlementConstraint: "the cooldown and withdrawal window",
   }),
-  "cgusd-cygnus-finance": {
-    ...queueRedeemBase,
-    ...reviewedQueueRedemptionSupplyFull,
+  "cgusd-cygnus-finance": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     outputAssets: ["usdc-circle"],
     settlementModel: "days",
     costModel: fixedFee(35, "Cygnus docs list a 35 bps withdrawal fee on cgUSD / wcgUSD -> USDC withdrawals"),
@@ -507,9 +495,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     notes: [
       "Cygnus docs describe a request-and-claim withdrawal queue represented by NFTs, with normal completion in 5-7 days and no published min/max withdrawal size",
     ],
-  },
-  "uty-xsy": {
-    ...queueRedeemBase,
+  }),
+  "uty-xsy": defineQueueRedeemConfig({
     unresolvedOutputDisposition: "issuer-undisclosed",
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.3, confidence: "heuristic", basis: "strategy-buffer" },
@@ -529,9 +516,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Current public XSY materials do not establish a fixed holder fee, executable capacity, or settlement SLA for the issuance-contract route. The prior 7-day USDC assertion is not retained as current output evidence.",
       "The 30% ratio is a reviewed heuristic reflecting delta-neutral AVAX hedge composition rather than a published instant-liquidity floor",
     ],
-  },
-  "usp-pikudao": {
-    ...queueRedeemBase,
+  }),
+  "usp-pikudao": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
@@ -546,13 +532,11 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Piku materials describe KYC-gated FIFO redemptions with settlement inside roughly 24 hours",
       "The reviewed 10% bound matches the tracked USDC/USDT cash buffer rather than assuming the full strategy book is immediately redeemable",
     ],
-  },
-  "aznd-mu-digital": {
-    ...queueRedeemBase,
+  }),
+  "aznd-mu-digital": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     unresolvedOutputDisposition: "issuer-undisclosed",
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
-    ...reviewedQueueRedemptionSupplyFull,
     costModel: fixedFee(0, "Mu Digital docs describe minting and redemption as fee-free"),
     docs: [
       sourceRef("Mu Digital docs", "https://docs.mudigital.net", ["route", "capacity", "access", "fees", "settlement"]),
@@ -568,10 +552,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Tracked metadata describes KYC-gated weekly AZND redemptions against the full reserve book rather than an always-live stablecoin hot-wallet buffer",
       "2026-07-27 recheck (Kimi data review): Mu Digital documents accepted mint funding assets (USDC, USDT, or AUSD) but still does not identify the asset used to settle an approved AZND redemption ('receipt of funds' after the weekly queue). The output therefore remains an unresolved asset with no guessed identity.",
     ],
-  },
-  "avusd-avant": {
-    ...queueRedeemBase,
-    ...reviewedQueueRedemptionSupplyFull,
+  }),
+  "avusd-avant": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     outputAssets: ["usdc-circle"],
     settlementModel: "days",
     costModel: documentedVariableFee("Avant docs say the redemption fee is shown in-app before confirmation"),
@@ -586,9 +568,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     notes: [
       "Avant docs describe redeeming avUSD back into USDC through an onchain request flow that usually completes within hours but can take up to 7 days depending on liquidity",
     ],
-  },
-  "usdu-unitas": {
-    ...queueRedeemBase,
+  }),
+  "usdu-unitas": defineQueueRedeemConfig({
     accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
     outputAssetType: "mixed-collateral",
@@ -615,13 +596,11 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Because USDu relies on a delta-neutral collateral stack rather than a pure cash-equivalent reserve bucket, the route keeps a conservative reviewed 5% immediate-capacity bound instead of scoring against full supply",
       "Output declared 2026-07-19: the Unitas terms define redemption as burning USDu to withdraw a pro-rata share of the underlying collateral, and the delta-neutral design page names the collateral classes as SOL, BTC, and ETH (JLP and the short-perp hedge leg are strategy positions rather than deliverable collateral classes); no single-stablecoin payout is documented.",
     ],
-  },
-  "yzusd-yuzu": {
-    ...queueRedeemBase,
+  }),
+  "yzusd-yuzu": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     accessModel: "issuer-api",
     outputAssets: ["usdt-tether"],
     settlementModel: "days",
-    ...reviewedQueueRedemptionSupplyFull,
     costModel: undisclosedReviewedFee(),
     docs: [
       sourceRef("Yuzu Money documentation", "https://yuzu-money.gitbook.io/yuzu-money", [
@@ -634,9 +613,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     notes: [
       "Yuzu documents primary minting and redemption for eligible KYC / AML-cleared investors; current model treats that rail as a reviewed queued exit rather than assuming continuously available public stablecoin liquidity",
     ],
-  },
-  "usdat-saturn": {
-    ...queueRedeemBase,
+  }),
+  "usdat-saturn": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
@@ -653,9 +631,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "USDAT is a permissioned M0 wrapper: mint/redeem requires KYC onboarding and is geofenced away from US, EEA, and OFAC jurisdictions; routes through the Uniswap V3 1bps tier against USDC",
       "The 50% ratio is a reviewed heuristic placeholder for M0 Swap Facility liquidity pending a published quantitative buffer bound",
     ],
-  },
-  "usdnr-nerona": {
-    ...queueRedeemBase,
+  }),
+  "usdnr-nerona": defineQueueRedeemConfig({
     accessModel: "whitelisted-onchain",
     outputAssets: ["m-m0"],
     settlementModel: "days",
@@ -675,9 +652,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Fee bounded 2026-08-12 at 0 bps for the modeled USDnr -> M leg, which is the leg this config scores. The docs' 0.01% figure is the Uniswap V3 pool tier on the separate downstream wM -> USDC corridor, so it is not a fee of the modeled route; a holder continuing to USDC pays it plus AMM slippage on top.",
       "Doc citations replaced 2026-08-12: the previously cited docs.nerona.finance host no longer resolves, and the current documentation lives at docs.nerona.xyz.",
     ],
-  },
-  "usdh-hermetica": {
-    ...queueRedeemBase,
+  }),
+  "usdh-hermetica": defineQueueRedeemConfig({
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
     accessModel: "whitelisted-onchain",
@@ -695,10 +671,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Delta-neutral BTC strategy (spot long + short perpetual) on Stacks; KYC-gated mint/redeem via the Hermetica app",
       "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol cash buffers rather than a published Hermetica-specific figure",
     ],
-  },
-  "usdrif-rif": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_PHASE_4_COVERAGE_AT),
+  }),
+  "usdrif-rif": defineReviewedQueueRedeemConfig(REVIEWED_PHASE_4_COVERAGE_AT, {
     outputAssets: ["asset:rif"],
     outputAssetType: "mixed-collateral",
     costModel: fixedFee(25, "RIF On Chain FAQ lists a 0.25% mint/redeem fee paid in RIF for USDRIF"),
@@ -723,10 +697,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "USDRIF supports settlement-cycle redemption requests into RIF collateral; the 90-day settlement cadence means Pharos treats the broad holder route as queued eventual redeemability",
       "Outside-settlement redemption is limited to free USDRIF, so immediate capacity is not modeled until live Rootstock telemetry exposes free redeemable amount, queue depth, and current system state",
     ],
-  },
-  "nusd-neutrl": {
-    ...queueRedeemBase,
-    ...reviewedQueueRedemptionSupplyFull,
+  }),
+  "nusd-neutrl": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     costModel: undisclosedReviewedFee(
@@ -744,9 +716,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     notes: [
       "Neutrl docs establish a dual-path redemption system with instant execution when AssetReserve liquidity is available and an onchain queued fallback when it is not; current model scores eventual redeemability rather than a separately measured live instant buffer",
     ],
-  },
-  "onyc-onre": {
-    ...queueRedeemBase,
+  }),
+  "onyc-onre": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle", "usdg-paxos"],
     capacityModel: { kind: "supply-ratio", ratio: 0.025, confidence: "documented-bound", basis: "strategy-buffer" },
     accessModel: "issuer-api",
@@ -775,7 +746,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     notes: [
       "OnRe currently targets monthly redemption capacity up to 2.5% of NAV, reserves up to 15% of underwriting capital for liquidity, and pays USDC or USDG to verified/accredited holders.",
     ],
-  },
+  }),
   "apyusd-apyx": erc4626ReserveTelemetryQueueConfig({
     reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
     accessModel: "whitelisted-onchain",
@@ -799,8 +770,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     telemetrySubject: "the vault's idle apxUSD balance",
     settlementConstraint: "the documented unlock window",
   }),
-  "savusd-avant": {
-    ...erc4626ReserveTelemetryQueueConfig({
+  "savusd-avant": erc4626ReserveTelemetryQueueConfig({
       reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
       settlementModel: "days",
       executionModel: "rules-based-nav",
@@ -822,7 +792,6 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ],
       telemetrySubject: "the staking vault's idle avUSD balance",
       settlementConstraint: "the one-day cooldown",
-    }),
     v9RouteReviewTerms: {
       settlementDelaySec: 86_400,
       reviewedAt: "2026-08-19",
@@ -834,7 +803,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         ),
       ],
     },
-  },
+  }),
   "srusde-strata": erc4626ReserveTelemetryQueueConfig({
     reviewedAt: "2026-08-27",
     accessModel: "whitelisted-onchain",
@@ -858,9 +827,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     telemetrySubject: "the tranche vault's idle underlying balance",
     settlementConstraint: "the documented redemption window",
   }),
-  "scusd-rings": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+  "scusd-rings": defineReviewedQueueRedeemConfig(REVIEWED_YIELD_EXPANSION_AT, {
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether", "dai-makerdao"],
     settlementModel: "days",
@@ -884,10 +851,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Rings documents 1:1 scAsset redemption into a user-selected underlying stablecoin after a multi-day cooldown; the conservative redeemable set is USDC, USDT, and DAI per the archived issuer tutorial (2026-07-27 review, Kimi data review applied by coordinator).",
       "Secondary sources also list GHO and USDS as collateral; both are excluded pending primary confirmation because docs.rings.money renders as an unreadable GitBook shell to non-browser clients (re-verified 2026-07-27).",
     ],
-  },
-  "hbusdt-hyperbeat": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+  }),
+  "hbusdt-hyperbeat": defineReviewedQueueRedeemConfig(REVIEWED_YIELD_EXPANSION_AT, {
     settlementModel: "days",
     executionModel: "rules-based-nav",
     costModel: fixedFee(0, "Hyperbeat docs state classic redemption completes within two days with no fee"),
@@ -908,11 +873,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ]),
       sourceRef("Hyperbeat addresses", "https://docs.hyperbeat.org/resources/addresses", ["route"]),
     ],
-  },
+  }),
   ...NEST_NAV_VAULT_CONFIGS,
-  "inalpha-nest": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
+  "inalpha-nest": defineReviewedQueueRedeemConfig(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT, {
     outputAssets: ["usdc-circle", "pusd-plume"],
     accessModel: "issuer-api",
     settlementModel: "days",
@@ -945,10 +908,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Nest docs list a 3-5 business day nALPHA redemption window and broader queue mechanics, so the route is modeled as delayed NAV redemption rather than instant stablecoin liquidity.",
       "Output type corrected 2026-07-19: the documented payout assets (pUSD or USDC) were already declared, so the nav placeholder type was replaced with stable-basket, matching the four sibling Nest vault entries retyped in the 2026-07-15 output wave; the delayed-NAV settlement semantics are unchanged.",
     ],
-  },
-  "busd0-usual": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+  }),
+  "busd0-usual": defineReviewedQueueRedeemConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
     settlementModel: "queued",
     costModel: undisclosedReviewedFee(
       "Usual docs describe permissionless bUSD0 redemption into USD0: early par exit requires the matching rt-bUSD0 token, while bUSD0 alone redeems at maturity; public docs reviewed do not publish a separate redemption fee",
@@ -971,9 +932,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Before June 11, 2028, par redemption requires recombining bUSD0 with rt-bUSD0; bUSD0-only redemption is modeled as documented-bound eventual capacity because the standalone bond leg does not redeem at par until maturity",
       "Secondary-market exits and optional governance floor redemption are excluded from the modeled route",
     ],
-  },
-  "usdm-monetrix": {
-    ...queueRedeemBase,
+  }),
+  "usdm-monetrix": defineQueueRedeemConfig({
     settlementModel: "days",
     executionModel: "deterministic-onchain",
     outputAssets: ["usdc-circle"],
@@ -1000,7 +960,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "USDM redemption is a permissionless request/claim flow: requestRedeem burns USDM and locks a 1:1 USDC claim, then claimRedeem transfers USDC after the governance-set three-day cooldown.",
       "The reviewed 10% strategy-buffer heuristic avoids treating Monetrix's delta-neutral positions as immediately redeemable full supply; the cooldown, pause, deposit limits, and TVL-cap controls can also block or constrain the route.",
     ],
-  },
+  }),
 };
 
 const FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(

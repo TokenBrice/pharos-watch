@@ -1,17 +1,10 @@
 import type { MintBurnCoverageStatus } from "@shared/types";
-import type {
-  CoverageBreakdownItem,
-  CoverageRow,
-  CoverageStatus,
-} from "@/lib/coverage-types";
+import type { CoverageStatus } from "@/lib/coverage-types";
 import {
-  breakdownItem,
   createDataUnavailableStatus,
-  createBreakdownCounter,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
-  defineCoverageFeature,
-  statusKindsFromPresets,
+  definePresetCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -88,21 +81,6 @@ function resolveFlow(
   return createPresetStatus(FLOW_STATUS_PRESETS[flowCoverageStatus ?? "none"] ?? FLOW_STATUS_PRESETS.none);
 }
 
-function formatFlows(
-  _rows: readonly CoverageRow[],
-  breakdownMap: ReadonlyMap<string, number>,
-): CoverageBreakdownItem[] {
-  const get = createBreakdownCounter(breakdownMap);
-  return [
-    breakdownItem("full", "full", get("full")),
-    breakdownItem("partial-history", "partial", get("partial-history")),
-    breakdownItem("lagging", "lagging", get("lagging")),
-    breakdownItem("bootstrapping", "bootstrapping", get("bootstrapping")),
-    breakdownItem("unknown", "unknown", get("unknown")),
-    breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", get(DATA_UNAVAILABLE_KIND)),
-  ];
-}
-
 const FLOWS_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Full / Partial / Lagging / Bootstr.",
@@ -126,9 +104,17 @@ const FLOWS_LEGEND: readonly CoverageLegendItem[] = [
   },
 ] as const;
 
-export const coverageFeature = defineCoverageFeature({
-  statusKinds: [...statusKindsFromPresets(FLOW_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
+export const coverageFeature = definePresetCoverageFeature({
+  presets: FLOW_STATUS_PRESETS,
+  extraStatusKinds: [DATA_UNAVAILABLE_KIND],
+  breakdown: [
+    { key: "full", label: "full" },
+    { key: "partial-history", label: "partial" },
+    { key: "lagging", label: "lagging" },
+    { key: "bootstrapping", label: "bootstrapping" },
+    { key: "unknown", label: "unknown" },
+    { key: DATA_UNAVAILABLE_KIND, label: "data n/a" },
+  ],
   legendItems: FLOWS_LEGEND,
   resolve: resolveFlow,
-  formatBreakdown: formatFlows,
 });

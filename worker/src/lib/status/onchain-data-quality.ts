@@ -2,8 +2,8 @@ import {
   STATUS_ONCHAIN_THRESHOLDS,
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
+import { formatPercentFromRatio } from "@shared/lib/format";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
-import { formatRatio } from "./format";
 
 /**
  * Minimum `trackedCoins` value at which the `onchain_monitor_low_sample` info
@@ -76,7 +76,7 @@ export function assessOnchainDataQuality(input: {
       code: "onchain_integrity_stale",
       layer: "data-quality",
       severity: "critical",
-      message: `On-chain integrity stale (stale=${formatRatio(input.staleRatio)}, divergence=${formatRatio(input.divergenceRatio)}).`,
+      message: `On-chain integrity stale (stale=${formatPercentFromRatio(input.staleRatio)}, divergence=${formatPercentFromRatio(input.divergenceRatio)}).`,
       metric: "onchainStaleRatio",
       value: input.staleRatio,
       threshold: STATUS_ONCHAIN_THRESHOLDS.ratioStale,
@@ -93,8 +93,8 @@ export function assessOnchainDataQuality(input: {
       layer: "data-quality",
       severity: "warning",
       message:
-        `On-chain integrity degraded (stale=${formatRatio(input.staleRatio)}, ` +
-        `divergence=${formatRatio(input.divergenceRatio)}).`,
+        `On-chain integrity degraded (stale=${formatPercentFromRatio(input.staleRatio)}, ` +
+        `divergence=${formatPercentFromRatio(input.divergenceRatio)}).`,
       metric: "onchainStaleRatio",
       value: input.staleRatio,
       threshold: STATUS_ONCHAIN_THRESHOLDS.ratioDegraded,

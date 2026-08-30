@@ -1,9 +1,9 @@
 import type { TapeEvent } from "@shared/types/tape-event";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { formatCompactUsd, formatScoreTrimmed, getNetPrefix } from "@shared/lib/format";
+import { formatCompactUsd, formatScoreTrimmed, formatUtcDateOnly, getNetPrefix } from "@shared/lib/format";
 
 export function utcDayKey(tsMs: number): string {
-  return new Date(tsMs).toISOString().slice(0, 10);
+  return formatUtcDateOnly(new Date(tsMs));
 }
 
 export function formatAbsoluteDate(tsMs: number): string {

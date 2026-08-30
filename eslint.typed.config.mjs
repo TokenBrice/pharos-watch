@@ -46,17 +46,7 @@ export default tseslint.config(
     rules: TYPED_RULES,
   },
   {
-    files: ["shared/lib/**/*.ts"],
-    ignores: IGNORES,
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: { project: "./tsconfig.typecheck.json", tsconfigRootDir: import.meta.dirname },
-    },
-    plugins: { "@typescript-eslint": tseslint.plugin, security },
-    rules: TYPED_RULES,
-  },
-  {
-    files: ["functions/**/*.ts", "functions/**/*.tsx"],
+    files: ["shared/lib/**/*.ts", "functions/**/*.ts", "functions/**/*.tsx"],
     ignores: IGNORES,
     languageOptions: {
       parser: tseslint.parser,

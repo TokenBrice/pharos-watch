@@ -3,28 +3,13 @@ import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/constants";
-import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { projectMethodologyBumps } from "../methodology";
-
-const TAPE_WRITE_TABLES: MockTableConfig[] = [
-  { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
-  { match: "INSERT OR REPLACE INTO cache", rows: [] },
-];
-
-function mockTapeD1(tables: MockTableConfig[] = []): MockD1Database {
-  return mockD1([...tables, ...TAPE_WRITE_TABLES]);
-}
-
-function extractInsertBinds(db: MockD1Database): unknown[][] {
-  return db
-    .getHistory()
-    .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO tape_events"))
-    .map((entry) => entry.binds);
-}
+import { mockTapeD1, tapeInsertBinds } from "./test-support";
 
 function extractSourceUrlsForType(db: MockD1Database, type: string): Set<unknown> {
   return new Set(
-    extractInsertBinds(db)
+    tapeInsertBinds(db)
       .filter((binds) => binds[1] === type)
       .map((binds) => binds[15]),
   );

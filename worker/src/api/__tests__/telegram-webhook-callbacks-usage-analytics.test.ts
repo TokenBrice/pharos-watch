@@ -1,7 +1,8 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   handleCallbackQuery,
-  mockD1,
+  makeCallbackQuery,
+  mockTelegramD1,
   resetCallbackTest,
 } from "./telegram-webhook-callbacks.test-support";
 
@@ -28,13 +29,8 @@ beforeEach(resetCallbackTest);
 describe("handleCallbackQuery", () => {
   describe("P1.17 mutating callbacks emit usage analytics", () => {
     it("depegstep:<id>:250 success records a subscribe usage event", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-depegstep-ok",
-        data: "depegstep:usdc-circle:250",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("depegstep:usdc-circle:250", { id: "cb-depegstep-ok", message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const history = db.getHistory();
       const subscriptionUpsert = history.find(
@@ -67,13 +63,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("safetydown:<id> success records a subscribe usage event", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-safetydown-ok",
-        data: "safetydown:usdc-circle",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("safetydown:usdc-circle", { id: "cb-safetydown-ok", message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const history = db.getHistory();
       const subscriptionUpsert = history.find(
@@ -104,13 +95,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("unsub:<id> success records an unsubscribe usage event", async () => {
-      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-unsub-ok",
-        data: "unsub:usdc-circle",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 100 },
-      });
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:usdc-circle", { id: "cb-unsub-ok", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
 
       const usageRows = db
         .getHistory()
@@ -127,19 +113,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("depegstep:<id>:250 D1 failure records a failure usage event", async () => {
-      const db = mockD1([
+      const db = mockTelegramD1([
         {
           match: "INSERT INTO telegram_subscriptions",
           rows: [],
           throwError: new Error("d1 boom"),
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-depegstep-fail",
-        data: "depegstep:usdc-circle:250",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("depegstep:usdc-circle:250", { id: "cb-depegstep-fail", message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const usageRows = db
         .getHistory()

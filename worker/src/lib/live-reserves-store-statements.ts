@@ -13,34 +13,6 @@ const SQLITE_NOW_MS_EXPRESSION = "CAST((julianday('now') - 2440587.5) * 86400000
 
 const serializeWarnings = (w: readonly unknown[]): string | null => (w.length > 0 ? JSON.stringify(w) : null);
 
-export function buildReserveCompositionUpsertStatement(
-  db: D1Database,
-  record: ReserveCompositionRecord,
-): D1PreparedStatement {
-  return db
-    .prepare(
-      `INSERT INTO reserve_composition (
-${RESERVE_COMPOSITION_INSERT_COLUMNS}
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(stablecoin_id) DO UPDATE SET
-${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
-       WHERE reserve_composition.fetched_at < excluded.fetched_at
-          OR (reserve_composition.fetched_at = excluded.fetched_at AND reserve_composition.attempt_id IS NULL)`,
-    )
-    .bind(
-      record.stablecoinId,
-      JSON.stringify(record.slices),
-      record.fetchedAt,
-      record.source,
-      record.attemptId ?? null,
-      JSON.stringify(record.metadata),
-      record.warningCount,
-      serializeWarnings(record.warnings),
-      record.adapterSourceModel,
-      record.adapterEvidenceClass,
-    );
-}
-
 export function buildReserveCompositionFinalizeSuccessStatement(
   db: D1Database,
   record: ReserveCompositionRecord,

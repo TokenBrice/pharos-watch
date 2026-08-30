@@ -1,4 +1,5 @@
-import { fetchUpstreamProxy } from "./upstream-proxy";
+import { DEFAULT_PROXY_TIMEOUT_MS, fetchUpstreamProxy } from "./upstream-proxy";
+import { jsonError } from "./proxy-utils";
 
 export interface PagesProxyContext<Env, Params = { path?: string | string[] }> {
   request: Request;
@@ -16,6 +17,61 @@ export interface PagesProxyUpstreamRequest {
   timeoutReason: DOMException;
   timeoutMessage: string;
   fetchFailedMessage: string;
+}
+
+export interface CreateProxyRequestOptions {
+  request: Request;
+  origin: string;
+  path: string;
+  search?: string;
+  method?: string;
+  headers?: Headers;
+  body?: BodyInit | null;
+  timeoutMs?: number;
+  label: string;
+}
+
+export function createProxyRequest({
+  request,
+  origin,
+  path,
+  search = "",
+  method = request.method,
+  headers = new Headers(),
+  body,
+  timeoutMs = DEFAULT_PROXY_TIMEOUT_MS,
+  label,
+}: CreateProxyRequestOptions): PagesProxyUpstreamRequest {
+  const timeoutMessage = `${label} upstream timed out`;
+  return {
+    upstreamUrl: new URL(`${path}${search}`, origin).toString(),
+    method,
+    headers,
+    body,
+    timeoutMs,
+    timeoutReason: new DOMException(timeoutMessage, "TimeoutError"),
+    timeoutMessage,
+    fetchFailedMessage: `${label} upstream fetch failed`,
+  };
+}
+
+export function rejectInvalidProxyEnvironment({
+  issues,
+  fatalCodes,
+  logPrefix,
+  publicMessage,
+}: {
+  issues: readonly { code: string; message: string }[];
+  fatalCodes: readonly string[];
+  logPrefix: string;
+  publicMessage: string;
+}): Response | null {
+  for (const issue of issues) {
+    console.warn(`[${logPrefix}] ${issue.message}`);
+  }
+  return issues.some((issue) => fatalCodes.includes(issue.code))
+    ? jsonError(500, publicMessage)
+    : null;
 }
 
 export type PagesProxyFetchErrorKind = "timeout" | "fetch-error";

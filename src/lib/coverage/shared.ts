@@ -93,6 +93,10 @@ export function createBreakdownCounter(breakdownMap: ReadonlyMap<string, number>
   return (kind: string) => breakdownMap.get(kind) ?? 0;
 }
 
+export type PresetCoverageBreakdown = Omit<CoverageBreakdownItem, "count"> & {
+  count?: (rows: readonly CoverageRow[], breakdownMap: ReadonlyMap<string, number>) => number;
+};
+
 /**
  * Shared "data-unavailable" status kind. Every feature can emit this when its
  * upstream feed has not loaded yet.
@@ -122,4 +126,22 @@ export function defineCoverageFeature<
   TResolve extends (...args: never[]) => CoverageStatus,
 >(def: CoverageFeatureModule<TResolve>): CoverageFeatureModule<TResolve> {
   return def;
+}
+
+export function definePresetCoverageFeature<
+  TResolve extends (...args: never[]) => CoverageStatus,
+>(def: {
+  presets: Readonly<Record<string, CoverageStatusPreset>>;
+  extraStatusKinds?: readonly string[];
+  resolve: TResolve;
+  breakdown: readonly PresetCoverageBreakdown[];
+  legendItems: readonly CoverageLegendItem[];
+}): CoverageFeatureModule<TResolve> {
+  return defineCoverageFeature({
+    statusKinds: [...statusKindsFromPresets(def.presets), ...(def.extraStatusKinds ?? [])],
+    legendItems: def.legendItems,
+    resolve: def.resolve,
+    formatBreakdown: (rows, breakdownMap) =>
+      def.breakdown.map((entry) => breakdownItem(entry.key, entry.label, entry.count?.(rows, breakdownMap) ?? breakdownMap.get(entry.key) ?? 0)),
+  });
 }

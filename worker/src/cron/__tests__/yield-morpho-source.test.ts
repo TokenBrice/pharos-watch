@@ -1,19 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchMorphoVaultSources } from "../yield-sync/sources";
 
 describe("fetchMorphoVaultSources", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("returns yield sources for stablecoin vaults", async () => {
-    const fetchSpy = mockFetch([
+    const fetchSpy = mockYieldSourceRoutes([
       {
         match: "api.morpho.org",
         body: {
@@ -68,13 +64,13 @@ describe("fetchMorphoVaultSources", () => {
   });
 
   it("returns empty array on HTTP error", async () => {
-    mockFetch([{ match: "api.morpho.org", body: { error: "internal server error" }, status: 500 }]);
+    mockYieldSourceRoutes([{ match: "api.morpho.org", body: { error: "internal server error" }, status: 500 }]);
     const results = await fetchMorphoVaultSources();
     expect(results).toEqual([]);
   });
 
   it("skips vaults with zero APY", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "api.morpho.org",
         body: {
@@ -100,7 +96,7 @@ describe("fetchMorphoVaultSources", () => {
   });
 
   it("skips a malformed item but keeps a valid one on the same page", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "api.morpho.org",
         body: {
@@ -139,7 +135,7 @@ describe("fetchMorphoVaultSources", () => {
   });
 
   it("skips vaults whose asset address is missing or not tracked", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "api.morpho.org",
         body: {
@@ -175,7 +171,7 @@ describe("fetchMorphoVaultSources", () => {
   });
 
   it("uses tracked chain/address identity before returned symbols", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "api.morpho.org",
         body: {

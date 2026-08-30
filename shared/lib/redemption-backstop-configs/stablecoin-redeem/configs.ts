@@ -1,6 +1,5 @@
-import { defineRecordEntries, finalizeBackstopRegistry } from "../factory";
+import { defineConfigFamily, defineRecordEntries, finalizeBackstopRegistry } from "../factory";
 import {
-  documentedBoundSupplyFull,
   documentedVariableFee,
   fixedFee,
   type RedemptionBackstopConfig,
@@ -9,6 +8,8 @@ import {
 } from "../shared";
 import {
   defineStablecoinRedeemConfig,
+  defineReviewedStablecoinRedeemConfig,
+  erc4626InstantConfig,
   gauntletMorphoConfig,
   REVIEWED_DIRECT_REDEMPTION_AT,
   REVIEWED_EXIT_CREDIT_WAVE_AT,
@@ -22,21 +23,114 @@ import {
   REVIEWED_WRAPPER_REDEMPTION_AT,
   REVIEWED_YIELD_EXPANSION_AT,
   REVIEWED_ZCHF_BRIDGE_AT,
-  reviewedDirectRedemptionSupplyFull,
   steakhousePrimeInstantConfig,
 } from "./shared";
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts";
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 
+const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
+  [
+    {
+      id: "wsrusd-reservoir",
+      executionModel: "rules-based-nav" as const,
+      costModel: documentedVariableFee(
+        "The wsrUSD ERC-4626 unwrap and the rUSD-to-USDC PSM redeem are both free, but the srUSD leg between them burns through SavingModule.redeem at `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`; redeemFee is a live on-chain parameter read each run (1.34 bps on 2026-08-12), governance-settable below 100%",
+        "formula",
+      ),
+      docs: [
+        sourceRef("Reservoir Savings (srUSD & wsrUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd", [
+          "route",
+          "capacity",
+          "fees",
+        ]),
+        sourceRef(
+          "Reservoir Peg Stability Module",
+          "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
+          ["route", "capacity"],
+        ),
+        sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
+      ],
+      notes: [
+        "The modeled route composes the ERC-4626 unwrap into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
+        "Fresh live reserve telemetry uses the USDC balance of Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D) as the immediate redeemable lower bound; the balance-sheet USDC bucket is parked in lending vaults and stays diagnostic-only",
+        "When the PSM read is unavailable the adapter withholds telemetry entirely, and the route falls back to the reviewed 25 bps minimum USDC PSM balance documented by Reservoir",
+        "No static fee bound declared 2026-08-12 despite the doc line \"wsrUSD carries no fees\": verified Etherscan-published source shows the wrapper (Savingcoin, ERC-4626 pure conversion) and the PSM (`_redeem` burns rUSD 1:1 and transfers USDC) are both free, but the srUSD leg in between burns `previewRedeem(amount) * (1e6 + redeemFee) / 1e6` in SavingModule.redeem. That `redeemFee` is charged on exit, read 134/1e6 = 1.34 bps at block 25735375, and the MANAGER role may set it anywhere below 100%, so no reviewed ceiling is defensible. The fee model is therefore formula-confidence and scores against the adapter's per-run `redeemFee()` read instead of a static number.",
+      ],
+    },
+    {
+      id: "rusd-reservoir",
+      costModel: fixedFee(
+        0,
+        "The rUSD-to-USDC Peg Stability Module redeem burns rUSD 1:1 and transfers USDC; the verified PSM source contains no fee logic",
+      ),
+      docs: [
+        sourceRef(
+          "Reservoir Peg Stability Module",
+          "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
+          ["route", "capacity", "fees", "access", "settlement"],
+        ),
+        sourceRef(
+          "Reservoir smart-contract addresses",
+          "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses",
+          ["route"],
+        ),
+        sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
+      ],
+      notes: [
+        "Added 2026-08-12: base rUSD redeems directly through Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D). Its redeem(uint256) and redeem(address,uint256) are `external whenNotPaused` with no role gate in the verified source, so the route is permissionless while the PSM is unpaused.",
+        "Fresh reserve telemetry reads the USDC balance of Reservoir's USDC PSM on-chain; when that read is unavailable the adapter withholds telemetry and the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
+      ],
+    },
+    {
+      id: "srusd-reservoir",
+      executionModel: "rules-based-nav" as const,
+      costModel: documentedVariableFee(
+        "srUSD exits to rUSD through SavingModule.redeem at `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`; redeemFee is a live on-chain parameter read each run (1.34 bps on 2026-08-12), governance-settable below 100%, and the downstream rUSD-to-USDC PSM redeem is 1:1 with no fee",
+        "formula",
+      ),
+      docs: [
+        sourceRef("Reservoir Savings (srUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd", [
+          "route",
+          "capacity",
+          "fees",
+          "access",
+          "settlement",
+        ]),
+        sourceRef(
+          "Reservoir Peg Stability Module",
+          "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
+          ["route", "capacity"],
+        ),
+        sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
+      ],
+      notes: [
+        "The modeled route composes the srUSD exit into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
+        "Fresh reserve telemetry reads the USDC balance of Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D) on-chain; when that read is unavailable the adapter withholds telemetry and the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
+        "No static fee bound declared 2026-08-12: verified Etherscan-published source shows SavingModule.redeem burns `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`, so the docs' \"micro burn fee ... one day's worth of interest\" is charged on exit rather than entry. It read 134/1e6 = 1.34 bps at block 25735375, but the MANAGER role may set it anywhere below 100%, so no reviewed ceiling is defensible. The fee model is therefore formula-confidence and scores against the adapter's per-run `redeemFee()` read instead of a static number.",
+      ],
+    },
+  ],
+  ({ id: _id, ...row }) =>
+    defineStablecoinRedeemConfig({
+      outputAssets: ["usdc-circle"],
+      capacityModel: {
+        kind: "reserve-sync-metadata",
+        fallbackRatio: 0.0025,
+        confidence: "documented-bound",
+        basis: "hot-buffer",
+      },
+      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+      ...row,
+    }),
+);
+
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
-  "usd3-3jane": defineStablecoinRedeemConfig({
-    executionModel: "rules-based-nav",
-    capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
-    costModel: fixedFee(
-      0,
+  "usd3-3jane": erc4626InstantConfig({
+    symbol: "USDC",
+    fallback: { basis: "live-direct-telemetry" },
+    feeDescription:
       "3Jane documents fee-free USD3 withdrawals; the vault implementation returns USDC at current NAV subject to available strategy liquidity.",
-    ),
     routeExitCorrelation: "same-protocol-liquidity",
     reviewedAt: "2026-07-13",
     docs: [
@@ -91,8 +185,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "outputAssets remains unset so the route resolves as an unresolved basket: vbUSDC and vbUSDT (Katana Vault Bridge) have no tracked Pharos ids. unresolvedOutputAssetKeys preserves the complete 11-member identity set diagnostically without making the basket scoreable.",
     ],
   }),
-  "ousd-origin-protocol": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "ousd-origin-protocol": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(25, "Origin docs list a 0.25% exit fee on OUSD redemptions"),
@@ -117,8 +210,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh Origin vault telemetry reads the vault's idle stablecoin balances as current direct redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   }),
-  "ousg-ondo-finance": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "ousg-ondo-finance": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
@@ -254,45 +346,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle underlying balance as current direct redemption capacity; the prior reviewed 20% heuristic is retained only as fallback when live metadata is unavailable.",
     ],
   }),
-  "wsrusd-reservoir": defineStablecoinRedeemConfig({
-    outputAssets: ["usdc-circle"],
-    executionModel: "rules-based-nav",
-    capacityModel: {
-      kind: "reserve-sync-metadata",
-      fallbackRatio: 0.0025,
-      confidence: "documented-bound",
-      basis: "hot-buffer",
-    },
-    costModel: documentedVariableFee(
-      "The wsrUSD ERC-4626 unwrap and the rUSD-to-USDC PSM redeem are both free, but the srUSD leg between them burns through SavingModule.redeem at `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`; redeemFee is a live on-chain parameter read each run (1.34 bps on 2026-08-12), governance-settable below 100%",
-      "formula",
-    ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
-    docs: [
-      sourceRef("Reservoir Savings (srUSD & wsrUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
-      sourceRef(
-        "Reservoir Peg Stability Module",
-        "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
-        ["route", "capacity"],
-      ),
-      sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
-    ],
-    notes: [
-      "The modeled route composes the ERC-4626 unwrap into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
-      "Fresh live reserve telemetry uses the USDC balance of Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D) as the immediate redeemable lower bound; the balance-sheet USDC bucket is parked in lending vaults and stays diagnostic-only",
-      "When the PSM read is unavailable the adapter withholds telemetry entirely, and the route falls back to the reviewed 25 bps minimum USDC PSM balance documented by Reservoir",
-      "No static fee bound declared 2026-08-12 despite the doc line \"wsrUSD carries no fees\": verified Etherscan-published source shows the wrapper (Savingcoin, ERC-4626 pure conversion) and the PSM (`_redeem` burns rUSD 1:1 and transfers USDC) are both free, but the srUSD leg in between burns `previewRedeem(amount) * (1e6 + redeemFee) / 1e6` in SavingModule.redeem. That `redeemFee` is charged on exit, read 134/1e6 = 1.34 bps at block 25735375, and the MANAGER role may set it anywhere below 100%, so no reviewed ceiling is defensible. The fee model is therefore formula-confidence and scores against the adapter's per-run `redeemFee()` read instead of a static number.",
-    ],
-  }),
-  "susds-sky": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(0, "Sky docs describe sUSDS vault deposits and withdrawals with no fee"),
+  "wsrusd-reservoir": RESERVOIR_REDEEM_CONFIGS["wsrusd-reservoir"]!,
+  "susds-sky": erc4626InstantConfig({
+    symbol: "USDS",
     reviewedAt: "2026-05-17",
+    feeDescription: "Sky docs describe sUSDS vault deposits and withdrawals with no fee",
     docs: [
       sourceRef("Sky sUSDS docs", "https://developers.sky.money/core-protocol/susds/", ["route", "capacity", "fees"]),
       sourceRef("Sky protocol token routes", "https://developers.sky.money/quick-start/protocol-token-routes/", [
@@ -305,11 +363,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle USDS balance as current direct wrapper capacity; final par-exit quality still depends on USDS's own PSM-backed exit surface.",
     ],
   }),
-  "sdai-sky": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(0, "Spark documents withdrawals from savings vaults without slippage or platform fees"),
+  "sdai-sky": erc4626InstantConfig({
+    symbol: "DAI",
     reviewedAt: "2026-05-17",
+    feeDescription: "Spark documents withdrawals from savings vaults without slippage or platform fees",
     docs: [
       sourceRef("Spark website", "https://spark.fi/", ["route", "fees"]),
       sourceRef("Spark docs portal", "https://docs.spark.fi/", ["route", "capacity"]),
@@ -319,14 +376,12 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle DAI balance as current direct wrapper capacity; downstream par-exit quality is inherited from DAI's own PSM-backed redemption surface.",
     ],
   }),
-  "sdola-inverse-finance": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull("2026-05-24"),
-    capacityModel: { kind: "reserve-sync-metadata" },
+  "sdola-inverse-finance": erc4626InstantConfig({
+    symbol: "DOLA",
+    reviewedAt: "2026-05-24",
+    executionModel: "deterministic-onchain",
     totalScoreCap: 70,
-    costModel: fixedFee(
-      0,
-      "sDOLA docs describe permissionless instant unwrapping back to DOLA with no lock-up period or early-withdrawal penalty.",
-    ),
+    feeDescription: "sDOLA docs describe permissionless instant unwrapping back to DOLA with no lock-up period or early-withdrawal penalty.",
     docs: [
       sourceRef(
         "sDOLA docs",
@@ -345,8 +400,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle DOLA balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   }),
-  "sdusd-dtrinity": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull("2026-06-10"),
+  "sdusd-dtrinity": defineReviewedStablecoinRedeemConfig("2026-06-10", {
     outputAssets: ["dusd-dtrinity"],
     capacityModel: { kind: "reserve-sync-metadata" },
     executionModel: "rules-based-nav",
@@ -407,14 +461,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Capacity is the current frxUSD inventory that the Fraxtal MintRedeemer reports as withdrawable, capped by the Ethereum sfrxUSD supply. The route remains non-scoreable because no primary-source or measured completion-time upper bound and no all-in transaction-gas cost are available; the conservative queued legacy label is not a settlement SLA.",
     ],
   }),
-  "scrvusd-curve": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
-      "Curve docs describe scrvUSD as a Yearn V3 vault with idle crvUSD always available for redemption; yield accrues through share price rather than a separate exit fee.",
-    ),
+  "scrvusd-curve": erc4626InstantConfig({
+    symbol: "crvUSD",
     reviewedAt: "2026-05-17",
+    feeDescription:
+      "Curve docs describe scrvUSD as a Yearn V3 vault with idle crvUSD always available for redemption; yield accrues through share price rather than a separate exit fee.",
     docs: [
       sourceRef("Curve scrvUSD month-in-review", "https://news.curve.finance/savings-crvusd-a-month-in-review/", [
         "route",
@@ -427,14 +478,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle crvUSD balance as current direct wrapper capacity; actual par-exit quality then depends on the underlying crvUSD redemption and peg-defense surface.",
     ],
   }),
-  "cusdo-openeden": defineStablecoinRedeemConfig({
+  "cusdo-openeden": erc4626InstantConfig({
+    symbol: "USDO",
     reviewedAt: REVIEWED_WRAPPER_REDEMPTION_AT,
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
+    feeDescription:
       "OpenEden integration docs route cUSDO redeem through the wrapper into USDO at convertToAssets; the separate USDO primary redemption fee is downstream of this wrapper leg.",
-    ),
     docs: [
       sourceRef("OpenEden cUSDO token docs", "https://docs.openeden.com/usdo/cusdo-token", ["route", "capacity"]),
       sourceRef("OpenEden integration guide", "https://docs.openeden.com/usdo/developers/integration-guide", ["route"]),
@@ -528,8 +576,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Because USN relies on delta-neutral exchange strategies rather than a pure cash-equivalent reserve bucket, the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
     ],
   }),
-  "aid-gaib": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "aid-gaib": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     accessModel: "whitelisted-onchain",
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
@@ -551,8 +598,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh reserve telemetry reads the redeemer's USDC payout float capped by the remaining daily redemption allowance (identity-gated on stablecoin()/aid() and the pinned beacon implementation) as the live executable bound; when the read is unavailable the route is left unrated instead of assuming full-supply immediacy",
     ],
   }),
-  "u-united-stables": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "u-united-stables": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     reviewedAt: "2026-08-27",
     accessModel: "whitelisted-onchain",
     outputAssetType: "stable-basket",
@@ -568,8 +614,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Output re-reviewed 2026-08-27: the terms define Eligible Assets as issuer-approved assets that may include USD, certain stablecoins, and other assets designated over time. They permit United Stables to satisfy a redemption with any eligible reserve asset, including cash, at its sole discretion. The terms do not name a complete guaranteed output set, so outputAssets is intentionally unset.",
     ],
   }),
-  "usx-solstice": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "usx-solstice": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     outputAssets: ["usdg-paxos"],
     accessModel: "whitelisted-onchain",
     costModel: undisclosedReviewedFee(
@@ -580,8 +625,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Retail users access USX primarily through DEX liquidity or the Solstice platform, while the primary mint/redeem rail is institution-only",
     ],
   }),
-  "usda-avalon": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "usda-avalon": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     outputAssets: ["usdt-tether"],
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -604,8 +648,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The modeled redemption rail is the documented USDa-to-USDT conversion vault on Ethereum mainnet rather than offchain BTC collateral withdrawals",
     ],
   }),
-  "usd0-usual": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "usd0-usual": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     outputAssets: ["asset:usyc", "asset:m", "asset:ustbl"],
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(
@@ -624,8 +667,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ),
     ],
   }),
-  "usdai-usd-ai": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "usdai-usd-ai": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     outputAssets: ["pyusd-paypal"],
@@ -651,8 +693,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Verified 2026-08-12 on Arbitrum: baseToken() resolved to PYUSD 0x46850aD61C2B7d64d08c9C754F45254596696984, the contract's paused() read false, and its PYUSD balance was 174,318,300.42 against a USDai supply near 172.6M — the float currently exceeds supply, so the ratio is not a fixed fraction that a static model could stand in for.",
     ],
   }),
-  "frxusd-frax": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "frxusd-frax": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: undisclosedReviewedFee(
@@ -731,14 +772,12 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The reviewed 20% bound follows the documented concurrent-redemption capacity limit instead of assuming the full supply is immediately backed by segregated USDC.",
     ],
   }),
-  "bbqusdc-steakhouse": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
-      "Smokehouse USDC uses a MetaMorpho vault; withdrawals redeem to USDC when vault liquidity is available and Morpho vault fees accrue from generated yield rather than a separate withdrawal fee.",
-    ),
+  "bbqusdc-steakhouse": erc4626InstantConfig({
+    symbol: "USDC",
+    fallback: { fallbackRatio: 0.05, basis: "strategy-buffer" },
     reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    feeDescription:
+      "Smokehouse USDC uses a MetaMorpho vault; withdrawals redeem to USDC when vault liquidity is available and Morpho vault fees accrue from generated yield rather than a separate withdrawal fee.",
     docs: [
       sourceRef(
         "Smokehouse USDC vault",
@@ -800,8 +839,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol on-hand stable buffers rather than a published instant-liquidity floor for this specific protocol.",
     ],
   }),
-  "usdz-anzen": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull("2026-04-16"),
+  "usdz-anzen": defineReviewedStablecoinRedeemConfig("2026-04-16", {
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     outputAssets: ["usdc-circle"],
@@ -843,8 +881,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Config-level cap reflects that the USDSC->M unwrap does not by itself return the holder to a liquid stablecoin; the downstream M redemption rail still gates actual par exit",
     ],
   }),
-  "apxusd-apyx": defineStablecoinRedeemConfig({
-    ...reviewedDirectRedemptionSupplyFull,
+  "apxusd-apyx": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     accessModel: "whitelisted-onchain",
     costModel: documentedVariableFee(
       "Apyx docs describe mint and redeem against approved assets for whitelisted participants, with offchain execution spreads and expenses reflected in the price rather than a fixed protocol fee",
@@ -879,8 +916,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The backing vault is a smart account (arbitrary execution) owned by a 12h-timelock-gated 3/6 Safe, and the pUSD token itself is UUPS-upgradeable behind the same timelock, so admin/upgrade risk is not captured by the live vault-balance ratio alone",
     ],
   }),
-  "susd-solayer": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
+  "susd-solayer": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_BATCH_AT, {
     outputAssets: ["usdc-circle"],
     executionModel: "rules-based-nav",
     costModel: undisclosedReviewedFee(
@@ -897,8 +933,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ]),
     ],
   }),
-  "usx-dforce": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
+  "usx-dforce": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_BATCH_AT, {
     outputAssetType: "stable-basket",
     costModel: undisclosedReviewedFee(
       "dForce docs describe USX mint and redemption through supported collateral/stablecoin routes; public docs reviewed do not publish a single fixed redemption fee",
@@ -912,8 +947,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("dForce USX LSR", "https://docs.usx.finance/minting-and-redeeming/lsr", ["route", "capacity", "fees"]),
     ],
   }),
-  "xdai-gnosis": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
+  "xdai-gnosis": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_BATCH_AT, {
     outputAssetType: "stable-basket",
     outputAssets: ["dai-makerdao", "usds-sky"],
     costModel: undisclosedReviewedFee(
@@ -930,11 +964,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Modeled as a bridge-backed stablecoin redemption route into DAI rather than an independent fiat issuer rail",
     ],
   }),
-  "susdd-tron-dao-reserve": defineStablecoinRedeemConfig({
+  "susdd-tron-dao-reserve": erc4626InstantConfig({
+    symbol: "USDD",
     reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(0, "USDD docs describe sUSDD withdrawals to USDD with no lock-up or protocol fee"),
+    feeDescription: "USDD docs describe sUSDD withdrawals to USDD with no lock-up or protocol fee",
     docs: [
       sourceRef("USDD sUSDD mechanism", "https://docs.usdd.io/susdd-mechanism", [
         "route",
@@ -950,83 +983,16 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle USDD balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   }),
-  "rusd-reservoir": defineStablecoinRedeemConfig({
-    outputAssets: ["usdc-circle"],
-    capacityModel: {
-      kind: "reserve-sync-metadata",
-      fallbackRatio: 0.0025,
-      confidence: "documented-bound",
-      basis: "hot-buffer",
-    },
-    costModel: fixedFee(
-      0,
-      "The rUSD-to-USDC Peg Stability Module redeem burns rUSD 1:1 and transfers USDC; the verified PSM source contains no fee logic",
-    ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
-    docs: [
-      sourceRef(
-        "Reservoir Peg Stability Module",
-        "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
-        ["route", "capacity", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Reservoir smart-contract addresses",
-        "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses",
-        ["route"],
-      ),
-      sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
-    ],
-    notes: [
-      "Added 2026-08-12: base rUSD redeems directly through Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D). Its redeem(uint256) and redeem(address,uint256) are `external whenNotPaused` with no role gate in the verified source, so the route is permissionless while the PSM is unpaused.",
-      "Fresh reserve telemetry reads the USDC balance of Reservoir's USDC PSM on-chain; when that read is unavailable the adapter withholds telemetry and the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
-    ],
-  }),
-  "srusd-reservoir": defineStablecoinRedeemConfig({
-    outputAssets: ["usdc-circle"],
-    capacityModel: {
-      kind: "reserve-sync-metadata",
-      fallbackRatio: 0.0025,
-      confidence: "documented-bound",
-      basis: "hot-buffer",
-    },
-    executionModel: "rules-based-nav",
-    costModel: documentedVariableFee(
-      "srUSD exits to rUSD through SavingModule.redeem at `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`; redeemFee is a live on-chain parameter read each run (1.34 bps on 2026-08-12), governance-settable below 100%, and the downstream rUSD-to-USDC PSM redeem is 1:1 with no fee",
-      "formula",
-    ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
-    docs: [
-      sourceRef("Reservoir Savings (srUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
-        "Reservoir Peg Stability Module",
-        "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
-        ["route", "capacity"],
-      ),
-      sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
-    ],
-    notes: [
-      "The modeled route composes the srUSD exit into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
-      "Fresh reserve telemetry reads the USDC balance of Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D) on-chain; when that read is unavailable the adapter withholds telemetry and the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
-      "No static fee bound declared 2026-08-12: verified Etherscan-published source shows SavingModule.redeem burns `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`, so the docs' \"micro burn fee ... one day's worth of interest\" is charged on exit rather than entry. It read 134/1e6 = 1.34 bps at block 25735375, but the MANAGER role may set it anywhere below 100%, so no reviewed ceiling is defensible. The fee model is therefore formula-confidence and scores against the adapter's per-run `redeemFee()` read instead of a static number.",
-    ],
-  }),
+  "rusd-reservoir": RESERVOIR_REDEEM_CONFIGS["rusd-reservoir"]!,
+  "srusd-reservoir": RESERVOIR_REDEEM_CONFIGS["srusd-reservoir"]!,
   "steakusdc-steakhouse": steakhousePrimeInstantConfig("USDC"),
   "steakusdt-steakhouse": steakhousePrimeInstantConfig("USDT"),
-  "syzusd-yuzu": defineStablecoinRedeemConfig({
+  "syzusd-yuzu": erc4626InstantConfig({
+    symbol: "yzUSD",
     reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
     totalScoreCap: 65,
-    costModel: fixedFee(
-      0,
+    feeDescription:
       "Yuzu syzUSD ERC-4626 unwrap charges no exit fee: on-chain previewRedeem == convertToAssets (Plasma 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6), no fee selectors; downstream yzUSD primary redemption stays KYC-gated",
-    ),
     docs: [
       sourceRef("Yuzu syzUSD docs", "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/staked-yzusd-syzusd", [
         "route",
@@ -1071,16 +1037,13 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the fxSAVE vault's idle fxSP balance as current direct redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of falling back to the prior heuristic strategy-buffer estimate.",
     ],
   }),
-  "susn-noon": defineStablecoinRedeemConfig({
+  "susn-noon": erc4626InstantConfig({
+    symbol: "USN",
     reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
-    capacityModel: { kind: "reserve-sync-metadata" },
     accessModel: "whitelisted-onchain",
-    executionModel: "rules-based-nav",
     totalScoreCap: 65,
-    costModel: fixedFee(
-      0,
+    feeDescription:
       "Noon docs state Noon does not charge fees or other dApp charges; sUSN unstaking exits to USN subject to cooldown and gas.",
-    ),
     docs: [
       sourceRef("Noon USN and sUSN", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn", [
         "route",
@@ -1104,8 +1067,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle USN balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   }),
-  "usdcx-movement": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+  "usdcx-movement": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
     outputAssets: ["usdc-circle"],
     executionModel: "deterministic-onchain",
     capacityModel: { kind: "reserve-sync-metadata" },
@@ -1132,38 +1094,39 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh reserve telemetry reads xReserve's balanceOfNativeCollateral(USDC, Movement domain 10005) on Ethereum as the live escrowed-USDC exit bound; when that read is unavailable the route is left unrated instead of assuming the full supply is releasable.",
     ],
   }),
-  "susdt-spark": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
-      "Spark docs describe Savings vault tokens as fee-free ERC-4626 products; spUSDT withdrawals redeem for USDT at the live vault exchange rate.",
-    ),
-    reviewedAt: "2026-05-17",
-    docs: [
-      sourceRef("Spark docs", "https://docs.spark.fi/", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Spark app", "https://spark.fi/", ["route"]),
+  ...defineConfigFamily(
+    [
+      {
+        id: "susdt-spark",
+        symbol: "USDT",
+        reviewedAt: "2026-05-17",
+        feeDescription:
+          "Spark docs describe Savings vault tokens as fee-free ERC-4626 products; spUSDT withdrawals redeem for USDT at the live vault exchange rate.",
+        docs: [
+          sourceRef("Spark docs", "https://docs.spark.fi/", ["route", "capacity", "fees", "access", "settlement"]),
+          sourceRef("Spark app", "https://spark.fi/", ["route"]),
+        ],
+        notes: [
+          "Fresh ERC-4626 reserve telemetry reads the vault's idle USDT balance as current direct redemption capacity; if the live snapshot is unavailable, the wrapper route is left unrated instead of assuming full-supply immediacy.",
+        ],
+      },
+      {
+        id: "susdc-spark",
+        symbol: "USDC",
+        reviewedAt: "2026-05-17",
+        feeDescription:
+          "Spark docs describe Savings vault tokens as fee-free ERC-4626 products; spUSDC withdrawals redeem for USDC at the live vault exchange rate.",
+        docs: [
+          sourceRef("Spark docs", "https://docs.spark.fi/", ["route", "capacity", "fees", "access", "settlement"]),
+          sourceRef("Spark app", "https://spark.fi/", ["route"]),
+        ],
+        notes: [
+          "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as current direct redemption capacity; if the live snapshot is unavailable, the wrapper route is left unrated instead of assuming full-supply immediacy.",
+        ],
+      },
     ],
-    notes: [
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle USDT balance as current direct redemption capacity; if the live snapshot is unavailable, the wrapper route is left unrated instead of assuming full-supply immediacy.",
-    ],
-  }),
-  "susdc-spark": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
-      "Spark docs describe Savings vault tokens as fee-free ERC-4626 products; spUSDC withdrawals redeem for USDC at the live vault exchange rate.",
-    ),
-    reviewedAt: "2026-05-17",
-    docs: [
-      sourceRef("Spark docs", "https://docs.spark.fi/", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Spark app", "https://spark.fi/", ["route"]),
-    ],
-    notes: [
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as current direct redemption capacity; if the live snapshot is unavailable, the wrapper route is left unrated instead of assuming full-supply immediacy.",
-    ],
-  }),
+    ({ id: _id, ...row }) => erc4626InstantConfig(row),
+  ),
   "gtusdc-gauntlet": gauntletMorphoConfig(
     "Gauntlet USDC Core vault",
     "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d/gauntlet-usdc-core",
@@ -1172,14 +1135,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     "Gauntlet USDC Prime vault",
     "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime",
   ),
-  "yvusdc-yearn": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
+  "yvusdc-yearn": erc4626InstantConfig({
+    symbol: "USDC",
+    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
+    feeDescription:
       "Yearn v3 vault withdrawals redeem yvUSDC-1 to USDC at the live vault exchange rate; Yearn reports performance fees on yield, not a separate withdrawal fee.",
-    ),
     docs: [
       sourceRef("Yearn v3 USDC vault", "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204", [
         "route",
@@ -1194,14 +1154,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry measures Yearn V3 default-queue withdrawable capacity from total idle USDC plus each funded strategy's maxRedeem(vault) value; if the live snapshot is unavailable, the route is left unrated instead of falling back to full NAV.",
     ],
   }),
-  "sgho-aave": defineStablecoinRedeemConfig({
+  "sgho-aave": erc4626InstantConfig({
+    symbol: "GHO",
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
+    feeDescription:
       "Aave sGHO previewRedeem returns the GHO amount received for redeeming sGHO shares; no separate sGHO redemption fee is documented.",
-    ),
     docs: [
       sourceRef("Aave sGHO guide", "https://aave.com/docs/aave-v3/guides/sgho", [
         "route",
@@ -1221,14 +1178,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh sGHO telemetry scores the contract's live previewRedeem(totalSupply) output as current direct redemption capacity into GHO; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   }),
-  "stusds-sky": defineStablecoinRedeemConfig({
+  "stusds-sky": erc4626InstantConfig({
+    symbol: "USDS",
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
+    feeDescription:
       "Sky stUSDS implements ERC-4626 withdraw/redeem to USDS at the chi exchange rate; the published implementation does not apply a separate exit fee.",
-    ),
     docs: [
       sourceRef("Sky stUSDS docs", "https://developers.skyeco.com/protocol/tokens/stusds/", [
         "route",
@@ -1248,14 +1202,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle USDS balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   }),
-  "stcusd-cap": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
-      "stcUSD unstakes to cUSD fee-free at the live vault exchange rate (only accrued-yield/lockedProfit NAV growth, no separate stcUSD wrapper fee); the 0.25% (0% whitelisted) fee is the downstream cUSD mint/burn/redeem leg, not the stcUSD step",
-    ),
+  "stcusd-cap": erc4626InstantConfig({
+    symbol: "cUSD",
     reviewedAt: "2026-05-17",
+    feeDescription:
+      "stcUSD unstakes to cUSD fee-free at the live vault exchange rate (only accrued-yield/lockedProfit NAV growth, no separate stcUSD wrapper fee); the 0.25% (0% whitelisted) fee is the downstream cUSD mint/burn/redeem leg, not the stcUSD step",
     docs: [
       sourceRef("Cap stcUSD mechanics", "https://docs.cap.app/protocol-overview/stcusd-mechanics", [
         "route",
@@ -1271,21 +1222,16 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle cUSD balance as current direct wrapper capacity; final cUSD par exit inherits Cap's proportional reserve-basket redemption route.",
     ],
   }),
-  "sbold-k3-capital": defineStablecoinRedeemConfig({
+  "sbold-k3-capital": erc4626InstantConfig({
+    symbol: "BOLD",
     reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     // The static documented-bound downgrade is retired: the adapter now reads
     // K3's collateral-health gate (maxCollInBold) each run and self-downgrades
     // to documented-bound whenever the gate is restricted or unreadable, so an
     // observed-open run may resolve live-direct.
-    capacityModel: {
-      kind: "reserve-sync-metadata",
-      basis: "strategy-buffer",
-    },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
+    fallback: { basis: "strategy-buffer" },
+    feeDescription:
       "K3 docs describe sBOLD entry fees only on deposit and mint; withdraw/redeem burns shares and returns BOLD at the vault exchange rate.",
-    ),
     docs: [
       sourceRef("K3 sBOLD introduction", "https://k3-capital.gitbook.io/sbold/introducing-sbold", [
         "route",
@@ -1310,14 +1256,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Live SP-withdrawable capacity is scored at documented-bound confidence (modelConfidence medium), not the adapter's live-direct default: the measured liquid-BOLD excludes not-yet-swapped collateral gains and K3 can temporarily restrict withdrawals on collateral-exposure thresholds, so the read is a bounded proxy for instantaneous redeemability rather than an unconditional direct quote.",
     ],
   }),
-  "ybold-yearn": defineStablecoinRedeemConfig({
+  "ybold-yearn": erc4626InstantConfig({
+    symbol: "BOLD",
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
-      "Yearn yBOLD docs state yBOLD is always redeemable for underlying BOLD without withdrawal fees or a waiting period.",
-    ),
+    feeDescription: "Yearn yBOLD docs state yBOLD is always redeemable for underlying BOLD without withdrawal fees or a waiting period.",
     docs: [
       sourceRef("Yearn yBOLD vault", "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8", [
         "route",
@@ -1343,20 +1285,13 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry measures Yearn V3 default-queue withdrawable capacity from total idle BOLD plus each funded strategy's maxRedeem(vault) value; if the live snapshot is unavailable, the route is left unrated instead of falling back to full NAV.",
     ],
   }),
-  "yusd-yieldfi": defineStablecoinRedeemConfig({
-    capacityModel: {
-      kind: "reserve-sync-metadata",
-      fallbackRatio: 0.1,
-      confidence: "documented-bound",
-      basis: "strategy-buffer",
-    },
+  "yusd-yieldfi": erc4626InstantConfig({
+    symbol: "USDC",
+    fallback: { fallbackRatio: 0.1, confidence: "documented-bound", basis: "strategy-buffer" },
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     settlementModel: "queued",
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
+    feeDescription:
       "YieldFi yUSD token terms list no redemption fee other than network gas; requests still settle after the documented cooldown/keeper process.",
-    ),
     docs: [
       sourceRef("YieldFi yUSD token terms", "https://docs.yield.fi/legal-documents/token-terms/yusd", [
         "route",
@@ -1376,17 +1311,14 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as the current redeemable bound while the queued request flow still governs settlement; the reviewed 10% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
     ],
   }),
-  "said-gaib": defineStablecoinRedeemConfig({
+  "said-gaib": erc4626InstantConfig({
+    symbol: "AID",
     outputAssets: ["aid-gaib"],
     reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
-    capacityModel: { kind: "reserve-sync-metadata" },
     settlementModel: "queued",
-    executionModel: "rules-based-nav",
     outputAssetType: "stable-single",
-    costModel: fixedFee(
-      0,
+    feeDescription:
       "sAID exits to AID through a monthly FIFO withdrawal cycle at unstaking NAV; verified source exposes no separate unstaking-fee deduction",
-    ),
     docs: [
       sourceRef("GAIB sAID docs", "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said", [
         "route",
@@ -1404,8 +1336,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Output type corrected 2026-07-19: the withdrawal pays AID (tracked aid-gaib, a $1-target stablecoin) — the previously declared output asset — so the nav placeholder type was replaced with stable-single; the unstaking-NAV conversion-rate and haircut caveats above are unchanged and remain captured by the queued rules-based-nav execution model.",
     ],
   }),
-  "zys-zephyr-protocol": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+  "zys-zephyr-protocol": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
     executionModel: "rules-based-nav",
     outputAssetType: "stable-single",
     outputAssets: ["zsd-zephyr-protocol"],
@@ -1439,8 +1370,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fee bound declared 2026-08-12: the pinned source above computes `conversion_fee = yield_coin_price / 1000` in the REDEEM_YIELD branch, a fixed 10 bps deduction enforced by consensus rather than a governance-settable parameter, so the prior undisclosed-fee marker is replaced by a fixed bound.",
     ],
   }),
-  "aa-falconx-mev-capital": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+  "aa-falconx-mev-capital": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
@@ -1467,8 +1397,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Modeled as a NAV tranche exit to underlying USDC exposure, with whitelist and CDO-liquidity constraints rather than an issuer fiat redemption route.",
     ],
   }),
-  "usdb-blast": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+  "usdb-blast": defineReviewedStablecoinRedeemConfig(REVIEWED_FOLLOWUP_REMEDIATION_AT, {
     outputAssets: ["dai-makerdao"],
     settlementModel: "days",
     outputAssetType: "stable-single",
@@ -1516,8 +1445,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The documented 0.5% reserve buffer is the immediate capacity bound; strategy assets and derivatives backing remain outside immediate redemption capacity.",
     ],
   }),
-  "weusd-picwe": defineStablecoinRedeemConfig({
-    ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+  "weusd-picwe": defineReviewedStablecoinRedeemConfig(REVIEWED_YIELD_EXPANSION_AT, {
     outputAssets: ["usdc-circle"],
     costModel: fixedFee(100, "PicWe docs describe a 1% WEUSD redemption fee"),
     docs: [
@@ -1531,14 +1459,12 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("PicWe mint and redeem", "https://docs.picwe.org/mint-and-redeem", ["route", "fees"]),
     ],
   }),
-  "autousd-auto-finance": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
-      "Auto Finance autopool redeem/withdraw burns autoUSD shares for USDC without a separate exit-fee deduction; streaming and periodic fees are NAV/accounting fees",
-    ),
+  "autousd-auto-finance": erc4626InstantConfig({
+    symbol: "USDC",
+    fallback: { fallbackRatio: 0.05, basis: "strategy-buffer" },
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
+    feeDescription:
+      "Auto Finance autopools redeem/withdraw burns autoUSD shares for USDC without a separate exit-fee deduction; streaming and periodic fees are NAV/accounting fees",
     docs: [
       sourceRef("Auto Finance autopools overview", "https://docs.auto.finance/auto-pools-protocol/autopools-tl-dr.md", [
         "route",
@@ -1562,15 +1488,13 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the autopool's idle USDC balance as current direct redemption capacity; the reviewed 5% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
     ],
   }),
-  "eearn-ember": defineStablecoinRedeemConfig({
+  "eearn-ember": erc4626InstantConfig({
+    symbol: "USDC",
     outputAssets: ["usdc-circle"],
-    capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
-    executionModel: "rules-based-nav",
+    fallback: { basis: "live-direct-telemetry" },
     v9RouteReviewTerms: { settlementModel: "queued" },
-    costModel: fixedFee(
-      0,
+    feeDescription:
       "On-chain ERC-4626 check on the eEARN contract (Ethereum 0x9be9...cafa2) shows previewRedeem equals convertToAssets, so no exit/withdrawal fee is currently skimmed; the fee is admin-configurable and presently zero",
-    ),
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     docs: [
       sourceRef("Ember Earn", "https://trade.bluefin.io/ember/eEARN", [
@@ -1618,11 +1542,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Unverified users' market swaps are secondary liquidity and are excluded from the redemption backstop.",
     ],
   }),
-  "jusd-juicedollar": defineStablecoinRedeemConfig({
+  "jusd-juicedollar": defineReviewedStablecoinRedeemConfig("2026-08-13", {
     outputAssetType: "stable-basket",
     unresolvedOutputAssetKeys: ["USDC.e (Citrea)", "USDT.e (Citrea)", "ctUSD (Citrea; tracked as ctusd-citrea)"],
     unresolvedOutputDisposition: "reviewed-external",
-    ...documentedBoundSupplyFull("2026-08-13"),
     costModel: fixedFee(0, "JuiceDollar's bridge documentation describes fee-free 1:1 burns into the source stablecoin"),
     routeExitCorrelation: "same-stablecoin-pool-backing",
     docs: [
@@ -1656,12 +1579,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Per-bridge mint limits, expiry horizons, and governance stop controls constrain execution; burning remains available after mint expiry, but supply-full is an eventual-system bound rather than a same-block liquidity claim.",
     ],
   }),
-  "jpyt-dephaser": defineStablecoinRedeemConfig({
+  "jpyt-dephaser": defineReviewedStablecoinRedeemConfig("2026-08-13", {
     outputAssetType: "stable-basket",
     outputAssets: ["usdt-tether", "usdc-circle"],
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    ...documentedBoundSupplyFull("2026-08-13"),
     costModel: undisclosedReviewedFee(
       "DePhaser's public terms disclose user-paid gas, while the contract source exposes protocol fee controls and reviewed materials do not establish an immutable numeric redemption fee",
     ),

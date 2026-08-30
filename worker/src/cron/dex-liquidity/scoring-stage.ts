@@ -6,8 +6,8 @@ import { isRecord } from "@shared/lib/type-guards";
 import { executeAtomicBatch } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
-import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseJson } from "../../lib/json-parse";
+import { createDexGenerationStore } from "./generation-store";
 import type {
   DexLiquidityPoolState,
   DexLiquidityScoringSourceState,
@@ -25,6 +25,25 @@ const DEX_LIQUIDITY_SCORING_STAGE_FUTURE_TOLERANCE_SEC = 2 * 60;
 const DEX_LIQUIDITY_SCORING_STAGE_FAILED_RETENTION_SEC = 2 * 3600;
 const DEX_LIQUIDITY_SCORING_STAGE_RETENTION_GENERATIONS_PER_RUN = 2;
 const DEX_LIQUIDITY_SCORING_STAGE_READY_POLL_MS = 5_000;
+
+const dexLiquidityScoringStageStore = createDexGenerationStore({
+  manifestTable: "dex_liquidity_scoring_stages",
+  childTable: "dex_liquidity_scoring_stage_chunks",
+  columns: { generationId: "generation_id", state: "state", createdAt: "created_at", failureReason: "failure_reason" },
+  terminalStates: ["writing", "ready", "failed"],
+  failureState: "failed",
+  failureReasonMaxLength: 500,
+  failureTransitionWhere: ({ state }) => `${state} = 'writing'`,
+  retentionSeconds: DEX_LIQUIDITY_SCORING_STAGE_FAILED_RETENTION_SEC,
+  maxGenerationsPerRun: DEX_LIQUIDITY_SCORING_STAGE_RETENTION_GENERATIONS_PER_RUN,
+  resultKeys: { child: "deletedChunkRows", manifest: "deletedStageRows" },
+  prune: {
+    alwaysPruneStates: ["consumed"],
+    protectGenerationId: true,
+    childOrderBy: "CASE WHEN state = 'consumed' THEN 0 ELSE 1 END, created_at ASC, generation_id ASC",
+    manifestOrderBy: "CASE WHEN candidate.state = 'consumed' THEN 0 ELSE 1 END, candidate.created_at ASC, candidate.generation_id ASC",
+  },
+});
 
 type SourceHeader = Omit<
   DexLiquidityScoringSourceState,
@@ -653,29 +672,6 @@ export function decodeDexLiquidityScoringStageChunks(
   return finishScoringStageDecode(decoder);
 }
 
-async function markStageFailed(
-  db: D1Database,
-  generationId: string,
-  error: unknown,
-): Promise<void> {
-  const failureReason = toErrorMessage(error);
-  try {
-    await db
-      .prepare(
-        `UPDATE dex_liquidity_scoring_stages
-            SET state = 'failed',
-                failure_reason = ?
-          WHERE generation_id = ?
-            AND state = 'writing'`,
-      )
-      .bind(failureReason.slice(0, 500), generationId)
-      .run();
-  } catch {
-    // A hard Worker termination or a rollout against an unmigrated local
-    // database leaves the generation in writing state, which consumers reject.
-  }
-}
-
 async function hasExactFinalizedStageManifest(
   db: D1Database,
   input: {
@@ -727,72 +723,11 @@ export async function pruneScoringStages(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<DexLiquidityScoringStageRetentionResult> {
-  const startedAtMs = Date.now();
-  const staleBefore = nowSec - DEX_LIQUIDITY_SCORING_STAGE_FAILED_RETENTION_SEC;
-  const result: DexLiquidityScoringStageRetentionResult = {
-    cutoff: staleBefore,
-    deletedRows: 0,
-    deletedChunkRows: 0,
-    deletedStageRows: 0,
-    oldestRemainingAt: null,
-    durationMs: 0,
-    error: null,
-  };
-  const candidatesSql = `
-    SELECT generation_id
-      FROM dex_liquidity_scoring_stages
-     WHERE generation_id != ?
-       AND (
-         state = 'consumed'
-         OR (state IN ('writing', 'ready', 'failed') AND created_at < ?)
-       )
-     ORDER BY
-       CASE WHEN state = 'consumed' THEN 0 ELSE 1 END,
-       created_at ASC,
-       generation_id ASC
-     LIMIT ?`;
-  try {
-    const chunks = await runWithOverloadRetry(
-      () => db.prepare(
-        `DELETE FROM dex_liquidity_scoring_stage_chunks
-          WHERE generation_id IN (${candidatesSql})`,
-      ).bind(
-        protectedGenerationId,
-        staleBefore,
-        DEX_LIQUIDITY_SCORING_STAGE_RETENTION_GENERATIONS_PER_RUN,
-      ).run(),
-      3,
-      signal,
-    );
-    result.deletedChunkRows = Number(chunks.meta?.changes ?? 0);
-    const stages = await runWithOverloadRetry(
-      () => db.prepare(
-        `DELETE FROM dex_liquidity_scoring_stages
-          WHERE generation_id IN (${candidatesSql})`,
-      ).bind(
-        protectedGenerationId,
-        staleBefore,
-        DEX_LIQUIDITY_SCORING_STAGE_RETENTION_GENERATIONS_PER_RUN,
-      ).run(),
-      3,
-      signal,
-    );
-    result.deletedStageRows = Number(stages.meta?.changes ?? 0);
-    const oldest = await runWithOverloadRetry(
-      () => db
-        .prepare("SELECT MIN(created_at) AS oldest_remaining_at FROM dex_liquidity_scoring_stages")
-        .first<{ oldest_remaining_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    result.error = toErrorMessage(error).slice(0, 500);
-  }
-  result.deletedRows = result.deletedChunkRows + result.deletedStageRows;
-  result.durationMs = Math.max(0, Date.now() - startedAtMs);
-  return result;
+  return dexLiquidityScoringStageStore.prune(db, {
+    protectedGenerationId,
+    nowSec,
+    signal,
+  });
 }
 
 export async function persistDexLiquidityScoringStage(
@@ -953,7 +888,11 @@ export async function persistDexLiquidityScoringStage(
       ))
     ) {
       if (finalizationError) throw finalizationError;
-      throw new Error("DEX liquidity scoring stage did not finalize a complete generation");
+      dexLiquidityScoringStageStore.assertTransition(
+        finalizedChanges,
+        1,
+        "DEX liquidity scoring stage did not finalize a complete generation",
+      );
     }
     const retention = await pruneScoringStages(db, generationId, readyAt, signal);
     return {
@@ -965,7 +904,7 @@ export async function persistDexLiquidityScoringStage(
       retention,
     };
   } catch (error) {
-    await markStageFailed(db, generationId, error);
+    await dexLiquidityScoringStageStore.markFailed(db, generationId, error);
     throw error;
   }
 }

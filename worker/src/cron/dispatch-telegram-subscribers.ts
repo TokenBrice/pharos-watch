@@ -2,14 +2,15 @@ import type { TelegramAlertType } from "@shared/types/status";
 import { buildInClause, chunkArray, D1_MAX_BOUND_PARAMETERS } from "../lib/db";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../lib/telegram-broadcast-targets";
-import {
-  listTelegramPresets,
-  resolveTelegramPresetTargets,
-  type TelegramPresetId,
-  type TelegramPresetResolveOptions,
-} from "../lib/telegram-presets";
+import { listTelegramPresets, type TelegramPresetResolveOptions } from "../lib/telegram-presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
+import {
+  loadActivePresetFollowers,
+  projectPresetFollowers,
+  resolvePresetMemberships,
+  type PresetAlertType,
+} from "./telegram-preset-subscriber-store";
 
 const ALERT_COLUMN_BY_TYPE = {
   dews: "alert_dews",
@@ -309,36 +310,18 @@ export function mergeSubscriberMaps(
 export async function loadPresetSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
-  type: Exclude<TelegramAlertType, "launch" | "reserve">,
+  type: PresetAlertType,
   nowSec: number,
   options: TelegramPresetResolveOptions = {},
 ): Promise<PresetSubscriberLoadResult> {
   if (stablecoinIds.length === 0) return { kind: "ok", rows: new Map() };
-  const alertColumn = ALERT_COLUMN_BY_TYPE[type];
-  if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
-    throw new Error(`Invalid preset alert subscription column for ${type}`);
-  }
-  const wantedIds = new Set(stablecoinIds);
-  const allPresetIds = listTelegramPresets().map((definition) => definition.id);
-  const allPresetInClause = buildInClause(allPresetIds);
-  let hasCandidateRows = false;
-  try {
-    const candidate = await db
-      .prepare(
-        // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
-        // against the hardcoded allowlist above before interpolation.
-        `SELECT 1 AS has_row
-           FROM telegram_preset_subscriptions p
-          JOIN telegram_subscribers u ON u.chat_id = p.chat_id
-          WHERE p.${alertColumn} = 1
-            AND p.preset_id IN (${allPresetInClause.sql})
-            AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
-          LIMIT 1`,
-      )
-      .bind(...allPresetInClause.binds, nowSec)
-      .first<{ has_row: number }>();
-    hasCandidateRows = candidate != null;
-  } catch (err) {
+  const memberships = await resolvePresetMemberships(db, {
+    alertType: type,
+    wantedStablecoinIds: stablecoinIds,
+    nowSec,
+    options,
+  });
+  if (memberships.kind === "query-failed") {
     logTelegramEvent({
       level: "warn",
       message: "dynamic preset query failed",
@@ -348,12 +331,9 @@ export async function loadPresetSubscriberRowsBatch(
       alertType: type,
       requestedStablecoinCount: stablecoinIds.length,
     });
-    return { kind: "query-failed", error: err };
+    return { kind: "query-failed", error: memberships.error };
   }
-  if (!hasCandidateRows) return { kind: "ok", rows: new Map() };
-
-  const resolved = await resolveTelegramPresetTargets(db, allPresetIds, options);
-  if (resolved.kind !== "ok") {
+  if (memberships.kind === "resolution-failed") {
     logTelegramEvent({
       level: "warn",
       message: "dynamic preset resolution failed",
@@ -361,65 +341,23 @@ export async function loadPresetSubscriberRowsBatch(
       module: "dispatch-telegram-subscribers",
       failureKind: "resolution-failed",
       alertType: type,
-      reason: resolved.reason,
-      presetCount: allPresetIds.length,
+      reason: memberships.reason,
+      presetCount: listTelegramPresets().length,
       subscriberRowCount: 1,
       requestedStablecoinCount: stablecoinIds.length,
     });
     return { kind: "resolution-failed" };
   }
-  const matchingPresets = resolved.presets.filter((preset) =>
-    preset.stablecoinIds.some((stablecoinId) => wantedIds.has(stablecoinId)),
-  );
-  if (matchingPresets.length === 0) return { kind: "ok", rows: new Map() };
-  const matchingPresetIds = matchingPresets.map((preset) => preset.definition.id);
-  const presetInClause = buildInClause(matchingPresetIds);
-  let result: {
-    results?: Array<{
-      chat_id: string;
-      preset_id: TelegramPresetId;
-      last_active_at: number;
-      depeg_worsening_bps_step: number | null;
-      quiet_hours_enabled: number | null;
-      quiet_hours_start_utc: number | null;
-      quiet_hours_end_utc: number | null;
-      timezone: string | null;
-      preference_generation: number;
-    }>;
-  };
-  try {
-    result = await db
-      .prepare(
-        // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
-        // against the hardcoded allowlist above before interpolation.
-        `SELECT p.chat_id,
-                p.preset_id,
-                u.last_active_at,
-                p.depeg_worsening_bps_step,
-                u.quiet_hours_enabled,
-                u.quiet_hours_start_utc,
-                u.quiet_hours_end_utc,
-                u.timezone,
-                u.preference_generation
-           FROM telegram_preset_subscriptions p
-          JOIN telegram_subscribers u ON u.chat_id = p.chat_id
-          WHERE p.${alertColumn} = 1
-            AND p.preset_id IN (${presetInClause.sql})
-            AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
-      )
-      .bind(...presetInClause.binds, nowSec)
-      .all<{
-        chat_id: string;
-        preset_id: TelegramPresetId;
-        last_active_at: number;
-        depeg_worsening_bps_step: number | null;
-        quiet_hours_enabled: number | null;
-        quiet_hours_start_utc: number | null;
-        quiet_hours_end_utc: number | null;
-        timezone: string | null;
-        preference_generation: number;
-      }>();
-  } catch (err) {
+  if (!memberships.hasCandidates || memberships.memberships.length === 0) {
+    return { kind: "ok", rows: new Map() };
+  }
+  const presetIds = [...new Set(memberships.memberships.map((membership) => membership.preset_id))];
+  const followers = await loadActivePresetFollowers(db, {
+    alertType: type,
+    presetIds,
+    nowSec,
+  });
+  if (followers.kind === "query-failed") {
     logTelegramEvent({
       level: "warn",
       message: "dynamic preset query failed",
@@ -429,36 +367,7 @@ export async function loadPresetSubscriberRowsBatch(
       alertType: type,
       requestedStablecoinCount: stablecoinIds.length,
     });
-    return { kind: "query-failed", error: err };
+    return { kind: "query-failed", error: followers.error };
   }
-
-  const rows = result.results ?? [];
-  if (rows.length === 0) return { kind: "ok", rows: new Map() };
-
-  const idsByPreset = new Map(resolved.presets.map((preset) => [preset.definition.id, new Set(preset.stablecoinIds)]));
-  const map = new Map<string, SubscriberRow[]>();
-  for (const row of rows) {
-    const presetIdsForRow = idsByPreset.get(row.preset_id);
-    if (!presetIdsForRow) continue;
-    for (const stablecoinId of presetIdsForRow) {
-      if (!wantedIds.has(stablecoinId)) continue;
-      const existing = map.get(stablecoinId) ?? [];
-      existing.push({
-        chat_id: row.chat_id,
-        last_active_at: row.last_active_at,
-        dews_min_band: null,
-        safety_mode: null,
-        depeg_worsening_bps_step: row.depeg_worsening_bps_step ?? null,
-        quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
-        quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
-        quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
-        timezone: row.timezone ?? null,
-        preference_generation: row.preference_generation ?? 0,
-        isGlobal: false,
-        hasLocalOverride: false,
-      });
-      map.set(stablecoinId, existing);
-    }
-  }
-  return { kind: "ok", rows: map };
+  return { kind: "ok", rows: projectPresetFollowers(memberships.memberships, followers.followers) };
 }

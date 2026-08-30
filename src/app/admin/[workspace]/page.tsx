@@ -45,26 +45,20 @@ export function generateStaticParams() {
   return Object.keys(WORKSPACES).map((workspace) => ({ workspace }));
 }
 
+const resolveWorkspace = async (params: Promise<{ workspace: string }>): Promise<(typeof WORKSPACES)[keyof typeof WORKSPACES] | null> => WORKSPACES[(await params).workspace as keyof typeof WORKSPACES] ?? null;
+
 export async function generateMetadata({ params }: { params: Promise<{ workspace: string }> }): Promise<Metadata> {
-  const { workspace } = await params;
-  const entry = WORKSPACES[workspace as keyof typeof WORKSPACES];
+  const entry = await resolveWorkspace(params);
   if (!entry) return { title: "Admin Workspace Not Found", robots: { index: false, follow: false } };
   return buildPageMetadata({
     title: entry.title,
     description: entry.description,
-    canonical: `/admin/${workspace}/`,
+    canonical: `/admin/${(await params).workspace}/`,
     robots: { index: false, follow: false },
   });
 }
 
-export default async function AdminWorkspacePage({
-  params,
-}: {
-  params: Promise<{ workspace: string }>;
-}) {
-  const { workspace } = await params;
-  const entry = WORKSPACES[workspace as keyof typeof WORKSPACES];
-  if (!entry) notFound();
-  const Client = entry.Client;
-  return <Client />;
+export default async function AdminWorkspacePage({ params }: { params: Promise<{ workspace: string }> }) {
+  const entry = await resolveWorkspace(params);
+  return entry ? <entry.Client /> : notFound();
 }

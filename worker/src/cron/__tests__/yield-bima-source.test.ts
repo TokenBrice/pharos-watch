@@ -1,19 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchBimaSusbdSource } from "../yield-sync/sources";
 
 describe("fetchBimaSusbdSource", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("drops low-quality BIMA rows with negligible TVL and zero APR", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "bima.money/api/earn/pools",
         body: {
@@ -36,7 +32,7 @@ describe("fetchBimaSusbdSource", () => {
   });
 
   it("parses materially live BIMA earn rows into a protocol-api source row", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "bima.money/api/earn/pools",
         body: {
@@ -72,7 +68,7 @@ describe("fetchBimaSusbdSource", () => {
   });
 
   it("returns null when the earn feed has no USBD row", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "bima.money/api/earn/pools",
         body: {
@@ -94,7 +90,7 @@ describe("fetchBimaSusbdSource", () => {
   });
 
   it("does not publish boosted-only APR because boosts are user-specific", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "bima.money/api/earn/pools",
         body: {

@@ -16,8 +16,8 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { PegCurrency } from "@shared/types";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 import { trackEvent } from "@/lib/analytics";
-import { decodeState, encodeState, type UrlStateSchema } from "@/lib/url-state";
-import { replaceEncodedUrlState } from "@/lib/replace-encoded-url-state";
+import { type UrlStateSchema } from "@/lib/url-state";
+import { useUrlState } from "@/hooks/use-url-state";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import {
@@ -46,20 +46,15 @@ export const LIQUIDITY_URL_SCHEMA: UrlStateSchema<LiquidityUrlState> = {
 export function LiquidityClient() {
   const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch, meta } = useDexLiquidity();
   const logos = logosById;
-  const { searchParams, getParam, setParam, replaceParams } = useUrlFilters();
-  const { peg: pegFilter } = useMemo(
-    () => decodeState(searchParams, LIQUIDITY_URL_SCHEMA),
-    [searchParams],
+  const { getParam, setParam } = useUrlFilters();
+  const { state: { peg: pegFilter }, patchState } = useUrlState(
+    LIQUIDITY_URL_SCHEMA, { clear: { key: "peg" } },
   );
   const setPegFilter = useCallback(
     (v: PegCurrency | "all") => {
       trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v });
-      const encoded = encodeState({ peg: v }, LIQUIDITY_URL_SCHEMA);
-      replaceParams((params) => {
-        replaceEncodedUrlState(params, encoded, { clear: "key", key: "peg" });
-      });
-    },
-    [replaceParams],
+      patchState({ peg: v });
+    }, [patchState],
   );
   const router = useRouter();
 

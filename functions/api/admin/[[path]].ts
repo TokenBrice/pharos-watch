@@ -16,7 +16,13 @@ import {
   buildProxyResponse as buildProxyResponseShared,
 } from "../../lib/proxy-utils";
 import { DEFAULT_PROXY_TIMEOUT_MS } from "../../lib/upstream-proxy";
-import { runPagesProxy, type PagesProxyContext } from "../../lib/pages-proxy-harness";
+import {
+  createProxyRequest,
+  rejectInvalidProxyEnvironment,
+  runPagesProxy,
+  type PagesProxyContext,
+} from "../../lib/pages-proxy-harness";
+import { cloneResponseWithPolicy } from "../../lib/response-policy";
 import { resolveOpsAdminUpstreamPath } from "../../lib/proxy-paths";
 
 const FORWARDED_REQUEST_HEADERS = [
@@ -88,17 +94,15 @@ function buildProxyResponse(upstreamResponse: Response, method: string): Respons
 }
 
 function applyAdminResponsePolicy(response: Response): Response {
-  const headers = new Headers(response.headers);
-  headers.set("Cache-Control", "private, no-store");
-  headers.set("CDN-Cache-Control", "no-store");
-  headers.set("Cloudflare-CDN-Cache-Control", "no-store");
-  headers.set("Referrer-Policy", "no-referrer");
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE);
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
+  return cloneResponseWithPolicy(response, {
+    mutateHeaders: (headers) => {
+      headers.set("Cache-Control", "private, no-store");
+      headers.set("CDN-Cache-Control", "no-store");
+      headers.set("Cloudflare-CDN-Cache-Control", "no-store");
+      headers.set("Referrer-Policy", "no-referrer");
+      headers.set("X-Content-Type-Options", "nosniff");
+      headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE);
+    },
   });
 }
 
@@ -194,13 +198,12 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
       return rejected;
     },
     validateEnv: ({ env }) => {
-      const issues = validatePagesOpsProxyEnv(env);
-      for (const issue of issues) {
-        console.warn(`[ops-proxy] ${issue.message}`);
-      }
-      return issues.some((issue) => issue.code === "ops-api-origin-invalid")
-        ? jsonError(500, "Ops API proxy is not configured")
-        : null;
+      return rejectInvalidProxyEnvironment({
+        issues: validatePagesOpsProxyEnv(env),
+        fatalCodes: ["ops-api-origin-invalid"],
+        logPrefix: "ops-proxy",
+        publicMessage: "Ops API proxy is not configured",
+      });
     },
     resolveUpstreamPath: ({ params }) => resolveOpsAdminUpstreamPath(params),
     rejectUpstreamPath: (_context, upstreamPath) =>
@@ -241,24 +244,23 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
       if (!upstreamOrigin) {
         return jsonError(500, "Ops API proxy is not configured");
       }
-      const requestUrl = new URL(request.url);
-      const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
       const body = createCappedRequestBody(request, () => {
         requestBodyTooLarge = true;
       });
       if (body instanceof Response) {
         return body;
       }
-      return {
-        upstreamUrl: upstreamUrl.toString(),
+      return createProxyRequest({
+        request,
+        origin: upstreamOrigin,
+        path: upstreamPath,
+        search: new URL(request.url).search,
         method: request.method,
         headers: upstreamHeaders,
         body,
         timeoutMs: resolveOpsAdminProxyTimeoutMs(upstreamPath),
-        timeoutReason: new DOMException("Operator API upstream timed out", "TimeoutError"),
-        timeoutMessage: "Operator API upstream timed out",
-        fetchFailedMessage: "Operator API upstream fetch failed",
-      };
+        label: "Operator API",
+      });
     },
     onFetchError: (_context, _upstreamPath, _errorKind, response) =>
       requestBodyTooLarge ? jsonError(413, "Request body too large") : response,

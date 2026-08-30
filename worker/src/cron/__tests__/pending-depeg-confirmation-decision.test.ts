@@ -1,12 +1,16 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import {
+  insertPendingDepeg,
+  makePendingDepegRow,
+  openLatestSchemaFixture,
+} from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import {
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
 } from "../../lib/constants";
-import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
+import { normalizePendingDepegRow } from "../../lib/depeg-pending";
 import type {
   CollectedConfirmationEvidence,
   ConfirmationPlanReady,
@@ -17,62 +21,12 @@ const NOW_SEC = 1_700_000_000;
 const openSqliteDatabases: DatabaseSync[] = [];
 
 function openFixture(): { sqlite: DatabaseSync; db: D1Database } {
-  const fixture = createLatestSchemaSqlite();
-  openSqliteDatabases.push(fixture.sqlite);
-  return fixture;
+  return openLatestSchemaFixture({ openDatabases: openSqliteDatabases });
 }
 
-function makePendingRow(overrides: Partial<PendingDepegRow> = {}): PendingDepegRow {
-  const firstSeenAt = overrides.first_seen_at ?? NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC - 60;
-  const firstSeenBps = overrides.first_seen_bps ?? -220;
-  const firstPrice = overrides.first_price ?? 0.978;
-  return {
-    id: 1,
-    stablecoin_id: "usdt-tether",
-    symbol: "USDT",
-    peg_type: "peggedUSD",
-    direction: "below",
-    first_seen_bps: firstSeenBps,
-    first_seen_at: firstSeenAt,
-    first_price: firstPrice,
-    last_seen_bps: firstSeenBps,
-    last_seen_at: firstSeenAt + DEPEG_PENDING_MIN_AGE_SEC,
-    last_price: firstPrice,
-    peak_seen_bps: null,
-    peak_price: null,
-    peg_reference: 1,
-    reason: "large-cap",
-    updated_at: firstSeenAt,
-    ...overrides,
-  };
-}
-
-function insertPending(sqlite: DatabaseSync, row: PendingDepegRow): void {
-  sqlite.prepare(
-    `INSERT INTO depeg_pending (
-       id, stablecoin_id, symbol, peg_type, direction, first_seen_bps,
-       first_seen_at, first_price, peg_reference, reason, last_seen_bps,
-       last_seen_at, last_price, peak_seen_bps, peak_price, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    row.id,
-    row.stablecoin_id,
-    row.symbol,
-    row.peg_type,
-    row.direction,
-    row.first_seen_bps,
-    row.first_seen_at,
-    row.first_price,
-    row.peg_reference,
-    row.reason ?? "large-cap",
-    row.last_seen_bps,
-    row.last_seen_at,
-    row.last_price,
-    row.peak_seen_bps,
-    row.peak_price,
-    row.updated_at ?? row.last_seen_at ?? row.first_seen_at,
-  );
-}
+const makePendingRow = (overrides: Partial<ReturnType<typeof makePendingDepegRow>> = {}) =>
+  makePendingDepegRow(overrides, { firstSeenBps: -220, firstPrice: 0.978 });
+const insertPending = insertPendingDepeg;
 
 function emptyEvidence(): CollectedConfirmationEvidence {
   return {

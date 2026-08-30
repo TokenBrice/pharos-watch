@@ -1,12 +1,444 @@
 [
   {
-    "date": "2026-07-18",
-    "title": "Small Peg, Larger Weight",
-    "text": "USX has held $0.378 for 645 hours on $20.81M mcap; apxUSD carries fourteen times the float at similar deviation. The peg tape is patient, not calm.",
-    "extended": "USX printed $0.378 for a 645th consecutive hour, 5783 bps below peg on $20.81M in float. The impact math flatters no one: at $120M weighted, USX ranks fourth among eleven active depegs, well behind apxUSD's $932M reading on 758 hours and a $295M mcap. Small coin, patient deviation, unchanged story.\n\nUSDA delivered the only meaningful narrowing, from 3098 bps to 503 bps on its $148M tranche, though a separate $84M tranche still sits 503 bps below and reads as chronic. The Bank Run Gauge climbed to 28.9 HEALTHY from 20.4, and PSI holds 94.8 BEDROCK on day 25 of the streak. The market cap sits 0.01% shy of its Digest-window ATH; even the ceiling is unhurried.\n\nUSDT prints 7.73% APY against a 5.73% 30d average with opportunity evidence missing; USDC moves the opposite way at 5.42% versus 7.33%, both on eleven-figure market caps. Neither corroborates without flow data. If apxUSD widens back through 3650 bps at tomorrow's snapshot, the peg tape stops being a chronic file and becomes an active one; PSI would need to fall to 92 before the BEDROCK frame breaks.",
-    "generatedAt": 1784362002,
+    "date": "2026-08-30",
+    "title": "Small Flows, Maxed Signals",
+    "text": "USD1 took in $4.00M and fxUSD $3.02M while rwaUSDi shed $3.96M, all three pinning intensity at 100 on flows worth a rounding error; if the Bank Run Gauge slips to negative 10, this stops being noise.",
+    "extended": "USD1 absorbed $4.00M and fxUSD $3.02M over 24 hours, both pinning their intensity readings at 100 against 30-day baselines, while rwaUSDi ran the other way at negative 100 and shed $3.96M. Three stablecoins maxing out their pressure signals on flows worth a rounding error reads as repositioning, not growth.\n\nPSI holds at 91.2, still BEDROCK on a 68-day streak, yet that is its softest reading in 19 days and breadth crept to 7.36. Twenty depegs stay active: MSUSD widened to 3,765 bps and USDA to 416, both worse than yesterday. The Bank Run Gauge whipsawed from 35.9 to negative 1.5, a 37-point swing back toward neutral.\n\nUSDC added $374.09M on the week to $73.98B, the largest mover on the board and the reason today reads as allocation, not alarm; total supply sits at $318.79B, a hair under the Digest-window high set a day ago. Next trigger: if the Bank Run Gauge slides to negative 10 or lower, the fxUSD and USD1 flows stop being noise and flow stress takes the lead.",
+    "generatedAt": 1788107017,
     "digestType": "daily",
-    "editionNumber": 144
+    "editionNumber": 188
+  },
+  {
+    "date": "2026-08-29",
+    "title": "Cash Grows, Yield Empties",
+    "text": "USDC booked $319.98M of its $518M weekly gain in a single day, nearly the $400M rotation line; USYC shed $101.90M in the same session, dumping most of its weekly bleed at once. Cash in, yield out.",
+    "extended": "USDC added $518.48M over seven days to reach $74.19B, the market's largest weekly mover and, by Circle's own history, a trickle: it once minted $6.55B in a single week. The pace is the tell. USDC booked $319.98M of that total in the last 24 hours, meaning most of a slow week landed in one session, just shy of the $400M that marks rotation.\n\nUSDT tells the opposite story: +$33.74M in a day against +$1.17B for the week, its growth already spent. The rotation reads cleaner at USYC, which shed $101.90M yesterday, nearly all of its $147.14M weekly drawdown compressed into one session. Money leaves a yield-bearing treasury token for plain cash while PSI holds at 91.7, its 67th straight BEDROCK day.\n\nThe Bank Run Gauge clawed back to 35.9 [HEALTHY] from yesterday's -19.3, and apxUSD sits unchanged at 315 bps below peg, day 74 of its STRC-driven drawdown. Next trigger: USDC clearing $400M in a single day turns allocation into rotation, and USYC crossing $130M of one-day outflow would confirm the exit is a decision, not noise.",
+    "generatedAt": 1787990870,
+    "digestType": "daily",
+    "editionNumber": 187
+  },
+  {
+    "date": "2026-08-28",
+    "title": "apxUSD Recovers As The Gauge Flips",
+    "text": "apxUSD tightened to 294 bps from 337 as the Bank Run Gauge flipped +21.2 to -19.3; PYUSD bled $42M, FDUSD $11.9M, 21 depegs still open. One coin healing, the flows turning.",
+    "extended": "apxUSD tightened to 294 bps below peg from 337 a day earlier, clawing back from the 3,159 bps crater the STRC drawdown left last June. At $313.59M it is the largest break on the board that isn't pmUSD, and one of the few moving the right way among 21 active depegs. It still trades at $0.970 with an F on backing.\n\nThe flow side moved the other way. The Bank Run Gauge flipped from +21.2 to -19.3 [CAUTIOUS] in a single session, with PYUSD shedding $42.07M and FDUSD $11.88M against their 30-day baselines; only AUSD leaned positive at +$6.28M. PSI held at 91.7 [BEDROCK], its lowest since August 11 but a 66th straight day in the band. pmUSD sits unchanged at 4,648 bps under.\n\nDEWS pushed its ALERT count to 10 from 8, AUDm crossing up from WATCH even as most of the board drifted calmer, a split screen that rarely resolves quietly. The next tell is the gauge: if it falls to -25 or lower, flow stress graduates from footnote to headline. AUSD's lone positive pull is the one number arguing against that.",
+    "generatedAt": 1787904459,
+    "digestType": "daily",
+    "editionNumber": 186
+  },
+  {
+    "date": "2026-08-27",
+    "title": "USDS Sheds A Week In A Day",
+    "text": "USDS lost $287M in one session, almost its entire weekly decline, while its yield slid under the 30-day average. USDC added $1.46B the same week. Another $360M day turns drift into rotation.",
+    "extended": "USDS shed $287.44M in a single session, roughly three-quarters of its $375.58M weekly decline compressed into one day, and the outflow is accelerating. It lands on a token carrying an A- safety score and a 5.65% yield that has drifted below its 30-day average of 6.04%. Capital is leaving the paying door here, not a broken one.\n\nThe backdrop stays placid: PSI holds at 92.1, a 65th consecutive BEDROCK day, with depeg severity at 0.03. USDC added $1.46B on the week even as USDS drains, the largest issuer expanding while a smaller peer contracts. Mint and burn echoed the tilt, USDG down $31.65M and AUSD down $9.20M over 24 hours, though the Bank Run Gauge held at a healthy 21.2.\n\nPMUSD widened again to 4,663 bps below peg at $0.534, an ongoing critical that has stopped surprising anyone. The number that decides tomorrow is USDS: another $360M single-day exit reclassifies this from drift to rotation, and with $287M already gone, that threshold is one ordinary session away.",
+    "generatedAt": 1787818016,
+    "digestType": "daily",
+    "editionNumber": 185
+  },
+  {
+    "date": "2026-08-26",
+    "title": "The Rotation Into Yield",
+    "text": "USDY drew $24.99M in net mints at max intensity; stUSDS and U joined the pressure while USDC bled $96.61M on the day. Yield is winning the allocation.",
+    "extended": "USDY pulled in $24.99M of net mints over 24 hours, pinning its pressure gauge at 100 against a 30-day baseline; stUSDS added $10.77M and U another $9.98M at the same maximum intensity. Three yield-bearing tokens hitting peak inflow pressure on the same day is not a coincidence, it is a preference. The money came from somewhere. USDC reversed to minus $96.61M on the day even as it held its $1.91B weekly lead, and BUIDL accelerated $142.80M in a single session. PSI reads 91.8, a 64-day BEDROCK streak, while the Bank Run Gauge sagged from 55.4 to 39.6 yet stayed HEALTHY. This is rotation, not flight. USDY's fresh supply arrived while its DEX depth thinned to $13.81M, a token adding coins faster than it adds an exit. PMUSD, still critical, narrowed to 4419 bps below peg on a $52.52M cap. Next trigger: a $125M single-day USDC move turns this drift out of plain dollars into confirmed rotation.",
+    "generatedAt": 1787731650,
+    "digestType": "daily",
+    "editionNumber": 184
+  },
+  {
+    "date": "2026-08-25",
+    "title": "PYUSD Erases A Week Overnight",
+    "text": "$111.63M left PYUSD in a day, erasing a week of gains as APY slid from ~8% to 3.82%. Mint/burn confirms -$97.61M out; the wider market still reads 92.6 BEDROCK.",
+    "extended": "PYUSD shed $111.63M in a single day, wiping out the $24.78M it had added over the prior week and then some. The mint/burn ledger agrees: net -$97.61M over 24 hours at maximum burn intensity, two independent pipelines pointing the same direction. The yield tells the rest; PYUSD's APY has fallen to 3.82% against a 30-day average near 8%, and money left the moment the rate did.\n\nPSI holds at 92.6, a 63rd straight day of BEDROCK, a reading that says the system at large feels none of this. USDC embodies that calm, adding $1.79B over seven days to $73.76B, the largest weekly mover on the board. apxUSD, unresolved since June's STRC drawdown, narrowed to 317 bps below peg from 430. The stress is real but still local.\n\nThe Bank Run Gauge sits at 55.4 and CONFIDENT with no flight-to-quality flag, which is why this reads as one issuer's problem rather than the market's. Next trigger: if PYUSD sheds at least $140M in a single day, the story graduates from drift to rotation. Should the gauge instead break to -10 or lower, flow stress replaces PYUSD as the thing to fear.",
+    "generatedAt": 1787645262,
+    "digestType": "daily",
+    "editionNumber": 183
+  },
+  {
+    "date": "2026-08-24-weekly",
+    "title": "USDC's Gauge Climbs As TVL Drains",
+    "text": "USDC's DEX liquidity score jumped 65 to 78 as $1.23B of TVL left the building. Circle added $1.67B, then stalled to $52.42M. USDS drained to $13.72M. PSI napped at 92.8.",
+    "extended": "USDC's DEX liquidity score climbed from 65 to 78 this week, the loudest item on the board, even as the TVL behind it drained from $5.40B to $4.17B. That is a fuel gauge reading full while the tank loses more than a billion dollars. PSI never noticed, holding the BEDROCK band all seven days between 91.8 and 94.1 and closing at 92.8, a hair off the 92.5 open. Circle spent the week feeding USDC, adding $1.67B over seven days before the tap narrowed to $52.42M in the final one. USDC ran as the largest weekly mover on four separate days, from +$765.61M on the 21st to the +$1.67B peak by the 24th. The yield desk kept flagging the same two names, USDT at 4.22% APY and USDC at 9.83%, both stamped opportunity-evidence-missing, which is the analytics way of saying the number arrived without a receipt. While USDC's figures puffed up, USDS liquidity collapsed: TVL fell from $162.28M to $13.72M and its score slid 59 to 49 on the 21st before clawing back +10 the next day. DAI went the other way, lifting its score +9 then +8 to 56, and USD1 gained +9 as its TVL nearly doubled from $51.80M to $89.83M. The chronic pmUSD depeg stayed broken at 4433 bps on $52.32M, unmoved and unresolved. Aggregate market cap added 0.48% to $318.06B, a rounding error dressed as growth. The louder week-over-week move was the Bank Run Gauge midpoint swinging from -5.4 to 12.0, even after bottoming at -17.7 on the 22nd. Freezing cooled sharply: 82 blacklist events worth $15.14M this week against 106 events and $51.53M last, most of it USDT on Tron in a single $4.59M action on the 22nd. The forward-look scoreboard closed 13 hit, 7 missed, one still pending, and the misses were mostly bets that USDC's supply surge would keep its liquidity honest. Next week decides whether $4.17B is the USDC TVL floor or the first step down; watch the score-versus-TVL gap if Circle's minting stays near this week's $52.42M crawl rather than its $1.67B sprint.",
+    "generatedAt": 1787559015,
+    "digestType": "weekly",
+    "editionNumber": 24
+  },
+  {
+    "date": "2026-08-24",
+    "title": "USDC Adds A Billion, Then Stalls",
+    "text": "Circle added $1.67B to USDC in seven days, then just $52.42M in the last one; USDe burned $21M net and the run gauge slid to -3.8, even with PSI parked at 92.8.",
+    "extended": "Circle added $1.67B to USDC across seven days and just $52.42M in the last one, roughly a fifth of the daily pace it kept all week. At $73.65B the largest weekly mover now sits 8% below its April peak of $79.75B, and the drop-off reads less like a pause than a balance sheet finding its level after a strong run.\n\nThe flow side tilted the other way. USDe burned a net $21.02M over 24 hours against its 30-day baseline, and the Bank Run Gauge slid from 25.6 to -3.8, neutral but no longer buoyant. DEWS moved eleven names from CALM into WATCH, lifting that count to 99, with satUSD and MAI still parked at ALERT. PSI holds 92.8 BEDROCK on a 62-day streak, total cap 0.20% under its record.\n\npmUSD holds its ongoing critical break at 4424 bps below peg, unchanged on a $52.39M cap; apxUSD trades 430 bps under after its STRC drawdown, and USDA widened to 242 bps overnight. Next trigger: if USDC's seven-day move clears $2B at the next snapshot, the deceleration was a pause, not a top. Watch USD1's mint pace, running $10.21M a day and accelerating, for the next rotation.",
+    "generatedAt": 1787558898,
+    "digestType": "daily",
+    "editionNumber": 182
+  },
+  {
+    "date": "2026-08-23",
+    "title": "Tether Turns On A Dime",
+    "text": "USDT added $977M in a day, dwarfing its $143M weekly net and reversing yesterday's outflows. USDC still leads the week at +$1.67B; PSI holds BEDROCK at 91.8 for a 61st day.",
+    "extended": "USDT added $977M in a single day, a figure that dwarfs its $143M net for the entire week and reverses the outflows that led yesterday's tape. The gap between one day and seven is the whole story: Tether shrank for most of the week, then bought itself back hard. Its A+ card shows backing at 74.7 and exit liquidity pinned at 100.\n\nUSDC remains the week's largest mover at +$1.67B, lifting it to $73.63B though still 8% under its April high. PSI reads 91.8, its 61st consecutive day in BEDROCK, and it has not slipped below that line since August 11. Severity is a trivial 0.03; breadth barely registers at 6.6, VNXAU and EURS the only names troubling the score.\n\nThe peg board stays ugly at the edges: pmUSD widened again to 4433 bps below par, an F-rated $52M holdout still marked at $0.557. apxUSD sits 420 bps under after June's STRC drawdown, its $309M the largest exposure among the broken names. Next trigger: if USDT clears $1B in one day tomorrow, this drift graduates into rotation.",
+    "generatedAt": 1787472472,
+    "digestType": "daily",
+    "editionNumber": 181
+  },
+  {
+    "date": "2026-08-22",
+    "title": "Tether Sheds Two Billion",
+    "text": "USDT burned a net $2.00B in 24h while USDC minted $838.53M; Flight-to-Quality never tripped, so call it rotation. A second $2B day with no offset would call it something else.",
+    "extended": "Tether burned a net $2.00 billion in twenty-four hours, an intensity reading pinned at -100, while USDC minted $838.53 million and PYUSD added $100 million the same day. Ethereum carried the drain at -$1.14 billion net. The Bank Run Gauge sits at -17.7, CAUTIOUS, yet Flight-to-Quality never tripped: capital rotated tiers rather than fled them.\n\nThat exit left no mark on the aggregate. Total stablecoin cap holds at $318.28B, 0.13% under its Digest-window high set thirty days ago, and PSI reads 92, BEDROCK, its sixtieth consecutive day in that band. Severity is 0.04, breadth 7.68; the largest issuer can shed $2B and the index does not blink.\n\nUSDT's supply decline is accelerating, -$863M over one day against -$842M across seven, and 36 Tron blacklist events froze $9.95M in the window. pmUSD widened again to 4,351 bps below peg at $0.565, its 2,695th hour underwater. If USDC keeps minting into Tether's burn next session, this stays rotation; a second $2B USDT day with no offset reads as exit.",
+    "generatedAt": 1787386020,
+    "digestType": "daily",
+    "editionNumber": 180
+  },
+  {
+    "date": "2026-08-21",
+    "title": "USDS Pool Empties, Score Shrugs",
+    "text": "USDS bled 91% of its DEX liquidity to $13.72M in a day; a $6.71B coin now backs its on-chain exit with pocket change, and the composite score fell only ten points.",
+    "extended": "USDS lost 91% of its DEX liquidity in a day, its pooled TVL draining from $162.28M to $13.72M while the composite score slipped a mild-looking ten points, from 59 to 49. That score understates the wound: a $6.71B stablecoin now backs its on-chain exit with $13.72M of depth, nearly 500 to 1 against the float. USDS's advertised yield is fading too, 5.59% APY against a 30-day average of 6.24%, reason for depth to leave rather than deepen. The mirror ran the other way at USD1, whose pool nearly doubled to $89.83M and lifted its score from 57 to 66; USDY thinned alongside USDS, its score sliding to 28. PSI reads 93 and BEDROCK, off from 94.1, a 59-day streak the index shrugs through even as DEWS ALERT names tripled from three to nine overnight. pmUSD remains 4,241 bps below peg, wider again. Next trigger: if USDS's liquidity score falls to 41, the drain has follow-through rather than a one-day flush.",
+    "generatedAt": 1787299647,
+    "digestType": "daily",
+    "editionNumber": 179
+  },
+  {
+    "date": "2026-08-20",
+    "title": "Scores Rise, Pools Thin",
+    "text": "Four DEX liquidity scores rose; only DAI's pool actually grew. USDC's jumped 13 to 78 while its DEX TVL fell $1.23B to $4.17B, and USD0 and FDUSD gained on thinner pools.",
+    "extended": "DAI's DEX liquidity score climbed nine points to 56 on $8.75M of added pool depth, the only honest liquidity gain of the day. Three larger names improved on shrinking pools: USDC's score jumped thirteen to 78 as its DEX TVL fell $1.23B to $4.17B, while USD0 gained fifteen and FDUSD fifteen more, both on thinner pools. The model is applauding what the pools are quietly withdrawing.\n\nPSI held its BEDROCK footing at 94.1, a 58-day streak, while total supply crept to $317.15B, still 0.48% under its window high. USTB led the week with a $697M mint, triple its prior single-week record, and USDC added $507M in a day. pmUSD widened marginally to 4,001 bps below peg at $0.600, no change in its 2,647-hour trajectory.\n\napxUSD's slow repair continues from its June STRC drawdown, 521 bps off peg against a 3,159 bps low, the rare depeg number moving the right way. USDC's yield already cooled to 9.83% from an 11.07% monthly average, exactly as flagged. The next tell is whether USDC's liquidity score reaches 86 while TVL keeps falling; if it does, the score is grading reputation, not exit depth.",
+    "generatedAt": 1787213286,
+    "digestType": "daily",
+    "editionNumber": 178
+  },
+  {
+    "date": "2026-08-19",
+    "title": "USDC Sheds, USDe Absorbs",
+    "text": "USDC lost $359.6M on the week while USDe pulled in $107M, $56M of it yesterday alone; a thinning 10% reward is loosening the incumbent's grip on its float.",
+    "extended": "USDC shed $359.6M over the week, the largest single move on the board, and with it went the assumption that its float is sticky. The money did not evaporate: USDe absorbed $107M across seven days, $56M of it yesterday alone, nearly all of it routed through Ethereum's $88.9M net inflow. At $71.87B, USDC now sits 10% below its April peak.\n\nThe headline market barely registered the move: $316.21B total, up a rounding-error $52.93M on the week and 0.78% under the Digest-window high set 27 days ago. PSI holds at 92.9, its 57th straight BEDROCK day. The rotation reads cleaner beside the yield tape: USDC's best APY cooled to 10.07% from a 30-day 11.15%, and a thinning reward loosens a float.\n\nThe depeg board stayed ugly but familiar: apxUSD widened to 668 bps on its documented STRC drawdown, while pmUSD ground on at 3878 bps below peg, unchanged enough to pass for furniture. USDC's APY has already slipped under its 11.7% cooling line; if it breaks the 9.76% seven-day average next session, the $360M reads as exodus, not rotation.",
+    "generatedAt": 1787126925,
+    "digestType": "daily",
+    "editionNumber": 177
+  },
+  {
+    "date": "2026-08-18",
+    "title": "USDT Grows Without Paying Up",
+    "text": "USDT pulled in $964M this week at a flat 4.12% yield; USDC, paying 9.26%, lost $376M. The name offering double the reward is the one bleeding float.",
+    "extended": "USDT's best advertised yield sits at 4.12%, dead flat against its 7-day average, and the issuer still pulled in $964M of fresh supply this week to reach $182.95B. USDC, paying 9.26%, shed $376M over the same seven days. The largest name grew without touching its rate; the one dangling more than double the reward is the one that bled float.\n\nThe cooling runs across the board: USDC's 9.26% is down from an 11.51% 30-day average, USDS eased to 5.75% from 6.35%, and each flagged anomaly kept reverting toward baseline. The Pharos Stability Index reads 92.5, its 56th straight day in BEDROCK, severity a rounding error at 0.03. Nothing here demands attention; the numbers merely invite it.\n\npmUSD remains 4003 bps below peg, 54 wider on the day and no closer to resolution after 108 days. DEWS keeps 8 names at ALERT, MAI and pmUSD leading on cross-source divergence. The lone yield still climbing is USD1, spiking to 3.27% from a 7-day average near zero; whether it holds above its 1.41% 30-day baseline next session decides if the print was signal or noise.",
+    "generatedAt": 1787040429,
+    "digestType": "daily",
+    "editionNumber": 176
+  },
+  {
+    "date": "2026-08-17-weekly",
+    "title": "USDT's Yield Reading Won't Hold Still",
+    "text": "USDT's top risk flag this week was a data gap, not a depeg: yield printed 0.51%, then 8.29%, then 4.12% on $183B unmoved. Nine names hit DEWS ALERT while PSI shrugged at 92.2.",
+    "extended": "The week's top risk flag was not a break but a blank: USDT's 08-15 yield warning pinned 4.12% APY against a $183.05B market cap and stamped it opportunity-evidence-missing, an alert on the largest stablecoin that the analytics could not corroborate. PSI opened at 91.1 on 08-11 and closed at 92.2, never leaving BEDROCK, so USDT's marquee event was a telemetry shrug rather than a wobble.\n\nUSDT ran through every column this week. Its yield feed read 0.51% APY on 08-11 and 8.29% by 08-12 before settling near 4.12% for four straight days, the analytics equivalent of a thermometer that cannot decide between hypothermia and fever. Supply lurched alongside it: down $1.24B on 08-11, a $1.01B reversal on 08-12. And Tron did the rest, with 106 blacklist events freezing $51.53M, more than double the prior week's $24.52M despite 83 fewer actions, led by a single $32.56M seizure on 08-12.\n\nThe counter-story was resolution. USDA cleared its 802 bps break after 869 hours, and XAUm closed 918 bps in 23 hours; only pmUSD held on, 3949 bps below peg at $57.41M mcap. The quieter concern lived in DEWS, where nine names sat in ALERT by 08-17 as RLUSD, XAUT, TUSD and USX all shed liquidity in one session, and the Bank Run Gauge sank to -12.6.\n\nCapital barely moved in aggregate: mcap rose 0.34% to $316.41B on the week yet landed flat at -0.06% versus last week. XAUT was the largest mover at +$2.67B even as its liquidity score fell 64 to 56, while USDC added $832.43M on 08-12 then bled $437.61M by 08-17. USDe's liquidity slid 59 to 50 as TVL dropped $85.37M to $58.72M.\n\nTwenty of twenty-one daily triggers resolved as hits, with one pending and zero misses. With nine names in ALERT and the gauge at -12.6 heading in, the next trigger is whether DEWS converts to the first grade transition after zero recorded this week.",
+    "generatedAt": 1786954204,
+    "digestType": "weekly",
+    "editionNumber": 23
+  },
+  {
+    "date": "2026-08-17",
+    "title": "Nine Names In ALERT",
+    "text": "DEWS ALERTs climbed from six to nine as RLUSD, XAUT, TUSD and USX all shed liquidity in one session. PSI's 92.2 registers none of it; the Bank Run Gauge, sinking to -12.6, does.",
+    "extended": "Nine stablecoins now register DEWS ALERT, up from six yesterday, and the liquidity scores feeding that band are sliding together. RLUSD dropped 63 to 54, XAUT 64 to 56, TUSD 50 to 32, USX 57 to 47. Four exit doors narrowing in a single session is a pattern, not an accident, and the warning band widened to match.\n\nThe Pharos Stability Index reads 92.2, a 55-day BEDROCK streak indifferent to any of it. The Bank Run Gauge disagrees, sagging from -6.0 to -12.6 and back into CAUTIOUS territory. Five sessions ago RLUSD was where money went; yesterday $15M of mints reversed and walked out the door it arrived through.\n\npmUSD remains the open wound at 3949 basis points below peg, wider again with no resolution. apxUSD, still bleeding from June's STRC drawdown, sits 619 bps under. Yield is the one number cooperating: USDC's best rate eased to 9.52%, USDT to 4.12%. If DEWS ALERTs cross ten next session while liquidity keeps sliding, the gap between 92.2 and the periphery stops being academic.",
+    "generatedAt": 1786954109,
+    "digestType": "daily",
+    "editionNumber": 175
+  },
+  {
+    "date": "2026-08-16",
+    "title": "USDf's Score Outruns Its Cash",
+    "text": "USDf's liquidity score jumped 11 to 58 while $1.9M left its pools; satUSD's fell with its TVL, down 72% to $732K. The grade rewards how depth sits, not how much shows up.",
+    "extended": "USDf's DEX liquidity score climbed eleven points to 58, the kind of move that usually signals money arriving. It didn't: TVL fell from $25.02M to $23.16M over the same window. The score reads depth and concentration, not dollars parked, so a $1.34B stablecoin posts a healthier grade while its pools quietly thin.\n\nsatUSD offers the honest version: its score cratered from 34 to 14 as TVL collapsed 72% to $732K, both metrics agreeing for once, on a $158.7M float. Four of five liquidity movers diverged from their own TVL today, proof the grade rewards how depth is arranged, not how much shows up. PSI holds at 93.1, its 54th straight BEDROCK day, indifferent to small-cap exit doors.\n\npmUSD widened again to 3,880 bps below peg, 106 days underwater and still without a floor. A liquidity score that rises while liquidity leaves is either a tribute to concentration or a coin grading its own homework. Next session's tell: whether USDf's 58 holds as TVL keeps draining, or whether the grade reconverges with the $23M actually parked there.",
+    "generatedAt": 1786867647,
+    "digestType": "daily",
+    "editionNumber": 174
+  },
+  {
+    "date": "2026-08-15",
+    "title": "apxUSD Widens, Fifty-Nine Days In",
+    "text": "apxUSD slid another 206bps to 713 below peg, now $0.928; on a $300M float it edges even pmUSD for the board's largest depeg impact. The STRC drawdown that opened it in June still hasn't closed.",
+    "extended": "apxUSD slid another 206 basis points off peg today, from 507 to 713; it now trades at $0.928. On a $300.97M float, that hands it the single largest depeg impact on the board, edging even pmUSD, which sits far deeper. The cause hasn't changed since June 2: the STRC drawdown that first cracked it to $0.89. Fifty-nine days on, its report card still reads F, backing 39.5.\n\nPSI eased to 92.7 from 94.6, its lowest in three days, though a 53-day BEDROCK streak makes that a rounding error, not a warning. Dollar yields kept compressing: USDT's best APY held at 4.12%, USDC's slipped to 10.16% against 11.42% a month back. pmUSD, 3,501 basis points below peg at $0.650, did nothing new.\n\nDEX depth split by name. ONyc firmed, score 50 to 63 on $12.4M of TVL, while USAT, NUSD, and DUSD each shed exit capacity, NUSD halving to $3.42M. Next trigger: if USDC's best APY falls back to 12.5%, 1.2 times its weekly average, the yield anomaly that has framed this week is finally cooling.",
+    "generatedAt": 1786781250,
+    "digestType": "daily",
+    "editionNumber": 173
+  },
+  {
+    "date": "2026-08-14",
+    "title": "USDC's Reward Wears Thin",
+    "text": "USDC's best yield fell to 9.48% from 13.8% a day earlier, while USDT held 4.12% and lost $350M of float this week; the dollar-yield complex is deflating, not panicking.",
+    "extended": "USDC's best yield printed 9.48% overnight, off a 7-day average of 10.88% and a 30-day mark of 11.45%. The 13.8% it dangled yesterday is 9.48% today; incentives age like milk, not wine. USDT held flat at 4.12% even as $350M drained from its float this week, and USDS eased to 5.95%. The dollar-yield complex is deflating in unison, not panic.\n\nUSDe supplies the day's only sharp move: DEX depth fell 31% in a session, TVL sliding from $85.37M to $58.72M and its liquidity score from 59 to 50, on a $3.96B market cap. The broader tape stayed inert. PSI holds 94.6, its 52nd consecutive BEDROCK day, with depeg severity at a rounding-error 0.04.\n\npmUSD remains 3,477 bps below peg, a 2,503-hour fixture no one expects to twitch. The live question is USDC: if its 9.48% keeps sliding below the 11.45% thirty-day average next session, the incentive unwind is genuine; a rebound toward 13% would stamp today as a one-day flush, not a trend.",
+    "generatedAt": 1786694928,
+    "digestType": "daily",
+    "editionNumber": 172
+  },
+  {
+    "date": "2026-08-13",
+    "title": "XAUT's Overnight Market Cap",
+    "text": "XAUT's +$2.67B weekly supply move equals its entire market cap, and its yield spiked to 5.22% from a 2.14% base while every dollar token cooled. Real bid or reclassification? Tomorrow's yield print decides.",
+    "extended": "XAUT logged the week's largest supply move at +$2.67B, a number that happens to equal its entire $2.67B market cap and reads more like a reclassification than a week of fresh mints. The real tell is the yield: Tether Gold's best APY spiked to 5.22% against a 2.14% thirty-day average, while every dollar token cooled the same day.\n\nDEWS carries the tension that a near-ATH market cap hides: the WATCH band swelled from 77 names to 98 overnight, a 21-coin jump, even as PSI held 93.4 and stretched its BEDROCK streak to 51 days. Nine names sit at ALERT, USDA among them, its peg 390 bps under after widening from 290. pmUSD grinds on at 3,459 bps below, unmoved.\n\nNext session decides whether XAUT's spike was a data blip or a genuine bid: hold near 5.22% and the supply reading earns some credibility; snap back toward 2.14% and it was noise. On the dollar side, USDC's anomaly completes its cooling if best APY slips to 13.8%, about 1.2x its 11.5% weekly average.",
+    "generatedAt": 1786608446,
+    "digestType": "daily",
+    "editionNumber": 171
+  },
+  {
+    "date": "2026-08-12",
+    "title": "Money Returns To RLUSD",
+    "text": "RLUSD's liquidity score jumped 52 to 67 on $28.13M of fresh mints; five days after money walked out, depth walked back in. PSI holds a fiftieth BEDROCK day at 92.6.",
+    "extended": "RLUSD's DEX liquidity score climbed from 52 to 67 in a day, backed by $152.34M in TVL and $28.13M in fresh net mints, the single largest pressure shift on yesterday's tape. Five days ago the story was RLUSD deepening as money walked out the door; the money came back, and it brought depth with it. The Pharos Stability Index reads 92.6, a fiftieth consecutive BEDROCK day, up from 91.1. Not every liquidity print agrees: USDf's score jumped 19 points while its TVL slid from $24.90M to $21.53M, an improvement scored on shrinking pools. DEWS holds ten names at ALERT, none worse than yesterday. pmUSD remains stranded 3496 bps below peg at $0.650. The dollar-yield thaw continued: USDC's best APY settled to 10.06% and USDS to 6.03%, both cooling as forecast. USDT is the lone holdout at 8.29%, nearly double its 4.27% seven-day average. If USDT's best rate slides to 5.1%, the anomaly is done; if RLUSD's 67 holds next session, the inflow reads as structural rather than a one-day blip.",
+    "generatedAt": 1786521998,
+    "digestType": "daily",
+    "editionNumber": 170
+  },
+  {
+    "date": "2026-08-11",
+    "title": "Seven Alerts, One Issuer",
+    "text": "$1.34B of the $1.38B in DEWS ALERT territory is one coin, USDf; the other six are decimal dust. PSI hit a 35-day low as apxUSD widened to 636 bps.",
+    "extended": "DEWS pushed ALUSD into ALERT overnight on cross-source divergence, making seven, and the tape reads like broadening stress. It is not. Of the $1.38B in the ALERT tier, USDf alone carries $1.34B, its score of 40 driven by mint/burn flow, pool drift, and supply velocity. The other six are decimal dust around one issuer. PSI slid to 91.1, its lowest in 35 days, down from 93.7 in one session; the 49-day BEDROCK streak survives, but the slide is real. apxUSD widened to 636 bps below peg at $0.936, the June STRC drawdown still leaking across $304.78M. pmUSD narrowed to 3476 bps yet remains the widest active depeg on the board. The week's yield anomalies are deflating on schedule: USDT's best APY cratered to 0.51%, USDC's eased to 10.96%. Next trigger: if USDf's ALERT score pushes toward WARNING or a second large-cap joins the tier, the concentration hardens into a cluster. Watch whether USDC's APY slips back to 14.9%, 1.2x its 7d average, confirming the cooldown.",
+    "generatedAt": 1786435737,
+    "digestType": "daily",
+    "editionNumber": 169
+  },
+  {
+    "date": "2026-08-10-weekly",
+    "title": "A7A5's Thirteen-Hour Ghost",
+    "text": "A7A5 flashed 819779 bps off peg and healed in 13 hours; PSI never left BEDROCK at 93.7. The real story was redemptions: USDC and USDT bled billions before the gauge hit -45.7.",
+    "extended": "A7A5 supplied the week's only real scream: a reading 819779 basis points off peg on August 8, resolved after 13 hours across $476.82M of market cap. 819779 basis points is not a depeg, it is a decimal point that wandered off and came home 13 hours later. The DEWS trail agrees, flipping A7A5 from CALM to WATCH twice on cross-source divergence and a yield anomaly. PSI treated the whole episode as static, climbing from 93.3 to 93.7 and extending its BEDROCK run while its worst print, 92 on August 7, barely dented anything.\n\nThe thread that actually ran through all seven days was redemption, not the A7A5 headline. USDC opened as the largest mover at -$1.48B on August 4, USDT followed with -$852.93M and -$554.35M on consecutive days, and by August 8 its burn was accelerating at -$334.88M. The Bank Run Gauge answered on August 10, cratering to -45.7 STRESS as USDT redemptions and an Ethereum outflow hit at once.\n\nThe counter-move came from the same names that bled: USDC reversed to +$356.88M on August 10, the week's largest single inflow, while a $233.43M USDC mint landed the same day. Running the other way from the settling, apxUSD escalated from WATCH to ALERT at score 41 on cross-source divergence, the only name to worsen rather than calm.\n\nTotal market cap still finished higher, $315.24B to $316.60B, a +0.43% grind that the +0.49% week-over-week reading confirms as unremarkable. The gauge midpoint improved to -3.9 from the prior week's -7.9, marking the panic as one bad afternoon rather than a slide. Less reassuring: blacklist activity more than doubled to 189 events and $24.52M affected, against 90 and $16.16M a week earlier, almost entirely USDT destroy orders on Tron.\n\npmUSD stayed the standing casualty, still above 5000 bps below peg on a shrinking $38.72M mcap. The week's triggers closed 18 hit, zero missed, three pending. Next week decides whether A7A5's cross-source divergence was a lone feed glitch or a first crack; watch the DEWS score if it climbs back past 17 while USDC outflows resume.",
+    "generatedAt": 1786349409,
+    "digestType": "weekly",
+    "editionNumber": 22
+  },
+  {
+    "date": "2026-08-10",
+    "title": "The Gauge Screams, The Index Yawns",
+    "text": "The Bank Run Gauge cratered to -45.7 STRESS on $1.75B of USDT redemptions and a $1.62B Ethereum outflow, while PSI never blinked from 93.7 and its 48-day BEDROCK run.",
+    "extended": "The Bank Run Gauge sank to -45.7 STRESS from -4.6 a day earlier, after a net $1.75B in USDT redemptions drained Ethereum by $1.62B in twenty-four hours. The gauge has flipped sign four times in seven sessions, swinging from +39.1 last week to today's deepest negative reading. The pressure was concentrated: USDT alone pinned the 30-day flow shift at its -100 floor.\n\nThe Pharos Stability Index registers none of it, holding 93.7 on a 48-day BEDROCK streak with severity at a rounding-error 0.03. The index measures depeg damage; the gauge measures money walking out the door, and today the two disagree completely. Total supply still rose $1.54B on the week to $316.6B, holding 0.65% under its high set 18 days ago.\n\nCorroboration is in the breadth. DEWS pushed seventeen names into WATCH, 90 to 107, and PYUSD shed $36M of DEX depth, score sliding 68 to 59. pmUSD stays the standing casualty at 4272 bps under peg, narrowed from 5061. Next trigger: a second gauge print below -40 turns today's whipsaw into a trend, while USD1's yield spiked to 11.76% against a 1.33% weekly average, the anomaly likeliest to move first.",
+    "generatedAt": 1786349371,
+    "digestType": "daily",
+    "editionNumber": 168
+  },
+  {
+    "date": "2026-08-09",
+    "title": "Dollar Yields Cool, Gold Runs Hot",
+    "text": "USDT's APY fell to 2.62%, roughly half its 30-day average, as gold went the other way: XAUT spiked to 3.44% while KAU liquidity collapsed from $3.93M to $735K. A yield climbing as the exit narrows is a queue, not a bonus.",
+    "extended": "USDT's best yield sank to 2.62%, roughly half its 5.12% thirty-day average, and USDC at 11.11% and USDS at 6.18% softened with it; every dollar-yield anomaly we flagged is deflating on schedule. The metals ran the opposite way. XAUT's APY spiked to 3.44% against a 1.6% baseline, and PAXG holds 13.5%, a reward-heavy print with degraded benchmarks behind it. The spike lands as gold-token exit depth disappears. KAU's DEX liquidity fell from $3.93M to $735K overnight, its score sliding 53 to 45; KAG's pool shrank from $573K to $6,820, a rounding error. A yield that climbs while the exit narrows in the same asset class is not an opportunity, it is a queue forming. PSI reads 93.1, BEDROCK for a 47th straight day, indifferent to a $338M token losing four-fifths of its depth. pmUSD stays critical at 5061 bps below peg, narrowed from 5270; the Bank Run Gauge cooled from 15.2 to a neutral -4.6. USDC's 11.11% sits well under its 15.2% cooling line, so the dollar side is settled. Next session's tell: whether XAUT holds above its 1.6% baseline, or gold-token liquidity keeps draining with KAU first in line.",
+    "generatedAt": 1786262919,
+    "digestType": "daily",
+    "editionNumber": 167
+  },
+  {
+    "date": "2026-08-08",
+    "title": "A7A5's Thirteen-Hour Round Trip",
+    "text": "A7A5 cratered 819,779 bps and clawed back within 172 bps of peg in 13 hours, $476.82M in play; USDT now pays 10.68% as $334.88M walked out the door in a day.",
+    "extended": "A7A5 posted the kind of number that usually breaks a chart: an 819,779 bps deviation at its peak, then a full crawl back to within 172 bps of peg inside 13 hours. At $476.82M in market cap, that is a genuine slice of value that vanished and reappeared the same day. The signal has since cleared. The steadier oddity is yield. USDT's best APY printed 10.68% against a 4.58% seven-day average, even as $334.88M drained in a single day; USDC offered 10.93% and USD1 a theatrical 15.06% versus its 1.62% norm. Each carries an opportunity-evidence-missing flag, the analytics equivalent of a coupon nobody can locate. PSI held at 92.8, a 46th straight BEDROCK day. The chronic wreckage sits unchanged: pmUSD narrowed to 5,270 bps below peg yet remains a $0.473 relic 98 days in, while USDA holds an ALERT at score 38 and satUSD's DEX liquidity score sank to 20 from 34. Next trigger: if USDT's best APY slides back toward 5.5%, roughly 1.2x its seven-day average, the yield spike is cooling rather than flagging stress on the largest float.",
+    "generatedAt": 1786176433,
+    "digestType": "daily",
+    "editionNumber": 166
+  },
+  {
+    "date": "2026-08-07",
+    "title": "RLUSD Deepens As Money Exits",
+    "text": "DEX depth climbed 51 to 66 while $10.58M walked out on-chain; deepening pools and net outflows rarely agree. apxUSD widened to 721 bps and YLDS shed 90% of its TVL.",
+    "extended": "RLUSD's DEX liquidity score jumped from 51 to 66 overnight, its pools thickening by nearly $12M to $158.55M in TVL. The same 24 hours carried $10.58M out of the token on-chain, the day's single worst outflow and a full 100-point swing against its 30-day baseline. Depth deepened while holders walked; on a $1.59B float, that reads as divergence, not recovery.\n\nThe Pharos Stability Index holds at 92, BEDROCK for a 45th straight day and last below that mark only five days ago. The Bank Run Gauge lurched from -43.7 to a healthy 39.1 in one session, and U added $145.47M to lead weekly supply, printing a fresh $1.24B high. The headline is steady; the edges are not.\n\napxUSD widened again to 721 bps off peg, its June STRC drawdown still unhealed on a $299.82M cap, and YLDS shed 90% of its DEX depth, from $7.24M to $688K, in a single day. pmUSD remains the standing casualty at 5,911 bps below par. Seven names now sit in DEWS ALERT or worse, up from four.\n\nIf RLUSD's new depth survives tomorrow's snapshot while money keeps leaving, the score is measuring a mirage rather than a floor. Next trigger: USDC's best APY cooling toward 14.7% would confirm the incentive that carried it to 13.82% is fading, not compounding into the next spike.",
+    "generatedAt": 1786090071,
+    "digestType": "daily",
+    "editionNumber": 165
+  },
+  {
+    "date": "2026-08-06",
+    "title": "Stress Reading, Stale Feed",
+    "text": "The Bank Run Gauge fell to -43.7 STRESS the day its flow feed went stale; PSI still reads 92.9 BEDROCK and $243M left Ethereum net. One signal screams, the reliable ones shrug.",
+    "extended": "The Bank Run Gauge lurched from 3.9 to -43.7 overnight, its deepest STRESS print of a jagged week, and it did so on the exact day its flow feed went stale. Ethereum stablecoins show $243M leaving net over 24 hours, which points the same direction, but a run signal that arrives with its Flight-to-Quality readout blacked out invites a squint before a scream.\n\nThe reliable gauges do not confirm it. The Pharos Stability Index holds 92.9 BEDROCK, a 44-day streak that last cracked three days ago, with severity at 0.05 and breadth at 6.03. Sixteen depegs stay active, but the loud ones are narrowing: apxUSD tightened to 679 bps on its old STRC drawdown, and USDA to 707 bps on day 31.\n\npmUSD remains the resident casualty at 5505 bps below peg, $0.449, barely narrower than yesterday. The safety ladder stretched at both ends: EURC climbed to an A while USDm slid to F. Next trigger: if USDT's best APY drops back toward 4%, roughly 1.2x its 3.37% seven-day average, the dollar squeeze behind this gauge is easing; hold near 9.44% and the outflows are real, stale feed or not.",
+    "generatedAt": 1786003826,
+    "digestType": "daily",
+    "editionNumber": 164
+  },
+  {
+    "date": "2026-08-05",
+    "title": "USDT Starves, USDC Feasts",
+    "text": "USDT's best yield sank to 1.62%, a third of its 30-day average, as $853M left its float; USDC pays 13.99% the same day. One starved, one flush, neither with evidence to show for it.",
+    "extended": "USDT's best on-chain yield sank to 1.62%, a third of its 30-day average of 5.37% and already under the 3.4% mark that would flag the anomaly as cooling. The same week, $853M drained from USDT's float, the largest supply move on the board. A shrinking yield beside a shrinking supply reads as one story, not two.\n\nUSDC runs the other direction, paying 13.99% against a 30-day average of 10.14%, a divergence the feed still cannot source. Two of the three largest dollar tokens now sit at opposite yield extremes, one starved and one flush, neither backed by visible opportunity evidence. PSI holds at 93.4, its forty-third straight day in BEDROCK, indifferent to the split.\n\nYLDS underlines the day's quieter damage, shedding 81% of its DEX depth from $29.05M to $5.41M, while pmUSD widened to 5,666 bps, one of sixteen names still off peg. Next trigger: if USDT's best rate slips under 3.4% tomorrow, the drought is confirmed; if USDC stays above 14.2%, its premium is structure, not noise.",
+    "generatedAt": 1785917202,
+    "digestType": "daily",
+    "editionNumber": 163
+  },
+  {
+    "date": "2026-08-04",
+    "title": "Alerts Double, Feeds Disagree",
+    "text": "DEWS ALERT names jumped four to eight overnight, driven by cross-source divergence, not insolvency; apxUSD's peg healed to 953 bps even as its stress light flipped on.",
+    "extended": "DEWS doubled its ALERT roster overnight, from four names to eight. ALUSD, apxUSD, and AZND all dropped out of WATCH, leaving a band table of 130 CALM, 100 WATCH, and 8 ALERT against yesterday's 144, 92, and 4. The common thread is not insolvency but disagreement: cross-source divergence scored a maximum 100 on nearly every name that moved.\n\napxUSD is the tell. Its peg has been healing since June's STRC drawdown, tightening from 1,184 to 953 basis points below a dollar, yet DEWS flipped it to ALERT anyway on price confidence and that same divergence. A recovering peg tripping a stress light is a reminder that the feeds moved, not the reserves. PSI holds at 93.3, its 42nd straight BEDROCK day, unbothered by the noise.\n\nThe yield tape carries the same ambiguity: USDT flashed 12.1% APY against a 1.48% seven-day average, USDC 12.8%, both tagged opportunity-evidence-missing, a reward nobody can source. pmUSD stayed critical, widening to 5,237 basis points off peg at $0.476. If USDT's best rate falls back near 1.8% next session, the anomaly is cooling; if the ALERT band pushes past eight, the divergence is signal, not static.",
+    "generatedAt": 1785830878,
+    "digestType": "daily",
+    "editionNumber": 162
+  },
+  {
+    "date": "2026-08-03-weekly",
+    "title": "Seven Straight Days Of USDC Outflows",
+    "text": "USDC led every session's outflows, peaking at -$2.16B, yet PSI held BEDROCK at 92.8. Rotation, not a run: mcap slipped just 0.42% while pmUSD's critical shelf stayed put and the gauge bottomed at -28.7.",
+    "extended": "USDC was the week's largest supply mover on all seven days, cresting at minus $2.16B on July 30 and never lighter than minus $818M. Against that, PSI opened at 92.3 and closed at 92.8, holding BEDROCK the full week and dipping only to 91.9 on August 2. The aggregate cap fell 0.42% to $315.06B, so the largest single-name outflow in the book barely registered on the index.\n\nThe drain read like a metronome rather than a spasm: seven consecutive sessions with USDC as the single largest mover, the mildest still minus $818M. That steady exit dwarfed the $1.33B the whole complex shed in cap, the tell that this was rotation, not a run. Alongside it, pmUSD held its critical shelf all week, grinding from 6,384 to 5,135 bps below peg on a $45.74M float, a wound that predates this recap. USDA supplied the only fresh cut, sliding another 476 bps deeper on August 2.\n\nWhile outflows built, enforcement moved the other way: blacklist events fell to 90 from 174, freezing $16.16M against the prior $32.17M. Unique depeg signals thinned from 15 to 11, even as raw observations crept to 109. The countercurrent was the report card: grade transitions jumped to 5 from zero, with EURC cut A to B on $455.14M and fxSAVE whipsawing C+ to F to C+ across August 2 and 3.\n\nCapital drifted rather than fled; market cap slipped 0.82% week over week while USDT idled near $183B. The Bank Run Gauge told the colder story, its midpoint sliding to -6.8 from -1.8 and bottoming at -28.7 on July 29. USDT's advertised yield lurched from 0.44% to 5.94% across the week, every reading tagged evidence-missing. The forward board closed 17 hit and 0 missed, with 4 triggers still pending.\n\nNext week decides whether USDC's seven-session bleed is a redemption cycle or a directional trend, and whether PSI can defend 91.9 for a 42nd BEDROCK day. The next trigger is pmUSD widening back past 6,384 bps, or satUSD's exit, already a 180-to-1 float-to-liquidity gap, closing to nothing.",
+    "generatedAt": 1785744662,
+    "digestType": "weekly",
+    "editionNumber": 21
+  },
+  {
+    "date": "2026-08-03",
+    "title": "satUSD's Exit Halves Overnight",
+    "text": "satUSD's on-chain TVL fell from $2.20M to $878.69K in a day against a $158.34M float, roughly 180 to 1; the F-grade token's escape hatch narrowed while PSI holds a 41st BEDROCK day.",
+    "extended": "satUSD's DEX liquidity score collapsed from 31 to 15 in a day, and the raw figure is worse: on-chain TVL fell from $2.20M to $878.69K against a $158.34M float. That leaves roughly 180 dollars of coin for every dollar of exit depth, on a token already stamped with an F safety grade. Nothing broke; the escape hatch just shrank.\n\nPSI holds at 92.8, its 41st consecutive BEDROCK day, so the index reads calm. The allocation story sits below it: USDC shed $1.41B over seven days to $72.04B, the largest weekly mover and now 10% under its April peak of $79.75B. Total supply eased $2.23B to $315.06B, 1.14% off the Digest-window high.\n\npmUSD narrowed to 5135 bps on day 93, still the deepest hole on the board; USDA widened to 1861 bps. Two of yesterday's yield anomalies, USDC and USDS, already cooled. Next trigger: if USDT's best APY falls to 5.1%, 1.2x its 4.29% weekly average, the yield distortion clears entirely. A second consecutive TVL drop at satUSD would confirm the exit erosion is structural, not noise.",
+    "generatedAt": 1785744469,
+    "digestType": "daily",
+    "editionNumber": 161
+  },
+  {
+    "date": "2026-08-02",
+    "title": "Three Pegs Widen As PSI Holds",
+    "text": "USDA slid another 476 bps to 1,368 below peg, its widest yet, as MSUSD and pmUSD also widened; PSI still read 91.9, its 40th BEDROCK day. An index calling bedrock over 15 active depegs is the whole tension.",
+    "extended": "USDA slid another 476 basis points in 24 hours to 1,368 below peg at $0.863, the widest mark in its 656-hour depeg. It kept bad company: MSUSD stretched to 2,684 bps, and pmUSD, 92 days into its collapse, ground down another notch to 5,325 bps at 46.8 cents. Three names deteriorating in a single session is a signal, not static.\n\nThe Pharos Stability Index shrugged, printing 91.9 and extending its BEDROCK run to 40 days, a level it has not traded below since July 9. That is the divergence: an aggregate calling bedrock while fifteen depegs sit active and a $75M issuer carrying three straight F grades bleeds toward 85 cents. Calm indices have a way of insulating exactly the names that later matter.\n\nDEWS offered thin relief, pulling apxUSD and ALUSD from ALERT back to WATCH, though apxUSD's own peg, cracked by June's STRC drawdown, still sits 1,101 bps light at $0.89. Watch USDA next: another session past 1,400 bps turns a chronic sore into a break. USD1's 11.86% APY, quadruple its 7-day average, is the yield line most likely to snap first.",
+    "generatedAt": 1785658116,
+    "digestType": "daily",
+    "editionNumber": 160
+  },
+  {
+    "date": "2026-08-01",
+    "title": "Yields Split, Exits Narrow",
+    "text": "USD1 pays 5.88%, triple its 7-day average, just as its DEX liquidity halves to $92.42M. USDT's 5.94% runs hot while USDC cools to 9.47%. The yield complex no longer moves together.",
+    "extended": "USDT's best yield printed 5.94%, nearly double its 3.11% seven-day average yet barely above its 5.59% thirty-day line; the anomaly is loud on the short lens and ordinary on the long one. USDC told the opposite story, cooling to 9.47% from the 12.6% that flagged it, and USDS eased to 6.48%. The yield complex has stopped moving in one direction. The spike that carries weight belongs to USD1, where 5.88% APY runs triple its 1.91% seven-day average, arriving as DEX liquidity halved: TVL $175.19M to $92.42M, score 74 to 59. Paying more to hold a token while the exit gets narrower is the least reassuring combination in this business. PSI held at 92.1, BEDROCK for a 39th day, though that is its lowest reading in a week. The Bank Run Gauge climbed to 21.1 and HEALTHY, and pmUSD's 91-day depeg narrowed a hair to 5,243 bps, neither of which reshapes the picture above. Next trigger: if USDT's best APY falls back to 3.7%, about 1.2 times its seven-day average, the anomaly cools; if USD1's liquidity keeps draining while its yield holds, the divergence hardens into a warning.",
+    "generatedAt": 1785571651,
+    "digestType": "daily",
+    "editionNumber": 159
+  },
+  {
+    "date": "2026-07-31",
+    "title": "Nineteen Names Slide To Watch",
+    "text": "115 coins now sit in DEWS WATCH, up from 96, and apxUSD escalated to ALERT while PSI held a 38th day at 92.4 BEDROCK. Index and tail are telling different stories.",
+    "extended": "apxUSD climbed from WATCH to ALERT on cross-source divergence, the sharpest of five DEWS band changes that shoved nineteen more names into WATCH overnight. The CALM cohort thinned from 139 coins to 119; ALERT now holds six. STRC's drawdown still has apxUSD at $0.88, 1,173 basis points below peg on $285M of float, even as the peg itself narrowed from 1,294. The Pharos Stability Index reads 92.4, its 38th straight day in BEDROCK, severity a rounding error at 0.05. Total market cap tells a softer story: $315.55B, down $1.61B on the week and 0.98% under the ATH set eight days ago. Breadth is where tension lives, 115 coins in WATCH against 96 yesterday. An index built on the biggest issuers can stay green while the long tail frays. DAI shed two-thirds of its DEX depth, $588M to $203M, while USD1 more than doubled to $175M; exit capacity is rotating between venues, not vanishing. pmUSD sits at 5,325 basis points on day 90, a $0.47 coin no one climbs out of. Next trigger: another night of CALM names sliding into WATCH turns one shuffle into a trend, and USDS reclaiming 7.8% APY would finally clear its yield flag.",
+    "generatedAt": 1785485312,
+    "digestType": "daily",
+    "editionNumber": 158
+  },
+  {
+    "date": "2026-07-30",
+    "title": "The Doors Get Narrower",
+    "text": "USDY's liquidity score slid 44 to 34 and DUSD shed 91% of its pool to $1.05M, while USD1's yield spiked to 10.89% from a negative weekly average. Exit capacity is thinning faster than anything is breaking.",
+    "extended": "USDY's DEX liquidity score dropped from 44 to 34 on a $2.14B market cap, even as its pool TVL barely moved, $18.09M to $17.36M. The erosion is not isolated: FDUSD slid 47 to 38, and DUSD lost 91% of its pool, $11.37M down to $1.05M, dragging its score from 54 to 31.\n\nThe Pharos Stability Index holds at 92.4, a 37th straight BEDROCK day, yet total supply has bled $2.76B over the week and sits 0.94% under its window high. The Bank Run Gauge clawed back to -23.6 from -28.7, still firmly CAUTIOUS, with USDC leading outflows at -$2.16B. pmUSD widened again to 6,384 bps on its 89th day below peg.\n\nYield tells the split: USD1 spiked to 10.89% APY from a negative 1.13% weekly average with no visible source, a coupon that size on a C-graded $4.04B peg advertising risk more than return. USDC pays 12.6%, USDT cooled to 4.3%. If USD1's rate falls back toward negative 1.4% next session, the spike was noise; if DUSD's pool holds near $1.05M, thinning depth, not yield, is the week's real signal.",
+    "generatedAt": 1785398863,
+    "digestType": "daily",
+    "editionNumber": 157
+  },
+  {
+    "date": "2026-07-29",
+    "title": "Scores Climb, The Gauge Cracks",
+    "text": "syrupUSDC's depth score jumped 12 points to 60 on $300K of fresh TVL, while the Bank Run Gauge cracked to -28.7 and Ethereum shed $202.83M net. PSI still reads 92.3, unbothered.",
+    "extended": "syrupUSDC's DEX liquidity score climbed 12 points to 60, yet its TVL barely moved, from $36.32M to $36.62M. The depth rating improved; the dollars behind it did not. sDAI made the cleaner case, nearly doubling TVL to $15.80M for an 11-point lift to 70. Two liquidity upgrades, only one paid for in cash.\n\nThe stress sits elsewhere. The Bank Run Gauge cracked from -0.8 to -28.7 into CAUTIOUS in a single session, with Ethereum posting $202.83M of net outflows and AUSD, M, and OUSG each printing a maximum -100 pressure shift. USDC bled $989M on the week, leaving its supply 9% below April's high.\n\nNone of this dents the headline: PSI holds 92.3, its 36th straight BEDROCK day, and pmUSD's slide to 6029 bps on day 88 no longer qualifies as news. The tell will be yield. USDC's best rate sits at 12.83%; if it slips back toward 12.5%, roughly 1.2x its 7-day average, the incentive propping that depth up is cooling.",
+    "generatedAt": 1785312544,
+    "digestType": "daily",
+    "editionNumber": 156
+  },
+  {
+    "date": "2026-07-28",
+    "title": "USDC Pays More To Keep Less",
+    "text": "USDC advertises 11.29% APY, above its 8.71% norm, the same week $818M walked out. USDT stays flat at 4.36%. A yield rising as deposits leave is not marketing; it is a symptom.",
+    "extended": "USDC advertises 11.29% APY, well above its 8.71% thirty-day norm, in the same week $818M walked out, its largest weekly outflow and enough to leave it 9% under April's ATH. USDT, by contrast, pays a placid 4.36%, flat against its own averages. A yield rising as deposits leave, tagged 'opportunity-evidence-missing,' is not marketing; it is a symptom.\n\nThe Pharos Stability Index holds at 92.3, still BEDROCK but its lowest in three days, the 35-day streak intact while total supply sits at $316.39B, 0.72% below its window high. pmUSD remains the open wound at 5,725 bps below peg on day 87, and apxUSD widened again to 1,378 bps, its June STRC drawdown still unhealed.\n\n**Exit capacity** syrupUSDT shed a third of its liquidity score overnight, 36 to 27 on $400M in float, and A7A5 crossed into ALERT at $502M on supply velocity, holding the DEWS ALERT count at eight. If USDC's headline yield cannot stay above its 8.71% baseline next session, the divergence resolves as a data artifact; if it holds while outflows persist, the symptom is real.",
+    "generatedAt": 1785226093,
+    "digestType": "daily",
+    "editionNumber": 155
+  },
+  {
+    "date": "2026-07-27",
+    "title": "PMUSD Finds No Floor",
+    "text": "PMUSD dropped 1,822 bps in a day to $0.44, now 5,602 below peg on day 86; a precious-metals token clearing 44 cents while a $317.66B market barely notices.",
+    "extended": "PMUSD lost another 1,822 basis points in a day, sinking to $0.44 and 5,602 below its peg on day 86 of a slide that never found a floor. A stablecoin named for the permanence of precious metals now clears at 44 cents. DEWS holds it at ALERT 37, with cross-source divergence pinned at 100.\n\nNone of this troubles the index. PSI reads 93.4, its 34th straight day in BEDROCK, because PMUSD's $37.8M market cap is a rounding error against $317.66B in aggregate supply, itself only 0.32% below its Digest-window high. The one bright note came from apxUSD, whose STRC-driven gap narrowed from 1,401 to 1,277 bps.\n\nYields kept deflating on schedule: USDC's best rate cooled to 11.64% from 14.9%, USDS to 6.48% from 8.1%, both still above their 30-day means. YLDS told a harsher story, its DEX pool shedding 89% of TVL to $4.29M overnight. If USDC's best APY falls to 12.8%, 1.2x its seven-day average, the anomaly formally cools by next session.",
+    "generatedAt": 1785139597,
+    "digestType": "daily",
+    "editionNumber": 154
+  },
+  {
+    "date": "2026-07-26",
+    "title": "PMUSD Slides Past 3,700 BPS",
+    "text": "574 bps deeper in a day: PMUSD trades at $0.622, 3,780 below a peg it last held 85 days ago, while PSI's 33-day BEDROCK streak barely notices $58M of failing collateral.",
+    "extended": "PMUSD slid another 574 basis points to $0.622, now 3,780 bps below a peg it last held cleanly 85 days ago. A precious-metals stablecoin trading at 62 cents is the kind of contradiction the reserve was built to prevent. DEWS keeps it in ALERT at score 38, cross-source divergence pinned at 100 and pool balance drift at 72; the 5,568 bps peak is history, the direction is not.\n\nPSI reads 93.1, its 33rd consecutive BEDROCK day, which means the index barely notices $58M of collateral coming apart. Fourteen depegs stay active. apxUSD widened to 1,401 bps on the same STRC drawdown that opened its wound in June, and USDA drifted to 400 bps off. None of them threatens the $318B aggregate; each hollows a different corner of it.\n\nXAUT shed $378M this week, its steepest one-week drawdown since a $373M move 178 days ago, pulling gold-backed supply to $2.48B. USDC's advertised 7.91% APY now sits under its 12.44% seven-day average, the yield anomaly draining as flagged. Next tell is whether PMUSD stalls above $0.60 or the reserve keeps failing to defend it.",
+    "generatedAt": 1785053208,
+    "digestType": "daily",
+    "editionNumber": 153
+  },
+  {
+    "date": "2026-07-25",
+    "title": "Stress Picks Its Names",
+    "text": "DEWS doubled its WARNING tier to two and drained WATCH from 99 to 91 names; apxUSD tripped ALERT while UTY holds 57 on $21M. PSI slipped to 92.1, its lowest in 16 days.",
+    "extended": "DEWS pushed two more names into ALERT and doubled its WARNING tier to two, while the WATCH band drained from 99 to 91; the middle is emptying toward both extremes. apxUSD crossed from WATCH into ALERT as cross-source divergence hit 100, and UTY holds WARNING at 57 on price confidence of 100 and liquidity erosion of 94, across barely $21M in cap. PSI slipped to 92.1, its lowest since July 9 and the first crack in a run of comfortable readings, though the 32-day BEDROCK streak survives intact. The stress is selective, not systemic. XAUT carries the allocation story: it shed $376M over the week to $2.48B, a hair under its largest weekly drawdown on record. apxUSD's peg quietly improved, narrowing from 1536 to 1336 bps below par as the STRC drawdown fades, even as its data feeds diverged enough to trip ALERT. pmUSD went the other way, widening to 3206 bps below peg on day 84 underwater, critical and unchanged in every way that counts. Next session sets the direction: a third name tipping into WARNING confirms breadth spreading rather than churning. On the majors, USDT's 6.61% APY still runs hot against a 5.96% seven-day average; if it eases toward 7.2%, the yield warning that has shadowed the tape all week finally cools.",
+    "generatedAt": 1784966880,
+    "digestType": "daily",
+    "editionNumber": 152
+  },
+  {
+    "date": "2026-07-24",
+    "title": "sUSDe Sheds Depth, Not Dollars",
+    "text": "sUSDe's DEX liquidity score fell nine points to 52 while $60.44M of TVL held; a $1.54B pool repricing its depth before anyone exits is the tension tape in one line.",
+    "extended": "sUSDe's DEX liquidity score dropped nine points to 52, the steepest fall on the board, while its TVL barely moved, holding at $60.44M against a $1.54B market cap. A score that erodes without capital leaving is a confidence signal, not a capacity one, and depth tends to get repriced before money actually walks.\n\n**Split Board** The rest of the table leaned the other way. YLDS climbed from 53 to 61 as its TVL leapt from $8.40M to $57.23M, genuine capacity arriving; sUSDai reached 78, syrupUSDC 53. DEWS still counts 11 names at ALERT or worse, and BNUSD skipped WATCH entirely, going CALM to ALERT on cross-source divergence.\n\nPSI eased to 93.8, its lowest in three days but 31 days into BEDROCK. The week's yield outliers are cooling, with USDC and USDS at their cool-down marks; apxUSD widened to 1536 bps on the unresolved STRC drawdown, and pmUSD holds critical at 3118 bps. If sUSDe's TVL chases its score down next session, the divergence becomes an exit; USDT toward 6.5% APY cools the last one.",
+    "generatedAt": 1784880522,
+    "digestType": "daily",
+    "editionNumber": 151
+  },
+  {
+    "date": "2026-07-23",
+    "title": "Circle Carries A Flat Market",
+    "text": "USDC minted $1.06B in a day and $1.08B on the week while total stablecoin cap rose just $935M. Subtract Circle and the rest of the market shrank. DEWS breadth is climbing too: 18 names left CALM and a WARNING slot filled.",
+    "extended": "USDC added $1.06B in a single day and $1.08B across the week, accelerating while every other major sat still. That would read as routine balance-sheet growth except for the arithmetic around it: total stablecoin cap rose only $935M to a fresh Digest-window high of $318.69B. Subtract Circle's mint and the rest of the market spent the week shrinking.\n\n**Stress Broadens** Eighteen names left DEWS's CALM band overnight; WATCH swelled to 103, ALERT to 8, and a WARNING slot filled that stood empty yesterday. EURm crossed WATCH to ALERT on cross-source divergence, and HBD tops the elevated set at score 55. Much of it reads as data disagreement rather than peg failure, but the count is drifting the wrong way.\n\nPSI holds at 95.2, a thirtieth straight BEDROCK day, indifferent to both the concentration and the creeping breadth. PMUSD stays the lone critical name at 3455 bps below peg, unchanged. Next trigger: if USDT's best APY slips toward 6%, 1.2x its 4.99% weekly average, the yield anomaly cools; the sharper tell is whether USDC's daily mint holds above $1B or the aggregate follows one issuer down.",
+    "generatedAt": 1784794206,
+    "digestType": "daily",
+    "editionNumber": 150
+  },
+  {
+    "date": "2026-07-22",
+    "title": "USDC Prints A Yield It Can't Source",
+    "text": "13.38% APY on $73.28B, well past an 8% base, and the source that pays it never shows. USDT cooled to 5.59%, USD1 sank to 0.96%; the yield tape reads noisy, not rich.",
+    "extended": "USDC is advertising 13.38% APY, well past its 11.92% weekly average and its 8.02% thirty-day base, on $73.28B of market cap. The catch: the dashboard flags opportunity-evidence-missing, meaning the number prints but the source that pays it never shows. A yield that large with no visible engine is a fleeting incentive or a data ghost. Contrast the majors. USDT, at $184.07B the largest issuer alive, cooled to 5.59%, below its own 5.95% thirty-day average, its yield trigger expiring after three quiet editions. USDS slipped to 6.75%, confirming the cooling that fired yesterday. USD1 ran the opposite way, 0.96% against a 3.6% weekly average, undercutting any claim these prints reflect real demand. PSI held at 94.9, a 29-day BEDROCK streak, and its largest severity contributor is EURS at 2177 bps above peg: $1.218 on a coin built to track the euro, not the dollar it gets measured against. The calm index leans on a currency mismatch. pmUSD widened to 3460 bps below peg, $0.654, still the worst active name. Next session decides whether USDC's 13.38% holds above its 11.92% weekly average with the source still dark; an unsourced yield is one that gets revised, not paid. If pmUSD clears 4000 bps off peg, read it as escalation, not the same chronic wound.",
+    "generatedAt": 1784707649,
+    "digestType": "daily",
+    "editionNumber": 149
+  },
+  {
+    "date": "2026-07-21",
+    "title": "USDTB Winds Down Quietly",
+    "text": "USDTB has bled $373M in a week down to $402M, roughly a fifth of its September peak, yet DEWS still pins it in ALERT at 39. Market cap sits a hair below its record; the stress has moved to the margins.",
+    "extended": "USDTB has shed $373M in seven days, leaving $402.52M on the books, roughly a fifth of the $1.83B it carried last September. DEWS keeps it pinned in ALERT at 39, flagging a yield anomaly at 100, supply velocity at 87, and mint/burn pressure at 64. This is a wind-down, not a run. PSI holds at 93.4, its 28th consecutive BEDROCK day, and total market cap sits a rounding error below its record at $317.76B. The stress lives in the margins: DEWS WATCH names swelled from 82 to 93 and logged the set's first WARNING band, while A7A5, AxCNH, BRLA, and BRZ all slid CALM to WATCH on cross-source divergence. PMUSD remains 2965 bps below peg, unchanged since the last edition. Yield stays loud elsewhere: USDC's best APY holds at 12.48% against an 11.7% seven-day average, while USDT's 5.71% has drifted back toward its 5.09% mean. Watch USDC next session; a slide under 14% marks the anomaly cooling, and another week of USDTB outflow turns its ALERT into an epitaph.",
+    "generatedAt": 1784621264,
+    "digestType": "daily",
+    "editionNumber": 148
+  },
+  {
+    "date": "2026-07-20-weekly",
+    "title": "BUIDL Blinks, USDS Drains Daily",
+    "text": "BUIDL flipped CALM to WATCH on supply velocity while USDS shed over $900M a day for five sessions. PSI held BEDROCK at 94.6 before closing at an eight-day low. A scheduled redemption, not a run.",
+    "extended": "BUIDL, the $2.88B tokenized-treasury fund, posted the loudest new signal of the week: a CALM-to-WATCH flip on supply velocity, severity 2902.8, the top of an otherwise sedate leaderboard. It did not commit to the move, flipping WATCH back to CALM at score 7 before slipping out again at score 19, a fund that cannot decide whether it is nervous. PSI spent all seven days in BEDROCK, midpoint 94.6 and up 2.5 points on the prior week, before closing at a 92.5 eight-day low on July 20.\n\nThe thread that actually ran the week was USDS. It was the single largest weekly mover on five of seven days, shedding between $897.40M and $924.74M each session, a drain flagged as accelerating and never once reversed. A drain of roughly $900M a day is not a run; it is a standing redemption order, executed on schedule. Total market cap fell 4.79% to $317.91B, most of it gone in one step around July 16.\n\nThe counter-move was broad de-escalation: USDT added $1.20B on July 15, grade transitions fell to 10 from 29, and blacklist dollars collapsed to $13.48M from $67.36M the prior week. Liquidity reshuffled rather than fled: USD0 gained 16 points and YLDS 14 while USDD shed 8, depth changing hands across mid-caps. A7A5 churned its own CALM-WATCH boundary on cross-source divergence, noise rather than outflow.\n\nStanding conditions held their posts: apxUSD stuck at 3159 bps on a shrinking $297M, pmUSD at 5568 bps, and USX pinned near $0.39 well past its 600th hour, chronic depegs the aggregate has priced in. The Bank Run Gauge widened from -11.9 to 29, midpoint up to 11.4 from 6.7, and USDT again flashed a 7.73% best yield with no evidence behind it.\n\nThe forward-look board closed 4 hit, 5 missed, 7 pending; the misses outnumbered the hits, and the syrupUSDT names that shed 26% of TVL were not the ones we flagged. Next week decides whether USDS's daily $900M redemption finds a floor or whether BUIDL's WATCH hardens into the ALERT the $528M DEWS ceiling already touched.",
+    "generatedAt": 1784535057,
+    "digestType": "weekly",
+    "editionNumber": 20
+  },
+  {
+    "date": "2026-07-20",
+    "title": "Eleven Names Leave Calm",
+    "text": "Four DEX pools thinned on the same tape while eleven names left DEWS's CALM band; syrupUSDT shed 26% of its TVL and PSI dipped to an eight-day low. Broadening, not breaking. Yet.",
+    "extended": "Eleven stablecoins dropped out of DEWS's CALM band in a day, the roster thinning from 153 to 142 as WATCH swelled to 92. Five names changed bands: ALUSD slid from WATCH to ALERT on cross-source divergence pinned at 100, AID and AUDF entered WATCH, while AZND and BRLA eased the other way. The stress is widening, not deepening.\n\nFour DEX pools thinned on the same tape. syrupUSDT's liquidity score collapsed from 39 to 22 as its TVL shed 26%, from $7.20M to $5.30M against a $400M float. USD0 fell 56 to 46, sUSDai 77 to 66, USAT 42 to 31. None cratered, but four exits narrowing at once is the texture of a market bracing.\n\nPSI eased to 92.5, its lowest reading in eight days though still parked in BEDROCK for a 27th straight session; total stablecoin cap sits $1.79B lighter on the week, a hair below the recent high. pmUSD stays broken at $0.703, 2,971 bps under peg in its 1,903rd hour, unchanged and unfixed.\n\nNext session sets the tone. If syrupUSDT's score keeps sliding under 20, its $400M float loses a working exit; if USDT's headline 7.73% APY cools toward 6.1%, that anomaly deflates without a story. Another eleven names leaving CALM would push DEWS toward its first WARNING entries; that band sits empty for now.",
+    "generatedAt": 1784534914,
+    "digestType": "daily",
+    "editionNumber": 147
+  },
+  {
+    "date": "2026-07-19",
+    "title": "Exit Capacity Changes Hands",
+    "text": "satUSD's liquidity score doubled to 33 on tripled TVL while crvUSD lost ten points; depth is reshuffling across mid-caps, not building, as PSI logs a 26th BEDROCK day.",
+    "extended": "satUSD's DEX liquidity score jumped from 17 to 33 as pool TVL tripled from $914K to $2.88M, the day's cleanest gain in exit capacity. The move cut against the grain: crvUSD shed ten points to 72 even as its TVL edged up to $366M, and sUSDD slipped to 20. Depth is being reshuffled across the mid-caps, not built.\n\nThe Pharos Stability Index holds at 95.4, its 26th straight BEDROCK day, with total supply at $318.00B, fractionally below its window high. DEWS still logged five band changes: AZND climbed to WARNING at score 57, ALUSD entered ALERT on cross-source divergence. apxUSD, bleeding since June's STRC drawdown, widened to 1,590 bps off peg; pmUSD remains parked at 2,965 bps.\n\nUSDS carries the week's real allocation story: down $913.54M over seven days to $6.70B, 25% under its April high, though it clawed back $9.25M yesterday, a reversal rather than a rescue. The majors' yield keeps deflating, with USDT's best APY cooled to 4.2%. If it slides back to 4.9%, roughly 1.2x its seven-day average, call the anomaly officially spent.",
+    "generatedAt": 1784448398,
+    "digestType": "daily",
+    "editionNumber": 146
+  },
+  {
+    "date": "2026-07-18",
+    "title": "The Majors Split On Yield",
+    "text": "USDT's best yield jumped to 7.73% with no opportunity behind it; USDC slid to 5.42%, below trend. The two biggest issuers, $184B and $73B, pointing opposite ways while PSI holds BEDROCK at 94.8.",
+    "extended": "USDT's best yield printed 7.73% APY against a 6.15% seven-day average, a spike with no documented opportunity behind it, just a number wearing a percentage sign. USDC ran the other direction, 5.42% versus its 7.66% average; USD1 collapsed to 1.05% from a 5.72% thirty-day mark. The two largest issuers, $184B and $73B, diverging on yield alone. PSI holds at 94.8, BEDROCK for a twenty-fifth straight day, easing from 95 and last below this line three days ago. The Bank Run Gauge sits at 28.9, its most positive read of the week after starting at negative 6.3 seven days back; mint flows favor stability, not the exit. pmUSD remains the standing crisis at 2950 bps below peg, though narrowed from 5568. Liquidity told a split story of its own: LISUSD shed 68% of its DEX depth, $17.32M down to $5.50M, while ONYC's score fell from 69 to 53. DEWS pushed BtcUSD from WATCH to ALERT even as BUIDL cooled to CALM. Next trigger: if USDT's best APY falls back toward 7.4%, roughly 1.2x its seven-day average, the anomaly is cooling rather than building.",
+    "generatedAt": 1784375494,
+    "digestType": "daily",
+    "editionNumber": 145
   },
   {
     "date": "2026-07-17",

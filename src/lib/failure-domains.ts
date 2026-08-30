@@ -1,5 +1,6 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import { titleCaseSlug } from "@/lib/title-case-slug";
 
 /**
  * Shared failure domains behind an asset's deployments, read from the V9
@@ -37,13 +38,6 @@ const PROTOCOL_LABELS: Record<string, string> = {
   wormhole: "Wormhole",
 };
 
-function titleCase(slug: string): string {
-  return slug
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 /**
  * Keys arrive as `chain:<id>`, `bridge-route:protocol:<slug>`, or a compound
  * `+`-joined contract key that often embeds the protocol it routes through.
@@ -53,23 +47,23 @@ function titleCase(slug: string): string {
 export function describeFailureDomain(key: string): { label: string; kind: FailureDomainKind } {
   if (key.startsWith("chain:")) {
     const chainId = key.slice("chain:".length);
-    return { label: CHAIN_META[chainId]?.name ?? titleCase(chainId), kind: "chain" };
+    return { label: CHAIN_META[chainId]?.name ?? titleCaseSlug(chainId), kind: "chain" };
   }
 
   const protocolPart = key.split("+").find((part) => part.startsWith("bridge-route:protocol:"));
   if (protocolPart) {
     const slug = protocolPart.slice("bridge-route:protocol:".length);
-    return { label: PROTOCOL_LABELS[slug] ?? titleCase(slug), kind: "bridge" };
+    return { label: PROTOCOL_LABELS[slug] ?? titleCaseSlug(slug), kind: "bridge" };
   }
 
   if (key.startsWith("bridge-route:")) {
     // `bridge-route:contract:<chain>:<address>` and its authority/program kin.
     const chainId = key.split("+")[0]?.split(":")[2] ?? "";
-    const chainName = CHAIN_META[chainId]?.name ?? (chainId ? titleCase(chainId) : "");
+    const chainName = CHAIN_META[chainId]?.name ?? (chainId ? titleCaseSlug(chainId) : "");
     return { label: chainName ? `Bridge contract on ${chainName}` : "Bridge contract", kind: "bridge" };
   }
 
-  return { label: titleCase(key.replace(/:/g, " ")), kind: "other" };
+  return { label: titleCaseSlug(key.replace(/:/g, " ")), kind: "other" };
 }
 
 export function buildFailureDomainsView(

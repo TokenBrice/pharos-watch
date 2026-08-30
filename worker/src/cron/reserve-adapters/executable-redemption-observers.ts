@@ -11,8 +11,6 @@ import {
   fetchEvmStorageAtBlock,
 } from "../../lib/evm-rpc";
 import {
-  decodeFunctionResult,
-  encodeFunctionData,
   keccak256,
   parseAbi,
 } from "viem/utils";
@@ -20,11 +18,15 @@ import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
 import {
-  EIP1967_IMPLEMENTATION_SLOT,
-  implementationAddressFromSlot,
-  multicallResultByLabel,
-} from "./onchain-identity";
-import { throwIfAborted } from "../../lib/abort";
+  abiObservation,
+  codeIdentityChecks,
+  executeEvmObservationPlan,
+} from "./evm-observation-plan";
+import type {
+  AnyEvmObservationField,
+  EvmCodeIdentity,
+  EvmObservationSnapshot,
+} from "./evm-observation-plan";
 
 type Hex = `0x${string}`;
 
@@ -80,14 +82,14 @@ const STATIC_ATOKEN_ABI = parseAbi([
   "function aToken() view returns (address)",
 ]);
 
-interface ProxyIdentity {
+interface ProxyIdentity extends EvmCodeIdentity {
   address: Hex;
   codeHash: Hex;
   implementationAddress: Hex;
   implementationCodeHash: Hex;
 }
 
-interface DirectIdentity {
+interface DirectIdentity extends EvmCodeIdentity {
   address: Hex;
   codeHash: Hex;
 }
@@ -241,24 +243,6 @@ function fail(coinId: string, reason: string): never {
   throw new Error(`${coinId} executable redemption observer failed closed: ${reason}`);
 }
 
-function resultData(
-  coinId: string,
-  results: readonly EvmMulticall3Result[],
-  label: string,
-): Hex {
-  const data = multicallResultByLabel(results, label);
-  if (!data) {
-    fail(coinId, `${label} unavailable`);
-  }
-  return data;
-}
-
-function normalizedAddress(coinId: string, value: unknown, label: string): string {
-  const normalized = normalizeEvmAddress(typeof value === "string" ? value : undefined);
-  if (!normalized) fail(coinId, `${label} returned an invalid address`);
-  return normalized;
-}
-
 function sameAddressSet(actual: readonly string[], expected: readonly string[]): boolean {
   if (actual.length !== expected.length) return false;
   const normalizedActual = actual
@@ -279,161 +263,161 @@ function fixedPointFeeBpsCeil(rawFee: bigint, scale: bigint, coinId: string): nu
   return Number(bps);
 }
 
-async function verifyDirectIdentity(
-  coinId: string,
-  identity: DirectIdentity,
-  blockNumber: number,
-  rpcOptions: EvmRpcOptions,
-  client: ExecutableRedemptionReadClient,
-  ctx: AdapterContext | undefined,
-  signal: AbortSignal,
-): Promise<void> {
-  const codeHash = await runAdapterIo(
-    ctx,
-    `${coinId}-redemption-code-${identity.address}`,
-    () => client.codeHash(identity.address, blockNumber, rpcOptions),
-    { signal },
-  );
-  if (codeHash?.toLowerCase() !== identity.codeHash) {
-    fail(coinId, `code identity drift at ${identity.address}`);
-  }
+function verifyExpectedAddress(coinId: string, label: string, expected: string) {
+  return (value: string): null => {
+    const normalized = normalizeEvmAddress(value);
+    if (!normalized) fail(coinId, `${label} returned an invalid address`);
+    if (normalized !== expected) fail(coinId, "live route dependency identity drift");
+    return null;
+  };
 }
 
-async function verifyProxyIdentity(
+async function readStateWithPlan<Fields extends readonly AnyEvmObservationField[]>(
   coinId: string,
-  identity: ProxyIdentity,
+  stateLabel: string,
+  fields: Fields,
+  identities: readonly EvmCodeIdentity[],
   blockNumber: number,
   rpcOptions: EvmRpcOptions,
   client: ExecutableRedemptionReadClient,
   ctx: AdapterContext | undefined,
   signal: AbortSignal,
-): Promise<void> {
-  await verifyDirectIdentity(coinId, identity, blockNumber, rpcOptions, client, ctx, signal);
-  const implementationWord = await runAdapterIo(
-    ctx,
-    `${coinId}-redemption-implementation-${identity.address}`,
-    () =>
-      client.storage(
-        identity.address,
-        EIP1967_IMPLEMENTATION_SLOT,
-        blockNumber,
-        rpcOptions,
-      ),
-    { signal },
-  );
-  if (implementationAddressFromSlot(implementationWord) !== identity.implementationAddress) {
-    fail(coinId, `implementation identity drift at ${identity.address}`);
-  }
-  await verifyDirectIdentity(
-    coinId,
-    {
-      address: identity.implementationAddress,
-      codeHash: identity.implementationCodeHash,
-    },
+): Promise<EvmObservationSnapshot<Fields>> {
+  const identityResult = await codeIdentityChecks(client, identities, {
     blockNumber,
     rpcOptions,
-    client,
-    ctx,
-    signal,
-  );
+    readCode: (readClient, address, readBlock, readOptions) =>
+      readClient.codeHash(address, readBlock, readOptions),
+    readStorage: (readClient, address, position, readBlock, readOptions) =>
+      readClient.storage(address, position, readBlock, readOptions),
+    run: (label, factory) => runAdapterIo(ctx, label, factory, { signal }),
+    codeLabel: (identity, kind) =>
+      `${coinId}-redemption-code-${kind === "implementation" ? identity.implementationAddress : identity.address}`,
+    storageLabel: (identity) => `${coinId}-redemption-implementation-${identity.address}`,
+  });
+  if (identityResult.status === "rejected") {
+    fail(
+      coinId,
+      identityResult.kind === "storage"
+        ? `implementation identity drift at ${identityResult.address}`
+        : `code identity drift at ${identityResult.address}`,
+    );
+  }
+
+  return executeEvmObservationPlan({
+    adapterKey: coinId,
+    fields,
+    onFailure: (label) => fail(coinId, `${label} unavailable`),
+    onDecodeError: (error) => {
+      throw error;
+    },
+    read: (calls) => runAdapterIo(
+      ctx,
+      stateLabel,
+      async () => {
+        const results = await client.multicall(
+          calls.map(({ label, contract, data, allowFailure }) => ({
+            label,
+            target: contract,
+            callData: data,
+            ...(allowFailure != null ? { allowFailure } : {}),
+          })),
+          blockNumber,
+          rpcOptions,
+        );
+        if (!results) fail(coinId, "route state unavailable");
+        return results;
+      },
+      { signal },
+    ),
+  });
 }
 
-function earnCalls(): EvmMulticall3Call[] {
+function earnFields() {
   return [
-    {
+    abiObservation({
       label: "earn-asset",
-      target: EARN.vault.address,
-      callData: encodeFunctionData({ abi: ERC4626_ABI, functionName: "asset" }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.vault.address,
+      abi: ERC4626_ABI,
+      functionName: "asset",
+      verify: verifyExpectedAddress(EARN.coinId, "asset", EARN.assetAddress),
+    }),
+    abiObservation({
       label: "earn-total-assets",
-      target: EARN.vault.address,
-      callData: encodeFunctionData({ abi: ERC4626_ABI, functionName: "totalAssets" }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.vault.address,
+      abi: ERC4626_ABI,
+      functionName: "totalAssets",
+    }),
+    abiObservation({
       label: "earn-validator",
-      target: EARN.vault.address,
-      callData: encodeFunctionData({ abi: EARN_VAULT_ABI, functionName: "vaultValidator" }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.vault.address,
+      abi: EARN_VAULT_ABI,
+      functionName: "vaultValidator",
+      verify: verifyExpectedAddress(EARN.coinId, "vaultValidator", EARN.validator.address),
+    }),
+    abiObservation({
       label: "earn-protocol-config",
-      target: EARN.vault.address,
-      callData: encodeFunctionData({ abi: EARN_VAULT_ABI, functionName: "protocolConfig" }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.vault.address,
+      abi: EARN_VAULT_ABI,
+      functionName: "protocolConfig",
+      verify: verifyExpectedAddress(
+        EARN.coinId,
+        "protocolConfig",
+        EARN.protocolConfig.address,
+      ),
+    }),
+    abiObservation({
       label: "earn-pause-status",
-      target: EARN.vault.address,
-      callData: encodeFunctionData({ abi: EARN_VAULT_ABI, functionName: "pauseStatus" }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.vault.address,
+      abi: EARN_VAULT_ABI,
+      functionName: "pauseStatus",
+    }),
+    abiObservation({
       label: "earn-pending-withdrawals",
-      target: EARN.vault.address,
-      callData: encodeFunctionData({
-        abi: EARN_VAULT_ABI,
-        functionName: "getPendingWithdrawalsLength",
-      }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.vault.address,
+      abi: EARN_VAULT_ABI,
+      functionName: "getPendingWithdrawalsLength",
+    }),
+    abiObservation({
       label: "earn-min-withdrawable-shares",
-      target: EARN.vault.address,
-      callData: encodeFunctionData({
-        abi: EARN_VAULT_ABI,
-        functionName: "minWithdrawableShares",
-      }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.vault.address,
+      abi: EARN_VAULT_ABI,
+      functionName: "minWithdrawableShares",
+    }),
+    abiObservation({
       label: "earn-withdrawal-fee",
-      target: EARN.validator.address,
-      callData: encodeFunctionData({
-        abi: EARN_VALIDATOR_ABI,
-        functionName: "withdrawalFee",
-        args: [EARN.vault.address],
-      }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.validator.address,
+      abi: EARN_VALIDATOR_ABI,
+      functionName: "withdrawalFee",
+      args: [EARN.vault.address],
+    }),
+    abiObservation({
       label: "earn-deposit-allow-list-count",
-      target: EARN.validator.address,
-      callData: encodeFunctionData({
-        abi: EARN_VALIDATOR_ABI,
-        functionName: "depositAllowListCount",
-        args: [EARN.vault.address],
-      }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.validator.address,
+      abi: EARN_VALIDATOR_ABI,
+      functionName: "depositAllowListCount",
+      args: [EARN.vault.address],
+    }),
+    abiObservation({
       label: "earn-protocol-paused",
-      target: EARN.protocolConfig.address,
-      callData: encodeFunctionData({
-        abi: EARN_PROTOCOL_CONFIG_ABI,
-        functionName: "getProtocolPauseStatus",
-      }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.protocolConfig.address,
+      abi: EARN_PROTOCOL_CONFIG_ABI,
+      functionName: "getProtocolPauseStatus",
+    }),
+    abiObservation({
       label: "earn-idle-usdc",
-      target: EARN.assetAddress,
-      callData: encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [EARN.vault.address],
-      }),
-      allowFailure: false,
-    },
-    {
+      contract: EARN.assetAddress,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [EARN.vault.address],
+    }),
+    abiObservation({
       label: "earn-asset-decimals",
-      target: EARN.assetAddress,
-      callData: encodeFunctionData({ abi: ERC20_ABI, functionName: "decimals" }),
-      allowFailure: false,
-    },
-  ];
+      contract: EARN.assetAddress,
+      abi: ERC20_ABI,
+      functionName: "decimals",
+    }),
+  ] as const;
 }
 
 async function observeEarn(
@@ -444,99 +428,23 @@ async function observeEarn(
   ctx: AdapterContext | undefined,
   signal: AbortSignal,
 ): Promise<ExecutableRedemptionObservation> {
-  await verifyProxyIdentity(
+  const state = await readStateWithPlan(
     EARN.coinId,
-    EARN.vault,
-    blockNumber,
-    rpcOptions,
-    client,
-    ctx,
-    signal,
-  );
-  await verifyProxyIdentity(
-    EARN.coinId,
-    EARN.validator,
-    blockNumber,
-    rpcOptions,
-    client,
-    ctx,
-    signal,
-  );
-  await verifyProxyIdentity(
-    EARN.coinId,
-    EARN.protocolConfig,
-    blockNumber,
-    rpcOptions,
-    client,
-    ctx,
-    signal,
-  );
-
-  const results = await runAdapterIo(
-    ctx,
     "eearn-redemption-state",
-    () => client.multicall(earnCalls(), blockNumber, rpcOptions),
-    { signal },
+    earnFields(),
+    [EARN.vault, EARN.validator, EARN.protocolConfig],
+    blockNumber,
+    rpcOptions,
+    client,
+    ctx,
+    signal,
   );
-  if (!results) fail(EARN.coinId, "route state unavailable");
-
-  const assetAddress = normalizedAddress(
-    EARN.coinId,
-    decodeFunctionResult({
-      abi: ERC4626_ABI,
-      functionName: "asset",
-      data: resultData(EARN.coinId, results, "earn-asset"),
-    }),
-    "asset",
-  );
-  const validatorAddress = normalizedAddress(
-    EARN.coinId,
-    decodeFunctionResult({
-      abi: EARN_VAULT_ABI,
-      functionName: "vaultValidator",
-      data: resultData(EARN.coinId, results, "earn-validator"),
-    }),
-    "vaultValidator",
-  );
-  const protocolConfigAddress = normalizedAddress(
-    EARN.coinId,
-    decodeFunctionResult({
-      abi: EARN_VAULT_ABI,
-      functionName: "protocolConfig",
-      data: resultData(EARN.coinId, results, "earn-protocol-config"),
-    }),
-    "protocolConfig",
-  );
-  if (
-    assetAddress !== EARN.assetAddress ||
-    validatorAddress !== EARN.validator.address ||
-    protocolConfigAddress !== EARN.protocolConfig.address
-  ) {
-    fail(EARN.coinId, "live route dependency identity drift");
-  }
-
-  const pauseStatus = decodeFunctionResult({
-    abi: EARN_VAULT_ABI,
-    functionName: "pauseStatus",
-    data: resultData(EARN.coinId, results, "earn-pause-status"),
-  }) as readonly [boolean, boolean, boolean];
-  const protocolPaused = decodeFunctionResult({
-    abi: EARN_PROTOCOL_CONFIG_ABI,
-    functionName: "getProtocolPauseStatus",
-    data: resultData(EARN.coinId, results, "earn-protocol-paused"),
-  });
-  const feeParts = decodeFunctionResult({
-    abi: EARN_VALIDATOR_ABI,
-    functionName: "withdrawalFee",
-    data: resultData(EARN.coinId, results, "earn-withdrawal-fee"),
-  }) as readonly [bigint, bigint, bigint];
+  const pauseStatus = state.values["earn-pause-status"] as readonly [boolean, boolean, boolean];
+  const protocolPaused = state.values["earn-protocol-paused"] as boolean;
+  const feeParts = state.values["earn-withdrawal-fee"] as readonly [bigint, bigint, bigint];
   const totalFeeRaw = feeParts[0] + feeParts[1];
   const feeBps = fixedPointFeeBpsCeil(totalFeeRaw, 10n ** 18n, EARN.coinId);
-  const assetDecimals = decodeFunctionResult({
-    abi: ERC20_ABI,
-    functionName: "decimals",
-    data: resultData(EARN.coinId, results, "earn-asset-decimals"),
-  });
+  const assetDecimals = state.values["earn-asset-decimals"] as number;
   if (assetDecimals !== EARN.assetDecimals) {
     fail(EARN.coinId, "USDC decimals drift");
   }
@@ -583,202 +491,93 @@ async function observeEarn(
       permanentWithdrawalFeeRaw: feeParts[0].toString(),
       timeBasedWithdrawalFeeRaw: feeParts[1].toString(),
       withdrawalFeeBalanceThresholdRaw: feeParts[2].toString(),
-      pendingWithdrawals: (
-        decodeFunctionResult({
-          abi: EARN_VAULT_ABI,
-          functionName: "getPendingWithdrawalsLength",
-          data: resultData(EARN.coinId, results, "earn-pending-withdrawals"),
-        }) as bigint
-      ).toString(),
-      minWithdrawableSharesRaw: (
-        decodeFunctionResult({
-          abi: EARN_VAULT_ABI,
-          functionName: "minWithdrawableShares",
-          data: resultData(EARN.coinId, results, "earn-min-withdrawable-shares"),
-        }) as bigint
-      ).toString(),
-      depositAllowListCount: (
-        decodeFunctionResult({
-          abi: EARN_VALIDATOR_ABI,
-          functionName: "depositAllowListCount",
-          data: resultData(EARN.coinId, results, "earn-deposit-allow-list-count"),
-        }) as bigint
-      ).toString(),
-      totalAssetsRaw: (
-        decodeFunctionResult({
-          abi: ERC4626_ABI,
-          functionName: "totalAssets",
-          data: resultData(EARN.coinId, results, "earn-total-assets"),
-        }) as bigint
-      ).toString(),
-      idleUnderlyingBalanceRaw: (
-        decodeFunctionResult({
-          abi: ERC20_ABI,
-          functionName: "balanceOf",
-          data: resultData(EARN.coinId, results, "earn-idle-usdc"),
-        }) as bigint
-      ).toString(),
+      pendingWithdrawals: (state.values["earn-pending-withdrawals"] as bigint).toString(),
+      minWithdrawableSharesRaw: (state.values["earn-min-withdrawable-shares"] as bigint).toString(),
+      depositAllowListCount: (state.values["earn-deposit-allow-list-count"] as bigint).toString(),
+      totalAssetsRaw: (state.values["earn-total-assets"] as bigint).toString(),
+      idleUnderlyingBalanceRaw: (state.values["earn-idle-usdc"] as bigint).toString(),
       idleUnderlyingUsedAsCapacity: false,
     },
   };
 }
 
-function dStakeCalls(): EvmMulticall3Call[] {
+type AbiFieldOptions = {
+  args?: readonly unknown[];
+  verify?: (value: string) => string | null;
+};
+
+function abiField(
+  label: string,
+  contract: string,
+  abi: readonly unknown[],
+  functionName: string,
+  options: AbiFieldOptions = {},
+): AnyEvmObservationField {
+  return abiObservation({
+    label,
+    contract,
+    abi,
+    functionName,
+    ...options,
+  } as never) as AnyEvmObservationField;
+}
+
+function strategyFields(label: "idle" | "dlend", strategyAddress: Hex) {
+  const strategyName = label === "idle" ? "idle" : "dLEND";
+  const adapterAddress = label === "idle" ? DSTAKE.idleAdapter.address : DSTAKE.dlendAdapter.address;
   return [
-    {
-      label: "dstake-asset",
-      target: DSTAKE.token.address,
-      callData: encodeFunctionData({ abi: ERC4626_ABI, functionName: "asset" }),
-      allowFailure: false,
-    },
-    {
-      label: "dstake-total-assets",
-      target: DSTAKE.token.address,
-      callData: encodeFunctionData({ abi: ERC4626_ABI, functionName: "totalAssets" }),
-      allowFailure: false,
-    },
-    {
-      label: "dstake-router",
-      target: DSTAKE.token.address,
-      callData: encodeFunctionData({ abi: DSTAKE_TOKEN_ABI, functionName: "router" }),
-      allowFailure: false,
-    },
-    {
-      label: "dstake-collateral-vault",
-      target: DSTAKE.token.address,
-      callData: encodeFunctionData({
-        abi: DSTAKE_TOKEN_ABI,
-        functionName: "collateralVault",
-      }),
-      allowFailure: false,
-    },
-    {
-      label: "router-token",
-      target: DSTAKE.router.address,
-      callData: encodeFunctionData({ abi: DSTAKE_ROUTER_ABI, functionName: "dStakeToken" }),
-      allowFailure: false,
-    },
-    {
-      label: "router-collateral-vault",
-      target: DSTAKE.router.address,
-      callData: encodeFunctionData({
-        abi: DSTAKE_ROUTER_ABI,
-        functionName: "collateralVault",
-      }),
-      allowFailure: false,
-    },
-    {
-      label: "router-paused",
-      target: DSTAKE.router.address,
-      callData: encodeFunctionData({ abi: DSTAKE_ROUTER_ABI, functionName: "paused" }),
-      allowFailure: false,
-    },
-    {
-      label: "router-withdrawal-fee",
-      target: DSTAKE.router.address,
-      callData: encodeFunctionData({
-        abi: DSTAKE_ROUTER_ABI,
-        functionName: "withdrawalFeeBps",
-      }),
-      allowFailure: false,
-    },
-    {
-      label: "router-max-withdrawal-fee",
-      target: DSTAKE.router.address,
-      callData: encodeFunctionData({
-        abi: DSTAKE_ROUTER_ABI,
-        functionName: "maxWithdrawalFeeBps",
-      }),
-      allowFailure: false,
-    },
-    {
-      label: "router-shortfall",
-      target: DSTAKE.router.address,
-      callData: encodeFunctionData({
-        abi: DSTAKE_ROUTER_ABI,
-        functionName: "currentShortfall",
-      }),
-      allowFailure: false,
-    },
-    {
-      label: "router-active-withdrawal-vaults",
-      target: DSTAKE.router.address,
-      callData: encodeFunctionData({
-        abi: DSTAKE_ROUTER_ABI,
-        functionName: "getActiveVaultsForWithdrawals",
-      }),
-      allowFailure: false,
-    },
-    ...([
-      ["idle", DSTAKE.idleStrategy.address],
-      ["dlend", DSTAKE.dlendStrategy.address],
-    ] as const).flatMap(([label, strategyAddress]) => [
-      {
-        label: `${label}-strategy-asset`,
-        target: strategyAddress,
-        callData: encodeFunctionData({ abi: STRATEGY_VAULT_ABI, functionName: "asset" }),
-        allowFailure: false,
-      },
-      {
-        label: `${label}-strategy-max-withdraw`,
-        target: strategyAddress,
-        callData: encodeFunctionData({
-          abi: STRATEGY_VAULT_ABI,
-          functionName: "maxWithdraw",
-          args: [DSTAKE.collateralVault.address],
-        }),
-        allowFailure: false,
-      },
-      {
-        label: `${label}-strategy-adapter`,
-        target: DSTAKE.router.address,
-        callData: encodeFunctionData({
-          abi: DSTAKE_ROUTER_ABI,
-          functionName: "strategyShareToAdapter",
-          args: [strategyAddress],
-        }),
-        allowFailure: false,
-      },
-      {
-        label: `${label}-strategy-healthy`,
-        target: DSTAKE.router.address,
-        callData: encodeFunctionData({
-          abi: DSTAKE_ROUTER_ABI,
-          functionName: "isVaultHealthyForWithdrawals",
-          args: [strategyAddress],
-        }),
-        allowFailure: false,
-      },
-    ]),
-    {
-      label: "dlend-pool",
-      target: DSTAKE.dlendStrategy.address,
-      callData: encodeFunctionData({ abi: STATIC_ATOKEN_ABI, functionName: "POOL" }),
-      allowFailure: false,
-    },
-    {
-      label: "dlend-atoken",
-      target: DSTAKE.dlendStrategy.address,
-      callData: encodeFunctionData({ abi: STATIC_ATOKEN_ABI, functionName: "aToken" }),
-      allowFailure: false,
-    },
-    {
-      label: "dlend-available-liquidity",
-      target: DSTAKE.assetAddress,
-      callData: encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [DSTAKE.dlendATokenAddress],
-      }),
-      allowFailure: false,
-    },
-    {
-      label: "dstake-asset-decimals",
-      target: DSTAKE.assetAddress,
-      callData: encodeFunctionData({ abi: ERC20_ABI, functionName: "decimals" }),
-      allowFailure: false,
-    },
-  ];
+    abiField(`${label}-strategy-asset`, strategyAddress, STRATEGY_VAULT_ABI, "asset", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, `${strategyName} strategy asset`, DSTAKE.assetAddress),
+    }),
+    abiField(`${label}-strategy-max-withdraw`, strategyAddress, STRATEGY_VAULT_ABI, "maxWithdraw", {
+      args: [DSTAKE.collateralVault.address],
+    }),
+    abiField(`${label}-strategy-adapter`, DSTAKE.router.address, DSTAKE_ROUTER_ABI, "strategyShareToAdapter", {
+      args: [strategyAddress],
+      verify: verifyExpectedAddress(DSTAKE.coinId, `${strategyName} strategy adapter`, adapterAddress),
+    }),
+    abiField(`${label}-strategy-healthy`, DSTAKE.router.address, DSTAKE_ROUTER_ABI, "isVaultHealthyForWithdrawals", {
+      args: [strategyAddress],
+    }),
+  ] as const;
+}
+
+function dStakeFields() {
+  return [
+    abiField("dstake-asset", DSTAKE.token.address, ERC4626_ABI, "asset", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "asset", DSTAKE.assetAddress),
+    }),
+    abiField("dstake-total-assets", DSTAKE.token.address, ERC4626_ABI, "totalAssets"),
+    abiField("dstake-router", DSTAKE.token.address, DSTAKE_TOKEN_ABI, "router", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "token router", DSTAKE.router.address),
+    }),
+    abiField("dstake-collateral-vault", DSTAKE.token.address, DSTAKE_TOKEN_ABI, "collateralVault", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "token collateral vault", DSTAKE.collateralVault.address),
+    }),
+    abiField("router-token", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "dStakeToken", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "router dStakeToken", DSTAKE.token.address),
+    }),
+    abiField("router-collateral-vault", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "collateralVault", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "router collateral vault", DSTAKE.collateralVault.address),
+    }),
+    abiField("router-paused", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "paused"),
+    abiField("router-withdrawal-fee", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "withdrawalFeeBps"),
+    abiField("router-max-withdrawal-fee", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "maxWithdrawalFeeBps"),
+    abiField("router-shortfall", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "currentShortfall"),
+    abiField("router-active-withdrawal-vaults", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "getActiveVaultsForWithdrawals"),
+    ...strategyFields("idle", DSTAKE.idleStrategy.address),
+    ...strategyFields("dlend", DSTAKE.dlendStrategy.address),
+    abiField("dlend-pool", DSTAKE.dlendStrategy.address, STATIC_ATOKEN_ABI, "POOL", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "dLEND pool", DSTAKE.dlendPoolAddress),
+    }),
+    abiField("dlend-atoken", DSTAKE.dlendStrategy.address, STATIC_ATOKEN_ABI, "aToken", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "dLEND aToken", DSTAKE.dlendATokenAddress),
+    }),
+    abiField("dlend-available-liquidity", DSTAKE.assetAddress, ERC20_ABI, "balanceOf", {
+      args: [DSTAKE.dlendATokenAddress],
+    }),
+    abiField("dstake-asset-decimals", DSTAKE.assetAddress, ERC20_ABI, "decimals"),
+  ] as const;
 }
 
 async function observeDStake(
@@ -789,165 +588,27 @@ async function observeDStake(
   ctx: AdapterContext | undefined,
   signal: AbortSignal,
 ): Promise<ExecutableRedemptionObservation> {
-  await verifyProxyIdentity(
+  const state = await readStateWithPlan(
     DSTAKE.coinId,
-    DSTAKE.token,
+    "sdusd-dtrinity-redemption-state",
+    dStakeFields(),
+    [
+      DSTAKE.token,
+      DSTAKE.router,
+      DSTAKE.collateralVault,
+      DSTAKE.idleStrategy,
+      DSTAKE.idleAdapter,
+      DSTAKE.dlendStrategy,
+      DSTAKE.dlendAdapter,
+    ],
     blockNumber,
     rpcOptions,
     client,
     ctx,
     signal,
   );
-  for (const identity of [
-    DSTAKE.router,
-    DSTAKE.collateralVault,
-    DSTAKE.idleStrategy,
-    DSTAKE.idleAdapter,
-    DSTAKE.dlendStrategy,
-    DSTAKE.dlendAdapter,
-  ]) {
-    throwIfAborted(signal);
-    await verifyDirectIdentity(
-      DSTAKE.coinId,
-      identity,
-      blockNumber,
-      rpcOptions,
-      client,
-      ctx,
-      signal,
-    );
-  }
 
-  const results = await runAdapterIo(
-    ctx,
-    "sdusd-dtrinity-redemption-state",
-    () => client.multicall(dStakeCalls(), blockNumber, rpcOptions),
-    { signal },
-  );
-  if (!results) fail(DSTAKE.coinId, "route state unavailable");
-
-  const addresses = {
-    asset: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: ERC4626_ABI,
-        functionName: "asset",
-        data: resultData(DSTAKE.coinId, results, "dstake-asset"),
-      }),
-      "asset",
-    ),
-    tokenRouter: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: DSTAKE_TOKEN_ABI,
-        functionName: "router",
-        data: resultData(DSTAKE.coinId, results, "dstake-router"),
-      }),
-      "token router",
-    ),
-    tokenCollateralVault: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: DSTAKE_TOKEN_ABI,
-        functionName: "collateralVault",
-        data: resultData(DSTAKE.coinId, results, "dstake-collateral-vault"),
-      }),
-      "token collateral vault",
-    ),
-    routerToken: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: DSTAKE_ROUTER_ABI,
-        functionName: "dStakeToken",
-        data: resultData(DSTAKE.coinId, results, "router-token"),
-      }),
-      "router dStakeToken",
-    ),
-    routerCollateralVault: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: DSTAKE_ROUTER_ABI,
-        functionName: "collateralVault",
-        data: resultData(DSTAKE.coinId, results, "router-collateral-vault"),
-      }),
-      "router collateral vault",
-    ),
-    idleAsset: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: STRATEGY_VAULT_ABI,
-        functionName: "asset",
-        data: resultData(DSTAKE.coinId, results, "idle-strategy-asset"),
-      }),
-      "idle strategy asset",
-    ),
-    dlendAsset: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: STRATEGY_VAULT_ABI,
-        functionName: "asset",
-        data: resultData(DSTAKE.coinId, results, "dlend-strategy-asset"),
-      }),
-      "dLEND strategy asset",
-    ),
-    idleAdapter: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: DSTAKE_ROUTER_ABI,
-        functionName: "strategyShareToAdapter",
-        data: resultData(DSTAKE.coinId, results, "idle-strategy-adapter"),
-      }),
-      "idle strategy adapter",
-    ),
-    dlendAdapter: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: DSTAKE_ROUTER_ABI,
-        functionName: "strategyShareToAdapter",
-        data: resultData(DSTAKE.coinId, results, "dlend-strategy-adapter"),
-      }),
-      "dLEND strategy adapter",
-    ),
-    dlendPool: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: STATIC_ATOKEN_ABI,
-        functionName: "POOL",
-        data: resultData(DSTAKE.coinId, results, "dlend-pool"),
-      }),
-      "dLEND pool",
-    ),
-    dlendAToken: normalizedAddress(
-      DSTAKE.coinId,
-      decodeFunctionResult({
-        abi: STATIC_ATOKEN_ABI,
-        functionName: "aToken",
-        data: resultData(DSTAKE.coinId, results, "dlend-atoken"),
-      }),
-      "dLEND aToken",
-    ),
-  };
-  if (
-    addresses.asset !== DSTAKE.assetAddress ||
-    addresses.tokenRouter !== DSTAKE.router.address ||
-    addresses.tokenCollateralVault !== DSTAKE.collateralVault.address ||
-    addresses.routerToken !== DSTAKE.token.address ||
-    addresses.routerCollateralVault !== DSTAKE.collateralVault.address ||
-    addresses.idleAsset !== DSTAKE.assetAddress ||
-    addresses.dlendAsset !== DSTAKE.assetAddress ||
-    addresses.idleAdapter !== DSTAKE.idleAdapter.address ||
-    addresses.dlendAdapter !== DSTAKE.dlendAdapter.address ||
-    addresses.dlendPool !== DSTAKE.dlendPoolAddress ||
-    addresses.dlendAToken !== DSTAKE.dlendATokenAddress
-  ) {
-    fail(DSTAKE.coinId, "live route dependency identity drift");
-  }
-
-  const activeWithdrawalVaults = decodeFunctionResult({
-    abi: DSTAKE_ROUTER_ABI,
-    functionName: "getActiveVaultsForWithdrawals",
-    data: resultData(DSTAKE.coinId, results, "router-active-withdrawal-vaults"),
-  }) as readonly string[];
+  const activeWithdrawalVaults = state.values["router-active-withdrawal-vaults"] as readonly string[];
   if (
     !sameAddressSet(activeWithdrawalVaults, [
       DSTAKE.idleStrategy.address,
@@ -957,26 +618,10 @@ async function observeDStake(
     fail(DSTAKE.coinId, "active withdrawal strategy set drift");
   }
 
-  const idleMaxWithdrawRaw = decodeFunctionResult({
-    abi: STRATEGY_VAULT_ABI,
-    functionName: "maxWithdraw",
-    data: resultData(DSTAKE.coinId, results, "idle-strategy-max-withdraw"),
-  }) as bigint;
-  const dlendMaxWithdrawRaw = decodeFunctionResult({
-    abi: STRATEGY_VAULT_ABI,
-    functionName: "maxWithdraw",
-    data: resultData(DSTAKE.coinId, results, "dlend-strategy-max-withdraw"),
-  }) as bigint;
-  const dlendAvailableLiquidityRaw = decodeFunctionResult({
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    data: resultData(DSTAKE.coinId, results, "dlend-available-liquidity"),
-  }) as bigint;
-  const totalAssetsRaw = decodeFunctionResult({
-    abi: ERC4626_ABI,
-    functionName: "totalAssets",
-    data: resultData(DSTAKE.coinId, results, "dstake-total-assets"),
-  }) as bigint;
+  const idleMaxWithdrawRaw = state.values["idle-strategy-max-withdraw"] as bigint;
+  const dlendMaxWithdrawRaw = state.values["dlend-strategy-max-withdraw"] as bigint;
+  const dlendAvailableLiquidityRaw = state.values["dlend-available-liquidity"] as bigint;
+  const totalAssetsRaw = state.values["dstake-total-assets"] as bigint;
   if (
     idleMaxWithdrawRaw < 0n ||
     dlendMaxWithdrawRaw < 0n ||
@@ -987,45 +632,17 @@ async function observeDStake(
     fail(DSTAKE.coinId, "invalid dLEND available-liquidity/max-withdraw bound");
   }
 
-  const currentFeeRaw = decodeFunctionResult({
-    abi: DSTAKE_ROUTER_ABI,
-    functionName: "withdrawalFeeBps",
-    data: resultData(DSTAKE.coinId, results, "router-withdrawal-fee"),
-  }) as bigint;
-  const maxFeeRaw = decodeFunctionResult({
-    abi: DSTAKE_ROUTER_ABI,
-    functionName: "maxWithdrawalFeeBps",
-    data: resultData(DSTAKE.coinId, results, "router-max-withdrawal-fee"),
-  }) as bigint;
+  const currentFeeRaw = state.values["router-withdrawal-fee"] as bigint;
+  const maxFeeRaw = state.values["router-max-withdrawal-fee"] as bigint;
   if (currentFeeRaw < 0n || maxFeeRaw < 0n || currentFeeRaw > maxFeeRaw || maxFeeRaw > 1_000_000n) {
     fail(DSTAKE.coinId, "invalid withdrawal fee state");
   }
   const feeBps = fixedPointFeeBpsCeil(currentFeeRaw, 1_000_000n, DSTAKE.coinId);
-  const paused = decodeFunctionResult({
-    abi: DSTAKE_ROUTER_ABI,
-    functionName: "paused",
-    data: resultData(DSTAKE.coinId, results, "router-paused"),
-  });
-  const shortfallRaw = decodeFunctionResult({
-    abi: DSTAKE_ROUTER_ABI,
-    functionName: "currentShortfall",
-    data: resultData(DSTAKE.coinId, results, "router-shortfall"),
-  }) as bigint;
-  const idleHealthy = decodeFunctionResult({
-    abi: DSTAKE_ROUTER_ABI,
-    functionName: "isVaultHealthyForWithdrawals",
-    data: resultData(DSTAKE.coinId, results, "idle-strategy-healthy"),
-  });
-  const dlendHealthy = decodeFunctionResult({
-    abi: DSTAKE_ROUTER_ABI,
-    functionName: "isVaultHealthyForWithdrawals",
-    data: resultData(DSTAKE.coinId, results, "dlend-strategy-healthy"),
-  });
-  const assetDecimals = decodeFunctionResult({
-    abi: ERC20_ABI,
-    functionName: "decimals",
-    data: resultData(DSTAKE.coinId, results, "dstake-asset-decimals"),
-  });
+  const paused = state.values["router-paused"] as boolean;
+  const shortfallRaw = state.values["router-shortfall"] as bigint;
+  const idleHealthy = state.values["idle-strategy-healthy"] as boolean;
+  const dlendHealthy = state.values["dlend-strategy-healthy"] as boolean;
+  const assetDecimals = state.values["dstake-asset-decimals"] as number;
   if (assetDecimals !== DSTAKE.assetDecimals || shortfallRaw < 0n) {
     fail(DSTAKE.coinId, "invalid dSTAKE asset or shortfall state");
   }

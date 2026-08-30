@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { formatUtcDateOnly } from "@shared/lib/format";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../abort";
 import {
@@ -394,7 +395,7 @@ export async function persistDewsResults(params: {
     );
     if (dailySnapshot.rewritten) {
       logWorkerEventArgs("lib", "info",
-        `[dews] Reconciled daily snapshot (${dailySnapshot.previousOwnedRowCount} -> ${dailySnapshot.sealedRowCount}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
+        `[dews] Reconciled daily snapshot (${dailySnapshot.previousOwnedRowCount} -> ${dailySnapshot.sealedRowCount}) for ${formatUtcDateOnly(new Date(todayMidnight * 1000))}`,
       );
     }
   }

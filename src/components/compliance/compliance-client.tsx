@@ -6,7 +6,8 @@ import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 import { trackEvent } from "@/lib/analytics";
-import { decodeState, encodeState, type UrlStateSchema } from "@/lib/url-state";
+import { type UrlStateSchema } from "@/lib/url-state";
+import { useUrlState } from "@/hooks/use-url-state";
 import { cn } from "@/lib/utils";
 import { PEG_FILTER_OPTIONS, PEG_METADATA } from "@shared/lib/classification";
 import type {
@@ -178,11 +179,8 @@ function inferRegimeFromLegacyParams({
 
 export function ComplianceClient() {
   const logos = logosById;
-  const { searchParams, getParam, setParam, replaceParams } = useUrlFilters();
-  const urlState = useMemo(
-    () => decodeState(searchParams, COMPLIANCE_URL_SCHEMA),
-    [searchParams],
-  );
+  const { getParam, setParam } = useUrlFilters();
+  const { state: urlState, patchState: writeUrlState, searchParams } = useUrlState(COMPLIANCE_URL_SCHEMA);
 
   const rawRegime = searchParams.get("regime") ?? "";
   const rawStatus = urlState.status;
@@ -199,59 +197,32 @@ export function ComplianceClient() {
   const rawPeg = searchParams.has("peg") ? urlState.peg : urlState.pegCurrency;
   const pegFilter = rawPeg;
 
-  const writeUrlState = useCallback(
-    (updates: Partial<ComplianceUrlState>) => {
-      const nextState = { ...urlState, ...updates };
-      const encoded = encodeState(nextState, COMPLIANCE_URL_SCHEMA);
-      replaceParams((params) => {
-        for (const key of Object.keys(COMPLIANCE_URL_SCHEMA)) params.delete(key);
-        for (const [key, value] of new URLSearchParams(encoded)) params.set(key, value);
-      });
-    },
-    [replaceParams, urlState],
-  );
+  const setRegimeFilter = useCallback((v: ComplianceRegimeFilter) => {
+    trackEvent("filter_applied", { page: "compliance", filter_type: "regime", filter_value: v });
+    trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: v });
+    writeUrlState({ regime: v, status: "all", type: "all", tokenType: "all" });
+  }, [writeUrlState]);
 
-  const setRegimeFilter = useCallback(
-    (v: ComplianceRegimeFilter) => {
-      trackEvent("filter_applied", { page: "compliance", filter_type: "regime", filter_value: v });
-      trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: v });
-      writeUrlState({ regime: v, status: "all", type: "all", tokenType: "all" });
-    },
-    [writeUrlState],
-  );
+  const setStatusFilter = useCallback((v: ComplianceStatusFilter) => {
+    trackEvent("filter_applied", { page: "compliance", filter_type: "status", filter_value: v });
+    writeUrlState({ status: v });
+  }, [writeUrlState]);
 
-  const setStatusFilter = useCallback(
-    (v: ComplianceStatusFilter) => {
-      trackEvent("filter_applied", { page: "compliance", filter_type: "status", filter_value: v });
-      writeUrlState({ status: v });
-    },
-    [writeUrlState],
-  );
+  const setTokenTypeFilter = useCallback((v: MicaTokenType | "all") => {
+    trackEvent("filter_applied", { page: "compliance", filter_type: "type", filter_value: v });
+    writeUrlState({ type: v, tokenType: "all" });
+  }, [writeUrlState]);
 
-  const setTokenTypeFilter = useCallback(
-    (v: MicaTokenType | "all") => {
-      trackEvent("filter_applied", { page: "compliance", filter_type: "type", filter_value: v });
-      writeUrlState({ type: v, tokenType: "all" });
-    },
-    [writeUrlState],
-  );
+  const setPegFilter = useCallback((v: PegCurrency | "all") => {
+    trackEvent("filter_applied", { page: "compliance", filter_type: "peg", filter_value: v });
+    writeUrlState({ peg: v, pegCurrency: "all" });
+  }, [writeUrlState]);
 
-  const setPegFilter = useCallback(
-    (v: PegCurrency | "all") => {
-      trackEvent("filter_applied", { page: "compliance", filter_type: "peg", filter_value: v });
-      writeUrlState({ peg: v, pegCurrency: "all" });
-    },
-    [writeUrlState],
-  );
-
-  const openOverviewStatus = useCallback(
-    (regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => {
-      trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: regime });
-      trackEvent("filter_applied", { page: "compliance", filter_type: "status", filter_value: status });
-      writeUrlState({ regime, status, type: "all", tokenType: "all" });
-    },
-    [writeUrlState],
-  );
+  const openOverviewStatus = useCallback((regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => {
+    trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: regime });
+    trackEvent("filter_applied", { page: "compliance", filter_type: "status", filter_value: status });
+    writeUrlState({ regime, status, type: "all", tokenType: "all" });
+  }, [writeUrlState]);
 
   const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync(
     "compliance",

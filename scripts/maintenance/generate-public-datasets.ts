@@ -37,6 +37,7 @@ import { fileURLToPath } from "node:url";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
 import type { DepegEvent } from "@shared/types/market";
 import { getMechanismArchetypeLabel } from "@shared/lib/classification/mechanism-archetypes";
+import { formatUtcDateOnly } from "@shared/lib/format";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-dews";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/liquidity-score";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
@@ -50,7 +51,7 @@ import {
   type PublicSnapshotEnvelopeV2,
 } from "@shared/types/public-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
-import { type CsvColumn, escapeCsvField } from "@shared/lib/csv";
+import { buildPublicDatasetArtifacts, type DatasetColumn } from "../lib/public-dataset-artifacts";
 import {
   RELEASE_DATA_FALLBACK_ENV_NAME,
   generatorFetchHeaders,
@@ -85,7 +86,6 @@ const CHECK_ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
   ...ROW_FLOORS,
   "depeg-history": 300,
 };
-const FRESHNESS_CONTRACT = "point-in-time sample; not guaranteed to track production freshness";
 
 type SnapshotEnvelope = Pick<PublicSnapshotEnvelopeV2, "snapshotDate" | "generatedAt" | "stablecoins"> & {
   methodologyVersions?: Record<string, string>;
@@ -114,16 +114,12 @@ interface ReportCardScore {
   grade?: string;
 }
 
-function isoDateUtc(now: Date): string {
-  return now.toISOString().slice(0, 10);
-}
-
 function isHistoricalSnapshotDate(snapshotDate: string): boolean {
-  return snapshotDate !== isoDateUtc(new Date());
+  return snapshotDate !== formatUtcDateOnly(new Date());
 }
 
 function resolveSnapshotDate(): string {
-  return process.env.PUBLIC_DATASETS_DATE?.trim() || isoDateUtc(new Date());
+  return process.env.PUBLIC_DATASETS_DATE?.trim() || formatUtcDateOnly(new Date());
 }
 
 async function safeFetchJson<T>(url: string): Promise<T | null> {
@@ -210,86 +206,6 @@ async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
   throw new Error("Depeg event pagination hit the 100-page safety cap before exhaustion.");
 }
 
-// --- CSV helpers ------------------------------------------------------------
-// `escapeCsvField` + `CsvColumn` come from shared/lib/csv.ts (imported above);
-// the preamble-aware builders below are script-specific.
-
-interface Preamble {
-  endpoint: string;
-  asOfISO: string;
-  sourceUrl: string;
-  methodologyLabel: string;
-  metadataStatus?: "approximated";
-  metadataNote?: string;
-}
-
-function preambleLine(p: Preamble): string {
-  const metadata = p.metadataStatus
-    ? ` | Metadata: ${p.metadataStatus}${p.metadataNote ? ` (${p.metadataNote})` : ""}`
-    : "";
-  return `Pharos pharos.watch | Endpoint: ${p.endpoint} | As of: ${p.asOfISO} | URL: ${p.sourceUrl} | Methodology: ${p.methodologyLabel} | Freshness: ${FRESHNESS_CONTRACT}${metadata}`;
-}
-
-function buildCsv<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): string {
-  const head = `# ${preambleLine(preamble)}`;
-  const header = columns.map((c) => c.header).join(",");
-  const body = rows.map((row, rowIndex) => columns.map((c) => escapeCsvField(c.accessor(row, rowIndex))).join(","));
-  return [head, header, ...body].join("\n") + "\n";
-}
-
-function buildJson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): string {
-  const objects = rows.map((row, rowIndex) => {
-    const obj: Record<string, string | number | null> = {};
-    for (const column of columns) {
-      obj[column.header] = column.accessor(row, rowIndex);
-    }
-    return obj;
-  });
-  return (
-    JSON.stringify(
-      {
-        _meta: {
-          endpoint: preamble.endpoint,
-          asOfISO: preamble.asOfISO,
-          sourceUrl: preamble.sourceUrl,
-          methodologyLabel: preamble.methodologyLabel,
-          freshnessContract: FRESHNESS_CONTRACT,
-          ...(preamble.metadataStatus
-            ? { metadataStatus: preamble.metadataStatus, metadataNote: preamble.metadataNote }
-            : {}),
-          rowCount: rows.length,
-        },
-        rows: objects,
-      },
-      null,
-      2,
-    ) + "\n"
-  );
-}
-
-function buildNdjson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): string {
-  const meta = JSON.stringify({
-    _meta: {
-      endpoint: preamble.endpoint,
-      asOfISO: preamble.asOfISO,
-      sourceUrl: preamble.sourceUrl,
-      methodologyLabel: preamble.methodologyLabel,
-      freshnessContract: FRESHNESS_CONTRACT,
-      ...(preamble.metadataStatus
-        ? { metadataStatus: preamble.metadataStatus, metadataNote: preamble.metadataNote }
-        : {}),
-    },
-  });
-  const body = rows.map((row, rowIndex) => {
-    const obj: Record<string, string | number | null> = {};
-    for (const column of columns) {
-      obj[column.header] = column.accessor(row, rowIndex);
-    }
-    return JSON.stringify(obj);
-  });
-  return [meta, ...body].join("\n") + "\n";
-}
-
 // --- Topic projections ------------------------------------------------------
 
 interface TopStablecoinRow {
@@ -304,7 +220,7 @@ interface TopStablecoinRow {
   chains: string;
 }
 
-const TOP_STABLECOINS_COLUMNS: CsvColumn<TopStablecoinRow>[] = [
+const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
   { header: "id", accessor: (r) => r.id },
   { header: "symbol", accessor: (r) => r.symbol },
   { header: "name", accessor: (r) => r.name },
@@ -349,7 +265,7 @@ interface DepegHistoryRow {
   source: "live" | "backfill";
 }
 
-const DEPEG_HISTORY_COLUMNS: CsvColumn<DepegHistoryRow>[] = [
+const DEPEG_HISTORY_COLUMNS: DatasetColumn<DepegHistoryRow>[] = [
   { header: "id", accessor: (r) => String(r.id) },
   { header: "stablecoinId", accessor: (r) => r.stablecoinId },
   { header: "symbol", accessor: (r) => r.symbol },
@@ -400,7 +316,7 @@ interface ScoreLatestRow {
   coverageClass: string | null;
 }
 
-const SCORES_LATEST_COLUMNS: CsvColumn<ScoreLatestRow>[] = [
+const SCORES_LATEST_COLUMNS: DatasetColumn<ScoreLatestRow>[] = [
   { header: "stablecoinId", accessor: (r) => r.stablecoinId },
   { header: "symbol", accessor: (r) => r.symbol },
   { header: "pegScore", accessor: (r) => r.pegScore },
@@ -458,7 +374,7 @@ interface PegMechanismDistributionRow {
   coinCount: number;
 }
 
-const PEG_MECHANISM_COLUMNS: CsvColumn<PegMechanismDistributionRow>[] = [
+const PEG_MECHANISM_COLUMNS: DatasetColumn<PegMechanismDistributionRow>[] = [
   { header: "mechanismArchetype", accessor: (r) => r.mechanismArchetype },
   { header: "mechanismLabel", accessor: (r) => r.mechanismLabel },
   { header: "pegReferenceId", accessor: (r) => r.pegReferenceId },
@@ -564,27 +480,11 @@ function projectPegMechanismDistribution(
 interface TopicSpec<T> {
   topic: PublicDatasetTopic;
   rows: T[];
-  columns: CsvColumn<T>[];
+  columns: DatasetColumn<T>[];
   /** Methodology label for the preamble. */
   methodologyLabel: string;
   metadataStatus?: "approximated";
   metadataNote?: string;
-}
-
-function topicPreamble(
-  topic: PublicDatasetTopic,
-  methodologyLabel: string,
-  asOfISO: string,
-  variant: "csv" | "json" | "ndjson",
-  metadata?: Pick<TopicSpec<unknown>, "metadataStatus" | "metadataNote">,
-): Preamble {
-  return {
-    endpoint: topic,
-    asOfISO,
-    sourceUrl: `${SITE_ORIGIN}/datasets/${topic}/latest.${variant}`,
-    methodologyLabel,
-    ...metadata,
-  };
 }
 
 function ensureDir(path: string): void {
@@ -662,7 +562,7 @@ function writePublicDatasetCurrentModule(
 function pruneOldSnapshots(topicDir: string, snapshotDate: string): number {
   if (!existsSync(topicDir)) return 0;
   const cutoffMs = new Date(`${snapshotDate}T00:00:00Z`).getTime() - RETENTION_DAYS * 86_400_000;
-  const cutoffDate = isoDateUtc(new Date(cutoffMs));
+  const cutoffDate = formatUtcDateOnly(new Date(cutoffMs));
   let removed = 0;
   for (const name of readdirSync(topicDir)) {
     const match = /^(\d{4}-\d{2}-\d{2})\.(csv|json|ndjson)$/.exec(name);
@@ -681,26 +581,23 @@ function writeTopic<T>(
   asOfISO: string,
 ): { dated: string[]; written: number } {
   const topicDir = join(DATASETS_DIR, spec.topic);
-  const csv = buildCsv(
-    spec.rows,
-    spec.columns,
-    topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "csv", spec),
-  );
-  const json = buildJson(
-    spec.rows,
-    spec.columns,
-    topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "json", spec),
-  );
-  const ndjson = buildNdjson(
-    spec.rows,
-    spec.columns,
-    topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "ndjson", spec),
-  );
+  const artifacts = buildPublicDatasetArtifacts({
+    rows: spec.rows,
+    columns: spec.columns,
+    metadata: {
+      endpoint: spec.topic,
+      asOfISO,
+      sourceUrl: (variant) => `${SITE_ORIGIN}/datasets/${spec.topic}/latest.${variant}`,
+      methodologyLabel: spec.methodologyLabel,
+      metadataStatus: spec.metadataStatus,
+      metadataNote: spec.metadataNote,
+    },
+  });
 
   const targets = [
-    { path: join(topicDir, `${snapshotDate}.csv`), contents: csv },
-    { path: join(topicDir, `${snapshotDate}.json`), contents: json },
-    { path: join(topicDir, `${snapshotDate}.ndjson`), contents: ndjson },
+    { path: join(topicDir, `${snapshotDate}.csv`), contents: artifacts.csv },
+    { path: join(topicDir, `${snapshotDate}.json`), contents: artifacts.json },
+    { path: join(topicDir, `${snapshotDate}.ndjson`), contents: artifacts.ndjson },
   ];
 
   let written = 0;

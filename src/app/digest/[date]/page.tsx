@@ -10,6 +10,7 @@ import { digestDisplay } from "@/lib/fonts/digest";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata, summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
+import { formatIsoTimestamp } from "@shared/lib/format";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
 import { DIGEST_BY_DATE, DIGEST_ENTRIES } from "@/lib/digest-registry";
@@ -81,8 +82,8 @@ function renderDigestDetail(digest: DigestContentEntry) {
               headline: `${digest.title} (${formatted})`,
               description: buildDigestMetadataDescription(digest, formatted),
               image: [`${SITE_URL}/og-editorial-digest.png`],
-              datePublished: new Date(digest.generatedAt * 1000).toISOString(),
-              dateModified: new Date(digest.generatedAt * 1000).toISOString(),
+              datePublished: formatIsoTimestamp(digest.generatedAt),
+              dateModified: formatIsoTimestamp(digest.generatedAt),
               mainEntityOfPage: `${SITE_URL}/digest/${digest.date}/`,
             }),
           ),
@@ -204,7 +205,7 @@ const route = createStaticSlugRoute({
       canonical: `/digest/${digest.date}/`,
       ogImage: "/og-editorial-digest.png",
       ogType: "article",
-      publishedTime: new Date(digest.generatedAt * 1000).toISOString(),
+      publishedTime: formatIsoTimestamp(digest.generatedAt),
     });
   },
   missingMetadata: { title: "Digest Not Found", robots: { index: false } },

@@ -21,7 +21,12 @@ import {
 import type { V9OperationalResilienceResult } from "./operational-resilience";
 import type { V9WrapperParentLimit } from "./wrapper-risk";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
-import { compareText } from "./primitives";
+import {
+  canonicalUniqueBy,
+  compareText,
+  parentAttributionFields,
+  propagateParentAttribution,
+} from "./primitives";
 import {
   canonicalizeV9PublicReasons,
   type V9PublicReason,
@@ -97,34 +102,55 @@ export function projectV9DependencyScore(
 
 const PILLAR_KEYS = ["backing", "exit", "control"] as const;
 
+const parentAdverseKey = (item: V9ParentAdverseAttribution) => `${item.path}\u0000${item.message}`;
+const compareParentAdverse = (left: V9ParentAdverseAttribution, right: V9ParentAdverseAttribution) =>
+  compareText(left.path, right.path) || compareText(left.message, right.message);
+const parentBoundedKey = (item: V9ParentBoundedUncertaintyAttribution) =>
+  [item.code, item.path, item.message, item.responsibility, item.boundedness].join("\u0000");
+const compareParentBounded = (
+  left: V9ParentBoundedUncertaintyAttribution,
+  right: V9ParentBoundedUncertaintyAttribution,
+) =>
+  compareText(left.code, right.code) ||
+  compareText(left.path, right.path) ||
+  compareText(left.message, right.message) ||
+  compareText(left.responsibility, right.responsibility) ||
+  compareText(left.boundedness, right.boundedness);
+
+function resolveV9SerialParentAttribution<
+  P extends { score: number | null; blocked: boolean },
+  T,
+>(
+  parentScore: number | null,
+  parents: readonly P[],
+  attributionFor: (parent: P) => readonly T[],
+  keyOf: (item: T) => string,
+  compare: (left: T, right: T) => number,
+): T[] {
+  if (parentScore === null) return [];
+  return canonicalUniqueBy(
+    parents.filter((parent) => !parent.blocked && parent.score === parentScore).flatMap(attributionFor),
+    keyOf,
+    compare,
+    "last",
+  );
+}
+
 export function propagateV9SerialParentAdverseAttribution(
   upstreamAssetId: string,
   attribution: readonly V9AdverseAttribution[],
 ): V9ParentAdverseAttribution[] {
-  const pathPrefix = `parent:${upstreamAssetId}:`;
-  const messagePrefix = `Required parent ${upstreamAssetId}: `;
-  return [
-    ...new Map(
-      attribution.map((item) => {
-        const alreadyAttributed =
-          item.source === "parent-score" && item.path.startsWith(pathPrefix);
-        const propagated: V9ParentAdverseAttribution = {
-          source: "parent-score",
-          path: alreadyAttributed ? item.path : `${pathPrefix}${item.path}`,
-          message:
-            alreadyAttributed && item.message.startsWith(messagePrefix)
-              ? item.message
-              : `${messagePrefix}${item.message}`,
-          responsibility: "measured-adverse",
-        };
-        return [`${propagated.path}\u0000${propagated.message}`, propagated];
-      }),
-    ).values(),
-  ].sort(
-    (left, right) =>
-      compareText(left.path, right.path) ||
-      compareText(left.message, right.message),
-  );
+  return propagateParentAttribution({
+    upstreamAssetId,
+    items: attribution,
+    project: (item, context) => ({
+      source: "parent-score",
+      ...parentAttributionFields(item, context),
+      responsibility: "measured-adverse",
+    }),
+    keyOf: parentAdverseKey,
+    compare: compareParentAdverse,
+  });
 }
 
 export function resolveV9SerialParentAdverseAttribution(
@@ -136,23 +162,16 @@ export function resolveV9SerialParentAdverseAttribution(
     adverseAttribution: readonly V9AdverseAttribution[];
   }[],
 ): V9ParentAdverseAttribution[] {
-  if (parentScore === null) return [];
-  return [
-    ...new Map(
-      parents
-        .filter((parent) => !parent.blocked && parent.score === parentScore)
-        .flatMap((parent) =>
-          propagateV9SerialParentAdverseAttribution(
-            parent.upstreamAssetId,
-            parent.adverseAttribution,
-          ),
-        )
-        .map((item) => [`${item.path}\u0000${item.message}`, item]),
-    ).values(),
-  ].sort(
-    (left, right) =>
-      compareText(left.path, right.path) ||
-      compareText(left.message, right.message),
+  return resolveV9SerialParentAttribution(
+    parentScore,
+    parents,
+    (parent) =>
+        propagateV9SerialParentAdverseAttribution(
+          parent.upstreamAssetId,
+          parent.adverseAttribution,
+        ),
+    parentAdverseKey,
+    compareParentAdverse,
   );
 }
 
@@ -160,42 +179,17 @@ export function propagateV9SerialParentBoundedUncertaintyAttribution(
   upstreamAssetId: string,
   attribution: readonly V9BoundedUncertaintyAttribution[],
 ): V9ParentBoundedUncertaintyAttribution[] {
-  const pathPrefix = `parent:${upstreamAssetId}:`;
-  const messagePrefix = `Required parent ${upstreamAssetId}: `;
-  return [
-    ...new Map(
-      attribution.map((item) => {
-        const alreadyAttributed =
-          item.source === "parent-score" && item.path.startsWith(pathPrefix);
-        const propagated: V9ParentBoundedUncertaintyAttribution = {
-          ...item,
-          source: "parent-score",
-          path: alreadyAttributed ? item.path : `${pathPrefix}${item.path}`,
-          message:
-            alreadyAttributed && item.message.startsWith(messagePrefix)
-              ? item.message
-              : `${messagePrefix}${item.message}`,
-        };
-        return [
-          [
-            propagated.code,
-            propagated.path,
-            propagated.message,
-            propagated.responsibility,
-            propagated.boundedness,
-          ].join("\u0000"),
-          propagated,
-        ];
-      }),
-    ).values(),
-  ].sort(
-    (left, right) =>
-      compareText(left.code, right.code) ||
-      compareText(left.path, right.path) ||
-      compareText(left.message, right.message) ||
-      compareText(left.responsibility, right.responsibility) ||
-      compareText(left.boundedness, right.boundedness),
-  );
+  return propagateParentAttribution({
+    upstreamAssetId,
+    items: attribution,
+    project: (item, context) => ({
+      ...item,
+      source: "parent-score",
+      ...parentAttributionFields(item, context),
+    }),
+    keyOf: parentBoundedKey,
+    compare: compareParentBounded,
+  });
 }
 
 export function resolveV9SerialParentBoundedUncertaintyAttribution(
@@ -207,35 +201,16 @@ export function resolveV9SerialParentBoundedUncertaintyAttribution(
     boundedUncertaintyAttribution: readonly V9BoundedUncertaintyAttribution[];
   }[],
 ): V9ParentBoundedUncertaintyAttribution[] {
-  if (parentScore === null) return [];
-  return [
-    ...new Map(
-      parents
-        .filter((parent) => !parent.blocked && parent.score === parentScore)
-        .flatMap((parent) =>
-          propagateV9SerialParentBoundedUncertaintyAttribution(
-            parent.upstreamAssetId,
-            parent.boundedUncertaintyAttribution,
-          ),
-        )
-        .map((item) => [
-          [
-            item.code,
-            item.path,
-            item.message,
-            item.responsibility,
-            item.boundedness,
-          ].join("\u0000"),
-          item,
-        ]),
-    ).values(),
-  ].sort(
-    (left, right) =>
-      compareText(left.code, right.code) ||
-      compareText(left.path, right.path) ||
-      compareText(left.message, right.message) ||
-      compareText(left.responsibility, right.responsibility) ||
-      compareText(left.boundedness, right.boundedness),
+  return resolveV9SerialParentAttribution(
+    parentScore,
+    parents,
+    (parent) =>
+        propagateV9SerialParentBoundedUncertaintyAttribution(
+          parent.upstreamAssetId,
+          parent.boundedUncertaintyAttribution,
+        ),
+    parentBoundedKey,
+    compareParentBounded,
   );
 }
 

@@ -344,6 +344,53 @@ describe("drainPendingQueue", () => {
     sqlite.close();
   });
 
+  it("defers pending alerts when preference revalidation fails", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    await withPendingQueueScenario({
+      now,
+      pending: {
+        id: 805,
+        chatId: "revalidation-failure",
+        html: "<b>Retry after revalidation failure</b>",
+        createdAt: now - 30,
+        expiresAt: now + 600,
+        sourceType: "risk_alert",
+        alertType: "dews",
+        dedupeKey: "revalidation-failure-key",
+        sourceEventId: "revalidation-failure-source",
+        alertScopeJson: serializePendingAlertScope([{ stablecoinId: "usdc-circle", family: "dews" }]),
+        preferenceGeneration: 1,
+        markupPolicyJson: serializePendingMarkupPolicy({}),
+      },
+    }, async ({ sqlite, db }) => {
+      const failingDb = {
+        ...db,
+        prepare: (sql: string) => {
+          if (sql.includes("SELECT chat_id, preference_generation, alert_snooze_until_ts")) {
+            return {
+              bind: () => ({
+                all: async () => { throw new Error("preference lookup unavailable"); },
+              }),
+            } as unknown as D1PreparedStatement;
+          }
+          return db.prepare(sql);
+        },
+      } as D1Database;
+
+      const result = await drainPendingQueue(failingDb, "bot-token", 1);
+
+      expect(result).toMatchObject({ attempted: 0, sent: 0, deferred: 1, dropped: 0 });
+      expect(mockSendToChat).not.toHaveBeenCalled();
+      expect(sqlite.prepare(
+        "SELECT not_before_at, last_error_class, processing_owner FROM telegram_pending_alerts WHERE id = 805",
+      ).get()).toEqual({
+        not_before_at: now + 300,
+        last_error_class: "preference_revalidation_failed",
+        processing_owner: null,
+      });
+    });
+  });
+
   it("replays persisted markup after unchanged-generation validation", async () => {
     const now = Math.floor(Date.now() / 1000);
     const replyMarkup = {

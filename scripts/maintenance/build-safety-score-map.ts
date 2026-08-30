@@ -68,7 +68,7 @@ import {
   type ReportCardsV9CurrentResponse,
 } from "@shared/types/report-cards-v9";
 import { StabilityIndexResponseSchema, type StabilityIndexCurrent } from "@shared/types/stability";
-import { escapeXml } from "../lib/og-svg.mts";
+import { buildSvgBrowserDocument, escapeXml } from "../lib/og-svg.mts";
 import {
   planAnnotations,
   validateAnnotationScene,
@@ -1688,25 +1688,6 @@ function buildSvg({
   return parts.join("\n");
 }
 
-function buildHtml(svg: string): string {
-  const fontFace = (family: string, file: string, weights: string, italic = false) => `
-  @font-face {
-    font-family: '${family}';
-    font-style: ${italic ? "italic" : "normal"};
-    font-weight: ${weights};
-    src: url('${pathToFileURL(file).href}') format('woff2');
-    font-display: block;
-  }`;
-  return `<!doctype html>
-<html><head><meta charset="utf-8"/>
-<style>${fontFace("Newsreader", NEWSREADER_FONT, "200 800")}${fontFace("Newsreader", NEWSREADER_ITALIC_FONT, "200 800", true)}${fontFace("JetBrains Mono", JETBRAINS_MONO_FONT, "100 800")}${fontFace("Bricolage Grotesque", BRICOLAGE_FONT, "200 800")}
-  html, body { margin: 0; padding: 0; background: #05070d; }
-  svg { display: block; }
-</style>
-</head>
-<body>${svg}</body></html>`;
-}
-
 async function validateRenderedAnnotations(
   page: Page,
   scene: AnnotationScene,
@@ -2472,7 +2453,16 @@ async function main(): Promise<void> {
 
   mkdirSync(dirname(pngPath), { recursive: true });
   writeFileSync(svgPath, svg);
-  writeFileSync(htmlPath, buildHtml(svg));
+  writeFileSync(htmlPath, buildSvgBrowserDocument({
+    svg,
+    background: "#05070d",
+    fonts: [
+      { family: "Newsreader", file: NEWSREADER_FONT, weight: "200 800" },
+      { family: "Newsreader", file: NEWSREADER_ITALIC_FONT, weight: "200 800", style: "italic" },
+      { family: "JetBrains Mono", file: JETBRAINS_MONO_FONT, weight: "100 800" },
+      { family: "Bricolage Grotesque", file: BRICOLAGE_FONT, weight: "200 800" },
+    ],
+  }));
 
   const browser = await firefox.launch({ headless: true });
   try {

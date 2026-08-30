@@ -37,6 +37,13 @@ import {
   V9_LEGACY_RESPONSIBILITY_BY_REASON,
 } from "./facts";
 import {
+  createV9GapIndex,
+  gapDomainAndCodeKey,
+  gapsForV9Ids,
+  projectGapReasons,
+  type V9GapIndex,
+} from "./gap-index";
+import {
   decimalSnap,
   hasV9PreExitDangerSignal,
   type V9PillarAdverseAttribution,
@@ -48,7 +55,13 @@ import {
   operationalResilienceBlockers,
 } from "./operational-market-depth";
 import { resolveV9ReasonPolicy } from "./policy";
-import { canonicalDomains, compareText, domainKey, uniqueSorted } from "./primitives";
+import {
+  canonicalDomains,
+  canonicalUniqueBy,
+  compareText,
+  domainKey,
+  uniqueSorted,
+} from "./primitives";
 import {
   resolveV9WrapperParentLimit,
   type V9WrapperForm,
@@ -87,6 +100,8 @@ export interface V9EvaluatedAsset {
   liquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
 }
 
+type V9EvaluationGapIndex = V9GapIndex<V9AssetFactsV3["gaps"][number]>;
+
 /** Post-credit backing quality inherited by baskets and wrapper parents. */
 export function projectV9EffectiveBackingPillarScore(
   result: Pick<V9EvaluatedAsset, "scoreInput">,
@@ -123,40 +138,32 @@ function pillarReason(
   };
 }
 
-function pillarReasonsForGaps(
+function pillarReasonsForGapIds(
   envelope: V9ValidatedPolicyEnvelope,
-  code: V9ReasonCode,
+  index: V9EvaluationGapIndex,
+  code: V9ReasonCode | null,
   path: string,
-  gaps: readonly V9AssetFactsV3["gaps"][number][],
-  fallbackResponsibility: V9EvidenceResponsibility,
+  gapIds: readonly string[],
+  fallbackCode: V9ReasonCode,
+  fallbackResponsibility: V9EvidenceResponsibility = "integration-missing",
   fallbackMessage?: string,
 ): V9PillarReason[] {
-  const causalGaps = [
-    ...new Map(
-      [...gaps]
-        .sort((left, right) => compareText(left.gapId, right.gapId))
-        .map((gap) => [gap.gapId, gap]),
-    ).values(),
-  ];
-  if (causalGaps.length === 0) {
-    return [
-      pillarReason(
-        envelope,
-        code,
-        path,
-        fallbackMessage,
-        fallbackResponsibility,
-      ),
-    ];
-  }
-  return causalGaps.map((gap) =>
+  return projectGapReasons({
+    index,
+    gapIds: uniqueSorted(gapIds),
+    path,
+    pathFor: (gap) => `${path}:cause:${encodeURIComponent(gap.gapId)}`,
+    fallbackCode,
+    fallbackMessage,
+    treatmentFor: () => undefined,
+  }).map((reason) =>
     pillarReason(
       envelope,
-      code,
-      `${path}:cause:${encodeURIComponent(gap.gapId)}`,
-      gap.message,
-      gap.responsibility,
-      gap.gapId,
+      code ?? reason.code,
+      reason.path,
+      reason.message,
+      reason.responsibility ?? fallbackResponsibility,
+      reason.path === path ? undefined : reason.gapIds[0],
     ),
   );
 }
@@ -165,6 +172,16 @@ interface V9ReasonAttribution {
   causalKey: string;
   responsibility: V9EvidenceResponsibility;
 }
+
+const compareReasonAttributions = (left: V9ReasonAttribution, right: V9ReasonAttribution) =>
+  compareText(left.causalKey, right.causalKey) || compareText(left.responsibility, right.responsibility);
+const canonicalReasonAttributions = (attributions: readonly V9ReasonAttribution[]) =>
+  canonicalUniqueBy(
+    [...attributions].sort(compareReasonAttributions),
+    (attribution) => `${attribution.causalKey}\u0000${attribution.responsibility}`,
+    compareReasonAttributions,
+    "last",
+  );
 
 function nrReasonAttributions(
   trace: Pick<V9ProductionScoreTrace, "nrReasons" | "propagatedParentReasons">,
@@ -187,20 +204,7 @@ function nrReasonAttributions(
         V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
     })),
   ];
-  return [
-    ...new Map(
-      attributions
-        .sort(
-          (left, right) =>
-            compareText(left.causalKey, right.causalKey) ||
-            compareText(left.responsibility, right.responsibility),
-        )
-        .map((attribution) => [
-          `${attribution.causalKey}\u0000${attribution.responsibility}`,
-          attribution,
-        ]),
-    ).values(),
-  ];
+  return canonicalReasonAttributions(attributions);
 }
 
 function attributedReasonPath(
@@ -367,62 +371,54 @@ function reasonClassifiedEvidenceLevel(
 }
 
 function backingPillar(
-  asset: V9AssetFactsV3,
   result: V9BackingResult,
   envelope: V9ValidatedPolicyEnvelope,
+  gapIndex: V9EvaluationGapIndex,
 ): V9PillarEvaluation {
-  const gapGroups = new Map<
-    string,
-    {
-      code: V9ReasonCode;
-      path: string;
-      gaps: V9AssetFactsV3["gaps"];
-    }
-  >();
+  const gapProjectedReasons: V9PillarReason[] = [];
   const syntheticReasons: Array<{
     reason: V9BackingResult["unresolved"][number];
     path: string;
   }> = [];
   for (const reason of result.unresolved) {
     const path = `backing:${reason.pathKey}`;
-    const gaps = reason.gapIds.flatMap((gapId) => {
-      const gap = asset.gaps.find((candidate) => candidate.gapId === gapId);
-      return gap ? [gap] : [];
-    });
+    const gaps = gapsForV9Ids(gapIndex, reason.gapIds);
     if (gaps.length === 0) {
       syntheticReasons.push({ reason, path });
       continue;
     }
     for (const gap of gaps) {
-      const key = `${gap.reasonCode}\u0000${path}`;
-      const group = gapGroups.get(key) ?? {
-        code: gap.reasonCode,
-        path,
-        gaps: [],
-      };
-      group.gaps.push(gap);
-      gapGroups.set(key, group);
+      gapProjectedReasons.push(
+        ...pillarReasonsForGapIds(
+          envelope,
+          gapIndex,
+          gap.reasonCode,
+          path,
+          [gap.gapId],
+          gap.reasonCode,
+          V9_LEGACY_RESPONSIBILITY_BY_REASON[gap.reasonCode],
+        ),
+      );
     }
   }
-  const canonicalSyntheticReasons = [
-    ...new Map(
-      syntheticReasons
-        .sort(
-          (left, right) =>
-            compareText(left.reason.code, right.reason.code) ||
-            compareText(left.path, right.path) ||
-            compareText(left.reason.causalKey ?? "", right.reason.causalKey ?? "") ||
-            compareText(
-              left.reason.responsibility ?? "",
-              right.reason.responsibility ?? "",
-            ),
-        )
-        .map((entry) => [
-          `${entry.reason.code}\u0000${entry.path}\u0000${entry.reason.causalKey ?? ""}\u0000${entry.reason.responsibility ?? ""}`,
-          entry,
-        ]),
-    ).values(),
-  ];
+  const compareSyntheticReasons = (
+    left: (typeof syntheticReasons)[number],
+    right: (typeof syntheticReasons)[number],
+  ) =>
+    compareText(left.reason.code, right.reason.code) ||
+    compareText(left.path, right.path) ||
+    compareText(left.reason.causalKey ?? "", right.reason.causalKey ?? "") ||
+    compareText(
+      left.reason.responsibility ?? "",
+      right.reason.responsibility ?? "",
+  );
+  const canonicalSyntheticReasons = canonicalUniqueBy(
+    syntheticReasons.sort(compareSyntheticReasons),
+    (entry) =>
+      `${entry.reason.code}\u0000${entry.path}\u0000${entry.reason.causalKey ?? ""}\u0000${entry.reason.responsibility ?? ""}`,
+    compareSyntheticReasons,
+    "last",
+  );
   const unkeyedSyntheticCounts = new Map<string, number>();
   for (const entry of canonicalSyntheticReasons) {
     const key = `${entry.reason.code}\u0000${entry.path}`;
@@ -435,15 +431,7 @@ function backingPillar(
   }
   const reasons = canonicalReasons(
     [
-      ...[...gapGroups.values()].flatMap((group) =>
-        pillarReasonsForGaps(
-          envelope,
-          group.code,
-          group.path,
-          group.gaps,
-          V9_LEGACY_RESPONSIBILITY_BY_REASON[group.code],
-        ),
-      ),
+      ...gapProjectedReasons,
       ...canonicalSyntheticReasons.map(({ reason, path }) => {
         const unkeyedIdentityCount =
           unkeyedSyntheticCounts.get(`${reason.code}\u0000${path}`) ?? 0;
@@ -482,6 +470,7 @@ function exitPillar(
   asset: V9AssetFactsV3,
   result: V9ExitEvaluationResult,
   envelope: V9ValidatedPolicyEnvelope,
+  gapIndex: V9EvaluationGapIndex,
 ): V9PillarEvaluation {
   const mechanismExitFacts = asset.mechanismExitFacts ?? [];
   const hasKnownRuntimeRoute = result.routes.some((trace) => {
@@ -559,13 +548,9 @@ function exitPillar(
     ),
     reasons: canonicalReasons(
       effectiveReasons.flatMap(({ code, profileFactKeys, profileResponsibility: responsibility }) => {
-        const matchingGaps = asset.gaps.filter(
-          (candidate) => candidate.ownerDomain === "exit" && candidate.reasonCode === code,
-        );
-        const exitGaps = asset.exitStatus.gapIds.flatMap((gapId) => {
-          const candidate = asset.gaps.find((item) => item.gapId === gapId);
-          return candidate ? [candidate] : [];
-        });
+        const matchingGaps =
+          gapIndex.byDomainAndCode.get(gapDomainAndCodeKey("exit", code)) ?? [];
+        const exitGaps = gapsForV9Ids(gapIndex, asset.exitStatus.gapIds);
         const unresolvedOutputGaps =
           code === "missing-same-notional-route" || code === "no-viable-exit-path"
             ? exitGaps.filter((gap) => gap.reasonCode === "unresolved-exit-output")
@@ -604,11 +589,13 @@ function exitPillar(
                 responsibility,
               ),
             ]
-          : pillarReasonsForGaps(
+          : pillarReasonsForGapIds(
               envelope,
+              gapIndex,
               code,
               path,
-              causalGaps,
+              causalGaps.map((gap) => gap.gapId),
+              code,
               nativeMeasuredCompleteEmpty || nativeMeasuredCapacityFloor
                 ? "measured-adverse"
                 : V9_LEGACY_RESPONSIBILITY_BY_REASON[code],
@@ -624,15 +611,12 @@ function controlPillar(
   asset: V9AssetFactsV3,
   result: V9EconomicControlResult,
   envelope: V9ValidatedPolicyEnvelope,
+  gapIndex: V9EvaluationGapIndex,
 ): V9PillarEvaluation {
-  const gapsForStatus = (status: V9FactStatusV2) =>
-    status.gapIds.flatMap((gapId) => {
-      const gap = asset.gaps.find((candidate) => candidate.gapId === gapId);
-      return gap ? [gap] : [];
-    });
-  const controlDomainGaps = asset.gaps.filter(
-    (candidate) => candidate.ownerDomain === "control",
-  );
+  const gapsForStatus = (status: V9FactStatusV2) => gapsForV9Ids(gapIndex, status.gapIds);
+  const controlDomainGaps = [...gapIndex.byDomainAndCode.values()]
+    .flat()
+    .filter((candidate) => candidate.ownerDomain === "control");
   const causalGapsForReason = (
     reason: V9EconomicControlResult["reasons"][number],
   ): V9AssetFactsV3["gaps"] => {
@@ -704,11 +688,13 @@ function controlPillar(
     ),
     reasons: canonicalReasons(
       result.reasons.flatMap((reason) => {
-        return pillarReasonsForGaps(
+        return pillarReasonsForGapIds(
           envelope,
+          gapIndex,
           reason.code,
           `control:${reason.path}`,
-          causalGapsForReason(reason),
+          causalGapsForReason(reason).map((gap) => gap.gapId),
+          reason.code,
           V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
           reason.label,
         );
@@ -749,38 +735,12 @@ function conservativeResolvedIncidentAgeMonths(
   return conservativeTrackRecordMonths(latestResolvedIncidentAtSec, asOfSec);
 }
 
-function gapReasonsForStatus(
-  asset: V9AssetFactsV3,
-  status: V9FactStatusV2,
-  envelope: V9ValidatedPolicyEnvelope,
-  path: string,
-  fallback: V9ReasonCode,
-  fallbackResponsibility: V9EvidenceResponsibility = "integration-missing",
-): V9PillarReason[] {
-  const gaps = status.gapIds.flatMap((gapId) => {
-    const gap = asset.gaps.find((candidate) => candidate.gapId === gapId);
-    return gap ? [gap] : [];
-  });
-  if (gaps.length === 0) {
-    return [pillarReason(envelope, fallback, path, undefined, fallbackResponsibility)];
-  }
-  return gaps.flatMap((gap) =>
-    pillarReasonsForGaps(
-      envelope,
-      gap.reasonCode,
-      path,
-      gaps.filter((candidate) => candidate.reasonCode === gap.reasonCode),
-      fallbackResponsibility,
-    ),
-  );
-}
-
 function unresolvedEvidenceReasons(
-  asset: V9AssetFactsV3,
   envelope: V9ValidatedPolicyEnvelope,
+  gapIndex: V9EvaluationGapIndex,
 ): V9PillarReason[] {
   return canonicalReasons(
-    asset.gaps.map((gap) =>
+    [...gapIndex.byId.values()].map((gap) =>
       pillarReason(
         envelope,
         gap.reasonCode,
@@ -827,51 +787,40 @@ function applyRoleDependencyProjection(
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9PillarEvaluation {
   if (projection.events.length === 0) return pillar;
-  const unavailableAttributions = [
-    ...new Map(
-      projection.events
-        .flatMap((event) =>
-          event.unavailableDimensions.flatMap((dimension) =>
-            event.upstreamAssetIds.flatMap((upstreamAssetId) => {
-              const upstream = evaluatedById.get(upstreamAssetId);
-              if (upstream === undefined) {
-                return [
-                  {
-                    causalKey: `${upstreamAssetId}:${dimension}:missing-upstream-evaluation`,
-                    responsibility: "integration-missing" as const,
-                  },
-                ];
-              }
-              if (dimension === "final") {
-                return nrReasonAttributions(upstream.trace).map((attribution) => ({
-                  ...attribution,
-                  causalKey: `${upstreamAssetId}:${dimension}:${attribution.causalKey}`,
-                }));
-              }
-              const reasons =
-                dimension === "backing"
-                  ? upstream.scoreInput.pillars.backing.reasons
-                  : dimension === "exit" || dimension === "access"
-                    ? upstream.scoreInput.pillars.exit.reasons
-                    : upstream.scoreInput.pillars.control.reasons;
-              return reasons.map((reason) => ({
-                causalKey: `${upstreamAssetId}:${dimension}:${reason.code}:${reason.path}`,
-                responsibility: reason.responsibility,
+  const unavailableAttributions = canonicalReasonAttributions(
+    projection.events
+      .flatMap((event) =>
+        event.unavailableDimensions.flatMap((dimension) =>
+          event.upstreamAssetIds.flatMap((upstreamAssetId) => {
+            const upstream = evaluatedById.get(upstreamAssetId);
+            if (upstream === undefined) {
+              return [
+                {
+                  causalKey: `${upstreamAssetId}:${dimension}:missing-upstream-evaluation`,
+                  responsibility: "integration-missing" as const,
+                },
+              ];
+            }
+            if (dimension === "final") {
+              return nrReasonAttributions(upstream.trace).map((attribution) => ({
+                ...attribution,
+                causalKey: `${upstreamAssetId}:${dimension}:${attribution.causalKey}`,
               }));
-            }),
-          ),
-        )
-        .sort(
-          (left, right) =>
-            compareText(left.causalKey, right.causalKey) ||
-            compareText(left.responsibility, right.responsibility),
-        )
-        .map((attribution) => [
-          `${attribution.causalKey}\u0000${attribution.responsibility}`,
-          attribution,
-        ]),
-    ).values(),
-  ];
+            }
+            const reasons =
+              dimension === "backing"
+                ? upstream.scoreInput.pillars.backing.reasons
+                : dimension === "exit" || dimension === "access"
+                  ? upstream.scoreInput.pillars.exit.reasons
+                  : upstream.scoreInput.pillars.control.reasons;
+            return reasons.map((reason) => ({
+              causalKey: `${upstreamAssetId}:${dimension}:${reason.code}:${reason.path}`,
+              responsibility: reason.responsibility,
+            }));
+          }),
+        ),
+      ),
+  );
   const attributions =
     unavailableAttributions.length > 0
       ? unavailableAttributions
@@ -1064,6 +1013,7 @@ function dependencyReasons(
   plan: V9DependencyEvaluationPlan,
   envelope: V9ValidatedPolicyEnvelope,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  gapIndex: V9EvaluationGapIndex,
 ): V9PillarReason[] {
   const reasons: V9PillarReason[] = [];
   if (
@@ -1071,12 +1021,14 @@ function dependencyReasons(
     asset.dependencies.status.observationState !== "known"
   ) {
     reasons.push(
-      ...gapReasonsForStatus(
-        asset,
-        asset.dependencies.status,
+      ...pillarReasonsForGapIds(
         envelope,
+        gapIndex,
+        null,
         "dependency:envelope",
+        asset.dependencies.status.gapIds,
         "unreviewed-dependency-relationships",
+        "integration-missing",
       ),
     );
   }
@@ -1095,10 +1047,7 @@ function dependencyReasons(
     );
   }
   const mappedWeightByUpstream = new Map<string, number>();
-  const dependencyStatusGaps = asset.dependencies.status.gapIds.flatMap((gapId) => {
-    const gap = asset.gaps.find((candidate) => candidate.gapId === gapId);
-    return gap ? [gap] : [];
-  });
+  const dependencyStatusGaps = gapsForV9Ids(gapIndex, asset.dependencies.status.gapIds);
   for (const exposure of asset.reserveExposures) {
     if (exposure.trackedAssetId === null) continue;
     mappedWeightByUpstream.set(
@@ -1110,11 +1059,13 @@ function dependencyReasons(
     const mappedWeight = mappedWeightByUpstream.get(dependency.upstreamAssetId);
     if (mappedWeight === undefined || Math.abs(mappedWeight - dependency.weight) > 0.000001) {
       reasons.push(
-        ...pillarReasonsForGaps(
+        ...pillarReasonsForGapIds(
           envelope,
+          gapIndex,
           "unreviewed-dependency-relationships",
           `dependency:collateral:${dependency.upstreamAssetId}`,
-          dependencyStatusGaps,
+          dependencyStatusGaps.map((gap) => gap.gapId),
+          "unreviewed-dependency-relationships",
           "integration-missing",
           `Collateral dependency ${dependency.upstreamAssetId} is not exactly mapped to reserve exposures.`,
         ),
@@ -1162,11 +1113,22 @@ function dependencyReasons(
   return canonicalReasons(reasons);
 }
 
-function pegInput(asset: V9AssetFactsV3, envelope: V9ValidatedPolicyEnvelope): V9ProductionScoreInput["peg"] {
+function pegInput(
+  asset: V9AssetFactsV3,
+  envelope: V9ValidatedPolicyEnvelope,
+  gapIndex: V9EvaluationGapIndex,
+): V9ProductionScoreInput["peg"] {
   const applicable = asset.peg.status.applicability.state !== "not-applicable";
   const reasons =
     applicable && asset.peg.status.observationState !== "known"
-      ? gapReasonsForStatus(asset, asset.peg.status, envelope, `peg:${asset.peg.pegKey}`, "missing-peg-input")
+      ? pillarReasonsForGapIds(
+          envelope,
+          gapIndex,
+          null,
+          `peg:${asset.peg.pegKey}`,
+          asset.peg.status.gapIds,
+          "missing-peg-input",
+        )
       : [];
   return {
     applicable,
@@ -1294,6 +1256,7 @@ export function evaluateV9Asset({
   evaluatedAsset: V9EvaluatedAsset;
   unavailabilityRoots: readonly string[];
 } {
+  const gapIndex = createV9GapIndex(asset.gaps);
   const cdpReview = asset.mechanismRiskReview.review?.archetype === "cdp" ? asset.mechanismRiskReview.review : null;
   const liquidationCapacitySelection =
     asset.archetype === "cdp"
@@ -1308,15 +1271,13 @@ export function evaluateV9Asset({
   const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById);
   const wrapperStrategyTier = resolveV9WrapperStrategyTier(asset, resolved, inheritedStablecoinBacking);
   const trackRecordMonths = conservativeTrackRecordMonths(asset.implementation.launchedAtSec, identity.asOfSec);
-  const dependencyStatusGaps = asset.dependencies.status.gapIds.flatMap((gapId) => {
-    const gap = asset.gaps.find((candidate) => candidate.gapId === gapId);
-    return gap ? [gap] : [];
-  });
+  const dependencyStatusGaps = gapsForV9Ids(gapIndex, asset.dependencies.status.gapIds);
   const backingAsset = {
     assetId: asset.assetId,
     reserveStatus: asset.reserveStatus,
     reserveExposures: asset.reserveExposures,
     gaps: asset.gaps,
+    gapIndex,
     resolvedUpstreamExposures: resolvedBackingExposures(
       asset,
       resolved,
@@ -1366,9 +1327,9 @@ export function evaluateV9Asset({
     transfer: asset.accessReview.transfer,
     freezeReviews: asset.accessReview.freeze.reviews,
   });
-  const peg = pegInput(asset, envelope);
-  const backingPillarEvaluation = backingPillar(asset, backing, envelope);
-  const controlPillarEvaluation = controlPillar(asset, control, envelope);
+  const peg = pegInput(asset, envelope, gapIndex);
+  const backingPillarEvaluation = backingPillar(backing, envelope, gapIndex);
+  const controlPillarEvaluation = controlPillar(asset, control, envelope, gapIndex);
   // The exit pillar's SIM-EXIT-L2 undisclosed-fee credit is withheld from an
   // asset already held down by a non-exit adverse fact. The gate reads the same
   // structural-signal set the scorer assembles (backing + control + dependency;
@@ -1394,16 +1355,18 @@ export function evaluateV9Asset({
       asset,
       exit,
       envelope,
+      gapIndex,
     ),
     control: controlPillarEvaluation,
   };
   const methodologyReasons =
     asset.implementation.launchedAtSec === null
-      ? gapReasonsForStatus(
-          asset,
-          asset.implementation.status,
+      ? pillarReasonsForGapIds(
           envelope,
+          gapIndex,
+          null,
           "methodology:implementation-date",
+          asset.implementation.status.gapIds,
           "missing-implementation-date",
         )
       : [];
@@ -1413,6 +1376,7 @@ export function evaluateV9Asset({
     dependencyPlan,
     envelope,
     evaluatedById,
+    gapIndex,
   );
   const measuredMarketDepth = measuredOperationalMarketDepth(asset, exit, envelope);
   const implementationHistory =
@@ -1461,7 +1425,7 @@ export function evaluateV9Asset({
     dependencyReasons: dependencyReasonsInput,
     dependencyStructuralSignals: dependencySignals,
     methodologyReasons,
-    unresolvedEvidence: unresolvedEvidenceReasons(asset, envelope),
+    unresolvedEvidence: unresolvedEvidenceReasons(envelope, gapIndex),
     operationalResilience,
   };
   const trace = scoreV9EvaluatedAsset(scoreInput, envelope);

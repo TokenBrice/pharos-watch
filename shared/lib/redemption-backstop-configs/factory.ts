@@ -86,6 +86,14 @@ export function defineBatch(
   }));
 }
 
+/** Build a plain config map from explicit per-id family rows. */
+export function defineConfigFamily<Row extends { id: string }>(
+  rows: readonly Row[],
+  build: (row: Row) => RedemptionBackstopConfig,
+): Record<string, RedemptionBackstopConfig> {
+  return Object.fromEntries(rows.map((row) => [row.id, cloneRedemptionBackstopConfig(build(row))]));
+}
+
 /**
  * Build registry entries from a `Record<id, config>`, optionally attaching a
  * `sourceFilePath` and an override reason. Supply `overrideReason` to apply one

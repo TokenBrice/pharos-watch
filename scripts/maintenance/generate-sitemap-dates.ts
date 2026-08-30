@@ -1,10 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { assertFullGitHistory } from "../lib/git-history.mts";
+import { listPerCoinStablecoinSourceFiles } from "../lib/stablecoin-catalog-sources";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
 import {
@@ -15,7 +16,6 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
 const APP_DIR = join(__dirname, "../../src/app");
-const STABLECOIN_COINS_DIR = join(__dirname, "../../shared/data/stablecoins/coins");
 const CASE_STUDY_CONTENT_DIR = join(__dirname, "../../src/lib/case-studies");
 const BLOG_POSTS_DIR = join(__dirname, "../../src/data/blog/posts");
 const OUTPUT = join(__dirname, "../../src/generated/sitemap-dates.json");
@@ -169,22 +169,11 @@ function walkPages(dir: string, prefix: string, dates: Record<string, string>): 
   }
 }
 
-function readStablecoinId(filePath: string): string {
-  const parsed = JSON.parse(readFileSync(filePath, "utf8")) as { id?: unknown };
-  if (typeof parsed.id !== "string" || !parsed.id) {
-    throw new Error(`Stablecoin metadata file is missing a string id: ${filePath}`);
-  }
-  return parsed.id;
-}
-
 function addStablecoinDetailDates(dates: Record<string, string>): void {
   const sharedLastModified = latestIso(...STABLECOIN_DETAIL_SHARED_SOURCES.map(getLastModified));
 
-  for (const entry of readdirSync(STABLECOIN_COINS_DIR, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    const filePath = join(STABLECOIN_COINS_DIR, entry.name);
-    const id = readStablecoinId(filePath);
-    dates[buildStablecoinUrl(id)] = latestIso(getLastModified(filePath), sharedLastModified);
+  for (const { id, file } of listPerCoinStablecoinSourceFiles(REPO_ROOT)) {
+    dates[buildStablecoinUrl(id)] = latestIso(getLastModified(join(REPO_ROOT, file)), sharedLastModified);
   }
 }
 

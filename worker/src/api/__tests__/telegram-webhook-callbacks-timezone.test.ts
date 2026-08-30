@@ -2,8 +2,9 @@ import { describe, expect, it, beforeEach } from "vitest";
 import {
   fetchSpy,
   handleCallbackQuery,
+  makeCallbackQuery,
   lastEditedMessageBody,
-  mockD1,
+  mockTelegramD1,
   resetCallbackTest,
 } from "./telegram-webhook-callbacks.test-support";
 
@@ -28,13 +29,8 @@ beforeEach(resetCallbackTest);
 describe("handleCallbackQuery", () => {
   describe("tz timezone callback", () => {
     it("tz:<zone> persists a valid IANA zone with timezone in the upsert", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-tz",
-        data: "tz:Europe/Paris",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("tz:Europe/Paris", { id: "cb-tz" }));
 
       const upsert = db
         .getHistory()
@@ -52,13 +48,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("tz:<unknown> rejects with a toast and does not write", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-tz-bad",
-        data: "tz:Mars/Olympus_Mons",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("tz:Mars/Olympus_Mons", { id: "cb-tz-bad" }));
 
       const wrote = db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
       expect(wrote).toBe(false);

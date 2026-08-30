@@ -22,7 +22,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { escapeXml } from "../lib/og-svg.mts";
+import { buildSvgBrowserDocument, escapeXml } from "../lib/og-svg.mts";
 import {
   assertNoStaleOgOutputs,
   formatOgWriteStatus,
@@ -232,35 +232,6 @@ function allPublicOutputsExist() {
   return CARDS.every((card) => existsSync(resolve(PUBLIC, card.file)));
 }
 
-// Wrap SVG in an HTML page that loads the Pharos local fonts via @font-face
-// so Playwright Firefox can use the exact serif/mono the dashboard renders.
-function buildHtml(svg) {
-  const newsreaderUrl = pathToFileURL(NEWSREADER_FONT).href;
-  const geistMonoUrl = pathToFileURL(GEIST_MONO_FONT).href;
-  return `<!doctype html>
-<html><head><meta charset="utf-8"/>
-<style>
-  @font-face {
-    font-family: 'Newsreader';
-    font-style: normal;
-    font-weight: 200 800;
-    src: url('${newsreaderUrl}') format('woff2');
-    font-display: block;
-  }
-  @font-face {
-    font-family: 'GeistMono';
-    font-style: normal;
-    font-weight: 400 700;
-    src: url('${geistMonoUrl}') format('woff2');
-    font-display: block;
-  }
-  html, body { margin: 0; padding: 0; background: #f8f8fa; }
-  svg { display: block; }
-</style>
-</head>
-<body>${svg}</body></html>`;
-}
-
 // The signature manifest fingerprints every deterministic render input and
 // committed PNG. When it matches and all committed PNGs exist, --check does
 // not need Firefox while still detecting hand-edited or corrupted assets.
@@ -306,7 +277,14 @@ try {
       const svgPath = resolve(STAGING, card.file.replace(/\.png$/, ".svg"));
       const htmlPath = resolve(STAGING, card.file.replace(/\.png$/, ".html"));
       writeFileSync(svgPath, svg);
-      writeFileSync(htmlPath, buildHtml(svg));
+      writeFileSync(htmlPath, buildSvgBrowserDocument({
+        svg,
+        background: "#f8f8fa",
+        fonts: [
+          { family: "Newsreader", file: NEWSREADER_FONT, weight: "200 800" },
+          { family: "GeistMono", file: GEIST_MONO_FONT, weight: "400 700" },
+        ],
+      }));
       const page = await browser.newPage({ viewport: { width: 1200, height: 628 } });
       try {
         await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });

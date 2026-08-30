@@ -376,6 +376,7 @@ vi.mock("../lib/coingecko", async (importOriginal) => {
 import worker from "../index";
 import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
+import { makeScheduledEnv } from "../test-helpers/scheduled-runtime.test-support";
 import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
@@ -447,9 +448,7 @@ describe("worker.scheduled", () => {
 
   it("runs 15-min cron fan-out and chained jobs (charts excluded)", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
 
@@ -539,9 +538,7 @@ describe("worker.scheduled", () => {
 
   it("runs status-self-check on the isolated offset trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
 
@@ -559,10 +556,7 @@ describe("worker.scheduled", () => {
 
   it("throws loudly when a scheduled trigger is unmapped", async () => {
     const { ctx } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
 
     await expect(
       worker.scheduled(
@@ -576,9 +570,7 @@ describe("worker.scheduled", () => {
 
   it("derives slot identity from scheduledTime and threads it through slot fencing and cron logging", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
     const scheduledTime = Date.parse("2026-03-23T00:15:00Z");
@@ -625,9 +617,7 @@ describe("worker.scheduled", () => {
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
 
@@ -660,9 +650,7 @@ describe("worker.scheduled", () => {
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
 
@@ -692,9 +680,7 @@ describe("worker.scheduled", () => {
     });
 
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
 
@@ -729,9 +715,7 @@ describe("worker.scheduled", () => {
     });
 
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
 
@@ -749,10 +733,7 @@ describe("worker.scheduled", () => {
 
   it("runs DEX source staging on the hourly :10 trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
 
     await worker.scheduled(
       { cron: "10 * * * *", scheduledTime: Date.parse("2026-08-10T12:10:00Z") } as ScheduledEvent,
@@ -771,10 +752,7 @@ describe("worker.scheduled", () => {
 
   it("runs two-hour DEX scoring before charts on an even-hour :16 trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
 
     await worker.scheduled(
       { cron: "16 * * * *", scheduledTime: Date.parse("2026-08-10T12:16:00Z") } as ScheduledEvent,
@@ -796,10 +774,7 @@ describe("worker.scheduled", () => {
 
   it("runs dews → psi on the decoupled DB-only trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
 
     await worker.scheduled(
       { cron: "26,56 * * * *" } as ScheduledEvent,
@@ -822,10 +797,7 @@ describe("worker.scheduled", () => {
     cronMocks.stageDexLiquidityScoring.mockRejectedValueOnce(new Error("dex stage failed"));
 
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
 
     await worker.scheduled(
       { cron: "10 * * * *", scheduledTime: Date.parse("2026-08-10T12:10:00Z") } as ScheduledEvent,
@@ -842,10 +814,7 @@ describe("worker.scheduled", () => {
   });
 
   it("reuses the current DEX generation at :46 without rerunning source staging", async () => {
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
     const consumer = makeExecutionContext();
     await worker.scheduled(
       { cron: "46 * * * *", scheduledTime: Date.parse("2026-08-10T12:46:00Z") } as ScheduledEvent,
@@ -861,9 +830,7 @@ describe("worker.scheduled", () => {
 
   it("runs yield publication on the dedicated hourly trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       ETHERSCAN_API_KEY: "etherscan",
     });
 
@@ -882,10 +849,7 @@ describe("worker.scheduled", () => {
 
   it("runs supplemental yield refresh on the dedicated 4-hour :25 trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
 
     await worker.scheduled(
       { cron: "25 */4 * * *" } as ScheduledEvent,
@@ -905,9 +869,7 @@ describe("worker.scheduled", () => {
     const slotStartedAt = Math.floor(scheduledTime / 1000);
 
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       ETHERSCAN_API_KEY: "etherscan",
     });
 
@@ -954,9 +916,7 @@ describe("worker.scheduled", () => {
     cronMocks.generateDailyDigest.mockRejectedValueOnce(new Error("digest failed"));
 
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       ANTHROPIC_API_KEY: "anthropic",
       TWITTER_API_KEY: "tw-key",
       TWITTER_API_SECRET: "tw-secret",
@@ -985,9 +945,7 @@ describe("worker.scheduled", () => {
 
   it("runs weekly recap on the isolated daily 08:10 trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       COINGECKO_API_KEY: "coingecko",
     });
 
@@ -1005,9 +963,7 @@ describe("worker.scheduled", () => {
 
   it("runs live reserve sync on the dedicated 4-hourly trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       ETHERSCAN_API_KEY: "etherscan",
       ALCHEMY_API_KEY: "alchemy",
     });
@@ -1028,10 +984,7 @@ describe("worker.scheduled", () => {
 
   it("runs only blacklist on the dedicated 6-hourly :03 trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
 
     await worker.scheduled(
       { cron: "3 */6 * * *" } as ScheduledEvent,
@@ -1077,9 +1030,7 @@ describe("worker.scheduled", () => {
 
   it("runs only DEX discovery on the dedicated 2-hourly :06 trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       COINGECKO_API_KEY: "cg-key",
     });
 
@@ -1097,9 +1048,7 @@ describe("worker.scheduled", () => {
 
   it("runs telegram dispatch on the dedicated 5-min trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
       TELEGRAM_RECAP_ROLLOUT_MODE: "off",
     });
@@ -1128,9 +1077,7 @@ describe("worker.scheduled", () => {
   it("fails telegram pending dispatch closed when recap rollout cleanup fails", async () => {
     cronMocks.cancelQueuedTelegramRecapsForRollout.mockRejectedValueOnce(new Error("cleanup failed"));
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
       TELEGRAM_RECAP_ROLLOUT_MODE: "off",
     });
@@ -1150,10 +1097,7 @@ describe("worker.scheduled", () => {
 
   it("polls the manual digest trigger on the shared 5-min trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
 
     await worker.scheduled(
       { cron: "*/5 * * * *" } as ScheduledEvent,
@@ -1170,9 +1114,7 @@ describe("worker.scheduled", () => {
 
   it("runs daily 03:00 housekeeping on its dedicated trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
 
@@ -1193,10 +1135,7 @@ describe("worker.scheduled", () => {
 
   it("runs the monthly yield coverage audit on its dedicated trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    });
+    const env = makeScheduledEnv();
 
     await worker.scheduled(
       { cron: "0 6 1 * *" } as ScheduledEvent,
@@ -1211,9 +1150,7 @@ describe("worker.scheduled", () => {
 
   it("runs the extended mint/burn lane on the offset 30-min slot", async () => {
     const { ctx, waits } = makeExecutionContext();
-    const env = createWorkerEnv({
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeScheduledEnv({
       ALCHEMY_API_KEY: "alchemy-key",
     });
 

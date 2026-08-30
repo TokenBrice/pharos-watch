@@ -425,6 +425,77 @@ type TelegramRetentionDeleteStep = (
   report?: TelegramRetentionReportDescriptor;
 };
 
+// SAFETY: These closed `as const` tuples are the only source of interpolated SQL
+// identifiers/fragments below, so builder callers cannot provide arbitrary SQL.
+const SIMPLE_RETENTION_TABLES = ["telegram_alert_job_target_items", "telegram_alert_job_targets", "telegram_alert_jobs", "telegram_alert_source_resolution_targets", "telegram_alert_source_resolution_memberships", "telegram_alert_source_resolution_pages", "telegram_freeze_alert_targets", "telegram_freeze_alert_events", "telegram_usage_daily", "telegram_watcher_lifecycle_daily", "telegram_adoption_daily", "telegram_adoption_retention_daily", "telegram_adoption_ingress_quota", "telegram_adoption_client_quota", "telegram_chat_delivery_diagnostics"] as const;
+const SIMPLE_RETENTION_COLUMNS = ["created_at", "detected_at", "day", "measurement_day", "updated_at"] as const;
+const SOURCE_CHILD_RETENTION_TABLES = ["telegram_alert_target_plan_items", "telegram_alert_target_plan_pages", "telegram_alert_planning_subscribers", "telegram_alert_target_expiry_progress", "telegram_alert_source_resolution_targets", "telegram_alert_source_resolution_memberships", "telegram_alert_source_resolution_pages"] as const;
+const SOURCE_CHILD_RETENTION_PREDICATES = ["child.state = 'complete'"] as const;
+
+type TelegramRetentionDeleteOptions = {
+  name: string;
+  cutoff: number | string;
+  totalLimit?: number;
+  countsTowardRunBudget?: boolean;
+  report?: TelegramRetentionReportDescriptor;
+};
+
+function makeSimpleRetentionDeleteStep(
+  {
+    name, table, timestampColumn, cutoff, totalLimit, countsTowardRunBudget, report,
+  }: TelegramRetentionDeleteOptions & {
+    table: (typeof SIMPLE_RETENTION_TABLES)[number];
+    timestampColumn: (typeof SIMPLE_RETENTION_COLUMNS)[number];
+  },
+): TelegramRetentionDeleteStep {
+  if (!SIMPLE_RETENTION_TABLES.includes(table)) throw new Error(`Unsupported Telegram retention table: ${table}`);
+  if (!SIMPLE_RETENTION_COLUMNS.includes(timestampColumn)) {
+    throw new Error(`Unsupported Telegram retention timestamp column: ${timestampColumn}`);
+  }
+  return {
+    name,
+    sql: `DELETE FROM ${table} WHERE ${timestampColumn} < ? AND rowid IN (SELECT rowid FROM ${table} WHERE ${timestampColumn} < ? ORDER BY ${timestampColumn} ASC, rowid ASC LIMIT ?)`,
+    cutoff,
+    cutoffBindCount: 2,
+    totalLimit,
+    countsTowardRunBudget,
+    report,
+  };
+}
+
+function makeSourceChildRetentionDeleteStep(
+  {
+    name, table, cutoff, childPredicate, totalLimit, countsTowardRunBudget, report,
+  }: TelegramRetentionDeleteOptions & {
+    table: (typeof SOURCE_CHILD_RETENTION_TABLES)[number];
+    childPredicate?: (typeof SOURCE_CHILD_RETENTION_PREDICATES)[number];
+  },
+): TelegramRetentionDeleteStep {
+  if (!SOURCE_CHILD_RETENTION_TABLES.includes(table)) throw new Error(`Unsupported Telegram retention table: ${table}`);
+  if (childPredicate && !SOURCE_CHILD_RETENTION_PREDICATES.includes(childPredicate)) {
+    throw new Error(`Unsupported Telegram retention child predicate: ${childPredicate}`);
+  }
+  return {
+    name,
+    sql: `DELETE FROM ${table}
+      WHERE rowid IN (
+        SELECT child.rowid
+          FROM telegram_alert_source_events source
+          JOIN ${table} child
+            ON child.source_event_id = source.source_event_id
+         WHERE source.completed_at < ?
+           AND source.status IN ('complete', 'expired')${childPredicate ? `\n           AND ${childPredicate}` : ""}
+         ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
+         LIMIT ?
+      )`,
+    cutoff,
+    cutoffBindCount: 1,
+    totalLimit,
+    countsTowardRunBudget,
+    report,
+  };
+}
+
 function runTelegramRetentionDeleteStep(
   db: D1Database,
   step: TelegramRetentionDeleteStep,
@@ -505,75 +576,21 @@ export async function runTelegramRetentionCleanup(
   const cutoffDayString = new Date((nowSec - USAGE_DAILY_RETENTION_SEC) * 1000).toISOString().slice(0, 10);
 
   const retentionDeleteSteps = [
-    {
-      name: "targetPlanItems",
-      sql: `DELETE FROM telegram_alert_target_plan_items
-      WHERE rowid IN (
-        SELECT child.rowid
-          FROM telegram_alert_source_events source
-          JOIN telegram_alert_target_plan_items child
-            ON child.source_event_id = source.source_event_id
-         WHERE source.completed_at < ?
-           AND source.status IN ('complete', 'expired')
-         ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
-         LIMIT ?
-      )`,
-      cutoff: workflowCutoff,
-      cutoffBindCount: 1,
-      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-      countsTowardRunBudget: true,
-    },
-    {
-      name: "targetPlanPages",
-      sql: `DELETE FROM telegram_alert_target_plan_pages
-      WHERE rowid IN (
-        SELECT child.rowid
-          FROM telegram_alert_source_events source
-          JOIN telegram_alert_target_plan_pages child
-            ON child.source_event_id = source.source_event_id
-         WHERE source.completed_at < ?
-           AND source.status IN ('complete', 'expired')
-         ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
-         LIMIT ?
-      )`,
-      cutoff: workflowCutoff,
-      cutoffBindCount: 1,
-    },
-    {
-      name: "planningSubscribers",
-      sql: `DELETE FROM telegram_alert_planning_subscribers
-      WHERE rowid IN (
-        SELECT child.rowid
-          FROM telegram_alert_source_events source
-          JOIN telegram_alert_planning_subscribers child
-            ON child.source_event_id = source.source_event_id
-         WHERE source.completed_at < ?
-           AND source.status IN ('complete', 'expired')
-         ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
-         LIMIT ?
-      )`,
-      cutoff: workflowCutoff,
-      cutoffBindCount: 1,
-      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-      countsTowardRunBudget: true,
-    },
-    {
-      name: "targetExpiryProgress",
-      sql: `DELETE FROM telegram_alert_target_expiry_progress
-      WHERE rowid IN (
-        SELECT child.rowid
-          FROM telegram_alert_source_events source
-          JOIN telegram_alert_target_expiry_progress child
-            ON child.source_event_id = source.source_event_id
-         WHERE source.completed_at < ?
-           AND source.status IN ('complete', 'expired')
-           AND child.state = 'complete'
-         ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
-         LIMIT ?
-      )`,
-      cutoff: workflowCutoff,
-      cutoffBindCount: 1,
-    },
+    makeSourceChildRetentionDeleteStep({
+      name: "targetPlanItems", table: "telegram_alert_target_plan_items", cutoff: workflowCutoff,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT, countsTowardRunBudget: true,
+    }),
+    makeSourceChildRetentionDeleteStep({
+      name: "targetPlanPages", table: "telegram_alert_target_plan_pages", cutoff: workflowCutoff,
+    }),
+    makeSourceChildRetentionDeleteStep({
+      name: "planningSubscribers", table: "telegram_alert_planning_subscribers", cutoff: workflowCutoff,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT, countsTowardRunBudget: true,
+    }),
+    makeSourceChildRetentionDeleteStep({
+      name: "targetExpiryProgress", table: "telegram_alert_target_expiry_progress", cutoff: workflowCutoff,
+      childPredicate: "child.state = 'complete'",
+    }),
     {
       name: "replayJobTargetItems",
       sql: `DELETE FROM telegram_alert_job_target_items
@@ -675,57 +692,18 @@ export async function runTelegramRetentionCleanup(
       cutoffBindCount: 1,
       report: { capped: false, group: "jobs" },
     },
-    {
-      name: "replaySourceResolutionTargets",
-      sql: `DELETE FROM telegram_alert_source_resolution_targets
-      WHERE rowid IN (
-        SELECT child.rowid
-          FROM telegram_alert_source_events source
-          JOIN telegram_alert_source_resolution_targets child
-            ON child.source_event_id = source.source_event_id
-         WHERE source.completed_at < ?
-           AND source.status IN ('complete', 'expired')
-         ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
-         LIMIT ?
-      )`,
-      cutoff: replayCutoff,
-      cutoffBindCount: 1,
+    makeSourceChildRetentionDeleteStep({
+      name: "replaySourceResolutionTargets", table: "telegram_alert_source_resolution_targets", cutoff: replayCutoff,
       report: { flat: false, capped: false, group: "sourceResolutionTargets" },
-    },
-    {
-      name: "replaySourceResolutionMemberships",
-      sql: `DELETE FROM telegram_alert_source_resolution_memberships
-      WHERE rowid IN (
-        SELECT child.rowid
-          FROM telegram_alert_source_events source
-          JOIN telegram_alert_source_resolution_memberships child
-            ON child.source_event_id = source.source_event_id
-         WHERE source.completed_at < ?
-           AND source.status IN ('complete', 'expired')
-         ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
-         LIMIT ?
-      )`,
-      cutoff: replayCutoff,
-      cutoffBindCount: 1,
+    }),
+    makeSourceChildRetentionDeleteStep({
+      name: "replaySourceResolutionMemberships", table: "telegram_alert_source_resolution_memberships", cutoff: replayCutoff,
       report: { flat: false, capped: false, group: "sourceResolutionMemberships" },
-    },
-    {
-      name: "replaySourceResolutionPages",
-      sql: `DELETE FROM telegram_alert_source_resolution_pages
-      WHERE rowid IN (
-        SELECT child.rowid
-          FROM telegram_alert_source_events source
-          JOIN telegram_alert_source_resolution_pages child
-            ON child.source_event_id = source.source_event_id
-         WHERE source.completed_at < ?
-           AND source.status IN ('complete', 'expired')
-         ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
-         LIMIT ?
-      )`,
-      cutoff: replayCutoff,
-      cutoffBindCount: 1,
+    }),
+    makeSourceChildRetentionDeleteStep({
+      name: "replaySourceResolutionPages", table: "telegram_alert_source_resolution_pages", cutoff: replayCutoff,
       report: { flat: false, capped: false, group: "sourceResolutionPages" },
-    },
+    }),
     {
       name: "replaySourceEvents",
       sql: `DELETE FROM telegram_alert_source_events
@@ -761,64 +739,14 @@ export async function runTelegramRetentionCleanup(
       cutoff: alertAuditCutoff,
       cutoffBindCount: 2,
     },
-    {
-      name: "auditJobTargetItems",
-      sql: "DELETE FROM telegram_alert_job_target_items WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_target_items WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-      cutoff: alertAuditCutoff,
-      cutoffBindCount: 2,
-      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-      countsTowardRunBudget: true,
-      report: { flat: false, capped: false, group: "jobTargetItems" },
-    },
-    {
-      name: "auditJobTargets",
-      sql: "DELETE FROM telegram_alert_job_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-      cutoff: alertAuditCutoff,
-      cutoffBindCount: 2,
-      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-      countsTowardRunBudget: true,
-      report: { flat: false, capped: false, group: "jobTargets" },
-    },
-    {
-      name: "auditJobs",
-      sql: "DELETE FROM telegram_alert_jobs WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_jobs WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-      cutoff: alertAuditCutoff,
-      cutoffBindCount: 2,
-      report: { flat: false, capped: false, group: "jobs" },
-    },
-    {
-      name: "auditSourceResolutionTargets",
-      sql: "DELETE FROM telegram_alert_source_resolution_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-      cutoff: alertAuditCutoff,
-      cutoffBindCount: 2,
-      report: { flat: false, capped: false, group: "sourceResolutionTargets" },
-    },
-    {
-      name: "auditSourceResolutionMemberships",
-      sql: "DELETE FROM telegram_alert_source_resolution_memberships WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_memberships WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-      cutoff: alertAuditCutoff,
-      cutoffBindCount: 2,
-      report: { flat: false, capped: false, group: "sourceResolutionMemberships" },
-    },
-    {
-      name: "auditSourceResolutionPages",
-      sql: "DELETE FROM telegram_alert_source_resolution_pages WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_pages WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-      cutoff: alertAuditCutoff,
-      cutoffBindCount: 2,
-      report: { flat: false, capped: false, group: "sourceResolutionPages" },
-    },
-    {
-      name: "freezeTargets",
-      sql: "DELETE FROM telegram_freeze_alert_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_freeze_alert_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-      cutoff: alertAuditCutoff,
-      cutoffBindCount: 2,
-    },
-    {
-      name: "freezeEvents",
-      sql: "DELETE FROM telegram_freeze_alert_events WHERE detected_at < ? AND rowid IN (SELECT rowid FROM telegram_freeze_alert_events WHERE detected_at < ? ORDER BY detected_at ASC, rowid ASC LIMIT ?)",
-      cutoff: alertAuditCutoff,
-      cutoffBindCount: 2,
-    },
+    makeSimpleRetentionDeleteStep({ name: "auditJobTargetItems", table: "telegram_alert_job_target_items", timestampColumn: "created_at", cutoff: alertAuditCutoff, totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT, countsTowardRunBudget: true, report: { flat: false, capped: false, group: "jobTargetItems" } }),
+    makeSimpleRetentionDeleteStep({ name: "auditJobTargets", table: "telegram_alert_job_targets", timestampColumn: "created_at", cutoff: alertAuditCutoff, totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT, countsTowardRunBudget: true, report: { flat: false, capped: false, group: "jobTargets" } }),
+    makeSimpleRetentionDeleteStep({ name: "auditJobs", table: "telegram_alert_jobs", timestampColumn: "created_at", cutoff: alertAuditCutoff, report: { flat: false, capped: false, group: "jobs" } }),
+    makeSimpleRetentionDeleteStep({ name: "auditSourceResolutionTargets", table: "telegram_alert_source_resolution_targets", timestampColumn: "created_at", cutoff: alertAuditCutoff, report: { flat: false, capped: false, group: "sourceResolutionTargets" } }),
+    makeSimpleRetentionDeleteStep({ name: "auditSourceResolutionMemberships", table: "telegram_alert_source_resolution_memberships", timestampColumn: "created_at", cutoff: alertAuditCutoff, report: { flat: false, capped: false, group: "sourceResolutionMemberships" } }),
+    makeSimpleRetentionDeleteStep({ name: "auditSourceResolutionPages", table: "telegram_alert_source_resolution_pages", timestampColumn: "created_at", cutoff: alertAuditCutoff, report: { flat: false, capped: false, group: "sourceResolutionPages" } }),
+    makeSimpleRetentionDeleteStep({ name: "freezeTargets", table: "telegram_freeze_alert_targets", timestampColumn: "created_at", cutoff: alertAuditCutoff }),
+    makeSimpleRetentionDeleteStep({ name: "freezeEvents", table: "telegram_freeze_alert_events", timestampColumn: "detected_at", cutoff: alertAuditCutoff }),
     {
       name: "auditSourceEvents",
       sql: `DELETE FROM telegram_alert_source_events
@@ -848,48 +776,13 @@ export async function runTelegramRetentionCleanup(
       cutoffBindCount: 2,
       report: { flat: false, capped: false, group: "sourceEvents" },
     },
-    {
-      name: "usageDaily",
-      sql: "DELETE FROM telegram_usage_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_usage_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
-      cutoff: cutoffDayString,
-      cutoffBindCount: 2,
-    },
-    {
-      name: "watcherLifecycle",
-      sql: "DELETE FROM telegram_watcher_lifecycle_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_watcher_lifecycle_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
-      cutoff: cutoffDayString,
-      cutoffBindCount: 2,
-    },
-    {
-      name: "adoptionDaily",
-      sql: "DELETE FROM telegram_adoption_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_adoption_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
-      cutoff: cutoffDayString,
-      cutoffBindCount: 2,
-    },
-    {
-      name: "adoptionRetention",
-      sql: "DELETE FROM telegram_adoption_retention_daily WHERE measurement_day < ? AND rowid IN (SELECT rowid FROM telegram_adoption_retention_daily WHERE measurement_day < ? ORDER BY measurement_day ASC, rowid ASC LIMIT ?)",
-      cutoff: cutoffDayString,
-      cutoffBindCount: 2,
-    },
-    {
-      name: "adoptionIngressQuota",
-      sql: "DELETE FROM telegram_adoption_ingress_quota WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_adoption_ingress_quota WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
-      cutoff: nowSec - 2 * DAY_SEC,
-      cutoffBindCount: 2,
-    },
-    {
-      name: "adoptionClientQuota",
-      sql: "DELETE FROM telegram_adoption_client_quota WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_adoption_client_quota WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
-      cutoff: nowSec - 2 * DAY_SEC,
-      cutoffBindCount: 2,
-    },
-    {
-      name: "diagnostics",
-      sql: "DELETE FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
-      cutoff: nowSec - CHAT_DIAGNOSTICS_RETENTION_SEC,
-      cutoffBindCount: 2,
-    },
+    makeSimpleRetentionDeleteStep({ name: "usageDaily", table: "telegram_usage_daily", timestampColumn: "day", cutoff: cutoffDayString }),
+    makeSimpleRetentionDeleteStep({ name: "watcherLifecycle", table: "telegram_watcher_lifecycle_daily", timestampColumn: "day", cutoff: cutoffDayString }),
+    makeSimpleRetentionDeleteStep({ name: "adoptionDaily", table: "telegram_adoption_daily", timestampColumn: "day", cutoff: cutoffDayString }),
+    makeSimpleRetentionDeleteStep({ name: "adoptionRetention", table: "telegram_adoption_retention_daily", timestampColumn: "measurement_day", cutoff: cutoffDayString }),
+    makeSimpleRetentionDeleteStep({ name: "adoptionIngressQuota", table: "telegram_adoption_ingress_quota", timestampColumn: "updated_at", cutoff: nowSec - 2 * DAY_SEC }),
+    makeSimpleRetentionDeleteStep({ name: "adoptionClientQuota", table: "telegram_adoption_client_quota", timestampColumn: "updated_at", cutoff: nowSec - 2 * DAY_SEC }),
+    makeSimpleRetentionDeleteStep({ name: "diagnostics", table: "telegram_chat_delivery_diagnostics", timestampColumn: "updated_at", cutoff: nowSec - CHAT_DIAGNOSTICS_RETENTION_SEC }),
     {
       name: "commandCooldownCache",
       cachePrefix: "telegram:command-cooldown:",

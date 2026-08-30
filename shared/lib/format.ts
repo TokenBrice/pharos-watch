@@ -253,9 +253,18 @@ export function formatTrackingSpanSeconds(seconds: number): string {
   return formatTrackingSpanDays(Math.floor(seconds / DAY_SECONDS));
 }
 
+/** Format a UTC calendar date as an ISO date string ("YYYY-MM-DD"). */
+export function formatUtcDateOnly(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 /** Format an epoch-seconds timestamp as an ISO date string ("YYYY-MM-DD"). */
 export function formatIsoDate(seconds: number): string {
-  return new Date(seconds * 1000).toISOString().slice(0, 10);
+  return formatUtcDateOnly(new Date(seconds * 1000));
+}
+
+export function formatIsoTimestamp(seconds: number): string {
+  return new Date(seconds * 1000).toISOString();
 }
 
 export function formatEventDate(timestamp: number): string {

@@ -17,6 +17,8 @@
  * the D1 read path lives in `worker/src/lib/measured-execution-ledger-query.ts`.
  */
 
+import { formatIsoDate } from "./format";
+
 export const MEASURED_LEDGER_VERSION = 1;
 export const MEASURED_LEDGER_CHUNK_CHARS = 240;
 /** Default chunk budget; 6 chunks ≈ 1,440 body chars, comfortably over the 14-cohort shape. */
@@ -337,10 +339,6 @@ export interface MeasuredLedgerJoinedCohortCycle {
   quotes: MeasuredLedgerQuoteCohort | null;
 }
 
-function utcDay(cycleSec: number): string {
-  return new Date(cycleSec * 1_000).toISOString().slice(0, 10);
-}
-
 /**
  * Joins Record A and Record B streams per daily cycle and derives the
  * Phase 0.1 tri-state per policy cohort. The cohort universe is the union of
@@ -358,7 +356,7 @@ export function joinMeasuredLedgerRecords(
   for (const record of records) {
     for (const key of Object.keys(record.cohorts)) cohortUniverse.add(key);
     if (record.kind === "A") {
-      const day = utcDay(record.cycle);
+      const day = formatIsoDate(record.cycle);
       const existing = admissionByDay.get(day);
       if (!existing || record.cycle >= existing.cycle) admissionByDay.set(day, record);
       continue;
@@ -369,7 +367,7 @@ export function joinMeasuredLedgerRecords(
         quotesByGeneration.set(record.targetGenerationId, record);
       }
     }
-    const day = utcDay(record.cycle);
+    const day = formatIsoDate(record.cycle);
     const existingDay = quotesByDay.get(day);
     if (!existingDay || record.cycle >= existingDay.cycle) quotesByDay.set(day, record);
   }

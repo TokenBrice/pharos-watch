@@ -7,10 +7,11 @@ import { StatusPill } from "@/components/status/severity-pill";
 import type { ReliabilityEndpointModel } from "@/lib/reliability-workspace-model";
 import { sanitizeReliabilityProbePath } from "@/lib/reliability-workspace-model";
 import { getProbeStatusDetail, getProbeStatusLabel, isProbePassing } from "@/lib/status-dashboard-model";
+import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { cn } from "@/lib/utils";
 
 function sampleLabel(timestamp: number | null): string {
-  return timestamp ? new Date(timestamp * 1_000).toLocaleString() : "Unknown";
+  return formatStatusTimestamp(timestamp, { fallback: "Unknown" });
 }
 
 function ProbeRows({ probes }: { probes: EndpointProbeResult[] }) {

@@ -1,9 +1,11 @@
+import { cloneResponseWithPolicy } from "./response-policy";
+
 export const NOINDEX_HEADER_VALUE = "noindex, nofollow";
 
 export function withNoindex(response: Response): Response {
-  const wrapped = new Response(response.body, response);
-  wrapped.headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE);
-  return wrapped;
+  return cloneResponseWithPolicy(response, {
+    mutateHeaders: (headers) => headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE),
+  });
 }
 
 export function noindexTextNotFoundResponse(): Response {

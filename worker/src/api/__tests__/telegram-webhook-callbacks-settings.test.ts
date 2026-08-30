@@ -3,7 +3,8 @@ import { mockTelegramMembership } from "../../test-helpers/__shared/telegram";
 import {
   fetchSpy,
   handleCallbackQuery,
-  mockD1,
+  makeCallbackQuery,
+  mockTelegramD1,
   resetCallbackTest,
 } from "./telegram-webhook-callbacks.test-support";
 
@@ -30,13 +31,10 @@ beforeEach(resetCallbackTest);
 describe("handleCallbackQuery", () => {
   describe("settings dispatch", () => {
     it("settings:home routes to the settings handler and edits the message", async () => {
-      const db = mockD1([{ match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null }]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-settings",
-        data: "settings:home",
-        from: { id: 1 },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      const db = mockTelegramD1([], {
+        fallbackTables: [{ match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null }],
       });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:home", { id: "cb-settings", from: { id: 1 } }));
 
       // editMessageText was called, not sendMessage.
       const edits = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("editMessageText"));
@@ -44,8 +42,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("settings:home:<page> routes to the requested per-coin button page", async () => {
-      const db = mockD1([
-        { match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null },
+      const db = mockTelegramD1([
         {
           match: "FROM telegram_subscriptions",
           rows: ["usdt-tether", "usdc-circle", "dai-makerdao", "pyusd-paypal", "usds-sky", "usde-ethena"].map(
@@ -61,13 +58,10 @@ describe("handleCallbackQuery", () => {
             }),
           ),
         },
-      ]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-settings-page",
-        data: "settings:home:1",
-        from: { id: 1 },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      ], {
+        fallbackTables: [{ match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null }],
       });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:home:1", { id: "cb-settings-page", from: { id: 1 } }));
 
       const edits = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("editMessageText"));
       expect(edits.length).toBe(1);
@@ -80,13 +74,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("settings:c:<id>:db:A writes the alert_dews flag", async () => {
-      const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-coin",
-        data: "settings:c:usdc-circle:db:A",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
-      });
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:c:usdc-circle:db:A", { id: "cb-coin" }));
 
       const history = db.getHistory();
       const insert = history.find(
@@ -99,21 +88,12 @@ describe("handleCallbackQuery", () => {
     });
 
     it("settings mutating callbacks in groups refuse non-admins before D1 writes", async () => {
-      const db = mockD1([
-        {
-          match: "FROM cache WHERE key = ?",
-          rows: [],
-          first: null,
-        },
-      ]);
+      const db = mockTelegramD1([], {
+        fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
+      });
       mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
 
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-settings-group",
-        data: "settings:gt:dews",
-        from: { id: 7, username: "member" },
-        message: { chat: { id: -42, type: "supergroup" }, message_id: 999 },
-      });
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:gt:dews", { id: "cb-settings-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 999 } }));
 
       const history = db.getHistory();
       expect(history.some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
@@ -122,13 +102,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("malformed settings callbacks do not write", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-settings-bad",
-        data: "settings:q:2",
-        from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
-      });
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:q:2", { id: "cb-settings-bad" }));
 
       expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
       const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));

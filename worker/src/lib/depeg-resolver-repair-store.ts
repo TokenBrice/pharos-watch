@@ -1,4 +1,3 @@
-import { insertReturningMapped } from "./db";
 import { assertNonEmpty, assertPositiveInteger } from "./depeg-resolver-store-validators";
 
 export type DdrRepairOperation =
@@ -21,6 +20,8 @@ export interface AuthorizeEventRepairInput {
   createdBy: string;
 }
 
+export type RepairAuthorizationIdentity = Pick<AuthorizeEventRepairInput, "eventId" | "incidentKey" | "operation" | "createdAt" | "expiresAt" | "createdBy">;
+
 export interface ConsumeEventRepairAuthorizationInput {
   authorizationId: number;
   eventId: number;
@@ -29,6 +30,8 @@ export interface ConsumeEventRepairAuthorizationInput {
   consumedAt: number;
   consumer: string;
 }
+
+type RepairAuthorizationConsumptionIdentity = RepairAuthorizationIdentity | Pick<ConsumeEventRepairAuthorizationInput, "authorizationId" | "eventId" | "incidentKey" | "operation">;
 
 export interface DdrEventRepairAuthorization {
   id: number;
@@ -83,6 +86,40 @@ function mapAuthorization(row: AuthorizationRow): DdrEventRepairAuthorization {
   };
 }
 
+function authorizationIdentityWhereSql(alias: string): string {
+  return `${alias}.event_id = ? AND ${alias}.incident_key = ? AND ${alias}.operation = ? AND ${alias}.created_at = ? AND ${alias}.expires_at = ? AND ${alias}.created_by = ?`;
+}
+
+export function repairAuthorizationIdentityBinds(identity: RepairAuthorizationIdentity): unknown[] { return [identity.eventId, identity.incidentKey, identity.operation, identity.createdAt, identity.expiresAt, identity.createdBy]; }
+
+export function prepareRepairAuthorization(db: D1Database, input: AuthorizeEventRepairInput, guard?: { sql: string; binds: readonly unknown[] }): D1PreparedStatement {
+  const columnsJson = JSON.stringify([...new Set(input.columns)].sort()), createdAtSql = guard == null ? "?" : `CASE WHEN ${guard.sql} THEN ? ELSE 0 END`;
+  return db.prepare(`INSERT INTO depeg_resolver_event_repair_authorizations
+    (event_id, incident_key, operation, columns_json, required_revision_id, required_erratum_id, reason, created_at, expires_at, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ${createdAtSql}, ?, ?) RETURNING *`).bind(
+    input.eventId, input.incidentKey, input.operation, columnsJson, input.requiredRevisionId ?? null, input.requiredErratumId ?? null, input.reason,
+    ...(guard?.binds ?? []), input.createdAt, input.expiresAt, input.createdBy,
+  );
+}
+
+export function prepareRepairAuthorizationConsumption(db: D1Database, identity: RepairAuthorizationConsumptionIdentity, consumedAt: number, consumer: string): D1PreparedStatement {
+  const byId = "authorizationId" in identity;
+  const whereSql = byId ? "authorization.id = ? AND authorization.event_id = ? AND authorization.incident_key = ? AND authorization.operation = ?" : authorizationIdentityWhereSql("authorization");
+  const identityBinds = byId ? [identity.authorizationId, identity.eventId, identity.incidentKey, identity.operation] : repairAuthorizationIdentityBinds(identity);
+  return db.prepare(`INSERT INTO depeg_resolver_event_repair_authorization_consumptions
+    (authorization_id, event_id, incident_key, operation, consumed_at, consumer)
+    SELECT authorization.id, authorization.event_id, authorization.incident_key, authorization.operation, ?, ?
+    FROM depeg_resolver_event_repair_authorizations authorization WHERE ${whereSql} AND authorization.expires_at >= ?`).bind(consumedAt, consumer, ...identityBinds, consumedAt);
+}
+
+export function repairAuthorizationIdSubquery(alias = "authorization"): string {
+  return `(SELECT ${alias}.id FROM depeg_resolver_event_repair_authorizations ${alias} WHERE ${authorizationIdentityWhereSql(alias)} LIMIT 1)`;
+}
+
+export function repairAuthorizationConsumedPredicate(alias = "authorization"): string {
+  return `EXISTS (SELECT 1 FROM depeg_resolver_event_repair_authorizations ${alias} JOIN depeg_resolver_event_repair_authorization_consumptions consumption ON consumption.authorization_id = ${alias}.id AND consumption.event_id = ${alias}.event_id AND consumption.incident_key = ${alias}.incident_key AND consumption.operation = ${alias}.operation WHERE ${authorizationIdentityWhereSql(alias)})`;
+}
+
 export async function authorizeEventRepair(
   db: D1Database,
   input: AuthorizeEventRepairInput,
@@ -98,29 +135,9 @@ export async function authorizeEventRepair(
   if (input.requiredRevisionId != null) assertPositiveInteger(input.requiredRevisionId, "requiredRevisionId");
   if (input.requiredErratumId != null) assertPositiveInteger(input.requiredErratumId, "requiredErratumId");
 
-  const columnsJson = JSON.stringify([...new Set(input.columns)].sort());
-  return insertReturningMapped(
-    db,
-    `INSERT INTO depeg_resolver_event_repair_authorizations
-     (event_id, incident_key, operation, columns_json, required_revision_id,
-      required_erratum_id, reason, created_at, expires_at, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     RETURNING *`,
-    [
-      input.eventId,
-      input.incidentKey,
-      input.operation,
-      columnsJson,
-      input.requiredRevisionId ?? null,
-      input.requiredErratumId ?? null,
-      input.reason,
-      input.createdAt,
-      input.expiresAt,
-      input.createdBy,
-    ],
-    mapAuthorization,
-    "repair authorization",
-  );
+  const row = await prepareRepairAuthorization(db, input).first<AuthorizationRow>();
+  if (!row) throw new Error("repair authorization insert could not be reloaded");
+  return mapAuthorization(row);
 }
 
 export async function consumeEventRepairAuthorization(
@@ -133,28 +150,12 @@ export async function consumeEventRepairAuthorization(
   assertNonEmpty(input.incidentKey, "incidentKey");
   assertNonEmpty(input.consumer, "consumer");
 
-  const result = await db
-    .prepare(
-      `INSERT INTO depeg_resolver_event_repair_authorization_consumptions
-       (authorization_id, event_id, incident_key, operation, consumed_at, consumer)
-       SELECT id, event_id, incident_key, operation, ?, ?
-       FROM depeg_resolver_event_repair_authorizations
-       WHERE id = ?
-         AND event_id = ?
-         AND incident_key = ?
-         AND operation = ?
-         AND expires_at >= ?`,
-    )
-    .bind(
-      input.consumedAt,
-      input.consumer,
-      input.authorizationId,
-      input.eventId,
-      input.incidentKey,
-      input.operation,
-      input.consumedAt,
-    )
-    .run();
+  const result = await prepareRepairAuthorizationConsumption(
+    db,
+    input,
+    input.consumedAt,
+    input.consumer,
+  ).run();
 
   if (Number(result.meta?.changes ?? 0) !== 1) {
     throw new Error("repair authorization was not available for consumption");

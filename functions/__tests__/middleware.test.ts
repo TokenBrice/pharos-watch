@@ -144,6 +144,24 @@ describe("pages middleware markdown negotiation", () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it("passes through non-negotiable methods before markdown negotiation", async () => {
+    const req = new Request("https://pharos.watch/stablecoin/usdt-tether/", {
+      method: "POST",
+      headers: { Accept: "text/markdown" },
+    });
+    const next = vi.fn(async () => new Response("POST passthrough", { status: 200 }));
+
+    const response = await onRequest({
+      request: req,
+      env: { ASSETS: { fetch: makeAssetsFetch(files) } },
+      next,
+    });
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("POST passthrough");
+  });
+
   it("falls through gracefully when the .md variant is missing", async () => {
     const req = new Request("https://pharos.watch/stablecoin/not-found/", {
       headers: { Accept: "text/markdown" },

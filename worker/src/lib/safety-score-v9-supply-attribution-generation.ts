@@ -7,7 +7,6 @@ import {
   type SupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { getCirculatingRaw } from "@shared/lib/supply";
 import { z } from "zod";
 import { SafetyScoreV9SupplyAttributionSchema } from "./report-cards-fixed-input";
 import {
@@ -25,6 +24,7 @@ import type {
   SafetyScoreV9SupplyAttributionCapture,
 } from "./safety-score-v9-supply-attribution";
 import {
+  aggregateSupplyUsd,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
 } from "./safety-score-v9-supply-attribution";
 import type { SafetyScoreV9SupplyAttributionInput } from "./safety-score-v9-supply-attribution-source";
@@ -251,13 +251,6 @@ function exactStrings(
     left.length === right.length &&
     left.every((value, index) => value === right[index])
   );
-}
-
-function aggregateSupplyUsd(
-  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
-  assetId: string,
-): number {
-  return getCirculatingRaw(fixedInput.aggregateCirculatingById[assetId] ?? {});
 }
 
 export function computeSafetyScoreV9SupplyAttributionGenerationId(

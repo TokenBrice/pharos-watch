@@ -1,16 +1,9 @@
-import type {
-  CoverageBreakdownItem,
-  CoverageRow,
-  CoverageStatus,
-} from "@/lib/coverage-types";
+import type { CoverageStatus } from "@/lib/coverage-types";
 import {
-  breakdownItem,
   createDataUnavailableStatus,
-  createBreakdownCounter,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
-  defineCoverageFeature,
-  statusKindsFromPresets,
+  definePresetCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -46,18 +39,6 @@ function resolveSafety(
   return createPresetStatus(safetyScore != null ? SAFETY_STATUS_PRESETS.rated : SAFETY_STATUS_PRESETS.nr);
 }
 
-function formatSafety(
-  _rows: readonly CoverageRow[],
-  breakdownMap: ReadonlyMap<string, number>,
-): CoverageBreakdownItem[] {
-  const get = createBreakdownCounter(breakdownMap);
-  return [
-    breakdownItem("rated", "rated", get("rated")),
-    breakdownItem("nr", "NR", get("nr")),
-    breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", get(DATA_UNAVAILABLE_KIND)),
-  ];
-}
-
 // "NR" is shared with DEX; the dedicated "general" legend entry covers it.
 const SAFETY_LEGEND: readonly CoverageLegendItem[] = [
   {
@@ -67,9 +48,14 @@ const SAFETY_LEGEND: readonly CoverageLegendItem[] = [
   },
 ] as const;
 
-export const coverageFeature = defineCoverageFeature({
-  statusKinds: [...statusKindsFromPresets(SAFETY_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
+export const coverageFeature = definePresetCoverageFeature({
+  presets: SAFETY_STATUS_PRESETS,
+  extraStatusKinds: [DATA_UNAVAILABLE_KIND],
+  breakdown: [
+    { key: "rated", label: "rated" },
+    { key: "nr", label: "NR" },
+    { key: DATA_UNAVAILABLE_KIND, label: "data n/a" },
+  ],
   legendItems: SAFETY_LEGEND,
   resolve: resolveSafety,
-  formatBreakdown: formatSafety,
 });

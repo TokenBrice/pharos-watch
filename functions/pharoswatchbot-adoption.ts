@@ -1,8 +1,12 @@
 import { buildProxyResponse, buildUpstreamHeaders, jsonError } from "./lib/proxy-utils";
 import { hashClientIp } from "./lib/client-ip-hash";
 import { rejectIfNotSiteDataUiOrigin } from "./lib/site-data-origin";
-import { DEFAULT_PROXY_TIMEOUT_MS } from "./lib/upstream-proxy";
-import { runPagesProxy, type PagesProxyContext } from "./lib/pages-proxy-harness";
+import {
+  createProxyRequest,
+  rejectInvalidProxyEnvironment,
+  runPagesProxy,
+  type PagesProxyContext,
+} from "./lib/pages-proxy-harness";
 import { resolveSiteApiOrigin, validatePagesSiteDataProxyEnv, type SiteDataProxyEnv } from "./lib/site-api-env";
 
 const TELEGRAM_ADOPTION_API_PATH = "/api/telegram-adoption";
@@ -58,17 +62,12 @@ export const onRequest = async (context: TelegramAdoptionPagesContext): Promise<
     },
     validateEnv: ({ env }) => {
       const issues = validatePagesSiteDataProxyEnv(env);
-      for (const issue of issues) {
-        if (issue.code === "site-data-db-missing") continue;
-        console.warn(`[telegram-adoption-proxy] ${issue.message}`);
-      }
-      return issues.some(
-        (issue) => issue.code === "site-api-origin-missing"
-          || issue.code === "site-api-origin-invalid"
-          || issue.code === "site-api-secret-missing",
-      )
-        ? jsonError(500, "Site API proxy is not configured")
-        : null;
+      return rejectInvalidProxyEnvironment({
+        issues: issues.filter((issue) => issue.code !== "site-data-db-missing"),
+        fatalCodes: ["site-api-origin-missing", "site-api-origin-invalid", "site-api-secret-missing"],
+        logPrefix: "telegram-adoption-proxy",
+        publicMessage: "Site API proxy is not configured",
+      });
     },
     resolveUpstreamPath: () => TELEGRAM_ADOPTION_API_PATH,
     beforeFetch: async ({ request, env }) => {
@@ -86,17 +85,15 @@ export const onRequest = async (context: TelegramAdoptionPagesContext): Promise<
         "X-Pharos-Site-Proxy-Secret": secret,
         [TELEGRAM_ADOPTION_CLIENT_HASH_HEADER]: clientIpHash,
       });
-      const upstreamUrl = new URL(upstreamPath, upstreamOrigin);
-      return {
-        upstreamUrl: upstreamUrl.toString(),
+      return createProxyRequest({
+        request,
+        origin: upstreamOrigin,
+        path: upstreamPath,
         method: "POST",
         headers,
         body: request.body,
-        timeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
-        timeoutReason: new DOMException("Telegram adoption upstream timed out", "TimeoutError"),
-        timeoutMessage: "Telegram adoption upstream timed out",
-        fetchFailedMessage: "Telegram adoption upstream fetch failed",
-      };
+        label: "Telegram adoption",
+      });
     },
     buildResponse: (_proxyContext, _upstreamPath, upstreamResponse) =>
       buildProxyResponse(upstreamResponse, FORWARDED_RESPONSE_HEADERS),

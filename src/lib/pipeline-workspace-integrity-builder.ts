@@ -1,16 +1,11 @@
-import { formatElapsedSeconds } from "@shared/lib/format";
 import type { StatusResponse } from "@shared/types";
+import { formatAge } from "@/lib/pipeline-workspace-format";
 import { healthSeverity, worstSeverity, SEVERITY_RANK } from "@/lib/status/workspace-mode";
 import type {
   PipelineIntegrityModel,
   PipelineIntegrityRow,
   PipelineSeverity,
 } from "@/lib/pipeline-workspace-model";
-
-function formatAge(ageSeconds: number | null, suffix = "since last sample"): string {
-  if (ageSeconds == null) return "Last sample not reported";
-  return `${formatElapsedSeconds(ageSeconds)} ${suffix}`;
-}
 
 export function buildPipelineIntegrityModel(data: StatusResponse): PipelineIntegrityModel {
   const publicationRows: PipelineIntegrityRow[] = [];
@@ -159,4 +154,3 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
     severity: worstSeverity(rows.map((row) => row.state)),
   };
 }
-

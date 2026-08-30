@@ -3,7 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { matchesGlob } from "node:path";
 import { GENERATED_ARTIFACT_REGISTRY, selectAutoStageArtifactIds } from "../lib/automation-registry.mjs";
-import { collectStagedFiles, splitNullDelimited } from "../lib/changed-files.mts";
+import { collectGitPaths, collectStagedFiles, normalizeRepoPaths, splitNullDelimited } from "../lib/changed-files.mts";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -44,9 +44,7 @@ function runShellCommandSync(command: string, cwd: string): number {
 }
 
 function collectUnstagedPaths(cwd: string, execFile: typeof execFileSync): string[] {
-  return splitNullDelimited(
-    String(execFile("git", ["diff", "--name-only", "--diff-filter=ACMRTD", "-z"], { cwd, encoding: "utf8" })),
-  ).map((path) => path.replaceAll("\\", "/"));
+  return collectGitPaths({ kind: "working", diffFilter: "ACMRTD" }, { cwd, execFile });
 }
 
 function matchesAny(path: string, patterns: readonly string[]): boolean {
@@ -72,7 +70,7 @@ function collectIgnoredPaths(
       encoding: "utf8",
       input: `${literal.join("\0")}\0`,
     });
-    return new Set(splitNullDelimited(String(output)).map((path) => path.replaceAll("\\", "/")));
+    return new Set(normalizeRepoPaths(splitNullDelimited(String(output))));
   } catch {
     return new Set();
   }

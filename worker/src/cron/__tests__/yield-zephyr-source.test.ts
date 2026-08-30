@@ -1,19 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchZephyrZysSource } from "../yield-sync/sources";
 
 describe("fetchZephyrZysSource", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanupYieldSourceTest);
 
   it("parses Zephyr historical returns into a ZYS protocol-api source row", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "zephyrprotocol.com/api/v1/historicalreturns",
         headers: { "x-last-success-at": "1778592715928" },
@@ -46,7 +42,7 @@ describe("fetchZephyrZysSource", () => {
   });
 
   it("returns null when the one-day effective APY is missing", async () => {
-    mockFetch([
+    mockYieldSourceRoutes([
       {
         match: "zephyrprotocol.com/api/v1/historicalreturns",
         body: {
@@ -60,7 +56,7 @@ describe("fetchZephyrZysSource", () => {
   });
 
   it("returns null on HTTP error", async () => {
-    mockFetch([{ match: "zephyrprotocol.com/api/v1/historicalreturns", status: 500, body: "" }]);
+    mockYieldSourceRoutes([{ match: "zephyrprotocol.com/api/v1/historicalreturns", status: 500, body: "" }]);
 
     await expect(fetchZephyrZysSource()).resolves.toBeNull();
   });

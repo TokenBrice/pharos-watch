@@ -6,6 +6,7 @@ import {
   isNegotiableMarkdownRoute,
 } from "@shared/lib/markdown-route-policy";
 import { injectHtmlCsp } from "./lib/csp-inject";
+import { cloneResponseWithPolicy } from "./lib/response-policy";
 
 interface MiddlewareEnv {
   ASSETS?: { fetch: typeof fetch };
@@ -95,18 +96,11 @@ function addDirectMarkdownAssetSeoHeaders(headers: Headers, canonicalPath: strin
   headers.set("Link", existingLink ? `${existingLink}, ${canonicalLink}` : canonicalLink);
 }
 
-function cloneForMethod(response: Response, method: string, headers: Headers): Response {
-  return new Response(method === "HEAD" ? null : response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
-
 function withNegotiationHeaders(response: Response, method: string): Response {
-  const headers = new Headers(response.headers);
-  addNegotiationCacheHeaders(headers);
-  return cloneForMethod(response, method, headers);
+  return cloneResponseWithPolicy(response, {
+    method,
+    mutateHeaders: addNegotiationCacheHeaders,
+  });
 }
 
 function withHtmlCsp(response: Response, request: Request, pathname: string): Promise<Response> {
@@ -129,9 +123,10 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
     const directMarkdownResponse = await ctx.next();
     if (!directMarkdownResponse.ok) return directMarkdownResponse;
 
-    const headers = new Headers(directMarkdownResponse.headers);
-    addDirectMarkdownAssetSeoHeaders(headers, directMarkdownCanonicalPath);
-    return cloneForMethod(directMarkdownResponse, ctx.request.method, headers);
+    return cloneResponseWithPolicy(directMarkdownResponse, {
+      method: ctx.request.method,
+      mutateHeaders: (headers) => addDirectMarkdownAssetSeoHeaders(headers, directMarkdownCanonicalPath),
+    });
   }
 
   const shouldTryMarkdown =
@@ -144,10 +139,13 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
     const mdResponse = await ctx.env.ASSETS.fetch(new Request(mdUrl.toString(), { method: "GET" }));
 
     if (mdResponse.ok) {
-      const headers = new Headers(mdResponse.headers);
-      headers.set("Content-Type", "text/markdown; charset=utf-8");
-      addNegotiationCacheHeaders(headers);
-      return cloneForMethod(mdResponse, ctx.request.method, headers);
+      return cloneResponseWithPolicy(mdResponse, {
+        method: ctx.request.method,
+        mutateHeaders: (headers) => {
+          headers.set("Content-Type", "text/markdown; charset=utf-8");
+          addNegotiationCacheHeaders(headers);
+        },
+      });
     }
   }
 

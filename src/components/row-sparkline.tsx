@@ -1,19 +1,40 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { type ReactNode, useId, useMemo } from "react";
 import { CHART_GREEN, CHART_RED, CHART_SLATE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
 
 /* Generic row sparkline.
    Pure-SVG, dependency-free, ~96×16 by default. Cheap enough to render ~400
-   per page. Sibling primitive to `pys-history-sparkline.tsx` — same SVG
-   vocabulary, no shared state. */
+   per page. Shared primitive for compact SVG trends. */
 
 export interface RowSparklineProps {
   /** Time-ordered samples. `null` marks a gap; the path breaks across it. */
   data: ReadonlyArray<number | null>;
+  /** Optional x-coordinate for each sample; defaults to the sample index. */
+  xValues?: readonly number[];
   width?: number;
   height?: number;
+  inset?: Readonly<{ top: number; right: number; bottom: number; left: number }>;
+  strokeWidth?: number;
+  yRangeMode?: "flat-unit" | "min-unit";
+  pointPrecision?: number | null;
+  nonScalingStroke?: boolean;
+  fillStyle?: "solid" | Readonly<{
+    kind: "vertical-gradient";
+    id: string;
+    startOpacity: number;
+    endOpacity: number;
+    baselineY: number;
+  }>;
+  /** Minimum number of finite samples required before rendering the SVG. */
+  minPoints?: number;
+  /** Draw the standard area fill beneath each line segment. */
+  fill?: boolean;
+  /** Hide the SVG from assistive technology. */
+  decorative?: boolean;
+  /** Replacement content for the empty-state fallback. */
+  emptyContent?: ReactNode;
   /** Signed-deviation mode: baseline anchored at 0 with diverging fills. */
   signed?: boolean;
   /** Reference rule drawn at this value (e.g. 0 bps for peg deviation). */
@@ -31,8 +52,7 @@ export interface RowSparklineProps {
 
 const DEFAULT_WIDTH = 96;
 const DEFAULT_HEIGHT = 16;
-const PAD_X = 1;
-const PAD_Y = 1;
+const DEFAULT_INSET = { top: 1, right: 1, bottom: 1, left: 1 } as const;
 const FILL_OPACITY = 0.18;
 const MIN_VALID_POINTS = 2;
 
@@ -41,14 +61,18 @@ interface PreparedPoint {
   i: number;
   /** Sample value (already finite). */
   v: number;
+  /** X-coordinate (sample index unless `xValues` is provided). */
+  x: number;
 }
 
-function prepare(data: ReadonlyArray<number | null>): PreparedPoint[] {
+function prepare(data: ReadonlyArray<number | null>, xValues?: readonly number[]): PreparedPoint[] {
   const out: PreparedPoint[] = [];
   for (let i = 0; i < data.length; i += 1) {
     const raw = data[i];
     if (raw == null || !Number.isFinite(raw)) continue;
-    out.push({ i, v: raw });
+    const x = xValues?.[i] ?? i;
+    if (!Number.isFinite(x)) continue;
+    out.push({ i, v: raw, x });
   }
   return out;
 }
@@ -79,24 +103,51 @@ function segmentize(points: PreparedPoint[]): Segment[] {
 
 function pointToCoords(
   p: PreparedPoint,
-  dataLen: number,
+  xStart: number,
+  xSpan: number,
   yMin: number,
   yMax: number,
   width: number,
   height: number,
+  inset: RowSparklineProps["inset"],
+  yRangeMode: RowSparklineProps["yRangeMode"],
 ): { x: number; y: number } {
-  const xSpan = Math.max(dataLen - 1, 1);
-  const yRange = Math.max(yMax - yMin, 1e-9);
-  const x = PAD_X + (p.i / xSpan) * (width - PAD_X * 2);
-  const y = PAD_Y + (1 - (p.v - yMin) / yRange) * (height - PAD_Y * 2);
+  const bounds = inset ?? DEFAULT_INSET;
+  const rawYRange = yMax - yMin;
+  const yRange = yRangeMode === "flat-unit"
+    ? rawYRange || 1
+    : yRangeMode === "min-unit" ? Math.max(rawYRange, 1) : Math.max(rawYRange, 1e-9);
+  const x = bounds.left + ((p.x - xStart) / xSpan) * (width - bounds.left - bounds.right);
+  const y = height - bounds.bottom - ((p.v - yMin) / yRange) * (height - bounds.top - bounds.bottom);
   return { x, y };
 }
 
-function buildLinePath(segment: Segment, project: (p: PreparedPoint) => { x: number; y: number }): string {
+function formatCoord(value: number, precision: number | null): string {
+  return precision === null ? String(value) : value.toFixed(precision);
+}
+
+function buildLinePoints(
+  segment: Segment,
+  project: (p: PreparedPoint) => { x: number; y: number },
+  precision: number | null,
+): string {
+  return segment.points
+    .map((p) => {
+      const { x, y } = project(p);
+      return `${formatCoord(x, precision)},${formatCoord(y, precision)}`;
+    })
+    .join(" ");
+}
+
+function buildLinePath(
+  segment: Segment,
+  project: (p: PreparedPoint) => { x: number; y: number },
+  precision: number | null,
+): string {
   return segment.points
     .map((p, idx) => {
       const { x, y } = project(p);
-      return `${idx === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+      return `${idx === 0 ? "M" : "L"}${formatCoord(x, precision)} ${formatCoord(y, precision)}`;
     })
     .join(" ");
 }
@@ -105,12 +156,13 @@ function buildAreaPath(
   segment: Segment,
   project: (p: PreparedPoint) => { x: number; y: number },
   baselineY: number,
+  precision: number | null,
 ): string {
   if (segment.points.length === 0) return "";
-  const line = buildLinePath(segment, project);
+  const line = buildLinePath(segment, project, precision);
   const first = project(segment.points[0]);
   const last = project(segment.points[segment.points.length - 1]);
-  return `${line} L${last.x.toFixed(2)} ${baselineY.toFixed(2)} L${first.x.toFixed(2)} ${baselineY.toFixed(2)} Z`;
+  return `${line} L${formatCoord(last.x, precision)} ${formatCoord(baselineY, precision)} L${formatCoord(first.x, precision)} ${formatCoord(baselineY, precision)} Z`;
 }
 
 /** For signed mode, walk a segment and split into above-/below-baseline
@@ -139,7 +191,8 @@ function splitBySign(
     ) {
       const t = (reference - prev.v) / (cur.v - prev.v);
       const crossI = prev.i + (cur.i - prev.i) * t;
-      const crossPoint: PreparedPoint = { i: crossI, v: reference };
+      const crossX = prev.x + (cur.x - prev.x) * t;
+      const crossPoint: PreparedPoint = { i: crossI, v: reference, x: crossX };
       bucket.push(crossPoint);
       result.push({ sign: currentSign, points: bucket });
       bucket = [crossPoint, cur];
@@ -157,8 +210,19 @@ function splitBySign(
 
 export function RowSparkline({
   data,
+  xValues,
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
+  inset = DEFAULT_INSET,
+  strokeWidth = 1.25,
+  yRangeMode,
+  pointPrecision = 2,
+  nonScalingStroke = true,
+  fillStyle = "solid",
+  minPoints = MIN_VALID_POINTS,
+  fill = true,
+  decorative = false,
+  emptyContent,
   signed = false,
   referenceValue,
   positiveColor = CHART_GREEN,
@@ -168,10 +232,12 @@ export function RowSparkline({
   className,
 }: RowSparklineProps) {
   const reactId = useId();
-  const prepared = useMemo(() => prepare(data), [data]);
+  const plotXValues =
+    xValues?.length === data.length && xValues.every((value) => Number.isFinite(value)) ? xValues : undefined;
+  const prepared = useMemo(() => prepare(data, plotXValues), [data, plotXValues]);
 
-  if (prepared.length < MIN_VALID_POINTS) {
-    return (
+  if (prepared.length < minPoints) {
+    return emptyContent !== undefined ? emptyContent : (
       <span
         className={cn("inline-flex font-mono text-[10px] text-muted-foreground", className)}
         aria-label={ariaLabel}
@@ -185,64 +251,86 @@ export function RowSparkline({
   const segments = segmentize(prepared);
   const ref = referenceValue ?? 0;
 
-  let yMin: number;
-  let yMax: number;
-  if (signed) {
-    let maxAbs = 0;
-    for (const p of prepared) {
-      const d = Math.abs(p.v - ref);
-      if (d > maxAbs) maxAbs = d;
-    }
-    if (maxAbs <= 0) maxAbs = 1;
-    yMin = ref - maxAbs;
-    yMax = ref + maxAbs;
-  } else {
-    let lo = Number.POSITIVE_INFINITY;
-    let hi = Number.NEGATIVE_INFINITY;
-    for (const p of prepared) {
-      if (p.v < lo) lo = p.v;
-      if (p.v > hi) hi = p.v;
-    }
-    yMin = lo;
-    yMax = hi;
-  }
+  const values = prepared.map((p) => p.v);
+  const maxAbs = Math.max(...values.map((value) => Math.abs(value - ref)));
+  const signedRange = maxAbs <= 0 ? 1 : maxAbs;
+  const yMin = signed ? ref - signedRange : Math.min(...values);
+  const yMax = signed ? ref + signedRange : Math.max(...values);
 
-  const dataLen = data.length;
-  const project = (p: PreparedPoint) => pointToCoords(p, dataLen, yMin, yMax, width, height);
+  const xStart = plotXValues?.[0] ?? 0;
+  const xEnd = plotXValues?.[plotXValues.length - 1] ?? data.length - 1;
+  const xSpan = Math.max(xEnd - xStart, 1);
+  const project = (p: PreparedPoint) => pointToCoords(
+    p, xStart, xSpan, yMin, yMax, width, height, inset, yRangeMode,
+  );
+  const baselineProjected = project({ i: 0, v: signed ? ref : yMin, x: xStart }).y;
+  const referenceProjected = referenceValue === undefined ? null : project({ i: 0, v: referenceValue, x: xStart }).y;
 
-  const baselineProjected = pointToCoords(
-    { i: 0, v: signed ? ref : yMin },
-    dataLen,
-    yMin,
-    yMax,
-    width,
-    height,
-  ).y;
-
-  const referenceProjected =
-    referenceValue !== undefined
-      ? pointToCoords({ i: 0, v: referenceValue }, dataLen, yMin, yMax, width, height).y
-      : null;
-
-  const titleId = `${reactId}-title`;
-  const descId = srSummary ? `${reactId}-desc` : undefined;
+  const titleId = decorative ? undefined : `${reactId}-title`;
+  const descId = !decorative && srSummary ? `${reactId}-desc` : undefined;
+  const gradientFill = typeof fillStyle === "object" ? fillStyle : null;
+  const renderSegment = (segment: Segment, key: string, color: string) => {
+    if (segment.points.length < 2) return null;
+    const lineProps = {
+      fill: "none",
+      stroke: color,
+      strokeWidth,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      vectorEffect: nonScalingStroke ? "non-scaling-stroke" : undefined,
+    } as const;
+    const line = decorative || !fill ? (
+      <polyline {...lineProps} points={buildLinePoints(segment, project, pointPrecision)} />
+    ) : (
+      <path {...lineProps} d={buildLinePath(segment, project, pointPrecision)} />
+    );
+    return (
+      <g key={key}>
+        {fill && gradientFill ? (
+          <polygon
+            points={`${buildLinePoints(segment, project, pointPrecision)} ${width},${gradientFill.baselineY} 0,${gradientFill.baselineY}`}
+            fill={`url(#${gradientFill.id})`}
+            stroke="none"
+          />
+        ) : fill ? (
+          <path
+            d={buildAreaPath(segment, project, baselineProjected, pointPrecision)}
+            fill={color}
+            fillOpacity={FILL_OPACITY}
+            stroke="none"
+          />
+        ) : null}
+        {line}
+      </g>
+    );
+  };
 
   return (
     <svg
-      role="img"
-      aria-labelledby={`${titleId}${descId ? ` ${descId}` : ""}`}
+      role={decorative ? undefined : "img"}
+      aria-hidden={decorative ? true : undefined}
+      aria-label={!decorative && xValues ? ariaLabel : undefined}
+      aria-labelledby={titleId ? `${titleId}${descId ? ` ${descId}` : ""}` : undefined}
       viewBox={`0 0 ${width} ${height}`}
       width={width}
       height={height}
       preserveAspectRatio="none"
       className={cn("inline-block align-middle", className)}
     >
-      <title id={titleId}>{ariaLabel}</title>
-      {srSummary ? <desc id={descId}>{srSummary}</desc> : null}
+      {titleId ? <title id={titleId}>{ariaLabel}</title> : null}
+      {descId ? <desc id={descId}>{srSummary}</desc> : null}
+      {fill && gradientFill ? (
+        <defs>
+          <linearGradient id={gradientFill.id} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={positiveColor} stopOpacity={gradientFill.startOpacity} />
+            <stop offset="100%" stopColor={positiveColor} stopOpacity={gradientFill.endOpacity} />
+          </linearGradient>
+        </defs>
+      ) : null}
       {referenceProjected !== null ? (
         <line
-          x1={PAD_X}
-          x2={width - PAD_X}
+          x1={inset.left}
+          x2={width - inset.right}
           y1={referenceProjected}
           y2={referenceProjected}
           stroke="currentColor"
@@ -255,57 +343,13 @@ export function RowSparkline({
       {signed
         ? segments.flatMap((segment, sIdx) => {
             const subs = splitBySign(segment, ref);
-            return subs.map((sub, idx) => {
-              if (sub.points.length < 2) return null;
-              const color =
-                sub.sign === "pos"
-                  ? positiveColor
-                  : sub.sign === "neg"
-                    ? negativeColor
-                    : CHART_SLATE;
-              return (
-                <g key={`s${sIdx}-${idx}`}>
-                  <path
-                    d={buildAreaPath({ points: sub.points }, project, baselineProjected)}
-                    fill={color}
-                    fillOpacity={FILL_OPACITY}
-                    stroke="none"
-                  />
-                  <path
-                    d={buildLinePath({ points: sub.points }, project)}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth={1.25}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                </g>
-              );
-            });
+            return subs.map((sub, idx) => renderSegment(
+              { points: sub.points },
+              `s${sIdx}-${idx}`,
+              sub.sign === "pos" ? positiveColor : sub.sign === "neg" ? negativeColor : CHART_SLATE,
+            ));
           })
-        : segments.map((segment, sIdx) => {
-            if (segment.points.length < 2) return null;
-            return (
-              <g key={`u${sIdx}`}>
-                <path
-                  d={buildAreaPath(segment, project, baselineProjected)}
-                  fill={positiveColor}
-                  fillOpacity={FILL_OPACITY}
-                  stroke="none"
-                />
-                <path
-                  d={buildLinePath(segment, project)}
-                  fill="none"
-                  stroke={positiveColor}
-                  strokeWidth={1.25}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </g>
-            );
-          })}
+        : segments.map((segment, sIdx) => renderSegment(segment, `u${sIdx}`, positiveColor))}
     </svg>
   );
 }

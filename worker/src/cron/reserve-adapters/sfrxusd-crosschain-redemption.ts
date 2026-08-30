@@ -27,12 +27,9 @@ import {
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
-import {
-  EIP1967_IMPLEMENTATION_SLOT,
-  implementationAddressFromSlot,
-  multicallResultByLabel,
-  runtimeCodeHash,
-} from "./onchain-identity";
+import { multicallResultByLabel, runtimeCodeHash } from "./onchain-identity";
+import { codeIdentityChecks } from "./evm-observation-plan";
+import type { EvmCodeIdentity } from "./evm-observation-plan";
 
 type Erc4626Params = LiveReserveAdapterParamsByKey["erc4626-single-asset"];
 type Hex = `0x${string}`;
@@ -448,133 +445,47 @@ async function verifyContractIdentities(args: {
         | "implementation-drift";
     }
 > {
-  type CodeRead = {
-    kind: "contract" | "implementation";
-    manifest: IdentityManifest;
-    code: Hex | null;
-  };
-  const codes = await Promise.all(
-    args.manifests.flatMap((manifest) => {
-      const block =
-        manifest.chain === "ethereum"
-          ? args.ethereumBlock
-          : args.fraxtalBlock;
-      const options =
-        manifest.chain === "ethereum"
-          ? args.ethereumOptions
-          : args.fraxtalOptions;
-      const reads: Array<Promise<CodeRead>> = [
-        runAdapterIo(
-          args.ctx,
-          `sfrxusd-route-code:${manifest.role}`,
-          () =>
-            args.client.code(
-              manifest.chain,
-              manifest.address,
-              block.blockNumber,
-              options,
-            ),
-          { signal: args.signal },
-        ).then((code) => ({
-          kind: "contract" as const,
-          manifest,
-          code,
-        })),
-      ];
-      if (manifest.implementationAddress) {
-        reads.push(
-          runAdapterIo(
-            args.ctx,
-            `sfrxusd-route-code:${manifest.role}:implementation`,
-            () =>
-              args.client.code(
-                manifest.chain,
-                manifest.implementationAddress!,
-                block.blockNumber,
-                options,
-              ),
-            { signal: args.signal },
-          ).then((code) => ({
-            kind: "implementation" as const,
-            manifest,
-            code,
-          })),
-        );
-      }
-      return reads;
-    }),
-  );
-  if (codes.some((entry) => entry.code == null)) {
-    return { status: "rejected", rejectionCode: "code-unavailable" };
-  }
-  for (const entry of codes) {
-    const expectedHash =
-      entry.kind === "contract"
-        ? entry.manifest.expectedRuntimeCodeHash
-        : entry.manifest.expectedImplementationRuntimeCodeHash;
-    if (
-      !expectedHash ||
-      runtimeCodeHash(entry.code) !== expectedHash.toLowerCase()
-    ) {
-      return {
-        status: "rejected",
-        rejectionCode:
-          entry.kind === "implementation"
-            ? "implementation-drift"
-            : "code-drift",
-      };
-    }
-  }
-
-  const proxies = args.manifests.filter(
-    (
-      manifest,
-    ): manifest is IdentityManifest & {
-      implementationAddress: string;
-      expectedImplementationRuntimeCodeHash: string;
-    } =>
-      manifest.implementationAddress != null &&
-      manifest.expectedImplementationRuntimeCodeHash != null,
-  );
-  const slots = await Promise.all(
-    proxies.map((manifest) => {
-      const block =
-        manifest.chain === "ethereum"
-          ? args.ethereumBlock
-          : args.fraxtalBlock;
-      const options =
-        manifest.chain === "ethereum"
-          ? args.ethereumOptions
-          : args.fraxtalOptions;
-      return runAdapterIo(
-        args.ctx,
-        `sfrxusd-route-implementation:${manifest.role}`,
-        () =>
-          args.client.storage(
-            manifest.chain,
-            manifest.address,
-            EIP1967_IMPLEMENTATION_SLOT,
-            block.blockNumber,
-            options,
-          ),
-        { signal: args.signal },
-      );
-    }),
-  );
-  if (slots.some((slot) => implementationAddressFromSlot(slot) == null)) {
+  type Identity = EvmCodeIdentity & { manifest: IdentityManifest };
+  const identities: Identity[] = args.manifests.map((manifest) => ({
+    address: manifest.address,
+    codeHash: manifest.expectedRuntimeCodeHash,
+    ...(manifest.implementationAddress
+      ? {
+          implementationAddress: manifest.implementationAddress,
+          ...(manifest.expectedImplementationRuntimeCodeHash
+            ? { implementationCodeHash: manifest.expectedImplementationRuntimeCodeHash }
+            : {}),
+        }
+      : {}),
+    manifest,
+  }));
+  const identityResult = await codeIdentityChecks(args.client, identities, {
+    parallel: true,
+    blockNumber: (identity) =>
+      identity.manifest.chain === "ethereum"
+        ? args.ethereumBlock.blockNumber
+        : args.fraxtalBlock.blockNumber,
+    rpcOptions: (identity) =>
+      identity.manifest.chain === "ethereum"
+        ? args.ethereumOptions
+        : args.fraxtalOptions,
+    readCode: (client, address, blockNumber, rpcOptions, identity) =>
+      client.code(identity.manifest.chain, address, blockNumber, rpcOptions),
+    readStorage: (client, address, slot, blockNumber, rpcOptions, identity) =>
+      client.storage(identity.manifest.chain, address, slot, blockNumber, rpcOptions),
+    hashCode: (code) => runtimeCodeHash(code as Hex),
+    run: (label, factory) => runAdapterIo(args.ctx, label, factory, { signal: args.signal }),
+    codeLabel: (identity, kind) =>
+      kind === "implementation"
+        ? `sfrxusd-route-code:${identity.manifest.role}:implementation`
+        : `sfrxusd-route-code:${identity.manifest.role}`,
+    storageLabel: (identity) => `sfrxusd-route-implementation:${identity.manifest.role}`,
+  });
+  if (identityResult.status === "rejected") {
     return {
       status: "rejected",
-      rejectionCode: "implementation-unavailable",
+      rejectionCode: identityResult.rejectionCode,
     };
-  }
-  if (
-    slots.some(
-      (slot, index) =>
-        implementationAddressFromSlot(slot) !==
-        normalizeExpectedAddress(proxies[index].implementationAddress),
-    )
-  ) {
-    return { status: "rejected", rejectionCode: "implementation-drift" };
   }
 
   return {

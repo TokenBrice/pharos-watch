@@ -18,6 +18,7 @@ import { FilterSelect, STATUS_FILTER_FIELD_CLASS, STATUS_PANEL_SHELL_CLASS } fro
 import { StatusPill } from "./severity-pill";
 import { cn } from "@/lib/utils";
 import { apiKeyAccessibleIdentity } from "./api-key-presentation";
+import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 // The Sort control keeps the bare class: its `<select>` shares a flex row with
 // the direction toggle rather than filling the label, so it is not a
 // `FilterSelect`.
@@ -368,7 +369,7 @@ export function ApiKeyTable({
                 {formatExpirySummary(key, nowSeconds)}
               </TableCell>
               <TableCell className="max-w-[14rem] px-3 py-2 align-top text-muted-foreground">
-                <div>{key.lastUsedAt ? new Date(key.lastUsedAt * 1000).toLocaleString() : "never"}</div>
+                <div>{formatStatusTimestamp(key.lastUsedAt, { fallback: "never" })}</div>
                 <div className="truncate font-mono text-[11px]">{key.lastUsedRoute ?? "no route"}</div>
               </TableCell>
               <TableCell

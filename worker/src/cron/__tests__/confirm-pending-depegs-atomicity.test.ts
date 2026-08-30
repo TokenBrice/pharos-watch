@@ -3,6 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import {
+  insertDexPrice,
+  insertPendingDepeg,
+  makePendingDepegRow,
+} from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), notOkAsNull: true, passthroughNonResponse: true }));
@@ -22,56 +27,28 @@ vi.mock("../../lib/native-peg-quotes", () => ({
 }));
 
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
-import { DEPEG_PENDING_MIN_AGE_SEC } from "../../lib/constants";
 
 const NOW_SEC = 1_700_000_000;
 
 function insertConfirmablePending(sqlite: DatabaseSync, id: number, stablecoinId: string): void {
-  sqlite.prepare(
-    `INSERT INTO depeg_pending (
-       id, stablecoin_id, symbol, peg_type, direction, first_seen_bps,
-       first_seen_at, first_price, peg_reference, reason, last_seen_bps,
-       last_seen_at, last_price, peak_seen_bps, peak_price, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
+  const row = makePendingDepegRow({
     id,
-    stablecoinId,
-    stablecoinId,
-    "peggedUSD",
-    "below",
-    -300,
-    NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC - 60,
-    0.97,
-    1,
-    "large-cap",
-    -300,
-    NOW_SEC - 30,
-    0.97,
-    -300,
-    0.97,
-    NOW_SEC - 30,
-  );
-
-  sqlite.prepare(
-    `INSERT INTO dex_prices (
-       stablecoin_id, symbol, dex_price_usd, source_pool_count,
-       source_total_tvl, deviation_from_primary_bps, primary_price_at_calc,
-       price_sources_json, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    stablecoinId,
-    stablecoinId,
-    0.97,
-    2,
-    5_000_000,
-    0,
-    0.97,
-    JSON.stringify([
-      { price: 0.97, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
-      { price: 0.969, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
-    ]),
-    NOW_SEC - 30,
-  );
+    stablecoin_id: stablecoinId,
+    symbol: stablecoinId,
+    first_seen_bps: -300,
+    first_price: 0.97,
+    last_seen_bps: -300,
+    last_seen_at: NOW_SEC - 30,
+    last_price: 0.97,
+    peak_seen_bps: -300,
+    peak_price: 0.97,
+    updated_at: NOW_SEC - 30,
+  });
+  insertPendingDepeg(sqlite, row);
+  insertDexPrice(sqlite, stablecoinId, stablecoinId, 0.97, [
+    { price: 0.97, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+    { price: 0.969, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+  ]);
 }
 
 function makePromotionAsset(stablecoinId: string) {

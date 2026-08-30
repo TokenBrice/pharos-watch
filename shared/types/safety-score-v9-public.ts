@@ -43,6 +43,7 @@ import {
 } from "./safety-score-v9-public-facts";
 import { refineCard } from "./safety-score-v9-public-internal";
 import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
+import { V9BoundedEvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
 
 export {
   findSafetyScoreV9ParentAttributionIssues,
@@ -373,13 +374,7 @@ const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
     code: V9ReasonCodeSchema,
     path: z.string().min(1),
     message: z.string().min(1),
-    responsibility: z.enum([
-      "integration-missing",
-      "issuer-undisclosed",
-      "method-unsupported",
-      "producer-failed",
-      "published-evidence-expired",
-    ]),
+    responsibility: V9BoundedEvidenceResponsibilitySchema,
   })
   .strict()
   .superRefine((item, ctx) => {
@@ -1378,13 +1373,15 @@ function refineCardBase(
   }
 }
 
-export const SafetyScoreV9CurrentCardSchema = z
+export const SafetyScoreV9CurrentCardBaseSchema = z
   .object({
     ...SafetyScoreV9CardShape,
     scoreTrace: SafetyScoreV9ScoreTraceSchema,
     breakdowns: SafetyScoreV9BreakdownsSchema.nullable(),
   })
-  .strict()
+  .strict();
+
+export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema
   .superRefine((card, ctx) => {
     refineCardBase(card, ctx);
     refineCard(card, ctx);

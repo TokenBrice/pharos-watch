@@ -1,15 +1,12 @@
 import type { RedemptionBackstopEntry } from "@shared/types";
 import type { RedemptionRouteFamily } from "@shared/types";
-import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/coverage-types";
+import type { CoverageStatus } from "@/lib/coverage-types";
 import { REDEMPTION_MODELED_ROUTE_DISPLAY, REDEMPTION_ROUTE_FAMILY_DISPLAY } from "@/lib/redemption-backstop-labels";
 import {
-  breakdownItem,
   createDataUnavailableStatus,
-  createBreakdownCounter,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
-  defineCoverageFeature,
-  statusKindsFromPresets,
+  definePresetCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -133,46 +130,6 @@ function resolveRedemption(entry: RedemptionBackstopEntry | null | undefined, da
   );
 }
 
-function formatRedemption(
-  _rows: readonly CoverageRow[],
-  breakdownMap: ReadonlyMap<string, number>,
-): CoverageBreakdownItem[] {
-  const get = createBreakdownCounter(breakdownMap);
-  return [
-    breakdownItem("modeled-heuristic", "heuristic", get("modeled-heuristic")),
-    breakdownItem("resolved-unscored", "resolved", get("resolved-unscored")),
-    breakdownItem("configured-unrated", "configured", get("configured-unrated")),
-    breakdownItem("impaired", "impaired", get("impaired")),
-    breakdownItem(
-      "offchain-issuer",
-      REDEMPTION_ROUTE_FAMILY_DISPLAY["offchain-issuer"].coverageBreakdownLabel,
-      get("offchain-issuer"),
-    ),
-    breakdownItem("psm-swap", REDEMPTION_ROUTE_FAMILY_DISPLAY["psm-swap"].coverageBreakdownLabel, get("psm-swap")),
-    breakdownItem(
-      "queue-redeem",
-      REDEMPTION_ROUTE_FAMILY_DISPLAY["queue-redeem"].coverageBreakdownLabel,
-      get("queue-redeem"),
-    ),
-    breakdownItem(
-      "collateral-redeem",
-      REDEMPTION_ROUTE_FAMILY_DISPLAY["collateral-redeem"].coverageBreakdownLabel,
-      get("collateral-redeem"),
-    ),
-    breakdownItem(
-      "stablecoin-redeem",
-      REDEMPTION_ROUTE_FAMILY_DISPLAY["stablecoin-redeem"].coverageBreakdownLabel,
-      get("stablecoin-redeem"),
-    ),
-    breakdownItem(
-      "basket-redeem",
-      REDEMPTION_ROUTE_FAMILY_DISPLAY["basket-redeem"].coverageBreakdownLabel,
-      get("basket-redeem"),
-    ),
-    breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", get(DATA_UNAVAILABLE_KIND)),
-  ];
-}
-
 const REDEMPTION_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Issuer / PSM / Queue / Collat. / Stable / Basket",
@@ -212,12 +169,25 @@ const REDEMPTION_LEGEND: readonly CoverageLegendItem[] = [
   },
 ] as const;
 
-export const coverageFeature = defineCoverageFeature({
-  statusKinds: [
-    ...statusKindsFromPresets(REDEMPTION_ROUTE_STATUS_PRESETS, REDEMPTION_STATE_STATUS_PRESETS),
-    DATA_UNAVAILABLE_KIND,
+export const coverageFeature = definePresetCoverageFeature({
+  presets: { ...REDEMPTION_ROUTE_STATUS_PRESETS, ...REDEMPTION_STATE_STATUS_PRESETS },
+  extraStatusKinds: [DATA_UNAVAILABLE_KIND],
+  breakdown: [
+    { key: "modeled-heuristic", label: "heuristic" },
+    { key: "resolved-unscored", label: "resolved" },
+    { key: "configured-unrated", label: "configured" },
+    { key: "impaired", label: "impaired" },
+    { key: "offchain-issuer", label: REDEMPTION_ROUTE_FAMILY_DISPLAY["offchain-issuer"].coverageBreakdownLabel },
+    { key: "psm-swap", label: REDEMPTION_ROUTE_FAMILY_DISPLAY["psm-swap"].coverageBreakdownLabel },
+    { key: "queue-redeem", label: REDEMPTION_ROUTE_FAMILY_DISPLAY["queue-redeem"].coverageBreakdownLabel },
+    {
+      key: "collateral-redeem",
+      label: REDEMPTION_ROUTE_FAMILY_DISPLAY["collateral-redeem"].coverageBreakdownLabel,
+    },
+    { key: "stablecoin-redeem", label: REDEMPTION_ROUTE_FAMILY_DISPLAY["stablecoin-redeem"].coverageBreakdownLabel },
+    { key: "basket-redeem", label: REDEMPTION_ROUTE_FAMILY_DISPLAY["basket-redeem"].coverageBreakdownLabel },
+    { key: DATA_UNAVAILABLE_KIND, label: "data n/a" },
   ],
   legendItems: REDEMPTION_LEGEND,
   resolve: resolveRedemption,
-  formatBreakdown: formatRedemption,
 });

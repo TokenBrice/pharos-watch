@@ -10,6 +10,13 @@ import {
 } from "./depeg-resolver-incident-store";
 import { buildInClause, isMissingTableError } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import {
+  prepareRepairAuthorization,
+  prepareRepairAuthorizationConsumption,
+  repairAuthorizationIdentityBinds,
+  repairAuthorizationConsumedPredicate,
+  repairAuthorizationIdSubquery,
+} from "./depeg-resolver-repair-store";
 
 export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "failed";
 
@@ -22,8 +29,6 @@ export const DDR_REPAIR_RUNNER_BATCH_LIMIT_V1 = 5;
 const DDR_REPAIR_RUNNER_CLAIM_LEASE_SEC_V1 = 15 * 60;
 export const DDR_REPAIR_RUNNER_BACKOFF_SEC_V1 = 6 * 60 * 60;
 const DDR_REPAIR_RUNNER_CREATED_BY = "ddr-worker:repair-task-runner-v1";
-const DDR_REPAIR_RUNNER_LINK_COLUMNS_JSON = '["event_id","incident_key","relation"]';
-const DDR_REPAIR_RUNNER_CURRENT_COLUMNS_JSON = '["current_event_id","current_started_at"]';
 const DDR_REPAIR_RUNNER_LINK_REASON = "Repair-task runner adopted a T1.2-safe live DDR tail";
 const DDR_REPAIR_RUNNER_CURRENT_REASON =
   "Repair-task runner advanced a T1.2-safe canonical current source";
@@ -728,6 +733,19 @@ function noPendingLockWhereSql(): string {
 }
 
 function predecessorLineageWhereSql(): string {
+  const authorizedPredecessor = (alias: string, operation: string) => `EXISTS (
+    SELECT 1
+    FROM depeg_resolver_event_repair_authorizations ${alias}_authorization
+    JOIN depeg_resolver_event_repair_authorization_consumptions ${alias}_consumption
+      ON ${alias}_consumption.authorization_id = ${alias}_authorization.id
+     AND ${alias}_consumption.event_id = ${alias}_authorization.event_id
+     AND ${alias}_consumption.incident_key = ${alias}_authorization.incident_key
+     AND ${alias}_consumption.operation = ${alias}_authorization.operation
+    WHERE ${alias}_authorization.id = ${alias}.repair_authorization_id
+      AND ${alias}_authorization.event_id = i.current_event_id
+      AND ${alias}_authorization.incident_key = i.incident_key
+      AND ${alias}_authorization.operation = '${operation}'
+  )`;
   return `EXISTS (
             SELECT 1
             FROM depeg_resolver_incident_event_links predecessor_link
@@ -735,19 +753,7 @@ function predecessorLineageWhereSql(): string {
               AND predecessor_link.event_id = i.current_event_id
               AND (
                 predecessor_link.repair_authorization_id IS NULL
-                OR EXISTS (
-                  SELECT 1
-                  FROM depeg_resolver_event_repair_authorizations predecessor_link_authorization
-                  JOIN depeg_resolver_event_repair_authorization_consumptions predecessor_link_consumption
-                    ON predecessor_link_consumption.authorization_id = predecessor_link_authorization.id
-                   AND predecessor_link_consumption.event_id = predecessor_link_authorization.event_id
-                   AND predecessor_link_consumption.incident_key = predecessor_link_authorization.incident_key
-                   AND predecessor_link_consumption.operation = predecessor_link_authorization.operation
-                  WHERE predecessor_link_authorization.id = predecessor_link.repair_authorization_id
-                    AND predecessor_link_authorization.event_id = i.current_event_id
-                    AND predecessor_link_authorization.incident_key = i.incident_key
-                    AND predecessor_link_authorization.operation = 'incident_link'
-                )
+                OR ${authorizedPredecessor("predecessor_link", "incident_link")}
               )
           )
           AND EXISTS (
@@ -757,19 +763,7 @@ function predecessorLineageWhereSql(): string {
               AND predecessor_revision.current_event_id = i.current_event_id
               AND (
                 predecessor_revision.repair_authorization_id IS NULL
-                OR EXISTS (
-                  SELECT 1
-                  FROM depeg_resolver_event_repair_authorizations predecessor_revision_authorization
-                  JOIN depeg_resolver_event_repair_authorization_consumptions predecessor_revision_consumption
-                    ON predecessor_revision_consumption.authorization_id = predecessor_revision_authorization.id
-                   AND predecessor_revision_consumption.event_id = predecessor_revision_authorization.event_id
-                   AND predecessor_revision_consumption.incident_key = predecessor_revision_authorization.incident_key
-                   AND predecessor_revision_consumption.operation = predecessor_revision_authorization.operation
-                  WHERE predecessor_revision_authorization.id = predecessor_revision.repair_authorization_id
-                    AND predecessor_revision_authorization.event_id = i.current_event_id
-                    AND predecessor_revision_authorization.incident_key = i.incident_key
-                    AND predecessor_revision_authorization.operation = 'incident_current_update'
-                )
+                OR ${authorizedPredecessor("predecessor_revision", "incident_current_update")}
               )
           )`;
 }
@@ -783,48 +777,6 @@ function repairCandidateFromSql(): string {
 }
 
 type RunnerRepairOperation = "incident_link" | "incident_current_update";
-
-function runnerAuthorizationIdentityWhereSql(operation: RunnerRepairOperation): string {
-  return `authorization.event_id = ?
-          AND authorization.incident_key = ?
-          AND authorization.operation = '${operation}'
-          AND authorization.created_at = ?
-          AND authorization.expires_at = ?
-          AND authorization.created_by = ?`;
-}
-
-function runnerAuthorizationIdSql(operation: RunnerRepairOperation): string {
-  return `(SELECT authorization.id
-           FROM depeg_resolver_event_repair_authorizations authorization
-           WHERE ${runnerAuthorizationIdentityWhereSql(operation)}
-           LIMIT 1)`;
-}
-
-function runnerConsumedAuthorizationWhereSql(operation: RunnerRepairOperation): string {
-  return `EXISTS (
-            SELECT 1
-            FROM depeg_resolver_event_repair_authorizations authorization
-            JOIN depeg_resolver_event_repair_authorization_consumptions consumption
-              ON consumption.authorization_id = authorization.id
-             AND consumption.event_id = authorization.event_id
-             AND consumption.incident_key = authorization.incident_key
-             AND consumption.operation = authorization.operation
-            WHERE ${runnerAuthorizationIdentityWhereSql(operation)}
-          )`;
-}
-
-function runnerAuthorizationIdentityBinds(
-  candidate: DdrRepairCandidateRow,
-  timestamp: number,
-): unknown[] {
-  return [
-    candidate.target_event_id,
-    candidate.incident_key,
-    timestamp,
-    timestamp + DDR_REPAIR_RUNNER_CLAIM_LEASE_SEC_V1,
-    DDR_REPAIR_RUNNER_CREATED_BY,
-  ];
-}
 
 async function candidateStillMatchesCanonicalIncident(
   db: D1Database,
@@ -864,114 +816,76 @@ async function executeDdrRepair(
 
   const targetBinds = targetIdentityBinds(candidate);
   const incidentBinds = candidateIdentityBinds(candidate);
-  const authorizationIdentityBinds = runnerAuthorizationIdentityBinds(candidate, timestamp);
+  const authorizationIdentity = { eventId: candidate.target_event_id, incidentKey: candidate.incident_key, createdAt: timestamp, expiresAt: timestamp + DDR_REPAIR_RUNNER_CLAIM_LEASE_SEC_V1, createdBy: DDR_REPAIR_RUNNER_CREATED_BY };
+  const prepareAuthorizationPair = (operation: RunnerRepairOperation, columns: string[], reason: string, guard?: { sql: string; binds: readonly unknown[] }) => [prepareRepairAuthorization(db, { ...authorizationIdentity, operation, columns, reason }, guard), prepareRepairAuthorizationConsumption(db, { ...authorizationIdentity, operation }, timestamp, DDR_REPAIR_RUNNER_CREATED_BY)];
   const statements = [
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_event_repair_authorizations
-         (event_id, incident_key, operation, columns_json, required_revision_id,
-          required_erratum_id, reason, created_at, expires_at, created_by)
-         VALUES (?, ?, 'incident_link', ?, NULL, NULL, ?,
-           CASE WHEN EXISTS (
-             SELECT 1
-             ${repairCandidateFromSql()}
-             WHERE ${targetIdentityWhereSql()}
-               AND ${incidentIdentityWhereSql()}
-               AND ${safeCurrentEventWhereSql()}
-               AND ${predecessorLineageWhereSql()}
-               AND ${noExistingTargetRepairWhereSql()}
-               AND EXISTS (
+    ...prepareAuthorizationPair(
+      "incident_link",
+      ["event_id", "incident_key", "relation"],
+      DDR_REPAIR_RUNNER_LINK_REASON,
+      {
+        sql: `EXISTS (
                  SELECT 1
-                 FROM depeg_events_with_provenance canonical_target
-                 WHERE canonical_target.id = target.id
-                   AND canonical_target.stablecoin_id = target.stablecoin_id
-                   AND canonical_target.direction = target.direction
-                   AND canonical_target.started_at = target.started_at
-                   AND canonical_target.source = 'live'
-                   AND (
-                     canonical_target.provenance_audit_verdict IS NULL
-                     OR canonical_target.provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')
+                 ${repairCandidateFromSql()}
+                 WHERE ${targetIdentityWhereSql()}
+                   AND ${incidentIdentityWhereSql()}
+                   AND ${safeCurrentEventWhereSql()}
+                   AND ${predecessorLineageWhereSql()}
+                   AND ${noExistingTargetRepairWhereSql()}
+                   AND EXISTS (
+                     SELECT 1
+                     FROM depeg_events_with_provenance canonical_target
+                     WHERE canonical_target.id = target.id
+                       AND canonical_target.stablecoin_id = target.stablecoin_id
+                       AND canonical_target.direction = target.direction
+                       AND canonical_target.started_at = target.started_at
+                       AND canonical_target.source = 'live'
+                       AND (
+                         canonical_target.provenance_audit_verdict IS NULL
+                         OR canonical_target.provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')
+                       )
                    )
-               )
-               AND EXISTS (
-                 SELECT 1
-                 FROM worker_repair_tasks claimed_task
-                 WHERE claimed_task.task_id = ?
-                   AND claimed_task.kind = ?
-                   AND claimed_task.state = 'claimed'
-                   AND claimed_task.locked_by = ?
-                   AND claimed_task.locked_until >= ?
-               )
-           ) THEN ? ELSE 0 END,
-           ?, ?)`,
-      )
-      .bind(
-        eventId,
-        candidate.incident_key,
-        DDR_REPAIR_RUNNER_LINK_COLUMNS_JSON,
-        DDR_REPAIR_RUNNER_LINK_REASON,
-        candidate.target_event_id,
-        ...targetBinds,
-        ...incidentBinds,
-        task.task_id,
-        DDR_REPAIR_TASK_KIND,
-        DDR_REPAIR_RUNNER_CREATED_BY,
-        timestamp,
-        timestamp,
-        timestamp + DDR_REPAIR_RUNNER_CLAIM_LEASE_SEC_V1,
-        DDR_REPAIR_RUNNER_CREATED_BY,
-      ),
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_event_repair_authorization_consumptions
-         (authorization_id, event_id, incident_key, operation, consumed_at, consumer)
-         SELECT authorization.id, authorization.event_id, authorization.incident_key,
-                authorization.operation, ?, ?
-         FROM depeg_resolver_event_repair_authorizations authorization
-         WHERE ${runnerAuthorizationIdentityWhereSql("incident_link")}`,
-      )
-      .bind(timestamp, DDR_REPAIR_RUNNER_CREATED_BY, ...authorizationIdentityBinds),
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_event_repair_authorizations
-         (event_id, incident_key, operation, columns_json, required_revision_id,
-          required_erratum_id, reason, created_at, expires_at, created_by)
-         VALUES (?, ?, 'incident_current_update', ?, NULL, NULL, ?, ?, ?, ?)`,
-      )
-      .bind(
-        eventId,
-        candidate.incident_key,
-        DDR_REPAIR_RUNNER_CURRENT_COLUMNS_JSON,
-        DDR_REPAIR_RUNNER_CURRENT_REASON,
-        timestamp,
-        timestamp + DDR_REPAIR_RUNNER_CLAIM_LEASE_SEC_V1,
-        DDR_REPAIR_RUNNER_CREATED_BY,
-      ),
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_event_repair_authorization_consumptions
-         (authorization_id, event_id, incident_key, operation, consumed_at, consumer)
-         SELECT authorization.id, authorization.event_id, authorization.incident_key,
-                authorization.operation, ?, ?
-         FROM depeg_resolver_event_repair_authorizations authorization
-         WHERE ${runnerAuthorizationIdentityWhereSql("incident_current_update")}`,
-      )
-      .bind(timestamp, DDR_REPAIR_RUNNER_CREATED_BY, ...authorizationIdentityBinds),
+                   AND EXISTS (
+                     SELECT 1
+                     FROM worker_repair_tasks claimed_task
+                     WHERE claimed_task.task_id = ?
+                       AND claimed_task.kind = ?
+                       AND claimed_task.state = 'claimed'
+                       AND claimed_task.locked_by = ?
+                       AND claimed_task.locked_until >= ?
+                   )
+               )`,
+        binds: [
+          candidate.target_event_id,
+          ...targetBinds,
+          ...incidentBinds,
+          task.task_id,
+          DDR_REPAIR_TASK_KIND,
+          DDR_REPAIR_RUNNER_CREATED_BY,
+          timestamp,
+        ],
+      },
+    ),
+    ...prepareAuthorizationPair(
+      "incident_current_update",
+      ["current_event_id", "current_started_at"],
+      DDR_REPAIR_RUNNER_CURRENT_REASON,
+    ),
     db
       .prepare(
         `INSERT INTO depeg_resolver_incident_event_links
          (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
          VALUES (?, ?, 'repair_replacement',
-           ${runnerAuthorizationIdSql("incident_link")},
-           CASE WHEN ${runnerConsumedAuthorizationWhereSql("incident_link")}
+           ${repairAuthorizationIdSubquery()},
+           CASE WHEN ${repairAuthorizationConsumedPredicate()}
              THEN ? ELSE 0 END,
            'T1.2-safe live tail linked by repair-task runner')`,
       )
       .bind(
         candidate.incident_key,
         candidate.target_event_id,
-        ...authorizationIdentityBinds,
-        ...authorizationIdentityBinds,
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_link" }),
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_link" }),
         timestamp,
       ),
     db
@@ -979,15 +893,15 @@ async function executeDdrRepair(
         `INSERT INTO depeg_resolver_incident_revisions
          (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
          VALUES (?, ?, ?, 'T1.2-safe live tail adopted by repair-task runner',
-           ${runnerAuthorizationIdSql("incident_current_update")}, NULL,
+           ${repairAuthorizationIdSubquery()}, NULL,
            CASE WHEN EXISTS (
              SELECT 1
              FROM depeg_resolver_incident_event_links linked
              WHERE linked.incident_key = ?
                AND linked.event_id = ?
-               AND linked.repair_authorization_id = ${runnerAuthorizationIdSql("incident_link")}
+               AND linked.repair_authorization_id = ${repairAuthorizationIdSubquery()}
            )
-             AND ${runnerConsumedAuthorizationWhereSql("incident_current_update")}
+             AND ${repairAuthorizationConsumedPredicate()}
              THEN ? ELSE 0 END,
            ?)`,
       )
@@ -995,11 +909,11 @@ async function executeDdrRepair(
         candidate.incident_key,
         candidate.current_event_id,
         candidate.target_event_id,
-        ...authorizationIdentityBinds,
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_current_update" }),
         candidate.incident_key,
         candidate.target_event_id,
-        ...authorizationIdentityBinds,
-        ...authorizationIdentityBinds,
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_link" }),
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_current_update" }),
         timestamp,
         DDR_REPAIR_RUNNER_CREATED_BY,
       ),
@@ -1024,7 +938,7 @@ async function executeDdrRepair(
                  FROM depeg_resolver_incident_event_links linked
                  WHERE linked.incident_key = i.incident_key
                    AND linked.event_id = target.id
-                   AND linked.repair_authorization_id = ${runnerAuthorizationIdSql("incident_link")}
+                   AND linked.repair_authorization_id = ${repairAuthorizationIdSubquery()}
                )
                AND EXISTS (
                  SELECT 1
@@ -1032,7 +946,7 @@ async function executeDdrRepair(
                  WHERE revision.incident_key = i.incident_key
                    AND revision.previous_event_id = i.current_event_id
                    AND revision.current_event_id = target.id
-                   AND revision.repair_authorization_id = ${runnerAuthorizationIdSql("incident_current_update")}
+                   AND revision.repair_authorization_id = ${repairAuthorizationIdSubquery()}
                )
            )`,
       )
@@ -1042,8 +956,8 @@ async function executeDdrRepair(
         timestamp,
         ...incidentBinds,
         ...targetBinds,
-        ...authorizationIdentityBinds,
-        ...authorizationIdentityBinds,
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_link" }),
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_current_update" }),
       ),
     db
       .prepare(

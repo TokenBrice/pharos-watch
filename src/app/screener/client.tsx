@@ -10,12 +10,10 @@ import { ScreenerTable } from "@/components/screener/screener-table";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
 import { usePegSummary, useReportCardsV9, useStressSignals, useDexLiquidity } from "@/hooks/api-hooks";
-import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useSort } from "@/hooks/use-sort";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { buildQueryFreshnessGroup } from "@/lib/query-refetch-group";
-import { decodeState, encodeState } from "@/lib/url-state";
-import { replaceEncodedUrlState } from "@/lib/replace-encoded-url-state";
+import { useUrlState } from "@/hooks/use-url-state";
 import {
   SCREENER_FILTER_DEFAULTS,
   SCREENER_URL_SCHEMA,
@@ -27,7 +25,6 @@ import {
   projectBlacklistable,
   projectMintAuthority,
   sortScreenerRows,
-  type ScreenerFilters,
   type ScreenerRow,
   type ScreenerSortKey,
 } from "@/lib/screener-filters";
@@ -138,7 +135,10 @@ export function ScreenerClient() {
     meta: dexMeta,
   } = useDexLiquidity();
 
-  const { searchParams, replaceParams } = useUrlFilters();
+  const { state: filters, replaceState: setFilters } = useUrlState(SCREENER_URL_SCHEMA, {
+    enabled: hasHydrated,
+    fallback: SCREENER_FILTER_DEFAULTS,
+  });
 
   // Normalize legacy singular deep-link aliases (e.g. `/screener/?mechanism=cdp`)
   // into the canonical plural URL schema, once after hydration. Pins
@@ -158,26 +158,6 @@ export function ScreenerClient() {
     const nextSearch = qs ? `?${qs}` : "";
     window.history.replaceState(null, "", `${window.location.pathname}${nextSearch}${window.location.hash}`);
   }, [hasHydrated]);
-
-  // Decode filters from URL via W1-F codec on every searchParams change.
-  // The URL is only available in the browser, so deep-linked filters are applied after hydration.
-  const filters = useMemo<ScreenerFilters>(
-    () => (hasHydrated ? decodeState(searchParams, SCREENER_URL_SCHEMA) : SCREENER_FILTER_DEFAULTS),
-    [hasHydrated, searchParams],
-  );
-
-  const setFilters = useCallback(
-    (next: ScreenerFilters) => {
-      const encoded = encodeState(next, SCREENER_URL_SCHEMA);
-      replaceParams((params) => {
-        replaceEncodedUrlState(params, encoded, {
-          clear: "all",
-          schemaKeys: Object.keys(SCREENER_URL_SCHEMA),
-        });
-      });
-    },
-    [replaceParams],
-  );
 
   const resetFilters = useCallback(() => setFilters(SCREENER_FILTER_DEFAULTS), [setFilters]);
 

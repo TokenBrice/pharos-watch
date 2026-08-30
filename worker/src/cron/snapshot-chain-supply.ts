@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
+import { prepareCacheUpsert } from "../lib/db-cache";
 import { CHAIN_META } from "@shared/lib/chains";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
@@ -142,9 +143,7 @@ export async function snapshotChainSupply(
         "INSERT OR REPLACE INTO chain_supply_history (chain_id, snapshot_date, total_usd, stablecoin_count)",
         chainRows,
       ),
-      db
-        .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-        .bind(SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY, markerValue, nowSec),
+      prepareCacheUpsert(db, { key: SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY, value: markerValue, updatedAt: nowSec }),
     ];
     await executeAtomicBatch(db, replacementStatements, { signal });
   } catch (err) {
