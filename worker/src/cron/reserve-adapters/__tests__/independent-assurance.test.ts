@@ -10,13 +10,13 @@ import {
   type IndependentAssuranceManifest,
   type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
-import { getReserveAdapter } from "../index";
-import { EUROP_INDEPENDENT_ASSURANCE_PROFILE } from "../europ-independent-assurance";
 import {
+  EUROP_INDEPENDENT_ASSURANCE_PROFILE,
+  straitsxIndependentAssuranceProfile,
   verifyIndependentAssuranceReport,
   type IndependentAssuranceProfile,
 } from "../independent-assurance";
-import { straitsxIndependentAssuranceProfile } from "../straitsx-independent-assurance";
+import { getReserveAdapter } from "../index";
 import { USDGO_INDEPENDENT_ASSURANCE_PROFILE } from "../usdgo-transparency";
 import { validateAdapterOutput } from "../validate";
 

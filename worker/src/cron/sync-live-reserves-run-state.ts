@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { getCache } from "../lib/db-cache";
+import { getCache, setCachesAt } from "../lib/db-cache";
 import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
@@ -127,22 +127,7 @@ async function writeLiveReserveCursorState(
   updatedAt: number,
   signal?: AbortSignal,
 ): Promise<void> {
-  throwIfAborted(signal);
-  await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-      )
-      .bind(
-        LIVE_RESERVE_RUN_CURSOR_CACHE_KEY,
-        JSON.stringify(state),
-        updatedAt,
-      )
-      .run(),
-    3,
-    signal,
-  );
-  throwIfAborted(signal);
+  return setCachesAt(db, [{ key: LIVE_RESERVE_RUN_CURSOR_CACHE_KEY, value: JSON.stringify(state) }], updatedAt, { signal });
 }
 
 async function deleteLiveReserveCursorState(db: D1Database, signal?: AbortSignal): Promise<void> {

@@ -7,7 +7,6 @@ import { batchExecute, buildInClause, executeAtomicBatch, prepareMultiRowInsertS
 import { sha256Hex } from "../lib/hash";
 import {
   listTelegramPresets,
-  resolveTelegramPresetTargets,
   type TelegramPresetId,
   type TelegramPresetResolveOptions,
 } from "../lib/telegram-presets";
@@ -18,6 +17,16 @@ import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fano
 import type { TelegramDispatchEvents } from "./dispatch-telegram-events";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import {
+  PRESET_ALERT_COLUMN,
+  PRESET_ALERT_TYPES,
+  loadActivePresetFollowers,
+  projectPresetFollowers,
+  resolvePresetMemberships,
+  type PresetAlertType,
+  type PresetFollower,
+  type PresetMembership,
+} from "./telegram-preset-subscriber-store";
+import {
   buildTelegramSnapshotCacheEntries,
   type TelegramAlertSnapshots,
 } from "./telegram-alert-snapshots";
@@ -25,14 +34,6 @@ import { alertSafetyIdentitiesAreComparable } from "../lib/alert-safety-source-c
 
 const SOURCE_EVENT_SCHEMA_VERSION = 1;
 const PRESET_PAGE_SIZE = 100;
-const PRESET_ALERT_TYPES = ["dews", "depeg", "safety"] as const;
-type PresetAlertType = (typeof PRESET_ALERT_TYPES)[number];
-
-const PRESET_ALERT_COLUMN: Record<PresetAlertType, string> = {
-  dews: "alert_dews",
-  depeg: "alert_depeg",
-  safety: "alert_safety",
-};
 
 interface TelegramAlertSourceEventRow {
   source_event_id: string;
@@ -77,20 +78,14 @@ interface ResolutionPageRow {
   alert_type: PresetAlertType;
   page_index: number;
   cursor_chat_id: string | null;
-  cursor_preset_id: string | null;
+  cursor_preset_id: TelegramPresetId | null;
   memberships_resolved: number;
   status: "pending" | "complete" | "expired";
   attempt_count: number;
 }
 
-interface ResolutionTargetRow {
-  preset_id: TelegramPresetId;
-  chat_id: string;
-}
-
-interface CurrentResolutionTargetRow extends ResolutionTargetRow {
+interface CurrentResolutionTargetRow extends PresetFollower {
   alert_type: PresetAlertType;
-  last_active_at: number;
   dews_min_band: string | null;
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
@@ -101,10 +96,8 @@ interface CurrentResolutionTargetRow extends ResolutionTargetRow {
   preference_generation: number;
 }
 
-interface ResolutionMembershipRow {
+interface ResolutionMembershipRow extends PresetMembership {
   alert_type: PresetAlertType;
-  preset_id: TelegramPresetId;
-  stablecoin_id: string;
 }
 
 export interface TelegramAlertSourceResolution {
@@ -416,25 +409,13 @@ async function resolveMemberships(
   nowSec: number,
   options: TelegramPresetResolveOptions,
 ): Promise<"ok" | "query-failed" | "resolution-failed"> {
-  const alertColumn = PRESET_ALERT_COLUMN[page.alert_type];
-  const presetIds = listTelegramPresets().map((preset) => preset.id);
-  const presetClause = buildInClause(presetIds);
-  let hasCandidates = false;
-  try {
-    const candidate = await db
-      .prepare(
-        `SELECT 1 AS has_row
-           FROM telegram_preset_subscriptions p
-           JOIN telegram_subscribers u ON u.chat_id = p.chat_id
-          WHERE p.${alertColumn} = 1
-            AND p.preset_id IN (${presetClause.sql})
-            AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
-          LIMIT 1`,
-      )
-      .bind(...presetClause.binds, nowSec)
-      .first<{ has_row: number }>();
-    hasCandidates = candidate != null;
-  } catch {
+  const resolved = await resolvePresetMemberships(db, {
+    alertType: page.alert_type,
+    wantedStablecoinIds: idsForType(source.events, page.alert_type),
+    nowSec,
+    options,
+  });
+  if (resolved.kind === "query-failed") {
     await recordPageFailure(db, page, nowSec, "query_failed");
     logTelegramEvent({
       level: "warn",
@@ -448,7 +429,24 @@ async function resolveMemberships(
     return "query-failed";
   }
 
-  if (!hasCandidates) {
+  if (resolved.kind === "resolution-failed") {
+    await recordPageFailure(db, page, nowSec, "resolution_failed");
+    logTelegramEvent({
+      level: "warn",
+      message: "dynamic preset source page resolution failed",
+      action: "preset-resolution",
+      module: "telegram-alert-source-events",
+      alertType: page.alert_type,
+      failureKind: "resolution-failed",
+      reason: resolved.reason,
+      presetCount: listTelegramPresets().length,
+      subscriberRowCount: 1,
+      requestedStablecoinCount: idsForType(source.events, page.alert_type).length,
+    });
+    return "resolution-failed";
+  }
+
+  if (!resolved.hasCandidates) {
     await executeAtomicBatch(db, [
       db
         .prepare(
@@ -466,36 +464,13 @@ async function resolveMemberships(
     return "ok";
   }
 
-  const resolved = await resolveTelegramPresetTargets(db, presetIds, options);
-  if (resolved.kind !== "ok") {
-    await recordPageFailure(db, page, nowSec, "resolution_failed");
-    logTelegramEvent({
-      level: "warn",
-      message: "dynamic preset source page resolution failed",
-      action: "preset-resolution",
-      module: "telegram-alert-source-events",
-      alertType: page.alert_type,
-      failureKind: "resolution-failed",
-      reason: resolved.reason,
-      presetCount: presetIds.length,
-      subscriberRowCount: 1,
-      requestedStablecoinCount: idsForType(source.events, page.alert_type).length,
-    });
-    return "resolution-failed";
-  }
-
-  const wanted = new Set(idsForType(source.events, page.alert_type));
-  const memberships = resolved.presets.flatMap((preset) =>
-    preset.stablecoinIds
-      .filter((stablecoinId) => wanted.has(stablecoinId))
-      .map((stablecoinId) => [
-        source.sourceEventId,
-        page.alert_type,
-        preset.definition.id,
-        stablecoinId,
-        nowSec,
-      ] as const),
-  );
+  const memberships = resolved.memberships.map((membership) => [
+    source.sourceEventId,
+    page.alert_type,
+    membership.preset_id,
+    membership.stablecoin_id,
+    nowSec,
+  ] as const);
   try {
     await batchExecute(db, [
       db
@@ -568,42 +543,16 @@ async function resolveFollowerPage(
     return "ok";
   }
 
-  const presetClause = buildInClause(presetIds);
-  const cursorPredicate = page.cursor_chat_id == null || page.cursor_preset_id == null
-    ? ""
-    : `AND (
-         preset.chat_id > ?
-         OR (preset.chat_id = ? AND preset.preset_id > ?)
-       )`;
-  const cursorBinds = page.cursor_chat_id == null || page.cursor_preset_id == null
-    ? []
-    : [page.cursor_chat_id, page.cursor_chat_id, page.cursor_preset_id];
-  const alertColumn = PRESET_ALERT_COLUMN[page.alert_type];
-  let rows: ResolutionTargetRow[];
-  try {
-    const result = await db
-      .prepare(
-        `SELECT preset.chat_id,
-                preset.preset_id,
-                subscriber.last_active_at,
-                preset.depeg_worsening_bps_step,
-                subscriber.quiet_hours_enabled,
-                subscriber.quiet_hours_start_utc,
-                subscriber.quiet_hours_end_utc,
-                subscriber.timezone
-           FROM telegram_preset_subscriptions preset
-           JOIN telegram_subscribers subscriber ON subscriber.chat_id = preset.chat_id
-          WHERE preset.${alertColumn} = 1
-            AND preset.preset_id IN (${presetClause.sql})
-            AND (subscriber.alert_snooze_until_ts IS NULL OR subscriber.alert_snooze_until_ts <= ?)
-            ${cursorPredicate}
-          ORDER BY preset.chat_id ASC, preset.preset_id ASC
-          LIMIT ?`,
-      )
-      .bind(...presetClause.binds, nowSec, ...cursorBinds, PRESET_PAGE_SIZE + 1)
-      .all<ResolutionTargetRow>();
-    rows = result.results ?? [];
-  } catch {
+  const followerPage = await loadActivePresetFollowers(db, {
+    alertType: page.alert_type,
+    presetIds,
+    nowSec,
+    cursor: page.cursor_chat_id == null || page.cursor_preset_id == null
+      ? undefined
+      : { chatId: page.cursor_chat_id, presetId: page.cursor_preset_id },
+    limit: PRESET_PAGE_SIZE,
+  });
+  if (followerPage.kind === "query-failed") {
     await recordPageFailure(db, page, nowSec, "query_failed");
     logTelegramEvent({
       level: "warn",
@@ -615,9 +564,9 @@ async function resolveFollowerPage(
     return "query-failed";
   }
 
-  const pageRows = rows.slice(0, PRESET_PAGE_SIZE);
-  const hasMore = rows.length > PRESET_PAGE_SIZE;
-  const last = pageRows[pageRows.length - 1];
+  const pageRows = followerPage.followers;
+  const hasMore = followerPage.hasMore;
+  const last = followerPage.nextCursor;
   const targetValues = pageRows.map((row) => [
     source.sourceEventId,
     page.page_key,
@@ -668,8 +617,8 @@ async function resolveFollowerPage(
           `${page.alert_type}:${nextIndex}`,
           page.alert_type,
           nextIndex,
-          last.chat_id,
-          last.preset_id,
+          last.chatId,
+          last.presetId,
           nowSec,
           nowSec,
         ),
@@ -742,35 +691,27 @@ async function loadResolutionMaps(
     }),
   ]);
 
-  const idsByPreset = new Map<string, string[]>();
+  const membershipsByType: Record<PresetAlertType, PresetMembership[]> = {
+    dews: [],
+    depeg: [],
+    safety: [],
+  };
   for (const row of membershipResult.results ?? []) {
-    const key = `${row.alert_type}\0${row.preset_id}`;
-    const ids = idsByPreset.get(key) ?? [];
-    ids.push(row.stablecoin_id);
-    idsByPreset.set(key, ids);
+    membershipsByType[row.alert_type].push(row);
   }
   const maps: Record<PresetAlertType, Map<string, SubscriberRow[]>> = {
     dews: new Map(),
     depeg: new Map(),
     safety: new Map(),
   };
-  for (const row of targetResults.flatMap((result) => result.results ?? [])) {
-    const subscriber: SubscriberRow = {
-      chat_id: row.chat_id,
-      last_active_at: Number(row.last_active_at),
-      dews_min_band: row.dews_min_band ?? null,
-      safety_mode: row.safety_mode ?? null,
-      depeg_worsening_bps_step: row.depeg_worsening_bps_step ?? null,
-      quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
-      quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
-      quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
-      timezone: row.timezone ?? null,
-      preference_generation: row.preference_generation ?? 0,
-      isGlobal: false,
-      hasLocalOverride: false,
-    };
-    for (const stablecoinId of idsByPreset.get(`${row.alert_type}\0${row.preset_id}`) ?? []) {
-      addPresetSubscriber(maps[row.alert_type], stablecoinId, subscriber);
+  for (let index = 0; index < PRESET_ALERT_TYPES.length; index += 1) {
+    const type = PRESET_ALERT_TYPES[index];
+    const projected = projectPresetFollowers(
+      membershipsByType[type],
+      targetResults[index]?.results ?? [],
+    );
+    for (const [stablecoinId, rows] of projected) {
+      for (const row of rows) addPresetSubscriber(maps[type], stablecoinId, row);
     }
   }
   return maps;
@@ -824,22 +765,10 @@ export async function loadTelegramSourcePresetSubscribersForChats(
       )
       .bind(sourceEventId, type, ...chatClause.binds, nowSec)
       .all<CurrentResolutionTargetRow & { stablecoin_id: string }>();
+    const projected = projectPresetFollowers([], rows.results ?? []);
     const map = new Map<string, SubscriberRow[]>();
-    for (const row of rows.results ?? []) {
-      addPresetSubscriber(map, row.stablecoin_id, {
-        chat_id: row.chat_id,
-        last_active_at: Number(row.last_active_at),
-        dews_min_band: row.dews_min_band ?? null,
-        safety_mode: row.safety_mode ?? null,
-        depeg_worsening_bps_step: row.depeg_worsening_bps_step ?? null,
-        quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
-        quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
-        quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
-        timezone: row.timezone ?? null,
-        preference_generation: row.preference_generation ?? 0,
-        isGlobal: false,
-        hasLocalOverride: false,
-      });
+    for (const [stablecoinId, subscribers] of projected) {
+      for (const subscriber of subscribers) addPresetSubscriber(map, stablecoinId, subscriber);
     }
     return { kind: "ok", rows: map };
   } catch (error) {

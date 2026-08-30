@@ -2,7 +2,15 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { DDR_PUBLIC_PREDICTION_DELAY_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { executeAtomicBatch, runChunkedInRead } from "./db";
-import { authorizeEventRepair, consumeEventRepairAuthorization } from "./depeg-resolver-repair-store";
+import {
+  authorizeEventRepair,
+  consumeEventRepairAuthorization,
+  prepareRepairAuthorization,
+  prepareRepairAuthorizationConsumption,
+  repairAuthorizationIdentityBinds,
+  repairAuthorizationConsumedPredicate,
+  repairAuthorizationIdSubquery,
+} from "./depeg-resolver-repair-store";
 import {
   assertHash,
   assertNonEmpty,
@@ -1027,69 +1035,53 @@ async function linkSealedNearbyIncidentTail(
   }
 
   const nowSec = optionNowSec(options);
-
-  const linkAuthorization = await authorizeEventRepair(db, {
-    eventId: event.eventId,
-    incidentKey: row.incident_key,
-    operation: "incident_link",
-    columns: ["event_id", "incident_key"],
-    reason: "Live source event reopened inside DDR sealed incident merge window",
-    createdAt: nowSec,
-    expiresAt: REPAIR_AUTHORIZATION_LONG_EXPIRY_AT,
-    createdBy: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
-  });
-  await consumeEventRepairAuthorization(db, {
-    authorizationId: linkAuthorization.id,
-    eventId: event.eventId,
-    incidentKey: row.incident_key,
-    operation: "incident_link",
-    consumedAt: nowSec,
-    consumer: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
-  });
-
-  const currentAuthorization = await authorizeEventRepair(db, {
-    eventId: event.eventId,
-    incidentKey: row.incident_key,
-    operation: "incident_current_update",
-    columns: ["current_event_id", "current_started_at"],
-    reason: "Live source event is the current source event for the sealed canonical incident",
-    createdAt: nowSec,
-    expiresAt: REPAIR_AUTHORIZATION_LONG_EXPIRY_AT,
-    createdBy: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
-  });
-  await consumeEventRepairAuthorization(db, {
-    authorizationId: currentAuthorization.id,
-    eventId: event.eventId,
-    incidentKey: row.incident_key,
-    operation: "incident_current_update",
-    consumedAt: nowSec,
-    consumer: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
-  });
-
-  // The two authorize/consume pairs above must run sequentially because the
-  // INSERTs/UPDATE below depend on their generated authorization ids. Those
-  // three mechanical writes are atomic via executeAtomicBatch(); the residual partial-
-  // state window is between authorization consumption and this batch.
+  const authorizationIdentity = { eventId: event.eventId, incidentKey: row.incident_key, createdAt: nowSec, expiresAt: REPAIR_AUTHORIZATION_LONG_EXPIRY_AT, createdBy: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY };
+  const prepareAuthorizationPair = (operation: "incident_link" | "incident_current_update", columns: string[], reason: string) => [prepareRepairAuthorization(db, { ...authorizationIdentity, operation, columns, reason }), prepareRepairAuthorizationConsumption(db, { ...authorizationIdentity, operation }, nowSec, AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY)];
+  // Authorization creation, consumption, and the dependent writes now share
+  // one atomic batch, closing the former partial-state window.
   await executeAtomicBatch(db, [
+    ...prepareAuthorizationPair(
+      "incident_link",
+      ["event_id", "incident_key"],
+      "Live source event reopened inside DDR sealed incident merge window",
+    ),
+    ...prepareAuthorizationPair(
+      "incident_current_update",
+      ["current_event_id", "current_started_at"],
+      "Live source event is the current source event for the sealed canonical incident",
+    ),
     db
       .prepare(
         `INSERT INTO depeg_resolver_incident_event_links
          (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
-         VALUES (?, ?, 'repair_replacement', ?, ?, ?)`,
+         VALUES (?, ?, 'repair_replacement',
+           ${repairAuthorizationIdSubquery()},
+           CASE WHEN ${repairAuthorizationConsumedPredicate()} THEN ? ELSE 0 END,
+           ?)`,
       )
-      .bind(row.incident_key, event.eventId, linkAuthorization.id, nowSec, AUTOMATED_SEALED_TAIL_LINK_NOTE),
+      .bind(
+        row.incident_key,
+        event.eventId,
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_link" }),
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_link" }),
+        nowSec,
+        AUTOMATED_SEALED_TAIL_LINK_NOTE,
+      ),
     db
       .prepare(
         `INSERT INTO depeg_resolver_incident_revisions
          (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
-         VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+         VALUES (?, ?, ?, ?, ${repairAuthorizationIdSubquery()}, NULL,
+           CASE WHEN ${repairAuthorizationConsumedPredicate()} THEN ? ELSE 0 END,
+           ?)`,
       )
       .bind(
         row.incident_key,
         row.current_event_id,
         event.eventId,
         AUTOMATED_SEALED_TAIL_CURRENT_REASON,
-        currentAuthorization.id,
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_current_update" }),
+        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_current_update" }),
         nowSec,
         AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
       ),

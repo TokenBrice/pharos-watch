@@ -107,45 +107,37 @@ export async function getCacheUpdatedAt(db: D1Database, key: string): Promise<nu
   return row?.updated_at ?? null;
 }
 
-export async function setCache(db: D1Database, key: string, value: string, signal?: AbortSignal): Promise<void> {
-  await setCacheAt(db, key, value, Math.floor(Date.now() / 1000), signal);
-}
-
-async function setCacheAt(
-  db: D1Database,
-  key: string,
-  value: string,
-  updatedAt: number,
-  signal?: AbortSignal,
-): Promise<void> {
-  throwIfAborted(signal);
-  await runWithOverloadRetry(() =>
-    db
-      .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .bind(key, value, updatedAt)
-      .run(),
-    3,
-    signal,
-  );
-  throwIfAborted(signal);
-}
-
 export interface CacheEntryWrite {
   key: string;
   value: string;
 }
 
-export async function setCacheMany(
+type CacheUpsertMode = "replace" | "if-newer";
+export function prepareCacheUpsert(
   db: D1Database,
-  entries: readonly CacheEntryWrite[],
-  signal?: AbortSignal,
+  entry: CacheEntryWrite & { updatedAt: number }, mode: CacheUpsertMode = "replace",
+): D1PreparedStatement {
+  return db.prepare(mode === "if-newer" ? `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+         WHERE cache.updated_at <= excluded.updated_at`
+    : "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)").bind(entry.key, entry.value, entry.updatedAt);
+}
+
+export async function setCachesAt(
+  db: D1Database, entries: readonly CacheEntryWrite[],
+  updatedAt: number,
+  { mode = "replace", signal }: { mode?: CacheUpsertMode; signal?: AbortSignal } = {},
 ): Promise<void> {
   throwIfAborted(signal);
   if (entries.length === 0) return;
-  const updatedAt = Math.floor(Date.now() / 1000);
-  const statement = db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
-  await executeCacheBatches(db, entries.map((entry) => statement.bind(entry.key, entry.value, updatedAt)), signal);
-  throwIfAborted(signal);
+  await executeCacheBatches(db, entries.map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt }, mode)), signal);
+}
+
+export async function setCache(db: D1Database, key: string, value: string, signal?: AbortSignal): Promise<void> {
+  return setCachesAt(db, [{ key, value }], Math.floor(Date.now() / 1000), { signal });
+}
+export async function setCacheMany(db: D1Database, entries: readonly CacheEntryWrite[], signal?: AbortSignal): Promise<void> {
+  return setCachesAt(db, entries, Math.floor(Date.now() / 1000), { signal });
 }
 
 export async function deleteCache(db: D1Database, key: string): Promise<void> {
@@ -189,7 +181,7 @@ export async function writeCacheWithPolicy<T>(
   signal?: AbortSignal,
 ): Promise<void> {
   if (policy.storage !== "d1-kv") throw new Error(`cache policy ${policy.schemaId} is not backed by D1 key/value cache`);
-  await setCacheAt(db, policy.key, policy.encode(value), updatedAt, signal);
+  return setCachesAt(db, [{ key: policy.key, value: policy.encode(value) }], updatedAt, { signal });
 }
 
 
@@ -216,18 +208,7 @@ export async function setCacheIfNewer(
   signal?: AbortSignal,
 ): Promise<CacheWriteResult> {
   throwIfAborted(signal);
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-         WHERE cache.updated_at <= excluded.updated_at`,
-      )
-      .bind(key, value, syncStartSec)
-      .run(),
-    3,
-    signal,
-  );
+  const result = await runWithOverloadRetry(() => prepareCacheUpsert(db, { key, value, updatedAt: syncStartSec }, "if-newer").run(), 3, signal);
   throwIfAborted(signal);
   if (result.meta.changes === 0) {
     logWorkerEvent({ scope: "lib", level: "info", event: "cache_write_skipped_newer", message: "Skipped cache write because existing data is newer", metadata: { key, syncStartSec } });

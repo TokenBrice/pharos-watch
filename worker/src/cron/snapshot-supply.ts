@@ -7,6 +7,7 @@ import {
   prepareMultiRowInsertStatements,
 } from "../lib/db";
 import { SUPPLY_HISTORY_UPSERT_PREFIX } from "../lib/supply-history-db";
+import { prepareCacheUpsert } from "../lib/db-cache";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
@@ -308,8 +309,7 @@ export async function snapshotSupply(
       const replacementStatements = [
         ...deleteStatements,
         ...prepareMultiRowInsertStatements(db, SUPPLY_HISTORY_UPSERT_PREFIX, snapshotRows),
-        db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-          .bind(SNAPSHOT_SUPPLY_LAST_WRITE_KEY, markerValue, nowSec),
+        prepareCacheUpsert(db, { key: SNAPSHOT_SUPPLY_LAST_WRITE_KEY, value: markerValue, updatedAt: nowSec }),
       ];
       await executeAtomicBatch(db, replacementStatements, { signal });
       throwIfAborted(signal);

@@ -6,7 +6,7 @@ import { fetchAccountableReserves } from "./accountable";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchAttestationPdfIndexReserves } from "./attestation-pdf-index";
-import { fetchAudxIndependentAssuranceReserves } from "./audx-independent-assurance";
+import { fetchIndependentAssuranceAdapter } from "./independent-assurance";
 import { fetchBlastUsdbYieldManagerReserves } from "./blast-usdb-yield-manager";
 import { fetchBtcfiReserves } from "./btcfi";
 import { fetchCapVaultReserves } from "./cap-vault";
@@ -21,7 +21,6 @@ import { fetchDolaInverseReserves } from "./dola-inverse";
 import { fetchEscrowBalanceReserves } from "./escrow-balance";
 import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
-import { fetchEuropIndependentAssuranceReserves } from "./europ-independent-assurance";
 import { fetchFalconReserves } from "./falcon";
 import { fetchFdusdTransparencyReserves } from "./fdusd-transparency";
 import { fetchFlyingTulipFtUsdReserves } from "./flying-tulip-ftusd";
@@ -62,7 +61,6 @@ import { fetchSolomonProtocolReserves } from "./solomon-protocol";
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSpikoApiReserves } from "./spiko-api";
 import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
-import { fetchStraitsxIndependentAssuranceReserves } from "./straitsx-independent-assurance";
 import { fetchTetherTransparencyReserves } from "./tether-transparency";
 import { fetchUnitedPorReserves } from "./united-por";
 import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
@@ -86,7 +84,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "anzen-usdz": fetchAnzenUsdzReserves,
   asymmetry: fetchAsymmetryReserves,
   "attestation-pdf-index": fetchAttestationPdfIndexReserves,
-  "audx-independent-assurance": fetchAudxIndependentAssuranceReserves,
+  "audx-independent-assurance": fetchIndependentAssuranceAdapter,
   "blast-usdb-yield-manager": fetchBlastUsdbYieldManagerReserves,
   btcfi: fetchBtcfiReserves,
   "cap-vault": fetchCapVaultReserves,
@@ -101,7 +99,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "erc4626-single-asset": fetchErc4626SingleAssetReserves,
   "escrow-balance": fetchEscrowBalanceReserves,
   ethena: fetchEthenaReserves,
-  "europ-independent-assurance": fetchEuropIndependentAssuranceReserves,
+  "europ-independent-assurance": fetchIndependentAssuranceAdapter,
   "evm-branch-balances": fetchEvmBranchBalancesReserves,
   falcon: fetchFalconReserves,
   "fdusd-transparency": fetchFdusdTransparencyReserves,
@@ -143,7 +141,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
 
   "spiko-api": fetchSpikoApiReserves,
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
-  "straitsx-independent-assurance": fetchStraitsxIndependentAssuranceReserves,
+  "straitsx-independent-assurance": fetchIndependentAssuranceAdapter,
   "tether-transparency": fetchTetherTransparencyReserves,
   "united-por": fetchUnitedPorReserves,
   "usdgo-transparency": fetchUsdgoTransparencyReserves,
