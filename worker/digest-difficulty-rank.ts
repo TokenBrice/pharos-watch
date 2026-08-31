@@ -45,18 +45,32 @@ interface Row {
 	difficulty: number;
 }
 
+async function readTextOrNull(path: "../.env.local" | ".dev.vars"): Promise<string | null> {
+	try {
+		return await readFile(path, "utf8");
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Reads a secret from the environment, then from the two known dotenv files.
+ * Parsed line-by-line rather than with a constructed RegExp so the lookup name
+ * is never interpolated into a pattern, and the two candidate paths are fixed
+ * literals rather than caller-supplied.
+ */
 async function resolveSecret(name: string): Promise<string | null> {
 	const fromEnv = process.env[name];
 	if (fromEnv && fromEnv.trim()) return fromEnv.trim();
-	for (const path of ["../.env.local", ".dev.vars"]) {
-		let contents: string;
-		try {
-			contents = await readFile(path, "utf8");
-		} catch {
-			continue;
+	for (const contents of [await readTextOrNull("../.env.local"), await readTextOrNull(".dev.vars")]) {
+		if (contents == null) continue;
+		for (const line of contents.split("\n")) {
+			const separator = line.indexOf("=");
+			if (separator < 0) continue;
+			if (line.slice(0, separator).trim() !== name) continue;
+			const value = line.slice(separator + 1).trim().replace(/^"|"$/g, "");
+			if (value) return value;
 		}
-		const match = contents.match(new RegExp(`^\\s*${name}\\s*=\\s*"?([^"\\n]+)"?`, "m"));
-		if (match) return match[1].trim();
 	}
 	return null;
 }
