@@ -184,15 +184,19 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   },
   "ctusd-citrea": {
     ...issuerBase,
-    ...documentedBoundSupplyFull("2026-04-16"),
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: undisclosedReviewedFee(
       "Citrea documents 1:1 fiat mint and redemption via MoonPay using M0 Protocol infrastructure; MoonPay fiat-ramp fees apply while public docs reviewed do not publish a separate Citrea protocol redemption fee",
     ),
+    reviewedAt: "2026-08-31",
     docs: [
       sourceRef("Citrea", "https://citrea.xyz/", ["route", "capacity"]),
       sourceRef("Citrea documentation", "https://docs.citrea.xyz/", ["route"]),
     ],
-    notes: ["Fiat-backed via MoonPay; reserves cryptographically attested on-chain by M0 Validators before minting"],
+    notes: [
+      "Fiat-backed via MoonPay; reserves cryptographically attested on-chain by M0 Validators before minting",
+      "Fresh live reserve metadata reads the current M balance held by the ctUSD extension and verifies the configured M0 SwapFacility path before admitting redemption capacity.",
+    ],
   },
   "xo-exodus": {
     ...issuerBase,
