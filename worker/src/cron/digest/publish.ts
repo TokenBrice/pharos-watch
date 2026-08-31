@@ -45,14 +45,14 @@ export interface DigestCredentialDiagnostics {
   telegramMissing?: readonly string[];
 }
 
-interface DigestTwitterPublication {
+export interface DigestTwitterPublication {
   creds: TwitterCreds | null;
   markerKey: string;
   required?: boolean;
   missingCredentialNames?: readonly string[];
 }
 
-interface DigestTelegramPublication {
+export interface DigestTelegramPublication {
   creds: TelegramCreds | null;
   editionKey: string;
   title?: string;
@@ -75,6 +75,40 @@ interface DigestTelegramPublication {
   missingCredentialNames?: readonly string[];
   successStatus?: string;
   alreadySentStatus?: string;
+}
+
+/** Keep credential-gated channel shape construction out of each edition path. */
+export function buildDigestTwitterPublication(
+  creds: TwitterCreds | null,
+  markerKey: string,
+  missingCredentialNames?: readonly string[],
+): DigestTwitterPublication | null {
+  if (!creds && missingCredentialNames == null) return null;
+  return {
+    creds,
+    markerKey,
+    required: missingCredentialNames != null,
+    missingCredentialNames,
+  };
+}
+
+type DigestTelegramPublicationOptions = Omit<
+  DigestTelegramPublication,
+  "creds" | "required" | "missingCredentialNames"
+>;
+
+export function buildDigestTelegramPublication(
+  creds: TelegramCreds | null,
+  missingCredentialNames: readonly string[] | undefined,
+  options: DigestTelegramPublicationOptions,
+): DigestTelegramPublication | null {
+  if (!creds && missingCredentialNames == null) return null;
+  return {
+    creds,
+    ...options,
+    required: missingCredentialNames != null,
+    missingCredentialNames,
+  };
 }
 
 interface DigestEditionDeliveryInput {

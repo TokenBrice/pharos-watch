@@ -186,5 +186,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/summarize-safety-score-v9-replay.ts", "read-only"),
     exempt("scripts/maintenance/watch-worker-cron.mjs", "read-only"),
     exempt("scripts/maintenance/weekly-curation-digest.mjs", "build"),
+    exempt("worker/digest-difficulty-rank.ts", "read-only"),
+    exempt("worker/digest-model-trial.ts", "test"),
   ]),
 });

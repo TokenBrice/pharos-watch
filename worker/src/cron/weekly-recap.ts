@@ -11,9 +11,16 @@ import { SECONDS } from "../lib/time-constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseJson } from "../lib/json-parse";
 import {
+  buildDigestLlmTelemetry,
+  buildDigestQualityAssessment,
   classifyDigestChannelStatus,
   didDigestChannelDeliver,
   markDigestMetaBlocked,
+  reportDigestCircuitOpen,
+  reportDigestGenerationComplete,
+  reportDigestLlmAttempt,
+  reportDigestMissingApiKey,
+  reportDigestRefusal,
   requestDigestCopy,
   resolveDigestLlmConfig,
 } from "./digest/platform";
@@ -22,18 +29,18 @@ import { formatQualityMetadata } from "./digest/quality-metadata";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { getMetaString } from "./daily-digest/digest-intelligence-utils";
-import type { DigestValidationIssue } from "./daily-digest/response";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
 import { WEEKLY_SYSTEM_PROMPT, buildWeeklyLeadRequirements, buildWeeklyPrompt } from "./weekly-recap/prompt";
 import type { DailyDigestSourceRow } from "./weekly-recap/types";
 import type { DigestSafetyContext } from "@shared/types/digest";
 import {
   digestSafetyContextFromPersistedInput,
-  findUnboundDigestSafetyClaimMarkers,
   loadDigestSafetyContext,
 } from "../lib/digest-safety-context";
 import { resolveDigestSafetyMap } from "../lib/digest-safety-map";
 import {
+  buildDigestTelegramPublication,
+  buildDigestTwitterPublication,
   deliverDigestEdition,
   publishDigestEdition,
   type DigestCredentialDiagnostics,
@@ -198,17 +205,7 @@ export async function generateWeeklyRecap(
     },
   });
   if (!anthropicApiKey) {
-    await reportCronProgress(reportProgress, {
-      stage: "skipped",
-      message: "Skipping weekly recap because Anthropic credentials are missing",
-      providerFamily: "anthropic",
-      itemsDone: 0,
-      itemsTotal: 1,
-      metadata: {
-        skipped: "missing-api-key",
-      },
-    });
-    return { metadata: "skipped: no API key" };
+    return reportDigestMissingApiKey(reportProgress, "weekly recap");
   }
 
   // Calendar identity belongs to the scheduled slot, not delayed execution.
@@ -322,26 +319,22 @@ export async function generateWeeklyRecap(
       qualityGateStatus: null,
       degradedReasons: retryDegradedReasons,
       safetyMap,
-      twitter: twitterCreds || credentialDiagnostics.twitterMissing != null
-        ? {
-            creds: twitterCreds,
-            markerKey: `${TWITTER_SENT_MARKER_PREFIX}${digestDate}`,
-            required: credentialDiagnostics.twitterMissing != null,
-            missingCredentialNames: credentialDiagnostics.twitterMissing,
-          }
-        : null,
-      telegram: telegramCreds || credentialDiagnostics.telegramMissing != null
-        ? {
-            creds: telegramCreds,
-            editionKey: `weekly:${digestDate}`,
-            recapRollout,
-            title: `Weekly Recap: ${existing.digest_title || `Week of ${weekStartLabel}`}`,
-            routeDate: `${digestDate}-weekly`,
-            required: credentialDiagnostics.telegramMissing != null,
-            missingCredentialNames: credentialDiagnostics.telegramMissing,
-            alreadySentStatus: "ok+already-sent",
-          }
-        : null,
+      twitter: buildDigestTwitterPublication(
+        twitterCreds,
+        `${TWITTER_SENT_MARKER_PREFIX}${digestDate}`,
+        credentialDiagnostics.twitterMissing,
+      ),
+      telegram: buildDigestTelegramPublication(
+        telegramCreds,
+        credentialDiagnostics.telegramMissing,
+        {
+          editionKey: `weekly:${digestDate}`,
+          recapRollout,
+          title: `Weekly Recap: ${existing.digest_title || `Week of ${weekStartLabel}`}`,
+          routeDate: `${digestDate}-weekly`,
+          alreadySentStatus: "ok+already-sent",
+        },
+      ),
       signal,
       reportProgress,
     });
@@ -528,16 +521,7 @@ export async function generateWeeklyRecap(
     llmConfig: resolvedLlmConfig,
     signal,
     logPrefix: "weekly-recap",
-    reportAttempt: async (llmAttempts) => {
-      await reportCronProgress(reportProgress, {
-        stage: "llm-attempt",
-        message: "Recorded weekly recap Anthropic attempt telemetry",
-        providerFamily: "anthropic",
-        itemsDone: llmAttempts.length,
-        itemsTotal: llmAttempts.length,
-        metadata: { llmAttempts },
-      });
-    },
+    reportAttempt: (llmAttempts) => reportDigestLlmAttempt(reportProgress, "weekly recap", llmAttempts),
     parseOptions: {
       metaFactory: ({ parsedMeta, usedRawTextFallback: degraded }) => ({
         ...(parsedMeta ?? {}),
@@ -556,78 +540,33 @@ export async function generateWeeklyRecap(
     },
   });
   if (digestCopy.kind === "circuit-open") {
-    await reportCronProgress(reportProgress, {
-      stage: "skipped",
-      message: "Skipping weekly recap because Anthropic circuit is open",
-      providerFamily: "anthropic",
-      itemsDone: 0,
-      itemsTotal: 1,
-      metadata: {
-        skipped: "anthropic-circuit-open",
-      },
-    });
+    await reportDigestCircuitOpen(reportProgress, "weekly recap");
     return { metadata: "skipped: anthropic circuit open" };
   }
   if (digestCopy.kind === "refusal") {
-    await reportCronProgress(reportProgress, {
-      stage: "skipped",
-      message: "Skipping weekly recap because Anthropic refused the request",
-      providerFamily: "anthropic",
-      itemsDone: 0,
-      itemsTotal: 1,
-      metadata: {
-        skipped: "anthropic-refusal",
-        refusalCategory: digestCopy.refusalCategory,
-        llmAttempts: digestCopy.llmAttempts,
-      },
-    });
-    return {
-      status: "degraded",
-      itemCount: 0,
-      metadata: JSON.stringify({
-        skipped: "anthropic-refusal",
-        refusalCategory: digestCopy.refusalCategory,
-        llmAttempts: digestCopy.llmAttempts,
-      }),
-    };
+    return reportDigestRefusal(
+      reportProgress,
+      "weekly recap",
+      digestCopy.refusalCategory,
+      digestCopy.llmAttempts,
+    );
   }
-  const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
-    safetyContext,
-    {
-      title: digestCopy.digestTitle,
-      text: digestCopy.digestText,
-      extended: digestCopy.digestExtended,
-    },
-  );
-  const safetyCopyIssues: DigestValidationIssue[] = unboundSafetyClaimMarkers.length > 0
-    ? [{
-        code: "unbound-safety-copy",
-        severity: "hard",
-        message: `Safety Score copy requires an identified publication (${unboundSafetyClaimMarkers.join(", ")})`,
-      }]
-    : [];
-  const qualityIssues = [...digestCopy.qualityIssues, ...safetyCopyIssues];
-  const hasBlockingQualityIssues =
-    digestCopy.hasBlockingQualityIssues || safetyCopyIssues.length > 0;
+  const {
+    qualityIssues,
+    safetyCopyIssues,
+    hasBlockingQualityIssues,
+  } = buildDigestQualityAssessment(safetyContext, digestCopy);
   const degradedReasons: string[] = [];
   if (digestCopy.usedRawTextFallback) degradedReasons.push("raw-text-fallback");
   if (safetyContext.status === "unavailable") degradedReasons.push("safety-context-unavailable");
   if (safetyCopyIssues.length > 0) degradedReasons.push("unbound-safety-copy");
-  await reportCronProgress(reportProgress, {
-    stage: "llm-generation-complete",
-    message: "Received weekly recap copy from Anthropic",
-    providerFamily: "anthropic",
-    itemsDone: 1,
-    itemsTotal: 1,
-    metadata: {
-      countTotals: {
-        textChars: digestCopy.digestText.length,
-        extendedChars: digestCopy.digestExtended.length,
-        qualityIssues: qualityIssues.length,
-      },
-      blockingQualityIssues: hasBlockingQualityIssues,
-    },
-  });
+  await reportDigestGenerationComplete(
+    reportProgress,
+    "weekly recap",
+    digestCopy,
+    qualityIssues.length,
+    hasBlockingQualityIssues,
+  );
 
   const publicationNowSec = Math.floor(Date.now() / 1000);
   const generatedAt = scheduledAtSec;
@@ -669,26 +608,22 @@ export async function generateWeeklyRecap(
     qualityGateStatus,
     degradedReasons,
     safetyMap,
-    twitter: twitterCreds || credentialDiagnostics.twitterMissing != null
-      ? {
-          creds: twitterCreds,
-          markerKey: `${TWITTER_SENT_MARKER_PREFIX}${digestDate}`,
-          required: credentialDiagnostics.twitterMissing != null,
-          missingCredentialNames: credentialDiagnostics.twitterMissing,
-        }
-      : null,
-    telegram: telegramCreds || credentialDiagnostics.telegramMissing != null
-      ? {
-          creds: telegramCreds,
-          editionKey: `weekly:${digestDate}`,
-          recapRollout,
-          title: `Weekly Recap: ${digestCopy.digestTitle || `Week of ${weeklyData.weekStartDate}`}`,
-          routeDate: `${digestDate}-weekly`,
-          required: credentialDiagnostics.telegramMissing != null,
-          missingCredentialNames: credentialDiagnostics.telegramMissing,
-          alreadySentStatus: "ok+already-sent",
-        }
-      : null,
+    twitter: buildDigestTwitterPublication(
+      twitterCreds,
+      `${TWITTER_SENT_MARKER_PREFIX}${digestDate}`,
+      credentialDiagnostics.twitterMissing,
+    ),
+    telegram: buildDigestTelegramPublication(
+      telegramCreds,
+      credentialDiagnostics.telegramMissing,
+      {
+        editionKey: `weekly:${digestDate}`,
+        recapRollout,
+        title: `Weekly Recap: ${digestCopy.digestTitle || `Week of ${weeklyData.weekStartDate}`}`,
+        routeDate: `${digestDate}-weekly`,
+        alreadySentStatus: "ok+already-sent",
+      },
+    ),
     signal,
     reportProgress,
   });
@@ -751,12 +686,7 @@ export async function generateWeeklyRecap(
           missingCredentialNames: credentialDiagnostics.telegramMissing ?? [],
         },
       },
-      llm: {
-        model: resolvedLlmConfig.model,
-        effort: resolvedLlmConfig.effort,
-        maxTokens: resolvedLlmConfig.maxTokens,
-        attempts: digestCopy.llmAttempts,
-      },
+      llm: buildDigestLlmTelemetry(resolvedLlmConfig, digestCopy.llmAttempts),
     }),
   };
 }

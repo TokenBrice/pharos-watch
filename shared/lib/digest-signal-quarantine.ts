@@ -14,7 +14,7 @@ export interface DigestSignalQuarantine {
   claimMarkers: readonly string[];
 }
 
-export const DIGEST_SIGNAL_QUARANTINES: readonly DigestSignalQuarantine[] = [
+const DIGEST_SIGNAL_QUARANTINES: readonly DigestSignalQuarantine[] = [
   {
     stablecoinId: "usds-sky",
     family: "liquidity",

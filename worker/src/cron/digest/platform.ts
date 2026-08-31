@@ -4,6 +4,7 @@ import type {
   DigestValidationIssue,
   DigestValidationProfile,
 } from "../daily-digest/response";
+import type { DigestSafetyContext } from "@shared/types/digest";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -11,10 +12,16 @@ import { readResponseTextBoundedWithSignal } from "../../lib/response-body";
 import {
   ANTHROPIC_TIMEOUT_MS,
   CIRCUIT_SOURCE,
+  DIGEST_EFFORT_LEVELS,
   type DigestEffort,
   type DigestLlmConfig,
 } from "../../lib/constants";
-import { recordCronFailure } from "../../lib/cron-logger";
+import {
+  recordCronFailure,
+  type CronProgressReporter,
+  type CronResult,
+} from "../../lib/cron-logger";
+import { reportCronProgress } from "../../lib/cron-progress";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
@@ -23,6 +30,7 @@ import {
   parseDigestModelResponse,
   validateDigestModelOutput,
 } from "../daily-digest/response";
+import { findUnboundDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
 import {
   accumulateAnthropicStream,
   AnthropicStreamFailure,
@@ -103,6 +111,171 @@ export type DigestChannelDisposition =
   | "retryable"
   | "terminal-unsent"
   | "not-configured";
+
+/**
+ * Worker-only scaffolding shared by the daily and weekly digest entrypoints.
+ * It stays beside the Anthropic platform path because these helpers carry
+ * CronResult/CronProgressReporter and worker safety-validation contracts.
+ */
+export type DigestEditionLabel = "daily digest" | "weekly recap";
+
+export interface DigestQualityCopy {
+  digestTitle: string;
+  digestText: string;
+  digestExtended: string;
+  qualityIssues: DigestValidationIssue[];
+  hasBlockingQualityIssues: boolean;
+}
+
+export interface DigestQualityAssessment {
+  safetyCopyIssues: DigestValidationIssue[];
+  qualityIssues: DigestValidationIssue[];
+  hasBlockingQualityIssues: boolean;
+}
+
+export interface DigestLlmTelemetry {
+  model: string;
+  effort: DigestEffort;
+  maxTokens: number;
+  attempts: DigestLlmAttemptTelemetry[];
+}
+
+export async function reportDigestMissingApiKey(
+  reportProgress: CronProgressReporter | undefined,
+  edition: DigestEditionLabel,
+): Promise<CronResult> {
+  await reportCronProgress(reportProgress, {
+    stage: "skipped",
+    message: `Skipping ${edition} because Anthropic credentials are missing`,
+    providerFamily: "anthropic",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      skipped: "missing-api-key",
+    },
+  });
+  return { metadata: "skipped: no API key" };
+}
+
+export async function reportDigestCircuitOpen(
+  reportProgress: CronProgressReporter | undefined,
+  edition: DigestEditionLabel,
+): Promise<void> {
+  await reportCronProgress(reportProgress, {
+    stage: "skipped",
+    message: `Skipping ${edition} because Anthropic circuit is open`,
+    providerFamily: "anthropic",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      skipped: "anthropic-circuit-open",
+    },
+  });
+}
+
+export async function reportDigestRefusal(
+  reportProgress: CronProgressReporter | undefined,
+  edition: DigestEditionLabel,
+  refusalCategory: AnthropicRefusalCategory | null,
+  llmAttempts: DigestLlmAttemptTelemetry[],
+): Promise<CronResult> {
+  const metadata = {
+    skipped: "anthropic-refusal" as const,
+    refusalCategory,
+    llmAttempts,
+  };
+  await reportCronProgress(reportProgress, {
+    stage: "skipped",
+    message: `Skipping ${edition} because Anthropic refused the request`,
+    providerFamily: "anthropic",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: { ...metadata },
+  });
+  return {
+    status: "degraded",
+    itemCount: 0,
+    metadata: JSON.stringify(metadata),
+  };
+}
+
+export async function reportDigestLlmAttempt(
+  reportProgress: CronProgressReporter | undefined,
+  edition: DigestEditionLabel,
+  llmAttempts: DigestLlmAttemptTelemetry[],
+): Promise<void> {
+  await reportCronProgress(reportProgress, {
+    stage: "llm-attempt",
+    message: `Recorded ${edition} Anthropic attempt telemetry`,
+    providerFamily: "anthropic",
+    itemsDone: llmAttempts.length,
+    itemsTotal: llmAttempts.length,
+    metadata: { llmAttempts },
+  });
+}
+
+export function buildDigestQualityAssessment(
+  safetyContext: DigestSafetyContext | undefined,
+  digestCopy: DigestQualityCopy,
+): DigestQualityAssessment {
+  const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
+    safetyContext,
+    {
+      title: digestCopy.digestTitle,
+      text: digestCopy.digestText,
+      extended: digestCopy.digestExtended,
+    },
+  );
+  const safetyCopyIssues: DigestValidationIssue[] = unboundSafetyClaimMarkers.length > 0
+    ? [{
+        code: "unbound-safety-copy",
+        severity: "hard",
+        message: `Safety Score copy requires an identified publication (${unboundSafetyClaimMarkers.join(", ")})`,
+      }]
+    : [];
+  return {
+    safetyCopyIssues,
+    qualityIssues: [...digestCopy.qualityIssues, ...safetyCopyIssues],
+    hasBlockingQualityIssues:
+      digestCopy.hasBlockingQualityIssues || safetyCopyIssues.length > 0,
+  };
+}
+
+export async function reportDigestGenerationComplete(
+  reportProgress: CronProgressReporter | undefined,
+  edition: DigestEditionLabel,
+  digestCopy: Pick<DigestQualityCopy, "digestText" | "digestExtended">,
+  qualityIssueCount: number,
+  hasBlockingQualityIssues: boolean,
+): Promise<void> {
+  await reportCronProgress(reportProgress, {
+    stage: "llm-generation-complete",
+    message: `Received ${edition} copy from Anthropic`,
+    providerFamily: "anthropic",
+    itemsDone: 1,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        textChars: digestCopy.digestText.length,
+        extendedChars: digestCopy.digestExtended.length,
+        qualityIssues: qualityIssueCount,
+      },
+      blockingQualityIssues: hasBlockingQualityIssues,
+    },
+  });
+}
+
+export function buildDigestLlmTelemetry(
+  config: DigestLlmConfig,
+  attempts: DigestLlmAttemptTelemetry[],
+): DigestLlmTelemetry {
+  return {
+    model: config.model,
+    effort: config.effort,
+    maxTokens: config.maxTokens,
+    attempts,
+  };
+}
 
 /**
  * Map the status grammar shared by digest channel delivery paths to the
@@ -187,13 +360,7 @@ export function resolveDigestLlmConfig(
     ? requestedModel
     : fallback.model;
   const requestedEffort = typeof overrides.effort === "string" ? overrides.effort.trim() : "";
-  const effort = requestedEffort === "low"
-    || requestedEffort === "medium"
-    || requestedEffort === "high"
-    || requestedEffort === "xhigh"
-    || requestedEffort === "max"
-    ? requestedEffort
-    : fallback.effort;
+  const effort = DIGEST_EFFORT_LEVELS.find((level) => level === requestedEffort) ?? fallback.effort;
   const parsedMaxTokens = typeof overrides.maxTokens === "string"
     ? Number(overrides.maxTokens.trim())
     : overrides.maxTokens;
@@ -263,12 +430,7 @@ function attachDigestLlmMeta(
       parsed = decoded as Record<string, unknown>;
     }
   }
-  parsed.llm = {
-    model: config.model,
-    effort: config.effort,
-    maxTokens: config.maxTokens,
-    attempts,
-  };
+  parsed.llm = buildDigestLlmTelemetry(config, attempts);
   return JSON.stringify(parsed);
 }
 
