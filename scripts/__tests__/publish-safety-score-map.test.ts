@@ -269,4 +269,13 @@ describe("Safety Map publication CLI", () => {
     expect(summary).toContain("`safety-map:2026-07-27.png` — the URL the digest embeds");
     expect(summary.trimEnd().endsWith("`safety-map:latest.json` — manifest, written last")).toBe(true);
   });
+
+  it("labels transient recovery and persistent delta rejection in the summary", () => {
+    const directory = temporaryDirectory();
+    const recovered = JSON.parse(readFileSync(writeRenderedState(directory, { deltaGuard: "recovered" }), "utf8")) as SafetyMapPublishState;
+    expect(buildSafetyMapSummary(recovered, "success")).toContain("Transient rejection recovered");
+
+    const persistent = JSON.parse(readFileSync(writeRenderedState(directory, { deltaGuard: "persistent", phase: "planned" }), "utf8")) as SafetyMapPublishState;
+    expect(buildSafetyMapSummary(persistent, "failure")).toContain("Persistent delta rejection");
+  });
 });

@@ -81,7 +81,7 @@ interface FarmRiskConfig {
 
 const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "fasanara-rwa-farm":       { risk: "high", ...cefiPositionMeta() },
-  "fasanara-gdaf":           { risk: "high", ...cefiPositionMeta() },
+  "fasanara-gdaf":           { risk: "high", ...cefiPositionMeta(), coinId: "mglobal-midas-fasanara", depType: "collateral" },
   "falconx-farm":            { risk: "high", ...cefiPositionMeta() },
   "morpho-v2-sentora-pyusd": { risk: "high", ...wrapperAssetMeta("pyusd") },
   "maple-farm-institutional": { risk: "high", ...cefiPositionMeta() },
@@ -102,7 +102,7 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "reservoir-wsrUSD":        { risk: "medium" },
   "sGHO":                    { risk: "medium", coinId: "sgho-aave", depType: "collateral" },
   "liquid-cap":              { risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
-  "cowswap-fxSave":          { risk: "medium" },
+  "cowswap-fxSave":          { risk: "medium", coinId: "fxsave-f-x-protocol", depType: "collateral" },
   "pendle-v3-PT-apxUSD-18JUN2026": { risk: "high", coinId: "apxusd-apyx", depType: "collateral" },
   "pendle-v3-PT-apyUSD-18JUN2026": { risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
   "new-silver-junior":       { risk: "high", ...cefiPositionMeta() },

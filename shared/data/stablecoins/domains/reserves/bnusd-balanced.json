@@ -97,6 +97,8 @@
       "name": "sodasftUSD (SODAX-wrapped staked ftUSD) borrower collateral",
       "pct": 2.76423407,
       "risk": "medium",
+      "coinId": "ftusd-flying-tulip",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "staked ftUSD (Sonic) via the SODAX sodasftUSD vault wrapper",
       "riskFactors": [
@@ -227,12 +229,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "Pharos reserve research agent (2026-08-20 current-source refresh)",
+    "reviewedAt": "2026-08-31",
+    "reviewer": "Pharos reserve research agent (2026-08-31 dependency identity verification)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Sonic public RPC: latest eth_call reads at block 77819356 (2026-08-20T14:21:05Z) — facilitator bucket and Aave oracle getAssetPrice per reserve on 0x12835f0b71d7c94b23b64f765ab9cbcb8f5250b9",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "Sonic public RPC: wrapper identity reads at block 78468970 (2026-08-31T10:12:08Z) — sodasftUSD supports sftUSD 0xd1e5...aeb1, whose ERC-4626 asset() is tracked ftUSD 0xf7d8...9c9c",
         "url": "https://rpc.soniclabs.com"
       },
       {
@@ -252,7 +258,7 @@
         "url": "https://coins.llama.fi/prices/current"
       }
     ],
-    "rationale": "Current-source re-measurement at Sonic block 77819356 (2026-08-20T14:21:05Z), replacing the 2026-07-30 envelope. The facilitator bucket reports currentBorrowed = 1,313,027.46 bnUSD (cap 2,500,000); the SODAX API enumerates 50 current borrowers and 24 nonzero reserve positions. Summing every borrower aToken balance and pricing each reserve with the pool Aave oracle getAssetPrice at the current Sonic read gives total backing $3,613,750.65 and collateralizationRatio 2.752228. Composition: sodahyTB $1,162,497 (32.16872978%), sodaUSDC $717,244 (19.84762818%), sodaUSDT $471,154 (13.03781973%), sodaBTC $352,884 (9.76503988%), sodaBNB $218,339 (6.04190304%), sodaAVAX $114,838 (3.17779144%), sodaSUI $107,827 (2.98382253%), sodasftUSD $99,893 (2.76423407%), sodaETH $88,541 (2.45011420%), sodaSODA $88,030 (2.43599211%), sodaWEETH $61,649 (1.70595983%), sodaHYPE $44,185 (1.22269177%), sodaSOL $28,540 (0.78975098%), sodaWSTETH $27,800 (0.76929741%), and a fully enumerated 0.83922505% tail (sodaNEAR, sodaPOL, sodaXLM, bnUSD, sodaS, sodaINJ, sodaWBTC, sodaKAIA, sodaLL, sodaSUSDS dust). The latest position set still includes the full borrower-collateral base; the Stability Fund's approved-stablecoin swaps mint through the same facilitator and are therefore not an additive unmeasured layer. hyTB remains identified as HiYield Treasury Bill Vault (SnowTrace token 0x8475509d391e6ee5A8b7133221CE17019D307B3E); the SODAX audits index still lists no report scoped to the hub EVM money-market Pool.",
+    "rationale": "Current-source re-measurement at Sonic block 77819356 (2026-08-20T14:21:05Z), replacing the 2026-07-30 envelope. The facilitator bucket reports currentBorrowed = 1,313,027.46 bnUSD (cap 2,500,000); the SODAX API enumerates 50 current borrowers and 24 nonzero reserve positions. Summing every borrower aToken balance and pricing each reserve with the pool Aave oracle getAssetPrice at the current Sonic read gives total backing $3,613,750.65 and collateralizationRatio 2.752228. Composition: sodahyTB $1,162,497 (32.16872978%), sodaUSDC $717,244 (19.84762818%), sodaUSDT $471,154 (13.03781973%), sodaBTC $352,884 (9.76503988%), sodaBNB $218,339 (6.04190304%), sodaAVAX $114,838 (3.17779144%), sodaSUI $107,827 (2.98382253%), sodasftUSD $99,893 (2.76423407%), sodaETH $88,541 (2.45011420%), sodaSODA $88,030 (2.43599211%), sodaWEETH $61,649 (1.70595983%), sodaHYPE $44,185 (1.22269177%), sodaSOL $28,540 (0.78975098%), sodaWSTETH $27,800 (0.76929741%), and a fully enumerated 0.83922505% tail (sodaNEAR, sodaPOL, sodaXLM, bnUSD, sodaS, sodaINJ, sodaWBTC, sodaKAIA, sodaLL, sodaSUSDS dust). The latest position set still includes the full borrower-collateral base; the Stability Fund's approved-stablecoin swaps mint through the same facilitator and are therefore not an additive unmeasured layer. At Sonic block 78468970, sodasftUSD 0x0902...8685 reported supported token 0xd1e5...aeb1, identified on-chain as sftUSD; sftUSD asset() returned 0xf7d85ec4e7710f71992752eac2111312e73e9c9c, the exact tracked Sonic ftUSD contract, and convertToAssets(1e6) returned 1e6. The 2.76423407% sodasftUSD slice is therefore linked through the wrappers to ftusd-flying-tulip. hyTB remains identified as HiYield Treasury Bill Vault (SnowTrace token 0x8475509d391e6ee5A8b7133221CE17019D307B3E); the SODAX audits index still lists no report scoped to the hub EVM money-market Pool.",
     "compositionBasis": "Complete enumeration of all 50 current bnUSD facilitator borrowers' aToken collateral across 24 nonzero SODAX money-market reserves at Sonic block 77819356, priced with the pool Aave oracle at the same current read per the issuer's official stats methodology",
     "compositionAsOf": "2026-08-20",
     "scope": "full-composition",

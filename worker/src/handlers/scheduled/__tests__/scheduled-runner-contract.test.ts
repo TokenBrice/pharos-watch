@@ -73,7 +73,10 @@ describe("scheduled runner contract", () => {
     expect(daily?.scheduleKey).toBe("daily0805Utc");
     expect(weekly?.scheduleKey).toBe("daily0810Utc");
     expect(CRON_TIMEOUT_MS["daily-digest"]).toBe(14 * 60_000);
-    expect(CRON_TIMEOUT_MS["weekly-recap"]).toBe(12 * 60_000);
+    // Weekly matches daily at 14 min: its own 12-min Anthropic cap previously
+    // consumed the entire job budget, leaving no headroom for persistence and
+    // the two channel deliveries that follow the LLM call.
+    expect(CRON_TIMEOUT_MS["weekly-recap"]).toBe(14 * 60_000);
   });
 
   it("keeps shared cron job identities explicit", () => {

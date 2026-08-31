@@ -563,7 +563,10 @@ async function reconcileStaleSlotArtifacts(
     }
   }
   const unconditionallyDueMissingJobs = stillMissingProgressJobs.filter(
-    (job) => !(slot.slot_key === "digestTriggerPoll" && job === "daily-digest"),
+    (job) => !(
+      slot.slot_key === "digestTriggerPoll"
+      && (job === "daily-digest" || job === "weekly-recap")
+    ),
   );
   for (const job of unconditionallyDueMissingJobs) {
     if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec, fence, reconcilerWorkerVersion)) {

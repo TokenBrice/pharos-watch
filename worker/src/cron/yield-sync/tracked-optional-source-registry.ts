@@ -1,14 +1,17 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { buildOnChainSourceKey } from "../yield-helpers";
 import {
-  fetchBasedollarSpSource,
+  BASEDOLLAR_SP_CONFIG,
+  LIQUITY_V2_SP_CONFIG,
   fetchBimaSusbdSource,
   fetchBprotocolLqtyOnlySource,
   fetchCurveScrvusdCurrentRateSource,
   fetchEtherfuseCetesSource,
   fetchHashnoteUsycSource,
+  fetchLiquityV2StabilityPoolSource,
   fetchOndoUsdyOracleSource,
   fetchReProtocolReusdSource,
+  fetchYearnYboldSource,
   fetchZephyrZysSource,
 } from "./sources";
 import { fetchMidasMmevNavOracleSource } from "./midas-mmev-nav-oracle";
@@ -26,9 +29,12 @@ const MIDAS_MMEV_ID = "mmev-midas";
 const ONDO_USDY_ID = "usdy-ondo-finance";
 const RE_REUSD_ID = "reusd-re-protocol";
 const ZEPHYR_ZYS_ID = "zys-zephyr-protocol";
+const YEARN_YBOLD_ID = "ybold-yearn";
+const LIQUITY_V2_BOLD_ID = "bold-liquity";
 const MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY = "protocol-api:midas-mmev-nav-oracle";
 const ONDO_USDY_ORACLE_SOURCE_KEY = "protocol-api:ondo-usdy-oracle";
 const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:scrvusd-curve:scrvusd-current-rate";
+const YEARN_YBOLD_SOURCE_KEY = "protocol-api:yearn:ybold";
 
 export interface TrackedOptionalSourceContext {
   db: D1Database;
@@ -207,6 +213,17 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
         null,
       ),
   },
+  {
+    stablecoinId: YEARN_YBOLD_ID,
+    sourceKey: YEARN_YBOLD_SOURCE_KEY,
+    run: (context) =>
+      runTimedOptionalSource(
+        "Yearn yBOLD source",
+        context.signal,
+        (budgetSignal) => fetchYearnYboldSource(budgetSignal),
+        null,
+      ),
+  },
 ] as const;
 
 export const TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID = new Map<string, TrackedOptionalSourceEntry[]>();
@@ -239,7 +256,23 @@ export const STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: readonly TrackedOption
       runTimedOptionalSource(
         "Base Dollar SP interest-only source",
         context.signal,
-        (budgetSignal) => fetchBasedollarSpSource(
+        (budgetSignal) => fetchLiquityV2StabilityPoolSource(
+          BASEDOLLAR_SP_CONFIG,
+          budgetSignal,
+          context.chainRpcs,
+        ),
+        null,
+      ),
+  },
+  {
+    stablecoinId: LIQUITY_V2_BOLD_ID,
+    sourceKey: buildOnChainSourceKey(LIQUITY_V2_BOLD_ID),
+    run: (context) =>
+      runTimedOptionalSource(
+        "Liquity V2 SP interest-only source",
+        context.signal,
+        (budgetSignal) => fetchLiquityV2StabilityPoolSource(
+          LIQUITY_V2_SP_CONFIG,
           budgetSignal,
           context.chainRpcs,
         ),

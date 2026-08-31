@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.42",
+    title: "BOLD and yBOLD Stop Sharing One Yield Row",
+    date: "2026-08-31",
+    effectiveAt: 1788134400,
+    summary:
+      "Base BOLD and the tracked Yearn yBOLD wrapper published identical APY and TVL because BOLD inherited the wrapper's DeFiLlama pool. BOLD now publishes a deterministic Liquity V2 Stability Pool aggregate across its three Ethereum branches, and yBOLD publishes Yearn's own ydaemon numbers.",
+    impact: [
+      "`bold-liquity` gains the deterministic `onchain:bold-liquity` reader, reusing the Base Dollar branch source family across the wstETH, WETH, and rETH Stability Pools: 75% of aggregate accrued borrower interest over total Stability Pool BOLD deposits, with shut-down branches contributing no interest but keeping their deposits, and a fail-closed CollateralRegistry branch-count guard",
+      "BOLD's curated DeFiLlama pool pin and yBOLD variant-map entry are removed. Both resolved to the wrapper's own Yearn pool, so BOLD's headline row was the wrapper's APY and TVL rather than the Stability Pool aggregate a BOLD holder can actually earn",
+      "BOLD's generic Tier-1 exchange-rate config is removed too. It read `convertToAssets` on the yBOLD vault under BOLD's identity, spending an RPC call on every sync and reserving the same `onchain:bold-liquity` key the branch aggregate now owns",
+      "`ybold-yearn` gains the first-party `protocol-api:yearn:ybold` reader: yBOLD vault TVL and the staked ysyBOLD net APR from Yearn's ydaemon endpoint, fail-closed unless the staked vault still wraps the tracked yBOLD vault. The DeFiLlama yBOLD pool stays pinned as a lower-evidence corroborating alternative",
+      "The Yearn venue still reaches BOLD through linked-variant projection, but as a `lending-opportunity` alternative that loses arbitration to the direct on-chain row instead of replacing it",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.41",
     title: "Base Dollar Liquity V2 Stability Pool Source",
     date: "2026-08-21",

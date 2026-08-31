@@ -52,6 +52,7 @@ export const CRITICAL_FILES = [
   "worker/src/cron/depeg-detection/persistence.ts",
   "worker/src/cron/depeg-detection/repair.ts",
   "worker/src/cron/depeg-resolver/context.ts",
+  "worker/src/cron/depeg-resolver/constants.ts",
   "worker/src/cron/depeg-resolver/incident-resolution.ts",
   "worker/src/cron/depeg-resolver/incident-state.ts",
   "worker/src/cron/depeg-resolver/options.ts",
@@ -59,11 +60,19 @@ export const CRITICAL_FILES = [
   "worker/src/cron/depeg-resolver/pre-lock-incident-reaper.ts",
   "worker/src/cron/depeg-resolver/public-projection.ts",
   "worker/src/cron/depeg-resolver/publication.ts",
+  "worker/src/cron/depeg-resolver/storage-adapters.ts",
   "worker/src/cron/depeg-resolver/utils.ts",
+  "worker/src/lib/depeg-resolver-assessment-store.ts",
+  "worker/src/lib/depeg-resolver-errata-store.ts",
   "worker/src/lib/depeg-resolver-incident-store.ts",
   "worker/src/lib/depeg-resolver-lock-opportunity-store.ts",
+  "worker/src/lib/depeg-resolver-methodology.ts",
   "worker/src/lib/depeg-resolver-publication-store.ts",
+  "worker/src/lib/depeg-resolver-repair-store.ts",
   "worker/src/lib/depeg-resolver-review-response.ts",
+  "worker/src/lib/depeg-resolver-review-snapshot-cache.ts",
+  "worker/src/lib/depeg-resolver-snapshot-cache.ts",
+  "worker/src/lib/depeg-resolver-store-validators.ts",
   "worker/src/cron/sync-live-reserves.ts",
   "worker/src/cron/sync-live-reserves-core.ts",
   "worker/src/cron/sync-live-reserves-finalize.ts",
@@ -276,18 +285,17 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
   /^shared\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|psi)[^/]*\.ts$/,
   /^functions\/lib\/[^/]*proxy[^/]*\.ts$/,
 ];
-// Waived high-stakes candidates mapped to their review deadline. The completeness
-// guard fails once a reviewAfter date passes, forcing enrollment or a new deadline.
+// Waived high-stakes candidates mapped to their advisory review deadline. The
+// completeness guard reports due reviews; it fails only for invalid, stale, or
+// missing waiver metadata/enrollment.
 /** @type {Record<string, string>} */
 export const CRITICAL_COVERAGE_WAIVERS = {
-  "worker/src/cron/depeg-resolver/constants.ts": "2026-08-30",
   // These two scheduled-path facades only re-export the live lib/dews owners;
   // the owners are enrolled above, while the compatibility surfaces remain
   // covered by their direct import contracts.
   "worker/src/cron/compute-dews.ts": "2026-09-05",
   "worker/src/lib/safety-score-v9-transfer-materiality-observer.ts": "2026-09-05",
   "worker/src/lib/safety-score-v9-transfer-materiality.ts": "2026-09-05",
-  "worker/src/cron/depeg-resolver/storage-adapters.ts": "2026-08-30",
   "worker/src/cron/sync-live-reserves-config.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/cache-publication.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts": "2026-09-05",
@@ -336,13 +344,6 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   "worker/src/lib/address-price-providers/moralis.ts": "2026-09-05",
   "worker/src/lib/authoritative-price-sources.ts": "2026-09-05",
   "worker/src/lib/coingecko-simple-price.ts": "2026-09-05",
-  "worker/src/lib/depeg-resolver-assessment-store.ts": "2026-08-30",
-  "worker/src/lib/depeg-resolver-errata-store.ts": "2026-08-30",
-  "worker/src/lib/depeg-resolver-methodology.ts": "2026-08-30",
-  "worker/src/lib/depeg-resolver-repair-store.ts": "2026-08-30",
-  "worker/src/lib/depeg-resolver-review-snapshot-cache.ts": "2026-08-30",
-  "worker/src/lib/depeg-resolver-snapshot-cache.ts": "2026-08-30",
-  "worker/src/lib/depeg-resolver-store-validators.ts": "2026-08-30",
   "worker/src/lib/dex-api-token-pricing.ts": "2026-09-05",
   "worker/src/lib/live-reserves-store.ts": "2026-09-05",
   "worker/src/lib/native-peg-implied-prices.ts": "2026-09-05",

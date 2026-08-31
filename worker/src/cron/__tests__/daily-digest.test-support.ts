@@ -140,6 +140,8 @@ export function mockDigestSafetyMapModule(
     resolveDigestSafetyMap: vi.fn(async (date: string) => ({
       kind: "available" as const,
       imageUrl: `https://pharos.watch/safety-scores/map.png?date=${date}`,
+      freshness: "current" as const,
+      ageDays: 0,
       manifest: {
         date,
         asOfSec: 1_772_796_000,

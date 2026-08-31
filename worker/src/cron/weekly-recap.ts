@@ -3,27 +3,18 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { formatIsoDate } from "@shared/lib/format";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
-import { throwIfAborted } from "../lib/abort";
 import { createNeutralSkippedCronResult } from "../lib/cron-result";
 import type { TelegramCreds } from "../lib/telegram";
-import {
-  deliverTelegramDigestEdition,
-  enqueueTelegramDigestEdition,
-} from "../lib/telegram-digest-outbox";
+import type { TwitterCreds } from "../lib/twitter";
 import { SECONDS } from "../lib/time-constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseJson } from "../lib/json-parse";
 import {
+  classifyDigestChannelStatus,
   didDigestChannelDeliver,
-  insertDigestRecord,
   markDigestMetaBlocked,
   requestDigestCopy,
 } from "./digest/platform";
-import {
-  runTelegramDigestDeliveryWithPermit,
-  mapTelegramDigestPermittedDelivery,
-  type TelegramDigestPermittedDelivery,
-} from "./telegram-digest-transport";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
@@ -39,6 +30,14 @@ import {
   findUnboundDigestSafetyClaimMarkers,
   loadDigestSafetyContext,
 } from "../lib/digest-safety-context";
+import { resolveDigestSafetyMap } from "../lib/digest-safety-map";
+import {
+  deliverDigestEdition,
+  publishDigestEdition,
+  type DigestCredentialDiagnostics,
+} from "./digest/publish";
+
+const TWITTER_SENT_MARKER_PREFIX = "weekly-recap:twitter-sent:";
 
 interface ExistingWeeklyDigestRow {
   generated_at: number;
@@ -50,6 +49,10 @@ interface ExistingWeeklyDigestRow {
 }
 
 interface WeeklyDigestMeta {
+  twitterDelivered?: boolean;
+  twitterDeliveryStatus?: string;
+  twitterDeliveryUpdatedAt?: number;
+  twitterDeliveredAt?: number;
   telegramDelivered?: boolean;
   telegramDeliveryStatus?: string;
   telegramDeliveryUpdatedAt?: number;
@@ -90,18 +93,27 @@ function encodeWeeklyDigestMeta(
   params: {
     generatedAt: number;
     nowSec: number;
+    twitterDelivered: boolean;
+    twitterDeliveryStatus: string;
     telegramDelivered: boolean;
     telegramDeliveryStatus: string;
     weeklyDefaults?: WeeklyDigestMeta;
   },
 ): string {
   const meta = parseWeeklyDigestMeta(rawMeta, params.generatedAt);
+  if (!params.twitterDelivered) {
+    delete meta.twitterDeliveredAt;
+  }
   if (!params.telegramDelivered) {
     delete meta.telegramDeliveredAt;
   }
   return JSON.stringify({
     ...(params.weeklyDefaults ?? {}),
     ...meta,
+    twitterDelivered: params.twitterDelivered,
+    twitterDeliveryStatus: params.twitterDeliveryStatus,
+    twitterDeliveryUpdatedAt: params.nowSec,
+    ...(params.twitterDelivered ? { twitterDeliveredAt: params.nowSec } : {}),
     telegramDelivered: params.telegramDelivered,
     telegramDeliveryStatus: params.telegramDeliveryStatus,
     telegramDeliveryUpdatedAt: params.nowSec,
@@ -109,21 +121,31 @@ function encodeWeeklyDigestMeta(
   });
 }
 
-function shouldRetryExistingWeeklyTelegram(meta: WeeklyDigestMeta): boolean {
-  if (meta.telegramDelivered !== false) return false;
-  const status = meta.telegramDeliveryStatus ?? "";
-  if (status === "skipped: quality-gate") return false;
-  return !/\b(?:execution_unknown|failed_permanent)\b/.test(status);
+function shouldRetryChannel(delivered: boolean | undefined, status: string | undefined): boolean {
+  if (delivered === true) return false;
+  if (!status) return true;
+  if (/\b(?:execution_unknown|failed_permanent)\b/.test(status)) return false;
+  return classifyDigestChannelStatus(status) === "retryable";
 }
 
-async function updateWeeklyTelegramDeliveryMeta(
+function shouldRetryExistingWeeklyDelivery(
+  meta: WeeklyDigestMeta,
+  channels: { twitter: boolean; telegram: boolean },
+): boolean {
+  return (channels.twitter && shouldRetryChannel(meta.twitterDelivered, meta.twitterDeliveryStatus))
+    || (channels.telegram && shouldRetryChannel(meta.telegramDelivered, meta.telegramDeliveryStatus));
+}
+
+async function updateWeeklyDeliveryMeta(
   db: D1Database,
   row: { generated_at: number; digest_meta: string | null },
-  params: { nowSec: number; telegramStatus: string },
+  params: { nowSec: number; twitterStatus: string; telegramStatus: string },
 ): Promise<void> {
   const digestMeta = encodeWeeklyDigestMeta(row.digest_meta, {
     generatedAt: row.generated_at,
     nowSec: params.nowSec,
+    twitterDelivered: didDigestChannelDeliver(params.twitterStatus),
+    twitterDeliveryStatus: params.twitterStatus,
     telegramDelivered: didDigestChannelDeliver(params.telegramStatus),
     telegramDeliveryStatus: params.telegramStatus,
   });
@@ -138,58 +160,24 @@ async function updateWeeklyTelegramDeliveryMeta(
     .run();
 }
 
-async function deliverWeeklyDigestToTelegram(params: {
-  db: D1Database;
-  telegramCreds: TelegramCreds | null;
-  digestTitle: string | null;
-  digestExtended: string | null;
-  digestText: string;
-  generatedAt: number;
-  weekStartLabel: string;
-  safetyContext: DigestSafetyContext;
-  signal?: AbortSignal;
-}): Promise<string> {
-  const date = formatIsoDate(params.generatedAt);
-  const editionKey = `weekly:${date}`;
-  const weekLabel = `Week of ${params.weekStartLabel}`;
-  const tgTitle = `Weekly Recap: ${params.digestTitle || weekLabel}`;
-  if (params.telegramCreds) {
-    const enqueueResult = await enqueueTelegramDigestEdition(params.db, {
-      editionKey,
-      digestKind: "weekly",
-      digestGeneratedAt: params.generatedAt,
-      targetChatId: params.telegramCreds.chatId,
-      title: tgTitle,
-      extended: params.digestExtended ?? params.digestText,
-      date: `${date}-weekly`,
-      safetyContext: params.safetyContext,
-    }, params.signal);
-    if (!enqueueResult.payloadMatched) {
-      throw new Error(`Immutable Telegram digest edition differs (${editionKey})`);
-    }
-  }
-  return runTelegramDigestDeliveryWithPermit({
-    db: params.db,
-    creds: params.telegramCreds,
-    owner: "weekly-recap",
-    editionKey,
-    signal: params.signal,
-    deliver: async (creds): Promise<TelegramDigestPermittedDelivery> => {
-      const delivery = await deliverTelegramDigestEdition(params.db, creds, editionKey, params.signal);
-      return mapTelegramDigestPermittedDelivery(delivery, {
-        success: "ok",
-        alreadySent: "ok+already-sent",
-      });
-    },
-  });
+function hasNonDeliveringDisposition(dispositions: {
+  twitter: "delivered" | "retryable" | "terminal-unsent" | "not-configured";
+  telegram: "delivered" | "retryable" | "terminal-unsent" | "not-configured";
+}): boolean {
+  return Object.values(dispositions).some(
+    (disposition) => disposition === "retryable" || disposition === "terminal-unsent",
+  );
 }
 
 export async function generateWeeklyRecap(
   db: D1Database,
   anthropicApiKey: string | null,
+  twitterCreds: TwitterCreds | null = null,
   telegramCreds: TelegramCreds | null = null,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
+  scheduledAtSec = Math.floor(Date.now() / 1000),
+  credentialDiagnostics: DigestCredentialDiagnostics = {},
 ): Promise<CronResult> {
   await reportCronProgress(reportProgress, {
     stage: "preflight",
@@ -199,7 +187,7 @@ export async function generateWeeklyRecap(
     itemsTotal: 1,
     metadata: {
       countTotals: {
-        configuredDeliveryChannels: Number(Boolean(telegramCreds)),
+        configuredDeliveryChannels: Number(Boolean(twitterCreds)) + Number(Boolean(telegramCreds)),
       },
     },
   });
@@ -217,9 +205,9 @@ export async function generateWeeklyRecap(
     return { metadata: "skipped: no API key" };
   }
 
-  // Check if today is Monday (UTC)
-  const now = new Date();
-  if (now.getUTCDay() !== 1) {
+  // Calendar identity belongs to the scheduled slot, not delayed execution.
+  const scheduledDate = new Date(scheduledAtSec * 1000);
+  if (scheduledDate.getUTCDay() !== 1) {
     await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipping weekly recap outside Monday UTC",
@@ -228,32 +216,39 @@ export async function generateWeeklyRecap(
       itemsTotal: 1,
       metadata: {
         skipped: "not-monday",
-        utcDay: now.getUTCDay(),
+        utcDay: scheduledDate.getUTCDay(),
       },
     });
     return createNeutralSkippedCronResult("not-monday", {
       skipped: "not-monday",
-      utcDay: now.getUTCDay(),
+      utcDay: scheduledDate.getUTCDay(),
     });
   }
 
-  // Check if weekly recap already exists for this week. Rows that were
-  // generated but not delivered to Telegram stay eligible for a delivery retry.
-  const weekStart = Math.floor(Date.now() / 1000) - 2 * SECONDS.ONE_DAY;
+  // Check the scheduled edition day. A non-blocked row with retryable channel
+  // state remains eligible for duplicate-safe delivery recovery.
+  const digestDate = formatIsoDate(scheduledAtSec);
+  const editionDayStart = bucketUnixSecondsToUtcDay(scheduledAtSec);
+  const editionDayEnd = editionDayStart + SECONDS.ONE_DAY;
   const existing = await db
     .prepare(
       `SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta, input_data
          FROM daily_digest
         WHERE generated_at >= ?
+          AND generated_at < ?
           AND json_extract(digest_meta, '$.type') = 'weekly'
+          AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
         ORDER BY generated_at DESC
         LIMIT 1`,
     )
-    .bind(weekStart)
+    .bind(editionDayStart, editionDayEnd)
     .first<ExistingWeeklyDigestRow>();
   if (existing) {
     const existingMeta = parseWeeklyDigestMeta(existing.digest_meta, existing.generated_at);
-    if (!shouldRetryExistingWeeklyTelegram(existingMeta)) {
+    if (!shouldRetryExistingWeeklyDelivery(existingMeta, {
+      twitter: Boolean(twitterCreds) || credentialDiagnostics.twitterMissing != null,
+      telegram: Boolean(telegramCreds) || credentialDiagnostics.telegramMissing != null,
+    })) {
       await reportCronProgress(reportProgress, {
         stage: "skipped",
         message: "Skipping weekly recap because this week already exists",
@@ -271,9 +266,9 @@ export async function generateWeeklyRecap(
       });
     }
     await reportCronProgress(reportProgress, {
-      stage: "telegram-delivery-retry",
-      message: "Retrying weekly recap Telegram delivery",
-      providerFamily: "telegram-api",
+      stage: "channel-delivery-retry",
+      message: "Retrying weekly recap channel delivery",
+      providerFamily: "digest",
       itemsDone: 0,
       itemsTotal: 1,
       metadata: {
@@ -298,34 +293,80 @@ export async function generateWeeklyRecap(
     const existingInput = parsedExistingInput.ok
       ? parsedExistingInput.value
       : null;
-    const retryStatus = await deliverWeeklyDigestToTelegram({
+    const safetyContext = digestSafetyContextFromPersistedInput(existingInput);
+    const retryNowSec = Math.floor(Date.now() / 1000);
+    const safetyMap = twitterCreds || telegramCreds
+      ? await resolveDigestSafetyMap(digestDate, retryNowSec, signal)
+      : null;
+    const weekStartLabel = getMetaString(existingMeta, "weekStart") ?? digestDate;
+    const retryDegradedReasons: string[] = [];
+    const retry = await deliverDigestEdition({
       db,
-      telegramCreds,
-      digestTitle: existing.digest_title,
-      digestExtended: existing.digest_extended,
-      digestText: existing.digest_text,
+      kind: "weekly",
       generatedAt: existing.generated_at,
-      weekStartLabel: getMetaString(existingMeta, "weekStart") ?? formatIsoDate(existing.generated_at),
-      safetyContext: digestSafetyContextFromPersistedInput(existingInput),
+      deliveryAt: retryNowSec,
+      digestDate,
+      editionNumber: null,
+      copy: {
+        title: existing.digest_title ?? "",
+        text: existing.digest_text,
+        extended: existing.digest_extended ?? existing.digest_text,
+      },
+      safetyContext,
+      qualityGateStatus: null,
+      degradedReasons: retryDegradedReasons,
+      safetyMap,
+      twitter: twitterCreds || credentialDiagnostics.twitterMissing != null
+        ? {
+            creds: twitterCreds,
+            markerKey: `${TWITTER_SENT_MARKER_PREFIX}${digestDate}`,
+            required: credentialDiagnostics.twitterMissing != null,
+            missingCredentialNames: credentialDiagnostics.twitterMissing,
+          }
+        : null,
+      telegram: telegramCreds || credentialDiagnostics.telegramMissing != null
+        ? {
+            creds: telegramCreds,
+            editionKey: `weekly:${digestDate}`,
+            title: `Weekly Recap: ${existing.digest_title || `Week of ${weekStartLabel}`}`,
+            routeDate: `${digestDate}-weekly`,
+            required: credentialDiagnostics.telegramMissing != null,
+            missingCredentialNames: credentialDiagnostics.telegramMissing,
+            alreadySentStatus: "ok+already-sent",
+          }
+        : null,
       signal,
+      reportProgress,
     });
-    await updateWeeklyTelegramDeliveryMeta(db, existing, {
-      nowSec: Math.floor(Date.now() / 1000),
-      telegramStatus: retryStatus,
+    await updateWeeklyDeliveryMeta(db, existing, {
+      nowSec: retryNowSec,
+      twitterStatus: retry.tweetStatus,
+      telegramStatus: retry.telegramStatus,
     });
     await reportCronProgress(reportProgress, {
       stage: "complete",
-      message: "Completed weekly recap Telegram retry",
-      providerFamily: "telegram-api",
+      message: "Completed weekly recap channel retry",
+      providerFamily: "digest",
       itemsDone: 1,
       itemsTotal: 1,
       metadata: {
-        telegramStatus: retryStatus,
+        twitterStatus: retry.tweetStatus,
+        telegramStatus: retry.telegramStatus,
       },
     });
     return {
       itemCount: 0,
-      metadata: `weekly: existing recap delivery retry, telegram: ${retryStatus}`,
+      ...(retryDegradedReasons.length > 0 || hasNonDeliveringDisposition(retry.dispositions)
+        ? { status: "degraded" as const }
+        : {}),
+      metadata: JSON.stringify({
+        summary: `weekly: existing recap delivery retry, tweet: ${retry.tweetStatus}, telegram: ${retry.telegramStatus}`,
+        channels: {
+          twitter: { status: retry.tweetStatus, disposition: retry.dispositions.twitter },
+          telegram: { status: retry.telegramStatus, disposition: retry.dispositions.telegram },
+        },
+        degradedReasons: retryDegradedReasons,
+      }),
     };
   }
 
@@ -359,7 +400,7 @@ export async function generateWeeklyRecap(
   // 15-day cutoff + LIMIT 15 captures current + prior weeks for WoW
   // deltas and bounds the result set deterministically even if the dedup
   // guard ever drifts.
-  const cutoff = Math.floor(Date.now() / 1000) - 15 * SECONDS.ONE_DAY;
+  const cutoff = scheduledAtSec - 15 * SECONDS.ONE_DAY;
   const dailyRows = await db
     .prepare(
       `WITH latest_daily AS (
@@ -384,8 +425,7 @@ export async function generateWeeklyRecap(
   // Snap the split to a UTC day boundary (= last Tuesday 00:00 UTC given
   // the Monday 08:05 cron slot). Day-level snap removes sub-second drift
   // ambiguity between weekly runs, unlike a rolling `now - 7d` window.
-  const nowSec = Math.floor(Date.now() / 1000);
-  const todayTs = bucketUnixSecondsToUtcDay(nowSec);
+  const todayTs = bucketUnixSecondsToUtcDay(scheduledAtSec);
   const weekBoundary = todayTs - 6 * SECONDS.ONE_DAY;
   const currentRows = allRows.filter((r) => r.generated_at >= weekBoundary);
   const priorRows = allRows.filter((r) => r.generated_at < weekBoundary);
@@ -531,6 +571,10 @@ export async function generateWeeklyRecap(
   const qualityIssues = [...digestCopy.qualityIssues, ...safetyCopyIssues];
   const hasBlockingQualityIssues =
     digestCopy.hasBlockingQualityIssues || safetyCopyIssues.length > 0;
+  const degradedReasons: string[] = [];
+  if (digestCopy.usedRawTextFallback) degradedReasons.push("raw-text-fallback");
+  if (safetyContext.status === "unavailable") degradedReasons.push("safety-context-unavailable");
+  if (safetyCopyIssues.length > 0) degradedReasons.push("unbound-safety-copy");
   await reportCronProgress(reportProgress, {
     stage: "llm-generation-complete",
     message: "Received weekly recap copy from Anthropic",
@@ -547,9 +591,13 @@ export async function generateWeeklyRecap(
     },
   });
 
+  const publicationNowSec = Math.floor(Date.now() / 1000);
+  const generatedAt = scheduledAtSec;
   const initialDigestMeta = encodeWeeklyDigestMeta(digestCopy.digestMeta, {
-    generatedAt: nowSec,
-    nowSec,
+    generatedAt,
+    nowSec: publicationNowSec,
+    twitterDelivered: false,
+    twitterDeliveryStatus: "pending",
     telegramDelivered: false,
     telegramDeliveryStatus: "pending",
     weeklyDefaults: {
@@ -561,72 +609,63 @@ export async function generateWeeklyRecap(
     },
   });
 
-  // Store
-  await reportCronProgress(reportProgress, {
-    stage: "persistence",
-    message: "Persisting weekly recap row",
-    providerFamily: "d1",
-    itemsDone: 0,
-    itemsTotal: 1,
-    metadata: {
-      cursor: {
-        weekStart: weeklyData.weekStartDate,
-        weekEnd: weeklyData.weekEndDate,
-      },
+  const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
+  const safetyMap = twitterCreds || telegramCreds
+    ? await resolveDigestSafetyMap(digestDate, publicationNowSec, signal)
+    : null;
+  const publication = await publishDigestEdition({
+    db,
+    kind: "weekly",
+    generatedAt,
+    deliveryAt: publicationNowSec,
+    digestDate,
+    editionNumber: null,
+    copy: {
+      title: digestCopy.digestTitle,
+      text: digestCopy.digestText,
+      extended: digestCopy.digestExtended,
+      meta: initialDigestMeta,
     },
+    inputData: weeklyData,
+    safetyContext,
+    qualityGateStatus,
+    degradedReasons,
+    safetyMap,
+    twitter: twitterCreds || credentialDiagnostics.twitterMissing != null
+      ? {
+          creds: twitterCreds,
+          markerKey: `${TWITTER_SENT_MARKER_PREFIX}${digestDate}`,
+          required: credentialDiagnostics.twitterMissing != null,
+          missingCredentialNames: credentialDiagnostics.twitterMissing,
+        }
+      : null,
+    telegram: telegramCreds || credentialDiagnostics.telegramMissing != null
+      ? {
+          creds: telegramCreds,
+          editionKey: `weekly:${digestDate}`,
+          title: `Weekly Recap: ${digestCopy.digestTitle || `Week of ${weeklyData.weekStartDate}`}`,
+          routeDate: `${digestDate}-weekly`,
+          required: credentialDiagnostics.telegramMissing != null,
+          missingCredentialNames: credentialDiagnostics.telegramMissing,
+          alreadySentStatus: "ok+already-sent",
+        }
+      : null,
+    signal,
+    reportProgress,
   });
-  // Hard quality failures are stored for inspection but never published.
-  const storedDigestMeta = hasBlockingQualityIssues
+  const storedDigestMeta = qualityGateStatus
     ? markDigestMetaBlocked(initialDigestMeta)
     : initialDigestMeta;
-
-  await insertDigestRecord({
-    db,
-    generatedAt: nowSec,
-    digestText: digestCopy.digestText,
-    digestTitle: digestCopy.digestTitle || null,
-    inputData: weeklyData,
-    digestExtended: digestCopy.digestExtended || null,
-    digestMeta: storedDigestMeta,
-    signal,
-  });
-  throwIfAborted(signal);
-
-  // Post to Telegram
-  const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
-  throwIfAborted(signal);
-  await reportCronProgress(reportProgress, {
-    stage: "telegram-delivery",
-    message: "Delivering weekly recap to Telegram",
-    providerFamily: "telegram-api",
-    itemsDone: 0,
-    itemsTotal: 1,
-    metadata: {
-      qualityGateStatus,
-    },
-  });
-  const telegramStatus =
-    qualityGateStatus ??
-    (await deliverWeeklyDigestToTelegram({
-      db,
-      telegramCreds,
-      digestTitle: digestCopy.digestTitle || null,
-      digestExtended: digestCopy.digestExtended || null,
-      digestText: digestCopy.digestText,
-      generatedAt: nowSec,
-      weekStartLabel: weeklyData.weekStartDate,
-      safetyContext,
-      signal,
-    }));
-  await updateWeeklyTelegramDeliveryMeta(
+  await updateWeeklyDeliveryMeta(
     db,
     {
-      generated_at: nowSec,
+      generated_at: generatedAt,
       digest_meta: storedDigestMeta,
     },
     {
-      nowSec,
-      telegramStatus,
+      nowSec: publicationNowSec,
+      twitterStatus: publication.tweetStatus,
+      telegramStatus: publication.telegramStatus,
     },
   );
 
@@ -644,17 +683,34 @@ export async function generateWeeklyRecap(
         extendedChars: digestCopy.digestExtended.length,
         qualityIssues: qualityIssues.length,
       },
-      telegramStatus,
+      twitterStatus: publication.tweetStatus,
+      telegramStatus: publication.telegramStatus,
       usedRawTextFallback: digestCopy.usedRawTextFallback,
     },
   });
   return {
     itemCount: 1,
-    ...(digestCopy.usedRawTextFallback ||
+    ...(degradedReasons.length > 0 ||
     hasBlockingQualityIssues ||
-    safetyContext.status === "unavailable"
+    hasNonDeliveringDisposition(publication.dispositions)
       ? { status: "degraded" as const }
       : {}),
-    metadata: `weekly: ${digestCopy.digestText.length} chars, telegram: ${telegramStatus}${digestCopy.usedRawTextFallback ? ", degraded: raw-text-fallback" : ""}${qualityMetadata}`,
+    metadata: JSON.stringify({
+      summary: `weekly: ${digestCopy.digestText.length} chars, tweet: ${publication.tweetStatus}, telegram: ${publication.telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}${qualityMetadata}`,
+      digestDate,
+      scheduledAtSec,
+      channels: {
+        twitter: {
+          status: publication.tweetStatus,
+          disposition: publication.dispositions.twitter,
+          missingCredentialNames: credentialDiagnostics.twitterMissing ?? [],
+        },
+        telegram: {
+          status: publication.telegramStatus,
+          disposition: publication.dispositions.telegram,
+          missingCredentialNames: credentialDiagnostics.telegramMissing ?? [],
+        },
+      },
+    }),
   };
 }

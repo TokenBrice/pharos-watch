@@ -157,10 +157,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Maple does not publish the current split between retained USDT and deployed institutional-credit strategies.",
   ],
   [
-    "usg-tangent::Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)::USDC",
-    "USG's static reserve slice is an aggregate productive-collateral bucket; USDC is one paired LP route rather than a separately weighted reserve slice.",
-  ],
-  [
     "vndc-jade-labs::Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools::USDC",
     "VNDC reports this as a mixed issuer-disclosed USDT/USDC collateral pool without stablecoin-level weights, so no single tracked coinId is representative.",
   ],

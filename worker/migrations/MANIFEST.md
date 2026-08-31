@@ -21,6 +21,7 @@
 | 0232     | `0232_depeg_recovery_continuity.sql`                         | Add nullable last-qualified recovery observation time for continuity-safe recovery confirmation.          |
 | 0233     | `0233_ddr_lock_opportunity_attempt_key.sql`                  | Add nullable retry-attempt identity and a partial unique index for idempotent DDR lock audit writes.       |
 | 0234     | `0234_mint_burn_price_repair_backlog_index.sql`              | Backfill the production-created historical-price-repair backlog index into migration lineage (no-op on production). |
+| 0235     | `0235_telegram_digest_media_state.sql`                        | Add typed Safety Score map attachment identity and retry-safe media delivery progress to Telegram digest editions. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -307,6 +308,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0232_depeg_recovery_continuity.sql`: Worker rollback ignores the additive nullable column. Retain it; prior Workers continue using `recovery_first_seen_at`, while forward Workers reset incomplete legacy recovery episodes safely.
 - `0233_ddr_lock_opportunity_attempt_key.sql`: Worker rollback ignores the additive nullable column and partial unique index. Retain both; historical null-key audit rows remain append-only and prior Workers continue writing null keys.
 - `0234_mint_burn_price_repair_backlog_index.sql`: additive IF NOT EXISTS index backfill; production already carries the index, so both apply and rollback are no-ops for existing databases.
+- `0235_telegram_digest_media_state.sql`: roll back media delivery by restoring the prior Worker. Keep the nullable map identity columns and defaulted media state; the prior Worker ignores them and continues inserting and draining digest rows unchanged.
 
 ## Rollback Procedure
 

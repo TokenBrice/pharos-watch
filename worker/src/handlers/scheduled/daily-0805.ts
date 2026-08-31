@@ -9,7 +9,12 @@
  */
 import { syncBluechip } from "../../cron/sync-bluechip";
 import { generateDailyDigest } from "../../cron/daily-digest";
-import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
+import {
+  buildTelegramCreds,
+  buildTwitterCreds,
+  missingTelegramCredentialNames,
+  missingTwitterCredentialNames,
+} from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
@@ -31,6 +36,10 @@ function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext) {
           buildTelegramCreds(runtime.env),
           signal,
           reportProgress,
+          {
+            twitterMissing: missingTwitterCredentialNames(runtime.env),
+            telegramMissing: missingTelegramCredentialNames(runtime.env),
+          },
         ),
     },
   });

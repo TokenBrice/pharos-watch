@@ -31,7 +31,7 @@ const SAMPLE_PAYLOAD = {
 
 describe("adaptM0Collateral", () => {
   it("keeps M0-backed curated aggregate collateral on the conservative classification", () => {
-    for (const coinId of ["musd-metamask", "ctusd-citrea", "usdat-saturn"]) {
+    for (const coinId of ["musd-metamask"]) {
       const aggregateCollateral = TRACKED_META_BY_ID.get(coinId)?.reserves?.find(
         ({ name }) => name === "U.S. Treasury bills & cash (M0 eligible collateral)",
       );
@@ -43,6 +43,39 @@ describe("adaptM0Collateral", () => {
         issuerOrObligor: "M0 permissioned minters and eligible collateral SPVs",
       });
     }
+  });
+
+  it("keeps exact extension claims out of the generic M0 collateral cohort", () => {
+    const ctusd = TRACKED_META_BY_ID.get("ctusd-citrea");
+    const usdat = TRACKED_META_BY_ID.get("usdat-saturn");
+
+    expect(ctusd?.reserves).toEqual([
+      expect.objectContaining({
+        name: "M token held by Citrea USD",
+        pct: 100,
+        coinId: "m-m0",
+        depType: "wrapper",
+      }),
+    ]);
+    expect(ctusd?.liveReservesConfig).toMatchObject({
+      adapter: "m0-wrapper-underlying",
+      breakerScope: "ctusd-citrea",
+      params: {
+        mode: "m-extension",
+        expectedMTokenAddress: "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+        expectedSwapFacilityAddress: "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+      },
+    });
+
+    expect(usdat?.reserves).toEqual([
+      expect.objectContaining({
+        name: "PYUSDx held by Saturn USDat",
+        pct: 100,
+        coinId: "pyusd-paypal",
+        depType: "wrapper",
+      }),
+    ]);
+    expect(usdat?.liveReservesConfig).toBeUndefined();
   });
 
   it("converts the total collateral snapshot into the single protocol-constrained slice", () => {

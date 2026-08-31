@@ -357,14 +357,19 @@ function parseProducerFreshnessState(value: string | null | undefined): Producer
 }
 
 export interface CronStalenessWatchdogOptions {
-  telegramCreds?: TelegramCreds | null;
+  /**
+   * Private operator chat credentials. Freshness transitions are ops signal,
+   * not audience content: they must never be sent with the public digest
+   * channel creds. Null suppresses the alert (state tracking still advances).
+   */
+  operatorTelegramCreds?: TelegramCreds | null;
 }
 
 async function alertOnFreshnessTransitions(params: {
   db: D1Database;
   observations: readonly CronStalenessObservation[];
   nowSec: number;
-  telegramCreds: TelegramCreds | null;
+  operatorTelegramCreds: TelegramCreds | null;
   signal?: AbortSignal;
 }): Promise<{ stale: string[]; recovered: string[]; sent: boolean; cooldown: boolean }> {
   const [stateCache, alertCache] = await Promise.all([
@@ -391,7 +396,7 @@ async function alertOnFreshnessTransitions(params: {
   }
   const lastAlertAt = Number(alertCache?.value);
   const cooldown = Number.isFinite(lastAlertAt) && params.nowSec - lastAlertAt < CRON_STALENESS_ALERT_COOLDOWN_SEC;
-  if (cooldown || !params.telegramCreds) {
+  if (cooldown || !params.operatorTelegramCreds) {
     return { stale, recovered, sent: false, cooldown };
   }
 
@@ -400,9 +405,9 @@ async function alertOnFreshnessTransitions(params: {
     recovered.length > 0 ? `<b>Recovered producers</b>: ${recovered.map(escapeHtml).join(", ")}` : null,
   ].filter((section): section is string => section != null);
   const delivery = await sendToChat(
-    params.telegramCreds.chatId,
+    params.operatorTelegramCreds.chatId,
     `<b>Pharos freshness watchdog</b>\n\n${sections.join("\n")}`,
-    params.telegramCreds.botToken,
+    params.operatorTelegramCreds.botToken,
     { disableWebPagePreview: true, signal: params.signal },
   );
   if (delivery.ok) {
@@ -447,7 +452,7 @@ export async function runCronStalenessWatchdog(
     db,
     observations: watchedObservations,
     nowSec,
-    telegramCreds: options.telegramCreds ?? null,
+    operatorTelegramCreds: options.operatorTelegramCreds ?? null,
     signal,
   });
 

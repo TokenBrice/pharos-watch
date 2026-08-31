@@ -162,7 +162,7 @@
     "ctusd-citrea": "core-stablecoin",
     "wm-m0": "stablecoin-variant",
     "usdnr-nerona": "stablecoin-variant",
-    "usdat-saturn": "cash-equivalent",
+    "usdat-saturn": "core-stablecoin",
     "usdk-kast": "cash-equivalent",
     "moveusd-cfx": "core-stablecoin",
     "xo-exodus": "core-stablecoin",

@@ -6,6 +6,8 @@
       "pct": 43.3,
       "risk": "high",
       "blacklistable": true,
+      "coinId": "mglobal-midas-fasanara",
+      "depType": "collateral",
       "assetClass": "private-credit",
       "issuerOrObligor": "Fasanara Capital",
       "riskFactors": [
@@ -19,6 +21,8 @@
       "name": "f(x) fxSAVE",
       "pct": 16.5,
       "risk": "medium",
+      "coinId": "fxsave-f-x-protocol",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "f(x) Protocol stability pool",
       "riskFactors": [
@@ -198,20 +202,6 @@
     "knownUnknownExposure": "No unresolved composition gap remains: the API omission is reconciled to the named on-chain Fasanara mGLOBAL temporary-repo farm and RedeemController dust.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Fasanara mGLOBAL (GDADF)",
-        "pct": 43.3,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Fasanara mGLOBAL is a named private-credit fund position, not a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "f(x) fxSAVE",
-        "pct": 16.5,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "f(x) fxSAVE is a named protocol position, not a tracked stablecoin dependency."
-      },
       {
         "reserveIndex": 2,
         "reserveName": "New Silver",

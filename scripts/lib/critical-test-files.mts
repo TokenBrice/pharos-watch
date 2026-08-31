@@ -134,7 +134,9 @@ export const CRITICAL_TEST_FILES: string[] = [
   "worker/src/lib/__tests__/safety-score-v9-peg-provenance-identity.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-peg-provenance.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-publication-assessment.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts",
+  // safety-score-v9-resource-budget.test.ts is intentionally absent: its
+  // subprocess contributes no in-process V8 coverage and can time out when it
+  // competes with coverage workers. The full/nightly suite still owns it.
   "worker/src/lib/__tests__/safety-score-v9-publication-codec.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-publication-runner.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-publication-store.test.ts",
@@ -203,10 +205,12 @@ export const CRITICAL_TEST_FILES: string[] = [
   "worker/src/cron/__tests__/depeg-resolver-public-projection.test.ts",
   "worker/src/cron/__tests__/compute-depeg-resolver-review.test.ts",
   "worker/src/lib/__tests__/depeg-resolver-ddrv2-store.test.ts",
+  "worker/src/lib/__tests__/depeg-resolver-errata-store.test.ts",
   "worker/src/cron/depeg-detection/__tests__/decision-engine.test.ts",
   "worker/src/cron/depeg-detection/__tests__/repair.test.ts",
   "worker/src/cron/depeg-resolver/__tests__/incident-resolution.test.ts",
   "worker/src/cron/depeg-resolver/__tests__/incident-state.test.ts",
+  "worker/src/cron/depeg-resolver/__tests__/storage-adapters.test.ts",
   "worker/src/cron/depeg-resolver/__tests__/utils.test.ts",
   "worker/src/cron/dews/__tests__/source-state-legacy.test.ts",
   "worker/src/cron/dews/source-state/__tests__/fallback.test.ts",
@@ -272,6 +276,9 @@ function buildCriticalCoverageOptions(): string[] {
   return [
     "--coverage",
     "--coverage.thresholds.lines=0",
+    // The all-critical suite contains wall-clock-sensitive contract tests.
+    // Unbounded file workers can starve those probes on large local/CI hosts.
+    "--maxWorkers=4",
     // Scope v8 remapping to the enrolled critical source. Per-file numbers for
     // the enrolled files are unchanged, but the reporter stops remapping the
     // rest of the loaded module graph — the heaviest part of this invocation.

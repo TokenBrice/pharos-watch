@@ -171,7 +171,10 @@ export const CRON_CONNECTION_BUDGET = {
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
   maxPhysicalTriggersBeforeRebalance: 39,
-  maxFetchCapableEntriesBeforeRebalance: 32,
+  // The digest publication watchdog is a one-connection serial sidecar on the
+  // existing status lane; admit that reviewed entry without changing trigger
+  // topology or the per-trigger peak.
+  maxFetchCapableEntriesBeforeRebalance: 33,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {
     p95DurationMs: 10 * 60 * 1000,
@@ -404,6 +407,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "statusSelfCheckOffset",
     triggerMode: "isolated",
     maxConnections: 1, // DB freshness inspection
+    connectionGroup: "status-self-check-chain",
+  },
+  {
+    job: "digest-publication-watchdog",
+    label: "Digest publication watchdog",
+    group: "quarter-hourly",
+    scheduleKey: "statusSelfCheckOffset",
+    triggerMode: "isolated",
+    maxConnections: 1, // One serial map-manifest fetch or operator alert; D1 reads are local binding work.
     connectionGroup: "status-self-check-chain",
   },
   {

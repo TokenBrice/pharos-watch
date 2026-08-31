@@ -47,10 +47,10 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       exactReplayPassed: true,
       // Snapshot value at FULL_REGISTRY_CLOCK_SEC, which the fixture derives from
       // the newest curated review date + 24h. Re-pin when curation advances the
-      // clock onto a different shock-coverage measurement: the 2026-08-29
-      // curation batch moved the clock to 2026-08-30T00:00:00Z and this ratio
-      // with it, from 0.284305925936.
-      stressLiquidationCoverageRatio: 0.235898946423,
+      // clock onto a different shock-coverage measurement: the 2026-08-31
+      // curation batch moved the clock to 2026-09-01T00:00:00Z and this ratio
+      // with it, from 0.235898946423.
+      stressLiquidationCoverageRatio: 0.190908008704,
     });
   });
 

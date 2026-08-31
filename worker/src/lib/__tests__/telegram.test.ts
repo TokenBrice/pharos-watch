@@ -10,6 +10,7 @@ const {
   editMessage,
   postDigestToTelegram,
   schedulePerChatBatches,
+  sendPhotoToChat,
   sendToChat,
   sendBatch,
 } = await import("../telegram");
@@ -67,6 +68,19 @@ describe("sendToChat", () => {
   it("builds weekly Telegram digest links with a trailing slash", () => {
     const body = buildTelegramMessage("Weekly Recap", "PSI held steady.", "2026-03-21-weekly", 1);
     expect(body).toContain(`<a href="https://pharos.watch/digest/2026-03-21-weekly/">Read on Pharos →</a>`);
+  });
+
+  it("does not render a Safety Score map as a hoped-for link preview", () => {
+    const body = buildTelegramMessage(
+      "Daily Digest",
+      "PSI held steady.",
+      "2026-03-21",
+      null,
+      null,
+      "<b>Today’s map</b>",
+    );
+    expect(body).toContain("<b>Today’s map</b>");
+    expect(body).not.toContain("View today’s map");
   });
 
   it("returns blocked: true on 403", async () => {
@@ -206,6 +220,44 @@ describe("sendToChat", () => {
 
     expect(result.retryAfterSec).toBe(12);
     expect(result.rateLimitScope).toBe("chat");
+  });
+
+  it("sends a photo with a capped HTML caption and the shared result shape", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await sendPhotoToChat(
+      "12345",
+      "https://pharos.watch/safety-scores/map.png?date=2026-03-21",
+      "x".repeat(1_100),
+      "bot-token",
+      { disableNotification: true },
+    );
+
+    expect(result).toMatchObject({ ok: true, statusCode: 200, delivery: "sent" });
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toContain("/sendPhoto");
+    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(body).toMatchObject({
+      chat_id: "12345",
+      photo: "https://pharos.watch/safety-scores/map.png?date=2026-03-21",
+      parse_mode: "HTML",
+      disable_notification: true,
+    });
+    expect(body.caption).toHaveLength(1_024);
+  });
+
+  it("classifies sendPhoto transport failures like sendMessage failures", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("Forbidden", { status: 403 }));
+
+    const result = await sendPhotoToChat("12345", "https://example.com/map.png", "Map", "bot-token");
+
+    expect(result).toMatchObject({
+      ok: false,
+      blocked: true,
+      retryable: false,
+      permanentFailure: true,
+      statusCode: 403,
+      delivery: "blocked",
+    });
   });
 
   it("does not infer global scope from Telegram description text", async () => {

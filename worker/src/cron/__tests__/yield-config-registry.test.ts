@@ -35,7 +35,7 @@ const directProtocolApiIds = new Set(
     .map((entry) => entry.stablecoinId),
 );
 const trackedCoinsById = new Map(TRACKED_STABLECOINS.map((coin) => [coin.id, coin] as const));
-const NON_YIELD_BEARING_ONCHAIN_IDS = new Set(["bold-liquity", "usdf-falcon"]);
+const NON_YIELD_BEARING_ONCHAIN_IDS = new Set(["usdf-falcon"]);
 const WAVE_1_DETERMINISTIC_PROMOTION_IDS = [
   "gtusdc-gauntlet",
   "susdc-spark",
@@ -281,6 +281,35 @@ describe("yield config registry", () => {
     // Pool opportunity, so it belongs in the source registry rather than the
     // yield-bearing asset manifest.
     expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "bd-basedollar")).toBeUndefined();
+  });
+
+  it("separates the BOLD Stability Pool aggregate from the Yearn yBOLD wrapper source", () => {
+    // BOLD is not yield-bearing: its opt-in Liquity V2 Stability Pool return is
+    // a standalone deterministic source, never the tracked yBOLD wrapper's row.
+    expect(YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "bold-liquity")).toMatchObject({
+      directProtocolApiLabel: "Liquity V2 Stability Pools (interest-only)",
+      directProtocolApiSourceKey: "onchain:bold-liquity",
+    });
+    expect(YIELD_POOL_MAP["bold-liquity"]).toBeUndefined();
+    expect(YIELD_VARIANT_MAP["bold-liquity"]).toBeUndefined();
+    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "bold-liquity")).toBeUndefined();
+    // The generic Tier-1 reader must not carry BOLD: its old entry pointed at the
+    // yBOLD vault, which both spent an RPC call every sync and reserved the same
+    // `onchain:bold-liquity` key the branch aggregate now owns.
+    expect(onChainIds.has("bold-liquity")).toBe(false);
+
+    // yBOLD keeps first-party Yearn numbers as its selected source; the curated
+    // DeFiLlama pool stays pinned as the lower-evidence corroborating row.
+    expect(YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "ybold-yearn")).toMatchObject({
+      directProtocolApiLabel: "Yearn yBOLD Stability Pool vault",
+      directProtocolApiSourceKey: "protocol-api:yearn:ybold",
+      nativePoolId: "4c29f645-12db-461f-a1d7-16900d624271",
+    });
+    expect(
+      YIELD_ADAPTER_MANIFEST
+        .find((entry) => entry.stablecoinId === "ybold-yearn")
+        ?.strategies.map((strategy) => strategy.kind),
+    ).toContain("protocol-api");
   });
 
   it("keeps pre-launch assets out of deterministic lending overrides", () => {

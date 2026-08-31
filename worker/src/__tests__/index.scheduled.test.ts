@@ -1149,14 +1149,16 @@ describe("worker.scheduled", () => {
     const env = makeScheduledEnv();
 
     await worker.scheduled(
-      { cron: "*/5 * * * *" } as ScheduledEvent,
+      // Pinned to a Wednesday: the poll's weekly-resume branch is Monday-only,
+      // and an unpinned slot time made this case depend on the wall clock.
+      { cron: "*/5 * * * *", scheduledTime: Date.parse("2026-08-26T12:05:00Z") } as ScheduledEvent,
       env,
       ctx,
     );
     await Promise.all(waits);
 
-    // Idle poll reads the force-run intent and the safety-map deferral key.
-    expect(cronMocks.getCache).toHaveBeenCalledTimes(2);
+    // Idle poll reads the force-run intent.
+    expect(cronMocks.getCache).toHaveBeenCalledTimes(1);
     expect(cronMocks.generateDailyDigest).not.toHaveBeenCalled();
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
   });

@@ -41,7 +41,13 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [["compute-safety-score-v9"]],
   },
   statusSelfCheckOffset: {
-    jobChains: [["cron-slot-sweeper", "status-self-check", "data-invariant-canary", "cron-staleness-watchdog"]],
+    jobChains: [[
+      "cron-slot-sweeper",
+      "status-self-check",
+      "data-invariant-canary",
+      "cron-staleness-watchdog",
+      "digest-publication-watchdog",
+    ]],
   },
   sixHourlyBlacklist: {
     jobChains: [["sync-blacklist"]],
@@ -95,7 +101,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [["reserve-recovery"]],
   },
   digestTriggerPoll: {
-    jobChains: [["daily-digest"]],
+    jobChains: [["daily-digest", "weekly-recap"]],
     budgetOnlyJobs: ["telegram-digest-outbox-drain", "digest-trigger-poll"],
   },
   daily0300Utc: {
@@ -165,6 +171,7 @@ export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, Scheduled
  */
 export const SHARED_SCHEDULED_JOB_IDENTITIES = {
   "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
+  "weekly-recap": ["digestTriggerPoll", "daily0810Utc"],
   "snapshot-supply": ["quarterHourly", "daily0800Utc"],
   "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
 } as const satisfies Record<string, readonly CronScheduleKey[]>;

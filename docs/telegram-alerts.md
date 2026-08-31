@@ -153,6 +153,7 @@ retained.
 | `TELEGRAM_WEBHOOK_SECRET` | No | Webhook registration and validation for `POST /api/telegram-webhook` via `X-Telegram-Bot-Api-Secret-Token`; active only when Telegram credentials are configured |
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | No | Temporary overlap secret accepted by `POST /api/telegram-webhook` during secret rotation; registration still emits only `TELEGRAM_WEBHOOK_SECRET` |
 | `TELEGRAM_CHAT_ID` | No | Daily digest channel posting, including appended cemetery and tracking notices |
+| `TELEGRAM_OPERATOR_CHAT_ID` | No | Private operator chat for the cron freshness-watchdog alert; the alert is suppressed when unset and never falls back to `TELEGRAM_CHAT_ID` |
 
 Webhook registration is handled by `npx tsx scripts/maintenance/register-telegram.ts --action webhook`, which calls Telegram `setWebhook` with the webhook URL and the JSON `secret_token` field:
 
@@ -892,7 +893,7 @@ The same bot token can be used for both:
 
 The Daily Digest is a market-wide editorial edition generated once on its existing schedule. A personalized recap is a private, per-subscriber deterministic view of Tape changes over that subscriber's watchlist window. They do not share an AI request or delivery outbox: recap planning does not call the digest generator, and a missing or stale digest only removes the optional footer link from a valid recap.
 
-Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs stored in `telegram_subscribers`.
+Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs stored in `telegram_subscribers`. Operator-only alerts (currently just the cron freshness watchdog) use `TELEGRAM_OPERATOR_CHAT_ID` via `buildTelegramOperatorCreds()`; they are ops signal rather than audience content, so they must never be sent with the public channel credentials, and an unset operator chat suppresses the send instead of falling back.
 
 ## Operational Notes
 

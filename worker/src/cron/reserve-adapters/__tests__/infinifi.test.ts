@@ -209,6 +209,8 @@ describe("adaptInfiniFi", () => {
     expect(slices.find((s) => s.name.includes("Fasanara"))).toMatchObject({
       pct: 40,
       risk: "high",
+      coinId: "mglobal-midas-fasanara",
+      depType: "collateral",
     });
     expect(slices.find((s) => s.name.includes("Spark"))).toMatchObject({
       pct: 30,
@@ -274,7 +276,7 @@ describe("adaptInfiniFi", () => {
         ...SAMPLE_RESPONSE.data,
         farms: [
           { name: "liquid-cap", label: "Liquid Cap", assetsNormalized: 60, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
-          { name: "cowswap-fxSave", label: "CoW Swap fxSave", assetsNormalized: 40, type: "ILLIQUID", underlyingAssetSymbol: "fxUSD" },
+          { name: "cowswap-fxSave", label: "f(x) fxSAVE", assetsNormalized: 40, type: "ILLIQUID", underlyingAssetSymbol: "fxSAVE" },
         ],
         stats: { asset: { totalTVLAssetNormalized: 100 } },
       },
@@ -284,7 +286,7 @@ describe("adaptInfiniFi", () => {
     expect(result.unknownFarms).toEqual([]);
     expect(result.slices).toEqual([
       { name: "Liquid Cap", pct: 60, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
-      { name: "CoW Swap fxSave", pct: 40, risk: "medium" },
+      { name: "f(x) fxSAVE", pct: 40, risk: "medium", coinId: "fxsave-f-x-protocol", depType: "collateral" },
     ]);
   });
 
@@ -345,7 +347,7 @@ describe("adaptInfiniFi", () => {
           { name: "sGHO", label: "Staked GHO", assetsNormalized: 20, type: "LIQUID", underlyingAssetSymbol: "GHO" },
           { name: "maple-farm-syrup", label: "Maple Syrup USDC", assetsNormalized: 15, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
           { name: "capfarm", label: "Cap stcUSD", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
-          { name: "fasanara-gdaf", label: "Fasanara mGLOBAL", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+          { name: "fasanara-gdaf", label: "Fasanara mGLOBAL (GDADF)", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
         ],
       },
     };
@@ -356,8 +358,7 @@ describe("adaptInfiniFi", () => {
     expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "sgho-aave", depType: "collateral" });
     expect(slices.find((s) => s.name === "Maple Syrup USDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
     expect(slices.find((s) => s.name === "Cap stcUSD")).toMatchObject({ coinId: "stcusd-cap", depType: "collateral" });
-    // fasanara has no coinId — should be absent
-    expect(slices.find((s) => s.name === "Fasanara mGLOBAL")).not.toHaveProperty("coinId");
+    expect(slices.find((s) => s.name === "Fasanara mGLOBAL (GDADF)")).toMatchObject({ coinId: "mglobal-midas-fasanara", depType: "collateral" });
   });
 
   it("preserves small farms above 0.05% before normalizeSlices rounding", () => {
