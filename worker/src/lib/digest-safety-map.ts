@@ -1,13 +1,23 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { throwIfAborted } from "./abort";
 import { readResponseTextBoundedWithSignal } from "./response-body";
 
 const MANIFEST_URL = `${SITE_ORIGIN}/safety-scores/map.json`;
 const IMAGE_PATH = "/safety-scores/map.png";
-const READ_TIMEOUT_MS = 3_000;
+const SAFETY_MAP_PHASE_TIMEOUT_MS = 8_000;
 const MANIFEST_MAX_BYTES = 16_384;
-const MAX_DATA_AGE_SEC = 24 * 60 * 60;
+const UTC_DAY_SEC = 86_400;
+
+/** Maximum whole days a carried-forward map may lag the requested date. */
+export const MAX_SAFETY_MAP_CARRY_FORWARD_DAYS = 2;
+const MAX_DATA_AGE_SEC = (MAX_SAFETY_MAP_CARRY_FORWARD_DAYS + 1) * 86400;
+const MAP_DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
 
 interface SafetyMapManifest {
   date: string;
@@ -46,48 +56,35 @@ export interface DigestSafetyMapCaptions {
   telegramAppendixHtml: string;
 }
 
+function parseUtcDateMs(value: unknown): number | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+    ? parsed.getTime()
+    : null;
+}
+
+function formatMapDateLabel(date: string): string {
+  const parsedMs = parseUtcDateMs(date);
+  return parsedMs === null ? date : MAP_DATE_FORMATTER.format(new Date(parsedMs));
+}
+
 export type DigestSafetyMapResolution =
-  | { kind: "available"; imageUrl: string; manifest: SafetyMapManifest }
+  | {
+      kind: "available";
+      imageUrl: string;
+      manifest: SafetyMapManifest;
+      freshness: "current" | "carried-forward";
+      ageDays: number;
+    }
   | { kind: "unavailable"; reason: string };
-
-/**
- * Fail-closed withholding state for the daily digest. When today's map is not
- * published, `generateDailyDigest` writes this intent instead of posting a
- * text-only edition; the digest-trigger-poll slot retries until the map is
- * live. A date rollover with the intent still pending means that day's digest
- * deliberately stayed unsent.
- */
-export const DIGEST_SAFETY_MAP_DEFERRAL_CACHE_KEY = "digest:safety-map-deferral";
-
-export interface DigestSafetyMapDeferral {
-  date: string;
-  reason: string;
-  firstDeferredAtSec: number;
-  attempts: number;
-}
-
-export function parseDigestSafetyMapDeferral(value: string): DigestSafetyMapDeferral | null {
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(value);
-  } catch {
-    return null;
-  }
-  if (!decoded || typeof decoded !== "object") return null;
-  const { date, reason, firstDeferredAtSec, attempts } = decoded as Partial<DigestSafetyMapDeferral>;
-  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-  if (typeof reason !== "string" || reason.length === 0) return null;
-  if (typeof firstDeferredAtSec !== "number" || !Number.isInteger(firstDeferredAtSec) || firstDeferredAtSec < 0) return null;
-  if (typeof attempts !== "number" || !Number.isInteger(attempts) || attempts < 0) return null;
-  return { date, reason, firstDeferredAtSec, attempts };
-}
 
 function parseManifest(value: unknown): SafetyMapManifest | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Partial<SafetyMapManifest>;
   if (
     typeof candidate.date !== "string"
-    || !/^\d{4}-\d{2}-\d{2}$/.test(candidate.date)
+    || parseUtcDateMs(candidate.date) === null
     || !Number.isFinite(candidate.asOfSec)
     || !Number.isFinite(candidate.renderedAtSec)
     || candidate.edition !== "daily"
@@ -124,7 +121,7 @@ function parseMapSummary(value: unknown): DigestSafetyMapSummary | null {
   const floorMcapByTier = candidate.floorMcapByTier;
   if (
     typeof candidate.date !== "string"
-    || !/^\d{4}-\d{2}-\d{2}$/.test(candidate.date)
+    || parseUtcDateMs(candidate.date) === null
     || !isNonNegativeInteger(candidate.asOfSec)
     || typeof candidate.methodologyVersion !== "string"
     || candidate.methodologyVersion.trim().length === 0
@@ -242,6 +239,8 @@ function formatUsdCompact(value: number): string {
 
 export function buildDigestSafetyMapCaptions(
   summary: DigestSafetyMapSummary | undefined,
+  freshness: "current" | "carried-forward",
+  ageDays: number,
 ): DigestSafetyMapCaptions | null {
   if (!summary || summary.totalMcapUsd <= 0) return null;
   const byTier = new Map(summary.tiers.map((tier) => [tier.tier, tier]));
@@ -255,10 +254,18 @@ export function buildDigestSafetyMapCaptions(
   const aSharePct = formatSharePct(aTier.mcapUsd, summary.totalMcapUsd);
   const outerSharePct = formatSharePct(outerMcapUsd, summary.totalMcapUsd);
   const mappedSupply = formatUsdCompact(summary.totalMcapUsd);
+  // Keep the current wording byte-for-byte stable. Carried maps name the UTC
+  // day they depict so a delayed publication is never presented as today's.
+  const mapDateLabel = freshness === "current" ? null : formatMapDateLabel(summary.date);
+  const mapReference = mapDateLabel ? `the ${mapDateLabel} map` : "today’s map";
+  const mapHeading = mapDateLabel ? `${mapDateLabel} map` : "Today’s map";
+  // `ageDays` is part of the pinned caption interface so callers cannot lose
+  // the freshness metadata while composing channel payloads.
+  void ageDays;
   return {
-    tweetHook: `Of ${mappedSupply.slice(1)} USD in mapped supply, A tier’s ${aTier.count} coins hold ${aSharePct}%; C/D/F’s ${outerCount} hold ${outerSharePct}%. Find yours on today’s map.`,
+    tweetHook: `Of ${mappedSupply.slice(1)} USD in mapped supply, A tier’s ${aTier.count} coins hold ${aSharePct}%; C/D/F’s ${outerCount} hold ${outerSharePct}%. Find yours on ${mapReference}.`,
     telegramAppendixHtml: [
-      "<b>Today’s map</b>",
+      `<b>${mapHeading}</b>`,
       `Mapped supply: ${mappedSupply} across ${summary.gradedCount} coins`,
       `A tier: ${aTier.count} coins · ${aSharePct}%`,
       `C/D/F tiers: ${outerCount} coins · ${outerSharePct}%`,
@@ -271,22 +278,27 @@ export async function resolveDigestSafetyMap(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<DigestSafetyMapResolution> {
-  const timeoutSignal = AbortSignal.timeout(READ_TIMEOUT_MS);
-  const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+  const manifestTimeoutSignal = AbortSignal.timeout(SAFETY_MAP_PHASE_TIMEOUT_MS);
+  const manifestSignal = signal
+    ? AbortSignal.any([signal, manifestTimeoutSignal])
+    : manifestTimeoutSignal;
   try {
     const manifestResponse = await fetch(MANIFEST_URL, {
       headers: { Accept: "application/json" },
-      signal: requestSignal,
+      signal: manifestSignal,
     });
+    throwIfAborted(signal);
     if (!manifestResponse.ok) {
       await manifestResponse.body?.cancel().catch(() => undefined);
+      throwIfAborted(signal);
       return { kind: "unavailable", reason: `manifest-http-${manifestResponse.status}` };
     }
     const raw = await readResponseTextBoundedWithSignal(
       manifestResponse,
       MANIFEST_MAX_BYTES,
-      requestSignal,
+      manifestSignal,
     );
+    throwIfAborted(signal);
     let decoded: unknown;
     try {
       decoded = JSON.parse(raw);
@@ -295,25 +307,55 @@ export async function resolveDigestSafetyMap(
     }
     const manifest = parseManifest(decoded);
     if (!manifest) return { kind: "unavailable", reason: "manifest-invalid" };
-    if (manifest.date !== date) return { kind: "unavailable", reason: "manifest-not-today" };
+    let freshness: "current" | "carried-forward";
+    let ageDays: number;
+    if (manifest.date === date) {
+      freshness = "current";
+      ageDays = 0;
+    } else {
+      const requestedMs = parseUtcDateMs(date);
+      const manifestMs = parseUtcDateMs(manifest.date);
+      if (requestedMs === null || manifestMs === null) {
+        return { kind: "unavailable", reason: "manifest-too-old" };
+      }
+      const lagSec = (requestedMs - manifestMs) / 1000;
+      ageDays = Math.floor(lagSec / UTC_DAY_SEC);
+      if (
+        !Number.isFinite(lagSec)
+        || !Number.isSafeInteger(ageDays)
+        || ageDays < 0
+        || ageDays > MAX_SAFETY_MAP_CARRY_FORWARD_DAYS
+      ) {
+        return { kind: "unavailable", reason: "manifest-too-old" };
+      }
+      freshness = "carried-forward";
+    }
     const ageSec = nowSec - manifest.asOfSec;
     if (ageSec < 0 || ageSec >= MAX_DATA_AGE_SEC) {
       return { kind: "unavailable", reason: "manifest-data-stale" };
     }
 
-    const imageUrl = `${SITE_ORIGIN}${IMAGE_PATH}?date=${encodeURIComponent(date)}`;
-    const imageResponse = await fetch(imageUrl, { method: "HEAD", signal: requestSignal });
+    const imageUrl = `${SITE_ORIGIN}${IMAGE_PATH}?date=${encodeURIComponent(manifest.date)}`;
+    const imageTimeoutSignal = AbortSignal.timeout(SAFETY_MAP_PHASE_TIMEOUT_MS);
+    const imageSignal = signal
+      ? AbortSignal.any([signal, imageTimeoutSignal])
+      : imageTimeoutSignal;
+    const imageResponse = await fetch(imageUrl, { method: "HEAD", signal: imageSignal });
+    throwIfAborted(signal);
     if (!imageResponse.ok) {
       await imageResponse.body?.cancel().catch(() => undefined);
+      throwIfAborted(signal);
       return { kind: "unavailable", reason: `image-http-${imageResponse.status}` };
     }
     const contentType = imageResponse.headers.get("Content-Type")?.toLowerCase() ?? "";
     if (!contentType.startsWith("image/png")) {
       await imageResponse.body?.cancel().catch(() => undefined);
+      throwIfAborted(signal);
       return { kind: "unavailable", reason: "image-content-type" };
     }
     await imageResponse.body?.cancel().catch(() => undefined);
-    return { kind: "available", imageUrl, manifest };
+    throwIfAborted(signal);
+    return { kind: "available", imageUrl, manifest, freshness, ageDays };
   } catch (error) {
     if (signal?.aborted) throw error;
     return { kind: "unavailable", reason: `read-failed:${toErrorMessage(error).slice(0, 80)}` };
