@@ -223,7 +223,14 @@ async function runGenerator(
 
   const child = spawn("npx", ["tsx", SCRIPT, "--out", pngPath, ...(options.args ?? [])], {
     cwd: REPO_ROOT,
-    env: { ...process.env, PHAROS_API_BASE: baseUrl, PHAROS_API_KEY: "fixture-key" },
+    env: {
+      ...process.env,
+      PHAROS_API_BASE: baseUrl,
+      PHAROS_API_KEY: "fixture-key",
+      // Persistent-rejection cases re-fetch three times; the real backoff is
+      // dead wait here and pushed these past the suite timeout under load.
+      PHAROS_DELTA_GUARD_BACKOFF_SCALE: "0",
+    },
   });
   let stdout = "";
   let stderr = "";

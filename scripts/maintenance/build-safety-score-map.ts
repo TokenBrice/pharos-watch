@@ -109,7 +109,14 @@ const MAX_DATA_AGE_SEC = 48 * 3600;
 // map is drawing floors instead of data.
 const MIN_JOIN_COVERAGE = 0.95;
 const MAX_DELTA_GUARD_ATTEMPTS = 3;
-const DELTA_GUARD_BACKOFF_MS = [500, 1500] as const;
+// Spacing between fresh re-fetches after a delta-guard rejection. A transient
+// upstream read should not cost the day's poster, but the wait is dead time in
+// tests that deliberately exercise a persistent rejection, so the guard suite
+// collapses it. Production never sets this.
+const DELTA_GUARD_BACKOFF_SCALE = Number(process.env.PHAROS_DELTA_GUARD_BACKOFF_SCALE ?? "1");
+const DELTA_GUARD_BACKOFF_MS = [500, 1500].map(
+  (ms) => Math.max(0, Math.round(ms * (Number.isFinite(DELTA_GUARD_BACKOFF_SCALE) ? DELTA_GUARD_BACKOFF_SCALE : 1))),
+) as readonly number[];
 
 class DeltaGuardRejection extends Error {
   constructor(message: string) {
