@@ -179,6 +179,66 @@ describe("requestDigestCopy refusals", () => {
     ]);
     vi.useRealTimers();
   });
+
+  it("stops retrying once unbilled post-submit failures exhaust the edition output budget", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      // `null` is the fetch-level timeout: the request reached Anthropic and may
+      // have been billed for a full generation, but no usage ever came back. The
+      // budget must charge it conservatively rather than treating it as free.
+      vi.mocked(fetchWithRetry).mockResolvedValue(null);
+
+      const pending = requestDigestCopy({
+        db,
+        anthropicApiKey: "key",
+        systemPrompt: "system",
+        userPrompt: "user",
+        llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+        logPrefix: "test",
+      });
+      // Attach the rejection handler before advancing timers, otherwise the
+      // promise rejects while unobserved and Vitest reports it as unhandled.
+      const rejects = expect(pending).rejects.toThrow(/Claude API error/);
+      await vi.runAllTimersAsync();
+      await rejects;
+
+      // Each request reserves its full 16k `max_tokens` against the 24k edition
+      // budget. The first attempt fits; charging its unknown outcome the full
+      // ceiling leaves 8k, which cannot cover another 16k reservation, so no
+      // retry happens at all even though DIGEST_FETCH_MAX_RETRIES allows two.
+      expect(vi.mocked(fetchWithRetry)).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps retrying server rejections, which are never billed for output", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      // A 529 is rejected before generation, so it must not consume the budget:
+      // charging it would disable overload retries after a single blip. A fresh
+      // Response per call keeps each error body readable.
+      vi.mocked(fetchWithRetry).mockImplementation(async () => new Response("overloaded", { status: 529 }));
+
+      const pending = requestDigestCopy({
+        db,
+        anthropicApiKey: "key",
+        systemPrompt: "system",
+        userPrompt: "user",
+        llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+        logPrefix: "test",
+      });
+      const rejects = expect(pending).rejects.toThrow(/Claude API error 529/);
+      await vi.runAllTimersAsync();
+      await rejects;
+
+      expect(vi.mocked(fetchWithRetry)).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("insertDigestRecord", () => {

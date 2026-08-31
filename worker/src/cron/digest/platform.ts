@@ -343,6 +343,22 @@ const DIGEST_FETCH_MAX_RETRIES = 2;
 const DIGEST_ERROR_BODY_TIMEOUT_MS = 15_000;
 const DIGEST_ERROR_BODY_MAX_BYTES = 2_000;
 const DIGEST_MAX_CONFIGURED_TOKENS = 16_000;
+/**
+ * Aggregate output-token budget for one edition, summed across EVERY billable
+ * attempt: the original leg, the corrective retry, and any HTTP retry of
+ * either.
+ *
+ * `max_tokens` alone does not bound spend. It caps a single generation, but a
+ * fetch-level timeout after Anthropic has already produced output is billed and
+ * still retried (see the `!response` branch below), so one edition can bill up
+ * to `DIGEST_FETCH_MAX_RETRIES + 1` generations per leg across two legs — six
+ * at the ceiling, roughly 3x the single-retry figure.
+ *
+ * 24,000 keeps the blended daily+weekly worst case at about $1.10/day at Opus 5
+ * pricing even when all six attempts bill, while still leaving room for the
+ * largest generation ever measured (10,857 tokens) plus a full corrective retry.
+ */
+const DIGEST_MAX_EDITION_OUTPUT_TOKENS = 24_000;
 const SUPPORTED_DIGEST_MODELS = ["claude-opus-5", "claude-sonnet-5", "claude-fable-5"] as const;
 
 interface DigestLlmConfigOverrides {
@@ -496,8 +512,42 @@ export async function requestDigestCopy(
       costUsd: streamResult ? computeAttemptCostUsd(streamResult) : null,
       httpStatus: response?.status ?? null,
     });
+    chargeAttempt(streamResult, response);
     await options.reportAttempt?.(llmAttempts.map((attempt) => ({ ...attempt })));
   };
+
+  /**
+   * Output tokens charged against this edition so far.
+   *
+   * Two deliberate conservatisms, because the goal is a bound and not an
+   * estimate:
+   *
+   * - A post-submit failure with no usage (a fetch-level timeout, where the
+   *   request reached Anthropic but the response never completed) is charged
+   *   the full `max_tokens`. Its real cost is unknown and may be a complete
+   *   generation, so counting it as zero would blind the budget to exactly the
+   *   spend it exists to bound.
+   * - A server rejection that carries an HTTP status (429/529/5xx) is charged
+   *   nothing: Anthropic rejects before generating, so no output was billed.
+   *   Charging those would disable legitimate overload retries after one 529.
+   */
+  let committedOutputTokens = 0;
+
+  const chargeAttempt = (streamResult: AnthropicStreamResult | undefined, response: Response | null): void => {
+    if (streamResult?.outputTokens != null) {
+      committedOutputTokens += streamResult.outputTokens;
+      return;
+    }
+    if (response === null) committedOutputTokens += options.llmConfig.maxTokens;
+  };
+
+  /**
+   * A request may only start when its entire `max_tokens` still fits the
+   * edition budget. Checking after the fact would permit a 16k generation on
+   * top of an already-large one and overshoot the cap.
+   */
+  const canAffordAnotherRequest = (): boolean =>
+    committedOutputTokens + options.llmConfig.maxTokens <= DIGEST_MAX_EDITION_OUTPUT_TOKENS;
 
   const requestClaude = async (
     userPrompt: string,
@@ -547,9 +597,13 @@ export async function requestDigestCopy(
           ? await readDigestErrorText(response, outerSignal)
           : "no response";
         await recordAttempt(requestKind, httpAttempt, attemptStarted, response);
+        // A retry is only free when nothing was produced. A fetch-level timeout
+        // may already have been billed for a full generation, so stop retrying
+        // once this edition has spent its aggregate output budget.
         if (
           httpAttempt <= DIGEST_FETCH_MAX_RETRIES
           && (!response || isRetryableDigestStatus(response.status))
+          && canAffordAnotherRequest()
         ) {
           await sleepWithSignal(digestRetryDelayMs(response, httpAttempt), outerSignal);
           continue;
@@ -618,6 +672,13 @@ export async function requestDigestCopy(
     if (elapsedMs >= budgetMs) {
       logWorkerEventArgs("handler", "warn",
         `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: elapsed ${elapsedMs}ms >= ${budgetMs}ms (${CORRECTIVE_RETRY_BUDGET_FRACTION * 100}% of budget). Issues: ${formatDigestValidationIssues(hardIssues)}`,
+      );
+    } else if (!canAffordAnotherRequest()) {
+      // Deliberate policy: spend the corrective retry on cheap editions and
+      // refuse it on expensive ones. A blocked edition is loud and already
+      // handled; an unbounded bill is neither.
+      logWorkerEventArgs("handler", "warn",
+        `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: edition output budget spent (${committedOutputTokens}/${DIGEST_MAX_EDITION_OUTPUT_TOKENS} tokens committed, next request reserves ${options.llmConfig.maxTokens}). Issues: ${formatDigestValidationIssues(hardIssues)}`,
       );
     } else {
       logWorkerEventArgs("handler", "warn",
