@@ -470,6 +470,15 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "TELEGRAM_OPERATOR_CHAT_ID",
+    valueType: "string",
+    description: "Private Telegram chat for operator-only alerts (cron freshness watchdog); operator alerts are suppressed when unset and never fall back to `TELEGRAM_CHAT_ID`.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
     key: "TELEGRAM_WEBHOOK_SECRET",
     valueType: "string",
     description: "Telegram webhook secret used to authenticate the webhook lane.",
