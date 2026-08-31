@@ -2,7 +2,9 @@ name: Weekly Validation
 
 on:
   schedule:
-    - cron: "0 6 * * 1"
+    # GitHub documents that top-of-hour schedules can be delayed or dropped
+    # under load. Keep this weekly ratchet off that contention boundary.
+    - cron: "17 6 * * 1"
   workflow_dispatch:
 
 jobs:

@@ -429,7 +429,7 @@ Full-suite coverage threshold is not enforced. The critical gate applies a 40% d
 
 CI does **not** run a full-suite coverage gate. The PR workflow runs `coverage:critical` only when an enrolled critical source or critical-coverage plumbing changes; its compare ref scopes the no-regression ratchet to the touched file(s). The weekly/manual Critical Coverage Ratchet workflow blocks on the all-critical gate via `npm run coverage:critical`:
 
-- Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator)
+- Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator), capped at four Vitest workers so wall-clock-sensitive contracts are not starved by coverage concurrency
 - Scopes v8 remapping to the enrolled critical source via per-file `--coverage.include` flags (built in `buildCriticalCoverageArgs`); per-file numbers are unchanged, the reporter just stops remapping the rest of the module graph
 - Parses `coverage/lcov.info`
 - Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)

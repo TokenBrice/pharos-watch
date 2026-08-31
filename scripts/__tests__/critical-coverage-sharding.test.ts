@@ -14,6 +14,7 @@ describe("critical coverage sharding", () => {
     expect(args).toContain("--reporter=blob");
     expect(args).toContain("--reporter=default");
     expect(args).toContain("--shard=1/4");
+    expect(args).toContain("--maxWorkers=4");
     expect(args.some((arg) => arg.startsWith("--coverage.include="))).toBe(true);
     expect(args.some((arg) => arg.endsWith(".test.ts"))).toBe(true);
   });
