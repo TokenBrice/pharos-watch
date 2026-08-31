@@ -2,7 +2,7 @@
   "id": "usdat-saturn",
   "name": "Saturn USDat",
   "symbol": "USDat",
-  "oneLiner": "USDat is Saturn's non-yield-bearing M0-backed dollar token, mintable and redeemable through KYC-gated Swap Facility flows.",
+  "oneLiner": "USDat is Saturn's non-yield-bearing PYUSDx-backed dollar token, mintable and redeemable through KYC-gated Swap Facility flows.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -11,16 +11,37 @@
   "infrastructures": [
     "m0"
   ],
-  "collateral": "100% backed by M (M0 Protocol's tokenized short-term U.S. Treasury bills) at launch — capital is held directly in the USDat smart contract and verifiable on-chain; protocol roadmap allows reserves to shift toward digital credit instruments (e.g. Strategy STRC preferred equity) over time",
-  "pegMechanism": "Permissioned 1:1 mint by depositing USDC via the M0 Swap Facility (Uniswap V3 1bps tier) which routes through wM; redemption returns USDC by unwrapping USDat back to wM and burning the USDat. Only KYC-onboarded addresses can mint, redeem, or hold USDat; geofenced away from US, EEA, and OFAC-sanctioned jurisdictions",
-  "mechanismArchetype": "tbill",
+  "collateral": "100% backed by PYUSDx held directly in the USDat proxy after Saturn's August 2026 migration from the legacy M-backed implementation; PYUSDx is M0's yield-bearing, non-rebasing token backed by PYUSD and issued by MoonPay",
+  "pegMechanism": "Permissioned 1:1 wrap and unwrap through the PYUSDx SwapFacility. The upgraded MultiMint implementation returns PYUSDx on unwrap and retains compliance whitelist, freeze, pause, and forced-transfer controls; the legacy M reserve was progressively replaced with PYUSDx and is now zero",
+  "mechanismArchetype": "fiat-cash",
+  "implementationLaunchDate": "2026-08-19",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-31",
+    "reviewer": "Pharos USDat PYUSDx migration review",
+    "rationale": "Saturn's first-party migration runbook and the deployed proxy show that USDat upgraded at Ethereum block 25789911 from its legacy M-backed implementation to a MultiMint extension whose current reserve is entirely PYUSDx. M0 and MoonPay define PYUSDx as a stablecoin framework backed by PayPal USD, and current fixed-block balances reconcile USDat supply exactly to PYUSDx with no M remaining. The operative mechanism is therefore a stablecoin-backed fiat-cash claim inherited through PYUSDx/PYUSD, not the former M tokenized-Treasury path.",
+    "sources": [
+      {
+        "label": "Saturn Dollar current implementation and PYUSDx migration runbook",
+        "url": "https://github.com/saturn-organization/saturn-dollar"
+      },
+      {
+        "label": "M0 and MoonPay PYUSDx backing announcement",
+        "url": "https://www.m0.org/press-releases/moonpay-m0-and-paypal-announce-pyusdx-the-infrastructure-platform-for-pyusd-backed-stablecoins"
+      },
+      {
+        "label": "Ethereum block 25789911",
+        "url": "https://etherscan.io/block/25789911"
+      }
+    ]
+  },
   "detailProvider": "defillama",
   "geckoId": "saturn-dollar",
   "llamaId": "400",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.saturn.credit/insights/saturn-protocol",
-    "provider": "Saturn Protocol reserve analytics API (in-house, live same-day JSON of USDC/M/USDAT composition dominated by M0's $M; the previously recorded Accountable + Chainlink attribution is unsubstantiated - CSP and bundles show only the M0 stack and Chainlink CCIP messaging, no PoR vendor)",
+    "provider": "Saturn Protocol reserve analytics and on-chain USDat proxy balances; the August 2026 MultiMint upgrade replaced the legacy M reserve with PYUSDx",
     "attestorTier": "self",
     "cadence": "real-time"
   },
@@ -69,21 +90,5 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "m0",
-    "version": 1,
-    "semantics": "protocol-reserve",
-    "breakerScope": "m0",
-    "display": {
-      "url": "https://dashboard.m0.org/",
-      "label": "M0 Dashboard"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://protocol-api.m0.org/graphql"
-      }
-    }
-  },
   "launchDate": "2026-03-10"
 }

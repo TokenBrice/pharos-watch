@@ -2,12 +2,13 @@
   "id": "ctusd-citrea",
   "reserves": [
     {
-      "sourceKey": "m0:eligible-collateral",
-      "name": "U.S. Treasury bills & cash (M0 eligible collateral)",
+      "name": "M token held by Citrea USD",
       "pct": 100,
-      "risk": "very-low",
-      "assetClass": "other",
-      "issuerOrObligor": "M0 permissioned minters and eligible collateral SPVs",
+      "risk": "low",
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Protocol and its approved issuer/SPV collateral path",
       "riskFactors": [
         "credit",
         "duration",
@@ -16,12 +17,12 @@
         "counterparty",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Pharos reserve curation batch R09",
+    "reviewedAt": "2026-08-31",
+    "reviewer": "Pharos reserve research (fixed-block M extension verification)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,13 +36,17 @@
       {
         "label": "M0 protocol API",
         "url": "https://protocol-api.m0.org/graphql"
+      },
+      {
+        "label": "Citrea public RPC: ctUSD extension identity and M reserve reads at block 12034145 (2026-08-31T10:06:23Z)",
+        "url": "https://rpc.mainnet.citrea.xyz"
       }
     ],
-    "rationale": "Citrea identifies ctUSD as an M0-minted stablecoin and directs reserve verification to the M0 network. M0 specifies that extensions wrap and unwrap the base M token through SwapFacility at a perfect 1:1 relationship. M0 now exposes only the on-chain-indexed Minter Gateway total: its off-chain CollateralCurrent composition feed was retired in August 2026, as recorded in the adapter comment in worker/src/cron/reserve-adapters/m0.ts. The reviewed composition therefore contains one 100% keyed aggregate classified as other; the former 97.9% tokenized-Treasury / 2.1% cash snapshot is not treated as current. The direct M relationship remains represented by the documented extension path and is not duplicated as a second reserve graph edge. ctUSD-specific underlying positions, custodians, and provider weights are not published by M0.",
-    "compositionBasis": "Current M0 Protocol API on-chain-indexed Minter Gateway total, the M0 extension relationship, and the adapter-level aggregate classification",
-    "compositionAsOf": "2026-08-29",
+    "rationale": "Citrea identifies ctUSD as an M0-powered stablecoin and directs reserve verification to the M0 network. M0 specifies that extensions wrap and unwrap the base M token through SwapFacility at a perfect 1:1 relationship. At Citrea block 12034145, ctUSD 0x8d82...6d5d returned mToken() = 0x866a...be1b and swapFacility() = 0xb680...6278, matching M0's canonical Citrea M and SwapFacility addresses; the extension held 6,476,982.901064 M against 6,455,671.808575 ctUSD supply. The complete direct claim is therefore the tracked m-m0 parent, while M0's underlying eligible collateral remains reviewed on that parent rather than duplicated here.",
+    "compositionBasis": "Citrea and M0 extension documentation plus fixed-block ctUSD mToken, SwapFacility, total-supply, and M-balance reads",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current M0 source exposes the full aggregate total but not its internal cash/Treasury allocation, minter-level provider shares, or ctUSD-specific custody terms; the retired 97.9/2.1 composition is not current.",
+    "knownUnknownExposure": "No direct reserve asset remains unidentified: the full claim is the tracked m-m0 parent, whose collateral composition is reviewed separately. ctUSD-specific legal custody and provider allocations remain undisclosed.",
     "knownUnknownExposurePct": 0
   }
 }

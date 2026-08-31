@@ -2,19 +2,20 @@
   "id": "usdat-saturn",
   "reserves": [
     {
-      "sourceKey": "m0:eligible-collateral",
-      "name": "U.S. Treasury bills & cash (M0 eligible collateral)",
+      "name": "PYUSDx held by Saturn USDat",
       "pct": 100,
-      "risk": "very-low",
-      "assetClass": "other",
-      "issuerOrObligor": "M0 permissioned minters and eligible collateral SPVs",
+      "risk": "low",
+      "coinId": "pyusd-paypal",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "MoonPay-issued PYUSDx, backed by PayPal USD",
       "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-08-31",
+    "reviewer": "Pharos reserve research (PYUSDx migration verification)",
     "confidence": "verified",
     "sources": [
       {
@@ -26,25 +27,28 @@
         "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
       },
       {
-        "label": "M0 protocol API",
-        "url": "https://protocol-api.m0.org/graphql"
+        "label": "Saturn Dollar current implementation and PYUSDx migration runbook",
+        "url": "https://github.com/saturn-organization/saturn-dollar"
+      },
+      {
+        "label": "M0 PYUSDx extension documentation",
+        "url": "https://docs.m0.org/build/pyusdx/deploy-extension"
+      },
+      {
+        "label": "M0 and MoonPay PYUSDx backing announcement",
+        "url": "https://www.m0.org/press-releases/moonpay-m0-and-paypal-announce-pyusdx-the-infrastructure-platform-for-pyusd-backed-stablecoins"
+      },
+      {
+        "label": "Ethereum public RPC: implementation, PYUSDx, M, and supply reads at block 25874567 (2026-08-31T10:08:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Saturn documents USDat's M0-backed mechanics and transparency model. M0 now exposes only the on-chain-indexed Minter Gateway total: its off-chain CollateralCurrent composition feed was retired in August 2026, as recorded in the adapter comment in worker/src/cron/reserve-adapters/m0.ts. The reviewed composition therefore contains one 100% keyed aggregate classified as other because no current cash/Treasury split is published; the former 97.9% tokenized-Treasury / 2.1% cash snapshot is not treated as live. The aggregate is an external M0 reserve envelope rather than a tracked stablecoin dependency.",
-    "compositionBasis": "Current M0 Protocol API on-chain-indexed Minter Gateway total combined with Saturn USDat mechanics and transparency documentation",
-    "compositionAsOf": "2026-08-29",
+    "rationale": "USDat was a direct M0 M extension, but Saturn's current first-party repository records a successful upgrade at Ethereum block 25789911 to a PYUSDx-backed MultiMint implementation and a progressive M-to-PYUSDx reserve wind-down. At block 25874567, the proxy's implementation slot held 0x496a...702c; pyusdx() returned 0xebdb...b14d; assetBalanceOf(M), actual M balance, and totalAssets() were all zero; and the proxy's 71,373,622.378072 PYUSDx balance exactly matched its 71,373,622.378072 USDat total supply. M0 documents PYUSDx extensions as 1:1 PYUSDx wrappers and the PYUSDx platform as backed by PayPal USD. USDat therefore has no current m-m0 claim; its complete serial claim is linked through PYUSDx to the tracked pyusd-paypal parent.",
+    "compositionBasis": "Saturn's current implementation and migration runbook, M0's PYUSDx/PYUSD claim documentation, and fixed-block implementation-slot, PYUSDx, M, total-assets, reserve-balance, and total-supply reads",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current M0 source exposes the full aggregate total but not its internal cash/Treasury allocation or minter-level provider shares; the retired 97.9/2.1 composition is not current.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "U.S. Treasury bills & cash (M0 eligible collateral)",
-        "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The current M0 aggregate does not identify a tracked reserve asset; the retired itemized feed cannot support an honest coinId link."
-      }
-    ]
+    "knownUnknownExposure": "The direct reserve asset is fully identified as PYUSDx and reconciles exactly to USDat supply; PYUSDx's documented 1:1 PayPal USD backing is represented by the pyusd-paypal wrapper dependency.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
@@ -65,7 +69,7 @@
         "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
       }
     ],
-    "uncertainty": "Saturn states that USDat capital is in the smart contract but does not publish legal ownership, segregation, insolvency treatment, or rehypothecation terms for the M reserve position.",
+    "uncertainty": "The USDat proxy holds the full PYUSDx reserve on-chain, but Saturn does not publish USDat-specific legal ownership, segregation, insolvency treatment, or rehypothecation terms for that position.",
     "knownUnknownExposurePct": 100
   }
 }

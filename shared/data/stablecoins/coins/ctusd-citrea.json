@@ -57,19 +57,37 @@
   "governanceQuality": "regulated-entity",
   "collateralQuality": "rwa",
   "liveReservesConfig": {
-    "adapter": "m0",
+    "adapter": "m0-wrapper-underlying",
     "version": 1,
-    "semantics": "protocol-reserve",
-    "breakerScope": "m0",
+    "semantics": "single-asset",
+    "breakerScope": "ctusd-citrea",
     "display": {
-      "url": "https://dashboard.m0.org/",
-      "label": "M0 Dashboard"
+      "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd",
+      "label": "Citrea USD documentation"
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://protocol-api.m0.org/graphql"
+        "kind": "onchain-evm",
+        "chain": "citrea",
+        "rpcMode": "public-rpc"
       }
+    },
+    "params": {
+      "mode": "m-extension",
+      "wrapperAddress": "0x8D82c4E3c936C7B5724A382a9c5a4E6Eb7aB6d5D",
+      "expectedMTokenAddress": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+      "expectedSwapFacilityAddress": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+      "slice": {
+        "name": "M token held by Citrea USD",
+        "risk": "low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
+      },
+      "sourceUrls": [
+        "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd",
+        "https://docs.m0.org/protocol/extensions"
+      ],
+      "rpcUrl": "https://rpc.mainnet.citrea.xyz"
     }
   },
   "launchDate": "2026-01-27"
