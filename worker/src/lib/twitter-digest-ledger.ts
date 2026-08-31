@@ -142,6 +142,7 @@ async function claimDelivery(
       return { status: "skipped", reason: "execution-unknown" };
     }
     if (candidate.state === "failed" && candidate.attempts >= TWITTER_DIGEST_MAX_ATTEMPTS) {
+      logAttemptsExhausted(key, candidate.attempts);
       return { status: "skipped", reason: "attempt-limit" };
     }
   }
@@ -165,7 +166,7 @@ async function claimDelivery(
 function logExecutionUnknown(key: string, attempts: number, error: string): void {
   logWorkerEvent({
     scope: "handler",
-    level: "warn",
+    level: "error",
     event: "twitter_digest_execution_unknown",
     job: "daily-digest",
     message: "Twitter digest delivery outcome is unknown; automatic retry is disabled pending manual reconciliation",
@@ -174,6 +175,21 @@ function logExecutionUnknown(key: string, attempts: number, error: string): void
       attempts,
       error,
       manualReconciliation: "Check the Twitter/X account for the dated digest, then repair the cache ledger state before retrying",
+    },
+  });
+}
+
+function logAttemptsExhausted(key: string, attempts: number): void {
+  logWorkerEvent({
+    scope: "handler",
+    level: "error",
+    event: "twitter_digest_attempts_exhausted",
+    job: "daily-digest",
+    message: "Twitter digest delivery attempts are exhausted; automatic retry is disabled",
+    metadata: {
+      key,
+      attempts,
+      maxAttempts: TWITTER_DIGEST_MAX_ATTEMPTS,
     },
   });
 }

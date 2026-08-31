@@ -66,6 +66,60 @@ interface RunDigestChannelDeliveryOptions<TCreds> {
   deliver: (creds: TCreds) => Promise<string | void>;
 }
 
+export type DigestChannelDisposition =
+  | "delivered"
+  | "retryable"
+  | "terminal-unsent"
+  | "not-configured";
+
+/**
+ * Map the status grammar shared by digest channel delivery paths to the
+ * disposition used by cron publication decisions. Unknown statuses fail
+ * closed: a status we do not understand must never look delivered.
+ */
+export function classifyDigestChannelStatus(status: string): DigestChannelDisposition {
+  if (status === "ok" || status.startsWith("ok+")) return "delivered";
+  if (status === "skipped: already-sent") return "delivered";
+
+  if (
+    status.startsWith("failed:")
+    || status === "skipped: circuit-open"
+    || status === "skipped: in-flight"
+    || status === "skipped: stale-safety-identity"
+    || status === "skipped: safety-identity-unavailable"
+    || status === "queued: pending"
+    || status === "queued: sending"
+    || status === "queued: transport-control-unavailable"
+    || status === "queued: transport-operator_pause"
+    || status === "queued: transport-outage_open"
+    || status === "queued: transport-probe_owned_elsewhere"
+    || status === "outbox-pending"
+    || status === "outbox-sending"
+  ) {
+    return "retryable";
+  }
+
+  if (
+    status === "skipped: execution-unknown"
+    || status === "skipped: attempt-limit"
+    || status === "skipped: quality-gate"
+    || status === "queued: execution_unknown"
+    || status === "queued: failed_permanent"
+    || status === "outbox-execution_unknown"
+    || status === "outbox-failed_permanent"
+  ) {
+    return "terminal-unsent";
+  }
+
+  if (status === "skipped: no-creds") return "not-configured";
+  if (status === "outbox-sent") return "delivered";
+  // Telegram's transport helper predates the shared `skipped:` grammar and
+  // still emits this legacy value when credentials are absent.
+  if (status === "no-creds") return "not-configured";
+
+  return "terminal-unsent";
+}
+
 /** Fraction of ANTHROPIC_TIMEOUT_MS after which the corrective retry is skipped. */
 const CORRECTIVE_RETRY_BUDGET_FRACTION = 0.5;
 
@@ -307,14 +361,14 @@ export async function insertDigestRecord(options: InsertDigestRecordOptions): Pr
 }
 
 export function didDigestChannelDeliver(status: string): boolean {
-  return status === "ok" || status.startsWith("ok+");
+  return classifyDigestChannelStatus(status) === "delivered";
 }
 
 export async function runDigestChannelDelivery<TCreds>(
   options: RunDigestChannelDeliveryOptions<TCreds>,
 ): Promise<string> {
   if (!options.creds) {
-    return "no-creds";
+    return "skipped: no-creds";
   }
   const allowed = await shouldAttemptFetch(options.db, options.circuitSource);
   if (!allowed) {
@@ -323,8 +377,14 @@ export async function runDigestChannelDelivery<TCreds>(
 
   try {
     const result = await options.deliver(options.creds);
-    await recordOutcomeSafe(options.db, options.circuitSource, true);
-    return result ?? "ok";
+    const status = result ?? "ok";
+    // A non-throwing skip (for example already-sent, in-flight, or a safety
+    // identity hold) did not make a provider request succeed. Leave the
+    // breaker untouched unless the channel explicitly reports delivery.
+    if (status === "ok" || status.startsWith("ok+")) {
+      await recordOutcomeSafe(options.db, options.circuitSource, true);
+    }
+    return status;
   } catch (err) {
     await recordOutcomeSafe(options.db, options.circuitSource, false);
     recordCronFailure(options.logPrefix, err, {
