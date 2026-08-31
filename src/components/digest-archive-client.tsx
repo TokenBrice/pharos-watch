@@ -192,7 +192,7 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
       <div className="pharos-card-shell space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <p className="pharos-kicker">The digest's own scoreboard</p>
+            <p className="pharos-kicker">The digest’s own scoreboard</p>
             <h2 id="digest-trigger-record" className="text-lg font-semibold tracking-tight text-foreground">
               Issued triggers, with every outcome visible
             </h2>

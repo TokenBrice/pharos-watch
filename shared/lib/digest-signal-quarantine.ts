@@ -61,6 +61,18 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * Symbol word-boundary matchers, built once at module load. The registry is
+ * static, so constructing these per call would allocate a RegExp for every
+ * symbol of every entry on every validated edition.
+ */
+const QUARANTINE_SYMBOL_PATTERNS: ReadonlyMap<DigestSignalQuarantine, readonly RegExp[]> = new Map(
+  DIGEST_SIGNAL_QUARANTINES.map((entry) => [
+    entry,
+    entry.symbols.map((symbol) => new RegExp(`\\b${escapeRegExp(symbol)}\\b`, "i")),
+  ]),
+);
+
 export function findQuarantinedDigestSignalClaims(
   copy: string,
   family: DigestSignalFamily,
@@ -73,7 +85,7 @@ export function findQuarantinedDigestSignalClaims(
     entry.family === family &&
     entry.startAt <= period.endAt &&
     entry.endAt >= period.startAt &&
-    entry.symbols.some((symbol) => new RegExp(`\\b${escapeRegExp(symbol)}\\b`, "i").test(copy)) &&
+    (QUARANTINE_SYMBOL_PATTERNS.get(entry) ?? []).some((pattern) => pattern.test(copy)) &&
     entry.claimMarkers.every((marker) => normalizedCopy.includes(marker)),
   );
 }
