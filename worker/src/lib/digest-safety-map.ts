@@ -254,16 +254,16 @@ export function buildDigestSafetyMapCaptions(
   const aSharePct = formatSharePct(aTier.mcapUsd, summary.totalMcapUsd);
   const outerSharePct = formatSharePct(outerMcapUsd, summary.totalMcapUsd);
   const mappedSupply = formatUsdCompact(summary.totalMcapUsd);
-  // Keep the current wording byte-for-byte stable. Carried maps name the UTC
-  // day they depict so a delayed publication is never presented as today's.
+  // Carried maps name the UTC day they depict so a delayed publication is
+  // never presented as today's.
   const mapDateLabel = freshness === "current" ? null : formatMapDateLabel(summary.date);
-  const mapReference = mapDateLabel ? `the ${mapDateLabel} map` : "today’s map";
+  const mapReference = mapDateLabel ? `the ${mapDateLabel} map` : "the map";
   const mapHeading = mapDateLabel ? `${mapDateLabel} map` : "Today’s map";
   // `ageDays` is part of the pinned caption interface so callers cannot lose
   // the freshness metadata while composing channel payloads.
   void ageDays;
   return {
-    tweetHook: `Of ${mappedSupply.slice(1)} USD in mapped supply, A tier’s ${aTier.count} coins hold ${aSharePct}%; C/D/F’s ${outerCount} hold ${outerSharePct}%. Find yours on ${mapReference}.`,
+    tweetHook: `See ${mapReference}.`,
     telegramAppendixHtml: [
       `<b>${mapHeading}</b>`,
       `Mapped supply: ${mappedSupply} across ${summary.gradedCount} coins`,

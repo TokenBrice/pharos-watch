@@ -9,6 +9,11 @@ describe("HELP_MESSAGE", () => {
   it("still lists /set as the canonical tuning command (sanity)", () => {
     expect(HELP_MESSAGE).toContain("/set");
   });
+
+  it("advertises the private daily recap controls", () => {
+    expect(HELP_MESSAGE).toContain("/recap");
+    expect(HELP_MESSAGE).toContain("private daily watchlist recap");
+  });
 });
 
 describe("START_MESSAGE", () => {

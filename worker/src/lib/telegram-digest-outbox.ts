@@ -17,6 +17,7 @@ import {
   DigestSafetyContextSchema,
   type DigestSafetyContext,
 } from "@shared/types/digest";
+import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import {
   checkDigestSafetyContextForDelivery,
@@ -84,6 +85,8 @@ export interface EnqueueTelegramDigestEditionInput {
   mapImageUrl?: string | null;
   mapDate?: string | null;
   mapAppendixHtml?: string | null;
+  /** Runtime rollout policy used to gate the private recap CTA; omitted means no CTA. */
+  recapRollout?: TelegramRecapRolloutPolicy | null;
   successActions?: readonly TelegramDigestSuccessAction[];
   safetyContext: DigestSafetyContext;
 }
@@ -246,6 +249,7 @@ export async function enqueueTelegramDigestEdition(
     input.editionNumber,
     input.appendixHtml,
     input.mapAppendixHtml,
+    input.recapRollout,
   );
   const chunks = splitMessage(rendered);
   const payloadJson = JSON.stringify(chunks);
