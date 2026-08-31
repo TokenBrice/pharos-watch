@@ -1,5 +1,6 @@
 import { runCronSlotSweeper } from "../../cron/cron-slot-sweeper";
 import { runCronStalenessWatchdog } from "../../cron/cron-staleness-watchdog";
+import { runDigestPublicationWatchdog } from "../../cron/digest-publication-watchdog";
 import { runDataInvariantCanary } from "../../cron/data-invariant-canary";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
 import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
@@ -54,6 +55,17 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
             runCronStalenessWatchdog(runtime.db, signal, {
               operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),
             }),
+        },
+        {
+          job: "digest-publication-watchdog",
+          errorMessage: "[cron] digest-publication-watchdog failed in isolated slot:",
+          run: (signal) =>
+            runDigestPublicationWatchdog(
+              runtime.db,
+              Math.floor(Date.now() / 1_000),
+              { operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env) },
+              signal,
+            ),
         },
       ],
     },
