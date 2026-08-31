@@ -9,6 +9,13 @@ vi.mock("next/link", async () => {
   return createNextLinkMock();
 });
 
+const mockGetSnapshotSafetyAssessment = vi.hoisted(() =>
+  vi.fn<(stablecoinId: string) => { grade: string; score: number | null; bucket: string } | null>(() => null),
+);
+vi.mock("@/lib/safety-grade-snapshot", () => ({
+  getSnapshotSafetyAssessment: mockGetSnapshotSafetyAssessment,
+}));
+
 const { StablecoinDetailSeoContent, buildStablecoinFaqItems } = await import("../static-seo-content");
 const { FaqSection } = await import("@/components/faq-section");
 
@@ -180,7 +187,8 @@ describe("StablecoinDetailSeoContent", () => {
       "Can TSTD be frozen or blacklisted?",
     ]);
     expect(items[0].answer).toContain("Primary market mint and redeem arbitrage");
-    // The safety answer must stay honest — no absolute-safety claims.
+    // Without a rated snapshot grade the safety answer must stay honest — no
+    // absolute-safety claims.
     expect(items[1].answer).toContain("Pharos does not mark TSTD as absolutely safe");
     expect(items[2].answer).toContain("Real-World Asset Backed");
     expect(items[2].answer).toContain("Cash, Treasury bills, and overnight repos");
@@ -195,5 +203,37 @@ describe("StablecoinDetailSeoContent", () => {
     const faqJsonLd = jsonLdScripts.find((script) => script.textContent?.includes('"FAQPage"'));
     expect(faqJsonLd).toBeTruthy();
     expect(faqJsonLd!.textContent).toContain("Can TSTD be frozen or blacklisted?");
+  });
+
+  it("tiers the safety answer by the snapshot Safety Score grade", () => {
+    try {
+      mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "A-", score: 88, bucket: "safe" });
+      let answer = buildStablecoinFaqItems(coin)[1].answer;
+      expect(answer).toContain("TSTD holds an A- Safety Score grade (88/100)");
+      expect(answer).toContain("overall safe, though no stablecoin is entirely risk-free");
+      expect(answer).toContain("CeFi-Dependent governance model");
+      expect(answer).toContain("Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below");
+
+      mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "C+", score: 55, bucket: "neutral" });
+      answer = buildStablecoinFaqItems(coin)[1].answer;
+      expect(answer).toContain("TSTD holds a C+ Safety Score grade (55/100)");
+      expect(answer).toContain("does not consider it clearly safe");
+
+      mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "F", score: 12, bucket: "risky" });
+      answer = buildStablecoinFaqItems(coin)[1].answer;
+      expect(answer).toContain("Pharos does not assess TSTD as safe");
+      expect(answer).toContain("an F Safety Score grade (12/100)");
+
+      mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "B", score: null, bucket: "safe" });
+      answer = buildStablecoinFaqItems(coin)[1].answer;
+      expect(answer).toContain("TSTD holds a B Safety Score grade in Pharos's latest published rating");
+
+      // Frozen archives never surface a snapshot grade.
+      const frozenAnswer = buildStablecoinFaqItems({ ...coin, status: "frozen", frozenAt: "2026-05-01" })[1].answer;
+      expect(frozenAnswer).toContain("frozen Pharos archive");
+      expect(frozenAnswer).not.toContain("Safety Score grade");
+    } finally {
+      mockGetSnapshotSafetyAssessment.mockReturnValue(null);
+    }
   });
 });

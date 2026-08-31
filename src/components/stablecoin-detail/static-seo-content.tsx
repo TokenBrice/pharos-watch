@@ -13,6 +13,7 @@ import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/li
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import type { FaqItem } from "@/lib/faq";
 import { normalizeWhitespace } from "@/lib/page-metadata";
+import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -220,7 +221,28 @@ function buildSafetyAnswer(coin: StablecoinMeta): string {
     return `${coin.name} is not in Pharos's active universe. ${coin.listingStatusReview?.reason ?? "Its listing is retained only as a static catalog record."}`;
   }
 
-  return `Pharos does not mark ${coin.symbol} as absolutely safe. Static metadata says ${coin.name} uses a ${governanceLabel} governance model and ${backingLabel} backing, with ${reserveEvidence}; the main caveat is that ${freezeControl}. Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below as the current risk read.`;
+  const staticContext = `Static metadata says ${coin.name} uses a ${governanceLabel} governance model and ${backingLabel} backing, with ${reserveEvidence}; the main caveat is that ${freezeControl}.`;
+  const liveRead =
+    "Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below as the current risk read.";
+
+  const assessment = getSnapshotSafetyAssessment(coin.id);
+  if (!assessment) {
+    return `Pharos does not mark ${coin.symbol} as absolutely safe. ${staticContext} ${liveRead}`;
+  }
+
+  const article = assessment.grade.startsWith("A") || assessment.grade === "F" ? "an" : "a";
+  const gradeClause = assessment.score !== null
+    ? `${article} ${assessment.grade} Safety Score grade (${assessment.score}/100)`
+    : `${article} ${assessment.grade} Safety Score grade`;
+
+  switch (assessment.bucket) {
+    case "safe":
+      return `${coin.symbol} holds ${gradeClause} in Pharos's latest published rating — a safe-tier grade, so Pharos assesses it as overall safe, though no stablecoin is entirely risk-free. ${staticContext} ${liveRead}`;
+    case "neutral":
+      return `${coin.symbol} holds ${gradeClause} in Pharos's latest published rating — a middle-tier grade that meets baseline expectations but carries meaningful weaknesses, so Pharos does not consider it clearly safe. ${staticContext} ${liveRead}`;
+    case "risky":
+      return `Pharos does not assess ${coin.symbol} as safe: it holds ${gradeClause} in the latest published rating, which flags significant structural risk. ${staticContext} ${liveRead}`;
+  }
 }
 
 function buildAlertCommand(coin: StablecoinMeta): string {
@@ -229,8 +251,9 @@ function buildAlertCommand(coin: StablecoinMeta): string {
 
 /**
  * Data-derived Q&A for AI-search citation on the coin long tail. Every answer
- * is assembled verbatim from checked-in StablecoinMeta fields — no live data,
- * no editorial claims beyond the static profile.
+ * is assembled from checked-in data — StablecoinMeta fields plus the
+ * scores-latest dataset mirror (refreshed from the live API at each Pages
+ * release) for the safety-grade tier. No editorial claims beyond those sources.
  */
 export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
