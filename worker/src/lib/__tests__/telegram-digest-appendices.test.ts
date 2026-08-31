@@ -187,6 +187,7 @@ describe("prepareTelegramDigestAppendices", () => {
       seededSnapshots: ["tracked:first-run", "frozen:first-run"],
     });
     expect(prepared.appendixHtml).toContain("<b>Tracking Changes</b>");
+    expect(prepared.appendixHtml).toContain("<blockquote expandable><code>USDX</code> Example USD</blockquote>");
     expect(prepared.appendixHtml).toContain("<code>USDX</code> Example USD");
 
     expect(mockSetCache).toHaveBeenCalledTimes(1);
@@ -252,6 +253,7 @@ describe("prepareTelegramDigestAppendices", () => {
       preLaunchSymbols: ["EURX"],
     });
     expect(prepared.appendixHtml).toContain("<b>New Cemetery Entries</b>");
+    expect(prepared.appendixHtml).toContain("<blockquote expandable><code>EURA</code> Angle EURA");
     expect(prepared.appendixHtml).toContain("<code>EURA</code> Angle EURA (2026-03; Abandoned)");
     expect(prepared.appendixHtml).toContain("<i>DeFi&#39;s first Euro, last out</i>");
     expect(prepared.appendixHtml).toContain("Peak mcap: $200.00M");

@@ -228,4 +228,46 @@ describe("weekly recap safety identity", () => {
     expect(prompt).not.toContain("Grade transitions:");
     expect(prompt).not.toContain("Top grade transitions by mcap");
   });
+
+  it("places the latest capture-matched census and grade movers in one dated safety desk", () => {
+    const rows = [0, 1, 2, 3, 4].map((index) => row(index, [], v9Identity));
+    const latestInput = JSON.parse(rows[4]!.input_data) as DigestInputData;
+    latestInput.safetyMap = {
+      imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-07-26",
+      freshness: "carried-forward",
+      ageDays: 2,
+      manifest: {
+        date: "2026-07-26",
+        asOfSec: 1_774_000_000,
+        renderedAtSec: 1_774_001_000,
+        edition: "daily",
+        bytes: { png: 1_000_000 },
+        mapSummary: {
+          date: "2026-07-26",
+          asOfSec: 1_774_000_000,
+          methodologyVersion: "v9.4",
+          gradedCount: 10,
+          notRatedCount: 2,
+          totalMcapUsd: 100_000_000_000,
+          floorMcapByTier: { a: 1_000_000, other: 100_000 },
+          tiers: [
+            { tier: "A", range: "90-100", count: 2, mcapUsd: 70_000_000_000, sharePct: 70, leaders: [{ symbol: "USDT", score: 95, mcapUsd: 60_000_000_000 }] },
+            { tier: "B", range: "80-89", count: 2, mcapUsd: 15_000_000_000, sharePct: 15, leaders: [] },
+            { tier: "C", range: "70-79", count: 2, mcapUsd: 8_000_000_000, sharePct: 8, leaders: [] },
+            { tier: "D", range: "60-69", count: 2, mcapUsd: 5_000_000_000, sharePct: 5, leaders: [] },
+            { tier: "F", range: "0-59", count: 2, mcapUsd: 2_000_000_000, sharePct: 2, leaders: [] },
+          ],
+        },
+      },
+    };
+    rows[4] = { ...rows[4]!, input_data: JSON.stringify(latestInput) };
+
+    const weekly = buildWeeklyInputData(rows, [], available(v9Identity));
+    const prompt = buildWeeklyPrompt(weekly!);
+
+    expect(prompt).toContain("Safety desk:");
+    expect(prompt).toContain("Safety Map census (carried-forward, age 2 days; depicts 2026-07-26 UTC)");
+    expect(prompt).toContain("Grade movers this week: none recorded");
+    expect(prompt).not.toContain("Top grade transitions by mcap");
+  });
 });

@@ -2,6 +2,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { round1 } from "@shared/lib/math";
 import type { DigestValidationProfile } from "../daily-digest/response";
 import { forbiddenTicsPromptLine } from "../daily-digest/voice-guards";
+import { buildSafetyMapCensusLines } from "../daily-digest/prompt";
 import type { WeeklyInputData } from "./types";
 
 export const WEEKLY_SYSTEM_PROMPT = [
@@ -83,6 +84,29 @@ export function buildWeeklyPrompt(
     lines.push(
       `Editorial omission: a canonical input (${data.safetyContext.expectedModel.toUpperCase()}: ${data.safetyContext.reason}) is unavailable. Omit that topic entirely; do not mention the missing input or draw conclusions from it.`,
     );
+  }
+
+  const safetyCensusLines: string[] = [];
+  const newestDailyDigests = [...data.dailyDigests].sort((left, right) => right.date.localeCompare(left.date));
+  for (const digest of safetyContextAvailable ? newestDailyDigests : []) {
+    const candidateLines = buildSafetyMapCensusLines(digest.inputData.safetyMap, digest.inputData.safetyContext);
+    if (candidateLines.length === 0) continue;
+    safetyCensusLines.push(...candidateLines);
+    break;
+  }
+  const gradeMovers = safetyContextAvailable ? data.weeklySignals.topGradeTransitions : [];
+  if (safetyCensusLines.length > 0 || gradeMovers.length > 0) {
+    lines.push("", "Safety desk:", ...safetyCensusLines);
+    if (gradeMovers.length === 0) {
+      lines.push("  Grade movers this week: none recorded. Do not infer tier crossings from the census.");
+    } else {
+      lines.push("  Grade movers this week (sole per-coin mover source):");
+      for (const transition of gradeMovers) {
+        lines.push(
+          `    ${transition.date} ${transition.symbol}: ${transition.model.toUpperCase()} ${transition.fromGrade} -> ${transition.toGrade}, ${formatCurrency(transition.mcapUsd)} mcap`,
+        );
+      }
+    }
   }
 
   if (data.gaugeRange) {
@@ -215,14 +239,6 @@ export function buildWeeklyPrompt(
     for (const event of data.weeklySignals.topBlacklistEvents) {
       lines.push(
         `    ${event.date} ${event.symbol} on ${event.chain}: ${event.type}, ${formatCurrency(event.amountUsd)}`,
-      );
-    }
-  }
-  if (safetyContextAvailable && data.weeklySignals.topGradeTransitions.length > 0) {
-    lines.push("  Top grade transitions by mcap:");
-    for (const transition of data.weeklySignals.topGradeTransitions) {
-      lines.push(
-        `    ${transition.date} ${transition.symbol}: ${transition.model.toUpperCase()} ${transition.fromGrade} -> ${transition.toGrade}, ${formatCurrency(transition.mcapUsd)} mcap`,
       );
     }
   }

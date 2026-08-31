@@ -161,8 +161,8 @@ function formatTrackedCoin(coin: TrackedStablecoinMeta): string {
 function buildCemeteryAppendix(coins: DeadStablecoin[], footer: string): string {
   return [
     "<b>New Cemetery Entries</b>",
-    coins.map(formatCemeteryCoin).join("\n\n"),
-    escapeHtml(footer),
+    ...coins.map((coin) => `<blockquote expandable>${formatCemeteryCoin(coin)}</blockquote>`),
+    `<blockquote expandable><i>${escapeHtml(footer)}</i></blockquote>`,
   ].join("\n\n");
 }
 
@@ -174,13 +174,15 @@ function buildTrackedAppendix(
 
   if (trackedCoins.length > 0) {
     sections.push(
-      "Newly tracked stablecoins:\n" + trackedCoins.map(formatTrackedCoin).join("\n"),
+      "Newly tracked stablecoins:",
+      ...trackedCoins.map((coin) => `<blockquote expandable>${formatTrackedCoin(coin)}</blockquote>`),
     );
   }
 
   if (preLaunchCoins.length > 0) {
     sections.push(
-      "Newly tracked pre-launch stablecoins:\n" + preLaunchCoins.map(formatTrackedCoin).join("\n"),
+      "Newly tracked pre-launch stablecoins:",
+      ...preLaunchCoins.map((coin) => `<blockquote expandable>${formatTrackedCoin(coin)}</blockquote>`),
     );
   }
 

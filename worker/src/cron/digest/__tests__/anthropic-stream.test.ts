@@ -63,16 +63,16 @@ function happyPathEvents(textChunks: string[]): SseEvent[] {
 describe("accumulateAnthropicStream", () => {
   it("concatenates text_delta chunks into the final string", async () => {
     const response = sseResponse(happyPathEvents(["Hello, ", "world", "!"]));
-    const text = await accumulateAnthropicStream(response);
-    expect(text).toBe("Hello, world!");
+    const result = await accumulateAnthropicStream(response);
+    expect(result.text).toBe("Hello, world!");
   });
 
   it("handles SSE frames split mid-event across chunks", async () => {
     const events = happyPathEvents(["alpha ", "beta ", "gamma"]);
     // Force chunk boundaries at odd positions so some events span multiple reads.
     const response = sseResponse(events, { chunkSplitPattern: [5, 10, 50, 30, 70, 200, 1] });
-    const text = await accumulateAnthropicStream(response);
-    expect(text).toBe("alpha beta gamma");
+    const result = await accumulateAnthropicStream(response);
+    expect(result.text).toBe("alpha beta gamma");
   });
 
   it("joins multiple data lines in one SSE frame with newlines", async () => {
@@ -89,8 +89,8 @@ describe("accumulateAnthropicStream", () => {
       ].join("\n"),
     );
 
-    const text = await accumulateAnthropicStream(response);
-    expect(text).toBe("split payload");
+    const result = await accumulateAnthropicStream(response);
+    expect(result.text).toBe("split payload");
   });
 
   it("ignores thinking_delta events (extended thinking)", async () => {
@@ -105,8 +105,8 @@ describe("accumulateAnthropicStream", () => {
       { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn" } } },
       { event: "message_stop", data: { type: "message_stop" } },
     ]);
-    const text = await accumulateAnthropicStream(response);
-    expect(text).toBe("final answer");
+    const result = await accumulateAnthropicStream(response);
+    expect(result.text).toBe("final answer");
   });
 
   it("throws when the stream emits an SSE error event", async () => {
@@ -150,6 +150,72 @@ describe("accumulateAnthropicStream", () => {
       { event: "message_stop", data: { type: "message_stop" } },
     ]);
     await expect(accumulateAnthropicStream(response)).rejects.toThrow(/empty/i);
+  });
+
+  it("returns a pre-output refusal with structured category and usage", async () => {
+    const response = sseResponse([
+      {
+        event: "message_start",
+        data: {
+          type: "message_start",
+          message: {
+            model: "claude-opus-5",
+            usage: {
+              input_tokens: 13069,
+              cache_creation_input_tokens: 0,
+              cache_read_input_tokens: 0,
+            },
+          },
+        },
+      },
+      {
+        event: "message_delta",
+        data: {
+          type: "message_delta",
+          delta: {
+            stop_reason: "refusal",
+            stop_details: { type: "refusal", category: "general_harms" },
+          },
+          usage: { output_tokens: 18 },
+        },
+      },
+      { event: "message_stop", data: { type: "message_stop" } },
+    ]);
+
+    await expect(accumulateAnthropicStream(response)).resolves.toMatchObject({
+      text: "",
+      servedModel: "claude-opus-5",
+      inputTokens: 13069,
+      cacheWriteTokens: 0,
+      cacheReadTokens: 0,
+      outputTokens: 18,
+      stopReason: "refusal",
+      refusalCategory: "general_harms",
+    });
+  });
+
+  it("discards partial text when a refusal arrives mid-stream", async () => {
+    const response = sseResponse([
+      { event: "message_start", data: { type: "message_start", message: { model: "claude-opus-5", usage: { input_tokens: 42 } } } },
+      { event: "content_block_delta", data: { type: "content_block_delta", delta: { type: "text_delta", text: "partial unsafe output" } } },
+      {
+        event: "message_delta",
+        data: {
+          type: "message_delta",
+          delta: {
+            stop_reason: "refusal",
+            stop_details: { type: "refusal", category: "cyber" },
+          },
+          usage: { output_tokens: 9 },
+        },
+      },
+      { event: "message_stop", data: { type: "message_stop" } },
+    ]);
+
+    const result = await accumulateAnthropicStream(response);
+    expect(result.text).toBe("");
+    expect(result.stopReason).toBe("refusal");
+    expect(result.refusalCategory).toBe("cyber");
   });
 
   it("reports a runaway-thinking max_tokens stop as truncation with token diagnostics", async () => {

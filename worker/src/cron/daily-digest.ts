@@ -3,26 +3,22 @@ import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import type { TwitterCreds } from "../lib/twitter";
 import type { TelegramCreds } from "../lib/telegram";
+import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { SECONDS } from "../lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
 import { setCache } from "../lib/db-cache";
 import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../lib/depeg-lifecycle";
 import { prepareTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
-import { buildDailyDigestInput } from "./daily-digest/input";
+import { buildDailyDigestInput, buildDigestSafetyMapCapture } from "./daily-digest/input";
 import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
-import { requestDigestCopy } from "./digest/platform";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
 import { attachDigestEditorialAudit } from "./daily-digest/digest-intelligence";
-import type { DigestValidationIssue } from "./daily-digest/response";
 import { logWorkerEvent } from "../lib/structured-log";
-import {
-  findUnboundDigestSafetyClaimMarkers,
-} from "../lib/digest-safety-context";
 import {
   buildDigestSafetyMapCaptions,
   resolveDigestSafetyMap,
@@ -31,11 +27,25 @@ import {
 import { safeJsonParse } from "../lib/api-cache-read";
 import type { DigestInputData } from "@shared/types/digest";
 import {
+  buildDigestTelegramPublication,
+  buildDigestTwitterPublication,
   deliverDigestEdition,
   publishDigestEdition,
   type DigestCredentialDiagnostics,
 } from "./digest/publish";
-import { classifyDigestChannelStatus } from "./digest/platform";
+import {
+  buildDigestLlmTelemetry,
+  buildDigestQualityAssessment,
+  classifyDigestChannelStatus,
+  reportDigestCircuitOpen,
+  reportDigestGenerationComplete,
+  reportDigestLlmAttempt,
+  reportDigestMissingApiKey,
+  reportDigestRefusal,
+  requestDigestCopy,
+  resolveDigestLlmConfig,
+} from "./digest/platform";
+import { DAILY_DIGEST_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -62,7 +72,10 @@ export async function generateDailyDigest(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
   credentialDiagnostics: DigestCredentialDiagnostics = {},
+  llmConfig: DigestLlmConfig = DAILY_DIGEST_LLM_CONFIG,
+  recapRollout: TelegramRecapRolloutPolicy | null = null,
 ): Promise<CronResult> {
+  const resolvedLlmConfig = resolveDigestLlmConfig(DAILY_DIGEST_LLM_CONFIG, llmConfig);
   await reportCronProgress(reportProgress, {
     stage: "preflight",
     message: "Checking daily digest generation prerequisites",
@@ -78,17 +91,7 @@ export async function generateDailyDigest(
   });
   if (!anthropicApiKey) {
     logWorkerEventArgs("handler", "info", "[daily-digest] No API key configured, skipping");
-    await reportCronProgress(reportProgress, {
-      stage: "skipped",
-      message: "Skipping daily digest because Anthropic credentials are missing",
-      providerFamily: "anthropic",
-      itemsDone: 0,
-      itemsTotal: 1,
-      metadata: {
-        skipped: "missing-api-key",
-      },
-    });
-    return { metadata: "skipped: no API key" };
+    return reportDigestMissingApiKey(reportProgress, "daily digest");
   }
 
   // Check if latest digest is <1h old and valid (not a broken code-block response)
@@ -153,6 +156,11 @@ export async function generateDailyDigest(
       }),
     };
   }
+  const now = Math.floor(Date.now() / 1000);
+  const digestDate = formatIsoDate(now);
+  const safetyMap = await resolveDigestSafetyMap(digestDate, now, signal);
+  const safetyMapCapture = buildDigestSafetyMapCapture(inputData, safetyMap);
+  if (safetyMapCapture) inputData.safetyMap = safetyMapCapture;
   const leadRequirements = buildCriticalDailyLeadRequirements(inputData, {
     previousInputData,
     recentLeadSignalIds,
@@ -195,7 +203,7 @@ export async function generateDailyDigest(
     metadata: {
       countTotals: {
         promptChars: userPromptContent.length,
-        maxTokens: 64000,
+        maxTokens: resolvedLlmConfig.maxTokens,
       },
     },
   });
@@ -204,16 +212,17 @@ export async function generateDailyDigest(
     anthropicApiKey,
     systemPrompt: SYSTEM_PROMPT,
     userPrompt: userPromptContent,
-    // Opus xhigh needs this floor; see digest/platform.ts for the effort rationale.
-    maxTokens: 64000,
+    llmConfig: resolvedLlmConfig,
     signal,
     logPrefix: "daily-digest",
+    reportAttempt: (llmAttempts) => reportDigestLlmAttempt(reportProgress, "daily digest", llmAttempts),
     validationProfile: {
       kind: "daily",
       recentMeta: recentMeta.map((entry) => ({
         meta: entry.meta as Record<string, unknown> | null,
         title: entry.title,
         rawText: entry.rawText,
+        extended: entry.extended,
       })),
       leadRequirements,
       depegFacts: llmSignals.topDepegs,
@@ -226,54 +235,32 @@ export async function generateDailyDigest(
     },
   });
   if (digestCopy.kind === "circuit-open") {
-    await reportCronProgress(reportProgress, {
-      stage: "skipped",
-      message: "Skipping daily digest because Anthropic circuit is open",
-      providerFamily: "anthropic",
-      itemsDone: 0,
-      itemsTotal: 1,
-      metadata: {
-        skipped: "anthropic-circuit-open",
-      },
-    });
+    await reportDigestCircuitOpen(reportProgress, "daily digest");
     return { status: "degraded", itemCount: 0, metadata: "skipped: anthropic circuit open" };
   }
-  const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
-    inputData.safetyContext,
-    {
-      title: digestCopy.digestTitle,
-      text: digestCopy.digestText,
-      extended: digestCopy.digestExtended,
-    },
-  );
-  const safetyCopyIssues: DigestValidationIssue[] = unboundSafetyClaimMarkers.length > 0
-    ? [{
-        code: "unbound-safety-copy",
-        severity: "hard",
-        message: `Safety Score copy requires an identified publication (${unboundSafetyClaimMarkers.join(", ")})`,
-      }]
-    : [];
-  const qualityIssues = [...digestCopy.qualityIssues, ...safetyCopyIssues];
-  const hasBlockingQualityIssues =
-    digestCopy.hasBlockingQualityIssues || safetyCopyIssues.length > 0;
+  if (digestCopy.kind === "refusal") {
+    return reportDigestRefusal(
+      reportProgress,
+      "daily digest",
+      digestCopy.refusalCategory,
+      digestCopy.llmAttempts,
+    );
+  }
+  const {
+    qualityIssues,
+    safetyCopyIssues,
+    hasBlockingQualityIssues,
+  } = buildDigestQualityAssessment(inputData.safetyContext, digestCopy);
   if (safetyCopyIssues.length > 0) {
     degradedReasons.push("unbound-safety-copy");
   }
-  await reportCronProgress(reportProgress, {
-    stage: "llm-generation-complete",
-    message: "Received daily digest copy from Anthropic",
-    providerFamily: "anthropic",
-    itemsDone: 1,
-    itemsTotal: 1,
-    metadata: {
-      countTotals: {
-        textChars: digestCopy.digestText.length,
-        extendedChars: digestCopy.digestExtended.length,
-        qualityIssues: qualityIssues.length,
-      },
-      blockingQualityIssues: hasBlockingQualityIssues,
-    },
-  });
+  await reportDigestGenerationComplete(
+    reportProgress,
+    "daily digest",
+    digestCopy,
+    qualityIssues.length,
+    hasBlockingQualityIssues,
+  );
 
   const storedInputData = attachDigestEditorialAudit({
     inputData,
@@ -281,11 +268,6 @@ export async function generateDailyDigest(
     qualityIssues,
     leadRequirements,
   });
-  const now = Math.floor(Date.now() / 1000);
-  const digestDate = formatIsoDate(now);
-  const safetyMap = twitterCreds || telegramCreds
-    ? await resolveDigestSafetyMap(digestDate, now, signal)
-    : null;
   const safetyMapCaptions = safetyMap?.kind === "available" && inputData.safetyContext?.status === "available"
     ? buildDigestSafetyMapCaptions(
         safetyMap.manifest.mapSummary,
@@ -324,32 +306,29 @@ export async function generateDailyDigest(
     qualityGateStatus,
     degradedReasons,
     safetyMap,
-    twitter: twitterCreds || credentialDiagnostics.twitterMissing != null
-      ? {
-          creds: twitterCreds,
-          markerKey: getTwitterSentMarkerKey(digestDate),
-          required: credentialDiagnostics.twitterMissing != null,
-          missingCredentialNames: credentialDiagnostics.twitterMissing,
-        }
-      : null,
-    telegram: telegramCreds || credentialDiagnostics.telegramMissing != null
-      ? {
-          creds: telegramCreds,
-          editionKey: `daily:${digestDate}`,
-          appendixHtml: telegramAppendices?.appendixHtml ?? null,
-          extraSections: [
-            ...(standingLine ? [{ kind: "text" as const, content: standingLine }] : []),
-            ...(safetyMapCaptions?.telegramAppendixHtml
-              ? [{ kind: "html" as const, content: safetyMapCaptions.telegramAppendixHtml }]
-              : []),
-          ],
-          successActions: telegramAppendices?.successActions ?? [],
-          required: credentialDiagnostics.telegramMissing != null,
-          missingCredentialNames: credentialDiagnostics.telegramMissing,
-          successStatus: `ok${appendixSuffix}`,
-          alreadySentStatus: "skipped: already-sent",
-        }
-      : null,
+    twitter: buildDigestTwitterPublication(
+      twitterCreds,
+      getTwitterSentMarkerKey(digestDate),
+      credentialDiagnostics.twitterMissing,
+    ),
+    telegram: buildDigestTelegramPublication(
+      telegramCreds,
+      credentialDiagnostics.telegramMissing,
+      {
+        editionKey: `daily:${digestDate}`,
+        recapRollout,
+        appendixHtml: telegramAppendices?.appendixHtml ?? null,
+        extraSections: [
+          ...(standingLine ? [{ kind: "text" as const, content: standingLine }] : []),
+          ...(safetyMapCaptions?.telegramAppendixHtml
+            ? [{ kind: "html" as const, content: safetyMapCaptions.telegramAppendixHtml }]
+            : []),
+        ],
+        successActions: telegramAppendices?.successActions ?? [],
+        successStatus: `ok${appendixSuffix}`,
+        alreadySentStatus: "skipped: already-sent",
+      },
+    ),
     signal,
     reportProgress,
   });
@@ -394,6 +373,7 @@ export async function generateDailyDigest(
       },
       twitterStatus: tweetStatus,
       telegramStatus,
+      llmAttempts: digestCopy.llmAttempts,
     },
   });
   logWorkerEventArgs("handler", "info", `[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
@@ -419,6 +399,7 @@ export async function generateDailyDigest(
           missingCredentialNames: credentialDiagnostics.telegramMissing ?? [],
         },
       },
+      llm: buildDigestLlmTelemetry(resolvedLlmConfig, digestCopy.llmAttempts),
     }),
   };
 }
@@ -443,6 +424,7 @@ export async function resumeDailyDigestDelivery(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
   credentialDiagnostics: DigestCredentialDiagnostics = {},
+  recapRollout: TelegramRecapRolloutPolicy | null = null,
 ): Promise<ResumeDailyDigestDeliveryOutcome> {
   const nowSec = Math.floor(Date.now() / 1000);
   const digestDate = formatIsoDate(nowSec);
@@ -450,12 +432,12 @@ export async function resumeDailyDigestDelivery(
   // SAFETY: the digest SQL filters are hardcoded fragments, not user input.
   const row = await db
     .prepare(
-      `SELECT generated_at, digest_text, digest_title, digest_extended, input_data FROM daily_digest
+      `SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest
        WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        ORDER BY generated_at DESC LIMIT 1`,
     )
     .bind(dayStartSec)
-    .first<{ generated_at: number; digest_text: string; digest_title: string | null; digest_extended: string | null; input_data: string | null }>();
+    .first<{ generated_at: number; digest_text: string; digest_title: string | null; digest_extended: string | null; digest_meta: string | null; input_data: string | null }>();
   throwIfAborted(signal);
   if (!row) return { kind: "no-publishable-digest" };
   const countResult = await db
@@ -522,6 +504,9 @@ export async function resumeDailyDigestDelivery(
       title: row.digest_title ?? "",
       text: row.digest_text,
       extended: row.digest_extended ?? "",
+      // Carried so a resumed delivery picks the same subject-aware cashtag the
+      // original send would have: without it, resume falls back to first-match.
+      meta: row.digest_meta,
     },
     safetyContext: storedInput?.safetyContext ?? null,
     qualityGateStatus: null,
@@ -544,6 +529,7 @@ export async function resumeDailyDigestDelivery(
         ? {
             creds: telegramCreds,
             editionKey: `daily:${digestDate}`,
+            recapRollout,
             appendixHtml: telegramAppendices?.appendixHtml ?? null,
             extraSections: [
               ...(standingLine ? [{ kind: "text" as const, content: standingLine }] : []),

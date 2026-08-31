@@ -256,19 +256,21 @@ Live reserve timeout values are resolved through `LiveReserveSyncBudgetConfig`. 
 
 Current digest generation constraints that are actually encoded in repo code:
 
-- model: `DIGEST_MODEL` (`claude-opus-4-8` at this revision)
+- model: per-job typed configuration, with both `DAILY_DIGEST_LLM_CONFIG` and `WEEKLY_RECAP_LLM_CONFIG` defaulting to `claude-opus-5`. Opus 5 adds safety classifiers, so the request path treats `stop_reason=refusal` as policy rather than infrastructure.
 - thinking: adaptive (`thinking.type = "adaptive"`)
-- reasoning effort: xhigh (`output_config.effort = "xhigh"`) — dropped from `max` on 2026-04-18 after runaway-thinking exhausted `max_tokens` twice (`stopReason=max_tokens` with only a `signature_delta` at both 16k and 32k). `max` has no constraint on thinking depth on the configured Opus family; `xhigh` is the selected level for complex editorial work.
+- reasoning effort: xhigh (`output_config.effort = "xhigh"`). This is deliberate: Opus 5 at `high` omitted the documented, mandated forward-look line on both measured daily editions, while `xhigh` preserved the incumbent's zero-soft-issue quality. The 16k ceiling, rather than lower effort, answers the cost constraint.
 - Anthropic outer timeout: `12 * 60_000 ms` (12 min), bound by `AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)` in `platform.ts`
 - per-attempt fetch timeout: `11 * 60_000 ms` (11 min), local to `requestDigestCopy`; safety net so a single stalled attempt cannot consume the outer budget
-- retry depth for the digest Anthropic call: `2` (max 3 attempts); the outer `AbortSignal` caps total wall time regardless
+- retry depth for the digest Anthropic call: `2` (max 3 HTTP attempts); every HTTP attempt is recorded independently
 - corrective retry skip: if first-pass elapsed `>= 50%` of the outer budget (6 min), the in-process retry after quality failures is skipped; the parse is accepted with `qualityIssues` flagged `degraded`
 - daily cron lease (wrapper timeout): `14 * 60_000 ms` (14 min), leaves ~2 min under Cloudflare's 15-min scheduled-event ceiling for D1 persistence, Twitter/Telegram delivery, and cron_runs logging.
 - daily-digest heartbeat override: `heartbeatSec = 30`, `maxRenewFailures = 3` (see `worker/src/handlers/scheduled/context.ts` — default policy unchanged for other jobs)
 - weekly cron lease: `12 * 60_000 ms` (12 min)
-- max_tokens: `64000` daily, `64000` weekly. Earlier settings of 16k → 32k at `effort: "max"` both hit `stop_reason=max_tokens` with no text emitted; the root-cause fix on 2026-04-18 lowered effort to `xhigh` and raised the ceiling to 64k in one change.
+- max_tokens: `16000` daily, `16000` weekly. The old 64k value was a runaway guard, not a spend guard. For Opus 5 at `xhigh`, the 16k cap creates a $1.062/day hard bound, below the $1.15 ceiling. `stop_reason=max_tokens` remains a hard pre-parser failure and therefore a loud truncation tripwire.
+- measured token/cost telemetry (production prompts, editions 2026-08-21 and 2026-08-07 plus the weekly): incumbent Opus 4.8 at `xhigh`/64k emitted 18,258 and 10,146 daily output tokens and 7,806 weekly, with $0.550/day blended cost and $1.104/day at the measured worst-case retry rate (96% of the $1.15 ceiling), with zero soft issues. Opus 5 at `xhigh`/16k emitted 10,857 and approximately 4,300 daily output tokens and 4,808 weekly, with $0.354/day blended cost and $0.712/day worst case (62% of ceiling), with zero daily soft issues. Opus 5 at `high`/16k emitted 4,879 and 2,981 daily output tokens and 2,616 weekly and cost $0.197/day, but both dailies raised `missing-forward-look`; that quality regression rejects `high` despite the additional roughly $0.16/day saving.
+- refusal fallback: requests set `fallbacks: "default"` with beta header `server-side-fallback-2026-07-01`. Server-side fallback preserves one streaming request and one outer timeout; a manual second model call could exceed the 12-minute Anthropic budget, the 14-minute wrapper, or Cloudflare's 15-minute scheduled-trigger ceiling after HTTP retries. If fallback still ends in `stop_reason=refusal`, all partial text is discarded, `stop_details.category` is retained, no edition is published, and the policy outcome neither damages nor heals the Anthropic circuit breaker.
 - cadence: daily scheduled run plus deferred manual admin trigger (see "Manual trigger runtime model" below)
-- cost accounting: pricing is external and can change independently of this repository. The current worker does not persist token-usage telemetry in `digest:last-trigger-result` or `cron_runs`; use provider-side Anthropic usage and billing logs for the exact cost of the configured `DIGEST_MODEL`.
+- cost accounting: pricing is external and can change independently of this repository. The worker now records every original, corrective, and HTTP attempt in cron progress/run metadata and stores successful-edition provenance in `daily_digest.digest_meta.llm`: requested and served model, effort, max tokens, input/cache-read/cache-write/output tokens, attempt identities, stop reason, refusal category, latency, HTTP status, and computed USD cost. Provider billing remains authoritative if the checked-in price table drifts.
 
 ### Manual trigger runtime model
 

@@ -3,10 +3,12 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
+import { useImageUnavailable } from "@/hooks/use-image-unavailable";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore, getNetColor } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";
-import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
+import { Activity, ArrowDownUp, BarChart3, CheckCircle, ImageOff, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
+import { formatDigestDateLabel } from "@/lib/digest";
 
 /* ---------- sub-section wrapper ---------- */
 
@@ -39,6 +41,249 @@ function SnapshotUnavailable() {
       <p className="pharos-kicker">The data behind this digest</p>
       <div className="rounded-lg border border-border/50 p-3 text-sm text-muted-foreground">
         Digest context is unavailable for this archive entry.
+      </div>
+    </section>
+  );
+}
+
+type StoredSafetyMapTier = {
+  tier: "A" | "B" | "C" | "D" | "F";
+  count: number;
+  mcapUsd: number;
+  sharePct: number;
+};
+
+type StoredSafetyMap = {
+  imageUrl: string;
+  freshness: "current" | "carried-forward";
+  ageDays: number | null;
+  manifest: {
+    date: string;
+    mapSummary: {
+      date: string;
+      asOfSec: number;
+      methodologyVersion: string;
+      gradedCount: number;
+      notRatedCount: number;
+      totalMcapUsd: number;
+      tiers: StoredSafetyMapTier[];
+    };
+  };
+};
+
+const SAFETY_MAP_TIERS = ["A", "B", "C", "D", "F"] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isNonNegativeFinite(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function isUtcDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function parseStoredSafetyMap(inputData: DigestSnapshotInputData): StoredSafetyMap | null {
+  const input = isRecord(inputData) ? inputData : null;
+  const rawMap = input?.safetyMap;
+  if (!isRecord(rawMap)) return null;
+
+  const manifest = isRecord(rawMap.manifest) ? rawMap.manifest : null;
+  const date = manifest?.date;
+  const imageUrl = rawMap.imageUrl;
+  const freshness = rawMap.freshness;
+  const ageDays = rawMap.ageDays;
+  if (
+    !isUtcDate(date)
+    || typeof imageUrl !== "string"
+    || imageUrl.trim().length === 0
+    || (freshness !== "current" && freshness !== "carried-forward")
+    || (ageDays !== undefined && (!isNonNegativeFinite(ageDays) || !Number.isInteger(ageDays)))
+  ) {
+    return null;
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(imageUrl, "https://pharos.watch");
+  } catch {
+    return null;
+  }
+  if (
+    !parsedUrl.pathname.endsWith("/safety-scores/map.png")
+    || parsedUrl.searchParams.get("date") !== date
+    || parsedUrl.searchParams.get("date") === "latest"
+  ) {
+    return null;
+  }
+
+  const rawSummary = manifest?.mapSummary ?? rawMap.mapSummary ?? rawMap.summary;
+  if (!isRecord(rawSummary)) return null;
+  const summaryDate = rawSummary.date;
+  const asOfSec = rawSummary.asOfSec;
+  const methodologyVersion = rawSummary.methodologyVersion;
+  const gradedCount = rawSummary.gradedCount;
+  const notRatedCount = rawSummary.notRatedCount;
+  const totalMcapUsd = rawSummary.totalMcapUsd;
+  const rawTiers = rawSummary.tiers;
+  if (
+    !isUtcDate(summaryDate)
+    || summaryDate !== date
+    || !isNonNegativeFinite(asOfSec)
+    || !Number.isInteger(asOfSec)
+    || typeof methodologyVersion !== "string"
+    || methodologyVersion.trim().length === 0
+    || !isNonNegativeFinite(gradedCount)
+    || !Number.isInteger(gradedCount)
+    || !isNonNegativeFinite(notRatedCount)
+    || !Number.isInteger(notRatedCount)
+    || !isNonNegativeFinite(totalMcapUsd)
+    || totalMcapUsd <= 0
+    || !Array.isArray(rawTiers)
+    || rawTiers.length !== SAFETY_MAP_TIERS.length
+  ) {
+    return null;
+  }
+
+  const seen = new Set<StoredSafetyMapTier["tier"]>();
+  const tiers: StoredSafetyMapTier[] = [];
+  for (const rawTier of rawTiers) {
+    if (!isRecord(rawTier)) return null;
+    const tier = rawTier.tier;
+    const count = rawTier.count;
+    const mcapUsd = rawTier.mcapUsd;
+    const sharePct = rawTier.sharePct;
+    if (
+      typeof tier !== "string"
+      || !SAFETY_MAP_TIERS.includes(tier as StoredSafetyMapTier["tier"])
+      || seen.has(tier as StoredSafetyMapTier["tier"])
+      || !isNonNegativeFinite(count)
+      || !Number.isInteger(count)
+      || !isNonNegativeFinite(mcapUsd)
+      || !isNonNegativeFinite(sharePct)
+      || sharePct > 100
+    ) {
+      return null;
+    }
+    seen.add(tier as StoredSafetyMapTier["tier"]);
+    tiers.push({ tier: tier as StoredSafetyMapTier["tier"], count, mcapUsd, sharePct });
+  }
+  if (!SAFETY_MAP_TIERS.every((tier) => seen.has(tier))) return null;
+  if (tiers.reduce((sum, tier) => sum + tier.count, 0) !== gradedCount) return null;
+  const mcapTolerance = Math.max(0.01, totalMcapUsd * 1e-9);
+  if (Math.abs(tiers.reduce((sum, tier) => sum + tier.mcapUsd, 0) - totalMcapUsd) > mcapTolerance) return null;
+  if (tiers.some((tier) => Math.abs((tier.mcapUsd / totalMcapUsd) * 100 - tier.sharePct) > 0.11)) return null;
+
+  return {
+    imageUrl,
+    freshness,
+    ageDays: typeof ageDays === "number" ? ageDays : null,
+    manifest: {
+      date,
+      mapSummary: {
+        date: summaryDate,
+        asOfSec,
+        methodologyVersion,
+        gradedCount,
+        notRatedCount,
+        totalMcapUsd,
+        tiers,
+      },
+    },
+  };
+}
+
+function SafetyMapUnavailable() {
+  return (
+    <div className="pharos-card-shell p-4 sm:p-5">
+      <div className="flex items-start gap-3">
+        <ImageOff className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <div className="space-y-1.5">
+          <p className="pharos-section-title">The map is not available right now</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            This edition keeps its original map citation, but the poster bytes are currently unavailable.
+            Every grade the map draws is available as live, sortable data on the{" "}
+            <a href="/safety-scores/" className="pharos-prose-link">
+              Safety Scores page
+            </a>
+            .
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DigestSafetyMapCard({ inputData }: { inputData: DigestSnapshotInputData }) {
+  const map = parseStoredSafetyMap(inputData);
+  const { unavailable, checkAlreadyFailed, onError } = useImageUnavailable();
+  if (!map) return null;
+  if (unavailable) return <SafetyMapUnavailable />;
+
+  const summary = map.manifest.mapSummary;
+  const byTier = new Map(summary.tiers.map((tier) => [tier.tier, tier]));
+  const aTier = byTier.get("A");
+  const outerTiers = ["C", "D", "F"]
+    .map((tier) => byTier.get(tier as StoredSafetyMapTier["tier"]))
+    .filter((tier): tier is StoredSafetyMapTier => tier !== undefined);
+  if (!aTier || outerTiers.length !== 3) return null;
+  const outerCount = outerTiers.reduce((sum, tier) => sum + tier.count, 0);
+  const outerMcapUsd = outerTiers.reduce((sum, tier) => sum + tier.mcapUsd, 0);
+  const aSharePct = ((aTier.mcapUsd / summary.totalMcapUsd) * 100).toFixed(1);
+  const outerSharePct = ((outerMcapUsd / summary.totalMcapUsd) * 100).toFixed(1);
+  const mapDateLabel = formatDigestDateLabel(map.manifest.date, "long");
+  const freshnessLabel = map.freshness === "current"
+    ? `Dated ${mapDateLabel} map`
+    : `Carried from the ${mapDateLabel} map${map.ageDays != null ? ` (${map.ageDays}d old)` : ""}`;
+
+  return (
+    <section aria-labelledby="digest-safety-map" className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p className="pharos-kicker">Safety Map</p>
+          <h3 id="digest-safety-map" className="text-base font-semibold text-foreground">
+            The dated market census behind this edition
+          </h3>
+        </div>
+        <p className="pharos-meta">{freshnessLabel}</p>
+      </div>
+      <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/10 p-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(12rem,0.8fr)] sm:items-stretch">
+        <figure className="overflow-hidden rounded-md border border-border/50 bg-[#05070d]">
+          <img
+            ref={checkAlreadyFailed}
+            src={map.imageUrl}
+            alt={`Pharos Safety Score Map for ${mapDateLabel}; ${summary.gradedCount} graded coins across A, B, C, D, and F tiers.`}
+            width={3200}
+            height={1800}
+            className="aspect-[16/9] w-full object-contain"
+            onError={onError}
+          />
+          <figcaption className="border-t border-white/10 px-2.5 py-2 text-[0.68rem] leading-relaxed text-white/70">
+            V{summary.methodologyVersion.replace(/^v/i, "")} · {summary.notRatedCount} not rated · as of {mapDateLabel}
+          </figcaption>
+        </figure>
+        <div className="flex flex-col justify-center gap-2 rounded-md border border-border/50 bg-background/45 p-3">
+          <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            {freshnessLabel}
+          </p>
+          <div className="space-y-1.5 text-sm text-foreground/90">
+            <p>Mapped supply: <span className="font-medium">{formatCurrency(summary.totalMcapUsd, 1)}</span> across {summary.gradedCount} coins</p>
+            <p>A tier: <span className="font-medium">{aTier.count} coins</span> · {aSharePct}%</p>
+            <p>C/D/F tiers: <span className="font-medium">{outerCount} coins</span> · {outerSharePct}%</p>
+          </div>
+          <a
+            href={map.imageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring mt-1 inline-flex w-fit rounded-sm text-xs font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            Open the dated poster&nbsp;&rarr;
+          </a>
+        </div>
       </div>
     </section>
   );
@@ -159,6 +404,8 @@ export function DigestSnapshot({ date }: { date: string }) {
         standingConditions={inputData.standingConditions}
         riskTape={inputData.riskTape}
       />
+
+      <DigestSafetyMapCard inputData={inputData} />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {/* 1. Market Snapshot — always shown */}

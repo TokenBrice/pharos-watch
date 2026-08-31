@@ -5,6 +5,8 @@ import {
   didDigestChannelDeliver,
   insertDigestRecord,
   markDigestMetaBlocked,
+  requestDigestCopy,
+  resolveDigestLlmConfig,
   runDigestChannelDelivery,
 } from "../platform";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
@@ -20,7 +22,164 @@ vi.mock("../../../lib/circuit-breaker", () => ({
   recordOutcomeSafe: vi.fn(async () => null),
 }));
 
+vi.mock("../../../lib/fetch-retry", () => ({
+  fetchWithRetry: vi.fn(),
+}));
+
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
+import { fetchWithRetry } from "../../../lib/fetch-retry";
+import { WEEKLY_RECAP_LLM_CONFIG } from "../../../lib/constants";
+
+function anthropicSseResponse(events: Array<{ event: string; data: unknown }>): Response {
+  const encoded = events
+    .map((event) => `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`)
+    .join("");
+  return new Response(encoded, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
+describe("digest LLM configuration", () => {
+  it("accepts bounded supported weekly overrides and rejects invalid values", () => {
+    expect(resolveDigestLlmConfig(WEEKLY_RECAP_LLM_CONFIG, {
+      model: "claude-sonnet-5",
+      effort: "medium",
+      maxTokens: "12000",
+    })).toEqual({ model: "claude-sonnet-5", effort: "medium", maxTokens: 12000 });
+
+    expect(resolveDigestLlmConfig(WEEKLY_RECAP_LLM_CONFIG, {
+      model: "unpriced-model",
+      effort: "turbo",
+      maxTokens: "64000",
+    })).toEqual(WEEKLY_RECAP_LLM_CONFIG);
+  });
+});
+
+describe("requestDigestCopy refusals", () => {
+  const db = {} as D1Database;
+
+  beforeEach(() => {
+    vi.mocked(fetchWithRetry).mockReset();
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+    vi.mocked(recordOutcomeSafe).mockReset().mockResolvedValue(null);
+  });
+
+  it.each([
+    ["before output", []],
+    ["after partial output", [{
+      event: "content_block_delta",
+      data: { type: "content_block_delta", delta: { type: "text_delta", text: "partial" } },
+    }]],
+  ])("returns a refusal %s without recording a circuit outcome", async (_label, textEvents) => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(anthropicSseResponse([
+      {
+        event: "message_start",
+        data: {
+          type: "message_start",
+          message: {
+            model: "claude-opus-5",
+            usage: { input_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+          },
+        },
+      },
+      ...textEvents,
+      {
+        event: "message_delta",
+        data: {
+          type: "message_delta",
+          delta: {
+            stop_reason: "refusal",
+            stop_details: { type: "refusal", category: "general_harms" },
+          },
+          usage: { output_tokens: 5 },
+        },
+      },
+      { event: "message_stop", data: { type: "message_stop" } },
+    ]));
+
+    const result = await requestDigestCopy({
+      db,
+      anthropicApiKey: "key",
+      systemPrompt: "system",
+      userPrompt: "user",
+      llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+      logPrefix: "test",
+    });
+
+    expect(result.kind).toBe("refusal");
+    expect(result.digestText).toBe("");
+    expect(result.refusalCategory).toBe("general_harms");
+    expect(result.llmAttempts).toMatchObject([{
+      stopReason: "refusal",
+      refusalCategory: "general_harms",
+      inputTokens: 100,
+      outputTokens: 5,
+    }]);
+    expect(recordOutcomeSafe).not.toHaveBeenCalled();
+  });
+
+  it("captures each HTTP attempt before a successful retry", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(new Response("overloaded", { status: 529 }))
+      .mockResolvedValueOnce(anthropicSseResponse([
+        {
+          event: "message_start",
+          data: {
+            type: "message_start",
+            message: {
+              model: "claude-opus-5",
+              usage: { input_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+            },
+          },
+        },
+        {
+          event: "content_block_delta",
+          data: {
+            type: "content_block_delta",
+            delta: {
+              type: "text_delta",
+              text: JSON.stringify({ title: "Title", text: "Text", extended: "Extended", meta: {} }),
+            },
+          },
+        },
+        {
+          event: "message_delta",
+          data: {
+            type: "message_delta",
+            delta: { stop_reason: "end_turn" },
+            usage: { output_tokens: 50 },
+          },
+        },
+        { event: "message_stop", data: { type: "message_stop" } },
+      ]));
+
+    const pending = requestDigestCopy({
+      db,
+      anthropicApiKey: "key",
+      systemPrompt: "system",
+      userPrompt: "user",
+      llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+      logPrefix: "test",
+    });
+    await vi.runAllTimersAsync();
+    const result = await pending;
+
+    expect(result.kind).toBe("ok");
+    expect(result.llmAttempts).toMatchObject([
+      { attemptNumber: 1, requestKind: "original", httpAttempt: 1, httpStatus: 529, costUsd: null },
+      {
+        attemptNumber: 2,
+        requestKind: "original",
+        httpAttempt: 2,
+        httpStatus: 200,
+        inputTokens: 100,
+        outputTokens: 50,
+        costUsd: 0.00175,
+      },
+    ]);
+    vi.useRealTimers();
+  });
+});
 
 describe("insertDigestRecord", () => {
   function makeOptions(db: D1Database, signal?: AbortSignal) {

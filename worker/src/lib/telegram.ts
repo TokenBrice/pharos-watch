@@ -1,4 +1,6 @@
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
+import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { logWorkerEventArgs } from "./structured-log";
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
 import { escapeHtml } from "./telegram-html";
@@ -74,6 +76,18 @@ export async function postTelegramBotApi(
 
 export { escapeHtml } from "./telegram-html";
 
+/**
+ * The digest is published in a channel, while personalized recaps are
+ * private-chat-only. Keep the CTA explicit about that boundary and fail closed
+ * until the caller supplies the runtime rollout policy.
+ */
+export function buildTelegramRecapCta(
+  rollout: TelegramRecapRolloutPolicy | null | undefined,
+): string | null {
+  if (rollout?.mode !== "public") return null;
+  return `<a href="${TELEGRAM_BOT_URL}">Open @PharosWatchBot for a private /recap →</a>`;
+}
+
 /** Build the full Telegram message for a digest. */
 export function buildTelegramMessage(
   title: string,
@@ -82,16 +96,34 @@ export function buildTelegramMessage(
   editionNumber?: number | null,
   appendixHtml?: string | null,
   mapAppendixHtml?: string | null,
+  recapRollout?: TelegramRecapRolloutPolicy | null,
 ): string {
   // Escape HTML first, then convert markdown bold **text** to <b>text</b>
-  const body = escapeHtml(extended).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  const extendedSections = extended.split("\n\n");
+  let standingLine: string | null = null;
+  const editorialSections: string[] = [];
+  for (const section of extendedSections) {
+    const trimmed = section.trim();
+    if (standingLine == null && /^Standing: [^\n]+$/.test(trimmed)) {
+      standingLine = trimmed;
+    } else {
+      editorialSections.push(section);
+    }
+  }
+  const body = escapeHtml(editorialSections.join("\n\n")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  const standing = standingLine == null
+    ? ""
+    : `<blockquote expandable>${escapeHtml(standingLine)}</blockquote>`;
   const kicker = editionNumber ? `Pharos Daily Digest #${editionNumber}\n` : "";
+  const recapCta = buildTelegramRecapCta(recapRollout);
   const sections = [
+    mapAppendixHtml ?? "",
     `${kicker}<b>${escapeHtml(title)}</b>`,
     body,
+    standing,
     appendixHtml ?? "",
-    mapAppendixHtml ?? "",
     `<a href="https://pharos.watch/digest/${date}/">Read on Pharos →</a>`,
+    recapCta ?? "",
   ].filter((section) => section.trim().length > 0);
   return sections.join("\n\n");
 }
@@ -115,8 +147,17 @@ export async function postDigestToTelegram(
   creds: TelegramCreds,
   editionNumber?: number | null,
   appendixHtml?: string | null,
+  recapRollout?: TelegramRecapRolloutPolicy | null,
 ): Promise<void> {
-  const text = buildTelegramMessage(title, extended, date, editionNumber, appendixHtml);
+  const text = buildTelegramMessage(
+    title,
+    extended,
+    date,
+    editionNumber,
+    appendixHtml,
+    null,
+    recapRollout,
+  );
   await postTelegramMessage(text, creds);
   logWorkerEventArgs("lib", "info", `[telegram] Posted digest (${text.length} chars)`);
 }

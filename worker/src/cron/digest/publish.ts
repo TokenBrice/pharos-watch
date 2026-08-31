@@ -10,6 +10,7 @@ import {
   checkDigestSafetyContextForDelivery,
 } from "../../lib/digest-safety-context";
 import type { TelegramCreds } from "../../lib/telegram";
+import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { TelegramDigestSuccessAction } from "../../lib/telegram-digest-appendices";
 import {
   deliverTelegramDigestEdition,
@@ -21,6 +22,7 @@ import {
   TwitterDigestLedgerPersistenceError,
 } from "../../lib/twitter-digest-ledger";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { tryParseJson } from "../../lib/json-parse";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import {
@@ -43,14 +45,14 @@ export interface DigestCredentialDiagnostics {
   telegramMissing?: readonly string[];
 }
 
-interface DigestTwitterPublication {
+export interface DigestTwitterPublication {
   creds: TwitterCreds | null;
   markerKey: string;
   required?: boolean;
   missingCredentialNames?: readonly string[];
 }
 
-interface DigestTelegramPublication {
+export interface DigestTelegramPublication {
   creds: TelegramCreds | null;
   editionKey: string;
   title?: string;
@@ -62,10 +64,51 @@ interface DigestTelegramPublication {
     content: string;
   }[];
   successActions?: readonly TelegramDigestSuccessAction[];
+  /**
+   * Runtime rollout policy gating the private `/recap` CTA. Omitted or null
+   * means no CTA, which is the correct fail-closed default: the command is
+   * private-chat only and gated, so advertising it to a channel whose audience
+   * cannot use it would be worse than staying silent.
+   */
+  recapRollout?: TelegramRecapRolloutPolicy | null;
   required?: boolean;
   missingCredentialNames?: readonly string[];
   successStatus?: string;
   alreadySentStatus?: string;
+}
+
+/** Keep credential-gated channel shape construction out of each edition path. */
+export function buildDigestTwitterPublication(
+  creds: TwitterCreds | null,
+  markerKey: string,
+  missingCredentialNames?: readonly string[],
+): DigestTwitterPublication | null {
+  if (!creds && missingCredentialNames == null) return null;
+  return {
+    creds,
+    markerKey,
+    required: missingCredentialNames != null,
+    missingCredentialNames,
+  };
+}
+
+type DigestTelegramPublicationOptions = Omit<
+  DigestTelegramPublication,
+  "creds" | "required" | "missingCredentialNames"
+>;
+
+export function buildDigestTelegramPublication(
+  creds: TelegramCreds | null,
+  missingCredentialNames: readonly string[] | undefined,
+  options: DigestTelegramPublicationOptions,
+): DigestTelegramPublication | null {
+  if (!creds && missingCredentialNames == null) return null;
+  return {
+    creds,
+    ...options,
+    required: missingCredentialNames != null,
+    missingCredentialNames,
+  };
 }
 
 interface DigestEditionDeliveryInput {
@@ -75,7 +118,13 @@ interface DigestEditionDeliveryInput {
   deliveryAt?: number;
   digestDate: string;
   editionNumber: number | null;
-  copy: { title: string; text: string; extended: string };
+  /**
+   * `meta` carries the model's declared editorial choices as a JSON string.
+   * Twitter uses `meta.leadSignalId` to prefer the edition's actual subject
+   * when choosing which single tracked ticker gets the `$` cashtag, instead of
+   * tagging whichever ticker happens to appear first.
+   */
+  copy: { title: string; text: string; extended: string; meta?: string | null };
   safetyContext: DigestSafetyContext | null;
   qualityGateStatus: string | null;
   degradedReasons: string[];
@@ -199,6 +248,7 @@ export async function deliverDigestEdition(
             input.editionNumber,
             map?.imageUrl ?? null,
             mapCaptions?.tweetHook ?? null,
+            tryParseJson(input.copy.meta, { onFailure: () => undefined }) ?? undefined,
           ),
           input.signal,
         );
@@ -250,6 +300,7 @@ export async function deliverDigestEdition(
         mapAppendixHtml: htmlSections.join("\n\n") || null,
         successActions: input.telegram.successActions ?? [],
         safetyContext: input.safetyContext ?? unavailableSafetyContext(),
+        recapRollout: input.telegram.recapRollout ?? null,
       }, input.signal);
       if (!enqueueResult.payloadMatched && enqueueResult.state !== "sent") {
         input.degradedReasons.push("telegram-outbox-payload-mismatch");

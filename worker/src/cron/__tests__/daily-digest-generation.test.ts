@@ -71,13 +71,18 @@ const VALID_MAP_SUMMARY = {
   ],
 };
 
-const VALID_MAP_TWEET_HOOK = "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.";
 const VALID_MAP_TELEGRAM_APPENDIX = [
   "<b>Today’s map</b>",
   "Mapped supply: $100B across 318 coins",
   "A tier: 13 coins · 81.8%",
   "C/D/F tiers: 264 coins · 11.2%",
 ].join("\n");
+
+// Matches the current-freshness branch of buildDigestSafetyMapCaptions: the
+// hook is a short pointer because the map image is already attached, and the
+// full tier census lives in the Telegram appendix above rather than in the
+// 270-character tweet budget.
+const VALID_MAP_TWEET_HOOK = "See the map.";
 
 const SAFETY_FREE_ANTHROPIC_TEXT = ANTHROPIC_OK_TEXT.replace(
   "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read.",
@@ -108,7 +113,16 @@ function mockAnthropicStreamResponse(text: string): Response {
   const events: Array<{ event: string; data: unknown }> = [
     {
       event: "message_start",
-      data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } },
+      data: {
+        type: "message_start",
+        message: {
+          id: "msg_test",
+          role: "assistant",
+          model: "claude-opus-5",
+          content: [],
+          usage: { input_tokens: 1000, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+        },
+      },
     },
     {
       event: "content_block_start",
@@ -121,7 +135,7 @@ function mockAnthropicStreamResponse(text: string): Response {
     { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
     {
       event: "message_delta",
-      data: { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null } },
+      data: { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 500 } },
     },
     { event: "message_stop", data: { type: "message_stop" } },
   ];
@@ -134,6 +148,34 @@ function mockAnthropicStreamResponse(text: string): Response {
     },
   });
   return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
+function mockAnthropicRefusalResponse(): Response {
+  const events: Array<{ event: string; data: unknown }> = [
+    {
+      event: "message_start",
+      data: {
+        type: "message_start",
+        message: { model: "claude-opus-5", usage: { input_tokens: 100 } },
+      },
+    },
+    {
+      event: "message_delta",
+      data: {
+        type: "message_delta",
+        delta: {
+          stop_reason: "refusal",
+          stop_details: { type: "refusal", category: "general_harms" },
+        },
+        usage: { output_tokens: 7 },
+      },
+    },
+    { event: "message_stop", data: { type: "message_stop" } },
+  ];
+  return new Response(
+    events.map((event) => `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`).join(""),
+    { status: 200, headers: { "Content-Type": "text/event-stream" } },
+  );
 }
 
 const commitTelegramAppendices = vi.fn(async () => undefined);
@@ -173,6 +215,7 @@ describe("generateDailyDigest", () => {
       .mockReset()
       .mockResolvedValue(baselineScenario.deliveryMocks.appendices);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+    vi.mocked(recordOutcomeSafe).mockReset().mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -221,6 +264,28 @@ describe("generateDailyDigest", () => {
     expect(insertBinds).toBeDefined();
     expect(insertBinds?.[1]).toBe("USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.");
     expect(insertBinds?.[2]).toBe("Calm Drift");
+    expect(JSON.parse(String(insertBinds?.[5]))).toMatchObject({
+      llm: {
+        model: "claude-opus-5",
+        effort: "xhigh",
+        maxTokens: 16000,
+        attempts: [{
+          attemptNumber: 1,
+          requestKind: "original",
+          httpAttempt: 1,
+          requestedModel: "claude-opus-5",
+          servedModel: "claude-opus-5",
+          inputTokens: 1000,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          outputTokens: 500,
+          stopReason: "end_turn",
+          refusalCategory: null,
+          costUsd: 0.0175,
+          httpStatus: 200,
+        }],
+      },
+    });
 
     const storedInput = JSON.parse(String(insertBinds?.[3])) as {
       aggregateUniverse?: string;
@@ -232,6 +297,12 @@ describe("generateDailyDigest", () => {
       nextTriggers?: unknown[];
       calmNarrativeFrame?: { label: string };
       editorialAudit?: { leadCandidateId?: string | null; usedCandidateIds?: string[] };
+      safetyMap?: {
+        imageUrl: string;
+        freshness: string;
+        ageDays: number;
+        manifest: { date: string; mapSummary: typeof VALID_MAP_SUMMARY };
+      };
     };
     expect(storedInput.totalMcapUsd).toBe(160_000_000);
     expect(storedInput.aggregateUniverse).toBe("core-stablecoins-v1");
@@ -243,6 +314,17 @@ describe("generateDailyDigest", () => {
     expect(storedInput.calmNarrativeFrame?.label).toBeTruthy();
     expect(storedInput.editorialAudit?.leadCandidateId).toBe("depeg:usdt-tether:active");
     expect(storedInput.editorialAudit?.usedCandidateIds).toEqual(["depeg:usdt-tether:active"]);
+    expect(storedInput.safetyMap).toMatchObject({
+      imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+      freshness: "current",
+      ageDays: 0,
+      manifest: { date: "2026-03-06", mapSummary: VALID_MAP_SUMMARY },
+    });
+    const anthropicBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    expect(anthropicBody.messages[0].content).toContain("Safety Map census (current; depicts 2026-03-06 UTC)");
+    expect(anthropicBody.messages[0].content).toContain("A tier: 13 coins, 81.8% of mapped supply");
 
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(postDigestTweet).toHaveBeenCalledWith(
@@ -252,6 +334,7 @@ describe("generateDailyDigest", () => {
       expect.any(Number),
       "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
       VALID_MAP_TWEET_HOOK,
+      expect.any(Object),
     );
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
@@ -275,12 +358,8 @@ describe("generateDailyDigest", () => {
         method: "POST",
         headers: expect.objectContaining({ "x-api-key": "anthropic-key" }),
       }),
-      // Digest-specific retry cap + per-attempt timeout. The outer
-      // AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS) caps total wall time; these
-      // inner values bound individual attempts so a stalled retry cannot
-      // consume the whole budget.
-      2,
-      { timeoutMs: 11 * 60_000 },
+      0,
+      { timeoutMs: 11 * 60_000, returnFinalResponse: true },
     );
   });
 
@@ -292,6 +371,7 @@ describe("generateDailyDigest", () => {
       max_tokens: number;
       thinking?: { type: string };
       output_config?: { effort: string };
+      fallbacks?: string;
       system: string;
       messages: { content: string }[];
       stream?: boolean;
@@ -299,7 +379,8 @@ describe("generateDailyDigest", () => {
     expect(anthropicBody.model).toBe(DIGEST_MODEL);
     expect(anthropicBody.thinking).toEqual({ type: "adaptive" });
     expect(anthropicBody.output_config).toEqual({ effort: "xhigh" });
-    expect(anthropicBody.max_tokens).toBe(64000);
+    expect(anthropicBody.max_tokens).toBe(16000);
+    expect(anthropicBody.fallbacks).toBe("default");
     // Streaming keeps the CF subrequest alive while Opus 4.7 thinks for minutes.
     expect(anthropicBody.stream).toBe(true);
     expect(anthropicBody.messages[0].content).toContain("Data quality notes:");
@@ -321,6 +402,11 @@ describe("generateDailyDigest", () => {
     const userPrompt = anthropicBody.messages[0].content;
     expect(userPrompt).not.toContain("Distribution: median");
     expect(userPrompt).not.toMatch(/\d+ above B/);
+    expect(userPrompt).not.toContain("Safety Map census");
+    const storedInput = JSON.parse(String(getInsertDigestBinds(baselineScenario.db as MockD1Database)?.[3])) as {
+      safetyMap?: unknown;
+    };
+    expect(storedInput.safetyMap).toBeUndefined();
   });
 
   it("keeps soft-only digest quality issues out of cron degraded status", async () => {
@@ -395,6 +481,14 @@ describe("generateDailyDigest", () => {
     expect(insertBinds?.[1]).toBe("USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.");
     expect(insertBinds?.[2]).toBe("Calm Drift");
     expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(insertBinds?.[5]))).toMatchObject({
+      llm: {
+        attempts: [
+          { attemptNumber: 1, requestKind: "original", httpAttempt: 1 },
+          { attemptNumber: 2, requestKind: "corrective", httpAttempt: 1 },
+        ],
+      },
+    });
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[daily-digest] Failed to parse digest model response"),
     );
@@ -424,14 +518,32 @@ describe("generateDailyDigest", () => {
   });
 
   it("includes bounded Anthropic error body text when generation fails before streaming", async () => {
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("anthropic overloaded", { status: 529 }));
+    vi.mocked(fetchWithRetry).mockImplementation(async () => new Response("anthropic overloaded", { status: 529 }));
     const db = baselineScenario.db;
 
-    await expect(generateDailyDigest(db, "anthropic-key")).rejects.toThrow(
+    const generation = expect(generateDailyDigest(db, "anthropic-key")).rejects.toThrow(
       "Claude API error 529: anthropic overloaded",
     );
+    await vi.runAllTimersAsync();
+    await generation;
 
     expect(recordOutcomeSafe).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.ANTHROPIC, false);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not publish or damage the circuit when Anthropic refuses", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(mockAnthropicRefusalResponse());
+    const db = baselineScenario.db;
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+
+    expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(result.metadata).toContain('"skipped":"anthropic-refusal"');
+    expect(result.metadata).toContain('"refusalCategory":"general_harms"');
+    expect(getInsertDigestBinds(db as MockD1Database)).toBeUndefined();
+    expect(postDigestTweet).not.toHaveBeenCalled();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(recordOutcomeSafe).not.toHaveBeenCalled();
   });
 
   it("skips generation when a recent valid digest already exists", async () => {
@@ -548,6 +660,7 @@ describe("generateDailyDigest", () => {
       editorialAudit?: { qualityIssueCodes?: string[] };
     };
     expect(storedInput.safetyScores).toBeUndefined();
+    expect((storedInput as { safetyMap?: unknown }).safetyMap).toBeUndefined();
     expect(storedInput.safetyContext).toMatchObject({
       status: "unavailable",
       expectedModel: "v9",
@@ -557,6 +670,12 @@ describe("generateDailyDigest", () => {
     expect(storedInput.editorialAudit).toMatchObject({
       qualityIssueCodes: expect.arrayContaining(["unbound-safety-copy"]),
     });
+    const anthropicBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    expect(anthropicBody.messages[0].content).not.toContain("Safety Map census");
+    expect(anthropicBody.messages[0].content).not.toContain("mapped supply");
+    expect(anthropicBody.messages[0].content).not.toMatch(/\bmap\b/i);
     expect(result.metadata).toContain("unbound-safety-copy");
     expect(fetchWithRetry).toHaveBeenCalledTimes(2);
     expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
@@ -822,6 +941,7 @@ describe("generateDailyDigest", () => {
       expect.any(Number),
       null,
       null,
+      expect.any(Object),
     );
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
       db,
@@ -853,6 +973,7 @@ describe("generateDailyDigest", () => {
       expect.any(Number),
       null,
       null,
+      expect.any(Object),
     );
     expect(enqueueTelegramDigestEdition).toHaveBeenCalled();
   });
@@ -860,13 +981,16 @@ describe("generateDailyDigest", () => {
   it("resumes stored-edition delivery with the map attached", async () => {
     const db = mockD1([
       {
-        match: "SELECT generated_at, digest_text, digest_title, digest_extended, input_data FROM daily_digest",
+        match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest",
         rows: [],
         first: {
           generated_at: 1_772_798_400,
           digest_text: "Stored digest body.",
           digest_title: "Stored Title",
           digest_extended: "Stored extended body.",
+          // Resume threads the stored meta so a resumed delivery picks the same
+          // subject-aware cashtag the original send would have.
+          digest_meta: JSON.stringify({ leadSignalId: "depeg:usdt-tether:active", lead: "depeg", coins: ["USDT"] }),
           input_data: JSON.stringify({ totalMcapUsd: 100e9 }),
         },
       },
@@ -907,13 +1031,14 @@ describe("generateDailyDigest", () => {
       187,
       "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
       null,
+      expect.any(Object),
     );
     expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
   it("reports an unresolved resume when no publishable digest row exists today", async () => {
     const db = mockD1([
-      { match: "SELECT generated_at, digest_text, digest_title, digest_extended, input_data FROM daily_digest", rows: [], first: null },
+      { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: null },
     ]);
 
     const result = await resumeDailyDigestDelivery(
@@ -974,6 +1099,7 @@ describe("generateDailyDigest", () => {
       expect.any(Number),
       "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
       null,
+      expect.any(Object),
     );
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
       db,

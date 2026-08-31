@@ -288,6 +288,24 @@ describe("Telegram digest outbox", () => {
       .toMatchObject({ value: "edition-42" });
   });
 
+  it("persists the rollout-gated recap CTA inside the immutable text payload", async () => {
+    const { sqlite, db } = createHarness();
+    const enqueued = await enqueueDaily(db, {
+      recapRollout: { mode: "public", allowedChatIds: new Set() },
+    });
+    expect(enqueued.chunks.join("\n")).toContain("private /recap");
+
+    const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
+    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+
+    expect(result).toMatchObject({ outcome: "sent", chunksSent: 1 });
+    expect(fetchMock.mock.calls).toHaveLength(1);
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
+    expect(payload.reply_markup).toBeUndefined();
+    expect(loadEdition(sqlite)).toMatchObject({ state: "sent", next_chunk_index: 1 });
+    expect(JSON.parse(loadEdition(sqlite).payload_chunks_json)[0]).toContain("private /recap");
+  });
+
   it("honors Telegram retry_after and retries the identical stored payload", async () => {
     const { sqlite, db } = createHarness();
     await enqueueDaily(db);

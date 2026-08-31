@@ -6,6 +6,7 @@ let fetchSpy = mockFetch([], { requireMatch: true });
 const {
   answerCallbackQuery,
   answerInlineQuery,
+  buildTelegramRecapCta,
   buildTelegramMessage,
   editMessage,
   postDigestToTelegram,
@@ -42,6 +43,23 @@ describe("sendToChat", () => {
       "Telegram API 403:",
     );
     expect(response.bodyUsed).toBe(true);
+  });
+
+  it("posts a rollout-gated private recap CTA when requested", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    await postDigestToTelegram(
+      "Daily Digest",
+      "PSI held steady.",
+      "2026-03-21",
+      digestCreds,
+      null,
+      null,
+      { mode: "public", allowedChatIds: new Set() },
+    );
+
+    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string) as { text: string };
+    expect(body.text).toContain("private /recap");
   });
 
   it("sends HTML message and returns ok", async () => {
@@ -81,6 +99,43 @@ describe("sendToChat", () => {
     );
     expect(body).toContain("<b>Today’s map</b>");
     expect(body).not.toContain("View today’s map");
+  });
+
+  it("keeps the map summary next to the map bubble and isolates standing context", () => {
+    const body = buildTelegramMessage(
+      "Daily Digest",
+      "The lead moved first.\n\nStanding: USX d3 250bps",
+      "2026-03-21",
+      12,
+      "<b>Tracking Changes</b>\n\n<blockquote expandable><code>USDX</code> Example USD</blockquote>",
+      "<b>Today’s map</b>\nMapped supply: $100B across 318 coins\nA tier: 13 coins · 81.8%\nC/D/F tiers: 264 coins · 11.2%",
+    );
+
+    expect(body.indexOf("<b>Today’s map</b>")).toBeLessThan(body.indexOf("Pharos Daily Digest #12"));
+    expect(body).toContain("<blockquote expandable>Standing: USX d3 250bps</blockquote>");
+    expect(body).not.toContain("The lead moved first.\n\nStanding:");
+    expect(body.indexOf("<blockquote expandable>Standing:")).toBeLessThan(body.indexOf("<b>Tracking Changes</b>"));
+  });
+
+  it("only advertises the private recap CTA in public rollout", () => {
+    const publicPolicy = { mode: "public" as const, allowedChatIds: new Set<string>() };
+    const canaryPolicy = { mode: "canary" as const, allowedChatIds: new Set(["channel-1"]) };
+
+    expect(buildTelegramRecapCta(publicPolicy)).toBe(
+      '<a href="https://t.me/PharosWatchBot">Open @PharosWatchBot for a private /recap →</a>',
+    );
+    expect(buildTelegramRecapCta(canaryPolicy)).toBeNull();
+    expect(buildTelegramRecapCta({ mode: "dark", allowedChatIds: new Set() })).toBeNull();
+    expect(buildTelegramRecapCta({ mode: "off", allowedChatIds: new Set() })).toBeNull();
+    expect(buildTelegramRecapCta(undefined)).toBeNull();
+
+    const publicBody = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null, null, null, publicPolicy);
+    const offBody = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null, null, null, {
+      mode: "off",
+      allowedChatIds: new Set(),
+    });
+    expect(publicBody).toContain("private /recap");
+    expect(offBody).not.toContain("private /recap");
   });
 
   it("returns blocked: true on 403", async () => {

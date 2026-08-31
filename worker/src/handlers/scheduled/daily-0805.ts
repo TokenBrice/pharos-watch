@@ -17,6 +17,7 @@ import {
 } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
+import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 const SLOT_LABEL = "daily 08:05 slot";
 
@@ -40,6 +41,10 @@ function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext) {
             twitterMissing: missingTwitterCredentialNames(runtime.env),
             telegramMissing: missingTelegramCredentialNames(runtime.env),
           },
+          // `undefined` keeps the checked-in daily LLM defaults; only the weekly
+          // leg takes runtime overrides today.
+          undefined,
+          resolveTelegramRecapRolloutPolicy(runtime.env),
         ),
     },
   });

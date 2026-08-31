@@ -99,6 +99,12 @@ Current peg, DEWS band, and safety grade for one coin — no subscription needed
 <code>/brief</code>
 Latest market brief from the daily digest inputs
 
+<code>/recap</code>
+Show your private daily watchlist recap status and controls (private chat only)
+
+<code>/recap on</code> / <code>/recap off</code> / <code>/recap time &lt;0-23&gt;</code>
+Enable, disable, or schedule the private daily recap
+
 <code>/top &lt;view&gt;</code>
 Rank current views: depeg, dews, yield, liquidity, chains, or safety
 

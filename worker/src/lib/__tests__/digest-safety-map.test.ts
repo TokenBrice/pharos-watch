@@ -144,8 +144,9 @@ describe("digest Safety Score map resolution", () => {
     expect(result.kind).toBe("available");
     if (result.kind !== "available") return;
 
-    expect(buildDigestSafetyMapCaptions(result.manifest.mapSummary, "current", 0)).toEqual({
-      tweetHook: "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.",
+    const captions = buildDigestSafetyMapCaptions(result.manifest.mapSummary, "current", 0);
+    expect(captions).toEqual({
+      tweetHook: "See the map.",
       telegramAppendixHtml: [
         "<b>Today’s map</b>",
         "Mapped supply: $100B across 318 coins",
@@ -153,13 +154,14 @@ describe("digest Safety Score map resolution", () => {
         "C/D/F tiers: 264 coins · 11.2%",
       ].join("\n"),
     });
+    expect(captions?.tweetHook.length).toBeLessThan(60);
   });
 
   it("labels a carried-forward caption with the map's actual date", () => {
     const summary = mapSummary({ date: "2026-04-24" });
 
     expect(buildDigestSafetyMapCaptions(summary, "carried-forward", 1)).toEqual({
-      tweetHook: "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on the 24 Apr map.",
+      tweetHook: "See the 24 Apr map.",
       telegramAppendixHtml: [
         "<b>24 Apr map</b>",
         "Mapped supply: $100B across 318 coins",
@@ -167,6 +169,12 @@ describe("digest Safety Score map resolution", () => {
         "C/D/F tiers: 264 coins · 11.2%",
       ].join("\n"),
     });
+  });
+
+  it("emits no captions without a valid mapped summary", () => {
+    expect(buildDigestSafetyMapCaptions(undefined, "current", 0)).toBeNull();
+    expect(buildDigestSafetyMapCaptions(mapSummary({ totalMcapUsd: 0 }), "current", 0)).toBeNull();
+    expect(buildDigestSafetyMapCaptions(mapSummary({ tiers: [] }), "current", 0)).toBeNull();
   });
 
   it.each([
