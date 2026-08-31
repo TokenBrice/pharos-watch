@@ -104,7 +104,10 @@ describe("check-cron-connection-budget", () => {
       },
     ]);
     expect(halfHourlyCharts?.totalConnections).toBe(3);
-    expect(report.fetchCapableEntryCount).toBe(32);
+    // 33 since digest-publication-watchdog joined the status lane: it probes the
+    // Safety Score map manifest, so it is fetch-capable even though its
+    // publication assertions are D1-only.
+    expect(report.fetchCapableEntryCount).toBe(33);
     expect(report.failed).toBe(false);
   });
 

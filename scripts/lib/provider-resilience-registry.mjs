@@ -220,18 +220,23 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
   {
     id: "digest-safety-map-readiness",
     family: "provider-transport",
-    description: "Daily digest Safety Score map manifest and dated-image readiness probes.",
-    files: ["worker/src/lib/digest-safety-map.ts", "worker/src/cron/daily-digest.ts"],
+    description: "Digest Safety Score map manifest and dated-image readiness probes.",
+    files: [
+      "worker/src/lib/digest-safety-map.ts",
+      "worker/src/cron/digest/publish.ts",
+      "worker/src/cron/digest-publication-watchdog.ts",
+    ],
     tests: [
       "worker/src/lib/__tests__/digest-safety-map.test.ts",
       "worker/src/cron/__tests__/daily-digest-generation.test.ts",
+      "worker/src/cron/__tests__/digest-publication-watchdog.test.ts",
     ],
     allowBareFetch: true,
     directFetchJustification:
-      "The same-owned Pages publication is a required digest attachment: reads are globally time-bounded, response bodies are consumed or cancelled, and an unready map defers the digest edition (withhold-retry-resume) instead of retrying inline or publishing without it.",
+      "The same-owned Pages publication is an optional digest attachment: reads are time-bounded per phase, response bodies are consumed or cancelled, and an unready map is carried forward within a bounded window or simply omitted. It never blocks or defers the edition, per the safety-map hard rule in docs/doc-ownership.json.",
     resilience: {
       transport: "direct-fetch",
-      timeout: "Uses one composed three-second AbortSignal across the manifest GET and dated-image HEAD probe.",
+      timeout: "Uses independent eight-second AbortSignal budgets for the manifest GET and the dated-image HEAD probe, plus a bounded probe in the publication watchdog.",
       body: "Reads the manifest through a bounded response helper and cancels unsuccessful or bodyless image responses.",
       circuitSources: [],
     },
@@ -240,14 +245,17 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "readResponseTextBoundedWithSignal",
       "body?.cancel",
       "resolveDigestSafetyMap",
-      "daily_digest_safety_map_deferred",
     ],
   },
   {
     id: "twitter-digest-delivery",
     family: "twitter",
     description: "Twitter/X daily digest delivery.",
-    files: ["worker/src/lib/twitter.ts", "worker/src/cron/digest/platform.ts", "worker/src/cron/daily-digest.ts"],
+    files: [
+      "worker/src/lib/twitter.ts",
+      "worker/src/cron/digest/platform.ts",
+      "worker/src/cron/digest/publish.ts",
+    ],
     tests: ["worker/src/lib/__tests__/twitter.test.ts", "worker/src/cron/__tests__/daily-digest.test.ts"],
     allowBareFetch: true,
     directFetchJustification:
