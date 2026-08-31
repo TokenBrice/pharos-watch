@@ -3,7 +3,7 @@ import { executeAtomicBatch } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseJson } from "./json-parse";
-import { buildTelegramMessage, sendToChat, type TelegramCreds } from "./telegram";
+import { buildTelegramMessage, sendPhotoToChat, sendToChat, type TelegramCreds } from "./telegram";
 import { splitMessage } from "./telegram-alerts";
 import type { TelegramDigestSuccessAction } from "./telegram-digest-appendices";
 import {
@@ -29,9 +29,10 @@ const TELEGRAM_DIGEST_OUTBOX_DRAIN_LIMIT = 4;
 const TELEGRAM_DIGEST_OUTBOX_SENT_RETENTION_SEC = 90 * 86_400;
 const TELEGRAM_DIGEST_OUTBOX_MAX_SUCCESS_ACTIONS = 20;
 const TELEGRAM_DIGEST_OUTBOX_MAX_BACKOFF_SEC = 60 * 60;
-const SAFETY_MAP_URL_PATTERN = /https:\/\/pharos\.watch\/safety-scores\/map\.png\?date=\d{4}-\d{2}-\d{2}/;
+const SAFETY_MAP_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export type TelegramDigestKind = "daily" | "weekly";
+export type TelegramDigestMediaState = "none" | "pending" | "sent";
 export type TelegramDigestOutboxState =
   | "pending"
   | "sending"
@@ -47,6 +48,9 @@ interface TelegramDigestOutboxRow {
   payload_chunks_json: string;
   success_actions_json: string;
   safety_context_json: string;
+  map_image_url: string | null;
+  map_date: string | null;
+  media_state: TelegramDigestMediaState;
   state: TelegramDigestOutboxState;
   next_chunk_index: number;
   attempts: number;
@@ -77,7 +81,8 @@ export interface EnqueueTelegramDigestEditionInput {
   date: string;
   editionNumber?: number | null;
   appendixHtml?: string | null;
-  imageUrl?: string | null;
+  mapImageUrl?: string | null;
+  mapDate?: string | null;
   mapAppendixHtml?: string | null;
   successActions?: readonly TelegramDigestSuccessAction[];
   safetyContext: DigestSafetyContext;
@@ -202,7 +207,8 @@ async function loadEdition(
     db
       .prepare(
         `SELECT edition_key, digest_kind, digest_generated_at, target_chat_id,
-                payload_chunks_json, success_actions_json, safety_context_json, state, next_chunk_index,
+                payload_chunks_json, success_actions_json, safety_context_json,
+                map_image_url, map_date, media_state, state, next_chunk_index,
                 attempts, next_attempt_at, delivery_owner, delivery_generation,
                 delivery_claim_expires_at, last_error_class, last_status_code
            FROM telegram_digest_outbox
@@ -219,8 +225,18 @@ export async function enqueueTelegramDigestEdition(
   signal?: AbortSignal,
 ): Promise<EnqueueTelegramDigestEditionResult> {
   throwIfAborted(signal);
-  const expectedImageUrl = `${SITE_ORIGIN}/safety-scores/map.png?date=${encodeURIComponent(input.date)}`;
-  if (input.imageUrl && input.imageUrl !== expectedImageUrl) {
+  const mapImageUrl = input.mapImageUrl ?? null;
+  const mapDate = input.mapDate ?? null;
+  if ((mapImageUrl == null) !== (mapDate == null)) {
+    throw new Error("Telegram digest map image URL and map date must be provided together");
+  }
+  if (mapDate != null && !SAFETY_MAP_DATE_PATTERN.test(mapDate)) {
+    throw new Error("Telegram digest map date must use YYYY-MM-DD");
+  }
+  const expectedImageUrl = mapDate == null
+    ? null
+    : `${SITE_ORIGIN}/safety-scores/map.png?date=${encodeURIComponent(mapDate)}`;
+  if (mapImageUrl != null && mapImageUrl !== expectedImageUrl) {
     throw new Error("Telegram digest image URL must be the canonical dated Safety Score map");
   }
   const rendered = buildTelegramMessage(
@@ -229,7 +245,6 @@ export async function enqueueTelegramDigestEdition(
     input.date,
     input.editionNumber,
     input.appendixHtml,
-    input.imageUrl,
     input.mapAppendixHtml,
   );
   const chunks = splitMessage(rendered);
@@ -238,10 +253,7 @@ export async function enqueueTelegramDigestEdition(
   const safetyContext = DigestSafetyContextSchema.parse(input.safetyContext);
   const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
     safetyContext,
-    // The independently freshness-gated map publication is allowed even when
-    // the authored digest copy omitted Safety Score claims. Remove only the
-    // exact canonical URL; all human-readable copy remains under this guard.
-    { extended: input.imageUrl ? rendered.replace(input.imageUrl, "") : rendered },
+    { extended: rendered },
   );
   if (unboundSafetyClaimMarkers.length > 0) {
     throw new Error(
@@ -255,9 +267,10 @@ export async function enqueueTelegramDigestEdition(
       .prepare(
         `INSERT OR IGNORE INTO telegram_digest_outbox (
            edition_key, digest_kind, digest_generated_at, target_chat_id,
-           payload_chunks_json, success_actions_json, safety_context_json, state, next_attempt_at,
+           payload_chunks_json, success_actions_json, safety_context_json,
+           map_image_url, map_date, media_state, state, next_attempt_at,
            created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
       )
       .bind(
         input.editionKey,
@@ -267,6 +280,9 @@ export async function enqueueTelegramDigestEdition(
         payloadJson,
         successActionsJson,
         safetyContextJson,
+        mapImageUrl,
+        mapDate,
+        mapImageUrl == null ? "none" : "pending",
         nowSec,
         nowSec,
         nowSec,
@@ -281,6 +297,8 @@ export async function enqueueTelegramDigestEdition(
   const payloadMatched = row.payload_chunks_json === payloadJson
     && row.success_actions_json === successActionsJson
     && row.safety_context_json === safetyContextJson
+    && row.map_image_url === mapImageUrl
+    && row.map_date === mapDate
     && row.target_chat_id === input.targetChatId;
   if (!payloadMatched) {
     logWorkerEvent({ scope: "lib", level: "warn", event: "telegram_digest_immutable_edition_preserved", message: "Preserving immutable existing Telegram digest edition", metadata: { editionKey: input.editionKey } });
@@ -559,6 +577,48 @@ async function advanceAcceptedChunk(
   }
 }
 
+async function advanceAcceptedMedia(
+  db: D1Database,
+  claim: TelegramDigestOutboxClaim,
+  nowSec: number,
+): Promise<void> {
+  try {
+    const result = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `UPDATE telegram_digest_outbox
+              SET media_state = 'sent',
+                  delivery_claim_expires_at = ?,
+                  updated_at = ?
+            WHERE edition_key = ?
+              AND state = 'sending'
+              AND delivery_owner = ?
+              AND delivery_generation = ?
+              AND media_state = 'pending'`,
+        )
+        .bind(
+          nowSec + TELEGRAM_DIGEST_OUTBOX_CLAIM_TTL_SEC,
+          nowSec,
+          claim.row.edition_key,
+          claim.owner,
+          claim.generation,
+        )
+        .run(),
+    );
+    if (Number(result.meta?.changes ?? 0) !== 1) {
+      throw new Error("owner or media state changed");
+    }
+  } catch (error) {
+    await bestEffortMarkExecutionUnknown(
+      db,
+      claim,
+      nowSec,
+      `accepted_media_persistence_failed:${toErrorMessage(error).slice(0, 120)}`,
+    );
+    throw error;
+  }
+}
+
 async function finalizeSentEdition(
   db: D1Database,
   claim: TelegramDigestOutboxClaim,
@@ -606,6 +666,7 @@ async function finalizeSentEdition(
             AND state = 'sending'
             AND delivery_owner = ?
             AND delivery_generation = ?
+            AND media_state IN ('none', 'sent')
             AND next_chunk_index = ?`,
       )
       .bind(
@@ -692,10 +753,9 @@ export async function deliverTelegramDigestEdition(
   }
 
   const storedCopy = claim.chunks.join("\n");
-  const safetyMapUrl = storedCopy.match(SAFETY_MAP_URL_PATTERN)?.[0];
   const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
     claim.safetyContext,
-    { extended: safetyMapUrl ? storedCopy.replace(safetyMapUrl, "") : storedCopy },
+    { extended: storedCopy },
   );
   if (unboundSafetyClaimMarkers.length > 0) {
     const errorClass = `unbound_safety_copy:${unboundSafetyClaimMarkers.join(",")}`;
@@ -742,21 +802,71 @@ export async function deliverTelegramDigestEdition(
     });
   }
 
+  if (claim.row.media_state === "pending") {
+    if (claim.row.map_image_url == null || claim.row.map_date == null) {
+      const errorClass = "invalid_pending_media";
+      await markPermanentFailure(db, claim, nowSec, errorClass, null);
+      return buildDeliveryResult(claim, "failed_permanent", "failed_permanent", {
+        chunksSent: 0,
+        nextChunkIndex: claim.row.next_chunk_index,
+        errorClass,
+      });
+    }
+    throwIfAborted(signal);
+    const photoResult = await sendPhotoToChat(
+      claim.row.target_chat_id,
+      claim.row.map_image_url,
+      `<b>Safety Score map · ${claim.row.map_date}</b>`,
+      creds.botToken,
+      { signal },
+    );
+    const completedAt = Math.floor(Date.now() / 1000);
+    if (photoResult.ok) {
+      await advanceAcceptedMedia(db, claim, completedAt);
+    } else {
+      const errorClass = photoResult.errorClass ?? "unknown";
+      if (photoResult.statusCode == null) {
+        await markExecutionUnknown(db, claim, completedAt, errorClass, null);
+        return buildDeliveryResult(claim, "execution_unknown", "execution_unknown", {
+          chunksSent: 0,
+          nextChunkIndex: claim.row.next_chunk_index,
+          errorClass,
+        });
+      }
+      if (photoResult.retryable) {
+        await returnToPending(
+          db,
+          claim,
+          completedAt,
+          errorClass,
+          photoResult.statusCode,
+          photoResult.retryAfterSec,
+        );
+        return buildDeliveryResult(claim, "pending", "pending", {
+          chunksSent: 0,
+          nextChunkIndex: claim.row.next_chunk_index,
+          errorClass,
+          retryAfterSec: photoResult.retryAfterSec,
+        });
+      }
+      await markPermanentFailure(db, claim, completedAt, errorClass, photoResult.statusCode);
+      return buildDeliveryResult(claim, "failed_permanent", "failed_permanent", {
+        chunksSent: 0,
+        nextChunkIndex: claim.row.next_chunk_index,
+        errorClass,
+      });
+    }
+  }
+
   let chunksSent = 0;
   for (let chunkIndex = claim.row.next_chunk_index; chunkIndex < claim.chunks.length; chunkIndex++) {
     throwIfAborted(signal);
     const chunk = claim.chunks[chunkIndex]!;
-    const safetyMapUrl = chunk.match(SAFETY_MAP_URL_PATTERN)?.[0];
     const result = await sendToChat(
       claim.row.target_chat_id,
       chunk,
       creds.botToken,
-      {
-        signal,
-        ...(safetyMapUrl
-          ? { linkPreviewOptions: { url: safetyMapUrl, prefer_large_media: true, show_above_text: true } }
-          : {}),
-      },
+      { signal },
     );
     const completedAt = Math.floor(Date.now() / 1000);
     if (result.ok) {

@@ -23,6 +23,9 @@ interface StoredEdition {
   payload_chunks_json: string;
   success_actions_json: string;
   safety_context_json: string;
+  map_image_url: string | null;
+  map_date: string | null;
+  media_state: string;
   state: string;
   next_chunk_index: number;
   attempts: number;
@@ -53,7 +56,8 @@ function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
 function loadEdition(sqlite: DatabaseSync, editionKey = "daily:2026-07-10"): StoredEdition {
   return sqlite
     .prepare(
-      `SELECT payload_chunks_json, success_actions_json, safety_context_json, state, next_chunk_index,
+      `SELECT payload_chunks_json, success_actions_json, safety_context_json,
+              map_image_url, map_date, media_state, state, next_chunk_index,
               attempts, next_attempt_at, delivery_owner, delivery_generation,
               last_error_class, last_status_code
          FROM telegram_digest_outbox
@@ -103,32 +107,154 @@ afterEach(() => {
 });
 
 describe("Telegram digest outbox", () => {
-  it("persists the dated map link and requests a large preview during delivery", async () => {
-    const { db } = createHarness();
-    const imageUrl = "https://pharos.watch/safety-scores/map.png?date=2026-07-10";
+  it("sends the dated map as a durable photo before the text chunks", async () => {
+    const { sqlite, db } = createHarness();
+    const mapImageUrl = "https://pharos.watch/safety-scores/map.png?date=2026-07-10";
     const mapAppendixHtml = [
       "<b>Today’s map</b>",
       "Mapped supply: $100B across 318 coins",
       "A tier: 13 coins · 81.8%",
       "C/D/F tiers: 264 coins · 11.2%",
     ].join("\n");
-    const enqueued = await enqueueDaily(db, { imageUrl, mapAppendixHtml });
+    const enqueued = await enqueueDaily(db, {
+      mapImageUrl,
+      mapDate: "2026-07-10",
+      mapAppendixHtml,
+    });
     expect(enqueued.chunks.join("\n")).toContain(mapAppendixHtml);
-    const fetchSpy = mockFetch([{
-      match: () => true,
-      respond: () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
-    }]);
+    expect(enqueued.chunks.join("\n")).not.toContain(mapImageUrl);
+    expect(loadEdition(sqlite)).toMatchObject({
+      map_image_url: mapImageUrl,
+      map_date: "2026-07-10",
+      media_state: "pending",
+      next_chunk_index: 0,
+    });
+    const mediaStatesAtFetch: string[] = [];
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    fetchSpy.mockImplementation(async (input) => {
+      mediaStatesAtFetch.push(loadEdition(sqlite).media_state);
+      if (String(input).endsWith("/sendMessage")) {
+        expect(loadEdition(sqlite)).toMatchObject({ media_state: "sent", next_chunk_index: 0 });
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
 
     const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
 
     expect(result).toMatchObject({ outcome: "sent", chunksSent: 1 });
-    const body = JSON.parse(String(fetchSpy.getHistory()[0]!.body));
-    expect(body.text).toContain(imageUrl);
-    expect(body.text.indexOf(mapAppendixHtml)).toBeLessThan(body.text.indexOf(imageUrl));
-    expect(body.link_preview_options).toEqual({
-      url: imageUrl,
-      prefer_large_media: true,
-      show_above_text: true,
+    expect(fetchSpy.mock.calls.map((call) => String(call[0]).split("/").pop())).toEqual([
+      "sendPhoto",
+      "sendMessage",
+    ]);
+    const photoBody = JSON.parse(String(fetchSpy.mock.calls[0]![1]?.body));
+    expect(photoBody).toMatchObject({
+      photo: mapImageUrl,
+      caption: "<b>Safety Score map · 2026-07-10</b>",
+      parse_mode: "HTML",
+    });
+    const textBody = JSON.parse(String(fetchSpy.mock.calls[1]![1]?.body));
+    expect(textBody.text).toContain(mapAppendixHtml);
+    expect(textBody.text).not.toContain(mapImageUrl);
+    expect(textBody.link_preview_options).toBeUndefined();
+    expect(mediaStatesAtFetch).toEqual(["pending", "sent"]);
+    expect(loadEdition(sqlite)).toMatchObject({ media_state: "sent", state: "sent", next_chunk_index: 1 });
+  });
+
+  it("keeps failed photo delivery retryable without advancing the text cursor", async () => {
+    const { sqlite, db } = createHarness();
+    const mapImageUrl = "https://pharos.watch/safety-scores/map.png?date=2026-07-09";
+    await enqueueDaily(db, { mapImageUrl, mapDate: "2026-07-09" });
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { ok: false, description: "server unavailable" }, status: 503 },
+        { body: { ok: true } },
+        { body: { ok: true } },
+      ],
+    }]);
+
+    const first = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+
+    expect(first).toMatchObject({
+      outcome: "pending",
+      chunksSent: 0,
+      nextChunkIndex: 0,
+      errorClass: "server_error",
+    });
+    expect(loadEdition(sqlite)).toMatchObject({
+      state: "pending",
+      media_state: "pending",
+      next_chunk_index: 0,
+      attempts: 1,
+    });
+
+    vi.setSystemTime(loadEdition(sqlite).next_attempt_at! * 1_000);
+    const retry = await drainTelegramDigestOutbox(db, creds);
+
+    expect(retry).toMatchObject({ due: 1, attempted: 1, sent: 1 });
+    expect(fetchMock.mock.calls.map((call) => String(call[0]).split("/").pop())).toEqual([
+      "sendPhoto",
+      "sendPhoto",
+      "sendMessage",
+    ]);
+    expect(loadEdition(sqlite)).toMatchObject({
+      state: "sent",
+      media_state: "sent",
+      next_chunk_index: 1,
+      attempts: 2,
+    });
+  });
+
+  it("does not resend a durably accepted photo when text delivery retries", async () => {
+    const { sqlite, db } = createHarness();
+    await enqueueDaily(db, {
+      mapImageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-07-10",
+      mapDate: "2026-07-10",
+    });
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { ok: true } },
+        { body: { ok: false, description: "server unavailable" }, status: 503 },
+        { body: { ok: true } },
+      ],
+    }]);
+
+    const first = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+
+    expect(first).toMatchObject({ outcome: "pending", chunksSent: 0, nextChunkIndex: 0 });
+    expect(loadEdition(sqlite)).toMatchObject({
+      state: "pending",
+      media_state: "sent",
+      next_chunk_index: 0,
+    });
+
+    vi.setSystemTime(loadEdition(sqlite).next_attempt_at! * 1_000);
+    const retry = await drainTelegramDigestOutbox(db, creds);
+
+    expect(retry).toMatchObject({ due: 1, attempted: 1, sent: 1 });
+    expect(fetchMock.mock.calls.map((call) => String(call[0]).split("/").pop())).toEqual([
+      "sendPhoto",
+      "sendMessage",
+      "sendMessage",
+    ]);
+    expect(loadEdition(sqlite)).toMatchObject({ state: "sent", media_state: "sent", next_chunk_index: 1 });
+  });
+
+  it("sends a text-only edition with media_state none", async () => {
+    const { sqlite, db } = createHarness();
+    await enqueueDaily(db);
+    const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
+
+    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+
+    expect(result).toMatchObject({ outcome: "sent", chunksSent: 1 });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/sendMessage");
+    expect(loadEdition(sqlite)).toMatchObject({
+      media_state: "none",
+      map_image_url: null,
+      map_date: null,
+      state: "sent",
     });
   });
 
@@ -362,6 +488,58 @@ describe("Telegram digest outbox", () => {
     expect(first).toMatchObject({ created: true, payloadMatched: true });
     expect(second).toMatchObject({ created: false, payloadMatched: false });
     expect(JSON.parse(loadEdition(sqlite).payload_chunks_json)).toEqual(first.chunks);
+  });
+
+  it("includes the typed map identity in immutable edition equality", async () => {
+    const { sqlite, db } = createHarness();
+    const first = await enqueueDaily(db, {
+      mapImageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-07-10",
+      mapDate: "2026-07-10",
+    });
+    const second = await enqueueDaily(db, {
+      mapImageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-07-09",
+      mapDate: "2026-07-09",
+    });
+
+    expect(first).toMatchObject({ created: true, payloadMatched: true });
+    expect(second).toMatchObject({ created: false, payloadMatched: false });
+    expect(loadEdition(sqlite)).toMatchObject({
+      map_image_url: "https://pharos.watch/safety-scores/map.png?date=2026-07-10",
+      map_date: "2026-07-10",
+      media_state: "pending",
+    });
+  });
+
+  it("keeps the migration compatible with the previous Worker's insert shape", () => {
+    const { sqlite } = createHarness();
+    const nowSec = Math.floor(Date.now() / 1000);
+    sqlite.prepare(
+      `INSERT INTO telegram_digest_outbox (
+         edition_key, digest_kind, digest_generated_at, target_chat_id,
+         payload_chunks_json, success_actions_json, safety_context_json, state, next_attempt_at,
+         created_at, updated_at
+       ) VALUES (?, 'daily', ?, ?, ?, '[]', ?, 'pending', ?, ?, ?)`,
+    ).run(
+      "daily:legacy-worker",
+      nowSec,
+      creds.chatId,
+      JSON.stringify(["Legacy Worker payload"]),
+      JSON.stringify(safetyContext),
+      nowSec,
+      nowSec,
+      nowSec,
+    );
+
+    expect(loadEdition(sqlite, "daily:legacy-worker")).toMatchObject({
+      map_image_url: null,
+      map_date: null,
+      media_state: "none",
+      state: "pending",
+      next_chunk_index: 0,
+    });
+    expect(() => sqlite.prepare(
+      "UPDATE telegram_digest_outbox SET media_state = 'invalid' WHERE edition_key = ?",
+    ).run("daily:legacy-worker")).toThrow();
   });
 
   it("refuses to enqueue safety claims without an identified publication", async () => {

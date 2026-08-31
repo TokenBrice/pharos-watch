@@ -81,7 +81,6 @@ export function buildTelegramMessage(
   date: string,
   editionNumber?: number | null,
   appendixHtml?: string | null,
-  imageUrl?: string | null,
   mapAppendixHtml?: string | null,
 ): string {
   // Escape HTML first, then convert markdown bold **text** to <b>text</b>
@@ -92,7 +91,6 @@ export function buildTelegramMessage(
     body,
     appendixHtml ?? "",
     mapAppendixHtml ?? "",
-    imageUrl ? `<a href="${escapeHtml(imageUrl)}">View today’s map →</a>` : "",
     `<a href="https://pharos.watch/digest/${date}/">Read on Pharos →</a>`,
   ].filter((section) => section.trim().length > 0);
   return sections.join("\n\n");
@@ -155,6 +153,8 @@ export interface SendToChatOpts {
   signal?: AbortSignal;
 }
 
+const TELEGRAM_PHOTO_CAPTION_MAX_LENGTH = 1_024;
+
 export type TelegramSendErrorClass = TelegramTransportErrorClass;
 
 export interface SendToChatResult {
@@ -170,53 +170,20 @@ export interface SendToChatResult {
   migrateToChatId?: string;
 }
 
-export interface SendBatchOptions {
-  softDeadlineAtMs?: number;
-  beforeSendBatch?: (
-    entries: readonly ScheduledBatchEntry<BatchMessage>[],
-  ) => Promise<ReadonlyMap<number, PreSendBatchResult> | void>;
-  afterSendBatch?: (
-    entries: readonly ScheduledBatchEntry<BatchMessage>[],
-    results: readonly BatchResult[],
-  ) => Promise<void>;
-}
-
-function classifyCallbackAcknowledgementFailure(statusCode: number): TelegramSendErrorClass {
-  if (statusCode === 429) return "rate_limit";
-  if (statusCode >= 500) return "server_error";
-  if (statusCode === 401 || statusCode === 403) return "auth_error";
-  if (statusCode === 400 || statusCode === 404 || statusCode === 413) return "bad_request";
-  return "unknown";
-}
-
-/** Send an HTML message to a specific Telegram chat. */
-export async function sendToChat(
-  chatId: string,
-  text: string,
+async function sendTelegramPayload(
+  method: "sendMessage" | "sendPhoto",
+  payload: unknown,
   botToken: string,
-  opts?: SendToChatOpts,
+  callerSignal?: AbortSignal,
 ): Promise<SendToChatResult> {
   try {
-    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-    const signal = opts?.signal
-      ? AbortSignal.any([opts.signal, AbortSignal.timeout(10_000)])
+    const signal = callerSignal
+      ? AbortSignal.any([callerSignal, AbortSignal.timeout(10_000)])
       : AbortSignal.timeout(10_000);
-    const res = await fetch(url, {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: "HTML",
-        // `link_preview_options` (Bot API 7.0+) takes precedence over the legacy
-        // boolean. We only emit the legacy field when the richer object is absent
-        // so older callers keep their existing behavior.
-        ...(opts?.linkPreviewOptions
-          ? { link_preview_options: opts.linkPreviewOptions }
-          : opts?.disableWebPagePreview && { disable_web_page_preview: true }),
-        ...(opts?.disableNotification && { disable_notification: true }),
-        ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
-      }),
+      body: JSON.stringify(payload),
       signal,
     });
 
@@ -259,6 +226,75 @@ export async function sendToChat(
       statusCode: null,
     };
   }
+}
+
+export interface SendBatchOptions {
+  softDeadlineAtMs?: number;
+  beforeSendBatch?: (
+    entries: readonly ScheduledBatchEntry<BatchMessage>[],
+  ) => Promise<ReadonlyMap<number, PreSendBatchResult> | void>;
+  afterSendBatch?: (
+    entries: readonly ScheduledBatchEntry<BatchMessage>[],
+    results: readonly BatchResult[],
+  ) => Promise<void>;
+}
+
+function classifyCallbackAcknowledgementFailure(statusCode: number): TelegramSendErrorClass {
+  if (statusCode === 429) return "rate_limit";
+  if (statusCode >= 500) return "server_error";
+  if (statusCode === 401 || statusCode === 403) return "auth_error";
+  if (statusCode === 400 || statusCode === 404 || statusCode === 413) return "bad_request";
+  return "unknown";
+}
+
+/** Send an HTML message to a specific Telegram chat. */
+export async function sendToChat(
+  chatId: string,
+  text: string,
+  botToken: string,
+  opts?: SendToChatOpts,
+): Promise<SendToChatResult> {
+  return sendTelegramPayload(
+    "sendMessage",
+    {
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      // `link_preview_options` (Bot API 7.0+) takes precedence over the legacy
+      // boolean. We only emit the legacy field when the richer object is absent
+      // so older callers keep their existing behavior.
+      ...(opts?.linkPreviewOptions
+        ? { link_preview_options: opts.linkPreviewOptions }
+        : opts?.disableWebPagePreview && { disable_web_page_preview: true }),
+      ...(opts?.disableNotification && { disable_notification: true }),
+      ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
+    },
+    botToken,
+    opts?.signal,
+  );
+}
+
+/** Send a photo attachment with an HTML caption to a specific Telegram chat. */
+export async function sendPhotoToChat(
+  chatId: string,
+  photoUrl: string,
+  caption: string,
+  botToken: string,
+  opts?: SendToChatOpts,
+): Promise<SendToChatResult> {
+  return sendTelegramPayload(
+    "sendPhoto",
+    {
+      chat_id: chatId,
+      photo: photoUrl,
+      caption: caption.slice(0, TELEGRAM_PHOTO_CAPTION_MAX_LENGTH),
+      parse_mode: "HTML",
+      ...(opts?.disableNotification && { disable_notification: true }),
+      ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
+    },
+    botToken,
+    opts?.signal,
+  );
 }
 
 export interface BatchMessage {
