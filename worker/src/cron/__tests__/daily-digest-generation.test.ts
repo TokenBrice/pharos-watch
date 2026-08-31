@@ -453,6 +453,54 @@ describe("generateDailyDigest", () => {
     expect(getInsertDigestBinds(recentDigestDb as MockD1Database)).toBeUndefined();
   });
 
+  it("regenerates a malformed recent digest instead of treating it as today's edition", async () => {
+    // A code-block response is stored but unpublishable. Without this branch a
+    // broken row inside the one-hour window would suppress regeneration for the
+    // rest of the hour and the day could ship nothing.
+    const scenario = makeDailyDigestScenario({
+      db: {
+        transformTables: (tables) => [
+          {
+            match: "SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1",
+            rows: [],
+            first: {
+              generated_at: Math.floor(Date.now() / 1000) - 5 * 60,
+              digest_text: "```json\n{\"title\":\"Broken\"",
+            },
+          },
+          ...tables,
+        ],
+      },
+    });
+
+    const result = await generateDailyDigest(scenario.db, "anthropic-key");
+
+    expect(result.metadata).not.toBe("skipped: recent digest exists");
+    expect(result.itemCount).toBe(1);
+    expect(fetchWithRetry).toHaveBeenCalled();
+  });
+
+  it("degrades but still publishes when the Telegram appendix state cannot be read", async () => {
+    vi.mocked(prepareTelegramDigestAppendices).mockRejectedValueOnce(new Error("appendix store down"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await generateDailyDigest(
+      baselineScenario.db,
+      "anthropic-key",
+      null,
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    expect(result.status).toBe("degraded");
+    expect(String(result.metadata)).toContain("telegram-appendix-state");
+    // The edition still ships: a missing appendix is cosmetic, not a reason to
+    // withhold the day's digest.
+    expect(result.itemCount).toBe(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it("skips regeneration when stablecoins cache is unavailable", async () => {
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
       kind: "error",
