@@ -40,6 +40,7 @@ import {
 } from "./slot-summary";
 import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { runWeeklyRecapForRuntime } from "./weekly-recap-invocation";
+import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
 const DIGEST_TRIGGER_POLL_SURFACE = "digest-trigger-poll";
@@ -225,6 +226,7 @@ async function runDailyDigestWithResume(
     twitterMissing: missingTwitterCredentialNames(runtime.env),
     telegramMissing: missingTelegramCredentialNames(runtime.env),
   };
+  const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
   const resumed = await resumeDailyDigestDelivery(
     runtime.db,
     twitterCreds,
@@ -233,6 +235,7 @@ async function runDailyDigestWithResume(
     signal,
     reportProgress,
     credentialDiagnostics,
+    recapRollout,
   );
   if (resumed.kind === "resumed") {
     return {
@@ -250,6 +253,9 @@ async function runDailyDigestWithResume(
     signal,
     reportProgress,
     credentialDiagnostics,
+    // Checked-in daily LLM defaults; see daily-0805.ts.
+    undefined,
+    recapRollout,
   );
 }
 

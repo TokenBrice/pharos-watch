@@ -22,11 +22,56 @@ interface AnthropicContentBlockDelta {
 }
 
 interface AnthropicMessageDelta {
-  delta?: { stop_reason?: string | null; stop_sequence?: string | null };
+  delta?: {
+    stop_reason?: string | null;
+    stop_sequence?: string | null;
+    stop_details?: AnthropicStopDetails | null;
+  };
   usage?: { output_tokens?: number };
 }
 
-export async function accumulateAnthropicStream(response: Response): Promise<string> {
+interface AnthropicMessageStart {
+  message?: {
+    model?: string;
+    usage?: {
+      input_tokens?: number;
+      cache_creation_input_tokens?: number | null;
+      cache_read_input_tokens?: number | null;
+    };
+  };
+}
+
+export type AnthropicRefusalCategory =
+  | "cyber"
+  | "bio"
+  | "frontier_llm"
+  | "reasoning_extraction"
+  | "general_harms";
+
+interface AnthropicStopDetails {
+  type?: string;
+  category?: AnthropicRefusalCategory | null;
+}
+
+export interface AnthropicStreamResult {
+  text: string;
+  servedModel: string | null;
+  inputTokens: number | null;
+  cacheWriteTokens: number | null;
+  cacheReadTokens: number | null;
+  outputTokens: number | null;
+  stopReason: string | null;
+  refusalCategory: AnthropicRefusalCategory | null;
+}
+
+export class AnthropicStreamFailure extends Error {
+  constructor(message: string, readonly result: AnthropicStreamResult) {
+    super(message);
+    this.name = "AnthropicStreamFailure";
+  }
+}
+
+export async function accumulateAnthropicStream(response: Response): Promise<AnthropicStreamResult> {
   const body = response.body;
   if (!body) {
     throw new Error("Anthropic stream: response has no body");
@@ -37,7 +82,12 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
   let buffer = "";
   let accumulated = "";
   let streamError: Error | null = null;
+  let servedModel: string | null = null;
+  let inputTokens: number | null = null;
+  let cacheWriteTokens: number | null = null;
+  let cacheReadTokens: number | null = null;
   let stopReason: string | null = null;
+  let refusalCategory: AnthropicRefusalCategory | null = null;
   let outputTokens: number | null = null;
   const eventCounts: Record<string, number> = {};
   const deltaTypeCounts: Record<string, number> = {};
@@ -62,7 +112,12 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
           deltaTypeCounts[result.deltaType] = (deltaTypeCounts[result.deltaType] ?? 0) + 1;
         }
         if (result.stopReason) stopReason = result.stopReason;
+        if (result.servedModel) servedModel = result.servedModel;
+        if (result.inputTokens != null) inputTokens = result.inputTokens;
+        if (result.cacheWriteTokens != null) cacheWriteTokens = result.cacheWriteTokens;
+        if (result.cacheReadTokens != null) cacheReadTokens = result.cacheReadTokens;
         if (result.outputTokens != null) outputTokens = result.outputTokens;
+        if (result.refusalCategory !== undefined) refusalCategory = result.refusalCategory;
         if (result.error) {
           streamError = result.error;
           break;
@@ -83,13 +138,32 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
     }
   }
 
-  if (streamError) throw streamError;
+  const result: AnthropicStreamResult = {
+    text: accumulated,
+    servedModel,
+    inputTokens,
+    cacheWriteTokens,
+    cacheReadTokens,
+    outputTokens,
+    stopReason,
+    refusalCategory,
+  };
+
+  if (streamError) throw new AnthropicStreamFailure(streamError.message, result);
+
+  // Anthropic documents stop_details on the streamed message_delta alongside
+  // stop_reason. A refusal can arrive before output or after partial output;
+  // either way the partial text must be discarded rather than parsed.
+  if (stopReason === "refusal") {
+    return { ...result, text: "" };
+  }
 
   // A max_tokens stop means the output was cut mid-stream. Truncated JSON
   // must fail here rather than flow into the parser's raw-text fallback.
   if (stopReason === "max_tokens") {
-    throw new Error(
+    throw new AnthropicStreamFailure(
       `Anthropic stream: response truncated at max_tokens (outputTokens=${outputTokens ?? "null"}, accumulatedChars=${accumulated.length})`,
+      result,
     );
   }
 
@@ -100,9 +174,9 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
       `events=${JSON.stringify(eventCounts)}`,
       `deltaTypes=${JSON.stringify(deltaTypeCounts)}`,
     ].join(", ");
-    throw new Error(`Anthropic stream: empty text content after message_stop (${detail})`);
+    throw new AnthropicStreamFailure(`Anthropic stream: empty text content after message_stop (${detail})`, result);
   }
-  return accumulated;
+  return result;
 }
 
 interface FrameResult {
@@ -111,7 +185,12 @@ interface FrameResult {
   eventType?: string;
   deltaType?: string;
   stopReason?: string;
+  servedModel?: string;
+  inputTokens?: number;
+  cacheWriteTokens?: number;
+  cacheReadTokens?: number;
   outputTokens?: number;
+  refusalCategory?: AnthropicRefusalCategory | null;
 }
 
 function handleFrame(frame: string): FrameResult {
@@ -128,6 +207,26 @@ function handleFrame(frame: string): FrameResult {
   if (!eventType || dataStr == null) return {};
 
   const out: FrameResult = { eventType };
+
+  if (eventType === "message_start") {
+    let parsed: AnthropicMessageStart;
+    try {
+      parsed = JSON.parse(dataStr) as AnthropicMessageStart;
+    } catch {
+      return out;
+    }
+    if (typeof parsed.message?.model === "string") out.servedModel = parsed.message.model;
+    if (typeof parsed.message?.usage?.input_tokens === "number") {
+      out.inputTokens = parsed.message.usage.input_tokens;
+    }
+    if (typeof parsed.message?.usage?.cache_creation_input_tokens === "number") {
+      out.cacheWriteTokens = parsed.message.usage.cache_creation_input_tokens;
+    }
+    if (typeof parsed.message?.usage?.cache_read_input_tokens === "number") {
+      out.cacheReadTokens = parsed.message.usage.cache_read_input_tokens;
+    }
+    return out;
+  }
 
   if (eventType === "content_block_delta") {
     let parsed: AnthropicContentBlockDelta;
@@ -151,6 +250,9 @@ function handleFrame(frame: string): FrameResult {
       return out;
     }
     if (parsed.delta?.stop_reason) out.stopReason = parsed.delta.stop_reason;
+    if (parsed.delta?.stop_details?.type === "refusal") {
+      out.refusalCategory = parsed.delta.stop_details.category ?? null;
+    }
     if (typeof parsed.usage?.output_tokens === "number") out.outputTokens = parsed.usage.output_tokens;
     return out;
   }

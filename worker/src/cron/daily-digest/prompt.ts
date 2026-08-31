@@ -1,4 +1,9 @@
-import type { DigestInputData } from "@shared/types/digest";
+import {
+  DigestSafetyMapCaptureSchema,
+  type DigestInputData,
+  type DigestSafetyContext,
+  type DigestSafetyMapCapture,
+} from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
 import { computeLeadStreak } from "@shared/lib/digest-lead-policy";
 import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admission";
@@ -247,28 +252,7 @@ export function buildUserPrompt(
     }
   }
 
-  if (data.gradeTransitions && data.gradeTransitions.length > 0) {
-    lines.push("", "Grade Transitions (last 48h):");
-    for (const transition of data.gradeTransitions) {
-      if (transition.model === "v9") {
-        const pillars = transition.currentPillars;
-        const cap = transition.bindingCap
-          ? ` | binding cap=${transition.bindingCap.kind} <=${transition.bindingCap.limit} (${transition.bindingCap.reason})`
-          : "";
-        const reasons = transition.reasonCodes.length > 0
-          ? ` | reasons=${transition.reasonCodes.join(",")}`
-          : "";
-        lines.push(
-          `  ${transition.symbol} | V9 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | backing=${pillars.backing.score}, exit=${pillars.exit.score}, control=${pillars.control.score}${cap}${reasons}`,
-        );
-      } else {
-        const dims = transition.currentDimensions;
-        lines.push(
-          `  ${transition.symbol} | V8 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | peg=${dims.peg}, liq=${dims.liq}, resilience=${dims.resilience}, decentralization=${dims.decentralization}`,
-        );
-      }
-    }
-  }
+  pushDailySafetyDeskLines(lines, data);
 
   if (data.safetyScores) {
     const { provenance } = data.safetyScores;
@@ -362,6 +346,68 @@ export function buildUserPrompt(
   }
 
   return lines.join("\n");
+}
+
+export function buildSafetyMapCensusLines(
+  capture: DigestSafetyMapCapture | undefined,
+  safetyContext: DigestSafetyContext | undefined,
+): string[] {
+  if (safetyContext?.status !== "available") return [];
+  const parsed = DigestSafetyMapCaptureSchema.safeParse(capture);
+  if (!parsed.success || parsed.data.manifest.mapSummary.totalMcapUsd <= 0) return [];
+  const map = parsed.data;
+  const summary = map.manifest.mapSummary;
+  const freshness = map.freshness === "current"
+    ? `current; depicts ${map.manifest.date} UTC`
+    : `carried-forward, age ${map.ageDays} day${map.ageDays === 1 ? "" : "s"}; depicts ${map.manifest.date} UTC`;
+  const lines = [
+    `  Safety Map census (${freshness}): ${formatCurrency(summary.totalMcapUsd, 1)} mapped supply across ${summary.gradedCount} graded coins; ${summary.notRatedCount} not rated.`,
+  ];
+  for (const tierName of ["A", "B", "C", "D", "F"] as const) {
+    const tier = summary.tiers.find((candidate) => candidate.tier === tierName);
+    if (!tier) return [];
+    const leaders = tier.leaders.length > 0
+      ? tier.leaders.map((leader) => `${leader.symbol} (${leader.score})`).join(", ")
+      : "none listed";
+    lines.push(
+      `    ${tier.tier} tier: ${tier.count} coins, ${tier.sharePct.toFixed(1)}% of mapped supply; leaders: ${leaders}.`,
+    );
+  }
+  lines.push(
+    "  Census rule: quote tier statistics only from this injected block; do not calculate or infer other tier figures. This census is stock, while grade movers are flow and the only evidence of tier crossings.",
+  );
+  return lines;
+}
+
+function pushDailySafetyDeskLines(lines: string[], data: DigestInputData): void {
+  const censusLines = buildSafetyMapCensusLines(data.safetyMap, data.safetyContext);
+  const transitions = data.safetyContext?.status === "available" ? data.gradeTransitions ?? [] : [];
+  if (censusLines.length === 0 && transitions.length === 0) return;
+  lines.push("", "Safety desk:", ...censusLines);
+  if (transitions.length === 0) {
+    lines.push("  Grade movers (last 48h): none recorded. Do not infer tier crossings from the census.");
+    return;
+  }
+  lines.push("  Grade movers (last 48h; sole per-coin mover source):");
+  for (const transition of transitions) {
+    if (transition.model === "v9") {
+      const pillars = transition.currentPillars;
+      const cap = transition.bindingCap
+        ? ` | binding cap=${transition.bindingCap.kind} <=${transition.bindingCap.limit} (${transition.bindingCap.reason})`
+        : "";
+      const reasons = transition.reasonCodes.length > 0
+        ? ` | reasons=${transition.reasonCodes.join(",")}`
+        : "";
+      lines.push(
+        `    ${transition.symbol} | V9 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | backing=${pillars.backing.score}, exit=${pillars.exit.score}, control=${pillars.control.score}${cap}${reasons}`,
+      );
+    } else {
+      const dims = transition.currentDimensions;
+      lines.push(
+        `    ${transition.symbol} | V8 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | peg=${dims.peg}, liq=${dims.liq}, resilience=${dims.resilience}, decentralization=${dims.decentralization}`,
+      );
+    }
+  }
 }
 
 function pushLeadRequirementLines(

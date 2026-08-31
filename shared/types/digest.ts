@@ -205,6 +205,122 @@ export interface DigestEditorialAudit {
   qualityIssueCodes?: string[];
 }
 
+const DigestSafetyMapTierSchema = z
+  .object({
+    tier: z.enum(["A", "B", "C", "D", "F"]),
+    range: z.string().trim().min(1),
+    count: z.number().int().nonnegative(),
+    mcapUsd: z.number().nonnegative(),
+    sharePct: z.number().min(0).max(100),
+    leaders: z
+      .array(
+        z
+          .object({
+            symbol: z.string().trim().min(1),
+            score: z.number().min(0).max(100),
+            mcapUsd: z.number().nonnegative(),
+          })
+          .strict(),
+      )
+      .max(3),
+  })
+  .strict();
+
+const DigestSafetyMapUtcDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => {
+    const parsed = new Date(`${value}T00:00:00Z`);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  }, "Safety Map date must be a real UTC calendar day");
+
+export const DigestSafetyMapSummarySchema = z
+  .object({
+    date: DigestSafetyMapUtcDateSchema,
+    asOfSec: z.number().int().nonnegative(),
+    methodologyVersion: z.string().trim().min(1),
+    gradedCount: z.number().int().nonnegative(),
+    notRatedCount: z.number().int().nonnegative(),
+    totalMcapUsd: z.number().nonnegative(),
+    floorMcapByTier: z
+      .object({
+        a: z.number().nonnegative(),
+        other: z.number().nonnegative(),
+      })
+      .strict(),
+    tiers: z.array(DigestSafetyMapTierSchema).length(5),
+  })
+  .strict()
+  .superRefine((summary, ctx) => {
+    const expectedTiers = ["A", "B", "C", "D", "F"];
+    if (new Set(summary.tiers.map((tier) => tier.tier)).size !== expectedTiers.length) {
+      ctx.addIssue({ code: "custom", path: ["tiers"], message: "Safety Map tiers must be unique and complete" });
+    }
+    const tierCount = summary.tiers.reduce((sum, tier) => sum + tier.count, 0);
+    if (tierCount !== summary.gradedCount) {
+      ctx.addIssue({ code: "custom", path: ["gradedCount"], message: "Safety Map tier counts must equal gradedCount" });
+    }
+    const tierMcapUsd = summary.tiers.reduce((sum, tier) => sum + tier.mcapUsd, 0);
+    const mcapTolerance = Math.max(0.01, summary.totalMcapUsd * 1e-9);
+    if (Math.abs(tierMcapUsd - summary.totalMcapUsd) > mcapTolerance) {
+      ctx.addIssue({ code: "custom", path: ["totalMcapUsd"], message: "Safety Map tier supply must equal totalMcapUsd" });
+    }
+    for (let index = 0; index < summary.tiers.length; index++) {
+      const tier = summary.tiers[index];
+      const computedShare = summary.totalMcapUsd === 0 ? 0 : (tier.mcapUsd / summary.totalMcapUsd) * 100;
+      if (Math.abs(computedShare - tier.sharePct) > 0.11) {
+        ctx.addIssue({ code: "custom", path: ["tiers", index, "sharePct"], message: "Safety Map tier share must match tier supply" });
+      }
+    }
+  });
+
+export type DigestSafetyMapSummary = z.output<typeof DigestSafetyMapSummarySchema>;
+
+export const DigestSafetyMapCaptureSchema = z
+  .object({
+    imageUrl: z.string().trim().min(1),
+    freshness: z.enum(["current", "carried-forward"]),
+    ageDays: z.number().int().nonnegative(),
+    manifest: z
+      .object({
+        date: DigestSafetyMapUtcDateSchema,
+        asOfSec: z.number().int().nonnegative(),
+        renderedAtSec: z.number().int().nonnegative(),
+        edition: z.literal("daily"),
+        bytes: z.object({ png: z.number().positive() }).strict(),
+        mapSummary: DigestSafetyMapSummarySchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((capture, ctx) => {
+    if (capture.manifest.mapSummary.date !== capture.manifest.date) {
+      ctx.addIssue({ code: "custom", path: ["manifest", "mapSummary", "date"], message: "Safety Map capture dates must match" });
+    }
+    if (capture.manifest.mapSummary.asOfSec !== capture.manifest.asOfSec) {
+      ctx.addIssue({ code: "custom", path: ["manifest", "mapSummary", "asOfSec"], message: "Safety Map capture timestamps must match" });
+    }
+    if (capture.freshness === "current" && capture.ageDays !== 0) {
+      ctx.addIssue({ code: "custom", path: ["ageDays"], message: "A current Safety Map capture must have ageDays 0" });
+    }
+    if (capture.freshness === "carried-forward" && capture.ageDays === 0) {
+      ctx.addIssue({ code: "custom", path: ["ageDays"], message: "A carried-forward Safety Map capture must have positive ageDays" });
+    }
+    try {
+      const imageUrl = new URL(capture.imageUrl);
+      if (
+        !imageUrl.pathname.endsWith("/safety-scores/map.png")
+        || imageUrl.searchParams.get("date") !== capture.manifest.date
+      ) {
+        ctx.addIssue({ code: "custom", path: ["imageUrl"], message: "Safety Map image URL must name the manifest date" });
+      }
+    } catch {
+      ctx.addIssue({ code: "custom", path: ["imageUrl"], message: "Safety Map image URL must be absolute" });
+    }
+  });
+
+export type DigestSafetyMapCapture = z.output<typeof DigestSafetyMapCaptureSchema>;
+
 export interface DigestInputData {
   digestVersion?: number;
   aggregateUniverse?: "core-stablecoins-v1";
@@ -225,6 +341,8 @@ export interface DigestInputData {
   editorialAudit?: DigestEditorialAudit;
   degradedSources?: string[];
   safetyContext?: DigestSafetyContext;
+  /** Dated, capture-matched Safety Score map used by this exact edition. */
+  safetyMap?: DigestSafetyMapCapture;
   /** Curated cause annotations for coins in the depeg set (why it broke). */
   causeContext?: {
     stablecoinId: string;
@@ -660,6 +778,9 @@ const DigestSnapshotInputDataSchema = z
     forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).optional(),
     riskTape: z.array(DigestRiskTapeItemSchema).optional(),
     safetyContext: DigestSafetyContextSchema.optional(),
+    // The frontend accepts pre-cutover aliases and performs its own complete,
+    // capture-matched parse before rendering; preserve that raw compatibility here.
+    safetyMap: z.unknown().optional(),
     topDepegs: z
       .array(
         z

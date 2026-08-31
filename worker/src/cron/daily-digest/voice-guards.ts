@@ -89,6 +89,34 @@ export function openingFingerprint(text: string): string | null {
   return `${head.toUpperCase()}-${second}`;
 }
 
+const STRUCTURAL_NGRAM_SIZE = 5;
+
+function structuralNgrams(text: string): Set<string> {
+  // Removing digits preserves sentence shape without treating a changed date,
+  // score, or threshold as fresh prose. Apostrophes intentionally split so
+  // "tomorrow's snapshot" and "tomorrow s snapshot" normalize alike.
+  const tokens = text.toLowerCase().match(/[a-z]+/g) ?? [];
+  const ngrams = new Set<string>();
+  for (let index = 0; index <= tokens.length - STRUCTURAL_NGRAM_SIZE; index++) {
+    ngrams.add(tokens.slice(index, index + STRUCTURAL_NGRAM_SIZE).join(" "));
+  }
+  return ngrams;
+}
+
+export function findRepeatedStructuralNgrams(
+  text: string,
+  recentTexts: readonly string[],
+  minimumPriorEditions = 2,
+): string[] {
+  if (minimumPriorEditions < 1) return [];
+  const current = structuralNgrams(text);
+  if (current.size === 0) return [];
+  const prior = recentTexts.map(structuralNgrams);
+  return [...current]
+    .filter((ngram) => prior.filter((entry) => entry.has(ngram)).length >= minimumPriorEditions)
+    .slice(0, 3);
+}
+
 const FORWARD_LOOK_CUES: RegExp[] = [
   /\bif\s+[\w$]+\s+(?:happens|holds|fails|breaks|crosses|stays|continues|keeps|slips|rises|falls|passes|drops)\b/i,
   /\bnext (?:session|day|digest|week|cycle|round|24h|48h|month)\b/i,

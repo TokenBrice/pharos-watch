@@ -5,6 +5,7 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createNeutralSkippedCronResult } from "../lib/cron-result";
 import type { TelegramCreds } from "../lib/telegram";
+import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { TwitterCreds } from "../lib/twitter";
 import { SECONDS } from "../lib/time-constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -14,6 +15,7 @@ import {
   didDigestChannelDeliver,
   markDigestMetaBlocked,
   requestDigestCopy,
+  resolveDigestLlmConfig,
 } from "./digest/platform";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
@@ -36,6 +38,7 @@ import {
   publishDigestEdition,
   type DigestCredentialDiagnostics,
 } from "./digest/publish";
+import { WEEKLY_RECAP_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
 
 const TWITTER_SENT_MARKER_PREFIX = "weekly-recap:twitter-sent:";
 
@@ -178,7 +181,10 @@ export async function generateWeeklyRecap(
   reportProgress?: CronProgressReporter,
   scheduledAtSec = Math.floor(Date.now() / 1000),
   credentialDiagnostics: DigestCredentialDiagnostics = {},
+  llmConfig: DigestLlmConfig = WEEKLY_RECAP_LLM_CONFIG,
+  recapRollout: TelegramRecapRolloutPolicy | null = null,
 ): Promise<CronResult> {
+  const resolvedLlmConfig = resolveDigestLlmConfig(WEEKLY_RECAP_LLM_CONFIG, llmConfig);
   await reportCronProgress(reportProgress, {
     stage: "preflight",
     message: "Checking weekly recap prerequisites",
@@ -328,6 +334,7 @@ export async function generateWeeklyRecap(
         ? {
             creds: telegramCreds,
             editionKey: `weekly:${digestDate}`,
+            recapRollout,
             title: `Weekly Recap: ${existing.digest_title || `Week of ${weekStartLabel}`}`,
             routeDate: `${digestDate}-weekly`,
             required: credentialDiagnostics.telegramMissing != null,
@@ -508,7 +515,7 @@ export async function generateWeeklyRecap(
         currentWeekRows: currentRows.length,
         priorWeekRows: priorRows.length,
         weeklyRiskSignals: weeklyData.weeklySignals.riskLeaderboard.length,
-        maxTokens: 64000,
+        maxTokens: resolvedLlmConfig.maxTokens,
       },
     },
   });
@@ -518,11 +525,19 @@ export async function generateWeeklyRecap(
     anthropicApiKey,
     systemPrompt: WEEKLY_SYSTEM_PROMPT,
     userPrompt,
-    // Matches daily-digest's 64k floor for Opus 4.7 adaptive thinking at
-    // xhigh effort — same runaway-thinking failure mode would apply here.
-    maxTokens: 64000,
+    llmConfig: resolvedLlmConfig,
     signal,
     logPrefix: "weekly-recap",
+    reportAttempt: async (llmAttempts) => {
+      await reportCronProgress(reportProgress, {
+        stage: "llm-attempt",
+        message: "Recorded weekly recap Anthropic attempt telemetry",
+        providerFamily: "anthropic",
+        itemsDone: llmAttempts.length,
+        itemsTotal: llmAttempts.length,
+        metadata: { llmAttempts },
+      });
+    },
     parseOptions: {
       metaFactory: ({ parsedMeta, usedRawTextFallback: degraded }) => ({
         ...(parsedMeta ?? {}),
@@ -552,6 +567,29 @@ export async function generateWeeklyRecap(
       },
     });
     return { metadata: "skipped: anthropic circuit open" };
+  }
+  if (digestCopy.kind === "refusal") {
+    await reportCronProgress(reportProgress, {
+      stage: "skipped",
+      message: "Skipping weekly recap because Anthropic refused the request",
+      providerFamily: "anthropic",
+      itemsDone: 0,
+      itemsTotal: 1,
+      metadata: {
+        skipped: "anthropic-refusal",
+        refusalCategory: digestCopy.refusalCategory,
+        llmAttempts: digestCopy.llmAttempts,
+      },
+    });
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        skipped: "anthropic-refusal",
+        refusalCategory: digestCopy.refusalCategory,
+        llmAttempts: digestCopy.llmAttempts,
+      }),
+    };
   }
   const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
     safetyContext,
@@ -643,6 +681,7 @@ export async function generateWeeklyRecap(
       ? {
           creds: telegramCreds,
           editionKey: `weekly:${digestDate}`,
+          recapRollout,
           title: `Weekly Recap: ${digestCopy.digestTitle || `Week of ${weeklyData.weekStartDate}`}`,
           routeDate: `${digestDate}-weekly`,
           required: credentialDiagnostics.telegramMissing != null,
@@ -686,6 +725,7 @@ export async function generateWeeklyRecap(
       twitterStatus: publication.tweetStatus,
       telegramStatus: publication.telegramStatus,
       usedRawTextFallback: digestCopy.usedRawTextFallback,
+      llmAttempts: digestCopy.llmAttempts,
     },
   });
   return {
@@ -710,6 +750,12 @@ export async function generateWeeklyRecap(
           disposition: publication.dispositions.telegram,
           missingCredentialNames: credentialDiagnostics.telegramMissing ?? [],
         },
+      },
+      llm: {
+        model: resolvedLlmConfig.model,
+        effort: resolvedLlmConfig.effort,
+        maxTokens: resolvedLlmConfig.maxTokens,
+        attempts: digestCopy.llmAttempts,
       },
     }),
   };

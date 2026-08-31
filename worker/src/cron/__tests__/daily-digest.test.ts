@@ -29,6 +29,8 @@ vi.mock("../telegram-digest-transport", async (importOriginal) => {
 vi.mock("../../lib/circuit-breaker", async () => (await import("./daily-digest.test-support")).mockDailyDigestCircuitBreakerModule());
 
 import { buildUserPrompt } from "../daily-digest/prompt";
+import { buildDigestSafetyMapCapture } from "../daily-digest/input";
+import { SYSTEM_PROMPT } from "../daily-digest/prompt/policy";
 import { classifyRegime } from "../daily-digest/prompt/regime";
 import {
   parseDigestModelResponse,
@@ -57,6 +59,7 @@ import {
 } from "../daily-digest/collectors-history";
 import type { CollectorContext } from "../daily-digest/collectors-shared";
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
+import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/digest-next-triggers";
 import type { DigestInputData } from "@shared/types/digest";
 import {
   makeWorkerReportCardsV9Response,
@@ -249,9 +252,16 @@ describe("lead requirement validator", () => {
 describe("opening-fingerprint voice guard", () => {
   it.each([
     {
-      label: "flags PSI-verb opening when any of last 3 also opened that way",
+      label: "flags PSI-verb opening when the matching opening is six editions back",
       extended: "PSI ticked to 96 in BEDROCK.\n\nUSDC added $500M.\n\nReal closer.",
-      recentText: ["PSI sits at 95. USDC hit ATH.", "USDT minted $2B. PSI unchanged.", "Flows rotated into gold. USDC weak."],
+      recentText: [
+        "USDT minted $2B. PSI unchanged.",
+        "Flows rotated into gold. USDC weak.",
+        "USDC supply contracted.",
+        "DAI liquidity recovered.",
+        "The gauge turned positive.",
+        "PSI sits at 95. USDC hit ATH.",
+      ],
       expected: true,
     },
     {
@@ -264,6 +274,22 @@ describe("opening-fingerprint voice guard", () => {
     const recentMeta = recentText.map((rawText, index) => ({ meta: null, title: String(index), rawText }));
     const issues = validateDigestModelOutput(makeParsedFixture({ extended }), { kind: "daily", recentMeta });
     expect(issues.some((issue) => issue.code === "opening-pattern-repetition")).toBe(expected);
+  });
+});
+
+describe("structural-repetition voice guard", () => {
+  it("soft-flags a digit-free five-gram repeated across prior editions", () => {
+    const recentMeta = [
+      "At tomorrow's 08:00 snapshot, the USDT threshold decides the lead.",
+      "At tomorrow's 09:00 snapshot, the USDC threshold decides the lead.",
+      "Fresh wording without the recurring sentence shape.",
+    ].map((rawText, index) => ({ meta: null, title: String(index), rawText }));
+
+    const issues = validateDigestModelOutput(makeParsedFixture({
+      extended: "At tomorrow's 10:00 snapshot, the DAI threshold decides the lead.\n\nUSDC added $500M.\n\nWatch for flows next session.",
+    }), { kind: "daily", recentMeta });
+
+    expect(issues).toContainEqual(expect.objectContaining({ code: "structural-repetition", severity: "soft" }));
   });
 });
 
@@ -378,6 +404,25 @@ describe("digest intelligence enrichment", () => {
     expect(intelligence.changeSummary?.worsenedSignals[0]).toMatchObject({ label: "USDT depeg widened" });
     expect(intelligence.forwardLookOutcomes?.[0]).toMatchObject({ status: "hit", triggerId: "trigger:depeg:usdt" });
     expect(intelligence.calmNarrativeFrame?.label).toBe("Supply rotation");
+  });
+
+  it("expires a depeg threshold after three pending editions and cedes its slot on the fourth", () => {
+    const triggerId = "trigger:depeg:usdt-tether";
+    const editions: DigestInputData[] = [];
+    let previous: DigestInputData | null = null;
+
+    for (let edition = 1; edition <= 4; edition++) {
+      const data: DigestInputData = { ...current, nextTriggers: buildNextTriggers(current, previous) };
+      editions.push(data);
+      previous = data;
+    }
+
+    expect(editions.slice(0, 3).map((edition) => edition.nextTriggers?.find((trigger) => trigger.id === triggerId)?.repeatedCount ?? 0))
+      .toEqual([0, 1, 2]);
+    expect(editions[3].nextTriggers?.some((trigger) => trigger.id === triggerId)).toBe(false);
+    expect(buildForwardLookOutcomes(editions[3], editions[2])).toContainEqual(
+      expect.objectContaining({ triggerId, status: "expired" }),
+    );
   });
 
   it("keeps unavailable flight-to-quality classification explicit in prompt and risk tape", () => {
@@ -496,6 +541,56 @@ describe("digest intelligence enrichment", () => {
 });
 
 describe("daily digest prompt contracts", () => {
+  const safetyContext = {
+    status: "available" as const,
+    expectedModel: "v9" as const,
+    identity: {
+      model: "v9" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: "9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "a".repeat(64),
+      evaluationBuildDigest: "b".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}` as const,
+      publicationGenerationId: "report-cards:v9:test",
+    },
+    publishedAt: 1_788_000_000,
+    reason: null,
+  };
+  const mapSummary = {
+    date: "2026-08-30",
+    asOfSec: 1_788_000_000,
+    methodologyVersion: "v9.4",
+    gradedCount: 10,
+    notRatedCount: 2,
+    totalMcapUsd: 100_000_000_000,
+    floorMcapByTier: { a: 1_000_000, other: 100_000 },
+    tiers: [
+      { tier: "A", range: "90-100", count: 2, mcapUsd: 70_000_000_000, sharePct: 70, leaders: [{ symbol: "USDT", score: 95, mcapUsd: 60_000_000_000 }] },
+      { tier: "B", range: "80-89", count: 2, mcapUsd: 15_000_000_000, sharePct: 15, leaders: [{ symbol: "USDC", score: 85, mcapUsd: 14_000_000_000 }] },
+      { tier: "C", range: "70-79", count: 2, mcapUsd: 8_000_000_000, sharePct: 8, leaders: [] },
+      { tier: "D", range: "60-69", count: 2, mcapUsd: 5_000_000_000, sharePct: 5, leaders: [] },
+      { tier: "F", range: "0-59", count: 2, mcapUsd: 2_000_000_000, sharePct: 2, leaders: [] },
+    ],
+  };
+  const basePromptData: DigestInputData = {
+    totalMcapUsd: 100_000_000_000,
+    mcap7dDelta: 0,
+    activeDepegCount: 0,
+    topDepegs: [],
+    biggestSupplyChange: null,
+    stabilityIndex: null,
+    yesterdayIndex: null,
+    safetyContext,
+  };
+
+  it("makes PSI conditional and separates trigger thresholds from observed movement", () => {
+    expect(SYSTEM_PROMPT).toContain("not a mandatory daily paragraph");
+    expect(SYSTEM_PROMPT).toContain("An armed trigger threshold is not a past observation");
+    expect(SYSTEM_PROMPT).toContain("agree mathematically");
+    expect(SYSTEM_PROMPT).toContain("do not transcribe its label, rationale, or detail verbatim");
+  });
+
   it("renders canonical V9 safety pillars without legacy dimensions", () => {
     const pillar = { score: 91, evidenceLevel: "strong" as const, freshness: "current" as const, reasons: [] };
     const cap = { kind: "redemption-access", limit: 82, reason: "Primary redemption remains eligibility-gated", binding: true };
@@ -521,6 +616,65 @@ describe("daily digest prompt contracts", () => {
     expect(prompt).toContain("Safety Scores (V9");
     expect(prompt).toContain("backing=91, exit=86, control=84");
     expect(prompt).not.toContain("peg=95");
+  });
+
+  it("builds a capture only from a complete, capture-matched map and available safety context", () => {
+    const resolution = {
+      kind: "available",
+      imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-08-30",
+      freshness: "current",
+      ageDays: 0,
+      manifest: {
+        date: "2026-08-30",
+        asOfSec: 1_788_000_000,
+        renderedAtSec: 1_788_001_000,
+        edition: "daily",
+        bytes: { png: 1_000_000 },
+        mapSummary,
+      },
+    };
+
+    expect(buildDigestSafetyMapCapture(basePromptData, resolution)).not.toBeNull();
+    expect(buildDigestSafetyMapCapture(basePromptData, {
+      ...resolution,
+      manifest: { ...resolution.manifest, mapSummary: { ...mapSummary, tiers: mapSummary.tiers.slice(0, 4) } },
+    })).toBeNull();
+    expect(buildDigestSafetyMapCapture(basePromptData, {
+      ...resolution,
+      manifest: { ...resolution.manifest, mapSummary: { ...mapSummary, date: "2026-08-29" } },
+    })).toBeNull();
+    expect(buildDigestSafetyMapCapture({
+      ...basePromptData,
+      safetyContext: { status: "unavailable", expectedModel: "v9", identity: null, publishedAt: null, reason: "held" },
+    }, resolution)).toBeNull();
+  });
+
+  it("injects the dated census, labels carried-forward freshness, and keeps archived rows map-free", () => {
+    const capture = buildDigestSafetyMapCapture(basePromptData, {
+      kind: "available",
+      imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-08-30",
+      freshness: "carried-forward",
+      ageDays: 2,
+      manifest: {
+        date: "2026-08-30",
+        asOfSec: 1_788_000_000,
+        renderedAtSec: 1_788_001_000,
+        edition: "daily",
+        bytes: { png: 1_000_000 },
+        mapSummary,
+      },
+    });
+    expect(capture).not.toBeNull();
+    const prompt = buildUserPrompt({ ...basePromptData, ...(capture ? { safetyMap: capture } : {}) });
+    expect(prompt).toContain("Safety Map census (carried-forward, age 2 days; depicts 2026-08-30 UTC)");
+    expect(prompt).toContain("A tier: 2 coins, 70.0% of mapped supply; leaders: USDT (95)");
+    expect(prompt).toContain("2 not rated");
+    expect(prompt).toContain("only evidence of tier crossings");
+    expect(prompt).not.toContain("Today’s map");
+
+    const archivedPrompt = buildUserPrompt({ ...basePromptData, safetyMap: undefined });
+    expect(archivedPrompt).not.toContain("Safety Map census");
+    expect(archivedPrompt).not.toContain("mapped supply");
   });
 });
 
@@ -1984,13 +2138,19 @@ describe("editorial guards (Batch 7)", () => {
       label: "flags fabricated movement claims against previous-edition facts",
       parsed: () => makeParsedFixture({ extended: `APXUSD narrowed from 3,650 bps yesterday, a recovery nobody measured. ${DEFAULT_PARSED_EXTENDED}` }),
       profile: { kind: "daily", recentMeta: [], prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159, bps: -3159 }] } satisfies DigestValidationProfile,
-      expected: [{ code: "unverifiable-movement-claim", present: true }],
+      expected: [{ code: "unverifiable-movement-claim", present: true, severity: "hard" as const }],
     },
     {
       label: "accepts movement claims the previous edition supports",
       parsed: () => makeParsedFixture({ extended: `APXUSD widened from 3,159 bps to 3,410 bps overnight. ${DEFAULT_PARSED_EXTENDED}` }),
       profile: { kind: "daily", recentMeta: [], prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159 }] } satisfies DigestValidationProfile,
       expected: [{ code: "unverifiable-movement-claim", present: false }],
+    },
+    {
+      label: "hard-flags a movement origin when the previous edition had no depeg fact",
+      parsed: () => makeParsedFixture({ extended: `APXUSD widened from 3,650 bps overnight. ${DEFAULT_PARSED_EXTENDED}` }),
+      profile: { kind: "daily", recentMeta: [], prevDepegFacts: [] } satisfies DigestValidationProfile,
+      expected: [{ code: "unverifiable-movement-claim", present: true, severity: "hard" as const }],
     },
     {
       label: "flags the same coin in three consecutive titles and day-count titles",

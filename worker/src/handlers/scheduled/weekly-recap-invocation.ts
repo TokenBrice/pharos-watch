@@ -7,6 +7,9 @@ import {
   missingTwitterCredentialNames,
 } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
+import { WEEKLY_RECAP_LLM_CONFIG } from "../../lib/constants";
+import { resolveDigestLlmConfig } from "../../cron/digest/platform";
+import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 /**
  * Single binding of the weekly recap to a scheduled runtime.
@@ -25,6 +28,17 @@ export function runWeeklyRecapForRuntime(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
+  const llmConfig = resolveDigestLlmConfig(WEEKLY_RECAP_LLM_CONFIG, {
+    model: "WEEKLY_DIGEST_MODEL" in runtime.env
+      ? runtime.env.WEEKLY_DIGEST_MODEL
+      : undefined,
+    effort: "WEEKLY_DIGEST_EFFORT" in runtime.env
+      ? runtime.env.WEEKLY_DIGEST_EFFORT
+      : undefined,
+    maxTokens: "WEEKLY_DIGEST_MAX_TOKENS" in runtime.env
+      ? runtime.env.WEEKLY_DIGEST_MAX_TOKENS
+      : undefined,
+  });
   return generateWeeklyRecap(
     runtime.db,
     runtime.env.ANTHROPIC_API_KEY ?? null,
@@ -37,5 +51,7 @@ export function runWeeklyRecapForRuntime(
       twitterMissing: missingTwitterCredentialNames(runtime.env),
       telegramMissing: missingTelegramCredentialNames(runtime.env),
     },
+    llmConfig,
+    resolveTelegramRecapRolloutPolicy(runtime.env),
   );
 }

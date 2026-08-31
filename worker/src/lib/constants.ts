@@ -255,9 +255,30 @@ export const CURVE_ORACLE_MAX_STALENESS_SEC = 300;
  */
 export const ANTHROPIC_TIMEOUT_MS = 12 * 60_000;
 
+export const DIGEST_EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
+export type DigestEffort = (typeof DIGEST_EFFORT_LEVELS)[number];
+
+export interface DigestLlmConfig {
+  model: string;
+  effort: DigestEffort;
+  maxTokens: number;
+}
+
 /**
- * Anthropic model used for digest/recap editorial generation.
- * Single source of truth shared by the implementation and its tests so a model
- * upgrade is a one-line change. A deliberate product decision, not an env var.
+ * Opus 5 adds streaming safety classifiers that can refuse a request. The
+ * digest request path handles that policy outcome separately from provider
+ * failures so it cannot poison the Anthropic circuit breaker.
  */
-export const DIGEST_MODEL = "claude-opus-4-8";
+export const DIGEST_MODEL = "claude-opus-5";
+
+export const DAILY_DIGEST_LLM_CONFIG: DigestLlmConfig = {
+  model: DIGEST_MODEL,
+  effort: "xhigh",
+  maxTokens: 16_000,
+};
+
+export const WEEKLY_RECAP_LLM_CONFIG: DigestLlmConfig = {
+  model: DIGEST_MODEL,
+  effort: "xhigh",
+  maxTokens: 16_000,
+};

@@ -67,6 +67,7 @@ import {
 import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
 import { postDigestTweet } from "../../lib/twitter";
 import { deliverTwitterDigestWithLedger } from "../../lib/twitter-digest-ledger";
+import { validateDigestModelOutput } from "../daily-digest/response";
 
 const safetyContext = {
   status: "available" as const,
@@ -117,11 +118,23 @@ function weeklyClaudeResponse(overrides: Partial<{
  */
 function mockAnthropicStreamResponse(text: string): Response {
   const events: Array<{ event: string; data: unknown }> = [
-    { event: "message_start", data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } } },
+    {
+      event: "message_start",
+      data: {
+        type: "message_start",
+        message: {
+          id: "msg_test",
+          role: "assistant",
+          model: "claude-opus-5",
+          content: [],
+          usage: { input_tokens: 800, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+        },
+      },
+    },
     { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } } },
     { event: "content_block_delta", data: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } } },
     { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
-    { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null } } },
+    { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 400 } } },
     { event: "message_stop", data: { type: "message_stop" } },
   ];
   const encoded = events
@@ -291,6 +304,26 @@ describe("generateWeeklyRecap", () => {
       weekEnd: "2026-03-28",
       telegramDelivered: false,
       telegramDeliveryStatus: "pending",
+      llm: {
+        model: "claude-opus-5",
+        effort: "xhigh",
+        maxTokens: 16000,
+        attempts: [{
+          attemptNumber: 1,
+          requestKind: "original",
+          httpAttempt: 1,
+          requestedModel: "claude-opus-5",
+          servedModel: "claude-opus-5",
+          inputTokens: 800,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          outputTokens: 400,
+          stopReason: "end_turn",
+          refusalCategory: null,
+          costUsd: 0.014,
+          httpStatus: 200,
+        }],
+      },
     });
     const update = db.getHistory().find((entry) => entry.sql.includes("SET digest_meta = ?"));
     const finalMeta = JSON.parse(String(update?.binds[0])) as Record<string, unknown>;
@@ -304,8 +337,8 @@ describe("generateWeeklyRecap", () => {
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.anthropic.com/v1/messages",
       expect.any(Object),
-      2,
-      { timeoutMs: 11 * 60_000 },
+      0,
+      { timeoutMs: 11 * 60_000, returnFinalResponse: true },
     );
 
     const weeklyBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
@@ -313,12 +346,14 @@ describe("generateWeeklyRecap", () => {
       max_tokens: number;
       thinking?: { type: string };
       output_config?: { effort: string };
+      fallbacks?: string;
       system: string;
     };
     expect(weeklyBody.model).toBe(DIGEST_MODEL);
     expect(weeklyBody.thinking).toEqual({ type: "adaptive" });
     expect(weeklyBody.output_config).toEqual({ effort: "xhigh" });
-    expect(weeklyBody.max_tokens).toBe(64000);
+    expect(weeklyBody.max_tokens).toBe(16000);
+    expect(weeklyBody.fallbacks).toBe("default");
 
     const weeklySystem = weeklyBody.system as string;
     expect(weeklySystem).toContain("forward-look");
@@ -373,6 +408,7 @@ describe("generateWeeklyRecap", () => {
       null,
       "https://pharos.watch/safety-scores/map.png?date=2026-03-29",
       null,
+      expect.any(Object),
     );
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
       db,
@@ -410,6 +446,23 @@ describe("generateWeeklyRecap", () => {
     expect(result.status).toBeUndefined();
     expect(result.metadata).toContain("quality: repeated-primary-coin:soft");
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
+  });
+
+  it("raises a hard issue when weekly copy repeats a quarantined liquidity claim", () => {
+    const issues = validateDigestModelOutput({
+      digestTitle: "USDS Liquidity Collapsed",
+      digestText: "USDS drained to $13.72M.",
+      digestExtended: "USDS liquidity collapsed as TVL fell from $162.28M to $13.72M.",
+      digestMeta: JSON.stringify({ weekStart: "2026-08-18", weekEnd: "2026-08-24" }),
+      strippedDashCount: 0,
+      forbiddenPhraseHits: [],
+      usedRawTextFallback: false,
+    }, { kind: "weekly" });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: "quarantined-signal-claim",
+      severity: "hard",
+    }));
   });
 
   it("reports weekly recap preflight and skipped progress when Anthropic is not configured", async () => {

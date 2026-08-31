@@ -4,7 +4,19 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 
 export interface RecentDigestMetaEntry {
   meta: DigestMeta | null;
+  /**
+   * Prompt-only variety fallback for pre-meta editions. `buildUserPrompt` uses
+   * this solely in its `else` branch, so it stays null once structured `meta`
+   * exists and never inflates the prompt for modern editions.
+   */
   rawText: string | null;
+  /**
+   * Validator history, always populated. The opening-fingerprint and
+   * structural-repetition checks measure the body, not the tweet-sized text, so
+   * they need `digest_extended` for every recent edition — including modern ones
+   * that carry `meta` and therefore have a null `rawText`.
+   */
+  extended: string | null;
   title: string | null;
 }
 
@@ -12,6 +24,7 @@ export function buildRecentDigestMeta(
   rows: Array<{
     digest_title: string | null;
     digest_text: string;
+    digest_extended?: string | null;
     digest_meta: string | null;
   }>,
 ): RecentDigestMetaEntry[] {
@@ -28,6 +41,7 @@ export function buildRecentDigestMeta(
     return {
       meta,
       rawText: !meta ? (row.digest_title ? `${row.digest_title}: ${row.digest_text}` : row.digest_text) : null,
+      extended: row.digest_extended ?? null,
       title: row.digest_title ?? null,
     };
   });

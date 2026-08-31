@@ -1,10 +1,18 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DigestResponseSchema } from "../../lib/schemas";
 import { validateDigestLeadRequirements, type DigestLeadRequirement } from "./lead-requirements";
-import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint, type LeadFamily } from "./voice-guards";
+import {
+  findForbiddenTics,
+  findRepeatedStructuralNgrams,
+  hasForwardLook,
+  leadFamily,
+  openingFingerprint,
+  type LeadFamily,
+} from "./voice-guards";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { getMetaString, normalizeStringArray } from "./digest-intelligence-utils";
 import { findDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
+import { findQuarantinedDigestSignalClaims } from "@shared/lib/digest-signal-quarantine";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -13,6 +21,9 @@ const FORBIDDEN_PHRASES = [
   "It's worth noting ",
   "It remains to be seen ",
 ];
+
+const OPENING_FINGERPRINT_WINDOW = 7;
+const STRUCTURAL_REPETITION_WINDOW = 7;
 
 export interface ParsedDigestResponse {
   digestTitle: string;
@@ -36,6 +47,13 @@ export interface DigestValidationProfile {
     meta: Record<string, unknown> | null;
     title: string | null;
     rawText?: string | null;
+    /**
+     * Previous editions' `digest_extended`. Required for the opening-fingerprint
+     * and structural-repetition checks: `rawText` is null once an edition carries
+     * structured `meta`, so without this both checks would silently degrade to
+     * titles for every modern edition.
+     */
+    extended?: string | null;
   }>;
   leadRequirements?: DigestLeadRequirement[];
   /** Per-coin depeg truth for the price/bps consistency lint. */
@@ -278,6 +296,15 @@ function getMetaCoins(meta: Record<string, unknown> | null): string[] {
   return value.filter((coin): coin is string => typeof coin === "string").map((coin) => coin.toUpperCase());
 }
 
+function weeklyPeriodFromMeta(meta: Record<string, unknown> | null): { startAt: number; endAt: number } | null {
+  const weekStart = getMetaString(meta, "weekStart");
+  const weekEnd = getMetaString(meta, "weekEnd");
+  if (!weekStart || !weekEnd) return null;
+  const startAt = Math.floor(Date.parse(`${weekStart}T00:00:00Z`) / 1000);
+  const endAt = Math.floor(Date.parse(`${weekEnd}T23:59:59Z`) / 1000);
+  return Number.isFinite(startAt) && Number.isFinite(endAt) ? { startAt, endAt } : null;
+}
+
 export function validateDigestModelOutput(
   parsed: ParsedDigestResponse,
   profile: DigestValidationProfile,
@@ -292,6 +319,7 @@ export function validateDigestModelOutput(
   const maxWords = isDaily ? 280 : 400;
   const minParagraphs = isDaily ? 3 : 4;
   const maxParagraphs = isDaily ? 4 : 6;
+  const parsedMeta = parsed.digestMeta ? JSON.parse(parsed.digestMeta) as Record<string, unknown> : null;
 
   if (parsed.usedRawTextFallback) {
     issues.push({ code: "raw-text-fallback", severity: "hard", message: "Model response was not valid digest JSON." });
@@ -328,6 +356,17 @@ export function validateDigestModelOutput(
       severity: "hard",
       message: "Copy references an unavailable canonical input; omit that topic entirely.",
     });
+  }
+  if (profile.kind === "weekly") {
+    const copy = `${parsed.digestTitle}\n${parsed.digestText}\n${parsed.digestExtended}`;
+    const weeklyPeriod = weeklyPeriodFromMeta(parsedMeta);
+    for (const quarantine of weeklyPeriod ? findQuarantinedDigestSignalClaims(copy, "liquidity", weeklyPeriod) : []) {
+      issues.push({
+        code: "quarantined-signal-claim",
+        severity: "hard",
+        message: `Copy repeats a retracted ${quarantine.family} claim for ${quarantine.stablecoinId} (${quarantine.incidentReference}).`,
+      });
+    }
   }
   if (combinedLength > 270) {
     issues.push({ code: "tweet-too-long", severity: "hard", message: `Title + text is ${combinedLength} characters, above 270.` });
@@ -367,7 +406,6 @@ export function validateDigestModelOutput(
     });
   }
 
-  const parsedMeta = parsed.digestMeta ? JSON.parse(parsed.digestMeta) as Record<string, unknown> : null;
   const recent = profile.recentMeta ?? [];
 
   issues.push(...validateDigestLeadRequirements({
@@ -390,9 +428,9 @@ export function validateDigestModelOutput(
   const currentFingerprint = openingFingerprint(parsed.digestExtended);
   if (currentFingerprint) {
     const recentFingerprints = recent
-      .slice(0, 3)
+      .slice(0, OPENING_FINGERPRINT_WINDOW)
       .map((entry) => {
-        const source = entry.rawText ?? entry.title ?? "";
+        const source = entry.extended ?? entry.rawText ?? entry.title ?? "";
         return openingFingerprint(source);
       })
       .filter((fp): fp is string => !!fp);
@@ -401,7 +439,7 @@ export function validateDigestModelOutput(
       issues.push({
         code: "opening-pattern-repetition",
         severity: "soft",
-        message: `Opening fingerprint '${currentFingerprint}' matches ${matchCount} of last 3 digests; open differently.`,
+        message: `Opening fingerprint '${currentFingerprint}' matches ${matchCount} of the last ${OPENING_FINGERPRINT_WINDOW} digests; open differently.`,
       });
     } else if (currentFingerprint === "psi-verb" && matchCount >= 1) {
       issues.push({
@@ -410,6 +448,20 @@ export function validateDigestModelOutput(
         message: "PSI-verb opening repeats; the lead should surface a candidate fact first.",
       });
     }
+  }
+  const repeatedStructuralNgrams = findRepeatedStructuralNgrams(
+    `${parsed.digestText}\n${parsed.digestExtended}`,
+    recent
+      .slice(0, STRUCTURAL_REPETITION_WINDOW)
+      .map((entry) => entry.extended ?? entry.rawText)
+      .filter((text): text is string => Boolean(text)),
+  );
+  if (repeatedStructuralNgrams.length > 0) {
+    issues.push({
+      code: "structural-repetition",
+      severity: "soft",
+      message: `Copy repeats a five-word sentence shape from at least two recent editions: ${repeatedStructuralNgrams.map((ngram) => `'${ngram}'`).join(", ")}.`,
+    });
   }
   const titleFingerprint = normalizeTitleFingerprint(parsed.digestTitle);
   const dedupeTitles = [
@@ -503,7 +555,7 @@ export function validateDigestModelOutput(
   if (profile.depegFacts && profile.depegFacts.length > 0) {
     issues.push(...lintPriceBpsConsistency(fullCopy, profile.depegFacts));
   }
-  if (profile.prevDepegFacts && profile.prevDepegFacts.length > 0) {
+  if (profile.prevDepegFacts) {
     issues.push(...lintMovementClaims(fullCopy, profile.prevDepegFacts));
   }
 
@@ -520,10 +572,11 @@ function sentenceMentionsSymbol(sentence: string, symbol: string): boolean {
 }
 
 /**
- * Price/bps consistency lint. The July 2026 corpus shipped "5,783 bps below
- * peg" beside "$0.997" in one sentence — the peak and the live price from two
- * different fields, laundered into a contradiction. Any sentence that quotes a
- * coin's dollar price AND a bps figure must have the two agree.
+ * Price/bps consistency lint. A candidate-model trial repeatedly paired prices
+ * with bps values from different fields. Any sentence that quotes a coin's
+ * dollar price AND a bps figure must have the two agree. This stays soft at the
+ * measured tolerance because making routine rounding mismatches hard would add
+ * a corrective LLM call; the prompt carries the preventative constraint.
  */
 function lintPriceBpsConsistency(
   copy: string,
@@ -569,7 +622,6 @@ function lintMovementClaims(
   copy: string,
   prevFacts: readonly DigestDepegFact[],
 ): DigestValidationIssue[] {
-  if (prevFacts.length === 0) return [];
   const issues: DigestValidationIssue[] = [];
   const knownPrevBps = prevFacts
     .flatMap((fact) => [fact.currentBps, fact.bps, fact.peakBps])
@@ -582,7 +634,10 @@ function lintMovementClaims(
     if (!supported) {
       issues.push({
         code: "unverifiable-movement-claim",
-        severity: "soft",
+        // This is a factual provenance failure, not a style defect. A hard
+        // issue spends one corrective retry rather than publishing an armed
+        // threshold as though it were yesterday's observation.
+        severity: "hard",
         message: `Copy claims movement "from ${claimedOrigin} bps" but no previous-edition depeg fact is near that value.`,
       });
     }
