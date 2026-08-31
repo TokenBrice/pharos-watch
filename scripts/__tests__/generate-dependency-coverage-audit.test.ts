@@ -167,6 +167,66 @@ describe("generate-dependency-coverage-audit", () => {
     ]);
   });
 
+  it("accepts the current V9 report-v5 score and native dependency graph shape", () => {
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [
+        coin({ id: "serial-upstream", symbol: "SER" }),
+        coin({ id: "basket-upstream", symbol: "BSK" }),
+        coin({ id: "dependent", symbol: "DEP" }),
+      ],
+      reportCards: {
+        schemaVersion: 5,
+        cards: [
+          { id: "serial-upstream", score: 80 },
+          { id: "basket-upstream", score: null },
+          { id: "dependent", score: 65 },
+        ],
+        dependencyGraph: {
+          edges: [
+            {
+              from: "serial-upstream",
+              to: "dependent",
+              kind: "serial",
+              materiality: "serial",
+              weight: null,
+              upstreamScore: 80,
+            },
+            {
+              from: "basket-upstream",
+              to: "dependent",
+              kind: "basket",
+              materiality: "basket-weighted",
+              weight: 0.25,
+              upstreamScore: null,
+            },
+          ],
+        },
+      },
+    });
+
+    expect(audit.summary).toMatchObject({
+      reportCardEdgeCount: 2,
+      reportCardParticipantCount: 3,
+      unavailableTargetEdgeCount: 1,
+    });
+    expect(audit.dependencyEdges).toEqual([
+      expect.objectContaining({
+        from: "basket-upstream",
+        reportKind: "basket",
+        reportMateriality: "basket-weighted",
+        reportedWeight: 0.25,
+        targetScoreability: "active-nr",
+      }),
+      expect.objectContaining({
+        from: "serial-upstream",
+        reportKind: "serial",
+        reportMateriality: "serial",
+        reportedWeight: null,
+        targetScoreability: "scoreable",
+      }),
+    ]);
+  });
+
   it("rejects malformed or duplicate report-card cards, dependencies, diagnostics, and edges", () => {
     const validEdge = { from: "upstream", to: "dependent", weight: 0.5, type: "collateral" };
     const validCard = { id: "dependent", overallScore: 70 };
@@ -517,6 +577,66 @@ describe("generate-dependency-coverage-audit", () => {
     });
   });
 
+  it("separates unique-symbol active-target leads into material and sub-1% lanes", () => {
+    const subject = coin({
+      id: "subject",
+      symbol: "SUB",
+      dependencies: [{ id: "usdc-circle", weight: 0.02, type: "collateral" }],
+      reserves: [
+        { name: "Fasanara mGLOBAL position", pct: 44, risk: "high" },
+        { name: "f(x) fxSAVE dust", pct: 0.4, risk: "medium" },
+        { name: "USDC liquidity", pct: 2, risk: "low" },
+      ],
+      reserveReview: {
+        reviewedAt: "2026-08-31",
+        reviewer: "fixture reviewer",
+        confidence: "verified",
+        sources: [{ label: "Reserve report", url: "https://example.test/reserves" }],
+        rationale: "Fixture identity review.",
+        compositionBasis: "Fixture reserve report",
+        scope: "selected-slices",
+        knownUnknownExposure: "No composition assertion beyond the fixture rows.",
+        knownUnknownExposurePct: 0,
+        nonLinkDispositions: [{
+          reserveIndex: 0,
+          reserveName: "Fasanara mGLOBAL position",
+          pct: 44,
+          disposition: "untracked-exogenous-asset",
+          rationale: "Fixture intentionally carries the stale untracked classification.",
+        }],
+      },
+    });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [
+        subject,
+        coin({ id: "mglobal-midas-fasanara", symbol: "mGLOBAL" }),
+        coin({ id: "fxsave-f-x-protocol", symbol: "fxSAVE" }),
+        coin({ id: "usdc-circle", symbol: "USDC" }),
+      ],
+    });
+
+    expect(audit.activeUnlinkedReserveSymbolLeads).toEqual([
+      expect.objectContaining({
+        coinId: "subject",
+        reserveIndex: 0,
+        candidateCoinId: "mglobal-midas-fasanara",
+        reason: "active-target-marked-untracked",
+      }),
+    ]);
+    expect(audit.subMaterialActiveUnlinkedReserveSymbolLeads).toEqual([
+      expect.objectContaining({
+        coinId: "subject",
+        reserveIndex: 1,
+        candidateCoinId: "fxsave-f-x-protocol",
+        reason: "unique-symbol-target-unlinked",
+      }),
+    ]);
+    expect(audit.summary).toMatchObject({
+      activeUnlinkedReserveSymbolLeadCount: 1,
+      subMaterialActiveUnlinkedReserveSymbolLeadCount: 1,
+    });
+  });
+
   it("surfaces exact manual dependency review gaps and stale relationships", () => {
     const missing = coin({
       id: "missing-review",
@@ -642,6 +762,36 @@ describe("generate-dependency-coverage-audit", () => {
     ]);
   });
 
+  it("reports a retained link missing from the current report even when the static registry still has it", () => {
+    const upstream = coin({ id: "upstream", symbol: "UP" });
+    const dependent = coin({
+      id: "dependent",
+      symbol: "DEP",
+      dependencies: [{ id: "upstream", weight: 1, type: "collateral" }],
+    });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [upstream, dependent],
+      targetDispositions: [{
+        targetId: "upstream",
+        expectedLifecycle: "active",
+        action: "retain-reviewed-link",
+        reviewer: "reviewer",
+        reviewedAt: "2026-08-31",
+        sources: [{ label: "Docs", url: "https://example.test/upstream" }],
+        rationale: "The reviewed upstream link remains expected in production.",
+      }],
+      reportCards: {
+        cards: [{ id: "upstream", score: null }, { id: "dependent", score: 70 }],
+        dependencyGraph: { edges: [] },
+      },
+    });
+
+    expect(audit.targetDispositionValidationIssues).toContainEqual(expect.objectContaining({
+      targetId: "upstream",
+      reason: "no-current-edge",
+    }));
+  });
+
   it("renders the reviewer-facing sections", () => {
     const audit = buildDependencyCoverageAudit({
       activeCoins,
@@ -671,7 +821,7 @@ describe("generate-dependency-coverage-audit", () => {
       generatedAt: "2026-08-28T00:00:00.000Z",
     }));
 
-    expect(sha256(markdown)).toBe("9d5d725a26bfda9229f7cd72bf5bf74f59b271167980706087afc7f0258d203e");
+    expect(sha256(markdown)).toBe("3161bfb850cb54fc1d0c675aea7386bb38212320c66f5ba7b23b7f187c18858f");
   });
 
   it("preserves clipped rows and the over-limit Markdown golden", () => {
@@ -685,7 +835,7 @@ describe("generate-dependency-coverage-audit", () => {
       generatedAt: "2026-08-28T00:00:00.000Z",
     }));
 
-    expect(sha256(markdown)).toBe("6e09c8711496db68d602ce1cdefdd78b6542bb1842db672d062f5b439282f9d9");
+    expect(sha256(markdown)).toBe("b28782601e9a5cc1ef6da51db7f2472c8364acb5dcf95567c6973d4e8a3b6412");
     expect(markdown).toContain("coin | mcap | local rank\n--- | ---: | ---:");
     expect(markdown).toContain("_Plus 1 more rows._");
     expect(markdown).not.toContain("C51 (candidate-51)");
