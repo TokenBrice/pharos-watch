@@ -24,12 +24,31 @@ vi.mock("../../lib/digest-safety-context", async (importOriginal) => {
     ...actual,
     loadDigestSafetyContext: vi.fn(),
     digestSafetyContextFromPersistedInput: vi.fn(),
+    checkDigestSafetyContextForDelivery: vi.fn(async () => ({ kind: "ok" as const })),
   };
 });
 
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcomeSafe: vi.fn(async () => {}),
+}));
+
+vi.mock("../../lib/twitter", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/twitter")>()),
+  postDigestTweet: vi.fn(async () => ({ tweetId: "weekly-tweet", mediaAttached: true })),
+}));
+
+vi.mock("../../lib/twitter-digest-ledger", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/twitter-digest-ledger")>()),
+  deliverTwitterDigestWithLedger: vi.fn(async (_db, _key, _edition, _now, post) => ({
+    status: "sent" as const,
+    post: await post(),
+  })),
+}));
+
+vi.mock("../../lib/digest-safety-map", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/digest-safety-map")>()),
+  resolveDigestSafetyMap: vi.fn(async () => ({ kind: "unavailable" as const, reason: "manifest-http-404" })),
 }));
 
 import { generateWeeklyRecap } from "../weekly-recap";
@@ -45,6 +64,9 @@ import {
   digestSafetyContextFromPersistedInput,
   loadDigestSafetyContext,
 } from "../../lib/digest-safety-context";
+import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
+import { postDigestTweet } from "../../lib/twitter";
+import { deliverTwitterDigestWithLedger } from "../../lib/twitter-digest-ledger";
 
 const safetyContext = {
   status: "available" as const,
@@ -218,6 +240,7 @@ describe("generateWeeklyRecap", () => {
     const result = await generateWeeklyRecap(
       db,
       "anthropic-key",
+      null,
       { botToken: "bot", chatId: "chat" },
     );
 
@@ -304,6 +327,63 @@ describe("generateWeeklyRecap", () => {
     expect(weeklySystem).toContain("arc");
   });
 
+  it("posts the weekly recap to X with a carried-forward dated map", async () => {
+    const db = mockD1(makeTables(), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce({
+      kind: "available",
+      imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-29",
+      manifest: {
+        date: "2026-03-29",
+        asOfSec: 1_774_800_000,
+        renderedAtSec: 1_774_800_100,
+        edition: "daily",
+        bytes: { png: 1_000 },
+      },
+      freshness: "carried-forward",
+      ageDays: 1,
+    });
+    const twitterCreds = {
+      apiKey: "key",
+      apiSecret: "secret",
+      accessToken: "token",
+      accessTokenSecret: "token-secret",
+    };
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      twitterCreds,
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    expect(result.status).toBeUndefined();
+    expect(deliverTwitterDigestWithLedger).toHaveBeenCalledWith(
+      db,
+      "weekly-recap:twitter-sent:2026-03-30",
+      null,
+      expect.any(Number),
+      expect.any(Function),
+      undefined,
+    );
+    expect(postDigestTweet).toHaveBeenCalledWith(
+      "Weekly Calm",
+      expect.any(String),
+      twitterCreds,
+      null,
+      "https://pharos.watch/safety-scores/map.png?date=2026-03-29",
+      null,
+    );
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        mapImageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-29",
+        mapDate: "2026-03-29",
+      }),
+      undefined,
+    );
+  });
+
   it("keeps residual soft quality warnings visible without degrading cron health", async () => {
     const recentWeeklyRows = [{
       digest_title: "Prior USDT Week",
@@ -321,6 +401,7 @@ describe("generateWeeklyRecap", () => {
     const result = await generateWeeklyRecap(
       db,
       "anthropic-key",
+      null,
       { botToken: "bot", chatId: "chat" },
     );
 
@@ -338,7 +419,7 @@ describe("generateWeeklyRecap", () => {
       progressUpdates.push(update);
     });
 
-    const result = await generateWeeklyRecap(db, null, null, undefined, reportProgress);
+    const result = await generateWeeklyRecap(db, null, null, null, undefined, reportProgress);
 
     expect(result.metadata).toBe("skipped: no API key");
     expect(progressUpdates.find((update) => update.stage === "preflight")).toMatchObject({
@@ -367,7 +448,7 @@ describe("generateWeeklyRecap", () => {
       progressUpdates.push(update);
     });
 
-    const result = await generateWeeklyRecap(db, "anthropic-key", null, undefined, reportProgress);
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, null, undefined, reportProgress);
 
     expect(result.status).toBe("skipped_neutral");
     expect(result.itemCount).toBe(0);
@@ -386,6 +467,29 @@ describe("generateWeeklyRecap", () => {
     });
     expect(fetchWithRetry).not.toHaveBeenCalled();
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
+  it("uses the Monday scheduled slot when execution starts after midnight Tuesday", async () => {
+    vi.setSystemTime(new Date("2026-03-31T00:01:00.000Z"));
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    const db = mockD1(makeTables(), { requireMatch: true });
+    const mondaySlotSec = Math.floor(Date.parse("2026-03-30T08:10:00Z") / 1000);
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      null,
+      null,
+      undefined,
+      undefined,
+      mondaySlotSec,
+    );
+
+    expect(result.itemCount).toBe(1);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      digestDate: "2026-03-30",
+      scheduledAtSec: mondaySlotSec,
+    });
   });
 
   it("returns a neutral skipped result when this week's recap already exists", async () => {
@@ -409,7 +513,7 @@ describe("generateWeeklyRecap", () => {
       },
     ], { requireMatch: true });
 
-    const result = await generateWeeklyRecap(db, "anthropic-key", null);
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     expect(result.status).toBe("skipped_neutral");
     expect(result.itemCount).toBe(0);
@@ -449,6 +553,7 @@ describe("generateWeeklyRecap", () => {
     const result = await generateWeeklyRecap(
       db,
       "anthropic-key",
+      null,
       { botToken: "bot", chatId: "chat" },
     );
 
@@ -467,6 +572,7 @@ describe("generateWeeklyRecap", () => {
     const result = await generateWeeklyRecap(
       db,
       "anthropic-key",
+      null,
       { botToken: "bot", chatId: "chat" },
     );
 
@@ -502,6 +608,7 @@ describe("generateWeeklyRecap", () => {
     const result = await generateWeeklyRecap(
       db,
       "anthropic-key",
+      null,
       { botToken: "bot", chatId: "chat" },
     );
 
@@ -536,7 +643,7 @@ describe("generateWeeklyRecap", () => {
         extended: VALID_WEEKLY_EXTENDED.replace("grade transitions", "risk transitions"),
       }));
 
-    const result = await generateWeeklyRecap(db, "anthropic-key", null);
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     expect(result.itemCount).toBe(1);
     expect(fetchWithRetry).toHaveBeenCalledTimes(2);
@@ -567,9 +674,11 @@ describe("generateWeeklyRecap", () => {
     const result = await generateWeeklyRecap(
       db,
       "anthropic-key",
+      null,
       { botToken: "bot", chatId: "chat" },
     );
 
+    expect(result.status).toBe("degraded");
     expect(result.metadata).toContain("telegram: failed:");
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
@@ -611,6 +720,7 @@ describe("generateWeeklyRecap", () => {
     const result = await generateWeeklyRecap(
       db,
       "anthropic-key",
+      null,
       { botToken: "bot", chatId: "chat" },
     );
 
@@ -646,7 +756,7 @@ describe("generateWeeklyRecap", () => {
     );
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 
-    const result = await generateWeeklyRecap(db, "anthropic-key", null);
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     expect(result.itemCount).toBe(1);
     expect(result.status).toBeUndefined();
@@ -671,7 +781,7 @@ describe("generateWeeklyRecap", () => {
     const db = mockD1(makeTables({ dailyRows: zeroStartRows }), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({ title: "Zero Base Week" }));
 
-    await generateWeeklyRecap(db, "anthropic-key", null);
+    await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     const anthropicRequest = vi.mocked(fetchWithRetry).mock.calls[0];
     const body = anthropicRequest?.[1]?.body;
@@ -713,7 +823,7 @@ describe("generateWeeklyRecap", () => {
     ]);
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 
-    await generateWeeklyRecap(db, "anthropic-key", null);
+    await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
       messages: { content: string }[];
@@ -754,7 +864,7 @@ describe("generateWeeklyRecap", () => {
     const db = mockD1(makeTables({ dailyRows: rows }), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 
-    await expect(generateWeeklyRecap(db, "anthropic-key", null)).resolves.toMatchObject({ itemCount: 1 });
+    await expect(generateWeeklyRecap(db, "anthropic-key", null, null)).resolves.toMatchObject({ itemCount: 1 });
 
     const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
       messages: { content: string }[];
@@ -768,7 +878,7 @@ describe("generateWeeklyRecap", () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 
-    await generateWeeklyRecap(db, "anthropic-key", null);
+    await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     const dailySelection = db.getHistory().find((entry) => entry.sql.includes("latest_daily"));
     expect(dailySelection?.sql).toContain("ROW_NUMBER() OVER");
@@ -816,7 +926,7 @@ describe("generateWeeklyRecap", () => {
       },
     }));
 
-    const result = await generateWeeklyRecap(db, "anthropic-key", null);
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     expect(result.status).toBeUndefined();
     const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
@@ -872,7 +982,7 @@ describe("generateWeeklyRecap", () => {
     const db = mockD1(makeTables({ dailyRows: rows }), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 
-    await generateWeeklyRecap(db, "anthropic-key", null);
+    await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
       messages: { content: string }[];
@@ -902,7 +1012,7 @@ describe("generateWeeklyRecap", () => {
       },
     }));
 
-    await generateWeeklyRecap(db, "anthropic-key", null);
+    await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
     expect(insert).toBeTruthy();
@@ -916,7 +1026,7 @@ describe("generateWeeklyRecap", () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
-    const result = await generateWeeklyRecap(db, "anthropic-key", null);
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     expect(result).toEqual({ metadata: "skipped: anthropic circuit open" });
     expect(fetchWithRetry).not.toHaveBeenCalled();

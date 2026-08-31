@@ -8,7 +8,12 @@
  */
 import { generateWeeklyRecap } from "../../cron/weekly-recap";
 import { syncDexShadowMeasuredExecution } from "../../cron/measured-execution/sync";
-import { buildTelegramCreds } from "../../lib/runtime-credentials";
+import {
+  buildTelegramCreds,
+  buildTwitterCreds,
+  missingTelegramCredentialNames,
+  missingTwitterCredentialNames,
+} from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups } from "./slot-groups";
 import { settleMeasuredExecutionLane } from "./half-hourly-measured-execution";
@@ -25,9 +30,15 @@ export async function runDaily0810Slot(runtime: ScheduledRuntimeContext) {
             generateWeeklyRecap(
               runtime.db,
               runtime.env.ANTHROPIC_API_KEY ?? null,
+              buildTwitterCreds(runtime.env),
               buildTelegramCreds(runtime.env),
               signal,
               reportProgress,
+              runtime.slotStartedAt,
+              {
+                twitterMissing: missingTwitterCredentialNames(runtime.env),
+                telegramMissing: missingTelegramCredentialNames(runtime.env),
+              },
             ),
         },
         {

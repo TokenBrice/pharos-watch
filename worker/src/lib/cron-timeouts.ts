@@ -69,7 +69,9 @@ const CRON_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
   // ~2 min for D1 persistence, Telegram/Twitter delivery, and cron_runs logging
   // before Cloudflare's 15-min scheduled-event ceiling.
   "daily-digest": 14 * 60_000,
-  "weekly-recap": 12 * 60_000,
+  // Weekly uses the same Anthropic budget and two-channel publication tail as
+  // daily, so preserve the same post-LLM headroom.
+  "weekly-recap": 14 * 60_000,
 };
 
 const cronJobIds = new Set(CRON_JOB_DEFINITIONS.map((definition) => definition.job));

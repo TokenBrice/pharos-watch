@@ -209,15 +209,15 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 | `GET /api/digest-archive` | All digests, newest first (up to 365), including compact PSI/mcap/risk summaries plus stored `riskTape`, `nextTriggers`, and forward-look outcomes parsed from input data |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a daily digest date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD-weekly` | Input data for a weekly recap slug; the handler strips `-weekly` for date parsing and returns the weekly snapshot when that digest row exists |
-| `POST /api/trigger-digest` *(admin)* | **Deferred**: writes a bounded pending intent (`requestId`, timestamps, attempt count, retry state, and last error) into the D1 `cache` table and returns 202. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min), retries transient failures with bounded backoff, retains exhausted/permanent failures as dead letters, and persists outcome to `digest:last-trigger-result`. All poll-driven runs (forced or deferred) are resume-first: when today already has a publishable digest row, delivery resumes from the stored edition instead of regenerating a duplicate, and the fail-closed map gate applies to forced runs too. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
+| `POST /api/trigger-digest` *(admin)* | **Deferred**: writes a bounded pending intent (`requestId`, timestamps, attempt count, retry state, and last error) into the D1 `cache` table and returns 202. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min), retries transient failures with bounded backoff, retains exhausted/permanent failures as dead letters, and persists outcome to `digest:last-trigger-result`. Poll-driven daily runs are resume-first: when today already has a publishable digest row, delivery resumes from the stored edition instead of regenerating a duplicate. The same poll resumes a missed weekly recap on Monday after 08:10 UTC when no non-blocked weekly row exists for that scheduled edition day. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
 
-An idle `digestTriggerPoll` with no pending force-run intent is a neutral conditional poll, not an omitted daily-digest execution. Stale-slot reconciliation therefore creates no synthetic `daily-digest` failure when no durable child progress exists. If a forced digest did start and left durable progress before losing ownership, the sweeper still records the real abandoned attempt using its original progress timestamps.
+An idle `digestTriggerPoll` with no pending force-run intent or due Monday recovery is a neutral conditional poll, not an omitted daily or weekly execution. Stale-slot reconciliation therefore creates no synthetic digest failure when neither child has durable progress. If a digest did start and left durable progress before losing ownership, the sweeper still records the real abandoned attempt using its original progress timestamps.
 
 ---
 
 ## Distribution
 
-When Twitter/X or Telegram is configured, the daily digest ships with the Safety Score map or not at all — the pipeline fails closed rather than posting a text-only social edition. Web-only runs skip this map gate. Before any generation work (including the LLM call), `generateDailyDigest` reads `/safety-scores/map.json` and HEAD-probes today's dated PNG. A same-day manifest with data under 24 hours old passes the gate; any unavailable or stale state withholds the whole run — no digest row, no LLM spend, no post — and records a `digest:safety-map-deferral` intent plus a `daily_digest_safety_map_deferred` warning. The `digestTriggerPoll` slot re-checks that intent every five minutes: while the map stays unpublished it waits; once the map is live it either generates the digest (no row for today yet) or resumes the stored edition's delivery.
+The daily digest never blocks on Safety Score map publication. A current manifest or one carried forward by up to two whole UTC days enables the dated map attachment; otherwise the digest still generates and delivers without map attachment or map prose. Attached URLs always use `manifest.date`, never `latest.png`, and carried-forward captions identify the date the poster depicts.
 
 After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. The manifest's optional `mapSummary` enables deterministic channel prose only when its complete typed shape is valid and the digest has an available canonical Safety Score context. An absent, partial, malformed, or capture-mismatched summary still permits the image attachment but emits no map prose. Twitter/X persists a same-day delivery ledger (see below).
 
@@ -243,7 +243,7 @@ After the digest is stored in D1, it is posted to configured Twitter/X and Teleg
 | `TWITTER_ACCESS_TOKEN` | OAuth access token |
 | `TWITTER_ACCESS_TOKEN_SECRET` | OAuth access token secret |
 
-If any of the four are absent, Twitter posting is skipped silently. Twitter/X delivery is replay-safe per UTC date: `daily-digest.ts` atomically advances `daily-digest:twitter-sent:YYYY-MM-DD` through `queued` → `sending` → `sent`, `execution_unknown`, or `failed`. Success records the tweet id. A clear Twitter 4xx rejection enters `failed` and may retry up to three total attempts; timeout, network, ambiguous 5xx, lost sending ownership, or accepted-post persistence ambiguity enters or is treated as `execution_unknown`, retains the ledger marker, disables automatic retry, and emits a structured warning with the manual reconciliation step. Legacy markers and terminal `sent` rows remain duplicate-safe. If the ledger claim fails, Twitter/X delivery is not attempted, avoiding duplicate force-run posts during cache/D1 contention. A map download or media-upload failure is handled before tweet creation and falls back to the text-only post; the map can never turn a publishable digest into a failed Twitter delivery.
+If any of the four are absent or blank, Twitter posting returns `skipped: no-creds`; the missing variable names are surfaced in structured run metadata, and the digest run is non-green rather than silently skipped. Twitter/X delivery is replay-safe per UTC date: `daily-digest.ts` atomically advances `daily-digest:twitter-sent:YYYY-MM-DD` through `queued` → `sending` → `sent`, `execution_unknown`, or `failed`. Success records the tweet id. A clear Twitter 4xx rejection enters `failed` and may retry up to three total attempts; timeout, network, ambiguous 5xx, lost sending ownership, or accepted-post persistence ambiguity enters or is treated as `execution_unknown`, retains the ledger marker, disables automatic retry, and emits a structured error with the manual reconciliation step. Legacy markers and terminal `sent` rows remain duplicate-safe. If the ledger claim fails, Twitter/X delivery is not attempted, avoiding duplicate force-run posts during cache/D1 contention. When no acceptable map is available, the tweet remains text-only; when a map is selected, a media upload failure aborts the mapped tweet before creation and remains eligible for the ledger's bounded retry path.
 
 ### Telegram
 
@@ -263,13 +263,11 @@ If any of the four are absent, Twitter posting is skipped silently. Twitter/X de
   A tier: {count} coins · {share}%
   C/D/F tiers: {count} coins · {share}%
 
-  <a href="https://pharos.watch/safety-scores/map.png?date=YYYY-MM-DD">View today’s map →</a>
-
   <a href="https://pharos.watch/digest/YYYY-MM-DD/">Read on Pharos →</a>
   ```
-- Endpoint: `POST https://api.telegram.org/bot{token}/sendMessage`
+- Endpoints: `POST https://api.telegram.org/bot{token}/sendPhoto` for mapped editions, followed by `POST https://api.telegram.org/bot{token}/sendMessage` for text chunks
 
-The `extended` field is used instead of `text`. The four-line map block shown above is present only when the optional map summary and canonical Safety Score context are both available; every count, supply total, and share is computed from the summary's tier market caps. When today's map passes the readiness contract, the canonical dated URL and any map block are persisted together in the rendered HTML at enqueue time, and the matching chunk is sent with `link_preview_options` selecting a large preview above the text. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
+The `extended` field is used instead of `text`. The four-line map block shown above is present only when the optional map summary and canonical Safety Score context are both available; every count, supply total, and share is computed from the summary's tier market caps. Telegram persists the dated map URL, depicted date, and media delivery state with the immutable edition. Delivery sends the map first through `sendPhoto`, durably records `media_state=sent`, then resumes text from the existing chunk cursor. Retryable photo failures do not advance that cursor, and text retries never resend an accepted photo. Editions without a map remain text-only with `media_state=none`. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
 
 Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram-digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body:
 
@@ -291,7 +289,7 @@ A same-day forced regeneration can render different copy after that immutable Te
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
 | `TELEGRAM_CHAT_ID` | Channel username (e.g. `@pharoswatch`) or numeric channel ID |
 
-If either is absent, Telegram posting is skipped silently.
+If either is absent or blank, Telegram delivery returns `no-creds`, surfaces the missing variable names in run metadata, and degrades the digest run.
 
 **Channel setup (one-time):**
 
@@ -300,25 +298,31 @@ If either is absent, Telegram posting is skipped silently.
 3. Add the bot as Admin with "Post Messages" permission only
 4. Add secrets from the worker directory: `cd worker && npx --no-install wrangler secret put TELEGRAM_BOT_TOKEN` and `cd worker && npx --no-install wrangler secret put TELEGRAM_CHAT_ID`
 
-`telegram.ts` also exports `sendToChat()` for the Telegram webhook command handler, but digest generation still uses the same HTML `sendMessage` API path and credentials.
+`telegram.ts` also exports `sendToChat()` for the Telegram webhook command handler; digest media and text use the same bot/channel credentials through the durable outbox.
 
 ### Distribution status logging
 
 Daily and weekly channel outcomes are returned in scheduled-run cron metadata. `POST /api/trigger-digest` does not run delivery inline anymore; it enqueues a retryable force-run intent and returns `202` with `{ ok, accepted, requestId, message }`, then the 5-minute digest-trigger poll writes each eventual result to cron history and the `digest:last-trigger-result` cache entry. Transient failures remain pending with bounded backoff for up to three attempts; permanent or exhausted failures remain as a retained `dead_letter` intent, while a successful run clears the intent.
 
 ```json
-{ "metadata": "243 chars, tweet: ok, telegram: ok" }
+{
+  "summary": "243 chars, tweet: ok, telegram: ok",
+  "channels": {
+    "twitter": { "status": "ok", "disposition": "delivered", "missingCredentialNames": [] },
+    "telegram": { "status": "ok", "disposition": "delivered", "missingCredentialNames": [] }
+  }
+}
 ```
 
-Possible channel values include `"no-creds"`, `"ok"`, `"failed: <truncated error>"`, `"queued: <state>"`, `"skipped: circuit-open"`, `"skipped: quality-gate"`, `"skipped: already-sent"`, and successful appendixed delivery strings such as `ok+appendix(...)`. Outbox retry and terminal backlog counts are separately exposed under the budget-only `telegram-digest-outbox-drain` status surface.
+Possible channel values include `"skipped: no-creds"` (Twitter), `"no-creds"` (Telegram), `"ok"`, `"failed: <truncated error>"`, `"queued: <state>"`, `"skipped: circuit-open"`, `"skipped: quality-gate"`, `"skipped: already-sent"`, and successful appendixed delivery strings such as `ok+appendix(...)`. Outbox retry and terminal backlog counts are separately exposed under the budget-only `telegram-digest-outbox-drain` status surface.
 
 ---
 
 ## Weekly Recap
 
 **File:** `worker/src/cron/weekly-recap.ts`
-**Schedule:** Mondays only in the `daily-0810` slot (`"10 8 * * *"`)
-**Dedup guard:** returns `skipped_neutral` outside Monday UTC or when a recent weekly row is already delivered; retries a recent row with `digest_meta.telegramDelivered = false` only while its delivery status is non-terminal. Quality-gate, `execution_unknown`, and `failed_permanent` rows require review rather than automatic weekly reruns.
+**Schedule:** Mondays only in the `daily-0810` slot (`"10 8 * * *"`), with missed-edition recovery from the five-minute digest poll after 08:10 Monday UTC
+**Dedup guard:** derives Monday and the edition date from the scheduled slot timestamp, returns `skipped_neutral` outside Monday UTC or when that scheduled day already has a non-blocked weekly row with no retryable channel, and retries only duplicate-safe channel states. Quality-gate, `execution_unknown`, and `failed_permanent` outcomes require review rather than blind channel replay.
 **Period semantics:** trailing daily editions available at the Monday 08:10 UTC start, not a strict Monday-Sunday calendar week. `digest_meta.periodType` is `"trailing-daily-editions"`.
 
 ### Data collection
@@ -348,7 +352,7 @@ Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 
 ### LLM call
 
 - **Model:** `claude-opus-4-8` with adaptive thinking + `xhigh` effort (identical contract to the daily digest)
-- **Timeout:** shared 12-minute Anthropic request cap; the scheduled weekly wrapper also has a 12-minute cron lease, so the lease can abort slow Monday recap runs
+- **Timeout:** shared 12-minute Anthropic request cap; the scheduled weekly wrapper has a 14-minute cron lease, preserving about two minutes for persistence and two-channel delivery
 - **max_tokens:** 64000
 - **Voice:** Same sardonic columnist, but synthesizing rather than reporting; rewritten system prompt adds arc framing, forward-look mandate on the last paragraph, tic list, and explicit week-over-week references
 - **Structure:** 4-6 paragraphs, 250-400 words: top unsuppressed Weekly Risk Leaderboard item as the week's headline, dominant story, counter-narrative, supply/capital flows, optional structural observation
@@ -358,11 +362,11 @@ Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 
 
 ### Storage
 
-Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"`, `"periodType": "trailing-daily-editions"`, `weekStart` and `weekEnd` date strings, the authored safety context, and Telegram delivery fields (`telegramDelivered`, `telegramDeliveryStatus`, `telegramDeliveryUpdatedAt`, and `telegramDeliveredAt` after success). The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`) with the exact active safety identity or an explicit unavailable state.
+Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"`, `"periodType": "trailing-daily-editions"`, `weekStart` and `weekEnd` date strings, the authored safety context, and parallel Twitter/Telegram delivery status, update, and delivered-at fields. The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`) with the exact active safety identity or an explicit unavailable state.
 
 ### Distribution
 
-Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "Weekly Recap:" and the link uses the weekly route slug `/digest/YYYY-MM-DD-weekly/`. The exact rendered weekly edition uses the same durable outbox as daily distribution. Confirmed retryable failures are polled every five minutes without another LLM call; ambiguous or permanent outcomes stop for operator reconciliation. The compatibility fields in `daily_digest.digest_meta` are updated after outbox success.
+Posted to both Twitter/X and Telegram. Twitter/X uses the distinct replay-safe ledger key `weekly-recap:twitter-sent:YYYY-MM-DD`; both channels attach the current or bounded carried-forward dated Safety Score map when available and otherwise publish without map prose or media. Telegram's title is prefixed with "Weekly Recap:" and the link uses the weekly route slug `/digest/YYYY-MM-DD-weekly/`. The exact rendered weekly edition uses the same durable outbox as daily distribution. Confirmed retryable Telegram failures are polled every five minutes without another LLM call; ambiguous or permanent outcomes stop for operator reconciliation. Channel compatibility fields in `daily_digest.digest_meta` are updated after delivery.
 
 ---
 
