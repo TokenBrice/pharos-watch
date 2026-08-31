@@ -44,3 +44,13 @@ The _why_ behind these locked decisions lives in the [Architectural Decision Rec
 - Worker cron jobs share Cloudflare's per-trigger 6-connection pool; consume response bodies before opening more fetches.
 - D1 migrations run before the new Worker is live; destructive cleanup needs a separate coordinated rollout.
 - Docs over ~1,500 lines (notably `docs/api-reference.md`): use the top navigation block, then Grep or offset-read only the matched section — never read wholesale.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
