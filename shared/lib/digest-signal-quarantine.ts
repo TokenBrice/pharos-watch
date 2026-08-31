@@ -69,6 +69,9 @@ function escapeRegExp(value: string): string {
 const QUARANTINE_SYMBOL_PATTERNS: ReadonlyMap<DigestSignalQuarantine, readonly RegExp[]> = new Map(
   DIGEST_SIGNAL_QUARANTINES.map((entry) => [
     entry,
+    // Symbols come from the checked-in registry above, never from user or model
+    // input, and are escaped with escapeRegExp before interpolation.
+    // eslint-disable-next-line security/detect-non-literal-regexp
     entry.symbols.map((symbol) => new RegExp(`\\b${escapeRegExp(symbol)}\\b`, "i")),
   ]),
 );
