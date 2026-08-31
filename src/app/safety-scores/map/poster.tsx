@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Download, ImageOff } from "lucide-react";
-import { useImageUnavailable } from "../use-image-unavailable";
+import { useImageUnavailable } from "@/hooks/use-image-unavailable";
 
 /**
  * The poster bytes are served by `functions/safety-scores/map.png.ts` out of KV,
