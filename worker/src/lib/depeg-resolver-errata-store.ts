@@ -26,9 +26,12 @@ export interface DdrPredictionErratum {
 }
 
 export interface LoadPredictionErrataFilters {
-  publicPredictionIds?: number[];
-  incidentKeys?: string[];
-  eventIds?: number[];
+  // Read-only: the loader measures length and copies through `new Set`, never
+  // mutating. Accepting readonly arrays lets callers pass `as const` fixtures
+  // and frozen constants without a cast.
+  publicPredictionIds?: readonly number[];
+  incidentKeys?: readonly string[];
+  eventIds?: readonly number[];
 }
 
 interface ErratumRow {
