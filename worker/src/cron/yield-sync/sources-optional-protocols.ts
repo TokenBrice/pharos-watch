@@ -1,7 +1,10 @@
 export {
-  fetchBasedollarSpSource,
+  BASEDOLLAR_SP_CONFIG,
+  LIQUITY_V2_SP_CONFIG,
   fetchBprotocolLqtyOnlySource,
   fetchCurveScrvusdCurrentRateSource,
+  fetchLiquityV2StabilityPoolSource,
+  type LiquityV2SpSourceConfig,
 } from "./sources-optional-protocols-onchain";
 export {
   fetchBimaSusbdSource,
@@ -9,6 +12,7 @@ export {
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
   fetchReProtocolReusdSource,
+  fetchYearnYboldSource,
 } from "./sources-optional-protocols-protocol-api";
 export { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
 export {

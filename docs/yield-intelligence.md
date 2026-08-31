@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.41`
+- **Current methodology version:** `v8.42`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/yield-methodology.ts`
 
@@ -141,22 +141,31 @@ apr                  = remainingLqtyRewards * dailyIssuanceFactor * lqtyPriceUsd
 
 **Caveat:** This source captures only the projected LQTY incentive stream. It deliberately excludes ETH liquidation gains, so it is a lower-bound estimate of the full Stability Pool return.
 
-#### Special-case Tier 1 estimator: Base Dollar Liquity V2 Stability Pools
+#### Special-case Tier 1 estimator: Liquity V2 Stability Pools
 
-Base Dollar has five branch-specific Liquity V2 Stability Pools on Base: WETH, wstETH, rETH, cbBTC, and cbETH. This deterministic row is labeled `Base Dollar Stability Pools (interest-only)` and publishes under source key `onchain:bd-basedollar` with `yieldType: lending-vault`; `sourceTvlUsd` is the total BD deposited across the five pools. Base Dollar itself is not yield-bearing — the Stability Pool is the deposit venue, as with LUSD.
+Base Dollar and Liquity V2 itself share one deterministic branch reader (`fetchLiquityV2StabilityPoolSource`), parameterized by chain, CollateralRegistry, and branch table:
+
+| Coin            | Chain    | Branches                                | Source key            | Label                                          |
+| --------------- | -------- | --------------------------------------- | --------------------- | ---------------------------------------------- |
+| `bold-liquity`  | Ethereum | wstETH, WETH, rETH                      | `onchain:bold-liquity`  | `Liquity V2 Stability Pools (interest-only)`   |
+| `bd-basedollar` | Base     | WETH, wstETH, rETH, cbBTC, cbETH        | `onchain:bd-basedollar` | `Base Dollar Stability Pools (interest-only)`  |
+
+Both rows publish `yieldType: lending-vault`, and `sourceTvlUsd` is the total deposit token held across that deployment's Stability Pools. Neither BOLD nor BD is yield-bearing itself — the Stability Pool is the deposit venue, as with LUSD — so both are standalone source-registry entries rather than yield-bearing manifest assets.
+
+This row is what keeps BOLD off its own wrapper's numbers. `bold-liquity` has no curated DeFiLlama pool and no variant-map entry: the tracked Yearn `yBOLD` wrapper owns the Yearn venue, and its linked-variant projection reaches BOLD only as a lower-evidence `lending-opportunity` alternative.
 
 **Reads:**
 
-- One batched `eth_call` read per refresh: the CollateralRegistry branch count plus each branch's Stability Pool BD deposits, `aggWeightedDebtSum`, and shutdown state
+- One batched `eth_call` read per refresh: the CollateralRegistry branch count plus each branch's Stability Pool deposits, `aggWeightedDebtSum`, and shutdown state
 
 **Formula:**
 
 ```
 aggregateBorrowerInterest = Σ activeBranch(aggWeightedDebtSum)
-apr = 0.75 * aggregateBorrowerInterest / totalStabilityPoolBDDeposits * 100
+apr = 0.75 * aggregateBorrowerInterest / totalStabilityPoolDeposits * 100
 ```
 
-Shutdown branches contribute zero. The reader fails closed if any read fails or if the CollateralRegistry reports a branch count different from the five configured branches (e.g. after a governor registers an announced AERO/LP branch), so the row is published only with complete branch coverage.
+Shutdown branches contribute zero interest but keep their deposits in the denominator, so the published number is the deposit-weighted aggregate across every branch rather than any single branch's rate. The reader fails closed if any read fails or if the CollateralRegistry reports a branch count different from the configured branch table (e.g. after a governor registers Base Dollar's announced AERO/LP branch), so a row is published only with complete branch coverage.
 
 **Caveat:** This is a deliberately conservative interest-only undercount. It excludes upfront borrowing fees and liquidation collateral gains, so it does not represent the full Stability Pool return.
 
@@ -189,7 +198,6 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 
 | Base Coin          | Wrapper | Purpose                        |
 | ------------------ | ------- | ------------------------------ |
-| BOLD (269)         | yBOLD   | Liquity Stability Pool wrapper |
 | USBD (253)         | sUSBD   | BIMA savings wrapper           |
 | AZND (327)         | loAZND  | Mu Digital locked wrapper      |
 | Neutrl USD (346)   | sNUSD   | Neutrl staked USD              |
@@ -203,7 +211,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | Hermetica USDh     | sUSDh   | Hermetica staking wrapper      |
 | Saturn USDat       | sUSDat  | Saturn staking vault           |
 
-`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of May 13, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, K3 `sBOLD`, and `savUSD` are tracked directly, so their base assets no longer resolve through those wrapper paths. Added 2026-05-13: gtUSDC (Gauntlet/Morpho), spUSDC and spUSDT (Spark Savings), sGHO (Aave SM), yBOLD, and yvUSDC (Yearn) now own their own native pool sources. Added 2026-05-22: base `gho-aave` no longer inherits the tracked sGHO source, and base `dola-inverse-finance` no longer publishes the untracked sDOLA wrapper source. AA_FalconXUSDC remains NAV/price-derived until a usable single-exposure nonzero APY source is available.
+`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of May 13, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, K3 `sBOLD`, and `savUSD` are tracked directly, so their base assets no longer resolve through those wrapper paths. Added 2026-05-13: gtUSDC (Gauntlet/Morpho), spUSDC and spUSDT (Spark Savings), sGHO (Aave SM), yBOLD, and yvUSDC (Yearn) now own their own native pool sources. Added 2026-05-22: base `gho-aave` no longer inherits the tracked sGHO source, and base `dola-inverse-finance` no longer publishes the untracked sDOLA wrapper source. Removed 2026-08-31: base `bold-liquity` no longer carries a yBOLD variant entry or a curated DeFiLlama pool pin, because both resolved to the tracked wrapper's own Yearn pool and republished it as BOLD's headline yield. AA_FalconXUSDC remains NAV/price-derived until a usable single-exposure nonzero APY source is available.
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 
@@ -213,7 +221,7 @@ For coins whose native savings path is published by the protocol itself but is n
 
 Protocol-specific lending-market readers that query protocol state directly also live in this tier. Even when the transport is an on-chain call, these rows are treated as curated protocol-native venues rather than Tier 1 deterministic native-wrapper sources, so arbitration still prefers a stronger native wrapper or savings source when one exists.
 
-This tier can also carry explicit wrapper-over-wrapper native sources when the upstream venue is a distinct managed wrapper around a tracked native yield token. K3 `sBOLD` now owns this path directly as `sbold-k3-capital`, while base BOLD keeps its Yearn `yBOLD` native-wrapper source.
+This tier can also carry explicit wrapper-over-wrapper native sources when the upstream venue is a distinct managed wrapper around a tracked native yield token. K3 `sBOLD` owns this path directly as `sbold-k3-capital`, and Yearn `yBOLD` owns it as `ybold-yearn`. Base BOLD does not inherit either: it publishes its own deterministic Liquity V2 Stability Pool aggregate.
 
 Royco Dawn markets also live in this tier. The supplemental source lane reads the Dawn market explorer API and emits separate `structured-tranche` rows for the senior and junior vaults in each verified market above the local Royco TVL floor. Rows use the stable source keys `royco-dawn:<chainId>:<marketId>:senior` and `royco-dawn:<chainId>:<marketId>:junior`; the tranche share tokens are not added to the stablecoin registry. Identity resolution maps the Royco deposit token back to a tracked underlying stablecoin by chain/address first, with configured wrapper-variant addresses such as Neutrl `sNUSD` attached to their tracked parent when the wrapper is not a first-class stablecoin row.
 
@@ -230,6 +238,8 @@ External `lending-opportunity`, `fixed-yield`, and `structured-tranche` rows und
 | `cetes-etherfuse`     | `Etherfuse CETES current issuance`  | Etherfuse first-party Next data at `https://app.etherfuse.com/bonds/cetes`                           |
 | `lusd-liquity`        | `B.Protocol LQTY-only source`       | deterministic on-chain LQTY-only source reader                                                       |
 | `bd-basedollar`       | `Base Dollar Stability Pools (interest-only)` | deterministic on-chain five-branch Liquity V2 Stability Pool reader                              |
+| `bold-liquity`        | `Liquity V2 Stability Pools (interest-only)` | deterministic on-chain three-branch Liquity V2 Stability Pool reader                              |
+| `ybold-yearn`         | `Yearn yBOLD Stability Pool vault`  | ydaemon `https://ydaemon.yearn.fi/1/vaults/<vault>` (yBOLD TVL, staked ysyBOLD net APR)              |
 | `usyc-hashnote`       | `Hashnote USYC`                     | Hashnote protocol API                                                                                |
 | `mmev-midas`          | `Midas mMEV/USD Oracle`             | on-chain issuer-listed mMEV/USD NAV oracle with historical anchor rows                               |
 | `usdy-ondo-finance`   | `Ondo USDY oracle`                  | on-chain Ondo oracle with historical anchor rows                                                     |
@@ -241,6 +251,8 @@ The BIMA adapter uses the protocol's published Ethereum earn feed, selects the U
 The Royco Dawn adapter maps APY ratios to percent APY, measured tranche-vault TVL to `sourceTvlUsd`, and market coverage/utilization/status/drawdown plus share-token addresses into nested `sourceRisk` fields. Royco rows carry `venueRiskTier: "unknown"` until a reviewed venue-risk audit assigns a sourced tier. They also carry investability flags for withdrawal constraints, verified listing status, and whether the row is senior protected or junior first-loss. KYC/access booleans are nullable; the current Dawn market payload does not expose explicit KYC or jurisdiction restriction fields, so those penalties apply only if future source evidence populates them. The universal measured-TVL gate augments Royco's bespoke market/vault floors.
 
 The Etherfuse CETES adapter reads the current CETES Stablebond issuance from Etherfuse's first-party Next data and maps `interestRateBps / 100` to APY. It publishes `protocol-api:etherfuse-cetes-current-issuance` with the current token amount as the exchange-rate observation when available. This source prevents MXN NAV appreciation plus USD/MXN FX movement from being annualized by the generic price-derived fallback.
+
+The Yearn yBOLD adapter reads Yearn's first-party ydaemon vault endpoint twice: the yBOLD vault (`0x9f43…a3d8`) supplies `sourceTvlUsd`, and the Staked yBOLD vault (`0x2334…91cd`) supplies the net APR. yBOLD's own price-per-share is flat because Yearn routes the Liquity V2 Stability Pool return to holders who stake into `ysyBOLD`, so the staked net APR is the advertised yBOLD yield. The adapter fails closed unless the staked vault's underlying asset is still the tracked yBOLD vault, and rejects APR outside `(0, 100]%` or TVL below the 100k publication floor. It publishes `protocol-api:yearn:ybold` as a `lending-vault` row; the curated DeFiLlama pool `4c29f645-…` stays pinned as a lower-evidence corroborating alternative.
 
 The Midas mMEV adapter reads the issuer-listed Ethereum mMEV/USD oracle, decodes its Chainlink-style `latestRoundData()` answer using the oracle `decimals()`, and publishes `protocol-api:midas-mmev-nav-oracle` as a NAV-appreciation row. Oracle answers must be positive, decimals must be within the supported range, and `updatedAt` must be no older than three days. Like other NAV-oracle rows, the first successful observation can seed `exchange_rate` history with `currentApy=0`; later runs compute APY from a prior published oracle anchor between 7 and 45 days old.
 

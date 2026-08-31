@@ -21,36 +21,79 @@ const LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR = "0xb140384b";
 const LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR = "0x9bf2f1ac";
 const LIQUITY_LQTY_GECKO_ID = "liquity";
 const BASEDOLLAR_BD_ID = "bd-basedollar";
-const BASEDOLLAR_SP_SOURCE_LABEL = "Base Dollar Stability Pools (interest-only)";
-const BASEDOLLAR_SP_SOURCE_TYPE = "lending-vault";
-const BASEDOLLAR_COLLATERAL_REGISTRY = "0x7551ebfc8340b7f91874942be9c653733d4fb04f";
-const BASEDOLLAR_TOTAL_COLLATERALS_SELECTOR = "0x30504b6f";
-const BASEDOLLAR_AGG_WEIGHTED_DEBT_SUM_SELECTOR = "0x42635a95";
-const BASEDOLLAR_SHUTDOWN_TIME_SELECTOR = "0x58569081";
-const BASEDOLLAR_TOTAL_BOLD_DEPOSITS_SELECTOR = "0xf71c6940";
-const BASEDOLLAR_SP_YIELD_SPLIT_PERCENT = 75n;
-const BASEDOLLAR_BRANCHES = [
-  {
-    activePool: "0x254a8267d4e12a8c0f283274632a18a33e49f7c0",
-    stabilityPool: "0x7d837bf114785642d225d1101145ddb8af4ba438",
-  },
-  {
-    activePool: "0x1021fefc406c9573ab3579fc55be13e3300ef6b1",
-    stabilityPool: "0xc65a05737d31e0f42c0806c739f3c88dd009c05f",
-  },
-  {
-    activePool: "0x1b9a62798e8bae0cea4eb21b4b3775359beb819f",
-    stabilityPool: "0x4eb3b6970fd358d34195b5d40e4eb64e0e3c0b6a",
-  },
-  {
-    activePool: "0xcaa72df531554087318eaf24646958500668b230",
-    stabilityPool: "0x6bd55dd953507641c84a03956760f83d29d65726",
-  },
-  {
-    activePool: "0xddac84ab417677f553cced8ababf497226112218",
-    stabilityPool: "0x25afbb09d9804482ed8e24295be4a12704fe93ea",
-  },
-] as const;
+const LIQUITY_V2_BOLD_ID = "bold-liquity";
+const LIQUITY_V2_SP_SOURCE_TYPE = "lending-vault";
+const LIQUITY_V2_TOTAL_COLLATERALS_SELECTOR = "0x30504b6f";
+const LIQUITY_V2_AGG_WEIGHTED_DEBT_SUM_SELECTOR = "0x42635a95";
+const LIQUITY_V2_SHUTDOWN_TIME_SELECTOR = "0x58569081";
+const LIQUITY_V2_TOTAL_BOLD_DEPOSITS_SELECTOR = "0xf71c6940";
+const LIQUITY_V2_SP_YIELD_SPLIT_PERCENT = 75n;
+
+export interface LiquityV2SpSourceConfig {
+  stablecoinId: string;
+  chain: string;
+  /** Log-event prefix so each deployment keeps its own operator-visible events. */
+  eventPrefix: string;
+  sourceLabel: string;
+  collateralRegistry: string;
+  branches: readonly { activePool: string; stabilityPool: string }[];
+}
+
+export const BASEDOLLAR_SP_CONFIG: LiquityV2SpSourceConfig = {
+  stablecoinId: BASEDOLLAR_BD_ID,
+  chain: "base",
+  eventPrefix: "basedollar",
+  sourceLabel: "Base Dollar Stability Pools (interest-only)",
+  collateralRegistry: "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
+  branches: [
+    {
+      activePool: "0x254a8267d4e12a8c0f283274632a18a33e49f7c0",
+      stabilityPool: "0x7d837bf114785642d225d1101145ddb8af4ba438",
+    },
+    {
+      activePool: "0x1021fefc406c9573ab3579fc55be13e3300ef6b1",
+      stabilityPool: "0xc65a05737d31e0f42c0806c739f3c88dd009c05f",
+    },
+    {
+      activePool: "0x1b9a62798e8bae0cea4eb21b4b3775359beb819f",
+      stabilityPool: "0x4eb3b6970fd358d34195b5d40e4eb64e0e3c0b6a",
+    },
+    {
+      activePool: "0xcaa72df531554087318eaf24646958500668b230",
+      stabilityPool: "0x6bd55dd953507641c84a03956760f83d29d65726",
+    },
+    {
+      activePool: "0xddac84ab417677f553cced8ababf497226112218",
+      stabilityPool: "0x25afbb09d9804482ed8e24295be4a12704fe93ea",
+    },
+  ],
+};
+
+// Liquity V2 mainnet: the three immutable collateral branches (wstETH, WETH,
+// rETH). ActivePool/StabilityPool addresses mirror the reviewed branch table in
+// shared/data/stablecoins/coins/bold-liquity.json.
+export const LIQUITY_V2_SP_CONFIG: LiquityV2SpSourceConfig = {
+  stablecoinId: LIQUITY_V2_BOLD_ID,
+  chain: "ethereum",
+  eventPrefix: "liquity-v2",
+  sourceLabel: "Liquity V2 Stability Pools (interest-only)",
+  collateralRegistry: "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+  branches: [
+    {
+      activePool: "0x531a8f99c70d6a56a7cee02d6b4281650d7919a0",
+      stabilityPool: "0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b",
+    },
+    {
+      activePool: "0xeb5a8c825582965f1d84606e078620a84ab16afe",
+      stabilityPool: "0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf",
+    },
+    {
+      activePool: "0x9074d72cc82dad1e13e454755aa8f144c479532f",
+      stabilityPool: "0xd442e41019b7f5c4dd78f50dc03726c446148695",
+    },
+  ],
+};
+
 const SCRVUSD_VAULT = "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367";
 const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:scrvusd-curve:scrvusd-current-rate";
 const SCRVUSD_SOURCE_POOL = "5fd328af-4203-471b-bd16-1705c726d926";
@@ -234,7 +277,8 @@ export async function fetchBprotocolLqtyOnlySource(
   }
 }
 
-export async function fetchBasedollarSpSource(
+export async function fetchLiquityV2StabilityPoolSource(
+  config: LiquityV2SpSourceConfig,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<ResolvedYield | null> {
@@ -243,19 +287,19 @@ export async function fetchBasedollarSpSource(
       scope: "lib",
       job: "sync-yield-data",
       level: "warn",
-      event: "basedollar-rpcs-missing",
-      message: "No chain RPCs provided for Base Dollar Stability Pool source",
+      event: `${config.eventPrefix}-rpcs-missing`,
+      message: `No chain RPCs provided for ${config.sourceLabel}`,
     });
     return null;
   }
-  const rpc = getChainRpc(chainRpcs, "base");
+  const rpc = getChainRpc(chainRpcs, config.chain);
   if (!rpc) {
     logWorkerEvent({
       scope: "lib",
       job: "sync-yield-data",
       level: "warn",
-      event: "basedollar-base-rpc-missing",
-      message: "No Base RPC configured for Base Dollar Stability Pool source",
+      event: `${config.eventPrefix}-${config.chain}-rpc-missing`,
+      message: `No ${config.chain} RPC configured for ${config.sourceLabel}`,
     });
     return null;
   }
@@ -264,22 +308,22 @@ export async function fetchBasedollarSpSource(
     // One JSON-RPC batch keeps every read on a single provider snapshot: the
     // registry branch count plus the three per-branch reads. The count guard
     // fails closed if the collateral governor registers a branch this adapter
-    // does not yet aggregate (AERO / Aerodrome LP branches are announced), so
-    // a partial sum can never publish as a "complete" APR.
+    // does not yet aggregate, so a partial sum can never publish as a
+    // "complete" APR.
     const calls = [
       {
         method: "eth_call",
-        params: [{ to: BASEDOLLAR_COLLATERAL_REGISTRY, data: BASEDOLLAR_TOTAL_COLLATERALS_SELECTOR }, "latest"],
+        params: [{ to: config.collateralRegistry, data: LIQUITY_V2_TOTAL_COLLATERALS_SELECTOR }, "latest"],
       },
-      ...BASEDOLLAR_BRANCHES.flatMap((branch) => [
-        { method: "eth_call", params: [{ to: branch.activePool, data: BASEDOLLAR_AGG_WEIGHTED_DEBT_SUM_SELECTOR }, "latest"] },
-        { method: "eth_call", params: [{ to: branch.activePool, data: BASEDOLLAR_SHUTDOWN_TIME_SELECTOR }, "latest"] },
-        { method: "eth_call", params: [{ to: branch.stabilityPool, data: BASEDOLLAR_TOTAL_BOLD_DEPOSITS_SELECTOR }, "latest"] },
+      ...config.branches.flatMap((branch) => [
+        { method: "eth_call", params: [{ to: branch.activePool, data: LIQUITY_V2_AGG_WEIGHTED_DEBT_SUM_SELECTOR }, "latest"] },
+        { method: "eth_call", params: [{ to: branch.activePool, data: LIQUITY_V2_SHUTDOWN_TIME_SELECTOR }, "latest"] },
+        { method: "eth_call", params: [{ to: branch.stabilityPool, data: LIQUITY_V2_TOTAL_BOLD_DEPOSITS_SELECTOR }, "latest"] },
       ]),
     ];
 
     throwIfAborted(signal);
-    const results = await fetchEvmRpcBatch("base", calls, { chainRpcs, signal });
+    const results = await fetchEvmRpcBatch(config.chain, calls, { chainRpcs, signal });
     if (results === null) return null;
 
     const values: bigint[] = [];
@@ -289,22 +333,22 @@ export async function fetchBasedollarSpSource(
     }
 
     const totalCollaterals = values[0]!;
-    if (totalCollaterals !== BigInt(BASEDOLLAR_BRANCHES.length)) {
+    if (totalCollaterals !== BigInt(config.branches.length)) {
       logWorkerEvent({
         scope: "lib",
         job: "sync-yield-data",
         level: "warn",
-        event: "basedollar-branch-count-mismatch",
+        event: `${config.eventPrefix}-branch-count-mismatch`,
         message:
-          `Base Dollar CollateralRegistry reports ${totalCollaterals} branches but the adapter aggregates ` +
-          `${BASEDOLLAR_BRANCHES.length}; failing closed until the branch table is re-reviewed`,
+          `${config.sourceLabel}: CollateralRegistry reports ${totalCollaterals} branches but the adapter `
+          + `aggregates ${config.branches.length}; failing closed until the branch table is re-reviewed`,
       });
       return null;
     }
 
     let totalAggWeightedDebtSumRaw = 0n;
     let totalDepositsRaw = 0n;
-    for (let index = 0; index < BASEDOLLAR_BRANCHES.length; index += 1) {
+    for (let index = 0; index < config.branches.length; index += 1) {
       const aggWeightedDebtSumRaw = values[1 + index * 3]!;
       const shutdownTimeRaw = values[2 + index * 3]!;
       const depositsRaw = values[3 + index * 3]!;
@@ -320,7 +364,7 @@ export async function fetchBasedollarSpSource(
     // APR% = 75 * sum(aggWeightedDebtSum) / (sum(SP deposits) * 1e18).
     // This is interest-only: upfront borrowing fees and liquidation collateral gains are excluded.
     const apr =
-      Number(BASEDOLLAR_SP_YIELD_SPLIT_PERCENT * totalAggWeightedDebtSumRaw)
+      Number(LIQUITY_V2_SP_YIELD_SPLIT_PERCENT * totalAggWeightedDebtSumRaw)
       / Number(totalDepositsRaw * 10n ** 18n);
     const totalDeposits = Number(totalDepositsRaw) / 1e18;
     if (!Number.isFinite(totalDeposits) || totalDeposits <= 0) return null;
@@ -334,9 +378,9 @@ export async function fetchBasedollarSpSource(
       sourceTvlUsd: totalDeposits,
       dataSource: "onchain",
       exchangeRate: null,
-      sourceKey: buildOnChainSourceKey(BASEDOLLAR_BD_ID),
-      yieldSource: BASEDOLLAR_SP_SOURCE_LABEL,
-      yieldType: BASEDOLLAR_SP_SOURCE_TYPE,
+      sourceKey: buildOnChainSourceKey(config.stablecoinId),
+      yieldSource: config.sourceLabel,
+      yieldType: LIQUITY_V2_SP_SOURCE_TYPE,
     };
   } catch (error) {
     if (signal?.aborted) {
@@ -346,8 +390,8 @@ export async function fetchBasedollarSpSource(
       scope: "lib",
       job: "sync-yield-data",
       level: "warn",
-      event: "basedollar-source-failed",
-      message: "Base Dollar Stability Pool source failed",
+      event: `${config.eventPrefix}-source-failed`,
+      message: `${config.sourceLabel} source failed`,
       error,
     });
     return null;
