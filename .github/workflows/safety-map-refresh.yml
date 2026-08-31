@@ -20,9 +20,11 @@
 name: Safety Map Refresh
 
 on:
-  # Two attempts absorb GitHub schedule delays before the 08:05 UTC digest.
-  # The second scheduled run exits during plan when today's fresh map is live.
+  # GitHub scheduled workflows are best-effort and routinely start hours late.
+  # Extra slots improve the odds, but the digest no longer depends on winning
+  # this race because it carries the map forward when today's map is missing.
   schedule:
+    - cron: "20 2 * * *"
     - cron: "20 4 * * *"
     - cron: "20 6 * * *"
   workflow_dispatch:

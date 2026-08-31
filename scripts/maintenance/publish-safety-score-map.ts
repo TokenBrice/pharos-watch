@@ -65,12 +65,17 @@ export interface SafetyMapPublishState {
   alreadyPublished: boolean;
   hadManifest: boolean;
   acceptedSnapshotTransition?: boolean;
-  deltaGuard: "ran" | "accepted" | "skipped" | "not reached";
+  deltaGuard: "ran" | "recovered" | "persistent" | "accepted" | "skipped" | "not reached";
   previousSnapshotPath?: string;
   priorManifest?: Record<string, unknown>;
   manifest?: SafetyMapManifest;
   manifestPath?: string;
   renderSeconds?: number;
+}
+
+interface RetryStatus {
+  recovered?: boolean;
+  persistent?: boolean;
 }
 
 export interface PublicationIo {
@@ -301,6 +306,8 @@ export async function renderSafetyMapPublication({
   const state = readState(statePath);
   if (state.alreadyPublished) return state;
   const previousSnapshotPath = state.previousSnapshotPath ?? join(dirname(statePath), "previous-snapshot.json");
+  const retryStatusPath = join(outDir, "latest.retry.json");
+  rmSync(retryStatusPath, { force: true });
   state.deltaGuard = state.acceptedSnapshotTransition
     ? "accepted"
     : existsSync(previousSnapshotPath) && statSync(previousSnapshotPath).size > 0 ? "ran" : "skipped";
@@ -308,9 +315,22 @@ export async function renderSafetyMapPublication({
   if (state.deltaGuard === "accepted") io.warning("Snapshot transition accepted", `The operator accepted the current live ${SNAPSHOT_LATEST_KEY} baseline transition; unconditional render guards still apply.`);
   const started = Date.now();
   const command = `npm run build:safety-score-map -- --out ${shellQuote(join(outDir, "latest.png"))} --previous-snapshot ${shellQuote(previousSnapshotPath)}${state.deltaGuard === "accepted" ? " --accept-snapshot-transition" : ""}`;
-  const result = await commandRunner(command, {}, {});
+  const result = await commandRunner(command, { SAFETY_MAP_RETRY_STATUS_PATH: retryStatusPath }, {});
   const status = typeof result === "number" ? result : result.status;
-  if (status !== 0) throw new Error(`Safety Map render failed with status ${status}`);
+  let retryStatus: RetryStatus | null = null;
+  if (existsSync(retryStatusPath)) {
+    try {
+      retryStatus = JSON.parse(readFileSync(retryStatusPath, "utf8")) as RetryStatus;
+    } catch {
+      io.warning("Retry status unreadable", "The render completed without a readable retry-status record.");
+    }
+  }
+  if (retryStatus?.recovered) state.deltaGuard = "recovered";
+  if (retryStatus?.persistent) state.deltaGuard = "persistent";
+  if (status !== 0) {
+    writeState(statePath, state);
+    throw new Error(`Safety Map render failed with status ${status}`);
+  }
   const { manifest, manifestPath } = buildManifest(outDir);
   Object.assign(state, { phase: "rendered", manifest, manifestPath, renderSeconds: Math.floor((Date.now() - started) / 1000) });
   writeState(statePath, state);
@@ -390,12 +410,14 @@ export function buildSafetyMapSummary(state: SafetyMapPublishState | null, jobSt
   ];
   if (state?.deltaGuard === "skipped") lines.push("> **Warning:** no readable `safety-map:snapshot:latest`, so the delta guard did", "> not run this time. Expected on a first run; investigate if it repeats.", "");
   if (state?.deltaGuard === "accepted") lines.push("> **Operator acceptance:** this manual run accepted the current live snapshot transition.", "> Unconditional freshness, geometry, composition, font, and raster guards still ran.", "");
+  if (state?.deltaGuard === "recovered") lines.push("> **Transient rejection recovered:** a delta guard rejected an upstream read, then a fresh retry passed. The published map uses the recovered attempt.", "");
+  if (state?.deltaGuard === "persistent") lines.push("> **Persistent delta rejection:** all three fresh validation attempts agreed on the shift. Nothing was published; human review with `--accept-snapshot-transition` is still required.", "");
   if (state?.alreadyPublished) {
     lines.push("### Skipped — today is already published", "", "The live `safety-map:latest.json` already carries today's date with fresh", "data, so this scheduled retry slot exited without rendering or writing.");
   } else if (jobStatus === "success" && state?.phase === "published" && manifest) {
     lines.push("### Published keys", "", ...safetyMapPublicationEntries(state, dirname(state.manifestPath ?? "")).map(({ key }) => `- \`${key}\`${key === MANIFEST_KEY ? " — manifest, written last" : key === `safety-map:${manifest.date}.png` ? " — the URL the digest embeds" : ""}`));
   } else {
-    lines.push("### Nothing was committed", "", "The run did not reach the manifest write, so `safety-map:latest.json` still", "points at the previous complete key set and consumers are unaffected.", "", "The 08:05 UTC digest will omit the map section and emit one ops line if this", "keeps failing. There is no webhook alert: `ALERT_WEBHOOK_URL` is unset in", "production, so `sendAlert()` no-ops.");
+    lines.push("### Nothing was committed", "", "The run did not reach the manifest write, so `safety-map:latest.json` still", "points at the previous complete key set and consumers are unaffected.", "", "The digest is not blocked by this miss; it may carry forward a recent dated map", "within its bounded continuity window and labels the date it depicts.");
   }
   return `${lines.join("\n")}\n`;
 }

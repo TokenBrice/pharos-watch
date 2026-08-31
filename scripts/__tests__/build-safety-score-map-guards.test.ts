@@ -53,6 +53,10 @@ let reportCardsPayloadOverride: unknown | undefined;
 let stablecoinsPayloadOverride: unknown | undefined;
 let psiPayloadOverride: unknown | undefined;
 
+function resolvePayload(override: unknown, fallback: () => unknown): unknown {
+  return typeof override === "function" ? (override as () => unknown)() : (override ?? fallback());
+}
+
 function reportCardsPayload(): unknown {
   const updatedAt = Math.max(asOfSec, Math.floor(Date.now() / 1000));
   const canonicalCards: SafetyScoreV9CurrentCard[] = cards.map((card) => {
@@ -105,11 +109,11 @@ beforeAll(async () => {
     const path = (req.url ?? "").split("?")[0];
     const body =
       path === "/api/report-cards/v9"
-        ? (reportCardsPayloadOverride ?? reportCardsPayload())
+        ? resolvePayload(reportCardsPayloadOverride, reportCardsPayload)
         : path === "/api/stablecoins"
-          ? (stablecoinsPayloadOverride ?? stablecoinsPayload())
+          ? resolvePayload(stablecoinsPayloadOverride, stablecoinsPayload)
           : path === "/api/stability-index"
-            ? (psiPayloadOverride ?? psiPayload())
+            ? resolvePayload(psiPayloadOverride, psiPayload)
           : null;
     if (!body) {
       res.writeHead(404).end("{}");
@@ -526,6 +530,62 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
       stopBeforeRender: true,
     });
     expect(run.stderr).not.toMatch(/Not-rated count moved/);
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it("re-fetches live data when a transient supply delta rejection recovers", async () => {
+    const prior = universe({ count: 20 });
+    const badAssets = prior.assets.map((asset) => asset.id === "coin-11"
+      ? { ...asset, circulating: { peggedUSD: (asset.circulating?.peggedUSD ?? 0) * 5 } }
+      : asset);
+    const badPayload = makeSafetyMapStablecoinsPayload(badAssets);
+    const goodPayload = makeSafetyMapStablecoinsPayload(prior.assets);
+    let reads = 0;
+    const path = snapshot(scratch, validSnapshot(prior));
+    const run = await runGenerator(prior, {
+      args: ["--previous-snapshot", path],
+      stopBeforeRender: true,
+      stablecoinsPayload: () => reads++ === 0 ? badPayload : goodPayload,
+    });
+    // stopBeforeRender deliberately trips the future-manifest guard after all
+    // fetch, retry, and validation work has passed; reaching that marker is
+    // the success signal for this no-browser fixture.
+    expect(reads).toBeGreaterThanOrEqual(2);
+    expect(run.stderr).toMatch(/Validation attempt 1\/3 rejected by delta guard/);
+    expect(run.stdout).toMatch(/Delta guard transient rejection recovered on attempt 2/);
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+    expect(run.stderr).not.toMatch(/Persistent delta guard rejection/);
+  });
+
+  it("fails closed after a persistent delta rejection on all three fresh attempts", async () => {
+    const prior = universe({ count: 20 });
+    const badAssets = prior.assets.map((asset) => asset.id === "coin-11"
+      ? { ...asset, circulating: { peggedUSD: (asset.circulating?.peggedUSD ?? 0) * 5 } }
+      : asset);
+    const badPayload = makeSafetyMapStablecoinsPayload(badAssets);
+    const path = snapshot(scratch, validSnapshot(prior));
+    const run = await runGenerator(prior, {
+      args: ["--previous-snapshot", path],
+      stablecoinsPayload: () => badPayload,
+    });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Validation attempt 1\/3 rejected by delta guard/);
+    expect(run.stderr).toMatch(/Validation attempt 2\/3 rejected by delta guard/);
+    expect(run.stderr).toMatch(/Validation attempt 3\/3 rejected by delta guard/);
+    expect(run.stderr).toMatch(/Persistent delta guard rejection after 3 attempts/);
+  });
+
+  it("keeps the 25% supply threshold unchanged", async () => {
+    const prior = universe({ count: 20 });
+    const withinThreshold = prior.assets.map((asset) => asset.id === "coin-11"
+      ? { ...asset, circulating: { peggedUSD: (asset.circulating?.peggedUSD ?? 0) * 1.24 } }
+      : asset);
+    const path = snapshot(scratch, validSnapshot(prior));
+    const run = await runGenerator({ cards: prior.cards, assets: withinThreshold }, {
+      args: ["--previous-snapshot", path],
+      stopBeforeRender: true,
+    });
+    expect(run.stderr).not.toMatch(/supply moved.*>25%/);
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
   });
 
