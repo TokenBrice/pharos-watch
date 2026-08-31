@@ -39,6 +39,7 @@ import {
   summarizeThrownScheduledJob,
 } from "./slot-summary";
 import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
+import { runWeeklyRecapForRuntime } from "./weekly-recap-invocation";
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
 const DIGEST_TRIGGER_POLL_SURFACE = "digest-trigger-poll";
@@ -281,21 +282,8 @@ async function runWeeklyResumeIfDue(
   let result: CronResult | null = null;
   let caught: unknown = null;
   try {
-    const { generateWeeklyRecap } = await import("../../cron/weekly-recap");
     result = (await runtime.runLeasedCron("weekly-recap", (signal, reportProgress) =>
-      generateWeeklyRecap(
-        runtime.db,
-        runtime.env.ANTHROPIC_API_KEY ?? null,
-        buildTwitterCreds(runtime.env),
-        buildTelegramCreds(runtime.env),
-        signal,
-        reportProgress,
-        runtime.slotStartedAt,
-        {
-          twitterMissing: missingTwitterCredentialNames(runtime.env),
-          telegramMissing: missingTelegramCredentialNames(runtime.env),
-        },
-      ))) ?? null;
+      runWeeklyRecapForRuntime(runtime, signal, reportProgress))) ?? null;
   } catch (error) {
     caught = error;
     logWorkerEvent({
