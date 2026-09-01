@@ -39,12 +39,12 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "none",
     "supervision": "none",
     "review": {
-      "evidence": "The cNGN FAQ and Bantu Foundation case study identify Bantu as the native issuance ledger and state that Bantu remains the source of truth for total supply while bridge contracts lock Bantu cNGN and mint equivalent destination representations. The Bantu issuer account and CNGN asset were re-read at ledger 34,127,652 on 2026-08-16. No dated whole-supply attestation reconciling Bantu issuance to all destination representations was accessible, so the native posture remains unbounded-or-compromised with reconciliation unknown. The Solana Token-2022 program can mint its deployment, but the reviewed primary sources do not prove whether that deployment is an AMTP representation or an independently reconciled native liability chain; it is therefore not used to support native issuance. Both questions the boundary migration raised are decided here rather than left open: the Solana deployment is conservatively classified as a representation because independent native issuance is unproven, and Bantu's absence from the route inventory is a catalog chain-registry gap rather than an unreviewed issuer fact. Neither is an open question about this issuer's mint authority.",
-      "reviewer": "Codex mint-bridge-boundary canonicality verification",
-      "reviewedAt": "2026-08-17",
+      "evidence": "The cNGN FAQ and Bantu Foundation case study identify Bantu as the native issuance ledger and state that Bantu remains the source of truth for total supply while bridge contracts lock Bantu cNGN and mint equivalent destination representations. The Bantu issuer account and CNGN asset were re-read at ledger 34,127,652 on 2026-08-16. No dated whole-supply attestation reconciling Bantu issuance to all destination representations was accessible, so the native posture remains unbounded-or-compromised with reconciliation unknown. The Solana Token-2022 program can mint its deployment, but the reviewed primary sources do not prove whether that deployment is an AMTP representation or an independently reconciled native liability chain; it is therefore not used to support native issuance. Both questions the boundary migration raised are decided here rather than left open: the Solana deployment is conservatively classified as a representation because independent native issuance is unproven, and Bantu's absence from the route inventory is a catalog chain-registry gap rather than an unreviewed issuer fact. Neither is an open question about this issuer's mint authority. ODR-A6 lane R reconciliation review 2026-09-01: https://cngn.co/transparency states 'We conduct monthly audits on reserve funds' but links only two smart-contract security audits (Frank Castle, January 2026; Hashlock, July 2026) and renders its live reserve widget at zero across every metric as of 2026-08-31 — no reserve report link, no attestation PDF and no token-supply figure appear anywhere on the page. /attestation, /reserves, /proof-of-reserve and /sitemap.xml each return 404, docs.cngn.co carries API documentation only with no attestation or reserve page in its navigation, and a Wayback CDX sweep of cngn.co/* shows the domain has never hosted an attestation or reserve document — only auditReportBg.png and totalReserve.png interface chrome. The Bala Isah Garba & Company ISAE 3000 engagement remains secondary-press-only: the newest report referenced anywhere is October 2025, the press piece that describes the monthly series states the reports are reachable via cngn.co while supplying no URL, and no Nigerian SEC or CBN publication of a cNGN reserve attestation exists (the only regulatory artefact is the 2024 SEC Approval-in-Principle under ARIP). reconciliation is therefore recorded as the positively-established 'none' rather than left at the unverified 'unknown' (MINT-LADDER 9.32); no supply or reserve figure is admitted from any of this.",
+      "reviewer": "Codex mint-bridge-boundary canonicality verification; ODR-A6 lane R reconciliation 2026-09-01",
+      "reviewedAt": "2026-09-01",
       "sources": [
         {
           "label": "cNGN FAQ — native Bantu issuance",
@@ -57,6 +57,10 @@
         {
           "label": "cNGN contract addresses",
           "url": "https://docs.cngn.co/guides/contract-addresses"
+        },
+        {
+          "label": "cNGN transparency page — re-opened 2026-09-01: monthly-audit claim, zero-valued widget, only smart-contract audits linked",
+          "url": "https://cngn.co/transparency"
         },
         {
           "label": "Bantu ledger 34,127,652",
