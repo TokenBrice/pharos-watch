@@ -1,19 +1,9 @@
 {
   "version": 1,
-  "policyVersion": "1.1",
-  "policyHash": "9edd984e2cae9e14",
-  "generatedAt": "2026-09-01T17:41:33.454Z",
+  "policyVersion": "1.2",
+  "policyHash": "baf6b0f7f9efd4cc",
+  "generatedAt": "2026-09-01T18:51:39.070Z",
   "entries": [
-    {
-      "surface": "about-prose",
-      "record": "src/components/about/about-page-content/AboutPageContent",
-      "field": "jsx-text",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "d4c9ca2dbd11483c"
-      ]
-    },
     {
       "surface": "about-prose",
       "record": "src/components/about/about-page-content/AboutPageContent",
@@ -28,20 +18,30 @@
       "surface": "about-prose",
       "record": "src/lib/about-content/title=PharosVille",
       "field": "description",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "7b41d030a864ea37"
-      ]
-    },
-    {
-      "surface": "about-prose",
-      "record": "src/lib/about-content/title=PharosVille",
-      "field": "description",
       "rule": "review-unqualified-superlative",
       "count": 1,
       "fingerprints": [
-        "0e4c79aa4f7e5b66"
+        "a900a221aa6e6b3e"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "aeur-anchored-coins",
+      "field": "aeur-anchored-coins.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "08b6ab62db86e54b"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "brl-itau",
+      "field": "brl-itau.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "848d2974c65d60a2"
       ]
     },
     {
@@ -56,12 +56,42 @@
     },
     {
       "surface": "ai-summaries",
+      "record": "cdxusd-cod3x",
+      "field": "cdxusd-cod3x.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "a99a999efb30fa6a"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
       "record": "cjpy-yamato",
       "field": "cjpy-yamato.title",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
         "7b50f9708a697c09"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "cngn-compliant-naira",
+      "field": "cngn-compliant-naira.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "6d7429f2a0940494"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "eurc-circle",
+      "field": "eurc-circle.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "c99ad868d44686ae"
       ]
     },
     {
@@ -76,6 +106,56 @@
     },
     {
       "surface": "ai-summaries",
+      "record": "euri-banking-circle",
+      "field": "euri-banking-circle.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "6a3b253342f77728"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "euroe-membrane",
+      "field": "euroe-membrane.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "cf7dd6e637d4c6e1"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "fusd-freedom-dollar",
+      "field": "fusd-freedom-dollar.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "1a1f6ba1eef3783c"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "gbpsafo-spiko",
+      "field": "gbpsafo-spiko.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "8f76dadd0e6a3c14"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "gho-aave",
+      "field": "gho-aave.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "192d1907ab10f004"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
       "record": "gyen-gyen",
       "field": "gyen-gyen.text",
       "rule": "no-unqualified-safety",
@@ -86,12 +166,102 @@
     },
     {
       "surface": "ai-summaries",
+      "record": "gyen-gyen",
+      "field": "gyen-gyen.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "fe5e2817b18d0248"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "jpyc-jpyc",
+      "field": "jpyc-jpyc.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "e06a6ff6beab778b"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
       "record": "jpysc-sbi-startale",
       "field": "jpysc-sbi-startale.text",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
         "d0066109c5091e57"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "jpyt-dephaser",
+      "field": "jpyt-dephaser.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "515967a595eaad3e"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "jpyt-dephaser",
+      "field": "jpyt-dephaser.title",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "ea9ca4141ee9ddb8"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "luausd-lumi-finance",
+      "field": "luausd-lumi-finance.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "c7c708938ceb9efe"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "onyc-onre",
+      "field": "onyc-onre.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "6368c7eb411f2907"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "pc0000033-tradable",
+      "field": "pc0000033-tradable.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "7d9981224c404a65"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "pc0000089-tradable",
+      "field": "pc0000089-tradable.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "d4243bbddbde58f8"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "pc0000101-tradable",
+      "field": "pc0000101-tradable.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "3ff711b1d2afb4c5"
       ]
     },
     {
@@ -166,6 +336,16 @@
     },
     {
       "surface": "ai-summaries",
+      "record": "rusd-revolut",
+      "field": "rusd-revolut.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "30da424baeb5d350"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
       "record": "scrvusd-curve",
       "field": "scrvusd-curve.text",
       "rule": "scoped-decorative-word",
@@ -217,12 +397,52 @@
     },
     {
       "surface": "ai-summaries",
+      "record": "uktbl-spiko",
+      "field": "uktbl-spiko.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "19ca0e3b3c99e0b8"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "uktbl-spiko",
+      "field": "uktbl-spiko.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "bc05231adbc51279"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usbd-bima",
+      "field": "usbd-bima.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "09c8b2daaec5d554"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
       "record": "usd0-usual",
       "field": "usd0-usual.text",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
         "c932e89c5fc711db"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usd0-usual",
+      "field": "usd0-usual.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "2ff829d71a0dc8c1"
       ]
     },
     {
@@ -389,22 +609,32 @@
     },
     {
       "surface": "ai-summaries",
-      "record": "usdx-hex-trust",
-      "field": "usdx-hex-trust.title",
-      "rule": "scoped-decorative-word",
-      "count": 1,
-      "fingerprints": [
-        "0261e8b646783689"
-      ]
-    },
-    {
-      "surface": "ai-summaries",
       "record": "usdy-ondo-finance",
       "field": "usdy-ondo-finance.text",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
         "cc24e4c07e352689"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "uusd-anything-labs",
+      "field": "uusd-anything-labs.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "3524aeae7d4fe72a"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "vcred-vcred",
+      "field": "vcred-vcred.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "d7da1cb85f103aef"
       ]
     },
     {
@@ -429,23 +659,22 @@
     },
     {
       "surface": "ai-summaries",
+      "record": "vusd-virtue",
+      "field": "vusd-virtue.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "3c5dc8aa1990d813"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
       "record": "wm-m0",
       "field": "wm-m0.text",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
         "e95da66f0b69889f"
-      ]
-    },
-    {
-      "surface": "ai-summaries",
-      "record": "wm-m0",
-      "field": "wm-m0.title",
-      "rule": "scoped-decorative-word",
-      "count": 2,
-      "fingerprints": [
-        "f77847aa4d9949d4",
-        "f77847aa4d9949d4"
       ]
     },
     {
@@ -462,10 +691,31 @@
       "surface": "ai-summaries",
       "record": "xo-exodus",
       "field": "xo-exodus.text",
+      "rule": "review-unqualified-superlative",
+      "count": 2,
+      "fingerprints": [
+        "483f551373a45958",
+        "f53a193bcecd2068"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "xo-exodus",
+      "field": "xo-exodus.text",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
         "821d8d07306f20dd"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "xusd-babelfish",
+      "field": "xusd-babelfish.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "fec2c837220e643c"
       ]
     },
     {
@@ -480,6 +730,27 @@
       ]
     },
     {
+      "surface": "ai-summaries",
+      "record": "yusd-aegis",
+      "field": "yusd-aegis.text",
+      "rule": "review-unqualified-superlative",
+      "count": 2,
+      "fingerprints": [
+        "01e4d44ea4194fad",
+        "9db6bf48cbd7612c"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "zchf-frankencoin",
+      "field": "zchf-frankencoin.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "a17621b8fa2eb76a"
+      ]
+    },
+    {
       "surface": "blog-posts",
       "record": "src/data/blog/posts/pharos-at-six-months",
       "field": "body",
@@ -487,17 +758,6 @@
       "count": 1,
       "fingerprints": [
         "f75f658bac8c21a9"
-      ]
-    },
-    {
-      "surface": "blog-posts",
-      "record": "src/data/blog/posts/pharos-at-six-months",
-      "field": "body",
-      "rule": "scoped-decorative-word",
-      "count": 2,
-      "fingerprints": [
-        "2a4eb7e62e21a99b",
-        "dc1ef15e6c757b0d"
       ]
     },
     {
@@ -533,152 +793,6 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral/dateISO=2026-02-18",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "05ecc707efc7ec6f",
-        "bb666530edb595c1"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral/dateISO=2026-03-23",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "cf127e598b600235",
-        "cf127e598b600235"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral/dateISO=2026-06-04",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "b54159e75a9de354",
-        "b54159e75a9de354"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral/heading=How Pharos saw it",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "2007c104015a1df4",
-        "f71ee9ed335aaf00"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "437374222bb4ca1d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral/heading=What apxUSD actually holds",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "5c05beffa2b98bdb",
-        "730c86d3ee060059"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral/heading=Who can actually arbitrage the peg",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "052d4de51bd1dbf3",
-        "95492f6d809881d8",
-        "a19417bbfda9e315",
-        "e7d3291687f7b1a3"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral/heading=Why a real-world asset moved with crypto",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "3e5e952e810adb0b",
-        "563165f715a52161",
-        "a365c1f1d2c5b396"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 5,
-      "fingerprints": [
-        "1a0fbe61c7621d5a",
-        "2f55377c67d373db",
-        "6e032f2939fd71e0",
-        "b8ea6ecb25851f79",
-        "fbbb0c354402d4f5"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "1b25f641cc6c6c92"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "1fb2710f5d1078de",
-        "a92e1f06a52bacbd"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/apxusd-dat-collateral/slug=apxusd-dat-collateral/slug=apxusd-dat-collateral",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "7c4eaf2eb8cad7c6",
-        "da642323a9875039"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/buidl-tokenized-tbill-2025/slug=buidl-tokenized-tbill-2025/slug=buidl-tokenized-tbill-2025/coinId=buidl-blackrock",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "0815d22681c84029"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/buidl-tokenized-tbill-2025/slug=buidl-tokenized-tbill-2025/slug=buidl-tokenized-tbill-2025/heading=Lessons",
       "field": "paragraphs",
       "rule": "no-unqualified-safety",
@@ -699,55 +813,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023/dateISO=2023-02-21",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "00837c5e8a83d0b0",
-        "220c1c506de831e1"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023/dateISO=2023-08-31",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "5d9915afb9c701da",
-        "5d9915afb9c701da"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023/dateISO=2024-02-29",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "9719241af361780f",
-        "9719241af361780f"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023/dateISO=2024-02-29",
       "field": "headline",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
         "31612a5d39c628a3"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "2ff7685fa93e8e6d"
       ]
     },
     {
@@ -762,88 +833,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023/heading=The successor shuffle",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "723f5e47e0b36d1e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "6700b67f548a806c",
-        "74490be67bd1c4c6"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023/heading=Why a solvent coin still died",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "2db745c2cb14e324",
-        "599b4d751243fa70"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "6547945b4dd8ea8c",
-        "a3dfce6cef36974f",
-        "c57febbeec7e2672",
-        "c57febbeec7e2672"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023",
       "field": "lead",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "071eb006a3078e5f"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "0290cc2a2f751d3c"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "cb076754c59f0f31"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "0567042235cabd94",
-        "571076cdafa6dff6"
+        "4d890cda886cac19"
       ]
     },
     {
@@ -858,175 +853,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/slug=busd-paxos-2023",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "9695a6cc76d9aa61"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/coinId=crvusd-curve",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "7bde7abe5b07f889",
-        "7bde7abe5b07f889"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/dateISO=2023-08-03",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "03e90be5a24d0aba"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/heading=How LLAMMA soft-liquidation absorbs stress",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "c8fd39c5cf10e3a0"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "116fd90962870346"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/heading=The founder-concentration thread",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "25f139fae68b2b9f",
-        "501a666e1d5ffc6c",
-        "67224a1fd54d473b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/heading=Three shocks in two years",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "745f6bbc4a5bb707",
-        "eb02d14f1258dc96"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "3010eb25fa20008e",
-        "ffade1369391767f"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "bf30352dbb9e1830",
-        "bf30352dbb9e1830"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "bebb0c3e408928ce"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy/slug=crvusd-exploit-trilogy",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "2de0ab0ca89ec18e",
-        "2de0ab0ca89ec18e",
-        "94f4fc3424953e29"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday/coinId=dai-makerdao",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "2bde36498c86f989"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday/dateISO=2020-04-01",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "2edf392a253c61b3",
-        "d28d5c0584d3dca7"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday/dateISO=2023-03-13",
       "field": "body",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
         "f5e4bd6ef9f286d5"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday/heading=2023: the PSM and the USDC dependency",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 5,
-      "fingerprints": [
-        "0cf311055a8465d5",
-        "47cfb200a23a3bf8",
-        "7d688e340703e211",
-        "b291b5f8c55480ce",
-        "cdcaac050454c805"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday/heading=Black Thursday 2020",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "21c48984c1ce629f"
       ]
     },
     {
@@ -1041,39 +873,6 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday/heading=How the CDP design recovered",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "375d568b651d0dd7"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "593f5125806cf1fd",
-        "bc7994ed8e33a871",
-        "f1ff3e0f0f4c3ecc"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "d579c591c923c2d1",
-        "d579c591c923c2d1"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday",
       "field": "lead",
       "rule": "scoped-decorative-word",
@@ -1084,299 +883,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "23fe727e4dce364c"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "5a8d6bec9904fb9e",
-        "5a8d6bec9904fb9e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/slug=dai-black-thursday",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "7daa64589801ebd0",
-        "dee858f6a8afe3d3"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024/dateISO=2022-12-31",
       "field": "headline",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
         "1d6750b8d79527dd"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024/dateISO=2024-06-30",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "f35c2c2e6c02e521",
-        "f35c2c2e6c02e521"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024/dateISO=2025-11-25",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "d08b7732f6a5d996"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "bcc870385d959dd1",
-        "c67659ec72e6206f"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024/heading=MiCA's e-money-token regime and what authorization requires",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "8b8fcf9f097935a8",
-        "b44b412762ceee33",
-        "cc52b850dc7dafdf"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024/heading=The compliant successors",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "12267480ba0821ba",
-        "28d20ed024c5443a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "3fc6c37b941465af",
-        "dfdd1f85187f794f",
-        "e441c61f9e7eb39f",
-        "e441c61f9e7eb39f"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "50f103aef86a3fcd",
-        "bd51470fa028d256"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "36214808ec9a682e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "67c297a41cc83f7a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "368c28b2c97e5057",
-        "c80d1fb350e62156"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/slug=eurt-mica-exit-2024",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "b0264bd262f274b4"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/coinId=fdusd-first-digital",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "d44e27e56f4811e7"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/dateISO=2025-04-02",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 6,
-      "fingerprints": [
-        "b307f423226618cf",
-        "b307f423226618cf",
-        "ba0f148edac1b1f7",
-        "ba0f148edac1b1f7",
-        "eb05a3290a67ef9a",
-        "eb05a3290a67ef9a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/heading=Custodian counterparty risk",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "4c295806167b52cf",
-        "85b12b1aea0f3261"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "47d7e578fc9c8a62",
-        "8bd22e2e4f01ef82"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/heading=Recovery via redemption",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "95fb33e50a695310",
-        "a8508023bac2a4ec",
-        "f09392289d481ff6"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/heading=The reflexive run: a tweet versus a bank failure",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "17029602e5d0a28f",
-        "674e8274925f5766"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "1ea20dd567690643",
-        "1ea20dd567690643"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "2362dea7a887c1f6",
-        "33f6b75798f17b71",
-        "5390c2e47b898d34",
-        "9c0645715b410c5e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "945b8b77b0d409c8"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "3712a5fed6212eb3"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "30de433a3a4e3f12",
-        "c0e7d0312110b25d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025/slug=fdusd-sun-fdt-2025",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "90d06a25f95e509b"
       ]
     },
     {
@@ -1413,165 +925,10 @@
       "surface": "case-studies",
       "record": "src/lib/case-studies/fei-protocol/slug=fei-protocol/slug=fei-protocol",
       "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "0e8314407c5d369a",
-        "ed8a14687a41465b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/fei-protocol/slug=fei-protocol/slug=fei-protocol",
-      "field": "takeaways",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
         "03262ae634127195"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022/dateISO=2022-11-02",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "0fbe541ec10fabf2"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022/dateISO=2022-11-16",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "c16fe7a619ac2eab",
-        "c16fe7a619ac2eab"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022/heading=Contagion by proximity to the counterparty",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "502294eafbdc9b80",
-        "a385598711d81722"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022/heading=HUSD: the casualty that didn't recover",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "15903c550bf571f8",
-        "3bda049d54ca3f4d",
-        "beb32be9bbbdd51e",
-        "df2c412494641130"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "d4155f057bdeee85",
-        "e52a0b22f857d5f5"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022/heading=What happened: an exchange, not a stablecoin, failed",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "1006221b911a6737",
-        "54cb82679695d71b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "ad383eb8bc3e291d",
-        "c2b9ef43e9cadd73",
-        "c41c56874cd07cee",
-        "d7beb5f1d31e1c21"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "1c6f657fc0202af4"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "4877e0e335726206",
-        "4877e0e335726206",
-        "f85b5cb39d7cbe4e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/ftx-contagion-2022/slug=ftx-contagion-2022/slug=ftx-contagion-2022",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "5748d3e6b4b0fbbd",
-        "af77ab672321cdf1"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021/dateISO=2021-06-16",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "4e52b86b82b849f3"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021/dateISO=2021-06-17",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "aa82787d1865bab7"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "023a453161f7e9ff",
-        "023a453161f7e9ff"
       ]
     },
     {
@@ -1588,22 +945,10 @@
       "surface": "case-studies",
       "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021/heading=The fractional-algorithmic redemption loop",
       "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "37844e9170b56b7f",
-        "37844e9170b56b7f",
-        "7403e7339d55a978"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021/heading=The fractional-algorithmic redemption loop",
-      "field": "paragraphs",
       "rule": "no-recategorizing-flip",
       "count": 1,
       "fingerprints": [
-        "a82035bbcaf2b190"
+        "3090ec8a947e272c"
       ]
     },
     {
@@ -1614,38 +959,6 @@
       "count": 1,
       "fingerprints": [
         "6f289c8eedf476bd"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "88e626b558999412",
-        "cfe8a086289ba4b6"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021/heading=Why it was the Terra prequel",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "30b82fab728b7293"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "ade8a488dc0dc603",
-        "c22bd47bc7f1c5ac"
       ]
     },
     {
@@ -1661,38 +974,6 @@
     {
       "surface": "case-studies",
       "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "45a70b42b92c9260"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "708c57ec4c66efb6"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "1deca334a78a9cce",
-        "f50e6667735bbb68",
-        "f50e6667735bbb68"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/slug=iron-titan-2021",
       "field": "takeaways",
       "rule": "no-unqualified-safety",
       "count": 1,
@@ -1702,67 +983,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/coinId=lusd-liquity",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "0650a0207498ef5e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "03dda40714d39099",
-        "0a16a987efe06e1f",
-        "aa6ba61b14abc0d4"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/heading=Lessons",
       "field": "paragraphs",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
-        "f0ab7c2946c00429"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/heading=March 2023: contagion inverted",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "0b74208ae2d2a9fb",
-        "7f9797f6c3c31ad7",
-        "cae5998c434e37a0"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/heading=Resilience by subtraction and its costs",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "65669f75e5d66989",
-        "98a8bfff15b167b7"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/heading=The failure it was built against",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "ce04c62b8c09266c"
+        "564ba72b60eaf0aa"
       ]
     },
     {
@@ -1772,20 +998,7 @@
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "dc512c0eda01609b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/heading=The redemption floor and the $1.00-$1.10 corridor",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "351f99d929752f08",
-        "53b61ee60f74a80e",
-        "632a8c1d7ea65f35",
-        "ad065c7ddb3dd03a"
+        "61de393bcbf9ffe3"
       ]
     },
     {
@@ -1795,205 +1008,7 @@
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "9ab58a8536ee9657"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "44a9bb6ae547b538",
-        "c412779c3fa6f495",
-        "f63e30d55cf5e8f3"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "b3437aaba8a7586a",
-        "b3437aaba8a7586a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "d57778de90f4008c",
-        "fbdd4ded4994bd9b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/coinId=mai-qidao",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "d790bb5661d9f79e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/dateISO=2023-07-08",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "c4e26784030f3cd6"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/dateISO=2023-10-13",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "3822bf3ed459442b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/dateISO=2024-02-22",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "ca5b316120fb26ee"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/heading=Bridge dependency as a depeg vector",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "309c415ff96b9fd1",
-        "588d8feec4bbcee1",
-        "a5588fc8c532f23a",
-        "e57494fd92ebda00"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/heading=Cross-chain bad debt",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "09084038288b6e61",
-        "09084038288b6e61",
-        "5ac832967f97e1be"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/heading=Deprecation pressure",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "ac029bb92135f22b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "4b1c07c7b361565a",
-        "79ddb2cf60d280ac",
-        "cfb610bac99e0502"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "6e7a4fa37e9f9ce7",
-        "f988b3160cfcd1db"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 5,
-      "fingerprints": [
-        "222a20e1bbecf8ac",
-        "8b976dea01e345dc",
-        "deda7d49120d8e8e",
-        "e96f0d971546ad4f",
-        "efee0ed02e58478e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "5189cc625e413246"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "8f814eaa6b05dbb0"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "312ed87323bbde28",
-        "88b9251d181ff136",
-        "88b9251d181ff136"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023/slug=mai-qidao-bridge-2023",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "8dd66a3246e4700b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023/dateISO=2023-05-21",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f67cd36ded504a95"
+        "40d50f577a191efa"
       ]
     },
     {
@@ -2008,102 +1023,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023/dateISO=2023-07-06",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "994e2ea5ab82d96b",
-        "9b613ab0b1b14d88",
-        "cc9d2c71995fc911"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023/dateISO=2023-07-14",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "6c30ca783006944b",
-        "b467d50c59174b5a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "691aeac8bb51ac35"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023/heading=Single-point-of-failure decentralization",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "54a4dadf8f7f4f8c",
-        "940b4aa86299dca8"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "2a68d2cde7708fc5",
-        "9a10de7b9d3cb660",
-        "aaabddad0607f28e",
-        "dbd910d4122176d4"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023/heading=Why native USDC was untouched",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "1adad579b82569f7",
-        "4d8644753d2a54d4"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023/heading=Wrapped is not native: the backing lives on the bridge",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "ecfa04297a9af74e"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023/heading=Wrapped is not native: the backing lives on the bridge",
       "field": "paragraphs",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "b2f427d49b68d4de"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "b5e5b11e8c2d72bd",
-        "d8df9678c070e5b1",
-        "d8df9678c070e5b1"
+        "8393a2fa43fcd0ae"
       ]
     },
     {
@@ -2113,50 +1038,7 @@
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "ff46c13ce843a0df"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "107c8cae4ea1bd73"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f18725d62f0a1dce"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "5557cc78c1c9e102",
-        "6e8cc66cf1737e20"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/slug=multichain-usdc-2023",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "113ecfea22bd3cb9",
-        "8bdabb89691af117",
-        "bd810bbf6688c274"
+        "57104fbf6ca16cf3"
       ]
     },
     {
@@ -2166,75 +1048,7 @@
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "8eca4aee2f7869f5"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals/dateISO=2025-10-02",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "dfa01b2e5c4d5f6d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals/dateISO=2026-05-04",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "abf2e413f4380751"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals/heading=An exotic collateral stack",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "2f9927b95561b147"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 5,
-      "fingerprints": [
-        "09957ae67aa9f1ea",
-        "141a5a82e8cc1dda",
-        "5446a1a8240e6d3a",
-        "5446a1a8240e6d3a",
-        "8acd9fe0b12e537f"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals/heading=The May 2026 crater",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "62aa7edf4a94737e",
-        "eef7877f3eeaaacc"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals/heading=What is and isn't verifiable",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "4050792c6f873783",
-        "6b9fa933fd5f296f",
-        "887dcdf1b21c0035",
-        "e382563dd057cf68"
+        "9afc8dc67244fed8"
       ]
     },
     {
@@ -2244,121 +1058,7 @@
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "913cedecc7b20a84"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals/heading=Why it persistently trades below $1",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "0b3ec3773af77b3f",
-        "7334c21e5ef62d4e",
-        "9764f9e35a798d3f"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "95c6b7dbdf92eeea",
-        "95c6b7dbdf92eeea",
-        "a8b30cf8871dc6f3"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "3e91c1d45aef45ec",
-        "3e91c1d45aef45ec"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/slug=pmusd-precious-metals",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "66f1cbe2546e6ea8",
-        "e6d33609d4dbeb4c"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/dateISO=2025-11-06",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "d6e5f17beaf28de2",
-        "d6e5f17beaf28de2"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/dateISO=2025-11-08",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "b46284268603deec"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/heading=Contagion through curated lending markets",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "298da3226a263d16",
-        "2be431fff6a49193",
-        "a1695e3c939d682f",
-        "ab78473ef312253d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "710d7f58cd8c1ed1"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/heading=The hardcoded-oracle trap",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "a554efe70e29f5c8",
-        "d8bf0ab7e20cad4d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/heading=The re-hypothecation map",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "6223498e01416b33",
-        "804c5be0d9056c39",
-        "a30226d22dad2e28",
-        "b931eb9e5bdfe1a1"
+        "acf0c3d8186f4153"
       ]
     },
     {
@@ -2373,262 +1073,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "7d1295ee1645c3d3",
-        "8c2cc8ae9f1fab1b",
-        "b0b9a4a52c8c91d7"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "90311b36ab9384f3",
-        "90311b36ab9384f3",
-        "ae499fce3430a35e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "a0f9b8a22ee081d2",
-        "d954d40c97c61591"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/coinId=susd-synthetix",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "aa06e6ee0a78f770"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/dateISO=2025-04-18",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "202a92031dc23c11",
-        "202a92031dc23c11"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/dateISO=2025-04-21",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "1eb4fc1d39b9517d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/dateISO=2025-08-31",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "98e63a32f78ea61d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/dateISO=2026-06-19",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "6e9b910a9b6d9c64"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/heading=How it ended: SIP-423 and the wind-down",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "27685bae8e6f341e",
-        "27685bae8e6f341e",
-        "641a7b22c4759cd0"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "03cd9ed444c11268",
-        "757ef3f8f6854d8c"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/heading=SIP-420 and the broken repeg incentive",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "a0e38c16df2a2f6f",
-        "ff2116aae62ca6a1"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/heading=The oversupply spiral",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "5d02e724731965b8",
-        "d83f965fdf0808fa"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/heading=The road back: lockups and the staking ratchet",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "a72c3e5f64ddb0df",
-        "e521705d83a83b10"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f88de648c955205a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "31fb55ced0ecc48b",
-        "4863e9f21a84b717",
-        "4bace28fb7ebcecb",
-        "8b3e760af5904912"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "279278a6de5c99ad"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "8b113d80cfe6446e",
-        "8b113d80cfe6446e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "4b68758437e7666d",
-        "b16520d76f4b946f",
-        "dfba5655185fb5dc"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/susd-sip420-2025/slug=susd-sip420-2025/slug=susd-sip420-2025",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "8ff83685d94aae08",
-        "8ff83685d94aae08"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022/dateISO=2022-05-08",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "3de63416962e934a",
-        "3de63416962e934a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022/dateISO=2022-05-11",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "09eff45a78319e55"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022/dateISO=2022-05-11",
       "field": "body",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "16054ed379f234a8"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022/heading=The mint-burn doom loop",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "0c2f8bf6f1be703b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "66aeffa59d82c3d1"
+        "aa05e3ed48226d01"
       ]
     },
     {
@@ -2643,55 +1093,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022/heading=Why Anchor's yield mattered",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "391d4ff1859cdf8b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "06f6d52ff80aa3ee",
-        "06f6d52ff80aa3ee",
-        "7c6a4556042cb5aa"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "8671add706ee2579"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022",
       "field": "takeaways",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
         "53484aada1f3385a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/slug=terra-ust-2022",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "248041b46dc8c9cc",
-        "72bb4023a8a24022"
       ]
     },
     {
@@ -2738,53 +1145,10 @@
       "surface": "case-studies",
       "record": "src/lib/case-studies/usd0pp-usual-2025/slug=usd0pp-usual-2025/slug=usd0pp-usual-2025",
       "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "5510ccfe9be314c1",
-        "5f3fab1f33df5e88",
-        "df2fabeb4fb6426b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usd0pp-usual-2025/slug=usd0pp-usual-2025/slug=usd0pp-usual-2025",
-      "field": "takeaways",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
-        "b2e6b48f866dcd8f"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023/coinId=usdc-circle",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "ffa2b0d64711599a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023/dateISO=2023-03-10",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "5bda1170da677f32",
-        "98374064c4d36e58"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023/dateISO=2023-03-11",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "243ebbac8709f473"
+        "c8821b434f32e827"
       ]
     },
     {
@@ -2811,53 +1175,10 @@
       "surface": "case-studies",
       "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023/heading=Lessons",
       "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "20cfe24e20c01df1"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023/heading=Lessons",
-      "field": "paragraphs",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
         "cf218fbbf313322a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "184eab6554c2fdac",
-        "abc145fe30dcd72e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023/heading=Why a fully-reserved coin still broke",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "f5d8fdba4620b25c",
-        "fb0fbf020eb0c5a5"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "0b8112331d57c985",
-        "17e51041d8559c5f"
       ]
     },
     {
@@ -2872,520 +1193,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "11f1ebc0f7ee1183"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f1d6e04f22d24d31"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/slug=usdc-svb-2023",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "a017005468fa5f65",
-        "b0195b41383df549",
-        "b04d929f803f0fef"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/coinId=usdd-tron-dao-reserve",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "4b340610b757a24c"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/dateISO=2024-08-19",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "8b602ee87278927d",
-        "8b602ee87278927d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/dateISO=2024-08-22",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "384559df10d30688"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "842c58eaefa98673"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/heading=Reflexive collateral",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "08046857aa3431ba"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "65211e36c39bef2a",
-        "c664be229bd1e201",
-        "c664be229bd1e201"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 5,
-      "fingerprints": [
-        "12bf2263dad4354c",
-        "4c57e65080878fba",
-        "616214afece4c221",
-        "ceaae0c33fb7dc21",
-        "f9af3f9eac4c90a3"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "97c19caca6c892cb"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "c2f866389f381bc3"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024",
       "field": "subtitle",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
-        "5d4732090371c9d7"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "330ff3a3e0e76ca3",
-        "3323195e9a8b9c39",
-        "fb29ecc8d9f46904"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "d0c79e51fefdb9b2"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usde-oracle-2025/slug=usde-oracle-2025/slug=usde-oracle-2025/coinId=usde-ethena",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "03b31625f471b226"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usde-oracle-2025/slug=usde-oracle-2025/slug=usde-oracle-2025/heading=How the delta-neutral design held",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "09643b6d68f15a92",
-        "1a397dbf7b27c2ff",
-        "4a136f52bbafa568",
-        "f7cd7b008fecf081"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usde-oracle-2025/slug=usde-oracle-2025/slug=usde-oracle-2025/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "b0826e342d5961e5"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usde-oracle-2025/slug=usde-oracle-2025/slug=usde-oracle-2025/heading=Venue print vs. peg break",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f5c7cf5f4bf9277b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usde-oracle-2025/slug=usde-oracle-2025/slug=usde-oracle-2025",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "7b8c7447c4cec928"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usde-oracle-2025/slug=usde-oracle-2025/slug=usde-oracle-2025",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "e74a94b9b289994d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usde-oracle-2025/slug=usde-oracle-2025/slug=usde-oracle-2025",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "0fb591a1a5689191",
-        "c1ff4a6e1083bcbe"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usde-oracle-2025/slug=usde-oracle-2025/slug=usde-oracle-2025",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "6c769f7aa4f6213a",
-        "8a431b783bc16519"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025/coinId=usdf-falcon",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "433a025cff738fa2"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025/dateISO=2025-05-28",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "e76cda215d053c7b",
-        "f85290c1481fd166"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025/dateISO=2025-07-08",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "3f8c53842c74975a",
-        "bfcd14c153a36324"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025/dateISO=2025-10-01",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "30d06dd7a7a2a05e",
-        "8f623a1d7735a703"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 5,
-      "fingerprints": [
-        "0b02f2c01afe933a",
-        "14340cf0b93a7f6c",
-        "36e034cb8daa66b4",
-        "8ab6180e11c983f3",
-        "a53520d43236686a"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025/heading=Recovery and the audit",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 5,
-      "fingerprints": [
-        "0a1df31223dd0446",
-        "0a1df31223dd0446",
-        "67d0edb9fa440d0e",
-        "97fc71b9ba96488f",
-        "c8150a7fb42a8619"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025/heading=The opacity discount",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 6,
-      "fingerprints": [
-        "30b725a898d88f91",
-        "3553b25024d6fd72",
-        "7fd931cb07829ed4",
-        "90283598110c3501",
-        "d764879f45155fb3",
-        "f5c7113b2be3ee39"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "5ff85bbb47c3f592"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025/heading=Why transparency is a peg input",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "73854f121ae9a2b9",
-        "81c79f5cb03a46e4",
-        "87e8542145ae86a9"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 5,
-      "fingerprints": [
-        "1bcf4b5cfc6f6bf2",
-        "2dd06ddfd0ce512b",
-        "418cb93b797185f5",
-        "5287f017863a273e",
-        "db9a81261eb34668"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "cdc495a28a307bff"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "434481dc34c9701b",
-        "434481dc34c9701b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "61766feb332295da",
-        "fe7bd5fdd8d3a41c",
-        "fe7bd5fdd8d3a41c"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdf-falcon-2025/slug=usdf-falcon-2025/slug=usdf-falcon-2025",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "5126ad90cb16d370"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022/dateISO=2022-03-01",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "ac9ca50eac8de145"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022/dateISO=2022-03-31",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "5df3fa8c2bb76ce9"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022/dateISO=2022-05-11",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "252daa42f99f9418",
-        "7cb018da46031e62"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022/dateISO=2023-02-15",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f5fc1f943a83009e"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022/dateISO=2023-06-01",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "c01061facbd4c620"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "a030f761e7c94db6"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022/heading=The Vires leverage circle",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "7c403f5fbd4fea9d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022/heading=The WAVES reflexivity loop",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "50b7f55610c1ae3f",
-        "9110b0a283518fb2"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "2d7d24286c6ec819",
-        "ac7031e2c525c09c"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 5,
-      "fingerprints": [
-        "49ffade811d7529b",
-        "5b069354f6b01102",
-        "8289f1bff0f73cfa",
-        "d20f79d37a782542",
-        "e2c76b93ae9acb80"
+        "45e270f9415393e6"
       ]
     },
     {
@@ -3400,88 +1213,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "79de9675c98eecc0",
-        "79de9675c98eecc0",
-        "8abf5366ff812c43"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022/slug=usdn-neutrino-2022",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "3429d2d02717fca2",
-        "64e13dbdeee76343"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/usdr-real-usd-2023/slug=usdr-real-usd-2023/slug=usdr-real-usd-2023/heading=Lessons",
       "field": "paragraphs",
       "rule": "no-recategorizing-flip",
       "count": 1,
       "fingerprints": [
         "d332b1c3f2b290c0"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022/dateISO=2022-05-11",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "96ccb3300ddcaaed",
-        "96ccb3300ddcaaed"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022/dateISO=2022-05-13",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "b840392684b42705",
-        "b840392684b42705"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022/dateISO=2023-05-01",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f6e3ed959b47adaf"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022/dateISO=2026-05-11",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "771b345cbd09537c"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022/heading=Lessons",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "14bafa232333bd28",
-        "453a791aa8667a7e"
       ]
     },
     {
@@ -3496,140 +1233,12 @@
     },
     {
       "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022/heading=The collateral whitelist as an attack surface",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "58bd0fe65fa69457"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022/heading=The slow fade",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "6b2b78d1fc11b3d4"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022/heading=What happened",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "1945c5e4ee254a5b"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022/heading=Why overcollateralization didn't save it",
-      "field": "paragraphs",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "7aafb56fb670a804"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "5b7726ac2275107b",
-        "99d67a0891012204",
-        "eb7d1c86ff54ca02",
-        "eb7d1c86ff54ca02"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "26070d6817e1f13c"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022",
-      "field": "subtitle",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "b3d99ada83e5a058",
-        "b3d99ada83e5a058"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "d1f6fa0f35c4faa9",
-        "e119bea1dbc1b114",
-        "e119bea1dbc1b114"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/slug=usdx-kava-2022",
-      "field": "watchpoints",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "c651970df4ceee66",
-        "f37966cbb0a6e5c3",
-        "f37966cbb0a6e5c3"
-      ]
-    },
-    {
-      "surface": "case-studies",
       "record": "src/lib/case-studies/usr-resolv-2026/slug=usr-resolv-2026/slug=usr-resolv-2026/heading=The single-key attack surface",
       "field": "paragraphs",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
         "3c5b32bc256fbf0d"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usr-resolv-2026/slug=usr-resolv-2026/slug=usr-resolv-2026",
-      "field": "metaDescription",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "08276a582fe381c2"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usr-resolv-2026/slug=usr-resolv-2026/slug=usr-resolv-2026",
-      "field": "takeaways",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "9989fc14a91593b3"
-      ]
-    },
-    {
-      "surface": "case-studies",
-      "record": "src/lib/case-studies/usyc-nav-pricing-2025/slug=usyc-nav-pricing-2025/slug=usyc-nav-pricing-2025/coinId=usyc-hashnote",
-      "field": "caption",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "1f539f04354a6097"
       ]
     },
     {
@@ -3644,146 +1253,12 @@
     },
     {
       "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=cash-stabl-fi-cash-2024-06",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f6482594fa6f8d53"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=d-saga-dollar-2026-01",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "0044279d4fc90b97"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=dyadv1-dyad-v1-2024-06",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "e081eb1ba2ca8679"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=esd-empty-set-dollar-2021-01",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "704cba98337275a9"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=eura-angle-eura-2026-03",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 4,
-      "fingerprints": [
-        "4204578624e544bb",
-        "81f066a18dbd1e26",
-        "c3ae23352e40310f",
-        "c3ae23352e40310f"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=fiat-fiat-i-2023-07",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "537c131e7bacbde2"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=float-float-protocol-2025-07",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "b5c774091126086e"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=fusd-fantom-usd-2022-06",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f1bb3a9580a0e64f"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=fusd-fedz-2026-05",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "f18f1a00c049fce0"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=krt-terrakrw-2022-05",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "34507f97c0f499c1"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=l-bold-legacy-bold-2025-02",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "cd959703f8b05406"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=musd-mstable-usd-2023-04",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "50e14409bce9c39f"
-      ]
-    },
-    {
-      "surface": "cemetery",
       "record": "shared/data/dead-stablecoins/id=musd-mstable-usd-2023-04",
       "field": "*.obituary",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
-        "1664d1abceebdd0b"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=pai-parrot-usd-2023-07",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "96b6a1718bbd937a",
-        "96b6a1718bbd937a"
+        "8176fda65068cc71"
       ]
     },
     {
@@ -3798,42 +1273,12 @@
     },
     {
       "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=r-raft-r-2023-11",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "5f6f8ea7a7622954"
-      ]
-    },
-    {
-      "surface": "cemetery",
       "record": "shared/data/dead-stablecoins/id=star-preon-star-2024-06",
       "field": "*.obituary",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
         "c7b0b2acd882f8e7"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=syusd-synnax-stablecoin-2026-01",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "c3de0318b3474ec1"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=uno-nostra-uno-2024-07",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "b4219763f0741d39"
       ]
     },
     {
@@ -3868,94 +1313,12 @@
     },
     {
       "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=usda-angle-usda-2026-03",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "8eee5f3eb02c5b5a",
-        "8eee5f3eb02c5b5a"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=usdi-interest-protocol-2023-06",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "eb25200e852e98cd"
-      ]
-    },
-    {
-      "surface": "cemetery",
       "record": "shared/data/dead-stablecoins/id=usdi-interest-protocol-2023-06",
       "field": "*.obituary",
       "rule": "scoped-decorative-word",
       "count": 1,
       "fingerprints": [
         "c55eb5833d9a0863"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=usdk-usdk-2023-06",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "5c364e940e44e824",
-        "d29fbe3ede7ab175"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=usdl-lift-dollar-2025-12",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "fed3087776d590ff"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=usdl-liquid-loans-usdl-2025-06",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "25ab865c1568192b"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=usdp-usdp-stablecoin-2023-06",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "0841c083fc7d8756"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=usds-sperax-usd-2023-02",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "101d11b7f1c1b5f6"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=usdx-kava-usdx-2022-06",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "678507474f47a99c"
       ]
     },
     {
@@ -3976,16 +1339,6 @@
       "count": 1,
       "fingerprints": [
         "4058d5f2fadaf18c"
-      ]
-    },
-    {
-      "surface": "cemetery",
-      "record": "shared/data/dead-stablecoins/id=vai-vai-2021-09",
-      "field": "*.obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "dc16243e47997698"
       ]
     },
     {
@@ -4036,6 +1389,36 @@
       "count": 1,
       "fingerprints": [
         "bf365b94f50f5502"
+      ]
+    },
+    {
+      "surface": "coin-summaries",
+      "record": "brl-b3",
+      "field": "oneLiner",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "3e5f88735104803b"
+      ]
+    },
+    {
+      "surface": "coin-summaries",
+      "record": "brl-itau",
+      "field": "oneLiner",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "6a83ed37a5815fd4"
+      ]
+    },
+    {
+      "surface": "coin-summaries",
+      "record": "usdt-tether",
+      "field": "oneLiner",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "41f5d25a6a7f48b7"
       ]
     },
     {
@@ -8138,350 +5521,6 @@
       ]
     },
     {
-      "surface": "learn-glossary",
-      "record": "src/lib/glossary-content/id=cemetery|term=Cemetery",
-      "field": "definition",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "27b3689044dfa10c"
-      ]
-    },
-    {
-      "surface": "learn-glossary",
-      "record": "src/lib/glossary-content/id=digest|term=Digest",
-      "field": "definition",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "768c9502e943fa83",
-        "9664994415a54d9a"
-      ]
-    },
-    {
-      "surface": "learn-glossary",
-      "record": "src/lib/glossary-content/id=freezewatch|term=FreezeWatch",
-      "field": "definition",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "9decd8b16b24edfc",
-        "9decd8b16b24edfc"
-      ]
-    },
-    {
-      "surface": "learn-glossary",
-      "record": "src/lib/glossary-content/id=pharos|term=Pharos",
-      "field": "definition",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "679a529a8a9a33c9"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/algorithmic/archetype=algorithmic/archetype=algorithmic/name=Basis Cash|coinId=bac-basis-cash-2021-01",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "9215b41df6bf9552"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/algorithmic/archetype=algorithmic/archetype=algorithmic/name=Empty Set Dollar|coinId=esd-empty-set-dollar-2021-01",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "690b05393a46a317"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/algorithmic/archetype=algorithmic/archetype=algorithmic/name=SpiceUSD|coinId=usds-spiceusd-2022-09",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "9ac64c0a675c3d35"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/algorithmic/archetype=algorithmic/archetype=algorithmic/title=Burn governance token",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "35e16d63cd6c8cad"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/algorithmic/archetype=algorithmic/archetype=algorithmic/title=CDP-plus-PSM hybrids retained under the label",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "a0f2ca1d8d819016"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/algorithmic/archetype=algorithmic/archetype=algorithmic/title=Mint/burn AMO",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "894f42e9a1d0758a"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/algorithmic/archetype=algorithmic/archetype=algorithmic",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "74baa97dd3c2adff",
-        "88d1e527e7fd6187",
-        "9ed8b8cf202012b8"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/algorithmic/archetype=algorithmic/archetype=algorithmic",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "c5a781829485db3d"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp/coinId=crvusd-curve",
-      "field": "note",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "0e1e2e18d4fa9137",
-        "0e1e2e18d4fa9137"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp/coinId=gho-aave",
-      "field": "note",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "6e9eb18f244f97bf",
-        "6e9eb18f244f97bf"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp/name=Kava USDX|coinId=usdx-kava-usdx-2022-06",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "dc42680613ce7141"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp/name=Prisma mkUSD|coinId=mkusd-prisma-mkusd-2024-11",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "abb368f96c9ece97"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp/name=Raft R|coinId=r-raft-r-2023-11",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "559300126e6c2f22"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp/name=YU (Yala)|coinId=yu-yu-2025-11",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "3f83d5bd284b7512"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp/title=Crypto collateral",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "000937a8a897eaee",
-        "000937a8a897eaee"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp/title=Soft-liquidation and savings wrappers",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "3e13941e9b808426"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp/title=Stablecoin minted (or position liquidated)",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "e22f33f78bfe8e9f",
-        "e22f33f78bfe8e9f",
-        "e5d53153ea707a5d"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp",
-      "field": "label",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "086a9ed2f5776279"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/cdp/archetype=cdp/archetype=cdp",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "3357bd9c85ffffd0"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/commodity-claim/archetype=commodity-claim/archetype=commodity-claim/coinId=xagm-matrixdock",
-      "field": "note",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "d688485c832adf4b"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/commodity-claim/archetype=commodity-claim/archetype=commodity-claim/title=Allocated versus unallocated",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "414289fa881065a9"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/commodity-claim/archetype=commodity-claim/archetype=commodity-claim/title=Metal is allocated in a named vault",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "2c2eabcc18c5faf7",
-        "33317b0a80d58bb0"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/commodity-claim/archetype=commodity-claim/archetype=commodity-claim",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "78b0b0982167ddde",
-        "7f0f83671fcf20db",
-        "b1555a8292906da4"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/commodity-claim/archetype=commodity-claim/archetype=commodity-claim",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "358e528b0dfbf0df",
-        "f78537e2b73be249"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/commodity-claim/archetype=commodity-claim/archetype=commodity-claim",
-      "field": "whatToWatch",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "e9100bdcf438eaed"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/fiat-cash/archetype=fiat-cash/archetype=fiat-cash/name=EUROe|coinId=euroe-euroe-2025-05",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "81b3e1913971a4b5"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/fiat-cash/archetype=fiat-cash/archetype=fiat-cash/name=USDK|coinId=usdk-usdk-2023-06",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "47ee6314a8cb8d89"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/fiat-cash/archetype=fiat-cash/archetype=fiat-cash/title=Issuer holds reserves",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "206887d0da70f080",
-        "206887d0da70f080"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/fiat-cash/archetype=fiat-cash/archetype=fiat-cash/title=MiCA-regulated non-USD pegs and yield-passthrough wrappers",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "7119c44cec1732d6"
-      ]
-    },
-    {
       "surface": "learn-mechanisms",
       "record": "src/lib/mechanism-explainers/fiat-cash/archetype=fiat-cash/archetype=fiat-cash",
       "field": "body",
@@ -8489,287 +5528,6 @@
       "count": 1,
       "fingerprints": [
         "c246fb9479cf92af"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/fiat-cash/archetype=fiat-cash/archetype=fiat-cash",
-      "field": "label",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "d775009f0428e719"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/fiat-cash/archetype=fiat-cash/archetype=fiat-cash",
-      "field": "whatToWatch",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "342dc0ffbc096cd7",
-        "e4972aae69d28efc"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/rwa-credit-fund/archetype=rwa-credit-fund/archetype=rwa-credit-fund/coinId=mf-one-midas",
-      "field": "note",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "b52276b8d6ef4bc4"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/rwa-credit-fund/archetype=rwa-credit-fund/archetype=rwa-credit-fund/coinId=mglobal-midas-fasanara",
-      "field": "note",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "3b7ed14fe01861bb"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/rwa-credit-fund/archetype=rwa-credit-fund/archetype=rwa-credit-fund/title=CLO tranche tokens",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "5333fd5f4f2bfad3"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/rwa-credit-fund/archetype=rwa-credit-fund/archetype=rwa-credit-fund/title=Institutional subscription",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "0af686bc20567a96",
-        "2d21f5af071ed9ae"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/rwa-credit-fund/archetype=rwa-credit-fund/archetype=rwa-credit-fund/title=Multi-strategy and structured credit vaults",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "88beb1aacf9df24c",
-        "88beb1aacf9df24c"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/rwa-credit-fund/archetype=rwa-credit-fund/archetype=rwa-credit-fund",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "d861f4374553fbd4"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/rwa-credit-fund/archetype=rwa-credit-fund/archetype=rwa-credit-fund",
-      "field": "label",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "c160047eb451356e"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/rwa-credit-fund/archetype=rwa-credit-fund/archetype=rwa-credit-fund",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "615d7181a28d0ec0"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/rwa-credit-fund/archetype=rwa-credit-fund/archetype=rwa-credit-fund",
-      "field": "whatToWatch",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "32607b795853ca9d"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/synthetic-delta-neutral/archetype=synthetic-delta-neutral/archetype=synthetic-delta-neutral/name=Elixir deUSD|coinId=deusd-elixir-deusd-2025-11",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "58ea71d6d93fcc63"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/synthetic-delta-neutral/archetype=synthetic-delta-neutral/archetype=synthetic-delta-neutral",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "0cfaf7c4e5b6209b",
-        "bd718a4dccbefee1"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/synthetic-delta-neutral/archetype=synthetic-delta-neutral/archetype=synthetic-delta-neutral",
-      "field": "label",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "4b0cc7955cf0f617",
-        "52787d0e45cfc7d5",
-        "9b52af2f073f030d"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/synthetic-delta-neutral/archetype=synthetic-delta-neutral/archetype=synthetic-delta-neutral",
-      "field": "whatToWatch",
-      "rule": "no-clause-dash",
-      "count": 6,
-      "fingerprints": [
-        "7284a2a29c179ed2",
-        "768f89c90c2e9c37",
-        "7799975107dfc089",
-        "aa3c3132b0ba7230",
-        "af0bfdec9599e3fc",
-        "ccda227ddee68eab"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill/name=Lift Dollar|coinId=usdl-lift-dollar-2025-12",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "33ef7442db02dbf6"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill/name=Mountain Protocol USDM|coinId=usdm-mountain-protocol-usdm-2025-08",
-      "field": "obituary",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "c3beef5f2c4933ae"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill/title=Investor cash",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 2,
-      "fingerprints": [
-        "aeea147657bda8cb",
-        "d7e29c472ab75bbc"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill/title=NAV-accreting fund shares",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "b71df525f1097d07"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill/title=Token units",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "696d55a0b53040e2"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill",
-      "field": "body",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "550bc81be3d42572",
-        "a846fa2dde3b5e32",
-        "e0a2de6b518b1009"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill",
-      "field": "label",
-      "rule": "no-clause-dash",
-      "count": 3,
-      "fingerprints": [
-        "7b2129deb4818a6d",
-        "a2231c7e03a1e812",
-        "e2b1521fea73cde0"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill",
-      "field": "lead",
-      "rule": "no-clause-dash",
-      "count": 1,
-      "fingerprints": [
-        "444cd4116b739a29"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill",
-      "field": "lead",
-      "rule": "no-unqualified-safety",
-      "count": 1,
-      "fingerprints": [
-        "fe209993cf886a3f"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill",
-      "field": "whatToWatch",
-      "rule": "no-clause-dash",
-      "count": 6,
-      "fingerprints": [
-        "276a846c0df69a35",
-        "594534945a300e6a",
-        "84b50b11150b047e",
-        "ba4bf8b7e723a736",
-        "d0d963f6ef15f984",
-        "d64073e3f7167671"
-      ]
-    },
-    {
-      "surface": "learn-mechanisms",
-      "record": "src/lib/mechanism-explainers/tbill/archetype=tbill/archetype=tbill",
-      "field": "whatToWatch",
-      "rule": "no-unqualified-safety",
-      "count": 1,
-      "fingerprints": [
-        "3f61a01569669bb2"
       ]
     },
     {
@@ -9651,6 +6409,17 @@
       "count": 1,
       "fingerprints": [
         "7865b0fc3f946c45"
+      ]
+    },
+    {
+      "surface": "weekly-digests",
+      "record": "data/digests/date=2026-08-31-weekly|digestType=weekly",
+      "field": "*.extended",
+      "rule": "review-unqualified-superlative",
+      "count": 2,
+      "fingerprints": [
+        "2b34884a57fc60e9",
+        "986205601311c2d1"
       ]
     }
   ]
