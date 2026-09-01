@@ -100,6 +100,7 @@ export function validatePolicy(raw: string): Policy {
   }
 
   assert(
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored finite version shape over the checked-in policy fence.
     typeof parsed.version === "string" && /^(?:0|[1-9]\d*)\.(?:0|[1-9](?:\d*[1-9])?)$/.test(parsed.version),
     "version must be an unambiguous MAJOR.MINOR number.",
   );
@@ -144,6 +145,7 @@ export function validatePolicy(raw: string): Policy {
       );
       assert(pattern.flags.includes("g"), `rule "${rule.id}" patterns must be global so every match is reported.`);
       try {
+        // eslint-disable-next-line security/detect-non-literal-regexp -- validating the authored policy fence's own patterns at build time.
         new RegExp(pattern.source, pattern.flags);
       } catch (error) {
         throw new Error(
@@ -168,6 +170,7 @@ export function validatePolicy(raw: string): Policy {
       `rule "${rule.id}" closerOnly must be boolean.`,
     );
     assert(
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored finite version shape over the checked-in policy fence.
       typeof rule.introducedIn === "string" && /^(?:0|[1-9]\d*)\.(?:0|[1-9](?:\d*[1-9])?)$/.test(rule.introducedIn),
       `rule "${rule.id}" needs an unambiguous MAJOR.MINOR introducedIn version.`,
     );

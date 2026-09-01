@@ -127,6 +127,7 @@ const NON_PROSE_FIELDS = new Set([
 const USER_CONTENT_FIELD_RE = /(?:user|donor|submitted|issuerProvided|issuerText|feedback)/i;
 const URL_RE = /(?:https?:\/\/|www\.)[^\s<>{}\[\]"']+/gi;
 const CODE_SPAN_RE = /`[^`\n]*`/g;
+// eslint-disable-next-line security/detect-unsafe-regex -- masks bounded checked-in corpus strings, not untrusted input; quantifiers are finite per token.
 const NUMBER_RE = /(?<![A-Za-z])(?:[-+\u2212]\s*)?(?:(?:[$€£¥₹₽₩₺₴₪₫฿]|[A-Z]{3})\s*)?\d[\d.,]*(?:\s*[%a-zA-Z]+)?(?:\s*[\u2012-\u2015\u2212-]\s*(?:[-+\u2212]\s*)?(?:(?:[$€£¥₹₽₩₺₴₪₫฿]|[A-Z]{3})\s*)?\d[\d.,]*(?:\s*[%a-zA-Z]+)?)?/g;
 
 function blankRange(text: string, start: number, end: number): string {

@@ -239,6 +239,7 @@ describe("case-study content", () => {
       const sectionIds = study.sections.map((section) => section.id);
       for (const id of sectionIds) {
         expect(id, `invalid section id in ${study.slug}: ${id}`).toMatch(
+          // eslint-disable-next-line security/detect-unsafe-regex -- anchored kebab-case id; finite groups, no backtracking ambiguity.
           /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
         );
       }

@@ -492,6 +492,7 @@ export function editorialGlobToRegExp(glob: string): RegExp {
       expression += escapeRegex(char);
     }
   }
+  // eslint-disable-next-line security/detect-non-literal-regexp -- compiled from the reviewed registry's literal glob declarations at startup.
   return new RegExp(`${expression}$`);
 }
 

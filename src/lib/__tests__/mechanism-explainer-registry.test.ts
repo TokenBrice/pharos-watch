@@ -6,6 +6,7 @@ import {
 } from "@/lib/mechanism-explainer-registry";
 import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
 
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored kebab-case id; finite groups, no backtracking ambiguity.
 const KEBAB_CASE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 describe("mechanism explainer registry", () => {

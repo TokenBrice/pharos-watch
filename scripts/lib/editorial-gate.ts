@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- CI-only corpus discovery uses reviewed registry paths. */
 import { globSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 

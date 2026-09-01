@@ -165,6 +165,7 @@ export const StablecoinLinkSchema = z
      */
     id: z
       .string()
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored kebab-case id; finite groups, no backtracking ambiguity.
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Expected a kebab-case link id")
       .optional(),
     label: z.string(),

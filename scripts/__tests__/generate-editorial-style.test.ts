@@ -35,6 +35,7 @@ function bumpedVersion(policy: ReturnType<typeof validatePolicy>): string {
 describe("editorial policy generator", () => {
   it("extracts and validates the single authored policy fence", () => {
     const policy = readPolicy();
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored finite version shape over the checked-in policy fence.
     expect(policy.version).toMatch(/^(?:0|[1-9]\d*)\.(?:0|[1-9](?:\d*[1-9])?)$/);
     expect(policy.registers.length).toBeGreaterThan(0);
     expect(policy.rules.length).toBeGreaterThan(0);
@@ -64,6 +65,7 @@ describe("editorial policy generator", () => {
     next.rules.push(added);
     const validated = validatePolicy(JSON.stringify(next));
     expect(() => assertMonotonicPolicyVersion(current, validated)).toThrow(
+      // eslint-disable-next-line security/detect-non-literal-regexp -- interpolates the committed policy version into an escaped literal template.
       new RegExp(`must set introducedIn to policy version ${next.version.replace(".", "\\.")}`),
     );
 

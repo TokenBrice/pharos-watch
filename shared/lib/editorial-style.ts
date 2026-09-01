@@ -90,6 +90,7 @@ const COMPILED = new Map<string, RegExp[]>();
 function patternsFor(rule: EditorialRuleSpec): RegExp[] {
   const cached = COMPILED.get(rule.id);
   if (cached) return cached;
+  // eslint-disable-next-line security/detect-non-literal-regexp -- patterns come from the generated policy module, a build-time constant.
   const compiled = rule.patterns.map((pattern) => new RegExp(pattern.source, pattern.flags));
   COMPILED.set(rule.id, compiled);
   return compiled;
