@@ -656,13 +656,21 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // ever retires it. Verified 2026-09-01: Ethereum 44,876,696,516.00 (block
   // 25881782) + BSC 31,739,108,295.00 (block 119325993) + Polygon
   // 14,040,000,000.000000 (block 93035233) + Harmony 1,201,000.00 (block 93230607)
-  // = 90,657,005,811.00. RESTATEMENT: CoinGecko has been frozen at exactly
-  // 173,856,905,811 IDRT (circulating === total) on 2026-02-01, 2026-05-01,
-  // 2026-07-01 and today, while every reviewed chain has been shrinking through
-  // that window - Ethereum 76,400,225,541 -> 44,876,696,516, BSC 49,607,657,295 ->
-  // 31,739,108,295, Polygon 16,310,000,000 -> 14,040,000,000 - so the frozen
-  // figure reconciles to no on-chain combination. Publishing the pinned reads
-  // restates supply by -47.86% (ftUSD/CHFAU/ACRDX stale-upstream precedent).
+  // = 90,657,005,811.00. RESTATEMENT: CoinGecko's 173,856,905,811 reconciles to
+  // the unit as (live Ethereum+BSC+Polygon totalSupply sum + a flat
+  // 40,000,000,000 issuer-declared addend) - bit-exact against history through
+  // 2025-08-30, when the series froze (the issuer's own supply API at
+  // api-client.rupiahtoken.com/v1/supply is dead) - so 43,201,101,000 of
+  // subsequent on-chain burns were never applied, and the Harmony 1,201,000 CG
+  // never counted closes the 83,199,900,000 delta exactly. Known gap: the
+  // issuer's own site names two further ledgers this aggregate cannot read -
+  // IDRTB (BEP-2 IDRTB-178, chain sunset Jun 2024, ~90B with 98.98% parked in
+  // one post-migration address) and IDRTL (permissioned Luniverse, no public
+  // explorer); the flat 40B addend is issuer-declared supply on those unreadable
+  // ledgers and stays outside this aggregate, like the mRe7YIELD TAC leg.
+  // Publishing the pinned reads restates supply by -47.86%; even crediting
+  // IDRTB/IDRTL at face value, CoinGecko's own basis would give ~130.7B today,
+  // never the frozen 173.9B (owner-ratified 2026-09-01).
   // Harmony is in CHAIN_META but absent from buildChainRpcs(); both official
   // shard-0 endpoints were verified 2026-09-01 (eth_chainId 1666600000).
   "idrt-rupiah-token": [
