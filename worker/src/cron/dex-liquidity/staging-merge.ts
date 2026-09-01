@@ -5,6 +5,7 @@ import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/li
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { STAGED_POOL_MAX_TVL_USD, stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { DIRECT_API_POOL_MIN_TVL_USD } from "../../lib/dex-api-pool-shaping";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -333,8 +334,14 @@ function requiresAuthoritativeProtocolConfirmation(
   chain: string,
   poolType: string,
   dexId: string,
+  tvlUsd: number | null,
 ): boolean {
   if (!authoritativeConfirmation) return false;
+  // Every direct-API census drops pools under DIRECT_API_POOL_MIN_TVL_USD before
+  // it is ever read, so a smaller staged pool is outside the census's reach and
+  // can never be confirmed. Demanding confirmation there deletes real liquidity
+  // for exactly the assets whose only pools sit below the direct-source floor.
+  if (tvlUsd == null || tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) return false;
   const familyDescriptor = `${dexId} ${poolType}`.toLowerCase();
   if (protocol === "pancakeswap") {
     if (familyDescriptor.includes("v2")) return false;
@@ -509,6 +516,7 @@ export async function mergeStagedPools(
         stagedPool.chain,
         poolType,
         dexId,
+        stagedPool.tvlUsd,
       )
     ) {
       const confirmedExactKeys = authoritativeConfirmation?.confirmedExactKeysByProtocol.get(normalizedProtocol);
