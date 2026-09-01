@@ -9,6 +9,7 @@ import {
   getGeckoTerminalDiscoveryTarget,
   getHorizonDiscoveryAsset,
   isAquariusSorobanDeployment,
+  isCensusProviderSetSupersededByRegistry,
   isIconBalancedDiscoveryDeployment,
   isKavaSwapDiscoveryDeployment,
   isTezosDiscoveryDeployment,
@@ -157,6 +158,17 @@ describe("DEX deployment coverage ownership", () => {
     expect(getHorizonDiscoveryAsset(issuer, "EURC")).toBe(`EURC:${issuer}`);
     expect(getDexDiscoveryProviders("stellar", soroban)).toEqual(["aquarius"]);
     expect(getHorizonDiscoveryAsset(soroban, "EURSPKCC")).toBeNull();
+  });
+
+  it("treats an empty persisted provider set as superseded only where the registry now resolves a provider", () => {
+    const soroban = "CDGSC6BA4TCAOVSFQCUEHDMOIIHYYVNYBT6YEARS4MX3ITAHUINVGQHX";
+
+    // Pre-Aquarius Soroban row: the registry resolves a provider today.
+    expect(isCensusProviderSetSupersededByRegistry("stellar", soroban, 0)).toBe(true);
+    // A chain that still has no registered provider stays a standing scope limit.
+    expect(isCensusProviderSetSupersededByRegistry("secret", "secret1unsupported", 0)).toBe(false);
+    // A row that recorded providers is never superseded by this rule.
+    expect(isCensusProviderSetSupersededByRegistry("stellar", soroban, 1)).toBe(false);
   });
 
   it("gives every exclusively inaccessible coin an owned, unexpired waiver", () => {

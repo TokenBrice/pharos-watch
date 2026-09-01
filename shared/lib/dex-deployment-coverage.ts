@@ -283,6 +283,26 @@ export function getDexDiscoveryProviders(chain: string, address?: string): DexDi
   return providers;
 }
 
+/**
+ * Whether a persisted census provider set is contradicted by the live registry.
+ *
+ * A census row's provider set is a snapshot of a *registry* fact, not an
+ * observation: an empty set means "no registered provider supported this chain
+ * when the row was written". When discovery coverage for a chain is added, rows
+ * written before it keep asserting an empty provider set until the crawl
+ * rotation reaches that deployment again — for a windowed footprint that is
+ * several runs. The registry, not the row, owns which providers exist, so a
+ * contradicted row is superseded metadata awaiting a re-crawl rather than a
+ * standing method limit.
+ */
+export function isCensusProviderSetSupersededByRegistry(
+  chain: string,
+  address: string | undefined,
+  persistedProviderCount: number,
+): boolean {
+  return persistedProviderCount === 0 && getDexDiscoveryProviders(chain, address).length > 0;
+}
+
 export function getActiveDexCoverageWaiver(
   stablecoinId: string,
   chain: string,

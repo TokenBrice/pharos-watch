@@ -64,6 +64,7 @@
     "audit:pricing-providers": "tsx scripts/maintenance/audit-pricing-provider-config.ts",
     "check:provider-resilience": "node --import tsx scripts/ci/check-provider-resilience.ts",
     "check:fetch-body-timeouts": "node --import tsx scripts/ci/check-fetch-body-timeouts.ts",
+    "check:dex-census-provider-drift": "node --import tsx scripts/ci/check-dex-census-provider-drift.ts",
     "audit:price-source-depth": "tsx scripts/maintenance/audit-price-source-depth.ts",
     "audit:dia-provider": "tsx scripts/maintenance/audit-dia-provider-poc.ts",
     "ops:d1-insights": "node scripts/maintenance/capture-d1-insights.mjs",
