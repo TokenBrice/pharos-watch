@@ -125,6 +125,63 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     ))).toBe(true);
   });
 
+  it("observes preloaded, reordered, rejected, and cleared request-cache promises", async () => {
+    const backing = new Map<string, Promise<unknown>>([["preloaded", Promise.resolve(true)]]);
+    let exerciseCache = true;
+    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => {
+      const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
+      return {
+        key: adapterKey,
+        sourceModel: definition.sourceModel,
+        evidenceClass: definition.evidenceClass,
+        sharedSourceMode: definition.sharedSourceMode,
+        validation: "validation" in definition ? definition.validation : undefined,
+        fetch: async (
+          _coin: unknown,
+          _config: unknown,
+          _signal: AbortSignal,
+          ctx?: AdapterContext,
+        ) => {
+          if (exerciseCache) {
+            exerciseCache = false;
+            let resolveSuccess!: (value: true) => void;
+            const success = new Promise<true>((resolve) => { resolveSuccess = resolve; });
+            ctx!.requestCache!.set("success", success);
+            ctx!.requestCache!.delete("success");
+            ctx!.requestCache!.set("success", success);
+            ctx!.requestCache!.delete("success");
+            ctx!.requestCache!.set("success", success);
+            resolveSuccess(true);
+            await success;
+
+            const failure = Promise.reject(new Error("expected request failure"));
+            ctx!.requestCache!.set("failure", failure);
+            ctx!.requestCache!.delete("failure");
+            ctx!.requestCache!.set("failure", failure);
+            await failure.catch(() => undefined);
+            ctx!.requestCache!.clear();
+          }
+          return {
+            slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+            metadata: { freshnessMode: "not-applicable" as const },
+          };
+        },
+      };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const result = await syncLiveReserves(
+      mockLiveReserveD1(),
+      new AbortController().signal,
+      { requestCache: backing },
+    );
+    const { adapterLatency } = metadataOf(result);
+
+    expect(backing.size).toBe(0);
+    expect(adapterLatency.requestCacheMisses).toBe(2);
+    expect(adapterLatency.requestCacheHits).toBe(2);
+  });
+
   it("persists a valid zero-attempt summary when the whole queue is deferred", async () => {
     getReserveAdapterMock.mockImplementation(() => {
       throw new Error("adapter must not be loaded");
