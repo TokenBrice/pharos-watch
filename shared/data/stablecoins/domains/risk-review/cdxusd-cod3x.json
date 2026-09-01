@@ -26,22 +26,26 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-08-28",
-      "reviewer": "Codex",
-      "rationale": "The whitepaper's intended design is price-sensitive and includes a Cod3x Lend liquidation path and AMOs, but it does not identify deployed contracts for those planned Facilitators. At Base block 50539797 the live token's complete facilitator list contained only 0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b, labeled Multisig. No public source establishes that Facilitator's live collateral, price input, liquidation, AMO, backstop, or shutdown rules, so neither a current branch model nor a complete absence of price-sensitive control can be verified.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-09-01",
+      "reviewer": "Pharos ODR-E1 oracle applicability review",
+      "rationale": "Ruled on an exhaustive on-chain enumeration, not on absent branch documentation. cdxUSD is a GHO-style token whose complete minting surface is its own facilitator registry, so the number of price-sensitive paths is directly readable. At Base block 50735165 (base-rpc.publicnode.com) and block 50735166 (mainnet.base.org) on 2026-09-01, getFacilitatorsList() returned exactly one entry, 0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b, on both endpoints; at block 50735520 getFacilitator on that address returned label \"Multisig\" with bucket capacity 100,000,000 cdxUSD and level 6,150,000 cdxUSD, equal to totalSupply, unchanged from the block-50539797 read of 2026-08-28. The facilitator is a Safe (VERSION 1.4.1) with threshold 3 over 9 owners at the same block; token owner() is 0xc0D3700924301AC384E5Eae3272E08220752DE3D and the token exposes no price-oracle accessor. The whitepaper's Cod3x Lend borrower-liquidation facilitator and its liquidity and arbitrage AMOs are therefore not deployed as facilitators on the live token: there is no second minting authority that could carry a per-market collateral or liquidation branch, and the registry read is complete rather than sampled. Exactly one price-sensitive path stands — the Safe facilitator's discretionary mint against strategy collateral it values under rules the protocol does not publish — and it is fully described at the top level, where tier opaque-or-unknown already carries that exposure. This is an enumerated absence of branches, not an unavailability of branch detail; if a Cod3x Lend facilitator is later added to the registry the disposition must return to branches-required.",
       "sources": [
         {
-          "label": "Cod3x cdxUSD whitepaper at commit 840ee169",
-          "url": "https://github.com/Cod3x-Labs/Whitepapers/blob/840ee1696a282e56cb763318dd1b9c8278f8772f/Cod3x%20USD%20-%20Composable%20Credit%20Primitive.pdf"
+          "label": "Base PublicNode RPC: getFacilitatorsList/getFacilitator/getFacilitatorBucket/totalSupply at blocks 50735165 and 50735520 (2026-09-01)",
+          "url": "https://base-rpc.publicnode.com"
         },
         {
-          "label": "Base Blockscout verified cdxUSD token source",
+          "label": "Base public RPC (mainnet.base.org): corroborating single-entry getFacilitatorsList read at block 50735166 (2026-09-01)",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "Base Blockscout verified cdxUSD token source (facilitator registry is the complete minting surface)",
           "url": "https://base.blockscout.com/address/0xc0d3700000987c99b3c9009069e4f8413fd22330?tab=contract"
         },
         {
-          "label": "Base PublicNode RPC fixed-block facilitator read",
-          "url": "https://base-rpc.publicnode.com"
+          "label": "Cod3x cdxUSD whitepaper at commit 840ee169 (planned Cod3x Lend liquidation and AMO facilitators)",
+          "url": "https://github.com/Cod3x-Labs/Whitepapers/blob/840ee1696a282e56cb763318dd1b9c8278f8772f/Cod3x%20USD%20-%20Composable%20Credit%20Primitive.pdf"
         }
       ]
     },

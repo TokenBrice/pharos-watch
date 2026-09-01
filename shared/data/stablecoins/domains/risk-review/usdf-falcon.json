@@ -26,18 +26,22 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-08-28",
-      "reviewer": "Codex",
-      "rationale": "Falcon's internal Spot Price is price-sensitive and governs USDf mint amounts, collateral-specific innovative-mint liquidation triggers, and maturity payouts. The current terms and mechanism pages establish user-selected strike and liquidation parameters but do not publish the complete supported-collateral inventory or map each live collateral to its production price source, collateral parameters, liquidation behavior, backstop, and shutdown/shortfall treatment. A complete top-level or branch model therefore cannot be established from public evidence.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-09-01",
+      "reviewer": "Pharos ODR-E1 oracle applicability review",
+      "rationale": "Ruled on an enumerated pricing surface, not on absent branch documentation. Falcon's own contract directory publishes no vault, collateral-pricing, liquidation, or auction contract on any chain: the Ethereum set is the USDf and sUSDf tokens, the Falcon Position NFT that represents an Innovative Mint position, an sUSDf staking-rewards distributor, and USDf/USD and sUSDf/USDf Chainlink feeds that price Falcon's own tokens for third-party integrators rather than feeding Falcon's collateral valuation; BNB Chain and XDC publish only the USDf representation and staking vaults. Every price-sensitive decision therefore runs off-chain through one path. The terms define the Spot Price as \"the price of the digital assets determined by Falcon Finance at its sole discretion as reflected in Falcon Finance's internal system, based on data sourced from major exchanges such as ByBit and Binance\"; they extend the same sole-discretion determination to Tokenized RWA collateral \"using any sources, methods or assumptions it considers appropriate\"; and they state one uniform liquidation trigger across collateral types — \"If, at any time during the Mint Term, the Spot Price of the collateralised Eligible Altcoin meets or falls below the specified liquidation price, Falcon Finance reserves the right to liquidate the Collateral immediately to cover the minted USDf\" — with no per-asset feed, heartbeat, staleness bound, fallback, auction, or backstop published for any collateral. Eligible collateral assets differ only in the strike and liquidation price the user selects for an individual position; that is a position parameter, not a distinct price-sensitive control path. Exactly one such path exists and it is fully described at the top level, where tier privileged-internal-pricing already carries the exposure. The unpublished supported-collateral inventory that held the prior unresolved ruling does not conceal a second pricing or liquidation topology: the sole-discretion internal Spot Price is by construction the single authority for whatever collateral is admitted.",
       "sources": [
         {
-          "label": "Falcon Finance terms: internal spot pricing and collateral-specific liquidation (last updated 2026-08-12)",
+          "label": "Falcon Finance terms: internal Spot Price defined at sole discretion, uniform liquidation trigger, RWA valuation discretion (last updated 2026-08-12)",
           "url": "https://docs.falcon.finance/resources/terms-of-use"
         },
         {
-          "label": "Falcon Innovative Mint: user-set liquidation and strike parameters (last updated 2025-08-25)",
+          "label": "Falcon Innovative Mint: user-set strike and liquidation price are the only per-position variation (last updated 2025-08-25)",
           "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-minting-mechanisms/innovative-mint"
+        },
+        {
+          "label": "Falcon Finance smart-contract directory: no vault, collateral-oracle, liquidation, or auction contract on any chain (read 2026-09-01)",
+          "url": "https://docs.falcon.finance/resources/smart-contracts"
         }
       ]
     },

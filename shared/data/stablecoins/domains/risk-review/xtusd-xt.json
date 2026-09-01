@@ -9,21 +9,21 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "The live XTUSD Vat 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b on XSC carries a single debt-bearing ilk, XT-A (Wrapped XT collateral), with Vat.spot set to 3.4780667 ray at block 48187434 (2026-08-08), but no Spotter, pip, or other price-update contract is a current Vat ward: only the Jug and the XT-A GemJoin are authorized among probed system contracts, and neither exposes a spot-poke path, so the collateral-price path is opaque and has no identified on-chain update mechanism. The Median/OSM/Spotter stack observed on XSC is wired only to the legacy TAI deployment (token 0x775c4bc7…), not to the XTUSD token 0x1a6131ea… or the live Vat, and the issuer announcement names no feed, heartbeat, or failover. No Cat/Dog, auction, or global-settlement module is authorized on the live Vat either, so the announced auction-based liquidation is not operable on-chain at the reviewed block.",
+    "summary": "The live XTUSD Vat 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b on XSC carries a single debt-bearing ilk, XT-A (Wrapped XT collateral), with Vat.spot set to 3.4780667 ray at block 48187434 (2026-08-08), but no Spotter, pip, or other price-update contract is a current Vat ward: only the Jug and the XT-A GemJoin are authorized among probed system contracts, and neither exposes a spot-poke path, so the collateral-price path is opaque and has no identified on-chain update mechanism. The Median/OSM/Spotter stack observed on XSC is wired only to the legacy TAI deployment (token 0x775c4bc7…), not to the XTUSD token 0x1a6131ea… or the live Vat, and the issuer announcement names no feed, heartbeat, or failover. No Cat/Dog, auction, or global-settlement module is authorized on the live Vat either, so the announced auction-based liquidation is not operable on-chain at the reviewed block. Re-verified on 2026-09-01 at blocks 48866032 (datarpc1) and 48866034 (datarpc2): the XT-A spot is byte-identical to the 2026-08-08 read after 678,598 blocks, the ward set is still only the Jug and the XT-A GemJoin, and Vat.debt equals XT-A Art x rate to the last wei-rad, so XT-A carries 100.000% of all Vat-internal debt.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-08-08",
-      "reviewer": "wave3-longtail-L03 (research agent)",
-      "rationale": "XTUSD is a live CDP: the XSC Vat holds one debt-bearing ilk, XT-A (Art 4,325,685.43 XTUSD at block 48187434), so a liquidation branch exists and must be populated. Exactly one branch was identified: XT-A is the only ilk observed with debt across four years of system transactions and the only collateral adapter found (GemJoin 0xdec7d8fe…, WXT). The branch inventory rests on probing every contract visible in the system's transaction history; DSS ilks and wards cannot be enumerated by direct reads, so a never-used ilk or ward granted at setup cannot be excluded, hence confidence limited.",
+      "reviewedAt": "2026-09-01",
+      "reviewer": "wave3-longtail-L03 (research agent); ODR-E1 re-verification 2026-09-01",
+      "rationale": "XTUSD is a live CDP: the XSC Vat holds one debt-bearing ilk, XT-A (Art 4,325,685.429106121218664325 XTUSD at blocks 48866032 and 48866034, 2026-09-01, unchanged from block 48187434 on 2026-08-08), so a liquidation branch exists and must be populated. Exactly one branch is debt-bearing, and that is now proved by arithmetic rather than inferred from transaction history: Vat.debt reads 4800510892960037551764310893306021067552105717710150 rad and XT-A Art x rate multiplies out to exactly the same value, with a zero residual, on both independent RPCs. Since Vat.debt is the sum of every ilk's Art x rate plus any suck-created debt, a zero residual leaves no room for a second debt-bearing ilk or for protocol-created debt, and a never-used ilk carries no debt and no branch weight by construction. The collateral adapter inventory is likewise closed for the debt-bearing branch: GemJoin 0xdec7d8fe3955ccbeb009e366c583fba2a9b63d2e reads ilk XT-A, gem WXT 0x4b681a704664ce482c45ec16ac9ecc9b121fb037, vat 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b, live 1, dec 18. Confidence is probable rather than verified for one residual reason only: the Vat's ward set cannot be enumerated. DSS wards is a mapping with no enumerator, and this fork emits no LogNote events at all — an eth_getLogs sweep of the Vat address across the entire chain from block 0 to 48866057 returned zero logs on both endpoints, while the same endpoints return 49 logs for WXT over the last 5,000,000 blocks, so the endpoints do serve historical logs and the Vat genuinely emits none. A ward granted at deployment and never exercised therefore cannot be excluded by any available read, and the branch records that residual fail-closed.",
       "sources": [
         {
-          "label": "XSC public RPC (datarpc1.xsc.pub, live Vat ilks/wards/Line, Jug duty/rho/vow, DaiJoin/GemJoin bindings, block 48187434, 2026-08-08)",
+          "label": "XSC public RPC (datarpc1.xsc.pub, live Vat ilks/wards/Line/debt/live, Jug duty/rho/vow/base, GemJoin ilk/gem/vat/live/dec, block 48866032, 2026-09-01; original inventory read at block 48187434, 2026-08-08)",
           "url": "https://datarpc1.xsc.pub"
         },
         {
-          "label": "XSC public RPC (datarpc2.xsc.pub, corroborating live Vat ilks('XT-A') read, 2026-08-08)",
+          "label": "XSC public RPC (datarpc2.xsc.pub, corroborating Vat/Jug/GemJoin reads at block 48866034, 2026-09-01)",
           "url": "https://datarpc2.xsc.pub"
         },
         {
@@ -32,16 +32,16 @@
         }
       ]
     },
-    "reviewedAt": "2026-08-08",
-    "reviewer": "wave3-longtail-L03 (research agent)",
-    "confidence": "limited",
+    "reviewedAt": "2026-09-01",
+    "reviewer": "wave3-longtail-L03 (research agent); ODR-E1 re-verification 2026-09-01",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "XSC public RPC (datarpc1.xsc.pub, live Vat 0xf9d4810f… ilks/wards/Line, Jug duty/rho/vow, DaiJoin/GemJoin bindings, block 48187434, 2026-08-08)",
+        "label": "XSC public RPC (datarpc1.xsc.pub, live Vat ilks('XT-A')/wards/Line/debt/live, Jug duty/rho/vow/base, DaiJoin/GemJoin bindings; block 48187434, 2026-08-08 and re-read at block 48866032, 2026-09-01)",
         "url": "https://datarpc1.xsc.pub"
       },
       {
-        "label": "XSC public RPC (datarpc2.xsc.pub, corroborating live Vat ilks('XT-A') read, 2026-08-08)",
+        "label": "XSC public RPC (datarpc2.xsc.pub, corroborating Vat/Jug/GemJoin reads; block 48187434, 2026-08-08 and re-read at block 48866034, 2026-09-01)",
         "url": "https://datarpc2.xsc.pub"
       },
       {
@@ -58,7 +58,7 @@
         "id": "xt-a",
         "label": "XT-A vault ilk (Wrapped XT)",
         "tier": "opaque-or-unknown",
-        "summary": "XT-A is the sole identified collateral branch: 4,325,685.43 XTUSD of vault debt (Art) against WXT at block 48187434 (2026-08-08). The Vat's XT-A spot is 3.4780667 ray, but no current Vat ward can update it and no liquidation module is authorized to act on unsafe vaults. The issuer's 2022 announcement publishes a 150% minimum collateral ratio and 3% annual fee for XT-A — the Jug duty reads 1.0000000009373033 ray, 3.0000% annualized, matching the announcement — but the mat/liquidation ratio is not readable on-chain because no Spotter holding it is wired to the live Vat.",
+        "summary": "XT-A is the sole debt-bearing collateral branch: 4,325,685.429106121218664325 XTUSD of vault debt (Art) against WXT, byte-identical at block 48187434 (2026-08-08) and at blocks 48866032/48866034 (2026-09-01). Its 100.000% debt share is arithmetic, not inferred: Vat.debt equals XT-A Art x rate with a zero residual, leaving no room for a second debt-bearing ilk. The Vat's XT-A spot is 3.4780667 ray, but no current Vat ward can update it and no liquidation module is authorized to act on unsafe vaults. The issuer's 2022 announcement publishes a 150% minimum collateral ratio and 3% annual fee for XT-A — the Jug duty reads 1.000000000937303470807876289 ray, 3.0000% annualized, matching the announcement, with base 0 and rho 1768050306 (2026-01-10T13:05:06Z, the last drip) — but the mat/liquidation ratio is not readable on-chain because no Spotter holding it is wired to the live Vat.",
         "collateralAssets": [
           "WXT (Wrapped XT, ilk XT-A)"
         ],
@@ -68,11 +68,11 @@
         "feeds": [
           {
             "provider": "None identified: the XT-A collateral price is a static Vat.spot with no authorized updater",
-            "path": "Vat 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b ilks(\"XT-A\").spot returns 3.478066666666666666666666666 ray, byte-identical on datarpc1 and datarpc2 at block 48211240 (2026-08-09) and unchanged from the block-48187434 read of 2026-08-08. No Spotter, pip, OSM, or median contract is a Vat ward: wards() answers 1 only for the Jug 0x8276a38e484771ee1b14c60aaa85ab2147e5eb0b and the XT-A GemJoin 0xdec7d8fe3955ccbeb009e366c583fba2a9b63d2e, and 0 for the DaiJoin 0xa57cde0585010aa1bcfadb3bf6f3445349bb98ab, the vow 0x73c190d6be81bbe3cbe96bb83d8ab66f1c645160, the CDP manager 0x5611e8f241a6fd545b642dff90c6ad8c68f89b99, the deployer 0xE8864ba6b3A6e2f5104A0ECFFd90E2C9fd2cb4Dc, and WXT 0x4b681a704664ce482c45ec16ac9ecc9b121fb037. Neither ward exposes a spot-poke path, and the Median-OSM-Spotter stack deployed on XSC is wired to the legacy TAI token 0x775c4bc7…, not to XTUSD or this Vat. Not-published: feed provider, feed address, heartbeat, staleness bound, and failover for the live path.",
+            "path": "Vat 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b ilks(\"XT-A\").spot returns 3.478066666666666666666666666 ray, byte-identical on datarpc1 and datarpc2 at blocks 48866032/48866034 (2026-09-01) and unchanged from the block-48187434 read of 2026-08-08 — 678,598 blocks and 24 days with no price movement whatsoever, which is what a spot with no authorized updater looks like. No Spotter, pip, OSM, or median contract is a Vat ward: wards() answers 1 only for the Jug 0x8276a38e484771ee1b14c60aaa85ab2147e5eb0b and the XT-A GemJoin 0xdec7d8fe3955ccbeb009e366c583fba2a9b63d2e, and 0 for the DaiJoin 0xa57cde0585010aa1bcfadb3bf6f3445349bb98ab, the vow 0x73c190d6be81bbe3cbe96bb83d8ab66f1c645160, the CDP manager 0x5611e8f241a6fd545b642dff90c6ad8c68f89b99, the deployer 0xE8864ba6b3A6e2f5104A0ECFFd90E2C9fd2cb4Dc, WXT 0x4b681a704664ce482c45ec16ac9ecc9b121fb037, and the Vat itself — the same answers at both the 2026-08-08 and 2026-09-01 blocks. Neither ward exposes a spot-poke path, and the Median-OSM-Spotter stack deployed on XSC is wired to the legacy TAI token 0x775c4bc7…, not to XTUSD or this Vat. Not-published: feed provider, feed address, heartbeat, staleness bound, and failover for the live path.",
             "address": "0xf9d4810f1b140d869d2f92ca8da1755ea55e786b",
             "chain": "xsc",
-            "observedAt": "2026-08-09",
-            "observedBlock": 48211240,
+            "observedAt": "2026-09-01",
+            "observedBlock": 48866032,
             "failureDomainKeys": [
               "xtdao-vat-spot-unwired",
               "xt-com-issuer-operations",
@@ -81,13 +81,13 @@
           }
         ],
         "fallbackBehavior": "No oracle feed is identifiable on the live path. Among all probed system contracts (deployer, DaiJoin, CDP manager, Jug, GemJoin), only the Jug and the XT-A GemJoin are Vat wards at block 48187434, and neither exposes a file/poke that can update Vat.spot, so the XT-A spot of 3.4780667 ray has no identified on-chain update mechanism, no heartbeat, and no staleness rejection. The Median→OSM→Spotter stack visible on XSC is wired only to the legacy TAI deployment (token 0x775c4bc7…), not to the XTUSD token 0x1a6131ea… or the live Vat, and the issuer announcement names no oracle provider, feed address, heartbeat, or failover. Not-published: any feed identity or failover for the live path.",
-        "observedAt": "2026-08-08",
-        "observedBlock": 48187434,
+        "observedAt": "2026-09-01",
+        "observedBlock": 48866032,
         "collateralParameters": [
           {
             "asset": "WXT (Wrapped XT, ilk XT-A)",
             "minimumCollateralRatioPct": 150,
-            "note": "The 150% minimum collateral ratio and 3% annual fee come from the issuer's 2022 launch announcement, not from a live Spotter read — the live Vat has no Spotter ward, so mat is not readable on-chain (the Jug duty independently matches 3.0000% annualized at block 48187434). Live Vat ilk XT-A parameters, re-read on two independent XSC RPCs (datarpc1, datarpc2) at block 48187434: line 1,000,000,000 XTUSD (1e54 rad), dust 10 XTUSD (1e46 rad), spot 3.4780667 ray, rate 1.1097688381727833 ray, Art 4,325,685.429106 — Vat-internal debt Art×rate = 4,800,510.89 XTUSD against a global Line of 2,000,000,000 XTUSD, so the ilk ceiling matches the announced 1,000,000,000 XTUSD design and is not breached. debtSharePct 100 rests on XT-A being the only debt-bearing ilk observed across four years of system transactions; DSS ilks cannot be enumerated by direct reads."
+            "note": "The 150% minimum collateral ratio and 3% annual fee come from the issuer's 2022 launch announcement, not from a live Spotter read — the live Vat has no Spotter ward, so mat is not readable on-chain (the Jug duty independently matches 3.0000% annualized, with base 0, at blocks 48187434 and 48866032). Live Vat ilk XT-A parameters, re-read on two independent XSC RPCs (datarpc1 block 48866032, datarpc2 block 48866034, 2026-09-01) and byte-identical to the block-48187434 read of 2026-08-08: line 1,000,000,000 XTUSD (1e54 rad), dust 10 XTUSD (1e46 rad), spot 3.4780667 ray, rate 1.109768838172783259552580622 ray, Art 4,325,685.429106121218664325 — Vat-internal debt Art x rate = 4,800,510.892960037551764310893306 XTUSD against a global Line of 2,000,000,000 XTUSD, so the ilk ceiling matches the announced 1,000,000,000 XTUSD design and is not breached. debtSharePct 100 no longer rests on transaction-history inference: Vat.debt reads 4800510892960037551764310893306021067552105717710150 rad, exactly XT-A's Art x rate, so every unit of Vat-internal debt is XT-A debt and no other ilk carries any."
           }
         ],
         "liquidationMechanism": "The issuer announcement describes an auction mechanism that handles risky vaults, but no liquidation module (Maker-style Cat/Dog or Flip/Clip auction contract) is a current Vat ward at block 48187434 — only the Jug and the XT-A GemJoin are authorized, and vault collateral seizure (Vat.grab) requires Vat auth — so no on-chain liquidation path is operable on the live deployment. No liquidation timer, grace period, or auction window stands on that path either, because no module exists to start one: liquidationDelaySec 0 records the absence of a delay parameter, not an ability to liquidate promptly. Not-published: liquidation trigger conditions and auction parameters.",
@@ -103,11 +103,11 @@
         ],
         "sources": [
           {
-            "label": "XSC public RPC (datarpc1.xsc.pub, live Vat ilks('XT-A')/wards/Line, Jug duty/rho/vow, block 48187434, 2026-08-08; ilks('XT-A') and Vat wards re-read at block 48211240, 2026-08-09)",
+            "label": "XSC public RPC (datarpc1.xsc.pub, live Vat ilks('XT-A')/wards/Line/debt/live, Jug duty/rho/vow/base, GemJoin ilk/gem/vat/live/dec, block 48866032, 2026-09-01; original reads at blocks 48187434 and 48211240, 2026-08-08/09)",
             "url": "https://datarpc1.xsc.pub"
           },
           {
-            "label": "XSC public RPC (datarpc2.xsc.pub, corroborating live Vat ilks('XT-A') read, 2026-08-08; corroborating ilks('XT-A') and Vat wards re-read at block 48211240, 2026-08-09)",
+            "label": "XSC public RPC (datarpc2.xsc.pub, corroborating Vat/Jug/GemJoin reads at block 48866034, 2026-09-01; original corroborating reads 2026-08-08/09)",
             "url": "https://datarpc2.xsc.pub"
           },
           {
