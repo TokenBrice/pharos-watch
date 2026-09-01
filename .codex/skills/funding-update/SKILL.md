@@ -162,7 +162,9 @@ For each unique sender:
    - WebFetch `https://api.ensideas.com/ens/resolve/{address}` (returns `{ name, displayName, address }`).
    - Ask the user to confirm/paste the name if the above are unavailable.
 
-   `display` is the verified ENS name if one exists, else `formatAddress(address)`. No name is better than a spoofed one.
+   Resolve the sender's reverse ENS record to a name. If it returns a name, forward-resolve that name back to an address (for example, through the ENS app or a resolver API) and compare the result with the original `from_address` using a case-insensitive hex comparison. Treat the name as verified only when the forward-resolved address exactly matches the original donor address.
+
+   If no name is returned, forward resolution is unavailable, or the address does not match, record the raw donor address, not the name; use `formatAddress(address)` for the `display` field. `display` is the verified ENS name only when that match succeeds. No name is better than a spoofed one.
 
 #### Step 6: Present the diff
 
@@ -213,7 +215,7 @@ git commit -m "data(funding): add {N} new donation(s) via funding-update" \
 - Never append a row you haven't personally verified on the right explorer (Etherscan, Basescan, Polygonscan, Arbiscan, Optimism explorer, or Gnosisscan depending on chain).
 - Never append a row without running the Step 3a decode on it. "It looks like a donation" is exactly what a Safe self-swap looks like.
 - `usd_at_receipt` is priced at the **transfer's block date**, not current spot. That's what makes historical coverage % meaningful.
-- ENS names must be forward-verified; an un-verified reverse record is a spoofing vector.
+- ENS names must be forward-verified back to the donor address with a case-insensitive hex comparison. If forward resolution is unavailable or does not match, record the raw donor address, never the name; use `formatAddress(address)` for the `display` field. An un-verified reverse record is a spoofing vector.
 - Spam rows are discarded, not recorded. No denylist file to maintain.
 - Never modify historical rows. If a row is wrong, ask the user before editing.
 - Never touch `costs.json`.

@@ -45,7 +45,7 @@ Write to `agents/questionnaires/<id>-<YYYY-MM-DD>.md` (ignored scratch; the file
 4. **Preferred answer format**: one shared template section (not per-question subsections) asking, for each question: an answer (`yes` / `no` / `not currently defined`); short explanation; source URL or contract address + function; effective date or observed block; the role that can change the answer; an API field or event Pharos can monitor, if available.
 5. **Close**: a governing agreement, policy, or stable machine-readable field makes answers durable evidence; answers support a Pharos re-review but do not guarantee a score or classification change.
 
-Every question must name the evidence that would settle it; `not currently defined` is a legitimate answer.
+Questionnaire construction rule: keep the tone neutral and precise, never accusatory or leading. Every question must name the evidence that would settle it; `not currently defined` is a legitimate answer.
 
 ## After answers arrive
 

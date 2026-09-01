@@ -49,7 +49,7 @@ git diff --cached --stat
 git fetch origin main
 ```
 
-Also check `gh pr list` for an open automated shock-coverage refresh PR: it arms auto-merge at creation and self-merges the moment its gate goes green (scheduled every other day), so it can move `main` under your release branch mid-release — rebase or re-fetch before pushing if it lands.
+Also check `gh pr list` for an open automated shock-coverage refresh PR: it arms auto-merge at creation and self-merges the moment its gate goes green (scheduled every other day), so it can move `main` under your release branch mid-release. Rebase or re-fetch before pushing if it lands.
 
 Classify the state:
 
@@ -110,13 +110,13 @@ git push -u origin <release-branch>
 gh pr create --base main --head <release-branch>
 ```
 
-Wait for the required `PR gate` check, then merge through GitHub. `gh pr merge <pr> --squash --auto` is a sanctioned option — repo-level auto-merge is enabled, and it queues the merge behind the required checks rather than bypassing them. Do not bypass branch protection or an intentionally enabled local gate. The merge push triggers the deploy classifier.
+Wait for the required `PR gate` check, then merge through GitHub. `gh pr merge <pr> --squash --auto` is a sanctioned option: repo-level auto-merge is enabled, and it queues the merge behind the required checks rather than bypassing them. Do not bypass branch protection or an intentionally enabled local gate. The merge push triggers the deploy classifier.
 
 Record the PR head SHA, merged `main` SHA, selected deployment surfaces, and deploy run id. A skipped reusable job is not a failure by itself; interpret it through the outer workflow classifier and aggregate `PR gate` result.
 
 ### 5. Watch Deployment
 
-After the protected PR is merged, watch the `Deploy to Cloudflare` run tied to the resulting `main` SHA — its classifier outputs (`pages_required` / `worker_required`) tell you which deploy surfaces were selected:
+After the protected PR is merged, watch the `Deploy to Cloudflare` run tied to the resulting `main` SHA; its classifier outputs (`pages_required` / `worker_required`) tell you which deploy surfaces were selected:
 
 ```bash
 gh run list --repo TokenBrice/pharos-watch --branch main --limit 10

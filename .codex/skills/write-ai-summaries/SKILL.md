@@ -12,7 +12,7 @@ The summary sits in the Overview section of the detail page alongside the reserv
 
 ### Summary Register
 
-Follow the `coin-summary` register in `docs/editorial-style.md`. Use a descriptive title, write 120-180 words, and close on the durable constraint. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss.
+The `coin-summary` register in `docs/editorial-style.md` governs voice and sets this surface's output contract: use a descriptive title, write 120-180 words, and close on the durable constraint. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss.
 
 ### Structure per Summary
 
@@ -34,8 +34,8 @@ Each summary is a `StablecoinAiSummary`. The authoritative shape is in `shared/t
 `reviewedBy`/`reviewedAt` exist too but are set only after the named reviewer approves. Never pre-stamp them.
 Optional `sources` entries are labeled HTTP links rendered directly beneath the summary. Add them whenever a static adoption, funding, holder/address, TVL, supply, or market-cap fact is retained.
 
-- **title**: Descriptor in title case (for example, "ETH-only immutable dollar"), never a nickname or mascot
-- **text**: 120-180 words, with one main claim per sentence. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss. Close on the durable constraint.
+- **title**: Follow the `coin-summary` register's descriptor-title requirement: use a descriptive title in title case, never a nickname or mascot
+- **text**: Follow the register's 120-180-word band, with one main claim per sentence. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss. Close on the durable constraint.
 - **updatedAt**: Today's date in ISO format
 
 ### Data Sources
@@ -47,7 +47,7 @@ Summaries must be grounded in Pharos's own data, not just external research. The
 1. **Read metadata**: Read the coin's base entry in `shared/data/stablecoins/coins/*.json` plus any domain sidecars under `shared/data/stablecoins/domains/`, or use its merged generated runtime entry in `coins.generated.json`. Read all fields: classification, collateral description, pegMechanism, reserves, jurisdiction, dependencies, resilience sub-factors (custodyModel, collateralQuality, governanceQuality), notices, yield config, blacklist status, and deployment footprint. Load `data/ai-summaries.json` to see existing summaries and avoid repeating patterns
 2. **Check live data** (for refreshes and high-profile coins): Open `https://pharos.watch/stablecoin/{id}` with the browser tool (claude-in-chrome or Playwright in Claude Code; `agent-browser` in Codex) to check the report card, peg score, liquidity score, redemption backstop, and DEWS band. Note anything the raw metadata doesn't capture, particularly depeg event history, safety grade trends, and exit liquidity quality
 3. **Research if needed**: Use web search for recent events (depegs, regulatory actions, governance changes) that would make the summary more current and specific. Check the coin's `links` for official sources
-4. **Write the summary**: Follow voice guidelines. Weave Pharos-specific insights into the narrative where they add editorial value. Don't just describe the coin generically. Interpret what our data reveals about its risks, strengths, and contradictions
+4. **Write the summary**: Follow the `coin-summary` register in `docs/editorial-style.md` for voice. Weave Pharos-specific insights into the narrative where they add editorial value. Don't just describe the coin generically. Interpret what our data reveals about its risks, strengths, and contradictions
 5. **Update the file**: Add/update entries in `data/ai-summaries.json`. Set `updatedAt` to today's date. Preserve existing entries unless explicitly asked to remove them
 
 ### Queue-Driven Refresh
@@ -81,14 +81,9 @@ When choosing what to highlight, consider these angles (pick the most interestin
 - **Irony or contradiction**: The most interesting stablecoins contain contradictions worth pointing out
 - **Safety profile**: What does the report card reveal? A strong grade with one weak pillar, a coin held under a binding cap ("why not higher"), an NR on missing evidence, or a coin that scores well despite its reputation. These are editorial gold
 
-### Anti-Patterns
+### Content, sourcing, and schema constraints
 
-- **Don't be generic**: "A well-designed stablecoin with strong fundamentals" says nothing. Every summary should be specific enough that it couldn't describe a different coin
 - **Don't repeat classification data verbatim**: The page already shows "centralized, RWA-backed, pegged to USD"; the summary should interpret, not restate
-- **Don't use emoji or exclamation marks**
-- **Don't hedge everything**: Take a position. "This is interesting because X" is better than "Some might argue that X could potentially be interesting"
-- **Don't write marketing copy**: No "revolutionary", "game-changing", "cutting-edge"
-- **Don't repeat title patterns**: If three summaries start with "The [Adjective] [Noun]", vary it
 - **Don't hard-code volatile numbers**: Market caps, TVL, and APY change weekly. Frame them relatively ("one of the largest", "sub-$10M market cap", "modest circulation") unless the specific number is central to the editorial point and you've verified it today. If you do cite a number, accept it will go stale
 - **Scope adoption claims**: Any static adoption, funding, address/holder, TVL, supply, or market-cap figure requires a displayed source and fact date. State the chain scope and denominator. Never call an address count "users" or "holders" without a defined method that distinguishes contracts and EOAs and deduplicates cross-chain controllers.
 - **Keep quantities economically comparable**: Do not divide parent or project financing by one product's token supply, market cap, or circulation unless both quantities measure the same economic concept. Token supply is not capital "used."

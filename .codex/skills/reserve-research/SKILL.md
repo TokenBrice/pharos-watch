@@ -56,7 +56,7 @@ A slice with no `assetClass` and no `coinId` scores as bounded-unknown quality: 
 
 8. If the user asked for implementation, patch or create the reserves sidecar, converge the aggregate and dependent projections with `npm run bootstrap:generated`, and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. If the request is research-only, stop after presenting the proposed array with sources and confidence.
 
-## Risk Tiers (legacy field: still schema-required)
+## Risk Tiers (legacy field, still schema-required)
 
 The 5-tier `risk` value is **not** read by the current Safety Score methodology; keep it accurate for schema validity and legacy surfaces, but spend research effort on the current methodology's slice fields above. Per-symbol source of truth: `shared/lib/reserve-asset-risk.ts`; use its tier when a symbol is listed there. Rough guidance for unlisted symbols:
 

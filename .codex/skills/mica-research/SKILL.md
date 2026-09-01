@@ -19,7 +19,7 @@ Research a stablecoin's standing under the EU Markets in Crypto-Assets Regulatio
 
 The `mica` object (exact field names): `status`, `tokenType`, `authorizationType`, `competentAuthority`, `authorizedEntity`, `significant` (boolean), `references` (`{ label, url }[]`). All but `status` are optional. Enum values for `status`/`tokenType`/`authorizationType` live in `shared/types/core.ts` (`MicaProfile`); the source file wins; the criteria table in `docs/mica-tracker.md` maps them to evidence.
 
-**HARD RULES (Zod-enforced):** every status except `out-of-scope` requires at least one `references` link; and `out-of-scope` rows must not carry `tokenType`, `authorizationType`, `competentAuthority`, or `authorizedEntity`.
+**HARD RULES (Zod-enforced; `check:stablecoin-data` fails otherwise):** every status except `out-of-scope` requires at least one `references` link; and `out-of-scope` rows must not carry `tokenType`, `authorizationType`, `competentAuthority`, or `authorizedEntity`.
 
 ## Workflow
 

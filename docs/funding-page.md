@@ -13,7 +13,7 @@ Public ledger of Pharos's running costs, donations, and sustainability path. The
 
 ## Layout
 
-The page keeps an honest, prose-forward register:
+The page uses a prose-forward layout:
 
 - The KPI card opens on a full-width hero strip whose frost-blue "One Beam" lights the monthly running cost (`costs.json` total). Coverage % stays **neutral** — it is a directional funding-progress figure and is never recolored frost.
 - Cards use the shared flat `pharos-card-shell` treatment.
@@ -46,9 +46,9 @@ Automation is intentionally deferred while the review volume remains small. Any 
 - `costs.json` — target review date is the 1st of each month; if it is missed, leave the stale `last_reviewed_at` visible and complete the review before describing costs as current. Bump the timestamp every time you edit.
 - `donations.json` — `funding-update` skill invoked ~weekly, or ad-hoc on alert. `last_updated_at` is bumped automatically by the skill.
 
-## Voice
+## Editorial and presentation contract
 
-Match `/about`: honest, plain, concrete. No urgency, no banners, no modals. Keep card titles noun-led and avoid fundraising pressure copy.
+Page prose follows the `brand` register in `docs/editorial-style.md`; this document does not define a second voice. Funding-specific presentation constraints: the page has no urgency banners or modals, and card titles are noun-led.
 
 ## Related files
 

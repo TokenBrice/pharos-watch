@@ -21,7 +21,7 @@ Use this skill from the Pharos repository root when the user asks to:
 - Use `docs/doc-ownership.json` to decide which docs may need updates.
 - Keep `/docs/` and `README.md` as the verified documentation corpus. Do not create committed planning archives.
 - Do not re-verify what CI already guards: file-path citations (`check:doc-source-paths`), internal doc links (`check:verified-doc-links`), methodology/doc sync (`check:doc-sync`), the generated `AGENTS.md` mirror (`check:generated-artifacts -- --only=agents-doc`), and generated API artifacts (`check:generated-artifacts -- --only=api-reference,openapi,postman`). The rest of the API reference is hand-written and remains in semantic-audit scope.
-- `docs/api-reference.md` is far over the wholesale-read threshold — navigate it via its top navigation block plus Grep or offset reads only.
+- `docs/api-reference.md` is far over the wholesale-read threshold. Navigate it via its top navigation block plus Grep or offset reads only.
 - Mirror durable top-level guidance between `AGENTS.md` and `CLAUDE.md`, or move it into `docs/process/*` and reference it from both.
 - If pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, Chain Health, or other methodology behavior changes, update `/methodology`, the owning methodology doc, and the structured entry under `shared/data/methodology-changelogs/`.
 - Methodology versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
