@@ -23,7 +23,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 50
+          # Gitleaks scans every non-merge commit in the PR range. A bounded
+          # checkout can turn its oldest shallow commit into a synthetic root
+          # and report unchanged repository content as newly introduced.
+          fetch-depth: 0
       - name: Ensure the PR merge base is available
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}

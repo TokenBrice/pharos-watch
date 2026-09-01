@@ -50,13 +50,15 @@ describe("CI workflow scope", () => {
     expect(preflight.some((step) => step.run?.includes("run-gitleaks.ts --range"))).toBe(true);
     expect(preflight.some((step) => step.uses === "./.github/actions/setup-workspace")).toBe(false);
     expect(
+      preflight.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"],
+    ).toBe(0);
+    expect(
       staticSteps.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"],
     ).toBe(0);
     expect(
       staticSteps.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.filter,
     ).toBe("blob:none");
     expect(preflight.some((step) => step.run?.includes("git merge-base"))).toBe(true);
-    expect(workflow).toContain("fetch-depth: 50");
     expect(workflow).toContain("git fetch --no-tags --unshallow origin");
     expect(workflow).toContain("matrix:\n        shard: [1, 2, 3, 4]");
     expect(workflow).toContain("npm run test:pr -- --shard=${{ matrix.shard }}/4");
