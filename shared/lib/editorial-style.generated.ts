@@ -3,26 +3,26 @@
 // edit the document and regenerate. Serialized data only, no logic.
 import type { EditorialPolicy } from "./editorial-style";
 
-export const EDITORIAL_STYLE_VERSION = "1.0";
+export const EDITORIAL_STYLE_VERSION = "1.1";
 
 /** Deterministic hash of the policy block. Bumps whenever enforcement changes. */
-export const EDITORIAL_STYLE_HASH = "52b40f72c060dd1a";
+export const EDITORIAL_STYLE_HASH = "9edd984e2cae9e14";
 
 export const EDITORIAL_POLICY: EditorialPolicy = {
-  "version": "1.0",
+  "version": "1.1",
   "oneLineDirective": "Write like an FT markets reporter with the tape in front of you: strongest verified fact first, distinguish observation from inference, explain the consequence plainly, no clause dashes, no corrective \"this is not X, it is Y\", no personified metrics, no nickname titles, no slogan closers. Wit only if deleting the names and figures kills the line; the default is none.",
   "registers": [
     {
       "id": "daily",
       "label": "Daily editorial",
       "group": "editorial",
-      "promptLine": "Lead with the highest-impact verified fact in 150 to 280 words plus a compact hook. Zero sharp lines is the default and one is the cap. Name a material observable trigger when the evidence contains one; never force a threshold ending."
+      "promptLine": "Lead with the highest-impact verified fact in 150 to 280 words plus a compact hook. Zero sharp lines is the default and one is the cap; sardonic is rare, never consecutive, and rotation-enforced. Preserve lead-family, opening-shape, and tone anti-repetition rules. Name a material observable trigger when the evidence contains one; never force a threshold ending."
     },
     {
       "id": "weekly",
       "label": "Weekly synthesis",
       "group": "editorial",
-      "promptLine": "Build the week's causal arc from daily evidence, separate persistent moves from reversals, and score prior expectations honestly. This is the strictest temperature, not the loosest."
+      "promptLine": "Build the week's causal arc from daily evidence, separate persistent moves from reversals, and score prior expectations honestly. This is the strictest temperature, not the loosest; never personify indexes."
     },
     {
       "id": "coin-summary",
@@ -34,7 +34,7 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
       "id": "cemetery",
       "label": "Cemetery",
       "group": "editorial",
-      "promptLine": "Obituary: chronological, sober, complete. Epitaph: short, with one evidence-backed barb permitted because the outcome is settled. No mascot nicknames."
+      "promptLine": "Obituary: chronological, sober, complete. Epitaph: short, with one evidence-backed barb permitted because the outcome is settled. No animal or mascot nicknames."
     },
     {
       "id": "long-form",
@@ -52,7 +52,7 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
       "id": "pre-launch",
       "label": "Pre-launch record",
       "group": "technical",
-      "promptLine": "Dated factual record: what was announced, by whom, with what commitment. No predictions or launch copy."
+      "promptLine": "Dated factual record: what was announced, by whom, with what commitment. No predictions, launch copy, or dash-glossed titles."
     },
     {
       "id": "notice",
@@ -94,7 +94,7 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
       "id": "page-description",
       "label": "Page description",
       "group": "product",
-      "promptLine": "One or two plain sentences on what the page contains and why it is useful. No jokes, suspense, or slogans."
+      "promptLine": "One or two plain sentences on what the page contains and why it is useful. No jokes, suspense, slogans, or unsupported uniqueness claims."
     },
     {
       "id": "analytical-explanation",
@@ -124,7 +124,7 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
       "id": "delivery-wrapper",
       "label": "Delivery wrapper",
       "group": "product",
-      "promptLine": "Utility register, not editorial. Wrapper strings pass the same scanner as the copy they frame."
+      "promptLine": "Utility register, not editorial. Wrapper strings pass the same scanner as the copy they frame. The cemetery-appendix footer rotation alone keeps its dark data-tied flavor under a named exemption."
     }
   ],
   "rules": [
@@ -147,7 +147,17 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "identifier"
       ],
       "replacementAdvice": "Split the clause or use a colon, comma, or semicolon.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "Supply fell — the peg held."
+        ],
+        "clean": [
+          "Scores run 0-100.",
+          "The reserve holds 1-3 month Treasury bills.",
+          "Keep the answer to 45-80 words."
+        ]
+      }
     },
     {
       "id": "no-minus-as-dash",
@@ -168,40 +178,58 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "numeric-sign"
       ],
       "replacementAdvice": "A style rule never rewrites a number. If this is a clause break, use punctuation; if it is a signed value, keep it.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "Supply fell − the peg held."
+        ],
+        "clean": [
+          "PSI moved −5% on the day.",
+          "Deviation was −0.3bps against the peg."
+        ]
+      }
     },
     {
       "id": "no-corrective-cleft",
-      "promptLabel": "Never write the corrective cleft: \"X is not A, it is B\" and its variants.",
+      "promptLabel": "Review pronoun-led corrective clefts such as \"this is not A, it is B\"; necessary technical distinctions can share this grammar.",
       "patterns": [
         {
-          "source": "\\b(?:is|was|are|were)\\s+not\\s+[^.,;:!?]{1,60}[,;]\\s+(?:it|this|that|they)\\s+(?:is|was|are|were)\\b",
+          "source": "\\b(?:it|this|that|they)\\s+(?:is|was|are|were)\\s+not\\s+[^.,;:!?]{1,60}[,;]\\s+(?:it|this|that|they)\\s+(?:is|was|are|were)\\b",
           "flags": "giu"
         },
         {
-          "source": "\\b(?:is|was|are|were)n['\\u2019]t\\s+[^.,;:!?]{1,60}[,;]\\s+(?:it|this|that|they)\\s*(?:is|was|are|were|['\\u2019]s)\\b",
+          "source": "\\b(?:it|this|that|they)\\s+(?:is|was|are|were)n['\\u2019]t\\s+[^.,;:!?]{1,60}[,;]\\s+(?:it|this|that|they)\\s*(?:is|was|are|were|['\\u2019]s)\\b",
           "flags": "giu"
         }
       ],
       "severity": {
-        "default": "hard"
+        "default": "advisory"
       },
       "exceptions": [
         "quoted-source"
       ],
-      "replacementAdvice": "State the fact and its consequence in separate defensible clauses.",
-      "introducedIn": "1.0"
+      "replacementAdvice": "Check whether this is a rhetorical flip. If so, state the fact and consequence directly; preserve necessary technical distinctions.",
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "This isn't a tweak; it's a rebuild."
+        ],
+        "clean": [
+          "The 72h backstop is not a weaker forecast-readiness score; it is the public accountability deadline.",
+          "The $0.87 floor was not a loss of backing; it was the issuer codifying the redemption discount."
+        ]
+      }
     },
     {
       "id": "no-corrective-cleft-split",
       "promptLabel": "Do not split a corrective cleft across two sentences (\"X is not A. It is B.\").",
       "patterns": [
         {
-          "source": "\\b(?:is|was|are|were)\\s+not\\s+[^.,;:!?]{1,60}\\.\\s+(?:It|This|That|They)\\s+(?:is|was|are|were)\\b",
+          "source": "\\b(?:It|This|That|They)\\s+(?:is|was|are|were)\\s+not\\s+[^.,;:!?]{1,60}\\.\\s+(?:It|This|That|They)\\s+(?:is|was|are|were)\\b",
           "flags": "gu"
         },
         {
-          "source": "\\b(?:is|was|are|were)n['\\u2019]t\\s+[^.,;:!?]{1,60}\\.\\s+(?:It|This|That|They)\\s*(?:is|was|are|were|['\\u2019]s)\\b",
+          "source": "\\b(?:It|This|That|They)\\s+(?:is|was|are|were)n['\\u2019]t\\s+[^.,;:!?]{1,60}\\.\\s+(?:It|This|That|They)\\s*(?:is|was|are|were|['\\u2019]s)\\b",
           "flags": "gu"
         }
       ],
@@ -212,15 +240,23 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "quoted-source"
       ],
       "replacementAdvice": "Advisory because a sentence boundary often separates two unrelated facts; a reviewer decides whether this is a rhetorical flip.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "This is not a coincidence. It is a preference."
+        ],
+        "clean": [
+          "Its timelock semantics were not resolved. It is retained as an evidence gap."
+        ]
+      }
     },
     {
       "id": "no-suspense-opener",
       "promptLabel": "Never open with withheld-subject suspense (\"What it doesn't have is ...\").",
       "patterns": [
         {
-          "source": "\\bWhat\\s+(?:it|this|that|they)\\s+(?:does|do|did)\\s*n['\\u2019]?t\\s+(?:have|do|show)\\s+is\\b",
-          "flags": "giu"
+          "source": "(?:^|[.!?]\\s+)What\\s+(?:(?:it|this|that|they|[A-Z][A-Za-z0-9'\\u2019-]*(?:\\s+[A-Z][A-Za-z0-9'\\u2019-]*){0,3})\\s+(?:(?:does|do|did)\\s+(?:not|n['\\u2019]?t)\\s+(?:have|do|show)|lacks?))\\s+is\\b",
+          "flags": "gmu"
         }
       ],
       "severity": {
@@ -230,11 +266,20 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "quoted-source"
       ],
       "replacementAdvice": "Put the substantive fact first.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "What it does not have is liquidity.",
+          "What USDC lacks is users."
+        ],
+        "clean": [
+          "The guide quotes \"What it doesn't have is users\" as an anti-example."
+        ]
+      }
     },
     {
       "id": "no-stale-phrase",
-      "promptLabel": "Never use: testament to, time will tell, it remains to be seen, in a world where, at its core, delve, game-changing, cutting-edge, revolutionary, needless to say, it's worth noting.",
+      "promptLabel": "Never use context-independent boilerplate: testament to, time will tell, it remains to be seen, in a world where, game-changing, cutting-edge, needless to say, or it's worth noting.",
       "patterns": [
         {
           "source": "\\btestament to\\b",
@@ -253,23 +298,11 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
           "flags": "giu"
         },
         {
-          "source": "\\bat its core\\b",
-          "flags": "giu"
-        },
-        {
-          "source": "\\bdelv(?:e|es|ed|ing)\\b",
-          "flags": "giu"
-        },
-        {
           "source": "\\bgame[- ]changing\\b",
           "flags": "giu"
         },
         {
           "source": "\\bcutting[- ]edge\\b",
-          "flags": "giu"
-        },
-        {
-          "source": "\\brevolutionary\\b",
           "flags": "giu"
         },
         {
@@ -289,22 +322,67 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "external-title"
       ],
       "replacementAdvice": "Delete the phrase and state the fact.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "The growth is a testament to demand."
+        ],
+        "clean": [
+          "The testamentary trust holds the shares."
+        ]
+      }
+    },
+    {
+      "id": "no-ambiguous-stale-phrase",
+      "promptLabel": "Avoid ambiguous stale phrasing where context permits: at its core, delve, and lowercase revolutionary.",
+      "patterns": [
+        {
+          "source": "\\bat its core\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\bdelv(?:e|es|ed|ing)\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\brevolutionary\\b",
+          "flags": "gu"
+        }
+      ],
+      "severity": {
+        "default": "advisory"
+      },
+      "exceptions": [
+        "quoted-source",
+        "external-title"
+      ],
+      "replacementAdvice": "Prefer the specific mechanism; preserve legitimate historical or proper-name use.",
+      "introducedIn": "1.1",
+      "examples": {
+        "violating": [
+          "At its core, the protocol is a CDP.",
+          "We delve into the reserve report.",
+          "The design is revolutionary."
+        ],
+        "clean": [
+          "Revolutionary Finance Ltd. issued the token."
+        ]
+      }
     },
     {
       "id": "no-hedged-closer",
       "promptLabel": "Never close on: worth watching, worth monitoring, bears watching, for now, the question is whether. Name the next observable threshold instead.",
       "patterns": [
         {
-          "source": "\\b(?:worth|bears?)\\s+(?:watching|monitoring)\\b",
+          "source": "\\b(?:worth|bears?)\\s+(?:watching|monitoring)[.!?]?\\s*$",
           "flags": "giu"
         },
         {
-          "source": "\\bfor now\\b",
+          "source": "\\bfor now[.!?]?\\s*$",
           "flags": "giu"
         },
         {
-          "source": "\\bthe (?:real )?question is whether\\b",
+          "source": "\\bthe (?:real )?question is whether\\b[^.!?]*[.!?]?\\s*$",
           "flags": "giu"
         }
       ],
@@ -316,34 +394,34 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "quoted-source"
       ],
       "replacementAdvice": "Say what to watch, when, and what it would mean.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "Supply fell 4%. The pool is worth watching. (Source: issuer report)"
+        ],
+        "clean": [
+          "The cap stays unchanged for now because no vote has passed."
+        ]
+      }
     },
     {
       "id": "no-dead-metaphor",
-      "promptLabel": "Never use: beneath the calm, surface calm, restless depths, below the waterline, something moving underneath, belies.",
+      "promptLabel": "In editorial registers never use: beneath the calm, surface calm, restless depths, or something moving underneath.",
       "patterns": [
         {
-          "source": "\\bbeneath the (?:calm|bedrock|surface)\\b",
+          "source": "\\bbeneath the calm\\b",
           "flags": "giu"
         },
         {
-          "source": "\\b(?:surface|calm) (?:calm|surfaces)\\b",
+          "source": "\\bsurface calm\\b",
           "flags": "giu"
         },
         {
-          "source": "\\brestless (?:depths|currents|plumbing)\\b",
+          "source": "\\brestless depths\\b",
           "flags": "giu"
         },
         {
-          "source": "\\bbelow the waterline\\b",
-          "flags": "giu"
-        },
-        {
-          "source": "\\bsomething (?:is )?moving (?:underneath|beneath|below)\\b",
-          "flags": "giu"
-        },
-        {
-          "source": "\\bbelies\\b",
+          "source": "\\bsomething (?:is )?moving underneath\\b",
           "flags": "giu"
         }
       ],
@@ -361,14 +439,23 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "quoted-source"
       ],
       "replacementAdvice": "Describe the mechanism instead of the weather.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "Beneath the calm, redemptions accelerated."
+        ],
+        "clean": [
+          "The headline figure belies a change in reserve composition.",
+          "The cable remains below the waterline."
+        ]
+      }
     },
     {
       "id": "no-unqualified-safety",
       "promptLabel": "Never make unqualified safety claims: safe, safest, risk-free, low-risk, guaranteed. Rankings name metric, scope, and date.",
       "patterns": [
         {
-          "source": "(?<![A-Za-z-])safe(?![A-Za-z-])",
+          "source": "(?<![A-Za-z-])safe(?!\\s+harbou?r\\b)(?![A-Za-z-])",
           "flags": "gu"
         },
         {
@@ -380,13 +467,18 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
           "flags": "giu"
         },
         {
-          "source": "\\bguarantee(?:d|s)?\\b",
+          "source": "\\blow[- ]risk\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "(?<!no )\\bguarantee(?:d|s)?\\b(?!\\s+(?:schemes?|funds?)\\b)(?!\\s+by\\s+(?:the\\s+)?issuer\\b)",
           "flags": "giu"
         }
       ],
       "severity": {
         "default": "advisory",
         "byRegister": {
+          "profile-reference": "hard",
           "page-description": "hard",
           "analytical-explanation": "hard",
           "product-utility": "hard",
@@ -401,14 +493,29 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "legal-term"
       ],
       "replacementAdvice": "Name the metric, scope, and date, or drop the claim.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "USDC is a low-risk place to park dollars."
+        ],
+        "clean": [
+          "MiCA safe harbor",
+          "There is no guarantee",
+          "deposit guarantee scheme",
+          "deposit guarantee schemes",
+          "guaranteed by the issuer",
+          "guarantee fund",
+          "Control sits with a 3-of-5 Safe.",
+          "The asset is not a safe-haven trade."
+        ]
+      }
     },
     {
       "id": "no-investment-recommendation",
       "promptLabel": "Never recommend buying, holding, selling, or switching.",
       "patterns": [
         {
-          "source": "\\bwe recommend\\b",
+          "source": "\\bwe recommend(?:\\s+(?:you\\s+)?(?:buy|hold|sell|switch|move|use))?\\b",
           "flags": "giu"
         },
         {
@@ -420,7 +527,31 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
           "flags": "giu"
         },
         {
-          "source": "\\btop pick\\b",
+          "source": "(?:^|[.!?]\\s+)(?:Buy|Hold|Sell)\\s+(?:[A-Z][A-Z0-9]{1,9}|the\\s+(?:asset|coin|token)|this\\s+(?:asset|coin|token))\\b",
+          "flags": "gmu"
+        },
+        {
+          "source": "(?:^|[.!?]\\s+)Use\\s+[A-Z][A-Z0-9]{1,9}\\s+for\\s+(?:venue access|custody|yield|trading)\\b",
+          "flags": "gmu"
+        },
+        {
+          "source": "\\b(?:investors?|holders?|users?)\\s+should\\s+(?:consider\\s+)?(?:buying|holding|selling|switching|moving|using)\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\b(?:our|the)\\s+top\\s+recommendation\\s+is\\s+to\\s+(?:buy|hold|sell|switch|move|use)\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\b[A-Z][A-Z0-9]{1,9}\\s+is\\s+(?:the\\s+)?best\\s+buy\\b",
+          "flags": "gu"
+        },
+        {
+          "source": "\\b(?:our|Pharos['\\u2019]s)\\s+top pick\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\bhold safely\\b",
           "flags": "giu"
         }
       ],
@@ -431,7 +562,193 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "quoted-source"
       ],
       "replacementAdvice": "Describe the trade-off and let the reader decide.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "Buy USDC.",
+          "Investors should consider switching to USDC.",
+          "Our top recommendation is to hold USDC.",
+          "USDC is the best buy."
+        ],
+        "clean": [
+          "The policy bans the phrase top pick.",
+          "The issuer called USDC its top pick."
+        ]
+      }
+    },
+    {
+      "id": "no-unqualified-convenience",
+      "promptLabel": "Do not claim an asset or route is easy, simple, or convenient without naming the concrete operational property.",
+      "patterns": [
+        {
+          "source": "\\b(?:easy|simple|convenient)\\s+(?:way|option|choice|asset|coin|stablecoin|route|solution|tool)\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\b(?:easy|simple|convenient)\\s+(?:to|for)\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\b(?:is|are|was|were)\\s+(?:easy|simple|convenient)\\b",
+          "flags": "giu"
+        }
+      ],
+      "severity": {
+        "default": "off",
+        "byRegister": {
+          "analytical-explanation": "hard"
+        }
+      },
+      "exceptions": [
+        "quoted-source",
+        "external-title"
+      ],
+      "replacementAdvice": "Name the steps, access constraint, cost, or venue coverage that makes the route convenient.",
+      "introducedIn": "1.1",
+      "examples": {
+        "violating": [
+          "USDC is easy to use.",
+          "This is a convenient option for custody."
+        ],
+        "clean": [
+          "The calculation uses a simple moving average."
+        ]
+      }
+    },
+    {
+      "id": "review-unsupported-reliability",
+      "promptLabel": "Review probably, likely, and reliably in deterministic risk explanations; attach evidence or state the uncertainty directly.",
+      "patterns": [
+        {
+          "source": "\\b(?:probably|likely|reliably)\\b",
+          "flags": "giu"
+        }
+      ],
+      "severity": {
+        "default": "off",
+        "byRegister": {
+          "analytical-explanation": "advisory"
+        }
+      },
+      "exceptions": [
+        "quoted-source",
+        "external-title"
+      ],
+      "replacementAdvice": "Attach the probability, evidence, or mechanism behind the reliability claim.",
+      "introducedIn": "1.1",
+      "examples": {
+        "violating": [
+          "Redemptions will probably remain open."
+        ],
+        "clean": []
+      }
+    },
+    {
+      "id": "no-marketing-social-proof",
+      "promptLabel": "Do not use trusted by or battle-tested as unsupported social proof in analytical explanations.",
+      "patterns": [
+        {
+          "source": "\\btrusted by\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\bbattle[- ]tested\\b",
+          "flags": "giu"
+        }
+      ],
+      "severity": {
+        "default": "off",
+        "byRegister": {
+          "analytical-explanation": "hard"
+        }
+      },
+      "exceptions": [
+        "quoted-source",
+        "external-title"
+      ],
+      "replacementAdvice": "Replace social proof with dated usage, incident, or operational evidence.",
+      "introducedIn": "1.1",
+      "examples": {
+        "violating": [
+          "The route is battle-tested.",
+          "The coin is trusted by institutions."
+        ],
+        "clean": []
+      }
+    },
+    {
+      "id": "review-unqualified-superlative",
+      "promptLabel": "Review bare rankings and superlatives; name the metric, scope, and date.",
+      "patterns": [
+        {
+          "source": "(?:^|[.!?]\\s+)(?=[^.!?]{0,180}\\b(?:largest|strongest|highest[- ]quality|best)\\b)(?![^.!?]{0,180}\\b(?:among|within|as of|liquidity score|market cap(?:italization)?|circulating supply|redemption depth|yield|20\\d{2})\\b)[^.!?]{0,180}(?:[.!?]|$)",
+          "flags": "gimu"
+        }
+      ],
+      "severity": {
+        "default": "off",
+        "byRegister": {
+          "profile-reference": "advisory",
+          "page-description": "advisory",
+          "analytical-explanation": "advisory",
+          "product-utility": "advisory",
+          "brand": "advisory",
+          "alert": "advisory",
+          "delivery-wrapper": "advisory"
+        }
+      },
+      "exceptions": [
+        "quoted-source",
+        "external-title"
+      ],
+      "replacementAdvice": "Add the metric, comparison universe, and date, or remove the ranking.",
+      "introducedIn": "1.1",
+      "examples": {
+        "violating": [
+          "USDC is the largest stablecoin.",
+          "This is the strongest design.",
+          "The highest-quality reserve is here."
+        ],
+        "clean": [
+          "USDC had the highest liquidity score among tracked USD coins in June 2026."
+        ]
+      }
+    },
+    {
+      "id": "review-unattributed-technical-risk",
+      "promptLabel": "Review technical risk labels that do not name a methodology or source.",
+      "patterns": [
+        {
+          "source": "(?:^|[.!?]\\s+)(?=[^.!?]{0,180}\\b(?:high|medium|low)[- ]risk\\b)(?![^.!?]{0,180}\\b(?:according to|under|rated|methodology|score|audit|report|source|Pharos V\\d+)\\b)[^.!?]{0,180}(?:[.!?]|$)",
+          "flags": "gimu"
+        }
+      ],
+      "severity": {
+        "default": "off",
+        "byRegister": {
+          "profile-reference": "advisory",
+          "page-description": "advisory",
+          "analytical-explanation": "advisory",
+          "product-utility": "advisory",
+          "brand": "advisory",
+          "alert": "advisory",
+          "delivery-wrapper": "advisory"
+        }
+      },
+      "exceptions": [
+        "quoted-source",
+        "external-title"
+      ],
+      "replacementAdvice": "Name the methodology, rating, audit, or source behind the risk label.",
+      "introducedIn": "1.1",
+      "examples": {
+        "violating": [
+          "This is a high-risk redemption route."
+        ],
+        "clean": [
+          "Pharos V9 rates the route high-risk under the exit methodology."
+        ]
+      }
     },
     {
       "id": "no-booster-language",
@@ -444,6 +761,14 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         {
           "source": "\\b(?:truly|incredibly|massively|hugely) (?:remarkable|impressive|significant)\\b",
           "flags": "giu"
+        },
+        {
+          "source": "!",
+          "flags": "gu"
+        },
+        {
+          "source": "(?:^|[.!?]\\s+)(?:Can you believe|Guess what|What happens next|Ready to|Want to know)[^?]*\\?",
+          "flags": "gimu"
         }
       ],
       "severity": {
@@ -458,14 +783,23 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "quoted-source"
       ],
       "replacementAdvice": "Let the number carry the emphasis.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "Supply jumped 40%!",
+          "Buckle up, the peg moved."
+        ],
+        "clean": [
+          "Supply increased 40% after the vote."
+        ]
+      }
     },
     {
       "id": "no-personified-metric",
       "promptLabel": "Named indexes, scores, gauges, and regimes do not nap, shrug, yawn, notice, refuse, or applaud. State what the number did.",
       "patterns": [
         {
-          "source": "\\b(?:PSI|DEWS|the index|the score|the gauge|the market|the tape|the regime)\\s+(?:napp?ed|naps|shrugg?ed|shrugs|yawn(?:ed|s)?|notic(?:ed|es)|refus(?:ed|es)|applaud(?:ed|s)|sleeps|slept)\\b",
+          "source": "\\b(?:PSI|DEWS|the index|the score|the gauge|the model|the market|the tape|the regime)\\s+(?:napp?ed|naps|shrugg?ed|shrugs|yawn(?:ed|s)?|notic(?:ed|es)|refus(?:ed|es)|applaud(?:ed|s)|sleeps|slept)\\b",
           "flags": "giu"
         },
         {
@@ -480,7 +814,15 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "quoted-source"
       ],
       "replacementAdvice": "Name the movement and its size.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "The model shrugged at the outflow."
+        ],
+        "clean": [
+          "The model score fell by four points."
+        ]
+      }
     },
     {
       "id": "no-hedge-stack",
@@ -510,7 +852,15 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "quoted-source"
       ],
       "replacementAdvice": "Keep one qualifier or state the uncertainty directly.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "Redemptions could potentially slow."
+        ],
+        "clean": [
+          "Redemptions may slow while the pause remains active."
+        ]
+      }
     },
     {
       "id": "no-recategorizing-flip",
@@ -536,7 +886,15 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "quoted-source"
       ],
       "replacementAdvice": "Say what it is, with the evidence.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "This is not merely a reserve change."
+        ],
+        "clean": [
+          "The report covers cash, not liabilities."
+        ]
+      }
     },
     {
       "id": "scoped-decorative-word",
@@ -574,7 +932,15 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "external-title"
       ],
       "replacementAdvice": "Describe the timing, visibility, or mechanism instead.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "Meanwhile, liquidity fell."
+        ],
+        "clean": [
+          "The regulatory framework changed in June."
+        ]
+      }
     },
     {
       "id": "scoped-market-metaphor",
@@ -590,6 +956,10 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         },
         {
           "source": "\\bcarcass\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\bfurniture\\b",
           "flags": "giu"
         }
       ],
@@ -607,7 +977,13 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "literal-cemetery"
       ],
       "replacementAdvice": "Use the literal event or outcome.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "The token became market furniture."
+        ],
+        "clean": []
+      }
     },
     {
       "id": "spaced-hyphen-clause-dash",
@@ -629,7 +1005,17 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "table"
       ],
       "replacementAdvice": "Use a colon, comma, semicolon, or period.",
-      "introducedIn": "1.0"
+      "introducedIn": "1.0",
+      "examples": {
+        "violating": [
+          "Supply fell - the peg held."
+        ],
+        "clean": [
+          "Scores run 0-100.",
+          "The reserve holds 1-3 month Treasury bills.",
+          "Keep the answer to 45-80 words."
+        ]
+      }
     }
   ]
 } as const;

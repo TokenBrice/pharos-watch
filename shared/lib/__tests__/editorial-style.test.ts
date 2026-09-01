@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  EDITORIAL_POLICY,
   EDITORIAL_REGISTER_IDS,
   EDITORIAL_STYLE_HASH,
   EDITORIAL_STYLE_VERSION,
@@ -8,6 +9,7 @@ import {
   formatEditorialFindings,
   hasBlockingEditorialFindings,
   scanEditorialText,
+  severityFor,
 } from "../editorial-style";
 
 const ruleIds = (text: string, register = "daily") =>
@@ -37,15 +39,18 @@ describe("hard rules catch real machine tells", () => {
     expect(hardIds("Supply fell \u2013 the peg held.")).toContain("no-clause-dash");
   });
 
-  it("blocks the corrective cleft within a sentence", () => {
-    expect(hardIds("BEDROCK at 95.9 is not complacency, it is what order looks like.")).toContain(
-      "no-corrective-cleft",
-    );
-    expect(hardIds("This isn't a tweak; it's a rebuild.")).toContain("no-corrective-cleft");
+  it("reviews bounded corrective clefts without blocking correct distinctions", () => {
+    expect(ruleIds("This isn't a tweak; it's a rebuild.")).toContain("no-corrective-cleft");
+    expect(hardIds("This isn't a tweak; it's a rebuild.")).not.toContain("no-corrective-cleft");
+    expect(
+      ruleIds(
+        "The 72h backstop is not a weaker forecast-readiness score; it is the public accountability deadline.",
+      ),
+    ).not.toContain("no-corrective-cleft");
   });
 
   it("treats the cross-sentence split cleft as advisory, not blocking", () => {
-    const text = "Three tokens moving together is not a coincidence. It is a preference.";
+    const text = "This is not a coincidence. It is a preference.";
     expect(ruleIds(text)).toContain("no-corrective-cleft-split");
     expect(hardIds(text)).not.toContain("no-corrective-cleft-split");
   });
@@ -55,7 +60,7 @@ describe("hard rules catch real machine tells", () => {
     // a hard match here would have blocked a correct record.
     const evidence =
       "Its governing owner/timelock semantics were not resolved. It is retained as an explicit native parameter-control evidence gap.";
-    expect(hardIds(evidence, "technical-evidence")).toHaveLength(0);
+    expect(ruleIds(evidence, "technical-evidence")).not.toContain("no-corrective-cleft-split");
   });
 
   it("blocks stale phrases", () => {
@@ -77,6 +82,53 @@ describe("closer-scoped rules judge only the ending", () => {
     expect(
       ruleIds("The pool is worth watching, but supply fell 4%. Redemptions cleared at par today."),
     ).not.toContain("no-hedged-closer");
+  });
+
+  it("ignores a factual mid-sentence 'for now' in a single-sentence field", () => {
+    expect(
+      ruleIds("The cap stays unchanged for now because no governance vote has passed."),
+    ).not.toContain("no-hedged-closer");
+  });
+
+  it("looks past a trailing source-only suffix to the substantive closer", () => {
+    expect(
+      hardIds("Supply fell 4%. The pool is worth watching. (Source: issuer report)"),
+    ).toContain("no-hedged-closer");
+  });
+
+  it("does not apply closer semantics to short title-like fields", () => {
+    const findings = scanEditorialText("Worth watching", { register: "daily", field: "title" });
+    expect(findings.map((finding) => finding.ruleId)).not.toContain("no-hedged-closer");
+  });
+});
+
+describe("structured canonical examples", () => {
+  const activeRegisterFor = (rule: (typeof EDITORIAL_POLICY.rules)[number]): string => {
+    const hard = EDITORIAL_POLICY.registers.find((register) => severityFor(rule, register.id) === "hard");
+    const advisory = EDITORIAL_POLICY.registers.find((register) => severityFor(rule, register.id) === "advisory");
+    const active = hard ?? advisory;
+    if (!active) throw new Error(`rule ${rule.id} has no active register`);
+    return active.id;
+  };
+
+  it("makes every violating example executable through the real scanner", () => {
+    for (const rule of EDITORIAL_POLICY.rules) {
+      const register = activeRegisterFor(rule);
+      for (const example of rule.examples.violating) {
+        const ids = ruleIds(example, register);
+        expect(ids, `${rule.id} should match in ${register}: ${example}`).toContain(rule.id);
+      }
+    }
+  });
+
+  it("keeps every clean example free of its paired rule", () => {
+    for (const rule of EDITORIAL_POLICY.rules) {
+      const register = activeRegisterFor(rule);
+      for (const example of rule.examples.clean) {
+        const ids = ruleIds(example, register);
+        expect(ids, `${rule.id} should not match in ${register}: ${example}`).not.toContain(rule.id);
+      }
+    }
   });
 });
 

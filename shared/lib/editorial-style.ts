@@ -13,7 +13,7 @@
  */
 import { EDITORIAL_POLICY, EDITORIAL_STYLE_HASH, EDITORIAL_STYLE_VERSION } from "./editorial-style.generated";
 
-export { EDITORIAL_STYLE_HASH, EDITORIAL_STYLE_VERSION };
+export { EDITORIAL_POLICY, EDITORIAL_STYLE_HASH, EDITORIAL_STYLE_VERSION };
 
 export type EditorialSeverity = "hard" | "advisory" | "off";
 export type EditorialRegisterGroup = "editorial" | "technical" | "product";
@@ -32,6 +32,10 @@ export interface EditorialRuleSpec {
   readonly exceptions?: readonly string[];
   readonly replacementAdvice?: string;
   readonly introducedIn: string;
+  readonly examples: {
+    readonly violating: readonly string[];
+    readonly clean: readonly string[];
+  };
 }
 
 export interface EditorialRegisterSpec {
@@ -109,14 +113,27 @@ export function severityFor(rule: EditorialRuleSpec, register: string): Editoria
  * sentence of the last non-empty paragraph, matching the digest guard's
  * long-standing behaviour.
  */
+function trimTrailingCitationSuffix(text: string): string {
+  let substantive = text.trimEnd();
+  const suffix = /(?:\s+|^)(?:\((?:sources?|citations?):[^()\n]*\)|(?:sources?|citations?):\s*(?:https?:\/\/\S+|\[[^\]]+\]\([^)]+\)|[^\n]+)|\[[\d,\s\-\u2013\u2014]+\]|https?:\/\/\S+)\s*$/iu;
+  while (suffix.test(substantive)) substantive = substantive.replace(suffix, "").trimEnd();
+  return substantive;
+}
+
 function closerHaystack(text: string): { text: string; offset: number } {
-  const paragraphs = text.split(/\n{2,}/).filter((paragraph) => paragraph.trim().length > 0);
+  const substantiveText = trimTrailingCitationSuffix(text);
+  const paragraphs = substantiveText.split(/\n{2,}/).filter((paragraph) => paragraph.trim().length > 0);
   const lastParagraph = paragraphs[paragraphs.length - 1] ?? "";
-  const paragraphOffset = text.lastIndexOf(lastParagraph);
+  const paragraphOffset = substantiveText.lastIndexOf(lastParagraph);
   const sentences = lastParagraph.split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim().length > 0);
   const lastSentence = sentences[sentences.length - 1] ?? lastParagraph;
   const sentenceOffset = lastParagraph.lastIndexOf(lastSentence);
   return { text: lastSentence, offset: (paragraphOffset < 0 ? 0 : paragraphOffset) + (sentenceOffset < 0 ? 0 : sentenceOffset) };
+}
+
+function isShortTitleLikeField(field: string | undefined, text: string): boolean {
+  if (!field || text.trim().length > 120) return false;
+  return /(?:^|[-_.])(?:title|heading|headline|label|name|hook)(?:$|[-_.])/iu.test(field);
 }
 
 export function scanEditorialText(text: string, context: EditorialScanContext): EditorialFinding[] {
@@ -130,6 +147,7 @@ export function scanEditorialText(text: string, context: EditorialScanContext): 
     if (severity === "off") continue;
     if (context.exemptions?.some((exemption) => rule.exceptions?.includes(exemption))) continue;
 
+    if (rule.closerOnly && isShortTitleLikeField(context.field, text)) continue;
     const haystack = rule.closerOnly ? closerHaystack(text) : { text, offset: 0 };
     if (haystack.text.length === 0) continue;
 

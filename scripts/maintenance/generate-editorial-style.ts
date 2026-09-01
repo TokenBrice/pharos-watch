@@ -16,6 +16,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { EDITORIAL_POLICY as GENERATED_EDITORIAL_POLICY } from "../../shared/lib/editorial-style.generated";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -52,6 +53,7 @@ interface PolicyRule {
   exceptions?: string[];
   replacementAdvice?: string;
   introducedIn: string;
+  examples: { violating: string[]; clean: string[] };
 }
 
 interface PolicyRegister {
@@ -61,11 +63,15 @@ interface PolicyRegister {
   promptLine: string;
 }
 
-interface Policy {
+export interface Policy {
   version: string;
   oneLineDirective: string;
   registers: PolicyRegister[];
   rules: PolicyRule[];
+}
+
+function numericVersion(version: string): number {
+  return Number(version);
 }
 
 export function extractPolicyBlock(markdown: string): string {
@@ -93,7 +99,10 @@ export function validatePolicy(raw: string): Policy {
     throw new Error(`[editorial-style] Policy block is not valid JSON: ${(error as Error).message}`);
   }
 
-  assert(typeof parsed.version === "string" && /^\d+\.\d+$/.test(parsed.version), "version must be MAJOR.MINOR.");
+  assert(
+    typeof parsed.version === "string" && /^(?:0|[1-9]\d*)\.(?:0|[1-9](?:\d*[1-9])?)$/.test(parsed.version),
+    "version must be an unambiguous MAJOR.MINOR number.",
+  );
   assert(
     typeof parsed.oneLineDirective === "string" && parsed.oneLineDirective.trim().length > 0,
     "oneLineDirective must be a non-empty string.",
@@ -158,7 +167,26 @@ export function validatePolicy(raw: string): Policy {
       rule.closerOnly === undefined || typeof rule.closerOnly === "boolean",
       `rule "${rule.id}" closerOnly must be boolean.`,
     );
-    assert(typeof rule.introducedIn === "string", `rule "${rule.id}" needs introducedIn.`);
+    assert(
+      typeof rule.introducedIn === "string" && /^(?:0|[1-9]\d*)\.(?:0|[1-9](?:\d*[1-9])?)$/.test(rule.introducedIn),
+      `rule "${rule.id}" needs an unambiguous MAJOR.MINOR introducedIn version.`,
+    );
+    assert(
+      numericVersion(rule.introducedIn) <= numericVersion(parsed.version),
+      `rule "${rule.id}" introducedIn ${rule.introducedIn} exceeds policy version ${parsed.version}.`,
+    );
+    assert(rule.examples != null && typeof rule.examples === "object", `rule "${rule.id}" needs examples.`);
+    assert(
+      Array.isArray(rule.examples.violating) && rule.examples.violating.length > 0,
+      `rule "${rule.id}" needs at least one violating example.`,
+    );
+    assert(Array.isArray(rule.examples.clean), `rule "${rule.id}" examples.clean must be an array.`);
+    for (const example of [...rule.examples.violating, ...rule.examples.clean]) {
+      assert(
+        typeof example === "string" && example.trim().length > 0,
+        `rule "${rule.id}" examples must be non-empty strings.`,
+      );
+    }
   }
 
   return parsed;
@@ -177,6 +205,39 @@ export function canonicalize(value: unknown): string {
 
 export function policyHash(policy: Policy): string {
   return createHash("sha256").update(canonicalize(policy)).digest("hex").slice(0, 16);
+}
+
+export function assertMonotonicPolicyVersion(current: Policy, next: Policy): void {
+  const currentVersion = numericVersion(current.version);
+  const nextVersion = numericVersion(next.version);
+  assert(
+    nextVersion >= currentVersion,
+    `policy version ${next.version} cannot be lower than generated version ${current.version}.`,
+  );
+
+  const changed = canonicalize(current) !== canonicalize(next);
+  assert(
+    !changed || nextVersion > currentVersion,
+    `semantic policy changes require a version above generated version ${current.version}.`,
+  );
+
+  if (nextVersion > currentVersion) {
+    const currentRules = new Map(current.rules.map((rule) => [rule.id, rule]));
+    for (const rule of next.rules) {
+      const previous = currentRules.get(rule.id);
+      if (!previous) {
+        assert(
+          rule.introducedIn === next.version,
+          `new rule "${rule.id}" must set introducedIn to policy version ${next.version}.`,
+        );
+      } else {
+        assert(
+          rule.introducedIn === previous.introducedIn,
+          `existing rule "${rule.id}" must keep introducedIn ${previous.introducedIn}.`,
+        );
+      }
+    }
+  }
 }
 
 export function renderModule(policy: Policy): string {
@@ -199,6 +260,7 @@ export function renderModule(policy: Policy): string {
 
 function main(): void {
   const policy = validatePolicy(extractPolicyBlock(readFileSync(DOC_PATH, "utf8")));
+  assertMonotonicPolicyVersion(GENERATED_EDITORIAL_POLICY as Policy, policy);
   syncGeneratedArtifacts({
     artifacts: [{ path: OUTPUT, contents: renderModule(policy) }],
     check: CHECK_MODE,
