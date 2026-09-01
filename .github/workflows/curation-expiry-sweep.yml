@@ -1,8 +1,8 @@
 name: Curation Expiry Sweep
 
 # Weekly Safety Score V9 curation sweep: freeze the current production compiler
-# input, replay it at HEAD, and publish the curation worklist plus the curated
-# reserve expiry queue into a pinned review issue. Read-only against production
+# input, replay it at HEAD, and publish the curation worklist, curated reserve
+# expiry queue, and typed missing-data registry. Read-only against production
 # (one D1 cache-row read); no product data is changed.
 # Runbook: docs/process/safety-score-curation-expiry-sweep.md
 
@@ -22,6 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
       - name: Export and normalize the production compiler input
@@ -40,7 +41,7 @@ jobs:
             --exact-cache-export agents/sweep/capture.raw.json \
             --output agents/sweep/capture.json
           echo "clock_sec=$(jq -r .clockSec agents/sweep/capture.json)" >> "$GITHUB_OUTPUT"
-      - name: Replay and generate the curation worklist, expiry queue, and live-withheld report
+      - name: Replay and generate the curation queues and missing-data registry
         id: generate
         env:
           CLOCK_SEC: ${{ steps.capture.outputs.clock_sec }}
@@ -68,10 +69,50 @@ jobs:
             --replay agents/sweep/replay.json \
             --output agents/sweep/live-withheld.md 2>&1 | tee agents/sweep/live-withheld-command.log
           live_withheld_status=${PIPESTATUS[0]}
+          npm run safety-score-v9:missing-data-registry -- \
+            --replay agents/sweep/replay.json \
+            --policy shared/data/safety-score-v9/methodology-policy-candidate-v1.json \
+            --output agents/sweep/missing-data-registry.json 2>&1 | tee agents/sweep/missing-data-registry-command.log
+          registry_status=${PIPESTATUS[0]}
+          if [ "$registry_status" = 0 ]; then
+            jq '{
+              schemaVersion: 1,
+              generatedFrom: {
+                asOfSec: .snapshot.asOfSec,
+                asOfIso: .snapshot.asOfIso,
+                factSetDigest: .snapshot.factSetDigest,
+                queueDigest: .snapshot.queueDigest,
+                policyId: .snapshot.policyId,
+                policyDigest: .snapshot.policyDigest
+              },
+              summary: {
+                stablecoinCount: .summary.stablecoinCount,
+                affectedStablecoinCount: .summary.affectedStablecoinCount,
+                openItemCount: .summary.openItemCount,
+                compiledFactItemCount: .summary.compiledFactItemCount,
+                supplementalScoreItemCount: .summary.supplementalScoreItemCount,
+                claimGroupCount: .summary.claimGroupCount,
+                responsibilityCounts: .summary.responsibilityCounts,
+                workTypeCounts: .summary.workTypeCounts,
+                resolutionModeCounts: .summary.resolutionModeCounts,
+                taskSourceCounts: .summary.taskSourceCounts
+              }
+            }' agents/sweep/missing-data-registry.json \
+              > .github/workflows/artifacts/safety-score-missing-data-registry-summary.json
+          fi
           echo "replay_status=$replay_status" >> "$GITHUB_OUTPUT"
           echo "worklist_status=$worklist_status" >> "$GITHUB_OUTPUT"
           echo "queue_status=$queue_status" >> "$GITHUB_OUTPUT"
           echo "live_withheld_status=$live_withheld_status" >> "$GITHUB_OUTPUT"
+          echo "registry_status=$registry_status" >> "$GITHUB_OUTPUT"
+      - name: Upload the full missing-data registry
+        if: steps.generate.outputs.registry_status == '0'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: safety-score-v9-missing-data-registry-${{ github.run_id }}
+          path: agents/sweep/missing-data-registry.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Open or update the sweep issue
         env:
           GH_TOKEN: ${{ github.token }}
@@ -79,6 +120,7 @@ jobs:
           WORKLIST_STATUS: ${{ steps.generate.outputs.worklist_status }}
           QUEUE_STATUS: ${{ steps.generate.outputs.queue_status }}
           LIVE_WITHHELD_STATUS: ${{ steps.generate.outputs.live_withheld_status }}
+          REGISTRY_STATUS: ${{ steps.generate.outputs.registry_status }}
         shell: bash
         run: |
           set -euo pipefail
@@ -89,7 +131,16 @@ jobs:
             echo
             echo "Generated from commit \`${GITHUB_SHA}\` on $(date -u +%F). Read-only review queues; no product data was changed. Drain per docs/process/safety-score-curation-expiry-sweep.md."
             echo
-            echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}, live-withheld=${LIVE_WITHHELD_STATUS}."
+            echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}, live-withheld=${LIVE_WITHHELD_STATUS}, missing-data registry=${REGISTRY_STATUS}."
+            echo
+            echo "## Missing-data registry"
+            if [ -f agents/sweep/missing-data-registry.json ]; then
+              jq -r '"- Open task rows: **\(.summary.openItemCount)**\n- Claim groups: **\(.summary.claimGroupCount)**\n- Compiled-fact tasks: **\(.summary.compiledFactItemCount)**\n- Score-projection supplements: **\(.summary.supplementalScoreItemCount)**\n- Affected stablecoins: **\(.summary.affectedStablecoinCount)**"' agents/sweep/missing-data-registry.json
+              echo
+              echo "These are routing counts, not mechanically closable facts. Download the full workflow artifact and drain by typed workType/claimGroupId."
+            else
+              echo "Registry unavailable."
+            fi
             echo
             echo "## Live-withheld counterfactual grade-drop report"
             echo '```text'
@@ -124,13 +175,14 @@ jobs:
             fi
             echo '```'
             echo
-            if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ]; then
+            if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ]; then
               echo "## Generation failures"
               for spec in \
                 "replay:$REPLAY_STATUS:agents/sweep/replay-command.log" \
                 "worklist:$WORKLIST_STATUS:agents/sweep/worklist-command.log" \
                 "expiry queue:$QUEUE_STATUS:agents/sweep/queue-command.log" \
-                "live-withheld:$LIVE_WITHHELD_STATUS:agents/sweep/live-withheld-command.log"; do
+                "live-withheld:$LIVE_WITHHELD_STATUS:agents/sweep/live-withheld-command.log" \
+                "missing-data registry:$REGISTRY_STATUS:agents/sweep/missing-data-registry-command.log"; do
                 IFS=: read -r label status log_file <<< "$spec"
                 if [ "$status" != 0 ]; then
                   echo "### $label (status $status)"
@@ -154,7 +206,34 @@ jobs:
           # Fail the run, not just the issue body, when any generator broke —
           # same rationale as agent-maintenance-candidates: a green run must
           # mean the queues are trustworthy.
-          if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ]; then
+          if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ]; then
             echo "::error title=Curation sweep incomplete::See the sweep issue for command status and available output."
             exit 1
           fi
+      - name: Detect missing-data registry summary drift
+        id: registry_diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .github/workflows/artifacts/safety-score-missing-data-registry-summary.json; then
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- .github/workflows/artifacts/safety-score-missing-data-registry-summary.json
+          fi
+      - name: Open or update missing-data registry snapshot PR
+        if: steps.registry_diff.outputs.has_diff == 'true'
+        env:
+          AUTOMATION_GITHUB_TOKEN: ${{ secrets.SHOCK_COVERAGE_GITHUB_TOKEN || secrets.OG_REFRESH_GITHUB_TOKEN }}
+          PR_BODY: |
+            Weekly pinned-input snapshot of the existing Safety Score V9 missing-data registry.
+
+            The full registry is attached to the source curation-sweep workflow run. This compact committed artifact makes task, claim-group, work-type, responsibility, and resolution-mode drift reviewable without committing the multi-megabyte registry.
+
+            These are routing counts, not mechanically closable facts. This refresh closes zero facts by itself. Drain procedure: `docs/process/safety-score-curation-expiry-sweep.md`.
+        run: |
+          node --import tsx scripts/ci/open-automated-refresh-pr.ts \
+            --branch automated/safety-score-missing-data-registry \
+            --path .github/workflows/artifacts/safety-score-missing-data-registry-summary.json \
+            --title "chore(v9): refresh missing-data registry snapshot" \
+            --body "$PR_BODY"
