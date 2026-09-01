@@ -31,6 +31,273 @@ const UNALLOWLISTABLE_DEGRADED_WARNING_CODES = new Set([
   "material-unknown-exposure",
 ]);
 
+export const ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS = [
+  1, 5, 10, 25, 50, 100, 250, 500, 1_000, 2_000, 5_000, 10_000, 20_000,
+] as const;
+export const ADAPTER_LATENCY_MAX_GROUPS = 128;
+// Leaves 24 KiB of the scheduled metadata envelope for the reserve lane's
+// existing outcome, cursor, breaker, and lease diagnostics.
+export const ADAPTER_LATENCY_MAX_BYTES = 36 * 1_024;
+
+export type AdapterLatencyStage = "primary" | "fallback";
+
+interface AdapterLatencyHistogram {
+  count: number;
+  sumMs: number;
+  buckets: number[];
+  p50UpperBoundMs: number | null;
+  p95UpperBoundMs: number | null;
+}
+
+export interface AdapterLatencyGroup {
+  adapterKey: string;
+  chain: string;
+  stage: AdapterLatencyStage;
+  cacheHit: boolean;
+  attemptCount: number;
+  ioCallCount: number;
+  waveCount: number;
+  errorCount: number;
+  elapsedMs: AdapterLatencyHistogram;
+}
+
+export interface AdapterLatencySummary {
+  schemaVersion: 1;
+  bucketUpperBoundsMs: number[];
+  groups: AdapterLatencyGroup[];
+  total: {
+    attemptCount: number;
+    ioCallCount: number;
+    waveCount: number;
+    errorCount: number;
+    elapsedMs: AdapterLatencyHistogram;
+  };
+  requestCacheHits: number;
+  requestCacheMisses: number;
+  omittedGroups: number;
+  omittedAttempts: number;
+  overflow: boolean;
+}
+
+export interface AdapterTelemetryProgress {
+  attemptCount: number;
+  ioCallCount: number;
+  waveCount: number;
+  requestCacheHits: number;
+  requestCacheMisses: number;
+  elapsedTotalMs: number;
+  groupCount: number;
+  overflow: boolean;
+}
+
+interface MutableAdapterLatencyGroup {
+  adapterKey: string;
+  chain: string;
+  stage: AdapterLatencyStage;
+  cacheHit: boolean;
+  attemptCount: number;
+  ioCallCount: number;
+  waveCount: number;
+  errorCount: number;
+  elapsedCount: number;
+  elapsedSumMs: number;
+  buckets: number[];
+}
+
+export interface AdapterLatencyCollector {
+  recordAttempt(input: {
+    adapterKey: string;
+    chain: string;
+    stage: AdapterLatencyStage;
+    cacheHit: boolean;
+    ioCallCount: number;
+    waveCount: number;
+    elapsedMs: number;
+    error: boolean;
+  }): void;
+  recordRequestCacheHit(): void;
+  recordRequestCacheMiss(): void;
+  progress(): AdapterTelemetryProgress;
+  finalize(): AdapterLatencySummary;
+}
+
+const MAX_TELEMETRY_DIMENSION_CHARS = 80;
+const MAX_SAFE_COUNTER = Number.MAX_SAFE_INTEGER;
+
+function saturatingInteger(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.min(MAX_SAFE_COUNTER, Math.floor(value));
+}
+
+function saturatingAdd(left: number, right: number): number {
+  return Math.min(MAX_SAFE_COUNTER, left + saturatingInteger(right));
+}
+
+function boundedDimension(value: string, fallback: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || !/^[a-z0-9._-]+$/.test(normalized)) return fallback;
+  return normalized.slice(0, MAX_TELEMETRY_DIMENSION_CHARS);
+}
+
+function percentileUpperBound(buckets: readonly number[], count: number, percentile: number): number | null {
+  if (count === 0) return null;
+  const target = Math.ceil(count * percentile);
+  const index = buckets.findIndex((bucketCount) => bucketCount >= target);
+  return index < 0 ? null : ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS[index]!;
+}
+
+function snapshotHistogram(group: Pick<
+  MutableAdapterLatencyGroup,
+  "elapsedCount" | "elapsedSumMs" | "buckets"
+>): AdapterLatencyHistogram {
+  return {
+    count: group.elapsedCount,
+    sumMs: group.elapsedSumMs,
+    buckets: [...group.buckets],
+    p50UpperBoundMs: percentileUpperBound(group.buckets, group.elapsedCount, 0.5),
+    p95UpperBoundMs: percentileUpperBound(group.buckets, group.elapsedCount, 0.95),
+  };
+}
+
+function utf8Bytes(value: string): number {
+  return new TextEncoder().encode(value).length;
+}
+
+function compareDimensions(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+export function createAdapterLatencyCollector(): AdapterLatencyCollector {
+  const groups = new Map<string, MutableAdapterLatencyGroup>();
+  const total: MutableAdapterLatencyGroup = {
+    adapterKey: "total",
+    chain: "multi",
+    stage: "primary",
+    cacheHit: false,
+    attemptCount: 0,
+    ioCallCount: 0,
+    waveCount: 0,
+    errorCount: 0,
+    elapsedCount: 0,
+    elapsedSumMs: 0,
+    buckets: ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS.map(() => 0),
+  };
+  let requestCacheHits = 0;
+  let requestCacheMisses = 0;
+
+  const update = (
+    group: MutableAdapterLatencyGroup,
+    input: Parameters<AdapterLatencyCollector["recordAttempt"]>[0],
+  ) => {
+    const elapsedMs = saturatingInteger(input.elapsedMs);
+    group.attemptCount = saturatingAdd(group.attemptCount, 1);
+    group.ioCallCount = saturatingAdd(group.ioCallCount, input.ioCallCount);
+    group.waveCount = saturatingAdd(group.waveCount, input.waveCount);
+    group.errorCount = saturatingAdd(group.errorCount, input.error ? 1 : 0);
+    group.elapsedCount = saturatingAdd(group.elapsedCount, 1);
+    group.elapsedSumMs = saturatingAdd(group.elapsedSumMs, elapsedMs);
+    for (let index = 0; index < ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS.length; index++) {
+      if (elapsedMs <= ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS[index]!) {
+        group.buckets[index] = saturatingAdd(group.buckets[index]!, 1);
+      }
+    }
+  };
+
+  const buildSummary = (): AdapterLatencySummary => {
+    const snapshots = Array.from(groups.values())
+      .sort((left, right) => (
+        compareDimensions(left.adapterKey, right.adapterKey)
+        || compareDimensions(left.chain, right.chain)
+        || compareDimensions(left.stage, right.stage)
+        || Number(left.cacheHit) - Number(right.cacheHit)
+      ))
+      .map((group): AdapterLatencyGroup => ({
+        adapterKey: group.adapterKey,
+        chain: group.chain,
+        stage: group.stage,
+        cacheHit: group.cacheHit,
+        attemptCount: group.attemptCount,
+        ioCallCount: group.ioCallCount,
+        waveCount: group.waveCount,
+        errorCount: group.errorCount,
+        elapsedMs: snapshotHistogram(group),
+      }));
+    const retained = snapshots.slice(0, ADAPTER_LATENCY_MAX_GROUPS);
+    const summary: AdapterLatencySummary = {
+      schemaVersion: 1,
+      bucketUpperBoundsMs: [...ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS],
+      groups: retained,
+      total: {
+        attemptCount: total.attemptCount,
+        ioCallCount: total.ioCallCount,
+        waveCount: total.waveCount,
+        errorCount: total.errorCount,
+        elapsedMs: snapshotHistogram(total),
+      },
+      requestCacheHits,
+      requestCacheMisses,
+      omittedGroups: snapshots.length - retained.length,
+      omittedAttempts: snapshots.slice(retained.length)
+        .reduce((sum, group) => saturatingAdd(sum, group.attemptCount), 0),
+      overflow: snapshots.length > retained.length,
+    };
+
+    while (utf8Bytes(JSON.stringify(summary)) > ADAPTER_LATENCY_MAX_BYTES && summary.groups.length > 0) {
+      const omitted = summary.groups.pop()!;
+      summary.omittedGroups = saturatingAdd(summary.omittedGroups, 1);
+      summary.omittedAttempts = saturatingAdd(summary.omittedAttempts, omitted.attemptCount);
+      summary.overflow = true;
+    }
+    return summary;
+  };
+
+  return {
+    recordAttempt(input) {
+      const adapterKey = boundedDimension(input.adapterKey, "unknown");
+      const chain = boundedDimension(input.chain, "multi");
+      const groupKey = JSON.stringify([adapterKey, chain, input.stage, input.cacheHit]);
+      let group = groups.get(groupKey);
+      if (!group) {
+        group = {
+          adapterKey,
+          chain,
+          stage: input.stage,
+          cacheHit: input.cacheHit,
+          attemptCount: 0,
+          ioCallCount: 0,
+          waveCount: 0,
+          errorCount: 0,
+          elapsedCount: 0,
+          elapsedSumMs: 0,
+          buckets: ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS.map(() => 0),
+        };
+        groups.set(groupKey, group);
+      }
+      update(group, input);
+      update(total, input);
+    },
+    recordRequestCacheHit() {
+      requestCacheHits = saturatingAdd(requestCacheHits, 1);
+    },
+    recordRequestCacheMiss() {
+      requestCacheMisses = saturatingAdd(requestCacheMisses, 1);
+    },
+    progress() {
+      return {
+        attemptCount: total.attemptCount,
+        ioCallCount: total.ioCallCount,
+        waveCount: total.waveCount,
+        requestCacheHits,
+        requestCacheMisses,
+        elapsedTotalMs: total.elapsedSumMs,
+        groupCount: groups.size,
+        overflow: groups.size > ADAPTER_LATENCY_MAX_GROUPS,
+      };
+    },
+    finalize: buildSummary,
+  };
+}
+
 export type ReserveCoinSyncStatus = "synced" | "failed" | "skipped";
 
 export interface ReserveCoinSyncResult {

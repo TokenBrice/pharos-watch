@@ -28,6 +28,7 @@ import {
   type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
 import type { LiveReserveSyncBudgetConfig } from "./sync-live-reserves-config";
+import type { AdapterLatencySummary, AdapterTelemetryProgress } from "./sync-live-reserves-core";
 
 export interface ReserveSyncAttemptFailureGroup {
   stablecoinId: string;
@@ -72,6 +73,8 @@ export interface FinalizeReserveSyncRunArgs {
   attemptedCoins?: number;
   adapterPhaseMs?: number;
   d1PhaseMs?: number;
+  adapterLatency: AdapterLatencySummary;
+  adapterTelemetryProgress: AdapterTelemetryProgress;
 }
 
 interface LiveReserveFinalizationWarning {
@@ -362,6 +365,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       synced: args.synced,
       failed: args.failed,
       skipped: args.skipped,
+      adapterTelemetryProgress: args.adapterTelemetryProgress,
     },
   });
 
@@ -487,6 +491,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
         d1CoinPersistence: args.d1PhaseMs ?? 0,
         finalization: Date.now() - finalizationStartedMs,
       },
+      adapterLatency: args.adapterLatency,
       attemptedCoins: args.attemptedCoins ?? args.synced + args.failed + args.circuitSkipped,
       cohortItemsDoneBeforeRun: args.cohortItemsDoneBeforeRun ?? 0,
       cohortItemsDoneAfterRun:

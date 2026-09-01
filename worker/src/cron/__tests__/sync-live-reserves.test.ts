@@ -1097,7 +1097,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
 
     const successAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_composition_history")
@@ -1112,6 +1112,24 @@ describe("syncLiveReserves", () => {
     expect(fallbackInfo).toBeDefined();
     expect(fallbackInfo!.effect).toBe("info");
     expect(fallbackInfo!.severity).toBe("info");
+    const runMetadata = JSON.parse(result.metadata ?? "{}") as {
+      adapterLatency?: {
+        groups?: Array<{ adapterKey?: string; stage?: string; attemptCount?: number }>;
+        total?: { attemptCount?: number };
+        overflow?: boolean;
+      };
+    };
+    const fallbackGroup = runMetadata.adapterLatency?.groups?.find((group) => (
+      group.adapterKey === fallbackCoin!.liveReservesConfig!.adapter
+      && group.stage === "fallback"
+    ));
+    expect(
+      fallbackGroup?.attemptCount === 1
+      || (
+        runMetadata.adapterLatency?.overflow === true
+        && (runMetadata.adapterLatency.total?.attemptCount ?? 0) > configuredCoinCount
+      ),
+    ).toBe(true);
   });
 
   it("persists full primary-plus-fallback failure context for reserve source chains", async () => {
