@@ -534,6 +534,58 @@
           }
         ],
         "evidence": "At Aptos ledger version 6262999136, this ordinary single account was trust_service master and owner of package object 0x13816cd4...f06a. It could mint, administer roles, set the one-time cap, and publish compatible package upgrades immediately; no multisig resource or on-chain timelock was present. The exact ACRED Wormhole receipt and conservation path is not identified, so this remains scoreable as adverse bridge/common-mode representation exposure rather than canonical Mint Authority."
+      },
+      {
+        "id": "acred-ethereum-source-master",
+        "label": "ACRED Ethereum source-side master and upgrade owner",
+        "routeRefs": [
+          "ethereum:0x17418038ecf73ba4026c4f428547bf099706f27b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "failureDomainKeys": [
+          "eoa:evm:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
+          "contract:ethereum:0x17418038ecf73ba4026c4f428547bf099706f27b",
+          "contract:ethereum:0xc397436742eaf7c325ddbfc4dc63d95822b27101"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The ACRED-specific Wormhole NTT manager, adapter, and peer set for the Ethereum source leg remain unidentified: no NTT manager was resolvable from the token, from the trust service, or from published Securitize/Wormhole material at the observation block, so no authenticated remote or burn-before-credit invariant is asserted for this leg.",
+          "caps": "At Ethereum block 25881932 on 2026-09-01, ACRED cap() returned zero. The verified DSToken implementation sets cap through setCap(uint256), which requires cap == 0 and _cap > 0, so a zero cap is the source's unset/uncapped state and TokenLibrary.issueTokens receives it as no ceiling. getCap(), maxSupply(), mintCap(), supplyCap(), totalCap(), mintingLimit(), MAX_SUPPLY(), CAP(), mintLimit(), totalSupplyCap(), bridgeLimit(), rateLimit(), dailyLimit(), limit(), and maxLimit() all reverted. totalSupply() was 0x60bfeeaac and totalIssued() 0x150196f760 over 27 registered wallets. This control can therefore issue without a ceiling today.",
+          "pausersAdminsUpgraders": "The token is an ERC1967 proxy (170 bytes) whose implementation slot held DSToken 0xfc8a9000c161e3c6e073e967107ce926a44a06e2 and whose admin slot was zero, i.e. a UUPS proxy upgraded through owner(). owner() returned 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee, an address with zero code. The token's TRUST_SERVICE (service id 1) resolved to 0xc397436742eaf7c325ddbfc4dc63d95822b27101 — itself an ERC1967 proxy over 0xd5417b82ae5b9ab7db1532b517fb284f38d7141e — and its getRole(0x59c1eacec450c57dcb9b8725d0f96635c2b676ee) returned 1, ROLE_MASTER. isPaused() returned false. One externally owned key therefore holds master role, issuance administration and immediate upgrade authority on the source deployment, with no timelock and no multisig."
+        },
+        "capDescription": "The Ethereum source deployment is uncapped at the observed block and this key can also set the one-time cap, grant ROLE_ISSUER, and replace the token implementation; public ACRED/Wormhole material does not prove that source-side issuance is restricted to validated transfer receipts.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The same key is ROLE_MASTER on the trust service, so it can grant itself or others any DSToken role, and it holds the UUPS upgrade path on the token proxy."
+        ],
+        "observedAt": "2026-09-01",
+        "observedBlock": 25881932,
+        "sources": [
+          {
+            "label": "Ethereum ACRED proxy and verified DSToken implementation",
+            "url": "https://eth.blockscout.com/address/0x17418038ecf73ba4026c4f428547bf099706f27b?tab=contract"
+          },
+          {
+            "label": "Ethereum ACRED trust service",
+            "url": "https://eth.blockscout.com/address/0xc397436742eaf7c325ddbfc4dc63d95822b27101?tab=contract"
+          },
+          {
+            "label": "Ethereum public JSON-RPC reads at block 25881932",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Wormhole and Securitize native transfer architecture",
+            "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
+          }
+        ],
+        "evidence": "The Ethereum deployment is ACRED's canonical native issuance route and also the source leg for the five Securitize/Wormhole representations, but it carried no bridge control until now. At Ethereum block 25881932 on 2026-09-01 the same zero-code key that is destination master on Avalanche, Ink, Polygon, Solana and Aptos — 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee — is also the source-side owner() of the ACRED proxy and ROLE_MASTER on its trust service 0xc397436742eaf7c325ddbfc4dc63d95822b27101. The proxy's admin slot is zero, so the upgrade path is UUPS through that owner, and cap() is zero, which the verified DSToken treats as uncapped. Because the ACRED-specific Wormhole manager and peer set are still unidentified, the source-side burn or lock that should conserve supply against the destination mints is unproven; this control is retained as adverse common-mode bridge exposure across all six ACRED deployments rather than as a second canonical liability."
       }
     ]
   }

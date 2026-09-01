@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "A7A5 has two canonical native issuance deployments, on Ethereum and Tron. Old Vector LLC's minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits; on-chain, the Ethereum token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers), and the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). Both native tokens are direct immutable deployments with no proxy or other mint-logic upgrade path. Ethereum wA7A5 is a same-chain parent-backed representation and is excluded from Mint Authority; its lock/mint route is reviewed under Bridge Risk.",
+    "summary": "A7A5 has two canonical native issuance deployments, on Ethereum and Tron. Old Vector LLC's minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits; on-chain, the Ethereum token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers), and the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). Both native tokens are direct immutable deployments with no proxy or other mint-logic upgrade path. Ethereum wA7A5 is a same-chain parent-backed representation and is excluded from Mint Authority; it holds parent A7A5 already counted inside the canonical Ethereum total, and its catalog route entry was withdrawn 2026-09-01 with the wrapper finding preserved in the Bridge Risk profile summary.",
     "upgradeability": {
       "model": "immutable",
       "deploymentRefs": [

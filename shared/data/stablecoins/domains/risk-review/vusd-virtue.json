@@ -424,6 +424,60 @@
           }
         ]
       }
+    ],
+    "controls": [
+      {
+        "id": "vusd-iota-evm-isc-system-representation",
+        "label": "VUSD IOTA EVM ISC system representation controller",
+        "routeRefs": [
+          "iota-evm:0x10740259a1860af3327dd0642ee35d6e8e7143ff"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "iota-evm",
+        "controllerAddress": "0x1074000000000000000000000000000000000000",
+        "failureDomainKeys": [
+          "protocol:iota-evm-canonical-bridge",
+          "contract:iota-evm:0x1074000000000000000000000000000000000000"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The representation is not independently issued: the ISC chain custodies the Move VUSD coins deposited into IOTA EVM and the ERC20Coin proxy reads and moves those balances through the Magic Contract at 0x1074000000000000000000000000000000000000, which returned only 7 bytes of code at IOTA EVM block 12825262 because the interface is implemented natively by the ISC runtime rather than in EVM bytecode.",
+          "caps": "A numeric ceiling exists on the source side and this controller cannot lift it. At IOTA checkpoint 185208700 on 2026-09-01, the VUSD Treasury 0x81f525f4fa5b2d3cf58677d3e39aabc4b0a1ca25cbba605033cfe417e47b0a16 carried exactly one authorized minting module — cdeeb40cd7ffd7c3b741f40a8e11cb784a5c9b588ce993d4ab86479072386ba1::witness::VirtueCDP — with LimitedSupply { limit 50000000000000, supply 5084155147217 } at 6 decimals, i.e. a 50,000,000 VUSD ceiling against 5,084,155.147217 VUSD outstanding. On the destination side at IOTA EVM block 12825262, VUSD 0x10740259a1860af3327dd0642ee35d6e8e7143ff returned name 'Virtue USD', symbol VUSD, decimals 6, no owner(), a zero EIP-1967 implementation slot, and cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), totalSupplyCap(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), maxLimit(), limit(), rateLimit(), and dailyLimit() all reverted — the representation has no independent issuance surface at all, so total representable VUSD stays bounded by the Move-side LimitedSupply that only the Move AdminCap can raise.",
+          "pausersAdminsUpgraders": "The ISC chain committee that operates IOTA EVM is the residual administrator of this route; its current membership, rotation policy, and any chain-level pause were not enumerated from public state and are recorded as unresolved. The ERC20Coin proxy itself exposes no owner, pause, freeze, or upgrade entrypoint."
+        },
+        "capDescription": "The IOTA EVM representation carries no cap or mint entrypoint of its own; total issuance is bounded by the source-side Treasury LimitedSupply of 50,000,000 VUSD, and only the Move AdminCap — not this route controller — can raise that limit.",
+        "canRaiseCap": false,
+        "bypassSurfaces": [
+          "The Move AdminCap holder 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 can call set_supply_limit and add_version on the source Treasury; that is Mint Authority exposure, not a capability of this bridge controller.",
+          "The ISC committee operating IOTA EVM is an unenumerated validator set for this route."
+        ],
+        "observedAt": "2026-09-01",
+        "observedBlock": 12825262,
+        "sources": [
+          {
+            "label": "IOTA EVM public JSON-RPC — VUSD system proxy at block 12825262",
+            "url": "https://json-rpc.evm.iotaledger.net"
+          },
+          {
+            "label": "IOTA mainnet JSON-RPC — VUSD Treasury at checkpoint 185208700",
+            "url": "https://api.mainnet.iota.cafe"
+          },
+          {
+            "label": "IOTA EVM ERC20Coin system proxy source",
+            "url": "https://github.com/iotaledger/wasp/blob/develop/packages/vm/core/evm/iscmagic/ERC20Coin.sol"
+          },
+          {
+            "label": "Virtue VUSD Treasury object",
+            "url": "https://explorer.iota.org/object/0x81f525f4fa5b2d3cf58677d3e39aabc4b0a1ca25cbba605033cfe417e47b0a16?network=mainnet"
+          }
+        ],
+        "evidence": "Both legs were re-read on 2026-09-01 and neither named RPC blocker materialised: IOTA EVM answered at block 12825262 and IOTA Move at checkpoint 185208700. The destination ERC20Coin at 0x10740259a1860af3327dd0642ee35d6e8e7143ff has no owner, no proxy implementation slot, and no mint, freeze, pause, or seize entrypoint; every one of twelve cap probes reverted. Its route controller is the ISC Magic Contract 0x1074000000000000000000000000000000000000, a native system contract with 7 bytes of EVM code and no discretionary key. On the source side the VUSD Treasury exposes exactly one authorized minting module with a LimitedSupply ceiling of 50,000,000 VUSD against 5,084,155.147217 VUSD of supply, and the AdminCap that can raise it (object 0x38a7b38d0f03338397d1c57f2cc2e3d7c5e3f6fe6887626aacc4cb4e8072c3f5, held by 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12) sits in Mint Authority, not in this control. The bridge controller is therefore cap-bounded: it can move representation supply but cannot raise the ceiling that limits it."
+      }
     ]
   }
 }
