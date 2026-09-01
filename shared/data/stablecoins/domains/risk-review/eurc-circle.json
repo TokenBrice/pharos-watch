@@ -307,16 +307,32 @@
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x783129e4d7ba0af0c896c239e57c06df379aae8c",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Tempo 2026-08-16 (block 35108454): TIP-20 token 0x20c0000000000000000000001621e21f71cf12fb reports name 'Bridged EURC (Stargate)', symbol EURC.e, supporting its classification as the Stargate-bridged EURC representation. LayerZero's current Stargate documentation confirms the generic pool/OFT and messaging model, but a current EURC-specific pool, peer set, or controller was not identified; Tempo TIP-20 role administration is exposed through a precompile and is not enumerable from standard EVM calls. Controller and peer evidence remains incomplete.",
+        "reviewNote": "Controller and peer set identified 2026-09-01, superseding the 2026-08-16 'not identified' finding (that review had confirmed only that TIP-20 0x20c0000000000000000000001621e21f71cf12fb reports name 'Bridged EURC (Stargate)', symbol EURC.e). Stargate's live V2 metadata registry lists asset id 23 (EURC) with four deployments: StargatePoolEURC 0x783129e4d7ba0af0c896c239e57c06df379aae8c on Ethereum, escrowing Circle EURC 0x1abaea1f7c830bd89acc67ec4af516284b1bc33c, plus StargateOFT peers on Tempo (0x7753dc8d4bd48db599da21e08b1ab1d6fdffdc71), Berachain (0x28bec7e30e6faee657a03e19bf1128aad7632a00) and Plume (0x5e2519045b5e38863c879c694fb0811dba333a60), with Tempo tokenMessaging 0x19ff94fe4c93d546e4db3e1fb124d45366b0b9f5. Pinned on-chain: at Tempo block 37485029 the Tempo OFT's token() returns this route's TIP-20 0x20c0000000000000000000001621e21f71cf12fb and the OFT answers oftVersion() (interfaceId 0x02e49c2c) with owner() 0x09c865fafb64d8cbcbf673d61a11e066063e3a1f; at Ethereum block 25881831 the Stargate pool's token() returns EURC and its EURC balance is 110,087.700000, equal to the Tempo EURC.e totalSupply of 110,087.700000 at that Tempo height. Under convention rule A1-2 (identified-adapter precedence) controllerChain/controllerAddress name the Ethereum-side escrow pool, matching the sibling Stargate-on-Tempo route in usdc-circle (tempo:0x20c000000000000000000000b9537d11c60e8b50 controlled by ethereum:0xc026395860db2d07ee33e05fe50ed7bd583189c7); the Tempo-side minting OFT and the TIP-20 itself are carried in failureDomainKeys. Residual gap, unchanged: Tempo TIP-20 role administration is exposed through a precompile and the token's own local admin key is not enumerable from standard EVM calls.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:layerzero-stargate",
+          "contract:ethereum:0x783129e4d7ba0af0c896c239e57c06df379aae8c",
+          "contract:tempo:0x7753dc8d4bd48db599da21e08b1ab1d6fdffdc71",
           "contract:tempo:0x20c0000000000000000000001621e21f71cf12fb"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 35108454,
+        "observedAt": "2026-09-01",
+        "observedBlock": 37485029,
         "sources": [
+          {
+            "label": "Stargate V2 mainnet metadata registry (EURC asset id 23: Ethereum pool and Tempo OFT, retrieved 2026-09-01)",
+            "url": "https://mainnet.stargate-api.com/v1/metadata?version=v2"
+          },
+          {
+            "label": "Stargate EURC.e OFT on Tempo explorer",
+            "url": "https://explorer.tempo.xyz/address/0x7753dc8d4bd48db599da21e08b1ab1d6fdffdc71"
+          },
+          {
+            "label": "StargatePoolEURC on Etherscan",
+            "url": "https://etherscan.io/address/0x783129e4d7ba0af0c896c239e57c06df379aae8c"
+          },
           {
             "label": "EURC.e on Tempo explorer (verified 2026-08-16)",
             "url": "https://explore.tempo.xyz/address/0x20c0000000000000000000001621e21f71cf12fb"
@@ -333,27 +349,33 @@
         "destinationChain": "cardano",
         "canonicalChain": "ethereum",
         "contractAddress": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff93545555243",
-        "protocol": "Wanchain EURC route (unresolved)",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Cardano Koios at block 13818175 confirms nonzero EURC asset supply of 178,479,391 units under policy 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935, and token metadata identifies a Wanchain mapping. However, Wanchain's current tokenPairs API returned no Cardano EURC pair, so the current Wanchain route, validator group, lockbox, and supply-conserving mint/burn invariant are not verified. This route remains stale/unresolved until a current pair or primary Wanchain policy/deployment source proves those facts.",
+        "protocol": "Wanchain Cardano bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "cardano",
+        "controllerAddress": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Re-verified 2026-09-01 at Koios tip block 13883854. Koios asset_info for policy 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935 asset name 45555243 returns EURC (fingerprint asset1y7tdpje6ud04x3tvhpd5thz699ygeh38r8jvp8), total_supply 178,479,391 units at 6 decimals - unchanged since the 2026-08-16 read - with mint_cnt 7, burn_cnt 6 and Cardano mint metadata label 1 {type 9, tokenPairID 894} written by the Wanchain bridge; the Cardano token registry subject 25c5de5f...45555243 ('The Mapping token of EURC.', url wanscan.org/tokens) is signed by the same registry key 6f6a0e6cbebaa0e6... that signs the Wanchain DAI and PYUSD subjects. The earlier staleness objection is answered rather than ignored: re-checked 2026-09-01, Wanchain's tokenPairs API lists no Cardano-chain pairs at all (448 pairs, no ADA chain type), and the already-reviewed dai-makerdao Cardano route's own tokenPairID 563 is likewise absent, so the missing pair is a property of the whole Wanchain Cardano lane and bears on whether the bridge currently offers new Cardano mints, not on the identity or classification of the outstanding representation. Controller identity is authored by the adopted controller-identity convention (agents/open-data-resolver/decisions/A1-controller-identity-convention.md, rule A1-4) following the reviewed dai-makerdao route cardano:25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935444149 on this same policy hash: the controller of record is the 28-byte minting policy ID, never the full asset id, and the rotating 25-node Wanchain Storeman group (MPC plus Shamir secret sharing, more than two-thirds of nodes required to sign) behind that policy is recorded in this note and in failureDomainKeys as protocol:wanchain-bridge. No new controller-specific on-chain read was made.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:wanchain-bridge",
           "contract:cardano:25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-09-01",
         "sources": [
           {
-            "label": "Koios EURC asset info (supply verified 2026-08-16)",
+            "label": "Koios EURC asset info (supply and Wanchain mint metadata verified 2026-09-01)",
             "url": "https://api.koios.rest/api/v1/asset_info?_asset_policy=25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935&_asset_name=45555243"
           },
           {
-            "label": "Wanchain current token-pairs API (Cardano pair absent)",
+            "label": "Cardano token registry subject 25c5de5f...45555243",
+            "url": "https://tokens.cardano.org/metadata/25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff93545555243"
+          },
+          {
+            "label": "Wanchain current token-pairs API (no Cardano-chain pairs, checked 2026-09-01)",
             "url": "https://bridge-api.wanchain.org/api/tokenPairs"
           },
           {
@@ -361,7 +383,7 @@
             "url": "https://stablecoins.llama.fi/stablecoin/50"
           }
         ],
-        "observedBlock": 13818175
+        "observedBlock": 13883854
       }
     ]
   }
