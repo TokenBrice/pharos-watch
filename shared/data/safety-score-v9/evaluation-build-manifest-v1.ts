@@ -166,7 +166,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
-      "sha256": "1f297808aee610364eefe16b3ee927e71e4570f179b506fdec275037e4654856"
+      "sha256": "427ddb6480de18545b469f332cbf942459dff67e990d84b8612ee3640b593ed4"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem.ts",
@@ -186,7 +186,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
-      "sha256": "4b91d23b820dd59fb535cf241c19d7c118a1d110d374158f8c518d0bd4dc3cdd"
+      "sha256": "0813d95493ee70af2c223372cc4c865de5e93104a5c114e8f497870b6c066a43"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/shared.ts",
@@ -601,7 +601,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "03acffaf9d71bbe67439a41873d3a32c4d0dcf43f7c7ba0a633f9fbf4526597d"
+  "digest": "82e310aca34db967e500903bba9c1f6bf9b8e0f0b9e1bd2c1713a3df1cd93061"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
