@@ -123,9 +123,9 @@ const GAP_OWNERS = [
   },
   {
     responsibility: "published-evidence-expired",
-    label: "Pharos copy is out of date",
+    label: "Issuer's newest report predates our window",
     detail:
-      "The issuer or its parent published this evidence, but our copy is outside its freshness window.",
+      "The issuer or its parent published this evidence, but nothing newer exists: the reporting cadence is slower than the freshness window.",
   },
 ] as const satisfies ReadonlyArray<{
   responsibility: V9EvidenceResponsibility;

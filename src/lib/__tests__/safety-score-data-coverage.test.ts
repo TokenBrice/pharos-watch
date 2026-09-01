@@ -136,7 +136,7 @@ describe("buildDataCoverageModel", () => {
     expect(model.openGapCount).toBe(3);
     expect(model.gapOwners).toContainEqual(expect.objectContaining({
       responsibility: "published-evidence-expired",
-      label: "Pharos copy is out of date",
+      label: "Issuer's newest report predates our window",
       count: 3,
     }));
     expect(model.gapTypes).toContainEqual({
