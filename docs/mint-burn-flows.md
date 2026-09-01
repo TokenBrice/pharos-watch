@@ -32,7 +32,7 @@ Earlier release history lives in `shared/data/methodology-changelogs/mint-burn-f
 ## Cron Schedule
 
 - **Critical lane pattern:** `4,34 * * * *` (every 30 minutes, offset at :04/:34)
-- **Extended lane pattern:** `18,48 * * * *` (every 30 minutes, offset at :18/:48 — placed ahead of the fenced V9 publication slot at :22/:52 to keep the minute-long extended scan clear of the DEX/V9 publication chain)
+- **Extended lane pattern:** logical `18,48 * * * *`, deployed as hourly physical aliases `18 * * * *` and `48 * * * *` (every 30 minutes, offset at :18/:48 — placed ahead of the fenced V9 publication slot at :22/:52 to keep the minute-long extended scan clear of the DEX/V9 publication chain). The aliases preserve cadence and slot identity while qualifying each invocation for Cloudflare's hourly Cron CPU class; the combined expression was retired after same-version production runs repeatedly exhausted the sub-hourly 30-second class and were reconciled as `platform-abandoned`.
 - **Trigger mode:** isolated. `sync-blacklist` runs on its own dedicated 6-hourly trigger (`3 */6 * * *`); `sync-dex-discovery` runs on a dedicated 2-hourly trigger (`6 */2 * * *`).
 - **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
 - **Provider:** Alchemy JSON-RPC

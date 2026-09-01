@@ -1203,27 +1203,30 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
   });
 
-  it("runs the extended mint/burn lane on the offset 30-min slot", async () => {
-    const { ctx, waits } = makeExecutionContext();
-    const env = makeScheduledEnv({
-      ALCHEMY_API_KEY: "alchemy-key",
-    });
+  it.each(["18 * * * *", "48 * * * *"])(
+    "runs the extended mint/burn lane on physical trigger %s",
+    async (cron) => {
+      const { ctx, waits } = makeExecutionContext();
+      const env = makeScheduledEnv({
+        ALCHEMY_API_KEY: "alchemy-key",
+      });
 
-    await worker.scheduled(
-      { cron: "18,48 * * * *" } as ScheduledEvent,
-      env,
-      ctx,
-    );
-    await Promise.all(waits);
+      await worker.scheduled(
+        { cron } as ScheduledEvent,
+        env,
+        ctx,
+      );
+      await Promise.all(waits);
 
-    expect(cronMocks.syncMintBurn).toHaveBeenCalledTimes(1);
-    const extendedCall = cronMocks.syncMintBurn.mock.calls[0] as unknown[] | undefined;
-    expect(extendedCall?.[2]).toMatchObject({
-      lane: "extended",
-      jobName: "sync-mint-burn-extended",
-    });
-    expect(cronMocks.refreshAggregateMintBurnFlowCache).not.toHaveBeenCalled();
-    expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
-    expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
-  });
+      expect(cronMocks.syncMintBurn).toHaveBeenCalledTimes(1);
+      const extendedCall = cronMocks.syncMintBurn.mock.calls[0] as unknown[] | undefined;
+      expect(extendedCall?.[2]).toMatchObject({
+        lane: "extended",
+        jobName: "sync-mint-burn-extended",
+      });
+      expect(cronMocks.refreshAggregateMintBurnFlowCache).not.toHaveBeenCalled();
+      expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
+      expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
+    },
+  );
 });
