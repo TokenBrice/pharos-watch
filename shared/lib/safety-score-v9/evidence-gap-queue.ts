@@ -8,6 +8,7 @@ import {
   type V9EvidenceGapPolicyBindingIssue,
   type V9EvidenceGapQueueCoreV1,
   type V9EvidenceGapQueueCoreV2,
+  type V9EvidenceGapBridgeJoinV1,
   type V9EvidenceGapQueueEntryV2,
   type V9EvidenceGapQueue,
   type V9EvidenceGapQueueV2,
@@ -25,6 +26,7 @@ import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { readCompiledV9FactSetForEvaluation } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "./control";
 import { compareText, deepFreeze } from "./primitives";
 
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1 = "safety-score-v9.evidence-gap-queue.v1";
@@ -145,6 +147,57 @@ function actionForGap(
   return "adjudicate-bounded-unknown";
 }
 
+/**
+ * ODR-D5a: the reason codes whose work item is a bridge-join question. The
+ * richer missing-data registry already hands its `BRIDGE_MATERIALITY` /
+ * `BRIDGE_ROUTE_REVIEW` items the whole bridge review verbatim; this terse
+ * queue carried none of it, so a bridge gap named no row.
+ */
+const V9_BRIDGE_JOIN_REASON_CODES: ReadonlySet<V9FactGapV3["reasonCode"]> = new Set([
+  "material-bridge-supply-unmatched",
+  "missing-bridge-route-rows",
+  "missing-bridge-routes",
+  "nonmaterial-bridge-supply-unmatched",
+  "runtime-bridge-materiality-unavailable",
+  "selected-bridge-route-missing",
+  "selected-bridge-route-unresolved",
+]);
+
+/**
+ * A gap is bridge-scoped when its reason is one of the bridge codes, or when it
+ * hangs off a deployment control the producer compiled as a bridge control
+ * (`unresolved-control-identity` on a bridge row is the common case).
+ */
+function gapIsBridgeScoped(asset: V9AssetFactsV3, gap: V9FactGapV3): boolean {
+  if (V9_BRIDGE_JOIN_REASON_CODES.has(gap.reasonCode)) return true;
+  const path = gap.path;
+  if (path.kind !== "deployment-control") return false;
+  const control = asset.controls.find((candidate) => candidate.controlKey === path.controlKey);
+  return control?.controlKind === "bridge";
+}
+
+function bridgeJoinForAsset(
+  asset: V9AssetFactsV3,
+  materialShareThreshold: number,
+  commonModeShareThreshold: number,
+): V9EvidenceGapBridgeJoinV1 {
+  const bridge = asset.economicControlReview.bridge;
+  const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
+    asset,
+    asset.controls,
+    bridge.routes,
+    materialShareThreshold,
+    commonModeShareThreshold,
+  );
+  return {
+    diagnostics: bridge.diagnostics ?? null,
+    subthresholdUnresolvedJoin: {
+      complete: join.complete,
+      cause: join.cause === null ? null : { ...join.cause, controlKeys: [...join.cause.controlKeys] },
+    },
+  };
+}
+
 function queueKey(asset: V9AssetFactsV3, gap: V9FactGapV3): string {
   return sha256Hex(
     stableJsonStringifyV1({
@@ -233,8 +286,14 @@ export function buildV9EvidenceGapQueue(args: {
   const factSetRead = readCompiledV9FactSetForEvaluation(args.factSet);
   const factSet = factSetRead.factSet;
   assertV9ValidatedPolicyEnvelope(args.policy);
-  const unordered = factSet.assets.flatMap((asset) =>
-    asset.gaps.map((gap) => {
+  const materiality = args.policy.policy.semantic.materiality;
+  const materialShareThreshold = materiality.deploymentMaterialSharePct / 100;
+  const unordered = factSet.assets.flatMap((asset) => {
+    // One join evaluation per asset, shared by every bridge-scoped gap on it.
+    let assetBridgeJoin: V9EvidenceGapBridgeJoinV1 | null = null;
+    const bridgeJoin = (): V9EvidenceGapBridgeJoinV1 =>
+      (assetBridgeJoin ??= bridgeJoinForAsset(asset, materialShareThreshold, materiality.commonModeShareThreshold));
+    return asset.gaps.map((gap) => {
       const reasonPolicy = resolveV9ReasonPolicy(args.policy, gap.reasonCode);
       const policyBindingIssues: V9EvidenceGapPolicyBindingIssue[] = [];
       if (reasonPolicy.reason.ownerDomain !== gap.ownerDomain) {
@@ -280,10 +339,11 @@ export function buildV9EvidenceGapQueue(args: {
         message: gap.message,
         evidenceRefIds: gap.evidenceRefIds,
         responsibility: gap.responsibility,
+        bridgeJoin: gapIsBridgeScoped(asset, gap) ? bridgeJoin() : null,
       } satisfies Omit<V9EvidenceGapQueueEntryV2, "priority">;
       return entry;
-    }),
-  );
+    });
+  });
   const entries = unordered.sort(comparePriority).map((entry, index) => ({ ...entry, priority: index + 1 }));
   const domainCounts = countBy(entries.map((entry) => entry.ownerDomain)).map(({ key, count }) => ({
     domain: key,

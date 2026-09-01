@@ -1088,6 +1088,8 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       },
       bridgeClaimControls: [],
       applicabilityBranch: "native-only-not-applicable",
+      // The not-applicable branch never reaches the sub-threshold join proof.
+      unprovenRouteJoins: [],
     });
   });
 
@@ -1139,6 +1141,48 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       },
       applicabilityBranch: "applicable",
     });
+    // ODR-D5a: the four native rows join bridge controls, and the $1 unmatched
+    // row is at the common-mode floor, so all five are named as unproven with
+    // their deploymentRouteKey — the diagnostic that was previously absent.
+    expect(
+      adapted.review.diagnostics?.unprovenRouteJoins.map((row) => row.deploymentRouteKey),
+    ).toEqual([
+      ...routes.map((candidate) => candidate.id).sort(),
+      "unmatched-chain:fusd-finchain:future-network",
+    ].sort());
+  });
+
+  it("records no unproven bridge row when every selected row is a tolerated dust remainder", () => {
+    // ODR-D5a: the two forgiven sub-threshold branches must stay silent, so a
+    // clean asset does not grow a diagnostics payload it cannot act on.
+    const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
+    const routes = profile.routes ?? [];
+    const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
+      selectedBridgeRoutes: [
+        {
+          deploymentRouteKey: "unmatched-chain:fusd-finchain:future-network",
+          supplyUsd: 1,
+          supplyShare: 0.0001,
+          reviewState: "unmatched" as const,
+        },
+      ],
+      selectedRouteSupplyShare: 0,
+      unknownRouteSupplyShare: 0.0001,
+      unreviewedRouteSupplyShare: 0,
+      failureDomains: [],
+    };
+    const chainRows = Object.fromEntries([
+      ...routes.map((candidate) => [candidate.destinationChain, { current: 1 }]),
+      ["Future Network", { current: 1 }],
+    ]);
+    const adapted = adaptBridgeFixture(
+      meta("fusd-finchain", { bridgeRouteRisk: profile }),
+      supplyReview,
+      chainRows,
+      v9TestClockSec(),
+    );
+
+    expect(adapted.review.diagnostics?.unprovenRouteJoins).toEqual([]);
   });
 
   it("keeps a reviewed representation route bridge-applicable", () => {

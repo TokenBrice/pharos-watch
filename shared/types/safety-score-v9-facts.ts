@@ -844,7 +844,29 @@ const V9BridgeRouteControlReviewV2Schema = z
   })
   .strict();
 
-const V9BridgeJoinDiagnosticsV1Schema = z
+/**
+ * ODR-D5a: a selected supply row the producer cannot show joined to one proven
+ * bridge control. Only rows the evaluator's completeness proof can actually
+ * fail on are recorded — the tolerated sub-threshold branches (RULED D-J pool,
+ * sub-material unmatched dust) are omitted, so this stays empty for a clean
+ * asset and names the residue for a carrier. Diagnostic only: nothing here
+ * reaches a score, a reason, or a cap.
+ */
+const V9BridgeSupplyRouteJoinV1Schema = z
+  .object({
+    deploymentRouteKey: CanonicalTextSchema,
+    reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]),
+    reviewedRouteKind: z.enum(["native", "controlled"]).nullable(),
+    supplyShare: FractionSchema,
+    joinedControlKeys: CanonicalStringArraySchema,
+    /** Null when the row joins no single control to describe. */
+    joinedControlSemanticsResolved: z.boolean().nullable(),
+    joinedControlSupplyShare: FractionSchema.nullable(),
+  })
+  .strict();
+export type V9BridgeSupplyRouteJoinV1 = z.infer<typeof V9BridgeSupplyRouteJoinV1Schema>;
+
+export const V9BridgeJoinDiagnosticsV1Schema = z
   .object({
     profileRouteCount: z.number().int().nonnegative(),
     canonicalSupplyRowCount: z.number().int().nonnegative(),
@@ -859,6 +881,12 @@ const V9BridgeJoinDiagnosticsV1Schema = z
       .strict(),
     bridgeClaimControls: CanonicalStringArraySchema,
     applicabilityBranch: z.enum(["native-only-not-applicable", "applicable"]),
+    // Retained facts predate this field; an absent list is "not recorded",
+    // which is why it defaults to empty rather than being required.
+    unprovenRouteJoins: canonicalArrayBy(
+      V9BridgeSupplyRouteJoinV1Schema,
+      (row) => row.deploymentRouteKey,
+    ).default([]),
   })
   .strict();
 export type V9BridgeJoinDiagnosticsV1 = z.infer<typeof V9BridgeJoinDiagnosticsV1Schema>;
