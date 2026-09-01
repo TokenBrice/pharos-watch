@@ -406,7 +406,6 @@ async function observeHoneyFactoryRedemptionCapacity(
         custodyInfo,
         index,
         isPegged,
-        liquidityHolder,
         redeemRate,
         relativeCap,
         vault,
