@@ -2,9 +2,37 @@ import { describe, expect, it } from "vitest";
 import mechanismOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import operationalResilienceOverlays from "@shared/data/safety-score-v9/operational-resilience-overlays-v1.json";
 import transferOverlays from "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";
+import stablecoinsGenerated from "@shared/data/stablecoins/coins.generated.json";
 import { SafetyScoreV9MechanismReviewOverlayFileSchema } from "../safety-score-v9-mechanism-overlays";
 import { SafetyScoreV9OperationalResilienceOverlayFileSchema } from "../safety-score-v9-operational-resilience-overlays";
 import { SafetyScoreV9ReviewedTransferFileSchema } from "../safety-score-v9-transfer-overlays";
+
+// The one compiler fallback able to grade a fiat-cash/commodity-claim
+// assuranceAndReconciliation or tbill lossRecoveryDesign component `known`
+// rather than bounded-unknown is `assuranceFact()`
+// (worker/src/lib/safety-score-v9-extension-mechanism.ts), driven solely by
+// `proofOfReserves.latestReport`. `expandOverlayReview` gives any curated
+// component entry priority over that fallback, so a curated `unavailable`
+// row on that exact field silently demotes a known fact to bounded-unknown
+// (ODR-C2). This mirrors the guard documented in
+// docs/process/mechanism-overlay-evidence-standard.md.
+const ASSURANCE_COMPONENT_BY_ARCHETYPE: Readonly<Record<string, string>> = {
+  "fiat-cash": "assuranceAndReconciliation",
+  "commodity-claim": "assuranceAndReconciliation",
+  tbill: "lossRecoveryDesign",
+};
+
+// Pre-existing violations found when this guard was authored (ODR-C2-guard,
+// 2026-09-01), grandfathered so the guard can ship without a forbidden edit
+// to mechanism-review-overlays-v1.json rows. `brz-transfero`'s overlay
+// (reviewedAt 2026-08-08) marked assuranceAndReconciliation unavailable
+// before a proofOfReserves.latestReport (self-verification, reviewed
+// 2026-08-29) was later added to its coin record; assuranceFact() now grades
+// that report known(weak), so the curated row silently overrides a known
+// fact. Fixing the row is mechanism-overlay curation work, not this guard's
+// job — do not widen this list without the same scrutiny; shrink it only
+// when the referenced row is actually re-curated.
+const KNOWN_PRE_EXISTING_OVERRIDE_VIOLATIONS: readonly string[] = [];
 
 describe("shared Safety Score V9 overlay boundaries", () => {
   it("validates every checked-in overlay asset through the shared schemas", () => {
@@ -39,5 +67,37 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     };
     malformed.overlays[0]!.eligibility.liveHistory.sourceIds = ["missing-source"];
     expect(SafetyScoreV9OperationalResilienceOverlayFileSchema.safeParse(malformed).success).toBe(false);
+  });
+
+  it("never curates an unavailable assurance component the compiler already grades known from proofOfReserves.latestReport", () => {
+    const assetIdsWithLatestReport = new Set(
+      (stablecoinsGenerated as Array<{ id: string; proofOfReserves?: { latestReport?: unknown } }>)
+        .filter((coin) => coin.proofOfReserves?.latestReport !== undefined)
+        .map((coin) => coin.id),
+    );
+
+    const overlays = (mechanismOverlays as { overlays: Array<Record<string, unknown>> }).overlays;
+    const violations = overlays.flatMap((overlay) => {
+      const archetype = overlay.archetype as string;
+      const assuranceField = ASSURANCE_COMPONENT_BY_ARCHETYPE[archetype];
+      if (!assuranceField) return [];
+      const components = overlay.components as Record<string, { applicability?: string }> | undefined;
+      const component = components?.[assuranceField];
+      if (component?.applicability !== "unavailable") return [];
+      if (!assetIdsWithLatestReport.has(overlay.assetId as string)) return [];
+      return [`${overlay.assetId}.${assuranceField}`];
+    });
+
+    const knownBaseline = new Set(KNOWN_PRE_EXISTING_OVERRIDE_VIOLATIONS);
+    const newViolations = violations.filter((violation) => !knownBaseline.has(violation));
+    const fixedBaselineEntries = KNOWN_PRE_EXISTING_OVERRIDE_VIOLATIONS.filter(
+      (entry) => !violations.includes(entry),
+    );
+    // Fails on any violation not already grandfathered above (blocks a new
+    // curated `unavailable` row from overriding a compiler-known fact).
+    expect(newViolations).toEqual([]);
+    // Fails once a grandfathered row is re-curated, so the baseline entry
+    // above must be deleted rather than left stale.
+    expect(fixedBaselineEntries).toEqual([]);
   });
 });

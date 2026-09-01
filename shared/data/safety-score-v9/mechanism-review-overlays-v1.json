@@ -9783,7 +9783,7 @@
           "url": "https://docs.transfero.com/"
         }
       ],
-      "notes": "Reviewed 2026-08-08. Transfero's product page reports R$15.2 million of collateral against R$12.3 million circulating and says BRZ is redeemable 1:1 through regulated partners. The only downloadable reserve report is an issuer-produced snapshot dated 2024-03-31, and the whitepaper describes separate reserve managers but supplies no holder trust, segregated-account instrument, or current external anchor for the reserve claim. claimAndSegregation is therefore unavailable under the fiat-cash evidence standard, not stretched to limited. The report names only an unidentified BCB-authorized institution and publishes no continuity terms, so custodyContinuity is unavailable. The product's Parsiq reference concerns blockchain monitoring, not financial reserve assurance, and the sole reserve statement is stale and self-produced; assuranceAndReconciliation is unavailable.",
+      "notes": "Reviewed 2026-08-08. Transfero's product page reports R$15.2 million of collateral against R$12.3 million circulating and says BRZ is redeemable 1:1 through regulated partners. The only downloadable reserve report is an issuer-produced snapshot dated 2024-03-31, and the whitepaper describes separate reserve managers but supplies no holder trust, segregated-account instrument, or current external anchor for the reserve claim. claimAndSegregation is therefore unavailable under the fiat-cash evidence standard, not stretched to limited. The report names only an unidentified BCB-authorized institution and publishes no continuity terms, so custodyContinuity is unavailable. The product's Parsiq reference concerns blockchain monitoring, not financial reserve assurance. assuranceAndReconciliation is intentionally omitted as of 2026-09-01: a proofOfReserves.latestReport (self-verification, recorded 2026-08-29) now exists on the coin record and auto-resolves the component as known-weak, superseding the earlier unavailable adjudication that predated it.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -9795,11 +9795,6 @@
           "applicability": "unavailable",
           "rationale": "Searched https://transfero.com/brz-stablecoin, the March 2024 reserve report at https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf, the whitepaper, and https://docs.transfero.com/. The reserve institution and reserve managers are not identified, and no allocation, anti-rehypothecation, failure, replacement, or successor-custody terms are published.",
           "sourceUrl": "https://docs.transfero.com/"
-        },
-        "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "Searched https://transfero.com/brz-stablecoin, https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf, and https://docs.transfero.com/. Only a stale 2024 issuer statement was found; Parsiq blockchain monitoring is not an independent financial reserve-to-liability examination, and no current dated independent reconciliation is published.",
-          "sourceUrl": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf"
         }
       }
     },
