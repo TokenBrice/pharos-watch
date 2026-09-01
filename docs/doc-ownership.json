@@ -105,6 +105,28 @@
       "exactPaths": ["src/components/home-blog-banner.tsx"]
     },
     {
+      "id": "editorial-style",
+      "label": "Editorial style policy and generated prompt",
+      "risk": "high",
+      "docsToRead": ["docs/editorial-style.md"],
+      "docsLikelyRequired": ["docs/editorial-style.md"],
+      "checks": ["npm run check:generated-artifacts -- --only=editorial-style"],
+      "hardRules": ["Edit the policy in docs/editorial-style.md and regenerate shared/lib/editorial-style.generated.ts; never hand-edit generated output.", "Keep shared/lib/editorial-style.ts runtime-neutral and derive prompt and scanner behavior from the generated policy."],
+      "prefixes": ["shared/lib/editorial-style"],
+      "exactPaths": ["docs/editorial-style.md", "scripts/maintenance/generate-editorial-style.ts"]
+    },
+    {
+      "id": "editorial-policy-corpus",
+      "label": "Editorial policy corpus gate",
+      "risk": "medium",
+      "docsToRead": ["docs/editorial-style.md", "docs/testing.md"],
+      "docsLikelyRequired": ["docs/editorial-style.md", "docs/testing.md"],
+      "checks": ["npx vitest run scripts/__tests__/editorial-policy.test.ts"],
+      "hardRules": ["Use docs/editorial-style.md as the only prose policy; do not add a second phrase list or parallel baseline inventory."],
+      "prefixes": ["scripts/lib/editorial-"],
+      "exactPaths": ["scripts/__tests__/editorial-policy.test.ts"]
+    },
+    {
       "id": "design-ui",
       "label": "Design or UI polish",
       "risk": "medium",
@@ -236,6 +258,18 @@
       "sources": ["src/data/blog/**", "src/app/blog/**", "src/app/feed/blog.xml/**", "src/components/home-blog-banner.tsx", "src/data/changelogs/**", "src/app/changelog/**"],
       "docs": ["docs/process/blog-publishing.md", "docs/og-images.md"],
       "notes": ["Registry metadata, post bodies, feed output, banner freshness, sitemap dates, and optional per-post cover/social images form one publishing contract.", "The weekly /changelog/ registry is the second surface in that doc: entry files, barrel, page JSON-LD, and the snapshot-tested markdown export move together."]
+    },
+    {
+      "name": "editorial-style",
+      "sources": ["docs/editorial-style.md", "shared/lib/editorial-style*.ts", "scripts/maintenance/generate-editorial-style.ts"],
+      "docs": ["docs/editorial-style.md", "docs/testing.md"],
+      "notes": ["The Markdown policy fence is authored; the generated module and runtime-neutral facade derive from it. Keep the generated artifact aligned with its source."]
+    },
+    {
+      "name": "editorial-policy-corpus",
+      "sources": ["scripts/lib/editorial-*", "scripts/__tests__/editorial-policy.test.ts"],
+      "docs": ["docs/editorial-style.md", "docs/testing.md"],
+      "notes": ["The corpus gate uses the canonical policy and stable record selectors; its focused test is the routing check for registered prose surfaces."]
     },
     {
       "name": "design-system",
