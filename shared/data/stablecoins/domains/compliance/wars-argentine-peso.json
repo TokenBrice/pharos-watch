@@ -27,7 +27,7 @@
       "summary": "wARS is a 1:1 Argentine-peso token intended to provide local-currency access, transfers, and mint/redeem functionality, so its token-level use is an apparent payment-stablecoin use case.",
       "references": [
         {
-          "label": "Ripio wFIAT — local stablecoins and 1:1 mint/redeem model",
+          "label": "Ripio wFIAT: local stablecoins and 1:1 mint/redeem model",
           "url": "https://www.ripio.com/en/wfiat",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"

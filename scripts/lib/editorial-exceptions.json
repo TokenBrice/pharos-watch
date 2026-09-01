@@ -3,39 +3,6 @@
   "exceptions": [
     {
       "surface": "domain-sidecars",
-      "record": "shared/data/stablecoins/domains/compliance/deuro-deuro/label=dEURO website — MiCA position: qualifies as crypto-asset under MiCA but Titles II–IV not applicable due to no central issuer (LEXR Germany Rechtsanwalts GmbH legal opinion)",
-      "field": "mica.references.*.label",
-      "ruleId": "no-clause-dash",
-      "excerpt": "–",
-      "fingerprints": ["94cca9e533c6c0db"],
-      "reason": "The cited legal title preserves the statutory section range Titles II–IV; changing the punctuation would alter the citation.",
-      "owner": "pharos",
-      "permanent": true
-    },
-    {
-      "surface": "domain-sidecars",
-      "record": "shared/data/stablecoins/domains/compliance/usda-alpha-partner/label=ESMA/European Commission MiCA Q&A: crypto-assets without an identifiable issuer do not fall under Titles II–IV",
-      "field": "mica.references.*.label",
-      "ruleId": "no-clause-dash",
-      "excerpt": "–",
-      "fingerprints": ["9ceaf59944388e26"],
-      "reason": "The cited legal title preserves the statutory section range Titles II–IV; changing the punctuation would alter the citation.",
-      "owner": "pharos",
-      "permanent": true
-    },
-    {
-      "surface": "domain-sidecars",
-      "record": "shared/data/stablecoins/domains/compliance/wm-m0/label=ESMA/European Commission MiCA Q&A: crypto-assets without an identifiable issuer do not fall under Titles II–IV",
-      "field": "mica.references.*.label",
-      "ruleId": "no-clause-dash",
-      "excerpt": "–",
-      "fingerprints": ["9ceaf59944388e26"],
-      "reason": "The cited legal title preserves the statutory section range Titles II–IV; changing the punctuation would alter the citation.",
-      "owner": "pharos",
-      "permanent": true
-    },
-    {
-      "surface": "domain-sidecars",
       "record": "shared/data/stablecoins/domains/mint-authority/a7a5-old-vector",
       "field": "mintAuthority.review.evidence",
       "ruleId": "no-clause-dash",

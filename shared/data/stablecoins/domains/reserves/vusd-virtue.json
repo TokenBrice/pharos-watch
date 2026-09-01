@@ -79,7 +79,7 @@
         "url": "https://api.mainnet.iota.cafe"
       },
       {
-        "label": "IOTA mainnet GraphQL — NativePool and cert::Metadata object reads",
+        "label": "IOTA mainnet GraphQL: NativePool and cert::Metadata object reads",
         "url": "https://graphql.mainnet.iota.cafe"
       },
       {

@@ -58,7 +58,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Anzen protocol contracts — SPCT pool 0xf30a29f1c540724fd8c5c4be1af604a6c6800d29 (Ethereum); no disclosed third-party custodian for on-chain reserves",
+        "name": "Anzen protocol contracts, SPCT pool 0xf30a29f1c540724fd8c5c4be1af604a6c6800d29 (Ethereum); no disclosed third-party custodian for on-chain reserves",
         "role": "other",
         "sharePct": 100,
         "jurisdiction": "British Virgin Islands"

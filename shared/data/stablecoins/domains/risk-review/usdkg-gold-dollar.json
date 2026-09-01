@@ -20,7 +20,7 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "ConsenSys Diligence — USDKG smart contract audit (Jan 2025): standalone Tether-style token, issue()/redeem() mint/burn by owners, blacklist + destroyBlackFunds, no bridge in scope",
+        "label": "ConsenSys Diligence USDKG smart contract audit (Jan 2025): standalone Tether-style token, issue()/redeem() mint/burn by owners, blacklist + destroyBlackFunds, no bridge in scope",
         "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
       },
       {

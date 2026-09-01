@@ -23,7 +23,7 @@ describe("coverage audit byte goldens", () => {
       build: () => buildDependencyCoverageAudit({ generatedAt }),
       markdown: renderDependencyCoverageAuditMarkdown,
       markdownSha: "ae44f8f08fb6fe2d5573d4f55c7f1489e18b069346dd75a7b342b9e0c464fe7e",
-      jsonSha: "70e156f9e9e286c23f7e85987ccbfd39bf6b993c364a71e98e58928c01efc3f3",
+      jsonSha: "c898a7bef9008b5948190b1f9041ffa777d88b692b1e3e744171220500dc20ce",
     },
     {
       name: "reserve",

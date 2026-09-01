@@ -16,7 +16,7 @@
           "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/update_asset/"
         },
         {
-          "label": "Zano docs — deploy_asset (asset descriptor: owner, total_max_supply)",
+          "label": "Zano docs: deploy_asset (asset descriptor: owner, total_max_supply)",
           "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/deploy_asset/"
         },
         {
@@ -81,7 +81,7 @@
           "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/update_asset/"
         },
         {
-          "label": "Zano docs — deploy_asset (asset descriptor: owner, total_max_supply)",
+          "label": "Zano docs: deploy_asset (asset descriptor: owner, total_max_supply)",
           "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/deploy_asset/"
         },
         {
