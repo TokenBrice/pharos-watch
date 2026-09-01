@@ -204,6 +204,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "D1 status state, transitions, and probe rows are authoritative; this is log-noise suppression only.",
   },
   {
+    sourcePath: "worker/src/lib/worker-version-first-seen.ts",
+    stateNames: ["scheduledVersionFirstSeenAttemptedInIsolate"],
+    owner: "Scheduled Worker-version first-seen diagnostics",
+    kind: "coordination",
+    resetOrTtl: "Set after the first scheduled marker attempt and reset on isolate recycle or deploy.",
+    durableTruth: "The write-once D1 worker-version-first-seen cache row is authoritative; this flag only suppresses repeat attempts in one isolate.",
+  },
+  {
     sourcePath: "worker/src/lib/telegram-log.ts",
     stateNames: [
       "invalidSecretWindowStartedAt",
