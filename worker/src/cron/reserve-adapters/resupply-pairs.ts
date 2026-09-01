@@ -3,19 +3,19 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import { throwIfAborted } from "../../lib/abort";
-import { mapWithConcurrency } from "../../lib/concurrency";
 import type { AdapterContext, AdapterResult } from "./types";
 import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  makeOnchainCallers,
+  fetchOnchainMulticall3,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
 import { decodeAddressWord, decodeUint256Word } from "./abi-decode";
 import { normalizeEvmAddress } from "./evm";
+import { multicallResultByLabel } from "./onchain-identity";
 
 interface ResupplyUnderlyingDescriptor {
   address: string;
@@ -59,7 +59,6 @@ const GUARD_ENABLED_SELECTOR = "0x901654fc";
 const PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR = "0x0e3d9f3c";
 const REUSD_ORACLE_PRICE_SELECTOR = "0xc6af1dda";
 const UNDERLYING_DECIMALS = 18;
-const PAIR_FETCH_CONCURRENCY = 2;
 
 interface RedemptionGuardSnapshot {
   guardEnabled: boolean;
@@ -281,57 +280,124 @@ export async function fetchResupplyPairsReserves(
   if (!params.pairs || params.pairs.length === 0) {
     throw new Error("resupply-pairs requires at least one configured pair");
   }
-  const onchain = makeOnchainCallers(input, {
+  const callOptions = {
+    chain: input.chain,
     signal,
     ctx,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
     timeoutMs: 12_000,
+  };
+
+  const redemptionHandlerAddress = params.redemptionHandlerAddress
+    ? parseConfiguredAddress(params.redemptionHandlerAddress, "redemption handler")
+    : undefined;
+  const pairs = params.pairs.map((pair, index) => {
+    throwIfAborted(signal);
+    return {
+      ...pair,
+      index,
+      pairAddress: parseConfiguredAddress(pair.address, `configured pair ${pair.key}`),
+    };
   });
 
-  let redemptionHandlerAddress: `0x${string}` | undefined;
-  let guard: RedemptionGuardSnapshot | undefined;
-  if (params.redemptionHandlerAddress) {
-    redemptionHandlerAddress = parseConfiguredAddress(params.redemptionHandlerAddress, "redemption handler");
-    const [rawGuardEnabled, rawThreshold, rawOraclePrice] = await Promise.all([
-      onchain.raw(redemptionHandlerAddress, GUARD_ENABLED_SELECTOR),
-      onchain.raw(redemptionHandlerAddress, PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR),
-      onchain.raw(redemptionHandlerAddress, REUSD_ORACLE_PRICE_SELECTOR),
-    ]);
-    guard = {
-      guardEnabled: decodeBooleanResult(rawGuardEnabled, `guardEnabled() for ${redemptionHandlerAddress}`),
-      permissionlessPriceThreshold: decodeUint256Result(
-        rawThreshold,
-        `permissionlessPriceThreshold() for ${redemptionHandlerAddress}`,
-      ),
-      reUsdOraclePrice: decodeUint256Result(rawOraclePrice, `reUsdOraclePrice() for ${redemptionHandlerAddress}`),
-    };
+  const firstStage = await fetchOnchainMulticall3({
+    ...callOptions,
+    calls: [
+      ...(redemptionHandlerAddress
+        ? [
+            { label: "guard-enabled", contract: redemptionHandlerAddress, data: GUARD_ENABLED_SELECTOR },
+            {
+              label: "permissionless-price-threshold",
+              contract: redemptionHandlerAddress,
+              data: PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR,
+            },
+            { label: "reusd-oracle-price", contract: redemptionHandlerAddress, data: REUSD_ORACLE_PRICE_SELECTOR },
+          ]
+        : []),
+      ...pairs.flatMap(({ index, pairAddress }) => [
+        { label: `pair:${index}:underlying`, contract: pairAddress, data: UNDERLYING_SELECTOR },
+        { label: `pair:${index}:accounting`, contract: pairAddress, data: GET_PAIR_ACCOUNTING_SELECTOR },
+        { label: `pair:${index}:collateral`, contract: pairAddress, data: COLLATERAL_SELECTOR },
+        ...(redemptionHandlerAddress
+          ? [{
+              label: `pair:${index}:max-redeemable-debt`,
+              contract: redemptionHandlerAddress,
+              data: encodeGetMaxRedeemableDebtCall(pairAddress),
+            }]
+          : []),
+      ]),
+    ],
+  });
+  if (!firstStage) {
+    throw new Error("resupply-pairs first-stage multicall failed");
   }
 
-  const snapshots = await mapWithConcurrency(params.pairs, PAIR_FETCH_CONCURRENCY, async (pair) => {
-    throwIfAborted(signal);
-    const pairAddress = parseConfiguredAddress(pair.address, `configured pair ${pair.key}`);
-    const [rawUnderlying, rawAccounting, rawMaxRedeemableDebt] = await Promise.all([
-      onchain.raw(pairAddress, UNDERLYING_SELECTOR),
-      onchain.raw(pairAddress, GET_PAIR_ACCOUNTING_SELECTOR),
-      redemptionHandlerAddress
-        ? onchain.raw(redemptionHandlerAddress, encodeGetMaxRedeemableDebtCall(pairAddress))
-        : Promise.resolve(null),
-    ]);
-    const underlyingAddress = parseAddressResult(rawUnderlying, `underlying() for ${pairAddress}`);
-    const accounting = decodePairAccounting(rawAccounting, pairAddress);
-    const rawCollateral = await onchain.raw(pairAddress, COLLATERAL_SELECTOR);
-    const collateralAddress = parseAddressResult(rawCollateral, `collateral() for ${pairAddress}`);
-    const rawCollateralAssets = await onchain.raw(
-      collateralAddress,
-      encodeConvertToAssetsCall(accounting.totalCollateral),
-    );
+  const guard: RedemptionGuardSnapshot | undefined = redemptionHandlerAddress
+    ? {
+        guardEnabled: decodeBooleanResult(
+          multicallResultByLabel(firstStage, "guard-enabled"),
+          `guardEnabled() for ${redemptionHandlerAddress}`,
+        ),
+        permissionlessPriceThreshold: decodeUint256Result(
+          multicallResultByLabel(firstStage, "permissionless-price-threshold"),
+          `permissionlessPriceThreshold() for ${redemptionHandlerAddress}`,
+        ),
+        reUsdOraclePrice: decodeUint256Result(
+          multicallResultByLabel(firstStage, "reusd-oracle-price"),
+          `reUsdOraclePrice() for ${redemptionHandlerAddress}`,
+        ),
+      }
+    : undefined;
+
+  const pairState = pairs.map(({ index, pairAddress, ...pair }) => ({
+    ...pair,
+    index,
+    pairAddress,
+    underlyingAddress: parseAddressResult(
+      multicallResultByLabel(firstStage, `pair:${index}:underlying`),
+      `underlying() for ${pairAddress}`,
+    ),
+    collateralAddress: parseAddressResult(
+      multicallResultByLabel(firstStage, `pair:${index}:collateral`),
+      `collateral() for ${pairAddress}`,
+    ),
+    accounting: decodePairAccounting(
+      multicallResultByLabel(firstStage, `pair:${index}:accounting`),
+      pairAddress,
+    ),
+    rawMaxRedeemableDebt: redemptionHandlerAddress
+      ? multicallResultByLabel(firstStage, `pair:${index}:max-redeemable-debt`)
+      : null,
+  }));
+
+  const secondStage = await fetchOnchainMulticall3({
+    ...callOptions,
+    calls: pairState.map(({ index, collateralAddress, accounting }) => ({
+      label: `pair:${index}:collateral-assets`,
+      contract: collateralAddress,
+      data: encodeConvertToAssetsCall(accounting.totalCollateral),
+    })),
+  });
+  if (!secondStage) {
+    throw new Error("resupply-pairs collateral conversion multicall failed");
+  }
+
+  const snapshots = pairState.map(({
+    index,
+    key,
+    pairAddress,
+    underlyingAddress,
+    collateralAddress,
+    accounting,
+    rawMaxRedeemableDebt,
+  }) => {
     const totalCollateralAssets = decodeUint256Result(
-      rawCollateralAssets,
+      multicallResultByLabel(secondStage, `pair:${index}:collateral-assets`),
       `convertToAssets() for ${collateralAddress}`,
     );
     return {
-      pairKey: pair.key,
+      pairKey: key,
       pairAddress,
       underlyingAddress,
       collateralAddress,

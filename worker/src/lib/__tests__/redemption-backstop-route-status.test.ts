@@ -63,6 +63,23 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.capsApplied).toEqual(["market-implied-depeg-impairment"]);
   });
 
+  it("withholds the route under uncertain current market evidence", () => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      severeMarketImplied: severeMarketEvidence({
+        routeStatus: "unknown",
+        routeStatusReason: "Open incident has no fresh authoritative current deviation",
+        activeDepegBps: undefined,
+      }),
+      allowSevereMarketOpenException: false,
+    });
+
+    expect(result.routeStatus).toBe("unknown");
+    expect(result.routeStatusSource).toBe("market-implied");
+    expect(result.impaired).toBe(true);
+    expect(result.capsApplied).toEqual(["market-implied-depeg-evidence-uncertain"]);
+  });
+
   it("lets strong live-direct routes keep live-open evidence during severe market impairment", () => {
     const result = mergeRedemptionRouteStatus({
       staticEvidence: staticOpen,
@@ -97,10 +114,9 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.capsApplied).toEqual(["market-implied-depeg-impairment"]);
   });
 
-  it("lets the strong live-direct exception survive on static evidence alone when the resolved flag is set", () => {
-    // The exception flag is computed by the entry builder from the FINAL
-    // resolved capacity state; the merge honors it regardless of which
-    // evidence channel carried the open status.
+  it("honors a producer-approved strong live-direct exception", () => {
+    // The entry builder sets this flag only when the final live-direct capacity
+    // state also carries explicit live-open status.
     const result = mergeRedemptionRouteStatus({
       staticEvidence: staticOpen,
       severeMarketImplied: severeMarketEvidence(),

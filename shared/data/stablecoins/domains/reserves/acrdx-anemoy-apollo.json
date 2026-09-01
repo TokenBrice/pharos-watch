@@ -2,11 +2,11 @@
   "id": "acrdx-anemoy-apollo",
   "reserves": [
     {
-      "name": "Apollo Diversified Credit-I Fund shares",
-      "pct": 97.11,
+      "name": "Apollo Diversified Credit Fund NAV",
+      "pct": 100,
       "risk": "high",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Apollo Diversified Credit Fund, advised by Apollo Global Management",
+      "issuerOrObligor": "Apollo Diversified Credit Fund, advised by Apollo Global Management; tokenized through the Anemoy Capital SPC feeder on Centrifuge",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -16,37 +16,11 @@
         "concentration"
       ],
       "liquidityHorizon": "over-seven-days"
-    },
-    {
-      "name": "Cash",
-      "pct": 2.73,
-      "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "Anemoy fund cash accounts; counterparties not disclosed",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Unspecified cryptocurrency balance",
-      "pct": 0.16,
-      "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Asset identity not disclosed by Chronicle",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Grok wave8 phase1 reserve re-verify; Kimi R05 bounded-unknown acceptance",
+    "reviewedAt": "2026-09-01",
+    "reviewer": "Grok wave8 phase1 reserve re-verify; Kimi R05 bounded-unknown acceptance; Claude ODR-E9 live-granularity join repair",
     "confidence": "verified",
     "sources": [
       {
@@ -70,33 +44,19 @@
         "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
       }
     ],
-    "rationale": "Write-time re-open of Chronicle's live Apollo ACRDX Proof of Asset dashboard on 2026-08-08 confirms the same three category buckets reported on 2026-07-28: Apollo Diversified Credit-I Fund shares, cash, and an unidentified cryptocurrency balance. Two-decimal weights remain 97.11%, 2.73%, and 0.16% (sum 100). The 0.16% cryptocurrency slice is verified by Chronicle only at the aggregate level; the underlying token is not identified. Because the exposure is small (well below 1% of gross holdings) and no further granular disclosure is available, it is accepted as a bounded known-unknown rather than blocking the entire reserve review. Cash counterparties and the gross-holdings-to-NAV residual also remain undisclosed.",
-    "compositionBasis": "Chronicle-verified gross feeder-fund holdings, reconciled to ACRDX NAV and on-chain Chronicle VAO Poked value; the 2026-08-08 re-open confirmed the same weights reported by the 2026-07-27 attestation",
+    "rationale": "The ACRDX live-reserve producer is the single-asset chronicle-nav adapter: it reads the Chronicle VAO Poked NAV for the token and publishes exactly one exposure, labelled \"Apollo Diversified Credit Fund NAV\", at 100%. The reviewed composition previously carried the Chronicle feeder-level category split (Apollo Diversified Credit-I Fund shares 97.11%, cash 2.73%, unidentified cryptocurrency 0.16% as at 2026-07-27, re-confirmed on the live dashboard 2026-08-08), so no reviewed row matched the captured exposure by name and the whole 34%-weight slice compiled without an assetClass or a failure domain. The composition is restated at the granularity the producer actually captures, matching the shape used for every other single-asset NAV adapter in the registry and for the identical Apollo fund under acred-apollo-securitize. The exposure is a fund share on the Apollo Diversified Credit Fund, held through the Anemoy Capital SPC feeder; the feeder's own category split is the look-through recorded above, and the fund's obligor-level schedule is not published, so the aggregate row keeps a basket-needs-split disposition rather than asserting a resolved obligor list.",
+    "compositionBasis": "Chronicle Proof of Asset NAV for ACRDX as captured by the production chronicle-nav single-asset adapter (one 100% exposure), interpreted with the Chronicle-verified gross feeder-fund holdings reconciled to ACRDX NAV at the 2026-07-27 attestation and re-opened 2026-08-08",
     "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "Chronicle labels USD 70,838.76, or 0.16% of gross holdings, only as cryptocurrency; it does not identify the token. Cash counterparties, the look-through obligor schedule inside the Apollo fund share, and the ~USD 39,473 gross-holdings-to-NAV difference are also unexplained, while the feeder-level asset categories and weights are reported.",
-    "knownUnknownExposurePct": 0.16,
+    "knownUnknownExposure": "The captured exposure is a single unsplit fund NAV. Within it, Chronicle reports the feeder-level categories (Apollo Diversified Credit-I Fund shares 97.11%, cash 2.73%, cryptocurrency 0.16%) but identifies neither the USD 70,838.76 cryptocurrency balance's token, nor the cash counterparties, nor the ~USD 39,473 gross-holdings-to-NAV difference, and the Apollo fund's obligor-level schedule is not published at all. The whole NAV row is therefore carried as an unsplit basket.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Apollo Diversified Credit-I Fund shares",
-        "pct": 97.11,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The backing asset is an identified Apollo fund share rather than a Pharos-tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Cash",
-        "pct": 2.73,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Cash is an exogenous reserve asset; the current feeder-fund weight is independently verified even though bank counterparties are not disclosed."
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "Unspecified cryptocurrency balance",
-        "pct": 0.16,
+        "reserveName": "Apollo Diversified Credit Fund NAV",
+        "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Chronicle verifies the aggregate cryptocurrency value but does not identify the constituent token. The exposure is bounded at 0.16% of gross holdings, so the reserve review proceeds with an explicit basket-needs-split disposition rather than blocking on this slice."
+        "rationale": "The exposure is an identified Apollo fund share rather than a Pharos-tracked stablecoin dependency, but it is captured as one aggregate NAV whose underlying obligor schedule is not published. The Chronicle feeder categories are recorded in knownUnknownExposure; they are not a per-obligor split, so the row stays explicitly unsplit."
       }
     ]
   },

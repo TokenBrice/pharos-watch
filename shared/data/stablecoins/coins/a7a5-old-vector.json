@@ -51,11 +51,6 @@
       "chain": "tron",
       "address": "TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ",
       "decimals": 6
-    },
-    {
-      "chain": "ethereum",
-      "address": "0xF442fF10b8deF89514560A66C0AD28777094636a",
-      "decimals": 6
     }
   ],
   "custodyModel": "institutional-unregulated",

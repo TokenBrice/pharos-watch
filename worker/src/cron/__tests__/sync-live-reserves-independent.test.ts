@@ -271,19 +271,32 @@ describe("syncLiveReserves", () => {
     expect(scoringMap.has(coin.id)).toBe(false);
   });
 
-  it("does not let scoring source-age overrides weaken adapter freshness policy", async () => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) =>
+  it("keeps stale source-age warnings degrading even when the warning code is allowlisted", async () => {
+    const configuredCoin = ACTIVE_STABLECOINS.find((candidate) =>
       candidate.liveReservesConfig?.adapter === "mento"
       && candidate.liveReservesConfig.scoring?.maxSourceAgeSec === 4_000_000
     ) as ConfiguredCoin | undefined;
-    expect(coin).toBeDefined();
+    expect(configuredCoin).toBeDefined();
+    const coin = {
+      ...configuredCoin!,
+      liveReservesConfig: {
+        ...configuredCoin!.liveReservesConfig,
+        scoring: {
+          ...configuredCoin!.liveReservesConfig.scoring,
+          allowedDegradedWarningCodes: [
+            ...(configuredCoin!.liveReservesConfig.scoring?.allowedDegradedWarningCodes ?? []),
+            "stale-source-data",
+          ],
+        },
+      },
+    } as ConfiguredCoin;
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
     const result = await syncReserveCoin({
       db,
-      coin: coin!,
+      coin,
       signal: new AbortController().signal,
-      adapter: adapterForCoin(coin!),
+      adapter: adapterForCoin(coin),
       runAdapter: async () => ({
         slices: [{ name: "Mento reserve", pct: 100, risk: "low" as const }],
         metadata: {
@@ -291,7 +304,7 @@ describe("syncLiveReserves", () => {
           sourceTimestamp: Math.floor(Date.now() / 1000) - 35 * 24 * 60 * 60,
         },
       }),
-      breakerCanFetch: new Map([[`live-reserves:${coin!.liveReservesConfig.breakerScope ?? coin!.liveReservesConfig.adapter}`, true]]),
+      breakerCanFetch: new Map([[`live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`, true]]),
       d1FinalizeTimeoutMs: 30_000,
       previousState: null,
     });
@@ -307,7 +320,7 @@ describe("syncLiveReserves", () => {
     )).toBe(true);
   });
 
-  it("keeps unverified reserve freshness unscoreable and degraded warnings degrading", async () => {
+  it("keeps an allowlisted degraded warning recorded while admitting the snapshot to scoring", async () => {
     const coin = ACTIVE_STABLECOINS.find((candidate) =>
       candidate.liveReservesConfig?.adapter === "reservoir"
       && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("unknown-position")
@@ -315,6 +328,7 @@ describe("syncLiveReserves", () => {
     expect(coin).toBeDefined();
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
+    const now = Math.floor(Date.now() / 1000);
     const result = await syncReserveCoin({
       db,
       coin: coin!,
@@ -322,7 +336,7 @@ describe("syncLiveReserves", () => {
       adapter: adapterForCoin(coin!),
       runAdapter: async () => ({
         slices: [{ name: "Reservoir reserve", pct: 100, risk: "low" as const }],
-        metadata: { freshnessMode: "unverified" as const },
+        metadata: { freshnessMode: "verified" as const, sourceTimestamp: now },
         warnings: [{
           code: "unknown-position",
           message: "Unmapped reserve position: new-farm",
@@ -340,10 +354,146 @@ describe("syncLiveReserves", () => {
       entry.sql.includes("UPDATE reserve_sync_state")
       && entry.sql.includes("last_success_at = ?")
     ));
-    expect(finalizeSuccess?.binds).toContain("degraded");
+    const compositionWrite = db.getHistory().find((entry) => (
+      entry.sql.includes("INSERT INTO reserve_composition (")
+    ));
+    expect(finalizeSuccess?.binds).toContain("ok");
     expect(finalizeSuccess?.binds.some((bind) =>
       typeof bind === "string" && bind.includes("unknown-position")
     )).toBe(true);
+    expect(compositionWrite?.binds.some((bind) =>
+      typeof bind === "string" && bind.includes("unknown-position")
+    )).toBe(true);
+
+    expect(finalizeSuccess).toBeDefined();
+    expect(compositionWrite).toBeDefined();
+    const persistedDb = mockLiveReserveD1([
+      {
+        match: "FROM reserve_sync_state",
+        rows: [{
+          stablecoin_id: coin!.id,
+          adapter_key: finalizeSuccess!.binds[0],
+          breaker_key: finalizeSuccess!.binds[1],
+          last_attempted_at: finalizeSuccess!.binds[2],
+          last_success_at: finalizeSuccess!.binds[3],
+          last_status: finalizeSuccess!.binds[4],
+          warning_count: finalizeSuccess!.binds[5],
+          warnings: finalizeSuccess!.binds[6],
+          last_error: finalizeSuccess!.binds[7],
+          metadata: finalizeSuccess!.binds[8],
+          last_attempt_id: finalizeSuccess!.binds[9],
+          pending_attempt_id: null,
+          last_success_attempt_id: finalizeSuccess!.binds[10],
+        }],
+      },
+      {
+        match: "FROM reserve_composition",
+        rows: [{
+          stablecoin_id: compositionWrite!.binds[0],
+          slices: compositionWrite!.binds[1],
+          fetched_at: compositionWrite!.binds[2],
+          source: compositionWrite!.binds[3],
+          attempt_id: compositionWrite!.binds[4],
+          metadata: compositionWrite!.binds[5],
+          warning_count: compositionWrite!.binds[6],
+          warnings: compositionWrite!.binds[7],
+          adapter_source_model: compositionWrite!.binds[8],
+          adapter_evidence_class: compositionWrite!.binds[9],
+        }],
+      },
+    ]);
+    const { loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves-store");
+    const scoringMap = await loadFreshIndependentLiveReserveMap(persistedDb, now);
+    expect(scoringMap.has(coin!.id)).toBe(true);
+  });
+
+  it("keeps the sync degraded when an allowlisted warning accompanies an unallowlisted warning", async () => {
+    const coin = ACTIVE_STABLECOINS.find((candidate) =>
+      candidate.liveReservesConfig?.adapter === "reservoir"
+      && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("unknown-position")
+    ) as ConfiguredCoin | undefined;
+    expect(coin).toBeDefined();
+    const { syncReserveCoin } = await import("../sync-live-reserves-core");
+    const db = mockLiveReserveD1();
+    const now = Math.floor(Date.now() / 1000);
+    const result = await syncReserveCoin({
+      db,
+      coin: coin!,
+      signal: new AbortController().signal,
+      adapter: adapterForCoin(coin!),
+      runAdapter: async () => ({
+        slices: [{ name: "Reservoir reserve", pct: 100, risk: "low" as const }],
+        metadata: { freshnessMode: "verified" as const, sourceTimestamp: now },
+        warnings: [
+          {
+            code: "unknown-position",
+            message: "Unmapped reserve position: reviewed-farm",
+            severity: "warning" as const,
+            effect: "degraded" as const,
+          },
+          {
+            code: "unreviewed-position",
+            message: "Unmapped reserve position: new-farm",
+            severity: "warning" as const,
+            effect: "degraded" as const,
+          },
+        ],
+      }),
+      breakerCanFetch: new Map([[`live-reserves:${coin!.liveReservesConfig.breakerScope ?? coin!.liveReservesConfig.adapter}`, true]]),
+      d1FinalizeTimeoutMs: 30_000,
+      previousState: null,
+    });
+
+    expect(result.status).toBe("synced");
+    const finalizeSuccess = db.getHistory().find((entry) => (
+      entry.sql.includes("UPDATE reserve_sync_state")
+      && entry.sql.includes("last_success_at = ?")
+    ));
+    expect(finalizeSuccess?.binds).toContain("degraded");
+    expect(finalizeSuccess?.binds.some((bind) => (
+      typeof bind === "string"
+      && bind.includes("unknown-position")
+      && bind.includes("unreviewed-position")
+    ))).toBe(true);
+  });
+
+  it("fails on a fatal warning even when its code is allowlisted", async () => {
+    const coin = ACTIVE_STABLECOINS.find((candidate) =>
+      candidate.liveReservesConfig?.adapter === "reservoir"
+      && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("unknown-position")
+    ) as ConfiguredCoin | undefined;
+    expect(coin).toBeDefined();
+    const { syncReserveCoin } = await import("../sync-live-reserves-core");
+    const db = mockLiveReserveD1();
+    const result = await syncReserveCoin({
+      db,
+      coin: coin!,
+      signal: new AbortController().signal,
+      adapter: adapterForCoin(coin!),
+      runAdapter: async () => ({
+        slices: [{ name: "Reservoir reserve", pct: 100, risk: "low" as const }],
+        metadata: { freshnessMode: "verified" as const, sourceTimestamp: Math.floor(Date.now() / 1000) },
+        warnings: [{
+          code: "unknown-position",
+          message: "Fatal reserve telemetry failure",
+          severity: "warning" as const,
+          effect: "fatal" as const,
+        }],
+      }),
+      breakerCanFetch: new Map([[`live-reserves:${coin!.liveReservesConfig.breakerScope ?? coin!.liveReservesConfig.adapter}`, true]]),
+      d1FinalizeTimeoutMs: 30_000,
+      previousState: null,
+    });
+
+    expect(result.status).toBe("failed");
+    const finalizeFailure = db.getHistory().find((entry) => (
+      entry.sql.includes("UPDATE reserve_sync_state")
+      && entry.binds.includes("error")
+    ));
+    expect(finalizeFailure?.binds.some((bind) =>
+      typeof bind === "string" && bind.includes("unknown-position")
+    )).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO reserve_composition ("))).toBe(false);
   });
 
   it("keeps expired prior reserve detail stale and unscoreable after a transient failure", async () => {

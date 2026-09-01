@@ -13,7 +13,9 @@ export interface StagedPool {
     | "aquarius"
     | "tezos"
     | "icon-balanced"
-    | "kava-swap";
+    | "kava-swap"
+    | "osmosis-sqs"
+    | "noble-swap";
   chain: string;
   protocol: string;
   dexId: string | null;
@@ -57,7 +59,9 @@ export interface DexDeploymentProviderCheck {
     | "aquarius"
     | "tezos"
     | "icon-balanced"
-    | "kava-swap";
+    | "kava-swap"
+    | "osmosis-sqs"
+    | "noble-swap";
   status: DexDeploymentProviderCheckStatus;
   observedPoolCount?: number;
   /** Timeout, 429, or other transport miss — do not persist as a hard provider outage. */

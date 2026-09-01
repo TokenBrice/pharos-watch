@@ -101,7 +101,7 @@
     "inputs": {
       "primary": {
         "kind": "http-json",
-        "url": "https://api-airdrop.river.inc/protocol-info"
+        "url": "https://api.river.inc/protocol-info"
       }
     }
   },

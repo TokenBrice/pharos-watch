@@ -13,7 +13,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { V9PublishedEvidenceAttribution } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
-import type { StablecoinLink, StablecoinMeta } from "@shared/types/core";
+import type { MintAuthorityControl, StablecoinLink, StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-extension-reserves";
@@ -51,6 +51,18 @@ export type ControlOverlay = NonNullable<
   Extract<NonNullable<ExtensionAsset["controlReview"]>, { state: "partially-reviewed-controls" }>
 >["controls"][number];
 export type ReserveClassification = ReturnType<typeof buildSafetyScoreV9ReserveClassifications>[number];
+
+export function authorityModelForType(
+  authorityType: MintAuthorityControl["authorityType"],
+): NonNullable<ControlOverlay["authority"]>["model"] {
+  if (authorityType === "safe" || authorityType === "multisig") return "multisig";
+  if (authorityType === "eoa") return "eoa";
+  if (authorityType === "dao-governor") return "governance";
+  if (authorityType === "issuer-backend" || authorityType === "custodian") return "issuer-backend";
+  if (authorityType === "validator-quorum") return "validator-quorum";
+  if (authorityType === "contract" || authorityType === "timelock" || authorityType === "bridge") return "contract";
+  return authorityType === "none" ? "none" : "unknown";
+}
 
 export const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
   V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;

@@ -14,9 +14,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "Codex V9 reserve curation",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-01",
+    "reviewer": "Pharos reserve research (ODR-C5 fixed-block M extension verification)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Exodus XO Cash launch announcement",
@@ -37,11 +37,15 @@
       {
         "label": "Solana M0 extension transaction (XO ↔ M wrap/unwrap)",
         "url": "https://solscan.io/tx/2LrRUirVnrcqJTS9LWS4aekoWNkTMLkpcrugS7QCDdpKcWJeJdUFTbTs5F9fcn7rc4EptoX5nmkkyczxUdhWg9ea"
+      },
+      {
+        "label": "Solana public RPC: XO m_vault $M balance and XO total-supply reads at slot 443400427 (2026-09-01T10:26:09Z)",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "rationale": "Exodus identifies XO as issued and managed by MoonPay using M0 infrastructure, while M0's extension documentation defines the wrap/unwrap model over $M. Current Solana transactions for the XO mint and the Solana $M mint execute through the M0 Portal and extension programs with Wrap/Unwrap, MintTo, and Burn instructions, establishing XO as a serial M0 extension claim rather than a parallel reserve basket. XO-specific legal custody terms and provider shares remain undisclosed, so the upstream M reserve is inherited rather than duplicated here.",
-    "compositionBasis": "M0 extension architecture, Exodus launch disclosure, and current Solana XO/$M wrap/unwrap transaction",
-    "compositionAsOf": "2026-08-20",
+    "rationale": "Exodus identifies XO as issued and managed by MoonPay using M0 infrastructure, while M0's extension and Solana documentation define the wrap/unwrap model over $M and the m_vault PDA that holds the backing $M. Verified directly on chain at Solana slot 443400427 (2026-09-01T10:26:09Z): the XO m_vault token account GeBTfYujk4JLr2MBCZznMTLTGch1QrUyYcMKen4KUFU2 (authority CRp6Mt7viCYmNhL1eVbQvH4SPmsrJoZvUAcrvwhqeWPe) held 2,384,487.692445 principal units of $M mzerojk9tg56ebsrEAhfkyc9VgKjTW2zDqp6C5mhjzH, or 2,606,906.391188 $M at the current M0 index (scaled-UI multiplier 1.093277352384), against an XO supply of 2,572,588.650176 on mint xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y - 101.33% coverage by $M alone. The 2026-08-11 M0 Portal ReceiveMessage transaction independently shows XO being minted while that exact vault is credited with $M, confirming it is XO's backing account. The complete direct claim is therefore the tracked m-m0 parent, whose own collateral composition stays reviewed on that entry rather than being duplicated here. XO-specific legal custody terms and provider shares remain undisclosed.",
+    "compositionBasis": "M0 extension and Solana documentation, Exodus launch disclosure, and fixed-slot XO m_vault $M balance and XO total-supply reads",
+    "compositionAsOf": "2026-09-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No direct reserve asset remains unidentified: the whole claim is the tracked m-m0 parent, whose own collateral composition is reviewed on that entry. XO-specific vault custody and provider allocation remain undisclosed.",
     "knownUnknownExposurePct": 0

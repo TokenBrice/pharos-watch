@@ -660,17 +660,36 @@
         "destinationChain": "cardano",
         "canonicalChain": "ethereum",
         "contractAddress": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355059555344",
-        "protocol": "Wanchain wanPYUSD (authority unresolved)",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Re-verified 2026-07-22. Wanchain's own Cardano transaction documentation identifies policy 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935 as Wanchain-mapped and requires userBurn for its mapped tokens. Wanchain documents a rotating 25-node Storeman group using MPC and Shamir secret sharing, with more than two-thirds of nodes required to sign; the live group API returned smgID 0x000000000000000000000000000000000000000000000041726965735f303638. That rotating off-chain group ID and threshold cannot be encoded honestly as a single Cardano contract controller in the current route schema, and the exact Cardano minting policy script identity was not published by the reviewed sources. The route therefore remains unresolved rather than fabricating a controller address.",
+        "protocol": "Wanchain Cardano bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "cardano",
+        "controllerAddress": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935",
+        "failureDomainKeys": [
+          "protocol:wanchain-bridge",
+          "contract:cardano:25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Re-verified 2026-09-01 at Koios tip block 13883854. Koios asset_info for policy 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935 asset name 5059555344 returns PYUSD (fingerprint asset1mugant52ue7kdzlh5nfv789rny8dffjnfgue26), total_supply 199,288,953 units at 6 decimals, mint_cnt 7 and burn_cnt 4, first minted 2024-12-11, carrying Cardano mint metadata label 1 {type 9, tokenPairID 898} written by the Wanchain bridge; the Cardano token registry subject 25c5de5f...5059555344 describes it as 'The Mapping token of PYUSD by WanChain' and points at wanscan.org/tokens. Controller identity is authored by the adopted controller-identity convention (agents/open-data-resolver/decisions/A1-controller-identity-convention.md, rule A1-4), not by a new controller-specific read: on Cardano the controller of record is the 28-byte minting policy ID and never the full asset id used by id/contractAddress, following the reviewed dai-makerdao route cardano:25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935444149, which publishes this same policy hash as its controllerAddress. The prior reviewer's objection is answered rather than overridden: the rotating 25-node Wanchain Storeman group (MPC plus Shamir secret sharing, more than two-thirds of nodes required to sign; smgID 0x000000000000000000000000000000000000000000000041726965735f303638 when last polled 2026-07-22) is the human authority behind that policy and is recorded in this note and in failureDomainKeys as protocol:wanchain-bridge, because the schema's controllerAddress can hold only a single on-chain identity. Wanchain's live tokenPairs API listed no Cardano-chain pairs at all on 2026-09-01 (448 pairs, no ADA chain type): pair 898 here, 894 for EURC and 563 for the already-reviewed dai-makerdao route are all absent, so pair absence is a property of the whole Wanchain Cardano lane rather than evidence against this route, and it bears on whether new mints are currently offered, not on the identity of the policy controlling the outstanding representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-22",
+        "observedAt": "2026-09-01",
+        "observedBlock": 13883854,
         "sources": [
+          {
+            "label": "Koios PYUSD asset info (supply and Wanchain mint metadata verified 2026-09-01)",
+            "url": "https://api.koios.rest/api/v1/asset_info?_asset_policy=25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935&_asset_name=5059555344"
+          },
+          {
+            "label": "Cardano token registry subject 25c5de5f...5059555344",
+            "url": "https://tokens.cardano.org/metadata/25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355059555344"
+          },
+          {
+            "label": "Wanchain current token-pairs API (no Cardano-chain pairs, checked 2026-09-01)",
+            "url": "https://bridge-api.wanchain.org/api/tokenPairs"
+          },
           {
             "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"

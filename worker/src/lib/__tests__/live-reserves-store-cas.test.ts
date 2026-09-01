@@ -45,6 +45,73 @@ describe("live-reserves-store", () => {
     expect(history.some((sql) => sql.includes("JOIN reserve_sync_state"))).toBe(true);
   });
 
+  it("publishes neither canonical row past the deadline and both rows inside it", async () => {
+    const { createSqliteD1 } = await import("../../test-helpers/sqlite-d1");
+
+    const expiredSqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const expiredDb = createSqliteD1(expiredSqlite);
+      const expiredAttemptId = "attempt-expired";
+      await beginReserveSyncAttempt(expiredDb, reserveSyncAttemptInput(expiredAttemptId));
+
+      const expiredResult = await finalizeReserveSuccess(expiredDb, expiredAttemptId, {
+        finalizeDeadlineMs: Date.now() - 60_000,
+      });
+
+      expect(expiredResult).toEqual({ finalized: false, historyRecorded: false });
+      expect(
+        expiredSqlite.prepare("SELECT attempt_id FROM reserve_composition WHERE stablecoin_id = ?")
+          .get("iusd-infinifi"),
+      ).toBeUndefined();
+      expect(
+        expiredSqlite.prepare(
+          `SELECT last_success_at, last_success_attempt_id, last_attempt_id, pending_attempt_id
+             FROM reserve_sync_state
+            WHERE stablecoin_id = ?`,
+        ).get("iusd-infinifi"),
+      ).toEqual({
+        last_success_at: null,
+        last_success_attempt_id: null,
+        last_attempt_id: expiredAttemptId,
+        pending_attempt_id: expiredAttemptId,
+      });
+    } finally {
+      expiredSqlite.close();
+    }
+
+    const timelySqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const timelyDb = createSqliteD1(timelySqlite);
+      const timelyAttemptId = "attempt-timely";
+      await beginReserveSyncAttempt(timelyDb, reserveSyncAttemptInput(timelyAttemptId));
+
+      const timelyResult = await finalizeReserveSuccess(timelyDb, timelyAttemptId, {
+        finalizeDeadlineMs: Date.now() + 60_000,
+      });
+
+      expect(timelyResult).toEqual({ finalized: true, historyRecorded: true });
+      expect(
+        timelySqlite.prepare(
+          `SELECT c.fetched_at, c.attempt_id,
+                  s.last_success_at, s.last_success_attempt_id,
+                  s.last_attempt_id, s.pending_attempt_id
+             FROM reserve_composition c
+             JOIN reserve_sync_state s ON s.stablecoin_id = c.stablecoin_id
+            WHERE c.stablecoin_id = ?`,
+        ).get("iusd-infinifi"),
+      ).toEqual({
+        fetched_at: 1_000,
+        attempt_id: timelyAttemptId,
+        last_success_at: 1_000,
+        last_success_attempt_id: timelyAttemptId,
+        last_attempt_id: timelyAttemptId,
+        pending_attempt_id: null,
+      });
+    } finally {
+      timelySqlite.close();
+    }
+  });
+
   it("treats a success finalization batch no-op as finalized when authoritative readback matches the attempt", async () => {
     const db = mockD1([
       {

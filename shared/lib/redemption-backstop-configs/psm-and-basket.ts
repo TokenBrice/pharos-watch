@@ -257,8 +257,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
   "fxd-fathom": {
     ...psmSwapBase,
     accessModel: "whitelisted-onchain",
-    unresolvedOutputAssetKeys: ["asset:xusdt"],
-    unresolvedOutputDisposition: "reviewed-external",
+    outputAssets: ["usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "psm-balance-share" },
     costModel: fixedFee(
       25,
@@ -278,11 +277,14 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
         ["route", "settlement"],
       ),
       sourceRef("FXD XDC deployments", "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network", ["route"]),
+      sourceRef("Fathom StableSwapModule on XDC", "https://xdcscan.io/address/0x42c06188B8C03769A1F73B3f31b259271ee3B981", [
+        "route",
+      ]),
     ],
     notes: [
       "Configured 2026-08-12 as the StableSwap Module rail, not CDP repayment: the whitepaper describes trading FXD at a fixed 1 FXD = 1 counter-stablecoin rate inside a pool, which is a holder-exercisable swap rather than the position-specific debt repayment that previously kept this coin unconfigured.",
       "Access is whitelisted because the same whitepaper states Stable Swap keeps a private list of possible participants to protect the pegging mechanism, and that the FXD Stable Swap arbitrager group is private and not publicly open.",
-      "Output is the deployed counter-stablecoin: the whitepaper names abUSDs and the smart-contract architecture page names the deployed pair FXD<->xUSDT. xUSDT has no tracked Pharos stablecoin id, so the reviewed identity is preserved as an unresolved external output rather than published as a scoreable asset.",
+      "Output resolved 2026-09-01: the smart-contract architecture page names the deployed pair FXD<->xUSDT, and the documented XDC StableSwapModule 0x42c06188B8C03769A1F73B3f31b259271ee3B981 was read at XDC mainnet block 106731562 (chainId 50): stablecoin() = 0x49d3f7543335cf38fa10889ccff10207e22110b5 (the tracked FXD deployment) and token() = 0xd4b5f10d61916bd6e0860144a91ac658de8a1437, whose symbol() is xUSDT, name() is USDT@xinfin, and decimals() is 6. That is the exact XDC deployment Pharos already tracks under usdt-tether, so the counter-stablecoin is a tracked output rather than an untracked external identity.",
       "The 10% ratio is a reviewed heuristic for StableSwap pool depth, not a published Fathom figure: no current public source exposes the module's counter-asset balance, per-account limits, or pause state on XDC, and Pharos does not model XDC contracts.",
     ],
   },
@@ -562,38 +564,6 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     notes: [
       "Holder must complete the XPR/Metal account-verification path and use WebAuth Wallet, so access is modeled as whitelisted onchain rather than permissionless.",
       "Pharos does not currently model XPR Network contracts, so this remains a static documented-bound route unless a supported-chain capacity adapter is added later.",
-    ],
-  },
-  "mai-qidao": {
-    ...psmSwapBase,
-    settlementModel: "queued",
-    outputAssetType: "stable-basket",
-    unresolvedOutputAssetKeys: [
-      "approved stablecoin collateral set (exact members are not enumerated by the current PSM documentation)",
-    ],
-    unresolvedOutputDisposition: "issuer-undisclosed",
-    capacityModel: { kind: "supply-full", confidence: "heuristic", basis: "full-system-eventual" },
-    costModel: documentedVariableFee(
-      "QiDao documents a fixed 1:1 PSM rate and a redemption fee on the collateral asset, but does not publish a numeric PSM fee on the current PSM page",
-    ),
-    routeExitCorrelation: "same-protocol-liquidity",
-    reviewedAt: "2026-08-13",
-    docs: [
-      sourceRef("QiDao Peg Stability Module", "https://docs.mai.finance/docs/peg-stability-module", [
-        "route",
-        "access",
-        "settlement",
-        "fees",
-        "capacity",
-      ]),
-      sourceRef("QiDao stablecoin economics", "https://docs.mai.finance/docs/stablecoin-economics", ["route"]),
-      sourceRef("QiDao fees", "https://docs.mai.finance/docs/fees", ["fees"]),
-      sourceRef("QiDao current protocol site", "https://www.mai.finance/", ["route"]),
-    ],
-    notes: [
-      "The permissionless PSM sends MAI into a public three-day withdrawal queue before paying 1:1 approved stablecoin collateral; the exact collateral set remains undisclosed, so outputAssets is intentionally unset.",
-      "supply-full is eventual-only: reviewed materials do not publish a current hot-buffer balance, withdrawal cap, or other immediate-capacity bound.",
-      "The PSM collateral is placed into QiDao-approved yield strategies, so the route remains correlated with QiDao's own collateral and strategy liquidity rather than ordinary CDP repayment.",
     ],
   },
   "iusd-indigo-protocol": {

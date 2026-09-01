@@ -7,8 +7,8 @@ import {
 } from "../deployment-outcomes";
 import type { DexDeploymentProviderCheck, StagedPool } from "../types";
 
-const NEW_PROVIDER_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly DexDeploymentProviderCheck["provider"][];
-const NEW_SOURCE_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly StagedPool["source"][];
+const NEW_PROVIDER_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap"] as const satisfies readonly DexDeploymentProviderCheck["provider"][];
+const NEW_SOURCE_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap"] as const satisfies readonly StagedPool["source"][];
 
 const DEPLOYMENT = {
   chain: "ethereum",
@@ -245,16 +245,19 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(40);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(29);
+    expect(outcomes).toHaveLength(30);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(24);
     expect(outcomes).toContainEqual(
       expect.objectContaining({
-        stablecoinId: "usdn-noble",
-        chain: "noble",
-        address: "uusdn",
+        stablecoinId: "usdc-circle",
+        chain: "polkadot",
+        address: "1337",
         providers: [],
       }),
     );
+    // Noble and Osmosis now resolve a registered provider, so the static
+    // unsupported sweep must no longer claim them.
+    expect(outcomes.some((row) => row.chain === "noble" || row.chain === "osmosis")).toBe(false);
   });
 
   it("materializes an inaccessible outcome when a bounded crawl fails", () => {

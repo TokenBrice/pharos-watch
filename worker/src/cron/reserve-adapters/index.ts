@@ -28,6 +28,7 @@ import { fetchFraxBalanceSheetReserves, fetchFraxFpiCollateralReserves } from ".
 import { fetchFxReserves } from "./fx";
 import { fetchGhoReserves } from "./gho";
 import { fetchHiveHbdProtocolReserves } from "./hive-hbd-protocol";
+import { fetchIdleCdoEpochVariantReserves } from "./idle-cdo-epoch-variant";
 import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchJupUsdReserves } from "./jupusd";
 import { fetchListaReserves } from "./lista";
@@ -109,6 +110,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   fx: fetchFxReserves,
   gho: fetchGhoReserves,
   "hive-hbd-protocol": fetchHiveHbdProtocolReserves,
+  "idle-cdo-epoch-variant": fetchIdleCdoEpochVariantReserves,
   infinifi: fetchInfiniFiReserves,
   jupusd: fetchJupUsdReserves,
   lista: fetchListaReserves,

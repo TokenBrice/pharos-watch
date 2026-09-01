@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -9,8 +12,11 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getReserveAdapter, LIVE_RESERVE_ADAPTER_FETCHERS } from "../index";
+import { buildSharedSourceCacheKey } from "../../sync-live-reserves-shared";
+import type { AdapterContext, AdapterResult, ReserveAdapterDefinition } from "../types";
 
 const VALID_INPUT_KINDS = new Set(["http-json", "http-html", "indexer", "onchain-solana", "onchain-evm"]);
+const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 
 function canonicalStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -37,6 +43,8 @@ function liveReserveSourceFingerprint(
 }
 
 describe("adapter registry completeness", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it.each(LIVE_RESERVE_ADAPTER_KEYS)("%s has a worker adapter function registered", (key) => {
     const adapter = getReserveAdapter(key);
     expect(
@@ -248,5 +256,64 @@ describe("adapter registry completeness", () => {
 
       expect(duplicateGroups).toEqual(expectedDuplicateGroups[adapterKey]);
     }
+  });
+
+  it.each([
+    ["sky-makercore", ["dai-makerdao", "usds-sky"]],
+    ["tether-transparency", ["usdt-tether", "xaut-tether"]],
+  ] as const)("shares the %s upstream across two coins in one run", async (adapterKey, coinIds) => {
+    const coins = coinIds.map((id) => {
+      const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === id);
+      expect(coin?.liveReservesConfig?.adapter).toBe(adapterKey);
+      return coin!;
+    });
+    const adapter = getReserveAdapter(adapterKey)!;
+    expect(adapter.sharedSourceMode).toBe("source-invariant");
+
+    const tetherFixture = JSON.parse(
+      readFileSync(resolve(TEST_DIR, "fixtures", "tether-transparency.json"), "utf8"),
+    );
+    const primaryInput = coins[0].liveReservesConfig!.inputs.primary;
+    const upstreamUrl = "url" in primaryInput ? primaryInput.url : undefined;
+    const upstreamFetches: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === upstreamUrl) {
+        upstreamFetches.push(url);
+        return new Response(JSON.stringify(adapterKey === "sky-makercore"
+          ? {
+              count: 1,
+              results: [{
+                group: "stablecoins",
+                group_name: "Stablecoins",
+                debt: "100",
+                collateral: "100",
+                datetime: "2026-08-31T00:00:00",
+              }],
+            }
+          : tetherFixture), { headers: { "content-type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x" }), {
+        headers: { "content-type": "application/json" },
+      });
+    }));
+
+    const ctx: AdapterContext = { requestCache: new Map() };
+    const sharedResults = new Map<string, Promise<AdapterResult>>();
+    const run = (coin: (typeof coins)[number]): Promise<AdapterResult> => {
+      const config = coin.liveReservesConfig!;
+      const cacheKey = buildSharedSourceCacheKey(config, adapter as ReserveAdapterDefinition);
+      if (cacheKey) {
+        const cached = sharedResults.get(cacheKey);
+        if (cached) return cached;
+      }
+      const result = adapter.fetch(coin, config, new AbortController().signal, ctx);
+      if (cacheKey) sharedResults.set(cacheKey, result);
+      return result;
+    };
+
+    await Promise.all(coins.map(run));
+
+    expect(upstreamFetches).toEqual([upstreamUrl]);
   });
 });

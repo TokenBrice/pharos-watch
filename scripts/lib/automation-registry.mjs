@@ -295,11 +295,15 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/data/stablecoins/coins.client.generated.json",
       "shared/data/stablecoins/coins.compliance.generated.json",
       "shared/data/stablecoins/coins.telegram-mini-app.generated.json",
+      "shared/data/stablecoins/coins.worker-runtime.generated.json",
     ],
     phase: 1,
     reproducibility: "deterministic",
     script: "scripts/build-data/build-client-registry.mjs",
-    sourcePaths: ["shared/data/stablecoins/coins.generated.json"],
+    sourcePaths: [
+      "shared/data/stablecoins/canonical-order.json",
+      "shared/data/stablecoins/coins.generated.json",
+    ],
   }),
   generatedArtifact({
     id: "stablecoin-client-projections",

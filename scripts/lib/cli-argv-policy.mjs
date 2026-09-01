@@ -21,6 +21,7 @@ export const CLI_ARGV_EXEMPTION_CATEGORIES = Object.freeze({
 
 export const CLI_ARGV_POLICY = Object.freeze({
   strict: Object.freeze([
+    strict("scripts/ci/check-dex-census-provider-drift.ts"),
     strict("scripts/ci/guard-worker-deploy.ts"),
     strict("scripts/ci/open-automated-refresh-pr.ts"),
     strict("scripts/maintenance/diff-safety-score-v9-movers.ts"),
@@ -73,6 +74,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/check-env-contract.ts", "read-only"),
     exempt("scripts/ci/check-fetch-body-timeouts.ts", "read-only"),
     exempt("scripts/ci/check-hook-polling-window.ts", "read-only"),
+    exempt("scripts/ci/check-mint-burn-runtime-imports.ts", "read-only"),
     exempt("scripts/ci/check-oracle-risk-coverage.ts", "read-only"),
     exempt("scripts/ci/check-redemption-backstops.ts", "build"),
     exempt("scripts/ci/check-script-entrypoints.ts", "read-only"),

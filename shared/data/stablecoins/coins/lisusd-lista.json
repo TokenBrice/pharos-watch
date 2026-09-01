@@ -98,7 +98,7 @@
           },
           "risk": "low",
           "coinId": "usdt-tether",
-          "depType": "mechanism"
+          "depType": "collateral"
         },
         {
           "name": "FDUSD GemJoin",
@@ -110,7 +110,7 @@
           },
           "risk": "low",
           "coinId": "fdusd-first-digital",
-          "depType": "mechanism"
+          "depType": "collateral"
         }
       ]
     }

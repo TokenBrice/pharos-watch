@@ -537,6 +537,19 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
+  "idle-cdo-epoch-variant": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: "idleCdoEpochVariant",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    // The vault's exit is a monthly epoch redemption whose stressed depth is
+    // not observable on-chain; publishing capacity from NAV would fabricate it.
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   infinifi: declareAdapter("none", HTTP_DASHBOARD_COLLATERAL_V1, {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
   }),

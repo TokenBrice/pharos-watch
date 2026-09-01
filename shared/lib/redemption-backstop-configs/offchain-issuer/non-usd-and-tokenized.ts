@@ -320,7 +320,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "mtbill-midas": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "documented-bound", basis: "hot-buffer" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "heuristic", basis: "hot-buffer" },
     settlementModel: "days",
     costModel: fixedFee(7, "Midas documents a 0.07% redemption fee"),
     v9RouteReviewTerms: {
@@ -352,13 +352,13 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ],
     notes: [
       "Midas documents atomic USDC redemptions when protocol liquidity is available, while standard processing completes within two business days in normal conditions and up to seven business days in stressed cases",
-      "Tracked mTBILL metadata records a 3% USD cash buffer; Pharos uses a 2% documented hot-buffer lower bound rather than claiming the full daily NAV redeemability as immediate capacity",
+      "The 2% hot-buffer ratio is a conservative modeling heuristic, not a documented lower bound; current Midas materials publish a dynamic atomic-capacity target rather than a binding floor",
     ],
   },
   "usdy-ondo-finance": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "heuristic", basis: "hot-buffer" },
     settlementModel: "days",
     costModel: {
       ...documentedVariableFee(
@@ -399,7 +399,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       ),
     ],
     notes: [
-      "Tracked USDY metadata records a 5% bank-demand-deposit slice; Pharos uses that reserve slice as the documented hot-buffer lower bound and does not promote the unvalidated 8% proposal.",
+      "The 5% hot-buffer ratio is a conservative modeling heuristic, not a documented lower bound; current Ondo materials do not publish a durable bank-demand-deposit allocation or instant-redemption floor.",
     ],
   },
   /** iauon-ondo and slvon-ondo share the Ondo GM shape; they differ only in ticker,

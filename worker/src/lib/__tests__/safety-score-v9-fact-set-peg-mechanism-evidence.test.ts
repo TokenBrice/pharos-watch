@@ -225,6 +225,28 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       metaById: uusdMetaWithPinnedMintReview(),
     });
     expect(baseline.assets[0]).not.toHaveProperty("mechanismReviewGapDisposition");
+    // The clock guard and the curated adjudication are mutually exclusive: the
+    // guard fires only before the overlay is current, this only once it is.
+    expect(baseline.assets[0]!.mechanismReviewedUnavailable).toEqual([
+      {
+        componentKey: "assuranceAndReconciliation",
+        rationale: expect.stringContaining("UUSD"),
+        sourceUrl: "https://uusd.ai/developers/",
+        reviewedAt: "2026-08-08",
+      },
+      {
+        componentKey: "claimAndSegregation",
+        rationale: expect.any(String),
+        sourceUrl: "https://uusd.ai/whitepaper.pdf",
+        reviewedAt: "2026-08-08",
+      },
+      {
+        componentKey: "custodyContinuity",
+        rationale: expect.any(String),
+        sourceUrl: "https://uusd.ai/",
+        reviewedAt: "2026-08-08",
+      },
+    ]);
 
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     for (const componentKey of [
@@ -239,9 +261,23 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
             componentKey: `mechanism-review:${componentKey}`,
           },
           responsibility: "issuer-undisclosed",
+          // The published gap says the review happened and what it found,
+          // instead of the sentence an unreviewed component also carries.
+          message: expect.stringContaining(
+            `Reviewed 2026-08-08: the ${componentKey} input is not published by the issuer.`,
+          ),
         }),
       );
     }
+    const assuranceGap = compiled.assets[0]!.gaps.find(
+      (gap) => gap.path.kind === "local-component"
+        && gap.path.componentKey === "mechanism-review:assuranceAndReconciliation",
+    );
+    expect(assuranceGap?.message).toContain("Source checked: https://uusd.ai/developers/");
+    // Zero score movement by construction: the fact stays bounded-unknown under
+    // the same reason code and owner; only the sentence changed.
+    expect(assuranceGap?.reasonCode).toBe("bounded-mechanism-review");
+    expect(assuranceGap?.observationState).toBe("bounded-unknown");
   });
 
   it("compiles clock-valid operational-resilience claims with one evidence record per cited source", () => {

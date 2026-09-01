@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.214",
+    title: "Canonical sUSDS and sUSDe vault NAV coverage",
+    date: "2026-09-01",
+    effectiveAt: 1788220800,
+    summary:
+      "Sky sUSDS and Ethena sUSDe can publish authoritative NAV prices from their canonical Ethereum ERC-4626 vaults and tracked parent assets.",
+    impact: [
+      "`susds-sky` resolves `convertToAssets(1 share)` from the canonical Ethereum vault and multiplies the USDS-denominated rate by the fresh trusted `usds-sky` price",
+      "`susde-ethena` resolves `convertToAssets(1 share)` from the canonical Ethereum staking vault and multiplies the USDe-denominated rate by the fresh trusted `usde-ethena` price",
+      "The existing parent-provenance gate, 0.5-10 assets-per-share bounds, 24-hour last-good rate cache, publication priority, and circuit semantics are unchanged",
+      "Neither wrapper receives a synthetic par price: a missing or untrusted parent, invalid vault rate, or unavailable live/cache quote fails closed and leaves the asset unpriced",
+      "`steakusdc-steakhouse` remains on its healthy pre-existing ERC-4626 registration; this revision does not add or alter its source route",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.213",
     title: "NAV supply valuation from the protocol-redeem route",
     date: "2026-08-30",

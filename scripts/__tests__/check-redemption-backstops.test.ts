@@ -56,8 +56,8 @@ describe("check-redemption-backstops CLI", () => {
       findings: Array<{ severity: string }>;
       auditRows: unknown[];
     };
-    expect(report.summary.configuredCount).toBe(328);
-    expect(report.auditRows).toHaveLength(328);
+    expect(report.summary.configuredCount).toBe(327);
+    expect(report.auditRows).toHaveLength(327);
     expect(report.findings.some((finding) => finding.severity === "error")).toBe(false);
   }, GATE_LOAD_TIMEOUT_MS);
 
@@ -71,8 +71,8 @@ describe("check-redemption-backstops CLI", () => {
     });
 
     const report = JSON.parse(readFileSync(reportPath, "utf8"));
-    expect(report.summary.configuredCount).toBe(328);
-    expect(report.auditRows).toHaveLength(328);
+    expect(report.summary.configuredCount).toBe(327);
+    expect(report.auditRows).toHaveLength(327);
     expect(report.auditRows[0]).toMatchObject({
       stablecoinId: expect.any(String),
       routeFamily: expect.any(String),
@@ -103,13 +103,14 @@ describe("check-redemption-backstops CLI", () => {
     });
 
     const report = JSON.parse(readFileSync(reportPath, "utf8")) as {
-      findings: Array<{ severity: string; code: string }>;
+      findings: Array<{ severity: string; code: string; stablecoinId?: string }>;
     };
     expect(report.findings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           severity: "warning",
-          code: "documented-bound-missing-route-support",
+          code: "unconfigured-active-coin",
+          stablecoinId: "mai-qidao",
         }),
       ]),
     );
@@ -129,7 +130,7 @@ describe("check-redemption-backstops CLI", () => {
     const report = JSON.parse(readFileSync(reportPath, "utf8")) as {
       summary: { configuredCount: number };
     };
-    expect(report.summary.configuredCount).toBe(328);
+    expect(report.summary.configuredCount).toBe(327);
   }, GATE_LOAD_TIMEOUT_MS);
 
   it("rejects unknown CLI arguments", () => {

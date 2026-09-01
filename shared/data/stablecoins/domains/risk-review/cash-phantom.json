@@ -354,7 +354,7 @@
           "protocol:layerzero-v2",
           "platform:solana-layerzero-endpoint"
         ],
-        "authorityType": "unknown",
+        "authorityType": "validator-quorum",
         "routeChecks": {
           "attestorQuorum": "LayerZero V2 Endpoint/DVN/executor validation is an external route failure domain. The exact per-OApp DVN and executor configuration, validator membership, quorum, and emergency override roster were not read; no threshold or custody claim is made.",
           "trustedPeerOrRemote": "The current HyperEVM OFT read identifies EID 30168 and its bytes32 peer for Solana OFTStore 3cQm..., so the delivery-contract link is known; that peer record does not identify the application-selected validator domain.",
@@ -375,7 +375,7 @@
             "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ],
-        "evidence": "The reviewed Solana ProgramData and Squads v3 reads resolve the 4-of-5 Endpoint upgrade multisig, and the reviewed HyperEVM OFT read resolves the EID 30168 peer to the Solana OFTStore; these are known upgrade and delivery-contract facts. The 2026-08-28 review did not resolve the application-selected CASH-specific DVN/executor roster, validator membership, quorum, emergency override roster, or controlling authority. The Endpoint upgrade multisig and OFTStore peer therefore cannot be treated as the validation-domain identity, and this separate control remains unknown."
+        "evidence": "The reviewed Solana ProgramData and Squads v3 reads resolve the 4-of-5 Endpoint upgrade multisig, and the reviewed HyperEVM OFT read resolves the EID 30168 peer to the Solana OFTStore; these are known upgrade and delivery-contract facts. The 2026-08-28 review did not resolve the application-selected CASH-specific DVN/executor roster, validator membership, quorum, emergency override roster, or controlling authority. The Endpoint upgrade multisig and OFTStore peer therefore cannot be treated as the validation-domain identity, and this separate control remains unknown. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external LayerZero V2 DVN/executor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum — known but weak, graded no higher than a named issuer backend and never above a named multisig — rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
       },
       {
         "id": "cash-solana-bridge-upgrade-common-mode",

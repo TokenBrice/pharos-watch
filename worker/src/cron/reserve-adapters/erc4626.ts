@@ -41,28 +41,28 @@ interface Erc4626CollateralizationRatioOptions {
   warningCode: string;
 }
 
+interface Erc4626CollateralizationRatioResultOptions {
+  totalAssetsRaw: bigint;
+  totalSupplyRaw: bigint | undefined;
+  convertResult: string | null;
+  warningCode: string;
+}
+
 export interface Erc4626CollateralizationRatioResult {
   collateralizationRatio?: number;
   convertToAssetsRaw?: bigint;
   warnings: LiveReserveWarning[];
 }
 
-export async function computeErc4626CollateralizationRatio({
-  call,
+export function computeErc4626CollateralizationRatioFromResult({
   totalAssetsRaw,
   totalSupplyRaw,
+  convertResult,
   warningCode,
-}: Erc4626CollateralizationRatioOptions): Promise<Erc4626CollateralizationRatioResult> {
+}: Erc4626CollateralizationRatioResultOptions): Erc4626CollateralizationRatioResult {
   const warnings: LiveReserveWarning[] = [];
 
-  if (totalSupplyRaw == null || totalSupplyRaw <= 0n) {
-    return { warnings };
-  }
-
-  const convertResult = await call(
-    `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(totalSupplyRaw)}`,
-  );
-  if (!convertResult) {
+  if (totalSupplyRaw == null || totalSupplyRaw <= 0n || !convertResult) {
     return { warnings };
   }
 
@@ -89,4 +89,25 @@ export async function computeErc4626CollateralizationRatio({
     ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
     warnings,
   };
+}
+
+export async function computeErc4626CollateralizationRatio({
+  call,
+  totalAssetsRaw,
+  totalSupplyRaw,
+  warningCode,
+}: Erc4626CollateralizationRatioOptions): Promise<Erc4626CollateralizationRatioResult> {
+  if (totalSupplyRaw == null || totalSupplyRaw <= 0n) {
+    return { warnings: [] };
+  }
+
+  const convertResult = await call(
+    `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(totalSupplyRaw)}`,
+  );
+  return computeErc4626CollateralizationRatioFromResult({
+    totalAssetsRaw,
+    totalSupplyRaw,
+    convertResult,
+    warningCode,
+  });
 }

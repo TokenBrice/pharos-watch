@@ -318,6 +318,65 @@ export async function cleanupStaging(
 }
 
 /**
+ * Per-coin shape of the current deployment census, read only to decide crawl
+ * cadence.
+ *
+ * `providerSupportedInaccessibleCount` deliberately excludes rows whose provider
+ * set is empty: a chain with no registered discovery provider is a standing
+ * scope limit that `classifyDexPlaceholderCoverage` already carries as an
+ * explicit unsupported remainder (owner ruling R1-D), not an unanswered
+ * deployment.
+ */
+export interface DiscoveryCensusSummary {
+  verifiedNoPoolsCount: number;
+  observedPoolsCount: number;
+  providerSupportedInaccessibleCount: number;
+}
+
+/**
+ * Aggregate the deployment census per stablecoin. Aggregation runs in SQL so a
+ * run pays one bounded read instead of materializing every outcome row.
+ */
+export async function readDiscoveryCensusSummaries(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<Map<string, DiscoveryCensusSummary>> {
+  throwIfAborted(signal);
+  const rows = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT stablecoin_id,
+                  SUM(CASE WHEN outcome = 'verified_no_pools' THEN 1 ELSE 0 END) AS verified_no_pools,
+                  SUM(CASE WHEN outcome = 'observed_pools' THEN 1 ELSE 0 END) AS observed_pools,
+                  SUM(CASE WHEN outcome = 'provider_inaccessible' AND provider_set_json <> '[]' THEN 1 ELSE 0 END)
+                    AS provider_supported_inaccessible
+             FROM dex_deployment_outcomes
+            GROUP BY stablecoin_id`,
+        )
+        .all<{
+          stablecoin_id: string;
+          verified_no_pools: number | null;
+          observed_pools: number | null;
+          provider_supported_inaccessible: number | null;
+        }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+
+  const summaries = new Map<string, DiscoveryCensusSummary>();
+  for (const row of rows.results ?? []) {
+    summaries.set(row.stablecoin_id, {
+      verifiedNoPoolsCount: row.verified_no_pools ?? 0,
+      observedPoolsCount: row.observed_pools ?? 0,
+      providerSupportedInaccessibleCount: row.provider_supported_inaccessible ?? 0,
+    });
+  }
+  return summaries;
+}
+
+/**
  * Read current discovery meta for all stablecoins.
  */
 export async function readDiscoveryMeta(db: D1Database, signal?: AbortSignal): Promise<Map<string, DiscoveryMeta>> {

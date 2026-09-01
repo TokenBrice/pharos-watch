@@ -9,6 +9,7 @@ import {
   deriveCommodityClaimMechanismExitFacts,
   expandOverlayReview,
   getSafetyScoreV9MechanismReviewGapDisposition,
+  getSafetyScoreV9MechanismReviewedUnavailableComponents,
   getSafetyScoreV9MechanismOverlayEvidence,
   MechanismReviewOverlaySchema,
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
@@ -180,6 +181,39 @@ describe("buildSafetyScoreV9MechanismReview", () => {
         beforeReviewSec,
       ),
     ).toBeNull();
+  });
+
+  it("carries the adjudicated non-disclosure only while the overlay is current", () => {
+    // a7a5-old-vector's committed fiat-cash overlay is reviewed 2026-08-08 and
+    // adjudicates all three components as reviewed-but-unpublished.
+    const currentSec = Date.UTC(2026, 7, 20) / 1_000;
+    expect(
+      getSafetyScoreV9MechanismReviewedUnavailableComponents("a7a5-old-vector", "fiat-cash", currentSec),
+    ).toEqual([
+      expect.objectContaining({
+        componentKey: "assuranceAndReconciliation",
+        sourceUrl: "https://docs.a7a5.io/legal/transparency.md",
+        reviewedAt: "2026-08-08",
+      }),
+      expect.objectContaining({ componentKey: "claimAndSegregation", reviewedAt: "2026-08-08" }),
+      expect.objectContaining({ componentKey: "custodyContinuity", reviewedAt: "2026-08-08" }),
+    ]);
+
+    // Inside the reviewed UTC day the overlay is not admitted at all, so the
+    // clock guard owns the gap and no adjudication is carried.
+    const sameDaySec = Date.UTC(2026, 7, 8, 12) / 1_000;
+    expect(
+      getSafetyScoreV9MechanismReviewedUnavailableComponents("a7a5-old-vector", "fiat-cash", sameDaySec),
+    ).toEqual([]);
+    expect(
+      getSafetyScoreV9MechanismReviewGapDisposition("a7a5-old-vector", "fiat-cash", sameDaySec),
+    ).toMatchObject({ responsibility: "method-unsupported" });
+
+    // A resolved archetype that disagrees with the overlay ignores it, exactly
+    // as the review build does.
+    expect(
+      getSafetyScoreV9MechanismReviewedUnavailableComponents("a7a5-old-vector", "tbill", currentSec),
+    ).toEqual([]);
   });
 
   it("expands every curated overlay after its date-only admission gate elapses", () => {

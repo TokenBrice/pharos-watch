@@ -36,14 +36,15 @@ import {
   UnixSecondsSchema,
   V9ClaimImpairmentSchema,
   V9ControlCapabilitySchema,
-  V9ControlCapKindSchema,
-  V9ControlCapUnitSchema,
+  V9ControlCapSemanticsSchema,
   V9ControlKindSchema,
   V9ControlScopeSchema,
   V9EconomicLossScopeSchema,
   V9MechanismExitDispositionSchema,
   V9MechanismExitFactKeySchema,
   V9MechanismQualitySchema,
+} from "@shared/types/safety-score-v9-fact-input-primitives";
+import {
   V9RouteCoverageClassSchema,
   V9RouteExecutionCertaintySchema,
   V9RouteExecutionModelSchema,
@@ -283,24 +284,25 @@ const ControlOverlaySchema = z
     controlKind: V9ControlKindSchema,
     scope: V9ControlScopeSchema,
     capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (value) => value),
-    capSemantics: z
-      .object({
-        kind: V9ControlCapKindSchema,
-        bound: z
-          .object({
-            amount: z.number().finite().nonnegative(),
-            unit: V9ControlCapUnitSchema,
-          })
-          .strict()
-          .nullable(),
-      })
-      .strict(),
+    capSemantics: V9ControlCapSemanticsSchema,
     claimImpairment: V9ClaimImpairmentSchema,
     economicLossScope: V9EconomicLossScopeSchema,
     authority: z
       .object({
         authorityKey: CanonicalTextSchema,
-        model: z.enum(["none", "eoa", "multisig", "governance", "contract", "issuer-backend", "unknown"]),
+        // AUTHORITY-LADDER 9.46: mirrors the published fact schema's model union
+        // (`shared/types/safety-score-v9-facts.ts`); `validator-quorum` is the
+        // external message-validation quorum rung.
+        model: z.enum([
+          "none",
+          "eoa",
+          "multisig",
+          "governance",
+          "contract",
+          "issuer-backend",
+          "validator-quorum",
+          "unknown",
+        ]),
         threshold: z
           .object({ required: z.number().int().positive(), total: z.number().int().positive() })
           .strict()
@@ -450,6 +452,21 @@ const AssetExtensionSchema = z
       })
       .strict()
       .optional(),
+    // Mechanism components the reviewer adjudicated as reviewed-but-unpublished.
+    // The facts stay bounded-unknown, so this changes no score; it carries the
+    // adjudication to the gap message, which is the only place a reader can
+    // tell a completed review from an outstanding one.
+    mechanismReviewedUnavailable: canonicalArrayBy(
+      z
+        .object({
+          componentKey: CanonicalTextSchema,
+          rationale: CanonicalTextSchema,
+          sourceUrl: CanonicalTextSchema,
+          reviewedAt: CanonicalTextSchema,
+        })
+        .strict(),
+      (row) => row.componentKey,
+    ).optional(),
     mechanismExitFacts: canonicalArrayBy(
       MechanismExitFactOverlaySchema,
       (fact) => fact.factKey,

@@ -465,11 +465,12 @@
         "authorityType": "eoa",
         "routeChecks": {
           "rateLimits": "xBridges(EOA) reverted and the EOA was not whitelisted in the reviewed Fantom bridge registry.",
+          "caps": "At Fantom block 123116374 on 2026-09-01, hasRole(ADMIN_ROLE, 0x13c716188c38ce27b9b2b672a59543cf1170eabe) returned true while mintCeiling and whitelisted both returned zero for it. In the verified CrossChainCanonicalAlchemicTokenV2 implementation 0x211c74db951c161c5a379363716ebdca5125ef59 the mintCeiling mapping bounds only exchangeOldForCanonical; mint(address,uint256) is gated solely by whitelisted[msg.sender] and paused[msg.sender], and setWhitelist(address,bool) is onlyAdmin. The retained role therefore reaches an uncapped mint path.",
           "pausersAdminsUpgraders": "The code-less EOA retains historical ADMIN_ROLE/minter evidence, but current key custody, liveness, and bridge semantics cannot be established.",
           "unsupportedReason": "Multichain-era EOA authority remains adverse evidence but is not promoted to a live native or bridge controller."
         },
-        "capDescription": "The historical EOA's current ability to mint or raise a bridge cap is unknown; its retained role evidence is preserved for Bridge Risk scoring.",
-        "canRaiseCap": "unknown",
+        "capDescription": "The historical EOA still holds Fantom alUSD ADMIN_ROLE, and because setWhitelist(address,bool) is onlyAdmin while mint(address,uint256) enforces no ceiling, that role reaches an uncapped mint path; its own current ceiling and whitelist entries are zero. Its retained role evidence is preserved for Bridge Risk scoring, and Multichain-era key custody and liveness remain unresolved.",
+        "canRaiseCap": true,
         "observedAt": "2026-07-20",
         "observedBlock": 36896627,
         "sources": [
@@ -505,11 +506,12 @@
         "signerCount": 7,
         "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
+          "caps": "At Fantom block 123116374 on 2026-09-01, owner() returned Safe 0x6b291cf19370a14bbb4491b01091e1e29335e605 and hasRole(ADMIN_ROLE, Safe) returned true, while its own mintCeiling and whitelisted entries were zero. In the verified CrossChainCanonicalAlchemicTokenV2 implementation 0x211c74db951c161c5a379363716ebdca5125ef59, setCeiling(address,uint256) is onlyOwner and setWhitelist(address,bool) is onlyAdmin, and mint(address,uint256) enforces no ceiling. The Safe can both raise any bridge-token ceiling and whitelist an uncapped minter.",
           "pausersAdminsUpgraders": "The Safe retains ADMIN_ROLE/minter evidence; guard and module-guard reads reverted, and its relationship to any legacy bridge is unresolved.",
           "unsupportedReason": "Fantom legacy bridge semantics and current route liveness are unresolved."
         },
-        "capDescription": "The Safe's retained token admin/minter authority is scoreable, but bridge-specific minting and cap-raising semantics remain unresolved.",
-        "canRaiseCap": "unknown",
+        "capDescription": "The Safe is Fantom alUSD owner() and holds ADMIN_ROLE, so it can raise any bridge-token mintCeiling through onlyOwner setCeiling and whitelist an uncapped mint(address,uint256) caller through onlyAdmin setWhitelist; its own current ceiling and whitelist entries are zero. Legacy Multichain-era bridge liveness remains unresolved.",
+        "canRaiseCap": true,
         "observedAt": "2026-07-20",
         "sources": [
           {
@@ -623,7 +625,7 @@
           "protocol:layerzero-v2",
           "protocol:layerzero-dvns"
         ],
-        "authorityType": "unknown",
+        "authorityType": "validator-quorum",
         "routeChecks": {
           "attestorQuorum": "The exact per-OApp send and receive ULN libraries, required and optional DVNs, confirmation thresholds, executor settings, and validator operating authorities were not independently read for the reviewed alUSD routes.",
           "trustedPeerOrRemote": "The exact alUSD OApp contracts and owner Safes are recorded in separate route controls. Those delivery and application-admin identities do not establish the independent LayerZero validator authority."
@@ -635,7 +637,7 @@
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
         ],
-        "evidence": "Current code and owner reads resolve the exact alUSD OApp delivery contracts separately. The reviewed evidence does not resolve the weakest external DVN/ULN validator authority for these routes, so this control remains unknown rather than inheriting the OApp contract identity."
+        "evidence": "Current code and owner reads resolve the exact alUSD OApp delivery contracts separately. The reviewed evidence does not resolve the weakest external DVN/ULN validator authority for these routes, so this control remains unknown rather than inheriting the OApp contract identity. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external LayerZero DVN/ULN validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum — known but weak, graded no higher than a named issuer backend and never above a named multisig — rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
       }
     ]
   }

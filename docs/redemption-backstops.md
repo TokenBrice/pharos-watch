@@ -8,12 +8,12 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.41`
+- **Current methodology version:** `v4.42`
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.41` update: on-chain redemption-rate probes require an explicit decimal scale. The six configured Liquity-style probes now pin their 18-decimal contract returns, so fresh successful reads can populate formula-route fee telemetry while an unavailable read remains unknown. Scoring weights and formulas remain unchanged.
+Latest `v4.42` update: market-implied degradation now requires an open live downside incident plus a fresh authoritative current signed deviation at or below -2500 bps. If current evidence is unavailable, the route publishes `unknown` / `market-implied`, remains `impaired`, and stays unrated instead of asserting present degradation from the incident's historical peak. Scoring weights, formulas, and the threshold remain unchanged.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
@@ -44,7 +44,7 @@ The config registry is validated at module load time against `TRACKED_META_BY_ID
 
 The cron reads:
 
-1. The strict `stablecoins` cache via `loadStablecoinsCache(...)`
+1. The strict `stablecoins` cache via `loadStablecoinsCache(...)`, including its generation timestamp, underlying price-observation timestamps and provenance, FX references, and same-generation prices used to derive current signed deviations
 2. The latest DEX liquidity snapshot via `loadDexLiquiditySnapshot(db)` so both the liquidity map and freshness can be reused
 3. A preloaded map of the latest authoritative reserve snapshot metadata for routes that use live reserve telemetry for capacity or fee inputs
 
@@ -56,7 +56,7 @@ Status semantics:
 - `degraded` when at least one row is written but any active configured route fails, hits a non-`missing-capacity`/non-`impaired`/non-`missing-cache` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, the reused DEX liquidity snapshot is stale or missing, the runtime cache has no active configured route at all, a reserve-metadata or DEX-liquidity preload step failed, or the D1 write/retention step returned warnings
 - `error` when zero routes resolve to a usable scored row because of route failures, blocking unresolved states, all active configured routes missing capacity, or every configured route being absent from the active runtime stablecoins cache
 
-Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity` (plus per-family/per-provider `familyMissingCapacityBy` / `providerMissingCapacityBy` breakdowns when any capacity is missing, so a single failing adapter family cannot hide inside the aggregate tolerance), `unresolvedCritical`, `availabilityDegraded`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `activeConfigured`, `cacheAbsentConfigured`, `dynamic`, `estimated`, `static`, `liquidityStale`, `severeActiveDepegThresholdBps`, registry/run manifest fields (`registryHash`, `familyCounts`, `strongProxyCount`, `heuristicCount`, `validatorVersion`, `configMethodologyVersion`, `v4ScoringParametersHash`), and route-status producer fields (`routeStatusProducer`, `routeStatusProducerFetches`), plus capped `failedIds`, `availabilityDegradedIds`, or `missingFromCache` when relevant. `availabilityDegraded`/`availabilityDegradedIds` are row-level route-availability signals and do not by themselves degrade the cron run.
+Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity` (plus per-family/per-provider `familyMissingCapacityBy` / `providerMissingCapacityBy` breakdowns when any capacity is missing, so a single failing adapter family cannot hide inside the aggregate tolerance), `unresolvedCritical`, `availabilityDegraded`, `marketImpliedDegraded`, `marketEvidenceUncertain`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `activeConfigured`, `cacheAbsentConfigured`, `dynamic`, `estimated`, `static`, `liquidityStale`, `severeActiveDepegThresholdBps`, registry/run manifest fields (`registryHash`, `familyCounts`, `strongProxyCount`, `heuristicCount`, `validatorVersion`, `configMethodologyVersion`, `v4ScoringParametersHash`), and route-status producer fields (`routeStatusProducer`, `routeStatusProducerFetches`), plus capped matching ID lists or `missingFromCache` when relevant. Intentional confirmed impairment and current-evidence uncertainty do not by themselves degrade the cron run.
 
 ---
 
@@ -92,7 +92,11 @@ The exit-route observation envelope this producer emits is consumed by the Safet
 
 The V9-only FPI path observes its Controller Pool, FRAX and FPI price feeds, and CPI tracker at one Ethereum block. Admission pins every dependency address and runtime hash, verifies current oracle rounds and controller/feed agreement, rejects paused or out-of-band state, and measures the live fee, quote, FRAX balance, and maximum redeemable FPI. Capacity is denominated as input FPI at the CPI peg; execution cost and the pinned FRAX output value remain separate so the all-in loss must satisfy the modeled-request ceiling. The configured CPI update bounds admit observations up to 62 days old at high model confidence, downgrade observations from 62 through 366 days to medium, and reject older state. The issuer collateral response and the nested route attempt publish through the same reserve-adapter result, so a failed issuer request cannot leave a new route attempt attached to stale composition. This evidence is consumed only by explicit V9 replay and does not alter standalone public redemption rows or scores.
 
-Severe active downside depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row is directionally below peg with `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. Severe upside events do not automatically impair a route whose redemption still clears at par into a non-impaired output asset. Downside impairment also propagates as output-asset impairment when a modeled route output has an open severe-depeg row. Dependency weights come from the coin's `variantOf` and `pegReferenceId` parents when either is set; otherwise, for every route family except `offchain-issuer`, they are derived from the coin's reserve composition (`reserves[].pct`) and declared `dependencies[].weight`. The row records `outputImpairedShare` and `outputImpairedDependencyId`, and a reserve-derived composition whose modeled weights sum above 100% of supply is flagged as over-leveraged with the impaired share clamped at 100%. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
+Severe active downside depegs add a current-exercisability gate on top of the static route score. The incident gate is an open live `depeg_events` row whose explicit direction is below peg; `peak_deviation_bps`, `peak_price`, `started_at`, and incident age remain historical context and never establish present severity. `degraded` / `market-implied` requires the same stablecoins generation used by the redemption run to be no more than 1800 seconds old, its underlying `priceObservedAt ?? priceUpdatedAt` to be finite, non-future, and no more than 1800 seconds old, non-cached and authoritative price trust, an authoritative peg reference, and a finite current signed deviation at or below -2500 bps. A fresh authoritative deviation above that boundary releases this overlay without closing the incident. If currency cannot be established, the route publishes `unknown` / `market-implied`, remains `resolutionState: impaired`, applies `market-implied-depeg-evidence-uncertain`, and withholds its score; a missing feed therefore cannot turn a permanently collapsed asset into an open static route.
+
+Confirmed downside impairment and current-evidence uncertainty both propagate through modeled outputs. Dependency weights come from `variantOf` and `pegReferenceId` parents when either is set; otherwise, for every route family except `offchain-issuer`, they are derived from reserve composition (`reserves[].pct`) and declared dependencies (`dependencies[].weight`). Only dependencies with confirmed current severe evidence contribute to `outputImpairedShare`, and the dependency with the largest absolute current severe deviation supplies the attribution. Any confirmed severe dependency takes precedence over uncertain dependencies; when none is currently severe but at least one relevant open incident is uncertain, the route is `unknown` and unrated. The direct strong-live exception remains limited to current permissionless atomic/immediate live-direct capacity and never bypasses output impairment or uncertainty. The redemption producer only reads `depeg_events`; lifecycle ownership, recovery, and incident closure remain with the depeg producer.
+
+Declared tracked-stablecoin outputs also carry an additive downstream-resolution disclosure. When an output row in the same snapshot is not `resolved`, the otherwise independent upstream row publishes `outputDependencyResolution: { stablecoinId, resolutionState }`; the field is omitted when every observed output row is resolved. This marker does not suppress a valid same-run measurement, change `routeStatus`, downgrade confidence, alter any score, or gate Safety Score V9 Exit eligibility. It is stored in the existing redemption `details_json` envelope, so it adds no typed D1 column and requires no migration or redemption methodology-version bump.
 
 ---
 
@@ -227,18 +231,20 @@ Each row also carries:
   - `missing-cache` when the stablecoins snapshot did not contain the asset or its current supply
   - `missing-capacity` when the route is configured but current runtime inputs could not produce usable capacity
   - `failed` when a route-specific resolver failed
-  - `impaired` when the route shape is known but current market or route-availability evidence contradicts broad par redemption; impaired rows have `score = null` and `modelConfidence = low`
+  - `impaired` when the route shape is known but current market or route-availability evidence either contradicts broad par redemption or cannot establish whether an open downside incident is still severe; impaired rows have `score = null` and `modelConfidence = low`
 - `routeStatus`:
   - `open` for normal resolved routes without current impairment evidence
-  - `degraded` when the route is currently impaired by market-implied evidence such as a severe active depeg
-  - `paused`, `cohort-limited`, and `unknown` are reserved for explicit route-availability sources and backward-compatible legacy rows
+  - `degraded` when fresh authoritative current evidence confirms severe market-implied impairment
+  - `unknown` with `routeStatusSource: market-implied` when an open downside incident lacks current authoritative evidence; this withholds the score rather than restoring the static route claim
+  - `paused`, `cohort-limited`, and other `unknown` combinations remain available to explicit route-availability sources and backward-compatible legacy rows
   - whitelist or approved-holder gates should normally be modeled through `accessModel` / `holderEligibility`; use `cohort-limited` only when current route evidence shows impairment beyond that reviewed eligible cohort
   - unknown route status remains a low-confidence signal unless the capacity evidence is direct live telemetry or a source-reviewed documented bound
 - `routeStatusSource`:
   - `static-config` for normal config-derived status
-  - `market-implied` for the severe active-depeg exercisability gate
-  - `operator-notice`, `protocol-api`, and `onchain` are reserved for future current-route evidence sources
-  - no operator override or standalone route-status feed is wired in the cron path today; merge precedence is live adapter evidence, then static config, with market-implied severe-depeg impairment applied last unless a strong live-direct route is explicitly open
+  - `market-implied` for both confirmed severe current-depeg impairment and unresolved current-evidence currency on an open downside incident
+  - reviewed adapters may currently emit `protocol-api` or `onchain` as live current-route evidence
+  - `operator-notice` is reserved for an explicit reviewed notice; no standalone operator override or route-status feed is wired in the cron path today
+  - merge precedence is live adapter evidence, then static config, with the market-implied overlay applied last unless a strong live-direct route is explicitly open; output impairment or uncertainty cannot use that exception
 - `holderEligibility`:
   - derived from the route access model by default: permissionless onchain routes are `any-holder`, whitelist routes are `whitelisted-primary`, issuer API routes are `verified-customer`, and manual routes are `issuer-discretionary`
 - `capacityConfidence`:
@@ -253,7 +259,8 @@ Each row also carries:
   - `immediate-bounded` when the model is intended to represent a current redeemable buffer
   - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity. Current V9 applies the unified Exit route ladder: reliable reviewed non-atomic issuer/protocol/eventual routes require output, evidence, failure-domain, and capacity gates and receive the applicable delay/confidence discounts. The DEX-gated primary-market bonus was historical V7.05 behavior, not a current scoring path.
 - `capacityBasis` (orthogonal to `capacityConfidence`: basis describes the model shape, confidence the evidence strength — consumers must read both; a `psm-balance-share` basis can be live-measured or a heuristic guess):
-  - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`
+  - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `fixed-buffer`, `live-direct-telemetry`, or `live-proxy-buffer`
+  - `fixed-buffer` identifies a reviewed fixed USD buffer (`capacityModel.kind === "fixed-usd"`), distinct from live-direct or live-proxy telemetry
   - reserve-sync fallback ratios use the configured `basis` when present, otherwise route-family defaults such as `psm-balance-share`, `strategy-buffer`, or `hot-buffer`; they are not labeled `live-proxy-buffer` unless live proxy telemetry produced the capacity
 - Live reserve telemetry fields are additive display/provenance context, not Safety Score eligibility by themselves:
   - `capacityKind` describes the adapter-declared evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`
@@ -338,7 +345,7 @@ Key columns:
 - `details_json`
 - `snapshot_run_id`
 
-`details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, optional live telemetry fields, fee fields, `resolutionState`, `routeStatus`, `routeStatusSource`, `routeStatusReason`, `routeStatusReviewedAt`, `holderEligibility`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
+`details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, optional live telemetry fields, fee fields, `resolutionState`, `routeStatus`, `routeStatusSource`, `routeStatusReason`, `routeStatusReviewedAt`, `holderEligibility`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and free-form `capsApplied` markers such as `market-implied-depeg-evidence-uncertain`. The v4.42 uncertainty state therefore uses existing JSON fields and requires no typed column or D1 migration.
 
 `snapshot_run_id` links current rows to a completed `redemption_backstop_runs` manifest when written by the post-`0094` worker. API and report-card readers prefer the latest valid completed run. If the newest completed manifest is incomplete or its rows are unreadable, readers try recent earlier completed runs before returning `503`. The true-legacy `MAX(updated_at)` fallback is retired: with no valid completed run, readers fail closed to `503` (fresh local databases 503 cleanly until the first completed sync).
 
@@ -377,7 +384,7 @@ Stored fields:
 
 The sync inserts a `running` row before writing immutable run rows, writes history after those rows are complete, and marks the manifest `completed` only after the immutable row count and update bounds are valid. If immutable row, history, or completion writes fail after the manifest is started, the writer best-effort marks the manifest `failed` with phase-specific failure metadata before rethrowing. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they return `503`; the legacy current-mirror write and the `MAX(updated_at)` fallback are retired.
 
-Run manifests and immutable run rows are pruned after successful writes with a 14-day retention window. The prune keeps the just-written run and the latest completed run even when either is older than the cutoff, so current API reads and legacy fallback constraints stay intact. Retention failures are recorded as completed-run warnings instead of failing the already-written snapshot.
+Run manifests and immutable run rows are pruned after successful writes with a 14-day retention window. The prune keeps the just-written run and the latest completed run even when either is older than the cutoff, so current API reads stay intact. Retention failures are recorded as completed-run warnings instead of failing the already-written snapshot.
 
 ---
 
@@ -402,7 +409,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
 - `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders one `Standalone route score` with a route-specific title (`Issuer redemption route` or `Redemption route`), source freshness, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions.
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
-- `/coverage` consumes `useRedemptionBackstops()` through `src/lib/coverage/redemption.ts`. It distinguishes scored route-family states from low-confidence heuristic routes, resolved-but-unscored routes, configured-but-unrated routes, impaired routes, no route, and `Data n/a` feed-unavailable states, so unresolved, eventual-only, impaired, or weakly evidenced rows do not inflate public strong-coverage counts. The Redemption quick filter includes configured/resolved route states but excludes `Data n/a`.
+- `/coverage` consumes `useRedemptionBackstops()` through `src/lib/coverage/redemption.ts`. It distinguishes scored route-family states from low-confidence heuristic routes, resolved-but-unscored routes, configured-but-unrated routes, impaired routes, no route, and `Data n/a` feed-unavailable states. Within impaired rows, `degraded` / `market-implied` means confirmed current severe evidence, while `unknown` / `market-implied` means the open incident lacks current authoritative evidence; both remain unrated and cannot inflate public strong-coverage counts. The Redemption quick filter includes configured/resolved route states but excludes `Data n/a`.
 
 The maintenance coverage audit requires a durable reviewed disposition for every active asset without a route config. `shared/data/coverage-dispositions/redemption-coverage-dispositions.ts` records evidence URLs, reviewer/date, rationale, the exact blocker and evidence still needed, and a route family only when official evidence proves that family. `add` means the holder route is evidenced but configuration still needs the listed capacity/status inputs; `needs-research`, `defer`, and `hard-reject` remain legitimate coverage outcomes and do not create a scoreable route. The audit rejects stale registry rows and keeps heuristic configured routes visible until hard capacity evidence replaces them.
 

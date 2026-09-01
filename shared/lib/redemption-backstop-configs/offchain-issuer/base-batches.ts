@@ -250,6 +250,26 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     },
     { sourceFilePath: SOURCE_FILE_PATH },
   ),
+  ...defineBatch(
+    ["kgst-kyrgyz-som", "jpyc-jpyc-v1"],
+    {
+      ...issuerBase,
+      capacityModel: {
+        kind: "supply-full",
+        confidence: "heuristic",
+      },
+      holderEligibility: "unknown",
+      routeStatus: "unknown",
+      reviewedAt: REVIEWED_NON_USD_BATCH_AT,
+      notes: [
+        "Current primary issuer materials do not establish an ordinary-holder redemption route or a full-supply redemption obligation, so the route and capacity remain heuristic and unverified.",
+      ],
+    },
+    { sourceFilePath: SOURCE_FILE_PATH },
+  ).map((entry) => ({
+    ...entry,
+    overrideReason: "Primary-terms review downgrades unsupported documented-bound route and capacity claims.",
+  })),
   ...addDocumentedBoundSourceRefs(
     defineBatch(
       ["zarp-zarp", "cetes-etherfuse"],
@@ -269,11 +289,9 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
         "audx-aussie-dollar-token",
         "brl1-brl1",
         "cngn-compliant-naira",
-        "kgst-kyrgyz-som",
         "reur-royal-euro",
         "wars-argentine-peso",
         "eusd-telcoin",
-        "jpyc-jpyc-v1",
         "rusd-royal-dollar",
       ],
       {

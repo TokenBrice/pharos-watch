@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildClientRegistryOutput,
+  buildWorkerRuntimeRegistryOutput,
   projectCoin,
   projectBlacklistStatus,
   projectGeniusProfile,
@@ -18,6 +19,37 @@ import {
 } from "@shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
+  it("projects the exact narrow Worker identity and lifecycle contract", () => {
+    const { runtimeCoins } = buildWorkerRuntimeRegistryOutput();
+    const expected = TRACKED_STABLECOINS.map((coin) => ({
+      id: coin.id,
+      symbol: coin.symbol,
+      ...(coin.status != null ? { status: coin.status } : {}),
+      ...(coin.contracts != null ? { contracts: coin.contracts } : {}),
+      ...(coin.tradedContracts != null ? { tradedContracts: coin.tradedContracts } : {}),
+      ...((coin.status == null || coin.status === "active") && coin.liveReservesConfig != null
+        ? {
+            liveReserveCircuitSource:
+              `live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`,
+          }
+        : {}),
+    }));
+
+    expect(runtimeCoins).toEqual(expected);
+    expect(
+      runtimeCoins.every((coin) =>
+        Object.keys(coin).every((key) => [
+          "id",
+          "symbol",
+          "status",
+          "contracts",
+          "tradedContracts",
+          "liveReserveCircuitSource",
+        ].includes(key)),
+      ),
+    ).toBe(true);
+  });
+
   it("projects only the compact listing class from the decision ledger", () => {
     const { slimCoins } = buildClientRegistryOutput();
     expect(slimCoins).toHaveLength(TRACKED_STABLECOINS.length);

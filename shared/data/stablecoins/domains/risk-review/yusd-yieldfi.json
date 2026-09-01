@@ -911,7 +911,7 @@
           "protocol:chainlink-ccip",
           "protocol:chainlink-ccip-don"
         ],
-        "authorityType": "unknown",
+        "authorityType": "validator-quorum",
         "routeChecks": {
           "attestorQuorum": "Chainlink's architecture documentation describes commit-DON consensus and independent Risk Management Network blessing, but the exact production DON/RMN validator membership, authority, and controlling contract set for these selected routes were not independently verified.",
           "trustedPeerOrRemote": "The exact per-chain Chainlink Router and YieldFi BridgeCCIP delivery contracts remain identified in the route-specific controls. This protocol-level control models only the external DON/RMN authority and therefore does not inherit those contract identities."
@@ -927,7 +927,7 @@
             "url": "https://docs.yield.fi/resources/contract-addresses"
           }
         ],
-        "evidence": "The verified route-specific BridgeCCIP implementations identify the exact delivery controller and configured Chainlink Router, then enforce allowed-peer and replay checks. Chainlink's documentation establishes a separate DON/RMN validation layer, but the reviewed evidence does not establish an exact validator authority or one controllerAddress for that layer, so its authority remains unresolved."
+        "evidence": "The verified route-specific BridgeCCIP implementations identify the exact delivery controller and configured Chainlink Router, then enforce allowed-peer and replay checks. Chainlink's documentation establishes a separate DON/RMN validation layer, but the reviewed evidence does not establish an exact validator authority or one controllerAddress for that layer, so its authority remains unresolved. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external Chainlink CCIP DON/RMN validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum — known but weak, graded no higher than a named issuer backend and never above a named multisig — rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
       }
     ]
   }

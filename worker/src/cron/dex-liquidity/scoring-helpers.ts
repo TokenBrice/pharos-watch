@@ -4,6 +4,7 @@ import type {
   LiquidityFallbackCounters,
   LiquidityMetrics,
   LiquiditySourceMixByFamily,
+  PoolEntry,
 } from "./types";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
@@ -13,6 +14,35 @@ import { normalizeProtocol } from "./pool-helpers";
 
 type PoolExtra = NonNullable<LiquidityMetrics["topPools"][number]["extra"]>;
 type PoolExtraKey = keyof PoolExtra;
+
+export function hasScoreFacingMeasuredExecution(pool: PoolEntry): boolean {
+  const extra = pool.extra;
+  return Boolean(
+    extra?.measuredExecutionTarget ||
+      extra?.measuredExecutionTargets?.length ||
+      extra?.measuredExecution ||
+      extra?.measuredExecutions?.length ||
+      extra?.measuredExecutionProfile ||
+      extra?.measuredExecutionProfiles?.length,
+  );
+}
+
+export function resolveUniqueTrackedTokenIndex(
+  assetIds: readonly (string | undefined)[],
+  stablecoinId: string,
+):
+  | { trackedTokenIndex: number; reason: null }
+  | { trackedTokenIndex: null; reason: "tracked-input-unresolved" | "ambiguous-token-identity" } {
+  const trackedIndexes = assetIds
+    .map((assetId, index) => (assetId === stablecoinId ? index : -1))
+    .filter((index) => index >= 0);
+  return trackedIndexes.length === 1
+    ? { trackedTokenIndex: trackedIndexes[0]!, reason: null }
+    : {
+        trackedTokenIndex: null,
+        reason: trackedIndexes.length === 0 ? "tracked-input-unresolved" : "ambiguous-token-identity",
+      };
+}
 
 function getPoolExtraNumber(
   extra: LiquidityMetrics["topPools"][number]["extra"] | undefined,
@@ -200,7 +230,9 @@ function shouldStrictlyCapSource(source: LiquidityMetrics["topPools"][number]["s
     source === "aquarius" ||
     source === "tezos" ||
     source === "icon-balanced" ||
-    source === "kava-swap";
+    source === "kava-swap" ||
+    source === "osmosis-sqs" ||
+    source === "noble-swap";
 }
 
 export function applyProtocolCaps(

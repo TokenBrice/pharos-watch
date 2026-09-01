@@ -19,6 +19,7 @@ import {
   resolveRedemptionBackstopEntry,
 } from "../lib/redemption-backstop-sources";
 import {
+  buildRedemptionCurrentDepegObservationMap,
   formatUtcDate,
   loadSevereActiveDepegAvailabilityMap,
 } from "../lib/redemption-backstop-availability";
@@ -114,6 +115,12 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   );
   const stablecoinAssetById = new Map(stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]));
   const now = Math.floor(Date.now() / 1000);
+  const currentDepegObservationsById = buildRedemptionCurrentDepegObservationMap({
+    peggedAssets: stablecoinsCache.payload.peggedAssets,
+    fxFallbackRates: stablecoinsCache.payload.fxFallbackRates,
+    stablecoinsGenerationAt: stablecoinsCache.updatedAt,
+    now,
+  });
   const preloadWarnings: string[] = [];
   let dexLiquidityMap: Awaited<ReturnType<typeof loadDexLiquiditySnapshot>>["map"] = {};
   let latestUpdatedAt: number | null = null;
@@ -139,7 +146,11 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     preloadWarnings.push(`reserve-metadata:${message}`);
   }
 
-  const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(db, formatUtcDate(now));
+  const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(
+    db,
+    formatUtcDate(now),
+    currentDepegObservationsById,
+  );
   const registryMetadata = buildRegistryMetadata(configuredIds, configById);
 
   // Staleness is tracked for operational visibility (degraded-run signal +
@@ -214,6 +225,12 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     .filter((entry) => entry.resolutionState === "impaired")
     .map((entry) => entry.stablecoinId);
   const availabilityDegradedCount = availabilityDegradedIds.length;
+  const marketImpliedDegradedIds = snapshots
+    .filter((entry) => entry.routeStatus === "degraded" && entry.routeStatusSource === "market-implied")
+    .map((entry) => entry.stablecoinId);
+  const marketEvidenceUncertainIds = snapshots
+    .filter((entry) => entry.routeStatus === "unknown" && entry.routeStatusSource === "market-implied")
+    .map((entry) => entry.stablecoinId);
   const missingFromCache = configuredIds.filter((stablecoinId) => !stablecoinAssetById.has(stablecoinId));
   const cacheAbsentConfiguredCount = missingFromCache.length;
   const activeConfiguredCount = Math.max(0, configuredIds.length - cacheAbsentConfiguredCount);
@@ -244,6 +261,8 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     ...(missingCapacityCount > 0 ? { familyMissingCapacityBy, providerMissingCapacityBy } : {}),
     unresolvedCritical: criticalUnresolvedCount,
     availabilityDegraded: availabilityDegradedCount,
+    marketImpliedDegraded: marketImpliedDegradedIds.length,
+    marketEvidenceUncertain: marketEvidenceUncertainIds.length,
     severeActiveDepegThresholdBps: REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
     missingCapacityOkThreshold: allowedMissingCapacityCount,
     coverageRatio,
@@ -261,6 +280,18 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       ? {
           availabilityDegradedIds: capStringList(availabilityDegradedIds),
           availabilityDegradedIdsTruncated: availabilityDegradedIds.length > 25,
+        }
+      : {}),
+    ...(marketImpliedDegradedIds.length > 0
+      ? {
+          marketImpliedDegradedIds: capStringList(marketImpliedDegradedIds),
+          marketImpliedDegradedIdsTruncated: marketImpliedDegradedIds.length > 25,
+        }
+      : {}),
+    ...(marketEvidenceUncertainIds.length > 0
+      ? {
+          marketEvidenceUncertainIds: capStringList(marketEvidenceUncertainIds),
+          marketEvidenceUncertainIdsTruncated: marketEvidenceUncertainIds.length > 25,
         }
       : {}),
     ...(missingFromCache.length > 0

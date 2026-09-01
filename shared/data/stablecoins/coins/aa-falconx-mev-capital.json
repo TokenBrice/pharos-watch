@@ -13,7 +13,7 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC base asset in the Pareto FalconX Credit Vault, providing fixed-rate exposure to FalconX institutional credit lines curated by M11 Credit.",
+  "collateral": "A senior (AA) tranche claim on a single-obligor FalconX credit facility curated by M11 Credit. USDC is the vault's deposit, unit of account and repayment asset, not its collateral: Pareto sends deposited USDC directly to the borrower's wallet, so the vault's asset is the FalconX receivable. Collateralisation, loan tape and claim priority are not disclosed.",
   "pegMechanism": "NAV-style credit vault token with monthly redemption mechanics; not a Falcon Finance USDf or MEV Capital strategy token.",
   "mechanismArchetype": "rwa-credit-fund",
   "archetypeOverride": true,
@@ -47,6 +47,51 @@
       "decimals": 18
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "idle-cdo-epoch-variant",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "aa-falconx-mev-capital",
+    "display": {
+      "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults",
+      "label": "Pareto credit vaults"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "cdoAddress": "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
+      "tranche": "AA",
+      "underlyingAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "underlyingDecimals": 6,
+      "creditSlice": {
+        "sourceKey": "idle-cdo:falconx-credit-facility",
+        "name": "FalconX single-obligor credit facility",
+        "risk": "high",
+        "assetClass": "private-credit",
+        "issuerOrObligor": "FalconX",
+        "riskFactors": ["credit", "counterparty", "concentration", "liquidity", "legal"]
+      },
+      "unlentSlice": {
+        "sourceKey": "idle-cdo:unlent-usdc",
+        "name": "Unlent USDC held by the credit vault",
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "assetClass": "stablecoin",
+        "riskFactors": ["counterparty", "custody", "smart-contract"],
+        "blacklistable": true
+      },
+      "sourceUrls": [
+        "https://docs.pareto.credit/product/credit-vaults",
+        "https://github.com/Idle-Labs/idle-tranches/tree/d7b98b98328e1506b4322c81d44f0a97f5944852"
+      ]
+    }
+  },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

@@ -76,7 +76,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 
 **File:** `worker/src/lib/mint-burn-contracts.ts`
 
-Token identity now resolves from the shared stablecoin registry in `shared/lib/stablecoins/registry.ts`, which validates the checked-in per-coin metadata assets under `shared/data/stablecoins/coins/*.json` through `shared/data/stablecoins/coins.generated.json` at module load. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. There are no explicit address overrides; both `reUSD` configs (`reusd-re-protocol` and `reusd-resupply`) resolve the registered token contract and track its canonical zero-address `Transfer` events.
+Token identity resolves from the canonical checked-in per-coin metadata under `shared/data/stablecoins/coins/*.json`. The validated full aggregate generates `coins.worker-runtime.generated.json`, a narrow identity/lifecycle/contract projection used by mint/burn so the extended scheduled lane does not initialize the evidence-rich full registry inside its 128 MB isolate. `npm run check:mint-burn-runtime-imports` bundles the extended scheduled entrypoint and rejects any runtime path back to the full registry. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. There are no explicit address overrides; both `reUSD` configs (`reusd-re-protocol` and `reusd-resupply`) resolve the registered token contract and track its canonical zero-address `Transfer` events.
 
 ### Registry ownership
 

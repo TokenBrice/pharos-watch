@@ -1,4 +1,3 @@
-import { buildDirectApiPoolIdentity } from "../direct-source-helpers";
 import type { DirectApiFetchPhaseResult } from "./direct-api";
 
 export interface AuthoritativeStagedPoolConfirmationIndex {
@@ -15,6 +14,9 @@ export function buildAuthoritativeStagedPoolConfirmationIndex(
   for (const entry of results) {
     const pagination = entry.result.pagination;
     if (
+      // A bounded sample never saw most of its protocol, so a pool missing from
+      // it is not evidence that the pool does not exist.
+      entry.censusScope === "bounded-sample" ||
       !entry.result.ok ||
       entry.result.degraded ||
       (pagination != null &&
@@ -23,6 +25,15 @@ export function buildAuthoritativeStagedPoolConfirmationIndex(
       continue;
     }
 
+    // Only the raw provider census can confirm a staged pool. `result.pools` has
+    // been compacted down to pools holding a tracked token by this point, and
+    // enforcing against that subset vetoes real pools the compaction removed.
+    // A census that produced no identity at all — a silent empty response, an
+    // adapter that resolved nothing — carries no evidence either; enforcing on
+    // it rejects every staged pool for the protocol on the strength of nothing.
+    const rawExactPoolKeys = entry.authoritativeExactPoolKeys;
+    if (!rawExactPoolKeys || rawExactPoolKeys.size === 0) continue;
+
     const enforcedChains = enforcedChainsByProtocol.get(entry.normalizedProtocol) ?? new Set<string>();
     for (const chain of entry.supportedChains) {
       enforcedChains.add(chain);
@@ -30,17 +41,8 @@ export function buildAuthoritativeStagedPoolConfirmationIndex(
     enforcedChainsByProtocol.set(entry.normalizedProtocol, enforcedChains);
 
     const confirmedExactKeys = confirmedExactKeysByProtocol.get(entry.normalizedProtocol) ?? new Set<string>();
-    if (entry.authoritativeExactPoolKeys) {
-      for (const exactPoolKey of entry.authoritativeExactPoolKeys) {
-        confirmedExactKeys.add(exactPoolKey);
-      }
-    } else {
-      for (const pool of entry.result.pools) {
-        const exactPoolKey = buildDirectApiPoolIdentity(pool).exactPoolKey;
-        if (exactPoolKey) {
-          confirmedExactKeys.add(exactPoolKey);
-        }
-      }
+    for (const exactPoolKey of rawExactPoolKeys) {
+      confirmedExactKeys.add(exactPoolKey);
     }
     confirmedExactKeysByProtocol.set(entry.normalizedProtocol, confirmedExactKeys);
   }

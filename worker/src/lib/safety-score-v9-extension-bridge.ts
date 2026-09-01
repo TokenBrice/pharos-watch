@@ -8,12 +8,14 @@ import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import type {
   V9BridgeJoinDiagnosticsV1,
+  V9BridgeSupplyRouteJoinV1,
   V9FailureDomainRef,
 } from "@shared/types/safety-score-v9-facts";
 import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/core";
 import {
   COMMON_MODE_MATERIAL_SHARE_THRESHOLD,
   DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,
+  authorityModelForType,
   confidenceForResearch,
   isoDateStartSec,
   notApplicableStatus,
@@ -46,15 +48,7 @@ function bridgeAuthority(
   const authorityKey = control.controllerAddress
     ? `${control.controllerChain ?? "chain-unresolved"}:${control.controllerAddress.toLowerCase()}`
     : (control.failureDomainKeys?.[0] ?? `bridge-control:${control.id}:${routeId}`);
-  const model: NonNullable<ControlOverlay["authority"]>["model"] = (() => {
-    if (control.authorityType === "safe" || control.authorityType === "multisig") return "multisig";
-    if (control.authorityType === "eoa") return "eoa";
-    if (control.authorityType === "dao-governor") return "governance";
-    if (control.authorityType === "issuer-backend") return "issuer-backend";
-    if (control.authorityType === "contract" || control.authorityType === "timelock") return "contract";
-    if (control.authorityType === "none") return "none";
-    return "unknown";
-  })();
+  const model = authorityModelForType(control.authorityType);
   const required = control.threshold ?? control.safe?.threshold;
   const total = control.signerCount ?? control.safe?.owners?.length;
   const threshold = model === "multisig" && required != null && total != null ? { required, total } : null;
@@ -165,6 +159,17 @@ export function mergedBridgeCapSemantics(
   return { kind: "bounded", bound: firstBound };
 }
 
+/**
+ * Weakness ordering for the merged route authority: higher is weaker, and
+ * `mergedBridgeAuthority` keeps the weakest contributor. Only the relative order
+ * is meaningful — the numbers carry no other semantics.
+ *
+ * AUTHORITY-LADDER 9.46: `validator-quorum` sits strictly below `issuer-backend`
+ * and strictly above `eoa`. That is the adopted owner ruling: an external
+ * validator quorum is known-but-weak — no stronger than a named issuer backend,
+ * and never stronger than a named multisig — but a rotating quorum that must
+ * collude is still a harder failure than one unattested single key.
+ */
 function bridgeAuthoritySeverity(model: NonNullable<ControlOverlay["authority"]>["model"]): number {
   return {
     none: 0,
@@ -172,8 +177,9 @@ function bridgeAuthoritySeverity(model: NonNullable<ControlOverlay["authority"]>
     governance: 1,
     contract: 2,
     "issuer-backend": 3,
-    eoa: 4,
-    unknown: 5,
+    "validator-quorum": 4,
+    eoa: 5,
+    unknown: 6,
   }[model];
 }
 
@@ -590,12 +596,82 @@ function hasCompleteSubthresholdBridgeInventory(
 
 type BridgeJoinChainRows = Readonly<Record<string, { current: number }>>;
 
+function bridgeJoinSharesReconcile(left: number, right: number): boolean {
+  return Math.abs(left - right) <= 0.000001;
+}
+
+/**
+ * ODR-D5a: name the selected supply rows this asset cannot show joined to one
+ * proven bridge control, so the residue carriers' `BRIDGE_MATERIALITY` work
+ * item points at a `deploymentRouteKey` instead of leaving the reader to
+ * re-derive the join. This mirrors the row branches of the evaluator's
+ * completeness proof (`evaluateV9SubthresholdUnresolvedBridgeJoins`) over the
+ * facts the producer can see; the two forgiven sub-threshold branches are
+ * skipped so a clean asset records nothing. It is diagnostics only — the
+ * evaluator remains the sole authority on the verdict.
+ */
+function buildUnprovenRouteJoins(
+  supplyReview: ExtensionAsset["supplyReview"],
+  bridgeControls: readonly ControlOverlay[],
+  controlSemanticsResolved: (control: ControlOverlay) => boolean,
+): V9BridgeSupplyRouteJoinV1[] {
+  const controlsByDeployment = new Map<string, ControlOverlay[]>();
+  for (const control of bridgeControls) {
+    if (control.controlKind !== "bridge") continue;
+    controlsByDeployment.set(control.deploymentKey, [
+      ...(controlsByDeployment.get(control.deploymentKey) ?? []),
+      control,
+    ]);
+  }
+  const unproven: V9BridgeSupplyRouteJoinV1[] = [];
+  for (const row of supplyReview?.selectedBridgeRoutes ?? []) {
+    const pooled = row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX);
+    // RULED D-J (2026-07-19) and the sub-material unmatched branch: both are
+    // accepted bounded rows, not join failures. Do not report them.
+    if (pooled && row.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD) continue;
+    if (row.reviewState === "unmatched" && !pooled && row.supplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD) continue;
+    const joined = controlsByDeployment.get(row.deploymentRouteKey) ?? [];
+    const single = joined.length === 1 ? joined[0]! : null;
+    const proven = (() => {
+      if (row.reviewState === "selected-reviewed") {
+        if (row.reviewedRouteKind === "native") return joined.length === 0;
+        if (row.reviewedRouteKind !== "controlled" || single === null) return false;
+        return (
+          controlSemanticsResolved(single) &&
+          single.materialSupplyShare !== null &&
+          bridgeJoinSharesReconcile(single.materialSupplyShare, row.supplyShare)
+        );
+      }
+      if (single === null) return false;
+      return (
+        single.scope === "deployment" &&
+        single.economicLossScope === "deployment" &&
+        single.materialSupplyShare !== null &&
+        bridgeJoinSharesReconcile(single.materialSupplyShare, row.supplyShare) &&
+        single.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD
+      );
+    })();
+    if (proven) continue;
+    unproven.push({
+      deploymentRouteKey: row.deploymentRouteKey,
+      reviewState: row.reviewState,
+      reviewedRouteKind: row.reviewedRouteKind ?? null,
+      supplyShare: row.supplyShare,
+      joinedControlKeys: [...new Set(joined.map((control) => control.controlKey))].sort(compareText),
+      joinedControlSemanticsResolved: single === null ? null : controlSemanticsResolved(single),
+      joinedControlSupplyShare: single === null ? null : single.materialSupplyShare,
+    });
+  }
+  return unproven.sort((left, right) => compareText(left.deploymentRouteKey, right.deploymentRouteKey));
+}
+
 function buildBridgeJoinDiagnostics(
   profileRoutes: readonly BridgeRouteDeployment[],
   chainRows: BridgeJoinChainRows | undefined,
   supplyReview: ExtensionAsset["supplyReview"],
   bridgeClaimControls: readonly ControlOverlay[],
   applicabilityBranch: V9BridgeJoinDiagnosticsV1["applicabilityBranch"],
+  unprovenRouteJoins: readonly V9BridgeSupplyRouteJoinV1[] = [],
 ): V9BridgeJoinDiagnosticsV1 {
   const routeCountByChain = new Map<string, number>();
   for (const route of profileRoutes) {
@@ -649,6 +725,7 @@ function buildBridgeJoinDiagnostics(
     },
     bridgeClaimControls: [...new Set(bridgeClaimControls.map((control) => control.controlKey))].sort(compareText),
     applicabilityBranch,
+    unprovenRouteJoins: [...unprovenRouteJoins],
   };
 }
 
@@ -977,6 +1054,9 @@ export function adaptBridgeReview(
           chainRows,
           supplyReview,
           bridgeClaimControls,
+          // The evaluator never runs the sub-threshold join proof on a
+          // not-applicable bridge review, so recording unproven rows here would
+          // report a failure that no proof ever asks about.
           "native-only-not-applicable",
         ),
       },
@@ -997,6 +1077,7 @@ export function adaptBridgeReview(
         supplyReview,
         bridgeClaimControls,
         "applicable",
+        buildUnprovenRouteJoins(supplyReview, controls, overlayFullyResolved),
       ),
     },
     controls,

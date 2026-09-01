@@ -13,11 +13,13 @@ export type WorkType =
   | "EXIT_DEX_COVERAGE"
   | "EXIT_OUTPUT"
   | "EXIT_RUNTIME_ROUTE"
+  | "EXIT_SETTLEMENT_BOUND"
   | "IMPLEMENTATION_DATE"
   | "MECHANISM_REVIEW"
   | "MINT_AUTHORITY"
   | "ORACLE_BRANCH"
   | "ORACLE_PROFILE"
+  | "PARENT_RATEABILITY"
   | "PEG_INPUT"
   | "RESERVE_COMPOSITION"
   | "RESERVE_SLICE";
@@ -250,6 +252,18 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     context: exitContext,
     touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9-extension.ts"],
   },
+  EXIT_SETTLEMENT_BOUND: {
+    title: "Exit route settlement-bound proof", stream: "EXIT",
+    instructions: "Resolve the flagged route's settlement bound: obtain or document a contract-verified or issuer-published bound proving completion within the same-notional settlement horizon (e.g. a redemption SLA), or, when the rail is genuinely an operator-batched queue with no bound, record that disposition in the redemption-backstop config rather than leaving the route silently excluded. Do not synthesize a capacity curve or settlement bound that the rail does not actually prove.",
+    completionCriteria: "A fresh exact replay resolves the route's settlement bound as proven, or confirms the route is no longer score-eligible, and the unproven-settlement-bound gapId is absent.",
+    recommendedSkill: null, likelyRepoAreas: ["shared/lib/redemption-backstop-configs/", "worker/src/cron/reserve-adapters/"],
+    cautions: ["A measured-adverse pause is a different fact from an unproven bound; do not conflate the two or invent a bound the rail does not document."],
+    ownerDomain: "exit",
+    defaultResolutionMode: "agent-curation",
+    reasonCodes: ["unproven-settlement-bound"],
+    context: exitContext,
+    touchpoints: () => ["shared/lib/redemption-backstop-configs/"],
+  },
   IMPLEMENTATION_DATE: {
     title: "Current mechanism implementation date", stream: "EVID",
     instructions: "Research the launch date of the currently scored mechanism boundary and populate implementationLaunchDate. Use the conservative range end for fuzzy dates and cite the source in the surrounding reviewed metadata or batch report.",
@@ -264,7 +278,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Mechanism risk component review", stream: "MECH",
     instructions: "Curate source-backed facts for the exact mechanism component in the mechanism-review overlay. Fiat-cash, T-bill, and commodity-claim components must satisfy the ratified strict evidence standard; when disclosure is insufficient, record a sourced unavailable disposition that remains bounded and non-scoring. Advanced archetypes require the complete measured-metric overlay.",
     completionCriteria: "A fresh exact replay either compiles the exact component as known and removes its bounded-mechanism-review gapId, or confirms that an independently reviewed unavailable disposition retains the bounded-unknown gap without changing score or grade.", recommendedSkill: "reserve-research",
-    likelyRepoAreas: ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", "shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9-extension-mechanism.ts"], cautions: ["Do not fabricate measured ratios or convert governance limits into committed liquidation capacity.", "Record an evidence blocker when the issuer or chain does not expose the required metric."],
+    likelyRepoAreas: ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", "shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9-extension-mechanism.ts"], cautions: ["Do not fabricate measured ratios or convert governance limits into committed liquidation capacity.", "Record an evidence blocker when the issuer or chain does not expose the required metric.", "Before curating fiat-cash assuranceAndReconciliation, commodity-claim assuranceAndReconciliation, or tbill lossRecoveryDesign as unavailable, check the asset's proofOfReserves.latestReport: when it is set, the compiler already grades that component known and a curated unavailable row silently overrides it to bounded-unknown. shared/types/__tests__/safety-score-v9-overlays.test.ts fails the build if this happens."],
     ownerDomain: "backing",
     defaultResolutionMode: "issuer-or-onchain-evidence",
     reasonCodes: ["bounded-mechanism-review"],
@@ -313,6 +327,18 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     context: (asset) => asset.economicControlReview.oracle,
     touchpoints: (source) => unique([risk(source)]),
   },
+  PARENT_RATEABILITY: {
+    title: "Required upstream parent rateability", stream: "methodology",
+    instructions: "This gap is not curatable on the asset itself: a required upstream parent (serial dependency) has no score yet, so the child is unrateable until the parent rates. Resolve the parent's own missing-data work items — its evidence gaps are what actually need to close — and this asset rates transitively once the parent does.",
+    completionCriteria: "A fresh exact replay reports the required upstream parent as rateable and removes the missing-parent-score gapId/nrReason for this asset.",
+    recommendedSkill: null, likelyRepoAreas: ["shared/data/stablecoins/coins/"],
+    cautions: ["Do not fabricate or bypass a parent score; work the parent's own missing-data items instead of editing this asset."],
+    ownerDomain: "methodology",
+    defaultResolutionMode: "agent-curation",
+    reasonCodes: ["missing-parent-score"],
+    context: (asset) => asset.dependencies,
+    touchpoints: (source) => [base(source)],
+  },
   PEG_INPUT: {
     title: "Current peg input", stream: "PEG",
     instructions: "Provide a resolvable peg reference and current peg observation with score, deviation, active-depeg state, tracking span, and failure-domain identity. Repair metadata/reference mapping or producer coverage as required; pure NAV assets need an explicit NAV disposition.",
@@ -331,7 +357,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   RESERVE_COMPOSITION: {
     title: "Reserve composition envelope", stream: "RESV",
     instructions: "Author the current structured reserve envelope with slice names and weights, asset classes, issuer/obligor identity, risk factors, liquidity horizon, maturity where applicable, dependency links, reserveReview, custodyProfile, and latest assurance scope.",
-    completionCriteria: "A fresh exact capture contains a reviewed reserve composition and removes the missing-reserve-composition gapId.", recommendedSkill: "reserve-research", likelyRepoAreas: ["shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"], cautions: ["Preserve documented unknown residuals instead of forcing an unsupported 100% allocation."],
+    completionCriteria: "A fresh exact capture contains a reviewed reserve composition and removes the missing-reserve-composition gapId, or, for stale-audited-reserve-composition, refreshes reserves[] and compositionAsOf from the newest independent attestation; if the issuer has not published a newer composition, record the blocker and accept the audited-fallback adequate ceiling rather than restating expired evidence.", recommendedSkill: "reserve-research", likelyRepoAreas: ["shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"], cautions: ["Preserve documented unknown residuals instead of forcing an unsupported 100% allocation."],
     ownerDomain: "backing",
     defaultResolutionMode: "agent-curation",
     reasonCodes: [
@@ -340,6 +366,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "missing-latest-assurance-report",
       "missing-reserve-composition",
       "partial-reserve-review",
+      "stale-audited-reserve-composition",
       "unreviewed-reserve-envelope",
     ],
     context: (asset) => ({

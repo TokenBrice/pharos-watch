@@ -47,11 +47,22 @@ import { DIRECT_API_FETCH_PHASE_CONCURRENCY, DIRECT_API_PROVIDER_TIMEOUT_MS } fr
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 
+/**
+ * Whether a provider's response is an exhaustive census of its protocol on the
+ * chains it declares, or only a bounded sample of it. Only an exhaustive census
+ * may veto an independently staged pool (see
+ * `buildAuthoritativeStagedPoolConfirmationIndex`): a sample that misses a pool
+ * proves nothing about that pool's existence.
+ */
+export type DirectApiCensusScope = "exhaustive" | "bounded-sample";
+
 export interface DirectApiFetcher {
   name: string;
   circuitKey: string;
   normalizedProtocol: string;
   supportedChains: string[];
+  /** Defaults to "exhaustive"; declare "bounded-sample" to withhold veto authority. */
+  censusScope?: DirectApiCensusScope;
   fn: (signal?: AbortSignal) => Promise<DexApiFetchResult>;
 }
 
@@ -60,6 +71,7 @@ export interface DirectApiFetchPhaseEntry {
   circuitKey: string;
   normalizedProtocol: string;
   supportedChains: string[];
+  censusScope?: DirectApiCensusScope;
   result: DexApiFetchResult;
   /** Exact raw-source identities retained without keeping discarded pool objects alive. */
   authoritativeExactPoolKeys?: Set<string>;
@@ -204,9 +216,14 @@ function compactDirectApiProviderEntry(
   if (entry.poolCompaction) return entry;
 
   const rawPools = entry.result.pools;
+  // Warnings (a handful of malformed rows on one page) do not invalidate the
+  // census, but they must not switch the confirmation set over to the compacted
+  // `entry.result.pools` either: that list is filtered down to tracked tokens
+  // below, so reading it back as "what the provider knows" vetoes every staged
+  // pool the compaction dropped. Collect the raw keys whenever the fetch itself
+  // succeeded and let the index decide whether the census may enforce.
   const authoritativeExactPoolKeys =
-    entry.normalizedProtocol !== "uniswap-v3-shadow" &&
-    entry.result.ok && !entry.result.degraded && (entry.result.warnings?.length ?? 0) === 0
+    entry.normalizedProtocol !== "uniswap-v3-shadow" && entry.result.ok && !entry.result.degraded
       ? new Set<string>()
       : undefined;
   const measuredExecutionPools: DexApiPool[] = [];
@@ -286,6 +303,9 @@ export function buildDexDirectApiFetchers(params: {
       circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API,
       normalizedProtocol: "fluid",
       supportedChains: ["ethereum", "arbitrum", "base", "polygon", "bsc", "plasma"],
+      // Emits only pools whose tokens resolve to a tracked stablecoin, so an
+      // absent pool means "not resolved here", not "does not exist".
+      censusScope: "bounded-sample",
       fn: (signal) => fetchFluidPools(signal, params.chainRpcs, params.fallbackCounters),
     },
     {
@@ -324,6 +344,12 @@ export function buildDexDirectApiFetchers(params: {
       circuitKey: CIRCUIT_SOURCE.METEORA_API,
       normalizedProtocol: "meteora",
       supportedChains: ["solana"],
+      // `dlmm.datapi.meteora.ag/pools` ignores the `limit` query parameter and
+      // answers with its own 10-row pages while advertising `total: 123268`.
+      // The paginated helper stops as soon as a page is shorter than the
+      // requested size, so this provider returns ~10 of ~123k pools and cannot
+      // speak for the pools it never saw.
+      censusScope: "bounded-sample",
       fn: fetchMeteoraPools,
     },
     {
@@ -345,6 +371,12 @@ export function buildDexDirectApiFetchers(params: {
       circuitKey: CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API,
       normalizedProtocol: "aerodrome",
       supportedChains: ["base"],
+      // `fetchSugarPools` keeps only pools holding a tracked token, and
+      // `fetchSlipstreamPools` then drops any pool with a one-sided reserve or
+      // an underivable USD price. A tick-spacing-1 CL pool sitting entirely on
+      // one side of its range is normal, so an omission is a coverage hole in
+      // this extract rather than evidence that the pool does not exist.
+      censusScope: "bounded-sample",
       fn: (signal) =>
         fetchSlipstreamPools(
           "aerodrome-slipstream",
@@ -374,6 +406,8 @@ export function buildDexDirectApiFetchers(params: {
       circuitKey: CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API,
       normalizedProtocol: "velodrome",
       supportedChains: ["optimism"],
+      // Same Sugar extract as Aerodrome Slipstream above.
+      censusScope: "bounded-sample",
       fn: (signal) =>
         fetchSlipstreamPools(
           "velodrome-slipstream",
@@ -397,7 +431,7 @@ export async function runDirectApiFetchPhase(
   const entries = await mapWithConcurrency(
     fetchers,
     DIRECT_API_FETCH_PHASE_CONCURRENCY,
-    async ({ name, circuitKey, normalizedProtocol, supportedChains, fn }) => {
+    async ({ name, circuitKey, normalizedProtocol, supportedChains, censusScope, fn }) => {
       const failedSources: string[] = [];
       const fallbackSignals: string[] = [];
       const sourceWarnings: string[] = [];
@@ -425,6 +459,7 @@ export async function runDirectApiFetchPhase(
           circuitKey,
           normalizedProtocol,
           supportedChains,
+          ...(censusScope ? { censusScope } : {}),
           result,
         };
         return {

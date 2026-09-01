@@ -935,6 +935,27 @@ describe("live-reserves-store", () => {
     ]);
   });
 
+  it("distinguishes a failed history reconciliation from a verified zero-gap result", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const failedDb = mockD1([
+      {
+        match: "FROM reserve_composition c",
+        rows: [],
+        throwError: "history reconciliation unavailable",
+      },
+    ]);
+
+    await expect(computeReserveCompositionOverview(failedDb, now)).resolves.toMatchObject({
+      historyWriteGaps: [],
+      historyWriteGapCheckFailed: true,
+    });
+
+    await expect(computeReserveCompositionOverview(mockD1(), now)).resolves.toMatchObject({
+      historyWriteGaps: [],
+      historyWriteGapCheckFailed: false,
+    });
+  });
+
   it("counts malformed stored slices as corruptCoins, not freshCoins", async () => {
     const now = Math.floor(Date.now() / 1000);
     const emptyOverview = await computeReserveCompositionOverview(mockD1(), now);

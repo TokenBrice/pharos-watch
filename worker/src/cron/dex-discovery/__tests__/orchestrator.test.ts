@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import type { ContractDeployment } from "@shared/types/core";
 import type { DiscoveryMeta } from "../types";
+import { DISCOVERY_TIERS } from "../types";
 import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";
+import { DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC } from "../../dex-liquidity/deployment-census-coverage";
 import {
   compareDiscoveryMeta,
   computeEffectiveTier,
+  hasVerifiedEmptyCensus,
   isEligibleThisRun,
 } from "../orchestrator";
 
@@ -53,6 +58,170 @@ describe("computeEffectiveTier", () => {
 
     expect(computeEffectiveTier("coin-a", 0, 0, recentDormant, 1, nowSec)).toBe("skip");
     expect(computeEffectiveTier("coin-d", 0, 0, staleDormant, 10, nowSec)).toBe("dormant");
+  });
+});
+
+describe("hasVerifiedEmptyCensus", () => {
+  const ethereumTarget: ContractDeployment = {
+    chain: "ethereum",
+    address: "0x1111111111111111111111111111111111111111",
+    decimals: 18,
+  };
+  const secondEthereumTarget: ContractDeployment = {
+    chain: "ethereum",
+    address: "0x2222222222222222222222222222222222222222",
+    decimals: 18,
+  };
+  const unsupportedTarget: ContractDeployment = { chain: "hive", address: "hbd", decimals: 3 };
+
+  it("holds when every provider-supported deployment is verified empty", () => {
+    expect(
+      hasVerifiedEmptyCensus([ethereumTarget, secondEthereumTarget], {
+        verifiedNoPoolsCount: 2,
+        observedPoolsCount: 0,
+        providerSupportedInaccessibleCount: 0,
+      }),
+    ).toBe(true);
+  });
+
+  it("ignores the unsupported-chain remainder instead of demoting the reviewed scope", () => {
+    expect(
+      hasVerifiedEmptyCensus([ethereumTarget, unsupportedTarget], {
+        verifiedNoPoolsCount: 1,
+        observedPoolsCount: 0,
+        providerSupportedInaccessibleCount: 0,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not hold on a partial, contradicted, or unanswered census", () => {
+    // A missing outcome row for one of two supported deployments.
+    expect(
+      hasVerifiedEmptyCensus([ethereumTarget, secondEthereumTarget], {
+        verifiedNoPoolsCount: 1,
+        observedPoolsCount: 0,
+        providerSupportedInaccessibleCount: 0,
+      }),
+    ).toBe(false);
+    // Pools were observed somewhere in the footprint.
+    expect(
+      hasVerifiedEmptyCensus([ethereumTarget], {
+        verifiedNoPoolsCount: 1,
+        observedPoolsCount: 1,
+        providerSupportedInaccessibleCount: 0,
+      }),
+    ).toBe(false);
+    // A provider-supported deployment is still unanswered.
+    expect(
+      hasVerifiedEmptyCensus([ethereumTarget, secondEthereumTarget], {
+        verifiedNoPoolsCount: 2,
+        observedPoolsCount: 0,
+        providerSupportedInaccessibleCount: 1,
+      }),
+    ).toBe(false);
+    // No census read at all, and a footprint with no reviewable deployment.
+    expect(hasVerifiedEmptyCensus([ethereumTarget], undefined)).toBe(false);
+    expect(
+      hasVerifiedEmptyCensus([unsupportedTarget], {
+        verifiedNoPoolsCount: 0,
+        observedPoolsCount: 0,
+        providerSupportedInaccessibleCount: 0,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("verified-empty census cadence (ODR-B1a)", () => {
+  const RUN_INTERVAL_SEC = CRON_INTERVALS["sync-dex-discovery"];
+
+  /**
+   * Replay the real run loop for a coin whose honest answer is "no pools
+   * anywhere": every crawl finds zero pools, so `updateDiscoveryMeta`
+   * increments `consecutive_misses` on every eligible run.
+   */
+  function simulateZeroPoolRuns(
+    stablecoinId: string,
+    censusVerifiedEmpty: boolean,
+    runCount: number,
+  ): { tiers: (string | null)[]; crawlRuns: number[] } {
+    const meta: DiscoveryMeta = {
+      stablecoinId,
+      consecutiveMisses: 0,
+      lastCrawlAt: 0,
+      lastHitAt: null,
+    };
+    const tiers: (string | null)[] = [];
+    const crawlRuns: number[] = [];
+    for (let run = 1; run <= runCount; run++) {
+      const runNowSec = nowSec + run * RUN_INTERVAL_SEC;
+      const tier = computeEffectiveTier(
+        stablecoinId,
+        0,
+        0,
+        meta,
+        run,
+        runNowSec,
+        censusVerifiedEmpty,
+      );
+      tiers.push(tier === "skip" ? null : tier);
+      if (tier !== "skip") {
+        crawlRuns.push(run);
+        meta.consecutiveMisses += 1;
+        meta.lastCrawlAt = runNowSec;
+      }
+    }
+    return { tiers, crawlRuns };
+  }
+
+  function maxGapRuns(crawlRuns: number[], runCount: number): number {
+    let gap = crawlRuns.length > 0 ? crawlRuns[0]! : runCount;
+    for (let i = 1; i < crawlRuns.length; i++) {
+      gap = Math.max(gap, crawlRuns[i]! - crawlRuns[i - 1]!);
+    }
+    return Math.max(gap, runCount - (crawlRuns[crawlRuns.length - 1] ?? 0));
+  }
+
+  it("holds a census-adequate tier across a long zero-pool run sequence", () => {
+    const runCount = 120;
+    const { tiers, crawlRuns } = simulateZeroPoolRuns("coin-d", true, runCount);
+
+    // The ladder still backs the coin off, it just never reaches dormant.
+    expect(tiers.some((tier) => tier === "t1")).toBe(true);
+    expect(tiers.some((tier) => tier === "t3")).toBe(true);
+    expect(tiers).not.toContain("dormant");
+
+    // Its own correct answer can no longer age itself out of the census: the
+    // widest crawl gap stays inside the freshness bound the census is judged by.
+    const gapRuns = maxGapRuns(crawlRuns, runCount);
+    expect(gapRuns).toBeLessThanOrEqual(DISCOVERY_TIERS.T3_MODULO);
+    expect(gapRuns * RUN_INTERVAL_SEC).toBeLessThanOrEqual(DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC);
+  });
+
+  it("still demotes an unanswered zero-pool footprint to dormant", () => {
+    const { tiers } = simulateZeroPoolRuns("coin-d", false, 120);
+    expect(tiers).toContain("dormant");
+  });
+
+  it("keeps the dormant ladder for a coin whose census is not verified empty", () => {
+    const meta: DiscoveryMeta = {
+      stablecoinId: "x",
+      consecutiveMisses: DISCOVERY_TIERS.BACKOFF_DORMANT_MISSES,
+      lastCrawlAt: nowSec - DISCOVERY_TIERS.DORMANT_INTERVAL_SEC - 1,
+      lastHitAt: null,
+    };
+    expect(computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec, false)).toBe("dormant");
+    expect(computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec, true)).toBe("t3");
+  });
+
+  it("never returns the dormant daily skip for a verified-empty census", () => {
+    const meta: DiscoveryMeta = {
+      stablecoinId: "x",
+      consecutiveMisses: 114,
+      lastCrawlAt: nowSec - 100,
+      lastHitAt: null,
+    };
+    expect(computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec, false)).toBe("skip");
+    expect(computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec, true)).toBe("t3");
   });
 });
 

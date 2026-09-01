@@ -518,6 +518,40 @@ describe("syncLiveReserves", () => {
     ))).toBe(true);
   });
 
+  it("reports breaker outcome write failures without counting them as recorded", async () => {
+    const firstQueuedCoin = SYNC_ORDERED_CONFIGURED_COINS[0]!;
+    const failedBreakerKey = `live-reserves:${
+      firstQueuedCoin.liveReservesConfig!.breakerScope ?? firstQueuedCoin.liveReservesConfig!.adapter
+    }`;
+    mockAdapterRegistry(async (coin) => {
+      if (coin?.id === firstQueuedCoin.id) {
+        throw new Error("forced reserve source outage");
+      }
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+    recordOutcomeSafeMock.mockImplementation(async (_db, key) => (
+      key === failedBreakerKey ? null : undefined
+    ));
+
+    const uniqueBreakerKeys = new Set(
+      ACTIVE_STABLECOINS
+        .filter((c) => c.liveReservesConfig)
+        .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
+    );
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      breakerOutcomesRecorded?: number;
+      breakerOutcomeWriteFailures?: number;
+    };
+
+    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, failedBreakerKey, false);
+    expect(metadata.breakerOutcomesRecorded).toBe(uniqueBreakerKeys.size - 1);
+    expect(metadata.breakerOutcomeWriteFailures).toBe(1);
+  });
+
   it("skips breaker outcome writes when finalization tail budget is exhausted", async () => {
     let nowMs = 1_700_000_000_000;
     const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
@@ -1063,7 +1097,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
 
     const successAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_composition_history")
@@ -1078,6 +1112,24 @@ describe("syncLiveReserves", () => {
     expect(fallbackInfo).toBeDefined();
     expect(fallbackInfo!.effect).toBe("info");
     expect(fallbackInfo!.severity).toBe("info");
+    const runMetadata = JSON.parse(result.metadata ?? "{}") as {
+      adapterLatency?: {
+        groups?: Array<{ adapterKey?: string; stage?: string; attemptCount?: number }>;
+        total?: { attemptCount?: number };
+        overflow?: boolean;
+      };
+    };
+    const fallbackGroup = runMetadata.adapterLatency?.groups?.find((group) => (
+      group.adapterKey === fallbackCoin!.liveReservesConfig!.adapter
+      && group.stage === "fallback"
+    ));
+    expect(
+      fallbackGroup?.attemptCount === 1
+      || (
+        runMetadata.adapterLatency?.overflow === true
+        && (runMetadata.adapterLatency.total?.attemptCount ?? 0) > configuredCoinCount
+      ),
+    ).toBe(true);
   });
 
   it("persists full primary-plus-fallback failure context for reserve source chains", async () => {

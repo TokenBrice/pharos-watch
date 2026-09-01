@@ -1148,6 +1148,127 @@ describe("mergeStagedPools", () => {
     expect(metrics.get("usdai-usd-ai")?.protocolTvl.balancer).toBe(547760);
   });
 
+  // ODR-B1b `pools-lost-before-scoring`. Every direct-API census drops pools
+  // under DIRECT_API_POOL_MIN_TVL_USD before it can be read, so a smaller staged
+  // pool can never appear in the confirmation set. Demanding confirmation there
+  // deleted the only pools `qcad-stablecorp` ($1,737 Orca) and `susd-solayer`
+  // ($7,834 Raydium CLMM) had, leaving both at poolCount 0 while their DEX
+  // deployment census still certified `observed_pools`.
+  it("retains staged pools that sit below the direct-API census TVL floor", async () => {
+    const now = 1710000000;
+    const orcaPool = "EJ3FwL8D2PkAaHmj1vawbR7fiUhXomt7vJhAaTBW4dnH";
+    const raydiumPool = "6GGYCNjZ5jqNFRfjJqCRdYiiTZY47LfweYAA4RRsYb4A";
+    const mockDb = createMockDb([
+      {
+        pool_id: `solana:${orcaPool}`,
+        stablecoin_id: "qcad-stablecorp",
+        source: "cg_onchain",
+        chain: "solana",
+        protocol: "orca",
+        dex_id: "orca",
+        symbol: "USDC / QCAD",
+        tvl_usd: 1736.8361,
+        volume_24h: 12,
+        quality_multiplier: 0.3,
+        pool_type: "cg-amm",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: null,
+        base_token: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        quote_token: "EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci",
+        quote_symbol: "QCAD",
+        price_usd: 0.72,
+        locked_liq_pct: null,
+        discovered_at: now - 86400,
+        refreshed_at: now,
+      },
+      {
+        pool_id: `solana:${raydiumPool}`,
+        stablecoin_id: "susd-solayer",
+        source: "cg_onchain",
+        chain: "solana",
+        protocol: "raydium",
+        dex_id: "raydium-clmm",
+        symbol: "sUSD / USDC",
+        tvl_usd: 7834.2681,
+        volume_24h: 340,
+        quality_multiplier: 0.3,
+        pool_type: "cg-amm",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: null,
+        base_token: "susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X",
+        quote_token: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        quote_symbol: "USDC",
+        price_usd: 1.0002,
+        locked_liq_pct: null,
+        discovered_at: now - 86400,
+        refreshed_at: now,
+      },
+    ]);
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(
+      mockDb,
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+      undefined,
+      makeAuthoritativeConfirmationIndex([
+        { protocol: "orca", chains: ["solana"] },
+        { protocol: "raydium", chains: ["solana"] },
+      ]),
+    );
+
+    expect(result.skippedByAuthoritativeProtocolCount).toBe(0);
+    expect(result.mergedCount).toBe(2);
+    expect(metrics.get("qcad-stablecorp")?.topPools[0]?.poolId).toBe(`solana:${orcaPool}`);
+    expect(metrics.get("susd-solayer")?.topPools[0]?.poolId).toBe(`solana:${raydiumPool}`);
+  });
+
+  it("still requires confirmation for staged pools at or above the census TVL floor", async () => {
+    const now = 1710000000;
+    const orcaPool = "2D9mokxthTheNAU6hCWGRXdNmhNQoypHs1JcRCbwkgLL";
+    const mockDb = createMockDb([
+      {
+        pool_id: `solana:${orcaPool}`,
+        stablecoin_id: "qcad-stablecorp",
+        source: "cg_onchain",
+        chain: "solana",
+        protocol: "orca",
+        dex_id: "orca",
+        symbol: "USDC / QCAD",
+        tvl_usd: 10_000,
+        volume_24h: 900,
+        quality_multiplier: 0.3,
+        pool_type: "cg-amm",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: null,
+        base_token: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        quote_token: "EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci",
+        quote_symbol: "QCAD",
+        price_usd: 0.72,
+        locked_liq_pct: null,
+        discovered_at: now - 86400,
+        refreshed_at: now,
+      },
+    ]);
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(
+      mockDb,
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+      undefined,
+      makeAuthoritativeConfirmationIndex([{ protocol: "orca", chains: ["solana"] }]),
+    );
+
+    expect(result.mergedCount).toBe(0);
+    expect(result.skippedByAuthoritativeProtocolCount).toBe(1);
+  });
+
   it("does not apply Pancake V3 authority to an exact Pancake V2 pool", async () => {
     const now = 1710000000;
     const poolAddress = "0x108752b2a22c731ede3edac2205c63ae553e221a";

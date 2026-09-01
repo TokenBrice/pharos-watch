@@ -13,7 +13,7 @@ import {
 } from "./db-cache";
 import { CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC } from "@shared/lib/ops-limits";
 import { CIRCUIT_SOURCE } from "./constants";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_LIVE_RESERVE_CIRCUIT_SOURCES } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
 import { logWorkerEvent } from "./structured-log";
 
@@ -335,16 +335,10 @@ export async function getCircuitStates(db: D1Database): Promise<Record<string, C
 }
 
 function getConfiguredLiveReserveCircuitSources(): Set<string> {
-  return new Set(
-    ACTIVE_STABLECOINS.map((coin) => coin.liveReservesConfig)
-      .filter((config): config is NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> =>
-        Boolean(config),
-      )
-      .map((config) => `live-reserves:${config.breakerScope ?? config.adapter}`),
-  );
+  return new Set(WORKER_ACTIVE_LIVE_RESERVE_CIRCUIT_SOURCES);
 }
 
-// ACTIVE_STABLECOINS is static per isolate — memoize to avoid recomputing on
+// The runtime registry is static per isolate — memoize to avoid recomputing on
 // every /health or /public-status-history request.
 let _activeCircuitSources: Set<string> | undefined;
 

@@ -1,4 +1,7 @@
-import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
+import {
+  getDexDiscoveryProviders,
+  isCensusProviderSetSupersededByRegistry,
+} from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { ExitRouteObservationCoverage } from "@shared/types/market";
 import type { ContractDeployment } from "@shared/types/core";
@@ -18,6 +21,8 @@ const DEX_DISCOVERY_PROVIDER_IDS = new Set([
   "tezos",
   "icon-balanced",
   "kava-swap",
+  "osmosis-sqs",
+  "noble-swap",
 ]);
 
 /**
@@ -286,6 +291,20 @@ export function classifyDexPlaceholderCoverage(params: {
       } else if (row.outcome === "provider_inaccessible") {
         if (row.observed_pool_count !== 0) {
           invalidOutcomeCount++;
+        } else if (
+          isCensusProviderSetSupersededByRegistry(
+            row.chain,
+            row.contract_address,
+            providerCount,
+          )
+        ) {
+          // The row claims no registered provider supports this chain while the
+          // registry now resolves one (this key is only reviewed because
+          // `getDexDiscoveryProviders()` returned a provider above). It is a
+          // pre-coverage artifact the crawl rotation has not overwritten yet, so
+          // it is superseded evidence — publishing it as a standing scope limit
+          // attributed a solved integration gap to "Pharos has no method here".
+          supersededOutcomeCount++;
         } else if (providerCount === 0) {
           providerInaccessibleCount++;
           unsupportedMethodOutcomeCount++;

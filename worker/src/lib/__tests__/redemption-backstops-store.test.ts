@@ -590,6 +590,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
         runsDeletedCount: 3,
         historyCutoff,
         historyRowsDeletedCount: 2,
+        truncated: false,
         warnings: [],
       });
       const remainingHistory = sqlite
@@ -696,6 +697,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
       runsDeletedCount: 1,
       historyCutoff: 9_000,
       historyRowsDeletedCount: 0,
+      truncated: false,
       warnings: [expect.stringContaining("row prune failed")],
     });
     const history = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM redemption_backstop"));
@@ -703,18 +705,48 @@ describe("loadRedemptionBackstopSnapshot", () => {
     expect(history[1]?.sql).toContain("DELETE FROM redemption_backstop_run_rows");
     expect(history[2]?.sql).toContain("DELETE FROM redemption_backstop_history");
   });
+
+  it("caps a large retention backlog and reports truncation", async () => {
+    const db = mockRedemptionD1([
+      {
+        match: "DELETE FROM redemption_backstop_runs",
+        rows: [],
+        runMeta: { changes: 2 },
+      },
+    ]);
+
+    const result = await pruneRedemptionBackstopRunRetention(db, {
+      nowSec: 10_000,
+      retentionSec: 1_000,
+      preserveRunId: "current-run",
+      batchSize: 2,
+      maxBatches: 3,
+    });
+
+    expect(result).toMatchObject({
+      runsDeletedCount: 6,
+      runRowsDeletedCount: 0,
+      historyRowsDeletedCount: 0,
+      truncated: true,
+      warnings: [expect.stringContaining("truncated")],
+    });
+    const deletes = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM redemption_backstop"));
+    expect(deletes).toHaveLength(3);
+    expect(deletes.every((entry) => entry.sql.includes("DELETE FROM redemption_backstop_runs"))).toBe(true);
+    expect(deletes[0]?.sql).toContain("ORDER BY COALESCE(completed_at, started_at) ASC");
+  });
 });
 
 describe("loadRedemptionBackstopLiveSignalRows", () => {
   const LIVE_SIGNAL_ROWS_SQL =
-    "SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at FROM redemption_backstop_run_rows WHERE snapshot_run_id = ? AND stablecoin_id IN (?)";
+    "SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
 
   it("serves narrow live-signal rows from the latest valid completed run", async () => {
     const db = mockD1Strict([
       completedRunsQuery([completedRunRow()]),
       {
         match: LIVE_SIGNAL_ROWS_SQL,
-        matchBinds: ["run-live", "eurc-circle"],
+        matchBinds: ["run-live"],
         rows: [
           {
             stablecoin_id: "eurc-circle",
@@ -748,7 +780,7 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
       ]),
       {
         match: LIVE_SIGNAL_ROWS_SQL,
-        matchBinds: ["run-valid", "eurc-circle"],
+        matchBinds: ["run-valid"],
         rows: [
           {
             stablecoin_id: "eurc-circle",
@@ -764,6 +796,46 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.stablecoin_id).toBe("eurc-circle");
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("falls back instead of returning a short live-signal set from a partial completed run", async () => {
+    const db = mockD1Strict([
+      completedRunsQuery([
+        completedRunRow({ run_id: "run-partial", completed_at: 1_700_000_020, expected_count: 2, written_count: 2 }),
+        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_010 }),
+      ]),
+      {
+        match: LIVE_SIGNAL_ROWS_SQL,
+        matchBinds: ["run-partial"],
+        rows: [
+          {
+            stablecoin_id: "eurc-circle",
+            immediate_capacity_ratio: 0.1,
+            route_family: "offchain-issuer",
+            updated_at: 1_700_000_000,
+          },
+        ],
+      },
+      {
+        match: LIVE_SIGNAL_ROWS_SQL,
+        matchBinds: ["run-valid"],
+        rows: [
+          {
+            stablecoin_id: "eurc-circle",
+            immediate_capacity_ratio: 0.42,
+            route_family: "offchain-issuer",
+            updated_at: 1_699_999_990,
+          },
+        ],
+      },
+    ]);
+
+    const rows = await loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"]);
+
+    expect(rows).toEqual([
+      expect.objectContaining({ stablecoin_id: "eurc-circle", immediate_capacity_ratio: 0.42 }),
+    ]);
     assertAllD1MatchesUsed(db);
   });
 

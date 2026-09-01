@@ -8,19 +8,23 @@ import {
   PAUSED_SELECTOR,
   TOTAL_SUPPLY_SELECTOR,
   encodeBalanceOfCallData,
+  encodeUint256,
 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { decodeStrictBoolWord } from "./abi-decode";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
+  fetchOnchainMulticall3,
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
 import {
   ERC4626_ASSET_SELECTOR,
+  ERC4626_CONVERT_TO_ASSETS_SELECTOR,
   ERC4626_TOTAL_ASSETS_SELECTOR,
   computeErc4626CollateralizationRatio,
+  computeErc4626CollateralizationRatioFromResult,
   makeContractRawCaller,
 } from "./erc4626";
 import {
@@ -38,6 +42,15 @@ import {
 } from "./executable-redemption-observers";
 
 const YEARN_V3_IS_SHUTDOWN_SELECTOR = "0xbf86d690";
+const EXECUTABLE_REDEMPTION_COIN_IDS = new Set(["eearn-ember", "sdusd-dtrinity"]);
+
+function successfulMulticallResult(
+  results: Awaited<ReturnType<typeof fetchOnchainMulticall3>>,
+  label: string,
+): string | null {
+  const result = results?.find((candidate) => candidate.label === label);
+  return result?.success && result.returnData !== "0x" ? result.returnData : null;
+}
 
 interface SingleAssetSliceConfig {
   name: ReserveSlice["name"];
@@ -90,10 +103,52 @@ export async function fetchErc4626SingleAssetReserves(
     fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
     timeoutMs: timeout,
   });
-  const [assetResult, totalAssetsResult] = await Promise.all([
-    call(ERC4626_ASSET_SELECTOR),
-    call(ERC4626_TOTAL_ASSETS_SELECTOR),
-  ]);
+  const usesSfrxusdCrosschainRoute =
+    sliceConfig.redemptionLiquidity?.source === "fraxtal-hop-withdrawable";
+  const usesExecutableRedemptionRoute = EXECUTABLE_REDEMPTION_COIN_IDS.has(coin.id);
+  const usesGenericBatch = !usesExecutableRedemptionRoute && !usesSfrxusdCrosschainRoute;
+  const probesYearnShutdown =
+    sliceConfig.redemptionLiquidity?.source === "yearn-v3-withdrawable";
+
+  let pauseProbe: Erc4626CapacityPauseProbe = { paused: null, shutdown: null };
+  let assetResult: string | null;
+  let totalAssetsResult: string | null;
+  let totalSupplyResult: string | null;
+
+  if (usesGenericBatch) {
+    const stateResults = await fetchOnchainMulticall3({
+      calls: [
+        { label: "asset", contract: contractAddress, data: ERC4626_ASSET_SELECTOR },
+        { label: "total-assets", contract: contractAddress, data: ERC4626_TOTAL_ASSETS_SELECTOR },
+        { label: "total-supply", contract: contractAddress, data: TOTAL_SUPPLY_SELECTOR },
+        { label: "paused", contract: contractAddress, data: PAUSED_SELECTOR },
+        ...(probesYearnShutdown
+          ? [{ label: "yearn-shutdown", contract: contractAddress, data: YEARN_V3_IS_SHUTDOWN_SELECTOR }]
+          : []),
+      ],
+      signal,
+      ctx: _ctx,
+      chain: primaryInput.chain,
+      rpcUrl: sliceConfig.rpcUrl,
+      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+      timeoutMs: timeout,
+    });
+    assetResult = successfulMulticallResult(stateResults, "asset");
+    totalAssetsResult = successfulMulticallResult(stateResults, "total-assets");
+    totalSupplyResult = successfulMulticallResult(stateResults, "total-supply");
+    pauseProbe = {
+      paused: decodeStrictBoolWord(successfulMulticallResult(stateResults, "paused")),
+      shutdown: probesYearnShutdown
+        ? decodeStrictBoolWord(successfulMulticallResult(stateResults, "yearn-shutdown"))
+        : null,
+    };
+  } else {
+    [assetResult, totalAssetsResult] = await Promise.all([
+      call(ERC4626_ASSET_SELECTOR),
+      call(ERC4626_TOTAL_ASSETS_SELECTOR),
+    ]);
+    totalSupplyResult = await call(TOTAL_SUPPLY_SELECTOR);
+  }
 
   if (!totalAssetsResult) {
     throw new Error(`ERC-4626 totalAssets() call failed for ${coin.id}`);
@@ -121,18 +176,59 @@ export async function fetchErc4626SingleAssetReserves(
   }
 
   // NAV cross-check: totalSupply() shares valued through convertToAssets() vs totalAssets()
-  const totalSupplyResult = await call(TOTAL_SUPPLY_SELECTOR);
-
   let totalSupplyRaw: bigint | undefined;
   if (totalSupplyResult) {
     totalSupplyRaw = BigInt(totalSupplyResult);
   }
-  const navCheck = await computeErc4626CollateralizationRatio({
-    call,
-    totalAssetsRaw,
-    totalSupplyRaw,
-    warningCode: "erc4626-nav-divergence",
-  });
+  let idleUnderlyingBalanceRaw: bigint | null = null;
+  let underlyingDecimalsRaw: bigint | null = usesSfrxusdCrosschainRoute ? 18n : null;
+  let navCheck: Awaited<ReturnType<typeof computeErc4626CollateralizationRatio>>;
+  if (usesGenericBatch) {
+    const dependentResults = await fetchOnchainMulticall3({
+      calls: [
+        ...(totalSupplyRaw != null && totalSupplyRaw > 0n
+          ? [{
+              label: "convert-to-assets",
+              contract: contractAddress,
+              data: `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(totalSupplyRaw)}`,
+            }]
+          : []),
+        ...(assetAddress
+          ? [
+              {
+                label: "idle-underlying-balance",
+                contract: assetAddress,
+                data: encodeBalanceOfCallData(contractAddress),
+              },
+              { label: "underlying-decimals", contract: assetAddress, data: DECIMALS_SELECTOR },
+            ]
+          : []),
+      ],
+      signal,
+      ctx: _ctx,
+      chain: primaryInput.chain,
+      rpcUrl: sliceConfig.rpcUrl,
+      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+      timeoutMs: timeout,
+    });
+    navCheck = computeErc4626CollateralizationRatioFromResult({
+      totalAssetsRaw,
+      totalSupplyRaw,
+      convertResult: successfulMulticallResult(dependentResults, "convert-to-assets"),
+      warningCode: "erc4626-nav-divergence",
+    });
+    const idleBalanceResult = successfulMulticallResult(dependentResults, "idle-underlying-balance");
+    const decimalsResult = successfulMulticallResult(dependentResults, "underlying-decimals");
+    idleUnderlyingBalanceRaw = idleBalanceResult ? BigInt(idleBalanceResult) : null;
+    underlyingDecimalsRaw = decimalsResult ? BigInt(decimalsResult) : null;
+  } else {
+    navCheck = await computeErc4626CollateralizationRatio({
+      call,
+      totalAssetsRaw,
+      totalSupplyRaw,
+      warningCode: "erc4626-nav-divergence",
+    });
+  }
   const { collateralizationRatio, convertToAssetsRaw } = navCheck;
   warnings.push(...navCheck.warnings);
 
@@ -162,11 +258,7 @@ export async function fetchErc4626SingleAssetReserves(
         );
       }
     } else {
-      const usesSfrxusdCrosschainRoute =
-        sliceConfig.redemptionLiquidity?.source === "fraxtal-hop-withdrawable";
-      let idleUnderlyingBalanceRaw: bigint | null = null;
-      let underlyingDecimalsRaw: bigint | null = usesSfrxusdCrosschainRoute ? 18n : null;
-      if (!usesSfrxusdCrosschainRoute) {
+      if (!usesGenericBatch && !usesSfrxusdCrosschainRoute) {
         const onchain = makeOnchainCallers(primaryInput, {
           signal,
           ctx: _ctx,
@@ -198,13 +290,10 @@ export async function fetchErc4626SingleAssetReserves(
       });
       warnings.push(...(configuredCapacity?.warnings ?? []));
 
-      // Route-openness evidence. The fraxtal hop manages its own route state, so
-      // it is left untouched; every other path probes the vault's pause surfaces
-      // once, after the capacity reads, so no extra round trip is serialized.
-      let pauseProbe: Erc4626CapacityPauseProbe = { paused: null, shutdown: null };
-      if (!usesSfrxusdCrosschainRoute) {
-        const probesYearnShutdown =
-          sliceConfig.redemptionLiquidity?.source === "yearn-v3-withdrawable";
+      // Route-openness evidence. The generic path already included these probes
+      // in its state batch. Executable observers own their route state, while the
+      // fraxtal hop manages its special cross-chain route independently.
+      if (!usesGenericBatch && !usesSfrxusdCrosschainRoute) {
         const [pausedResult, shutdownResult] = await Promise.all([
           call(PAUSED_SELECTOR),
           probesYearnShutdown ? call(YEARN_V3_IS_SHUTDOWN_SELECTOR) : Promise.resolve(null),

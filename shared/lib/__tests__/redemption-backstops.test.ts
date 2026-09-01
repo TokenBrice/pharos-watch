@@ -883,7 +883,7 @@ describe("getRedemptionBackstopConfig", () => {
     }
   });
 
-  it("upgrades the moderate-effort reviewed queue out of heuristic redemption semantics", () => {
+  it("applies the moderate-effort reviewed queue configurations", () => {
     expect(getRedemptionBackstopConfig("dola-inverse-finance")).toMatchObject({
       routeFamily: "psm-swap",
       capacityModel: { kind: "reserve-sync-metadata" },
@@ -902,10 +902,26 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("mtbill-midas")).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "days",
-      capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "documented-bound", basis: "hot-buffer" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "heuristic", basis: "hot-buffer" },
       costModel: { kind: "fee-bps", feeBps: 7 },
       reviewedAt: "2026-05-17",
     });
+
+    expect(getRedemptionBackstopConfig("usdy-ondo-finance")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "heuristic", basis: "hot-buffer" },
+    });
+
+    for (const id of ["jpyc-jpyc-v1", "kgst-kyrgyz-som"] as const) {
+      expect(getRedemptionBackstopConfig(id)).toMatchObject({
+        routeFamily: "offchain-issuer",
+        holderEligibility: "unknown",
+        routeStatus: "unknown",
+        capacityModel: { kind: "supply-full", confidence: "heuristic" },
+      });
+    }
+
+    expect(getRedemptionBackstopConfig("mai-qidao")).toBeNull();
 
     expect(getRedemptionBackstopConfig("musd-metamask")).toMatchObject({
       routeFamily: "offchain-issuer",

@@ -394,7 +394,7 @@ export async function loadDdrContext(
     try {
       return { results: await loadRedemptionBackstopLiveSignalRows(db, activeCoinIds) };
     } catch (error) {
-      if (error instanceof RedemptionBackstopSnapshotUnavailableError) return { results: [] };
+      if (error instanceof RedemptionBackstopSnapshotUnavailableError && error.cause == null) return { results: [] };
       throw error;
     }
   });

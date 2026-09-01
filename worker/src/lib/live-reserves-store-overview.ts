@@ -309,10 +309,13 @@ export async function computeReserveCompositionOverview(
   db: D1Database,
   now: number,
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
-): Promise<ReserveCompositionOverview> {
+): Promise<ReserveCompositionOverview & { historyWriteGapCheckFailed: boolean }> {
   const configuredCoins = getConfiguredLiveReserveCoins();
   if (configuredCoins.length === 0) {
-    return emptyReserveCompositionOverview();
+    return {
+      ...emptyReserveCompositionOverview(),
+      historyWriteGapCheckFailed: false,
+    };
   }
 
   const coinIds = configuredCoins.map((coin) => coin.id);
@@ -324,9 +327,11 @@ export async function computeReserveCompositionOverview(
   const cursor = parseCursorCacheState(await getCache(db, LIVE_RESERVE_RUN_CURSOR_CACHE_KEY));
 
   let historyWriteGaps: NonNullable<ReserveCompositionOverview["historyWriteGaps"]> = [];
+  let historyWriteGapCheckFailed = false;
   try {
     historyWriteGaps = await loadLiveReserveHistoryWriteGaps(db);
   } catch (error) {
+    historyWriteGapCheckFailed = true;
     logWorkerEventArgs("lib", "warn", "[live-reserves] Failed to reconcile reserve history write gaps:", error);
   }
 
@@ -356,6 +361,7 @@ export async function computeReserveCompositionOverview(
     cursorTailFailedAt: cursor.cursorTailFailedAt,
     runBudgetTruncationCount: cursor.runBudgetTruncationCount,
     historyWriteGaps,
+    historyWriteGapCheckFailed,
     persistentlyStaleIndependentCoins: counts.persistentlyStaleIndependentCoins.sort(
       (a, b) => b.ageSec - a.ageSec,
     ),

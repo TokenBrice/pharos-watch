@@ -226,17 +226,18 @@ describe("DEX placeholder deployment-census coverage", () => {
       reason: "deploymentCensusMissingOutcome",
     },
     {
-      name: "unsupported provider method",
+      name: "pre-coverage empty provider set contradicted by the live registry",
       deployments: [deployment()],
       rows: [
         outcome({
           outcome: "provider_inaccessible",
           observed_pool_count: 0,
           provider_set_json: "[]",
+          reason: "No registered token-pool provider supports this chain",
         }),
       ],
-      state: "unsupported-method",
-      reason: "deploymentCensusUnsupportedMethod",
+      state: "discovery-deferral",
+      reason: "deploymentCensusSupersededOutcome",
     },
     {
       name: "observed pool lost before scoring",
@@ -408,6 +409,38 @@ describe("DEX placeholder deployment-census coverage", () => {
         providerInaccessibleCount: 1,
       },
     });
+  });
+
+  it("never reports an unsupported method for a deployment the registry now covers", () => {
+    // The exact Spiko shape: the Soroban row was written by the static
+    // inaccessible pass minutes before Aquarius coverage shipped, and the
+    // windowed crawl has not rotated back to Stellar since.
+    const address = "CDGSC6BA4TCAOVSFQCUEHDMOIIHYYVNYBT6YEARS4MX3ITAHUINVGQHX";
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: [deployment(), deployment("stellar", address)],
+      outcomeRows: [
+        outcome(),
+        outcome({
+          chain: "stellar",
+          contract_address: address,
+          outcome: "provider_inaccessible",
+          provider_set_json: "[]",
+          reason: "No registered token-pool provider supports this chain",
+        }),
+      ],
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("discovery-deferral");
+    expect(classification.coverage.status).toBe("unknown");
+    expect(classification.coverage.unsupportedReasons).toEqual({
+      deploymentCensusSupersededOutcome: 1,
+    });
+    expect(
+      classification.coverage.unsupportedReasons.deploymentCensusUnsupportedMethod ?? 0,
+    ).toBe(0);
+    expect(classification.census.supersededOutcomeCount).toBe(1);
+    expect(classification.census.unsupportedChainDeploymentCount).toBe(0);
   });
 
   it("keeps an entirely unsupported footprint poisoned under the same reason key", () => {

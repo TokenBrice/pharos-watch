@@ -168,6 +168,58 @@
         ],
         "reviewNote": "Re-verified from scratch on-chain 2026-07-30 at Polygon block 91163184 (polygon-bor-rpc.publicnode.com): name 'Rupiah Token', symbol IDRT, totalSupply 14,040,000,000.00 (6 decimals); non-upgradeable (EIP-1967 slots zero); owner() = 0xa1f0fc535ad0ebcae0ef81b2990fcd75465ad7ae — a Safe proxy, getThreshold() = 4, identical 6-owner signer set as the Ethereum Safe. Issuer-native mint, no bridge representation."
       }
+    ],
+    "controls": [
+      {
+        "id": "idrt-harmony-legacy-bridge-token-manager",
+        "label": "1IDRT Harmony legacy bridge TokenManager (ward EOA controlled)",
+        "routeRefs": [
+          "harmony:0xcefbea899cfccdc653b171d063481b622086be3f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin"
+        ],
+        "controllerChain": "harmony",
+        "controllerAddress": "0xbadb6897cf2e35aca73b6f37361a35eeb6f71637",
+        "failureDomainKeys": [
+          "protocol:harmony-bridge",
+          "contract:harmony:0xbadb6897cf2e35aca73b6f37361a35eeb6f71637",
+          "eoa:0x533334823b1e5a9c17b32b2957660e84b4d3cfad"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Ethereum-side lock leg of the legacy Harmony route was not identified: no Harmony Horizon lock contract holding canonical IDRT was resolved, so the representation's backing is asserted by the bridge operator rather than proven by a reviewed escrow balance.",
+          "trustedPeerOrRemote": "The TokenManager's authenticated remote is not readable on-chain: it exposes no peer, validator, or remote-chain accessor, and Harmony's public RPC caps eth_getLogs at 1,024 blocks, so neither the historical MinterAdded set nor the relaying authority could be enumerated at the observation block.",
+          "caps": "At Harmony block 93231516 on 2026-09-01 (api.harmony.one), neither leg exposes a mint ceiling: on 1IDRT 0xcefbea899cfccdc653b171d063481b622086be3f and on TokenManager 0xbadb6897cf2e35aca73b6f37361a35eeb6f71637, cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), dailyLimit(), and limit() all returned empty. isMinter(0xbadb6897cf2e35aca73b6f37361a35eeb6f71637) returned true and an eth_estimateGas of 1IDRT.mint(address,uint256) from the TokenManager succeeded at 51,895 gas, while the same call from the ward EOA reverted with 'MinterRole: caller does not have the Minter role'. Both contracts are non-upgradeable (EIP-1967 implementation slots zero; 4,504 and 9,238 bytes of code). Because the token's MinterRole set is not enumerable and any current minter can call addMinter, no ceiling bounds a mint on this route.",
+          "pausersAdminsUpgraders": "The TokenManager's dispatch table decodes to the Harmony Horizon HRC20 token-manager surface — addToken(address,string,string,uint8), removeToken(address,uint256), registerToken(address,address), mappedTokens(address), rely(address), deny(address), wards(address) plus Ownable — and carries no mint, pause, or upgrade entrypoint of its own. owner() returned EOA 0x533334823b1e5a9c17b32b2957660e84b4d3cfad (zero code) and wards(0x533334823b1e5a9c17b32b2957660e84b4d3cfad) returned 1, so that single key holds both the Ownable and ward administration of the contract that holds 1IDRT's MinterRole. There is no pause surface on either contract."
+        },
+        "capDescription": "The legacy Harmony 1IDRT representation is minted under an unbounded MinterRole held by the Horizon TokenManager; no cap, rate limit, or supply-conservation bound was readable on either contract, and the minter set is not enumerable, so additional minters cannot be excluded.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The 1IDRT MinterRole set is not enumerable on-chain and any current minter can call addMinter(address), so the reviewed minter inventory cannot be proven complete.",
+          "The Ethereum-side lock/escrow leg and the relaying authority of the legacy Harmony bridge are unidentified."
+        ],
+        "observedAt": "2026-09-01",
+        "observedBlock": 93231516,
+        "sources": [
+          {
+            "label": "1IDRT on Harmony explorer",
+            "url": "https://explorer.harmony.one/address/0xcefbea899cfccdc653b171d063481b622086be3f"
+          },
+          {
+            "label": "1IDRT Harmony minter contract",
+            "url": "https://explorer.harmony.one/address/0xbadb6897cf2e35aca73b6f37361a35eeb6f71637"
+          },
+          {
+            "label": "Harmony API RPC reads at block 93231516",
+            "url": "https://api.harmony.one"
+          }
+        ],
+        "evidence": "At Harmony block 93231516 on 2026-09-01, 1IDRT 0xcefbea899cfccdc653b171d063481b622086be3f returned name 'Rupiah Token', symbol '1IDRT', decimals 2, totalSupply 1,201,000.00 — unchanged since the 2026-07-30 review, so the route remains dormant. The token has no owner(); its only mint gate is MinterRole, and isMinter(0xbadb6897cf2e35aca73b6f37361a35eeb6f71637) returned true while isMinter(0x533334823b1e5a9c17b32b2957660e84b4d3cfad) returned false. 0xbadb6897cf2e35aca73b6f37361a35eeb6f71637 is a non-upgradeable Harmony Horizon HRC20 TokenManager whose owner() is EOA 0x533334823b1e5a9c17b32b2957660e84b4d3cfad and whose wards(0x533334823b1e5a9c17b32b2957660e84b4d3cfad) is 1. Its dispatch table carries addToken, removeToken, registerToken, mappedTokens, rely, deny, wards and the Ownable surface, but eth_estimateGas reverted for mint(address,uint256) from both the ward EOA and an unrelated caller, so no direct mint entrypoint on the TokenManager is claimed. What is proven is that the contract holding an unbounded MinterRole over the representation is administered end-to-end by one externally owned key, that no cap or rate limit exists on either contract, and that the token's minter set cannot be enumerated because Harmony's public RPC rejects eth_getLogs ranges above 1,024 blocks. This is adverse external-lock-mint bridge exposure, not a second canonical issuance route."
+      }
     ]
   }
 }

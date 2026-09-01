@@ -2,10 +2,27 @@
   "id": "bd-basedollar",
   "blacklistabilityReview": {
     "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: BD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Base Blockscout verified BD token source",
+        "url": "https://base.blockscout.com/address/0x252d36f435582ecb01686448d21e8c9ea0b2ca65?tab=contract"
+      },
+      {
+        "label": "Pinned Base Dollar BoldToken source",
+        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/BoldToken.sol"
+      },
+      {
+        "label": "Base public RPC used for the block 50734519 reads",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "Base block 50734519",
+        "url": "https://base.blockscout.com/block/50734519"
+      }
+    ],
+    "evidence": "Re-derived from primary sources 2026-09-01 at Base block 50734519, replacing the 2026-05-12 inferred backfill. BD 0x252d36f435582ecb01686448d21e8c9ea0b2ca65 is the sole registry deployment and is a direct non-proxy contract: all three EIP-1967 slots (implementation, admin, beacon) read zero and proxiableUUID() reverts, so no authority can swap in a freezing implementation. owner() returned the zero address. Probes for paused(), isBlacklisted(address), isBlackListed(address), frozen(address), isFrozen(address) and DEFAULT_ADMIN_ROLE() all revert, so the deployment exposes no holder-selective denylist, freeze flag, pause switch or role registry. The only balance-destroying entry point is burn(address,uint256), which reverted with 'BoldToken: Caller is neither CR nor BorrowerOperations nor TroveManager nor StabilityPool': it is reachable only by the immutable protocol branch contracts through their scoped debt-repayment and Stability Pool accounting paths, never by a discretionary key, and there is no seize, wipe or reissue path at all. Reads at the block: name() 'Base Dollar', symbol() 'BD', decimals() 18, totalSupply() 125,576.35 BD. No direct freeze reach; no upstream freeze reach either, since BD is minted against WETH, wstETH, rETH, cbBTC and cbETH collateral rather than against a freezable stablecoin.",
+    "reviewer": "Claude ODR-A5 blacklistability re-derivation",
+    "reviewedAt": "2026-09-01"
   },
   "oracleRisk": {
     "tier": "standard-external",

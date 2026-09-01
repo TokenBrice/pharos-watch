@@ -217,6 +217,7 @@ const AUTHORITY_TYPE_LABELS: Record<string, string> = {
   "dao-governor": "DAO governor",
   contract: "Contract",
   "issuer-backend": "Issuer backend",
+  "validator-quorum": "Validator quorum",
   bridge: "Bridge",
   custodian: "Custodian",
   none: "None",

@@ -40,6 +40,7 @@ import {
   getSafetyScoreV9MechanismExitFacts,
   getSafetyScoreV9MechanismOverlayEvidence,
   getSafetyScoreV9MechanismReviewGapDisposition,
+  getSafetyScoreV9MechanismReviewedUnavailableComponents,
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
 } from "./safety-score-v9-extension-mechanism";
 import {
@@ -97,6 +98,7 @@ import {
 import {
   ReviewEvidenceBuilder,
   accessEvidenceObservationState,
+  authorityModelForType,
   boundedObservedAt,
   confidenceForResearch,
   conservativeDateEndSec,
@@ -261,15 +263,7 @@ function canonicalAuthorityType(assetId: string, control: MintAuthorityControl):
     ? `${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`
     : (control.failureDomainKeys?.[0] ?? issuerAuthorityKey(assetId, control));
   if (authorityKey === null) return null;
-  const model: NonNullable<ControlOverlay["authority"]>["model"] = (() => {
-    if (control.authorityType === "safe" || control.authorityType === "multisig") return "multisig";
-    if (control.authorityType === "eoa") return "eoa";
-    if (control.authorityType === "dao-governor") return "governance";
-    if (control.authorityType === "issuer-backend") return "issuer-backend";
-    if (control.authorityType === "contract" || control.authorityType === "timelock") return "contract";
-    if (control.authorityType === "none") return "none";
-    return "unknown";
-  })();
+  const model = authorityModelForType(control.authorityType);
   const threshold =
     model === "multisig" && control.threshold != null && control.signerCount != null
       ? { required: control.threshold, total: control.signerCount }
@@ -1544,6 +1538,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
       const mechanismReviewGapDisposition =
         getSafetyScoreV9MechanismReviewGapDisposition(assetId, archetype, clockSec);
+      const mechanismReviewedUnavailable = getSafetyScoreV9MechanismReviewedUnavailableComponents(
+        assetId,
+        archetype,
+        clockSec,
+      );
       const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
       if (mechanismRiskReview && mechanismOverlayEvidence) {
         reviewEvidence.add({
@@ -1637,6 +1636,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         launchedAtSec: conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec),
         mechanismRiskReview,
         ...(mechanismReviewGapDisposition ? { mechanismReviewGapDisposition } : {}),
+        ...(mechanismReviewedUnavailable.length > 0 ? { mechanismReviewedUnavailable } : {}),
         mechanismExitFacts: getSafetyScoreV9MechanismExitFacts(assetId, archetype, clockSec),
         dependencies: {
           ...prepared.dependency,

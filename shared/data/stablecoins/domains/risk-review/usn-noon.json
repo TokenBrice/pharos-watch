@@ -252,10 +252,12 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At Ethereum block 25771119, USN remoteTokens(324) and remoteTokens(50104) returned the zkSync and Sophon representations. The owner-only configureHyperlane, configureISM, registerHyperlaneRemoteToken, and setPeer methods can change the reviewed route configuration; the Ethereum mailbox is 0xc005dc82818d67af737725bd4bf75435d065d239 and its effective default ISM is 0x10cf42691db303ff44f35c9ced2cd1283a93e046.",
+          "caps": "At Ethereum block 25881932 on 2026-09-01, USN 0xda67b4284609d2d48e5d10cfac411572727dc1ed exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), totalSupplyCap(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), maxLimit(), maxLimit(address), limit(), limit(address), rateLimit(), and dailyLimit() all reverted. mailbox() returned 0xc005dc82818d67af737725bd4bf75435d065d239, interchainSecurityModule() returned zero, token() returned the contract itself, and the EIP-1967 implementation was 0x961e78b26f6984a2ddac42e4ce5b8014a311608e, so the Safe-administered proxy can also replace the mint logic. Nothing caps an accepted Hyperlane delivery. The reviewed zkSync (block 71804657) and Sophon (block 29658925) representations returned the same twelve reverts.",
           "pausersAdminsUpgraders": "The Noon 3-of-6 Safe owns the Ethereum USN implementation and can change its Hyperlane mailbox, ISM, remote-token mapping, and peer configuration. The mailbox owner 0x562dfaac27a84be6c96273f5c9594da1681c0da7 is a separate Hyperlane administration domain.",
           "attestorQuorum": "The Ethereum default ISM address is known, but its current validator/member set and quorum semantics were not independently decoded."
         },
         "capDescription": "This Safe controls Ethereum USN Hyperlane bridge configuration for the canonical route and the reviewed zkSync, Sophon, and Starknet representations; it is separate from the Safe's native MinterHandler controls.",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "The Hyperlane mailbox owner and default ISM validator administration are separate protocol failure domains."
         ],
@@ -314,10 +316,12 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At Ethereum block 25771119, Endpoint V2 peers(30165) returned the zkSync USN representation and peers(30334) returned the Sophon USN representation. peer(30500) for Starknet was zero; no LayerZero Starknet route is asserted.",
+          "caps": "At Ethereum block 25881932 on 2026-09-01, the LayerZero leg carried no mint ceiling either: on USN 0xda67b4284609d2d48e5d10cfac411572727dc1ed, endpoint() returned Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, token() returned the contract itself, approvalRequired() returned false, and cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), totalSupplyCap(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), maxLimit(), maxLimit(address), limit(), limit(address), rateLimit(), and dailyLimit() all reverted. The zkSync (block 71804657, endpoint 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf) and Sophon (block 29658925, endpoint 0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7) representations returned the same reverts, so no per-lane token cap bounds an accepted OFT credit.",
           "pausersAdminsUpgraders": "The Noon Safe controls the Ethereum USN owner-only LayerZero peer configuration through the current implementation; the Endpoint V2 address is 0x1a44076050125825900e736c501f859c50fe728c and permissionless() returned true.",
           "unsupportedReason": "The active per-channel DVN sets, receive/send libraries, executor configuration, and enforced options were not independently decoded."
         },
         "capDescription": "This Safe controls the Ethereum USN LayerZero peer configuration for the verified zkSync and Sophon routes; the absent Starknet peer is retained as negative evidence.",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "LayerZero Endpoint V2, DVN, message-library, and Executor governance is external to the Noon Safe."
         ],
@@ -506,10 +510,12 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At zkSync block 71576774, the representation mailbox was 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, its default ISM was 0xf55cb3c8c4b20276af9f979b0d94bd7ae5487fa2, and its LayerZero peer for EID 30101 returned Ethereum USN.",
+          "caps": "At zkSync block 71804657 on 2026-09-01, representation 0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6 exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), totalSupplyCap(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), maxLimit(), limit(), rateLimit(), and dailyLimit() all reverted, so it is a plain Hyperlane/LayerZero synthetic rather than an xERC20 with configured minting limits. owner() returned the Safe above, mailbox() returned 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, interchainSecurityModule() returned zero, token() returned the contract itself, and the EIP-1967 implementation was 0xa5b228237bef9bc804d8d6e7c76d0853a406bf34, so the Safe-administered proxy can also replace the mint logic. Nothing caps an accepted delivery.",
           "pausersAdminsUpgraders": "The token owner is the 3-of-4 Safe above. The token implementation/admin slots were 0xa5b228237bef9bc804d8d6e7c76d0853a406bf34 / 0x5a82384a042cce41f9ac6f0c110773e5b3266f11; the mailbox implementation/admin were 0x1b4e7fd3052fc6d84dab69eef6a156c7d7909a78 / 0xd01274dc164d32f8595be707f221375e68ce300c, and mailbox owner was 0xcd81ccfe7d9306849136fa96397113345a32ecf3.",
           "attestorQuorum": "The current default ISM address is known, but its validator/member set and quorum semantics were not independently decoded."
         },
         "capDescription": "This Safe governs the zkSync burn-mint representation's owner/configuration surface; the destination mint is intended to execute only through authenticated Hyperlane message delivery.",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "Representation proxy source/ABI provenance and exact destination mint/burn authorization and pause behavior were not fully verified."
         ],
@@ -727,10 +733,12 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At Sophon block 29641979, the representation mailbox was 0x9bbdf86b272d224323136e15594fdce487f40ce7, its default ISM was 0x309d19dc1adaacd7ff8baae9737e7d2314a4651e, and its LayerZero peer for EID 30101 returned Ethereum USN.",
+          "caps": "At Sophon block 29658925 on 2026-09-01, representation 0xc1aa99c3881b26901af70738a7c217dc32536d36 exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), totalSupplyCap(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), maxLimit(), limit(), rateLimit(), and dailyLimit() all reverted, so it is a plain Hyperlane/LayerZero synthetic rather than an xERC20 with configured minting limits. owner() returned the Safe above, mailbox() returned 0x9bbdf86b272d224323136e15594fdce487f40ce7, interchainSecurityModule() returned zero, token() returned the contract itself, and the EIP-1967 implementation was 0xf90d5784e175b6142958ec32b77b7aa63582d957, so the Safe-administered proxy can also replace the mint logic. Nothing caps an accepted delivery.",
           "pausersAdminsUpgraders": "The token owner is the 3-of-4 Safe above. The token implementation/admin slots were 0xf90d5784e175b6142958ec32b77b7aa63582d957 / 0xad871a241d1fe8dd6293d6746d1898d211cf5890; the mailbox implementation/admin were 0xa3949b37109d64b10de93252eefebbb2e6b8944f / 0x038f9f4e93e88af2c688da265222fde80e455aa4, and mailbox owner was 0x113d3a19031fe5db58884d6aa54545dd4de499c0.",
           "attestorQuorum": "The current default ISM address is known, but its validator/member set and quorum semantics were not independently decoded."
         },
         "capDescription": "This Safe governs the Sophon burn-mint representation's owner/configuration surface; the destination mint is intended to execute only through authenticated Hyperlane message delivery.",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "Representation proxy source/ABI provenance and exact destination mint/burn authorization and pause behavior were not fully verified."
         ],
@@ -936,10 +944,11 @@
         "threshold": 1,
         "signerCount": 1,
         "modulesOrGuardsStatus": "not-applicable",
-        "canRaiseCap": false,
+        "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "At Starknet block 13501913, token owner()=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox()=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, interchain_security_module()=0. Prior 2026-08-16 router-table reads (Ethereum/zkSync/Sophon/TAC) are not re-litigated here.",
-          "pausersAdminsUpgraders": "Owner account class hash 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a. get_public_key()=0x38156224d6c067d825a4f6838e674ee2d2f71127a27c3110af7934bc4125f0b. get_signers()=[count=1, that key, 0, 0] (no guardian / backup). get_threshold() is not implemented. get_version() felt 0x3030312e3030322e303030 decodes to ASCII 001.002.000. This is a single-signer account contract, not a multi-signer quorum.",
+          "caps": "Re-adjudicated 2026-09-01 under the ODR-D2 rule at Starknet block 14197601 (rpc.starknet.lava.build). The representation's class hash is 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d, unchanged, and the deployed class ABI declares 35 functions with no ceiling entrypoint of any kind; cap, max_supply, get_cap and mint_limit each return \"Requested entrypoint does not exist in the contract\". owner=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, interchain_security_module=0, total_supply=0x61983eab91df84e59000. No numeric mint ceiling exists, and the owner additionally holds the class upgrade entrypoint, so the fail-closed value is raiseable rather than bounded.",
+        "pausersAdminsUpgraders": "Owner account class hash 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a. get_public_key()=0x38156224d6c067d825a4f6838e674ee2d2f71127a27c3110af7934bc4125f0b. get_signers()=[count=1, that key, 0, 0] (no guardian / backup). get_threshold() is not implemented. get_version() felt 0x3030312e3030322e303030 decodes to ASCII 001.002.000. This is a single-signer account contract, not a multi-signer quorum.",
           "attestorQuorum": "Token-level ISM is zero; Hyperlane mailbox default ISM (decoded on starknet-hyperlane-mailbox-owner) is effective."
         },
         "capDescription": "The Starknet owner account governs the upgradeable Hyperlane representation and its router table; this is bridge representation authority, not an independent native USN issuance route. Signer quorum is 1-of-1.",

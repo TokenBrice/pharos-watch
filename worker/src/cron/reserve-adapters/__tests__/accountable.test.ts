@@ -858,6 +858,22 @@ describe("adaptAccountableDashboard", () => {
     })).rejects.toThrow(/no valid timeline reserve total/);
   });
 
+  it("fails closed when the nearest Yuzu timeline reserve total is more than 24 hours away", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    await expect(runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "1787848065315",
+      reserves: {
+        total_reserves: 1_000,
+        total_supply: 1_000,
+        exposure_split_ts: "2026.08.24 07:31:16 UTC",
+        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
+        timeline: [{ ts: "1787466675000", reserves: 1_000 }],
+      },
+    })).rejects.toThrow(/no contemporaneous timeline reserve total/);
+  });
+
   it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 

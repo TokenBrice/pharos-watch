@@ -70,6 +70,17 @@ Wave-6 packet research produced the canonical negative examples; they remain the
   bounded-unknown, its penalty is retained, and responsibility re-attributes to
   issuer-undisclosed. This is a sourced nondisclosure disposition, not a quality claim or an
   evidence closure.
+  - **Do not use `unavailable` on the auto-known assurance component without checking
+    `proofOfReserves.latestReport` first.** `assuranceAndReconciliation` (fiat-cash,
+    commodity-claim) and `lossRecoveryDesign` (tbill) are the one case where the compiler
+    fallback (`assuranceFact()` in `worker/src/lib/safety-score-v9-extension-mechanism.ts`)
+    can already be `known` rather than bounded. `expandOverlayReview` gives any curated
+    component entry priority over that fallback, so a curated `unavailable` row on that
+    field demotes a known fact to bounded-unknown with no warning. When the asset's
+    `proofOfReserves.latestReport` exists and genuinely supports the report's own grade,
+    leave the component out of `components` entirely rather than curating it unavailable.
+    `shared/types/__tests__/safety-score-v9-overlays.test.ts` fails the build if a row does
+    this.
 
 ## Metric applicability states (cdp / sdn / rwa)
 

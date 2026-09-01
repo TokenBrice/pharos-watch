@@ -12,6 +12,7 @@ vi.mock("../helpers", async (importOriginal) => {
     ...actual,
     fetchErc20Balance: vi.fn(),
     fetchDefiLlamaPrices: vi.fn(),
+    fetchOnchainMulticall3: vi.fn(),
     fetchOnchainUint256,
     makeOnchainCallers: makeOnchainCallersMock({
       uint256: fetchOnchainUint256,
@@ -27,6 +28,7 @@ import { validateAdapterOutput } from "../validate";
 import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
+  fetchOnchainMulticall3,
   fetchOnchainUint256,
   fetchOnchainRawCall,
   probeOptionalRedemptionRateBps,
@@ -100,6 +102,67 @@ function mockHoneyOnchain(options: { assetCount?: bigint; failVaultAsset?: boole
     if (normalizedContract === HONEY_VAULT && data === "0x72d4b21a") return abiWords(0n, 0n);
     return null;
   });
+  vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => {
+    if (calls.every((call) => call.label.startsWith("branch-balance:"))) return null;
+    return Promise.all(calls.map(async (call) => {
+      const raw = call.data === "0x22acb867" || call.data === "0x72d4b21a"
+        ? await fetchOnchainRawCall({ contract: call.contract, data: call.data } as never)
+        : await fetchOnchainUint256({ contract: call.contract, data: call.data } as never);
+      return raw == null
+        ? { label: call.label, success: false, returnData: "0x" as const }
+        : {
+            label: call.label,
+            success: true,
+            returnData: (typeof raw === "bigint" ? abiWords(raw) : raw) as `0x${string}`,
+          };
+    }));
+  });
+}
+
+function mockFourAssetHoneyBatches(custody: boolean) {
+  const assets = Array.from({ length: 4 }, (_, index) =>
+    `0x${(0xa1 + index).toString(16).padStart(40, "0")}`
+  );
+  const vaults = Array.from({ length: 4 }, (_, index) =>
+    `0x${(0xb1 + index).toString(16).padStart(40, "0")}`
+  );
+  const custodyHolders = Array.from({ length: 4 }, (_, index) =>
+    `0x${(0xc1 + index).toString(16).padStart(40, "0")}`
+  );
+  vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => {
+    if (calls.every((call) => call.label.startsWith("branch-balance:"))) return null;
+    return calls.map((call) => {
+      const index = Number(call.label.split(":").pop());
+      let returnData: string;
+      if (call.label === "honey:honey") returnData = abiWords(addressWord(HONEY_TOKEN));
+      else if (call.label === "honey:asset-count") returnData = abiWords(4n);
+      else if (call.label.startsWith("honey:asset:")) returnData = abiWords(addressWord(assets[index]));
+      else if (call.label === "honey:weights") returnData = uintArrayResult([WAD, WAD, WAD, WAD]);
+      else if (call.label === "honey:global-cap") returnData = abiWords(WAD);
+      else if (
+        call.label === "honey:factory-paused"
+        || call.label === "honey:forced-basket-mode"
+        || call.label === "honey:basket-mode"
+      ) returnData = abiWords(0n);
+      else if (call.label.startsWith("honey:vault:")) returnData = abiWords(addressWord(vaults[index]));
+      else if (call.label.startsWith("honey:collected-fees:")) returnData = abiWords(0n);
+      else if (call.label.startsWith("honey:redeem-rate:")) returnData = abiWords(999_500_000_000_000_000n);
+      else if (call.label.startsWith("honey:is-pegged:")) returnData = abiWords(1n);
+      else if (call.label.startsWith("honey:relative-cap:")) returnData = abiWords(WAD);
+      else if (call.label.startsWith("honey:vault-asset:")) returnData = abiWords(addressWord(assets[index]));
+      else if (call.label.startsWith("honey:vault-paused:")) returnData = abiWords(0n);
+      else if (call.label.startsWith("honey:custody-info:")) {
+        returnData = abiWords(custody ? 1n : 0n, custody ? addressWord(custodyHolders[index]) : 0n);
+      } else if (call.label.startsWith("honey:factory-shares:")) returnData = abiWords(10n * WAD);
+      else if (call.label.startsWith("honey:asset-decimals:")) returnData = abiWords(6n);
+      else if (call.label.startsWith("honey:converted-assets:")) returnData = abiWords(10_000_000n);
+      else if (call.label.startsWith("honey:holder-balance:")) returnData = abiWords(8_000_000n);
+      else if (call.label.startsWith("honey:custody-allowance:")) returnData = abiWords(7_000_000n);
+      else return { label: call.label, success: false, returnData: "0x" as const };
+      return { label: call.label, success: true, returnData: returnData as `0x${string}` };
+    });
+  });
+  return { assets, vaults };
 }
 
 function wstEthBranch(overrides: Record<string, unknown> = {}) {
@@ -165,6 +228,7 @@ function makeBranchConfig(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(fetchOnchainMulticall3).mockReset().mockResolvedValue(null);
 });
 
 describe("fetchEvmBranchBalancesReserves", () => {
@@ -211,6 +275,67 @@ describe("fetchEvmBranchBalancesReserves", () => {
         redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
       } as never,
     })).toEqual({ valid: true, warnings: [] });
+  });
+
+  it.each([
+    { custody: false, expectedStageSizes: [2, 9, 20, 20, 8], expectedCapacity: 32 },
+    { custody: true, expectedStageSizes: [2, 9, 20, 20, 12], expectedCapacity: 28 },
+  ])(
+    "batches the configured four Honey assets into five dependency waves (custody=$custody)",
+    async ({ custody, expectedStageSizes, expectedCapacity }) => {
+      vi.mocked(fetchErc20Balance).mockResolvedValue(12_000_000n);
+      const { assets } = mockFourAssetHoneyBatches(custody);
+      const config = makeBranchConfig([honeyBranch()], {
+        chain: "berachain",
+        params: {
+          redemptionCapacity: {
+            ...honeyRedemptionCapacity(),
+            stableAssets: assets.map((address) => ({ address, decimals: 6 })),
+          },
+        },
+      });
+
+      const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+
+      expect(result.metadata?.redemption).toMatchObject({ capacityUsd: expectedCapacity });
+      const honeyBatches = vi.mocked(fetchOnchainMulticall3).mock.calls
+        .map(([options]) => options.calls)
+        .filter((calls) => calls[0]?.label.startsWith("honey:"));
+      expect(honeyBatches.map((calls) => calls.length)).toEqual(expectedStageSizes);
+      expect(honeyBatches).toHaveLength(5);
+    },
+  );
+
+  it("batches four same-chain branch balances into one Multicall3 wave", async () => {
+    const branches = Array.from({ length: 4 }, (_, index) => ({
+      name: `branch-${index}`,
+      holder: `0x${(0xd1 + index).toString(16).padStart(40, "0")}`,
+      token: {
+        chain: "ethereum",
+        address: `0x${(0xe1 + index).toString(16).padStart(40, "0")}`,
+        decimals: 6,
+      },
+      risk: "low",
+      priceUsd: 1,
+    }));
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) =>
+      calls.map((call, index) => ({
+        label: call.label,
+        success: true,
+        returnData: abiWords(BigInt(index + 1) * 1_000_000n) as `0x${string}`,
+      })),
+    );
+
+    const result = await fetchEvmBranchBalancesReserves(
+      coin,
+      makeBranchConfig(branches),
+      signal,
+    );
+
+    expect(result.slices).toHaveLength(4);
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[0]?.[0].calls).toHaveLength(4);
+    expect(fetchErc20Balance).not.toHaveBeenCalled();
   });
 
   it.each([

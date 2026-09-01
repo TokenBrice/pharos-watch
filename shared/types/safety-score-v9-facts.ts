@@ -17,6 +17,7 @@ import {
   ExitRouteObservationHistorySchema,
 } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
+import { ReserveAssetClassSchema } from "./reserves";
 import {
   V9EvidenceResponsibilitySchema,
   V9FactStatusV2Schema,
@@ -42,8 +43,7 @@ import {
   Sha256Schema,
   UnixSecondsSchema,
   V9ClaimImpairmentSchema,
-  V9ControlCapKindSchema,
-  V9ControlCapUnitSchema,
+  V9ControlCapSemanticsSchema,
   V9ControlCapabilitySchema,
   V9ControlKindSchema,
   V9ControlScopeSchema,
@@ -354,24 +354,7 @@ export const V9EffectiveDependenciesV3Schema = z
   .superRefine(validateDependencyEnvelope);
 export type V9EffectiveDependenciesV3 = z.infer<typeof V9EffectiveDependenciesV3Schema>;
 
-export const V9ReserveAssetClassSchema = z.enum([
-  "cash",
-  "bank-deposit",
-  "treasury-bill",
-  "government-security",
-  "repo",
-  "money-market-fund",
-  "stablecoin",
-  "cryptoasset",
-  "hedged-crypto",
-  "private-credit",
-  "public-credit",
-  "tokenized-security",
-  "fund-share",
-  "protocol-position",
-  "commodity-allocated",
-  "other",
-]);
+export const V9ReserveAssetClassSchema = ReserveAssetClassSchema;
 
 const V9ReserveExposureFactV2Schema = z
   .object({
@@ -637,24 +620,26 @@ const V9DeploymentControlFactV2Schema = z
     scope: V9ControlScopeSchema,
     status: V9FactStatusV2Schema,
     capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (capability) => capability),
-    capSemantics: z
-      .object({
-        kind: V9ControlCapKindSchema,
-        bound: z
-          .object({
-            amount: z.number().finite().nonnegative(),
-            unit: V9ControlCapUnitSchema,
-          })
-          .strict()
-          .nullable(),
-      })
-      .strict(),
+    capSemantics: V9ControlCapSemanticsSchema,
     claimImpairment: V9ClaimImpairmentSchema,
     economicLossScope: V9EconomicLossScopeSchema,
     authority: z
       .object({
         authorityKey: CanonicalTextSchema,
-        model: z.enum(["none", "eoa", "multisig", "governance", "contract", "issuer-backend", "unknown"]),
+        // AUTHORITY-LADDER 9.46: `validator-quorum` is an external
+        // message-validation quorum (LayerZero DVN set, CCIP DON/RMN, Bantu AMTP
+        // group, IBC light-client validator set). Known-but-weak: it grades at or
+        // below `issuer-backend` and never above a named multisig.
+        model: z.enum([
+          "none",
+          "eoa",
+          "multisig",
+          "governance",
+          "contract",
+          "issuer-backend",
+          "validator-quorum",
+          "unknown",
+        ]),
         threshold: z
           .object({ required: z.number().int().positive(), total: z.number().int().positive() })
           .strict()
@@ -844,7 +829,29 @@ const V9BridgeRouteControlReviewV2Schema = z
   })
   .strict();
 
-const V9BridgeJoinDiagnosticsV1Schema = z
+/**
+ * ODR-D5a: a selected supply row the producer cannot show joined to one proven
+ * bridge control. Only rows the evaluator's completeness proof can actually
+ * fail on are recorded — the tolerated sub-threshold branches (RULED D-J pool,
+ * sub-material unmatched dust) are omitted, so this stays empty for a clean
+ * asset and names the residue for a carrier. Diagnostic only: nothing here
+ * reaches a score, a reason, or a cap.
+ */
+const V9BridgeSupplyRouteJoinV1Schema = z
+  .object({
+    deploymentRouteKey: CanonicalTextSchema,
+    reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]),
+    reviewedRouteKind: z.enum(["native", "controlled"]).nullable(),
+    supplyShare: FractionSchema,
+    joinedControlKeys: CanonicalStringArraySchema,
+    /** Null when the row joins no single control to describe. */
+    joinedControlSemanticsResolved: z.boolean().nullable(),
+    joinedControlSupplyShare: FractionSchema.nullable(),
+  })
+  .strict();
+export type V9BridgeSupplyRouteJoinV1 = z.infer<typeof V9BridgeSupplyRouteJoinV1Schema>;
+
+export const V9BridgeJoinDiagnosticsV1Schema = z
   .object({
     profileRouteCount: z.number().int().nonnegative(),
     canonicalSupplyRowCount: z.number().int().nonnegative(),
@@ -859,6 +866,12 @@ const V9BridgeJoinDiagnosticsV1Schema = z
       .strict(),
     bridgeClaimControls: CanonicalStringArraySchema,
     applicabilityBranch: z.enum(["native-only-not-applicable", "applicable"]),
+    // Retained facts predate this field; an absent list is "not recorded",
+    // which is why it defaults to empty rather than being required.
+    unprovenRouteJoins: canonicalArrayBy(
+      V9BridgeSupplyRouteJoinV1Schema,
+      (row) => row.deploymentRouteKey,
+    ).default([]),
   })
   .strict();
 export type V9BridgeJoinDiagnosticsV1 = z.infer<typeof V9BridgeJoinDiagnosticsV1Schema>;

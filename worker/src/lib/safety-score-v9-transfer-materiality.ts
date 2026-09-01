@@ -14,7 +14,7 @@ export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY =
 const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC = 1_800;
 
 export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([
-  "aa-falconx-mev-capital", "asusdf-astherus", "bbqusdc-steakhouse", "dusd-dialectic",
+  "aa-falconx-mev-capital", "asusdf-astherus", "bbqusdc-steakhouse", "bd-basedollar", "dusd-dialectic",
   "eearn-ember", "fusd-freedom-dollar", "fxsave-f-x-protocol", "gldt-gold-dao",
   "gtusdc-gauntlet", "gtusdcp-gauntlet", "jpyt-dephaser", "jusd-juicedollar",
   "kgst-kyrgyz-som", "luausd-lumi-finance", "sbold-k3-capital", "scrvusd-curve",

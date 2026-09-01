@@ -2772,10 +2772,11 @@
         "routeChecks": {
           "trustedPeerOrRemote": "The reviewed fixed-block route inventory identified owner-gated setPeer(...) and peers(...) on the BEVM DebtTokenWithLz route; current peer state was not re-read because the BEVM RPC endpoint did not return state in the 2026-08-16 pass.",
           "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; current aggregate, per-lane, and endpoint-side limits were not enumerated because the BEVM RPC endpoint was unavailable.",
+          "caps": "At BEVM block 13014518 on 2026-09-01, the route exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), and mintingLimit() all reverted on 0x2031c8848775a5efb7cff2a4edbe3f04c50a1478. The address is an ERC-1967 proxy whose implementation 0xa9ecf240b4621cf703adc3985a084770d8df1f3a contains proxiableUUID(), upgradeToAndCall(address,bytes), and mint(address,uint256) but no cap selector, so the owner-gated UUPS path can replace the mint logic and nothing caps bridge minting.",
           "pausersAdminsUpgraders": "The reviewed route inventory identified owner-gated UUPS upgrade, setDelegate(), and LayerZero configuration paths. Current owner, endpoint address, delegate, and DVN/executor configuration remain unresolved because the BEVM RPC endpoint did not return state in the 2026-08-16 pass."
         },
-        "capDescription": "The reviewed River owner identity remains the BEVM route's administrative controller, and the route's burn/mint delivery semantics remain covered. Because the BEVM endpoint and implementation are unresolved, this control claims no upgrade or peer-configuration capability; local SatoshiXApp/CDP issuance remains separately authored in Mint Authority.",
-        "canRaiseCap": "unknown",
+        "capDescription": "The reviewed River owner identity remains the BEVM route's administrative controller, and the route's burn/mint delivery semantics remain covered. The BEVM endpoint, ERC-1967 implementation, and owner were re-read on 2026-09-01 and the route exposes no mint cap; admitting upgrade and peer-configuration capability is deferred to a full BEVM route re-review, so this control still claims neither; local SatoshiXApp/CDP issuance remains separately authored in Mint Authority.",
+        "canRaiseCap": true,
         "observedAt": "2026-07-20",
         "sources": [
           {
@@ -2865,7 +2866,7 @@
           "endpoint:layerzero-v2:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
           "config:layerzero-v2-dvn-executor"
         ],
-        "authorityType": "unknown",
+        "authorityType": "validator-quorum",
         "routeChecks": {
           "attestorQuorum": "LayerZero V2 endpoint/DVN/executor validation is an external route failure domain. The exact per-OApp DVN and executor configuration, validator membership, quorum, and emergency override roster were not read; no threshold or custody claim is made.",
           "trustedPeerOrRemote": "The reviewed route rows identify the satUSD DebtTokenWithLz delivery contracts and known LayerZero V2 endpoint addresses on Ethereum, Arbitrum, Base, BSC, Sonic, BOB, Bitlayer, Hemi, and X Layer. Current satUSD peer mappings were not re-read; the BEVM route's endpoint, implementation, and peer state remain unresolved because its RPC endpoint did not return state.",
@@ -2887,7 +2888,7 @@
             "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
           }
         ],
-        "evidence": "The reviewed route rows and River bridge documentation establish the issuer-deployed DebtTokenWithLz delivery contracts and OFT burn/mint semantics for the ten selected LayerZero routes, while the owner controls separately preserve only source-proven route administration. The 2026-08-28 review found no primary source in the record that resolves current satUSD peers, aggregate or per-lane rate limits, per-OApp DVN/executor configuration, validator authority, or the BEVM endpoint/implementation. Delivery contracts, protocol labels, and the recorded owner EOA therefore do not resolve the independent validation domain; this control remains unknown and keeps the CTRL/BRDG review source-enriched but blocked rather than cleared."
+        "evidence": "The reviewed route rows and River bridge documentation establish the issuer-deployed DebtTokenWithLz delivery contracts and OFT burn/mint semantics for the ten selected LayerZero routes, while the owner controls separately preserve only source-proven route administration. The 2026-08-28 review found no primary source in the record that resolves current satUSD peers, aggregate or per-lane rate limits, per-OApp DVN/executor configuration, validator authority, or the BEVM endpoint/implementation. Delivery contracts, protocol labels, and the recorded owner EOA therefore do not resolve the independent validation domain; this control remains unknown and keeps the CTRL/BRDG review source-enriched but blocked rather than cleared. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external LayerZero V2 DVN/executor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum — known but weak, graded no higher than a named issuer backend and never above a named multisig — rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
       }
     ]
 

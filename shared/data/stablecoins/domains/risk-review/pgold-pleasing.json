@@ -395,10 +395,11 @@
           "trustedPeerOrRemote": "At Arbitrum block 495272772, the adapter token() was canonical PGOLD and endpoint() was LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c. The ApeChain token's peers(30110) points back to this adapter.",
           "attestorQuorum": "LayerZero Endpoint V2 and its DVN/executor validation are external route failure domains; PGOLD-specific DVN and executor configuration was not independently enumerated.",
           "rateLimits": "No PGOLD-specific aggregate or per-route LayerZero rate-limit value was independently enumerated.",
+          "caps": "At Arbitrum block 500605267 on 2026-09-01, adapter 0xbfd47e6098017c04957ba218dade65e23f661793 exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), and mintingLimit() all reverted. approvalRequired() returned true and token() returned canonical PGOLD 0x3e76bb02286bfeaa89dd35f11253f2cbce634f91, confirming a lock/release adapter, and its EIP-1967 implementation slot was zero, so it is not upgradeable. The escrowed balance floats with deposits and withdrawals and is not a contract-enforced cap, so no cap-raising bound applies.",
           "pausersAdminsUpgraders": "At Arbitrum block 495272772, adapter owner() returned EOA 0x25a6a7fbe039c14b06adb6bda434b960981dbaed. The owner-controlled adapter peer/delegate and message configuration surfaces are bridge administration; no adapter upgrade path was separately verified."
         },
         "capDescription": "The Arbitrum OFT Adapter provides the canonical-side lock/escrow leg for the ApeChain LayerZero representation. Its owner and peer/delegate configuration govern bridge movement, not native PGOLD minting.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 495272772,
         "sources": [
@@ -443,10 +444,11 @@
           "trustedPeerOrRemote": "At ApeChain block 46540614, endpoint() returned LayerZero Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and peers(30110) returned the Arbitrum OFT Adapter 0xbfd47e6098017c04957ba218dade65e23f661793. The owner can alter the representation's LayerZero peer/configuration surface.",
           "attestorQuorum": "LayerZero Endpoint V2 and its DVN/executor validation are external route failure domains; PGOLD-specific DVN and executor configuration was not independently enumerated.",
           "rateLimits": "No PGOLD-specific aggregate or per-route LayerZero rate-limit value was independently enumerated.",
+          "caps": "At ApeChain block 47965727 on 2026-09-01, representation 0x64ae250e044688ddd04262f17daca23c28d241c2 exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), and mintingLimit() all reverted. token() returned the contract itself, approvalRequired() returned false, and the EIP-1967 implementation slot was zero, so it is a non-upgradeable native LayerZero OFT whose authenticated mint is bounded by no cap; owner() remained 0x25a6a7fbe039c14b06adb6bda434b960981dbaed and endpoint() remained 0x6f475642a6e85809b1c36fa62763669b1b48dd5b.",
           "pausersAdminsUpgraders": "At ApeChain block 46540809, a current owner-originated mint simulation reverted. The representation is not treated as an independent native mint path; the owner-controlled peer and bridge configuration remain route-scoped controls."
         },
         "capDescription": "The ApeChain OFT can mint and burn the LayerZero representation when the validated peer/message path is used. Its owner controls bridge configuration, while a direct owner mint simulation reverted at the observed block.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 46540809,
         "sources": [

@@ -2,7 +2,7 @@
 
 /**
  * Build-time projection of `shared/data/stablecoins/coins.generated.json`
- * into slim client-facing JSON consumed by
+ * into slim client- and Worker-facing JSON consumed by
  * `shared/lib/stablecoins/client-registry.ts`, the compliance route, and the
  * bundled Telegram Mini App catalog.
  *
@@ -34,16 +34,20 @@ import { parseSourceFile } from "../lib/ts-ast.mts";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const SOURCE_JSON_REL = "shared/data/stablecoins/coins.generated.json";
+const CANONICAL_ORDER_JSON_REL = "shared/data/stablecoins/canonical-order.json";
 const LISTING_DECISIONS_JSON_REL = "shared/data/stablecoins/listing-decisions.json";
 const OUTPUT_JSON_REL = "shared/data/stablecoins/coins.client.generated.json";
 const COMPLIANCE_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.compliance.generated.json";
 const TELEGRAM_MINI_APP_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.telegram-mini-app.generated.json";
+const WORKER_RUNTIME_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.worker-runtime.generated.json";
 const CLIENT_META_TS_REL = "shared/types/stablecoin-client-meta.ts";
 const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
+const CANONICAL_ORDER_JSON_ABS = resolve(REPO_ROOT, CANONICAL_ORDER_JSON_REL);
 const LISTING_DECISIONS_JSON_ABS = resolve(REPO_ROOT, LISTING_DECISIONS_JSON_REL);
 const OUTPUT_JSON_ABS = resolve(REPO_ROOT, OUTPUT_JSON_REL);
 const COMPLIANCE_OUTPUT_JSON_ABS = resolve(REPO_ROOT, COMPLIANCE_OUTPUT_JSON_REL);
 const TELEGRAM_MINI_APP_OUTPUT_JSON_ABS = resolve(REPO_ROOT, TELEGRAM_MINI_APP_OUTPUT_JSON_REL);
+const WORKER_RUNTIME_OUTPUT_JSON_ABS = resolve(REPO_ROOT, WORKER_RUNTIME_OUTPUT_JSON_REL);
 const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
 const CLIENT_FIELDS_EXPORT = "STABLECOIN_CLIENT_META_FIELDS";
 const GENIUS_CLIENT_FIELDS_EXPORT = "GENIUS_CLIENT_PROFILE_FIELDS";
@@ -560,10 +564,85 @@ export function buildTelegramMiniAppCatalogOutput({ sourceJsonPath = SOURCE_JSON
   };
 }
 
+export function projectWorkerRuntimeCoin(coin, index) {
+  if (typeof coin?.id !== "string" || coin.id.length === 0) {
+    throw new Error(`[client-registry] Worker runtime entry ${index}: invalid or missing id`);
+  }
+  if (typeof coin.symbol !== "string" || coin.symbol.length === 0) {
+    throw new Error(`[client-registry] Worker runtime entry ${index} (${coin.id}): invalid or missing symbol`);
+  }
+
+  const projected = {
+    id: coin.id,
+    symbol: coin.symbol,
+  };
+  if (Object.prototype.hasOwnProperty.call(coin, "status")) {
+    projected.status = coin.status;
+  }
+  if (Array.isArray(coin.contracts)) {
+    projected.contracts = coin.contracts.map(({ chain, address, decimals }) => ({ chain, address, decimals }));
+  }
+  if (Array.isArray(coin.tradedContracts)) {
+    projected.tradedContracts = coin.tradedContracts.map(({ chain, address, decimals }) => ({
+      chain,
+      address,
+      decimals,
+    }));
+  }
+  if (
+    (coin.status == null || coin.status === "active")
+    && isPlainObject(coin.liveReservesConfig)
+    && !coin.liveReservesConfig.suspended
+  ) {
+    const { adapter, breakerScope } = coin.liveReservesConfig;
+    if (typeof adapter === "string" && adapter.length > 0) {
+      projected.liveReserveCircuitSource = `live-reserves:${
+        typeof breakerScope === "string" && breakerScope.length > 0 ? breakerScope : adapter
+      }`;
+    }
+  }
+  return projected;
+}
+
+export function buildWorkerRuntimeRegistryOutput({
+  sourceJsonPath = SOURCE_JSON_ABS,
+  canonicalOrderJsonPath = CANONICAL_ORDER_JSON_ABS,
+} = {}) {
+  const rawJson = readFileSync(sourceJsonPath, "utf8");
+  const parsed = JSON.parse(rawJson);
+  const canonicalOrder = JSON.parse(readFileSync(canonicalOrderJsonPath, "utf8"));
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
+  }
+  if (!Array.isArray(canonicalOrder) || canonicalOrder.some((id) => typeof id !== "string")) {
+    throw new Error(`[client-registry] ${CANONICAL_ORDER_JSON_REL} is not a string array`);
+  }
+
+  const sourceById = new Map(parsed.map((coin) => [coin.id, coin]));
+  const runtimeCoins = canonicalOrder.map((id, index) => {
+    const coin = sourceById.get(id);
+    if (!coin) {
+      throw new Error(`[client-registry] ${CANONICAL_ORDER_JSON_REL} references unknown stablecoin ID: ${id}`);
+    }
+    return projectWorkerRuntimeCoin(coin, index);
+  });
+  if (runtimeCoins.length !== parsed.length) {
+    throw new Error(
+      `[client-registry] ${CANONICAL_ORDER_JSON_REL} covers ${runtimeCoins.length}/${parsed.length} stablecoins`,
+    );
+  }
+  return {
+    output: `${JSON.stringify(runtimeCoins, null, 2)}\n`,
+    runtimeCoins,
+  };
+}
+
 export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
   const { output, slimCoins } = buildClientRegistryOutput();
   const { output: complianceOutput, geniusEntries } = buildComplianceRegistryOutput();
   const { output: telegramMiniAppOutput, searchableCoins } = buildTelegramMiniAppCatalogOutput();
+  const { output: workerRuntimeOutput, runtimeCoins } = buildWorkerRuntimeRegistryOutput();
 
   if (checkMode) {
     const current = existsSync(OUTPUT_JSON_ABS) ? readFileSync(OUTPUT_JSON_ABS, "utf8") : "";
@@ -573,13 +652,17 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
     const currentTelegramMiniApp = existsSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS)
       ? readFileSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS, "utf8")
       : "";
+    const currentWorkerRuntime = existsSync(WORKER_RUNTIME_OUTPUT_JSON_ABS)
+      ? readFileSync(WORKER_RUNTIME_OUTPUT_JSON_ABS, "utf8")
+      : "";
     if (
       current !== output ||
       currentCompliance !== complianceOutput ||
-      currentTelegramMiniApp !== telegramMiniAppOutput
+      currentTelegramMiniApp !== telegramMiniAppOutput ||
+      currentWorkerRuntime !== workerRuntimeOutput
     ) {
       console.error(
-        `${OUTPUT_JSON_REL}, ${COMPLIANCE_OUTPUT_JSON_REL}, or ${TELEGRAM_MINI_APP_OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
+        `${OUTPUT_JSON_REL}, ${COMPLIANCE_OUTPUT_JSON_REL}, ${TELEGRAM_MINI_APP_OUTPUT_JSON_REL}, or ${WORKER_RUNTIME_OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
       );
       process.exit(1);
     }
@@ -590,6 +673,9 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
     console.log(
       `${TELEGRAM_MINI_APP_OUTPUT_JSON_REL}: Mini App catalog is current (${searchableCoins.length} entries, ${telegramMiniAppOutput.length} bytes)`,
     );
+    console.log(
+      `${WORKER_RUNTIME_OUTPUT_JSON_REL}: Worker runtime registry is current (${runtimeCoins.length} entries, ${workerRuntimeOutput.length} bytes)`,
+    );
   } else {
     mkdirSync(dirname(OUTPUT_JSON_ABS), { recursive: true });
     writeFileSync(OUTPUT_JSON_ABS, output, "utf8");
@@ -597,12 +683,17 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
     writeFileSync(COMPLIANCE_OUTPUT_JSON_ABS, complianceOutput, "utf8");
     mkdirSync(dirname(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS), { recursive: true });
     writeFileSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS, telegramMiniAppOutput, "utf8");
+    mkdirSync(dirname(WORKER_RUNTIME_OUTPUT_JSON_ABS), { recursive: true });
+    writeFileSync(WORKER_RUNTIME_OUTPUT_JSON_ABS, workerRuntimeOutput, "utf8");
     console.log(`${OUTPUT_JSON_REL}: wrote client registry (${slimCoins.length} entries, ${output.length} bytes)`);
     console.log(
       `${COMPLIANCE_OUTPUT_JSON_REL}: wrote compliance registry (${geniusEntries.length} GENIUS entries, ${complianceOutput.length} bytes)`,
     );
     console.log(
       `${TELEGRAM_MINI_APP_OUTPUT_JSON_REL}: wrote Mini App catalog (${searchableCoins.length} entries, ${telegramMiniAppOutput.length} bytes)`,
+    );
+    console.log(
+      `${WORKER_RUNTIME_OUTPUT_JSON_REL}: wrote Worker runtime registry (${runtimeCoins.length} entries, ${workerRuntimeOutput.length} bytes)`,
     );
   }
 }

@@ -1,40 +1,94 @@
-import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
 import { formatIsoDate } from "@shared/lib/format";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinData } from "@shared/types/market";
+import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "./constants";
+import { classifyPrimaryDepegTrust } from "./depeg-trust-policy";
+import { deriveCurrentPegObservationMap } from "./peg-analytics";
 
 export { formatIsoDate as formatUtcDate } from "@shared/lib/format";
 
 export interface ActiveDepegAvailabilityRow {
   stablecoin_id: string;
-  peak_deviation_bps: number;
-  direction?: "above" | "below" | string | null;
+  direction: "below";
   started_at: number;
 }
 
+export interface RedemptionCurrentDepegObservation {
+  currentDeviationBps: number;
+}
+
 export interface RedemptionRouteAvailability {
-  routeStatus: Extract<RedemptionRouteStatus, "degraded">;
+  routeStatus: Extract<RedemptionRouteStatus, "degraded" | "unknown">;
   routeStatusSource: Extract<RedemptionRouteStatusSource, "market-implied">;
   routeStatusReason: string;
   routeStatusReviewedAt: string;
-  activeDepegBps: number;
+  activeDepegBps?: number;
   activeDepegStartedAt: number;
   activeDepegDirection: "below";
   outputImpairedShare?: number;
   outputImpairedDependencyId?: string;
 }
 
-function isSevereDownsideDepeg(row: ActiveDepegAvailabilityRow): boolean {
-  if (!Number.isFinite(row.peak_deviation_bps)) return false;
-  const activeDepegBps = Math.abs(row.peak_deviation_bps);
-  if (activeDepegBps < REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS) return false;
+export interface EvaluatedOpenIncident {
+  row: ActiveDepegAvailabilityRow;
+  state: "severe" | "non-severe" | "uncertain";
+  currentDeviationBps?: number;
+}
 
-  if (row.direction === "below") return true;
-  if (row.direction === "above") return false;
+export function buildRedemptionCurrentDepegObservationMap(options: {
+  peggedAssets: StablecoinData[];
+  fxFallbackRates?: Record<string, number>;
+  stablecoinsGenerationAt: number | null;
+  now: number;
+}): Map<string, RedemptionCurrentDepegObservation> {
+  const { peggedAssets, fxFallbackRates, stablecoinsGenerationAt, now } = options;
+  const result = new Map<string, RedemptionCurrentDepegObservation>();
+  if (
+    stablecoinsGenerationAt == null ||
+    !Number.isFinite(stablecoinsGenerationAt) ||
+    stablecoinsGenerationAt > now ||
+    now - stablecoinsGenerationAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
+  ) {
+    return result;
+  }
 
-  return row.peak_deviation_bps < 0;
+  const currentPegObservationById = deriveCurrentPegObservationMap({
+    peggedAssets,
+    fxFallbackRates,
+    asOf: stablecoinsGenerationAt,
+  });
+
+  for (const asset of peggedAssets) {
+    const quoteObservedAt = asset.priceObservedAt ?? asset.priceUpdatedAt;
+    if (
+      typeof quoteObservedAt !== "number" ||
+      !Number.isFinite(quoteObservedAt) ||
+      quoteObservedAt > now ||
+      now - quoteObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC ||
+      asset.priceSource === "cached" ||
+      classifyPrimaryDepegTrust(asset, now) !== "authoritative"
+    ) {
+      continue;
+    }
+
+    const pegObservation = currentPegObservationById.get(asset.id);
+    const currentDeviationBps = pegObservation?.currentDeviationBps;
+    if (
+      pegObservation?.pegReferenceUnavailable ||
+      typeof currentDeviationBps !== "number" ||
+      !Number.isFinite(currentDeviationBps)
+    ) {
+      continue;
+    }
+
+    result.set(asset.id, { currentDeviationBps });
+  }
+
+  return result;
 }
 
 function getTrackedSymbol(stablecoinId: string): string {
@@ -57,9 +111,7 @@ function resolveOutputDependencyWeights(
 ): { weights: Map<string, number>; reserveDerived: boolean } {
   const weights = new Map<string, number>();
 
-  if (meta.variantOf) {
-    addDependencyWeight(weights, meta.variantOf, 1, meta.id);
-  }
+  if (meta.variantOf) addDependencyWeight(weights, meta.variantOf, 1, meta.id);
   if (meta.pegReferenceId && meta.pegReferenceId !== meta.variantOf) {
     addDependencyWeight(weights, meta.pegReferenceId, 1, meta.id);
   }
@@ -70,7 +122,6 @@ function resolveOutputDependencyWeights(
   for (const reserve of meta.reserves ?? []) {
     addDependencyWeight(weights, reserve.coinId, reserve.pct / 100, meta.id);
   }
-
   for (const dependency of meta.dependencies ?? []) {
     addDependencyWeight(weights, dependency.id, dependency.weight, meta.id);
   }
@@ -79,73 +130,126 @@ function resolveOutputDependencyWeights(
 }
 
 export interface OutputDependencyImpairmentEvaluation {
-  impairedRow: ActiveDepegAvailabilityRow;
-  impairedDependencyId: string;
-  outputImpairedShare: number;
+  evidenceState: "severe" | "uncertain";
+  incidentRow: ActiveDepegAvailabilityRow;
+  dependencyId: string;
+  currentDeviationBps?: number;
+  outputImpairedShare?: number;
   /** True when the configured output dependency weights sum above 1.0 (over-leveraged composition). */
   overLeveragedComposition: boolean;
 }
 
 export function evaluateOutputDependencyImpairment(
   weights: ReadonlyMap<string, number>,
-  directRowsById: ReadonlyMap<string, ActiveDepegAvailabilityRow>,
+  incidentsById: ReadonlyMap<string, EvaluatedOpenIncident>,
 ): OutputDependencyImpairmentEvaluation | null {
-  let impairedRow: ActiveDepegAvailabilityRow | null = null;
-  let impairedDependencyId: string | null = null;
+  let severeIncident: EvaluatedOpenIncident | null = null;
+  let severeDependencyId: string | null = null;
+  let uncertainIncident: EvaluatedOpenIncident | null = null;
+  let uncertainDependencyId: string | null = null;
+  let uncertainWeight = 0;
   let impairedShare = 0;
   let totalWeight = 0;
 
   for (const [dependencyId, weight] of weights) {
     totalWeight += weight;
-    const dependencyRow = directRowsById.get(dependencyId);
-    if (!dependencyRow) continue;
+    const incident = incidentsById.get(dependencyId);
+    if (!incident || incident.state === "non-severe") continue;
+    if (incident.state === "uncertain") {
+      if (uncertainIncident == null || weight > uncertainWeight) {
+        uncertainIncident = incident;
+        uncertainDependencyId = dependencyId;
+        uncertainWeight = weight;
+      }
+      continue;
+    }
+
     impairedShare += weight;
     if (
-      impairedRow == null ||
-      Math.abs(dependencyRow.peak_deviation_bps) > Math.abs(impairedRow.peak_deviation_bps)
+      severeIncident == null ||
+      Math.abs(incident.currentDeviationBps ?? 0) > Math.abs(severeIncident.currentDeviationBps ?? 0)
     ) {
-      impairedRow = dependencyRow;
-      impairedDependencyId = dependencyId;
+      severeIncident = incident;
+      severeDependencyId = dependencyId;
     }
   }
 
-  if (!impairedRow || !impairedDependencyId) return null;
-
-  return {
-    impairedRow,
-    impairedDependencyId,
-    outputImpairedShare: Math.min(1, Math.max(0, impairedShare)),
-    overLeveragedComposition: totalWeight > 1 + 1e-9,
-  };
+  const overLeveragedComposition = totalWeight > 1 + 1e-9;
+  if (severeIncident && severeDependencyId) {
+    return {
+      evidenceState: "severe",
+      incidentRow: severeIncident.row,
+      dependencyId: severeDependencyId,
+      currentDeviationBps: severeIncident.currentDeviationBps,
+      outputImpairedShare: Math.min(1, Math.max(0, impairedShare)),
+      overLeveragedComposition,
+    };
+  }
+  if (uncertainIncident && uncertainDependencyId) {
+    return {
+      evidenceState: "uncertain",
+      incidentRow: uncertainIncident.row,
+      dependencyId: uncertainDependencyId,
+      overLeveragedComposition,
+    };
+  }
+  return null;
 }
 
 export async function loadSevereActiveDepegAvailabilityMap(
   db: D1Database,
   routeStatusReviewedAt: string,
+  currentObservationsById: ReadonlyMap<string, RedemptionCurrentDepegObservation>,
 ): Promise<Map<string, RedemptionRouteAvailability>> {
   const rows = await db
     .prepare(
-      `SELECT stablecoin_id, peak_deviation_bps, direction, started_at
+      `SELECT stablecoin_id, direction, started_at
          FROM depeg_events
-        WHERE ended_at IS NULL`,
+        WHERE ended_at IS NULL
+          AND source = 'live'`,
     )
     .all<ActiveDepegAvailabilityRow>();
 
   const result = new Map<string, RedemptionRouteAvailability>();
-  const directRowsById = new Map<string, ActiveDepegAvailabilityRow>();
+  const incidentsById = new Map<string, EvaluatedOpenIncident>();
   for (const row of rows.results ?? []) {
-    if (!isSevereDownsideDepeg(row)) continue;
+    if (row.direction !== "below") continue;
 
-    const activeDepegBps = Math.abs(row.peak_deviation_bps);
+    const currentObservation = currentObservationsById.get(row.stablecoin_id);
+    const state = currentObservation == null
+      ? "uncertain"
+      : currentObservation.currentDeviationBps <= -REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS
+        ? "severe"
+        : "non-severe";
+    const incident: EvaluatedOpenIncident = {
+      row,
+      state,
+      ...(currentObservation ? { currentDeviationBps: currentObservation.currentDeviationBps } : {}),
+    };
+    incidentsById.set(row.stablecoin_id, incident);
 
-    directRowsById.set(row.stablecoin_id, row);
+    if (state === "non-severe") continue;
+    if (state === "severe") {
+      const activeDepegBps = Math.abs(currentObservation!.currentDeviationBps);
+      result.set(row.stablecoin_id, {
+        routeStatus: "degraded",
+        routeStatusSource: "market-implied",
+        routeStatusReason:
+          `Open downside depeg incident started ${formatIsoDate(row.started_at)}; fresh authoritative current deviation is ${currentObservation!.currentDeviationBps} bps, so static redemption availability cannot score.`,
+        routeStatusReviewedAt,
+        activeDepegBps,
+        activeDepegStartedAt: row.started_at,
+        activeDepegDirection: "below",
+      });
+      continue;
+    }
+
     result.set(row.stablecoin_id, {
-      routeStatus: "degraded",
+      routeStatus: "unknown",
       routeStatusSource: "market-implied",
       routeStatusReason:
-        `Active severe downside depeg of ${activeDepegBps} bps started ${formatIsoDate(row.started_at)}; static redemption route requires current live-open evidence before it can score.`,
+        `Open downside depeg incident started ${formatIsoDate(row.started_at)}, but no authoritative current deviation within ${DEPEG_PRIMARY_PRICE_MAX_AGE_SEC} seconds establishes present route availability; redemption score withheld.`,
       routeStatusReviewedAt,
-      activeDepegBps,
       activeDepegStartedAt: row.started_at,
       activeDepegDirection: "below",
     });
@@ -153,18 +257,32 @@ export async function loadSevereActiveDepegAvailabilityMap(
 
   for (const meta of ACTIVE_STABLECOINS) {
     if (result.has(meta.id)) continue;
-
     const config = getRedemptionBackstopConfig(meta.id);
     if (!config) continue;
 
     const { weights: outputDependencyWeights, reserveDerived } = resolveOutputDependencyWeights(meta, config);
-    const evaluation = evaluateOutputDependencyImpairment(outputDependencyWeights, directRowsById);
+    const evaluation = evaluateOutputDependencyImpairment(outputDependencyWeights, incidentsById);
     if (!evaluation) continue;
 
-    const { impairedRow, impairedDependencyId, outputImpairedShare } = evaluation;
-    const activeDepegBps = Math.abs(impairedRow.peak_deviation_bps);
-    const dependencySymbol = getTrackedSymbol(impairedDependencyId);
-    const isParentImpairment = meta.variantOf === impairedDependencyId || meta.pegReferenceId === impairedDependencyId;
+    const { incidentRow, dependencyId } = evaluation;
+    const dependencySymbol = getTrackedSymbol(dependencyId);
+    const isParentImpairment = meta.variantOf === dependencyId || meta.pegReferenceId === dependencyId;
+    if (evaluation.evidenceState === "uncertain") {
+      result.set(meta.id, {
+        routeStatus: "unknown",
+        routeStatusSource: "market-implied",
+        routeStatusReason:
+          `Output asset uncertainty: ${isParentImpairment ? "parent " : ""}${dependencySymbol} has an open downside depeg incident started ${formatIsoDate(incidentRow.started_at)}, but no authoritative current deviation within ${DEPEG_PRIMARY_PRICE_MAX_AGE_SEC} seconds establishes output availability; redemption score withheld.`,
+        routeStatusReviewedAt,
+        activeDepegStartedAt: incidentRow.started_at,
+        activeDepegDirection: "below",
+        outputImpairedDependencyId: dependencyId,
+      });
+      continue;
+    }
+
+    const activeDepegBps = Math.abs(evaluation.currentDeviationBps!);
+    const outputImpairedShare = evaluation.outputImpairedShare!;
     const outputImpairedSharePct = Math.round(outputImpairedShare * 100);
     const overLeveragedMarker =
       reserveDerived && evaluation.overLeveragedComposition
@@ -175,15 +293,15 @@ export async function loadSevereActiveDepegAvailabilityMap(
       routeStatusSource: "market-implied",
       routeStatusReason:
         (isParentImpairment
-          ? `Output asset impairment: parent ${dependencySymbol} has an active severe downside depeg of ${activeDepegBps} bps started ${formatIsoDate(impairedRow.started_at)}; wrapper redemption requires current live-open evidence before it can score.`
-          : `Output asset impairment: ${dependencySymbol} has an active severe downside depeg of ${activeDepegBps} bps started ${formatIsoDate(impairedRow.started_at)}; ${outputImpairedSharePct}% of modeled route output is impaired until current live-open evidence is available.`) +
+          ? `Output asset impairment: parent ${dependencySymbol} has a fresh authoritative current downside deviation of ${activeDepegBps} bps on an incident started ${formatIsoDate(incidentRow.started_at)}; wrapper redemption requires current live-open evidence before it can score.`
+          : `Output asset impairment: ${dependencySymbol} has a fresh authoritative current downside deviation of ${activeDepegBps} bps on an incident started ${formatIsoDate(incidentRow.started_at)}; ${outputImpairedSharePct}% of modeled route output is impaired until current live-open evidence is available.`) +
         overLeveragedMarker,
       routeStatusReviewedAt,
       activeDepegBps,
-      activeDepegStartedAt: impairedRow.started_at,
+      activeDepegStartedAt: incidentRow.started_at,
       activeDepegDirection: "below",
       outputImpairedShare,
-      outputImpairedDependencyId: impairedDependencyId,
+      outputImpairedDependencyId: dependencyId,
     });
   }
 

@@ -4,7 +4,12 @@ import {
   LIVE_RESERVE_RPC_MODE_VALUES,
 } from "../types/live-reserve-core";
 import { RedemptionHolderEligibilitySchema } from "../types/redemption";
-import { ReserveRiskSchema, ReserveSliceSchema } from "../types/reserves";
+import {
+  ReserveAssetClassSchema,
+  ReserveRiskFactorSchema,
+  ReserveRiskSchema,
+  ReserveSliceSchema,
+} from "../types/reserves";
 
 const LiveReserveRpcModeSchema = z.enum(LIVE_RESERVE_RPC_MODE_VALUES);
 const LiveReserveRiskSchema = ReserveRiskSchema;
@@ -891,6 +896,51 @@ const nestVaultPositionsParamsSchema = z
   })
   .strict();
 
+// The credit receivable a `IdleCDOEpochVariant` vault holds is not a tracked
+// asset and must never carry a `coinId`: linking it to the deposit token would
+// present a single-obligor loan as that token's own reserves. The classification
+// (asset class, obligor, risk factors) is reviewed curation and therefore
+// config-owned; the *sizing* is always read on-chain.
+const idleCdoCreditSliceSchema = z
+  .object({
+    sourceKey: z.string().trim().min(3),
+    name: z.string().trim().min(1),
+    risk: LiveReserveRiskSchema,
+    assetClass: ReserveAssetClassSchema,
+    issuerOrObligor: z.string().trim().min(1),
+    riskFactors: z.array(ReserveRiskFactorSchema).min(1),
+  })
+  .strict();
+
+// Emitted only when the CDO actually holds an unlent underlying balance. The
+// adapter never synthesises this slice from NAV.
+const idleCdoUnlentSliceSchema = z
+  .object({
+    sourceKey: z.string().trim().min(3),
+    name: z.string().trim().min(1),
+    risk: LiveReserveRiskSchema,
+    coinId: z.string().trim().min(1),
+    depType: LiveReserveDependencyTypeSchema.optional(),
+    assetClass: ReserveAssetClassSchema.optional(),
+    issuerOrObligor: z.string().trim().min(1).optional(),
+    riskFactors: z.array(ReserveRiskFactorSchema).min(1).optional(),
+    blacklistable: z.boolean().optional(),
+  })
+  .strict();
+
+const idleCdoEpochVariantParamsSchema = z
+  .object({
+    cdoAddress: EvmAddressSchema,
+    tranche: z.enum(["AA", "BB"]),
+    underlyingAddress: EvmAddressSchema,
+    underlyingDecimals: z.number().int().nonnegative(),
+    creditSlice: idleCdoCreditSliceSchema,
+    unlentSlice: idleCdoUnlentSliceSchema,
+    ...OptionalSourceUrlsFields,
+    ...OptionalEvmRpcFields,
+  })
+  .strict();
+
 const makinaStrategyParamsSchema = z
   .object({
     allocationsUrl: AbsoluteUrlSchema,
@@ -1337,6 +1387,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   unitedPor: unitedPorParamsSchema,
   usd1BundleOracle: usd1BundleOracleParamsSchema,
   hiveHbdProtocol: hiveHbdProtocolParamsSchema,
+  idleCdoEpochVariant: idleCdoEpochVariantParamsSchema,
   usdaiHub: usdaiHubParamsSchema,
   xdaiBridge: xdaiBridgeParamsSchema,
   yamato: yamatoParamsSchema,

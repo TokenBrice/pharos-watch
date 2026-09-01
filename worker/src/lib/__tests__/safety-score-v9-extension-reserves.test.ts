@@ -14,6 +14,7 @@ import {
   buildSafetyScoreV9ReserveClassifications,
   dependencyReserveSlices,
 } from "../safety-score-v9-extension-reserves";
+import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
@@ -266,6 +267,67 @@ describe("curated reserve dependency admission", () => {
       source: "live-reserve",
       diagnostics: { graphState: "valid", issueCodes: [] },
       edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
+    });
+  });
+
+  // Regression for ODR-E2: `lisusd-lista`'s live-reserve GemJoin branches
+  // named a `coinId` upstream with `depType: "mechanism"` at dust weight.
+  // `defaultV9DependencyEconomicRole` maps any non-"collateral" type to
+  // "serial-claim", which requires weight === 1 and drops any lesser weight
+  // as `invalid-serial-weight`, poisoning the whole graph to `"invalid"`.
+  // A dust-weight coinId slice on a live-reserve branch must default (or be
+  // curated) to "collateral" so it lands as a valid basket-exposure edge.
+  it("keeps a live-reserve branch with a dust-weight coinId slice as a valid basket edge", () => {
+    const base = makeV9TwoAssetFixedInput({
+      omitAlphaReserve: true,
+      clockSec: DEPENDENCY_CLOCK_SEC,
+    });
+    const {
+      schemaVersion: _schemaVersion,
+      activeAssetIds: _activeAssetIds,
+      dexPayloadFingerprint: _dexPayloadFingerprint,
+      redemptionPayloadFingerprint: _redemptionPayloadFingerprint,
+      registryFingerprint: _registryFingerprint,
+      inputMethodologyVersions: _inputMethodologyVersions,
+      baseInputGenerationId: _baseInputGenerationId,
+      ...draft
+    } = base;
+    const fixed = createReportCardsFixedInput({
+      ...draft,
+      activeAssetIds: ["alpha", "beta"],
+      liveReserveMap: {
+        ...base.liveReserveMap,
+        alpha: [
+          {
+            name: "Beta stablecoin GemJoin",
+            pct: 0.0068,
+            risk: "low" as const,
+            coinId: "beta",
+          },
+          {
+            name: "Custodied cash",
+            pct: 99.9932,
+            risk: "very-low" as const,
+            assetClass: "cash" as const,
+            issuerOrObligor: "issuer:alpha",
+            riskFactors: ["custody" as const, "counterparty" as const],
+            liquidityHorizon: "immediate" as const,
+            maturityDaysMax: 0,
+          },
+        ],
+      },
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        ["alpha", { id: "alpha", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }],
+        ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }],
+      ]),
+    });
+    const alpha = extension.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(alpha.dependencies).toMatchObject({
+      source: "live-reserve",
+      diagnostics: { graphState: "valid", issueCodes: [] },
+      edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.000068 }],
     });
   });
 });

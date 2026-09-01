@@ -28,6 +28,7 @@ import {
   type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
 import type { LiveReserveSyncBudgetConfig } from "./sync-live-reserves-config";
+import type { AdapterLatencySummary, AdapterTelemetryProgress } from "./sync-live-reserves-core";
 
 export interface ReserveSyncAttemptFailureGroup {
   stablecoinId: string;
@@ -72,6 +73,8 @@ export interface FinalizeReserveSyncRunArgs {
   attemptedCoins?: number;
   adapterPhaseMs?: number;
   d1PhaseMs?: number;
+  adapterLatency: AdapterLatencySummary;
+  adapterTelemetryProgress: AdapterTelemetryProgress;
 }
 
 interface LiveReserveFinalizationWarning {
@@ -84,6 +87,7 @@ interface LiveReserveFinalizationBudget {
   deadlineMs: number;
   remainingMs: number;
   breakerOutcomesRecorded: number;
+  breakerOutcomeWriteFailures: number;
   breakerOutcomesSkippedBudget: number;
   breakerOutcomesSkippedClosedSuccess: number;
   breakerOutcomeBudgetExhausted: boolean;
@@ -98,6 +102,7 @@ function resolveFinalizationBudget(args: FinalizeReserveSyncRunArgs): LiveReserv
     deadlineMs,
     remainingMs: Math.max(0, deadlineMs - Date.now()),
     breakerOutcomesRecorded: 0,
+    breakerOutcomeWriteFailures: 0,
     breakerOutcomesSkippedBudget: 0,
     breakerOutcomesSkippedClosedSuccess: 0,
     breakerOutcomeBudgetExhausted: false,
@@ -175,8 +180,12 @@ async function recordBreakerOutcomesForRun(
     }
 
     const [key, success] = candidates[index]!;
-    await recordOutcomeSafe(args.db, key, success);
-    budget.breakerOutcomesRecorded++;
+    const outcome = await recordOutcomeSafe(args.db, key, success);
+    if (outcome !== null) {
+      budget.breakerOutcomesRecorded++;
+    } else {
+      budget.breakerOutcomeWriteFailures++;
+    }
   }
 }
 
@@ -356,6 +365,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       synced: args.synced,
       failed: args.failed,
       skipped: args.skipped,
+      adapterTelemetryProgress: args.adapterTelemetryProgress,
     },
   });
 
@@ -481,6 +491,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
         d1CoinPersistence: args.d1PhaseMs ?? 0,
         finalization: Date.now() - finalizationStartedMs,
       },
+      adapterLatency: args.adapterLatency,
       attemptedCoins: args.attemptedCoins ?? args.synced + args.failed + args.circuitSkipped,
       cohortItemsDoneBeforeRun: args.cohortItemsDoneBeforeRun ?? 0,
       cohortItemsDoneAfterRun:
@@ -492,6 +503,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
         || finalizationBudget.historyPruneSkipped,
       breakerOutcomesTotal: args.breakerOutcomes.size,
       breakerOutcomesRecorded: finalizationBudget.breakerOutcomesRecorded,
+      breakerOutcomeWriteFailures: finalizationBudget.breakerOutcomeWriteFailures,
       breakerOutcomesSkippedBudget: finalizationBudget.breakerOutcomesSkippedBudget,
       breakerOutcomesSkippedClosedSuccess: finalizationBudget.breakerOutcomesSkippedClosedSuccess,
       breakerOutcomeBudgetExhausted: finalizationBudget.breakerOutcomeBudgetExhausted,

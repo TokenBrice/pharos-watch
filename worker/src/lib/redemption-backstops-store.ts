@@ -15,6 +15,7 @@ import type {  RedemptionBackstopEntry,
 import {
   RedemptionBackstopEntrySchema,
   RedemptionBackstopDetailsSchema,
+  RedemptionRouteFamilySchema,
   RedemptionCapacityProfileSchema,
   RedemptionCapacityBasisSchema,
   RedemptionCapacityConfidenceSchema,
@@ -463,27 +464,58 @@ export async function loadRedemptionBackstopLiveSignalRows(
   if (stablecoinIds.length === 0) return [];
 
   const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
-  const run = recentRuns.find(
-    (candidate) =>
-      candidate.written_count === candidate.expected_count &&
-      (candidate.expected_count === 0 || candidate.max_updated_at != null),
-  );
-  if (!run) {
-    throw new RedemptionBackstopSnapshotUnavailableError(
-      "No valid completed redemption backstop run found for live signals",
+  const requestedIds = new Set(stablecoinIds);
+  let rowReadError: unknown;
+
+  for (const run of recentRuns) {
+    if (run.written_count !== run.expected_count) continue;
+    if (run.expected_count > 0 && run.max_updated_at == null) continue;
+
+    let rows: D1Result<RedemptionBackstopLiveSignalRow>;
+    try {
+      rows = await db
+        .prepare(
+          `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at
+             FROM redemption_backstop_run_rows
+            WHERE snapshot_run_id = ?`,
+        )
+        .bind(run.run_id)
+        .all<RedemptionBackstopLiveSignalRow>();
+    } catch (error) {
+      rowReadError ??= error;
+      continue;
+    }
+
+    const resultRows = rows.results ?? [];
+    const decodedRows = resultRows.filter(
+      (row) =>
+        typeof row.stablecoin_id === "string" &&
+        row.stablecoin_id.length > 0 &&
+        (row.immediate_capacity_ratio == null ||
+          (typeof row.immediate_capacity_ratio === "number" &&
+            Number.isFinite(row.immediate_capacity_ratio) &&
+            row.immediate_capacity_ratio >= 0 &&
+            row.immediate_capacity_ratio <= 1)) &&
+        (row.route_family == null || RedemptionRouteFamilySchema.safeParse(row.route_family).success) &&
+        typeof row.updated_at === "number" &&
+        Number.isFinite(row.updated_at) &&
+        row.updated_at >= 0,
     );
+    const decodedIds = new Set(decodedRows.map((row) => row.stablecoin_id));
+    if (
+      resultRows.length !== run.written_count ||
+      decodedRows.length !== run.written_count ||
+      decodedIds.size !== run.written_count
+    ) {
+      continue;
+    }
+
+    return decodedRows.filter((row) => requestedIds.has(row.stablecoin_id));
   }
 
-  const rows = await db
-    .prepare(
-      `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at
-         FROM redemption_backstop_run_rows
-        WHERE snapshot_run_id = ?
-          AND stablecoin_id IN (${stablecoinIds.map(() => "?").join(", ")})`,
-    )
-    .bind(run.run_id, ...stablecoinIds)
-    .all<RedemptionBackstopLiveSignalRow>();
-  return rows.results ?? [];
+  throw new RedemptionBackstopSnapshotUnavailableError("No valid completed redemption backstop run found for live signals", {
+    cause: rowReadError,
+  });
 }
 
 export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {

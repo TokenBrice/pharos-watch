@@ -227,6 +227,16 @@ export const MINT_AUTHORITY_CONTROL_ROLE_VALUES = [
   "unknown",
 ] as const;
 
+/**
+ * AUTHORITY-LADDER 9.46 (2026-09-01): `validator-quorum` names an external
+ * message-validation quorum — a LayerZero DVN set, a Chainlink CCIP DON/RMN, a
+ * Bantu AMTP validator group, an IBC light-client validator set — whose members
+ * are a rotating, protocol-scoped population rather than a named key holder.
+ * It is a KNOWN-BUT-WEAK authority: it grades at or below `issuer-backend` and
+ * never above a named multisig, because an anonymous rotating quorum is not
+ * stronger than a 3-of-5 Safe. Use it only where the controlling party genuinely
+ * is the validation domain; a named operator behind it is still that operator.
+ */
 export const MINT_AUTHORITY_TYPE_VALUES = [
   "safe",
   "multisig",
@@ -235,6 +245,7 @@ export const MINT_AUTHORITY_TYPE_VALUES = [
   "dao-governor",
   "contract",
   "issuer-backend",
+  "validator-quorum",
   "bridge",
   "custodian",
   "none",

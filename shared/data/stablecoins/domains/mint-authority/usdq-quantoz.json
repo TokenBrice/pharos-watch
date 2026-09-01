@@ -157,7 +157,7 @@
         ],
         "label": "USDQ Algorand ASA manager/reserve account",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
@@ -181,7 +181,7 @@
             "url": "https://mainnet-api.algonode.cloud/v2/blocks/64138559"
           }
         ],
-        "evidence": "At Algorand round 64138559, the official node/indexer returned ASA 2768603795 named Quantoz USDQ (USDQ, six decimals), with manager and creator UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M and reserve, freeze, and clawback all set to 3PJ3E3D6XI7YWMJAUX6WDCHWZ4GC2WHTAQIWJBYVJ326LM2I6NSMSLGCDY. The ASA total is fixed at 10000000000000000000 base units; the reserve account controls distribution, while the manager can replace role addresses. The manager account is standard signature type, but its off-chain signer custody is not established."
+        "evidence": "At Algorand round 64138559, the official node/indexer returned ASA 2768603795 named Quantoz USDQ (USDQ, six decimals), with manager and creator UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M and reserve, freeze, and clawback all set to 3PJ3E3D6XI7YWMJAUX6WDCHWZ4GC2WHTAQIWJBYVJ326LM2I6NSMSLGCDY. The ASA total is fixed at 10000000000000000000 base units; the reserve account controls distribution, while the manager can replace role addresses. The manager account is standard signature type, but its off-chain signer custody is not established. Signer-model read 2026-09-01 at Algorand round 64625482 (mainnet-idx.algonode.cloud): the manager account reports sig-type \"sig\" with auth-addr null, confirming the earlier standard-signature-type finding and ruling out a multisig, logic-signature or rekeyed account. Classified issuer-backend under AUTHORITY-LADDER 9.46, matching the eurq-quantoz Algorand ASA manager row from the same issuer. Off-chain key custody for that single key remains unattested, which is what the issuer-backend rung already prices."
       }
     ],
     "economicCapSemantics": "unbounded",

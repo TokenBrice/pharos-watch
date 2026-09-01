@@ -335,7 +335,11 @@ export function expandOverlayReview(
     // A component the curated review does not evidence keeps the built
     // review's fact when one exists (e.g. PoR-derived assurance), otherwise
     // stays bounded-unknown; serial mechanism components are never published
-    // as missing.
+    // as missing. A curated `unavailable` stays bounded-unknown and scores
+    // exactly like an unreviewed one; its reviewed rationale and source travel
+    // separately through
+    // `getSafetyScoreV9MechanismReviewedUnavailableComponents` because the
+    // required applicability of a bounded fact cannot carry a rationale.
     review[componentField] = curated
       ? !("applicability" in curated) || curated.applicability === "measured"
         ? knownFact(kebabCase(componentField), curated.quality)
@@ -408,6 +412,53 @@ export function getSafetyScoreV9MechanismReviewGapDisposition(
       "date-only review until its UTC day has elapsed.",
     componentKeys: Object.keys(overlay.components).sort(),
   };
+}
+
+export interface V9MechanismReviewedUnavailableComponent {
+  /** Camel-case review field, matching the emitted `mechanism-review:<key>` gap. */
+  componentKey: string;
+  rationale: string;
+  sourceUrl: string;
+  reviewedAt: string;
+}
+
+/**
+ * Components a CURRENT overlay adjudicated as reviewed-but-unpublished
+ * (`applicability: "unavailable"` with a written rationale and a cited source).
+ *
+ * The fact itself is bounded-unknown and scores identically to an unreviewed
+ * component — `V9FactApplicability` admits a rationale only for the
+ * not-applicable and unresolved states, so a required bounded fact has nowhere
+ * to carry one. The adjudication therefore travels beside the review and lands
+ * on the emitted gap's message, which is where a reader meets it.
+ *
+ * Mutually exclusive with `getSafetyScoreV9MechanismReviewGapDisposition`: that
+ * one fires only inside the reviewed UTC day, before the overlay is current at
+ * all, and reports the clock guard rather than a curated adjudication.
+ */
+export function getSafetyScoreV9MechanismReviewedUnavailableComponents(
+  assetId: string,
+  archetype: string,
+  clockSec: number,
+): V9MechanismReviewedUnavailableComponent[] {
+  const overlay = currentMechanismOverlay(assetId, archetype, clockSec);
+  if (overlay === null) return [];
+  // Mirrors `expandOverlayReview`: a projected profile component wins over the
+  // curated row, so its adjudication never reaches a fact.
+  const projectedComponents =
+    overlay.profileReview === undefined ? null : projectV9MechanismProfile(overlay.profileReview).components;
+  const rows: V9MechanismReviewedUnavailableComponent[] = [];
+  for (const [componentField, curated] of Object.entries(overlay.components)) {
+    if (projectedComponents?.[componentField] !== undefined) continue;
+    if (!("applicability" in curated) || curated.applicability !== "unavailable") continue;
+    rows.push({
+      componentKey: componentField,
+      rationale: curated.rationale,
+      sourceUrl: curated.sourceUrl,
+      reviewedAt: overlay.reviewedAt,
+    });
+  }
+  return rows.sort((left, right) => compareText(left.componentKey, right.componentKey));
 }
 
 export function getSafetyScoreV9MechanismOverlayEvidence(

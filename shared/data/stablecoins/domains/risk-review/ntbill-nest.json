@@ -467,6 +467,62 @@
           }
         ],
         "evidence": "Nest's current registry identifies 0x7de01896d36bea9cf072ac64e41685418941d8be as NestCCTPRelayer on Plume. Nest states that this relayer receives the CCTP message and invokes the configured composer hook; the relayer is therefore retained as bridge escrow/settlement machinery without inventing an administrator."
+      },
+      {
+        "id": "nest-arbitrum-share-layerzero-teller",
+        "label": "Nest nTBILL Arbitrum LayerZero teller (owner Safe administered)",
+        "routeRefs": [
+          "arbitrum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x1492062b3ae7996c71f87a2b390b6b82afea0c59",
+        "failureDomainKeys": [
+          "protocol:layerzero-endpoint-v2",
+          "contract:arbitrum:0x1492062b3ae7996c71f87a2b390b6b82afea0c59",
+          "contract:arbitrum:0x0a4f939b5d51157c58ba053275eaf77a782b4996",
+          "safe:arbitrum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "No authenticated remote is configured on this leg today. At Arbitrum block 500610274 on 2026-09-01, the teller's peers() returned zero for EIDs 30101 (Ethereum), 30110 (Arbitrum), 30161, 30370, 30102, 30168, and 30318, and selectorToChains() returned an all-zero record for the Ethereum and Plume EIDs, so the deployed LayerZero surface is dormant. endpoint() returned Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c and the endpoint's delegates(teller) returned 0x0c2350b53d0a5610b219b064515ee0ad50829345, a delegate distinct from the owner Safe.",
+          "caps": "At Arbitrum block 500610274 on 2026-09-01, no mint ceiling exists on this route. On the BoringVault 0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9 — a non-proxy 7,935-byte deployment with zero EIP-1967 implementation and admin slots — cap(), maxSupply(), mintCap(), supplyCap(), totalCap(), mintingLimit(), maxMintable(), MAX_SUPPLY(), CAP(), mintLimit(), totalSupplyCap(), bridgeLimit(), rateLimit(), dailyLimit(), limit(), maxLimit(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), and rateLimits(uint32) all reverted, and hook() returned the zero address. The vault's authority() is RolesAuthority 0x0a4f939b5d51157c58ba053275eaf77a782b4996, whose getRolesWithCapability(vault, enter(address,address,uint256,address,uint256)) returned bit 3 and isCapabilityPublic() returned false; the full UserRoleUpdated history shows role 3 granted to exactly one address, this teller, and never revoked. The RolesAuthority's own owner() is the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, so that Safe can grant role 3 to any further address at will. Nothing caps the resulting share mint.",
+          "rateLimits": "No per-lane rate limit could be read: the teller exposes no rate-limit accessor and its LayerZero peer table is empty, so no configured lane exists to carry one.",
+          "pausersAdminsUpgraders": "owner() on the teller, on the vault, on the accountant 0x0b738cd187872b265a689e8e4130c336e76892ec, and on the RolesAuthority all returned the same Arbitrum Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 — a GnosisSafeL2 v1.3.0 with threshold 3 over 6 owners, getModulesPaginated returning an empty module array and a zero guard slot. The teller's isPaused() returned false and shareLockPeriod() returned 0. Neither the vault nor the teller is a proxy, so no upgrade path was identified on this leg."
+        },
+        "capDescription": "The Arbitrum leg carries no mint ceiling: the BoringVault has no cap surface, the enter() capability is gated only by RolesAuthority role 3, and the Safe that owns the RolesAuthority can grant that role to any address. The LayerZero teller is deployed but has no peer configured today, so cross-chain credit on this leg is dormant rather than bounded.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The owner Safe owns the RolesAuthority and can grant the mint-bearing role 3 to any address, so the reviewed single role-3 holder is not a durable bound.",
+          "The LayerZero endpoint delegate 0x0c2350b53d0a5610b219b064515ee0ad50829345 is a separate configuration authority from the owner Safe."
+        ],
+        "observedAt": "2026-09-01",
+        "observedBlock": 500610274,
+        "sources": [
+          {
+            "label": "Arbitrum nTBILL verified BoringVault source",
+            "url": "https://arbitrum.blockscout.com/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9?tab=contract"
+          },
+          {
+            "label": "Arbitrum nTBILL LayerZero teller (MultiChainLayerZeroTellerWithMultiAssetSupport)",
+            "url": "https://arbitrum.blockscout.com/address/0x1492062b3ae7996c71f87a2b390b6b82afea0c59?tab=contract"
+          },
+          {
+            "label": "Arbitrum nTBILL RolesAuthority",
+            "url": "https://arbitrum.blockscout.com/address/0x0a4f939b5d51157c58ba053275eaf77a782b4996?tab=contract"
+          },
+          {
+            "label": "Arbitrum One public JSON-RPC reads at block 500610274",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "The 2026-08-29 route review recorded Arbitrum as reviewed native issuance and did not identify any cross-chain machinery there. At Arbitrum block 500610274 on 2026-09-01 that machinery is present but dormant: the single holder of RolesAuthority role 3 over the vault's enter(address,address,uint256,address,uint256) capability is 0x1492062b3ae7996c71f87a2b390b6b82afea0c59, a verified MultiChainLayerZeroTellerWithMultiAssetSupport whose vault() is the nTBILL BoringVault, whose endpoint() is LayerZero Endpoint V2, and whose owner() is the Nest Arbitrum Safe. Every probed peer and selectorToChains entry is zero, so no authenticated remote can credit shares on this leg today, but the Safe that owns the teller, the RolesAuthority, the accountant and the vault can set a peer and grant further mint roles without any cap, delay, guard or module standing in the way. This is retained as adverse bridge/common-mode exposure on the Arbitrum deployment, distinct from the Mint Authority record of the same Safe's native issuance control."
       }
     ]
   }

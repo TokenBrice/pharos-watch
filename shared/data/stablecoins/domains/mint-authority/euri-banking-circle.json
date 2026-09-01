@@ -70,7 +70,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "none",
     "supervision": "prudential",
     "review": {
       "sources": [
@@ -91,13 +91,21 @@
           "url": "https://www.eurite.com/wp-content/uploads/2025/07/Banking-Circle-S.A_Annual-Accounts_31.12.2024_Final_Signed-by-all-1.pdf"
         },
         {
+          "label": "MiCA Art. 58 — Arts. 22/23/24(3) apply only to non-Member-State-currency EMTs; Art. 36 audit reaches EMTs only when significant",
+          "url": "https://www.mica.wtf/mica/title-iv-e-money-tokens-art.-48-48/chapter-2/article-58"
+        },
+        {
+          "label": "Banking Circle EURI product page (marketing PDFs only, no attestation) — re-opened 2026-09-01",
+          "url": "https://www.bankingcircle.com/euri/"
+        },
+        {
           "label": "CSSF entity notice naming Banking Circle",
           "url": "https://www.cssf.lu/en/2025/01/warning-concerning-the-fraudulent-activities-carried-out-by-circle-group-s-a/"
         }
       ],
-      "evidence": "At Ethereum block 25294735 and BSC block 103620570: token owner = EOA 0xfCA77c... (no bytecode on both chains); EIP-1967 proxy admin = 0xE0c6d43e... (same address on both chains), proxy-admin.owner() = EOA 0x315ef9e4... (no bytecode on both chains). All on-chain addressable mint surfaces confirmed across both deployments. Issuer-backend control corroborated by MiCA credit-institution license. Eurite states that Ernst & Young performs periodic attestations, but the reviewed site exposes no dated token reserve examination; its only linked June item is a smart-contract audit. The latest published EY bank financial audit is for December 31, 2024 and does not reconcile EURI supply to reserves, so cadence and latest qualifying report date remain unavailable and reconciliation is unknown. The CSSF source matches Banking Circle S.A. as both a bank and e-money-token issuer, establishing prudential supervision of the issuer despite the assurance gap. Economic-posture fields reviewed 2026-08-15: issuer EOAs can mint or replace mint logic without delay, no dated EURI reserve attestation reconciles supply, and CSSF supervises Banking Circle as the authorized credit-institution issuer.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "At Ethereum block 25294735 and BSC block 103620570: token owner = EOA 0xfCA77c... (no bytecode on both chains); EIP-1967 proxy admin = 0xE0c6d43e... (same address on both chains), proxy-admin.owner() = EOA 0x315ef9e4... (no bytecode on both chains). All on-chain addressable mint surfaces confirmed across both deployments. Issuer-backend control corroborated by MiCA credit-institution license. Eurite states that Ernst & Young performs periodic attestations, but the reviewed site exposes no dated token reserve examination; its only linked June item is a smart-contract audit. The latest published EY bank financial audit is for December 31, 2024 and does not reconcile EURI supply to reserves, so cadence and latest qualifying report date remain unavailable and reconciliation is unknown. The CSSF source matches Banking Circle S.A. as both a bank and e-money-token issuer, establishing prudential supervision of the issuer despite the assurance gap. Economic-posture fields reviewed 2026-08-15: issuer EOAs can mint or replace mint logic without delay, no dated EURI reserve attestation reconciles supply, and CSSF supervises Banking Circle as the authorized credit-institution issuer. ODR-A6 lane R reconciliation review 2026-09-01: eurite.com publishes no reserve attestation at all. Its full page sitemap is seven pages (/, /regulatory-information/, /privacy-policy/, /download-whitepaper/, /download-our-whitepaper-thank-you/, /contact-us/, /about-us/); /transparency/, /reports/ and /attestation/ each return 404; /regulatory-information/ carries CSSF registration numbers and no assurance artefact; and the live EURI MiCA whitepaper PDF contains no occurrence of 'attest', 'assurance', 'Ernst' or 'EY', its only audit references being Fireblocks SOC reviews and the PeckShield smart-contract audit. bankingcircle.com/euri links three marketing PDFs and no attestation. The homepage's 'attested by a top tier auditor' sentence links no document, and no Banking Circle regulatory-disclosures portal serving monthly EURI attestations could be reached from any primary source. MiCA imposes no public reserve-to-supply reconciliation duty on this issuer: Art. 22 quarterly reporting runs to the competent authority rather than the public, and Art. 58(3) applies Arts. 22-24(3) only to e-money tokens denominated in a currency that is not an official currency of a Member State, so a euro-denominated EMT is out of scope; the only public reserve-audit route, Art. 36(9)-(10), reaches EMT issuers through Art. 58(1) only once an EMT is designated significant, and the EBA has designated no EMT significant. Prudential supervision of Banking Circle S.A. and Art. 54 safeguarding remain the operative constraint, which is exactly what supervision 'prudential' already records; the reconciliation field is a separate fact and is set to the positively-established 'none' rather than left at the unverified 'unknown' (MINT-LADDER 9.32).",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15; ODR-A6 lane R reconciliation 2026-09-01",
+      "reviewedAt": "2026-09-01"
     },
     "upgradeability": {
       "model": "transparent-proxy",

@@ -304,15 +304,77 @@ function materialBridgeSeverity(
   return materialSupplyShare >= highShareThreshold ? "high" : "moderate";
 }
 
-function hasCompleteSubthresholdUnresolvedBridgeJoins(
+/**
+ * Why the sub-threshold unresolved bridge-join completeness proof failed.
+ *
+ * ODR-D5a: the proof used to return a bare boolean, so a residue carrier
+ * publishing `nonmaterial-bridge-supply-unmatched` said nothing about *which*
+ * supply row could not be joined to a proven bridge control. Diagnosing the
+ * residue then meant re-deriving the whole join by hand. The typed cause names
+ * the failing `deploymentRouteKey` (or the offending control key, for the two
+ * inventory-level failures that precede any row) so downstream diagnostics can
+ * carry it. It is diagnostic only: no branch here changes the verdict.
+ */
+export type V9BridgeJoinFailureCode =
+  /** The reviewed supply partition does not reconcile, so no row can be proven. */
+  | "supply-partition-unreconciled"
+  /** One reviewed bridge route row is claimed by more than one control review. */
+  | "duplicate-bridge-route-control"
+  /** A reviewed native row carries a bridge control it should not. */
+  | "reviewed-native-row-carries-control"
+  /** A reviewed row's route kind is absent (retained V2) or unrecognized. */
+  | "reviewed-row-kind-unresolved"
+  /** A reviewed controlled row joins zero or several bridge controls. */
+  | "reviewed-row-control-join-not-unique"
+  /** A reviewed controlled row's single control cannot carry the join. */
+  | "reviewed-row-control-unproven"
+  /** An unresolved or material unmatched row joins zero or several controls. */
+  | "unresolved-row-control-join-not-unique"
+  /** An unresolved or material unmatched row's control cannot bound it. */
+  | "unresolved-row-control-unproven";
+
+export interface V9BridgeJoinFailureCause {
+  readonly code: V9BridgeJoinFailureCode;
+  readonly deploymentRouteKey: string | null;
+  readonly reviewState: V9EconomicControlAssetFacts["supply"]["selectedBridgeRoutes"][number]["reviewState"] | null;
+  readonly reviewedRouteKind: "native" | "controlled" | null;
+  readonly supplyShare: number | null;
+  readonly controlKeys: readonly string[];
+}
+
+export type V9SubthresholdUnresolvedBridgeJoinResult =
+  | { readonly complete: true; readonly cause: null }
+  | { readonly complete: false; readonly cause: V9BridgeJoinFailureCause };
+
+const COMPLETE_SUBTHRESHOLD_UNRESOLVED_BRIDGE_JOINS: V9SubthresholdUnresolvedBridgeJoinResult = {
+  complete: true,
+  cause: null,
+};
+
+export function evaluateV9SubthresholdUnresolvedBridgeJoins(
   facts: V9EconomicControlAssetFacts,
   controls: readonly V9DeploymentControlFactV2[],
   bridgeRoutes: readonly V9BridgeRouteControlReview[],
   materialShareThreshold: number,
   commonModeShareThreshold: number,
-): boolean {
+): V9SubthresholdUnresolvedBridgeJoinResult {
+  const incomplete = (
+    code: V9BridgeJoinFailureCode,
+    detail: Partial<Omit<V9BridgeJoinFailureCause, "code">> = {},
+  ): V9SubthresholdUnresolvedBridgeJoinResult => ({
+    complete: false,
+    cause: {
+      code,
+      deploymentRouteKey: detail.deploymentRouteKey ?? null,
+      reviewState: detail.reviewState ?? null,
+      reviewedRouteKind: detail.reviewedRouteKind ?? null,
+      supplyShare: detail.supplyShare ?? null,
+      controlKeys: detail.controlKeys ?? [],
+    },
+  });
+
   const rows = reconciledSupplyPartition(facts);
-  if (rows === null) return false;
+  if (rows === null) return incomplete("supply-partition-unreconciled");
 
   const bridgeControlsByDeployment = new Map<string, V9DeploymentControlFactV2[]>();
   for (const control of controls) {
@@ -326,46 +388,77 @@ function hasCompleteSubthresholdUnresolvedBridgeJoins(
   for (const route of bridgeRoutes) {
     bridgeRouteCounts.set(route.controlKey, (bridgeRouteCounts.get(route.controlKey) ?? 0) + 1);
   }
-  if ([...bridgeRouteCounts.values()].some((count) => count !== 1)) return false;
-  return rows.every((route) => {
+  const duplicateControlKeys = uniqueSorted(
+    [...bridgeRouteCounts.entries()].filter(([, count]) => count !== 1).map(([controlKey]) => controlKey),
+  );
+  if (duplicateControlKeys.length > 0) {
+    return incomplete("duplicate-bridge-route-control", { controlKeys: duplicateControlKeys });
+  }
+  for (const route of rows) {
+    const rowDetail = {
+      deploymentRouteKey: route.deploymentRouteKey,
+      reviewState: route.reviewState,
+      reviewedRouteKind: route.reviewedRouteKind ?? null,
+      supplyShare: route.supplyShare,
+    };
     // RULED D-J (2026-07-19): an unrecognized-chain-label pool below the
     // common-mode materiality floor is an accepted bounded row, not a proof
     // failure. At or above the floor the pool keeps the ordinary fail-closed
     // per-row checks below (the material unrecognized-chain latency case).
     if (isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) && route.supplyShare < commonModeShareThreshold) {
-      return true;
+      continue;
     }
     if (
       route.reviewState === "unmatched" &&
       !isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) &&
       route.supplyShare < materialShareThreshold
     ) {
-      return true;
+      continue;
     }
     const joined = bridgeControlsByDeployment.get(route.deploymentRouteKey) ?? [];
+    const joinedControlKeys = uniqueSorted(joined.map((control) => control.controlKey));
     if (route.reviewState === "selected-reviewed") {
-      if (route.reviewedRouteKind === "native") return joined.length === 0;
-      if (route.reviewedRouteKind !== "controlled") return false;
-      if (joined.length !== 1) return false;
+      if (route.reviewedRouteKind === "native") {
+        if (joined.length === 0) continue;
+        return incomplete("reviewed-native-row-carries-control", {
+          ...rowDetail,
+          controlKeys: joinedControlKeys,
+        });
+      }
+      if (route.reviewedRouteKind !== "controlled") {
+        return incomplete("reviewed-row-kind-unresolved", { ...rowDetail, controlKeys: joinedControlKeys });
+      }
+      if (joined.length !== 1) {
+        return incomplete("reviewed-row-control-join-not-unique", { ...rowDetail, controlKeys: joinedControlKeys });
+      }
       const control = joined[0]!;
-      return (
+      if (
         controlCanRepresent(control, "bridge") &&
         isKnownRequired(control.status) &&
         control.materialSupplyShare !== null &&
         bridgeSharesReconcile(control.materialSupplyShare, route.supplyShare) &&
         bridgeRouteCounts.get(control.controlKey) === 1
-      );
+      ) {
+        continue;
+      }
+      return incomplete("reviewed-row-control-unproven", { ...rowDetail, controlKeys: joinedControlKeys });
     }
-    if (joined.length !== 1) return false;
+    if (joined.length !== 1) {
+      return incomplete("unresolved-row-control-join-not-unique", { ...rowDetail, controlKeys: joinedControlKeys });
+    }
     const control = joined[0]!;
-    return (
+    if (
       control.scope === "deployment" &&
       control.economicLossScope === "deployment" &&
       control.materialSupplyShare !== null &&
       bridgeSharesReconcile(control.materialSupplyShare, route.supplyShare) &&
       control.materialSupplyShare < materialShareThreshold
-    );
-  });
+    ) {
+      continue;
+    }
+    return incomplete("unresolved-row-control-unproven", { ...rowDetail, controlKeys: joinedControlKeys });
+  }
+  return COMPLETE_SUBTHRESHOLD_UNRESOLVED_BRIDGE_JOINS;
 }
 
 function controlFallbackKind(control: V9DeploymentControlFactV2): "mint" | "oracle" | "bridge" | null {
@@ -536,6 +629,14 @@ function applyMergedMintSignals(
  * facts, and grades UP or DOWN relative to the 45 default: a live compromise or an
  * economically unbounded control grades below it, a hardened governed/multisig
  * path above it. issuer-backend and unknown authority stay at the neutral default.
+ *
+ * AUTHORITY-LADDER 9.46: `validator-quorum` — an external message-validation
+ * quorum (LayerZero DVN set, CCIP DON/RMN, Bantu AMTP group, IBC light-client
+ * validator set) — is known-but-weak and also holds at the neutral default. The
+ * adopted ruling is that it grades at or below `issuer-backend` and never above a
+ * named multisig; the multisig branch below starts from `concentrated-admin`,
+ * which is strictly above this rung, so naming a validation domain can never lift
+ * a control into the multisig class.
  */
 function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy): number {
   const quality = controlPolicy.mintPostureQuality;
@@ -581,6 +682,11 @@ function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, contr
     case "issuer-backend":
       // A centralized backend key with a bounded claim is neither a lift nor a
       // clear danger on static facts alone: hold at the neutral default.
+      return controlPolicy.boundedUnknownQuality;
+    case "validator-quorum":
+      // An external validation quorum is a named, public failure domain — it is
+      // no longer unknown — but its membership rotates and no individual signer
+      // is accountable, so it earns no lift over the centralized-backend rung.
       return controlPolicy.boundedUnknownQuality;
     case "eoa":
       // Safety 9.1: an externally-owned key under reviewed MPC or HSM custody is
@@ -1179,13 +1285,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     if (bridge.status.observationState !== "known") {
       addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
     }
-    const completeSubthresholdUnresolvedJoins = hasCompleteSubthresholdUnresolvedBridgeJoins(
+    const completeSubthresholdUnresolvedJoins = evaluateV9SubthresholdUnresolvedBridgeJoins(
       args.facts,
       controls,
       bridge.routes,
       materialShareThreshold,
       policy.materiality.commonModeShareThreshold,
-    );
+    ).complete;
     const unresolvedBridgeShare =
       args.facts.supply.unknownRouteSupplyShare === null || args.facts.supply.unreviewedRouteSupplyShare === null
         ? null

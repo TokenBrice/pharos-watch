@@ -298,11 +298,12 @@
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "At zkSync block 71576848, owner() returned 0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263, mailbox() returned 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, token-level ISM() returned zero, and the LayerZero endpoint was 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf. A zero token-level ISM delegates to the mailbox default ISM; its validator set and quorum were not decoded.",
+          "caps": "At zkSync block 71804227 on 2026-09-01, representation 0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), mintingMaxLimitOf(address), and mintingCurrentLimitOf(address) all reverted, so it is a plain Hyperlane synthetic rather than an xERC20 with configured minting limits. token() returned the contract itself and its EIP-1967 implementation was 0x9f80bbe82dbad5d74904c83bd8990c8ba9dfe82a, so the owner-administered proxy can replace the mint logic; nothing caps an accepted delivery.",
           "pausersAdminsUpgraders": "The route-local owner contract is the reviewed destination bridge administrator. Its owner-contract multisig threshold and any upgrade authorization were not independently verified.",
           "onchainAmountBounds": "The representation mints and burns on accepted Hyperlane message delivery against sUSN locked on Ethereum; no independent native collateral or route-level aggregate cap was verified."
         },
         "capDescription": "The zkSync destination representation is a Hyperlane bridge mint/burn route against Ethereum-locked sUSN, with the route-local owner controlling bridge administration and peer-related configuration.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
           "The owner contract's multisig threshold and upgrade authorization were not independently verified."
@@ -345,11 +346,12 @@
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "At Sophon block 29641987, owner() returned 0x553d36879016ce22977a622804eee76dc0dc88e0, mailbox() returned 0x9bbdf86b272d224323136e15594fdce487f40ce7, token-level ISM() returned zero, and the LayerZero endpoint was 0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7. A zero token-level ISM delegates to the mailbox default ISM; its validator set and quorum were not decoded.",
+          "caps": "At Sophon block 29658914 on 2026-09-01, representation 0xb87dbe27db932bacaaa96478443b6519d52c5004 exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), mintingMaxLimitOf(address), and mintingCurrentLimitOf(address) all reverted, so it is a plain Hyperlane synthetic rather than an xERC20 with configured minting limits. token() returned the contract itself and its EIP-1967 implementation was 0xf280f30e0dbde661ce8e38acd658fc40f755ef80, so the owner-administered proxy can replace the mint logic; nothing caps an accepted delivery.",
           "pausersAdminsUpgraders": "The route-local owner contract is the reviewed destination bridge administrator. Its owner-contract multisig threshold and any upgrade authorization were not independently verified.",
           "onchainAmountBounds": "The representation mints and burns on accepted Hyperlane message delivery against sUSN locked on Ethereum; no independent native collateral or route-level aggregate cap was verified."
         },
         "capDescription": "The Sophon destination representation is a Hyperlane bridge mint/burn route against Ethereum-locked sUSN, with the route-local owner controlling bridge administration and peer-related configuration.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
           "The owner contract's multisig threshold and upgrade authorization were not independently verified."
@@ -391,11 +393,12 @@
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "At Starknet block 13410062, owner() returned 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox() returned 0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, token-level ISM() returned zero, and class hash remained 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d. A zero token-level ISM delegates to the mailbox default ISM; its validator set and quorum were not decoded.",
+          "caps": "At Starknet block 14195197 on 2026-09-01, representation 0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17 had no cap, max_supply, get_cap, or mint_limit entrypoint (each call returned \"Requested entrypoint does not exist\"), so no mint ceiling exists. owner remained 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox remained 0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, interchain_security_module returned zero, and the class hash was unchanged at 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d. Nothing caps an accepted Hyperlane delivery.",
           "pausersAdminsUpgraders": "The route-local owner contract is the reviewed destination bridge administrator. Its owner-contract multisig threshold and any upgrade authorization were not independently verified.",
           "onchainAmountBounds": "The representation mints and burns on accepted Hyperlane message delivery against sUSN locked on Ethereum; no independent native collateral or route-level aggregate cap was verified."
         },
         "capDescription": "The Starknet destination representation is a Hyperlane bridge mint/burn route against Ethereum-locked sUSN, with the route-local owner controlling bridge administration and peer-related configuration.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
           "The owner contract's multisig threshold and upgrade authorization were not independently verified."
