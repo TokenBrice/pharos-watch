@@ -134,4 +134,20 @@ describe("adaptive PR checks", () => {
       expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:structural");
     }
   });
+  it("runs the editorial policy gate for every registered extractor family", () => {
+    const representativePaths = [
+      "data/ai-summaries.json",
+      "src/data/changelogs/example.ts",
+      "src/data/blog/posts/example.md",
+      "scripts/lib/editorial-baseline.json",
+      "scripts/lib/editorial-exceptions.json",
+    ];
+    const plan = buildPrStaticCheckPlan(representativePaths);
+    const editorialCommand = plan.commands.find((command) => command.name === "test");
+    expect(editorialCommand).toEqual({
+      name: "test",
+      args: ["scripts/__tests__/editorial-policy.test.ts"],
+    });
+    expect(buildPrStaticCheckPlan(["src/lib/not-an-editorial-surface.ts"]).commands).not.toContainEqual(editorialCommand);
+  });
 });
