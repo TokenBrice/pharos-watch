@@ -10,8 +10,10 @@ import {
   type IndependentAssuranceManifest,
   type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   EUROP_INDEPENDENT_ASSURANCE_PROFILE,
+  fetchIndependentAssuranceAdapter,
   straitsxIndependentAssuranceProfile,
   verifyIndependentAssuranceReport,
   type IndependentAssuranceProfile,
@@ -155,6 +157,34 @@ async function verifyRealIndexFixture(
   });
 }
 
+const ROUTED_ASSURANCE_COINS = [
+  "xsgd-straitsx",
+  "xusd-straitsx",
+  "audx-aussie-dollar-token",
+] as const;
+
+function routedAssuranceCoin(id: (typeof ROUTED_ASSURANCE_COINS)[number]) {
+  const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === id);
+  if (!coin?.liveReservesConfig) throw new Error(`missing routed assurance config for ${id}`);
+  return coin;
+}
+
+function assuranceCandidate(
+  product: "XSGD" | "XUSD" | "AUDX",
+  url: string,
+  date: string,
+): string {
+  const [year, month, day] = date.split("-");
+  const monthName = new Date(Date.UTC(Number(year), Number(month) - 1, 1)).toLocaleString("en", {
+    month: "long",
+    timeZone: "UTC",
+  });
+  const label = product === "AUDX"
+    ? `${product} assurance report ${date}`
+    : `${product} SCS Reserve Account Report (${day} ${monthName} ${year})`;
+  return `<a href="${url}">${label}</a>`;
+}
+
 describe("independent-assurance manifest framework", () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -248,6 +278,78 @@ describe("independent-assurance manifest framework", () => {
       verifyRealIndexFixture("USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, fixture, ambiguous),
     ).rejects.toThrow("reviewed report URL is missing or duplicated");
   });
+
+  it.each(ROUTED_ASSURANCE_COINS)(
+    "%s dispatches through the exported adapter and preserves every fail-closed gate",
+    async (coinId) => {
+      const coin = routedAssuranceCoin(coinId);
+      const config = coin.liveReservesConfig!;
+      const product = coin.symbol.toUpperCase() as "XSGD" | "XUSD" | "AUDX";
+      const reviewed = getIndependentAssuranceManifest(product);
+      const reviewedCandidate = assuranceCandidate(product, reviewed.reportUrl, reviewed.reportDate);
+      const nextDate = `${reviewed.reportDate.slice(0, 5)}07-31`;
+      const newerUrl = new URL(
+        product === "AUDX"
+          ? `report-${nextDate}.pdf`
+          : `${product}-SCS-Reserve-Account-Report-31-July-2026.pdf`,
+        reviewed.reportUrl,
+      ).toString();
+      const newerCandidate = assuranceCandidate(product, newerUrl, nextDate);
+      const duplicateUrl = new URL(`alternate-${product}-${reviewed.reportDate}.pdf`, reviewed.reportUrl).toString();
+      const duplicateCandidate = assuranceCandidate(product, duplicateUrl, reviewed.reportDate);
+
+      const cases = [
+        {
+          name: "hash mismatch",
+          config,
+          html: reviewedCandidate,
+          pdf: new Uint8Array(reviewed.reportByteLength),
+          error: "SHA-256",
+        },
+        {
+          name: "URL/host drift",
+          config: {
+            ...config,
+            inputs: { ...config.inputs, primary: { kind: "http-html" as const, url: "https://example.com/drift" } },
+          },
+          html: reviewedCandidate,
+          pdf: PDF_BYTES,
+          error: "configured index URL is not the reviewed official index",
+        },
+        { name: "missing reviewed URL", config, html: "<p>No reports</p>", pdf: PDF_BYTES, error: "reviewed report URL is missing or duplicated" },
+        { name: "newer unreviewed report", config, html: reviewedCandidate + newerCandidate, pdf: PDF_BYTES, error: "newer unreviewed report" },
+        { name: "duplicate latest date", config, html: reviewedCandidate + duplicateCandidate, pdf: PDF_BYTES, error: "reviewed report URL is missing or duplicated" },
+      ];
+
+      for (const testCase of cases) {
+        const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          if (url === reviewed.officialIndexUrl) {
+            return new Response(testCase.html, { headers: { "content-type": "text/html" } });
+          }
+          if (url === reviewed.reportUrl) {
+            return new Response(testCase.pdf, {
+              headers: {
+                "content-type": "application/pdf",
+                "content-length": String(testCase.pdf.length),
+              },
+            });
+          }
+          throw new Error(`unexpected ${testCase.name} request ${url}`);
+        });
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(
+          fetchIndependentAssuranceAdapter(
+            coin,
+            testCase.config,
+            new AbortController().signal,
+          ),
+          testCase.name,
+        ).rejects.toThrow(testCase.error);
+      }
+    },
+  );
 
   it("keeps stale verified reports out of score-grade state", () => {
     const adapter = getReserveAdapter("audx-independent-assurance");
