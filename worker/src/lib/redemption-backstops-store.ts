@@ -465,6 +465,7 @@ export async function loadRedemptionBackstopLiveSignalRows(
 
   const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
   const requestedIds = new Set(stablecoinIds);
+  let rowReadError: unknown;
 
   for (const run of recentRuns) {
     if (run.written_count !== run.expected_count) continue;
@@ -480,7 +481,8 @@ export async function loadRedemptionBackstopLiveSignalRows(
         )
         .bind(run.run_id)
         .all<RedemptionBackstopLiveSignalRow>();
-    } catch {
+    } catch (error) {
+      rowReadError ??= error;
       continue;
     }
 
@@ -511,9 +513,9 @@ export async function loadRedemptionBackstopLiveSignalRows(
     return decodedRows.filter((row) => requestedIds.has(row.stablecoin_id));
   }
 
-  throw new RedemptionBackstopSnapshotUnavailableError(
-    "No valid completed redemption backstop run found for live signals",
-  );
+  throw new RedemptionBackstopSnapshotUnavailableError("No valid completed redemption backstop run found for live signals", {
+    cause: rowReadError,
+  });
 }
 
 export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {

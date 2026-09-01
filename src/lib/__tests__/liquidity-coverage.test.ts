@@ -21,7 +21,9 @@ describe("liquidity coverage", () => {
     // from the active registry.
     // 50 -> 40 when wave-3 census providers (aquarius/tezos/icon-balanced/kava-swap)
     // covered 10 formerly no-provider deployments.
-    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(40);
+    // 40 -> 30 when the Osmosis SQS and Noble swap providers covered another
+    // 10 Cosmos deployments.
+    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(30);
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {

@@ -100,6 +100,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The current Safety Score V9 publication inputs and stablecoin registry statuses are authoritative; this only avoids repeated per-coin dependency and mint-component scans inside one run.",
   },
   {
+    sourcePath: "worker/src/cron/dex-discovery/crawl-cosmos-pools.ts",
+    stateNames: ["cosmosRequestState"],
+    owner: "Cosmos DEX discovery pacing",
+    kind: "coordination",
+    resetOrTtl: "One last-request timestamp enforcing a 400ms pacing floor inside a discovery run; resets with the isolate and via the test-only reset hook.",
+    durableTruth: "Upstream Osmosis and Noble rate limits are authoritative; this state only spaces requests within one isolate.",
+  },
+  {
     sourcePath: "worker/src/cron/dex-discovery/crawl-horizon-pools.ts",
     stateNames: ["horizonRequestState"],
     owner: "Stellar Horizon discovery pacing",
@@ -178,6 +186,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     kind: "coordination",
     resetOrTtl: "Tracks one pending prune promise and consecutive prune failures until completion or isolate recycle.",
     durableTruth: "Atomic D1 feedback_rate_limit reservations are authoritative.",
+  },
+  {
+    sourcePath: "worker/src/lib/redemption-backstop-sources.ts",
+    stateNames: ["outputDependencyResolutionRuns"],
+    owner: "Redemption output-dependency resolution",
+    kind: "coordination",
+    resetOrTtl: "At most four snapshot timestamps retain row references while one serial redemption build converges; old runs are evicted and all state resets with the isolate.",
+    durableTruth: "The current redemption build inputs and persisted completed-run snapshot are authoritative; this state only reconciles rows built in either order.",
   },
   {
     sourcePath: "worker/src/lib/request-source-attribution.ts",

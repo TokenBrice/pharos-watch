@@ -108,6 +108,8 @@ Since v4.39, a measured route scores zero when executable capacity is zero or be
 
 Since v4.4, an open route with an unproven settlement completion bound publishes unestablished capacity and remains unrated rather than being scored zero.
 
+Since v4.42, market-implied degradation on an open live downside incident requires a fresh authoritative current signed deviation at or below -2500 bps. The incident's historical peak does not establish present severity: when current evidence is stale, missing, cached, untrusted, or lacks an authoritative peg reference, the route publishes unknown / market-implied and remains impaired with its score withheld; a fresh non-severe deviation releases only this overlay without closing the incident.
+
 This route score is separate from Safety Score V9 Exit. The two share reviewed route-scoring primitives, but V9 re-evaluates exact same-notional evidence under its own stress request, evidence ceilings, danger interlocks, and independent-backup policy.
 
 

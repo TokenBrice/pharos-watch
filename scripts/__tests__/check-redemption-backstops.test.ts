@@ -103,13 +103,14 @@ describe("check-redemption-backstops CLI", () => {
     });
 
     const report = JSON.parse(readFileSync(reportPath, "utf8")) as {
-      findings: Array<{ severity: string; code: string }>;
+      findings: Array<{ severity: string; code: string; stablecoinId?: string }>;
     };
     expect(report.findings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           severity: "warning",
-          code: "documented-bound-missing-route-support",
+          code: "unconfigured-active-coin",
+          stablecoinId: "mai-qidao",
         }),
       ]),
     );
