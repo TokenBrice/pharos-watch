@@ -1,13 +1,14 @@
+import { buildEditorialPrompt } from "@shared/lib/editorial-style";
 import { formatCurrency } from "@shared/lib/format";
 import { round1 } from "@shared/lib/math";
-import type { DigestValidationProfile } from "../daily-digest/response";
-import { forbiddenTicsPromptLine } from "../daily-digest/voice-guards";
+import { ALLOWED_TONES, type DigestValidationProfile } from "../daily-digest/response";
 import { buildSafetyMapCensusLines } from "../daily-digest/prompt";
 import type { WeeklyInputData } from "./types";
 
 export const WEEKLY_SYSTEM_PROMPT = [
+  buildEditorialPrompt("weekly"),
+  "",
   "You write the weekly editorial recap for Pharos, a stablecoin analytics dashboard.",
-  "Dry, sharp, memorable, like a sardonic columnist synthesizing rather than reporting.",
   "",
   "You receive a week of daily digest data, pre-aggregated weekly signal leaderboards, and week-over-week delta summaries.",
   "Use the Weekly Risk Leaderboard and Weekly Signals block as the source of truth for the week's protagonists. Use the week-over-week deltas to frame where this week sits versus the previous one.",
@@ -27,21 +28,17 @@ export const WEEKLY_SYSTEM_PROMPT = [
   "Retrospective-only recaps are rejected.",
   "",
   "SPICE BUDGET.",
-  "Earn one sharp sentence per recap: a named analogy, a historical parallel, or a concrete-stakes observation.",
+  "A sharp sentence is optional and capped at one per recap: a named analogy, a historical parallel, or a concrete-stakes observation.",
   "One per recap. Do not force it.",
   "",
-  "FORBIDDEN TICS.",
-  forbiddenTicsPromptLine(),
-  "",
   "FORMATTING.",
-  "No emojis, no clickbait, no hedging, no exclamation marks.",
-  "NEVER use em dashes or en dashes. Use commas, semicolons, colons, or periods.",
+  "No emojis, exclamation marks, or markdown code fences.",
   "",
   "STRUCTURE.",
   "The extended field is 4-6 paragraphs, 250-400 words total.",
   "P1: the week's headline from the top unsuppressed risk leader, with PSI arc and dominant regime as context.",
   "P2: the dominant story, the thread that ran through multiple days.",
-  "P3: the counter-narrative, what moved the opposite direction or was quietly significant.",
+  "P3: the counter-narrative, what moved the opposite direction and why it matters.",
   "P4: supply and capital flows, weekly mcap movement, biggest movers, gauge trend, referring to week-over-week deltas when they change the story.",
   "P5-P6 (optional): a structural observation or the forward-look.",
   "If using fewer than 6 paragraphs, fold the forward-look into the last paragraph.",
@@ -51,7 +48,8 @@ export const WEEKLY_SYSTEM_PROMPT = [
   "OUTPUT CONTRACT.",
   'Respond with valid JSON only: { "title": "3-8 word headline", "extended": "...", "text": "tweet-sized hook under 270 chars combined with title", ',
   '  "meta": { "leadSignalId": "...", "lead": "one of allowed leads", "tone": "one of allowed tones", "coins": ["..."], "usedCandidateIds": [...] } }',
-  "Allowed leads and tones are identical to the daily contract.",
+  "Allowed leads are identical to the daily contract.",
+  `Allowed tones: ${ALLOWED_TONES.join(", ")}.`,
 ].join("\n");
 
 export function buildWeeklyPrompt(
@@ -192,7 +190,7 @@ export function buildWeeklyPrompt(
       freshSignals.forEach(renderSignal);
     }
     if (standingSignals.length > 0) {
-      lines.push("  STANDING CONDITIONS (carried over from prior weeks — one line each at most, never the headline):");
+      lines.push("  STANDING CONDITIONS (carried over from prior weeks; one line each at most, never the headline):");
       standingSignals.forEach(renderSignal);
     }
   } else {
@@ -265,7 +263,7 @@ export function buildWeeklyPrompt(
   for (const d of compatibleHeadlines) {
     const psi = d.inputData.stabilityIndex;
     lines.push(
-      `  ${d.date}: "${d.title}" — PSI ${psi?.score ?? "?"} [${psi?.band ?? "?"}], mcap ${formatCurrency(d.inputData.totalMcapUsd)}`,
+      `  ${d.date}: "${d.title}"; PSI ${psi?.score ?? "?"} [${psi?.band ?? "?"}], mcap ${formatCurrency(d.inputData.totalMcapUsd)}`,
     );
   }
   if (compatibleHeadlines.length === 0) {
@@ -290,7 +288,9 @@ export function buildWeeklyPrompt(
     }
   }
 
-  return lines.join("\n");
+  return lines.join("\n")
+    .replace(/[\u2012-\u2015]/g, ",")
+    .replace(/\bquietly\s+significant\b/gi, "gradually material");
 }
 
 export function buildWeeklyLeadRequirements(data: WeeklyInputData): DigestValidationProfile["leadRequirements"] {

@@ -30,6 +30,12 @@ vi.mock("../../lib/circuit-breaker", async () => (await import("./daily-digest.t
 
 import { generateDailyDigest, resumeDailyDigestDelivery } from "../daily-digest";
 import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
+import {
+  buildEditorialPrompt,
+  EDITORIAL_STYLE_HASH,
+  EDITORIAL_STYLE_VERSION,
+} from "@shared/lib/editorial-style";
+import { ALLOWED_TONES } from "../daily-digest/response";
 
 
 
@@ -390,11 +396,12 @@ describe("generateDailyDigest", () => {
     expect(anthropicBody.messages[0].content).toContain("Calm Narrative Frame");
 
     const systemPrompt = anthropicBody.system;
-    expect(systemPrompt).toContain("Do NOT reuse any of the following house-style tics");
-    expect(systemPrompt).toContain("plumbing");
-    expect(systemPrompt).toContain("forward-look");
-    expect(systemPrompt).toContain("Earn one sharp sentence");
-    expect(systemPrompt).toContain("EXEMPLAR");
+    expect(systemPrompt.startsWith(buildEditorialPrompt("daily"))).toBe(true);
+    expect(systemPrompt).toContain("REGISTER: Daily editorial.");
+    expect(systemPrompt).toContain(`Allowed tones: ${ALLOWED_TONES.join(", ")}.`);
+    expect(systemPrompt).not.toContain("death spirals");
+    expect(systemPrompt).not.toContain("FORBIDDEN TICS");
+    expect(systemPrompt).not.toContain("NEVER use em dashes or en dashes");
     expect(systemPrompt).toContain("Momentum Candidate");
     expect(systemPrompt).toContain("total-mcap ATH");
     expect(systemPrompt).toContain("CALM-DAY STORYTELLING");
@@ -824,8 +831,9 @@ describe("generateDailyDigest", () => {
     const metaJson = insertBinds?.[5];
     expect(metaJson).toBeDefined();
     const meta = JSON.parse(String(metaJson));
-    expect(meta.lead).toBe("dews-band-change");
-    expect(meta.tone).toBe("foreboding");
+    expect(meta.tone).toBe("other");
+    expect(meta.editorialStyleVersion).toBe(EDITORIAL_STYLE_VERSION);
+    expect(meta.editorialStyleHash).toBe(EDITORIAL_STYLE_HASH);
     expect(meta.coins).toEqual(["FRAX"]);
   });
 

@@ -1,6 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { EDITORIAL_STYLE_HASH, EDITORIAL_STYLE_VERSION } from "@shared/lib/editorial-style";
 import { makeDigestRow } from "../../test-helpers/__shared/fixtures";
 import { handleDigestArchive } from "../digest-archive";
 
@@ -57,6 +58,40 @@ describe("handleDigestArchive", () => {
     expect(body.digests[0].riskSignal).toMatchObject({ symbol: "PMUSD", bps: -5284, severity: "critical" });
     expect(body.digests[0].riskTape).toHaveLength(1);
     expect(body.digests[0].nextTriggers).toHaveLength(1);
+  });
+
+  it("projects editorial style provenance and marks legacy rows without rewriting them", async () => {
+    const current = makeDigestRow({
+      id: 2,
+      generated_at: 2_000,
+      digest_meta: JSON.stringify({
+        editorialStyleVersion: EDITORIAL_STYLE_VERSION,
+        editorialStyleHash: EDITORIAL_STYLE_HASH,
+      }),
+    });
+    const legacy = makeDigestRow({
+      id: 1,
+      generated_at: 1_000,
+      digest_meta: null,
+    });
+    const db = mockD1([{ match: "daily_digest", rows: [current, legacy] }]);
+    const res = await handleDigestArchive(db);
+    const body = (await res.json()) as {
+      digests: Array<{
+        editorialStyleVersion: string;
+        editorialStyleHash: string;
+      }>;
+    };
+
+    expect(body.digests[0]).toMatchObject({
+      editorialStyleVersion: EDITORIAL_STYLE_VERSION,
+      editorialStyleHash: EDITORIAL_STYLE_HASH,
+    });
+    expect(body.digests[1]).toMatchObject({
+      editorialStyleVersion: "pre-policy",
+      editorialStyleHash: "pre-policy",
+    });
+    expect(legacy.digest_meta).toBeNull();
   });
 
   it("handles missing input_data gracefully", async () => {

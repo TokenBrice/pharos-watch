@@ -2,7 +2,6 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DigestResponseSchema } from "../../lib/schemas";
 import { validateDigestLeadRequirements, type DigestLeadRequirement } from "./lead-requirements";
 import {
-  findForbiddenTics,
   findRepeatedStructuralNgrams,
   hasForwardLook,
   leadFamily,
@@ -13,14 +12,21 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { getMetaString, normalizeStringArray } from "./digest-intelligence-utils";
 import { findDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
 import { findQuarantinedDigestSignalClaims } from "@shared/lib/digest-signal-quarantine";
+import {
+  EDITORIAL_STYLE_HASH,
+  EDITORIAL_STYLE_VERSION,
+  scanEditorialText,
+  type EditorialFinding,
+} from "@shared/lib/editorial-style";
 
-const FORBIDDEN_PHRASES = [
-  "Meanwhile, ",
-  "Meanwhile ",
-  "In other news, ",
-  "It's worth noting ",
-  "It remains to be seen ",
-];
+export type DigestStyleGateMode = "shadow" | "enforce";
+
+/**
+ * Shadow is deliberate during the telemetry period. Change this immutable
+ * default, or pass `styleGateMode: "enforce"` from a cron profile, for the
+ * later blocking flip.
+ */
+export const STYLE_GATE_MODE: DigestStyleGateMode = "shadow";
 
 const OPENING_FINGERPRINT_WINDOW = 7;
 const STRUCTURAL_REPETITION_WINDOW = 7;
@@ -31,7 +37,11 @@ export interface ParsedDigestResponse {
   digestExtended: string;
   digestMeta: string | null;
   strippedDashCount: number;
-  forbiddenPhraseHits: string[];
+  /**
+   * Captured from model-owned fields before trimming or legacy punctuation
+   * repair. Optional keeps hand-built validation fixtures source-compatible.
+   */
+  editorialFindings?: readonly EditorialFinding[];
   usedRawTextFallback: boolean;
 }
 
@@ -39,10 +49,15 @@ export interface DigestValidationIssue {
   code: string;
   severity: "hard" | "soft";
   message: string;
+  ruleId?: string;
+  field?: string;
+  excerpt?: string;
+  index?: number;
 }
 
 export interface DigestValidationProfile {
   kind: "daily" | "weekly";
+  styleGateMode?: DigestStyleGateMode;
   recentMeta?: Array<{
     meta: Record<string, unknown> | null;
     title: string | null;
@@ -82,18 +97,16 @@ export interface DigestDepegFact {
 }
 
 export interface DigestModelResponseParseOptions {
+  register?: "daily" | "weekly";
   metaFactory?: (options: {
     parsedMeta: Record<string, unknown> | null;
     usedRawTextFallback: boolean;
   }) => Record<string, unknown> | null;
 }
 
-// Detection only — silently deleting phrases left capitalization and grammar
-// fragments mid-sentence. Hits become a soft quality issue instead.
-function detectForbiddenPhrases(value: string): string[] {
-  return FORBIDDEN_PHRASES.filter((phrase) => value.includes(phrase));
-}
-
+// Legacy shadow-mode repair. Remove this call path when STYLE_GATE_MODE flips
+// to "enforce"; hard findings should then retry or block instead of silently
+// rewriting model-owned punctuation.
 function stripForbiddenDashes(value: string): string {
   return value.replace(/[\u2013\u2014]/g, ",");
 }
@@ -141,12 +154,9 @@ const ALLOWED_LEADS = new Set([
   "other",
 ]);
 
-const ALLOWED_TONES = new Set([
+export const ALLOWED_TONES = [
   "bemused",
-  "foreboding",
   "clinical",
-  "wistful",
-  "darkly-amused",
   "urgent",
   "dry",
   "analytical",
@@ -156,11 +166,13 @@ const ALLOWED_TONES = new Set([
   "observant",
   "forensic",
   "resigned",
-  "ironic",
   "other",
-]);
+] as const;
 
-function normalizeToken(value: unknown, allowed: Set<string>): string | undefined {
+const ALLOWED_TONE_SET = new Set<string>(ALLOWED_TONES);
+
+
+function normalizeToken(value: unknown, allowed: ReadonlySet<string>): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim().toLowerCase().replace(/[_\s]+/g, "-");
   if (!normalized) return undefined;
@@ -182,7 +194,7 @@ function normalizeParsedMeta(meta: Record<string, unknown> | null): Record<strin
   if (leadSignalId) out.leadSignalId = leadSignalId;
   const lead = normalizeToken(meta.lead, ALLOWED_LEADS);
   if (lead) out.lead = lead;
-  const tone = normalizeToken(meta.tone, ALLOWED_TONES);
+  const tone = normalizeToken(meta.tone, ALLOWED_TONE_SET);
   if (tone) out.tone = tone;
   const coins = normalizeCoins(meta.coins);
   if (coins) out.coins = coins;
@@ -225,18 +237,26 @@ export function parseDigestModelResponse(
   options: DigestModelResponseParseOptions = {},
 ): ParsedDigestResponse {
   const parsedJson = extractDigestJson(rawText);
+  const register = options.register ?? "daily";
 
   let digestTitle: string;
   let digestText: string;
   let digestExtended: string;
   let usedRawTextFallback = false;
   let parsedMeta: Record<string, unknown> | null = null;
+  let editorialFindings: EditorialFinding[] = [];
 
   try {
     if (!parsedJson) {
       throw new Error("no valid JSON found");
     }
     const parsed = DigestResponseSchema.parse(parsedJson);
+    // Scan the exact model-owned strings before trimming or any legacy repair.
+    editorialFindings = [
+      ...scanEditorialText(parsed.title, { register, field: "title" }),
+      ...scanEditorialText(parsed.text, { register, field: "text" }),
+      ...scanEditorialText(parsed.extended, { register, field: "extended" }),
+    ];
     digestTitle = parsed.title.trim();
     digestText = parsed.text.trim();
     digestExtended = parsed.extended.trim();
@@ -249,13 +269,18 @@ export function parseDigestModelResponse(
     digestTitle = "";
     digestText = rawText.trim();
     digestExtended = "";
+    editorialFindings = scanEditorialText(digestText, { register, field: "text" });
     usedRawTextFallback = true;
   }
 
   const resolvedMeta = options.metaFactory
     ? options.metaFactory({ parsedMeta, usedRawTextFallback })
     : parsedMeta;
-  const digestMeta = resolvedMeta ? JSON.stringify(resolvedMeta) : null;
+  const digestMeta = JSON.stringify({
+    ...(resolvedMeta ?? {}),
+    editorialStyleVersion: EDITORIAL_STYLE_VERSION,
+    editorialStyleHash: EDITORIAL_STYLE_HASH,
+  });
 
   const strippedDashCount = [digestTitle, digestText, digestExtended].join("").match(/[\u2013\u2014]/g)?.length ?? 0;
   digestTitle = stripForbiddenDashes(digestTitle);
@@ -263,17 +288,13 @@ export function parseDigestModelResponse(
   digestExtended = stripForbiddenDashes(digestExtended);
   digestText = stripRepeatedTitlePrefix(digestTitle, digestText);
 
-  const forbiddenPhraseHits = [
-    ...new Set([...detectForbiddenPhrases(digestText), ...detectForbiddenPhrases(digestExtended)]),
-  ];
-
   return {
     digestTitle,
     digestText,
     digestExtended,
     digestMeta,
     strippedDashCount,
-    forbiddenPhraseHits,
+    editorialFindings,
     usedRawTextFallback,
   };
 }
@@ -320,16 +341,27 @@ export function validateDigestModelOutput(
   const minParagraphs = isDaily ? 3 : 4;
   const maxParagraphs = isDaily ? 4 : 6;
   const parsedMeta = parsed.digestMeta ? JSON.parse(parsed.digestMeta) as Record<string, unknown> : null;
+  const editorialFindings = parsed.editorialFindings ?? [
+    ...scanEditorialText(parsed.digestTitle, { register: profile.kind, field: "title" }),
+    ...scanEditorialText(parsed.digestText, { register: profile.kind, field: "text" }),
+    ...scanEditorialText(parsed.digestExtended, { register: profile.kind, field: "extended" }),
+  ];
+  const styleGateMode = profile.styleGateMode ?? STYLE_GATE_MODE;
+  for (const finding of editorialFindings) {
+    const severity = styleGateMode === "enforce" && finding.severity === "hard" ? "hard" : "soft";
+    issues.push({
+      code: "editorial-style",
+      severity,
+      ruleId: finding.ruleId,
+      field: finding.field,
+      excerpt: finding.excerpt,
+      index: finding.index,
+      message: `Editorial style rule ${finding.ruleId} in ${finding.field ?? "copy"} found "${finding.excerpt}".${finding.advice ? ` ${finding.advice}` : ""}`,
+    });
+  }
 
   if (parsed.usedRawTextFallback) {
     issues.push({ code: "raw-text-fallback", severity: "hard", message: "Model response was not valid digest JSON." });
-  }
-  if (parsed.forbiddenPhraseHits.length > 0) {
-    issues.push({
-      code: "forbidden-phrase",
-      severity: "soft",
-      message: `Copy contains forbidden throat-clearing phrase(s): ${parsed.forbiddenPhraseHits.map((phrase) => phrase.trim()).join(", ")}.`,
-    });
   }
   if (!parsed.digestTitle.trim()) {
     issues.push({ code: "missing-title", severity: "hard", message: "Title is missing." });
@@ -389,14 +421,6 @@ export function validateDigestModelOutput(
     });
   }
 
-  const tics = findForbiddenTics(parsed.digestText, parsed.digestExtended);
-  if (tics.length > 0) {
-    issues.push({
-      code: "forbidden-tic",
-      severity: "soft",
-      message: `Output contains house-style tic(s): ${tics.join(", ")}. Rewrite without them.`,
-    });
-  }
 
   if (!hasForwardLook(`${parsed.digestText}\n${parsed.digestExtended}`)) {
     issues.push({

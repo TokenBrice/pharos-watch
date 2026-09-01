@@ -42,6 +42,8 @@ interface ApiDigest {
   generatedAt: number;
   digestType?: "daily" | "weekly";
   editionNumber?: number;
+  editorialStyleVersion?: string;
+  editorialStyleHash?: string;
 }
 
 export interface DigestSyncCliOptions {
@@ -191,6 +193,17 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
           generatedAt: d.generatedAt,
           digestType: d.digestType ?? ("daily" as const),
           editionNumber: d.editionNumber ?? 0,
+          // Provenance is persisted only when the upstream edition actually
+          // carries it. Editions predating the policy stay absent, and the
+          // `pre-policy` sentinel the API computes for display is stripped
+          // here: writing it would tag an archive with a policy it never
+          // followed, which the provenance contract forbids.
+          ...(d.editorialStyleVersion && d.editorialStyleVersion !== "pre-policy"
+            ? { editorialStyleVersion: d.editorialStyleVersion }
+            : {}),
+          ...(d.editorialStyleHash && d.editorialStyleHash !== "pre-policy"
+            ? { editorialStyleHash: d.editorialStyleHash }
+            : {}),
         }));
         const entries = deduplicateDigestEntries(mappedEntries);
         const duplicateCount = mappedEntries.length - entries.length;

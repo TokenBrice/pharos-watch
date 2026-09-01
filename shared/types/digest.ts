@@ -662,6 +662,14 @@ export const DigestArchiveEntrySchema = z.object({
   riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
   digestType: z.enum(["daily", "weekly"]).optional(),
   editionNumber: z.number().optional(),
+  /**
+   * Editorial style policy that produced the edition. Absent on editions
+   * authored before the policy existed; those read back as `pre-policy` rather
+   * than being back-filled, so an archive edition is never claimed to have
+   * followed rules that did not exist. See docs/editorial-style.md.
+   */
+  editorialStyleVersion: z.string().optional(),
+  editorialStyleHash: z.string().optional(),
 });
 export type DigestArchiveEntry = z.infer<typeof DigestArchiveEntrySchema>;
 
@@ -684,6 +692,13 @@ export const DigestStoredSnapshotSchema = z.array(
     generatedAt: DigestArchiveEntrySchema.shape.generatedAt,
     digestType: DigestArchiveEntrySchema.shape.digestType.default("daily"),
     editionNumber: DigestArchiveEntrySchema.shape.editionNumber.default(0),
+    /**
+     * Absent on editions authored before the policy. Storage stays optional and
+     * archives are never back-filled; the `pre-policy` sentinel is computed at
+     * the API and UI read boundary, never written into the snapshot.
+     */
+    editorialStyleVersion: DigestArchiveEntrySchema.shape.editorialStyleVersion,
+    editorialStyleHash: DigestArchiveEntrySchema.shape.editorialStyleHash,
   }),
 );
 export type DigestContentEntry = z.infer<typeof DigestStoredSnapshotSchema>[number];

@@ -77,8 +77,6 @@ interface RequestDigestCopyResult {
   digestText: string;
   digestExtended: string;
   digestMeta: string | null;
-  strippedDashCount: number;
-  forbiddenPhraseHits: string[];
   usedRawTextFallback: boolean;
   qualityIssues: DigestValidationIssue[];
   hasBlockingQualityIssues: boolean;
@@ -473,8 +471,6 @@ export async function requestDigestCopy(
       digestText: "",
       digestExtended: "",
       digestMeta: "",
-      strippedDashCount: 0,
-      forbiddenPhraseHits: [],
       usedRawTextFallback: false,
       qualityIssues: [],
       hasBlockingQualityIssues: false,
@@ -640,6 +636,9 @@ export async function requestDigestCopy(
   };
 
   let prompt = options.userPrompt;
+  const parseOptions = options.validationProfile
+    ? { ...(options.parseOptions ?? {}), register: options.validationProfile.kind }
+    : options.parseOptions;
   const original = await requestClaude(prompt, "original");
   if (original.kind === "refusal") {
     return {
@@ -648,8 +647,6 @@ export async function requestDigestCopy(
       digestText: "",
       digestExtended: "",
       digestMeta: null,
-      strippedDashCount: 0,
-      forbiddenPhraseHits: [],
       usedRawTextFallback: false,
       qualityIssues: [],
       hasBlockingQualityIssues: false,
@@ -657,7 +654,7 @@ export async function requestDigestCopy(
       refusalCategory: original.category,
     };
   }
-  let parsed = parseDigestModelResponse(original.rawText, options.parseOptions);
+  let parsed = parseDigestModelResponse(original.rawText, parseOptions);
   let qualityIssues = options.validationProfile
     ? validateDigestModelOutput(parsed, options.validationProfile)
     : [];
@@ -711,8 +708,6 @@ export async function requestDigestCopy(
           digestText: "",
           digestExtended: "",
           digestMeta: null,
-          strippedDashCount: 0,
-          forbiddenPhraseHits: [],
           usedRawTextFallback: false,
           qualityIssues: [],
           hasBlockingQualityIssues: false,
@@ -720,7 +715,7 @@ export async function requestDigestCopy(
           refusalCategory: corrective.category,
         };
       }
-      parsed = parseDigestModelResponse(corrective.rawText, options.parseOptions);
+      parsed = parseDigestModelResponse(corrective.rawText, parseOptions);
       qualityIssues = options.validationProfile
         ? validateDigestModelOutput(parsed, options.validationProfile)
         : [];
@@ -732,11 +727,6 @@ export async function requestDigestCopy(
   }
   if (parsed.strippedDashCount > 0) {
     logWorkerEventArgs("handler", "info", `[${options.logPrefix}] Prompt compliance: ${parsed.strippedDashCount} forbidden dashes stripped`);
-  }
-  if (parsed.forbiddenPhraseHits.length > 0) {
-    logWorkerEventArgs("handler", "warn",
-      `[${options.logPrefix}] Prompt compliance: forbidden phrase(s) present: ${parsed.forbiddenPhraseHits.map((phrase) => phrase.trim()).join(", ")}`,
-    );
   }
   if (qualityIssues.length > 0) {
     logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] Digest quality checks still failing: ${formatDigestValidationIssues(qualityIssues)}`);

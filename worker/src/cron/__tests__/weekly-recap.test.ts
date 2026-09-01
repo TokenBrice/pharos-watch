@@ -67,7 +67,15 @@ import {
 import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
 import { postDigestTweet } from "../../lib/twitter";
 import { deliverTwitterDigestWithLedger } from "../../lib/twitter-digest-ledger";
-import { validateDigestModelOutput } from "../daily-digest/response";
+import {
+  buildEditorialPrompt,
+  EDITORIAL_STYLE_HASH,
+  EDITORIAL_STYLE_VERSION,
+} from "@shared/lib/editorial-style";
+import {
+  ALLOWED_TONES,
+  validateDigestModelOutput,
+} from "../daily-digest/response";
 
 const safetyContext = {
   status: "available" as const,
@@ -302,6 +310,8 @@ describe("generateWeeklyRecap", () => {
       periodType: "trailing-daily-editions",
       weekStart: "2026-03-24",
       weekEnd: "2026-03-28",
+      editorialStyleVersion: EDITORIAL_STYLE_VERSION,
+      editorialStyleHash: EDITORIAL_STYLE_HASH,
       telegramDelivered: false,
       telegramDeliveryStatus: "pending",
       llm: {
@@ -356,10 +366,12 @@ describe("generateWeeklyRecap", () => {
     expect(weeklyBody.fallbacks).toBe("default");
 
     const weeklySystem = weeklyBody.system as string;
-    expect(weeklySystem).toContain("forward-look");
-    expect(weeklySystem).toContain("plumbing");
-    expect(weeklySystem).toContain("week-over-week");
-    expect(weeklySystem).toContain("arc");
+    expect(weeklySystem.startsWith(buildEditorialPrompt("weekly"))).toBe(true);
+    expect(weeklySystem).toContain("REGISTER: Weekly synthesis.");
+    expect(weeklySystem).toContain(`Allowed tones: ${ALLOWED_TONES.join(", ")}.`);
+    expect(weeklySystem).not.toContain("FORBIDDEN TICS");
+    expect(weeklySystem).not.toContain("quietly significant");
+    expect(weeklySystem).not.toMatch(/[\u2012-\u2015]/);
   });
 
   it("posts the weekly recap to X with a carried-forward dated map", async () => {
@@ -455,7 +467,6 @@ describe("generateWeeklyRecap", () => {
       digestExtended: "USDS liquidity collapsed as TVL fell from $162.28M to $13.72M.",
       digestMeta: JSON.stringify({ weekStart: "2026-08-18", weekEnd: "2026-08-24" }),
       strippedDashCount: 0,
-      forbiddenPhraseHits: [],
       usedRawTextFallback: false,
     }, { kind: "weekly" });
 

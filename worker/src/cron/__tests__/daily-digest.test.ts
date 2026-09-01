@@ -30,15 +30,16 @@ vi.mock("../../lib/circuit-breaker", async () => (await import("./daily-digest.t
 
 import { buildUserPrompt } from "../daily-digest/prompt";
 import { buildDigestSafetyMapCapture } from "../daily-digest/input";
-import { SYSTEM_PROMPT } from "../daily-digest/prompt/policy";
+import { DAILY_EXEMPLAR, SYSTEM_PROMPT } from "../daily-digest/prompt/policy";
 import { classifyRegime } from "../daily-digest/prompt/regime";
 import {
+  ALLOWED_TONES,
+  hasBlockingDigestQualityIssues,
   parseDigestModelResponse,
   validateDigestModelOutput,
   type DigestValidationProfile,
   type ParsedDigestResponse,
 } from "../daily-digest/response";
-
 import {
   collectLiquidityShifts,
   collectActiveDepegs,
@@ -60,6 +61,7 @@ import {
 import type { CollectorContext } from "../daily-digest/collectors-shared";
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/digest-next-triggers";
+import { buildEditorialPrompt, scanEditorialText } from "@shared/lib/editorial-style";
 import type { DigestInputData } from "@shared/types/digest";
 import {
   makeWorkerReportCardsV9Response,
@@ -106,7 +108,6 @@ function makeParsedFixture(
       coins: ["USDT"],
     }),
     strippedDashCount: 0,
-    forbiddenPhraseHits: [],
     usedRawTextFallback: false,
   };
 }
@@ -293,34 +294,70 @@ describe("structural-repetition voice guard", () => {
   });
 });
 
-describe("forbidden-tic voice guard", () => {
-  it.each([
-    ["flags plumbing metaphor anywhere in extended", "PSI held.\n\nThe plumbing flinched again.\n\nDone.", true],
-    ["flags 'worth watching' in closer position", "Line one.\n\nLine two.\n\nLine three, worth monitoring into next week.", true],
-    ["does NOT flag 'worth watching' mid-paragraph when last sentence is different", "A coin worth watching for mcap drift, plus five others. Real closer sentence here.\n\nLine two.\n\nLine three.", false],
-    ["does not flag prose free of tics", "USDT added $3B.\n\nUSDC pulled $200M.\n\nThe gap is now the story.", false],
-  ] as const)("%s", (_label, extended, expected) => {
-    const issues = validateDigestModelOutput(makeParsedFixture({ extended }), { kind: "daily", recentMeta: [] });
-    expect(issues.some((issue) => issue.code === "forbidden-tic")).toBe(expected);
+describe("editorial style gate", () => {
+  function parseWithExtended(extended: string): ParsedDigestResponse {
+    const paddingA = "USDT supply stayed near the prior print while the next observable trigger remained unchanged. ".repeat(6).trim();
+    const paddingB = "The market snapshot kept its measured shape as flows and prices moved within the stated range. ".repeat(5).trim();
+    return parseDigestModelResponse(JSON.stringify({
+      title: "Calm Market",
+      text: "USDT held its peg.",
+      extended: `${extended}\n\n${paddingA}\n\n${paddingB}`,
+      meta: { lead: "depeg", tone: "dry", coins: ["USDT"] },
+    }));
+  }
+
+  it("records a hard dash finding in shadow mode without blocking", () => {
+    const parsed = parseWithExtended("USDT moved — the next trigger is tomorrow.");
+    const issues = validateDigestModelOutput(parsed, { kind: "daily" });
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: "editorial-style",
+      severity: "soft",
+      ruleId: "no-clause-dash",
+      field: "extended",
+      excerpt: "—",
+    }));
+    expect(hasBlockingDigestQualityIssues(issues)).toBe(false);
+  });
+
+  it("blocks the same hard finding when the profile flips to enforce", () => {
+    const parsed = parseWithExtended("USDT moved — the next trigger is tomorrow.");
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", styleGateMode: "enforce" });
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: "editorial-style",
+      severity: "hard",
+      ruleId: "no-clause-dash",
+      field: "extended",
+      excerpt: "—",
+    }));
+    expect(hasBlockingDigestQualityIssues(issues)).toBe(true);
+  });
+
+  it("reports universal tics through the shared policy scanner", () => {
+    const parsed = parseWithExtended("USDT held.\n\nThe plumbing flinched.\n\nWatch the next trigger.");
+    const issue = validateDigestModelOutput(parsed, { kind: "daily" }).find(
+      (candidate) => candidate.code === "editorial-style" && candidate.ruleId === "scoped-decorative-word",
+    );
+    expect(issue).toMatchObject({ severity: "soft", field: "extended", excerpt: "plumbing" });
   });
 });
 
 describe("tone cluster validator", () => {
   it.each([
-    ["fires tone-cluster when same tone appears 3+ times in last 5", ["foreboding", "foreboding", "foreboding", "foreboding", "foreboding"], true],
-    ["does not fire when spread across tones", ["dry", "sardonic", "foreboding", "clinical", "wistful"], false],
+    ["fires tone-cluster when same tone appears 3+ times in last 5", ["dry", "dry", "dry", "dry", "dry"], true],
+    ["does not fire when spread across tones", ["dry", "sardonic", "clinical", "analytical", "forensic"], false],
   ] as const)("%s", (_label, tones, expected) => {
     const recentMeta = tones.map((tone, index) => ({
       meta: { lead: "depeg", tone } as Record<string, unknown>,
       title: String(index),
     }));
-    const issues = validateDigestModelOutput(makeParsedFixture({ tone: "foreboding" }), {
+    const issues = validateDigestModelOutput(makeParsedFixture({ tone: "dry" }), {
       kind: "daily",
       recentMeta,
     });
     expect(issues.some((issue) => issue.code === "tone-cluster")).toBe(expected);
   });
 });
+
 
 describe("digest intelligence enrichment", () => {
   const current: DigestInputData = {
@@ -589,6 +626,18 @@ describe("daily digest prompt contracts", () => {
     expect(SYSTEM_PROMPT).toContain("An armed trigger threshold is not a past observation");
     expect(SYSTEM_PROMPT).toContain("agree mathematically");
     expect(SYSTEM_PROMPT).toContain("do not transcribe its label, rationale, or detail verbatim");
+  });
+  it("composes the canonical daily directive and register before the factual contract", () => {
+    const canonical = buildEditorialPrompt("daily");
+    expect(SYSTEM_PROMPT.startsWith(canonical)).toBe(true);
+    expect(SYSTEM_PROMPT).toContain("REGISTER: Daily editorial.");
+    expect(SYSTEM_PROMPT).toContain(`Allowed tones: ${ALLOWED_TONES.join(", ")}.`);
+    expect(SYSTEM_PROMPT).not.toContain("death spirals");
+    expect(SYSTEM_PROMPT).not.toContain("FORBIDDEN TICS");
+  });
+
+  it("keeps the daily exemplar free of hard editorial findings", () => {
+    expect(scanEditorialText(DAILY_EXEMPLAR, { register: "daily" }).filter((finding) => finding.severity === "hard")).toEqual([]);
   });
 
   it("renders canonical V9 safety pillars without legacy dimensions", () => {
@@ -2050,16 +2099,20 @@ describe("gate/retry correctness (Batch 3)", () => {
 
   it.each([
     {
-      label: "flags forbidden phrases as a soft issue instead of silently stripping them",
-      parsed: () => {
-        const parsed = makeParsedFixture({
-          extended: "Meanwhile, USDT sits still at 3 bps. Watch for USDC next session if flows reverse hard tomorrow. The market held its line through the close today quietly.\n\nSupply held flat for a third session running now. Depth on the majors stayed intact through both sessions. Nothing in the flow data suggests stress building yet.\n\nDEWS stayed green across every tracked name today. The gauge sat at plus twelve through the close. Nobody moved more than ten million on the day.",
-        });
-        parsed.forbiddenPhraseHits = ["Meanwhile, "];
-        return parsed;
-      },
+      label: "reports shared editorial findings as a soft issue",
+      parsed: () => parseDigestModelResponse(JSON.stringify({
+        title: "Calm Flow",
+        text: "USDT held its peg.",
+        extended: "Meanwhile, USDT sits still at 3 bps. Watch for USDC next session if flows reverse hard tomorrow. The market held its line through the close today quietly.\n\nSupply held flat for a third session running now. Depth on the majors stayed intact through both sessions. Nothing in the flow data suggests stress building yet.\n\nDEWS stayed green across every tracked name today. The gauge sat at plus twelve through the close. Nobody moved more than ten million on the day.",
+        meta: { lead: "depeg", tone: "dry", coins: ["USDT"] },
+      })),
       profile: { kind: "daily", recentMeta: [] } satisfies DigestValidationProfile,
-      expected: [{ code: "forbidden-phrase", present: true, severity: "soft" as const }],
+      expected: [{
+        code: "editorial-style",
+        present: true,
+        severity: "soft" as const,
+        messageIncludes: "scoped-decorative-word",
+      }],
       copyIncludes: "Meanwhile, ",
     },
     {

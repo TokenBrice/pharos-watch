@@ -29,18 +29,29 @@ export function buildRecentDigestMeta(
   }>,
 ): RecentDigestMetaEntry[] {
   return rows.map((row) => {
-    let meta: DigestMeta | null = null;
+    let storedMeta: DigestMeta | null = null;
     if (row.digest_meta) {
       try {
-        meta = JSON.parse(row.digest_meta) as DigestMeta;
+        const decoded: unknown = JSON.parse(row.digest_meta);
+        if (decoded && typeof decoded === "object" && !Array.isArray(decoded)) {
+          storedMeta = decoded as DigestMeta;
+        }
       } catch (err) {
         logWorkerEventArgs("handler", "warn", `[daily-digest] Failed to parse digest_meta: ${toErrorMessage(err)}`);
       }
     }
 
+    const meta: DigestMeta = {
+      ...(storedMeta ?? {}),
+      editorialStyleVersion: storedMeta?.editorialStyleVersion ?? "pre-policy",
+      editorialStyleHash: storedMeta?.editorialStyleHash ?? "pre-policy",
+    };
+
     return {
       meta,
-      rawText: !meta ? (row.digest_title ? `${row.digest_title}: ${row.digest_text}` : row.digest_text) : null,
+      // Preserve the pre-meta prompt fallback without writing a sentinel back
+      // to D1. A legacy row with no metadata still supplies its old copy.
+      rawText: !storedMeta ? (row.digest_title ? `${row.digest_title}: ${row.digest_text}` : row.digest_text) : null,
       extended: row.digest_extended ?? null,
       title: row.digest_title ?? null,
     };
