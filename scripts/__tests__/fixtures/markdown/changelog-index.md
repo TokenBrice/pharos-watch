@@ -23,7 +23,7 @@ Safety Score V9 reaches 9.45, the orbital Safety Map ships, and four new swap ce
 
 The Safety Score map ships daily, Liquidity Score v6 lands, and the yield surface stops blanking.
 
-- **Daily Safety Score map**: The shareable Safety Score landscape became a daily 07:20 UTC publication, generated behind fail-closed guards for stale data, join coverage, font loading, and layout collisions, and it rides the social digest.
+- **Daily Safety Score map**: The shareable Safety Score map became a daily 07:20 UTC publication, generated behind fail-closed guards for stale data, join coverage, font loading, and layout collisions, and it rides the social digest.
 - **Safety Score V9 stability**: V9 advanced from v9.23 to v9.33: the mint-authority and bridge-risk boundary closed its fail-open, Solana attribution anchors hardened, reserve-weight boundary drift was canonicalized, and curation entries now expire.
 - **Liquidity Score v6**: The v6.0 cutover corrected a Raydium double count that scored concentrated pools as plain AMMs, retired the native lane, and deleted the shadow inventory. v6.1 scopes native confirmation to covered pool families.
 - **Yield availability**: Yield rankings now fall back to the coherent publish-time safety snapshot instead of blanking scores after every scoring deploy, with an explicit stale label and a 24-hour window. Base Dollar yield joined at v8.41.
@@ -66,7 +66,7 @@ Safety Score V9 goes live with mechanism-backed coin pages, a wave-7/8 evidence 
 - **Explainable coin pages**: Coin pages now justify each score with causal attribution and evidence ownership, surface mechanism-review findings inline, and give pillar breakdowns clearer hierarchy plus a new collateralization module.
 - **Mechanism evidence drain**: Wave-7 and wave-8 research landed 42 new mechanism overlays and drained a 41-item integration tail, each cross-verified across vendors (GROK, KIMI) and ratified against a documented mechanism-overlay evidence standard.
 - **DEX execution reliability**: Exact-exit measurement expanded to Optimism, Balancer, and pinned Solana CLMM, while DEX staging was bounded to its memory budget via chunked transactions, amortized persistence, and recovered UniV4 and SunSwap batches.
-- **Fail-closed publication**: Publication now holds rather than guesses — V9 input is skipped after a failed DEX stage, producer holds baseline by identity, transition caches survive rollout, and report-card failures stay isolated to one asset.
+- **Fail-closed publication**: Publication now holds rather than guesses: V9 input is skipped after a failed DEX stage, producer holds baseline by identity, transition caches survive rollout, and report-card failures stay isolated to one asset.
 - **Wider coverage**: The FX peg feed added KES, GHS, COP, CLP, and PEN; DDRv4 shipped for depeg-duration resolution; and coverage grew with the XOFm Mento redemption backstop, DUSD Makina reserves, and CHFAU aggregate on-chain supply.
 - **Pipeline hardening**: CI moved from exhaustive PR validation to adaptive checks, 156 D1 migrations were squashed into the baseline, drift checks were calibrated against live Cloudflare, and the new Pharos logo rolled to production.
 
@@ -109,18 +109,18 @@ The coin page completes its redesign, PharosWatchBot adds personalized daily rec
 
 - **Coverage & lifecycle**: Western Union's USDPT is promoted from pre-launch to active tracking, GYEN freezes after GMO's wind-down, the cemetery archives confirmed wind-downs, 76 AI summaries refresh, and depeg pages become a permanent archive.
 - **Live reserve coverage**: Live reserve adapters land for USDT and XAUt (~$186B), Spiko, USDtb, United's U, and PUSD, and redemption methodology v4.17 adds live-direct capacity telemetry for USTB and the 13-coin Mento family.
-- **Personalized daily recaps**: PharosWatchBot gains opt-in personalized daily recaps — planned, delivered, and cleaned up durably per chat — with settings controls, a rollout kill switch, operator telemetry, and a privacy disclosure.
+- **Personalized daily recaps**: PharosWatchBot gains opt-in personalized daily recaps: planned, delivered, and cleaned up durably per chat, with settings controls, a rollout kill switch, operator telemetry, and a privacy disclosure.
 - **Truthful bot delivery**: Delivery preserves opt-outs across chat migrations, applies presets atomically, serializes per-chat sends, and pauses during outages; ingress is bounded, logs stay aggregate-only, adoption is measured without tracking.
 - **Yield decision workbench**: The yield workbench moves to summary rankings with a complete decision and comparison workflow, and yield v8.32 scores external opportunities at the market level while preserving opportunity risk end to end.
-- **Routed operator workspaces**: The single-page admin dashboard splits into eight routed workspaces — Triage, Pipeline, Reliability, Crons, Actions, Comms, History, and API Management — with guarded replay-safe actions and durable audit history.
-- **Coin page & bot hero**: The stablecoin detail page completes its Figma template — pill-tab nav, hero KPI band, xl right rail, Sources modal — and the PharosWatchBot page gets a benefits-led signal-board hero with a lighthouse watch beam.
+- **Routed operator workspaces**: The single-page admin dashboard splits into eight routed workspaces: Triage, Pipeline, Reliability, Crons, Actions, Comms, History, and API Management, with guarded replay-safe actions and durable audit history.
+- **Coin page & bot hero**: The stablecoin detail page completes its Figma template, pill-tab nav, hero KPI band, xl right rail, and Sources modal. The PharosWatchBot page gets a benefits-led signal-board hero with a lighthouse watch beam.
 - **Pipeline correctness**: A worker-wide remediation adds durable operations schemas, effect fencing, and exact publication generations so partial data cannot publish as complete, and a sweep resolves 33 numbered issue reports across the stack.
 
 ## 2026-06-29 to 2026-07-05
 
 The redesigned homepage canon now spans every nav group, a vaults.fyi yield source lands, and kUSD joins pre-launch.
 
-- **Site-wide design canon**: Every nav group — Markets, Risk, Learn, Reference, Analyze — and the coin detail template adopt the redesigned homepage canon: new hero surfaces, flat cards, the Whyte display face, and sidebar remnants removed.
+- **Site-wide design canon**: Every nav group (Markets, Risk, Learn, Reference, and Analyze) and the coin detail template adopt the redesigned homepage canon. The rollout adds new hero surfaces, flat cards, the Whyte display face, and removes sidebar remnants.
 - **Tablet table workbench**: Tablets now get the full data-table workbench via a new lg breakpoint and auto-fit column priority (useFittedColumns plus a fit toggle), with widened overview columns and fixed header-glyph and price overflow.
 - **Yield intelligence**: A new optional vaults.fyi yield source lands with structured logging and rollout guardrails, and venue risk scores are recalibrated against Yearn’s published reports in yield methodology v8.298.
 - **Coverage & data**: kUSD and Open USD join the pre-launch board, tGLD gains a Euler/JPEG partnership milestone, frozen stablecoins are fully retired from runtime, redemption, and cemetery surfaces, and verified metadata corrections land.
@@ -160,9 +160,9 @@ Safety Score v8.0 folds in mint authority, report cards score chain and oracle r
 - **Reserves & redemption**: Reserve views ship for 11 active coins, eight more become evidence-bearing attestation feeds, and 30 redemption routes gain live reserve-sync capacity. Redemption reaches v4.11 with documented same-day buffers.
 - **Yield & compliance**: Yield coverage expands via the Wave 1 source-roster (v8.23), and GBP, JPY, and AUD benchmarks move to direct central-bank sources. A broad MiCA and GENIUS data pass refreshes compliance metadata across the registry.
 - **Depeg control board**: The depeg table becomes an interactive control board with filtering, sorting, and severity signals. Displayed deviation is now gated on peg-reference authority (DEWS v6.08), and repair-required events are quarantined.
-- **Verification passport**: The coin detail hero becomes a verification passport — visas for Issued, MiCA, GENIUS, and track record — and the contract wall becomes labeled rows with inline verify actions. An MRZ experiment was reverted.
+- **Verification passport**: The coin detail hero becomes a verification passport with visas for Issued, MiCA, GENIUS, and track record. The contract wall becomes labeled rows with inline verify actions. An MRZ experiment was reverted.
 - **Search, a11y & performance**: Per-chain OG cards ship for 107 chain pages, detail pages gain FAQ and Article JSON-LD, and a hydrated-state axe lane plus screen-reader tables raise accessibility. Critical CSS inlines and the CSP drops unsafe-eval.
-- **Platform consolidation**: A shared table system replaces bespoke tables with common shells, controls, and skeletons. Code-health Waves 1–4 dedupe helpers, prune dead exports, name magic numbers, and tidy worker and scoring internals.
+- **Platform consolidation**: A shared table system replaces bespoke tables with common shells, controls, and skeletons. Code-health Waves 1 to 4 dedupe helpers, prune dead exports, name magic numbers, and tidy worker and scoring internals.
 
 ## 2026-06-01 to 2026-06-06
 
@@ -183,8 +183,8 @@ The Depeg Resolver (DDR/DDRR) v2 ships at /depeg, dashboard cards flatten, and t
 - **Depeg Resolver (DDR/DDRR) v2**: /depeg goes public: DDR predicts how long an active depeg will last with sticky locked forecasts and a verdict-band lockup; DDRR scores past predictions on a reviewer. DDR also shows on each coin page.
 - **Data audit & remediation**: Data passes plus follow-ups recover crvUSD and Reservoir reserve breakers, move ZCHF capacity to CHFAU, switch fxSAVE redemption to live capacity, align USG/HLUSD/JPYC/YUSD, and pin StablR's EURR/USDR multisig exploit.
 - **Compliance & GENIUS tracker**: A new GENIUS Act tracker surface launches alongside expanded compliance metadata research, and the MiCA tracker now enforces out-of-scope constraints to keep deliberately-undefined coins distinct from unassessed ones.
-- **Pre-launch additions**: Tenbin Gold (tGLD) — a synthetic gold debt-note from a CME-futures basket — and GEL₮, Tether's pre-launch Georgian Lari, join the pre-launch list, and the weekly upcoming sweep tracks Flipcash's launch and USDPT.
-- **Flat-card design pass**: Card accents flatten — the colored border-l retires except for data-driven indicators. Price Transparency and Redemption Backstop go full-width on coin pages, and depeg page hierarchy tightens around the resolver.
+- **Pre-launch additions**: Tenbin Gold (tGLD), a synthetic gold debt-note from a CME-futures basket, and GEL₮, Tether's pre-launch Georgian Lari, join the pre-launch list, and the weekly upcoming sweep tracks Flipcash's launch and USDPT.
+- **Flat-card design pass**: Card accents flatten: the colored border-l retires except for data-driven indicators. Price Transparency and Redemption Backstop go full-width on coin pages, and depeg page hierarchy tightens around the resolver.
 - **Platform hygiene**: Cron cache helpers centralize, depeg resolver and DEWS D1 retries harden, admin API contracts get schema validation, and several large surfaces (yield, command palette, timeline, picker) split into smaller modules.
 
 ## 2026-05-18 to 2026-05-24
@@ -199,7 +199,7 @@ Design-system overhaul lands, the MiCA tracker goes live, and the yield page get
 - **Navigation & homepage refresh**: An alternate homepage and timeline layout land, with a 9-depeg desktop grid, an optional phosphor CRT reading mode, a unified chain-profile hero, expanded mechanism explainers, and a prominence-ranked command palette.
 - **Pricing integrity & reliability**: DEX price sanity gates and Carbon normalization make DexScreener augmentation opt-in (pricing v6.05), Liquidity Score v5.7 adds price-gating, plus a cron staleness watchdog and an API-key rate-limit fallback.
 - **Redemption backstop coverage**: Redemption backstop scoring (v4.04) gains documented route sources, source-support validation, and expanded confidence scoring, with a coverage matrix that surfaces outage and degraded states; report cards degrade on redemption outages, the data is exposed in stablecoin JSON-LD, and malformed telemetry fails closed.
-- **Mint Authority transparency**: A new Mint Authority section on coin pages surfaces who can mint and control supply — control addresses with on-chain evidence, Safe-module display, and risk-tone posture cues — with coverage expanded across the top stablecoins.
+- **Mint Authority transparency**: A new Mint Authority section on coin pages surfaces who can mint and control supply. It includes control addresses with on-chain evidence, Safe-module display, and risk-tone posture cues. Coverage expands across the top stablecoins.
 - **Broader coverage**: The tracked universe reaches 399 coins with FUSD, sDOLA, GLDT, and Ondo's iAUON and sLVON added and pre-launch gynUSD joining, while reserve adapters climb to 57 and live-reserve coverage to 267.
 
 ## 2026-05-11 to 2026-05-17
@@ -271,10 +271,10 @@ Pricing pipeline v5.0 lands, 40+ new risk-coverage entries across backstops/blac
 
 Infrastructure axis launches, PSI hero gets arc gauge and event timeline, and Liquidity Score v5.0 brings size-aware scoring.
 
-- **Infrastructure axis**: New filter dimension lets users browse stablecoins by underlying protocol — Liquity v1/v2 and M0 tagged across 25 coins, replacing the deprecated protocol-lineage fields.
+- **Infrastructure axis**: New filter dimension lets users browse stablecoins by underlying protocol: Liquity v1/v2 and M0 tagged across 25 coins, replacing the deprecated protocol-lineage fields.
 - **Stability intelligence**: PSI page ships an arc gauge hero with annotated crisis events from COVID Crash to BTC ATH, plus hardened non-USD depeg replay for BRZ, TRYB, and commodity pegs.
 - **Safety Scores redesign**: Grade-grouped card grid, systemic risk headline, entrance animations, and v6.93 scoring with steeper peg multiplier and active-depeg grade cap.
-- **Live reserves surge**: 10+ new adapters — Frax balance-sheet, Block Analitica for DAI/USDS, MIM cauldrons, eUSD, feUSD, Honey — push live reserve tracking to 126 coins.
+- **Live reserves surge**: 10+ new adapters push live reserve tracking to 126 coins, including Frax's balance sheet, Block Analitica for DAI/USDS, MIM cauldrons, eUSD, feUSD, and Honey.
 - **Liquidity Score v5.0**: Size-aware scoring formulas, best-path exit model with diversification premium, and Uniswap V2/V4 split replace the v4 blend.
 - **Broader coverage**: Seven new stablecoins (USDat, wM, USDnr, USDK, XO Cash, evaUSDC, evaUSDT) bring the dashboard to 194 tracked coins; RAI retired to the cemetery.
 - **Navigation & pages**: Collapsible sidebar groups, two-column API reference with scrollspy, redesigned /telegram page, and changelog timeline with category tags.

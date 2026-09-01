@@ -48,6 +48,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The Cloudflare Access JWKS endpoint and each presented JWT remain authoritative.",
   },
   {
+    sourcePath: "shared/lib/editorial-style.ts",
+    stateNames: ["COMPILED"],
+    owner: "Editorial style scanner",
+    kind: "cache",
+    resetOrTtl: "One compiled RegExp array per policy rule until isolate recycle; the policy is a build-time constant.",
+    durableTruth: "The fenced policy in docs/editorial-style.md and its generated module are authoritative; the cache only avoids recompiling fixed patterns.",
+  },
+  {
     sourcePath: "shared/lib/format.ts",
     stateNames: ["decimalFormatterCache"],
     owner: "Shared decimal formatting",
