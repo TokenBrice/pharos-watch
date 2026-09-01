@@ -6,7 +6,7 @@ export const content: ArchetypeContent = {
   subtitle:
     "The token is not a dollar claim. It is legal title to identified bars of gold or silver sitting in a named vault, usually redeemable for physical delivery in whole-bar lots.",
   lead: [
-    "A commodity-claim token inverts the usual stablecoin question. Its reference price is not $1 — it is one troy ounce (or one gram) of metal — so a token that tracks its reference perfectly will still move in dollar terms every day. Pharos tracks these assets because the token's own risk question is the same one every stablecoin faces: is there a real, enforceable, verified claim on the stated asset, and can a holder get out?",
+    "A commodity-claim token inverts the usual stablecoin question. Its reference price is one troy ounce (or one gram) of metal rather than $1, so a token that tracks its reference perfectly will still move in dollar terms every day. Pharos tracks these assets because the token's own risk question is the same one every stablecoin faces: is there a real, enforceable, verified claim on the stated asset, and can a holder get out?",
     "The design substitutes a vault for a bank. Buyers send funds, the issuer buys metal and allocates specific numbered bars, and the token is minted as title to that allocated metal. Because the reserve asset is a physical object rather than a bank balance, the risk moves from banking rails and reserve composition to four different questions: whether the holder actually owns identified metal or merely has an unsecured contractual claim on the issuer, who runs the vault and what happens if they fail, whether an independent party reconciles the bar list against token supply, and whether physical redemption is genuinely operable or a marketing line with an unreachable minimum.",
   ],
   howItWorks: [
@@ -16,7 +16,7 @@ export const content: ArchetypeContent = {
     },
     {
       title: "Metal is allocated in a named vault",
-      body: "The issuer takes delivery into a vault operated by a specialist custodian — Brink's, Loomis, an LBMA-accredited Swiss or Singapore facility, a DMCC vault in Dubai — and allocates specific bars, identified by serial number, refiner, and weight, to the token's reserve. 'Allocated' is the load-bearing word: allocated metal is identified property held for the holders' benefit, while unallocated metal is an unsecured claim on the issuer's own inventory.",
+      body: "The issuer takes delivery into a vault operated by a specialist custodian (Brink's, Loomis, an LBMA-accredited Swiss or Singapore facility, a DMCC vault in Dubai) and allocates specific bars, identified by serial number, refiner, and weight, to the token's reserve. 'Allocated' is the load-bearing word: allocated metal is identified property held for the holders' benefit, while unallocated metal is an unsecured claim on the issuer's own inventory.",
     },
     {
       title: "Token minted as title to that metal",
@@ -30,7 +30,7 @@ export const content: ArchetypeContent = {
     },
     {
       headline: "Vault and custodian concentration",
-      body: "Metal cannot be reissued on another chain or moved with a wire. It sits in one or two facilities, in one or two jurisdictions, under one operator, usually with insurance whose terms are not published. Custodian failure, a seizure order in the vault's jurisdiction, or an export restriction is not a liquidity event that arbitrage repairs — the reserve is physically unavailable.",
+      body: "Metal cannot be reissued on another chain or moved with a wire. It sits in one or two facilities, in one or two jurisdictions, under one operator, usually with insurance whose terms are not published. Custodian failure, a seizure order in the vault's jurisdiction, or an export restriction is not a liquidity event that arbitrage repairs; the reserve is physically unavailable.",
     },
     {
       headline: "Assurance that never counts the bars",
@@ -38,7 +38,7 @@ export const content: ArchetypeContent = {
     },
     {
       headline: "Physical redemption that no holder can reach",
-      body: "Physical delivery usually requires a whole London Good Delivery bar — several hundred troy ounces of gold, a six-figure position — plus fabrication, insurance, and freight fees, collection at the vault's jurisdiction, and sometimes eligibility limited to a specific class of account. A redemption right that exists on paper but is unreachable for essentially every holder does not function as an exit.",
+      body: "Physical delivery usually requires a whole London Good Delivery bar (several hundred troy ounces of gold, a six-figure position), plus fabrication, insurance, and freight fees, collection at the vault's jurisdiction, and sometimes eligibility limited to a specific class of account. A redemption right that exists on paper but is unreachable for essentially every holder does not function as an exit.",
     },
     {
       headline: "Commodity price is not a depeg",
@@ -60,7 +60,7 @@ export const content: ArchetypeContent = {
     },
     {
       coinId: "xagm-matrixdock",
-      note: "Matrixdock Silver — the same allocated-vault template applied to silver. Silver's much lower value-to-weight ratio makes storage and delivery economics, not title, the dominant practical constraint.",
+      note: "Matrixdock Silver, the same allocated-vault template applied to silver. Silver's much lower value-to-weight ratio makes storage and delivery economics, not title, the dominant practical constraint.",
     },
     {
       coinId: "kau-kinesis",
@@ -74,7 +74,7 @@ export const content: ArchetypeContent = {
   variations: [
     {
       title: "Allocated versus unallocated",
-      body: "The sharpest split in the archetype. Allocated structures name specific bars and hold them for the holders' benefit; unallocated structures give a claim on a quantity of metal from the issuer's pool. Pharos treats the difference as a title question, not a disclosure question — the absence of segregation language is itself the finding.",
+      body: "The sharpest split in the archetype. Allocated structures name specific bars and hold them for the holders' benefit; unallocated structures give a claim on a quantity of metal from the issuer's pool. Pharos treats the difference as a title question, not a disclosure question. The absence of segregation language is itself the finding.",
     },
     {
       title: "Per-ounce, per-gram, and silver",
@@ -90,7 +90,7 @@ export const content: ArchetypeContent = {
     },
   ],
   whatToWatch: [
-    "Safety Score Backing breakdown on /stablecoin/[id]/. Commodity claims are graded on title and allocation, custody continuity, assurance and reconciliation, and physical redemption — not on cash-reserve components.",
+    "Safety Score Backing breakdown on /stablecoin/[id]/. Commodity claims are graded on title and allocation, custody continuity, assurance and reconciliation, and physical redemption, not on cash-reserve components.",
     "Proof-of-reserves method, scope, and cadence on the detail page. Look for an examination that reconciles a bar list to token supply, and for how recent the latest report is; an annual inventory schedule is weak evidence of today's allocation.",
     "Redemption Backstop route family. Physical delivery shows up as an off-chain issuer route with a large minimum and a settlement delay; check whether the minimum is reachable for a realistic position before treating it as an exit.",
     "Exit route depth on the Safety Score Exit pillar. For most holders the real exit is secondary-market liquidity, not the vault, and commodity tokens trade in thinner books than major dollar stablecoins.",

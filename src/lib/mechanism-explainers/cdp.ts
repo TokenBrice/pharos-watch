@@ -6,13 +6,13 @@ export const content: ArchetypeContent = {
   subtitle:
     "Overcollateralized vaults issue stablecoin debt; positions liquidate when collateral falls below a safety ratio.",
   lead: [
-    "A collateralized debt position (CDP) stablecoin is created when a user locks crypto worth more than the debt they want to issue. The protocol mints the stablecoin against the collateral. If the collateral falls below the configured safety ratio, anyone can liquidate the position by repaying the debt and seizing the collateral at a discount. The peg is held by a mix of arbitrage incentives, direct on-chain redemption, and (in many systems) a Peg Stability Module — a PSM, which exchanges the stablecoin 1:1 against an upstream stablecoin.",
+    "A collateralized debt position (CDP) stablecoin is created when a user locks crypto worth more than the debt they want to issue. The protocol mints the stablecoin against the collateral. If the collateral falls below the configured safety ratio, anyone can liquidate the position by repaying the debt and seizing the collateral at a discount. The peg is held by a mix of arbitrage incentives, direct on-chain redemption, and (in many systems) a Peg Stability Module, or PSM, which exchanges the stablecoin 1:1 against an upstream stablecoin.",
     "The design moves reserve management on-chain and lets anyone inspect the books in real time. That transparency comes with three pinned dependencies: a working oracle, working liquidations, and working governance.",
   ],
   howItWorks: [
     {
       title: "Crypto collateral",
-      body: "A user deposits ETH, an LST, BTC, or — where allowed — another stablecoin into a vault. The minimum collateral ratio (110% for Liquity v1, 130–175% for most Maker vaults, system-set in Aave V3 for GHO) sets the safety buffer.",
+      body: "A user deposits ETH, an LST, BTC, or, where allowed, another stablecoin into a vault. The minimum collateral ratio (110% for Liquity v1, 130-175% for most Maker vaults, system-set in Aave V3 for GHO) sets the safety buffer.",
     },
     {
       title: "Vault / PSM",
@@ -20,7 +20,7 @@ export const content: ArchetypeContent = {
     },
     {
       title: "Stablecoin minted (or position liquidated)",
-      body: "If collateral breaches the minimum ratio, the vault is liquidated — auctioned (Maker), absorbed by a Stability Pool — the on-chain pool that buys the seized collateral at a discount using deposited stablecoin (Liquity, BOLD) — or soft-arbitraged by an internal AMM (LLAMMA for crvUSD, which continuously rebalances collateral across price bands rather than liquidating at a single threshold). On-chain redemption also lets holders swap the stablecoin for $1 of collateral from the riskiest vault, functioning as a hard price floor.",
+      body: "If collateral breaches the minimum ratio, the vault is liquidated. Maker auctions it; Liquity and BOLD absorb it through a Stability Pool, an on-chain pool that buys the seized collateral at a discount using deposited stablecoin; crvUSD soft-arbitrages it through LLAMMA, an internal AMM that continuously rebalances collateral across price bands rather than liquidating at a single threshold. On-chain redemption also lets holders swap the stablecoin for $1 of collateral from the riskiest vault, functioning as a hard price floor.",
     },
   ],
   riskProfile: [
@@ -60,11 +60,11 @@ export const content: ArchetypeContent = {
     },
     {
       coinId: "gho-aave",
-      note: "Mints against any Aave V3 collateral with facilitator-managed limits and yield-bearing GHO Stability Modules — GSMs — that swap stataUSDC and stataUSDT 1:1 against GHO and import that upstream stablecoin risk by design.",
+      note: "Mints against any Aave V3 collateral with facilitator-managed limits and yield-bearing GHO Stability Modules (GSMs) that swap stataUSDC and stataUSDT 1:1 against GHO and import that upstream stablecoin risk by design.",
     },
     {
       coinId: "crvusd-curve",
-      note: "Uses LLAMMA — Lending-Liquidating AMM Algorithm — to continuously arbitrage collateral inside an internal AMM rather than hard-liquidating at a threshold. PegKeepers deploy pre-minted crvUSD into Curve pools against multiple stablecoins to dampen deviations.",
+      note: "Uses LLAMMA (Lending-Liquidating AMM Algorithm) to continuously arbitrage collateral inside an internal AMM rather than hard-liquidating at a threshold. PegKeepers deploy pre-minted crvUSD into Curve pools against multiple stablecoins to dampen deviations.",
     },
   ],
   variations: [
@@ -78,7 +78,7 @@ export const content: ArchetypeContent = {
     },
     {
       title: "Soft-liquidation and savings wrappers",
-      body: "crvUSD's LLAMMA continuously arbitrages collateral between paired bands rather than liquidating at one threshold — collateral attrition during chop instead of a one-shot liquidation in a crash. sDAI, sUSDS, and scrvUSD wrap the underlying CDP stablecoin in a savings vault that routes protocol revenue to holders.",
+      body: "crvUSD's LLAMMA continuously arbitrages collateral between paired bands rather than liquidating at one threshold: collateral attrition during chop instead of a one-shot liquidation in a crash. sDAI, sUSDS, and scrvUSD wrap the underlying CDP stablecoin in a savings vault that routes protocol revenue to holders.",
     },
   ],
   whatToWatch: [
@@ -120,7 +120,7 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/cemetery/",
-      label: "Cemetery — historical CDP failures",
+      label: "Cemetery: historical CDP failures",
     },
   ],
   visuals: ARCHETYPE_VISUALS.cdp,
@@ -129,21 +129,21 @@ export const content: ArchetypeContent = {
       name: "Kava USDX",
       date: "2022-06",
       obituary:
-        "Cosmos-native multi-collateral CDP — mint USDX against BTC, XRP, BNB, or KAVA. Peaked at $176M before UST's implosion exposed the design flaw: USDX had on-boarded UST as collateral. The peg cracked to $0.55 and never healed. The textbook example of collateral on-boarding rewriting solvency overnight.",
+        "Cosmos-native multi-collateral CDP minting USDX against BTC, XRP, BNB, or KAVA. Peaked at $176M before UST's implosion exposed the design flaw: USDX had on-boarded UST as collateral. The peg cracked to $0.55 and never healed. The textbook example of collateral on-boarding rewriting solvency overnight.",
       coinId: "usdx-kava-usdx-2022-06",
     },
     {
       name: "Raft R",
       date: "2023-11",
       obituary:
-        "CDP minting R against wstETH and rETH collateral. A smart-contract exploit drained $3.3M in ETH — the hacker netted only ~$1.6M due to a slippage error of their own. Raft halted minting, offered a 42% recovery plan, and was abandoned. Code surface, not collateral, was the failure point.",
+        "CDP minting R against wstETH and rETH collateral. A smart-contract exploit drained $3.3M in ETH; the hacker netted only ~$1.6M due to a slippage error of their own. Raft halted minting, offered a 42% recovery plan, and was abandoned. Code surface, not collateral, was the failure point.",
       coinId: "r-raft-r-2023-11",
     },
     {
       name: "Prisma mkUSD",
       date: "2024-11",
       obituary:
-        "LST-backed CDP that took an $11.6M exploit in March 2024 and never recovered confidence. Governance approved PIP-46 to decommission the protocol — debt ceiling to zero and a PSM-style wind-down. A controlled funeral, but a funeral.",
+        "LST-backed CDP that took an $11.6M exploit in March 2024 and never recovered confidence. Governance approved PIP-46 to decommission the protocol: debt ceiling to zero and a PSM-style wind-down. A controlled funeral, but a funeral.",
       coinId: "mkusd-prisma-mkusd-2024-11",
     },
     {
@@ -171,7 +171,7 @@ export const content: ArchetypeContent = {
       name: "YU (Yala)",
       date: "2025-11",
       obituary:
-        "BTC-backed CDP that survived its first death — a September 2025 mint-authorization exploit produced 120M unauthorized YU and the team injected $5.5M to claw back the peg. Two months later, runaway borrowing drained all liquidity pools and YU collapsed to $0.44. The mint surface was patched; the bank-run surface was not.",
+        "BTC-backed CDP that survived its first death: a September 2025 mint-authorization exploit produced 120M unauthorized YU, and the team injected $5.5M to claw back the peg. Two months later, runaway borrowing drained all liquidity pools and YU collapsed to $0.44. The mint surface was patched; the bank-run surface was not.",
       coinId: "yu-yu-2025-11",
     },
   ],

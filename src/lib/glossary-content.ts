@@ -17,7 +17,7 @@ export interface GlossaryEntryExample {
 export interface GlossaryEntry {
   /** URL-safe slug. Used as the on-page anchor and as a `seeAlso` reference. */
   id: string;
-  /** Title-Case display term — the proper-noun spelling Pharos publishes. */
+  /** Title-Case display term: the proper-noun spelling Pharos publishes. */
   term: string;
   /** Single uppercase letter for the alphabetical jump rail. */
   letter: string;
@@ -27,7 +27,7 @@ export interface GlossaryEntry {
   methodologyAnchor: string;
   /** Methodology version pin for the relevant section at time of authoring. */
   methodologyVersion: string;
-  /** Optional historical reference — one named incident, one link. */
+  /** Optional historical reference: one named incident, one link. */
   example?: GlossaryEntryExample;
   /** Other glossary entries worth pairing with this one. */
   seeAlso?: readonly string[];
@@ -62,11 +62,11 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "Cemetery",
     letter: "C",
     definition:
-      "Pharos's archive of decommissioned stablecoins. Each entry preserves the asset's historical data, an authored obituary, and the cause of death — algorithmic failure, liquidity drain, custodial failure, regulatory action, or abandonment. The Cemetery is a citeable archive of failure, not a graveyard joke; the tombstone register is a discipline, not a theme.",
+      "Pharos's archive of decommissioned stablecoins. Each entry preserves the asset's historical data, an authored obituary, and the cause of death: algorithmic failure, liquidity drain, custodial failure, regulatory action, or abandonment. The Cemetery is a citeable archive of failure, not a graveyard joke; the tombstone register is a discipline, not a theme.",
     methodologyAnchor: "/methodology/#lifecycle-phases-methodology",
     methodologyVersion: "v7.26",
     example: {
-      label: "Example: TerraUSD, May 2022 — see cemetery entry →",
+      label: "Example: TerraUSD, May 2022. See cemetery entry →",
       href: "/cemetery/",
     },
     seeAlso: ["digest", "tape"],
@@ -80,7 +80,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     methodologyAnchor: "/methodology/#pegscore-dews-methodology",
     methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     example: {
-      label: "Example: USDC, March 11, 2023 — see incident page →",
+      label: "Example: USDC, March 11, 2023. See incident page →",
       href: "/depeg/usdc-2023-03-11/",
     },
     seeAlso: ["dews", "pegscore", "pressureshift"],
@@ -90,11 +90,11 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "DEWS",
     letter: "D",
     definition:
-      "Depeg Early Warning System. A forward-looking per-coin stress score, 0–100, recomputed every 30 minutes from eight weighted sub-signals: price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.",
+      "Depeg Early Warning System. A forward-looking per-coin stress score, 0 to 100, recomputed every 30 minutes from eight weighted sub-signals: price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.",
     methodologyAnchor: "/methodology/#pegscore-dews-methodology",
     methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     example: {
-      label: "Example: TerraUSD's death spiral — read the case study →",
+      label: "Example: TerraUSD's death spiral. Read the case study →",
       href: "/learn/case-studies/terra-ust-2022/",
     },
     seeAlso: ["pegscore", "psi", "calm-watch-alert-warning-danger"],
@@ -104,7 +104,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "Digest",
     letter: "D",
     definition:
-      "Pharos's editorial daily, published at /digest/. The Digest reads the previous day's stablecoin movements as a single briefing — mint/burn pressure, PSI shifts, confirmed depegs, FreezeWatch entries — not as a feed dump. Capitalized when referring to the publication ritual; “daily digest” is the descriptive phrase. The Digest carries the editorial signature for the platform.",
+      "Pharos's editorial daily, published at /digest/. The Digest reads the previous day's stablecoin movements as a single briefing covering mint/burn pressure, PSI shifts, confirmed depegs, and FreezeWatch entries, not as a feed dump. Capitalized when referring to the publication ritual; “daily digest” is the descriptive phrase. The Digest carries the editorial signature for the platform.",
     methodologyAnchor: "/methodology/#pricing-pipeline-methodology",
     methodologyVersion: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["tape", "cemetery"],
@@ -114,7 +114,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "FreezeWatch",
     letter: "F",
     definition:
-      "The live ledger of issuer-intervention events — freeze, unfreeze, pause, block, wipe — across supported centralized stablecoin contracts. Events are normalized by chain, action type, native amount, and USD amount, with provenance attached. FreezeWatch is the surface Pharos publishes for issuer power; the underlying methodology is the Blacklist Tracker. One word, capital F, capital W.",
+      "The live ledger of issuer-intervention events (freeze, unfreeze, pause, block, wipe) across supported centralized stablecoin contracts. Events are normalized by chain, action type, native amount, and USD amount, with provenance attached. FreezeWatch is the surface Pharos publishes for issuer power; the underlying methodology is the Blacklist Tracker. One word, capital F, capital W.",
     methodologyAnchor: "/methodology/#blacklist-tracker-methodology",
     methodologyVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["bluechip", "safety-score"],
@@ -124,7 +124,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "LiquidityScore",
     letter: "L",
     definition:
-      "DEX liquidity score, 0–100, combining TVL depth (30%), 24-hour volume (20%), pool quality (20%), durability (20%), and pair diversity (10%). Discovery is source-aware: thin, stale, or identity-poor pools remain visible for diagnostics but do not receive scoring weight. LiquidityScore measures exit capacity, not market presence. One word, capital L, capital S.",
+      "DEX liquidity score, 0 to 100, combining TVL depth (30%), 24-hour volume (20%), pool quality (20%), durability (20%), and pair diversity (10%). Discovery is source-aware: thin, stale, or identity-poor pools remain visible for diagnostics but do not receive scoring weight. LiquidityScore measures exit capacity, not market presence. One word, capital L, capital S.",
     methodologyAnchor: "/methodology/#liquidity-methodology",
     methodologyVersion: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["bluechip", "safety-score"],
@@ -144,7 +144,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "PegScore",
     letter: "P",
     definition:
-      "Composite peg-stability score, 0–100. PegScore combines time-at-peg (50%) and event severity (50%) over a window capped by the coin's actual age, then enters the safety grade through a power-curve multiplier at exponent 0.40. The multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. One word, capital P, capital S.",
+      "Composite peg-stability score, 0 to 100. PegScore combines time-at-peg (50%) and event severity (50%) over a window capped by the coin's actual age, then enters the safety grade through a power-curve multiplier at exponent 0.40. The multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. One word, capital P, capital S.",
     methodologyAnchor: "/methodology/#pegscore-dews-methodology",
     methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["dews", "safety-score", "depeg"],
@@ -154,7 +154,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "Pharos",
     letter: "P",
     definition:
-      "The publication and the platform. Pharos tracks every meaningful stablecoin: what backs it, what could freeze it, and how the peg holds under stress. The work is independent, methodological, and citable. Used as a proper noun without article — Pharos tracks, Pharos publishes, Pharos refuses. Never “the Pharos.”",
+      "The publication and the platform. Pharos tracks every meaningful stablecoin: what backs it, what could freeze it, and how the peg holds under stress. The work is independent, methodological, and citable. Used as a proper noun without article: Pharos tracks, Pharos publishes, Pharos refuses. Never “the Pharos.”",
     methodologyAnchor: "/methodology/",
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["digest", "tape", "cemetery"],
@@ -174,7 +174,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "PSI",
     letter: "P",
     definition:
-      "Pharos Stability Index. A 30-minute ecosystem-wide condition score, 0–100, that subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term. The result maps into six condition bands from BEDROCK to MELTDOWN. PSI is conservative by design: one small depeg should not move the index, but simultaneous broad stress should. Always uppercase.",
+      "Pharos Stability Index. A 30-minute ecosystem-wide condition score, 0 to 100, that subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term. The result maps into six condition bands from BEDROCK to MELTDOWN. PSI is conservative by design: one small depeg should not move the index, but simultaneous broad stress should. Always uppercase.",
     methodologyAnchor: "/methodology/#stability-index-methodology",
     methodologyVersion: PSI_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["dews", "pressureshift"],
@@ -184,7 +184,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "Safety Score",
     letter: "S",
     definition:
-      "Pharos's V9 risk grade for a stablecoin. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) with bounded aggregation, then applies peg, evidence, dependency, wrapper, track-record, and structural constraints. Grades run A+ (87+) through F (0–39), with NR for insufficient required evidence.",
+      "Pharos's V9 risk grade for a stablecoin. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) with bounded aggregation, then applies peg, evidence, dependency, wrapper, track-record, and structural constraints. Grades run A+ (87+) through F (0 to 39), with NR for insufficient required evidence.",
     methodologyAnchor: "/methodology/#safety-scores-methodology",
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["bluechip", "pegscore", "liquidity-score"],

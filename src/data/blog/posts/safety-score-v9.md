@@ -28,7 +28,7 @@ Every stablecoin is scored through the review that matches its actual mechanism,
 - A **centralized fiat-backed stablecoin** faces an entirely different battery: regulatory standing, attestation and audit quality, reserve transparency, custody arrangements, redemption terms.
 - A **synthetic delta-neutral design** is examined on its hedging venues, its counterparty surface, and what happens to the book when funding turns against it.
 
-Same three pillars for everyone, but the evidence feeding those pillars is tailored to what can actually kill each design. The result is that a V9 score means the same thing across radically different stablecoins: it measures the evidence-based risk of each design, given its mechanism.
+Same three pillars for everyone, but the evidence feeding those pillars is tailored to what can actually kill each design. The result is that a V9 score means the same thing across radically different stablecoins: under the published methodology, it measures the evidence-based risk of each design, given its mechanism.
 
 ## Ceilings, not averages
 

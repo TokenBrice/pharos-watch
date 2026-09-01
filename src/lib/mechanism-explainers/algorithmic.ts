@@ -6,17 +6,17 @@ export const content: ArchetypeContent = {
   subtitle:
     "The peg is held by protocol-level mint/burn rules and arbitrage incentives rather than by 1:1 reserves.",
   lead: [
-    "An algorithmic stablecoin keeps its peg through a programmatic mint/burn rule and an arbitrage loop, not through 1:1 collateral. In the canonical form (UST/LUNA), a user burns a governance token to mint a dollar's worth of the stablecoin, and the loop is reversible. The whole mechanism rests on confidence in the governance token — which is precisely what evaporates first in a crisis. \"Reflexive\" describes that feedback: the peg holds because the governance token has value, and the governance token has value partly because the peg holds.",
+    "An algorithmic stablecoin keeps its peg through a programmatic mint/burn rule and an arbitrage loop, not through 1:1 collateral. In the canonical form (UST/LUNA), a user burns a governance token to mint a dollar's worth of the stablecoin, and the loop is reversible. The whole mechanism rests on confidence in the governance token, which is precisely what evaporates first in a crisis. \"Reflexive\" describes that feedback: the peg holds because the governance token has value, and the governance token has value partly because the peg holds.",
     "Pharos taxonomy no longer treats `algorithmic` as a live backing bucket. The remaining tokens carrying this archetype tag are either historical shadow assets retained for PSI continuity, or current designs that pair algorithmic peg-defense with some real collateral. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
   ],
   howItWorks: [
     {
       title: "Burn governance token",
-      body: "A user burns a governance token of value `V`, and the protocol mints `V` worth of stablecoin. There is no 1:1 reserve in a custodian — the only \"backing\" is the governance-token market float, itself partly determined by the stablecoin's success. The reverse trip exists too: redeem the stablecoin for `V` of newly minted governance token. Pharos now tracks this as mint-authority and mechanism risk rather than a FreezeWatch freeze tier.",
+      body: "A user burns a governance token of value `V`, and the protocol mints `V` worth of stablecoin. There is no 1:1 reserve in a custodian: the only \"backing\" is the governance-token market float, itself partly determined by the stablecoin's success. The reverse trip exists too: redeem the stablecoin for `V` of newly minted governance token. Pharos now tracks this as mint-authority and mechanism risk rather than a FreezeWatch freeze tier.",
     },
     {
       title: "Mint/burn AMO",
-      body: "An AMO (Algorithmic Market Operations module) is an autonomous on-chain agent that issues or retires stablecoin to nudge the price back to peg. Above $1 it lets anyone mint at $1 and sell higher; below $1 it lets anyone buy on market and redeem for $1 of governance token. The arbitrage is supposed to close the gap. There are no reserves to draw down — every defense action expands or contracts the governance-token float.",
+      body: "An AMO (Algorithmic Market Operations module) is an autonomous on-chain agent that issues or retires stablecoin to nudge the price back to peg. Above $1 it lets anyone mint at $1 and sell higher; below $1 it lets anyone buy on market and redeem for $1 of governance token. The arbitrage is supposed to close the gap. There are no reserves to draw down. Every defense action expands or contracts the governance-token float.",
     },
     {
       title: "Stablecoin minted (no 1:1 backing)",
@@ -30,11 +30,11 @@ export const content: ArchetypeContent = {
     },
     {
       headline: "Mint/burn arbitrage breakdown",
-      body: "The peg only holds when arbitrageurs are confident the governance token can be sold for at least the value being minted. Once that confidence breaks, the under-peg trade does not close, and the protocol cannot fix it from inside the loop. Governance-token dilution as a defense — selling extra supply to top up reserves — works until holders refuse to absorb dilution, typically the moment the defense is most needed.",
+      body: "The peg only holds when arbitrageurs are confident the governance token can be sold for at least the value being minted. Once that confidence breaks, the under-peg trade does not close, and the protocol cannot fix it from inside the loop. Governance-token dilution as a defense (selling extra supply to top up reserves) works until holders refuse to absorb dilution, typically the moment the defense is most needed.",
     },
     {
       headline: "Recursive use as collateral",
-      body: "UST was deeply embedded across DeFi: Anchor's ~$14B deposit base, the Curve 4pool, lending markets, and synthetic asset protocols all carried direct UST exposure. When UST broke, every protocol holding it was simultaneously impaired. Algorithmic designs that allow themselves to be used as collateral multiply the contagion surface — a property the design family shares with no other archetype on Pharos.",
+      body: "UST was deeply embedded across DeFi: Anchor's ~$14B deposit base, the Curve 4pool, lending markets, and synthetic asset protocols all carried direct UST exposure. When UST broke, every protocol holding it was simultaneously impaired. Algorithmic designs that allow themselves to be used as collateral multiply the contagion surface, a property the design family shares with no other archetype on Pharos.",
     },
     {
       headline: "Privileged mint authority retained",
@@ -70,7 +70,7 @@ export const content: ArchetypeContent = {
     },
     {
       title: "CDP-plus-PSM hybrids retained under the label",
-      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module — close to the `cdp` archetype in mechanism, but classified `algorithmic` because of its depeg history and privileged mint path. FPI is a 100%-collateralized CPI tracker with seigniorage-token dilution as its algorithmic backstop. The bucket is broader than its name suggests.",
+      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module, close to the `cdp` archetype in mechanism, but it is classified `algorithmic` because of its depeg history and privileged mint path. FPI is a 100%-collateralized CPI tracker with seigniorage-token dilution as its algorithmic backstop. The bucket is broader than its name suggests.",
     },
   ],
   whatToWatch: [
@@ -123,7 +123,7 @@ export const content: ArchetypeContent = {
       name: "Empty Set Dollar",
       date: "2021-01",
       obituary:
-        "Pioneered the \"seigniorage shares\" model in DeFi. When ESD traded below $1, users could buy coupons (burning ESD) for future redemption at a profit. The mechanism worked during expansion but collapsed when confidence evaporated — coupons expired worthless, and ESD fell to $0.01.",
+        "Pioneered the \"seigniorage shares\" model in DeFi. When ESD traded below $1, users could buy coupons (burning ESD) for future redemption at a profit. The mechanism worked during expansion but collapsed when confidence evaporated: coupons expired worthless, and ESD fell to $0.01.",
       coinId: "esd-empty-set-dollar-2021-01",
     },
     {
@@ -137,7 +137,7 @@ export const content: ArchetypeContent = {
       name: "Basis Cash",
       date: "2021-01",
       obituary:
-        "An anonymous fork of the Basis design, BAC lost its peg within weeks of launch. Later revealed to be co-founded by Do Kwon under a pseudonym — who learned nothing before building the even more catastrophic TerraUSD.",
+        "An anonymous fork of the Basis design, BAC lost its peg within weeks of launch. Later revealed to be co-founded by Do Kwon under a pseudonym. He learned nothing before building the even more catastrophic TerraUSD.",
       coinId: "bac-basis-cash-2021-01",
     },
     {
@@ -172,7 +172,7 @@ export const content: ArchetypeContent = {
       name: "TerraUSD",
       date: "2022-05",
       obituary:
-        "The canonical algorithmic-stablecoin failure. UST went from $1 to ~$0.10 across May 9–13, 2022; LUNA went from above $80 to fractions of a cent in the same window; ~$40B of combined market value evaporated. The mechanism worked as designed under normal conditions and as critics had predicted under coordinated stress.",
+        "The canonical algorithmic-stablecoin failure. UST went from $1 to ~$0.10 across May 9-13, 2022; LUNA went from above $80 to fractions of a cent in the same window; ~$40B of combined market value evaporated. The mechanism worked as designed under normal conditions and as critics had predicted under coordinated stress.",
       coinId: "ust-terrausd-2022-05",
     },
     {
@@ -200,7 +200,7 @@ export const content: ArchetypeContent = {
       name: "SpiceUSD",
       date: "2022-09",
       obituary:
-        "SpiceTrade's algorithmic dollar. Lost its peg and faded out of trading without a single catastrophic event — a slow attrition under thin liquidity rather than a UST-style breakdown.",
+        "SpiceTrade's algorithmic dollar. Lost its peg and faded out of trading without a single catastrophic event: a slow attrition under thin liquidity rather than a UST-style breakdown.",
       coinId: "usds-spiceusd-2022-09",
     },
     {

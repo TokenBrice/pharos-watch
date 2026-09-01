@@ -8,7 +8,7 @@ description: "Weekly release notes for Pharos."
 
 ## 2026-08-24 to 2026-08-30
 
-Safety Score V9 reaches 9.45, the orbital Safety Map ships, and four new swap census providers close chain gaps.
+The orbital Safety Map ships as Safety Score V9 reaches 9.45; four new swap census providers close chain gaps.
 
 - **Exit-capacity truth**: Safety Score v9.44 and v9.45 separated a measured zero from an unproven settlement bound: an open queue with no proven completion bound now floors Exit under the unverified ceiling instead of grading F.
 - **Reserve evidence gates**: V9 9.4 through 9.43 split reserve classification from composition freshness, let an audited composition survive a stale feed on its own rung, and bounded Tether's feed by its actual disclosure cadence.
@@ -21,7 +21,7 @@ Safety Score V9 reaches 9.45, the orbital Safety Map ships, and four new swap ce
 
 ## 2026-08-17 to 2026-08-23
 
-The Safety Score map ships daily, Liquidity Score v6 lands, and the yield surface stops blanking.
+The Safety Score map goes daily and Liquidity Score v6 completes its staged cutover; yield rankings no longer blank after scoring deploys.
 
 - **Daily Safety Score map**: The shareable Safety Score map became a daily 07:20 UTC publication, generated behind fail-closed guards for stale data, join coverage, font loading, and layout collisions, and it rides the social digest.
 - **Safety Score V9 stability**: V9 advanced from v9.23 to v9.33: the mint-authority and bridge-risk boundary closed its fail-open, Solana attribution anchors hardened, reserve-weight boundary drift was canonicalized, and curation entries now expire.

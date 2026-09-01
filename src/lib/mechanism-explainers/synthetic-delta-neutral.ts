@@ -34,11 +34,11 @@ export const content: ArchetypeContent = {
     },
     {
       headline: "Mint authority and operator privileges",
-      body: "USR (Resolv Labs) was frozen on Pharos in April 2026 after an attacker exploited a single privileged EOA-minter on 22 March 2026 — depositing ~100K USDC, receiving 50M USR, and iterating until ~80M unbacked USR existed for roughly $25M of extracted ETH. The delta-neutral collateral book itself worked as designed; an operator-level privilege failure with no oracle, no amount cap, and no max-mint guard did not. The synthetic mechanism is no defense against a minter-key compromise.",
+      body: "USR (Resolv Labs) was frozen on Pharos in April 2026 after an attacker exploited a single privileged EOA-minter on 22 March 2026: depositing ~100K USDC, receiving 50M USR, and iterating until ~80M unbacked USR existed for roughly $25M of extracted ETH. The delta-neutral collateral book itself worked as designed; an operator-level privilege failure with no oracle, no amount cap, and no max-mint guard did not. The synthetic mechanism is no defense against a minter-key compromise.",
     },
     {
       headline: "Redemption queue under stress",
-      body: "Most synthetic-delta-neutral tokens enforce a multi-day redemption cooldown so the protocol can unwind hedges in order — Ethena's sUSDe runs on a 1-to-7-day cooldown that adjusts to the share of backing held in liquid stablecoins versus perpetual positions. In a panic this is precisely when holders want instant exit, and the cooldown is what forces the redemption queue to clear in the order positions can be sold rather than in the order claims arrive.",
+      body: "Most synthetic-delta-neutral tokens enforce a multi-day redemption cooldown so the protocol can unwind hedges in order. Ethena's sUSDe runs on a 1-to-7-day cooldown that adjusts to the share of backing held in liquid stablecoins versus perpetual positions. In a panic this is precisely when holders want instant exit, and the cooldown is what forces the redemption queue to clear in the order positions can be sold rather than in the order claims arrive.",
     },
   ],
   representativeCoins: [
@@ -82,12 +82,12 @@ export const content: ArchetypeContent = {
     },
   ],
   whatToWatch: [
-    "DEWS on /depeg — synthetic-delta-neutral tokens have full Depeg Early Warning System coverage; Pool Balance Drift, Liquidity Erosion, and Mint/Burn Flow signals fire early when an unwind begins.",
-    "Live Reserve panel on /stablecoin/usde-ethena/ and equivalents — shows the live mix of stablecoins, BTC, ETH/LST, and the CEX venue distribution of the short legs.",
-    "Custody and venue posture on the report card — CEX-based strategies and fully on-chain lending strategies have different control, oracle, and failure domains.",
-    "Redemption Backstop cooldown and holder eligibility — most synthetic dollars enforce a multi-day cooldown; the backstop card surfaces the settlement delay and the verified-customer holder eligibility tier.",
-    "Mint/Burn Bank Run Gauge on /flows — a sustained burn surge against zero mints during a market-down move is the on-chain footprint of an active redemption queue against the delta-neutral book.",
-    "Wrapper peg reference — sUSDe inherits its peg reference from USDe, so a severe downside depeg on the parent propagates as output-asset impairment on the wrapper's Redemption Backstop card.",
+    "DEWS on /depeg. Synthetic-delta-neutral tokens have full Depeg Early Warning System coverage; Pool Balance Drift, Liquidity Erosion, and Mint/Burn Flow signals fire early when an unwind begins.",
+    "Live Reserve panel on /stablecoin/usde-ethena/ and equivalents. It shows the live mix of stablecoins, BTC, ETH/LST, and the CEX venue distribution of the short legs.",
+    "Custody and venue posture on the report card. CEX-based strategies and fully on-chain lending strategies have different control, oracle, and failure domains.",
+    "Redemption Backstop cooldown and holder eligibility. Most synthetic dollars enforce a multi-day cooldown; the backstop card surfaces the settlement delay and the verified-customer holder eligibility tier.",
+    "Mint/Burn Bank Run Gauge on /flows. A sustained burn surge against zero mints during a market-down move is the on-chain footprint of an active redemption queue against the delta-neutral book.",
+    "Wrapper peg reference. sUSDe inherits its peg reference from USDe, so a severe downside depeg on the parent propagates as output-asset impairment on the wrapper's Redemption Backstop card.",
   ],
   crossLinks: [
     {
@@ -104,11 +104,11 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/freezewatch/",
-      label: "FreezeWatch — freeze and upstream intervention coverage",
+      label: "FreezeWatch: freeze and upstream intervention coverage",
     },
     {
       href: "/learn/mechanisms/cdp/",
-      label: "CDP — crypto-collateralized designs that liquidate instead of hedge",
+      label: "CDP: crypto-collateralized designs that liquidate instead of hedge",
     },
     {
       href: "/learn/case-studies/usde-oracle-2025/",
@@ -120,7 +120,7 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/cemetery/",
-      label: "Cemetery — historical synthetic delta-neutral failures",
+      label: "Cemetery: historical synthetic delta-neutral failures",
     },
   ],
   visuals: ARCHETYPE_VISUALS["synthetic-delta-neutral"],
@@ -136,7 +136,7 @@ export const content: ArchetypeContent = {
       name: "Elixir deUSD",
       date: "2025-11",
       obituary:
-        "Synthetic dollar that lost 97% of value overnight when counterparty Stream Finance disclosed a $93M loss — Stream held roughly 65% of deUSD's collateral. The delta-neutral book itself worked; the choice of counterparty did not.",
+        "Synthetic dollar that lost 97% of value overnight when counterparty Stream Finance disclosed a $93M loss; Stream held roughly 65% of deUSD's collateral. The delta-neutral book itself worked; the choice of counterparty did not.",
       coinId: "deusd-elixir-deusd-2025-11",
     },
     {

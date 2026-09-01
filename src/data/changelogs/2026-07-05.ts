@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "The redesigned homepage canon now spans every nav group, a vaults.fyi yield source lands, and kUSD joins pre-launch.",
   fieldNotes:
-    "This was a consolidation week more than a launch week. The redesigned homepage’s visual language finally reached the whole site; every nav group, the stablecoin detail template, and new hero surfaces now share one canon, while tablets gained the full table workbench. Beneath the surface the bulk of the work was quieter: a sweeping dead-code and duplication cleanup, a faster merge gate, and steadier worker pipelines. A vaults.fyi yield source and two pre-launch coins were the headline additions.",
+    "This was a consolidation week more than a launch week. The redesigned homepage’s visual language finally reached the whole site; every nav group, the stablecoin detail template, and new hero surfaces now share one canon, while tablets gained the full table workbench. Most of the work was less visible: a sweeping dead-code and duplication cleanup, a faster merge gate, and steadier worker pipelines. A vaults.fyi yield source and two pre-launch coins were the headline additions.",
   summary: [
     {
       label: "Site-wide design canon",
