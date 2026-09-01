@@ -5,13 +5,13 @@ export const entry: ChangelogEntry = {
   headline:
     "The redesigned homepage canon now spans every nav group, a vaults.fyi yield source lands, and kUSD joins pre-launch.",
   fieldNotes:
-    "This was a consolidation week more than a launch week. The redesigned homepage’s visual language finally reached the whole site — every nav group, the stablecoin detail template, and new hero surfaces now share one canon, while tablets gained the full table workbench. Beneath the surface the bulk of the work was quieter: a sweeping dead-code and duplication cleanup, a faster merge gate, and steadier worker pipelines. A vaults.fyi yield source and two pre-launch coins were the headline additions.",
+    "This was a consolidation week more than a launch week. The redesigned homepage’s visual language finally reached the whole site; every nav group, the stablecoin detail template, and new hero surfaces now share one canon, while tablets gained the full table workbench. Beneath the surface the bulk of the work was quieter: a sweeping dead-code and duplication cleanup, a faster merge gate, and steadier worker pipelines. A vaults.fyi yield source and two pre-launch coins were the headline additions.",
   summary: [
     {
       label: "Site-wide design canon",
       tag: "design",
       description:
-        "Every nav group — Markets, Risk, Learn, Reference, Analyze — and the coin detail template adopt the redesigned homepage canon: new hero surfaces, flat cards, the Whyte display face, and sidebar remnants removed.",
+        "Every nav group, Markets, Risk, Learn, Reference, Analyze, and the coin detail template adopt the redesigned homepage canon: new hero surfaces, flat cards, the Whyte display face, and sidebar remnants removed.",
     },
     {
       label: "Tablet table workbench",

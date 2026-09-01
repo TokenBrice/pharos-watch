@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "Design-system overhaul lands, the MiCA tracker goes live, and the yield page gets a ground-up rebuild.",
   fieldNotes:
-    "The busiest week in a while, and most of it is about how Pharos reads. A foundational design-system pass reset the tokens, contrast, and motion under every surface; the yield page was torn down and rebuilt around a draggable risk budget; and two new front doors opened — a MiCA compliance tracker and a Learn hub that connects case studies to the charts. Coverage crossed 399 coins, and a late-week push hardened redemption backstops and added a Mint Authority view.",
+    "The busiest week in a while, and most of it is about how Pharos reads. A foundational design-system pass reset the tokens, contrast, and motion under every surface; the yield page was torn down and rebuilt around a draggable risk budget; and two new front doors opened: a MiCA compliance tracker and a Learn hub that connects case studies to the charts. Coverage crossed 399 coins, and a late-week push hardened redemption backstops and added a Mint Authority view.",
   summary: [
     {
       label: "Design system & UX overhaul",
@@ -62,7 +62,7 @@ export const entry: ChangelogEntry = {
       label: "Mint Authority transparency",
       tag: "feature",
       description:
-        "A new Mint Authority section on coin pages surfaces who can mint and control supply — control addresses with on-chain evidence, Safe-module display, and risk-tone posture cues — with coverage expanded across the top stablecoins.",
+        "A new Mint Authority section on coin pages surfaces who can mint and control supply: control addresses with on-chain evidence, Safe-module display, and risk-tone posture cues, with coverage expanded across the top stablecoins.",
     },
     {
       label: "Broader coverage",

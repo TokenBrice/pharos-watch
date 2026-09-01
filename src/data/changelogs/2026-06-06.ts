@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "Navigation redesign reshapes the sidebar and homepage, a compare hub launches, and the depeg resolver locks forecasts.",
   fieldNotes:
-    "A heads-down week. The visible change is a navigation rework — a sticky core rail, a watch-column sidebar, and a homepage that rotates through what's worth looking at — plus a compare hub for putting two stablecoins beside each other. Underneath, the resolver learned to withhold forecasts until it's actually ready, apxUSD's wobble got handled live, and a long correctness pass taught the data pipeline to fail closed rather than guess.",
+    "A heads-down week. The visible change is a navigation rework: a sticky core rail, a watch-column sidebar, and a homepage that rotates through what's worth looking at, plus a compare hub for putting two stablecoins beside each other. Underneath, the resolver learned to withhold forecasts until it's actually ready, apxUSD's wobble got handled live, and a long correctness pass taught the data pipeline to fail closed rather than guess.",
   summary: [
     {
       label: "Navigation & homepage redesign",
