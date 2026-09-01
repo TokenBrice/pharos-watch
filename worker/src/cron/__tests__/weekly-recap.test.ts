@@ -60,6 +60,7 @@ import {
 import { runTelegramDigestDeliveryWithPermit } from "../telegram-digest-transport";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { DIGEST_MODEL } from "../../lib/constants";
+import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
 import {
   digestSafetyContextFromPersistedInput,
   loadDigestSafetyContext,
@@ -190,8 +191,17 @@ function makeTables(overrides: Partial<{
   existingWeekly: Record<string, unknown> | null;
   dailyRows: ReturnType<typeof buildDailyRows>;
   recentWeeklyRows: Record<string, unknown>[];
+  styleGateModes: { daily: "shadow" | "enforce"; weekly: "shadow" | "enforce" };
 }> = {}): MockTableConfig[] {
   return [
+    ...(["daily", "weekly"] as const).map((kind): MockTableConfig => ({
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: [DIGEST_STYLE_GATE_MODE_CACHE_KEYS[kind]],
+      rows: [],
+      first: overrides.styleGateModes
+        ? { value: overrides.styleGateModes[kind], updated_at: Math.floor(Date.now() / 1000) }
+        : null,
+    })),
     {
       match: "SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta",
       rows: [],
@@ -372,6 +382,67 @@ describe("generateWeeklyRecap", () => {
     expect(weeklySystem).not.toContain("FORBIDDEN TICS");
     expect(weeklySystem).not.toContain("quietly significant");
     expect(weeklySystem).not.toMatch(/[\u2012-\u2015]/);
+  });
+
+  it("keeps weekly shadow independent from daily enforce and repairs before publication", async () => {
+    const violatedExtended = VALID_WEEKLY_EXTENDED.replace("synthesize the slow drift:", "synthesize the slow drift —");
+    const db = mockD1(makeTables({
+      styleGateModes: { daily: "enforce", weekly: "shadow" },
+    }), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({ extended: violatedExtended }));
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      null,
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(String(insert?.binds[4])).not.toContain("—");
+    expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
+      styleGateMode: "shadow",
+      editorialStyleGate: { mode: "shadow", firstPassWouldBlock: true },
+    });
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      editorialStyleGate: { mode: "shadow" },
+      channels: { telegram: { disposition: "delivered" } },
+    });
+  });
+
+  it("keeps weekly enforce independent from daily shadow and blocks the unresolved raw finding", async () => {
+    const violatedExtended = VALID_WEEKLY_EXTENDED.replace("synthesize the slow drift:", "synthesize the slow drift —");
+    const db = mockD1(makeTables({
+      styleGateModes: { daily: "shadow", weekly: "enforce" },
+    }), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({ extended: violatedExtended }));
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      null,
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(String(insert?.binds[4])).toContain("—");
+    expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
+      qualityGate: "blocked",
+      styleGateMode: "enforce",
+      editorialStyleGate: {
+        mode: "enforce",
+        firstPassWouldBlock: true,
+        retry: { eligible: true, attempted: true, outcome: "unresolved" },
+      },
+    });
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      channels: { telegram: { status: "skipped: quality-gate", disposition: "terminal-unsent" } },
+    });
   });
 
   it("posts the weekly recap to X with a carried-forward dated map", async () => {
@@ -867,6 +938,12 @@ describe("generateWeeklyRecap", () => {
     }));
 
     const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [DIGEST_STYLE_GATE_MODE_CACHE_KEYS.weekly],
+        first: null,
+        rows: [],
+      },
       {
         match: "SELECT id FROM daily_digest WHERE generated_at >= ? AND json_extract(digest_meta, '$.type') = 'weekly'",
         first: null,

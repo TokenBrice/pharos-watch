@@ -17,6 +17,8 @@ import {
   enqueueTelegramDigestEdition,
 } from "../../lib/telegram-digest-outbox";
 import { postDigestTweet, type TwitterCreds } from "../../lib/twitter";
+import { buildTweetText } from "../../lib/twitter-digest-text";
+import { buildTelegramMessage } from "../../lib/telegram";
 import {
   deliverTwitterDigestWithLedger,
   TwitterDigestLedgerPersistenceError,
@@ -37,6 +39,11 @@ import {
   runTelegramDigestDeliveryWithPermit,
   type TelegramDigestPermittedDelivery,
 } from "../telegram-digest-transport";
+import {
+  scanTelegramDigestWrapper,
+  scanTwitterDigestWrapper,
+  type DigestWrapperEditorialFinding,
+} from "./wrapper-style-gate";
 
 type DigestKind = "daily" | "weekly";
 
@@ -145,6 +152,7 @@ export interface DigestPublicationOutcome {
   tweetStatus: string;
   telegramStatus: string;
   dispositions: Record<"twitter" | "telegram", DigestChannelDisposition>;
+  wrapperEditorialAlerts: Record<"twitter" | "telegram", DigestWrapperEditorialFinding[]>;
 }
 
 function unavailableSafetyContext(): DigestSafetyContext {
@@ -203,6 +211,26 @@ export async function deliverDigestEdition(
         map.ageDays,
       )
     : null;
+  const wrapperEditorialAlerts: DigestPublicationOutcome["wrapperEditorialAlerts"] = {
+    twitter: [],
+    telegram: [],
+  };
+
+  if (!input.qualityGateStatus && input.twitter?.creds) {
+    const renderedTweet = buildTweetText(
+      input.copy.title,
+      input.copy.text,
+      input.editionNumber,
+      map ? mapCaptions?.tweetHook ?? null : null,
+      tryParseJson(input.copy.meta, { onFailure: () => undefined }) ?? undefined,
+    );
+    wrapperEditorialAlerts.twitter = scanTwitterDigestWrapper({
+      rendered: renderedTweet,
+      title: input.copy.title,
+      editionNumber: input.editionNumber,
+      mapHook: map ? mapCaptions?.tweetHook ?? null : null,
+    });
+  }
 
   throwIfAborted(input.signal);
   await reportCronProgress(input.reportProgress, {
@@ -213,7 +241,15 @@ export async function deliverDigestEdition(
     itemsTotal: 1,
     metadata: { qualityGateStatus: input.qualityGateStatus },
   });
-  const tweetStatus = input.qualityGateStatus ?? await runDigestChannelDelivery({
+  if (wrapperEditorialAlerts.twitter.length > 0) {
+    input.degradedReasons.push("twitter-editorial-style-wrapper");
+    recordCronFailure(job, new Error("Twitter digest delivery wrapper failed editorial style gate"), {
+      metadata: { channel: "twitter", findings: wrapperEditorialAlerts.twitter },
+    });
+  }
+  const twitterGateStatus = input.qualityGateStatus
+    ?? (wrapperEditorialAlerts.twitter.length > 0 ? "skipped: editorial-style-wrapper" : null);
+  const tweetStatus = twitterGateStatus ?? await runDigestChannelDelivery({
     db: input.db,
     circuitSource: CIRCUIT_SOURCE.TWITTER_API,
     creds: input.twitter?.creds ?? null,
@@ -278,46 +314,70 @@ export async function deliverDigestEdition(
   });
   let telegramOutboxReady = false;
   if (!input.qualityGateStatus && input.telegram?.creds) {
-    try {
-      const textSections = input.telegram.extraSections
-        ?.filter((section) => section.kind === "text" && section.content.trim())
-        .map((section) => section.content) ?? [];
-      const htmlSections = input.telegram.extraSections
-        ?.filter((section) => section.kind === "html" && section.content.trim())
-        .map((section) => section.content) ?? [];
-      const enqueueResult = await enqueueTelegramDigestEdition(input.db, {
-        editionKey: input.telegram.editionKey,
-        digestKind: input.kind,
-        digestGeneratedAt: input.generatedAt,
-        targetChatId: input.telegram.creds.chatId,
-        title: input.telegram.title ?? input.copy.title,
-        extended: [input.copy.extended, ...textSections].filter(Boolean).join("\n\n"),
-        date: input.telegram.routeDate ?? input.digestDate,
-        editionNumber: input.editionNumber,
-        appendixHtml: input.telegram.appendixHtml ?? null,
-        mapImageUrl: map?.imageUrl ?? null,
-        mapDate: map?.manifest.date ?? null,
-        mapAppendixHtml: htmlSections.join("\n\n") || null,
-        successActions: input.telegram.successActions ?? [],
-        safetyContext: input.safetyContext ?? unavailableSafetyContext(),
-        recapRollout: input.telegram.recapRollout ?? null,
-      }, input.signal);
-      if (!enqueueResult.payloadMatched && enqueueResult.state !== "sent") {
-        input.degradedReasons.push("telegram-outbox-payload-mismatch");
-        recordCronFailure(job, new Error("Immutable Telegram digest edition differs"), {
-          metadata: {
-            stage: "telegram-outbox-payload-mismatch",
-            editionKey: input.telegram.editionKey,
-          },
-        });
+    const textSections = input.telegram.extraSections
+      ?.filter((section) => section.kind === "text" && section.content.trim())
+      .map((section) => section.content) ?? [];
+    const htmlSections = input.telegram.extraSections
+      ?.filter((section) => section.kind === "html" && section.content.trim())
+      .map((section) => section.content) ?? [];
+    const renderedTelegram = buildTelegramMessage(
+      input.telegram.title ?? input.copy.title,
+      [input.copy.extended, ...textSections].filter(Boolean).join("\n\n"),
+      input.telegram.routeDate ?? input.digestDate,
+      input.editionNumber,
+      input.telegram.appendixHtml ?? null,
+      htmlSections.join("\n\n") || null,
+      input.telegram.recapRollout ?? null,
+    );
+    wrapperEditorialAlerts.telegram = scanTelegramDigestWrapper({
+      rendered: renderedTelegram,
+      modelTitle: input.copy.title,
+      modelExtended: input.copy.extended,
+      cemeteryAppendixHtml: input.telegram.appendixHtml ?? null,
+    });
+    if (wrapperEditorialAlerts.telegram.length > 0) {
+      input.degradedReasons.push("telegram-editorial-style-wrapper");
+      recordCronFailure(job, new Error("Telegram digest delivery wrapper failed editorial style gate"), {
+        metadata: { channel: "telegram", findings: wrapperEditorialAlerts.telegram },
+      });
+    } else {
+      try {
+        const enqueueResult = await enqueueTelegramDigestEdition(input.db, {
+          editionKey: input.telegram.editionKey,
+          digestKind: input.kind,
+          digestGeneratedAt: input.generatedAt,
+          targetChatId: input.telegram.creds.chatId,
+          title: input.telegram.title ?? input.copy.title,
+          extended: [input.copy.extended, ...textSections].filter(Boolean).join("\n\n"),
+          date: input.telegram.routeDate ?? input.digestDate,
+          editionNumber: input.editionNumber,
+          appendixHtml: input.telegram.appendixHtml ?? null,
+          mapImageUrl: map?.imageUrl ?? null,
+          mapDate: map?.manifest.date ?? null,
+          mapAppendixHtml: htmlSections.join("\n\n") || null,
+          successActions: input.telegram.successActions ?? [],
+          safetyContext: input.safetyContext ?? unavailableSafetyContext(),
+          recapRollout: input.telegram.recapRollout ?? null,
+        }, input.signal);
+        if (!enqueueResult.payloadMatched && enqueueResult.state !== "sent") {
+          input.degradedReasons.push("telegram-outbox-payload-mismatch");
+          recordCronFailure(job, new Error("Immutable Telegram digest edition differs"), {
+            metadata: {
+              stage: "telegram-outbox-payload-mismatch",
+              editionKey: input.telegram.editionKey,
+            },
+          });
+        }
+        telegramOutboxReady = true;
+      } catch (error) {
+        input.degradedReasons.push("telegram-outbox-write");
+        recordCronFailure(job, error, { metadata: { stage: "telegram-outbox-write" } });
       }
-      telegramOutboxReady = true;
-    } catch (error) {
-      input.degradedReasons.push("telegram-outbox-write");
-      recordCronFailure(job, error, { metadata: { stage: "telegram-outbox-write" } });
     }
   }
-  const telegramStatus = input.qualityGateStatus ?? await runTelegramDigestDeliveryWithPermit({
+  const telegramGateStatus = input.qualityGateStatus
+    ?? (wrapperEditorialAlerts.telegram.length > 0 ? "skipped: editorial-style-wrapper" : null);
+  const telegramStatus = telegramGateStatus ?? await runTelegramDigestDeliveryWithPermit({
     db: input.db,
     creds: input.telegram?.creds ?? null,
     owner: job,
@@ -372,6 +432,7 @@ export async function deliverDigestEdition(
     tweetStatus,
     telegramStatus,
     dispositions,
+    wrapperEditorialAlerts,
   };
 }
 

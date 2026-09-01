@@ -46,6 +46,7 @@ import {
   type DigestCredentialDiagnostics,
 } from "./digest/publish";
 import { WEEKLY_RECAP_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
+import { resolveDigestStyleGateMode } from "../lib/digest-style-gate";
 
 const TWITTER_SENT_MARKER_PREFIX = "weekly-recap:twitter-sent:";
 
@@ -496,6 +497,7 @@ export async function generateWeeklyRecap(
   }
 
   const userPrompt = buildWeeklyPrompt(weeklyData, recentWeeklyMeta);
+  const styleGateMode = await resolveDigestStyleGateMode(db, "weekly", signal);
   await reportCronProgress(reportProgress, {
     stage: "llm-generation",
     message: "Requesting weekly recap copy from Anthropic",
@@ -534,6 +536,7 @@ export async function generateWeeklyRecap(
     },
     validationProfile: {
       kind: "weekly",
+      styleGateMode,
       recentMeta: recentWeeklyMeta,
       leadRequirements: buildWeeklyLeadRequirements(weeklyData),
       forbidSafetyClaims: safetyContext.status !== "available",
@@ -661,6 +664,7 @@ export async function generateWeeklyRecap(
       telegramStatus: publication.telegramStatus,
       usedRawTextFallback: digestCopy.usedRawTextFallback,
       llmAttempts: digestCopy.llmAttempts,
+      editorialStyleGate: digestCopy.editorialStyleGate,
     },
   });
   return {
@@ -687,6 +691,8 @@ export async function generateWeeklyRecap(
         },
       },
       llm: buildDigestLlmTelemetry(resolvedLlmConfig, digestCopy.llmAttempts),
+      editorialStyleGate: digestCopy.editorialStyleGate,
+      wrapperEditorialAlerts: publication.wrapperEditorialAlerts,
     }),
   };
 }

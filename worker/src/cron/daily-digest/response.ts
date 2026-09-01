@@ -18,15 +18,13 @@ import {
   scanEditorialText,
   type EditorialFinding,
 } from "@shared/lib/editorial-style";
+import {
+  DEFAULT_DIGEST_STYLE_GATE_MODE,
+  type DigestStyleGateMode,
+} from "../../lib/digest-style-gate";
 
-export type DigestStyleGateMode = "shadow" | "enforce";
-
-/**
- * Shadow is deliberate during the telemetry period. Change this immutable
- * default, or pass `styleGateMode: "enforce"` from a cron profile, for the
- * later blocking flip.
- */
-export const STYLE_GATE_MODE: DigestStyleGateMode = "shadow";
+export type { DigestStyleGateMode } from "../../lib/digest-style-gate";
+export const STYLE_GATE_MODE = DEFAULT_DIGEST_STYLE_GATE_MODE;
 
 const OPENING_FINGERPRINT_WINDOW = 7;
 const STRUCTURAL_REPETITION_WINDOW = 7;
@@ -98,17 +96,17 @@ export interface DigestDepegFact {
 
 export interface DigestModelResponseParseOptions {
   register?: "daily" | "weekly";
+  styleGateMode?: DigestStyleGateMode;
   metaFactory?: (options: {
     parsedMeta: Record<string, unknown> | null;
     usedRawTextFallback: boolean;
   }) => Record<string, unknown> | null;
 }
 
-// Legacy shadow-mode repair. Remove this call path when STYLE_GATE_MODE flips
-// to "enforce"; hard findings should then retry or block instead of silently
-// rewriting model-owned punctuation.
+// Legacy shadow-mode repair. Enforce mode preserves the original copy so hard
+// findings retry or block rather than being silently rewritten.
 function stripForbiddenDashes(value: string): string {
-  return value.replace(/[\u2013\u2014]/g, ",");
+  return value.replace(/[\u2012-\u2015]/g, ",");
 }
 
 function stripRepeatedTitlePrefix(title: string, text: string): string {
@@ -238,6 +236,7 @@ export function parseDigestModelResponse(
 ): ParsedDigestResponse {
   const parsedJson = extractDigestJson(rawText);
   const register = options.register ?? "daily";
+  const styleGateMode = options.styleGateMode ?? STYLE_GATE_MODE;
 
   let digestTitle: string;
   let digestText: string;
@@ -280,12 +279,17 @@ export function parseDigestModelResponse(
     ...(resolvedMeta ?? {}),
     editorialStyleVersion: EDITORIAL_STYLE_VERSION,
     editorialStyleHash: EDITORIAL_STYLE_HASH,
+    styleGateMode,
   });
 
-  const strippedDashCount = [digestTitle, digestText, digestExtended].join("").match(/[\u2013\u2014]/g)?.length ?? 0;
-  digestTitle = stripForbiddenDashes(digestTitle);
-  digestText = stripForbiddenDashes(digestText);
-  digestExtended = stripForbiddenDashes(digestExtended);
+  const strippedDashCount = styleGateMode === "shadow"
+    ? [digestTitle, digestText, digestExtended].join("").match(/[\u2012-\u2015]/g)?.length ?? 0
+    : 0;
+  if (styleGateMode === "shadow") {
+    digestTitle = stripForbiddenDashes(digestTitle);
+    digestText = stripForbiddenDashes(digestText);
+    digestExtended = stripForbiddenDashes(digestExtended);
+  }
   digestText = stripRepeatedTitlePrefix(digestTitle, digestText);
 
   return {
@@ -542,7 +546,14 @@ export function validateDigestModelOutput(
       });
     }
   }
-  if (tone && recentThree.some((entry) => getMetaString(entry.meta, "tone") === tone)) {
+  const previousTone = getMetaString(recentThree[0]?.meta ?? null, "tone");
+  if (tone === "sardonic" && previousTone === "sardonic") {
+    issues.push({
+      code: "consecutive-sardonic-tone",
+      severity: "hard",
+      message: "Sardonic tone cannot run in consecutive editions; select another allowed tone.",
+    });
+  } else if (tone && recentThree.some((entry) => getMetaString(entry.meta, "tone") === tone)) {
     issues.push({ code: "repeated-tone", severity: "soft", message: `Tone repeats recent tone '${tone}'.` });
   }
   const recentFive = recent.slice(0, 5);

@@ -2,7 +2,14 @@ import type { TelegramCreds } from "../lib/telegram";
 import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { runIdempotentAdminAction } from "../lib/idempotency";
 import { setCache } from "../lib/db-cache";
-import { jsonResponse } from "../lib/api-response";
+import { errorResponse, jsonResponse } from "../lib/api-response";
+import { readRequestTextBounded } from "../lib/api-json-body";
+import {
+  DIGEST_STYLE_GATE_MODE_CACHE_KEYS,
+  type DigestStyleGateKind,
+  parseDigestStyleGateMode,
+  resolveDigestStyleGateModes,
+} from "../lib/digest-style-gate";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { normalizeBlacklistSyncStateKey } from "../lib/db";
 
@@ -23,6 +30,49 @@ export const handleTriggerDigest = makeAdminRoute(
   "route-trigger-digest",
   async ({ db, request }: TriggerDigestRouteContext) =>
     runIdempotentAdminAction(db, "trigger-digest", request, async () => {
+      const requestText = await readRequestTextBounded(request, 1_024);
+      if (requestText instanceof Response) return requestText;
+      let requestedStyleGateMode: { kind: DigestStyleGateKind; mode: "shadow" | "enforce" } | null = null;
+      if (requestText.trim()) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(requestText);
+        } catch {
+          return errorResponse(400, "Request body must be valid JSON");
+        }
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          return errorResponse(400, "Request body must be a JSON object");
+        }
+        const body = parsed as Record<string, unknown>;
+        if (Object.keys(body).some((key) => key !== "styleGateMode")) {
+          return errorResponse(400, "Request body contains an unknown field");
+        }
+        if (Object.prototype.hasOwnProperty.call(body, "styleGateMode")) {
+          const candidate = body.styleGateMode;
+          if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) {
+            return errorResponse(400, "styleGateMode must target exactly one of daily or weekly");
+          }
+          const entries = Object.entries(candidate);
+          if (entries.length !== 1 || (entries[0]?.[0] !== "daily" && entries[0]?.[0] !== "weekly")) {
+            return errorResponse(400, "styleGateMode must target exactly one of daily or weekly");
+          }
+          const [kind, value] = entries[0] as [DigestStyleGateKind, unknown];
+          const mode = parseDigestStyleGateMode(value);
+          if (!mode) return errorResponse(400, 'styleGateMode value must be "shadow" or "enforce"');
+          requestedStyleGateMode = { kind, mode };
+        }
+      }
+      if (requestedStyleGateMode) {
+        await setCache(
+          db,
+          DIGEST_STYLE_GATE_MODE_CACHE_KEYS[requestedStyleGateMode.kind],
+          requestedStyleGateMode.mode,
+        );
+      }
+      const effectiveStyleGateMode = await resolveDigestStyleGateModes(db);
+      if (requestedStyleGateMode) {
+        effectiveStyleGateMode[requestedStyleGateMode.kind] = requestedStyleGateMode.mode;
+      }
       const requestId = `manual-digest-${crypto.randomUUID()}`;
       const requestedAt = Math.floor(Date.now() / 1000);
       await setCache(
@@ -42,6 +92,7 @@ export const handleTriggerDigest = makeAdminRoute(
           ok: true,
           accepted: true,
           requestId,
+          styleGateMode: effectiveStyleGateMode,
           message: "Digest trigger queued; will execute on the next polling tick (≤5 min).",
         },
         { status: 202, noStore: true },

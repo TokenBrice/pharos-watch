@@ -332,6 +332,17 @@ describe("editorial style gate", () => {
     expect(hasBlockingDigestQualityIssues(issues)).toBe(true);
   });
 
+  it.each(["‒", "―"])("scans and shadow-repairs the full forbidden dash range: %s", (dash) => {
+    const parsed = parseWithExtended(`USDT moved ${dash} the next trigger is tomorrow.`);
+    expect(parsed.digestExtended).not.toContain(dash);
+    expect(parsed.editorialFindings).toContainEqual(expect.objectContaining({
+      ruleId: "no-clause-dash",
+      field: "extended",
+      excerpt: dash,
+      severity: "hard",
+    }));
+  });
+
   it("reports universal tics through the shared policy scanner", () => {
     const parsed = parseWithExtended("USDT held.\n\nThe plumbing flinched.\n\nWatch the next trigger.");
     const issue = validateDigestModelOutput(parsed, { kind: "daily" }).find(
@@ -342,6 +353,17 @@ describe("editorial style gate", () => {
 });
 
 describe("tone cluster validator", () => {
+  it("hard-fails consecutive sardonic editions", () => {
+    const issues = validateDigestModelOutput(makeParsedFixture({ tone: "sardonic" }), {
+      kind: "daily",
+      recentMeta: [{ meta: { lead: "depeg", tone: "sardonic" }, title: "Prior" }],
+    });
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: "consecutive-sardonic-tone",
+      severity: "hard",
+    }));
+  });
+
   it.each([
     ["fires tone-cluster when same tone appears 3+ times in last 5", ["dry", "dry", "dry", "dry", "dry"], true],
     ["does not fire when spread across tones", ["dry", "sardonic", "clinical", "analytical", "forensic"], false],

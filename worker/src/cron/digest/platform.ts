@@ -1,9 +1,11 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type {
   DigestModelResponseParseOptions,
+  DigestStyleGateMode,
   DigestValidationIssue,
   DigestValidationProfile,
 } from "../daily-digest/response";
+import type { EditorialFinding } from "@shared/lib/editorial-style";
 import type { DigestSafetyContext } from "@shared/types/digest";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
@@ -71,6 +73,35 @@ export interface DigestLlmAttemptTelemetry {
   httpStatus: number | null;
 }
 
+export interface DigestEditorialStyleGateFinding {
+  ruleId: string;
+  field: string | null;
+  excerpt: string;
+  originalSeverity: "hard" | "advisory";
+}
+
+export interface DigestEditorialStyleGateTelemetry {
+  mode: DigestStyleGateMode;
+  firstPassWouldBlock: boolean;
+  firstPassFindings: DigestEditorialStyleGateFinding[];
+  firstPassFindingCount: number;
+  firstPassFindingsTruncated: boolean;
+  retry: {
+    eligible: boolean;
+    attempted: boolean;
+    outcome:
+      | "not-needed"
+      | "shadow-observed"
+      | "skipped-time-budget"
+      | "skipped-token-budget"
+      | "resolved"
+      | "unresolved";
+  };
+  finalUnresolvedFindings: DigestEditorialStyleGateFinding[];
+  finalUnresolvedFindingCount: number;
+  finalUnresolvedFindingsTruncated: boolean;
+}
+
 interface RequestDigestCopyResult {
   kind: "ok" | "circuit-open" | "refusal";
   digestTitle: string;
@@ -82,6 +113,7 @@ interface RequestDigestCopyResult {
   hasBlockingQualityIssues: boolean;
   llmAttempts: DigestLlmAttemptTelemetry[];
   refusalCategory: AnthropicRefusalCategory | null;
+  editorialStyleGate?: DigestEditorialStyleGateTelemetry;
 }
 
 interface InsertDigestRecordOptions {
@@ -306,6 +338,7 @@ export function classifyDigestChannelStatus(status: string): DigestChannelDispos
     status === "skipped: execution-unknown"
     || status === "skipped: attempt-limit"
     || status === "skipped: quality-gate"
+    || status === "skipped: editorial-style-wrapper"
     || status === "queued: execution_unknown"
     || status === "queued: failed_permanent"
     || status === "outbox-execution_unknown"
@@ -436,6 +469,7 @@ function attachDigestLlmMeta(
   digestMeta: string | null,
   config: DigestLlmConfig,
   attempts: DigestLlmAttemptTelemetry[],
+  editorialStyleGate: DigestEditorialStyleGateTelemetry,
 ): string {
   let parsed: Record<string, unknown> = {};
   if (digestMeta) {
@@ -445,7 +479,28 @@ function attachDigestLlmMeta(
     }
   }
   parsed.llm = buildDigestLlmTelemetry(config, attempts);
+  parsed.editorialStyleGate = editorialStyleGate;
   return JSON.stringify(parsed);
+}
+
+const DIGEST_STYLE_GATE_FINDING_LIMIT = 12;
+const DIGEST_STYLE_GATE_EXCERPT_LIMIT = 160;
+
+function boundEditorialFindings(findings: readonly EditorialFinding[]): {
+  findings: DigestEditorialStyleGateFinding[];
+  count: number;
+  truncated: boolean;
+} {
+  return {
+    findings: findings.slice(0, DIGEST_STYLE_GATE_FINDING_LIMIT).map((finding) => ({
+      ruleId: finding.ruleId,
+      field: finding.field ?? null,
+      excerpt: finding.excerpt.slice(0, DIGEST_STYLE_GATE_EXCERPT_LIMIT),
+      originalSeverity: finding.severity,
+    })),
+    count: findings.length,
+    truncated: findings.length > DIGEST_STYLE_GATE_FINDING_LIMIT,
+  };
 }
 
 async function readDigestErrorText(response: Response, signal?: AbortSignal): Promise<string> {
@@ -637,7 +692,11 @@ export async function requestDigestCopy(
 
   let prompt = options.userPrompt;
   const parseOptions = options.validationProfile
-    ? { ...(options.parseOptions ?? {}), register: options.validationProfile.kind }
+    ? {
+        ...(options.parseOptions ?? {}),
+        register: options.validationProfile.kind,
+        styleGateMode: options.validationProfile.styleGateMode,
+      }
     : options.parseOptions;
   const original = await requestClaude(prompt, "original");
   if (original.kind === "refusal") {
@@ -655,6 +714,16 @@ export async function requestDigestCopy(
     };
   }
   let parsed = parseDigestModelResponse(original.rawText, parseOptions);
+  const firstPassEditorialFindings = parsed.editorialFindings ?? [];
+  const styleGateMode = options.validationProfile?.styleGateMode ?? "shadow";
+  const styleWouldBlock = firstPassEditorialFindings.some((finding) => finding.severity === "hard");
+  const styleRetryEligible = styleWouldBlock
+    && Date.now() - started < ANTHROPIC_TIMEOUT_MS * CORRECTIVE_RETRY_BUDGET_FRACTION
+    && canAffordAnotherRequest();
+  let styleRetryAttempted = false;
+  let styleRetryOutcome: DigestEditorialStyleGateTelemetry["retry"]["outcome"] = styleWouldBlock
+    ? styleGateMode === "shadow" ? "shadow-observed" : "unresolved"
+    : "not-needed";
   let qualityIssues = options.validationProfile
     ? validateDigestModelOutput(parsed, options.validationProfile)
     : [];
@@ -667,10 +736,12 @@ export async function requestDigestCopy(
     const elapsedMs = Date.now() - started;
     const budgetMs = ANTHROPIC_TIMEOUT_MS * CORRECTIVE_RETRY_BUDGET_FRACTION;
     if (elapsedMs >= budgetMs) {
+      if (styleGateMode === "enforce" && styleWouldBlock) styleRetryOutcome = "skipped-time-budget";
       logWorkerEventArgs("handler", "warn",
         `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: elapsed ${elapsedMs}ms >= ${budgetMs}ms (${CORRECTIVE_RETRY_BUDGET_FRACTION * 100}% of budget). Issues: ${formatDigestValidationIssues(hardIssues)}`,
       );
     } else if (!canAffordAnotherRequest()) {
+      if (styleGateMode === "enforce" && styleWouldBlock) styleRetryOutcome = "skipped-token-budget";
       // Deliberate policy: spend the corrective retry on cheap editions and
       // refuse it on expensive ones. A blocked edition is loud and already
       // handled; an unbounded bill is neither.
@@ -678,6 +749,7 @@ export async function requestDigestCopy(
         `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: edition output budget spent (${committedOutputTokens}/${DIGEST_MAX_EDITION_OUTPUT_TOKENS} tokens committed, next request reserves ${options.llmConfig.maxTokens}). Issues: ${formatDigestValidationIssues(hardIssues)}`,
       );
     } else {
+      if (styleGateMode === "enforce" && styleWouldBlock) styleRetryAttempted = true;
       logWorkerEventArgs("handler", "warn",
         `[${options.logPrefix}] Digest quality checks failed, retrying once (elapsed ${elapsedMs}ms): ${formatDigestValidationIssues(hardIssues)}`,
       );
@@ -719,6 +791,11 @@ export async function requestDigestCopy(
       qualityIssues = options.validationProfile
         ? validateDigestModelOutput(parsed, options.validationProfile)
         : [];
+      if (styleGateMode === "enforce" && styleWouldBlock) {
+        styleRetryOutcome = (parsed.editorialFindings ?? []).some((finding) => finding.severity === "hard")
+          ? "unresolved"
+          : "resolved";
+      }
     }
   }
 
@@ -732,14 +809,33 @@ export async function requestDigestCopy(
     logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] Digest quality checks still failing: ${formatDigestValidationIssues(qualityIssues)}`);
   }
 
+  const firstPass = boundEditorialFindings(firstPassEditorialFindings);
+  const finalUnresolved = boundEditorialFindings(parsed.editorialFindings ?? []);
+  const editorialStyleGate: DigestEditorialStyleGateTelemetry = {
+    mode: styleGateMode,
+    firstPassWouldBlock: styleWouldBlock,
+    firstPassFindings: firstPass.findings,
+    firstPassFindingCount: firstPass.count,
+    firstPassFindingsTruncated: firstPass.truncated,
+    retry: {
+      eligible: styleRetryEligible,
+      attempted: styleRetryAttempted,
+      outcome: styleRetryOutcome,
+    },
+    finalUnresolvedFindings: finalUnresolved.findings,
+    finalUnresolvedFindingCount: finalUnresolved.count,
+    finalUnresolvedFindingsTruncated: finalUnresolved.truncated,
+  };
+
   return {
     kind: "ok",
     ...parsed,
-    digestMeta: attachDigestLlmMeta(parsed.digestMeta, options.llmConfig, llmAttempts),
+    digestMeta: attachDigestLlmMeta(parsed.digestMeta, options.llmConfig, llmAttempts, editorialStyleGate),
     qualityIssues,
     hasBlockingQualityIssues: hasBlockingDigestQualityIssues(qualityIssues),
     llmAttempts,
     refusalCategory: null,
+    editorialStyleGate,
   };
 }
 
