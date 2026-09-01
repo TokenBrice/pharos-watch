@@ -69,7 +69,6 @@ import {
   type CurveCompositeRuntimeEvidence,
 } from "./curve-composite";
 import {
-  UNISWAP_V4_ADAPTER_PROFILE_ID,
   quoteUniswapV4Requests,
   resolveUniswapV4PoolBindings,
   validateUniswapV4ProfileProof,

@@ -15,15 +15,12 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import type { DexMeasuredQuoteOutcome } from "./persistence";
 import type { DexMeasuredRawQuotePoint } from "./profiles";
-import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible, type DexMeasuredExecutionDeployment } from "./registry";
-import { CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID, getCurveCryptoSwapShadowPolicy, type CurveCryptoSwapPoolPolicy } from "./curve-cryptoswap";
+import { isDexMeasuredExecutionDeploymentScoreEligible, type DexMeasuredExecutionDeployment } from "./registry";
+import { getCurveCryptoSwapShadowPolicy, type CurveCryptoSwapPoolPolicy } from "./curve-cryptoswap";
 import { CURVE_STABLESWAP_ADAPTER_PROFILE_ID, getCurveStableSwapPolicy, type CurveStableSwapPoolPolicy } from "./curve-stableswap";
-import { CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID, getCurveStableSwapNgPolicy,
-  type CurveStableSwapNgPoolPolicy } from "./curve-stableswap-ng";
-import { getCurveCompositePolicy, isCurveCompositeAdapterProfileId,
-  type CurveCompositePoolPolicy } from "./curve-composite";
-import { UNISWAP_V4_ADAPTER_PROFILE_ID, getUniswapV4Deployment,
-  type UniswapV4Deployment } from "./uniswap-v4";
+import { getCurveStableSwapNgPolicy, type CurveStableSwapNgPoolPolicy } from "./curve-stableswap-ng";
+import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "./curve-composite";
+import { type UniswapV4Deployment } from "./uniswap-v4";
 import { resolveQuoterV2AdapterDeployment } from "./adapters/quoter-v2";
 import { resolveUniswapV4AdapterDeployment } from "./adapters/uniswap-v4";
 
