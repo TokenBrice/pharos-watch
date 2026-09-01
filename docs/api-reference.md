@@ -2464,14 +2464,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.41"
+      "methodologyVersion": "4.42"
     }
   },
   "methodology": {
-    "version": "4.41",
-    "versionLabel": "v4.41",
-    "currentVersion": "4.41",
-    "currentVersionLabel": "v4.41",
+    "version": "4.42",
+    "versionLabel": "v4.42",
+    "currentVersion": "4.42",
+    "currentVersionLabel": "v4.42",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -2511,9 +2511,9 @@ The `effectiveExitScore` field and the `methodology.effectiveExitModel` block we
 - `missing-cache` = the stablecoins snapshot did not include the asset or its current supply
 - `missing-capacity` = the route is configured, but the snapshot could not resolve enough capacity to score it
 - `failed` = a route-specific resolver failed
-- `impaired` = the route shape is known but current market or route-availability evidence contradicts broad par redemption
+- `impaired` = the route shape is known but current market or route-availability evidence either contradicts broad par redemption or cannot establish whether an open downside incident is still severe; the score is withheld in both cases
 
-`routeStatus` / `routeStatusSource` describe current route availability separately from the static route shape. Normal rows use `routeStatus: "open"` and `routeStatusSource: "static-config"`. A severe active depeg (`>=2500 bps`) can publish `routeStatus: "degraded"` and `routeStatusSource: "market-implied"` for static or non-live-direct routes; those impaired rows have `score = null` and `modelConfidence = "low"`. `holderEligibility` describes the modeled holder cohort, such as `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown`.
+`routeStatus` / `routeStatusSource` describe current route availability separately from the static route shape. Normal rows use `routeStatus: "open"` and `routeStatusSource: "static-config"`. On an open live downside incident, `routeStatus: "degraded"` with `routeStatusSource: "market-implied"` now requires a fresh authoritative current signed deviation at or below -2500 bps; the incident's historical `peak_deviation_bps` is not current severity evidence. If the stablecoins generation, underlying quote timestamp or provenance, price trust, peg reference, or signed deviation cannot establish currency within the 1800-second window, the existing combination `routeStatus: "unknown"` / `routeStatusSource: "market-implied"` is published instead. Both outcomes use `resolutionState: "impaired"`, `score = null`, and `modelConfidence = "low"`; the unknown combination reports evidence uncertainty, not confirmed current degradation. A fresh current deviation above -2500 bps releases only this overlay and does not close the incident. `holderEligibility` describes the modeled holder cohort, such as `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown`.
 
 For v4-compatible snapshots, route-status and capacity telemetry remain part of the four-hour `sync-redemption-backstops` snapshot. The worker does not fetch a separate real-time route-status feed during this sync; route status comes from live-reserve adapter metadata, static reviewed policy, and market-implied severe-depeg overlays.
 

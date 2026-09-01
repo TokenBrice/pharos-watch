@@ -2,14 +2,58 @@ import { describe, expect, it } from "vitest";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
+  buildRedemptionCurrentDepegObservationMap,
   evaluateOutputDependencyImpairment,
   loadSevereActiveDepegAvailabilityMap,
   type ActiveDepegAvailabilityRow,
+  type EvaluatedOpenIncident,
 } from "../redemption-backstop-availability";
 import { buildRedemptionBackstopEntry } from "../redemption-backstop-sources";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 const REVIEW_DATE = "2026-04-22";
+
+function observations(entries: Array<[string, number]>) {
+  return new Map(entries.map(([id, currentDeviationBps]) => [id, { currentDeviationBps }]));
+}
+
+describe("buildRedemptionCurrentDepegObservationMap", () => {
+  const now = 1_788_220_800;
+
+  function authoritativeAsset(observedAt: number) {
+    return makeAsset({
+      id: "usda-avalon",
+      symbol: "USDa",
+      price: 0.7,
+      priceSource: "pyth",
+      priceConfidence: "single-source",
+      priceObservedAt: observedAt,
+      priceUpdatedAt: observedAt,
+      agreeSources: ["pyth"],
+    });
+  }
+
+  it("admits a fresh authoritative signed current deviation", () => {
+    const result = buildRedemptionCurrentDepegObservationMap({
+      peggedAssets: [authoritativeAsset(now - 60)],
+      stablecoinsGenerationAt: now - 60,
+      now,
+    });
+
+    expect(result.get("usda-avalon")?.currentDeviationBps).toBe(-3000);
+  });
+
+  it("rejects a fresh generation whose underlying quote is stale", () => {
+    const result = buildRedemptionCurrentDepegObservationMap({
+      peggedAssets: [authoritativeAsset(now - 1801)],
+      stablecoinsGenerationAt: now - 60,
+      now,
+    });
+
+    expect(result.has("usda-avalon")).toBe(false);
+  });
+});
 
 describe("loadSevereActiveDepegAvailabilityMap", () => {
   it("inherits parent severe depeg into tracked wrapper route status", async () => {
@@ -28,7 +72,11 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       },
     ]);
 
-    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const result = await loadSevereActiveDepegAvailabilityMap(
+      db,
+      REVIEW_DATE,
+      observations([["usds-sky", -3100]]),
+    );
 
     const parent = result.get("usds-sky");
     expect(parent?.routeStatus).toBe("degraded");
@@ -60,7 +108,11 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       },
     ]);
 
-    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const result = await loadSevereActiveDepegAvailabilityMap(
+      db,
+      REVIEW_DATE,
+      observations([["usds-sky", -1200]]),
+    );
     expect(result.has("usds-sky")).toBe(false);
     expect(result.has("susds-sky")).toBe(false);
   });
@@ -86,11 +138,18 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       },
     ]);
 
-    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const result = await loadSevereActiveDepegAvailabilityMap(
+      db,
+      REVIEW_DATE,
+      observations([
+        ["usds-sky", -3100],
+        ["susds-sky", -4200],
+      ]),
+    );
     const variant = result.get("susds-sky");
     expect(variant?.activeDepegBps).toBe(4200);
     expect(variant?.activeDepegStartedAt).toBe(2_000_000);
-    expect(variant?.routeStatusReason).toContain("Active severe downside depeg");
+    expect(variant?.routeStatusReason).toContain("fresh authoritative current deviation");
   });
 
   it("does not impair routes for severe upside depegs", async () => {
@@ -108,13 +167,17 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       },
     ]);
 
-    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const result = await loadSevereActiveDepegAvailabilityMap(
+      db,
+      REVIEW_DATE,
+      observations([["usds-sky", -3100]]),
+    );
 
     expect(result.has("usds-sky")).toBe(false);
     expect(result.has("susds-sky")).toBe(false);
   });
 
-  it("treats signed legacy severe negative rows as downside", async () => {
+  it("requires an explicit below direction on the open incident", async () => {
     const db = mockD1([
       {
         match: "FROM depeg_events",
@@ -128,9 +191,13 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       },
     ]);
 
-    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const result = await loadSevereActiveDepegAvailabilityMap(
+      db,
+      REVIEW_DATE,
+      observations([["usds-sky", -3100]]),
+    );
 
-    expect(result.get("usds-sky")?.routeStatus).toBe("degraded");
+    expect(result.has("usds-sky")).toBe(false);
   });
 
   it("impairs configured collateral routes when their structured output dependency is depegged", async () => {
@@ -148,7 +215,11 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       },
     ]);
 
-    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const result = await loadSevereActiveDepegAvailabilityMap(
+      db,
+      REVIEW_DATE,
+      observations([["ausd-agora", -3600]]),
+    );
     const cusd = result.get("cusd-celo");
     expect(cusd?.routeStatus).toBe("degraded");
     expect(cusd?.outputImpairedDependencyId).toBe("ausd-agora");
@@ -177,7 +248,14 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       },
     ]);
 
-    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const result = await loadSevereActiveDepegAvailabilityMap(
+      db,
+      REVIEW_DATE,
+      observations([
+        ["usdc-circle", -3000],
+        ["usdt-tether", -2600],
+      ]),
+    );
     const cusd = result.get("cusd-celo");
     expect(cusd?.routeStatus).toBe("degraded");
     // worst impaired dependency wins attribution (USDC's -3000 bps beats USDT's -2600 bps)
@@ -205,7 +283,11 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       },
     ]);
 
-    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const result = await loadSevereActiveDepegAvailabilityMap(
+      db,
+      REVIEW_DATE,
+      observations([["not-a-tracked-dependency", -4000]]),
+    );
 
     // The direct row itself is preserved, but nothing inherits it
     expect(result.get("not-a-tracked-dependency")?.routeStatus).toBe("degraded");
@@ -227,7 +309,11 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       },
     ]);
 
-    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const result = await loadSevereActiveDepegAvailabilityMap(
+      db,
+      REVIEW_DATE,
+      observations([["usde-ethena", -2800]]),
+    );
     const honey = result.get("honey-berachain");
     expect(honey?.routeStatus).toBe("degraded");
     expect(honey?.outputImpairedDependencyId).toBe("usde-ethena");
@@ -236,14 +322,49 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     expect(honey?.outputImpairedShare).toBe(1);
     expect(honey?.routeStatusReason).toContain("modeled route output is impaired");
   });
+
+  it("publishes unknown from stale evidence and never mutates the incident", async () => {
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            stablecoin_id: "usda-avalon",
+            direction: "below",
+            started_at: 1_765_756_800,
+          },
+        ],
+      },
+    ]);
+
+    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE, new Map());
+
+    expect(result.get("usda-avalon")).toMatchObject({
+      routeStatus: "unknown",
+      routeStatusSource: "market-implied",
+    });
+    expect(result.get("usda-avalon")?.routeStatusReason).toContain("redemption score withheld");
+    const history = db.getHistory();
+    expect(history).toHaveLength(1);
+    expect(history[0].sql).toContain("source = 'live'");
+    expect(history.every(({ sql }) => /^\s*SELECT\b/i.test(sql))).toBe(true);
+  });
 });
 
 describe("evaluateOutputDependencyImpairment", () => {
-  const row = (stablecoinId: string, peakDeviationBps: number, startedAt: number): ActiveDepegAvailabilityRow => ({
+  const row = (stablecoinId: string, startedAt: number): ActiveDepegAvailabilityRow => ({
     stablecoin_id: stablecoinId,
-    peak_deviation_bps: peakDeviationBps,
     direction: "below",
     started_at: startedAt,
+  });
+  const severe = (
+    stablecoinId: string,
+    currentDeviationBps: number,
+    startedAt: number,
+  ): EvaluatedOpenIncident => ({
+    row: row(stablecoinId, startedAt),
+    state: "severe",
+    currentDeviationBps,
   });
 
   it("clamps over-leveraged compositions to a 100% impaired share and flags them", () => {
@@ -252,19 +373,19 @@ describe("evaluateOutputDependencyImpairment", () => {
       ["dep-a", 0.7],
       ["dep-b", 0.6],
     ]);
-    const directRowsById = new Map([
-      ["dep-a", row("dep-a", -2800, 1_000_000)],
-      ["dep-b", row("dep-b", -3600, 2_000_000)],
+    const incidentsById = new Map([
+      ["dep-a", severe("dep-a", -2800, 1_000_000)],
+      ["dep-b", severe("dep-b", -3600, 2_000_000)],
     ]);
 
-    const evaluation = evaluateOutputDependencyImpairment(weights, directRowsById);
+    const evaluation = evaluateOutputDependencyImpairment(weights, incidentsById);
 
     expect(evaluation).not.toBeNull();
     expect(evaluation?.outputImpairedShare).toBe(1);
     expect(evaluation?.overLeveragedComposition).toBe(true);
     // worst deviation wins attribution
-    expect(evaluation?.impairedDependencyId).toBe("dep-b");
-    expect(evaluation?.impairedRow.peak_deviation_bps).toBe(-3600);
+    expect(evaluation?.dependencyId).toBe("dep-b");
+    expect(evaluation?.currentDeviationBps).toBe(-3600);
   });
 
   it("does not flag compositions whose weights sum to at most 1.0", () => {
@@ -272,9 +393,9 @@ describe("evaluateOutputDependencyImpairment", () => {
       ["dep-a", 0.6],
       ["dep-b", 0.4],
     ]);
-    const directRowsById = new Map([["dep-a", row("dep-a", -3000, 1_000_000)]]);
+    const incidentsById = new Map([["dep-a", severe("dep-a", -3000, 1_000_000)]]);
 
-    const evaluation = evaluateOutputDependencyImpairment(weights, directRowsById);
+    const evaluation = evaluateOutputDependencyImpairment(weights, incidentsById);
 
     expect(evaluation?.outputImpairedShare).toBeCloseTo(0.6, 6);
     expect(evaluation?.overLeveragedComposition).toBe(false);
@@ -288,9 +409,29 @@ describe("evaluateOutputDependencyImpairment", () => {
 
     expect(evaluateOutputDependencyImpairment(weights, new Map())).toBeNull();
 
-    const partial = evaluateOutputDependencyImpairment(weights, new Map([["dep-a", row("dep-a", -3000, 1_000_000)]]));
+    const partial = evaluateOutputDependencyImpairment(
+      weights,
+      new Map([["dep-a", severe("dep-a", -3000, 1_000_000)]]),
+    );
     expect(partial?.outputImpairedShare).toBeCloseTo(0.5, 6);
-    expect(partial?.impairedDependencyId).toBe("dep-a");
+    expect(partial?.dependencyId).toBe("dep-a");
+  });
+
+  it("prefers a confirmed severe dependency over an uncertain dependency", () => {
+    const evaluation = evaluateOutputDependencyImpairment(
+      new Map([
+        ["dep-uncertain", 0.8],
+        ["dep-severe", 0.2],
+      ]),
+      new Map<string, EvaluatedOpenIncident>([
+        ["dep-uncertain", { row: row("dep-uncertain", 1_000_000), state: "uncertain" }],
+        ["dep-severe", severe("dep-severe", -2700, 2_000_000)],
+      ]),
+    );
+
+    expect(evaluation?.evidenceState).toBe("severe");
+    expect(evaluation?.dependencyId).toBe("dep-severe");
+    expect(evaluation?.outputImpairedShare).toBeCloseTo(0.2, 6);
   });
 });
 

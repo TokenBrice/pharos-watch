@@ -388,6 +388,27 @@ describe("syncRedemptionBackstops", () => {
 
   it("passes severe active depeg availability into builders without degrading the cron", async () => {
     const now = Math.floor(Date.now() / 1000);
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: now - 60,
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "cusd-cap",
+            symbol: "CUSD",
+            circulating: { peggedUSD: 10_000_000 },
+            price: 0.1668,
+            priceSource: "pyth",
+            priceConfidence: "single-source",
+            priceObservedAt: now - 60,
+            priceUpdatedAt: now - 60,
+            priceObservedAtMode: "upstream",
+            agreeSources: ["pyth"],
+          }),
+          makeAsset({ id: "iusd-infinifi", symbol: "IUSD", circulating: { peggedUSD: 20_000_000 } }),
+        ],
+      },
+    });
     resolveRedemptionBackstopEntryMock
       .mockResolvedValueOnce(
         makeResolvedSnapshot("cusd-cap", now, {
@@ -409,7 +430,7 @@ describe("syncRedemptionBackstops", () => {
         rows: [
           {
             stablecoin_id: "cusd-cap",
-            peak_deviation_bps: -8332,
+            direction: "below",
             started_at: 1_774_145_097,
           },
         ],
@@ -436,6 +457,8 @@ describe("syncRedemptionBackstops", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.availabilityDegraded).toBe(1);
     expect(metadata.availabilityDegradedIds).toEqual(["cusd-cap"]);
+    expect(metadata.marketImpliedDegraded).toBe(1);
+    expect(metadata.marketEvidenceUncertain).toBe(0);
     expect(metadata.unresolvedCritical).toBe(0);
     expect(metadata.severeActiveDepegThresholdBps).toBe(2500);
   });

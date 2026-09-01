@@ -1081,6 +1081,67 @@ describe("buildRedemptionBackstopEntry", () => {
     );
   });
 
+  it("withholds the score when an open incident lacks current authoritative evidence", async () => {
+    const entry = await buildEntry(
+      "test-coin",
+      route({
+        capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed route" },
+      }),
+      100_000_000,
+      33,
+      {
+        routeAvailability: severeMarketEvidence({
+          routeStatus: "unknown",
+          routeStatusReason:
+            "Open downside incident, but no authoritative current deviation within 1800 seconds establishes present route availability; redemption score withheld.",
+          activeDepegBps: undefined,
+        }),
+      },
+    );
+
+    expect(entry.resolutionState).toBe("impaired");
+    expect(entry.score).toBeNull();
+    expect(entry.routeStatus).toBe("unknown");
+    expect(entry.routeStatusSource).toBe("market-implied");
+    expect(entry.modelConfidence).toBe("low");
+    expect(entry.capsApplied).toContain("market-implied-depeg-evidence-uncertain");
+  });
+
+  it("does not let live-direct capacity bypass uncertainty without explicit live-open status", async () => {
+    const entry = await buildEntry(
+      "zchf-frankencoin",
+      route({
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+      }),
+      50_000_000,
+      33,
+      {
+        reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
+          immediateRedeemableUsd: 5_000_000,
+          immediateRedeemableRatio: 0.1,
+          sourceTimestamp: now - 120,
+          redemption: {
+            capacityUsd: 5_000_000,
+            capacityRatioOfSupply: 0.1,
+            capacityKind: "live-direct",
+            freshnessKind: "same-run-onchain",
+            sourceTimestamp: now - 120,
+          },
+        }, { fetchedAt: now - 120 }),
+        routeAvailability: severeMarketEvidence({
+          routeStatus: "unknown",
+          activeDepegBps: undefined,
+        }),
+      },
+    );
+
+    expect(entry.resolutionState).toBe("impaired");
+    expect(entry.routeStatus).toBe("unknown");
+    expect(entry.score).toBeNull();
+  });
+
   it("keeps strong live-direct routes scoreable during severe active depegs", async () => {
     const entry = await buildEntry(
       "zchf-frankencoin",

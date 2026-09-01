@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.42",
+    title: "Market-implied impairment requires current severe-depeg evidence",
+    date: "2026-09-01",
+    effectiveAt: 1788220800,
+    summary:
+      "Market-implied redemption impairment now requires a fresh authoritative current downside deviation on an open incident, while stale or unavailable currency publishes an unknown market-evidence status and keeps the route unrated instead of asserting present degradation from a historical peak.",
+    impact: [
+      "An open live downside depeg row remains the incident gate, but peak_deviation_bps is historical context only: degraded / market-implied now requires a current signed deviation at or below -2500 bps whose price observation and peg reference pass the existing 1800-second freshness and authority rules.",
+      "When an open downside incident has no trustworthy current deviation, the row publishes routeStatus unknown with routeStatusSource market-implied, remains resolutionState impaired, and keeps score = null; missing evidence cannot restore a static open-route claim.",
+      "A fresh current deviation above the severe threshold releases only the market-implied overlay and falls back to live/static route status without closing or mutating the depeg event. Permanently collapsed assets remain degraded while fresh severe evidence persists and become unknown, not open, if the feed disappears.",
+      "The same current-evidence rule applies to modeled output dependencies; the direct strong-live exception remains available only for current permissionless atomic/immediate capacity and never bypasses a severely impaired or uncertain output asset.",
+      "At the 2026-09-01 production capture measurement, nine rows were degraded by market-implied impairment: one retained current severe evidence, three had current non-severe evidence, and five had no current peg observation. Scoring weights, ladders, route-family caps, and the 2500 bps threshold are unchanged.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.41",
     title: "Explicit scaling for on-chain redemption rates",
     date: "2026-09-01",

@@ -46,23 +46,29 @@ export function mergeRedemptionRouteStatus(args: {
     };
 
   const selectedImpaired = selected.routeStatus !== "open" && selected.routeStatus !== "unknown";
-  const severeOutputImpaired = args.severeMarketImplied?.outputImpairedDependencyId != null;
-  const severeMarketImpaired =
-    args.severeMarketImplied != null && (severeOutputImpaired || !args.allowSevereMarketOpenException);
-  const finalEvidence = severeMarketImpaired ? (args.severeMarketImplied as RedemptionRouteStatusEvidence) : selected;
+  const marketOutputImpaired = args.severeMarketImplied?.outputImpairedDependencyId != null;
+  const marketOverlayApplied =
+    args.severeMarketImplied != null && (marketOutputImpaired || !args.allowSevereMarketOpenException);
+  const finalEvidence = marketOverlayApplied ? (args.severeMarketImplied as RedemptionRouteStatusEvidence) : selected;
   const capsApplied: string[] = [];
   if (selectedImpaired) capsApplied.push("route-status-impairment");
-  if (severeMarketImpaired) capsApplied.push("market-implied-depeg-impairment");
+  if (marketOverlayApplied) {
+    capsApplied.push(
+      args.severeMarketImplied?.routeStatus === "unknown"
+        ? "market-implied-depeg-evidence-uncertain"
+        : "market-implied-depeg-impairment",
+    );
+  }
 
   const notes = new Set<string>();
   if (selected.routeStatusReason) notes.add(selected.routeStatusReason);
-  if (severeMarketImpaired && args.severeMarketImplied?.routeStatusReason) {
+  if (marketOverlayApplied && args.severeMarketImplied?.routeStatusReason) {
     notes.add(args.severeMarketImplied.routeStatusReason);
   }
 
   return {
     ...finalEvidence,
-    impaired: selectedImpaired || severeMarketImpaired,
+    impaired: selectedImpaired || marketOverlayApplied,
     capsApplied,
     notes: [...notes],
   };

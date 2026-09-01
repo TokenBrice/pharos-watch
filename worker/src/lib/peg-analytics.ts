@@ -35,6 +35,75 @@ export interface PegAnalyticsSnapshot {
   pegDataById: Map<string, PegSummaryCoin>;
 }
 
+export interface CurrentPegObservation {
+  currentDeviationBps: number | null;
+  pegReference: PegSummaryCoin["pegReference"];
+  pegReferenceUnavailable: boolean;
+  currentPriceUnavailable: boolean;
+}
+
+export function deriveCurrentPegObservationMap(options: {
+  peggedAssets: StablecoinData[];
+  fxFallbackRates?: Record<string, number>;
+  asOf: number;
+}): Map<string, CurrentPegObservation> {
+  const priceById = new Map(options.peggedAssets.map((asset) => [asset.id, asset]));
+  const {
+    rates: pegRates,
+    sources: pegRateSources = {},
+    counts: pegRateCounts = {},
+  } = derivePegRates(options.peggedAssets, TRACKED_META_BY_ID, options.fxFallbackRates);
+  const result = new Map<string, CurrentPegObservation>();
+
+  for (const meta of ACTIVE_STABLECOINS) {
+    const asset = priceById.get(meta.id);
+    const supply = asset ? getCirculatingRaw(asset) : 0;
+    const currentPriceUnavailable =
+      !meta.flags.navToken && (asset === undefined || !hasUsableCurrentPrice(asset));
+    let currentDeviationBps: number | null = null;
+    let pegReferenceUnavailable = false;
+    let pegReference: PegSummaryCoin["pegReference"] = null;
+
+    if (!meta.flags.navToken && asset && hasUsableCurrentPrice(asset) && supply >= DEPEG_EVENT_MIN_SUPPLY_USD) {
+      const pegType = normalizePegType(asset.pegType);
+      if (
+        !isAuthoritativeDepegPegReference({
+          pegType,
+          pegCurrency: meta.flags.pegCurrency,
+          pegRateSource: pegType ? pegRateSources[pegType] ?? null : null,
+          pegRateContributorCount: pegType ? pegRateCounts[pegType] ?? null : null,
+        })
+      ) {
+        pegReferenceUnavailable = true;
+      } else {
+        const pegRef = getPegReference(pegType, pegRates, meta.commodityOunces);
+        const pegRateSource = pegType ? pegRateSources[pegType] : undefined;
+        if (pegRef != null && Number.isFinite(pegRef) && pegRef > 0 && pegRateSource) {
+          pegReference = {
+            valueUsd: pegRef,
+            source: pegRateSource,
+            contributorCount: pegType ? pegRateCounts[pegType] ?? 0 : 0,
+            asOf: options.asOf,
+          };
+        }
+        currentDeviationBps =
+          pegRef != null && Number.isFinite(pegRef) && pegRef > 0
+            ? deriveDepegSignal(asset.price, pegRef)?.bps ?? null
+            : null;
+      }
+    }
+
+    result.set(meta.id, {
+      currentDeviationBps,
+      pegReference,
+      pegReferenceUnavailable,
+      currentPriceUnavailable,
+    });
+  }
+
+  return result;
+}
+
 function parseLaunchDateSec(dateText: string | undefined): number | null {
   if (!dateText) return null;
   const parsedMs = Date.parse(`${dateText}T00:00:00Z`);
@@ -133,11 +202,11 @@ export async function derivePegAnalyticsSnapshot(
   }
 
   const priceById = new Map(options.peggedAssets.map((asset) => [asset.id, asset]));
-  const {
-    rates: pegRates,
-    sources: pegRateSources = {},
-    counts: pegRateCounts = {},
-  } = derivePegRates(options.peggedAssets, TRACKED_META_BY_ID, options.fxFallbackRates);
+  const currentPegObservationById = deriveCurrentPegObservationMap({
+    peggedAssets: options.peggedAssets,
+    fxFallbackRates: options.fxFallbackRates,
+    asOf: options.methodologyAsOf,
+  });
   const methodologyVersion = getDepegDewsMethodologyVersionAt(options.methodologyAsOf);
   const trackingFallbackStart = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
@@ -157,46 +226,12 @@ export async function derivePegAnalyticsSnapshot(
     // with no usable price observation has an UNOBSERVED deviation, not a
     // withheld or quiet one. Downstream scoring must be able to tell the two
     // apart instead of reading the shared null as "at peg".
-    const currentPriceUnavailable =
-      !meta.flags.navToken && (asset === undefined || !hasUsableCurrentPrice(asset));
-
-    let currentDeviationBps: number | null = null;
-    let pegReferenceUnavailable = false;
-    let pegReference: PegSummaryCoin["pegReference"] = null;
-    if (!meta.flags.navToken && asset && hasUsableCurrentPrice(asset)) {
-      if (supply >= DEPEG_EVENT_MIN_SUPPLY_USD) {
-        // Same authority gate as the depeg detection engine: a thin non-USD
-        // peer median without a live FX fallback is self-referential (a lone
-        // coin always reads ~0; a 2-coin group mirrors half of any real move
-        // onto the healthy peer), so deviation is withheld instead of shown.
-        const pegType = normalizePegType(asset.pegType);
-        if (
-          !isAuthoritativeDepegPegReference({
-            pegType,
-            pegCurrency: meta.flags.pegCurrency,
-            pegRateSource: pegType ? pegRateSources[pegType] ?? null : null,
-            pegRateContributorCount: pegType ? pegRateCounts[pegType] ?? null : null,
-          })
-        ) {
-          pegReferenceUnavailable = true;
-        } else {
-          const pegRef = getPegReference(pegType, pegRates, meta.commodityOunces);
-          const pegRateSource = pegType ? pegRateSources[pegType] : undefined;
-          if (pegRef != null && Number.isFinite(pegRef) && pegRef > 0 && pegRateSource) {
-            pegReference = {
-              valueUsd: pegRef,
-              source: pegRateSource,
-              contributorCount: pegType ? pegRateCounts[pegType] ?? 0 : 0,
-              asOf: options.methodologyAsOf,
-            };
-          }
-          currentDeviationBps =
-            pegRef != null && Number.isFinite(pegRef) && pegRef > 0
-              ? deriveDepegSignal(asset.price, pegRef)?.bps ?? null
-              : null;
-        }
-      }
-    }
+    const currentPegObservation = currentPegObservationById.get(meta.id) ?? {
+      currentDeviationBps: null,
+      pegReference: null,
+      pegReferenceUnavailable: false,
+      currentPriceUnavailable: !meta.flags.navToken,
+    };
 
     const { trackingStart, coverage: historyCoverage } = resolveTrackingAnchor(
       meta,
@@ -216,10 +251,10 @@ export async function derivePegAnalyticsSnapshot(
       pegType: asset?.pegType ?? "",
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
-      currentDeviationBps,
-      pegReference,
-      ...(pegReferenceUnavailable ? { pegReferenceUnavailable } : {}),
-      ...(currentPriceUnavailable ? { currentPriceUnavailable } : {}),
+      currentDeviationBps: currentPegObservation.currentDeviationBps,
+      pegReference: currentPegObservation.pegReference,
+      ...(currentPegObservation.pegReferenceUnavailable ? { pegReferenceUnavailable: true } : {}),
+      ...(currentPegObservation.currentPriceUnavailable ? { currentPriceUnavailable: true } : {}),
       depegEventCoverageLimited,
       pegScore: scoreResult.pegScore,
       pegPct: scoreResult.pegPct,

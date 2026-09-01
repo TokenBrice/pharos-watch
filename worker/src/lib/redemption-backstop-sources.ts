@@ -199,14 +199,14 @@ export async function buildRedemptionBackstopEntry(
     staticEvidence: staticRouteStatus,
     liveEvidence: liveRouteStatus,
     severeMarketImplied: options.routeAvailability ?? null,
-    allowSevereMarketOpenException: hasStrongLiveDirectRoute,
+    allowSevereMarketOpenException: hasStrongLiveDirectRoute && liveRouteStatus?.routeStatus === "open",
   });
   const routeStatus = mergedRouteStatus.routeStatus;
   const routeStatusSource = mergedRouteStatus.routeStatusSource;
   const routeStatusReason = mergedRouteStatus.routeStatusReason;
   const routeStatusReviewedAt = mergedRouteStatus.routeStatusReviewedAt;
 
-  if (resolutionState === "resolved" && mergedRouteStatus.impaired) {
+  if (mergedRouteStatus.impaired && (resolutionState === "resolved" || options.routeAvailability != null)) {
     resolutionState = "impaired";
     score = null;
     const translatedCaps = mergedRouteStatus.capsApplied.map((cap) =>
