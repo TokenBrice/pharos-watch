@@ -16,6 +16,7 @@ const serializeWarnings = (w: readonly unknown[]): string | null => (w.length > 
 export function buildReserveCompositionFinalizeSuccessStatement(
   db: D1Database,
   record: ReserveCompositionRecord,
+  finalizeDeadlineMs: number,
 ): D1PreparedStatement {
   return db
     .prepare(
@@ -29,6 +30,7 @@ ${RESERVE_COMPOSITION_INSERT_COLUMNS}
           WHERE stablecoin_id = ?
             AND last_attempt_id = ?
             AND pending_attempt_id = ?
+            AND ${SQLITE_NOW_MS_EXPRESSION} <= ?
        )
        ON CONFLICT(stablecoin_id) DO UPDATE SET
 ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
@@ -42,6 +44,7 @@ ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
             WHERE stablecoin_id = ?
               AND last_attempt_id = ?
               AND pending_attempt_id = ?
+              AND ${SQLITE_NOW_MS_EXPRESSION} <= ?
          )`,
     )
     .bind(
@@ -58,9 +61,11 @@ ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
       record.stablecoinId,
       record.attemptId ?? null,
       record.attemptId ?? null,
+      finalizeDeadlineMs,
       record.stablecoinId,
       record.attemptId ?? null,
       record.attemptId ?? null,
+      finalizeDeadlineMs,
     );
 }
 

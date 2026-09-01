@@ -106,7 +106,7 @@ export async function finalizeReserveSyncSuccess(
 
   try {
     const [compositionRes, finalizeRes] = await executeAtomicBatch(db, [
-        buildReserveCompositionFinalizeSuccessStatement(db, composition),
+        buildReserveCompositionFinalizeSuccessStatement(db, composition, finalizeDeadlineMs),
         buildReserveSyncFinalizeSuccessStatement(db, syncState, finalizeDeadlineMs),
       ], { returnResults: true });
     compositionApplied = ((compositionRes as D1Result).meta.changes ?? 0) > 0;
