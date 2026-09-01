@@ -17,6 +17,7 @@ import {
   ExitRouteObservationHistorySchema,
 } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
+import { ReserveAssetClassSchema } from "./reserves";
 import {
   V9EvidenceResponsibilitySchema,
   V9FactStatusV2Schema,
@@ -42,8 +43,7 @@ import {
   Sha256Schema,
   UnixSecondsSchema,
   V9ClaimImpairmentSchema,
-  V9ControlCapKindSchema,
-  V9ControlCapUnitSchema,
+  V9ControlCapSemanticsSchema,
   V9ControlCapabilitySchema,
   V9ControlKindSchema,
   V9ControlScopeSchema,
@@ -354,24 +354,7 @@ export const V9EffectiveDependenciesV3Schema = z
   .superRefine(validateDependencyEnvelope);
 export type V9EffectiveDependenciesV3 = z.infer<typeof V9EffectiveDependenciesV3Schema>;
 
-export const V9ReserveAssetClassSchema = z.enum([
-  "cash",
-  "bank-deposit",
-  "treasury-bill",
-  "government-security",
-  "repo",
-  "money-market-fund",
-  "stablecoin",
-  "cryptoasset",
-  "hedged-crypto",
-  "private-credit",
-  "public-credit",
-  "tokenized-security",
-  "fund-share",
-  "protocol-position",
-  "commodity-allocated",
-  "other",
-]);
+export const V9ReserveAssetClassSchema = ReserveAssetClassSchema;
 
 const V9ReserveExposureFactV2Schema = z
   .object({
@@ -637,18 +620,7 @@ const V9DeploymentControlFactV2Schema = z
     scope: V9ControlScopeSchema,
     status: V9FactStatusV2Schema,
     capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (capability) => capability),
-    capSemantics: z
-      .object({
-        kind: V9ControlCapKindSchema,
-        bound: z
-          .object({
-            amount: z.number().finite().nonnegative(),
-            unit: V9ControlCapUnitSchema,
-          })
-          .strict()
-          .nullable(),
-      })
-      .strict(),
+    capSemantics: V9ControlCapSemanticsSchema,
     claimImpairment: V9ClaimImpairmentSchema,
     economicLossScope: V9EconomicLossScopeSchema,
     authority: z

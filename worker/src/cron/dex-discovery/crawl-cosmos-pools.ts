@@ -4,12 +4,11 @@ import {
   isOsmosisSqsDiscoveryDeployment,
 } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
-import { USER_AGENT } from "../../lib/constants";
 import { sleepWithSignal } from "../../lib/abort";
-import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { IsolateLocalState } from "../../lib/isolate-local-state";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../dex-liquidity/constants";
 import { type CrawlStageContext, toStagedPool } from "./staged-pool";
+import { fetchDexDiscoveryJsonEndpoint } from "./fetch-json-endpoint";
 import { STAGED_POOL_MAX_TVL_USD, type DexDeploymentProviderCheck } from "./types";
 
 /**
@@ -55,18 +54,6 @@ export interface CosmosPoolsStageResult {
 
 export { isNobleSwapDiscoveryDeployment, isOsmosisSqsDiscoveryDeployment };
 
-interface EndpointSuccess {
-  kind: "success";
-  body: unknown;
-}
-
-interface EndpointFailure {
-  kind: "failure";
-  retryable?: true;
-}
-
-type EndpointResult = EndpointSuccess | EndpointFailure;
-
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -78,10 +65,6 @@ function parseDenom(value: unknown): string | null {
   const denom = value.trim();
   if (denom.length === 0 || denom.length > 128 || /[\s:]/u.test(denom)) return null;
   return denom;
-}
-
-function isRetryableStatus(status: number): boolean {
-  return status === 408 || status === 425 || status === 429 || status >= 500;
 }
 
 async function paceCosmosRequest(signal?: AbortSignal): Promise<void> {
@@ -96,31 +79,15 @@ async function fetchCosmosEndpoint(
   url: string,
   maxResponseBytes: number,
   context: CrawlStageContext,
-): Promise<EndpointResult> {
+): ReturnType<typeof fetchDexDiscoveryJsonEndpoint> {
   await paceCosmosRequest(context.signal);
-  const result = await fetchJsonWithRetry<unknown>(
+  return fetchDexDiscoveryJsonEndpoint({
     url,
-    {
-      signal: context.buildStageSignal(COSMOS_STAGE_TIMEOUT_MS),
-      headers: {
-        Accept: "application/json",
-        "User-Agent": USER_AGENT,
-      },
-    },
-    COSMOS_REQUEST_MAX_RETRIES,
-    {
-      maxResponseBytes,
-      returnFinalResponse: true,
-      timeoutMs: COSMOS_STAGE_TIMEOUT_MS,
-    },
-  );
-  if (result == null) return { kind: "failure", retryable: true };
-  if (!result.response.ok) {
-    return isRetryableStatus(result.response.status)
-      ? { kind: "failure", retryable: true }
-      : { kind: "failure" };
-  }
-  return { kind: "success", body: result.body };
+    signal: context.buildStageSignal(COSMOS_STAGE_TIMEOUT_MS),
+    maxRetries: COSMOS_REQUEST_MAX_RETRIES,
+    maxResponseBytes,
+    timeoutMs: COSMOS_STAGE_TIMEOUT_MS,
+  });
 }
 
 function makeProviderCheck(

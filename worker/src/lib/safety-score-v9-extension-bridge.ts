@@ -15,6 +15,7 @@ import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile 
 import {
   COMMON_MODE_MATERIAL_SHARE_THRESHOLD,
   DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,
+  authorityModelForType,
   confidenceForResearch,
   isoDateStartSec,
   notApplicableStatus,
@@ -47,27 +48,7 @@ function bridgeAuthority(
   const authorityKey = control.controllerAddress
     ? `${control.controllerChain ?? "chain-unresolved"}:${control.controllerAddress.toLowerCase()}`
     : (control.failureDomainKeys?.[0] ?? `bridge-control:${control.id}:${routeId}`);
-  const model: NonNullable<ControlOverlay["authority"]>["model"] = (() => {
-    if (control.authorityType === "safe" || control.authorityType === "multisig") return "multisig";
-    if (control.authorityType === "eoa") return "eoa";
-    if (control.authorityType === "dao-governor") return "governance";
-    if (control.authorityType === "issuer-backend") return "issuer-backend";
-    // AUTHORITY-LADDER 9.46: an external message-validation quorum is its own
-    // rung — known, but weaker than a named issuer backend and never stronger
-    // than a named multisig.
-    if (control.authorityType === "validator-quorum") return "validator-quorum";
-    // 9.46 also closes a fall-through defect: `bridge` and `custodian` are
-    // authored `MINT_AUTHORITY_TYPE_VALUES` members with no branch here, so a
-    // curator who recorded them still landed on `unknown`. Bridge machinery is a
-    // contract-scoped authority (the same treatment `timelock` takes), and a
-    // custodian is an institutional operator — the grouping `issuerAuthorityKey`
-    // in `safety-score-v9-extension.ts` already applies to it.
-    if (control.authorityType === "contract" || control.authorityType === "timelock") return "contract";
-    if (control.authorityType === "bridge") return "contract";
-    if (control.authorityType === "custodian") return "issuer-backend";
-    if (control.authorityType === "none") return "none";
-    return "unknown";
-  })();
+  const model = authorityModelForType(control.authorityType);
   const required = control.threshold ?? control.safe?.threshold;
   const total = control.signerCount ?? control.safe?.owners?.length;
   const threshold = model === "multisig" && required != null && total != null ? { required, total } : null;

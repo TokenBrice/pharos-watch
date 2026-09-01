@@ -4,25 +4,13 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
+  const { makeOnchainCallersMock, makeOnchainMulticall3Mock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   const fetchOnchainRawCall = vi.fn();
-  const fetchOnchainMulticall3 = vi.fn(async (options: {
-    calls: Array<{ label: string; contract: string; data: string }>;
-    [key: string]: unknown;
-  }) => Promise.all(options.calls.map(async (call) => {
-    const request = { ...options, ...call };
-    const value = call.data === "0xfeaf968c"
-      ? await fetchOnchainRawCall(request)
-      : await fetchOnchainUint256(request);
-    return {
-      label: call.label,
-      success: value != null,
-      returnData: typeof value === "bigint"
-        ? `0x${value.toString(16).padStart(64, "0")}`
-        : value ?? "0x",
-    };
-  })));
+  const fetchOnchainMulticall3 = makeOnchainMulticall3Mock({
+    uint256: fetchOnchainUint256,
+    raw: fetchOnchainRawCall,
+  });
   return {
     ...actual,
     fetchErc20TotalSupply: vi.fn(),

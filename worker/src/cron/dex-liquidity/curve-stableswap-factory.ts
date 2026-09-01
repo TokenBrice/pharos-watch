@@ -17,6 +17,7 @@ import {
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import { normalizeProtocol } from "./pool-helpers";
+import { hasScoreFacingMeasuredExecution, resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
 import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
 
 /**
@@ -150,18 +151,6 @@ function asEvmAddress(chain: string, value: string | null | undefined): `0x${str
 function isUnresolvedCurveStableswapJoin(pool: PoolEntry): boolean {
   const gate = pool.extra?.executionCapabilityGate;
   return gate?.family === "curve-stableswap" && gate.reason === "exact-pool-join-unresolved";
-}
-
-function hasScoreFacingMeasuredExecution(pool: PoolEntry): boolean {
-  const extra = pool.extra;
-  return Boolean(
-    extra?.measuredExecutionTarget ||
-      extra?.measuredExecutionTargets?.length ||
-      extra?.measuredExecution ||
-      extra?.measuredExecutions?.length ||
-      extra?.measuredExecutionProfile ||
-      extra?.measuredExecutionProfiles?.length,
-  );
 }
 
 function gateReference(reference: FactoryReference, reason: CurveGateReason): void {
@@ -344,16 +333,9 @@ export function buildCurveStableswapFactoryExecutionModel(input: {
   const assetIds = state.coins.map((address) =>
     input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, address)),
   );
-  const trackedIndexes = assetIds
-    .map((assetId, index) => (assetId === input.stablecoinId ? index : -1))
-    .filter((index) => index >= 0);
-  if (trackedIndexes.length !== 1) {
-    return {
-      model: null,
-      reason: trackedIndexes.length === 0 ? "tracked-input-unresolved" : "ambiguous-token-identity",
-    };
-  }
-  const trackedTokenIndex = trackedIndexes[0]!;
+  const trackedResolution = resolveUniqueTrackedTokenIndex(assetIds, input.stablecoinId);
+  if (trackedResolution.trackedTokenIndex === null) return { model: null, reason: trackedResolution.reason };
+  const { trackedTokenIndex } = trackedResolution;
 
   const trustedPriceByIndex = assetIds.map((assetId) => {
     if (!assetId) return null;

@@ -16,6 +16,7 @@ import {
 } from "../../lib/evm-rpc";
 import { DECIMALS_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
+import { resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
 import type { EvmV2ExecutionCandidate, LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
 
 const GET_PAIR_SELECTOR = "0xe6a43905";
@@ -377,16 +378,9 @@ function buildExecutionModel(input: {
   const assetIds = state.tokenAddresses.map((address) =>
     input.chainAddressToId.get(canonicalExitRouteAssetKey(input.deployment.chain, address)),
   );
-  const trackedIndexes = assetIds
-    .map((assetId, index) => (assetId === reference.stablecoinId ? index : -1))
-    .filter((index) => index >= 0);
-  if (trackedIndexes.length !== 1) {
-    return {
-      model: null,
-      reason: trackedIndexes.length === 0 ? "tracked-input-unresolved" : "ambiguous-token-identity",
-    };
-  }
-  const trackedTokenIndex = trackedIndexes[0]!;
+  const trackedResolution = resolveUniqueTrackedTokenIndex(assetIds, reference.stablecoinId);
+  if (trackedResolution.trackedTokenIndex === null) return { model: null, reason: trackedResolution.reason };
+  const { trackedTokenIndex } = trackedResolution;
   const trustedPriceByIndex = assetIds.map((assetId) => {
     if (!assetId) return null;
     const price = input.stablecoinPriceById.get(assetId);

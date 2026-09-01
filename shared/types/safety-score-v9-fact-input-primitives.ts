@@ -50,6 +50,18 @@ export const V9ControlCapKindSchema = z.enum([
   "unknown",
 ]);
 export const V9ControlCapUnitSchema = z.enum(["token-units", "usd-notional", "supply-fraction"]);
+export const V9ControlCapSemanticsSchema = z
+  .object({
+    kind: V9ControlCapKindSchema,
+    bound: z
+      .object({
+        amount: z.number().finite().nonnegative(),
+        unit: V9ControlCapUnitSchema,
+      })
+      .strict()
+      .nullable(),
+  })
+  .strict();
 export const V9ClaimImpairmentSchema = z.enum(["none", "bounded", "unbounded", "unknown"]);
 export const V9EconomicLossScopeSchema = z.enum(["access-only", "deployment", "reserve-claim", "global-claim", "unknown"]);
 

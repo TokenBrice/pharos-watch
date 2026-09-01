@@ -98,6 +98,7 @@ import {
 import {
   ReviewEvidenceBuilder,
   accessEvidenceObservationState,
+  authorityModelForType,
   boundedObservedAt,
   confidenceForResearch,
   conservativeDateEndSec,
@@ -262,23 +263,7 @@ function canonicalAuthorityType(assetId: string, control: MintAuthorityControl):
     ? `${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`
     : (control.failureDomainKeys?.[0] ?? issuerAuthorityKey(assetId, control));
   if (authorityKey === null) return null;
-  // AUTHORITY-LADDER 9.46: kept identical to `bridgeAuthority()` in
-  // `safety-score-v9-extension-bridge.ts` so one authored `authorityType` cannot
-  // compile to two different authority models depending on which review carries
-  // it. `validator-quorum` is the external message-validation rung; `bridge` and
-  // `custodian` previously fell through to `unknown` on both sides.
-  const model: NonNullable<ControlOverlay["authority"]>["model"] = (() => {
-    if (control.authorityType === "safe" || control.authorityType === "multisig") return "multisig";
-    if (control.authorityType === "eoa") return "eoa";
-    if (control.authorityType === "dao-governor") return "governance";
-    if (control.authorityType === "issuer-backend") return "issuer-backend";
-    if (control.authorityType === "validator-quorum") return "validator-quorum";
-    if (control.authorityType === "contract" || control.authorityType === "timelock") return "contract";
-    if (control.authorityType === "bridge") return "contract";
-    if (control.authorityType === "custodian") return "issuer-backend";
-    if (control.authorityType === "none") return "none";
-    return "unknown";
-  })();
+  const model = authorityModelForType(control.authorityType);
   const threshold =
     model === "multisig" && control.threshold != null && control.signerCount != null
       ? { required: control.threshold, total: control.signerCount }

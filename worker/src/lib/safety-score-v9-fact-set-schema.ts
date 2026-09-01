@@ -36,14 +36,15 @@ import {
   UnixSecondsSchema,
   V9ClaimImpairmentSchema,
   V9ControlCapabilitySchema,
-  V9ControlCapKindSchema,
-  V9ControlCapUnitSchema,
+  V9ControlCapSemanticsSchema,
   V9ControlKindSchema,
   V9ControlScopeSchema,
   V9EconomicLossScopeSchema,
   V9MechanismExitDispositionSchema,
   V9MechanismExitFactKeySchema,
   V9MechanismQualitySchema,
+} from "@shared/types/safety-score-v9-fact-input-primitives";
+import {
   V9RouteCoverageClassSchema,
   V9RouteExecutionCertaintySchema,
   V9RouteExecutionModelSchema,
@@ -283,18 +284,7 @@ const ControlOverlaySchema = z
     controlKind: V9ControlKindSchema,
     scope: V9ControlScopeSchema,
     capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (value) => value),
-    capSemantics: z
-      .object({
-        kind: V9ControlCapKindSchema,
-        bound: z
-          .object({
-            amount: z.number().finite().nonnegative(),
-            unit: V9ControlCapUnitSchema,
-          })
-          .strict()
-          .nullable(),
-      })
-      .strict(),
+    capSemantics: V9ControlCapSemanticsSchema,
     claimImpairment: V9ClaimImpairmentSchema,
     economicLossScope: V9EconomicLossScopeSchema,
     authority: z

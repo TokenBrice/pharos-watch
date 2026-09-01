@@ -4,8 +4,7 @@ import {
   KAVA_SWAP_USDX_DISCOVERY_ADDRESS,
 } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
-import { USER_AGENT } from "../../lib/constants";
-import { fetchJsonWithRetry } from "../../lib/fetch-retry";
+import { fetchDexDiscoveryJsonEndpoint } from "./fetch-json-endpoint";
 import { type CrawlStageContext, toStagedPool } from "./staged-pool";
 import type { DexDeploymentProviderCheck } from "./types";
 
@@ -32,18 +31,6 @@ interface KavaSwapParams {
   allowedPairs: Set<string>;
   feeTierBp: number;
 }
-
-interface KavaEndpointSuccess {
-  kind: "success";
-  body: unknown;
-}
-
-interface KavaEndpointFailure {
-  kind: "failure";
-  retryable?: true;
-}
-
-type KavaEndpointResult = KavaEndpointSuccess | KavaEndpointFailure;
 
 export interface KavaSwapPoolsStageResult {
   providerChecks: DexDeploymentProviderCheck[];
@@ -180,34 +167,14 @@ function parseKavaSwapPools(body: unknown): KavaSwapPool[] | null {
   return pools;
 }
 
-function isRetryableStatus(status: number): boolean {
-  return status === 408 || status === 425 || status === 429 || status >= 500;
-}
-
-async function fetchKavaSwapEndpoint(path: string, signal: AbortSignal): Promise<KavaEndpointResult> {
-  const result = await fetchJsonWithRetry<unknown>(
-    `${KAVA_SWAP_API_BASE}${path}`,
-    {
-      signal,
-      headers: {
-        Accept: "application/json",
-        "User-Agent": USER_AGENT,
-      },
-    },
-    KAVA_SWAP_REQUEST_MAX_RETRIES,
-    {
-      maxResponseBytes: KAVA_SWAP_MAX_RESPONSE_BYTES,
-      returnFinalResponse: true,
-      timeoutMs: KAVA_SWAP_STAGE_TIMEOUT_MS,
-    },
-  );
-  if (result == null) return { kind: "failure", retryable: true };
-  if (!result.response.ok) {
-    return isRetryableStatus(result.response.status)
-      ? { kind: "failure", retryable: true }
-      : { kind: "failure" };
-  }
-  return { kind: "success", body: result.body };
+function fetchKavaSwapEndpoint(path: string, signal: AbortSignal) {
+  return fetchDexDiscoveryJsonEndpoint({
+    url: `${KAVA_SWAP_API_BASE}${path}`,
+    signal,
+    maxRetries: KAVA_SWAP_REQUEST_MAX_RETRIES,
+    maxResponseBytes: KAVA_SWAP_MAX_RESPONSE_BYTES,
+    timeoutMs: KAVA_SWAP_STAGE_TIMEOUT_MS,
+  });
 }
 function makeProviderCheck(
   target: ContractDeployment,

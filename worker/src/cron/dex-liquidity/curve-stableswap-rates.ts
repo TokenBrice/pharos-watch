@@ -15,6 +15,7 @@ import {
   type EvmBlockHeader,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
+import { hasScoreFacingMeasuredExecution } from "./scoring-helpers";
 import type {
   CurveStableswapRateInputExecutionCandidate,
   LiquidityMetrics,
@@ -83,18 +84,6 @@ function asEvmAddress(chain: string, value: string | null | undefined): `0x${str
 function isRateBearingGate(pool: PoolEntry): boolean {
   const gate = pool.extra?.executionCapabilityGate;
   return gate?.family === "curve-stableswap" && gate.reason === "rate-bearing-inputs";
-}
-
-function hasScoreFacingMeasuredExecution(pool: PoolEntry): boolean {
-  const extra = pool.extra;
-  return Boolean(
-    extra?.measuredExecutionTarget ||
-      extra?.measuredExecutionTargets?.length ||
-      extra?.measuredExecution ||
-      extra?.measuredExecutions?.length ||
-      extra?.measuredExecutionProfile ||
-      extra?.measuredExecutionProfiles?.length,
-  );
 }
 
 function clearCandidate(reference: CandidateReference): void {
