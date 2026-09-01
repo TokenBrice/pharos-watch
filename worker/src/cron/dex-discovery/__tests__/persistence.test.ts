@@ -4,6 +4,7 @@ import {
   hasValidStagedPoolTvl,
   incrementRunSeq,
   isValidStagedPoolId,
+  readDiscoveryCensusSummaries,
   readDiscoveryMeta,
   recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
@@ -228,6 +229,56 @@ describe("discovery persistence D1 retry coverage", () => {
       consecutiveMisses: 3,
       lastCrawlAt: 1_710_000_000,
       lastHitAt: 1_709_900_000,
+    });
+  });
+
+  it("aggregates the deployment census per coin and excludes unsupported chains", async () => {
+    let sql = "";
+    const db = {
+      prepare: (statement: string) => {
+        sql = statement;
+        return {
+          all: async () => ({
+            results: [
+              {
+                stablecoin_id: "buidl-blackrock",
+                verified_no_pools: 8,
+                observed_pools: 0,
+                provider_supported_inaccessible: 0,
+              },
+              {
+                stablecoin_id: "m-m0",
+                verified_no_pools: 9,
+                observed_pools: 0,
+                provider_supported_inaccessible: 7,
+              },
+              {
+                stablecoin_id: "sparse",
+                verified_no_pools: null,
+                observed_pools: null,
+                provider_supported_inaccessible: null,
+              },
+            ],
+          }),
+        };
+      },
+    } as unknown as D1Database;
+
+    const summaries = await readDiscoveryCensusSummaries(db);
+
+    // Unsupported-chain rows must not count as unanswered deployments (R1-D).
+    expect(sql).toContain("provider_set_json <> '[]'");
+    expect(sql).toContain("GROUP BY stablecoin_id");
+    expect(summaries.get("buidl-blackrock")).toEqual({
+      verifiedNoPoolsCount: 8,
+      observedPoolsCount: 0,
+      providerSupportedInaccessibleCount: 0,
+    });
+    expect(summaries.get("m-m0")?.providerSupportedInaccessibleCount).toBe(7);
+    expect(summaries.get("sparse")).toEqual({
+      verifiedNoPoolsCount: 0,
+      observedPoolsCount: 0,
+      providerSupportedInaccessibleCount: 0,
     });
   });
 

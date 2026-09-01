@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
@@ -16,12 +17,14 @@ import {
 import {
   cleanupStaging,
   incrementRunSeq,
+  readDiscoveryCensusSummaries,
   readDiscoveryMeta,
   readDiscoveryTargetCursors,
   recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
   writeDiscoveryTargetCursors,
+  type DiscoveryCensusSummary,
 } from "./persistence";
 import {
   advanceDiscoveryTargetCursor,
@@ -151,6 +154,31 @@ function cadenceEligible(
   return discoveryCohort(stablecoinId, modulo) === runCohort(runSeq, modulo);
 }
 
+/**
+ * Does this coin's census already hold a complete, honest "no DEX pools
+ * anywhere" answer for its provider-supported footprint?
+ *
+ * `updateDiscoveryMeta` counts every zero-pool crawl as a miss, so a footprint
+ * whose correct answer is zero accrues misses forever. Left alone the backoff
+ * ladder demotes it to dormant, whose 24h-plus per-window cadence is slower than
+ * the census freshness bound (`resolveDexDeploymentCensusMaxAgeSec`, priced at
+ * the t3 cadence plus headroom) — so a correct zero-pool answer decayed into a
+ * permanently stale census. Chains with no registered discovery provider are
+ * excluded because the census carries them as a standing unsupported remainder
+ * rather than an unanswered deployment (owner ruling R1-D).
+ */
+export function hasVerifiedEmptyCensus(
+  targets: readonly ContractDeployment[],
+  summary: DiscoveryCensusSummary | undefined,
+): boolean {
+  if (!summary) return false;
+  if (summary.observedPoolsCount > 0 || summary.providerSupportedInaccessibleCount > 0) return false;
+  const supportedDeploymentCount = targets.filter(
+    (target) => getDexDiscoveryProviders(target.chain, target.address).length > 0,
+  ).length;
+  return supportedDeploymentCount > 0 && summary.verifiedNoPoolsCount >= supportedDeploymentCount;
+}
+
 export function computeEffectiveTier(
   stablecoinId: string,
   poolCount: number,
@@ -158,6 +186,7 @@ export function computeEffectiveTier(
   meta: DiscoveryMeta | undefined,
   runSeq: number,
   nowSec: number,
+  censusVerifiedEmpty = false,
 ): EffectiveTier {
   let tier: Exclude<EffectiveTier, "skip">;
 
@@ -171,7 +200,11 @@ export function computeEffectiveTier(
   }
 
   const misses = meta?.consecutiveMisses ?? 0;
-  if (misses >= DISCOVERY_TIERS.BACKOFF_DORMANT_MISSES) {
+  // A footprint that has already answered "no pools anywhere" for every
+  // provider-supported deployment keeps backing off to t3 but never falls to
+  // dormant: t3 is the cadence the census freshness bound is priced at, so its
+  // own correct answer can no longer age itself out of the reviewed scope.
+  if (misses >= DISCOVERY_TIERS.BACKOFF_DORMANT_MISSES && !censusVerifiedEmpty) {
     if ((meta?.lastCrawlAt ?? 0) > nowSec - DISCOVERY_TIERS.DORMANT_INTERVAL_SEC) {
       return "skip";
     }
@@ -249,6 +282,9 @@ export async function syncDexDiscovery(
   const failedCoins: string[] = [];
   const failedCoinErrors: Record<string, string> = {};
   const tierBreakdown = { t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
+  // Coins the verified-empty census held above dormant this run. Observability
+  // for the cadence rule: a green deploy proves nothing about a 20h cadence.
+  let censusCadenceHolds = 0;
   let windowedCoins = 0;
   let windowedDeploymentsDeferred = 0;
   let targetCursors = new Map<string, string>();
@@ -300,6 +336,7 @@ export async function syncDexDiscovery(
 
     const liquidityCoverage = await readLiquidityCoverage(db);
     const metaById = await readDiscoveryMeta(db, signal);
+    const censusById = await readDiscoveryCensusSummaries(db, signal);
     targetCursors = await readDiscoveryTargetCursors(db, signal);
     runSeq = await incrementRunSeq(db, signal);
 
@@ -308,6 +345,14 @@ export async function syncDexDiscovery(
     for (const coin of ACTIVE_STABLECOINS) {
       activeIds.add(coin.id);
       const coverage = liquidityCoverage.get(coin.id);
+      const targets = getTrackedContracts(coin);
+      const censusVerifiedEmpty = hasVerifiedEmptyCensus(targets, censusById.get(coin.id));
+      if (
+        censusVerifiedEmpty &&
+        (metaById.get(coin.id)?.consecutiveMisses ?? 0) >= DISCOVERY_TIERS.BACKOFF_DORMANT_MISSES
+      ) {
+        censusCadenceHolds += 1;
+      }
       const tier = computeEffectiveTier(
         coin.id,
         coverage?.poolCount ?? 0,
@@ -315,6 +360,7 @@ export async function syncDexDiscovery(
         metaById.get(coin.id),
         runSeq,
         nowSec,
+        censusVerifiedEmpty,
       );
 
       if (tier === "skip") {
@@ -326,7 +372,7 @@ export async function syncDexDiscovery(
       eligibleCoins.push({
         stablecoinId: coin.id,
         tier,
-        targets: getTrackedContracts(coin),
+        targets,
         meta: metaById.get(coin.id),
       });
     }
@@ -513,6 +559,7 @@ export async function syncDexDiscovery(
         coinsCrawled,
         poolsDiscovered,
         tierBreakdown,
+        censusCadenceHolds,
         budgetExhausted,
         stagingWritesSkippedForBudget,
         cleanupSkippedForBudget,
@@ -536,6 +583,7 @@ export async function syncDexDiscovery(
         coinsCrawled,
         poolsDiscovered,
         tierBreakdown,
+        censusCadenceHolds,
         budgetExhausted,
         stagingWritesSkippedForBudget,
         cleanupSkippedForBudget,
@@ -567,6 +615,7 @@ export async function syncDexDiscovery(
         coinsCrawled,
         poolsDiscovered,
         tierBreakdown,
+        censusCadenceHolds,
         budgetExhausted,
         stagingWritesSkippedForBudget,
         cleanupSkippedForBudget,
