@@ -46,7 +46,7 @@
         "directMintAbility": "cap-limited",
         "capDescription": "HOME supply expands only as new overcollateralized home loans are originated through a Pan; minting is tied to lien-backed loan creation rather than free issuer mint.",
         "canRaiseCap": false,
-        "evidence": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is a proxy (EIP-1967 impl slot = 0x366049d336e73cfaf39c6a933780ca4c96ea084c, 24022 bytes); owner() reverts on the proxy — minting is contract-controlled via Pan loan origination. Follow-up 2026-07-20: the HOME token proxy's implementation is the Pool16 lending contract (blockscout-verified): borrow() mints HOME permissionlessly against servicer-issued property NFT liens (99% to borrower, 0.5% to servicer, 0.5% to DAO); getServicerAddress() = 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 (the reviewed 3-of-5 MultiSigWallet) and the liquidity token is USDC 0xa0b86991... There is no aggregate on-chain supply cap; mint volume is bounded only by servicer-originated loans.",
+        "evidence": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is a proxy (EIP-1967 impl slot = 0x366049d336e73cfaf39c6a933780ca4c96ea084c, 24022 bytes); owner() reverts on the proxy; minting is contract-controlled via Pan loan origination. Follow-up 2026-07-20: the HOME token proxy's implementation is the Pool16 lending contract (blockscout-verified): borrow() mints HOME permissionlessly against servicer-issued property NFT liens (99% to borrower, 0.5% to servicer, 0.5% to DAO); getServicerAddress() = 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 (the reviewed 3-of-5 MultiSigWallet) and the liquidity token is USDC 0xa0b86991... There is no aggregate on-chain supply cap; mint volume is bounded only by servicer-originated loans.",
         "sources": [
           {
             "label": "HOME token on Etherscan",
@@ -67,7 +67,7 @@
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295203: HOME token EIP-1967 proxy admin slot = 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f (ProxyAdmin, verified via Blockscout). ProxyAdmin.owner() = 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486. getOwners() on that address returns 5 EOA addresses; storage slot 4 = 3 (required/threshold); storage slot 3 = 5 (ownerCount). Contract is 342 bytes — classic Gnosis MultiSigWallet (pre-Safe, no module system).",
+        "evidence": "At Ethereum block 25295203: HOME token EIP-1967 proxy admin slot = 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f (ProxyAdmin, verified via Blockscout). ProxyAdmin.owner() = 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486. getOwners() on that address returns 5 EOA addresses; storage slot 4 = 3 (required/threshold); storage slot 3 = 5 (ownerCount). Contract is 342 bytes, classic Gnosis MultiSigWallet (pre-Safe, no module system).",
         "sources": [
           {
             "label": "HOME ProxyAdmin on Etherscan",

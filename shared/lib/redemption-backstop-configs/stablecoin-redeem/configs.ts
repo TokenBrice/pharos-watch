@@ -1544,8 +1544,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "jusd-juicedollar": defineReviewedStablecoinRedeemConfig("2026-08-13", {
     outputAssetType: "stable-basket",
-    unresolvedOutputAssetKeys: ["USDC.e (Citrea)", "USDT.e (Citrea)", "ctUSD (Citrea; tracked as ctusd-citrea)"],
-    unresolvedOutputDisposition: "reviewed-external",
+    outputAssets: ["usdc-circle", "usdt-tether", "ctusd-citrea"],
     costModel: fixedFee(0, "JuiceDollar's bridge documentation describes fee-free 1:1 burns into the source stablecoin"),
     routeExitCorrelation: "same-stablecoin-pool-backing",
     docs: [
@@ -1575,7 +1574,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Citrea mainnet RPC", "https://rpc.mainnet.citrea.xyz", ["capacity", "route"]),
     ],
     notes: [
-      "The permissionless bridge rail burns JUSD and atomically returns the bridge's source stablecoin; the complete three-member output set remains unresolved because two Citrea assets are untracked.",
+      "The permissionless bridge rail burns JUSD and atomically returns the bridge's source stablecoin.",
+      "Output resolved 2026-09-01 from the fixed Citrea route implementation: USDT.e bridge `0x5cc0e668f8ba61e111b6168e19d17d3c65040614` returns six-decimal token `0x9f3096bac87e7f03dc09b0b416eb0df837304dc4`; USDC.e bridge `0x920db0adf6fee2d69401e9f68d60319177dca20f` returns six-decimal token `0xe045e6c36cf77faa2cfb54466d71a3aef7bbe839`; ctUSD bridge `0x8d11020286af9ecf7e5d7bd79699c391b224a0bd` returns six-decimal token `0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d`. The existing authoritative price route identity-gates those contracts, runtime code hashes, reserves, allowance, and a public burn simulation before inheriting `usdt-tether`, `usdc-circle`, or `ctusd-citrea` valuation.",
       "Per-bridge mint limits, expiry horizons, and governance stop controls constrain execution; burning remains available after mint expiry, but supply-full is an eventual-system bound rather than a same-block liquidity claim.",
     ],
   }),

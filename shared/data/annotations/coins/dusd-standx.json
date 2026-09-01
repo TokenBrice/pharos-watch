@@ -1,4 +1,4 @@
 [
-  {"date":"2025-04-08","kind":"governance","label":"StandX DUSD launch — delta-neutral synthetic dollar","severity":"med","note":"2025-04-08 — StandX DUSD token launches with delta-neutral hedged collateral"},
-  {"date":"2025-11-24","kind":"governance","label":"StandX mainnet launch — perp DEX with DUSD-margin yield","severity":"med","note":"2025-11-24 — StandX mainnet opens to public; DUSD TVL >$176M next day"}
+  {"date":"2025-04-08","kind":"governance","label":"StandX DUSD launch, delta-neutral synthetic dollar","severity":"med","note":"2025-04-08: StandX DUSD token launches with delta-neutral hedged collateral"},
+  {"date":"2025-11-24","kind":"governance","label":"StandX mainnet launch, perp DEX with DUSD-margin yield","severity":"med","note":"2025-11-24: StandX mainnet opens to public; DUSD TVL >$176M next day"}
 ]

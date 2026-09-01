@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import ts from "typescript";
+import { EDITORIAL_POLICY, scanEditorialText } from "../../editorial-style";
 
 const REQUIRED_TARGETS = [
   "shared/lib/selector/what-to-watch-templates.ts",
@@ -18,34 +20,15 @@ const CORPUS_GLOBS = [
   "src/components/selector/**/*.{ts,tsx}",
   "scripts/fixtures/selector-editorial-examples.md",
 ];
-const RULES = [
-  ["Pharos recommends", /\bPharos\s+recommends?\b/gi, "Pharos recommends"],
-  ["Top pick", /\btop\s+pick\b/gi, "top pick"],
-  ["Safe (unqualified)", /(?<![A-Za-z-])safe(?![A-Za-z])/gi, "safe"],
-  ["Best yield-bearing", /\bbest\s+yield(?:-|\s+)bearing\b/gi, "best yield-bearing"],
-  ["Trusted by", /\btrusted\s+by\b/gi, "trusted by"],
-  ["Battle-tested", /\bbattle(?:-|\s+)tested\b/gi, "battle-tested"],
-  ["Probably/likely/reliably (epistemic hedge)", /\b(?:probably|likely|reliably)\b/gi, "probably"],
-  ["We recommend (buy/hold/use)", /\bwe recommend (?:you )?(?:buy|hold|use)\b/gi, "we recommend you buy"],
-  ["Easy/simple/convenient", /\b(?:easy|simple|convenient)\b/gi, "easy"],
-  [
-    "Strongest current reading on that axis",
-    /\bstrongest\s+current\s+reading\s+on\s+that\s+axis\b/gi,
-    "strongest current reading on that axis",
-  ],
-  ["Deprecated rail", /\bdeprecated\s+rail\b/gi, "deprecated rail"],
-  ["Cannot tolerate", /\bcannot\s+tolerate\b/gi, "cannot tolerate"],
-  [
-    "Use [X] for [venue/custody/yield/trading]",
-    /\buse\s+\w+\s+for\s+(?:venue\s+access|custody|yield|trading)\b/gi,
-    "use USDC for custody",
-  ],
-  ["Surfaced opportunities", /\bsurfaced\s+opportunities\b/gi, "surfaced opportunities"],
-  ["Hold safely", /\bhold\s+safely\b/gi, "hold safely"],
-  ["Raw whyKey join fallback", /\bwhyKeys\b[^\n]*\.join\s*\(/gi, "whyKeys.join(', ')"],
-  ["Raw reasonKey interpolation fallback", /\$\{\s*(?:entry\.)?reasonKey\s*\}/g, "`${entry.reasonKey}`"],
-] as const;
-
+const SELECTOR_RULE_IDS = new Set(
+  EDITORIAL_POLICY.rules
+    .filter(
+      (rule) =>
+        rule.severity.byRegister?.["analytical-explanation"] !== undefined ||
+        rule.id === "no-investment-recommendation",
+    )
+    .map((rule) => rule.id),
+);
 function discover(root = process.cwd(), patterns = CORPUS_GLOBS, required = REQUIRED_TARGETS): string[] {
   for (const path of required) {
     if (!existsSync(join(root, path))) throw new Error(`required scan target missing: ${path}`);
@@ -58,14 +41,34 @@ function discover(root = process.cwd(), patterns = CORPUS_GLOBS, required = REQU
 
 function scan(file: string, source: string) {
   const findings: Array<{ file: string; line: number; rule: string; match: string; excerpt: string }> = [];
-  for (const [rule, regex] of RULES) {
-    regex.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(source))) {
-      const line = source.slice(0, match.index).split("\n").length;
-      const excerpt = source.split("\n")[line - 1];
-      if (!excerpt.includes("banned-phrase-allow:"))
-        findings.push({ file, line, rule, match: match[0], excerpt: excerpt.trim().slice(0, 160) });
+  const sourceLines = source.split("\n");
+  const units: Array<{ text: string; offset: number }> = [];
+  if (file.endsWith(".md")) {
+    units.push({ text: source, offset: 0 });
+  } else {
+    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const visit = (node: ts.Node): void => {
+      if (ts.isStringLiteralLike(node)) {
+        units.push({ text: node.text, offset: node.getStart(sourceFile) + 1 });
+      } else if (ts.isJsxText(node)) {
+        units.push({ text: node.getText(sourceFile), offset: node.getStart(sourceFile) });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+  }
+
+  for (const unit of units) {
+    for (const finding of scanEditorialText(unit.text, { register: "analytical-explanation" })) {
+      // Existing universal-rule debt is ratcheted by the repository corpus gate.
+      // This retained local suite owns the Selector-specific central rules only.
+      if (!SELECTOR_RULE_IDS.has(finding.ruleId)) continue;
+      const index = unit.offset + finding.index;
+      const line = source.slice(0, index).split("\n").length;
+      const excerpt = sourceLines[line - 1] ?? "";
+      if (!excerpt.includes("banned-phrase-allow:")) {
+        findings.push({ file, line, rule: finding.ruleId, match: finding.excerpt, excerpt: excerpt.trim().slice(0, 160) });
+      }
     }
   }
   return findings;
@@ -84,19 +87,16 @@ describe("selector editorial policy", () => {
     ).toEqual([]);
   });
 
-  it("reports every rule with actionable diagnostics and honors same-line allows", () => {
-    const all = scan("fixture.tsx", RULES.map((rule) => rule[2]).join("\n"));
-    expect(RULES).toHaveLength(17);
-    expect(new Set(all.map((finding) => finding.rule))).toEqual(new Set(RULES.map((rule) => rule[0])));
-    expect(scan("fixture.tsx", "hold safely // banned-phrase-allow: quoted policy\ntop pick")).toEqual([
-      { file: "fixture.tsx", line: 2, rule: "Top pick", match: "top pick", excerpt: "top pick" },
+  it("uses every active central-policy rule and honors same-line allows", () => {
+    const activeRules = EDITORIAL_POLICY.rules.filter((rule) => SELECTOR_RULE_IDS.has(rule.id));
+    for (const rule of activeRules) {
+      const findings = scan("fixture.md", rule.examples.violating[0]!);
+      expect(findings.map((finding) => finding.rule), rule.id).toContain(rule.id);
+    }
+    expect(scan("fixture.md", "hold safely // banned-phrase-allow: quoted policy\nBuy USDC.")).toEqual([
+      { file: "fixture.md", line: 2, rule: "no-investment-recommendation", match: "Buy USDC", excerpt: "Buy USDC." },
     ]);
-    expect(
-      scan(
-        "fixture.tsx",
-        "safer safety safely safeguard unsafe fail-safe\nconst whyKeys = []; const reasonKey = 'weak';",
-      ),
-    ).toEqual([]);
+    expect(scan("fixture.md", "safer safety safely safeguard unsafe fail-safe")).toEqual([]);
   });
 
   it("fails missing targets and skips tests, dot dirs, specs, and non-target extensions", () => {
@@ -112,7 +112,7 @@ describe("selector editorial policy", () => {
       "surface/__tests__/skip.ts",
       "surface/.hidden/skip.ts",
     ])
-      writeFileSync(join(root, file), "top pick", "utf8");
+      writeFileSync(join(root, file), "Buy USDC.", "utf8");
     expect(discover(root, ["surface/**/*.ts"], ["surface"]).map((path) => path.slice(root.length + 1))).toEqual([
       "surface/visible.ts",
     ]);

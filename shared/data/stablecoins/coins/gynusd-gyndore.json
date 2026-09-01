@@ -9,7 +9,7 @@
     "yieldBearing": true
   },
   "collateral": "cbBTC (Coinbase Wrapped Bitcoin); single-collateral CDPs on Base with 110% minimum collateralization ratio, ~90.91% max LTV",
-  "pegMechanism": "CDP-based: gynUSD minted against cbBTC at 110% min collateralization ratio. If gynUSD trades below $1, on-chain redemptions allow users to swap gynUSD for $1 of cbBTC. Stability Pool absorbs liquidations; liquidators receive a $100 cbBTC bond per position. Borrow rate (1–20%) adjustable in ±10bps steps by GYND holders via the Pareto Controller (80% consensus, 24h challenge window), or by a bootstrapping admin key pre-fee-switch.",
+  "pegMechanism": "CDP-based: gynUSD minted against cbBTC at 110% min collateralization ratio. If gynUSD trades below $1, on-chain redemptions allow users to swap gynUSD for $1 of cbBTC. Stability Pool absorbs liquidations; liquidators receive a $100 cbBTC bond per position. Borrow rate (1 to 20%) adjustable in ±10bps steps by GYND holders via the Pareto Controller (80% consensus, 24h challenge window), or by a bootstrapping admin key pre-fee-switch.",
   "mechanismArchetype": "cdp",
   "detailProvider": "defillama",
   "yieldConfig": {
@@ -25,7 +25,7 @@
     {
       "date": "2026-02-02",
       "type": "announcement",
-      "title": "Gyndore announced — whitepaper published",
+      "title": "Gyndore announced: whitepaper published",
       "description": "Bitcoin-backed CDP stablecoin protocol on Base announced by Ayeteasea, with whitepaper and website going live.",
       "sourceUrl": "https://medium.com/@gyndore"
     },

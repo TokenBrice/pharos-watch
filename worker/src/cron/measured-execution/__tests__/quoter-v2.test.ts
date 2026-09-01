@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { encodeAbiParameters, parseAbiParameters } from "viem/utils";
 
 const rpcMocks = vi.hoisted(() => ({
+  fetchEvmCodeAtBlock: vi.fn(),
   fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
 }));
 
 vi.mock("../../../lib/evm-rpc", () => ({
+  fetchEvmCodeAtBlock: rpcMocks.fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock: rpcMocks.fetchEvmMulticall3Aggregate3AtBlock,
 }));
 
@@ -23,11 +26,24 @@ import {
   resolveQuoterV2PoolBindings,
   validateQuoterV2ProfileProof,
 } from "../quoter-v2";
-import { getDexMeasuredExecutionDeployment } from "../registry";
+import {
+  getDexMeasuredExecutionDeployment,
+  isDexMeasuredExecutionDeploymentScoreEligible,
+  verifyDexMeasuredExecutionDeployment,
+} from "../registry";
 import {
   createDexMeasuredExecutionRpcBudget,
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
 } from "../profiles";
+import { buildDexMeasuredExecutionProfile } from "../profiles";
+import { projectQuoterV2ProfileToV2 } from "../adapters/quoter-v2";
+import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
+import { toMaturePublicProfile } from "./profile.test-support";
+
+const DEMANDED_GRID_USD = [
+  1_000,
+  ...DEX_MEASURED_CAPACITY_NOTIONALS_USD,
+] as const;
 
 interface ReplayFixture {
   name: string;
@@ -163,7 +179,23 @@ function makeTarget(fixture: ReplayFixture): DexMeasuredExecutionTarget {
 
 describe("QuoterV2 pinned-block replay proofs", () => {
   beforeEach(() => {
+    rpcMocks.fetchEvmCodeAtBlock.mockReset();
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockReset();
+  });
+
+  it("rejects a reviewed Quoter deployment when pinned runtime code differs", async () => {
+    const deployment = getDexMeasuredExecutionDeployment(
+      "uniswap-v3-quoter-v2",
+      "ethereum",
+    )!;
+    rpcMocks.fetchEvmCodeAtBlock.mockResolvedValue("0x00");
+
+    await expect(verifyDexMeasuredExecutionDeployment({
+      deployment,
+      blockNumber: REPLAYS[0]!.blockNumber,
+      chainRpcs: new Map(),
+    })).resolves.toEqual({ ok: false, reason: "code-hash-mismatch" });
+    expect(rpcMocks.fetchEvmCodeAtBlock).toHaveBeenCalledTimes(1);
   });
 
   for (const fixture of REPLAYS) {
@@ -172,14 +204,26 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain);
       if (!deployment) throw new Error(`missing ${fixture.name} deployment`);
       rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
-        async (_chain: string, calls: Array<{ label: string; target: string }>) =>
+        async (_chain: string, calls: Array<{ label: string; target: string; callData: `0x${string}` }>) =>
           calls.map((call) => ({
             label: call.label,
             success: true,
             returnData:
               call.target.toLowerCase() === deployment.factoryAddress
                 ? fixture.factoryReturnData
-                : fixture.quoteReturnData,
+                : encodeAbiParameters(
+                    parseAbiParameters(
+                      "uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate",
+                    ),
+                    [
+                      BigInt(fixture.amountOutRaw) *
+                        BigInt(`0x${call.callData.slice(2 + 8 + 128, 2 + 8 + 192)}`) /
+                        BigInt(fixture.amountInRaw),
+                      2n ** 96n,
+                      1,
+                      100_000n,
+                    ],
+                  ),
           })),
       );
 
@@ -195,12 +239,19 @@ describe("QuoterV2 pinned-block replay proofs", () => {
         chainRpcs: new Map(),
       });
       const quotes = await quoteQuoterV2Requests({
-        requests: [{ target, inputUsd: 1_000_000, endpointAddress: deployment.endpointAddress }],
+        requests: DEMANDED_GRID_USD.map((inputUsd) => ({
+          target,
+          inputUsd,
+          endpointAddress: deployment.endpointAddress,
+        })),
         blockNumber: fixture.blockNumber,
         chainRpcs: new Map(),
       });
-      const point = quotes[0]?.point;
-      if (!point || !binding[0]?.proof) throw new Error(`missing ${fixture.name} proof fixture`);
+      const points = quotes.flatMap((quote) => quote.point ? [quote.point] : []);
+      const point = points.find((quote) => quote.inputUsd === 1_000_000);
+      if (!point || points.length !== DEMANDED_GRID_USD.length || !binding[0]?.proof) {
+        throw new Error(`missing ${fixture.name} proof fixture`);
+      }
 
       expect(point.amountInRaw).toBe(fixture.amountInRaw);
       expect(point.amountOutRaw).toBe(fixture.amountOutRaw);
@@ -212,42 +263,58 @@ describe("QuoterV2 pinned-block replay proofs", () => {
         returnData: fixture.factoryReturnData,
       });
 
-      const profile: DexMeasuredExecutionProfile = {
-        schemaVersion: DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
-        kind: "measured-executable-depth",
-        targetId: target.targetId,
+      const profile = buildDexMeasuredExecutionProfile({
+        target,
         targetGenerationId: "target-generation",
         quoteGenerationId: "quote-generation",
-        adapterProfileId: target.adapterProfileId,
-        protocol: target.protocol,
-        chain: target.chain,
-        poolId: target.poolId,
-        poolTokenAddresses: target.poolTokenAddresses,
-        tokenIn: target.tokenIn,
-        tokenOut: target.tokenOut,
-        ...(target.feePips != null ? { feePips: target.feePips } : {}),
-        ...(target.tickSpacing != null ? { tickSpacing: target.tickSpacing } : {}),
-        retainedTvlUsdAtQuote: target.retainedTvlUsd,
-        retainedPoolPriceUsdAtQuote: target.retainedPoolPriceUsd,
         quotedAt: target.capturedAt + 60,
         blockNumber: fixture.blockNumber,
-        executionEndpoint: {
-          address: deployment.endpointAddress,
-          codeHash: deployment.expectedCodeHash,
-        },
+        endpointAddress: deployment.endpointAddress,
+        endpointCodeHash: deployment.expectedCodeHash,
         poolBindingProof: binding[0].proof,
-        maxCostBps: DEX_MEASURED_MAX_COST_BPS,
-        marginalOutputRatio: point.outputUsd / point.inputUsd,
-        capacityCurve: DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => ({
-          requestedNotionalUsd,
-          maxCostBps: DEX_MEASURED_MAX_COST_BPS,
-          executableUsd: 0,
-          completionRatio: 0,
-        })),
-        quoteProof: [point],
-      };
+        points,
+      });
 
       expect(validateQuoterV2ProfileProof(profile)).toEqual([]);
+      const v2Profile = projectQuoterV2ProfileToV2(profile);
+      expect(v2Profile).toMatchObject({
+        adapterId: "evm-quoter-v2",
+        demandedInputAmountsUsd: DEMANDED_GRID_USD,
+        payload: { platform: "evm", blockNumber: fixture.blockNumber },
+      });
+      expect(v2Profile?.payload.platform === "evm" && v2Profile.payload.callProof).toHaveLength(5);
+      if (
+        isDexMeasuredExecutionDeploymentScoreEligible(
+          fixture.adapterProfileId,
+          fixture.chain,
+        )
+      ) {
+        const measuredExecution = toMaturePublicProfile(profile);
+        const p4 = buildP4DexExitRouteObservations({
+          stablecoinId: target.stablecoinId,
+          observedAt: profile.quotedAt + 60,
+          retainedPools: [{
+            poolId: target.poolId,
+            project: target.protocol,
+            chain: target.chain,
+            tvlUsd: target.retainedTvlUsd,
+            symbol: `${target.tokenIn.symbol}-${target.tokenOut.symbol}`,
+            poolType: "cg-concentrated",
+            source: "dl",
+            extra: {
+              measuredExecution,
+              measuredExecutionPhysicalPoolId: target.poolId,
+            },
+          }],
+        });
+        expect(p4.coverage).toMatchObject({
+          retainedPoolCount: 1,
+          scoreEligibleObservationCount: 1,
+          scoreEligiblePoolCount: 1,
+          scoreEligibleCapabilityPoolCount: 1,
+          unsupportedPoolCount: 0,
+        });
+      }
       profile.executionEndpoint.address = "0x0000000000000000000000000000000000000001";
       expect(validateQuoterV2ProfileProof(profile)).toContain("execution-endpoint-identity-mismatch");
     });

@@ -112,11 +112,11 @@
     ],
     "sources": [
       {
-        "label": "Yuzu ouroboros-contracts — PSMOVaultComposer.sol (share OFT must be adapter / lockbox)",
+        "label": "Yuzu ouroboros-contracts: PSMOVaultComposer.sol (share OFT must be adapter / lockbox)",
         "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/PSMOVaultComposer.sol"
       },
       {
-        "label": "Yuzu ouroboros-contracts — ProtoOVaultComposer.sol (inherits LayerZero VaultComposerSync)",
+        "label": "Yuzu ouroboros-contracts: ProtoOVaultComposer.sol (inherits LayerZero VaultComposerSync)",
         "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/ProtoOVaultComposer.sol"
       },
       {

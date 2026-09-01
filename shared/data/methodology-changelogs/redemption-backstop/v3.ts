@@ -283,7 +283,7 @@ export const REDEMPTION_BACKSTOP_V3: readonly MethodologyChangelogEntry[] = [
       summary:
         "The effective exit score now uses max(dex, redemption) + diversification bonus instead of a weighted blend that penalized coins with one strong exit path and one weak one.",
       impact: [
-        "Effective exit formula changed from `max(dex, dex × 0.55 + redemption × 0.45)` to `max(dex, redemption) + min(dex, redemption) × 0.10` — the best exit path dominates and a second path earns a modest diversification bonus",
+        "Effective exit formula changed from `max(dex, dex × 0.55 + redemption × 0.45)` to `max(dex, redemption) + min(dex, redemption) × 0.10`: the best exit path dominates and a second path earns a modest diversification bonus",
         "Redemption-only coins now use the raw redemption backstop score with no cap or discount, removing the previous `min(70, score × 0.75)` penalty; route family caps (offchain-issuer ≤ 65, queue-redeem ≤ 70) remain as guardrails",
         "Coins with strong permissionless redemption (DAI, GHO, frxUSD, LUSD, BOLD) see the largest uplift; DEX-only coins are unaffected; CeFi offchain-issuer coins see modest improvement bounded by route family caps",
       ],

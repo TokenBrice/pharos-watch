@@ -607,7 +607,7 @@
             "url": "https://mainnet.sorobanrpc.com"
           }
         ],
-        "evidence": "Horizon 2026-07-14: account GBYIQXBK... has exactly one signer (itself, ed25519, weight 1) and low/med/high thresholds 0 — not a Stellar multisig. It is the contract creator, token get_owner() and PERM get_admin() at ledger 63473407. simulateTransaction of token.upgrade succeeds with caller = this account and fails for a MINTER holder, so wasm replacement is owner-gated."
+        "evidence": "Horizon 2026-07-14: account GBYIQXBK... has exactly one signer (itself, ed25519, weight 1) and low/med/high thresholds 0, not a Stellar multisig. It is the contract creator, token get_owner() and PERM get_admin() at ledger 63473407. simulateTransaction of token.upgrade succeeds with caller = this account and fails for a MINTER holder, so wasm replacement is owner-gated."
       },
       {
         "chain": "stellar",
@@ -639,7 +639,7 @@
             "url": "https://horizon.stellar.org/accounts/GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
           }
         ],
-        "evidence": "Soroban ledger 63473407: get_role_member(MINTER, 0..2) = GD2ELXTH..., GBWKGT3Q..., GDUFSH23.... Horizon shows each of the three accounts has a single ed25519 signer with weight 1 and thresholds 0/0/0 — none is a Stellar multisig."
+        "evidence": "Soroban ledger 63473407: get_role_member(MINTER, 0..2) = GD2ELXTH..., GBWKGT3Q..., GDUFSH23.... Horizon shows each of the three accounts has a single ed25519 signer with weight 1 and thresholds 0/0/0, none is a Stellar multisig."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -92,7 +92,7 @@
         "bridgeTypes": [
           "erc20-proxy"
         ],
-        "note": "ERC1967 proxy over an ERC20Upgradeable/AccessControl/UUPS impl with no LayerZero/OFT messaging functions — confirms the Adapter/lockbox (not native OFT) architecture."
+        "note": "ERC1967 proxy over an ERC20Upgradeable/AccessControl/UUPS impl with no LayerZero/OFT messaging functions. This confirms the Adapter/lockbox (not native OFT) architecture."
       }
     ],
     "sources": [
@@ -109,7 +109,7 @@
         "url": "https://etherscan.io/address/0xBf1060028b212896F799CFbaeA1eD4EEbd060978#code"
       },
       {
-        "label": "ZeUSD token contract (Etherscan code — plain ERC20 proxy)",
+        "label": "ZeUSD token contract (Etherscan code: plain ERC20 proxy)",
         "url": "https://etherscan.io/address/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761#code"
       }
     ],
@@ -152,7 +152,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on manta 2026-07-20 (block 9029112): ZeUSD token 0x7dc9748da8e762e569f9269f48f69a1a9f8ea761 symbol()='ZeUSD', endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; the OFT contract itself is the mint/burn authority for this representation. owner() = Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca (no bytecode — EOA, as recorded in the mint-authority review).",
+        "reviewNote": "Verified on manta 2026-07-20 (block 9029112): ZeUSD token 0x7dc9748da8e762e569f9269f48f69a1a9f8ea761 symbol()='ZeUSD', endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; the OFT contract itself is the mint/burn authority for this representation. owner() = Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca (no bytecode, EOA, as recorded in the mint-authority review).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -186,7 +186,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on metis 2026-07-20 (block 22922643): ZeUSD token 0x2d3d1a6982840dd88bc2380fd557f8a9d5e27a77 symbol()='ZeUSD', endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; the OFT contract itself is the mint/burn authority for this representation. owner() = Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca (no bytecode — EOA, as recorded in the mint-authority review).",
+        "reviewNote": "Verified on metis 2026-07-20 (block 22922643): ZeUSD token 0x2d3d1a6982840dd88bc2380fd557f8a9d5e27a77 symbol()='ZeUSD', endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; the OFT contract itself is the mint/burn authority for this representation. owner() = Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca (no bytecode, EOA, as recorded in the mint-authority review).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -220,7 +220,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on avalanche 2026-07-20 (block 90755315): ZeUSD token 0x7dc9748da8e762e569f9269f48f69a1a9f8ea761 symbol()='ZeUSD', endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; the OFT contract itself is the mint/burn authority for this representation. owner() = Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca (no bytecode — EOA, as recorded in the mint-authority review).",
+        "reviewNote": "Verified on avalanche 2026-07-20 (block 90755315): ZeUSD token 0x7dc9748da8e762e569f9269f48f69a1a9f8ea761 symbol()='ZeUSD', endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; the OFT contract itself is the mint/burn authority for this representation. owner() = Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca (no bytecode, EOA, as recorded in the mint-authority review).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",

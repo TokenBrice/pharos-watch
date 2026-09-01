@@ -32,6 +32,7 @@
   "geckoId": "argentine-peso",
   "links": [
     {
+      "id": "website",
       "label": "Website",
       "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
     },
@@ -40,6 +41,7 @@
       "url": "https://x.com/RipioApp"
     },
     {
+      "id": "proof-of-reserve",
       "label": "Proof of Reserve",
       "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
     }

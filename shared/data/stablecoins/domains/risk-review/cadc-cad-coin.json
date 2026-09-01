@@ -150,7 +150,7 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native CADC on Solana: SPL mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 (6 decimals, supply 10,001,000,000 raw) has mintAuthority 5PtbcryLdJNVzVxu1FhaJfrHManR4H2Ezg4N5oZ4k3dw and freezeAuthority CwAYsAH3HpJSFvmxUCxd3sExavu9TeEvz49zruhei6w4 — the Loon issuance authorities (read 2026-07-20 via Solana RPC).",
+        "reviewNote": "Native CADC on Solana: SPL mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 (6 decimals, supply 10,001,000,000 raw) has mintAuthority 5PtbcryLdJNVzVxu1FhaJfrHManR4H2Ezg4N5oZ4k3dw and freezeAuthority CwAYsAH3HpJSFvmxUCxd3sExavu9TeEvz49zruhei6w4, the Loon issuance authorities (read 2026-07-20 via Solana RPC).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

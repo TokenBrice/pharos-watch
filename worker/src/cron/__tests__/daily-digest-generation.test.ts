@@ -30,6 +30,13 @@ vi.mock("../../lib/circuit-breaker", async () => (await import("./daily-digest.t
 
 import { generateDailyDigest, resumeDailyDigestDelivery } from "../daily-digest";
 import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
+import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
+import {
+  buildEditorialPrompt,
+  EDITORIAL_STYLE_HASH,
+  EDITORIAL_STYLE_VERSION,
+} from "@shared/lib/editorial-style";
+import { ALLOWED_TONES } from "../daily-digest/response";
 
 
 
@@ -185,6 +192,21 @@ function getInsertDigestBinds(db: MockD1Database): unknown[] | undefined {
   return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"))?.binds;
 }
 
+function styleGateModeTables(modes: { daily: "shadow" | "enforce"; weekly: "shadow" | "enforce" }) {
+  return (Object.entries(modes) as Array<[keyof typeof modes, "shadow" | "enforce"]>).map(([kind, mode]) => ({
+    match: "SELECT value, updated_at FROM cache WHERE key = ?",
+    matchBinds: [DIGEST_STYLE_GATE_MODE_CACHE_KEYS[kind]],
+    rows: [],
+    first: { value: mode, updated_at: Math.floor(Date.now() / 1000) },
+  }));
+}
+
+function withClauseDash(raw: string): string {
+  const parsed = JSON.parse(raw) as { extended: string };
+  parsed.extended = parsed.extended.replace("selection, not volume", "selection — not volume");
+  return JSON.stringify(parsed);
+}
+
 describe("generateDailyDigest", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -265,6 +287,13 @@ describe("generateDailyDigest", () => {
     expect(insertBinds?.[1]).toBe("USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.");
     expect(insertBinds?.[2]).toBe("Calm Drift");
     expect(JSON.parse(String(insertBinds?.[5]))).toMatchObject({
+      styleGateMode: "shadow",
+      editorialStyleGate: {
+        mode: "shadow",
+        firstPassWouldBlock: false,
+        firstPassFindings: [],
+        retry: { eligible: false, attempted: false, outcome: "not-needed" },
+      },
       llm: {
         model: "claude-opus-5",
         effort: "xhigh",
@@ -390,11 +419,12 @@ describe("generateDailyDigest", () => {
     expect(anthropicBody.messages[0].content).toContain("Calm Narrative Frame");
 
     const systemPrompt = anthropicBody.system;
-    expect(systemPrompt).toContain("Do NOT reuse any of the following house-style tics");
-    expect(systemPrompt).toContain("plumbing");
-    expect(systemPrompt).toContain("forward-look");
-    expect(systemPrompt).toContain("Earn one sharp sentence");
-    expect(systemPrompt).toContain("EXEMPLAR");
+    expect(systemPrompt.startsWith(buildEditorialPrompt("daily"))).toBe(true);
+    expect(systemPrompt).toContain("REGISTER: Daily editorial.");
+    expect(systemPrompt).toContain(`Allowed tones: ${ALLOWED_TONES.join(", ")}.`);
+    expect(systemPrompt).not.toContain("death spirals");
+    expect(systemPrompt).not.toContain("FORBIDDEN TICS");
+    expect(systemPrompt).not.toContain("NEVER use em dashes or en dashes");
     expect(systemPrompt).toContain("Momentum Candidate");
     expect(systemPrompt).toContain("total-mcap ATH");
     expect(systemPrompt).toContain("CALM-DAY STORYTELLING");
@@ -436,6 +466,156 @@ describe("generateDailyDigest", () => {
     expect(fetchWithRetry).toHaveBeenCalledTimes(1);
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps daily shadow independent from weekly enforce and repairs before publication", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(mockAnthropicStreamResponse(withClauseDash(ANTHROPIC_OK_TEXT)));
+    const db = makeDailyDigestScenario({
+      db: { prependTables: styleGateModeTables({ daily: "shadow", weekly: "enforce" }) },
+    }).db;
+
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" },
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(postDigestTweet).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(String(getInsertDigestBinds(db as MockD1Database)?.[4])).not.toContain("—");
+    const storedMeta = JSON.parse(String(getInsertDigestBinds(db as MockD1Database)?.[5]));
+    expect(storedMeta).toMatchObject({
+      styleGateMode: "shadow",
+      editorialStyleGate: {
+        mode: "shadow",
+        firstPassWouldBlock: true,
+        firstPassFindings: [{
+          ruleId: "no-clause-dash",
+          field: "extended",
+          excerpt: "—",
+          originalSeverity: "hard",
+        }],
+        retry: { eligible: true, attempted: false, outcome: "shadow-observed" },
+      },
+    });
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      editorialStyleGate: { mode: "shadow" },
+      channels: {
+        twitter: { disposition: "delivered" },
+        telegram: { disposition: "delivered" },
+      },
+    });
+  });
+
+  it("keeps daily enforce independent from weekly shadow and blocks after one field-targeted retry", async () => {
+    const violated = withClauseDash(ANTHROPIC_OK_TEXT);
+    vi.mocked(fetchWithRetry).mockImplementation(async () => mockAnthropicStreamResponse(violated));
+    const db = makeDailyDigestScenario({
+      db: { prependTables: styleGateModeTables({ daily: "enforce", weekly: "shadow" }) },
+    }).db;
+
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" },
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    const correctiveBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[1]?.[1]?.body)) as {
+      messages: Array<{ content: string }>;
+    };
+    expect(correctiveBody.messages[0].content).toContain("no-clause-dash");
+    expect(correctiveBody.messages[0].content).toContain("extended");
+    expect(correctiveBody.messages[0].content).toContain("—");
+    expect(postDigestTweet).not.toHaveBeenCalled();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    expect(String(insertBinds?.[4])).toContain("selection — not volume");
+    const storedMeta = JSON.parse(String(insertBinds?.[5]));
+    expect(storedMeta).toMatchObject({
+      qualityGate: "blocked",
+      styleGateMode: "enforce",
+      editorialStyleGate: {
+        mode: "enforce",
+        firstPassWouldBlock: true,
+        retry: { eligible: true, attempted: true, outcome: "unresolved" },
+        finalUnresolvedFindings: [{ ruleId: "no-clause-dash", field: "extended" }],
+      },
+    });
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      channels: {
+        twitter: { status: "skipped: quality-gate", disposition: "terminal-unsent" },
+        telegram: { status: "skipped: quality-gate", disposition: "terminal-unsent" },
+      },
+      editorialStyleGate: { mode: "enforce" },
+    });
+  });
+
+  it("skips only a wrapper-failing channel without another model generation", async () => {
+    vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
+      ...baselineScenario.deliveryMocks.appendices,
+      appendixHtml: "This wrapper is safe.",
+      metadata: {
+        ...baselineScenario.deliveryMocks.appendices.metadata,
+        hasAppendix: true,
+        trackedDetected: 1,
+      },
+    });
+
+    const result = await generateDailyDigest(
+      baselineScenario.db,
+      "anthropic-key",
+      { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" },
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(postDigestTweet).toHaveBeenCalledTimes(1);
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      channels: {
+        twitter: { disposition: "delivered" },
+        telegram: { status: "skipped: editorial-style-wrapper", disposition: "terminal-unsent" },
+      },
+      wrapperEditorialAlerts: {
+        telegram: [{ ruleId: "no-unqualified-safety", field: "telegram" }],
+      },
+    });
+  });
+
+  it("keeps the literal cemetery appendix allow publishable", async () => {
+    vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
+      ...baselineScenario.deliveryMocks.appendices,
+      appendixHtml: "<b>New Cemetery Entries</b>\n\nThe market has finished another obituary for us.",
+      metadata: {
+        ...baselineScenario.deliveryMocks.appendices.metadata,
+        hasAppendix: true,
+        cemeteryDetected: 1,
+      },
+    });
+
+    const result = await generateDailyDigest(
+      baselineScenario.db,
+      "anthropic-key",
+      null,
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      channels: { telegram: { disposition: "delivered" } },
+      wrapperEditorialAlerts: { telegram: [] },
+    });
   });
 
   it("reports digest preflight and skipped progress when Anthropic is not configured", async () => {
@@ -824,8 +1004,9 @@ describe("generateDailyDigest", () => {
     const metaJson = insertBinds?.[5];
     expect(metaJson).toBeDefined();
     const meta = JSON.parse(String(metaJson));
-    expect(meta.lead).toBe("dews-band-change");
-    expect(meta.tone).toBe("foreboding");
+    expect(meta.tone).toBe("other");
+    expect(meta.editorialStyleVersion).toBe(EDITORIAL_STYLE_VERSION);
+    expect(meta.editorialStyleHash).toBe(EDITORIAL_STYLE_HASH);
     expect(meta.coins).toEqual(["FRAX"]);
   });
 

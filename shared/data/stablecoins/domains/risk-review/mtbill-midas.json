@@ -44,7 +44,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the ethereum mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms ethereum minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the ethereum mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms ethereum minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes, no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -69,7 +69,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the base mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms base minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the base mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms base minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes, no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -94,7 +94,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the rootstock mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms rootstock minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the rootstock mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms rootstock minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes, no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -119,7 +119,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the plume mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms plume minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the plume mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms plume minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes, no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -144,7 +144,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the etherlink mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms etherlink minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the etherlink mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms etherlink minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes, no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

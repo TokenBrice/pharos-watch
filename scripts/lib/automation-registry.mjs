@@ -402,6 +402,18 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: ["src/data/changelogs/*.ts"],
   }),
   generatedArtifact({
+    id: "editorial-style",
+    buildLifecycle: "compile-input",
+    autoStage: true,
+    checkCommand: "node --import tsx scripts/maintenance/generate-editorial-style.ts --check",
+    command: "node --import tsx scripts/maintenance/generate-editorial-style.ts",
+    outputPaths: ["shared/lib/editorial-style.generated.ts"],
+    phase: 2,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-editorial-style.ts",
+    sourcePaths: ["docs/editorial-style.md"],
+  }),
+  generatedArtifact({
     id: "og-editorial",
     buildLifecycle: "maintenance-only",
     checkCommand: "node scripts/maintenance/build-og-editorial.mjs --check",

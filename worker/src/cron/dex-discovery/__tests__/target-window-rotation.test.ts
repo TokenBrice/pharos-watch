@@ -68,6 +68,7 @@ vi.mock("../persistence", () => ({
 import { syncDexDiscovery } from "../orchestrator";
 import { crawlCoin } from "../crawl-sources";
 import { discoveryTargetCursorKey, estimateDeploymentCrawlCostMs } from "../target-window";
+import { recordDiscoveryAttemptFence } from "../persistence";
 
 const db = {
   prepare: () => ({
@@ -109,6 +110,11 @@ describe("dex discovery deployment-window rotation", () => {
       const result = await syncDexDiscovery(db, null);
       expect(result.status).toBe("ok");
       runWindows.push(lastCrawlWindow());
+      const fenceCalls = vi.mocked(recordDiscoveryAttemptFence).mock.calls;
+      expect(
+        fenceCalls[fenceCalls.length - 1]?.[2]
+          .map(discoveryTargetCursorKey),
+      ).toEqual(runWindows[runWindows.length - 1]);
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ windowedCoins: 1 });
     }
 

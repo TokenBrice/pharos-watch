@@ -54,7 +54,7 @@
     "review": {
       "sources": [
         {
-          "label": "Tenbin contracts — deployments.json",
+          "label": "Tenbin contracts: deployments.json",
           "url": "https://github.com/tenbinlabs/tenbin-contracts/blob/master/deployments.json"
         },
         {

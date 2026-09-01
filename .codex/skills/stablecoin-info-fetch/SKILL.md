@@ -3,8 +3,9 @@ name: stablecoin-info-fetch
 description: Verify and populate one tracked stablecoin's metadata (collateral, peg mechanism, jurisdiction, links, geckoId, contracts, proofOfReserves) in its routed per-coin source files. Use when adding a coin, filling metadata gaps, or auditing one coin's entry.
 ---
 
-# Stablecoin Info Fetch
+Read `docs/editorial-style.md` before writing. Its universal rules and the named `profile-reference`, `coin-summary`, and `technical-evidence` registers govern all Pharos-owned prose; this skill adds only factual, sourcing, schema, and format requirements.
 
+# Stablecoin Info Fetch
 Verify one coin's metadata with structured APIs and primary sources first, then patch the owning base or domain-sidecar JSON with the smallest defensible diff.
 
 ## Read First
@@ -28,7 +29,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - `cmcSlug`
 - `contracts`
 - `proofOfReserves`
-- `oneLiner` (required on every active/pre-launch coin — CI-backstopped)
+- `oneLiner` (required on every active/pre-launch coin; CI-backstopped)
 - `mechanismArchetype` (use the mapping cheatsheet in `docs/process/adding-a-stablecoin.md`; `check:mechanism-archetype-coverage` backstops)
 - `mintAuthority` (reviewed-or-waived for high-value active additions and pre-launch promotions; descriptive only)
 
@@ -57,7 +58,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - `geckoId`: confirm via search plus coin detail, not by guessing
 - `cmcSlug`: add only when genuinely needed for price fallback
 - `contracts`: verify name, symbol, and decimals before adding
-- `proofOfReserves`: store `{ type, url, provider?, attestorTier?, cadence?, attestorJurisdiction?, attestorLicense? }` (`shared/types/stablecoin-meta-schemas.ts` wins on shape). `attestorTier` is required-or-waived when `type` is `independent-audit` — see the attestor-tier rules in `docs/process/adding-a-stablecoin.md`
+- `proofOfReserves`: store `{ type, url, provider?, attestorTier?, cadence?, attestorJurisdiction?, attestorLicense? }` (`shared/types/stablecoin-meta-schemas.ts` wins on shape). `attestorTier` is required-or-waived when `type` is `independent-audit`. See the attestor-tier rules in `docs/process/adding-a-stablecoin.md`
 - `mintAuthority`: if high-value or explicitly requested, either author a sourced `mintAuthority` profile or record an intentional gap. The profile must include `mintPath`, `authorityPosture`, `confidence`, `summary`, and `review`; privileged paths require `controls[]` unless confidence is `unknown`.
 
 6. If DefiLlama reports meaningful supply on a chain that is missing from `contracts`, treat that as a gap signal and use `contract-populate` or `contract-enrich` style verification.
@@ -76,4 +77,4 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - If sources conflict, keep the current value unless a stronger primary source clearly wins.
 - Mint Authority is descriptive and unscored. Missing reviewed data means the detail section is omitted; it must not be treated as safe.
 - Verified Safe or multisig Mint Authority controls need threshold, signer count, and modules/guards status. If modules or guards are unknown, cap verified or probable confidence at `manual-review`.
-- Adding a chain deployment to `contracts` on an active multi-chain asset creates a current Safety Score methodology exit/control evidence gap unless matching `bridgeRouteRisk.routes` rows exist (risk-review sidecar) — author or flag them; do not silently expand the deployment footprint.
+- Adding a chain deployment to `contracts` on an active multi-chain asset creates a current Safety Score methodology exit/control evidence gap unless matching `bridgeRouteRisk.routes` rows exist (risk-review sidecar). Author or flag them; do not silently expand the deployment footprint.

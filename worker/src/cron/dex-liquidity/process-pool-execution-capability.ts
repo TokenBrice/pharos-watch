@@ -1,9 +1,15 @@
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import {
+  canonicalExitRouteAssetKey,
+  canonicalExitRouteChain,
+} from "@shared/lib/exit-route-identity";
+import type { DexApiPool } from "../../lib/dex-api-common";
 import type {
   CurvePoolEntry,
   CurveStableswapRateInputExecutionCandidate,
+  PoolEntry,
+  SymbolLookups,
 } from "./types";
-import { isCryptoSwap } from "./pool-helpers";
+import { isCryptoSwap, normalizeProtocol } from "./pool-helpers";
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
 import {
   DEX_MEASURED_TARGET_SCHEMA_VERSION,
@@ -42,6 +48,148 @@ import type {
   PoolProtocolEnrichment,
   ResolvedPoolIdentity,
 } from "./process-pool-types";
+import {
+  buildRegisteredDexExecutionTarget,
+  hasRegisteredDexExecutionTargetOutput,
+  type DexExecutionTargetFactoryOutput,
+} from "./execution-target-registry";
+
+export interface DirectApiExecutionTargetContext {
+  uniV3ExecutionCandidates: PoolProcessingContext["uniV3ExecutionCandidates"];
+  uniswapV4ExecutionCandidates: PoolProcessingContext["uniswapV4ExecutionCandidates"];
+  aerodromeIsStable: PoolProcessingContext["aerodromeIsStable"];
+  measuredTargetCapturedAt: number;
+  contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
+}
+
+function directApiPoolFeePips(pool: DexApiPool): number | null {
+  if (pool.feeRate == null || !Number.isFinite(pool.feeRate) || pool.feeRate <= 0) return null;
+  const feePips = Math.round(pool.feeRate * 1_000_000);
+  return Number.isInteger(feePips) && feePips <= 1_000_000 ? feePips : null;
+}
+
+function buildDirectApiFactoryInput(input: {
+  pool: DexApiPool;
+  stablecoinId: string;
+  chainAddressToId: PoolProcessingContext["chainAddressToId"];
+  symbolToChainScopedIds: PoolProcessingContext["symbolToChainScopedIds"];
+  stablecoinPriceById: NonNullable<PoolProcessingContext["stablecoinPriceById"]>;
+  validationReferences: NonNullable<PoolProcessingContext["validationReferences"]>;
+  executionTargetContext: DirectApiExecutionTargetContext;
+}) {
+  const {
+    pool,
+    stablecoinId,
+    chainAddressToId,
+    symbolToChainScopedIds,
+    stablecoinPriceById,
+    validationReferences,
+    executionTargetContext,
+  } = input;
+  const protocol = normalizeProtocol(pool.source);
+  const chainNorm = canonicalExitRouteChain(pool.chain);
+  const poolSymbols = pool.tokens.map((token) => token.symbol);
+  const feePips = directApiPoolFeePips(pool);
+  const llamaPool = {
+    pool: pool.poolAddress,
+    chain: pool.chain,
+    project: protocol,
+    symbol: poolSymbols.join(" / "),
+    poolMeta: feePips == null ? null : `${feePips / 10_000}%`,
+    tvlUsd: pool.tvlUsd,
+    volumeUsd1d: pool.volume24hUsd,
+    volumeUsd7d: null,
+    stablecoin: pool.tokens.every((token) =>
+      chainAddressToId.has(canonicalExitRouteAssetKey(chainNorm, token.address)),
+    ),
+    underlyingTokens: pool.tokens.map((token) => token.address),
+    apyBase: null,
+    apyReward: null,
+    apy: 0,
+    sigma: 0,
+    exposure: "multi",
+    count: 30,
+  };
+  const context = {
+    pools: [llamaPool],
+    dexProjects: new Set<string>(),
+    symbolToChainScopedIds,
+    chainAddressToId,
+    curvePoolMap: new Map(),
+    uniV3PoolFees: new Map(),
+    uniV3SymbolFees: new Map(),
+    aerodromeIsStable: executionTargetContext.aerodromeIsStable,
+    uniV3ExecutionCandidates: executionTargetContext.uniV3ExecutionCandidates,
+    stablecoinPriceById,
+    measuredTargetCapturedAt: executionTargetContext.measuredTargetCapturedAt,
+    validationReferences,
+    aerodromeV2ExecutionCandidates: new Map(),
+    uniqueAerodromeV2ExecutionCandidates: new Map(),
+    curvePoolCandidatesByFingerprint: new Map(),
+    uniswapV4ExecutionCandidates: executionTargetContext.uniswapV4ExecutionCandidates,
+    contractMetaByChainAddress: executionTargetContext.contractMetaByChainAddress,
+  } as PoolProcessingContext & Pick<DirectApiExecutionTargetContext, "contractMetaByChainAddress">;
+  const identity: ResolvedPoolIdentity = {
+    pool: llamaPool,
+    matchedIds: new Set([stablecoinId]),
+    poolSymbols,
+    poolType: pool.poolType,
+    protocol,
+    chainNorm,
+    addrCurveKey: canonicalExitRouteAssetKey(chainNorm, pool.poolAddress),
+    fpCurveKey: null,
+    symCurveKey: `${chainNorm}:${poolSymbols
+      .map((symbol) => symbol.toUpperCase())
+      .sort()
+      .join("-")}`,
+  };
+  const enrichment: PoolProtocolEnrichment = {
+    curveData: undefined,
+    curveMeasuredRouteData: undefined,
+    curveAddressMatch: false,
+    resolvedPoolType: pool.poolType,
+    qualityMultiplier: 1,
+    feeTierForExtra: feePips == null ? undefined : feePips / 100,
+    balanceRatio: 1,
+    poolMaturityDays: 30,
+    organicFraction: 0.5,
+    hasMeasuredOrganicFraction: false,
+    effectivePoolTvl: pool.tvlUsd,
+    rawContribTvl: pool.tvlUsd,
+    balanceDetails: undefined,
+    volumeUsd1d: pool.volume24hUsd,
+    volumeUsd7d: null,
+  };
+  return { context, identity, enrichment, stablecoinId };
+}
+
+/**
+ * Project an exact direct-source pool into the already-frozen factory input.
+ * The projection deliberately carries the source pool id, token order and fee
+ * rather than rebuilding identity from a retained display row.
+ */
+export function buildRegisteredDirectApiExecutionTarget(input: {
+  pool: DexApiPool;
+  stablecoinId: string;
+  chainAddressToId: PoolProcessingContext["chainAddressToId"];
+  symbolToChainScopedIds: PoolProcessingContext["symbolToChainScopedIds"];
+  stablecoinPriceById: NonNullable<PoolProcessingContext["stablecoinPriceById"]>;
+  validationReferences: NonNullable<PoolProcessingContext["validationReferences"]>;
+  executionTargetContext: DirectApiExecutionTargetContext;
+}): DexExecutionTargetFactoryOutput | null {
+  const output = buildRegisteredDexExecutionTarget(buildDirectApiFactoryInput(input));
+  return hasRegisteredDexExecutionTargetOutput(output) ? output : null;
+}
+
+export function applyRegisteredExecutionTargetOutput(
+  extra: NonNullable<PoolEntry["extra"]>,
+  output: DexExecutionTargetFactoryOutput,
+): void {
+  for (const [key, value] of Object.entries(output) as [keyof PoolExecutionCapability, unknown][]) {
+    if (value === undefined) delete extra[key];
+    else Object.assign(extra, { [key]: value });
+  }
+}
 
 /**
  * Builds the exact StableSwap execution model for an address-matched plain
@@ -777,6 +925,12 @@ export function buildPoolExecutionCapability(
     !curveCompositeMeasuredTarget
       ? curveExecutionCapability.gate
       : measuredExecutionGate;
+  const registeredTarget = buildRegisteredDexExecutionTarget({
+    context,
+    identity,
+    enrichment,
+    stablecoinId,
+  });
 
   return {
     ...(curveExecutionCapability.executionModel
@@ -794,5 +948,6 @@ export function buildPoolExecutionCapability(
     ...(curveStableSwapPhysicalPoolId
       ? { measuredExecutionPhysicalPoolId: curveStableSwapPhysicalPoolId }
       : {}),
+    ...registeredTarget,
   };
 }

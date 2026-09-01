@@ -50,7 +50,7 @@
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "dUSD's own price is hard-coded at $1 for mint, redeem, and dLEND lending/borrowing to resist manipulation, but the protocol values its yield-bearing reserve stablecoins (e.g. sfrxUSD, sUSDS) and dLEND collateral through external feeds — API3 and Redstone, with Chainlink and issuer feeds — and those feeds drive reserve NAV and mint/redeem ratios. No documented single-primary-with-failover oracle architecture per asset.",
+    "summary": "dUSD's own price is hard-coded at $1 for mint, redeem, and dLEND lending/borrowing to resist manipulation, but the protocol values its yield-bearing reserve stablecoins (e.g. sfrxUSD, sUSDS) and dLEND collateral through external feeds, API3 and Redstone, with Chainlink and issuer feeds, and those feeds drive reserve NAV and mint/redeem ratios. No documented single-primary-with-failover oracle architecture per asset.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -116,11 +116,11 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "dTRINITY docs — contract addresses",
+            "label": "dTRINITY docs: contract addresses",
             "url": "https://docs.dtrinity.org/security/addresses"
           },
           {
-            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "label": "dTRINITY docs: network support (chain-isolated architecture)",
             "url": "https://docs.dtrinity.org/key-concepts/network-support"
           },
           {
@@ -145,11 +145,11 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "dTRINITY docs — contract addresses",
+            "label": "dTRINITY docs: contract addresses",
             "url": "https://docs.dtrinity.org/security/addresses"
           },
           {
-            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "label": "dTRINITY docs: network support (chain-isolated architecture)",
             "url": "https://docs.dtrinity.org/key-concepts/network-support"
           },
           {
@@ -174,11 +174,11 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "dTRINITY docs — contract addresses",
+            "label": "dTRINITY docs: contract addresses",
             "url": "https://docs.dtrinity.org/security/addresses"
           },
           {
-            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "label": "dTRINITY docs: network support (chain-isolated architecture)",
             "url": "https://docs.dtrinity.org/key-concepts/network-support"
           },
           {
@@ -198,16 +198,16 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment (chain-isolated architecture): the Sonic dUSD proxy is administered directly by the 3-of-5 Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262 with no timelock (role reads 2026-07-20) — a weaker control than the other chains, and the deployment is absent from dTRINITY's docs registry (flagged).",
+        "reviewNote": "Issuer-native deployment (chain-isolated architecture): the Sonic dUSD proxy is administered directly by the 3-of-5 Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262 with no timelock (role reads 2026-07-20), a weaker control than the other chains, and the deployment is absent from dTRINITY's docs registry (flagged).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "dTRINITY docs — contract addresses",
+            "label": "dTRINITY docs: contract addresses",
             "url": "https://docs.dtrinity.org/security/addresses"
           },
           {
-            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "label": "dTRINITY docs: network support (chain-isolated architecture)",
             "url": "https://docs.dtrinity.org/key-concepts/network-support"
           },
           {

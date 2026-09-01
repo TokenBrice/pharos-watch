@@ -2,7 +2,6 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
@@ -39,6 +38,7 @@ import {
 } from "./deployment-outcomes";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { getRuntimeDexDiscoveryProviders } from "./provider-registry";
 
 export type EffectiveTier = "t1" | "t2" | "t3" | "dormant" | "skip";
 
@@ -110,6 +110,7 @@ async function fenceFailedDiscoveryAttempt(
     await recordDiscoveryAttemptFence(
       db,
       candidate.stablecoinId,
+      deployments,
       nowSec,
       signal,
     );
@@ -174,7 +175,7 @@ export function hasVerifiedEmptyCensus(
   if (!summary) return false;
   if (summary.observedPoolsCount > 0 || summary.providerSupportedInaccessibleCount > 0) return false;
   const supportedDeploymentCount = targets.filter(
-    (target) => getDexDiscoveryProviders(target.chain, target.address).length > 0,
+    (target) => getRuntimeDexDiscoveryProviders(target.chain, target.address).length > 0,
   ).length;
   return supportedDeploymentCount > 0 && summary.verifiedNoPoolsCount >= supportedDeploymentCount;
 }
@@ -442,6 +443,7 @@ export async function syncDexDiscovery(
         await recordDiscoveryAttemptFence(
           db,
           candidate.stablecoinId,
+          targetWindow.targets,
           nowSec,
           signal,
         );

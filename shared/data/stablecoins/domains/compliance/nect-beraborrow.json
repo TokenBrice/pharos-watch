@@ -4,19 +4,19 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — ART/EMT issuer registers",
+        "label": "ESMA MiCA register landing page: ART/EMT issuer registers",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA interim MiCA register — EMT issuers (checked 2026-08-14)",
+        "label": "ESMA interim MiCA register: EMT issuers (checked 2026-08-14)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Beraborrow overview — NECT minted by over-collateralized Dens",
+        "label": "Beraborrow overview: NECT minted by over-collateralized Dens",
         "url": "https://beraborrow.gitbook.io/docs"
       },
       {
-        "label": "Beraborrow NECT peg documentation — protocol redemption mechanism",
+        "label": "Beraborrow NECT peg documentation: protocol redemption mechanism",
         "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions/usdnect-peg"
       }
     ]

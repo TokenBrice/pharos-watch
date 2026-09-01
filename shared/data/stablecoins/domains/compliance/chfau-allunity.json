@@ -6,13 +6,13 @@
       "summary": "CHFAU is marketed as a 1:1 CHF-redeemable EMT for payments, settlement, and treasury use. That functional profile is close to a GENIUS payment stablecoin, although AllUnity is a German foreign issuer and no U.S. GENIUS pathway was found.",
       "references": [
         {
-          "label": "AllUnity CHFAU product page — 1:1 redemption and payments use",
+          "label": "AllUnity CHFAU product page: 1:1 redemption and payments use",
           "url": "https://allunity.com/chfau",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "GENIUS Act — payment stablecoin definition and foreign issuer framework",
+          "label": "GENIUS Act: payment stablecoin definition and foreign issuer framework",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "accessedAt": "2026-08-14"
@@ -34,25 +34,25 @@
     "notes": "The ESMA EMT register reviewed on 2026-08-14 contains an official CHFAU entry naming AllUnity GmbH and BaFin, which is MiCA evidence only and not GENIUS approval. No public U.S. permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was located. AllUnity's own site limits direct minting to institutional and professional clients and states that reserve audit reporting is coming soon. The GENIUS rulemaking phase remains proposed-rules.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC Digital Assets Licensing Applications — current pending-application table",
+        "label": "OCC Digital Assets Licensing Applications: current pending-application table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Federal Register 91 FR 10202 — OCC GENIUS proposed rules",
+        "label": "Federal Register 91 FR 10202: OCC GENIUS proposed rules",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "ESMA Interim MiCA Register — EMTWP.csv entry for CHFAU / AllUnity GmbH",
+        "label": "ESMA Interim MiCA Register: EMTWP.csv entry for CHFAU / AllUnity GmbH",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
         "sourceKind": "foreign-regulator",
         "sourceDate": "2026-08-12",
@@ -65,7 +65,7 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "AllUnity Trust Center — reserve transparency and regulatory disclosures",
+        "label": "AllUnity Trust Center: reserve transparency and regulatory disclosures",
         "url": "https://allunity.com/trust-center/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

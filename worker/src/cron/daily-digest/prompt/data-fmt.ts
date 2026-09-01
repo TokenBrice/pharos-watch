@@ -62,7 +62,7 @@ export function pushMomentumLines(lines: string[], data: DigestInputData): void 
   const candidates = data.editorialCandidates ?? [];
   const momentum = selectMomentumCandidates(candidates);
   if (momentum.length === 0) return;
-  lines.push("", "Momentum Candidates (forward-watch material — use these to anchor the required forward-look line):");
+  lines.push("", "Momentum Candidates (forward-watch material; use these to anchor the required forward-look line):");
   for (const candidate of momentum) {
     const symbols = candidate.symbols.length > 0 ? ` | coins=${candidate.symbols.join(",")}` : "";
     lines.push(

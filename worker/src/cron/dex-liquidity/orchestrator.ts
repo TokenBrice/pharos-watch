@@ -756,8 +756,9 @@ async function buildDexLiquidityPoolState(
     fallbackCounters: ctx.fallbackCounters,
   });
 
-  // Primary pools and enrichment maps have been projected into metrics and the
-  // identity index. Drop their source graphs before D1 materializes staged rows.
+  // Primary pools and display-only enrichment maps have been projected into
+  // metrics and the identity index. Keep only the exact target candidates
+  // through direct-pool integration, then release them below.
   preferredPrimaryPools = [];
   primaryPreference.filteredPools = [];
   sourceState.dataSources.pools = [];
@@ -768,10 +769,7 @@ async function buildDexLiquidityPoolState(
   sourceState.subgraphEnrichment.uniV3PoolFees = new Map();
   sourceState.subgraphEnrichment.uniV3SymbolFees = new Map();
   sourceState.subgraphEnrichment.uniV3PriceObs = new Map();
-  sourceState.subgraphEnrichment.uniV3ExecutionCandidates = new Map();
-  sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates = new Map();
   sourceState.subgraphEnrichment.aerodromePriceObs = new Map();
-  sourceState.subgraphEnrichment.aerodromeIsStable = new Map();
   sourceState.subgraphEnrichment.aerodromeV2ExecutionCandidates = new Map();
 
   const directApiIntegration = await integrateDirectApiLiquidityPhase({
@@ -786,6 +784,16 @@ async function buildDexLiquidityPoolState(
     symbolToIds: sourceState.lookups.symbolToIds,
     validationReferences: sourceState.validationReferences,
     stablecoinPriceById: sourceState.stablecoinPriceById,
+    executionTargetContext: {
+      uniV3ExecutionCandidates:
+        sourceState.subgraphEnrichment.uniV3ExecutionCandidates,
+      uniswapV4ExecutionCandidates:
+        sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
+      aerodromeIsStable: sourceState.subgraphEnrichment.aerodromeIsStable,
+      measuredTargetCapturedAt: ctx.syncStartSec,
+      contractMetaByChainAddress:
+        sourceState.lookups.contractMetaByChainAddress,
+    },
     preprocessedPoolCounts: sourceState.directApiPoolCounts,
     fallbackCounters: ctx.fallbackCounters,
   });
@@ -793,6 +801,9 @@ async function buildDexLiquidityPoolState(
 
   // The compact direct pool list is no longer needed after integration.
   sourceState.directApiPools = [];
+  sourceState.subgraphEnrichment.uniV3ExecutionCandidates = new Map();
+  sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates = new Map();
+  sourceState.subgraphEnrichment.aerodromeIsStable = new Map();
   sourceState.lookups.symbolToIds = new Map();
   sourceState.lookups.symbolToChainScopedIds = new Map();
   sourceState.lookups.addressToId = new Map();

@@ -231,11 +231,11 @@
           "url": "https://etherscan.io/address/0x65771978ff9238162a41c77384c9f55c1ec9e9ab"
         },
         {
-          "label": "Usual EUR0 token contract documentation — collateralization enforcement on mint",
+          "label": "Usual EUR0 token contract documentation: collateralization enforcement on mint",
           "url": "https://tech.usual.money/smart-contracts/token-contracts/eur0"
         },
         {
-          "label": "Usual EUR0 Revenue Distribution Module documentation — EUR0_MINT holder",
+          "label": "Usual EUR0 Revenue Distribution Module documentation: EUR0_MINT holder",
           "url": "https://tech.usual.money/smart-contracts/protocol-contracts/eur0/eur0-revenue-distribution-module"
         }
       ],

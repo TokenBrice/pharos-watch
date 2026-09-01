@@ -19,10 +19,10 @@ export const content: CaseStudy = {
     "The repricing did not stay contained. Several Morpho lending markets had configured oracles that valued USD0++ at a hardcoded 1:1 to USD0, so leveraged positions built on that assumption faced liquidation pressure as the real exit value fell below parity. The episode is a clean study in redemption-terms risk: a locked yield instrument marketed alongside a stablecoin, a soft peg that depended on a redemption promise the issuer could revise, and DeFi collateral plumbing that had priced away the gap.",
   ],
   takeaways: [
-    "This was a governance/terms change, not a backing failure — Usual unilaterally added a $0.87 early-exit floor, repricing USD0++ to ~$0.89 while the underlying Treasury collateral was untouched.",
+    "This was a governance/terms change, not a backing failure: Usual unilaterally added a $0.87 early-exit floor, repricing USD0++ to ~$0.89 while the underlying Treasury collateral was untouched.",
     "Redemption terms are part of the peg: a soft peg resting on an issuer's revisable promise is only as firm as that issuer's discretion, and can reprice overnight without a holder vote.",
-    "A multi-year locked claim that pays par only at maturity is a bond, not a dollar — at a few percent yearly yield its fair present value sits in the high-80-cent range, so the floor codified a discount rather than a loss.",
-    "Hardcoded 1:1 oracles in Morpho markets turned the contractual repricing into forced deleveraging — collateral plumbing that pins a derivative to its base removes the very price signal that would warn of this.",
+    "A multi-year locked claim that pays par only at maturity is a bond, not a dollar: at a few percent yearly yield its fair present value sits in the high-80-cent range, so the floor codified a discount rather than a loss.",
+    "Hardcoded 1:1 oracles in Morpho markets turned the contractual repricing into forced deleveraging; collateral plumbing that pins a derivative to its base removes the very price signal that would warn of this.",
   ],
   primaryCoinId: "usd0-usual",
   archetype: "rwa-credit-fund",
@@ -57,6 +57,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-usual-changed",
       heading: "What Usual changed",
       paragraphs: [
         "Before the announcement, the market's working model was that one USD0++ could be redeemed for one USD0 at will. Usual replaced that with a two-path exit. Holders could leave immediately at a floor that began at $0.87 and was scheduled to rise toward $1 across the asset's four-year term, or they could take a conditional 1:1 unstake that required surrendering accrued USUAL rewards. Either path made the true cost of leaving early explicit for the first time.",
@@ -64,6 +65,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "stablecoin-or-bond",
       heading: "Stablecoin or bond?",
       paragraphs: [
         "USD0++ was always closer to a fixed-term instrument than a dollar. Locking USD0 for roughly four years in exchange for token rewards is the economic shape of a zero-coupon-style claim, and a claim that pays out at par only at maturity should trade at a discount before then. At a few percent of annual yield over four years, a fair present value sits in the high-80-cent range rather than at $1. Viewed that way, the $0.87 floor was not a loss of backing; it was the issuer codifying the discounted value of an early exit.",
@@ -71,6 +73,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "morpho-collateral-cascade",
       heading: "The Morpho collateral cascade",
       paragraphs: [
         "The repricing propagated through DeFi because lending markets had priced away the very risk the floor exposed. Several Morpho markets accepting USD0++ as collateral used oracles that valued it at a fixed 1:1 to USD0 rather than tracking a floating market rate. While USD0++ held near parity, leveraged and looped positions built on that assumption looked safe.",
@@ -78,6 +81,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Redemption terms are part of the peg. A soft peg that rests on an issuer's redemption promise is only as firm as the issuer's discretion to revise it, and a change made without prior holder consent can reprice an asset overnight even when its backing is untouched. Track who controls exit terms and how those terms can change.",
@@ -119,23 +123,23 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "Blockworks — Usual protocol's depeg spurs instability in DeFi markets",
+      label: "Blockworks: Usual protocol's depeg spurs instability in DeFi markets",
       href: "https://blockworks.co/news/usual-depeg-spurs-defi-instability",
     },
     {
-      label: "The Block — Usual Money protocol update as USD0++ drops below 92 cents",
+      label: "The Block: Usual Money protocol update as USD0++ drops below 92 cents",
       href: "https://www.theblock.co/post/333995/usual-money-protocol-update",
     },
     {
-      label: "Coinspeaker — Usual Labs' USD0++ falls as ecosystem questions new redemption model",
+      label: "Coinspeaker: Usual Labs' USD0++ falls as ecosystem questions new redemption model",
       href: "https://www.coinspeaker.com/usual-labs-usd0-falls-ecosystem-questions-new-redemption-model/",
     },
     {
-      label: "Usual — USD0++ upgrade: early unstaking, vaults, liquidity",
+      label: "Usual: USD0++ upgrade: early unstaking, vaults, liquidity",
       href: "https://usual.money/blog/usd0-upgrade-early-unstaking-vaults-liquidity",
     },
     {
-      label: "Gate Learn — Usual explained: USD0++ depegging and circular-loan liquidations",
+      label: "Gate Learn: Usual explained: USD0++ depegging and circular-loan liquidations",
       href: "https://www.gate.com/learn/articles/usual-explained-the-hidden-issues-behind-usd0-depegging-and-circular-loans-liquidation/6030",
     },
   ],

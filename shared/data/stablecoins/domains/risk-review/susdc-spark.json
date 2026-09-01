@@ -51,7 +51,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: 163-byte minimal proxy (implementation 0x1b992302652a92611dcd5090d1cb388c6377f455, EIP-1967 admin slot zero — no upgrade authority) of the Spark ERC-4626 savings vault with asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; shares mint natively against local USDC deposits. The vault's DEFAULT_ADMIN is the Spark DAO SubProxy (SPARK_PROXY 0x3300f198988e4C9C63F75dF86De36421f06af8c4) per the Spark address registry. No bridge control carries the claim.",
+        "reviewNote": "On-chain 2026-07-20: 163-byte minimal proxy (implementation 0x1b992302652a92611dcd5090d1cb388c6377f455, EIP-1967 admin slot zero, no upgrade authority) of the Spark ERC-4626 savings vault with asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; shares mint natively against local USDC deposits. The vault's DEFAULT_ADMIN is the Spark DAO SubProxy (SPARK_PROXY 0x3300f198988e4C9C63F75dF86De36421f06af8c4) per the Spark address registry. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -76,7 +76,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: 163-byte minimal proxy (implementation 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12, EIP-1967 admin slot zero — no upgrade authority) of the Spark ERC-4626 savings vault with asset() = USDC 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6e; shares mint natively against local USDC deposits. The vault's DEFAULT_ADMIN is the Spark cross-chain governance executor (SPARK_EXECUTOR 0x7566DEbC906C17338524A414343fA61BcA26A843, driven from mainnet via the LZReceiver 0xd905be48983D405C6fD7f5a983D2351fb61C691F) per the Spark address registry. No bridge control carries the claim.",
+        "reviewNote": "On-chain 2026-07-20: 163-byte minimal proxy (implementation 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12, EIP-1967 admin slot zero, no upgrade authority) of the Spark ERC-4626 savings vault with asset() = USDC 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6e; shares mint natively against local USDC deposits. The vault's DEFAULT_ADMIN is the Spark cross-chain governance executor (SPARK_EXECUTOR 0x7566DEbC906C17338524A414343fA61BcA26A843, driven from mainnet via the LZReceiver 0xd905be48983D405C6fD7f5a983D2351fb61C691F) per the Spark address registry. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

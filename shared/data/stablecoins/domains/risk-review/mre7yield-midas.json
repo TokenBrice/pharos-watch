@@ -112,7 +112,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals — Midas issuer-native deployment on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals, Midas issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

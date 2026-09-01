@@ -145,7 +145,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "The current WARS Safe is 4-of-7 with the reviewed owners and remains the shared DEFAULT_ADMIN_ROLE authority able to authorize native minters and upgrades on the six authored deployments. The token exposes no supply cap, so mint authorized by this Safe is unbounded. Safe module and guard state was not fully re-enumerated after the current owner read and remains explicitly unknown here; this does not change the native posture."
+        "evidence": "The current WARS Safe is 4-of-7 with the reviewed owners and remains the shared DEFAULT_ADMIN_ROLE authority able to authorize native minters and upgrades on the six authored deployments. The token exposes no supply cap, so mint authorized by this Safe is unbounded. Safe module and guard state was not fully re-enumerated after the current owner read and remains explicitly unknown here. This does not change the native posture."
       },
       {
         "chain": "ethereum",

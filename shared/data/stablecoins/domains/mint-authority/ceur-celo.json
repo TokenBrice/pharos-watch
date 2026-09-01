@@ -96,7 +96,7 @@
             "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
           }
         ],
-        "evidence": "At Celo block 69291541, owner() returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Safe API returned threshold 4, 6 owners (down from 7 recorded previously — signer was rotated out), no modules, zero guard. Follow-up 2026-07-20: as EURm token owner this Safe administers the minter set (it can authorize or replace the Broker and its exchange limits), so the Broker's mint cap is raiseable by this control."
+        "evidence": "At Celo block 69291541, owner() returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Safe API returned threshold 4, 6 owners (down from 7 recorded previously, signer was rotated out), no modules, zero guard. Follow-up 2026-07-20: as EURm token owner this Safe administers the minter set (it can authorize or replace the Broker and its exchange limits), so the Broker's mint cap is raiseable by this control."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -47,7 +47,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'EUR CoinVertible', symbol EURCV, 18 decimals — SG Forge issuer-native deployment on Ethereum. Pinned totalSupply() at block 25583961 on 2026-07-21 returned 101,974,490.260000000000000000 EURCV, 79.64155532% of the summed 128,041,811.64 EURCV issuer-native supply.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'EUR CoinVertible', symbol EURCV, 18 decimals, SG Forge issuer-native deployment on Ethereum. Pinned totalSupply() at block 25583961 on 2026-07-21 returned 101,974,490.260000000000000000 EURCV, 79.64155532% of the summed 128,041,811.64 EURCV issuer-native supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-21",
         "observedBlock": 25583961,

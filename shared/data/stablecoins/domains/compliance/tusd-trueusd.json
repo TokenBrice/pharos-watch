@@ -5,15 +5,15 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Binance EEA MiCA restrictions — TUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+        "label": "Binance EEA MiCA restrictions: TUSD among non-MiCA-compliant stablecoins delisted for EEA users",
         "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
       },
       {
-        "label": "Kraken EEA stablecoin restrictions — TUSD delisted for EEA clients",
+        "label": "Kraken EEA stablecoin restrictions: TUSD delisted for EEA clients",
         "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
       },
       {
-        "label": "ESMA interim MiCA EMT issuer register — TrueUSD/TUSD not listed",
+        "label": "ESMA interim MiCA EMT issuer register: TrueUSD/TUSD not listed",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]
@@ -43,7 +43,7 @@
         "accessedAt": "2026-06-13"
       },
       {
-        "label": "SEC Press Release 2024-145 — TrueCoin/TrustToken settled charges",
+        "label": "SEC Press Release 2024-145: TrueCoin/TrustToken settled charges",
         "url": "https://www.sec.gov/newsroom/press-releases/2024-145",
         "sourceKind": "federal-regulator",
         "sourceDate": "2024-09-24",
@@ -68,8 +68,8 @@
         "SEC press release 2024-145 and litigation release LR-26126 (action against prior operators TrueCoin/TrustToken; Techteryx not named)",
         "TrueUSD transparency page and white paper materials",
         "Public foreign payment stablecoin issuer exception materials (Treasury NPRM FR 2026-06489)",
-        "FinCEN/OFAC enforcement pages — no Techteryx-specific action found",
-        "CoinDesk reporting on Dubai worldwide asset freeze (Oct 2025) — civil litigation, not U.S. enforcement",
+        "FinCEN/OFAC enforcement pages: no Techteryx-specific action found",
+        "CoinDesk reporting on Dubai worldwide asset freeze (Oct 2025): civil litigation, not U.S. enforcement",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",

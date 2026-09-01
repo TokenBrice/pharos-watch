@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA interim register and scope page — ART/EMT issuer registers reviewed; no spUSDC entry found on 2026-08-14",
+        "label": "ESMA MiCA interim register and scope page: ART/EMT issuer registers reviewed; no spUSDC entry found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Spark documentation — spUSDC is an ERC-4626 savings vault share whose value accrues USDC yield",
+        "label": "Spark documentation: spUSDC is an ERC-4626 savings vault share whose value accrues USDC yield",
         "url": "https://docs.spark.fi/"
       },
       {
-        "label": "Sky governance proposal — Spark Savings USDC (spUSDC)",
+        "label": "Sky governance proposal: Spark Savings USDC (spUSDC)",
         "url": "https://vote.sky.money/polling/QmUn84ag"
       }
     ]
@@ -51,7 +51,7 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Spark documentation — spUSDC savings product",
+        "label": "Spark documentation: spUSDC savings product",
         "url": "https://docs.spark.fi/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

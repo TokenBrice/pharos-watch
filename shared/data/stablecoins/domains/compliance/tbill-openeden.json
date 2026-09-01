@@ -6,13 +6,13 @@
       "summary": "TBILL is a tokenized fund interest (NAV-appreciating share of Treasury Bills Institutional Liquidity Limited, a BVI Registered Professional Fund). The GENIUS Act expressly excludes securities under the Securities Act of 1933 and Investment Company Act of 1940 from the definition of payment stablecoin. A BVI professional fund interest is a securities-law construct, not a fixed-value payment instrument, and TBILL's NAV-based pricing, yield-bearing structure, and KYC-gated institutional-only access are all inconsistent with a payment stablecoin.",
       "references": [
         {
-          "label": "OpenEden TBILL introduction — BVI Registered Professional Fund structure",
+          "label": "OpenEden TBILL introduction: BVI Registered Professional Fund structure",
           "url": "https://docs.openeden.com/tbill/introduction",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-06-07"
         },
         {
-          "label": "GENIUS Act S.1582 — payment stablecoin definition excludes securities",
+          "label": "GENIUS Act S.1582: payment stablecoin definition excludes securities",
           "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18"
@@ -23,7 +23,7 @@
     "issuerPathway": "not-applicable",
     "issuerEntity": "Treasury Bills Institutional Liquidity Limited (OpenEden)",
     "issuerDomicile": "British Virgin Islands",
-    "licensingRegulator": "BVI FSC — Registered Professional Fund",
+    "licensingRegulator": "BVI FSC: Registered Professional Fund",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",

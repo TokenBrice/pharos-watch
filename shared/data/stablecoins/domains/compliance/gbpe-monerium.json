@@ -23,7 +23,7 @@
       "summary": "GBPe is a GBP-denominated e-money token issued and redeemable by Monerium, so its token-level design is a payment stablecoin even though no U.S. GENIUS authorization was found.",
       "references": [
         {
-          "label": "Monerium token integration — regulated e-money tokens redeemable via API",
+          "label": "Monerium token integration: regulated e-money tokens redeemable via API",
           "url": "https://docs.monerium.com/token-integration/",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
@@ -51,7 +51,7 @@
     "notes": "Monerium hf is an Icelandic EMI and GBPe is documented as a regulated, redeemable e-money token. No token-specific GENIUS approval, state-qualified status, official application, or OCC foreign-issuer registration was found in the public U.S. materials reviewed on 2026-08-14. The OCC foreign-issuer registration and Treasury comparability materials reviewed remain proposed-rulemaking, so foreignExceptionStatus stays unknown rather than asserting a qualification failure.",
     "references": [
       {
-        "label": "OCC GENIUS Act proposed rule — foreign payment stablecoin issuer registration",
+        "label": "OCC GENIUS Act proposed rule: foreign payment stablecoin issuer registration",
         "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
         "sourceKind": "federal-register",
         "accessedAt": "2026-08-14"
@@ -75,19 +75,19 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Central Bank of Iceland supervised entities — Monerium hf",
+        "label": "Central Bank of Iceland supervised entities: Monerium hf",
         "url": "https://cb.is/financial-supervision/regulated-activities/supervised-entities/?q=monerium&type=",
         "sourceKind": "foreign-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Monerium tokens — GBPe and supported networks",
+        "label": "Monerium tokens: GBPe and supported networks",
         "url": "https://docs.monerium.com/tokens/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Monerium financial information — EMI supervision and safeguarded assets",
+        "label": "Monerium financial information: EMI supervision and safeguarded assets",
         "url": "https://monerium.com/financial-information/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
@@ -108,7 +108,7 @@
       "reviewedAt": "2026-08-14",
       "references": [
         {
-          "label": "OCC GENIUS Act proposed rule — foreign payment stablecoin issuer registration",
+          "label": "OCC GENIUS Act proposed rule: foreign payment stablecoin issuer registration",
           "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
           "sourceKind": "federal-register",
           "accessedAt": "2026-08-14"

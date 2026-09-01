@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA interim MiCA register — current ART/EMT register page (last update 12 August 2026)",
+        "label": "ESMA interim MiCA register: current ART/EMT register page (last update 12 August 2026)",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "AUDD terms — AUDD Digital platform eligibility is limited to Australian entities/citizens/residents",
+        "label": "AUDD terms: AUDD Digital platform eligibility is limited to Australian entities/citizens/residents",
         "url": "https://www.audd.digital/audd-terms-and-conditions/"
       },
       {
-        "label": "AUDD issuer page — AUDD is issued under an Australian Financial Services Licence and offered through Australian compliance onboarding",
+        "label": "AUDD issuer page: AUDD is issued under an Australian Financial Services Licence and offered through Australian compliance onboarding",
         "url": "https://www.audd.digital/"
       }
     ]
@@ -72,9 +72,9 @@
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin 2026-3 and public releases",
         "Treasury NPRM on state-regime comparability (FR 2026-06489)",
-        "AUDD issuer website (audd.digital) — no mention of GENIUS Act or US registration",
-        "Coinbase AUDD pages — trading restricted for US users, custody only",
-        "Web search for AUDC/AUDD GENIUS foreign exception or US registration — no results",
+        "AUDD issuer website (audd.digital): no mention of GENIUS Act or US registration",
+        "Coinbase AUDD pages: trading restricted for US users, custody only",
+        "Web search for AUDC/AUDD GENIUS foreign exception or US registration: no results",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",

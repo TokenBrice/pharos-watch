@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA interim MiCA register — ART/EMT register page reviewed; no Hubble/USDH issuer entry located on 2026-08-14",
+        "label": "ESMA interim MiCA register: ART/EMT register page reviewed; no Hubble/USDH issuer entry located on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Hubble Protocol USDH documentation — USDH is a Solana-native crypto-backed stablecoin borrowed against deposited crypto assets for DeFi",
+        "label": "Hubble Protocol USDH documentation: USDH is a Solana-native crypto-backed stablecoin borrowed against deposited crypto assets for DeFi",
         "url": "https://docs.hubbleprotocol.io/faq/usdh-stablecoin"
       },
       {
-        "label": "Hubble Protocol USDH acquisition documentation — USDH is minted by depositing crypto collateral and is acquired through Solana DeFi venues",
+        "label": "Hubble Protocol USDH acquisition documentation: USDH is minted by depositing crypto collateral and is acquired through Solana DeFi venues",
         "url": "https://docs.hubbleprotocol.io/faq/usdh-stablecoin/acquire-usdh"
       }
     ]

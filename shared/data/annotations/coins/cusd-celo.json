@@ -1,4 +1,4 @@
 [
-  {"date":"2020-06-28","kind":"governance","label":"Stability protocol activated — cUSD transfers enabled","severity":"med","href":"https://forum.celo.org/t/governance-proposal-to-activate-celo-stability-protocol-and-enable-cusd-transfers/547","note":"2020-06-28 — Governance activated the Celo stability protocol and enabled Celo Dollar transfers."},
-  {"date":"2025-12-17","kind":"governance","label":"Mento rebrand — cUSD becomes USDm, V3 multichain FX","severity":"med","href":"https://www.mento.org/blog/a-new-chapter-in-multichain-fx-the-evolution-of-mento-stablecoins","note":"2025-12-17 — Mento rebrands Celo Dollar (cUSD) as Mento Dollar (USDm)."}
+  {"date":"2020-06-28","kind":"governance","label":"Stability protocol activated, cUSD transfers enabled","severity":"med","href":"https://forum.celo.org/t/governance-proposal-to-activate-celo-stability-protocol-and-enable-cusd-transfers/547","note":"2020-06-28: Governance activated the Celo stability protocol and enabled Celo Dollar transfers."},
+  {"date":"2025-12-17","kind":"governance","label":"Mento rebrand: cUSD becomes USDm, V3 multichain FX","severity":"med","href":"https://www.mento.org/blog/a-new-chapter-in-multichain-fx-the-evolution-of-mento-stablecoins","note":"2025-12-17: Mento rebrands Celo Dollar (cUSD) as Mento Dollar (USDm)."}
 ]

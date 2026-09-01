@@ -69,15 +69,15 @@
         "url": "https://tori.accountable.capital"
       },
       {
-        "label": "Tori docs — backing and strategy overview (money markets typically the largest allocation; TradFi futures examples)",
+        "label": "Tori docs: backing and strategy overview (money markets typically the largest allocation; TradFi futures examples)",
         "url": "https://docs.tori.finance/strategy/overview.md"
       },
       {
-        "label": "Tori docs — institutional minting and redemption (KYC/AML whitelisting for NAV mint/redeem)",
+        "label": "Tori docs: institutional minting and redemption (KYC/AML whitelisting for NAV mint/redeem)",
         "url": "https://docs.tori.finance/resources/institutional.md"
       },
       {
-        "label": "Tori docs — reserve fund (protocol-managed buffer, not third-party insurance)",
+        "label": "Tori docs: reserve fund (protocol-managed buffer, not third-party insurance)",
         "url": "https://docs.tori.finance/solution/reserve-fund.md"
       },
       {

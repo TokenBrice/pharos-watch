@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USDtb has two native issuance routes—Ethereum Anchorage USDtb and the Solana Token-2022 mint 8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T (mint/permanent-delegate C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt)—and LayerZero OFT representations on Ethereum (adapter over the native inner token), Arbitrum, and Base. The EVM OFT owner is a 5-of-10 Safe. DefiLlama and official key-addresses treat only the Token-2022 mint as Solana circulating; a separate LayerZero Solana OFT mint 39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy exists with ~3.24 tokens and is omitted from the catalog so the Solana supply row matches exactly one native route.",
+    "summary": "USDtb has two native issuance routes: Ethereum Anchorage USDtb and the Solana Token-2022 mint 8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T (mint/permanent-delegate C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt). It also has LayerZero OFT representations on Ethereum (adapter over the native inner token), Arbitrum, and Base. The EVM OFT owner is a 5-of-10 Safe. DefiLlama and official key-addresses treat only the Token-2022 mint as Solana circulating; a separate LayerZero Solana OFT mint 39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy exists with ~3.24 tokens and is omitted from the catalog so the Solana supply row matches exactly one native route.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; mint-bridge-boundary migration",
     "confidence": "manual-review",

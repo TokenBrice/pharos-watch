@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA/European Commission MiCA Q&A — crypto-assets without an identifiable issuer do not fall under Titles II–IV",
+        "label": "ESMA/European Commission MiCA Q&A: crypto-assets without an identifiable issuer do not fall under Titles II-IV",
         "url": "https://www.esma.europa.eu/print/pdf/node/219621"
       },
       {
-        "label": "ESMA MiCA register portal — no Alpha Partner/USDA issuer record located in the reviewed issuer registers",
+        "label": "ESMA MiCA register portal: no Alpha Partner/USDA issuer record located in the reviewed issuer registers",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Alpha Partner official site — no legal issuer, EU offer, or MiCA authorization disclosed in the reviewed public material",
+        "label": "Alpha Partner official site: no legal issuer, EU offer, or MiCA authorization disclosed in the reviewed public material",
         "url": "https://alphapartner.vip/"
       }
     ]
@@ -29,7 +29,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "GENIUS Act — payment stablecoin definition",
+          "label": "GENIUS Act: payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
@@ -56,7 +56,7 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC digital assets licensing applications — no Alpha Partner/USDA applicant identified",
+        "label": "OCC digital assets licensing applications: no Alpha Partner/USDA applicant identified",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"

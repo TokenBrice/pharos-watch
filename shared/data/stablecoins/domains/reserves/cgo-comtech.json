@@ -34,7 +34,7 @@
         "url": "https://comtechgold.com/assets/pdf/ComTech%20FZCO%20-%20Gold%20Stock%20as%20on%2026th%20February%202026.pdf"
       }
     ],
-    "rationale": "ComTech states that one CGO represents one gram of allocated physical gold, held 1:1 in segregated and insured TransGuard vault accounts in the UAE. The 26 February 2026 self-signed gold-stock letter confirms 39 kg of allocated gold backing outstanding CGO. The reserve is therefore one 100% commodity-allocated slice. Bar-level or refiner-level weights are not published, but they are look-through details beneath the single allocated-commodity reserve slice rather than additional reserve slices.",
+    "rationale": "ComTech states that one CGO represents one gram of allocated physical gold, held 1:1 in segregated and insured TransGuard vault accounts in the UAE. The 26 February 2026 self-signed gold-stock letter confirms 39 kg of allocated gold backing outstanding CGO. The reserve is therefore one 100% commodity-allocated slice. Bar-level or refiner-level weights are not published; these are look-through details beneath the single allocated-commodity reserve slice rather than additional reserve slices.",
     "compositionBasis": "Issuer disclosure of one gram of allocated physical gold per CGO and the 26 February 2026 gold-stock letter",
     "compositionAsOf": "2026-02-26",
     "scope": "full-composition",

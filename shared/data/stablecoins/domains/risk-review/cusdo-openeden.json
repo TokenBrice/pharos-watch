@@ -67,7 +67,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Compounding Open Dollar', symbol cUSDO, 18 decimals — OpenEden issuer-native deployment on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Compounding Open Dollar', symbol cUSDO, 18 decimals, OpenEden issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

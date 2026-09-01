@@ -160,7 +160,6 @@ describe("liquidity lead gating", () => {
         digestMeta: JSON.stringify({ leadSignalId: "liquidity:usds" }),
         strippedDashCount: 0,
         usedRawTextFallback: false,
-        forbiddenPhraseHits: [],
       },
       { kind: "daily", suppressedCandidateIds: ["liquidity:usds"] },
     );

@@ -1,0 +1,5578 @@
+{
+  "version": 1,
+  "policyVersion": "1.2",
+  "policyHash": "baf6b0f7f9efd4cc",
+  "generatedAt": "2026-09-01T19:19:16.048Z",
+  "entries": [
+    {
+      "surface": "about-prose",
+      "record": "src/components/about/about-page-content/AboutPageContent",
+      "field": "jsx-text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "6813e0028523f092"
+      ]
+    },
+    {
+      "surface": "about-prose",
+      "record": "src/lib/about-content/href=https://pharosville.pharos.watch/",
+      "field": "description",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "a900a221aa6e6b3e"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "aeur-anchored-coins",
+      "field": "aeur-anchored-coins.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "08b6ab62db86e54b"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "brl-itau",
+      "field": "brl-itau.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "848d2974c65d60a2"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "buidl-blackrock",
+      "field": "buidl-blackrock.text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "70b61399d8350bd8"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "cdxusd-cod3x",
+      "field": "cdxusd-cod3x.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "a99a999efb30fa6a"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "cjpy-yamato",
+      "field": "cjpy-yamato.title",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "7b50f9708a697c09"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "cngn-compliant-naira",
+      "field": "cngn-compliant-naira.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "6d7429f2a0940494"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "eurc-circle",
+      "field": "eurc-circle.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "c99ad868d44686ae"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "euri-banking-circle",
+      "field": "euri-banking-circle.text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "e76b34e220c26350"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "euri-banking-circle",
+      "field": "euri-banking-circle.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "6a3b253342f77728"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "euroe-membrane",
+      "field": "euroe-membrane.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "cf7dd6e637d4c6e1"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "fusd-freedom-dollar",
+      "field": "fusd-freedom-dollar.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "1a1f6ba1eef3783c"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "gbpsafo-spiko",
+      "field": "gbpsafo-spiko.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "8f76dadd0e6a3c14"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "gho-aave",
+      "field": "gho-aave.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "192d1907ab10f004"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "gyen-gyen",
+      "field": "gyen-gyen.text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "4d038d7b6f8793ba"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "gyen-gyen",
+      "field": "gyen-gyen.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "fe5e2817b18d0248"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "jpyc-jpyc",
+      "field": "jpyc-jpyc.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "e06a6ff6beab778b"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "jpysc-sbi-startale",
+      "field": "jpysc-sbi-startale.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "d0066109c5091e57"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "jpyt-dephaser",
+      "field": "jpyt-dephaser.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "515967a595eaad3e"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "jpyt-dephaser",
+      "field": "jpyt-dephaser.title",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "ea9ca4141ee9ddb8"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "luausd-lumi-finance",
+      "field": "luausd-lumi-finance.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "c7c708938ceb9efe"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "onyc-onre",
+      "field": "onyc-onre.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "6368c7eb411f2907"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "pc0000033-tradable",
+      "field": "pc0000033-tradable.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "7d9981224c404a65"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "pc0000089-tradable",
+      "field": "pc0000089-tradable.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "d4243bbddbde58f8"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "pc0000101-tradable",
+      "field": "pc0000101-tradable.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "3ff711b1d2afb4c5"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "pmusd-precious-metals",
+      "field": "pmusd-precious-metals.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "60f969f96771df58"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "pyusd-paypal",
+      "field": "pyusd-paypal.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "6d3213aad2a316fa"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "qcad-stablecorp",
+      "field": "qcad-stablecorp.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "847fabacbe794787"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "reusd-resupply",
+      "field": "reusd-resupply.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "623ffe8f98165f70"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "rlusd-ripple",
+      "field": "rlusd-ripple.text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "fcea8d2f9ef8b033"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "rlusd-ripple",
+      "field": "rlusd-ripple.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "175dbd4615a475c9"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "roughrider-bnd",
+      "field": "roughrider-bnd.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "d395cda0e839f1c5"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "rusd-revolut",
+      "field": "rusd-revolut.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "30da424baeb5d350"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "scrvusd-curve",
+      "field": "scrvusd-curve.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "4538e63d2dc13fd8"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "spkcc-spiko",
+      "field": "spkcc-spiko.text",
+      "rule": "scoped-decorative-word",
+      "count": 2,
+      "fingerprints": [
+        "a67ef175d6bd674c",
+        "b55162c07ff32599"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "susd-solayer",
+      "field": "susd-solayer.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "ed5fd054c26de496"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "susdt-spark",
+      "field": "susdt-spark.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "f897142c3976b970"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "uktbl-spiko",
+      "field": "uktbl-spiko.text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "b16c94b07b1618f2"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "uktbl-spiko",
+      "field": "uktbl-spiko.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "19ca0e3b3c99e0b8"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "uktbl-spiko",
+      "field": "uktbl-spiko.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "bc05231adbc51279"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usbd-bima",
+      "field": "usbd-bima.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "09c8b2daaec5d554"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usd0-usual",
+      "field": "usd0-usual.text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "c932e89c5fc711db"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usd0-usual",
+      "field": "usd0-usual.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "2ff829d71a0dc8c1"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usda-avalon",
+      "field": "usda-avalon.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "85b87713be98b0e4"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdat-saturn",
+      "field": "usdat-saturn.text",
+      "rule": "scoped-decorative-word",
+      "count": 3,
+      "fingerprints": [
+        "51b5c9c7fdc9e0dc",
+        "60423eaf83547b22",
+        "d80e3fc739d45743"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdb-bridge",
+      "field": "usdb-bridge.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "6a769838bee32a62"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdcv-societe-generale-forge",
+      "field": "usdcv-societe-generale-forge.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "1b107b23807981ac"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdcx-movement",
+      "field": "usdcx-movement.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "20084d75bf9c1e3e"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdg-paxos",
+      "field": "usdg-paxos.text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "3c789397f82cd016"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdglo-glo",
+      "field": "usdglo-glo.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "b8dd6c56b2231f32"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdgo-osl",
+      "field": "usdgo-osl.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "2906732c0be58f91"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdk-kast",
+      "field": "usdk-kast.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "f78e8bb329c52bff"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdk-orki",
+      "field": "usdk-orki.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "98b3acc37e75b980"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdnr-nerona",
+      "field": "usdnr-nerona.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "030fbadd93e60dad"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdnr-nerona",
+      "field": "usdnr-nerona.title",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "0b34cebb4b6a275e"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdp-paxos",
+      "field": "usdp-paxos.text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "8ff2ab32c4bbeb73"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdrif-rif",
+      "field": "usdrif-rif.text",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "382f819937ed90ec"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdsc-startale",
+      "field": "usdsc-startale.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "771b3d62ad3fa385"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdsc-startale",
+      "field": "usdsc-startale.title",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "766a1ecbfbd259da"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "usdy-ondo-finance",
+      "field": "usdy-ondo-finance.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "cc24e4c07e352689"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "uusd-anything-labs",
+      "field": "uusd-anything-labs.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "3524aeae7d4fe72a"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "vcred-vcred",
+      "field": "vcred-vcred.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "d7da1cb85f103aef"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "veur-vnx",
+      "field": "veur-vnx.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "aed97a6b63818722"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "vgbp-vnx",
+      "field": "vgbp-vnx.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "e9e8956bf07df30a"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "vusd-virtue",
+      "field": "vusd-virtue.text",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "3c5dc8aa1990d813"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "wm-m0",
+      "field": "wm-m0.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "e95da66f0b69889f"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "xaut-tether",
+      "field": "xaut-tether.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "8f112fe59475ba26"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "xo-exodus",
+      "field": "xo-exodus.text",
+      "rule": "review-unqualified-superlative",
+      "count": 2,
+      "fingerprints": [
+        "483f551373a45958",
+        "f53a193bcecd2068"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "xo-exodus",
+      "field": "xo-exodus.text",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "821d8d07306f20dd"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "xusd-babelfish",
+      "field": "xusd-babelfish.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "fec2c837220e643c"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "xusd-straitsx",
+      "field": "xusd-straitsx.text",
+      "rule": "scoped-decorative-word",
+      "count": 2,
+      "fingerprints": [
+        "22adc037a6b44519",
+        "776151001c4e855d"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "yusd-aegis",
+      "field": "yusd-aegis.text",
+      "rule": "review-unqualified-superlative",
+      "count": 2,
+      "fingerprints": [
+        "01e4d44ea4194fad",
+        "9db6bf48cbd7612c"
+      ]
+    },
+    {
+      "surface": "ai-summaries",
+      "record": "zchf-frankencoin",
+      "field": "zchf-frankencoin.text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "a17621b8fa2eb76a"
+      ]
+    },
+    {
+      "surface": "blog-posts",
+      "record": "src/data/blog/posts/pharos-at-six-months",
+      "field": "body",
+      "rule": "no-booster-language",
+      "count": 1,
+      "fingerprints": [
+        "f75f658bac8c21a9"
+      ]
+    },
+    {
+      "surface": "blog-posts",
+      "record": "src/data/blog/posts/safety-score-v9",
+      "field": "body",
+      "rule": "no-booster-language",
+      "count": 2,
+      "fingerprints": [
+        "1f429eb896525a0c",
+        "8de3edadc449ebe5"
+      ]
+    },
+    {
+      "surface": "blog-posts",
+      "record": "src/data/blog/posts/safety-score-v9",
+      "field": "body",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "ad5f5a669662f54d"
+      ]
+    },
+    {
+      "surface": "blog-posts",
+      "record": "src/data/blog/posts/safety-score-v9",
+      "field": "body",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "5d3f1459e257ccb6"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/buidl-tokenized-tbill-2025/slug=buidl-tokenized-tbill-2025/id=lessons",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "4f7f74bff5dd2776"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/buidl-tokenized-tbill-2025/slug=buidl-tokenized-tbill-2025",
+      "field": "takeaways",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "b5fdff2ab09fb5f9"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/dateISO=2024-02-29",
+      "field": "headline",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "31612a5d39c628a3"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023/id=lessons",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "2b687148cc8731b7"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023",
+      "field": "lead",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "4d890cda886cac19"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/busd-paxos-2023/slug=busd-paxos-2023",
+      "field": "takeaways",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "64affec2eb728f43"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/dateISO=2023-03-13",
+      "field": "body",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "f5e4bd6ef9f286d5"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday/id=black-thursday-2020",
+      "field": "paragraphs",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "083ca6a71bee2d07"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/dai-black-thursday/slug=dai-black-thursday",
+      "field": "lead",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "cefed1a5b8683098"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/eurt-mica-exit-2024/slug=eurt-mica-exit-2024/dateISO=2022-12-31",
+      "field": "headline",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "1d6750b8d79527dd"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/fei-protocol/slug=fei-protocol/id=direct-incentive-experiment",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "0378d03d220237bd"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/fei-protocol/slug=fei-protocol/id=lessons",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "513d2eacfa578500"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/fei-protocol/slug=fei-protocol",
+      "field": "lead",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "c7cbe46d464b47e4"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/fei-protocol/slug=fei-protocol",
+      "field": "takeaways",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "03262ae634127195"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/id=fractional-algorithmic-redemption-loop",
+      "field": "paragraphs",
+      "rule": "no-recategorizing-flip",
+      "count": 1,
+      "fingerprints": [
+        "3090ec8a947e272c"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/id=fractional-algorithmic-redemption-loop",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "6f289c8eedf476bd"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021/id=lessons",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "0ac3974a53688c9a"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021",
+      "field": "lead",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "80cc6d716dfe530c"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/iron-titan-2021/slug=iron-titan-2021",
+      "field": "takeaways",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "a8201c4e642dec50"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/id=failure-it-was-built-against",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "61de393bcbf9ffe3"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/id=lessons",
+      "field": "paragraphs",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "564ba72b60eaf0aa"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/lusd-flight-to-safety-2023/slug=lusd-flight-to-safety-2023/id=redemption-floor-and-the-1-00-1-10-corridor",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "40d50f577a191efa"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/dateISO=2023-06-01",
+      "field": "body",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "ccf43e36021f49cb"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023/id=wrapped-is-not-native-the-backing-lives-on-the-bridge",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "8393a2fa43fcd0ae"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023",
+      "field": "lead",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "57104fbf6ca16cf3"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/multichain-usdc-2023/slug=multichain-usdc-2023",
+      "field": "watchpoints",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "9afc8dc67244fed8"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/pmusd-precious-metals/slug=pmusd-precious-metals/id=what-is-and-isnt-verifiable",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "acf0c3d8186f4153"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/stream-elixir-contagion-2025/slug=stream-elixir-contagion-2025/id=re-hypothecation-map",
+      "field": "paragraphs",
+      "rule": "no-recategorizing-flip",
+      "count": 1,
+      "fingerprints": [
+        "db6e37e46188144a"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/dateISO=2022-05-11",
+      "field": "body",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "aa05e3ed48226d01"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022/id=what-happened",
+      "field": "paragraphs",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "0c5c2fed460d9ca2"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/terra-ust-2022/slug=terra-ust-2022",
+      "field": "takeaways",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "53484aada1f3385a"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usd0pp-usual-2025/slug=usd0pp-usual-2025/id=morpho-collateral-cascade",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "39751b30a6bc6d03"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usd0pp-usual-2025/slug=usd0pp-usual-2025/id=morpho-collateral-cascade",
+      "field": "paragraphs",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "4fe960802bf741ea"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usd0pp-usual-2025/slug=usd0pp-usual-2025/id=what-usual-changed",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "68912e7bf4f48a21"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usd0pp-usual-2025/slug=usd0pp-usual-2025",
+      "field": "lead",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "5af96db59a410779"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usd0pp-usual-2025/slug=usd0pp-usual-2025",
+      "field": "takeaways",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "c8821b434f32e827"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/id=contagion-through-defi",
+      "field": "paragraphs",
+      "rule": "no-recategorizing-flip",
+      "count": 1,
+      "fingerprints": [
+        "422226f4056de14b"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/id=contagion-through-defi",
+      "field": "paragraphs",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "8a7d89e176d59e1b"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023/id=lessons",
+      "field": "paragraphs",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "cf218fbbf313322a"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usdc-svb-2023/slug=usdc-svb-2023",
+      "field": "lead",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "0f8ad033a0d0c5d0"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usdd-tron-reserve-2024/slug=usdd-tron-reserve-2024",
+      "field": "subtitle",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "45e270f9415393e6"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usdn-neutrino-2022/slug=usdn-neutrino-2022",
+      "field": "subtitle",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "4bf7b3f6685975f3"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usdr-real-usd-2023/slug=usdr-real-usd-2023/id=lessons",
+      "field": "paragraphs",
+      "rule": "no-recategorizing-flip",
+      "count": 1,
+      "fingerprints": [
+        "d332b1c3f2b290c0"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usdx-kava-2022/slug=usdx-kava-2022/id=lessons",
+      "field": "paragraphs",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "ed270d14691b22a7"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usr-resolv-2026/slug=usr-resolv-2026/id=single-key-attack-surface",
+      "field": "paragraphs",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "3c5b32bc256fbf0d"
+      ]
+    },
+    {
+      "surface": "case-studies",
+      "record": "src/lib/case-studies/usyc-nav-pricing-2025/slug=usyc-nav-pricing-2025",
+      "field": "lead",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "6cf17c7d4ac1260f"
+      ]
+    },
+    {
+      "surface": "cemetery",
+      "record": "shared/data/dead-stablecoins/id=musd-mstable-usd-2023-04",
+      "field": "*.obituary",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "8176fda65068cc71"
+      ]
+    },
+    {
+      "surface": "cemetery",
+      "record": "shared/data/dead-stablecoins/id=par-parallel-2024-09",
+      "field": "*.obituary",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "2881225c0c6799b3"
+      ]
+    },
+    {
+      "surface": "cemetery",
+      "record": "shared/data/dead-stablecoins/id=star-preon-star-2024-06",
+      "field": "*.obituary",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "c7b0b2acd882f8e7"
+      ]
+    },
+    {
+      "surface": "cemetery",
+      "record": "shared/data/dead-stablecoins/id=uno-nostra-uno-2024-07",
+      "field": "*.obituary",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "866323b57b6f26ff"
+      ]
+    },
+    {
+      "surface": "cemetery",
+      "record": "shared/data/dead-stablecoins/id=usd-usd-2025-01",
+      "field": "*.epitaph",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "add5adfe6d14678b"
+      ]
+    },
+    {
+      "surface": "cemetery",
+      "record": "shared/data/dead-stablecoins/id=usd-usd-2025-01",
+      "field": "*.obituary",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "685193945975e75e"
+      ]
+    },
+    {
+      "surface": "cemetery",
+      "record": "shared/data/dead-stablecoins/id=usdi-interest-protocol-2023-06",
+      "field": "*.obituary",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "c55eb5833d9a0863"
+      ]
+    },
+    {
+      "surface": "cemetery",
+      "record": "shared/data/dead-stablecoins/id=usdx-kava-usdx-2022-06",
+      "field": "*.obituary",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "f015ce51c18be0d3"
+      ]
+    },
+    {
+      "surface": "cemetery",
+      "record": "shared/data/dead-stablecoins/id=ush-hedge-usd-2024-06",
+      "field": "*.obituary",
+      "rule": "scoped-decorative-word",
+      "count": 1,
+      "fingerprints": [
+        "4058d5f2fadaf18c"
+      ]
+    },
+    {
+      "surface": "coin-profile-prose",
+      "record": "alusd-alchemix",
+      "field": "pegMechanism",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "40ffcbdc9b26ff3c"
+      ]
+    },
+    {
+      "surface": "coin-profile-prose",
+      "record": "chfau-allunity",
+      "field": "collateral",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "c3ccff3440bcde07"
+      ]
+    },
+    {
+      "surface": "coin-profile-prose",
+      "record": "euri-banking-circle",
+      "field": "collateral",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "b17521663de97cf4"
+      ]
+    },
+    {
+      "surface": "coin-profile-prose",
+      "record": "euri-banking-circle",
+      "field": "collateral",
+      "rule": "review-unattributed-technical-risk",
+      "count": 1,
+      "fingerprints": [
+        "ddb314e1a22ea1b8"
+      ]
+    },
+    {
+      "surface": "coin-profile-prose",
+      "record": "yusd-yieldfi",
+      "field": "pegMechanism",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "bf365b94f50f5502"
+      ]
+    },
+    {
+      "surface": "coin-summaries",
+      "record": "brl-b3",
+      "field": "oneLiner",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "3e5f88735104803b"
+      ]
+    },
+    {
+      "surface": "coin-summaries",
+      "record": "brl-itau",
+      "field": "oneLiner",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "6a83ed37a5815fd4"
+      ]
+    },
+    {
+      "surface": "coin-summaries",
+      "record": "usdt-tether",
+      "field": "oneLiner",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "41f5d25a6a7f48b7"
+      ]
+    },
+    {
+      "surface": "command-palette-copy",
+      "record": "src/components/command-palette-actions/buildVerbPreview",
+      "field": "label",
+      "rule": "no-clause-dash",
+      "count": 4,
+      "fingerprints": [
+        "21ba7c3b67a8aa67",
+        "5c3038009c643f37",
+        "785d6d67af375239",
+        "cbe7e1ba129fa2b8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/dusd-dtrinity",
+      "field": "genius.notes",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "30a0bb2bfd07e9e0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/eurot-token-teknoloji/url=https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/",
+      "field": "mica.references.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "0080252dfb41a3d2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/gbpe-monerium/url=https://docs.monerium.com/tokens/",
+      "field": "mica.references.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2d2c96256b7971d6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/gbpe-monerium/url=https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
+      "field": "mica.references.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "532d763fb0d3eb9e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/gusd-gemini/url=https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica",
+      "field": "mica.references.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "bd24e4d92d9fb276"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/reusd-re-protocol",
+      "field": "genius.notes",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "65bed83bd652a1db"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/trusd-tori/url=https://docs.tori.finance/legal/trusd-terms",
+      "field": "mica.references.*.label",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "032e2193a827425e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/usdm-moneta/url=https://moneta.global/",
+      "field": "genius.references.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e39441da66faabbf"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/usdm-moneta/url=https://www.finanstilsynet.no/en/finanstilsynets-registry/details/?id=201280",
+      "field": "mica.references.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2385bc14ebd47940"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/usdp-paxos/url=https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica",
+      "field": "mica.references.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ab61b80363922420"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/usdq-quantoz/url=https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+      "field": "mica.references.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f1e148980b3c84c8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/compliance/usdu-unitas",
+      "field": "genius.notes",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "ade4811768371c65"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/a7a5-old-vector",
+      "field": "mintAuthority.review.evidence",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "6b2449c321b17d2e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/aa-falconx-mev-capital/chain=ethereum|address=0x433d5b175148da32ffe1e1a37a939e1b7e79be4d/url=https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ba3a47860b22d096"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/aa-falconx-mev-capital/chain=ethereum|address=0xc26a6fa2c37b38e549a4a1807543801db684f99c/url=https://docs.pareto.credit/product/credit-vaults/live-vaults",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7a361f884a9fa477"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/aa-falconx-mev-capital/chain=ethereum|address=0xc26a6fa2c37b38e549a4a1807543801db684f99c/url=https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "63e04b042e5b1902"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/aa-falconx-mev-capital/url=https://docs.pareto.credit/product/credit-vaults/live-vaults",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7a361f884a9fa477"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/aa-falconx-mev-capital/url=https://docs.pareto.credit/product/credit-vaults/live-vaults",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7a361f884a9fa477"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/aa-falconx-mev-capital/url=https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "33d97d01002dd539"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/aa-falconx-mev-capital/url=https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "63e04b042e5b1902"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/aa-falconx-mev-capital",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b3da884afab6e448"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/acrdx-anemoy-apollo/address=0x9711730060c73ee7fcfe1890e8a0993858a7d225",
+      "field": "mintAuthority.controls.*.evidence",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "1b1a69e7259cf460"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/acrdx-anemoy-apollo/url=https://www.bvifsc.vg/regulated-entities/anemoy-asset-management-limited",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "92f6b4489f8dad4b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/acrdx-anemoy-apollo/url=https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "8961eb6613751d47"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/acred-apollo-securitize/url=https://www.bvifsc.vg/regulated-entities/securitize-tokenized-apollo-diversified-credit-fund-ltd",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "93648fa27785cc0f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/audd-novatti/url=https://www.audd.digital/wp-content/uploads/2026/07/AUDC-Agreed-upon-procedures-report-Jun26_.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a1c6be6f1c279bce"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/ausd-agora/url=https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "540ac3e2c39efec1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/bbqusdc-steakhouse/url=https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "75700bd0a0e9ee4f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/bbqusdc-steakhouse",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "67bd75c3aecdb497"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/benji-franklin-templeton/url=https://www.franklintempleton.com/forms-literature/download-preview/9001-P",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d7f206eec5f98518"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/brla-brla-digital/url=https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2caea15f22416b85"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/brlv-crown/url=https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9eebd9a2f7229007"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/ceur-celo/chain=celo|address=0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/ceur-celo/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/chfm-mento/chain=celo|address=0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/chfm-mento/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/chfm-mento/url=https://docs.mento.org/mento-v3/dive-deeper/cdp",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "43ea74d6b3f40cf7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/chfm-mento",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 2,
+      "fingerprints": [
+        "22e72c12d763ce5a",
+        "99b9c0e11bd47db3"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/cusd-celo/chain=celo|address=0x58099b74f4acd642da77b4b7966b4138ec5ba458/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1b955f6685b6bff2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/cusd-celo/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1b955f6685b6bff2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/cusdo-openeden",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "c000a45ea68dbaf4"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0x1c31c09010d8aea22276e526c62fbe7ccbe493ba/url=https://safe-transaction-arbitrum.safe.global/api/v1/safes/0x1c31c09010d8aeA22276E526C62Fbe7Ccbe493BA/",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "db6bb82a7c6247cd"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0x7ef842673909c1bbc877ae746250f033434ee58d/url=https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1540aed90e7a27a6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0x829fbb7071c6518c7964e80a2662744f19ddfef6/url=https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a0f18a01ed4f3237"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0x96166e8cc4c3519c6cf4af79aae82f8094518f3/url=https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1540aed90e7a27a6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0xa2438524d704232d610af0aeb27a790ce59f86ea/url=https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a0f18a01ed4f3237"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0xa2438524d704232d610af0aeb27a790ce59f86ea/url=https://arbitrum.blockscout.com/api?module=logs&action=getLogs&fromBlock=4444960&toBlock=latest&address=0xb18727bee9e66a3d780589c7648fd7185a44f220&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b85e207a0c24e40e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0xb18727bee9e66a3d780589c7648fd7185a44f220/url=https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a0f18a01ed4f3237"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0xb18727bee9e66a3d780589c7648fd7185a44f220/url=https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1540aed90e7a27a6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0xdeab81c9ff7528de932890058579c0c2341f7223/url=https://arbitrum.blockscout.com/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709?tab=contract",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "3a2a9361d0dfc507"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0xee26af8b256649c1f3b8e03cf6483e9bcf188108/url=https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a0f18a01ed4f3237"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/chain=arbitrum|address=0xee26af8b256649c1f3b8e03cf6483e9bcf188108/url=https://arbitrum.blockscout.com/api?module=logs&action=getLogs&fromBlock=4444960&toBlock=latest&address=0xb18727bee9e66a3d780589c7648fd7185a44f220&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b85e207a0c24e40e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/url=https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a0f18a01ed4f3237"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/url=https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1540aed90e7a27a6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/url=https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1540aed90e7a27a6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/dusd-fluid/url=https://arbitrum.blockscout.com/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709?tab=contract",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "3a2a9361d0dfc507"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/eurcv-societe-generale-forge/url=https://www.whitecase.com/news/press-release/white-case-advises-sg-forge-transformative-updates-eur-coinvertible-stablecoin",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "0b15410f035b454b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/europ-schuman/url=https://schuman.io/europ/",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "52c6ca335278ea0a"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/europ-schuman/url=https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "5d94f5fda75fca5a"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/eurq-quantoz/url=https://www.dnb.nl/openbaar-register/registerdetailpagina/?registerCode=WFTEG&relationNumber=R186418",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ec97fc53f1119d96"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/eurr-stablr/date=2026-05-24/url=https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2e67179731daa363"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/eurr-stablr/date=2026-05-24/url=https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "71afcf84ff702db0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/eurs-stasis/url=https://api-site.stasis.net/api/weeklyStatement/download?id=205",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "42919ee71e6c24c2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/eursafo-spiko/url=https://geco.amf-france.org/produit-d-epargne/c79399",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "c68f860d6bf213ac"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/eurspkcc-spiko/url=https://geco.amf-france.org/produit-d-epargne/c79398",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7fc6602fe437d431"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/fidd-fidelity/url=https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "8e30d2646d1548e8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/gbpm-mento/chain=celo|address=0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/gbpm-mento/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/gbpm-mento/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/gtusdc-gauntlet/url=https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "75700bd0a0e9ee4f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/gtusdc-gauntlet",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "67bd75c3aecdb497"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/gtusdcp-gauntlet/url=https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "75700bd0a0e9ee4f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/gtusdcp-gauntlet",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "67bd75c3aecdb497"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/gusd-gemini/url=https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "419075c01a50efc2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/hyusd-hylo/chain=solana|address=DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL",
+      "field": "mintAuthority.controls.*.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 2,
+      "fingerprints": [
+        "26114290572886cf",
+        "bc684c532866d7b0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/inalpha-nest/chain=multichain|address=0x20428f901a50ec69f5a2b56d313491cc686fafff/url=https://docs.nest.credit/introduction/how-to-use-nest",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7e3d408ce8e31f83"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/inalpha-nest/url=https://docs.nest.credit/about/liquidity-and-redemptions",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "81b6bae7003d75e1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/jaaa-janus-henderson-anemoy/chain=ethereum|address=0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f/url=https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9c01bb743ff5e7a1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/jaaa-janus-henderson-anemoy/url=https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9c01bb743ff5e7a1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/jpym-mento/chain=celo|address=0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/jpym-mento/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/jtrsy-anemoy/chain=ethereum|address=0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f/url=https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9c01bb743ff5e7a1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/jtrsy-anemoy/url=https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9c01bb743ff5e7a1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/jupusd-jupiter/url=https://www.theblock.co/post/384366/jupiter-rolls-out-native-jupusd-stablecoin-backed-90-by-blackrock-and-ethenas-usdtb",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "96f26b092edcf78b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/msusd-main-street/chain=ethereum|address=0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858/url=https://api.safe.global/tx-service/eth/api/v1/safes/0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858/",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "28944e2c43e44b27"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/msusd-main-street/url=https://api.safe.global/tx-service/eth/api/v1/safes/0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858/",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "28944e2c43e44b27"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/myrc-blox",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7ae6d60d900d92d6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/nxusd-nereus/date=2022-09-06/url=https://www.financialexpress.com/business/blockchain-avalanche-flash-loan-exploit-sees-371000-in-usdc-stolen-2659238/",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "90ca6eefa3d1fdd8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/ousd-origin-protocol/date=2020-11-17/url=https://blog.originprotocol.com/what-weve-changed-since-the-ousd-attack-5894f2bd77cf",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "082e80b67bbf0e98"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/ousd-origin-protocol/date=2020-11-17/url=https://peckshield.medium.com/origin-dollar-incident-root-cause-analysis-f27e11988c90",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "721cca318f82239a"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pht-pht/url=https://eth.blockscout.com/address/0xBe370Ad45D44eB45174C4Ec60b88839feF32C077",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fe31bcf04a5a93bf"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x1000008dd9001b968442c1000017eae6e0da00ba/url=https://polygon.blockscout.com/address/0x1000008dd9001b968442c1000017eae6e0da00ba",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "361f7caab9eb179e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x1000008dd9001b968442c1000017eae6e0da00ba/url=https://polygon.blockscout.com/address/0x492fec596ec347459e1ebe30b9245eb3b49b1bba",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a69502b24155b3d8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x200000900045e3b6259600682756002200028933/url=https://polygon.blockscout.com/address/0x200000900045e3b6259600682756002200028933",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fb6bb6031b6577ad"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x200000900045e3b6259600682756002200028933/url=https://polygon.blockscout.com/address/0xa61e7ca374f721d5b9fd5b0fee6fb90f27d448d7",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f6cc11a4783ce397"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x2957922eb93258b93368531d39facca3b4dc5854/url=https://polygon.blockscout.com/address/0x2957922eb93258b93368531d39facca3b4dc5854",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "07cdba9ce17a442b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x30000034706c7d8e12009dab006be20000c031a8/url=https://polygon.blockscout.com/address/0x30000034706c7d8e12009dab006be20000c031a8",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "68deb91c4f56242b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x30000034706c7d8e12009dab006be20000c031a8/url=https://polygon.blockscout.com/address/0xb529b2430d78868422c47934d9d61cc9d0c53dbb",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b8c603a7f69c80f8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x3dce0a29139a851da1dfca56af8e8a6440b4d952/url=https://polygon.blockscout.com/address/0x3dce0a29139a851da1dfca56af8e8a6440b4d952",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fc64d393ab67cc48"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x3dce0a29139a851da1dfca56af8e8a6440b4d952/url=https://polygon.blockscout.com/address/0x47ebfac3353314c788b96cdcbf41daadfe03629c",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "34ef9f5f0af64770"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x3dce0a29139a851da1dfca56af8e8a6440b4d952/url=https://polygon.blockscout.com/address/0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1222d55ad48a608b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0x93070a847efef7f70739046a929d47a521f5b8ee/url=https://polygon.blockscout.com/address/0x93070a847efEf7F70739046A929D47a521F5B8ee",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "0b175ea91874da6d"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0xada100db00ca00073811820692005400218fce1f/url=https://polygon.blockscout.com/address/0xada100db00ca00073811820692005400218fce1f",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "70ef00fc8806689c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/chain=polygon|address=0xada2005600dec949baf300f4c6120000bdb6eaab/url=https://polygon.blockscout.com/address/0xada2005600dec949baf300f4c6120000bdb6eaab",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fab5b7c9a610283b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/url=https://polygon.blockscout.com/address/0x1000008dd9001b968442c1000017eae6e0da00ba",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "361f7caab9eb179e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/url=https://polygon.blockscout.com/address/0x200000900045e3b6259600682756002200028933",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fb6bb6031b6577ad"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/url=https://polygon.blockscout.com/address/0x30000034706c7d8e12009dab006be20000c031a8",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "68deb91c4f56242b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/url=https://polygon.blockscout.com/address/0x3dce0a29139a851da1dfca56af8e8a6440b4d952",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fc64d393ab67cc48"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/url=https://polygon.blockscout.com/address/0x47ebfac3353314c788b96cdcbf41daadfe03629c",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "34ef9f5f0af64770"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/url=https://polygon.blockscout.com/address/0x93070a847efEf7F70739046A929D47a521F5B8ee",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "0b175ea91874da6d"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/url=https://polygon.blockscout.com/address/0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1222d55ad48a608b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/pusd-polymarket/url=https://polygon.blockscout.com/address/0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1222d55ad48a608b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/qcad-stablecorp/url=https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9bb1ff240f2b1e5e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/rwausdi-multipli",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "90e3c717ba4c85af"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/safo-spiko-usd/url=https://geco.amf-france.org/produit-d-epargne/c79399",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "c68f860d6bf213ac"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/sbc-brale/url=https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-05-2026.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "83448f518cdada51"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/sfrxusd-frax/url=https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2dcf8ffc17c45674"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/spkcc-spiko",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d66de336d9ac9a3e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/steakusdc-steakhouse/url=https://eth.blockscout.com/address/0x4d7bd498bb24098ca281c05519629c605407f71d",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "54dd413f2b13fd7b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/susdc-spark",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 3,
+      "fingerprints": [
+        "67bd75c3aecdb497",
+        "89cf66cff2650feb",
+        "a456596d4652f96e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/susdd-tron-dao-reserve/url=https://docs.usdd.io/introduction/collateral-asset-contract-addresses.md",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "92fbedd1d2d91bed"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/susdd-tron-dao-reserve/url=https://docs.usdd.io/system-architecture/susdd-mechanism.md",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e9c2b68c38fa1573"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/tryb-bilira/url=https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a325f5892dd1853f5b372cf_Bilira_Guvence_Raporu_May%C4%B1s_2026_ENG.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b1c18414a5587324"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/u-united-stables",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 2,
+      "fingerprints": [
+        "03e862014f00ada5",
+        "976d7c6a7c132cd8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/usdp-paxos/url=https://framerusercontent.com/assets/aEYkxLoItegSVUhVudrg5lQZQEQ.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e6acf6b4212d6676"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/usdp-paxos/url=https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "bbd6de809c58ac59"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/usdq-quantoz/url=https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ec97fc53f1119d96"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/usdr-stablr/date=2026-05-24/url=https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2e67179731daa363"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/usdr-stablr/date=2026-05-24/url=https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "71afcf84ff702db0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/usdt-tether/date=2019-07-13/url=https://thepaypers.com/payments/news/tether-minted-5-bln-usdt-by-mistake-immediately-burned-them",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e61f2d003f670395"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/usdt-tether/date=2019-07-13/url=https://www.coindesk.com/markets/2019/07/16/tether-accidentally-minted-5-billion-of-its-stablecoins-then-deleted-them",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b359932ef163808f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/usg-tangent/chain=ethereum|address=0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+      "field": "mintAuthority.controls.*.evidence",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "a2cd8a6bb366769d"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/vchf-vnx/url=https://register.fma-li.li/search?searchText=VNX",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "26f9a7867fab84ee"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/vcred-vcred",
+      "field": "mintAuthority.review.evidence",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "f2c4fbf616e7739d"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/vgbp-vnx/url=https://register.fma-li.li/search?searchText=VNX",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "26f9a7867fab84ee"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/vnxau-vnx/url=https://register.fma-li.li/search?searchText=VNX",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "26f9a7867fab84ee"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/wbrl-ripio/url=https://www.ripio.com/en/wfiat",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6b3248c60a79a6ea"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/wbrl-ripio",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "15c81fb5e0133708"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/wmxn-ripio",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b393cf0ef64a2d5a"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xmd-metal-dollar/chain=xpr-network|address=swapscold/url=https://explorer.xprnetwork.org/account/xmd.treasury",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d14f0b52a808e9d0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xmd-metal-dollar/chain=xpr-network|address=xmd.treasury/url=https://explorer.xprnetwork.org/account/xmd.token",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4aaefa4bb39c14f7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xmd-metal-dollar/chain=xpr-network|address=xmd.treasury/url=https://explorer.xprnetwork.org/account/xmd.treasury",
+      "field": "mintAuthority.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d14f0b52a808e9d0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xmd-metal-dollar/url=https://explorer.xprnetwork.org/account/swapscold",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "85cb187b5ba81720"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xmd-metal-dollar/url=https://explorer.xprnetwork.org/account/swapscold",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "85cb187b5ba81720"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xmd-metal-dollar/url=https://explorer.xprnetwork.org/account/xmd.token",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4aaefa4bb39c14f7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xmd-metal-dollar/url=https://explorer.xprnetwork.org/account/xmd.treasury",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d14f0b52a808e9d0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xsgd-straitsx/url=https://eservices.mas.gov.sg/fid/institution?term=StraitsX",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4102b0ea382ca743"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xtusd-xt",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 2,
+      "fingerprints": [
+        "9fc486833a964f97",
+        "ec23523faa7a6e59"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xusd-straitsx/url=https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bd73219d7e8e1139a331_XUSD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "c0e0d239243f559a"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/xusd-straitsx/url=https://eservices.mas.gov.sg/fid/institution?term=StraitsX",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4102b0ea382ca743"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/yzusd-yuzu/url=https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa",
+      "field": "mintAuthority.review.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "8d3b2dce8a150c46"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/yzusd-yuzu/url=https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "8d3b2dce8a150c46"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/zarp-zarp",
+      "field": "mintAuthority.review.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "599bde514b1e5ba7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/zeusd-zoth/date=2025-03-01/url=https://blog.solidityscan.com/zoth-hack-analysis-80ba3ac5076b/",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "00e2929b663d7747"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/zeusd-zoth/date=2025-03-01/url=https://blog.verichains.io/p/anatomy-of-a-hack-how-a-simple-logic",
+      "field": "mintAuthority.mintIncidents.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "348eff367880f858"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/zsd-zephyr-protocol/url=https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "01a313d200b41f9b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/zsd-zephyr-protocol/url=https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62",
+      "field": "mintAuthority.upgradeability.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9f358f26a22d78a4"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/asusdf-astherus",
+      "field": "custodyProfile.providers.*.name",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "0f2e245df11a8d2d"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/audd-novatti/url=https://cdn.audd.digital/dam/reports/AUDC+Agreed+upon+procedures+report+Jul26_.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ff83c7e0be25dd07"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/audd-novatti/url=https://www.audd.digital/wp-content/uploads/2026/07/AUDC-Agreed-upon-procedures-report-Jun26_.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a1c6be6f1c279bce"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/audf-forte/url=https://vuvuzela-iguana-ecmf.squarespace.com/s/AUDF-Reserves-Report-May-2026.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "958a54e331e92620"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/audf-forte/url=https://vuvuzela-iguana-ecmf.squarespace.com/s/AUDF-Reserves-Report-May-2026.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "958a54e331e92620"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/audx-aussie-dollar-token/url=https://www.audxtoken.com/_files/ugd/539754_4d37414d003148f582f99d625f903ef6.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9c878da065376da1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/audx-aussie-dollar-token/url=https://www.audxtoken.com/_files/ugd/539754_d2b6ce0bfdd947bda8375fe3283a0491.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9d1eab32b85dc3f7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/ausd-agora/url=https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "540ac3e2c39efec1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/ausd-agora/url=https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "540ac3e2c39efec1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/avusd-avant/url=https://docs.avantprotocol.com/overview/core-tokens",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "940fc7eae8e41a79"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/avusd-avant/url=https://docs.avantprotocol.com/overview/core-tokens",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "940fc7eae8e41a79"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/axcnh-anchorx/url=https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "8d6a028e23af97ff"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/bc3m-backed/url=https://api.backed.fi/graphql",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "5a8b0f9428dc83be"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/bib01-backed/url=https://api.backed.fi/graphql",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "073454cc4b745272"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/brl1-brl1/url=https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9a544103b6b5acbd"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/brl1-brl1/url=https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "5a7c2f6b2b0e51d2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/brla-brla-digital/url=https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3a47f28f0ae48040bbdafe358baa09b3",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4ffb80659daed192"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/brla-brla-digital/url=https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3c67f28f-0ae4-80fb-bd17-f3ca9b5d3490",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ad1acdf0bf5f0207"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/brlv-crown/url=https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_af8cfa373d.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e238989d3d6c93be"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/buck-bucket-protocol",
+      "field": "reserveReview.nonLinkDispositions.*.rationale",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "bc7502773561a73a"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/cadd-cad-digital/url=https://drive.google.com/file/d/1OKE8d0upGDiH0QePMFWfmPffNWyiUrm9/view",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1feb9152965d9e22"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/cadd-cad-digital/url=https://drive.google.com/file/d/1ZMyKTB4oq6bZDNmT8WiatYDyTYmCPXQi/view?usp=sharing",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "db9d1222d5a78d56"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/cetes-etherfuse/url=https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "bed58c78296b2cc4"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/cetes-etherfuse/url=https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "bed58c78296b2cc4"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/chfau-allunity",
+      "field": "reserveReview.rationale",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "f5a1857e19b1d0f7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/chfau-allunity",
+      "field": "reserves.*.name",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "54ca0895686e73b7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/doc-money-on-chain/url=https://public-node.rsk.co",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6a05072172e6e557"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/doc-money-on-chain/url=https://public-node.rsk.co",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6a05072172e6e557"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/doc-money-on-chain/url=https://rootstock.blockscout.com/block/9176862",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7e3c69095f19edc7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/doc-money-on-chain/url=https://rootstock.blockscout.com/block/9176862",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7e3c69095f19edc7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/dusd-fluid/url=https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=txs",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "94528637316ad194"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/eurau-allunity",
+      "field": "reserveReview.rationale",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "8b2cd10145fa36ae"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/eurc-circle/url=https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20June%2026.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "c6439d24d044976f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/eurc-circle/url=https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20May%2026.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "0b4f8150fa23d8c7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/euri-banking-circle",
+      "field": "reserveReview.nonLinkDispositions.*.rationale",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "d2250d2e66737955"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/euri-banking-circle",
+      "field": "reserveReview.rationale",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "76ee897882177e08"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/euri-banking-circle",
+      "field": "reserves.*.name",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "da549c9f9e6acddf"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/eurq-quantoz/url=https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f1e148980b3c84c8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/eurq-quantoz",
+      "field": "reserveReview.rationale",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "cc293628b8007f43"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/fdusd-first-digital/url=https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20%28June%202026%29.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "65633c8d71f111dc"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/fdusd-first-digital/url=https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20%28June%202026%29.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "65633c8d71f111dc"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/fidd-fidelity/url=https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ac939b3d079de791"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/fidd-fidelity/url=https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ac939b3d079de791"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/gbpe-monerium/url=https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "dd2b716b00f48e1f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/gtusdc-gauntlet/url=https://morpho.org/terms-of-use",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e987269e38c25147"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/gusd-gemini/url=https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "419075c01a50efc2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/gusd-gemini/url=https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "419075c01a50efc2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/hchf-hedera-swiss-franc/url=https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0.0.6070027",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4ecb5047183afd4a"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/hchf-hedera-swiss-franc/url=https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0.0.6070041",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a4befc6493b810b3"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/hchf-hedera-swiss-franc/url=https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0.0.6070108",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2e10b16d8a46181b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/hchf-hedera-swiss-franc/url=https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7cd9261e17e466ca"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/hchf-hedera-swiss-franc/url=https://mainnet.hashio.io/api",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "10a37d0b5f94c672"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/hchf-hedera-swiss-franc/url=https://mainnet.hashio.io/api",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "10a37d0b5f94c672"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/idrt-rupiah-token/url=https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf?updated_at=2026-02-20T07%3A40%3A45.154Z",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "48f7a04adf14109e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/idrt-rupiah-token/url=https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf?updated_at=2026-02-20T07%3A40%3A45.154Z",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "48f7a04adf14109e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/iusd-initia/url=https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "933c4e3b46ced6c7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/iusd-initia/url=https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "933c4e3b46ced6c7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/jpyc-jpyc/url=https://www.s-kessai.jp/businesses/funds_transfer/practice_deposit/",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "9fee6978d31a1230"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/jusd-juicedollar",
+      "field": "custodyProfile.providers.*.name",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "745866a7ff05af26"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/jusd-juicedollar",
+      "field": "reserveReview.rationale",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d9a879df92ce910e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/mxnb-juno",
+      "field": "reserveReview.rationale",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "22786697723ba39f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/paxg-paxos/url=https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "62e87134767e2e23"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/paxg-paxos/url=https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "62e87134767e2e23"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/pyusd-paypal/url=https://framerusercontent.com/assets/99N5QwJCmGdSIzUsGoGdLXxYI0.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ca68568751e76b8c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/pyusd-paypal/url=https://framerusercontent.com/assets/99N5QwJCmGdSIzUsGoGdLXxYI0.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ca68568751e76b8c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/pyusd-paypal/url=https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc?locale.x=en_US%5C",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fc6ade16a76baa4d"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/pyusd-paypal/url=https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc?locale.x=en_US%5C",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fc6ade16a76baa4d"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/reur-royal-euro/url=https://ribstatic.com/public_sanitized/2026-04-20/REUR_sanitized_PoR_snapshot_20260420_1.json",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4d80c040db70c0fe"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/reur-royal-euro/url=https://ribstatic.com/public_sanitized/2026-04-20/REUR_sanitized_PoR_snapshot_20260420_1.json",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4d80c040db70c0fe"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/rlusd-ripple/url=https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "199fe6ad0d340c16"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/rlusd-ripple/url=https://cdn.sanity.io/files/ior4a5y3/production/5a9121caa4206788930869cac0f868e5841d7fae.pdf/RLUSD_Attestation_Report_-_June'26_FINAL.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7eab8fd4057dd4c5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/rlusd-ripple",
+      "field": "custodyProfile.providers.*.name",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "5f667d11c1ac8e82"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/rlusd-ripple",
+      "field": "reserveReview.rationale",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "0f61d2d412fae025"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/sbc-brale/url=https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-06-2026.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1df59bb0ed1994e8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/sbc-brale/url=https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-07-2026.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d67a4d08e4de2eb9"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/silk-shade-protocol",
+      "field": "custodyProfile.providers.*.name",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b16c342a6e607251"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/tbill-openeden/url=https://drive.google.com/file/d/1zkGEy-ZUWvH4sKtoppk0Ktl32eHRCgC7/view",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "3e890b951bb60d3e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/tbill-openeden/url=https://drive.google.com/file/d/1zkGEy-ZUWvH4sKtoppk0Ktl32eHRCgC7/view",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "3e890b951bb60d3e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/tgbp-tokenised/url=https://hypzwtzgiiobtwtrskfq.supabase.co/storage/v1/object/public/Website%20Files/Independent%20Accounts%20Report%20-%20BCP%20Technologies%20Ltd%20-%20%2030%20June%202026.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "73428c2ef45c1ba2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/tryb-bilira/url=https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4cfdcee1dcd37c40"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/tusd-trueusd/url=https://widget.verinumus.io/api/v1/tusd/report",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "afe26d144a775a78"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/tusd-trueusd/url=https://widget.verinumus.io/api/v1/tusd/report",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "947acaa98fb38d2e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usat-tether/url=https://learn.anchorage.com/05.31.26_USAT_Stablecoin_Attestation_Report_signed.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ebd7e984876d1043"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usat-tether/url=https://learn.anchorage.com/06.30.26_USAT-Stablecoin-Attestation-Report.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6629fd491d7896a5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usd1-world-liberty-financial/url=https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_May_2026.pdf?version=0",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "32f05db8014c927d"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usd1-world-liberty-financial/url=https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_May_2026.pdf?version=0",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "32f05db8014c927d"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdai-usd-ai/url=https://usd.ai/susdai",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e7709f64b5f25aee"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdb-blast/url=https://docs.blast.io/about-blast",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d6072b8606848d10"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdb-blast/url=https://docs.blast.io/about-blast",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d6072b8606848d10"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdc-circle/url=https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20June%2026.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e7d511ec7fca6685"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdc-circle/url=https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fd6a273120409df0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdc-circle/url=https://www.sec.gov/Archives/edgar/data/1876042/000187604226000062/crcl-20251231.htm",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "00d40a68672e50c2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdg-paxos/url=https://framerusercontent.com/assets/o61pz3wuO4LmxEuDTUxmINc09qc.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "776829f5fc2c9efb"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdg-paxos/url=https://framerusercontent.com/assets/o61pz3wuO4LmxEuDTUxmINc09qc.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "776829f5fc2c9efb"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdglo-glo/url=https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-06-2026.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1442e882062b2006"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdglo-glo/url=https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-06-2026.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1442e882062b2006"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdgo-osl/url=https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "0b3ecb2f68672328"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdgo-osl/url=https://learn.anchorage.com/06.30.26_USDGO-Stablecoin-Attestation-Report.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "60d8065e0f4de7e1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdgo-osl",
+      "field": "reserveReview.rationale",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7a27ba902e425de1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdh-hermetica/coinId=usdc-circle",
+      "field": "reserves.*.name",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "bd8139ffc8500079"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdh-hermetica",
+      "field": "reserves.*.name",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "29c70d858a17c858"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdkg-gold-dollar",
+      "field": "reserveReview.rationale",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "7af87006da8d98a5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdkg-gold-dollar",
+      "field": "reserveReview.rationale",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1e2979ce29062542"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdp-paxos/url=https://framerusercontent.com/assets/aEYkxLoItegSVUhVudrg5lQZQEQ.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e6acf6b4212d6676"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdp-paxos/url=https://framerusercontent.com/assets/aEYkxLoItegSVUhVudrg5lQZQEQ.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e6acf6b4212d6676"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdq-quantoz/url=https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f1e148980b3c84c8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdq-quantoz",
+      "field": "reserveReview.rationale",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "7db8132119d2dcb4"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdtb-ethena/url=https://learn.anchorage.com/05.31.26_USDtb_Stablecoin_Attestation_Report_signed.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1218531293ef473f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/usdtb-ethena/url=https://learn.anchorage.com/06.30.26_USDtb-Stablecoin-Attestation-Report.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "efecc765cef0120b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/wars-argentine-peso/url=https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "91d65af2c4ed7a2f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/wars-argentine-peso/url=https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "91d65af2c4ed7a2f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/wbrl-ripio/url=https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "13456c7f52954505"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/wbrl-ripio/url=https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "13456c7f52954505"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/wcop-ripio/url=https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ff972d77234dfab8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/wcop-ripio/url=https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ff972d77234dfab8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/wmxn-ripio/url=https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6888dd264d5fccf6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/wmxn-ripio/url=https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6888dd264d5fccf6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/xaum-matrixdock",
+      "field": "reserveReview.rationale",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7c6fa421ee74b09c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/xaut-tether/url=https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ced0629cf65aec33"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/xaut-tether/url=https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ced0629cf65aec33"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/xmd-metal-dollar/url=https://explorer.xprnetwork.org/account/swapscold",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "85cb187b5ba81720"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/xmd-metal-dollar/url=https://explorer.xprnetwork.org/account/xmd.treasury",
+      "field": "custodyProfile.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d14f0b52a808e9d0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/xmd-metal-dollar/url=https://explorer.xprnetwork.org/account/xmd.treasury",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "d14f0b52a808e9d0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/xmd-metal-dollar/url=https://proton.eosusa.io/v1/chain/get_currency_balance",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "8d9a94c55998be6e"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/xusd-straitsx/url=https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c789f7ac035cdb7e226fc_XUSD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b9c352d0d4ca4407"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/xusd-straitsx",
+      "field": "reserveReview.rationale",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "47aaaa67d4229ff9"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/reserves/zarp-zarp/url=https://kempengroup.co.za/wp-content/uploads/2026/08/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-08-12.pdf",
+      "field": "reserveReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "930cc637b781c2c8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/apxusd-apyx/id=apxusd-base-ccip-burn-mint-owner/url=https://docs.chain.link/ccip/directory/mainnet/token/apxUSD",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "60039179dd33357c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/apxusd-apyx/id=apxusd-bsc-ccip-burn-mint-owner/url=https://docs.chain.link/ccip/directory/mainnet/token/apxUSD",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "60039179dd33357c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/apxusd-apyx/id=apxusd-ethereum-ccip-lock-release-owner/url=https://docs.chain.link/ccip/directory/mainnet/token/apxUSD",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "60039179dd33357c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/apxusd-apyx/id=base:0xd993935e13851dd7517af10687ec7e5022127228/url=https://docs.chain.link/ccip/directory/mainnet/token/apxUSD",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "60039179dd33357c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/apxusd-apyx/id=bsc:0x6b3788fd6604bbf03c5378d24e57bb334baad4af/url=https://docs.chain.link/ccip/directory/mainnet/token/apxUSD",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "60039179dd33357c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/apxusd-apyx/id=ethereum:0x98a878b1cd98131b271883b390f68d2c90674665/url=https://docs.chain.link/ccip/directory/mainnet/token/apxUSD",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "60039179dd33357c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/apxusd-apyx/url=https://docs.chain.link/ccip/directory/mainnet/token/apxUSD",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "9910f097dd85cc55"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/apyusd-apyx/id=base:0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa/url=https://docs.chain.link/ccip/directory/mainnet/token/apyUSD",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "59fe86c3f4b143ae"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/apyusd-apyx/url=https://docs.chain.link/ccip/directory/mainnet/token/apyUSD",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "59fe86c3f4b143ae"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/aznd-mu-digital/url=https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2965df08e695fc99"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/bnusd-balanced/id=injective:factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j/url=https://lcd.injective.network/cosmwasm/wasm/v1/contract/inj177fx40l0g3jqmtmmuyl2zhrjvhr3knvthlr0ul",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "65dead5f91f3890f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/bnusd-balanced/id=injective:factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j/url=https://lcd.injective.network/cosmwasm/wasm/v1/contract/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2a634f6cfde79e08"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/ceur-celo/id=celo:0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "8354119bb99fe2ae"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/ceur-celo/id=monad:0x4d502d735b4c574b487ed641ae87ceae884731c7/url=https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "91c769fcd2d109c2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/ceur-celo/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "94c81abddc3bf4b8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/cusd-celo/id=cusd-celo-ntt-owner-safe/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1b955f6685b6bff2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/cusd-celo/id=cusd-monad-ntt-owner-safe/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1b955f6685b6bff2"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/doc-money-on-chain/url=https://arb1.arbitrum.io/rpc",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "665a64ac0dc5d7e0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/doc-money-on-chain/url=https://arbitrum.blockscout.com/address/0x2ad62eb9744c720364f6ac856360a43e8a2229b5",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b9653ac255c90692"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/doc-money-on-chain/url=https://public-node.rsk.co",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "75483aad12cb2888"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/doc-money-on-chain/url=https://rootstock.blockscout.com/address/0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f5e2db6ece37d1f7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/doc-money-on-chain/url=https://rootstock.blockscout.com/address/0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e57cea8ff23d3f34"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/doc-money-on-chain/url=https://sourcify.dev/server/v2/contract/42161/0x2ad62eb9744c720364f6ac856360a43e8a2229b5?fields=abi,metadata",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "ad905958619147be"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/dusd-fluid/url=https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "1540aed90e7a27a6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=arbitrum:0x17fc002b466eec40dae837fc4be5c67993ddbd6f",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b06fd6f9a9b20493"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=aurora:0xe4b9e004389d91e4134a28f19bd833cba1d994b6",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=avalanche:0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=boba:0x7562f525106f5d54e891e005867bf489b5988cd9",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=bsc:0x90c97f71e18723b0cf0dfa30ee176ab653e89f40",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=fantom:0xdc301622e621166bd8e82f2ca0a26c13ad0be355",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-arbitrum-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b06fd6f9a9b20493"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-aurora-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-avalanche-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-boba-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-bsc-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-fantom-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-harmony-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "a848c739d3b8a9c0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-moonbeam-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-moonriver-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-optimism-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=frax-polygon-crosschain-route",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=harmony:0xfa7191d292d5633f702b0bd7e3e3bccc0e633200",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "a848c739d3b8a9c0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=moonbeam:0x322e86852e492a7ee17f28a78c663da38fb33bfb",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=moonriver:0x1a93b23281cc1cde4c4741353f3064709a16197d",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=optimism:0x2e3d870790dc77a83dd1d18184acc7439a53f475",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/frax-frax/id=polygon:0x45c32fa6df82ead1e2ef74d17b76547eddfaff89",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "no-corrective-cleft-split",
+      "count": 1,
+      "fingerprints": [
+        "b5900171d2d0c7f5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/gbpm-mento/id=gbpm-celo-ntt-safe/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/gbpm-mento/id=gbpm-monad-ntt-safe/url=https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "41067919a51054b6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/gbpm-mento/id=gbpm-monad-stabletoken-spoke-proxy-admin/url=https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "41067919a51054b6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/gbpm-mento/url=https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4de925103c0459da"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/gbpm-mento/url=https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "41067919a51054b6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/gldt-gold-dao/url=https://basescan.org/token/0x86856814e74456893cfc8946bedcbb472b5fa856",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2ecd9f9ae924f696"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/grams-token-teknoloji/url=https://polygonscan.com/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "95871dbe1dfad15c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/grams-token-teknoloji/url=https://snowtrace.io/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "47d2b05dda465e03"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/grams-token-teknoloji/url=https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "8796f44fb31dc76f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/iusd-initia/id=iusd-initia-ausd0-layerzero-admin",
+      "field": "bridgeRouteRisk.controls.*.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "a18150e01d05bcb8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/jpym-mento/id=jpym-monad-spoke-owner-safe/url=https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "41067919a51054b6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/msusd-main-street/id=msusd-sonic-oft-owner-safe/url=https://api.safe.global/tx-service/sonic/api/v1/safes/0x861a58d3DE287196c5546d10c7afFa479E0963e4/",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "84d35c784cf8655b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/msusd-main-street/url=https://api.safe.global/tx-service/sonic/api/v1/safes/0x861a58d3DE287196c5546d10c7afFa479E0963e4/",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "84d35c784cf8655b"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/nwisdom-nest/url=https://docs.nest.credit/about/cross-chain",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "edbbbd437334afe0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/nwisdom-nest/url=https://docs.nest.credit/developers/smart-contracts",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b53076bf977d8b00"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/rd-rai-dollar/url=https://docs.raidollar.tech/docs/borrowing/collaterals",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "67c4e4fb565f3b83"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/rd-rai-dollar/url=https://docs.raidollar.tech/docs/rd/token",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b5a5ea2ad56973de"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/scusd-rings",
+      "field": "blacklistabilityReview.evidence",
+      "rule": "no-recategorizing-flip",
+      "count": 1,
+      "fingerprints": [
+        "f6ccf4ec661668d0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/sdusd-dtrinity",
+      "field": "blacklistabilityReview.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2d2d24e8b6782495"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/sfrxusd-frax/id=sfrxusd-ethereum-lockbox-owner/url=https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8C82D4a505003f27/",
+      "field": "bridgeRouteRisk.controls.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2dcf8ffc17c45674"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/silk-shade-protocol/id=wbtc",
+      "field": "oracleRisk.branches.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2749238c027a8886"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/susdai-usd-ai",
+      "field": "blacklistabilityReview.evidence",
+      "rule": "no-recategorizing-flip",
+      "count": 1,
+      "fingerprints": [
+        "5d9611625aaaa45f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usbd-bima/id=ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c/url=https://docs.bima.money/security/mainnet-addresses",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "2f00f1797d0619e5"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usbd-bima/url=https://docs.bima.money/security/mainnet-addresses",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f2d6d5e37288dbce"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usbd-bima/url=https://www.rootdata.com/Projects/detail/BIMA",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "5dd2fdcce6eed61c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdb-blast/url=https://docs.blast.io/about-blast",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "dca5efaef080b37a"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdrif-rif/url=https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e6a6a7d456ee97d9"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdt-tether/id=conflux:0xaf37e8b6c9ed7f6318979f56fc287d76c30847ff/url=https://evm.confluxscan.org/address/0xaf37E8B6C9ED7f6318979f56Fc287d76c30847ff",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "dad9e6b585d2b9fb"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdt-tether/id=corn:0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb/url=https://maizenet-explorer.usecorn.com/token/0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "83a167e3900cbdc8"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdt-tether/id=hedera:0x00000000000000000000000000000000009ce723/url=https://hashscan.io/mainnet/token/0.0.10282787",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f252d1e8a931f4d9"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdt-tether/id=injective:peggy0xdAC17F958D2ee523a2206206994597C13D831ec7/url=https://sentry.lcd.injective.network/cosmos/bank/v1beta1/denoms_metadata/peggy0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "fd9f5867a0816d34"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdt-tether/id=injective:peggy0xdAC17F958D2ee523a2206206994597C13D831ec7/url=https://sentry.lcd.injective.network/peggy/v1/params",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "943898ac3cd07ed6"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdt-tether/id=morph-l2:0xe7cd86e13ac4309349f30b3435a9d337750fc82d/url=https://explorer.morphl2.io/address/0xe7cd86e13AC4309349F30B3435a9d337750fC82D",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6a5acaec4b7b8783"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdt-tether/id=rootstock:0x779ded0c9e1022225f8e0630b35a9b54be713736/url=https://rootstock.blockscout.com/address/0x779dED0C9e1022225F8e0630b35A9B54Be713736",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "08da14e40a36e8d1"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdt-tether/id=sui:0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT/url=https://docs.sui.io/concepts/tokenomics/sui-bridging",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "64c2c1244f0fd9cc"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/usdt-tether/id=tempo:0x20c00000000000000000000014f22ca97301eb73/url=https://explorer.tempo.xyz/address/0x20C00000000000000000000014f22CA97301EB73",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "88499004f55130ef"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/uty-xsy/url=https://docs.yieldpoint.io/protocol/architecture/contracts",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "44de219db87d19cd"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/uty-xsy/url=https://docs.yieldpoint.io/protocol/architecture/overview",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "5dc90b69d9dff6fa"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/uty-xsy/url=https://docs.yieldpoint.io/protocol/architecture/tokens-and-fees",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "0a7f494e0c96ac31"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/uty-xsy/url=https://docs.yieldpoint.io/protocol/integration/bridge-operations",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b389e30100736339"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/wars-argentine-peso/url=https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "91d65af2c4ed7a2f"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/wclp-ripio",
+      "field": "blacklistabilityReview.evidence",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "b0ab9c8fb95f4029"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/wusd-worldwide/id=ethereum:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "414266e2223a9559"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/wusd-worldwide/id=polygon:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+      "field": "bridgeRouteRisk.routes.*.reviewNote",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "c47364a452f49fdb"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/xmd-metal-dollar/url=https://explorer.xprnetwork.org/account/xmd.token",
+      "field": "blacklistabilityReview.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "4aaefa4bb39c14f7"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/yzusd-yuzu/id=plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc/url=https://x.com/YuzuMoneyX/status/2074480433233027222",
+      "field": "bridgeRouteRisk.routes.*.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6b4b46e0a6ec4e8c"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/yzusd-yuzu/url=https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/yuzu-usd/index.ts",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e56d88241599f110"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/yzusd-yuzu/url=https://metadata.layerzero-api.com/v1/metadata",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "82fabe6ecd3805c0"
+      ]
+    },
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/risk-review/yzusd-yuzu/url=https://x.com/YuzuMoneyX/status/2074480433233027222",
+      "field": "bridgeRouteRisk.sources.*.label",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6b4b46e0a6ec4e8c"
+      ]
+    },
+    {
+      "surface": "funding-narrative",
+      "record": "src/components/funding/funding-page-sections/CostBreakdown",
+      "field": "jsx-text",
+      "rule": "no-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "6b59e4b11cd1e233"
+      ]
+    },
+    {
+      "surface": "funding-narrative",
+      "record": "src/components/funding/funding-page-sections/FundingKpiRow",
+      "field": "label",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "4a42f1b4f53c3bf3"
+      ]
+    },
+    {
+      "surface": "funding-narrative",
+      "record": "src/components/funding/funding-page-sections/PrimaryGivethTile",
+      "field": "jsx-text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "e1ab7d345a693657"
+      ]
+    },
+    {
+      "surface": "funding-narrative",
+      "record": "src/components/funding/funding-page-sections/SupportCtas",
+      "field": "jsx-text",
+      "rule": "review-unqualified-superlative",
+      "count": 1,
+      "fingerprints": [
+        "aa78d1d7183dd6df"
+      ]
+    },
+    {
+      "surface": "learn-mechanisms",
+      "record": "src/lib/mechanism-explainers/fiat-cash/archetype=fiat-cash",
+      "field": "body",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "c246fb9479cf92af"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/depeg-dews/v2/version=2.0|date=2026-02-20",
+      "field": "impact",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 2,
+      "fingerprints": [
+        "72f194b8ce6b07cd",
+        "72f194b8ce6b07cd"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/liquidity-score/v5/version=5.96|date=2026-07-28",
+      "field": "impact",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "31402f1008275365"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/mint-burn-flow/v2/version=2.1|date=2026-03-01",
+      "field": "impact",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "d758fa6b6d4e97cf"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/mint-burn-flow/v3/version=3.1|date=2026-03-03",
+      "field": "summary",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "72aa419e2e8bf76b"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/mint-burn-flow/v4/version=4.6|date=2026-03-09",
+      "field": "summary",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "f9ab170e9eca66d3"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/redemption-backstop/v2/version=2.9|date=2026-03-24",
+      "field": "impact",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "8d8c9cc04138c054"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/redemption-backstop/v4/version=4.3|date=2026-08-07",
+      "field": "impact",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "a56da7846feb5680"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/safety-score/v5/version=5.7|date=2026-03-13",
+      "field": "summary",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "8add52be84e6fc47"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/stability-index/v1/version=1.0|date=2026-02-25",
+      "field": "impact",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 2,
+      "fingerprints": [
+        "c493f54f98a76314",
+        "c493f54f98a76314"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/stability-index/v2/version=2.0|date=2026-02-26",
+      "field": "impact",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f47d5498a2f6b8ac"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/stability-index/v3/version=3.0|date=2026-03-01",
+      "field": "impact",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 2,
+      "fingerprints": [
+        "b7d1c9b8df6473dd",
+        "b7d1c9b8df6473dd"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/yield-methodology/v5/version=5.6|date=2026-03-26",
+      "field": "impact",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "d9c469ccae11b806"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/yield-methodology/v5/version=5.7|date=2026-03-26",
+      "field": "summary",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "10e73ea55b9b8199"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/yield-methodology/v6/version=6.1|date=2026-03-26",
+      "field": "impact",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "cd83c1642a6098ba"
+      ]
+    },
+    {
+      "surface": "methodology-changelogs",
+      "record": "shared/data/methodology-changelogs/yield-methodology/v6/version=6.1|date=2026-03-26",
+      "field": "title",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "d6c46d64f3e50c91"
+      ]
+    },
+    {
+      "surface": "page-metadata",
+      "record": "src/app/docs/page/buildPageMetadata",
+      "field": "title",
+      "rule": "spaced-hyphen-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "3f8d297343a46b87"
+      ]
+    },
+    {
+      "surface": "prose-authoring-skills",
+      "record": ".codex/skills/annotations-refresh/SKILL",
+      "field": "body",
+      "rule": "no-booster-language",
+      "count": 1,
+      "fingerprints": [
+        "92f880ce20dc6fa9"
+      ]
+    },
+    {
+      "surface": "prose-authoring-skills",
+      "record": ".codex/skills/annotations-refresh/SKILL",
+      "field": "body",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "d4a029f2b8220ef2"
+      ]
+    },
+    {
+      "surface": "prose-authoring-skills",
+      "record": ".codex/skills/issuer-questionnaire/SKILL",
+      "field": "body",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "2af2abad475a1323"
+      ]
+    },
+    {
+      "surface": "prose-authoring-skills",
+      "record": ".codex/skills/stablecoin-info-fetch/SKILL",
+      "field": "body",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "4cf70d9fe83aa20e"
+      ]
+    },
+    {
+      "surface": "prose-authoring-skills",
+      "record": ".codex/skills/yield-coverage-audit-drain/SKILL",
+      "field": "body",
+      "rule": "no-unqualified-safety",
+      "count": 1,
+      "fingerprints": [
+        "af8ec8c1b2d0f152"
+      ]
+    },
+    {
+      "surface": "telegram-alert-copy",
+      "record": "worker/src/lib/telegram-alerts-formatting/formatDepegTriggeredLine",
+      "field": "return",
+      "rule": "no-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f6f1038be721186a"
+      ]
+    },
+    {
+      "surface": "telegram-alert-copy",
+      "record": "worker/src/lib/telegram-alerts-formatting/formatDepegWorseningLine",
+      "field": "return",
+      "rule": "no-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "40090f7933abecd6"
+      ]
+    },
+    {
+      "surface": "telegram-alert-copy",
+      "record": "worker/src/lib/telegram-alerts-formatting/formatDewsLine",
+      "field": "return",
+      "rule": "no-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "56d2d89734f1796d"
+      ]
+    },
+    {
+      "surface": "telegram-alert-copy",
+      "record": "worker/src/lib/telegram-alerts-formatting/formatFreezeLine",
+      "field": "return",
+      "rule": "no-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "696b1e0d38482a37"
+      ]
+    },
+    {
+      "surface": "telegram-alert-copy",
+      "record": "worker/src/lib/telegram-alerts-formatting/formatLaunchLine",
+      "field": "return",
+      "rule": "no-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "e242828d9c5ad528"
+      ]
+    },
+    {
+      "surface": "telegram-alert-copy",
+      "record": "worker/src/lib/telegram-alerts-formatting/formatReserveLine",
+      "field": "return",
+      "rule": "no-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "f498e7fa241680b9"
+      ]
+    },
+    {
+      "surface": "telegram-alert-copy",
+      "record": "worker/src/lib/telegram-alerts-formatting/formatSafetyLine",
+      "field": "return",
+      "rule": "no-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "7865b0fc3f946c45"
+      ]
+    },
+    {
+      "surface": "weekly-digests",
+      "record": "data/digests/date=2026-08-31-weekly|digestType=weekly",
+      "field": "*.extended",
+      "rule": "review-unqualified-superlative",
+      "count": 2,
+      "fingerprints": [
+        "2b34884a57fc60e9",
+        "986205601311c2d1"
+      ]
+    }
+  ]
+}

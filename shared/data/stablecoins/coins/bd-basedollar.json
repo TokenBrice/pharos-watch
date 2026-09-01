@@ -185,7 +185,7 @@
     {
       "date": "2026-05-21",
       "type": "audit",
-      "title": "Post-audit remediation ongoing — oracle staleness, TWAP/slippage, and sAMM-overflow fixes merged",
+      "title": "Post-audit remediation ongoing: oracle staleness, TWAP/slippage, and sAMM-overflow fixes merged",
       "description": "GitHub activity through May 21 2026 shows continued audit-finding remediation (oracle staleness-check, TWAP/slippage handling, and sAMM overflow fixes) merged into the main branch; no mainnet deployment yet.",
       "sourceUrl": "https://github.com/basedollar/basedollar"
     },

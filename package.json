@@ -158,6 +158,7 @@
     "analyze:gsc-performance": "node scripts/maintenance/analyze-gsc-performance.mjs",
     "og:capture": "node scripts/maintenance/screenshot-og.mjs",
     "build:og-editorial": "node scripts/maintenance/build-og-editorial.mjs",
+    "generate:editorial-baseline": "node --import tsx scripts/maintenance/generate-editorial-baseline.ts",
     "build:safety-score-map": "tsx scripts/maintenance/build-safety-score-map.ts --edition=daily",
     "build:safety-score-map:monthly": "tsx scripts/maintenance/build-safety-score-map.ts --edition=monthly",
     "build:og-case-studies": "tsx scripts/maintenance/build-og-case-studies.ts",

@@ -209,7 +209,7 @@
             "url": "https://bscscan.com/address/0xf38979e05650be7926ea07bb59c48fb9b1db3d08#code"
           }
         ],
-        "evidence": "At BSC block 116356868, this zero-code EOA had uint256.max minter allowance on the BSC USYC representation. The allowance is not decremented by minting; this is the shared EOA's bridge-route capability, while its Ethereum native allowance remains separately reviewed in Mint Authority."
+        "evidence": "At BSC block 116356868, this zero-code EOA had uint256.max minter allowance on the BSC USYC representation. The allowance is not decremented by minting. This is the shared EOA's bridge-route capability, while its Ethereum native allowance remains separately reviewed in Mint Authority."
       },
       {
         "id": "usyc-bsc-entitlements-owner",

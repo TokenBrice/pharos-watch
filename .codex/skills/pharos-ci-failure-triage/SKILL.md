@@ -132,9 +132,9 @@ Then watch the new run with `gh run list` and `gh run watch`.
 
 ### 6. Scheduled Automation Failures
 
-Most workflows in `.github/workflows/` are scheduled automation. Shock-coverage refresh, protocol-API mechanism refresh, and OG refresh can open PRs; maintenance candidates opens or updates an issue, while nightly validation, coverage ratchets, and security scans report through their workflow runs. A failure there is not automatically a push/merge-gate failure — triage the automation's own run and any branch or issue it owns.
+Most workflows in `.github/workflows/` are scheduled automation. Shock-coverage refresh, protocol-API mechanism refresh, and OG refresh can open PRs; maintenance candidates opens or updates an issue, while nightly validation, coverage ratchets, and security scans report through their workflow runs. A failure there is not automatically a push/merge-gate failure. Triage the automation's own run and any branch or issue it owns.
 
-The shock-coverage refresh is the urgent one: its PR arms auto-merge at creation (repo-level auto-merge is enabled but per-PR opt-in; this is the one automation that opts in), so it self-merges the moment its gate goes green — and the underlying measurements carry a hard 72h freshness bound past which the V9 engine fails closed to degraded backing scores. If that loop is broken, check `scripts/ci/check-shock-coverage-freshness.ts` and follow `docs/process/shock-coverage-refresh.md`.
+The shock-coverage refresh is the urgent one: its PR arms auto-merge at creation (repo-level auto-merge is enabled but per-PR opt-in; this is the one automation that opts in), so it self-merges the moment its gate goes green. The underlying measurements carry a hard 72h freshness bound past which the V9 engine fails closed to degraded backing scores. If that loop is broken, check `scripts/ci/check-shock-coverage-freshness.ts` and follow `docs/process/shock-coverage-refresh.md`.
 
 ## Companion Subagents
 

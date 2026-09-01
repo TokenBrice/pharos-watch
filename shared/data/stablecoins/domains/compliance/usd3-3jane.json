@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "MiCA Article 2 — financial instruments and funds are outside MiCA scope",
+        "label": "MiCA Article 2: financial instruments and funds are outside MiCA scope",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       },
       {
-        "label": "3Jane Terms of Use — USD3 is a yieldcoin backed by credit lines and the platform is operated by Tulkum Assets Corp.",
+        "label": "3Jane Terms of Use: USD3 is a yieldcoin backed by credit lines and the platform is operated by Tulkum Assets Corp.",
         "url": "https://www.3jane.xyz/pdf/terms-of-service.pdf"
       },
       {
-        "label": "3Jane official site — USD3 is a credit-backed yieldcoin with auto-compounded yield",
+        "label": "3Jane official site: USD3 is a credit-backed yieldcoin with auto-compounded yield",
         "url": "https://www.3jane.xyz/"
       }
     ]
@@ -35,7 +35,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "GENIUS Act — payment stablecoin definition",
+          "label": "GENIUS Act: payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",

@@ -6,7 +6,7 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "USDf is an overcollateralized synthetic dollar backed by crypto assets (BTC, ETH, SOL, stablecoins, altcoins) with delta-neutral strategies — not a fiat-redeemable payment instrument. Issued by Falcon Digital Limited (BVI). Terms of Use explicitly prohibit US persons: 'The Falcon Assets are not offered or sold, and will not be offered or sold, in the United States or to U.S. Persons.' Falcon Finance created a separate GENIUS-ready product (fUSD, issued by Anchorage Digital Bank N.A.) expressly because USDf cannot serve compliance-constrained US institutions.",
+      "summary": "USDf is an overcollateralized synthetic dollar backed by crypto assets (BTC, ETH, SOL, stablecoins, altcoins) with delta-neutral strategies: not a fiat-redeemable payment instrument. Issued by Falcon Digital Limited (BVI). Terms of Use explicitly prohibit US persons: 'The Falcon Assets are not offered or sold, and will not be offered or sold, in the United States or to U.S. Persons.' Falcon Finance created a separate GENIUS-ready product (fUSD, issued by Anchorage Digital Bank N.A.) expressly because USDf cannot serve compliance-constrained US institutions.",
       "references": [
         {
           "label": "Falcon Finance Terms of Use",
@@ -32,10 +32,10 @@
     "reserveDisclosureUrl": "https://app.falcon.finance/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDf is a crypto-collateralized synthetic dollar (mechanismArchetype: synthetic-delta-neutral), not a fiat-backed payment stablecoin. US persons are explicitly excluded from the Terms of Use; the United States is listed as a restricted jurisdiction. Falcon Finance launched a separate GENIUS-ready token (fUSD) issued by Anchorage Digital Bank N.A. (federally chartered) on 2026-05-27 as the compliant US payment stablecoin counterpart — confirming that USDf itself is out of GENIUS scope. A quarterly audit report was published in October 2025 confirming full reserve backing; attestation cadence is quarterly, not monthly.",
+    "notes": "USDf is a crypto-collateralized synthetic dollar (mechanismArchetype: synthetic-delta-neutral), not a fiat-backed payment stablecoin. US persons are explicitly excluded from the Terms of Use; the United States is listed as a restricted jurisdiction. Falcon Finance launched a separate GENIUS-ready token (fUSD) issued by Anchorage Digital Bank N.A. (federally chartered) on 2026-05-27 as the compliant US payment stablecoin counterpart, confirming that USDf itself is out of GENIUS scope. A quarterly audit report was published in October 2025 confirming full reserve backing; attestation cadence is quarterly, not monthly.",
     "references": [
       {
-        "label": "Falcon Finance Terms of Use — US persons restriction",
+        "label": "Falcon Finance Terms of Use: US persons restriction",
         "url": "https://docs.falcon.finance/resources/terms-of-use",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"

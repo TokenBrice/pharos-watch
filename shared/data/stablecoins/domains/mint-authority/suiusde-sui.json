@@ -19,11 +19,11 @@
       "observedBlock": 298482440,
       "sources": [
         {
-          "label": "Sui fullnode RPC — suiUSDe package UpgradeCap",
+          "label": "Sui fullnode RPC: suiUSDe package UpgradeCap",
           "url": "https://fullnode.mainnet.sui.io:443"
         },
         {
-          "label": "Suiscan — suiUSDe UpgradeCap object",
+          "label": "Suiscan: suiUSDe UpgradeCap object",
           "url": "https://suiscan.xyz/mainnet/object/0x764653924d7bc3b889809de7ca077f5dd69ec378cb5d52be448c15613a5116c8"
         },
         {
@@ -45,7 +45,7 @@
         "capDescription": "TreasuryCap<SUI_USDE> is wrapped inside the shared Treasury object, so minting must route through Treasury module logic rather than an externally held TreasuryCap.",
         "sources": [
           {
-            "label": "Sui fullnode RPC – Treasury object",
+            "label": "Sui fullnode RPC: Treasury object",
             "url": "https://fullnode.mainnet.sui.io:443"
           }
         ],
@@ -61,7 +61,7 @@
         "canRaiseCap": true,
         "sources": [
           {
-            "label": "Sui fullnode RPC – RoleAuthorized events",
+            "label": "Sui fullnode RPC: RoleAuthorized events",
             "url": "https://fullnode.mainnet.sui.io:443"
           }
         ],

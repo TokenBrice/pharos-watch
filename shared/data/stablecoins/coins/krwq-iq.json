@@ -16,7 +16,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-07-22",
     "reviewer": "GPT SOL-NR-B wave6",
-    "rationale": "KRWQ's issuer reserve endpoint reports the current reserve assets and an over-100% reserve ratio, while issuer materials describe KYC-gated centralized issuance and redemption. The KRW reference and mixed reserve assets do not make this a USD peg or an algorithmic design; it is an issuer-managed reserve claim.",
+    "rationale": "KRWQ's issuer reserve endpoint reports the current reserve assets and an over-100% reserve ratio, while issuer materials describe KYC-gated centralized issuance and redemption. The KRW reference and mixed reserve assets indicate an issuer-managed reserve claim rather than a USD peg or an algorithmic design.",
     "sources": [
       {
         "label": "KRWQ custodian-assets API",

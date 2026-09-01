@@ -13,9 +13,11 @@ import type {
 } from "../types/market";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "../types/exit-route";
 import {
-} from "./exit-route-identity";
-import {
+  DEX_EXACT_QUOTE_ADAPTER_IDS,
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
+  getDexMeasuredExecutionFreshnessMaxSec,
+  type DexExactQuoteAdapterId,
+  type DexExecutionProfileV2,
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
@@ -30,6 +32,220 @@ export const CURVE_STABLESWAP_MIN_COMPLETE_CYCLES = 3;
 export const CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 export const CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES = 3;
 export const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
+
+export type DexExecutionCapabilityLifecycle = "shadow" | "active" | "disabled";
+export type DexExecutionProofKind =
+  | "evm-call-proof"
+  | "evm-state-and-call-proof"
+  | "evm-reserve-proof"
+  | "solana-account-proof";
+
+export interface DexExecutionCapabilityRegistration {
+  profileId: string;
+  capabilityId: string;
+  adapterId: DexExactQuoteAdapterId;
+  platform: "evm" | "solana";
+  lifecycle: DexExecutionCapabilityLifecycle;
+  eligibleChains: readonly string[];
+  eligibleDeploymentKeys?: readonly string[];
+  freshnessMaxSec: number;
+  proofKind: DexExecutionProofKind;
+  failureDomainVersion: string;
+  routeSemanticsVersion: string;
+}
+
+const ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS = [
+  "aerodrome-slipstream-quoter-v2:base",
+  "uniswap-v3-quoter-v2:ethereum",
+  "uniswap-v3-quoter-v2:polygon",
+  "uniswap-v3-quoter-v2:arbitrum",
+  "uniswap-v3-quoter-v2:celo",
+  "pancakeswap-v3-quoter-v2:base",
+  "pancakeswap-v3-quoter-v2:bsc",
+  "pancakeswap-v3-quoter-v2:ethereum",
+] as const;
+
+const capabilityRegistration = (
+  registration: Omit<DexExecutionCapabilityRegistration, "freshnessMaxSec" | "failureDomainVersion" | "routeSemanticsVersion">,
+): DexExecutionCapabilityRegistration => ({
+  ...registration,
+  freshnessMaxSec: getDexMeasuredExecutionFreshnessMaxSec(registration.profileId),
+  failureDomainVersion: "dex-failure-domains-v1",
+  routeSemanticsVersion: "v9-exit-route-semantics-v1",
+});
+
+/**
+ * Runtime-neutral producer/capability registry. Future implementation units
+ * fill leaf adapters and target factories; they do not add central profile or
+ * eligibility switches.
+ */
+export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityRegistration[] = [
+  capabilityRegistration({
+    profileId: "uniswap-v3-quoter-v2",
+    capabilityId: "quoter-v2-measured-exact",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2,
+    platform: "evm",
+    lifecycle: "active",
+    eligibleChains: ["ethereum", "polygon", "arbitrum", "celo"],
+    eligibleDeploymentKeys: ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS,
+    proofKind: "evm-state-and-call-proof",
+  }),
+  capabilityRegistration({
+    profileId: "pancakeswap-v3-quoter-v2",
+    capabilityId: "quoter-v2-measured-exact",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2,
+    platform: "evm",
+    lifecycle: "active",
+    eligibleChains: ["ethereum", "base", "bsc"],
+    eligibleDeploymentKeys: ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS,
+    proofKind: "evm-state-and-call-proof",
+  }),
+  capabilityRegistration({
+    profileId: "aerodrome-slipstream-quoter-v2",
+    capabilityId: "quoter-v2-measured-exact",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2,
+    platform: "evm",
+    lifecycle: "active",
+    eligibleChains: ["base"],
+    eligibleDeploymentKeys: ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS,
+    proofKind: "evm-state-and-call-proof",
+  }),
+  capabilityRegistration({
+    profileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+    capabilityId: "uniswap-v4-hook-free-measured-exact",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4,
+    platform: "evm",
+    lifecycle: "active",
+    eligibleChains: ["ethereum"],
+    proofKind: "evm-state-and-call-proof",
+  }),
+  capabilityRegistration({
+    profileId: "curve-cryptoswap-get-dy-v1",
+    capabilityId: "curve-cryptoswap-measured-exact",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.curveCryptoSwap,
+    platform: "evm",
+    lifecycle: "active",
+    eligibleChains: ["ethereum"],
+    proofKind: "evm-state-and-call-proof",
+  }),
+  capabilityRegistration({
+    profileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+    capabilityId: "curve-stableswap-main-registry-measured-exact",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwap,
+    platform: "evm",
+    lifecycle: "active",
+    eligibleChains: ["ethereum"],
+    proofKind: "evm-state-and-call-proof",
+  }),
+  capabilityRegistration({
+    profileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+    capabilityId: "curve-stableswap-ng-factory-measured-exact",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwapNg,
+    platform: "evm",
+    lifecycle: "active",
+    eligibleChains: ["ethereum"],
+    proofKind: "evm-state-and-call-proof",
+  }),
+  capabilityRegistration({
+    profileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveRateBearing,
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite,
+    platform: "evm",
+    lifecycle: "shadow",
+    eligibleChains: ["ethereum"],
+    proofKind: "evm-state-and-call-proof",
+  }),
+  capabilityRegistration({
+    profileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveMetapool,
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite,
+    platform: "evm",
+    lifecycle: "shadow",
+    eligibleChains: ["ethereum"],
+    proofKind: "evm-state-and-call-proof",
+  }),
+  capabilityRegistration({
+    profileId: "evm-v2-constant-product-v1",
+    capabilityId: "evm-v2-constant-product-exact",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.evmV2,
+    platform: "evm",
+    lifecycle: "active",
+    eligibleChains: ["ethereum", "base", "bsc"],
+    proofKind: "evm-reserve-proof",
+  }),
+  capabilityRegistration({
+    profileId: "orca-whirlpool-exact-v1",
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.solanaClmm,
+    platform: "solana",
+    lifecycle: "shadow",
+    eligibleChains: ["solana"],
+    proofKind: "solana-account-proof",
+  }),
+  capabilityRegistration({
+    profileId: "raydium-clmm-exact-v1",
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.solanaClmm,
+    platform: "solana",
+    lifecycle: "shadow",
+    eligibleChains: ["solana"],
+    proofKind: "solana-account-proof",
+  }),
+] as const;
+
+export function getDexExecutionCapabilityRegistration(
+  profileId: string,
+): DexExecutionCapabilityRegistration | null {
+  return DEX_EXECUTION_CAPABILITY_REGISTRY.find((entry) => entry.profileId === profileId) ?? null;
+}
+
+type DexExecutionProfileAdmissionInput = Pick<DexMeasuredExecutionPublicProfile, "adapterProfileId" | "chain"> |
+  Pick<DexExecutionProfileV2, "profileId"> & { identity: Pick<DexExecutionProfileV2["identity"], "chain"> };
+
+export function isDexExecutionProfileAdmittedForScoring(
+  profile: DexExecutionProfileAdmissionInput,
+  registration: DexExecutionCapabilityRegistration,
+): boolean {
+  const profileId = "adapterProfileId" in profile ? profile.adapterProfileId : profile.profileId;
+  const chain = ("chain" in profile ? profile.chain : profile.identity.chain).trim().toLowerCase();
+  if (profileId !== registration.profileId || registration.lifecycle !== "active") return false;
+  if (!registration.eligibleChains.includes(chain)) return false;
+  if (!registration.eligibleDeploymentKeys) return true;
+  return registration.eligibleDeploymentKeys.includes(`${profileId}:${chain}`);
+}
+
+export interface DexExitRouteScoreEligibilityInput {
+  producerScoreEligible: boolean;
+  routeState: "known" | "stale" | "missing" | "bounded-unknown" | "unsupported" | "not-applicable";
+  outputState: "known" | "stale" | "missing" | "bounded-unknown" | "unsupported" | "not-applicable";
+  coverageClass: string;
+  holderAccess: string;
+  executionModel: string;
+  executionCertainty: string;
+  observationConfidence: string;
+  settlementModel: string;
+  settlementSlaSec: number | null;
+  physicalResourceKeys: readonly string[];
+}
+
+/** Final V9 route-semantics gate; producer admission alone is insufficient. */
+export function isDexExitRouteScoreEligible(route: DexExitRouteScoreEligibilityInput): boolean {
+  const reviewedSemanticsAreScoreable =
+    route.holderAccess !== "unknown" &&
+    route.executionModel !== "unknown" &&
+    route.executionCertainty !== "unknown" &&
+    route.observationConfidence !== "unknown" &&
+    route.settlementModel !== "unknown" &&
+    route.physicalResourceKeys.length > 0 &&
+    (route.settlementModel === "atomic" || route.settlementSlaSec !== null);
+  return (
+    route.producerScoreEligible &&
+    route.routeState === "known" &&
+    route.outputState === "known" &&
+    route.coverageClass !== "diagnostic" &&
+    reviewedSemanticsAreScoreable
+  );
+}
 
 type CapabilityLevel = "exact" | "partial" | "symbol-only" | "aggregate-only" | "absent";
 export type P4MeasuredExecutionPublicProfile = DexMeasuredExecutionPublicProfile;
@@ -563,24 +779,14 @@ export function observationHistoryForProfile(
   return "observationHistory" in profile ? profile.observationHistory : undefined;
 }
 
-const MEASURED_EXECUTION_CAPABILITY_BY_PROFILE_ID: Readonly<Record<string, string>> = {
-  "uniswap-v3-quoter-v2": "quoter-v2-measured-exact",
-  "pancakeswap-v3-quoter-v2": "quoter-v2-measured-exact",
-  "aerodrome-slipstream-quoter-v2": "quoter-v2-measured-exact",
-  [UNISWAP_V4_ADAPTER_PROFILE_ID]: "uniswap-v4-hook-free-measured-exact",
-  "curve-cryptoswap-get-dy-v1": "curve-cryptoswap-measured-exact",
-  [CURVE_STABLESWAP_ADAPTER_PROFILE_ID]: "curve-stableswap-main-registry-measured-exact",
-  [CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID]: "curve-stableswap-ng-factory-measured-exact",
-};
-
 export function isQuoterV2MeasuredExecutionAdapter(adapterProfileId: string): boolean {
-  return MEASURED_EXECUTION_CAPABILITY_BY_PROFILE_ID[adapterProfileId] ===
-    "quoter-v2-measured-exact";
+  return getDexExecutionCapabilityRegistration(adapterProfileId)?.adapterId ===
+    DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2;
 }
 
 export function isUniswapV4MeasuredExecutionAdapter(adapterProfileId: string): boolean {
-  return MEASURED_EXECUTION_CAPABILITY_BY_PROFILE_ID[adapterProfileId] ===
-    "uniswap-v4-hook-free-measured-exact";
+  return getDexExecutionCapabilityRegistration(adapterProfileId)?.adapterId ===
+    DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4;
 }
 
 export function capabilityForPool(
@@ -591,9 +797,11 @@ export function capabilityForPool(
     ? undefined
     : measuredExecutionProfilesForPool(pool)[0];
   if (measuredProfile) {
+    const registration = getDexExecutionCapabilityRegistration(measuredProfile.adapterProfileId);
     return capabilityById(
-      MEASURED_EXECUTION_CAPABILITY_BY_PROFILE_ID[measuredProfile.adapterProfileId] ??
-        "measured-adapter-shadow",
+      registration && isDexExecutionProfileAdmittedForScoring(measuredProfile, registration)
+        ? registration.capabilityId
+        : "measured-adapter-shadow",
     );
   }
   if (

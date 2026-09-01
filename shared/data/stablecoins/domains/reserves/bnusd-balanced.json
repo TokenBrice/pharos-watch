@@ -234,11 +234,11 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "Sonic public RPC: latest eth_call reads at block 77819356 (2026-08-20T14:21:05Z) — facilitator bucket and Aave oracle getAssetPrice per reserve on 0x12835f0b71d7c94b23b64f765ab9cbcb8f5250b9",
+        "label": "Sonic public RPC: latest eth_call reads at block 77819356 (2026-08-20T14:21:05Z): facilitator bucket and Aave oracle getAssetPrice per reserve on 0x12835f0b71d7c94b23b64f765ab9cbcb8f5250b9",
         "url": "https://rpc.soniclabs.com"
       },
       {
-        "label": "Sonic public RPC: wrapper identity reads at block 78468970 (2026-08-31T10:12:08Z) — sodasftUSD supports sftUSD 0xd1e5...aeb1, whose ERC-4626 asset() is tracked ftUSD 0xf7d8...9c9c",
+        "label": "Sonic public RPC: wrapper identity reads at block 78468970 (2026-08-31T10:12:08Z): sodasftUSD supports sftUSD 0xd1e5...aeb1, whose ERC-4626 asset() is tracked ftUSD 0xf7d8...9c9c",
         "url": "https://rpc.soniclabs.com"
       },
       {

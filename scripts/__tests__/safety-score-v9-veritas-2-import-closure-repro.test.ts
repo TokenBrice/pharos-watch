@@ -16,7 +16,7 @@ const OMITTED_SCORE_BEARING_IMPORTS = [
   },
   {
     path: "shared/lib/exit-route-identity.ts",
-    importedBy: "shared/lib/p4-exit-route-capability-policy.ts",
+    importedBy: "shared/lib/p4-exit-route-observation-assembly.ts",
     importSpecifier: "./exit-route-identity",
   },
   {

@@ -2,7 +2,7 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 // Versioning convention (see compareMethodologyVersions in
 // @shared/lib/methodology-versions/base): each dotted segment is compared as an
-// INTEGER, not a decimal fraction — so `3.997` parses to [3, 997] and sorts after
+// INTEGER, not a decimal fraction: `3.997` parses to [3, 997] and sorts after
 // `3.99` ([3, 99]) and `3.9` ([3, 9]). The minor segment is therefore an
 // open-ended integer counter within the v3 bucket; routine changes bump it
 // (…3.9 → 3.99 → 3.997 → 3.9971 → 3.9972 …) and stay in this file. Create a new `v4.ts`

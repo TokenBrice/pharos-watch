@@ -42,7 +42,7 @@ const TELEGRAM_CTA_BUTTON_CLASS = cn(
   CTA_BUTTON_CLASS,
   "border-transparent bg-foreground text-background hover:bg-foreground/90 hover:text-background dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 dark:hover:text-background",
 );
-export const ABOUT_METADATA_TITLE = "About Pharos: Shining a Light on Every Peg";
+export const ABOUT_METADATA_TITLE = "About Pharos: Independent Stablecoin Risk Monitoring";
 export const ABOUT_METADATA_DESCRIPTION =
   "About Pharos: open stablecoin analytics for peg tracking, safety scores, liquidity, freeze monitoring, methodology, data sources, and failed-coin archives.";
 const ABOUT_PAGE_JSON_LD = {
@@ -388,11 +388,11 @@ export function AboutPageContent() {
             {PRE_LAUNCH_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the core
             universe with honest governance classification, transitive dependency scoring, and live reserve composition
             where available. Real-time depeg detection, freeze monitoring across 35 stablecoins, and a 30-minute
-            ecosystem-wide stability index give you the full picture before a crisis makes the headlines.
+            ecosystem-wide stability index surface stress as it builds, before it reaches the headlines.
           </p>
           <p>
-            When a tracked stablecoin effectively dies &mdash; issuer abandonment, supply trending to zero,
-            irrecoverable depeg, regulatory shutdown &mdash; Pharos freezes it rather than deletes it, and surfaces it
+            When a tracked stablecoin effectively dies (issuer abandonment, supply trending to zero,
+            irrecoverable depeg, regulatory shutdown), Pharos freezes it rather than deletes it, and surfaces it
             in the{" "}
             <Link href="/cemetery/" className={INLINE_EXTERNAL_LINK_CLASS}>
               cemetery
@@ -548,14 +548,14 @@ export function AboutPageContent() {
         <AboutFeatureSection
           eyebrow="Coverage"
           title="What Pharos Tracks"
-          intro="The raw monitoring layer — live supply, peg behavior, blacklist activity, liquidity depth, and chain-level flow data pulled from 50+ sources into one operating picture."
+          intro="The raw monitoring layer: live supply, peg behavior, blacklist activity, liquidity depth, and chain-level flow data pulled from 50+ sources into one operating picture."
           items={trackedFeatures}
         />
 
         <AboutFeatureSection
           eyebrow="Signals"
           title="What Pharos Computes"
-          intro="The analysis layer — models, scores, and forecasts you cannot find anywhere else: a VIX for stablecoins, dependency-capped safety grades, and forward-looking depeg pressure."
+          intro="The analysis layer: models and forecasts Pharos computes from its own pipeline, including a VIX for stablecoins, dependency-capped safety grades, and forward-looking depeg pressure."
           items={COMPUTED_FEATURES}
           footer={
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -655,7 +655,7 @@ export function AboutPageContent() {
 
         <aside className="border-y border-border/60 py-5 text-xs leading-relaxed text-muted-foreground">
           <p>
-            <span className="font-semibold text-foreground">Disclaimer</span> — Pharos is an informational tool, not a
+            <span className="font-semibold text-foreground">Disclaimer:</span> Pharos is an informational tool, not a
             licensed financial advisor. Nothing on this site constitutes financial, investment, or legal advice. All
             data is provided as-is and may contain errors or delays. Always do your own research and consult a qualified
             professional before making financial decisions.

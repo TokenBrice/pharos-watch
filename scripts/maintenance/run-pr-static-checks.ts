@@ -13,6 +13,10 @@ import {
   type NpmScriptCommand,
 } from "../lib/command-runner.mts";
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
+import {
+  EDITORIAL_POLICY_TEST_COMMAND,
+  hasEditorialPolicyImpact,
+} from "../lib/editorial-surface-registry";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
@@ -72,6 +76,12 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
 
   if (hasStructuralCheckImpact(changedFiles)) {
     commands.push({ name: "check:structural" });
+  }
+  if (hasEditorialPolicyImpact(changedFiles)) {
+    commands.push({
+      name: EDITORIAL_POLICY_TEST_COMMAND.name,
+      args: [...EDITORIAL_POLICY_TEST_COMMAND.args],
+    });
   }
 
   if (classification.pagesChanged) {

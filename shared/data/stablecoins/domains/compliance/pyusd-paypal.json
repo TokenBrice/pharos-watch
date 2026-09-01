@@ -5,7 +5,7 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Kraken EEA stablecoin restrictions – PYUSD explicitly listed",
+        "label": "Kraken EEA stablecoin restrictions: PYUSD explicitly listed",
         "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
       },
       {
@@ -13,7 +13,7 @@
         "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
       },
       {
-        "label": "ESMA interim MiCA register (issuers of EMTs) – no PYUSD/Paxos row found",
+        "label": "ESMA interim MiCA register (issuers of EMTs): no PYUSD/Paxos row found",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       }
     ]
@@ -71,7 +71,7 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC NR-2025-125 (Dec 12, 2025) – conditional trust-charter approval, not a PPSI approval",
+        "OCC NR-2025-125 (Dec 12, 2025): conditional trust-charter approval, not a PPSI approval",
         "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
         "Paxos OCC national trust charter conversion press release (Dec 12, 2025)",
         "Paxos PYUSD transparency and terms",
@@ -84,7 +84,7 @@
         "FDIC GENIUS Act NPRM",
         "NCUA PPSI application and standards proposals"
       ],
-      "summary": "Paxos received OCC conditional trust-charter approval Dec 2025, but no PPSI approval exists – the GENIUS Act PPSI application framework remains in proposed-rules rulemaking as of June 7, 2026.",
+      "summary": "Paxos received OCC conditional trust-charter approval Dec 2025, but no PPSI approval exists: the GENIUS Act PPSI application framework remains in proposed-rules rulemaking as of June 7, 2026.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-06-18"
     },

@@ -978,7 +978,7 @@
             "url": "https://tonviewer.com/EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5"
           }
         ],
-        "reviewNote": "TON jetton master EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr ('Ethena tsUSDe', tonapi.io whitelisted, metadata hosted on metadata.layerzero-api.com, queried 2026-07-20) reports mintable=true with admin 0:1f6277c3ca382dc81b90c8a29d4656d6416b79680ba1188bc64027e434f27bfc (EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5, wallet-type account). The jetton admin is the mint authority for the TON representation; its internal signer set is not enumerable via public APIs — controller identity recorded, composition unverified.",
+        "reviewNote": "TON jetton master EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr ('Ethena tsUSDe', tonapi.io whitelisted, metadata hosted on metadata.layerzero-api.com, queried 2026-07-20) reports mintable=true with admin 0:1f6277c3ca382dc81b90c8a29d4656d6416b79680ba1188bc64027e434f27bfc (EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5, wallet-type account). The jetton admin is the mint authority for the TON representation; its internal signer set is not enumerable via public APIs, controller identity recorded, composition unverified.",
         "controllerChain": "ton",
         "controllerAddress": "EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5",
         "failureDomainKeys": [

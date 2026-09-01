@@ -46,6 +46,7 @@ import {
   resolveDigestLlmConfig,
 } from "./digest/platform";
 import { DAILY_DIGEST_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
+import { resolveDigestStyleGateMode } from "../lib/digest-style-gate";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -165,6 +166,7 @@ export async function generateDailyDigest(
     previousInputData,
     recentLeadSignalIds,
   });
+  const styleGateMode = await resolveDigestStyleGateMode(db, "daily", signal);
   const userPromptContent = buildUserPrompt(inputData, recentMeta, { leadRequirements, recentLeadSignalIds });
   await reportCronProgress(reportProgress, {
     stage: "input-collected",
@@ -218,6 +220,7 @@ export async function generateDailyDigest(
     reportAttempt: (llmAttempts) => reportDigestLlmAttempt(reportProgress, "daily digest", llmAttempts),
     validationProfile: {
       kind: "daily",
+      styleGateMode,
       recentMeta: recentMeta.map((entry) => ({
         meta: entry.meta as Record<string, unknown> | null,
         title: entry.title,
@@ -374,6 +377,7 @@ export async function generateDailyDigest(
       twitterStatus: tweetStatus,
       telegramStatus,
       llmAttempts: digestCopy.llmAttempts,
+      editorialStyleGate: digestCopy.editorialStyleGate,
     },
   });
   logWorkerEventArgs("handler", "info", `[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
@@ -400,6 +404,8 @@ export async function generateDailyDigest(
         },
       },
       llm: buildDigestLlmTelemetry(resolvedLlmConfig, digestCopy.llmAttempts),
+      editorialStyleGate: digestCopy.editorialStyleGate,
+      wrapperEditorialAlerts: delivery.wrapperEditorialAlerts,
     }),
   };
 }

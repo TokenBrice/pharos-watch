@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  decodeFunctionData,
   encodeAbiParameters,
   encodeFunctionData,
   parseAbi,
@@ -35,11 +36,22 @@ import {
   quoteUniswapV4Requests,
   resolveUniswapV4PoolBindings,
   validateUniswapV4ProfileProof,
+  verifyUniswapV4Deployment,
 } from "../uniswap-v4";
+import { projectUniswapV4ProfileToV2 } from "../adapters/uniswap-v4";
+import {
+  DEX_MEASURED_CAPACITY_NOTIONALS_USD,
+} from "@shared/types/measured-execution";
+import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
+import { toMaturePublicProfile } from "./profile.test-support";
 
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 const BLOCK = 25_618_353;
+const DEMANDED_GRID_USD = [
+  1_000,
+  ...DEX_MEASURED_CAPACITY_NOTIONALS_USD,
+] as const;
 const POOL_ID = computeUniswapV4PoolId({
   currency0: USDC,
   currency1: USDT,
@@ -96,9 +108,9 @@ async function runV4ProofScenario({
 }): Promise<{
   target: ReturnType<typeof target>;
   quotes: readonly [
-    Awaited<ReturnType<typeof quoteUniswapV4Requests>>[number] & {
+    ...(Awaited<ReturnType<typeof quoteUniswapV4Requests>>[number] & {
       point: NonNullable<Awaited<ReturnType<typeof quoteUniswapV4Requests>>[number]["point"]>;
-    },
+    })[],
   ];
   profile: ReturnType<typeof buildDexMeasuredExecutionProfile>;
 }> {
@@ -126,12 +138,11 @@ async function runV4ProofScenario({
     parseAbiParameters("uint128 liquidity"),
     [9_000_000_000_000n],
   );
-  const quoteReturnData = encodeAbiParameters(
-    parseAbiParameters("uint256 amountOut,uint256 gasEstimate"),
-    [amountOutRaw, 130_000n],
-  );
+  const quoterAbi = parseAbi([
+    "function quoteExactInputSingle(((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,bool zeroForOne,uint128 exactAmount,bytes hookData) params) returns (uint256 amountOut,uint256 gasEstimate)",
+  ]);
   rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
-    async (_chain: string, calls: Array<{ label: string }>) =>
+    async (_chain: string, calls: Array<{ label: string; callData: `0x${string}` }>) =>
       calls.map((call) => ({
         label: call.label,
         success: quoteSuccess
@@ -141,7 +152,20 @@ async function runV4ProofScenario({
           ? slot0ReturnData
           : call.label.endsWith(":liquidity")
             ? liquidityReturnData
-            : quoteReturnData,
+            : (() => {
+                const decoded = decodeFunctionData({
+                  abi: quoterAbi,
+                  data: call.callData,
+                });
+                const params = decoded.args[0] as { exactAmount: bigint };
+                return encodeAbiParameters(
+                  parseAbiParameters("uint256 amountOut,uint256 gasEstimate"),
+                  [
+                    amountOutRaw * params.exactAmount / 1_000_000_000n,
+                    130_000n,
+                  ],
+                );
+              })(),
       })),
   );
 
@@ -160,22 +184,19 @@ async function runV4ProofScenario({
     chainRpcs: new Map(),
   });
   const quotes = await quoteUniswapV4Requests({
-    requests: [
-      {
-        target: measuredTarget,
-        inputUsd: 1_000,
-        endpointAddress: deployment.endpointAddress,
-      },
-    ],
+    requests: DEMANDED_GRID_USD.map((inputUsd) => ({
+      target: measuredTarget,
+      inputUsd,
+      endpointAddress: deployment.endpointAddress,
+    })),
     blockNumber: BLOCK,
     chainRpcs: new Map(),
   });
   const binding = bindings[0];
-  const quote = quotes[0];
-  if (!binding?.proof || !quote?.point) {
+  const exactQuotes = quotes.flatMap((quote) => quote.point ? [{ ...quote, point: quote.point }] : []);
+  if (!binding?.proof || exactQuotes.length !== DEMANDED_GRID_USD.length) {
     throw new Error("missing V4 proof fixture");
   }
-  const point = quote.point;
   const profile = buildDexMeasuredExecutionProfile({
     target: measuredTarget,
     targetGenerationId: "targets",
@@ -185,9 +206,9 @@ async function runV4ProofScenario({
     endpointAddress: deployment.endpointAddress,
     endpointCodeHash: deployment.expectedCodeHash,
     uniswapV4PoolProof: binding.proof,
-    points: [point],
+    points: exactQuotes.map((quote) => quote.point),
   });
-  return { target: measuredTarget, quotes: [{ ...quote, point }], profile };
+  return { target: measuredTarget, quotes: exactQuotes, profile };
 }
 
 describe("hook-free Uniswap V4 measured execution", () => {
@@ -202,6 +223,21 @@ describe("hook-free Uniswap V4 measured execution", () => {
       scoreEligible: true,
     });
     expect(getUniswapV4Deployment("base")).toBeNull();
+  });
+
+  it("rejects a V4 deployment when pinned PoolManager code differs", async () => {
+    const deployment = getUniswapV4Deployment("ethereum")!;
+    rpcMocks.fetchEvmCodeAtBlock.mockResolvedValue("0x00");
+
+    await expect(verifyUniswapV4Deployment({
+      deployment,
+      blockNumber: BLOCK,
+      chainRpcs: new Map(),
+    })).resolves.toEqual({
+      ok: false,
+      reason: "pool-manager-code-hash-mismatch",
+    });
+    expect(rpcMocks.fetchEvmCodeAtBlock).toHaveBeenCalledTimes(1);
   });
 
   it("builds only a reviewed exact hook-free PoolKey target", () => {
@@ -292,6 +328,37 @@ describe("hook-free Uniswap V4 measured execution", () => {
     });
     expect(quotes[0].point.costBps).toBeCloseTo(5, 8);
     expect(validateUniswapV4ProfileProof(profile)).toEqual([]);
+    const v2Profile = projectUniswapV4ProfileToV2(profile);
+    expect(v2Profile).toMatchObject({
+      adapterId: "evm-uniswap-v4",
+      demandedInputAmountsUsd: DEMANDED_GRID_USD,
+      payload: { platform: "evm", blockNumber: BLOCK },
+    });
+    expect(v2Profile?.payload.platform === "evm" && v2Profile.payload.callProof).toHaveLength(5);
+    const measuredExecution = toMaturePublicProfile(profile);
+    expect(buildP4DexExitRouteObservations({
+      stablecoinId: profile.tokenIn.trackedAssetId!,
+      observedAt: profile.quotedAt + 60,
+      retainedPools: [{
+        poolId: profile.poolId,
+        project: "uniswap-v4",
+        chain: profile.chain,
+        tvlUsd: profile.retainedTvlUsdAtQuote,
+        symbol: `${profile.tokenIn.symbol}-${profile.tokenOut.symbol}`,
+        poolType: "cg-concentrated",
+        source: "cg_onchain",
+        extra: {
+          measuredExecution,
+          measuredExecutionPhysicalPoolId: profile.poolId,
+        },
+      }],
+    }).coverage).toMatchObject({
+      retainedPoolCount: 1,
+      scoreEligibleObservationCount: 1,
+      scoreEligiblePoolCount: 1,
+      scoreEligibleCapabilityPoolCount: 1,
+      unsupportedPoolCount: 0,
+    });
 
     profile.uniswapV4PoolProof!.poolId = `0x${"0".repeat(64)}`;
     expect(validateUniswapV4ProfileProof(profile)).toContain(
@@ -310,11 +377,14 @@ describe("hook-free Uniswap V4 measured execution", () => {
       "v4-quote-exceeds-pool-spot-bound",
     );
 
-    profile.quoteProof[0]!.amountOutRaw = "999900000";
-    profile.quoteProof[0]!.returnData = encodeAbiParameters(
-      parseAbiParameters("uint256 amountOut,uint256 gasEstimate"),
-      [999_900_000n, 130_000n],
-    );
+    for (const point of profile.quoteProof) {
+      const boundedAmountOut = BigInt(point.amountInRaw) * 9_999n / 10_000n;
+      point.amountOutRaw = boundedAmountOut.toString();
+      point.returnData = encodeAbiParameters(
+        parseAbiParameters("uint256 amountOut,uint256 gasEstimate"),
+        [boundedAmountOut, 130_000n],
+      );
+    }
     expect(validateUniswapV4ProfileProof(profile)).toEqual([]);
   });
 

@@ -10,7 +10,7 @@ export const CHAIN_HEALTH_V1: readonly MethodologyChangelogEntry[] = [
       "Chain Health quality now averages Safety Scores over rated supply only instead of imputing a 40 for not-rated supply, and the peg-stability factor derives deviation from the shared depeg-signal primitive rather than a local formula copy.",
     impact: [
       "Not-rated supply is excluded from both the numerator and the denominator of the `quality` factor; the 50% rated-supply coverage gate is now the only not-rated mechanism, and below it the whole composite stays `null`",
-      "Removed the implicit `40` (the D-grade threshold) previously assigned to unrated coins — an imputed risk judgement Pharos had not made",
+      "Removed the implicit `40` (the D-grade threshold) previously assigned to unrated coins, an imputed risk judgement Pharos had not made",
       "5 of 105 published chains move: manta 71 → 88, stacks 82 → 90, megaeth 50 → 54, metis 87 → 89, cardano 71 → 72 quality; health scores move by at most 5 points and no chain changes health band",
       "Peg stability now calls the shared `deriveDepegSignal(...)` used by the depeg pipeline; the derivation is numerically identical (unrounded bps) and no chain's `pegStability` changed",
       "Non-positive or non-finite prices now score neutral `50` like a missing price instead of scoring `0` or poisoning the chain average with `NaN`",
@@ -70,14 +70,14 @@ export const CHAIN_HEALTH_V1: readonly MethodologyChangelogEntry[] = [
     date: "2026-03-16",
     effectiveAt: 1773619201,
     summary:
-      "Added a fifth health factor — Chain Environment — that rates chain infrastructure quality via a resilience tier system. Rebalanced weights to reduce backing diversity influence and give chain quality 20% of the composite.",
+      "Added a fifth health factor, Chain Environment, which rates chain infrastructure quality via a resilience tier system. Rebalanced weights to reduce backing diversity influence and give chain quality 20% of the composite.",
     impact: [
       "New Chain Environment factor (20% weight): tier 1 = 100 (Ethereum), tier 2 = 60 (default), tier 3 = 20 (PulseChain, Harmony, etc.)",
       "Backing diversity weight reduced from 15% to 10%",
       "Quality weight reduced from 35% to 30%",
       "Concentration weight reduced from 25% to 20%",
       "Peg stability weight reduced from 25% to 20%",
-      "Chains with poor infrastructure penalized — e.g. PulseChain dropped from #1 healthiest to mid-table",
+      "Chains with poor infrastructure penalized: e.g. PulseChain dropped from #1 healthiest to mid-table",
     ],
     commits: ["f6978ec"],
     reconstructed: false,
@@ -90,12 +90,12 @@ export const CHAIN_HEALTH_V1: readonly MethodologyChangelogEntry[] = [
     summary:
       "Launched per-chain health scoring with four factors: quality (35%), concentration (25%), peg stability (25%), and backing diversity (15%). Exposed via /api/chains and the /chains/ leaderboard.",
     impact: [
-      "Introduced chain health score as a 0–100 composite across four factors",
+      "Introduced chain health score as a 0-100 composite across four factors",
       "Quality: supply-weighted average of Pharos Safety Scores (null if < 50% coverage)",
       "Concentration: HHI-based metric rewarding stablecoin diversity",
       "Peg stability: supply-weighted peg proximity across all chain stablecoins",
       "Backing diversity: Shannon entropy across the backing taxonomy active at the time",
-      "Health bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19)",
+      "Health bands: robust (80-100), healthy (60-79), mixed (40-59), fragile (20-39), concentrated (0-19)",
       "Added /api/chains endpoint, /chains/ leaderboard page, and /chains/[chain]/ detail pages",
     ],
     commits: ["003eafd"],

@@ -165,7 +165,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "none",
         "canRaiseCap": false,
-        "evidence": "XRPL account_info confirmed: AccountFlags 9437184 = 0x900000 (lsfDefaultRipple=true, lsfDisableMaster=true). No RegularKey field. No SignerList (account_objects returned empty). The issuer account's master key is disabled and no signing authority exists — the XRPL AUDD issuer account is locked and cannot mint new tokens or modify balances on XRPL.",
+        "evidence": "XRPL account_info confirmed: AccountFlags 9437184 = 0x900000 (lsfDefaultRipple=true, lsfDisableMaster=true). No RegularKey field. No SignerList (account_objects returned empty). The issuer account's master key is disabled and no signing authority exists. The XRPL AUDD issuer account is locked and cannot mint new tokens or modify balances on XRPL.",
         "sources": [
           {
             "label": "XRPL account",

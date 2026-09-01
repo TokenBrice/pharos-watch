@@ -4,12 +4,13 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "USDKG official site — Kyrgyz oversight and distribution information reviewed; no EU offer or venue identified",
+        "label": "USDKG official site: Kyrgyz oversight and distribution information reviewed; no EU offer or venue identified",
         "url": "https://www.usdkg.com/"
       },
       {
-        "label": "USDKG: Building for Regulated Markets in 2026 — Kyrgyz legal framework and EU MiCA discussed, without an EU authorization or offer claim",
-        "url": "https://www.usdkg.com/blog/building-usdkg-for-regulated-markets-in-2026"
+        "label": "Building USDKG for Regulated Markets in 2026",
+        "url": "https://www.usdkg.com/blog/building-usdkg-for-regulated-markets-in-2026",
+        "quoted": true
       },
       {
         "label": "ESMA Interim MiCA Register landing page",
@@ -34,7 +35,7 @@
     "reserveDisclosureUrl": "https://www.usdkg.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDKG is commodity-backed (physical LBMA gold) but USD-referenced and issuer-redeemable; the gold backing raises a question whether it qualifies as a payment stablecoin under GENIUS (which targets fiat-referenced instruments), but no definitive exclusion exists and the USD peg makes apparent-payment-stablecoin the more conservative classification. No public GENIUS approval, PPSI application, or foreign-issuer exception was found. The issuer is a Kyrgyz state-owned entity (OJSC Virtual Asset Issuer) with no known U.S. regulatory presence. Listed on Hong Kong's OSL HK exchange (May 2026) — no U.S. regulatory event. No OFAC, FinCEN, or enforcement action found.",
+    "notes": "USDKG is commodity-backed (physical LBMA gold) but USD-referenced and issuer-redeemable; the gold backing raises a question whether it qualifies as a payment stablecoin under GENIUS (which targets fiat-referenced instruments), but no definitive exclusion exists and the USD peg makes apparent-payment-stablecoin the more conservative classification. No public GENIUS approval, PPSI application, or foreign-issuer exception was found. The issuer is a Kyrgyz state-owned entity (OJSC Virtual Asset Issuer) with no known U.S. regulatory presence. Listed on Hong Kong's OSL HK exchange (May 2026): no U.S. regulatory event. No OFAC, FinCEN, or enforcement action found.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -58,7 +59,7 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "OSL HK USDKG listing announcement (May 2026) — no US regulatory event",
+        "label": "OSL HK USDKG listing announcement (May 2026): no US regulatory event",
         "url": "https://chainwire.org/2026/05/21/osl-strengthens-asias-digital-asset-ecosystem-with-listing-of-state-supervised-gold-backed-stablecoin-usdkg/",
         "sourceKind": "news",
         "sourceDate": "2026-05-21",

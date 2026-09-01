@@ -47,7 +47,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'wiTRY', symbol wiTRY, 18 decimals; owner() = 0x7ac3bb10225a4ef27134bcf54454d545a1738662 — Brix issuer-native deployment on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'wiTRY', symbol wiTRY, 18 decimals; owner() = 0x7ac3bb10225a4ef27134bcf54454d545a1738662, Brix issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -68,7 +68,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Wrapped iTRY', symbol wiTRY, 18 decimals on MegaETH; owner() = 0x7ac3bb10225a4ef27134bcf54454d545a1738662 — identical to the Ethereum deployment owner (Brix uniform multichain deployment). The owner contract holds the mint authority.",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Wrapped iTRY', symbol wiTRY, 18 decimals on MegaETH; owner() = 0x7ac3bb10225a4ef27134bcf54454d545a1738662, identical to the Ethereum deployment owner (Brix uniform multichain deployment). The owner contract holds the mint authority.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",

@@ -400,7 +400,7 @@
             "url": "https://basescan.org/address/0x5875eee11cf8398102fdad704c9e96607675467a"
           }
         ],
-        "evidence": "The official Base initialization names 0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255 as the L2 governance relay. At Base block 50065518 it remained a ward on the Base sUSDS representation, so its bridge upgrade and administration authority is route-scoped Bridge Risk. The historical candidate admin address 0x36b072ed8afe665e3aa6daba79decbec63752b22 is retained as adverse evidence: wards(0x36b072ed8afe665e3aa6daba79decbec63752b22) returned 0 at that block and current SkyLink documents do not identify it, so it is stale/non-current rather than an active controller."
+        "evidence": "The official Base initialization names 0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255 as the L2 governance relay. At Base block 50065518 it remained a ward on the Base sUSDS representation, so its bridge upgrade and administration authority is route-scoped Bridge Risk. The historical candidate admin address 0x36b072ed8afe665e3aa6daba79decbec63752b22 is retained as adverse evidence: wards(0x36b072ed8afe665e3aa6daba79decbec63752b22) returned 0 at that block and current SkyLink documents do not identify this address, so the address is stale/non-current rather than an active controller."
       },
       {
         "id": "susds-optimism-l2-token-bridge",

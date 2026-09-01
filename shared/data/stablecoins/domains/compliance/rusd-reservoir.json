@@ -4,19 +4,19 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — ART/EMT issuer registers",
+        "label": "ESMA MiCA register landing page: ART/EMT issuer registers",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA interim MiCA register — EMT issuers (checked 2026-08-14)",
+        "label": "ESMA interim MiCA register: EMT issuers (checked 2026-08-14)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Reservoir Terms of Service — rUSD not offered in the EEA",
+        "label": "Reservoir Terms of Service: rUSD not offered in the EEA",
         "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service"
       },
       {
-        "label": "Reservoir rUSD documentation — non-U.S. protocol stablecoin",
+        "label": "Reservoir rUSD documentation: non-U.S. protocol stablecoin",
         "url": "https://docs.reservoir.xyz/products/stablecoin-rusd"
       }
     ]
@@ -63,7 +63,7 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
-        "Reservoir Terms of Service (docs.reservoir.xyz/security-and-compliance/terms-of-service) — confirmed US person exclusion and Cayman Islands governing law",
+        "Reservoir Terms of Service (docs.reservoir.xyz/security-and-compliance/terms-of-service): confirmed US person exclusion and Cayman Islands governing law",
         "Reservoir rUSD docs and protocol documentation",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
         "OCC Bulletin 2026-3 GENIUS proposed rule",

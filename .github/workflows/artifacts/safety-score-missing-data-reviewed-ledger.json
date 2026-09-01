@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "description": "Durable reviewed outcomes for Safety Score V9 missing-data registry claim groups. Registry regeneration never deletes this history.",
+  "decisionFields": [
+    "claimGroupId",
+    "taskIds",
+    "workType",
+    "resolutionMode",
+    "decision",
+    "reviewedAt",
+    "reviewer",
+    "evidence",
+    "rationale",
+    "changeRefs",
+    "sentinels",
+    "nextReviewTrigger",
+    "factsClosed"
+  ],
+  "allowedDecisions": ["promote", "reject", "defer"],
+  "decisions": []
+}

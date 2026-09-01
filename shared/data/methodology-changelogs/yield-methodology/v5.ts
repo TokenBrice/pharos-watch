@@ -117,7 +117,7 @@ export const YIELD_METHODOLOGY_V5: readonly MethodologyChangelogEntry[] = [
   },
   {
     version: "5.2",
-    title: "Yield Coverage Expansion — Protocol-Native API Wave",
+    title: "Yield Coverage Expansion: Protocol-Native API Wave",
     date: "2026-03-25",
     effectiveAt: 1774396800,
     summary:

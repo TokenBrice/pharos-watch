@@ -10,12 +10,13 @@ Run every command from the repository root. Use one fresh production capture for
 entire sweep; do not combine worklists or dates from different producer cycles.
 
 The sweep is also automated: `.github/workflows/curation-expiry-sweep.yml` runs this
-procedure every Tuesday (and on manual dispatch) with the deploy pipeline's Cloudflare
-credentials, then publishes the live-withheld counterfactual report, expiry queue, and
-the worklist's Dependencies/Backing streams into the pinned "Safety Score curation
-expiry sweep" issue. The workflow run fails when any generator breaks, so a green run
-means the queues are trustworthy. Draining the queues stays operator work — follow the
-steps below.
+procedure every Tuesday at 05:45 UTC (and on manual dispatch) with the deploy
+pipeline's Cloudflare credentials. It publishes the live-withheld counterfactual
+report, expiry queue, the worklist's Dependencies/Backing streams, and a compact
+missing-data-registry summary into the pinned "Safety Score curation expiry sweep"
+issue. The full missing-data registry is retained as a workflow artifact for 30 days.
+The workflow run fails when any generator breaks, so a green run means the queues are
+trustworthy. Draining the queues stays operator work — follow the steps below.
 
 **Operator contract:** the sweep operator reviews and drains the `DEP`/`RESV`,
 pre-expiry, and live-withheld rows weekly. Mark a high-supply counterfactual grade drop
@@ -122,6 +123,82 @@ dependency-creating collateral links, and the adapter state (`none` or
 they have no current `RESV` or `DEP` row. A fresh live snapshot in a later cycle
 removes the asset from this preventive queue; it does not retroactively make this
 cycle's missing snapshot live.
+
+## 4a. Generate and drain the typed missing-data registry
+
+Generate the existing router from the same replay and the current V9 policy:
+
+```bash
+registry="agents/v9-captures/missing-data-registry-${stamp}.json"
+npm run safety-score-v9:missing-data-registry -- \
+  --replay "${replay}" \
+  --policy shared/data/safety-score-v9/methodology-policy-candidate-v1.json \
+  --output "${registry}"
+```
+
+The registry's `workType`, `resolutionMode`, `claimGroupId`, evidence action,
+touchpoints, current context, and disappearance sentinels are the routing contract.
+Do not build another classifier from the evidence queue's four-value `action` field.
+Task rows, claim groups, and dispatch reachability are routing counts, not estimates of
+closable facts. No registry row closes a fact mechanically.
+
+Work one whole `claimGroupId` (one asset and `workType`) at a time. Read the embedded
+work-type definition and recommended skill, then verify all four boundaries:
+
+1. **Identity:** local asset, chain, contract, wrapper/variant, and exact component or
+   route identity; do not accept a symbol-only match where collisions are possible.
+2. **Source:** primary dated evidence or pinned explorer/RPC observations, including
+   the scope and date of a negative search.
+3. **Safety/publication:** the fail-closed producer, admission, dependency, and
+   publication gates, plus runtime readback where applicable. A source edit alone is
+   not proof that production consumed it.
+4. **Methodology:** the current method must permit the evidence or producer. Never
+   weaken evidence standards or invent values to make a sentinel disappear.
+
+Triage by the registry's typed `workType`:
+
+| Work types | Required drain checks |
+| --- | --- |
+| `MECHANISM_REVIEW`, `ARCHETYPE_CLASSIFICATION` | Archetype, exact component proposition, issuer disclosure scope, review date, and strict evidence eligibility. |
+| `RESERVE_COMPOSITION`, `RESERVE_SLICE`, `DEPENDENCY_REVIEW` | Latest primary report, composition date, slice materiality, custody, and dependency identity; never date-bump without re-review. |
+| `EXIT_DEX_COVERAGE`, `EXIT_RUNTIME_ROUTE`, `EXIT_OUTPUT`, `EXIT_SETTLEMENT_BOUND` | Venue/token identity, callable route, notional/output semantics, supported method family, and runtime readback; batch reusable adapters/censuses. |
+| `BRIDGE_ROUTE_REVIEW`, `BRIDGE_MATERIALITY` | Canonical deployment/bridge identity, chain support, materiality, controls, and producer refresh after curation. |
+| `ACCESS_REVIEW`, `DEPLOYMENT_CONTROLS`, `MINT_AUTHORITY` | Exact contract/proxy and role scope, current authority, upgrade path, and dated primary/explorer evidence. |
+| `ORACLE_BRANCH`, `ORACLE_PROFILE`, `PEG_INPUT` | Configured branch, source freshness, runtime availability, and fail-closed behavior. |
+| `PARENT_RATEABILITY` | Canonical parent/dependency identity and proof that the score projection consumes it. |
+
+For a new work type, read its embedded definition and emitting code before deciding;
+do not infer a resolution from its name. Resolution mode describes the work shape,
+not the outcome: curation needs reviewed source evidence, runtime work needs a fresh
+readback, mixed work needs both in that order, and methodology capability needs an
+owner ruling.
+
+Finish every reviewed claim group as exactly one of:
+
+- **promote** — verified evidence or producer repair is ready. Record its source and
+  change references and the relevant `doneWhenGapIdAbsent` or
+  `doneWhenScoreReasonAbsent` sentinel. It becomes a closure only after a fresh
+  production replay makes the sentinel disappear without an adverse replacement.
+- **reject** — the candidate is wrong, unsafe, inadmissible, or a reviewed terminal
+  external/structural blocker. Record evidence, rationale, and a concrete re-review
+  trigger. Rejection normally leaves the public fact open.
+- **defer** — a named prerequisite remains (for example issuer disclosure, owner
+  ruling, reusable adapter, production observation, or source recovery). Record the
+  blocker, owner, and a date or event trigger; never use an undated deferral.
+
+Append the decision to
+`.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json`. Each
+entry uses the field roster declared in that file and links the stable claim-group and
+task IDs to evidence, sentinels, review trigger, and `factsClosed`. Never remove an old
+decision when a task disappears or returns; append another decision. This ledger is
+authored review provenance and is not replaced when the generated registry refreshes.
+
+The workflow commits only the compact projection at
+`.github/workflows/artifacts/safety-score-missing-data-registry-summary.json` through
+the existing automated-refresh PR helper. The full multi-megabyte registry stays in
+the workflow artifact. The compact snapshot is intentionally not `autoStage`: its
+input is a fresh production capture that a pre-commit hook cannot reproduce.
+
 ## 5. Check the live-withheld counterfactual
 
 The expiry queue only answers whether a reviewed composition is about to stop being
@@ -167,15 +244,18 @@ counterfactual report.
 | `DEP` / `RESV` drain | Each supply-prioritized item disappeared or has a current, evidence-backed blocker. |
 | Pre-expiry review | Every listed composition was refreshed, received a live snapshot, or has a documented blocker before the 31-day window plus 7-day reporting grace closes. |
 | Live-withheld review | Each high-supply grade-drop row has a reviewed fallback path, a current producer action, or a documented blocker/escalation in the pinned issue. |
+| Missing-data registry | Every reviewed claim group has a promote/reject/defer ledger entry; promoted facts count only after their exact sentinel disappears on a fresh production replay. |
 | Measurement | The closing worklist, pre-expiry list, and counterfactual report come from one fresh capture replayed with its own `clockSec`. |
 
 
 ## Artifact hygiene
 
-Keep captures, replays, generated worklists, and temporary queue output under
-`agents/v9-captures/`. The entire `agents/` tree is gitignored scratch space. Never
-commit these multi-megabyte, point-in-time artifacts or move them into `docs/`; re-export
-production input on every weekly sweep. Follow the equivalence harness's
+Keep captures, replays, generated worklists, the full missing-data registry, and
+temporary queue output under `agents/v9-captures/`. The entire `agents/` tree is
+gitignored scratch space. Never commit these multi-megabyte, point-in-time artifacts
+or move them into `docs/`; re-export production input on every weekly sweep. The only
+committed point-in-time projection is the compact registry summary named above, while
+the append-only reviewed ledger preserves operator decisions. Follow the equivalence harness's
 [artifact-hygiene contract](./safety-score-equivalence-harness.md#artifact-hygiene).
 
 ## Related

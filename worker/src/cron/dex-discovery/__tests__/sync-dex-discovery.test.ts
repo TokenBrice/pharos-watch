@@ -180,6 +180,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       undefined,
     );
@@ -230,6 +231,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       undefined,
     );
@@ -290,6 +292,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       undefined,
     );
@@ -314,6 +317,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       undefined,
     );
@@ -341,6 +345,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       controller.signal,
     );

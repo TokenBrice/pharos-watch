@@ -297,7 +297,7 @@
             "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
           }
         ],
-        "evidence": "At finalized Solana slots 439714386–439714402, OApp program 2UvSehbvxnufkbY9VYmDpKFriXVbb5rQ5unrcCqDqB1G used ProgramData CYVLd3XvpowaKGG4Q521uu261Jhcao2WSGiYb889UXoL and named 5hYBtyUNcNi1muvUnXfsv9BcVdVATvYnUtEioBMXhax as current upgrade authority. This no-delay authority can rewrite receive logic and use the OFTStore signer; Bridge allowance and per-call checks remain separate failure domains."
+        "evidence": "At finalized Solana slots 439714386 to 439714402, OApp program 2UvSehbvxnufkbY9VYmDpKFriXVbb5rQ5unrcCqDqB1G used ProgramData CYVLd3XvpowaKGG4Q521uu261Jhcao2WSGiYb889UXoL and named 5hYBtyUNcNi1muvUnXfsv9BcVdVATvYnUtEioBMXhax as current upgrade authority. This no-delay authority can rewrite receive logic and use the OFTStore signer; Bridge allowance and per-call checks remain separate failure domains."
       },
       {
         "id": "cash-layerzero-endpoint-validator",
@@ -375,7 +375,7 @@
             "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ],
-        "evidence": "The reviewed Solana ProgramData and Squads v3 reads resolve the 4-of-5 Endpoint upgrade multisig, and the reviewed HyperEVM OFT read resolves the EID 30168 peer to the Solana OFTStore; these are known upgrade and delivery-contract facts. The 2026-08-28 review did not resolve the application-selected CASH-specific DVN/executor roster, validator membership, quorum, emergency override roster, or controlling authority. The Endpoint upgrade multisig and OFTStore peer therefore cannot be treated as the validation-domain identity, and this separate control remains unknown. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external LayerZero V2 DVN/executor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum — known but weak, graded no higher than a named issuer backend and never above a named multisig — rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
+        "evidence": "The reviewed Solana ProgramData and Squads v3 reads resolve the 4-of-5 Endpoint upgrade multisig, and the reviewed HyperEVM OFT read resolves the EID 30168 peer to the Solana OFTStore; these are known upgrade and delivery-contract facts. The 2026-08-28 review did not resolve the application-selected CASH-specific DVN/executor roster, validator membership, quorum, emergency override roster, or controlling authority. The Endpoint upgrade multisig and OFTStore peer therefore cannot be treated as the validation-domain identity, and this separate control remains unknown. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external LayerZero V2 DVN/executor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum, known but weak, graded no higher than a named issuer backend and never above a named multisig, rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
       },
       {
         "id": "cash-solana-bridge-upgrade-common-mode",
@@ -444,7 +444,7 @@
             "url": "https://github.com/Squads-Protocol/squads-mpl"
           }
         ],
-        "evidence": "At finalized Solana slots 442196974–442197014 on 2026-08-28, Token-2022 ProgramData DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY named AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz as its current upgrade authority. The official Squads v3 PDA seeds derive AeLm... as authority index 1 of multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ; that current account reports threshold 4, six members, and no program-enforced delay. This shared-program multisig can affect both the canonical Token-2022 mint and the bridge representation."
+        "evidence": "At finalized Solana slots 442196974 to 442197014 on 2026-08-28, Token-2022 ProgramData DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY named AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz as its current upgrade authority. The official Squads v3 PDA seeds derive AeLm... as authority index 1 of multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ; that current account reports threshold 4, six members, and no program-enforced delay. This shared-program multisig can affect both the canonical Token-2022 mint and the bridge representation."
       },
       {
         "id": "cash-hyperevm-tokenauthority-admin",

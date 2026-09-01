@@ -135,7 +135,7 @@
             ]
           }
         ],
-        "fallbackBehavior": "No secondary feed. Unlike the other three cauldrons' ProxyOracle (owned by a 3-of-6 Safe), this ProxyOracle's owner() is a single externally-owned account, 0xfddfE525054efaAD204600d00CA86ADb1Cc2ea8a (eth_getCode returns 0x; also one of the eleven signers on the separate 5-of-11 MIM token owner Safe) — one key alone, with no multisig or timelock, can redirect this cauldron's price source.",
+        "fallbackBehavior": "No secondary feed. Unlike the other three cauldrons' ProxyOracle (owned by a 3-of-6 Safe), this ProxyOracle's owner() is a single externally-owned account, 0xfddfE525054efaAD204600d00CA86ADb1Cc2ea8a (eth_getCode returns 0x; also one of the eleven signers on the separate 5-of-11 MIM token owner Safe), one key alone, with no multisig or timelock, can redirect this cauldron's price source.",
         "observedAt": "2026-07-21",
         "observedBlock": 25579951,
         "collateralParameters": [

@@ -17,7 +17,7 @@
         ],
         "capDescription": "Mint bounded per branch by collateral ratio and Liquity-v2-style redemption/liquidation; users set their own interest rate. Mint is gated to registered BorrowerOperations addresses set at initialization.",
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 25295272: BoldToken proxy (0x09fd37d9...) at EIP-1967 impl 0xa5ae6f43... Source confirms: mint() restricted to BorrowerOperations, ActivePool, or CCIP pools via _requireCallerIsBOorAPorCCIP(). BorrowerOperations addresses are set via CollateralRegistry (0x5e159fac...) at initialization; owner renounced in setCollateralRegistry() call. Follow-up 2026-07-20: Ebisu branch BorrowerOperations contracts verified with live bytecode — Ethereum branches 0x026cf854..., 0x116d3842..., 0x66283665... and Plasma branches 0x061010c0..., 0x2291cbed..., 0x3b338fe0..., 0x3f97c24a..., 0x458d3c3b... (deployment addresses from the Ebisu app configuration; CollateralRegistry 0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7 shared).",
+        "evidence": "At Ethereum block 25295272: BoldToken proxy (0x09fd37d9...) at EIP-1967 impl 0xa5ae6f43... Source confirms: mint() restricted to BorrowerOperations, ActivePool, or CCIP pools via _requireCallerIsBOorAPorCCIP(). BorrowerOperations addresses are set via CollateralRegistry (0x5e159fac...) at initialization; owner renounced in setCollateralRegistry() call. Follow-up 2026-07-20: Ebisu branch BorrowerOperations contracts verified with live bytecode, Ethereum branches 0x026cf854..., 0x116d3842..., 0x66283665... and Plasma branches 0x061010c0..., 0x2291cbed..., 0x3b338fe0..., 0x3f97c24a..., 0x458d3c3b... (deployment addresses from the Ebisu app configuration; CollateralRegistry 0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7 shared).",
         "sources": [
           {
             "label": "ebUSD BoldToken impl on Etherscan",
@@ -63,7 +63,7 @@
           "observedBlock": 25295272,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295272: CollateralRegistry (0x5e159fac..., ERC1967Proxy) ebisuAdmin()=0x25b85831da750c912ab7f0cf53b9d82f7894ed07, a Gnosis Safe 1.3.0. getOwners()=3 EOAs, threshold=2, getModulesPaginated() returns empty array, guard slot=0x0, masterCopy slot0=0xd9db270c... (Safe 1.3.0), fallbackHandler=0xf48f2b2d.... EbisuUpgradeableV2 enforces 7-day UPGRADE_TIMELOCK on-chain. BoldToken slot 354-355=0x0 (pendingImplementation=0x0, upgradeProposalTime=0 — no pending upgrade). BoldToken slot 359=0x1 (ccipTokenPoolsLocked=true). BoldToken owner (slot 101)=0x0 (renounced).",
+        "evidence": "At Ethereum block 25295272: CollateralRegistry (0x5e159fac..., ERC1967Proxy) ebisuAdmin()=0x25b85831da750c912ab7f0cf53b9d82f7894ed07, a Gnosis Safe 1.3.0. getOwners()=3 EOAs, threshold=2, getModulesPaginated() returns empty array, guard slot=0x0, masterCopy slot0=0xd9db270c... (Safe 1.3.0), fallbackHandler=0xf48f2b2d.... EbisuUpgradeableV2 enforces 7-day UPGRADE_TIMELOCK on-chain. BoldToken slot 354-355=0x0 (pendingImplementation=0x0, upgradeProposalTime=0, no pending upgrade). BoldToken slot 359=0x1 (ccipTokenPoolsLocked=true). BoldToken owner (slot 101)=0x0 (renounced).",
         "sources": [
           {
             "label": "Ebisu CollateralRegistry on Etherscan",

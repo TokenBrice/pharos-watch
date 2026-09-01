@@ -10,6 +10,7 @@ import {
   type DexMeasuredExecutionCurveCompositeProof,
   type DexMeasuredExecutionTarget,
   type DexMeasuredExecutionUniswapV4PoolProof,
+  type DexRequestBudget,
 } from "@shared/types/measured-execution";
 
 export const DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS = 15_000;
@@ -20,13 +21,11 @@ export interface DexMeasuredRawQuotePoint extends DexMeasuredExecutionQuotePoint
 
 export type DexMeasuredExecutionBudgetStopReason = "request-budget-exhausted" | "runtime-deadline-exceeded";
 
-export interface DexMeasuredExecutionRpcBudget {
-  tryConsume(): boolean;
+export interface DexMeasuredExecutionRpcBudget extends DexRequestBudget {
   canRequestChain(chain: string): boolean;
   recordChainResult(chain: string, success: boolean): void;
   isChainCircuitOpen(chain: string): boolean;
   readonly requestsUsed: number;
-  readonly deadlineMs: number;
   readonly openChains: readonly string[];
   readonly stopReason: DexMeasuredExecutionBudgetStopReason | null;
 }
@@ -43,17 +42,18 @@ export function createDexMeasuredExecutionRpcBudget(input: {
   const openChains = new Set<string>();
   const normalizeChain = (chain: string) => chain.trim().toLowerCase();
   return {
-    tryConsume() {
+    tryConsume(count = 1) {
+      if (!Number.isInteger(count) || count <= 0) return false;
       if (stopReason != null) return false;
       if (now() >= input.deadlineMs) {
         stopReason = "runtime-deadline-exceeded";
         return false;
       }
-      if (requestsUsed >= input.maxRequests) {
+      if (requestsUsed + count > input.maxRequests) {
         stopReason = "request-budget-exhausted";
         return false;
       }
-      requestsUsed++;
+      requestsUsed += count;
       return true;
     },
     canRequestChain(chain) {
@@ -74,6 +74,12 @@ export function createDexMeasuredExecutionRpcBudget(input: {
     },
     get requestsUsed() {
       return requestsUsed;
+    },
+    get maxRequests() {
+      return input.maxRequests;
+    },
+    get remainingRequests() {
+      return Math.max(0, input.maxRequests - requestsUsed);
     },
     get deadlineMs() {
       return input.deadlineMs;

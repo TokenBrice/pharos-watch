@@ -32,7 +32,7 @@ python3 .codex/skills/coingecko-id-verif/scripts/verify.py --all
 ## Notes
 
 - The script loads `COINGECKO_API_KEY` from `worker/.dev.vars` when present. Without it, the free CoinGecko API is used.
-- `--scan` iterates only coins that have a `llamaId`; coins without one are invisible to it — check those individually with `--coin`.
+- `--scan` iterates only coins that have a `llamaId`; coins without one are invisible to it. Check those individually with `--coin`.
 - The script compares three views of the asset:
   - our configured `geckoId` from the JSON stablecoin registry
   - DefiLlama's `gecko_id`

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "exceptions": [
+    {
+      "surface": "domain-sidecars",
+      "record": "shared/data/stablecoins/domains/mint-authority/a7a5-old-vector",
+      "field": "mintAuthority.review.evidence",
+      "ruleId": "no-clause-dash",
+      "excerpt": "—",
+      "fingerprints": ["90de0a09c5e0480a", "a12dd34089966aff"],
+      "occurrences": 2,
+      "reason": "Both dashes are inside single-quoted verbatim external report titles reproduced as evidence; changing them would falsify the cited document titles.",
+      "owner": "pharos",
+      "permanent": true
+    }
+  ]
+}

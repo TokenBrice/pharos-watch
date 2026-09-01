@@ -4,11 +4,11 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "MiCA Article 2 — financial instruments and funds are outside MiCA scope",
+        "label": "MiCA Article 2: financial instruments and funds are outside MiCA scope",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       },
       {
-        "label": "Theo thBILL product page — tokenized Treasury product representing a proportional fund share with NAV appreciation",
+        "label": "Theo thBILL product page: tokenized Treasury product representing a proportional fund share with NAV appreciation",
         "url": "https://theo.xyz/thbill"
       }
     ]
@@ -19,7 +19,7 @@
       "summary": "thBILL is a NAV-appreciating tokenized Treasury product representing a proportional share of institutional Treasury funds, not a fixed-value payment instrument. The GENIUS Act excludes securities from the payment-stablecoin definition.",
       "references": [
         {
-          "label": "GENIUS Act — payment stablecoin definition and securities exclusion",
+          "label": "GENIUS Act: payment stablecoin definition and securities exclusion",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
@@ -48,7 +48,7 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC digital assets licensing applications — no Theo/thBILL application identified",
+        "label": "OCC digital assets licensing applications: no Theo/thBILL application identified",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"

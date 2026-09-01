@@ -59,7 +59,7 @@ export function getAboutLeadParagraphs({
 }: Pick<AboutStablecoinCounts, "activeStablecoins">): string[] {
   return [
     "Most trackers show price. Pharos shows risk.",
-    `Live reserve feeds, forward-looking depeg warnings, and public blacklist monitoring across a ${activeStablecoins}-asset core universe of stablecoins and cash equivalents — everything that could make a stable asset fail.`,
+    `Live reserve feeds, forward-looking depeg warnings, and public blacklist monitoring across a ${activeStablecoins}-asset core universe of stablecoins and cash equivalents: everything that could make a stable asset fail.`,
   ];
 }
 
@@ -195,7 +195,7 @@ export const COMPANION_FEATURES: readonly AboutFeatureItem[] = [
   {
     title: "PharosVille",
     description:
-      "A pixel-art harbor view of the same data. Every coin sails as a ship; DEWS zones become anchorages, breakwaters, and warning shoals — the classification you read in tables, drawn as a place. Best on desktop.",
+      "A pixel-art harbor view of the same data. Every coin sails as a ship; DEWS zones become anchorages, breakwaters, and warning shoals: the classification you read in tables, drawn as a place. Best on desktop.",
     icon: Ship,
     href: "https://pharosville.pharos.watch/",
     external: true,

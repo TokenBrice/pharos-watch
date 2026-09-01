@@ -38,6 +38,7 @@ import {
 } from "./profiles";
 import { quoteQuoterV2Requests, resolveQuoterV2PoolBindings, validateQuoterV2ProfileProof } from "./quoter-v2";
 import {
+  DEX_EXACT_QUOTE_ADAPTER_REGISTRY,
   verifyDexMeasuredExecutionDeployment,
 } from "./registry";
 import {
@@ -68,7 +69,6 @@ import {
   type CurveCompositeRuntimeEvidence,
 } from "./curve-composite";
 import {
-  UNISWAP_V4_ADAPTER_PROFILE_ID,
   quoteUniswapV4Requests,
   resolveUniswapV4PoolBindings,
   validateUniswapV4ProfileProof,
@@ -76,6 +76,7 @@ import {
   type UniswapV4Deployment,
   type UniswapV4RuntimeEvidence,
 } from "./uniswap-v4";
+import { runSolanaClmmShadowLane } from "./solana-clmm/inventory";
 import {
   MAX_ADMISSION_ROTATION_CYCLES, MAX_EXPIRING_PRIORITY_RPC_REQUESTS, MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   MEASURED_EXECUTION_ADMISSION_SOURCE_KEY, MEASURED_EXECUTION_REFINEMENT_ROUNDS,
@@ -165,7 +166,7 @@ function applyQuoteOutcomes(
  * request/proof shape; the stage keeps chain lanes and adapter groups
  * serialized exactly as before.
  */
-const MEASURED_QUOTE_ADAPTER_REGISTRY: Readonly<
+const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
   Record<
     TargetDeployment["kind"],
     {
@@ -176,7 +177,7 @@ const MEASURED_QUOTE_ADAPTER_REGISTRY: Readonly<
   >
 > = {
   "quoter-v2": {
-    profileIds: ["uniswap-v3-quoter-v2", "pancakeswap-v3-quoter-v2", "aerodrome-slipstream-quoter-v2"],
+    profileIds: DEX_EXACT_QUOTE_ADAPTER_REGISTRY.find((entry) => entry.adapterId === "evm-quoter-v2")!.profileIds,
     validate: validateQuoterV2ProfileProof,
     quote: async (input) => {
       const outcomes = await quoteQuoterV2Requests({
@@ -194,7 +195,7 @@ const MEASURED_QUOTE_ADAPTER_REGISTRY: Readonly<
     },
   },
   "uniswap-v4": {
-    profileIds: [UNISWAP_V4_ADAPTER_PROFILE_ID],
+    profileIds: DEX_EXACT_QUOTE_ADAPTER_REGISTRY.find((entry) => entry.adapterId === "evm-uniswap-v4")!.profileIds,
     validate: validateUniswapV4ProfileProof,
     quote: async (input) => {
       const outcomes = await quoteUniswapV4Requests({
@@ -706,7 +707,7 @@ async function syncDexMeasuredExecutionLane(
       }
       for (const [kind, adapterRequests] of byAdapter) {
         throwIfAborted(signal);
-        await MEASURED_QUOTE_ADAPTER_REGISTRY[kind].quote({
+        await DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS[kind].quote({
           requests: adapterRequests,
           chainRpcs,
           signal,
@@ -804,7 +805,7 @@ async function syncDexMeasuredExecutionLane(
         expectedQuoteGenerationId: quoteGenerationId,
         nowSec: publishedAt,
       });
-      const adapterIssues = MEASURED_QUOTE_ADAPTER_REGISTRY[state.deployment.kind].validate(profile);
+      const adapterIssues = DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS[state.deployment.kind].validate(profile);
       if (genericIssues.length > 0 || adapterIssues.length > 0) {
         throw new Error([...genericIssues, ...adapterIssues].join(","));
       }
@@ -985,5 +986,12 @@ export async function syncDexShadowMeasuredExecution(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
-  return syncDexMeasuredExecutionLane(db, chainRpcs, signal, reportProgress, "shadow");
+  const baseResult = await syncDexMeasuredExecutionLane(db, chainRpcs, signal, reportProgress, "shadow");
+  return runSolanaClmmShadowLane({
+    db,
+    chainRpcs,
+    baseResult,
+    signal,
+    reportProgress,
+  });
 }

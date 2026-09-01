@@ -9,7 +9,7 @@
     "issuerPathway": "federal-qualified-nonbank",
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "OCC (conditional national trust bank charter — Bridge National Trust Bank, NY); FinCEN/state MTLs for current MSB operations",
+    "licensingRegulator": "OCC (conditional national trust bank charter: Bridge National Trust Bank, NY); FinCEN/state MTLs for current MSB operations",
     "primaryFederalRegulator": "OCC",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
@@ -18,7 +18,7 @@
     "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge Building Inc. (BBI), a Stripe subsidiary, received OCC conditional approval Feb 12, 2026 (CD1365) to organize Bridge National Trust Bank — a federal nonbank trust charter that maps to the federal-qualified-nonbank GENIUS pathway. Bridge publicly markets USDB and its Open Issuance platform as 'GENIUS-ready' (per bridge.xyz blog and Stripe Open Issuance announcement). No PPSI approval or official GENIUS application has been filed or granted; the application framework is still in proposed-rules rulemaking. GENIUS Act is not yet effective (effective date: Jan 18, 2027 at latest). Bridge is also a registered MSB with state MTLs for current operations.",
+    "notes": "Bridge Building Inc. (BBI), a Stripe subsidiary, received OCC conditional approval Feb 12, 2026 (CD1365) to organize Bridge National Trust Bank: a federal nonbank trust charter that maps to the federal-qualified-nonbank GENIUS pathway. Bridge publicly markets USDB and its Open Issuance platform as 'GENIUS-ready' (per bridge.xyz blog and Stripe Open Issuance announcement). No PPSI approval or official GENIUS application has been filed or granted; the application framework is still in proposed-rules rulemaking. GENIUS Act is not yet effective (effective date: Jan 18, 2027 at latest). Bridge is also a registered MSB with state MTLs for current operations.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -26,7 +26,7 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "OCC Corporate Decision 1365 — Bridge National Trust Bank",
+        "label": "OCC Corporate Decision 1365: Bridge National Trust Bank",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
         "sourceKind": "federal-regulator"
       },
@@ -36,12 +36,12 @@
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Bridge stablecoins FAQ — reserve and compliance disclosure",
+        "label": "Bridge stablecoins FAQ: reserve and compliance disclosure",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Stripe Open Issuance announcement — GENIUS-ready reserve management",
+        "label": "Stripe Open Issuance announcement: GENIUS-ready reserve management",
         "url": "https://stripe.com/blog/introducing-open-issuance-from-bridge",
         "sourceKind": "issuer-disclosure"
       }
@@ -49,10 +49,10 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin (Bulletin 2026-3) and Federal Register NPRM 2026-04089",
-        "OCC Corporate Decision 1365 — Bridge National Trust Bank conditional approval Feb 2026",
-        "bridge.xyz blog — OCC conditional approval announcement",
+        "OCC Corporate Decision 1365: Bridge National Trust Bank conditional approval Feb 2026",
+        "bridge.xyz blog: OCC conditional approval announcement",
         "Bridge stablecoins FAQ (apidocs.bridge.xyz)",
-        "Stripe Open Issuance blog — GENIUS-ready compliance positioning",
+        "Stripe Open Issuance blog: GENIUS-ready compliance positioning",
         "Federal Register GENIUS Act tracker (Chapman & Cutler, accessed 2026-06-18)",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",

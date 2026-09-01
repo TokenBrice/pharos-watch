@@ -52,7 +52,7 @@ export const YIELD_METHODOLOGY_V4: readonly MethodologyChangelogEntry[] = [
     date: "2026-03-24",
     effectiveAt: 1774310400,
     summary:
-      "Yield coverage widened through new deterministic Treasury fallbacks plus a broader but still curated lending auto-discovery set for long-tail safe assets.",
+      "Yield coverage widened through new deterministic Treasury fallbacks plus a broader but still curated lending auto-discovery set for long-tail assets.",
     impact: [
       "USYC and thBILL now participate in rate-derived Treasury fallback coverage alongside the existing BUIDL/USTB/YLDS/mTBILL/OUSG set",
       "Auto-discovered lending coverage now recognizes additional curated protocol slugs already present in live DeFiLlama data, including Loopscale, Vesper, Lista Lending, Liqwid, Overnight, Lagoon, and NAVI Lending",

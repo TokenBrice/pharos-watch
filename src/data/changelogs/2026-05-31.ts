@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "The Depeg Resolver (DDR/DDRR) v2 ships at /depeg, dashboard cards flatten, and the data layer gets a two-pass audit.",
   fieldNotes:
-    "After last week's design-system sprint, the new tone moves into product. The Depeg Resolver opens to the public — DDR predicts how long a current depeg will last, DDRR scores how well past predictions held up — and the rest of the dashboard quietly harmonizes around the flat-card baseline. Two data-enhancement passes also work through a backlog of reserve, redemption, and classification follow-ups.",
+    "After last week's design-system sprint, the new tone moves into product. The Depeg Resolver opens to the public. DDR predicts how long a current depeg will last, DDRR scores how well past predictions held up, and the rest of the dashboard quietly harmonizes around the flat-card baseline. Two data-enhancement passes also work through a backlog of reserve, redemption, and classification follow-ups.",
   summary: [
     {
       label: "Depeg Resolver (DDR/DDRR) v2",
@@ -31,13 +31,13 @@ export const entry: ChangelogEntry = {
       label: "Pre-launch additions",
       tag: "coverage",
       description:
-        "Tenbin Gold (tGLD) — a synthetic gold debt-note from a CME-futures basket — and GEL₮, Tether's pre-launch Georgian Lari, join the pre-launch list, and the weekly upcoming sweep tracks Flipcash's launch and USDPT.",
+        "Tenbin Gold (tGLD), a synthetic gold debt-note from a CME-futures basket, and GEL₮, Tether's pre-launch Georgian Lari, join the pre-launch list, and the weekly upcoming sweep tracks Flipcash's launch and USDPT.",
     },
     {
       label: "Flat-card design pass",
       tag: "design",
       description:
-        "Card accents flatten — the colored border-l retires except for data-driven indicators. Price Transparency and Redemption Backstop go full-width on coin pages, and depeg page hierarchy tightens around the resolver.",
+        "Card accents flatten: the colored border-l retires except for data-driven indicators. Price Transparency and Redemption Backstop go full-width on coin pages, and depeg page hierarchy tightens around the resolver.",
     },
     {
       label: "Platform hygiene",

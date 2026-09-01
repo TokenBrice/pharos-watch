@@ -159,8 +159,25 @@ export const StablecoinFlagsSchema = z
 
 export const StablecoinLinkSchema = z
   .object({
+    /**
+     * editorial-selector identity for links whose url is not unique within the
+     * coin; immutable after publication.
+     */
+    id: z
+      .string()
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored kebab-case id; finite groups, no backtracking ambiguity.
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Expected a kebab-case link id")
+      .optional(),
     label: z.string(),
     url: HttpUrlSchema,
+    /**
+     * Marks the label as a verbatim external title (an article headline, filing
+     * name, or document title) rather than Pharos-composed copy. Editorial style
+     * rules never apply to quoted text, so the corpus gate reads this as
+     * `ownership: "quoted"` and skips the record, and label punctuation
+     * migrations must leave it untouched. See docs/editorial-style.md.
+     */
+    quoted: z.boolean().optional(),
   })
   .strict();
 
@@ -647,6 +664,8 @@ const GeniusReferenceSchema = z
     sourceKind: z.enum(GENIUS_SOURCE_KIND_VALUES),
     sourceDate: ReviewDateSchema.optional(),
     accessedAt: ReviewDateSchema.optional(),
+    /** Verbatim external title; see `StablecoinLinkSchema.quoted`. */
+    quoted: z.boolean().optional(),
   })
   .strict();
 export type GeniusReference = z.output<typeof GeniusReferenceSchema>;

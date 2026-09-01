@@ -102,7 +102,7 @@ export const SAFETY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
       summary:
         "Peg multiplier exponent raised from 0.2 to 0.4 so peg stability impacts grades more meaningfully. Active depegs above 1000 bps now cap the overall score at D; above 2500 bps caps at F.",
       impact: [
-        "PEG_MULTIPLIER_EXPONENT changed from 0.2 to 0.4 — coins with pegScore 80+ see ~1-5% more reduction; coins with pegScore < 30 see 19-34% more reduction",
+        "PEG_MULTIPLIER_EXPONENT changed from 0.2 to 0.4: coins with pegScore 80+ see ~1-5% more reduction; coins with pegScore < 30 see 19-34% more reduction",
         "New graduated active depeg cap: >= 2500 bps (25%) caps overall at 39 (F), >= 1000 bps (10%) caps overall at 49 (D)",
         "Active depeg severity (activeDepegBps) added to RawDimensionInputs for reproducibility in stressed grades and frontend",
       ],

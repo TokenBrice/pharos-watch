@@ -548,7 +548,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "BOLD on Hyperliquid L1 is the L1 representation of the HyperEVM BOLD deployment (same address 0x84533b1512a3a23f0c9668d88fdf86feffdbb11a), reached through Hyperliquid's native L1-EVM linkage — there is no separate external bridge. Mint authority therefore rests with the HyperEVM Chainlink CCIP BurnMintTokenPool 0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1, exactly as for the reviewed HyperEVM route.",
+        "reviewNote": "BOLD on Hyperliquid L1 is the L1 representation of the HyperEVM BOLD deployment (same address 0x84533b1512a3a23f0c9668d88fdf86feffdbb11a), reached through Hyperliquid's native L1-EVM linkage. There is no separate external bridge. Mint authority therefore rests with the HyperEVM Chainlink CCIP BurnMintTokenPool 0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1, exactly as for the reviewed HyperEVM route.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "hyperevm",
         "controllerAddress": "0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1",

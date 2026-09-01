@@ -298,7 +298,7 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "AlchemistV2.admin() is a separate chain-local protocol-admin contract that can change native issuance parameters; its governing owner or timelock semantics were not identified from a verified source.",
-        "evidence": "At the reviewed Arbitrum AlchemistV2 read, admin() returned 0xee1aa1c3d0622fced823c7720cf9e8079558484b. The returned address is a code-bearing 171-byte admin contract, but its governing owner/timelock semantics were not resolved; it is retained as an explicit native parameter-control evidence gap.",
+        "evidence": "At the reviewed Arbitrum AlchemistV2 read, admin() returned 0xee1aa1c3d0622fced823c7720cf9e8079558484b. The returned address is a code-bearing 171-byte admin contract, but its governing owner/timelock semantics were not resolved. It is retained as an explicit native parameter-control evidence gap.",
         "sources": [
           {
             "label": "Arbitrum AlchemistV2 explorer",
@@ -524,7 +524,7 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "AlchemistV2.admin() is a separate chain-local protocol-admin contract that can change native issuance parameters; its governing owner or timelock semantics were not identified from a verified source.",
-        "evidence": "At Optimism block 155658381, AlchemistV2.admin() returned 0x3dda174aa9e897e18b8e10e6ce39c2a52398181d. The returned address is a code-bearing 171-byte admin contract, but its governing owner/timelock semantics were not resolved; it is retained as an explicit native parameter-control evidence gap.",
+        "evidence": "At Optimism block 155658381, AlchemistV2.admin() returned 0x3dda174aa9e897e18b8e10e6ce39c2a52398181d. The returned address is a code-bearing 171-byte admin contract, but its governing owner/timelock semantics were not resolved. It is retained as an explicit native parameter-control evidence gap.",
         "sources": [
           {
             "label": "Optimism AlchemistV2 explorer",

@@ -1,7 +1,7 @@
 [
-  {"date":"2018-03-05","kind":"governance","label":"TUSD launch on Ethereum","severity":"low","note":"2018-03-05 — TrustToken launches TUSD on Ethereum, listed on Bittrex"},
-  {"date":"2020-12-18","kind":"governance","label":"TUSD ownership transferred from TrueCoin to Techteryx","severity":"med","note":"2020-12-18 — TrueCoin sells TUSD operations to Techteryx (BVI consortium)"},
-  {"date":"2023-06-10","kind":"regulatory","label":"Prime Trust mint pause — TUSD attestation ripcord triggered","severity":"med","note":"2023-06-10 — Prime Trust mint pause; TUSD briefly depegs to ~$0.993"},
-  {"date":"2023-07-13","kind":"governance","label":"Techteryx assumes full operational control of TUSD","severity":"low","note":"2023-07-13 — Techteryx takes full operational control from Archblock"},
-  {"date":"2024-09-24","kind":"regulatory","label":"SEC settlement vs. TrueCoin/TrustToken over TUSD reserves","severity":"high","href":"https://www.sec.gov/newsroom/press-releases/2024-145","note":"2024-09-24 — SEC settles charges vs. TrueCoin/TrustToken for misleading TUSD backing"}
+  {"date":"2018-03-05","kind":"governance","label":"TUSD launch on Ethereum","severity":"low","note":"2018-03-05: TrustToken launches TUSD on Ethereum, listed on Bittrex"},
+  {"date":"2020-12-18","kind":"governance","label":"TUSD ownership transferred from TrueCoin to Techteryx","severity":"med","note":"2020-12-18: TrueCoin sells TUSD operations to Techteryx (BVI consortium)"},
+  {"date":"2023-06-10","kind":"regulatory","label":"Prime Trust mint pause, TUSD attestation ripcord triggered","severity":"med","note":"2023-06-10: Prime Trust mint pause; TUSD briefly depegs to ~$0.993"},
+  {"date":"2023-07-13","kind":"governance","label":"Techteryx assumes full operational control of TUSD","severity":"low","note":"2023-07-13: Techteryx takes full operational control from Archblock"},
+  {"date":"2024-09-24","kind":"regulatory","label":"SEC settlement vs. TrueCoin/TrustToken over TUSD reserves","severity":"high","href":"https://www.sec.gov/newsroom/press-releases/2024-145","note":"2024-09-24: SEC settles charges vs. TrueCoin/TrustToken for misleading TUSD backing"}
 ]

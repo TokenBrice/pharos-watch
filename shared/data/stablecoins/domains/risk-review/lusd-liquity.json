@@ -422,7 +422,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Scroll LUSD is the canonical bridged token: gateway() reads 0xe2b4795039517653c5ae8c2a9bfdd783b48f447a — the Scroll L2 standard ERC20 gateway (2,206-byte code, read 2026-07-20) — which is the mint authority for the representation. totalSupply $672k.",
+        "reviewNote": "Scroll LUSD is the canonical bridged token: gateway() reads 0xe2b4795039517653c5ae8c2a9bfdd783b48f447a, the Scroll L2 standard ERC20 gateway (2,206-byte code, read 2026-07-20), which is the mint authority for the representation. totalSupply $672k.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "scroll",

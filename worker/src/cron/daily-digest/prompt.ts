@@ -27,6 +27,8 @@ export interface DigestMeta {
   coins?: string[];
   usedCandidateIds?: string[];
   suppressedCandidateIds?: string[];
+  editorialStyleVersion?: string;
+  editorialStyleHash?: string;
 }
 
 export function buildUserPrompt(
@@ -79,7 +81,7 @@ export function buildUserPrompt(
   if (data.topDepegs.length > 0) {
     lines.push("Active depegs by market impact (live deviation × mcap):");
     lines.push(
-      "  IMPORTANT: 'now' is the live deviation — quote THAT as the current state. 'peak' is the event's historical extreme; never present peak as today's deviation.",
+      "  IMPORTANT: 'now' is the live deviation; quote THAT as the current state. 'peak' is the event's historical extreme; never present peak as today's deviation.",
     );
     for (const depeg of data.topDepegs) {
       const age = depeg.ageHours != null ? ` | age ${depeg.ageHours}h` : "";
@@ -329,10 +331,10 @@ export function buildUserPrompt(
   const rawFallbacks: string[] = [];
   for (let i = 0; i < recentMeta.length; i++) {
     const entry = recentMeta[i];
-    if (entry.meta) {
-      const meta = entry.meta;
+    const meta = entry.meta;
+    if (meta && Object.keys(meta).some((key) => key !== "editorialStyleVersion" && key !== "editorialStyleHash")) {
       metaLines.push(
-        `  Day -${i + 1}: "${entry.title}" — lead: ${meta.lead ?? "unknown"}, tone: ${meta.tone ?? "unknown"}, coins: ${(meta.coins ?? []).join(", ") || "none"}`,
+        `  Day ${i + 1}: "${entry.title}" | lead: ${meta.lead ?? "unknown"}, tone: ${meta.tone ?? "unknown"}, coins: ${(meta.coins ?? []).join(", ") || "none"}`,
       );
     } else if (entry.rawText) {
       rawFallbacks.push(`- "${entry.rawText}"`);
@@ -342,10 +344,14 @@ export function buildUserPrompt(
     lines.push("", "Recent digest angles (DO NOT repeat any of these approaches):", ...metaLines);
   }
   if (rawFallbacks.length > 0) {
-    lines.push("", "RECENT DIGESTS — do NOT reuse phrasing, metaphors, or structure:", ...rawFallbacks);
+    lines.push("", "RECENT DIGESTS: do NOT reuse phrasing, metaphors, or structure:", ...rawFallbacks);
   }
 
-  return lines.join("\n");
+  // Keep injected history and curated labels from teaching the model a banned
+  // clause glyph or the weekly prompt's retired "quietly significant" wording.
+  return lines.join("\n")
+    .replace(/[\u2012-\u2015]/g, ",")
+    .replace(/\bquietly\s+significant\b/gi, "gradually material");
 }
 
 export function buildSafetyMapCensusLines(
@@ -423,13 +429,13 @@ function pushLeadRequirementLines(
     if (requirement.severity === "hard" && requirement.candidateIds.length > 0) {
       lines.push(
         "",
-        `REQUIRED LEAD TODAY: ${requirement.candidateIds.join(", ")} — ${requirement.reason}.`,
+        `REQUIRED LEAD TODAY: ${requirement.candidateIds.join(", ")}; ${requirement.reason}.`,
         "Declare this candidate id as meta.leadSignalId and open with its story. This overrides variety preferences for the lead only.",
       );
     } else if (requirement.mentionTokens && requirement.mentionTokens.length > 0) {
       lines.push(
         "",
-        `REQUIRED MENTION (not the lead): ${requirement.mentionTokens.join(", ")} — ${requirement.reason}.`,
+        `REQUIRED MENTION (not the lead): ${requirement.mentionTokens.join(", ")}; ${requirement.reason}.`,
         "Cover it in at most one sentence; do NOT lead with it. Choose today's lead from the other top candidates.",
       );
     }
@@ -438,7 +444,7 @@ function pushLeadRequirementLines(
 
 function pushCauseContextLines(lines: string[], data: DigestInputData): void {
   if (!data.causeContext || data.causeContext.length === 0) return;
-  lines.push("", "CAUSE CONTEXT (curated, primary-sourced — cite when covering the coin):");
+  lines.push("", "CAUSE CONTEXT (curated, primary-sourced; cite when covering the coin):");
   for (const entry of data.causeContext) {
     lines.push(`  ${entry.symbol} | ${entry.date} | ${entry.kind} | ${entry.label}`);
   }
@@ -464,7 +470,7 @@ function pushOngoingStoryLines(
   if (streakEntries.length === 0) return;
   lines.push(
     "",
-    "ONGOING STORIES (lead-streak ledger — the reader has already seen these as headlines):",
+    "ONGOING STORIES (lead-streak ledger; the reader has already seen these as headlines):",
     ...streakEntries,
     "  Do not re-lead an unchanged ongoing story. Day-counting is not news; only a material change re-qualifies it.",
   );

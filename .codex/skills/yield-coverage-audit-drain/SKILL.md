@@ -3,6 +3,8 @@ name: yield-coverage-audit-drain
 description: Drain the Pharos Yield Intelligence coverage-audit queue into reviewed source coverage, documented intentional gaps, or watchlisted deferrals. Use monthly after `yield-coverage-audit` runs, after yield coverage drops, or when promoting queue candidates such as `native-exact-pool`, `lending-allowlist`, `source-family-adapter`, `stale-auto-lending-override`, or `quarantine-ready-to-restore`.
 ---
 
+Read `docs/editorial-style.md` before writing. Its universal rules and the named `technical-evidence` register govern all Pharos-owned prose; this skill adds only factual, sourcing, schema, and format requirements.
+
 # Yield Coverage Audit Drain
 
 Monthly operator workflow for turning the cached `yield-coverage-audit`
@@ -39,7 +41,7 @@ npx wrangler d1 execute stablecoin-db --remote --command "select key, value, upd
 ```
 
 If remote D1 is unavailable, fall back to the most recent cached payload
-already present in test fixtures or prior run output — the audit itself runs
+already present in test fixtures or prior run output. The audit itself runs
 only as a Worker cron (`worker/src/handlers/scheduled/monthly-yield-audit.ts`);
 there is no local npm entrypoint. Do not mutate production D1 from this skill.
 
@@ -69,7 +71,7 @@ Handle queue items by `kind`:
   quarantined before restoring hourly coverage.
 - `unmatched-high-tvl-pool` / `missing-protocol`: a high-TVL stablecoin pool or
   protocol has no local coverage mapping. Decide venue map, allowlist, or
-  adapter candidacy — or record a documented intentional gap; do not leave the
+  adapter candidacy. Record a documented intentional gap; do not leave the
   row unaddressed just because it is watch-severity.
 - `venue-risk-config-missing`: an active source's venue protocol has no
   reviewed entry in `YIELD_RISK_CONFIG`
@@ -83,7 +85,7 @@ Handle queue items by `kind`:
   force coverage around a guard without written rationale.
 
 The kind list above mirrors `YieldCoverageAuditQueueItemKind` in
-`shared/types/status/yield-liquidity.ts` — the source file wins; triage any
+`shared/types/status/yield-liquidity.ts`. The source file wins; triage any
 kind not listed here from its emitting code in
 `worker/src/cron/yield-coverage-audit.ts`.
 
@@ -152,7 +154,7 @@ Yield methodology versions are numeric. Read the current version from
 `shared/lib/methodology-versions/yield-methodology.ts` and pick the next
 strictly greater numeric value (integer-segment comparison: `8.3` > `8.292`,
 so extend the same segment, e.g. `8.292` → `8.293`). Never trust a version
-number quoted in a doc or skill — the source file wins.
+number quoted in a doc or skill. The source file wins.
 
 ## Validation
 
@@ -173,7 +175,7 @@ and frontend status/methodology tests when public status or UI copy changes.
 ## Output
 
 If the queue is empty, report the snapshot source/date and zero counts, then
-stop — do not hunt for speculative coverage work outside the queue.
+stop. Do not hunt for speculative coverage work outside the queue.
 
 End the drain with:
 

@@ -12,14 +12,14 @@ export const content: CaseStudy = {
     "Fei survived the launch shock and eventually clawed back to parity, then removed direct incentives entirely in a V2 redesign. But the deeper problem, that PCV is not the same thing as guaranteed redeemability, was never fully resolved. After Fei merged with Rari Capital to form Tribe DAO and an $80M reentrancy exploit drained the merged lending markets in April 2022, governance fractured. In August 2022, in the aftermath of Terra's collapse, Fei Labs proposed winding the project down; by late September, the redemption path was active and the asset was effectively abandoned.",
   ],
   takeaways: [
-    "Reflexive incentives are fragile peg defenses: FEI's burn penalty on sub-peg sells trapped holders instead of creating buyers, and each algorithmic reweight became the best moment to dump — it depegged to ~$0.73 within days of launch.",
+    "Reflexive incentives are fragile peg defenses: FEI's burn penalty on sub-peg sells trapped holders instead of creating buyers, and each algorithmic reweight became the best moment to dump: it depegged to ~$0.73 within days of launch.",
     "Protocol Controlled Value is not redeemability: owning reserves is not the same as giving every holder a clean, guaranteed claim to par.",
-    "Merger complexity compounds failure — binding the stablecoin to Rari's Fuse lending markets meant an $80M reentrancy exploit became an existential question for the peg.",
+    "Merger complexity compounds failure: binding the stablecoin to Rari's Fuse lending markets meant an $80M reentrancy exploit became an existential question for the peg.",
     "When a governance vote, not a market, decides an asset's fate, the signal is the politics of loss allocation: Tribe DAO chose to wind down and redeem FEI 1:1 for DAI in August 2022.",
   ],
   archetype: "algorithmic",
   outcome: "died",
-  eventDateLabel: "2021–2022",
+  eventDateLabel: "2021-2022",
   eventWindow: {
     startISO: "2021-04-03",
     endISO: "2022-09-22",
@@ -75,6 +75,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "direct-incentive-experiment",
       heading: "The direct-incentive experiment",
       paragraphs: [
         "Fei's central claim was that a stablecoin could hold its peg without a bank account full of dollars and without locking up far more crypto collateral than the coins it issued. FEI minted along a bonding curve against ETH, and the protocol kept the ETH it received as Protocol Controlled Value, reserves owned by the protocol rather than by individual depositors who could withdraw at will.",
@@ -83,6 +84,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-it-depegged-at-birth",
       heading: "Why it depegged at birth",
       paragraphs: [
         "The genesis event raised far more than the mechanism was tuned for. A large cohort of participants had bought FEI below a dollar expecting it to converge upward, and many also wanted their ETH back. When FEI failed to snap to a dollar, those holders tried to leave at once.",
@@ -91,6 +93,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "rari-hack-and-the-end",
       heading: "The Rari hack and the end",
       paragraphs: [
         "Fei removed direct incentives in its V2 redesign in late 2021 and made FEI redeemable one-to-one against PCV, a meaningful move toward genuine backing. It then merged with Rari Capital to form Tribe DAO, binding the stablecoin's treasury and governance to Rari's Fuse lending pools.",
@@ -99,6 +102,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Reflexive incentives are fragile peg defenses. A penalty that punishes sellers does not create buyers; under stress it traps holders and can intensify the very flight it was meant to prevent. Fei demonstrated this within days of launch, before any external shock.",
@@ -121,31 +125,31 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "Cointelegraph — Fei Labs raises 639K ETH in genesis event",
+      label: "Cointelegraph: Fei Labs raises 639K ETH in genesis event",
       href: "https://cointelegraph.com/news/fei-labs-raises-639k-eth-in-genesis-event",
     },
     {
-      label: "CoinDesk — $1B Fei Stablecoin's Rocky Start Is a Wake-Up Call for DeFi Investors",
+      label: "CoinDesk: $1B Fei Stablecoin's Rocky Start Is a Wake-Up Call for DeFi Investors",
       href: "https://www.coindesk.com/markets/2021/04/07/1b-fei-stablecoins-rocky-start-is-a-wake-up-call-for-defi-investors",
     },
     {
-      label: "CoinDesk — DeFi Lender Rari Capital/Fei Loses $80M in Hack",
+      label: "CoinDesk: DeFi Lender Rari Capital/Fei Loses $80M in Hack",
       href: "https://www.coindesk.com/business/2022/04/30/defi-lender-rari-capitalfei-loses-80m-in-hack",
     },
     {
-      label: "CertiK — Revisiting the FEI Protocol Incident (exitMarket reentrancy analysis)",
+      label: "CertiK: Revisiting the FEI Protocol Incident (exitMarket reentrancy analysis)",
       href: "https://www.certik.com/ko/blog/revisiting-fei-protocol-incident",
     },
     {
-      label: "Axios — Another algorithmic stablecoin looks like it is giving up",
+      label: "Axios: Another algorithmic stablecoin looks like it is giving up",
       href: "https://www.axios.com/2022/08/25/algorithmic-stablecoin-tribedao-fei",
     },
     {
-      label: "The Defiant — Fei Community Up In Arms Over Dissolution Plan",
+      label: "The Defiant: Fei Community Up In Arms Over Dissolution Plan",
       href: "https://thedefiant.io/news/defi/fei-shutdown-uproar",
     },
     {
-      label: "Blockworks — Fei flips again, repays crypto hack victims",
+      label: "Blockworks: Fei flips again, repays crypto hack victims",
       href: "https://blockworks.co/news/fei-flips-again-repays-crypto-hack-victims",
     },
   ],

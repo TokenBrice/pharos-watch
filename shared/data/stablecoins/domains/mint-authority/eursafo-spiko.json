@@ -63,7 +63,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295046, PermissionManager (0x344278aff…, ERC1967Proxy → PermissionManager impl) initialization logs (block 19690268) assign mint function (0x40c10f19) and burn (0x9dc29fac) access to 0xa0769f7a8fc65e47de93797b4e21c073c117fc80 and 0xe4880249745eac5f1ed9d8f7df844792d560e750. Both are UUPS proxies (impl 0x15ea0ec4, 'Token' contract) with owner() = 0x0 — operated as issuer backend relayers via the PermissionManager system.",
+        "evidence": "At Ethereum block 25295046, PermissionManager (0x344278aff…, ERC1967Proxy → PermissionManager impl) initialization logs (block 19690268) assign mint function (0x40c10f19) and burn (0x9dc29fac) access to 0xa0769f7a8fc65e47de93797b4e21c073c117fc80 and 0xe4880249745eac5f1ed9d8f7df844792d560e750. Both are UUPS proxies (impl 0x15ea0ec4, 'Token' contract) with owner() = 0x0, operated as issuer backend relayers via the PermissionManager system.",
         "sources": [
           {
             "label": "Spiko smart contracts",

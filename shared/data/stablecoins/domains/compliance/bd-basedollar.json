@@ -9,7 +9,7 @@
       "summary": "BD is minted when users borrow against overcollateralized positions in a decentralized Liquity V2-style protocol and can be redeemed permissionlessly for on-chain collateral. No legal person obligated to convert, redeem, or repurchase BD for a fixed amount of monetary value is identified, leaving its treatment under the GENIUS payment-stablecoin definition unclear.",
       "references": [
         {
-          "label": "GENIUS Act — payment stablecoin definition",
+          "label": "GENIUS Act: payment stablecoin definition",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
@@ -40,14 +40,14 @@
     "notes": "Explicitly assessed for cohort parity with other tracked Liquity V2-class stablecoins despite BD's launch-scale supply. Base Dollar's materials describe protocol-level borrowing and collateral redemption, but do not identify a conventional legal issuer or a GENIUS issuer pathway. Public on-chain collateral visibility is not treated as the issuer reserve disclosure or monthly attestation contemplated by GENIUS. No public approval, state qualification, official application, foreign-issuer registration, or enforcement action was located; the regime remains in proposed-rules phase.",
     "references": [
       {
-        "label": "GENIUS Act — payment stablecoin definition and issuer limitation",
+        "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
         "accessedAt": "2026-08-21"
       },
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
@@ -99,14 +99,14 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://basedollar.org/ — describes a decentralized borrowing protocol but names no legal issuer, U.S. license, GENIUS application, or reserve-attestation program.",
-        "https://docs.basedollar.org/docs/user-docs/general — describes user-minted BD, collateral, and limited governance but identifies no issuer entity or regulatory pathway.",
-        "https://docs.basedollar.org/docs/user-docs/redemption-and-delegation — documents permissionless protocol redemption for collateral, not redemption by a legal issuer for fixed monetary value.",
-        "https://github.com/basedollar/basedollar — documents the Liquity V2 fork and protocol mechanics but contains no public GENIUS authorization, application, or issuer disclosure.",
-        "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html — the OCC pending digital-assets application table contains no Base Dollar or Basedollar applicant.",
-        "https://www.federalregister.gov/api/v1/documents.json?per_page=20&conditions%5Bterm%5D=Base%20Dollar%20stablecoin — the search returned general GENIUS rulemaking and unrelated lexical matches, with no BD-specific authorization, application, foreign exception, or enforcement action.",
-        "https://www.dfs.ny.gov/virtual_currency_businesses — New York DFS regulated-entity, limited-purpose trust, and approved-stablecoin Greenlist entries do not name Base Dollar, Basedollar, or BD.",
-        "https://news.google.com/rss/search?q=%22Base%20Dollar%22%20stablecoin%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen — exact-name news search returned no relevant application, authorization, or enforcement coverage."
+        "https://basedollar.org/: describes a decentralized borrowing protocol but names no legal issuer, U.S. license, GENIUS application, or reserve-attestation program.",
+        "https://docs.basedollar.org/docs/user-docs/general: describes user-minted BD, collateral, and limited governance but identifies no issuer entity or regulatory pathway.",
+        "https://docs.basedollar.org/docs/user-docs/redemption-and-delegation: documents permissionless protocol redemption for collateral, not redemption by a legal issuer for fixed monetary value.",
+        "https://github.com/basedollar/basedollar: documents the Liquity V2 fork and protocol mechanics but contains no public GENIUS authorization, application, or issuer disclosure.",
+        "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html: the OCC pending digital-assets application table contains no Base Dollar or Basedollar applicant.",
+        "https://www.federalregister.gov/api/v1/documents.json?per_page=20&conditions%5Bterm%5D=Base%20Dollar%20stablecoin: the search returned general GENIUS rulemaking and unrelated lexical matches, with no BD-specific authorization, application, foreign exception, or enforcement action.",
+        "https://www.dfs.ny.gov/virtual_currency_businesses: New York DFS regulated-entity, limited-purpose trust, and approved-stablecoin Greenlist entries do not name Base Dollar, Basedollar, or BD.",
+        "https://news.google.com/rss/search?q=%22Base%20Dollar%22%20stablecoin%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen: exact-name news search returned no relevant application, authorization, or enforcement coverage."
       ],
       "summary": "No public GENIUS PPSI approval, state-qualified approval, official application, registered foreign-issuer exception, or enforcement action was found for BD or an identifiable Base Dollar issuer. Project materials instead describe permissionless borrowing and collateral redemption through a decentralized protocol without naming a legal issuer.",
       "reviewer": "Codex compliance research",

@@ -28,6 +28,13 @@ export interface ChartAnnotation {
   kind: ChartAnnotationKind;
   /** Short label rendered in the SR-only legend; ≤80 chars. */
   label: string;
+  /**
+   * Marks `label` as a verbatim external title rather than Pharos-composed
+   * copy. Editorial style rules never apply to quoted text, so the corpus gate
+   * reads this as `ownership: "quoted"` and label punctuation migrations must
+   * leave it untouched. See docs/editorial-style.md.
+   */
+  quoted?: boolean;
   severity?: "low" | "med" | "high";
   /** Optional primary-source URL (issuer post-mortem, regulator filing, etc.). */
   href?: string;

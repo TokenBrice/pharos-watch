@@ -2,7 +2,7 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 // Versioning convention (see compareMethodologyVersions in
 // @shared/lib/methodology-versions/base): each dotted segment is compared as an
-// INTEGER, not a decimal fraction — so the minor segment is an open-ended integer
+// INTEGER, not a decimal fraction, so the minor segment is an open-ended integer
 // counter within the v5 bucket, e.g. `5.0` ([5, 0]) < `5.8` ([5, 8]) < `5.81`
 // ([5, 81]). This file is the closed v5 history: since the v6.0 release, new
 // entries land in `v6.ts`. Entries below are newest-first by version.
@@ -480,9 +480,9 @@ export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
       "All scoring dimensions are now size-independent. TVL Depth measures effective TVL relative to market cap instead of absolute dollar value. Volume Activity has a recalibrated curve with a realistic ceiling (tops out at ~32% V/T instead of ~500%). Pool Quality measures venue quality retention ratio (qualityAdjustedTvl / totalTvl, rescaled) instead of absolute quality-adjusted TVL. Weights rebalanced to 30/20/20/20/10.",
     impact: [
       "TVL Depth uses effective-TVL-to-market-cap ratio on a log scale (35 × log10(ratio / 0.0007)), with absolute fallback for coins without market cap data",
-      "Volume Activity recalibrated: 38 × (log10(V/T) + 3) — zero line at 0.1% V/T, tops at ~32% V/T. USDC/USDT now score 86-90 instead of 52-56",
+      "Volume Activity recalibrated: 38 × (log10(V/T) + 3). Zero line at 0.1% V/T, tops at ~32% V/T. USDC/USDT now score 86-90 instead of 52-56",
       "Pool Quality measures quality retention (qualityAdjustedTvl / totalTvl, rescaled from 15-80% range to 0-100). Fully size-independent",
-      "Weights rebalanced from 35/20/22.5/15/7.5 to 30/20/20/20/10 — structural quality (Pool Quality + Durability = 40%) now matches depth + activity (50%)",
+      "Weights rebalanced from 35/20/22.5/15/7.5 to 30/20/20/20/10: structural quality (Pool Quality + Durability = 40%) now matches depth + activity (50%)",
       "Coins like BOLD and LUSD with high relative depth ratios see significant score improvements; large-cap coins with low relative depth see depth dimension scores decrease but compensate through volume, durability, and diversity",
     ],
     commits: [],

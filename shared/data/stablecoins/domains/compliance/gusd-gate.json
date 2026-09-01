@@ -6,7 +6,7 @@
       "summary": "Gate markets GUSD as a principal-protected yield product, but it is also fixed at a 1:1 subscription and redemption rate, transferable, tradable, and usable as collateral. Public materials do not identify the legal issuer or instrument terms needed to determine whether GUSD is a GENIUS payment stablecoin or an excluded security or investment product.",
       "references": [
         {
-          "label": "GENIUS Act statutory text — payment stablecoin definition",
+          "label": "GENIUS Act statutory text: payment stablecoin definition",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",

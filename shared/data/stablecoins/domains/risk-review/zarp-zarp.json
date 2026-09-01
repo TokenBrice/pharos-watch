@@ -47,7 +47,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the ethereum ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the ethereum ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128.... No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -72,7 +72,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the base ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the base ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128.... No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -97,7 +97,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the polygon ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the polygon ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128.... No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

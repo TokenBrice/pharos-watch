@@ -129,7 +129,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Celo at block 72618310: token 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313 reports symbol GHSm, name 'Mento Ghanaian Cedi', 18 decimals (Celo blockscout identifies it as 'Celo Ghanian Cedi' / cGHS). owner() = 0x890db8a597940165901372dd7db61c9f246e2147, a TransparentUpgradeableProxy to a TimelockController (0x3eFAD8F997F705675924470Ec84677DB68c5A2d0) — Mento governance. Native Mento issuance on Celo; no cross-chain route.",
+        "reviewNote": "Verified on Celo at block 72618310: token 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313 reports symbol GHSm, name 'Mento Ghanaian Cedi', 18 decimals (Celo blockscout identifies it as 'Celo Ghanian Cedi' / cGHS). owner() = 0x890db8a597940165901372dd7db61c9f246e2147, a TransparentUpgradeableProxy to a TimelockController (0x3eFAD8F997F705675924470Ec84677DB68c5A2d0), Mento governance. Native Mento issuance on Celo; no cross-chain route.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "observedBlock": 72618310,

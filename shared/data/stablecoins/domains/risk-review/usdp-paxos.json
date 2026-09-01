@@ -163,7 +163,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "USDP on Linea is the canonical-bridged representation: bridge() on the token reads 0x353012dc4a9a6cf55c941badc267f82004a8ceb9 — the Linea L2 TokenBridge (2,227-byte code, read 2026-07-20) — which is the mint authority for the representation. totalSupply $2.0 dust. DefiLlama lists this address in its paxos-standard linea entry.",
+        "reviewNote": "USDP on Linea is the canonical-bridged representation: bridge() on the token reads 0x353012dc4a9a6cf55c941badc267f82004a8ceb9, the Linea L2 TokenBridge (2,227-byte code, read 2026-07-20), which is the mint authority for the representation. totalSupply $2.0 dust. DefiLlama lists this address in its paxos-standard linea entry.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "linea",

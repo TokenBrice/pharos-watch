@@ -4,6 +4,10 @@ import {
   MECHANISM_EXPLAINER_ENTRIES,
   MECHANISM_EXPLAINER_TITLES,
 } from "@/lib/mechanism-explainer-registry";
+import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
+
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored kebab-case id; finite groups, no backtracking ambiguity.
+const KEBAB_CASE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 describe("mechanism explainer registry", () => {
   it("owns one non-empty title for every mechanism archetype", () => {
@@ -21,5 +25,16 @@ describe("mechanism explainer registry", () => {
         ogFilename: `og-learn-${slug}.png`,
       })),
     );
+  });
+
+  it("gives steps and variations stable, unique kebab-case ids", () => {
+    for (const content of Object.values(ARCHETYPE_CONTENT)) {
+      for (const records of [content.howItWorks, content.variations]) {
+        const ids = records.map(({ id }) => id);
+
+        expect(ids.every((id) => KEBAB_CASE_ID.test(id))).toBe(true);
+        expect(new Set(ids).size).toBe(ids.length);
+      }
+    }
   });
 });

@@ -5,11 +5,11 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register — EMTWP.csv (EMT issuers)",
+        "label": "ESMA Interim MiCA Register: EMTWP.csv (EMT issuers)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "ESMA MiCA register landing page — authorized EMT issuer register",
+        "label": "ESMA MiCA register landing page: authorized EMT issuer register",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
@@ -17,7 +17,7 @@
         "url": "https://en.cryptonomist.ch/2024/02/29/france-the-usual-protocol-launches-usd0-the-stablecoin-that-rewards-the-community/"
       },
       {
-        "label": "ChainArgos: USD as Usual — MiCA analysis",
+        "label": "ChainArgos: USD as Usual, a MiCA analysis",
         "url": "https://www.chainargos.com/usd-as-usual/"
       }
     ]
@@ -25,7 +25,7 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USD0 is a 1:1 USD-pegged, RWA-backed token redeemable on-chain — token-level characteristics fit \"payment stablecoin\" under the GENIUS Act. However, the issuer is Usual DAO, a France-domiciled decentralized autonomous organization with no US legal entity. Whether and how the GENIUS Act's issuer-level obligations reach a DAO issuer domiciled in France is genuinely unclear, especially while foreign-issuer comparability rules remain in proposed-rulemaking phase.",
+      "summary": "USD0 is a 1:1 USD-pegged, RWA-backed token redeemable on-chain: token-level characteristics fit \"payment stablecoin\" under the GENIUS Act. However, the issuer is Usual DAO, a France-domiciled decentralized autonomous organization with no US legal entity. Whether and how the GENIUS Act's issuer-level obligations reach a DAO issuer domiciled in France is genuinely unclear, especially while foreign-issuer comparability rules remain in proposed-rulemaking phase.",
       "references": [
         {
           "label": "GENIUS Act statutory text (S.1582)",
@@ -73,7 +73,7 @@
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Usual DAO governance — UIP-15 protocol ownership",
+        "label": "Usual DAO governance: UIP-15 protocol ownership",
         "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0",
         "sourceKind": "issuer-disclosure"
       }

@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "Screener launches, detail pages rebuild around verdict, and Yield v8.13 ships multi-currency benchmarks.",
   fieldNotes:
-    "Three releases that change how Pharos reads. The Screener gives the research-grade audience its own room, with the URL as the language of saved work. The detail rebuild stops asking visitors to assemble the answer themselves — the verdict comes first now, the mechanism schematic next, and the chart annotations carry the receipts. Yield v8.13 finally treats GBP, JPY and the others as first-class — non-dollar benchmarks, on their own tab. The trust surfaces (PDFs, RSS, citations) ship alongside.",
+    "Three releases that change how Pharos reads. The Screener gives the research-grade audience its own room, with the URL as the language of saved work. The detail rebuild stops asking visitors to assemble the answer themselves: the verdict comes first now, the mechanism schematic next, and the chart annotations carry the receipts. Yield v8.13 finally treats GBP, JPY and the others as first-class: non-dollar benchmarks, on their own tab. The trust surfaces (PDFs, RSS, citations) ship alongside.",
   summary: [
     {
       label: "Pharos Screener launch",

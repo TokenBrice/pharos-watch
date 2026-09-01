@@ -40,12 +40,12 @@
     "notes": "Paxos converted its NYDFS limited purpose trust charter to an OCC national trust bank charter on December 12, 2025 (conditional approval). This positions Paxos on the federal-qualified-nonbank pathway under GENIUS. No PPSI application framework exists yet (still in proposed-rule stage as of 2026-06-18); no PPSI approval has been granted to any issuer. USDP continues to be Paxos-issued and covered by federal OCC oversight but has no GENIUS PPSI authorization.",
     "references": [
       {
-        "label": "OCC Conditional Approval — Paxos Trust Company Charter Conversion (December 2025)",
+        "label": "OCC Conditional Approval: Paxos Trust Company Charter Conversion (December 2025)",
         "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125e.pdf",
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "OCC National Trust Charter Announcement — Five Digital Asset Firms (December 12, 2025)",
+        "label": "OCC National Trust Charter Announcement: Five Digital Asset Firms (December 12, 2025)",
         "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
         "sourceKind": "federal-regulator"
       },
@@ -55,7 +55,7 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "Paxos newsroom — OCC national trust charter approval",
+        "label": "Paxos newsroom: OCC national trust charter approval",
         "url": "https://www.paxos.com/newsroom/occ-approves-paxos-application-to-convert-to-occ-trust-paxos-to-complete-conversion-imminently-to-become-a-federally-regulated-blockchain-infrastructure-provider",
         "sourceKind": "issuer-disclosure"
       },

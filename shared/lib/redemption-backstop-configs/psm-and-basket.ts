@@ -569,8 +569,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
   "iusd-indigo-protocol": {
     ...psmSwapBase,
     outputAssetType: "stable-basket",
-    unresolvedOutputAssetKeys: ["usdm-moneta", "usda-anzens", "USDCx (Cardano)"],
-    unresolvedOutputDisposition: "reviewed-external",
+    outputAssets: ["usdm-moneta", "usda-anzens", "usdc-circle"],
     capacityModel: { kind: "supply-ratio", ratio: 0.15577082, confidence: "heuristic", basis: "psm-balance-share" },
     costModel: fixedFee(100, "Indigo's current iUSD PSM data and app quote show a 1% redemption fee"),
     routeExitCorrelation: "same-protocol-liquidity",
@@ -592,10 +591,15 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       sourceRef("Current Indigo assets API", "https://analytics.indigoprotocol.io/api/v3/assets", ["route", "capacity", "fees"]),
       sourceRef("Current Indigo asset analytics API", "https://analytics.indigoprotocol.io/api/v3/analytics/assets", ["capacity"]),
       sourceRef("Current Indigo swap application", "https://app.indigoprotocol.io/", ["route", "access", "fees"]),
+      sourceRef(
+        "Circle xReserve supported chains",
+        "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
+        ["route", "settlement"],
+      ),
     ],
     notes: [
       "The modeled holder-facing route is Indigo's funded PSM swap: iUSD exits to USDM, USDA, or USDCx at a 1% redemption fee; the separate CDP redemption signer path is not included.",
-      "USDM and USDA are verified tracked Pharos identities (`usdm-moneta` and `usda-anzens`); USDCx on Cardano is not tracked. Because the complete basket must remain unresolved when one member is untracked, all three reviewed identities are preserved in unresolvedOutputAssetKeys.",
+      "Output resolved 2026-09-01: USDM and USDA are the exact tracked Cardano deployments under `usdm-moneta` and `usda-anzens`; Circle's xReserve registry identifies Cardano USDCx policy `1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378`, the six-decimal deployment tracked under `usdc-circle`. The complete three-member PSM output set therefore has canonical price identities without treating UI symbols as evidence.",
       "The 0.15577082 ratio is iUSD PSM supply divided by iUSD total supply from the reviewed Indigo analytics snapshot, representing a funded-PSM share rather than an immediate promise that all iUSD can exit.",
       "The current PSM assets data reports redemption enabled for all three pools, a 1% fee, and a 10,000-unit minimum order; wallet connection is normal permissionless onchain access rather than an allowlist.",
     ],

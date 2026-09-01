@@ -283,7 +283,7 @@
           "rateLimits": "No public on-chain CCIP or adapter rate-limit admin. Any ceiling is issuer-operational and unpublished.",
           "pausersAdminsUpgraders": "Execution uses the already-reviewed native issuance surface (EVM MINTER_ROLE / BURNER_ROLE EOAs and the Solana Token-2022 authority). Those identities stay in Mint Authority and are not restated here as bridge controllers."
         },
-        "capDescription": "The mapping bridge can mint destination EURAU only as the counterpart of a source burn, subject to AllUnity’s backend. It is not independent native issuance and it is not a registered CCIP token pool.",
+        "capDescription": "The mapping bridge can mint destination EURAU only as the counterpart of a source burn, subject to AllUnity’s backend. The route is neither independent native issuance nor a registered CCIP token pool.",
         "canRaiseCap": true,
         "observedAt": "2026-08-18",
         "observedBlock": 25783939,
