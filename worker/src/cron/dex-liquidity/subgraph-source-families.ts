@@ -374,6 +374,10 @@ export async function fetchUniswapV4Data(
     missingApiKeyMessage:
       "[dex-liquidity] No GRAPH_API_KEY, skipping Uniswap V4 execution enrichment",
     familyLabel: "Uniswap V4 subgraph",
+    // Keep the expanded shadow source family inside the existing five-header
+    // source-lane cohort. RPC quoting remains in measured execution's isolated
+    // trigger and is never opened from this source pass.
+    maxConcurrency: 5,
     createLookups: () => ({
       uniswapV4ExecutionCandidates: new Map(),
     }),

@@ -300,7 +300,9 @@ function decodeUint256Result(result: EvmMulticall3Result | undefined): bigint | 
 }
 
 function decodeReservesResult(result: EvmMulticall3Result | undefined): [bigint, bigint] | null {
-  if (!result?.success) return null;
+  // Both reviewed V2 pair families return exactly (reserve0, reserve1,
+  // blockTimestampLast). Extra or truncated words are not a reserve proof.
+  if (!result?.success || !/^0x[0-9a-fA-F]{192}$/.test(result.returnData)) return null;
   try {
     const [reserve0, reserve1] = decodeAbiParameters(
       [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }],

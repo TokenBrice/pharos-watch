@@ -78,11 +78,16 @@ export const buildUniV3PoolQuery = (skip: number): string => `{
  * Official Uniswap V4 Ethereum subgraph deployment:
  * https://developers.uniswap.org/api/subgraph/subgraphs-devs/deployments
  *
- * Only Ethereum is reviewed here. Other chains remain unsupported until an
- * official endpoint and deployment identities are pinned independently.
+ * The non-Ethereum sources are published by the same Uniswap Graph account and
+ * feed target-review evidence only. Their runtime deployments remain outside
+ * active scoring until independently pinned code identities survive shadow.
  */
 export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
   ethereum: "DiYPVdygkfjDWhbxGSqAQxwBKmfKnkWQojqeM2rkLb3G",
+  base: "CHz2jQ8g62rewnrMyGF9yHktmkGjMwKBw4rVx82E64Um",
+  arbitrum: "EpEZyTnADuwvqpMh7vcTPFHDN3MwqiUN9QHapCBPbRWW",
+  polygon: "2CB2uQxcDKWDenagn2z17KQVCtfwSx5eXYuvqTciRTJu",
+  bsc: "EAq1nJKgjnuKH6Gj4RFjCW7LcL7E2uipbncdwV7TTWkX",
 };
 
 export const UNISWAP_V4_POOL_PAGE_SIZE = 1000;

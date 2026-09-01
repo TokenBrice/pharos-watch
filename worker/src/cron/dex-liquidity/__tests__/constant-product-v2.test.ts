@@ -1,7 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import {
+  buildAmmCapacityCurve,
+  validateAmmExecutionModel,
+} from "@shared/lib/p4-exit-route-amm-simulation";
+import {
+  DexExecutionProfileV2Schema,
+  type DexMeasuredExecutionTarget,
+} from "@shared/types/measured-execution";
+import {
+  getDexExecutionCapabilityRegistration,
+  isDexExecutionProfileAdmittedForScoring,
+} from "@shared/lib/p4-exit-route-capability-policy";
 import { buildPoolFingerprint, initMetrics } from "../pool-helpers";
+import { buildEvmV2RegisteredExecutionTarget } from "../execution-targets/evm-v2";
 import {
   EVM_V2_EXECUTION_DEPLOYMENTS,
   attachEvmV2CandidateToRetainedPool,
@@ -10,6 +23,18 @@ import {
   enrichEvmV2ExecutionModels,
   resolveEvmV2ExecutionCandidate,
 } from "../constant-product-v2";
+import {
+  EVM_V2_REPLAY_BLOCK,
+  EVM_V2_REPLAY_CASES,
+  EVM_V2_RETAINED_TVL_USD,
+  addressWord as fixtureAddressWord,
+  buildReviewedV2Profile,
+  replayCandidate,
+  replayMulticallResults,
+  replayPool,
+  replayTarget,
+  type EvmV2ReplayCase,
+} from "./fixtures/evm-v2-fixtures";
 
 const U = "0xce24439f2d9c6a2289f741120fe202248b666666" as const;
 const WBNB = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c" as const;
@@ -132,6 +157,190 @@ async function runV2PriceLegScenario({
   });
   return metric;
 }
+
+function targetForReplay(replay: EvmV2ReplayCase): DexMeasuredExecutionTarget {
+  const chainAddressToId = new Map([
+    [canonicalExitRouteAssetKey("bsc", replay.stablecoinAddress), replay.assetId],
+    [canonicalExitRouteAssetKey("bsc", replay.counterAddress), replay.counterAssetId],
+  ]);
+  const contractMetaByChainAddress = new Map([
+    [
+      canonicalExitRouteAssetKey("bsc", replay.stablecoinAddress),
+      {
+        stablecoinId: replay.assetId,
+        symbol: replay.stablecoinSymbol,
+        decimals: replay.stablecoinDecimals,
+        source: "contract" as const,
+      },
+    ],
+    [
+      canonicalExitRouteAssetKey("bsc", replay.counterAddress),
+      {
+        stablecoinId: replay.counterAssetId,
+        symbol: replay.counterSymbol,
+        decimals: replay.counterDecimals,
+        source: "contract" as const,
+      },
+    ],
+  ]);
+  const output = buildEvmV2RegisteredExecutionTarget({
+    context: {
+      chainAddressToId,
+      aerodromeIsStable: new Map(),
+      stablecoinPriceById: new Map([
+        [replay.assetId, 1],
+        [replay.counterAssetId, 1],
+      ]),
+      measuredTargetCapturedAt: 1_700_000_000,
+      contractMetaByChainAddress,
+    },
+    identity: {
+      chainNorm: "bsc",
+      protocol: "pancakeswap",
+      pool: {
+        pool: replay.poolAddress,
+        project: "pancakeswap",
+        symbol: `${replay.stablecoinSymbol} / ${replay.counterSymbol}`,
+        underlyingTokens: [replay.stablecoinAddress, replay.counterAddress],
+      },
+    },
+    enrichment: {
+      resolvedPoolType: "cg-amm",
+      rawContribTvl: EVM_V2_RETAINED_TVL_USD,
+    },
+    stablecoinId: replay.assetId,
+  } as never);
+  const target = output?.measuredExecutionTarget;
+  if (!target) throw new Error(`V2 fixture target was not built for ${replay.assetId}`);
+  return target;
+}
+
+async function runReplay(
+  replay: EvmV2ReplayCase,
+  options: {
+    blockNumber?: number;
+    serveOnlyBlock?: number;
+    mutateResults?: (results: ReturnType<typeof replayMulticallResults>) => void;
+  } = {},
+) {
+  const candidate = replayCandidate(replay);
+  const metric = initMetrics(replay.assetId, replay.stablecoinSymbol);
+  const pool = replayPool(replay, candidate);
+  metric.topPools.push(pool);
+  const chainAddressToId = new Map([
+    [canonicalExitRouteAssetKey("bsc", replay.stablecoinAddress), replay.assetId],
+    [canonicalExitRouteAssetKey("bsc", replay.counterAddress), replay.counterAssetId],
+  ]);
+  const contractMetaByChainAddress = new Map([
+    [
+      canonicalExitRouteAssetKey("bsc", replay.stablecoinAddress),
+      {
+        stablecoinId: replay.assetId,
+        symbol: replay.stablecoinSymbol,
+        decimals: replay.stablecoinDecimals,
+        source: "contract" as const,
+      },
+    ],
+    [
+      canonicalExitRouteAssetKey("bsc", replay.counterAddress),
+      {
+        stablecoinId: replay.counterAssetId,
+        symbol: replay.counterSymbol,
+        decimals: replay.counterDecimals,
+        source: "contract" as const,
+      },
+    ],
+  ]);
+  const pinnedBlock = options.blockNumber ?? EVM_V2_REPLAY_BLOCK;
+  const fetchBlockNumber = vi.fn(async () => pinnedBlock);
+  const fetchCodeAtBlock = vi.fn(async () => "0x6000" as const);
+  const fetchMulticall = vi.fn(
+    async (
+      _chain: string,
+      calls: readonly { label: string; target: string }[],
+      blockNumber: number,
+    ) => {
+      if (options.serveOnlyBlock != null && blockNumber !== options.serveOnlyBlock) return null;
+      const results = replayMulticallResults(replay, calls);
+      options.mutateResults?.(results);
+      return results;
+    },
+  );
+  const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find(
+    (entry) => entry.source === "pancakeswap-v2",
+  )!;
+
+  await enrichEvmV2ExecutionModels({
+    metrics: new Map([[metric.stablecoinId, metric]]),
+    chainAddressToId,
+    contractMetaByChainAddress,
+    stablecoinPriceById: new Map([
+      [replay.assetId, 1],
+      [replay.counterAssetId, 1],
+    ]),
+    chainRpcs: new Map([
+      [
+        "bsc",
+        {
+          chainId: "bsc",
+          chainName: "BSC",
+          type: "evm",
+          rpcUrl: "https://rpc.example",
+          explorerUrl: "https://example.com",
+        },
+      ],
+    ]),
+    dependencies: {
+      fetchBlockNumber,
+      fetchCodeAtBlock,
+      fetchMulticall: fetchMulticall as never,
+      hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
+    },
+  });
+
+  return {
+    metric,
+    pool,
+    candidate,
+    fetchBlockNumber,
+    fetchCodeAtBlock,
+    fetchMulticall,
+    contractMetaByChainAddress,
+  };
+}
+
+const EXPECTED_U5_FACTS = {
+  "idrt-rupiah-token": {
+    assetId: "idrt-rupiah-token",
+    reasonCode: "unsupported-same-notional-route",
+    exactFactPath: "exit:unsupported-same-notional-route",
+  },
+  "spusd-soulpeg": {
+    assetId: "spusd-soulpeg",
+    reasonCode: "missing-runtime-route-evidence",
+    exactFactPath: "gap:exit:local-component:spusd-soulpeg:gap:exit-routes",
+  },
+  "stusd-stoneyield": {
+    assetId: "stusd-stoneyield",
+    reasonCode: "missing-runtime-route-evidence",
+    exactFactPath: "gap:exit:local-component:stusd-stoneyield:gap:exit-routes",
+  },
+  "susd-hedgecore": {
+    assetId: "susd-hedgecore",
+    reasonCode: "missing-runtime-route-evidence",
+    exactFactPath: "gap:exit:local-component:susd-hedgecore:gap:exit-routes",
+  },
+  "usda-alpha-partner": {
+    assetId: "usda-alpha-partner",
+    reasonCode: "missing-runtime-route-evidence",
+    exactFactPath: "gap:exit:local-component:usda-alpha-partner:gap:exit-routes",
+  },
+  "uusd-anything-labs": {
+    assetId: "uusd-anything-labs",
+    reasonCode: "missing-runtime-route-evidence",
+    exactFactPath: "gap:exit:local-component:uusd-anything-labs:gap:exit-routes",
+  },
+} as const;
 
 describe("constant-product V2 execution", () => {
   it("admits only the reviewed V2 families", () => {
@@ -900,5 +1109,165 @@ describe("constant-product V2 execution", () => {
       reason: "deployment-code-mismatch",
     });
     expect(fetchMulticall).not.toHaveBeenCalled();
+  });
+
+  for (const replay of EVM_V2_REPLAY_CASES) {
+    it(`replays the exact U5 tuple and complete V2 curve for ${replay.assetId}`, async () => {
+      const result = await runReplay(replay);
+      const retained = result.metric.topPools[0]!;
+      const model = retained.extra?.ammExecutionModel;
+      const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find(
+        (entry) => entry.source === "pancakeswap-v2",
+      )!;
+
+      expect(replay.fact).toEqual(EXPECTED_U5_FACTS[replay.assetId as keyof typeof EXPECTED_U5_FACTS]);
+      expect(retained.poolId).toBe(`bsc:${replay.poolAddress}`);
+      expect(retained.extra?.executionCapabilityGate).toBeUndefined();
+      expect(model).toBeDefined();
+      expect(validateAmmExecutionModel(model!, {
+        chain: "bsc",
+        stablecoinId: replay.assetId,
+        retainedTvlUsd: EVM_V2_RETAINED_TVL_USD,
+      })).toEqual([]);
+      expect(model!.feeRate).toBe(0.0025);
+      expect(model!.trackedTokenIndex).toBe(
+        replay.pairTokenOrder === "stable-first" ? 0 : 1,
+      );
+      expect(model!.tokens.map((token) => ({
+        address: token.address,
+        decimals: token.decimals,
+        balance: token.balance,
+      }))).toEqual(
+        replay.pairTokenOrder === "stable-first"
+          ? [
+              {
+                address: replay.stablecoinAddress,
+                decimals: replay.stablecoinDecimals,
+                balance: EVM_V2_RETAINED_TVL_USD / 2,
+              },
+              {
+                address: replay.counterAddress,
+                decimals: replay.counterDecimals,
+                balance: EVM_V2_RETAINED_TVL_USD / 2,
+              },
+            ]
+          : [
+              {
+                address: replay.counterAddress,
+                decimals: replay.counterDecimals,
+                balance: EVM_V2_RETAINED_TVL_USD / 2,
+              },
+              {
+                address: replay.stablecoinAddress,
+                decimals: replay.stablecoinDecimals,
+                balance: EVM_V2_RETAINED_TVL_USD / 2,
+              },
+            ],
+      );
+
+      const outputTokenIndex = model!.trackedTokenIndex === 0 ? 1 : 0;
+      const curve = buildAmmCapacityCurve(model!, outputTokenIndex);
+      expect(curve).toHaveLength(4);
+      expect(curve.every((point) =>
+        point.executableUsd === point.requestedNotionalUsd &&
+        point.completionRatio === 1 &&
+        point.executionCostBps != null &&
+        point.executionCostBps <= 200,
+      )).toBe(true);
+
+      expect(result.fetchBlockNumber).toHaveBeenCalledOnce();
+      expect(result.fetchCodeAtBlock).toHaveBeenCalledWith(
+        "bsc",
+        deployment.factoryAddress,
+        EVM_V2_REPLAY_BLOCK,
+        expect.any(Object),
+      );
+      expect(result.fetchMulticall).toHaveBeenCalledOnce();
+      expect(result.fetchMulticall.mock.calls[0]![2]).toBe(EVM_V2_REPLAY_BLOCK);
+      expect(result.fetchMulticall.mock.calls[0]![1]).toHaveLength(6);
+
+      const target = targetForReplay(replay);
+      expect(target).toEqual(replayTarget(replay));
+      expect(target.feePips).toBe(2_500);
+      expect(target.tokenIn.trackedAssetId).toBe(replay.assetId);
+      expect(target.tokenOut.trackedAssetId).toBe(replay.counterAssetId);
+      const reviewed = buildReviewedV2Profile({ replay, model: model!, target });
+      expect(reviewed.capacityCurve).toEqual(curve);
+      expect(reviewed.profile.capacityCurve.every((point) =>
+        point.executableUsd === point.requestedNotionalUsd && point.completionRatio === 1,
+      )).toBe(true);
+      expect(reviewed.profile.quoteProof).toHaveLength(5);
+      expect(DexExecutionProfileV2Schema.parse(reviewed.profileV2)).toEqual(reviewed.profileV2);
+
+      const registration = getDexExecutionCapabilityRegistration("evm-v2-constant-product-v1");
+      expect(registration).not.toBeNull();
+      expect(isDexExecutionProfileAdmittedForScoring(reviewed.profileV2, registration!)).toBe(true);
+    });
+  }
+
+  it("rejects a factory result bound to a different pair address", async () => {
+    const replay = EVM_V2_REPLAY_CASES[1]!;
+    const result = await runReplay(replay, {
+      mutateResults: (results) => {
+        results.find((entry) => entry.label.endsWith("-pair"))!.returnData =
+          fixtureAddressWord("0x0000000000000000000000000000000000005bad");
+      },
+    });
+
+    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(result.pool.extra?.executionCapabilityGate).toEqual({
+      family: "constant-product-v2",
+      reason: "exact-pool-join-unresolved",
+    });
+  });
+
+  it("rejects a pair whose token identity is not the staged counter-asset pair", async () => {
+    const replay = EVM_V2_REPLAY_CASES[2]!;
+    const result = await runReplay(replay, {
+      mutateResults: (results) => {
+        results.find((entry) => entry.label.endsWith("-token0"))!.returnData =
+          fixtureAddressWord("0x0000000000000000000000000000000000005bad");
+      },
+    });
+
+    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(result.pool.extra?.executionCapabilityGate).toEqual({
+      family: "constant-product-v2",
+      reason: "ambiguous-token-identity",
+    });
+  });
+
+  it("rejects a malformed reserve snapshot instead of producing partial depth", async () => {
+    const replay = EVM_V2_REPLAY_CASES[3]!;
+    const result = await runReplay(replay, {
+      mutateResults: (results) => {
+        results.find((entry) => entry.label.endsWith("-reserves"))!.returnData =
+          `${reservesWord(
+            2_000_000_000n * 10n ** 18n,
+            2_000_000_000n * 10n ** 18n,
+          )}00`;
+      },
+    });
+
+    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(result.pool.extra?.executionCapabilityGate).toEqual({
+      family: "constant-product-v2",
+      reason: "incomplete-exact-capture",
+    });
+  });
+
+  it("does not reuse a stale reserve batch when the pinned block changes", async () => {
+    const replay = EVM_V2_REPLAY_CASES[4]!;
+    const result = await runReplay(replay, {
+      blockNumber: EVM_V2_REPLAY_BLOCK + 1,
+      serveOnlyBlock: EVM_V2_REPLAY_BLOCK,
+    });
+
+    expect(result.fetchMulticall.mock.calls[0]![2]).toBe(EVM_V2_REPLAY_BLOCK + 1);
+    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(result.pool.extra?.executionCapabilityGate).toEqual({
+      family: "constant-product-v2",
+      reason: "incomplete-exact-capture",
+    });
   });
 });
