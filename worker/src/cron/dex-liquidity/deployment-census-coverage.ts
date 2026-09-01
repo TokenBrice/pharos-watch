@@ -21,6 +21,8 @@ const DEX_DISCOVERY_PROVIDER_IDS = new Set([
   "tezos",
   "icon-balanced",
   "kava-swap",
+  "osmosis-sqs",
+  "noble-swap",
 ]);
 
 /**

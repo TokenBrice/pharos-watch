@@ -12,13 +12,29 @@ import {
   isCensusProviderSetSupersededByRegistry,
   isIconBalancedDiscoveryDeployment,
   isKavaSwapDiscoveryDeployment,
+  isNobleSwapDiscoveryDeployment,
+  isOsmosisSqsDiscoveryDeployment,
   isTezosDiscoveryDeployment,
 } from "../dex-deployment-coverage";
 import type { DexDiscoveryProvider } from "../dex-deployment-coverage";
 import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 
-const NEW_DISCOVERY_PROVIDER_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly DexDiscoveryProvider[];
-const NEW_SOURCE_FAMILY_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly LiquidityPoolSourceFamily[];
+const NEW_DISCOVERY_PROVIDER_TYPE_PINS = [
+  "aquarius",
+  "tezos",
+  "icon-balanced",
+  "kava-swap",
+  "osmosis-sqs",
+  "noble-swap",
+] as const satisfies readonly DexDiscoveryProvider[];
+const NEW_SOURCE_FAMILY_TYPE_PINS = [
+  "aquarius",
+  "tezos",
+  "icon-balanced",
+  "kava-swap",
+  "osmosis-sqs",
+  "noble-swap",
+] as const satisfies readonly LiquidityPoolSourceFamily[];
 
 const REVIEW_AT_SEC = Date.UTC(2026, 6, 10) / 1000;
 
@@ -44,21 +60,28 @@ describe("DEX deployment coverage ownership", () => {
       }
     }
 
-    expect(unsupported).toHaveLength(40);
-    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(29);
-    expect(exclusivelyUnsupported).toHaveLength(2);
+    expect(unsupported).toHaveLength(30);
+    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(24);
+    // Registering the Osmosis and Noble providers removed the last two active
+    // coins whose entire footprint sat outside the discovery registry.
+    expect(exclusivelyUnsupported).toEqual([]);
     expect(getDexDiscoveryProviders("stellar")).toEqual(["horizon"]);
   });
 
-  it("pins the four new provider and source-family identities", () => {
-    expect(NEW_DISCOVERY_PROVIDER_TYPE_PINS).toHaveLength(4);
-    expect(NEW_SOURCE_FAMILY_TYPE_PINS).toHaveLength(4);
+  it("pins the six new provider and source-family identities", () => {
+    expect(NEW_DISCOVERY_PROVIDER_TYPE_PINS).toHaveLength(6);
+    expect(NEW_SOURCE_FAMILY_TYPE_PINS).toHaveLength(6);
     expect(Object.keys(AQUARIUS_SUPPORTED_TOKEN_IDS)).toHaveLength(8);
     expect(DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS).toMatchObject({
       aquarius: false,
       tezos: true,
       "icon-balanced": false,
       "kava-swap": false,
+      // Osmosis' sidecar indexes every pool module on the chain and Noble's
+      // `swap` module is the whole DEX surface of that app-chain, so a
+      // completed empty response is a certifiable known-empty census.
+      "osmosis-sqs": true,
+      "noble-swap": true,
     });
   });
 
@@ -83,6 +106,36 @@ describe("DEX deployment coverage ownership", () => {
       "curve",
       "kava-swap",
     ]);
+  });
+
+  it("registers the Cosmos census providers by chain and denom shape", () => {
+    const osmosisUsdx = "ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE";
+
+    expect(isOsmosisSqsDiscoveryDeployment("osmosis", osmosisUsdx)).toBe(true);
+    expect(getDexDiscoveryProviders("osmosis", osmosisUsdx)).toEqual(["osmosis-sqs"]);
+    expect(isOsmosisSqsDiscoveryDeployment("osmosis", "uosmo")).toBe(true);
+    expect(
+      isOsmosisSqsDiscoveryDeployment(
+        "osmosis",
+        "factory/osmo1q77cw0mmlluxu0wr29fcdd0tdnh78gzhkvhe4n6ulal9qvrtu43qtd0nh8/wiha",
+      ),
+    ).toBe(true);
+    // Lowercase IBC hashes are not the on-wire denom and must not be queried.
+    expect(isOsmosisSqsDiscoveryDeployment("osmosis", osmosisUsdx.toLowerCase())).toBe(false);
+    expect(isOsmosisSqsDiscoveryDeployment("osmosis", "0xdeadbeef")).toBe(false);
+    expect(isOsmosisSqsDiscoveryDeployment("osmosis")).toBe(false);
+
+    expect(isNobleSwapDiscoveryDeployment("noble", "uusdn")).toBe(true);
+    expect(getDexDiscoveryProviders("noble", "uusdn")).toEqual(["noble-swap"]);
+    expect(isNobleSwapDiscoveryDeployment("noble", "ausdy")).toBe(true);
+    expect(isNobleSwapDiscoveryDeployment("noble", "UUSDN")).toBe(false);
+
+    // MANTRA's Cosmos IBC denom shares the denom shape but not the chain: it
+    // must never be routed to an Osmosis or Noble index.
+    const mantraIbc = "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A";
+    expect(isOsmosisSqsDiscoveryDeployment("mantra", mantraIbc)).toBe(false);
+    expect(isNobleSwapDiscoveryDeployment("mantra", mantraIbc)).toBe(false);
+    expect(getDexDiscoveryProviders("mantra", mantraIbc)).toEqual([]);
   });
 
   it("registers only the exact supplemental GeckoTerminal deployment shapes", () => {
@@ -190,7 +243,7 @@ describe("DEX deployment coverage ownership", () => {
     });
 
     expect(missing).toEqual([]);
-    expect(DEX_COVERAGE_WAIVERS).toHaveLength(4);
+    expect(DEX_COVERAGE_WAIVERS).toHaveLength(1);
     expect(DEX_COVERAGE_WAIVERS.every((waiver) => waiver.owner.length > 0 && waiver.expiresAt > REVIEW_AT_SEC)).toBe(
       true,
     );

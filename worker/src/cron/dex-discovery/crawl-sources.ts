@@ -17,6 +17,7 @@ import { crawlSorobanPoolsStage } from "./crawl-soroban-pools";
 import { crawlTezosPoolsStage } from "./crawl-tezos-pools";
 import { crawlIconBalancedPoolsStage } from "./crawl-icon-balanced-pools";
 import { crawlKavaSwapPoolsStage } from "./crawl-kava-swap-pools";
+import { crawlCosmosPoolsStage } from "./crawl-cosmos-pools";
 import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
@@ -238,6 +239,23 @@ export async function crawlCoin(
   const kavaSwapStage = await crawlKavaSwapPoolsStage({ coinTargets, context });
   providerChecks.push(...kavaSwapStage.providerChecks);
   if (kavaSwapStage.stoppedEarly) {
+    return await finalizeOwnRun({
+      pools,
+      unresolvedChains: coinGeckoStage.unresolvedChains,
+      deploymentOutcomes: classifyDexDeploymentOutcomes({
+        stablecoinId,
+        deployments: coinTargets,
+        pools,
+        providerChecks,
+        nowSec,
+      }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+    });
+  }
+
+  const cosmosStage = await crawlCosmosPoolsStage({ coinTargets, context });
+  providerChecks.push(...cosmosStage.providerChecks);
+  if (cosmosStage.stoppedEarly) {
     return await finalizeOwnRun({
       pools,
       unresolvedChains: coinGeckoStage.unresolvedChains,

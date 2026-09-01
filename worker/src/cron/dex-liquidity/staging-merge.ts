@@ -679,7 +679,11 @@ export async function mergeStagedPools(
                     ? "icon-balanced"
                     : stagedPool.source === "kava-swap"
                       ? "kava-swap"
-                      : "gecko_terminal",
+                      : stagedPool.source === "osmosis-sqs"
+                        ? "osmosis-sqs"
+                        : stagedPool.source === "noble-swap"
+                          ? "noble-swap"
+                          : "gecko_terminal",
       ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
       ...(stagedPool.source === "cg_tickers"
         ? {

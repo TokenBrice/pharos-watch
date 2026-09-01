@@ -12,7 +12,9 @@ export type DexDiscoveryProvider =
   | "aquarius"
   | "tezos"
   | "icon-balanced"
-  | "kava-swap";
+  | "kava-swap"
+  | "osmosis-sqs"
+  | "noble-swap";
 
 /**
  * The chains on which Curve's getPools/all endpoint is queried and counts as a
@@ -68,6 +70,28 @@ export const ICON_BALANCED_BNUSD_DISCOVERY_ADDRESS = "cx88fd7df7ddff82f7cc735c87
 
 /** Canonical native Kava USDX deployment identity. */
 export const KAVA_SWAP_USDX_DISCOVERY_ADDRESS = "usdx";
+
+/**
+ * Cosmos bank denominations the two Cosmos census adapters can query.
+ *
+ * Osmosis' sidecar query server (`sqsprod.osmosis.zone`) and Noble's LCD both
+ * address a pool leg by its bank denom, so the registry identity is used
+ * verbatim. IBC hashes are case-sensitive on the wire and both chains are
+ * `type: "other"` in the chain registry, so `canonicalExitRouteScopedId` leaves
+ * them untouched — the census identity and the provider query string are the
+ * same string.
+ */
+const COSMOS_IBC_DENOM_RE = /^ibc\/[0-9A-F]{64}$/;
+const COSMOS_FACTORY_DENOM_RE = /^factory\/[a-z0-9]{8,90}\/[A-Za-z0-9._:-]{1,64}$/;
+const COSMOS_NATIVE_DENOM_RE = /^[a-z][a-z0-9]{1,63}$/;
+
+function isCosmosDiscoveryDenom(address: string): boolean {
+  return (
+    COSMOS_IBC_DENOM_RE.test(address) ||
+    COSMOS_NATIVE_DENOM_RE.test(address) ||
+    COSMOS_FACTORY_DENOM_RE.test(address)
+  );
+}
 
 /**
  * GeckoTerminal networks that are safe for the deployment census but are not
@@ -158,6 +182,32 @@ export function isKavaSwapDiscoveryDeployment(chain: string, address?: string): 
   return chain === "kava" && address?.trim().toLowerCase() === KAVA_SWAP_USDX_DISCOVERY_ADDRESS;
 }
 
+/**
+ * Whether an Osmosis deployment can be queried through the Osmosis sidecar
+ * query server's denom filter.
+ *
+ * The filter is served by Osmosis' own indexer across every pool module
+ * (balancer, stableswap, concentrated, CosmWasm), which is why the provider is
+ * registered exhaustive. `mantra` is deliberately not routed here: its Cosmos
+ * IBC denoms live on a different chain whose pools this index does not hold.
+ */
+export function isOsmosisSqsDiscoveryDeployment(chain: string, address?: string): boolean {
+  return chain === "osmosis" && address != null && isCosmosDiscoveryDenom(address.trim());
+}
+
+/**
+ * Whether a Noble deployment can be queried through Noble's `swap` module.
+ *
+ * Investigated before wiring (2026-09-01): Noble is a permissioned app-chain
+ * with no CosmWasm and no third-party AMM, but it does host a first-party
+ * `noble/swap/v1` StableSwap module, so the census answer is a real query
+ * rather than a standing not-applicable ruling. That single module is the
+ * whole DEX surface of the chain, which is why the provider is exhaustive.
+ */
+export function isNobleSwapDiscoveryDeployment(chain: string, address?: string): boolean {
+  return chain === "noble" && address != null && isCosmosDiscoveryDenom(address.trim());
+}
+
 /** Translate one eligible registry identity to Horizon's `CODE:ISSUER` filter. */
 export function getHorizonDiscoveryAsset(address: string, symbol?: string): string | null {
   const trimmed = address.trim();
@@ -228,12 +278,14 @@ export interface DexCoverageWaiver {
   expiresAt: number;
 }
 
-const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [
-  ["usdn-noble", "noble"],
-  ["uusd-youves", "tezos"],
-  ["usdx-kava", "osmosis"],
-  ["silk-shade-protocol", "secret"],
-] as const;
+/**
+ * Every entry must still satisfy the waiver's own claim — that no registered
+ * provider supports the chain. `usdn-noble`/noble and `usdx-kava`/osmosis were
+ * removed when the Noble `swap` and Osmosis sidecar providers were registered,
+ * and `uusd-youves`/tezos when the TzKT census was; keeping them would publish
+ * "no provider supports this chain" beside a census row naming one.
+ */
+const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [["silk-shade-protocol", "secret"]] as const;
 
 const COVERAGE_WAIVER_EXPIRY_SEC = Date.UTC(2026, 9, 31) / 1000;
 
@@ -263,6 +315,10 @@ export const DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS: Readonly<Record<DexDiscovery
   tezos: true, // TzKT token-holder census is chain-wide by construction.
   "icon-balanced": false, // Balanced venue only, not chain-wide.
   "kava-swap": false, // x/swap module only; Kava EVM venues exist.
+  // Osmosis' own sidecar index spans every pool module on the chain.
+  "osmosis-sqs": true,
+  // Noble's `swap` module is the chain's entire DEX surface (no CosmWasm).
+  "noble-swap": true,
 };
 
 export function isDexDiscoveryProviderExhaustive(provider: DexDiscoveryProvider): boolean {
@@ -280,6 +336,8 @@ export function getDexDiscoveryProviders(chain: string, address?: string): DexDi
   if (isTezosDiscoveryDeployment(chain, address)) providers.push("tezos");
   if (isIconBalancedDiscoveryDeployment(chain, address)) providers.push("icon-balanced");
   if (isKavaSwapDiscoveryDeployment(chain, address)) providers.push("kava-swap");
+  if (isOsmosisSqsDiscoveryDeployment(chain, address)) providers.push("osmosis-sqs");
+  if (isNobleSwapDiscoveryDeployment(chain, address)) providers.push("noble-swap");
   return providers;
 }
 

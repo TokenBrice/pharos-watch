@@ -200,7 +200,9 @@ function shouldStrictlyCapSource(source: LiquidityMetrics["topPools"][number]["s
     source === "aquarius" ||
     source === "tezos" ||
     source === "icon-balanced" ||
-    source === "kava-swap";
+    source === "kava-swap" ||
+    source === "osmosis-sqs" ||
+    source === "noble-swap";
 }
 
 export function applyProtocolCaps(

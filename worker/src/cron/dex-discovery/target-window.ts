@@ -35,6 +35,14 @@ const DEPLOYMENT_CRAWL_COST_MS = {
   "icon-balanced": 8_000,
   // Kava x/swap requires serial params and pool-list reads.
   "kava-swap": 16_000,
+  // One denom-filtered Osmosis sidecar read per deployment: the 400 ms serial
+  // pacing floor plus an allowance covering the single retry. Measured
+  // 2026-09-01, largest tracked denom (USDC, 814 pools, ~0.95 MB): 165-331 ms.
+  "osmosis-sqs": 2_800,
+  // One Noble `swap` module read (measured 68-180 ms for a ~0.6 KB payload),
+  // shared by the coin's Noble deployments but priced per deployment because
+  // the window selector prices deployments.
+  "noble-swap": 2_000,
 } as const;
 
 /** Provider stage order inside a coin crawl. */
@@ -48,6 +56,8 @@ const COST_PROVIDER_ORDER = [
   "tezos",
   "icon-balanced",
   "kava-swap",
+  "osmosis-sqs",
+  "noble-swap",
 ] as const;
 
 export interface DiscoveryTargetWindow {
