@@ -46,6 +46,58 @@ import {
 import { buildFpiControllerV9ExitRouteObservation } from "./fpi-controller-redemption-route";
 import { buildSfrxusdCrosschainV9ExitRouteObservation } from "./sfrxusd-crosschain-redemption-route";
 
+interface OutputDependencyResolutionParticipant {
+  entry: RedemptionBackstopEntry;
+  outputStablecoinIds: readonly string[];
+}
+
+interface OutputDependencyResolutionRun {
+  participants: Map<string, OutputDependencyResolutionParticipant>;
+}
+
+const outputDependencyResolutionRuns = new Map<number, OutputDependencyResolutionRun>();
+const MAX_OUTPUT_DEPENDENCY_RESOLUTION_RUNS = 4;
+
+// The sync builds rows serially, then persists the completed array. Keeping the
+// returned row references here lets either build order converge on the same
+// snapshot-local disclosure without recursively re-running a dependency's
+// capacity resolver or changing that dependency's score semantics.
+function registerOutputDependencyResolution(
+  entry: RedemptionBackstopEntry,
+  config: RedemptionBackstopConfig,
+  now: number,
+): void {
+  let run = outputDependencyResolutionRuns.get(now);
+  if (!run || run.participants.has(entry.stablecoinId)) {
+    run = { participants: new Map() };
+    outputDependencyResolutionRuns.set(now, run);
+  }
+
+  const outputStablecoinIds = (config.outputAssets ?? []).filter((id) => !id.startsWith("asset:"));
+  run.participants.set(entry.stablecoinId, { entry, outputStablecoinIds });
+
+  for (const participant of run.participants.values()) {
+    const unresolvedDependencyId = participant.outputStablecoinIds.find((dependencyId) => {
+      const dependency = run!.participants.get(dependencyId)?.entry;
+      return dependency != null && dependency.resolutionState !== "resolved";
+    });
+    if (unresolvedDependencyId) {
+      participant.entry.outputDependencyResolution = {
+        stablecoinId: unresolvedDependencyId,
+        resolutionState: run.participants.get(unresolvedDependencyId)!.entry.resolutionState,
+      };
+    } else {
+      delete participant.entry.outputDependencyResolution;
+    }
+  }
+
+  while (outputDependencyResolutionRuns.size > MAX_OUTPUT_DEPENDENCY_RESOLUTION_RUNS) {
+    const oldestRun = outputDependencyResolutionRuns.keys().next().value;
+    if (oldestRun == null) break;
+    outputDependencyResolutionRuns.delete(oldestRun);
+  }
+}
+
 function resolveStaticFields(
   stablecoinId: string,
   config: RedemptionBackstopConfig,
@@ -339,13 +391,15 @@ export async function buildRedemptionBackstopEntry(
     notes,
     capsApplied,
   };
+  let finalizedEntry = entry;
   if (entry.capacityProfile && !entry.capacityProfile.exitRouteObservations) {
     const derived = deriveSupplyModelExitRouteObservation(entry, now);
     if (derived) {
-      return { ...entry, capacityProfile: { ...entry.capacityProfile, exitRouteObservations: [derived] } };
+      finalizedEntry = { ...entry, capacityProfile: { ...entry.capacityProfile, exitRouteObservations: [derived] } };
     }
   }
-  return entry;
+  registerOutputDependencyResolution(finalizedEntry, config, now);
+  return finalizedEntry;
 }
 
 function inferDefaultRouteExitCorrelation(
@@ -389,7 +443,7 @@ export function buildFailedRedemptionBackstopEntry(
   const resolutionState: RedemptionBackstopEntry["resolutionState"] = "failed";
   const holderEligibility = config.holderEligibility ?? resolveDefaultHolderEligibility(config);
 
-  return {
+  const entry: RedemptionBackstopEntry = {
     stablecoinId,
     score: null,
     dexLiquidityScore: null,
@@ -434,4 +488,6 @@ export function buildFailedRedemptionBackstopEntry(
     ],
     capsApplied: [],
   };
+  registerOutputDependencyResolution(entry, config, now);
+  return entry;
 }

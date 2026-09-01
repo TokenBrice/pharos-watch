@@ -30,6 +30,10 @@ function makeRedemptionRow(overrides: Record<string, unknown> = {}) {
     methodology_version: "1.1",
     details_json: JSON.stringify({
       resolutionState: "resolved",
+      outputDependencyResolution: {
+        stablecoinId: "downstream-output",
+        resolutionState: "missing-capacity",
+      },
       capacityConfidence: "heuristic",
       capacitySemantics: "eventual-only",
       capacityKind: "live-proxy-validated",
@@ -137,6 +141,7 @@ describe("handleRedemptionBackstops", () => {
           effectiveExitScore: number;
           feeDescription?: string;
           resolutionState: string;
+          outputDependencyResolution?: { stablecoinId: string; resolutionState: string };
           modelConfidence: string;
           capacityKind?: string;
         }
@@ -151,6 +156,10 @@ describe("handleRedemptionBackstops", () => {
     expect(body.methodology.routeFamilyCaps).toEqual({ queueRedeem: 70, offchainIssuer: 65 });
     expect(body.snapshotSource).toBe("run-rows");
     expect(body.coins["cusd-cap"]?.resolutionState).toBe("resolved");
+    expect(body.coins["cusd-cap"]?.outputDependencyResolution).toEqual({
+      stablecoinId: "downstream-output",
+      resolutionState: "missing-capacity",
+    });
     expect(body.coins["cusd-cap"]?.modelConfidence).toBe("low");
     expect(body.coins["cusd-cap"]?.capacityKind).toBe("live-proxy-validated");
     expect(body.coins["cusd-cap"]?.feeDescription).toContain("Fixed redemption fee");

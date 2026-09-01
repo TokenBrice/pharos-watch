@@ -113,6 +113,11 @@ export type RedemptionFeeModelKind = z.infer<typeof RedemptionFeeModelKindSchema
 export const RedemptionModelConfidenceSchema = z.enum(["high", "medium", "low"]);
 export type RedemptionModelConfidence = z.infer<typeof RedemptionModelConfidenceSchema>;
 
+export const RedemptionOutputDependencyResolutionSchema = z.object({
+  stablecoinId: z.string(),
+  resolutionState: RedemptionResolutionStateSchema,
+});
+
 export const RedemptionCapacityScoringHorizonSchema = z.enum(["immediate", "daily", "queued", "eventual", "unknown"]);
 
 export const RedemptionRouteExitCorrelationSchema = z.enum([
@@ -251,6 +256,7 @@ export const RedemptionBackstopEntrySchema = z.object({
   provider: z.string(),
   sourceMode: RedemptionSourceModeSchema,
   resolutionState: RedemptionResolutionStateSchema,
+  outputDependencyResolution: RedemptionOutputDependencyResolutionSchema.optional(),
   routeStatus: RedemptionRouteStatusSchema.optional().default("unknown"),
   routeStatusSource: RedemptionRouteStatusSourceSchema.optional().default("static-config"),
   routeStatusReason: z.string().optional(),
@@ -291,6 +297,7 @@ export type RedemptionBackstopEntry = z.infer<typeof RedemptionBackstopEntrySche
 
 export const RedemptionBackstopDetailsSchema = RedemptionBackstopEntrySchema.pick({
   resolutionState: true,
+  outputDependencyResolution: true,
   capacityConfidence: true,
   capacityBasis: true,
   capacitySemantics: true,

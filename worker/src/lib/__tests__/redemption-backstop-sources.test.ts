@@ -132,6 +132,56 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.score).not.toBeNull();
   });
 
+  it("discloses an unresolved declared output without changing the resolved hop", async () => {
+    const routeEntry = await buildEntry(
+      "test-output-dependent-unresolved",
+      route({
+        routeFamily: "psm-swap",
+        capacityModel: { kind: "supply-ratio", ratio: 0.5 },
+        outputAssetType: "stable-single",
+        outputAssets: ["test-unresolved-output"],
+      }),
+      100_000_000,
+      null,
+    );
+    const unchanged = {
+      score: routeEntry.score,
+      capacityScore: routeEntry.capacityScore,
+      capacityConfidence: routeEntry.capacityConfidence,
+      modelConfidence: routeEntry.modelConfidence,
+      resolutionState: routeEntry.resolutionState,
+    };
+
+    const outputEntry = await buildEntry("test-unresolved-output", route(), null, null);
+
+    expect(outputEntry.resolutionState).toBe("missing-cache");
+    expect(routeEntry).toMatchObject({
+      outputDependencyResolution: {
+        stablecoinId: "test-unresolved-output",
+        resolutionState: "missing-cache",
+      },
+      ...unchanged,
+    });
+  });
+
+  it("omits the disclosure when the declared output is fully resolved", async () => {
+    const outputEntry = await buildEntry("test-resolved-output", route(), 100_000_000, null);
+    const routeEntry = await buildEntry(
+      "test-output-dependent-resolved",
+      route({
+        routeFamily: "psm-swap",
+        capacityModel: { kind: "supply-ratio", ratio: 0.5 },
+        outputAssetType: "stable-single",
+        outputAssets: ["test-resolved-output"],
+      }),
+      100_000_000,
+      null,
+    );
+
+    expect(outputEntry.resolutionState).toBe("resolved");
+    expect(routeEntry).not.toHaveProperty("outputDependencyResolution");
+  });
+
   it("uses capacity profile scoring capacity to reduce effective exit score", async () => {
     const entry = await buildEntry(
       "test-coin",
