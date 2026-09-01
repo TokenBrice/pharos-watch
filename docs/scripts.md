@@ -8,7 +8,7 @@ Operational and CI helper scripts live in `scripts/`, while worker-bound operati
 
 ## Safety Score Map Refresh
 
-`npm run build:safety-score-map` fetches the report cards, stablecoin supply, and Stability Index again whenever a day-over-day delta guard rejects a live read. The producer makes up to three complete fetch-and-validate attempts with backoff, logging each attempt's observed census, tier supply, and missing-logo count. A rejection that clears on a later fresh read is reported as transient recovery; three rejected attempts fail closed and still require deliberate `--accept-snapshot-transition` review for a genuine transition. Guard thresholds, including the 25% supply limit, are unchanged.
+`npm run build:safety-score-map` fetches one canonical set of report cards, stablecoin supply, and Stability Index data, then renders it. The map does not compare scores, grades, tier populations, leaders, or supply movements with an earlier run; those audits belong to the Safety Score publication pipeline. It retains only input-contract and renderability checks, so a schema-valid held or aged Safety Score publication still produces a poster while malformed data, unusable supply joins, stale PSI context, invalid geometry, missing fonts, or a wrong-size raster fail closed.
 
 `.github/workflows/safety-map-refresh.yml` schedules the refresh at 02:20, 04:20, and 06:20 UTC, plus manual dispatch. GitHub scheduled starts are best-effort and can arrive hours late, so the additional slots only improve the odds. The digest is independent of winning this race and can carry forward a recent dated map within its bounded continuity window.
 

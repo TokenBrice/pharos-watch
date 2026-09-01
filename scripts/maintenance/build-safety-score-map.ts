@@ -30,21 +30,11 @@
  *   - $PHAROS_API_BASE: optional API origin override
  *   - live PSI: the current display level and condition band shown beneath the
  *     map title, fetched during the render alongside report cards and supply
- *   - --previous-snapshot <path>: the prior run's .snapshot.json, which arms
- *     the day-over-day delta guard. Optional; absent or unreadable skips that
- *     guard with a warning so a first run can bootstrap. Freshness, finite
- *     geometry, and join coverage are asserted unconditionally.
- *   - --accept-snapshot-transition: with a readable previous snapshot, validate
- *     its full contract but accept its day-over-day comparison as reviewed.
  *
  * Outputs (alongside the PNG, sharing its basename):
  *   - .svg / .html   the rendered scene and its screenshot host
  *   - .alt.json      alt text plus the per-tier table, same numbers as the pixels
- *   - .snapshot.json header {edition, date, publicationStatus, asOfSec,
- *                    renderedAtSec, methodologyVersion, counts, mapSummary}
- *                    plus {id, symbol, score, grade, mcap} per graded coin
- *                    (movers baseline, and the next run's delta-guard input)
- *   - .manifest.json {date, asOfSec, renderedAtSec, counts, bytes}
+ *   - .manifest.json publication provenance, counts, and the public map summary
  */
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -102,42 +92,9 @@ const BODY_TOP = HEADER_RULE_Y + HEADER_BODY_GAP;
 const GALAXY_CX = 800;
 const GALAXY_CY = 482;
 
-// Data freshness ceiling for an unattended render: a stalled report-card
-// producer must fail the job, not publish week-old scores under today's date.
-const MAX_DATA_AGE_SEC = 48 * 3600;
 // Below this share of graded cards joining a list row with real supply, the
 // map is drawing floors instead of data.
 const MIN_JOIN_COVERAGE = 0.95;
-const MAX_DELTA_GUARD_ATTEMPTS = 3;
-// Spacing between fresh re-fetches after a delta-guard rejection. A transient
-// upstream read should not cost the day's poster, but the wait is dead time in
-// tests that deliberately exercise a persistent rejection, so the guard suite
-// collapses it. Production never sets this.
-const DELTA_GUARD_BACKOFF_SCALE = Number(process.env.PHAROS_DELTA_GUARD_BACKOFF_SCALE ?? "1");
-const DELTA_GUARD_BACKOFF_MS = [500, 1500].map(
-  (ms) => Math.max(0, Math.round(ms * (Number.isFinite(DELTA_GUARD_BACKOFF_SCALE) ? DELTA_GUARD_BACKOFF_SCALE : 1))),
-) as readonly number[];
-
-class DeltaGuardRejection extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "DeltaGuardRejection";
-  }
-}
-
-interface DeltaGuardRetryStatus {
-  attempts: number;
-  recovered: boolean;
-  persistent: boolean;
-  rejections: string[];
-  observed: Array<{
-    attempt: number;
-    graded: number;
-    notRated: number;
-    missingLogos: number;
-    tiers: Record<Tier, { count: number; mcap: number }>;
-  }>;
-}
 
 // Palette: a midnight editorial shell lets the classification colors read as
 // orbital signals instead of spreadsheet rules.
@@ -263,27 +220,10 @@ export interface LogoRenderData {
 
 type SubgradeLane = "plus" | "base" | "minus";
 
-function writeDeltaGuardRetryStatus(status: DeltaGuardRetryStatus): void {
-  const path = process.env.SAFETY_MAP_RETRY_STATUS_PATH?.trim();
-  if (!path) return;
-  try {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, `${JSON.stringify(status, null, 2)}\n`);
-  } catch (error) {
-    console.warn(`[safety-score-map] Could not write retry status at ${path}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
-}
-
 function parseCliArgs(argv: readonly string[]): {
   out: string | null;
   edition: Edition;
   issue: number | null;
-  previousSnapshot: string | null;
-  acceptSnapshotTransition: boolean;
 } {
   const { values } = parseArgs({
     args: [...argv],
@@ -291,8 +231,6 @@ function parseCliArgs(argv: readonly string[]): {
       out: { type: "string" },
       edition: { type: "string" },
       issue: { type: "string" },
-      "previous-snapshot": { type: "string" },
-      "accept-snapshot-transition": { type: "boolean" },
     },
   });
   const edition = values.edition ?? "daily";
@@ -304,12 +242,7 @@ function parseCliArgs(argv: readonly string[]): {
     issue = Number(values.issue);
     if (!Number.isInteger(issue) || issue < 1) throw new Error(`--issue must be a positive integer (got "${values.issue}")`);
   }
-  const previousSnapshot = values["previous-snapshot"] ?? null;
-  const acceptSnapshotTransition = values["accept-snapshot-transition"] === true;
-  if (acceptSnapshotTransition && !previousSnapshot) {
-    throw new Error("--accept-snapshot-transition requires --previous-snapshot");
-  }
-  return { out: values.out ?? null, edition, issue, previousSnapshot, acceptSnapshotTransition };
+  return { out: values.out ?? null, edition, issue };
 }
 
 function loadApiKey(): string {
@@ -1953,317 +1886,6 @@ function buildTierTable(tiers: readonly TierSummary[]): string {
 
 // --- Main -----------------------------------------------------------------
 
-// §11.2b rule 2: a half-broken producer shows up as a census that moves too
-// far overnight, not as a crash. Deliberately non-fatal when there is no prior
-// snapshot — a first run has nothing to compare against and must still boot.
-const MAX_GRADED_DROP = 0.02;
-const MAX_NOT_RATED_MOVE = 5;
-// A joined<->unjoined flip for a coin present on both days is usually a
-// transient upstream supply gap on one small coin, not a join-pipeline break.
-// Tolerate a few immaterial flips with a warning; refuse when flips are
-// numerous or carry real supply. Materiality is measured against the previous
-// snapshot's mapped supply.
-const MAX_JOIN_FLIPS = 3;
-const MAX_JOIN_FLIP_MCAP_SHARE = 0.001;
-
-interface SnapshotCoin {
-  id: string;
-  symbol: string;
-  score: number;
-  grade: string;
-  mcap: number;
-}
-
-interface PreviousSnapshot {
-  publicationStatus: string;
-  counts: {
-    graded: number;
-    notRated: number;
-    unjoined: number;
-    missingLogos: number;
-    byTier: Record<Tier, number>;
-  };
-  mapSummary: MapSummary;
-  coins: SnapshotCoin[];
-}
-
-interface CurrentDeltaState {
-  gradedCount: number;
-  notRatedCount: number;
-  missingLogoCount: number | null;
-  coins: readonly SnapshotCoin[];
-  tiers: readonly TierSummary[];
-}
-
-function malformedSnapshot(path: string, reason: string): never {
-  throw new Error(`--previous-snapshot ${path} is malformed: ${reason} — refusing to skip the delta guard`);
-}
-
-function nonNegativeInteger(value: unknown, label: string, path: string): number {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) malformedSnapshot(path, `${label} must be a non-negative integer`);
-  return value as number;
-}
-
-function isSnapshotRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function parseSnapshotCoin(value: unknown, index: number, path: string): SnapshotCoin {
-  if (!isSnapshotRecord(value)) malformedSnapshot(path, `coins[${index}] is not an object`);
-  if (typeof value.id !== "string" || value.id.length === 0) malformedSnapshot(path, `coins[${index}].id is missing`);
-  if (typeof value.symbol !== "string" || value.symbol.length === 0) malformedSnapshot(path, `coins[${index}].symbol is missing`);
-  if (typeof value.grade !== "string" || !SAFETY_GRADE_VALUES.includes(value.grade as (typeof SAFETY_GRADE_VALUES)[number])) {
-    malformedSnapshot(path, `coins[${index}].grade is invalid`);
-  }
-  if (typeof value.score !== "number" || !Number.isFinite(value.score) || value.score < 0 || value.score > 100) {
-    malformedSnapshot(path, `coins[${index}].score is outside 0-100`);
-  }
-  if (scoreToGrade(value.score) !== value.grade) malformedSnapshot(path, `coins[${index}] has a score/grade disagreement`);
-  if (typeof value.mcap !== "number" || !Number.isFinite(value.mcap) || value.mcap < 0) {
-    malformedSnapshot(path, `coins[${index}].mcap must be a non-negative finite number`);
-  }
-  return {
-    id: value.id,
-    symbol: value.symbol,
-    score: value.score,
-    grade: value.grade,
-    mcap: value.mcap,
-  };
-}
-
-function parseSnapshotMapSummary(value: unknown, path: string): MapSummary {
-  if (!isSnapshotRecord(value)) malformedSnapshot(path, "mapSummary is missing");
-  if (typeof value.date !== "string" || value.date.length === 0) malformedSnapshot(path, "mapSummary.date is invalid");
-  if (typeof value.asOfSec !== "number" || !Number.isFinite(value.asOfSec) || !Number.isInteger(value.asOfSec)) malformedSnapshot(path, "mapSummary.asOfSec is invalid");
-  if (typeof value.methodologyVersion !== "string" || value.methodologyVersion.length === 0) malformedSnapshot(path, "mapSummary.methodologyVersion is invalid");
-  const gradedCount = nonNegativeInteger(value.gradedCount, "mapSummary.gradedCount", path);
-  const notRatedCount = nonNegativeInteger(value.notRatedCount, "mapSummary.notRatedCount", path);
-  if (typeof value.totalMcapUsd !== "number" || !Number.isFinite(value.totalMcapUsd) || value.totalMcapUsd < 0) malformedSnapshot(path, "mapSummary.totalMcapUsd is invalid");
-  if (!isSnapshotRecord(value.floorMcapByTier)) malformedSnapshot(path, "mapSummary.floorMcapByTier is missing");
-  if (typeof value.floorMcapByTier.a !== "number" || !Number.isFinite(value.floorMcapByTier.a) || value.floorMcapByTier.a <= 0) malformedSnapshot(path, "mapSummary.floorMcapByTier.a is invalid");
-  if (typeof value.floorMcapByTier.other !== "number" || !Number.isFinite(value.floorMcapByTier.other) || value.floorMcapByTier.other <= 0) malformedSnapshot(path, "mapSummary.floorMcapByTier.other is invalid");
-  if (!Array.isArray(value.tiers) || value.tiers.length !== TIER_ORDER.length) malformedSnapshot(path, "mapSummary.tiers must contain every grade band");
-
-  const seenTiers = new Set<string>();
-  const tiers: MapSummary["tiers"] = [];
-  for (const [index, rawTier] of value.tiers.entries()) {
-    if (!isSnapshotRecord(rawTier) || typeof rawTier.tier !== "string" || !TIER_ORDER.includes(rawTier.tier as Tier)) {
-      malformedSnapshot(path, `mapSummary.tiers[${index}].tier is invalid`);
-    }
-    const tier = rawTier.tier as Tier;
-    if (seenTiers.has(tier)) malformedSnapshot(path, `mapSummary.tiers contains duplicate ${tier}`);
-    seenTiers.add(tier);
-    if (typeof rawTier.range !== "string" || rawTier.range.length === 0) malformedSnapshot(path, `mapSummary.tiers[${index}].range is invalid`);
-    const count = nonNegativeInteger(rawTier.count, `mapSummary.tiers[${index}].count`, path);
-    if (typeof rawTier.mcapUsd !== "number" || !Number.isFinite(rawTier.mcapUsd) || rawTier.mcapUsd < 0) malformedSnapshot(path, `mapSummary.tiers[${index}].mcapUsd is invalid`);
-    if (typeof rawTier.sharePct !== "number" || !Number.isFinite(rawTier.sharePct) || rawTier.sharePct < 0) malformedSnapshot(path, `mapSummary.tiers[${index}].sharePct is invalid`);
-    if (!Array.isArray(rawTier.leaders) || rawTier.leaders.length > 3) malformedSnapshot(path, `mapSummary.tiers[${index}].leaders is invalid`);
-    const leaders = rawTier.leaders.map((rawLeader, leaderIndex) => {
-      if (!isSnapshotRecord(rawLeader) || typeof rawLeader.symbol !== "string" || rawLeader.symbol.length === 0) malformedSnapshot(path, `mapSummary.tiers[${index}].leaders[${leaderIndex}] is invalid`);
-      if (typeof rawLeader.score !== "number" || !Number.isFinite(rawLeader.score) || rawLeader.score < 0 || rawLeader.score > 100) malformedSnapshot(path, `mapSummary.tiers[${index}].leaders[${leaderIndex}].score is invalid`);
-      if (typeof rawLeader.mcapUsd !== "number" || !Number.isFinite(rawLeader.mcapUsd) || rawLeader.mcapUsd < 0) malformedSnapshot(path, `mapSummary.tiers[${index}].leaders[${leaderIndex}].mcapUsd is invalid`);
-      return { symbol: rawLeader.symbol, score: rawLeader.score, mcapUsd: rawLeader.mcapUsd };
-    });
-    tiers.push({ tier, range: rawTier.range, count, mcapUsd: rawTier.mcapUsd, sharePct: rawTier.sharePct, leaders });
-  }
-  if (seenTiers.size !== TIER_ORDER.length) malformedSnapshot(path, "mapSummary.tiers is missing a grade band");
-  return {
-    date: value.date,
-    asOfSec: value.asOfSec,
-    methodologyVersion: value.methodologyVersion,
-    gradedCount,
-    notRatedCount,
-    totalMcapUsd: value.totalMcapUsd,
-    floorMcapByTier: { a: value.floorMcapByTier.a, other: value.floorMcapByTier.other },
-    tiers,
-  };
-}
-
-function readPreviousSnapshot(path: string): PreviousSnapshot | null {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(readFileSync(resolve(path), "utf8"));
-  } catch (err) {
-    const code = isSnapshotRecord(err) && typeof err.code === "string" ? err.code : null;
-    if (code === "ENOENT") {
-      console.warn(`[safety-score-map] Could not read --previous-snapshot ${path} (file not found) — delta guard skipped`);
-      return null;
-    }
-    if (err instanceof SyntaxError) malformedSnapshot(path, "JSON could not be parsed");
-    throw new Error(`[safety-score-map] Could not read --previous-snapshot ${path} (${err instanceof Error ? err.message : String(err)})`);
-  }
-  if (!isSnapshotRecord(raw)) malformedSnapshot(path, "root must be an object");
-  if (raw.publicationStatus !== "current") malformedSnapshot(path, "publicationStatus must be current");
-  const counts = raw.counts;
-  if (!isSnapshotRecord(counts)) malformedSnapshot(path, "counts is missing");
-  const graded = nonNegativeInteger(counts.graded, "counts.graded", path);
-  const notRated = nonNegativeInteger(counts.notRated, "counts.notRated", path);
-  const unjoined = nonNegativeInteger(counts.unjoined, "counts.unjoined", path);
-  const missingLogos = nonNegativeInteger(counts.missingLogos, "counts.missingLogos", path);
-  const rawByTier = counts.byTier;
-  if (!isSnapshotRecord(rawByTier)) malformedSnapshot(path, "counts.byTier is missing");
-  const byTier = Object.fromEntries(TIER_ORDER.map((tier) => {
-    if (!(tier in rawByTier)) malformedSnapshot(path, `counts.byTier.${tier} is missing`);
-    return [tier, nonNegativeInteger(rawByTier[tier], `counts.byTier.${tier}`, path)];
-  })) as Record<Tier, number>;
-  if (Object.keys(rawByTier).some((tier) => !TIER_ORDER.includes(tier as Tier))) malformedSnapshot(path, "counts.byTier contains an unknown tier");
-  if (Object.values(byTier).reduce((sum, count) => sum + count, 0) !== graded) malformedSnapshot(path, "counts.byTier does not sum to counts.graded");
-  if (unjoined > graded || missingLogos > graded) malformedSnapshot(path, "counts has an impossible census value");
-
-  if (!Array.isArray(raw.coins)) malformedSnapshot(path, "coins is missing");
-  const coins = raw.coins.map((coin, index) => parseSnapshotCoin(coin, index, path));
-  if (coins.length !== graded) malformedSnapshot(path, "coins length does not match counts.graded");
-  const coinIds = new Set<string>();
-  for (const coin of coins) {
-    if (coinIds.has(coin.id)) malformedSnapshot(path, `coins contains duplicate ${coin.id}`);
-    coinIds.add(coin.id);
-  }
-  const mapSummary = parseSnapshotMapSummary(raw.mapSummary, path);
-  if (mapSummary.gradedCount !== graded || mapSummary.notRatedCount !== notRated) malformedSnapshot(path, "mapSummary counts disagree with counts");
-  const summaryByTier = new Map(mapSummary.tiers.map((tier) => [tier.tier, tier]));
-  for (const tier of TIER_ORDER) {
-    if (summaryByTier.get(tier)!.count !== byTier[tier]) malformedSnapshot(path, `mapSummary.${tier} count disagrees with counts.byTier`);
-  }
-  const totalSummaryMcap = mapSummary.tiers.reduce((sum, tier) => sum + tier.mcapUsd, 0);
-  if (Math.abs(totalSummaryMcap - mapSummary.totalMcapUsd) > Math.max(1, mapSummary.totalMcapUsd * 1e-9)) malformedSnapshot(path, "mapSummary tier supply does not sum to totalMcapUsd");
-  return { publicationStatus: "current", counts: { graded, notRated, unjoined, missingLogos, byTier }, mapSummary, coins };
-}
-
-function assertSaneDeltas(
-  path: string | null,
-  current: CurrentDeltaState,
-  acceptSnapshotTransition = false,
-): void {
-  if (!path) {
-    console.warn("[safety-score-map] No --previous-snapshot supplied — day-over-day delta guard skipped");
-    return;
-  }
-  const previous = readPreviousSnapshot(path);
-  if (!previous) {
-    if (acceptSnapshotTransition) {
-      throw new Error("--accept-snapshot-transition requires a readable --previous-snapshot");
-    }
-    return;
-  }
-  if (acceptSnapshotTransition) {
-    console.warn("[safety-score-map] Operator accepted the validated previous snapshot transition — day-over-day comparisons skipped");
-    return;
-  }
-  const priorGraded = previous.counts.graded;
-  const priorNotRated = previous.counts.notRated;
-  if (current.gradedCount < priorGraded * (1 - MAX_GRADED_DROP)) {
-    throw new DeltaGuardRejection(
-      `Graded count fell from ${priorGraded} to ${current.gradedCount} (>${MAX_GRADED_DROP * 100}%) since the previous snapshot — refusing to publish a shrunken census`,
-    );
-  }
-  if (Math.abs(current.notRatedCount - priorNotRated) > MAX_NOT_RATED_MOVE) {
-    throw new DeltaGuardRejection(
-      `Not-rated count moved from ${priorNotRated} to ${current.notRatedCount} (>${MAX_NOT_RATED_MOVE}) since the previous snapshot — the scoring producer looks half-broken`,
-    );
-  }
-
-  const priorById = new Map(previous.coins.map((coin) => [coin.id, coin]));
-  const currentByTier = new Map(current.tiers.map((tier) => [tier.tier, tier]));
-  for (const tier of TIER_ORDER) {
-    const priorCount = previous.counts.byTier[tier];
-    const currentCount = currentByTier.get(tier)!.count;
-    const allowedMove = Math.max(2, Math.ceil(priorCount * MAX_GRADED_DROP));
-    if (Math.abs(currentCount - priorCount) > allowedMove) {
-      throw new DeltaGuardRejection(`Tier ${tier} count moved from ${priorCount} to ${currentCount} (> ${allowedMove}) since the previous snapshot — refusing an unexplained reclassification`);
-    }
-
-    const priorTier = previous.mapSummary.tiers.find((entry) => entry.tier === tier)!;
-    const currentTier = currentByTier.get(tier)!;
-    const mcapDelta = Math.abs(currentTier.mcap - priorTier.mcapUsd);
-    if (mcapDelta > Math.max(1, priorTier.mcapUsd * 0.25)) {
-      throw new DeltaGuardRejection(`Tier ${tier} supply moved from ${priorTier.mcapUsd} to ${currentTier.mcap} (>25%) since the previous snapshot — refusing an unexplained supply shift`);
-    }
-    const priorLeader = priorTier.leaders[0];
-    const currentLeader = currentTier.leaders[0];
-    if ((priorLeader == null) !== (currentLeader == null)) {
-      throw new DeltaGuardRejection(`Tier ${tier} leader changed since the previous snapshot — refusing an unexplained leader shift`);
-    }
-    if (priorLeader != null && currentLeader != null) {
-      if (priorLeader.symbol === currentLeader.symbol) {
-        if (Math.abs(currentLeader.mcap - priorLeader.mcapUsd) > Math.max(1, priorLeader.mcapUsd * 0.25)) {
-          throw new DeltaGuardRejection(`Tier ${tier} leader supply moved from ${priorLeader.mcapUsd} to ${currentLeader.mcap} (>25%) since the previous snapshot — refusing an unexplained leader shift`);
-        }
-      } else {
-        // A swap between near-tied coins is ordinary market movement (the
-        // 2026-08-29 BUIDL/USYC flip sat 0.6% apart, failed both scheduled
-        // runs, and blocked the digest map), so a new leader is accepted when
-        // the prior census already knew the coin and its own supply moved
-        // within the same 25% tolerance. A leader the prior census never saw
-        // still reads as a broken join or census fault and fails closed.
-        const priorCoin = priorById.get(currentLeader.id);
-        if (priorCoin == null) {
-          throw new DeltaGuardRejection(`Tier ${tier} leader changed to ${currentLeader.symbol}, absent from the previous census — refusing an unexplained leader shift`);
-        }
-        if (Math.abs(currentLeader.mcap - priorCoin.mcap) > Math.max(1, priorCoin.mcap * 0.25)) {
-          throw new DeltaGuardRejection(`Tier ${tier} leader ${currentLeader.symbol} supply moved from ${priorCoin.mcap} to ${currentLeader.mcap} (>25%) since the previous snapshot — refusing an unexplained leader shift`);
-        }
-      }
-    }
-  }
-
-  const currentById = new Map(current.coins.map((coin) => [coin.id, coin]));
-  const allIds = new Set([...priorById.keys(), ...currentById.keys()]);
-  // Census additions/removals are deliberately not join flips — they are
-  // already bounded by the graded-count, tier-count, tier-supply and leader
-  // guards above. Counting them here failed the run the day after any coin
-  // entered the census (2026-08-26: hollar-hydrated moving NR -> graded under
-  // methodology 9.44 blocked the daily publication and the digest map, and a
-  // failed run never advances the snapshot baseline, so every later run kept
-  // failing against the same stale census).
-  const joinChanges = [...allIds].filter((id) => {
-    const prior = priorById.get(id);
-    const next = currentById.get(id);
-    return prior != null && next != null && (prior.mcap > 0) !== (next.mcap > 0);
-  });
-  if (joinChanges.length > 0) {
-    const flippedMcap = joinChanges.reduce(
-      (sum, id) => sum + Math.max(priorById.get(id)!.mcap, currentById.get(id)!.mcap),
-      0,
-    );
-    const maxFlippedMcap = previous.mapSummary.totalMcapUsd * MAX_JOIN_FLIP_MCAP_SHARE;
-    const detail = `${joinChanges.length} coin(s) since the previous snapshot (${joinChanges.slice(0, 5).join(", ")}; $${Math.round(flippedMcap).toLocaleString("en-US")} affected)`;
-    if (joinChanges.length > MAX_JOIN_FLIPS || flippedMcap > maxFlippedMcap) {
-      throw new DeltaGuardRejection(
-        `Supply join identity changed for ${detail} — beyond the tolerance of ${MAX_JOIN_FLIPS} coins and ${MAX_JOIN_FLIP_MCAP_SHARE * 100}% of mapped supply ($${Math.round(maxFlippedMcap).toLocaleString("en-US")}), refusing to publish an ambiguous census`,
-      );
-    }
-    console.warn(
-      `[safety-score-map] Supply join identity changed for ${detail} — within tolerance, publishing from the current supply state (a coin that lost its join draws at the size floor)`,
-    );
-  }
-  const gradeTransitions = [...allIds].filter((id) => {
-    const prior = priorById.get(id);
-    const next = currentById.get(id);
-    return prior != null && next != null && prior.grade !== next.grade;
-  });
-  const maxGradeTransitions = Math.max(5, Math.ceil(priorGraded * 0.1));
-  if (gradeTransitions.length > maxGradeTransitions) {
-    throw new DeltaGuardRejection(`Per-coin grade transitions moved ${gradeTransitions.length} assets (> ${maxGradeTransitions}) since the previous snapshot — the scoring producer looks half-broken`);
-  }
-  if (current.missingLogoCount != null && previous.counts.missingLogos !== current.missingLogoCount) {
-    throw new DeltaGuardRejection(`Missing-logo count moved from ${previous.counts.missingLogos} to ${current.missingLogoCount} since the previous snapshot — refusing an unexplained asset change`);
-  }
-  console.log(`[safety-score-map] Delta guard OK vs previous snapshot (graded ${priorGraded} -> ${current.gradedCount}, not rated ${priorNotRated} -> ${current.notRatedCount})`);
-}
-
-function assertMissingLogoDelta(
-  path: string | null,
-  missingLogoCount: number,
-  acceptSnapshotTransition = false,
-): void {
-  if (!path || acceptSnapshotTransition) return;
-  const previous = readPreviousSnapshot(path);
-  if (!previous) return;
-  if (previous.counts.missingLogos !== missingLogoCount) {
-    throw new DeltaGuardRejection(`Missing-logo count moved from ${previous.counts.missingLogos} to ${missingLogoCount} since the previous snapshot — refusing an unexplained asset change`);
-  }
-}
-
 interface PreparedMapData {
   reportCardsResult: FetchJsonResult;
   reportCards: ReturnType<typeof parseMapReportCards>;
@@ -2283,12 +1905,8 @@ interface PreparedMapData {
 async function fetchAndValidateMapData(
   apiKey: string,
   baseUrl: string,
-  previousSnapshot: string | null,
-  acceptSnapshotTransition: boolean,
-  attempt: number,
-  retryStatus: DeltaGuardRetryStatus,
 ): Promise<PreparedMapData> {
-  console.log(`[safety-score-map] Fetching live data from ${baseUrl} (validation attempt ${attempt}/${MAX_DELTA_GUARD_ATTEMPTS})`);
+  console.log(`[safety-score-map] Fetching canonical data from ${baseUrl}`);
   const [reportCardsResult, listResult, psiResult] = await Promise.all([
     fetchJson(API_PATHS.reportCardsV9(), apiKey, baseUrl),
     fetchJson(API_PATHS.stablecoins(), apiKey, baseUrl),
@@ -2297,14 +1915,7 @@ async function fetchAndValidateMapData(
   const reportCards = parseMapReportCards(reportCardsResult.body);
   const list = parseMapStablecoins(listResult.body);
   const psi = selectMapPsi(parseMapPsi(psiResult.body));
-  if (reportCardsResult.publicationStatus !== "current") {
-    throw new Error(`Report-card publication status is "${reportCardsResult.publicationStatus ?? "missing"}" — refusing to render a non-current capture`);
-  }
-
   const nowSec = Math.floor(Date.now() / 1000);
-  const ageSec = nowSec - reportCards.asOfSec;
-  if (ageSec < 0) throw new Error(`Report-card capture is ${(ageSec / 3600).toFixed(1)}h old — refusing to render a future-dated capture`);
-  if (ageSec >= MAX_DATA_AGE_SEC) throw new Error(`Report-card capture is ${(ageSec / 3600).toFixed(1)}h old (must be under ${MAX_DATA_AGE_SEC / 3600}h) — refusing to render stale scores`);
   const psiAgeSec = nowSec - psi.computedAt;
   if (psiAgeSec < 0) throw new Error(`PSI reading is ${(psiAgeSec / 60).toFixed(1)}m old — refusing to render a future-dated level`);
   if (psiAgeSec >= API_FRESHNESS_MAX_AGE_SEC.stabilityIndex) throw new Error(`PSI reading is ${(psiAgeSec / 60).toFixed(1)}m old (must be under ${API_FRESHNESS_MAX_AGE_SEC.stabilityIndex / 60}m) — refusing to render a stale level`);
@@ -2334,9 +1945,6 @@ async function fetchAndValidateMapData(
 
   const tiers = summarizeMapCoins(graded);
   const lanes = summarizeSubgradeLanes(graded);
-  const initialObservedTiers = Object.fromEntries(tiers.map((tier) => [tier.tier, { count: tier.count, mcap: tier.mcap }])) as Record<Tier, { count: number; mcap: number }>;
-  console.log(`[safety-score-map] Validation attempt ${attempt}/${MAX_DELTA_GUARD_ATTEMPTS} observed graded=${graded.length} notRated=${notRatedCount} missingLogos=pending ${TIER_ORDER.map((tier) => `${tier}=${initialObservedTiers[tier].count}/${initialObservedTiers[tier].mcap}`).join(" ")}`);
-  assertSaneDeltas(previousSnapshot, { gradedCount: graded.length, notRatedCount, missingLogoCount: null, coins: graded, tiers }, acceptSnapshotTransition);
 
   const { bands, k, gravelFloor } = fitLayout(graded);
   const logos = new Map<string, LogoRenderData | null>();
@@ -2349,9 +1957,7 @@ async function fetchAndValidateMapData(
   const missingLogos = allBubbles.filter((bubble) => !logos.get(bubble.coin.id));
   if (missingLogos.length > 0) console.warn(`[safety-score-map] No logo for ${missingLogos.length} coins: ${missingLogos.slice(0, 12).map((b) => b.coin.id).join(", ")}${missingLogos.length > 12 ? ", …" : ""}`);
 
-  retryStatus.observed.push({ attempt, graded: graded.length, notRated: notRatedCount, missingLogos: missingLogos.length, tiers: initialObservedTiers });
-  console.log(`[safety-score-map] Validation attempt ${attempt}/${MAX_DELTA_GUARD_ATTEMPTS} observed graded=${graded.length} notRated=${notRatedCount} missingLogos=${missingLogos.length} ${TIER_ORDER.map((tier) => `${tier}=${initialObservedTiers[tier].count}/${initialObservedTiers[tier].mcap}`).join(" ")}`);
-  assertMissingLogoDelta(previousSnapshot, missingLogos.length, acceptSnapshotTransition);
+  console.log(`[safety-score-map] Render input graded=${graded.length} notRated=${notRatedCount} missingLogos=${missingLogos.length}`);
   return { reportCardsResult, reportCards, psi, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos };
 }
 
@@ -2394,40 +2000,12 @@ function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k: number
 }
 
 async function main(): Promise<void> {
-  const { out, edition, issue, previousSnapshot, acceptSnapshotTransition } = parseCliArgs(process.argv.slice(2));
+  const { out, edition, issue } = parseCliArgs(process.argv.slice(2));
   unsupportedGlyphs.clear();
   const apiKey = loadApiKey();
   const baseUrl = process.env.PHAROS_API_BASE?.trim() || DEFAULT_MAINTENANCE_API_BASE_URL;
 
-  const retryStatus: DeltaGuardRetryStatus = { attempts: 0, recovered: false, persistent: false, rejections: [], observed: [] };
-  let prepared: PreparedMapData | null = null;
-  for (let attempt = 1; attempt <= MAX_DELTA_GUARD_ATTEMPTS; attempt += 1) {
-    try {
-      prepared = await fetchAndValidateMapData(apiKey, baseUrl, previousSnapshot, acceptSnapshotTransition, attempt, retryStatus);
-      retryStatus.attempts = attempt;
-      retryStatus.recovered = retryStatus.rejections.length > 0;
-      writeDeltaGuardRetryStatus(retryStatus);
-      if (retryStatus.recovered) console.log(`[safety-score-map] Delta guard transient rejection recovered on attempt ${attempt} after ${retryStatus.rejections.length} rejected attempt(s)`);
-      break;
-    } catch (error) {
-      if (!(error instanceof DeltaGuardRejection)) {
-        retryStatus.attempts = attempt;
-        writeDeltaGuardRetryStatus(retryStatus);
-        throw error;
-      }
-      retryStatus.attempts = attempt;
-      retryStatus.rejections.push(error.message);
-      console.warn(`[safety-score-map] Validation attempt ${attempt}/${MAX_DELTA_GUARD_ATTEMPTS} rejected by delta guard: ${error.message}`);
-      writeDeltaGuardRetryStatus(retryStatus);
-      if (attempt === MAX_DELTA_GUARD_ATTEMPTS) {
-        retryStatus.persistent = true;
-        writeDeltaGuardRetryStatus(retryStatus);
-        throw new Error(`Persistent delta guard rejection after ${MAX_DELTA_GUARD_ATTEMPTS} attempts — ${error.message}`);
-      }
-      await sleep(DELTA_GUARD_BACKOFF_MS[attempt - 1]);
-    }
-  }
-  if (!prepared) throw new Error("Safety map validation did not produce a snapshot");
+  const prepared = await fetchAndValidateMapData(apiKey, baseUrl);
   const { reportCardsResult, reportCards, psi, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos } = prepared;
   const totalMcap = graded.reduce((sum, coin) => sum + coin.mcap, 0);
   const floorMcapByTier: FloorMcapByTier = {
@@ -2579,8 +2157,6 @@ async function main(): Promise<void> {
     floorMcapByTier,
     tiers,
   });
-  // One header shape, shared by the snapshot and the manifest: it is both the
-  // movers baseline and the input the next run's delta guard reads back.
   const counts = {
     graded: graded.length,
     notRated: notRatedCount,
@@ -2596,26 +2172,6 @@ async function main(): Promise<void> {
     `${JSON.stringify({ edition, date: runDate, asOfSec: reportCards.asOfSec, psi, altText, table, tiers }, null, 2)}\n`,
   );
   writeFileSync(
-    sidecar(".snapshot.json"),
-    `${JSON.stringify(
-      {
-        edition,
-        date: runDate,
-        publicationStatus: reportCardsResult.publicationStatus,
-        asOfSec: reportCards.asOfSec,
-        renderedAtSec,
-        methodologyVersion: reportCards.methodologyVersion,
-        updatedAt: reportCards.updatedAt,
-        publicationHealth: reportCards.publicationHealth,
-        counts,
-        mapSummary,
-        coins: graded.map((coin) => ({ id: coin.id, symbol: coin.symbol, score: coin.score, grade: coin.grade, mcap: coin.mcap })),
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  writeFileSync(
     manifestPath,
     `${JSON.stringify(
       {
@@ -2626,9 +2182,12 @@ async function main(): Promise<void> {
         renderedAtSec,
         asOfSec: reportCards.asOfSec,
         methodologyVersion: reportCards.methodologyVersion,
+        updatedAt: reportCards.updatedAt,
+        publicationHealth: reportCards.publicationHealth,
         counts,
         totalMcap,
         bytes: statSync(pngPath).size,
+        mapSummary,
       },
       null,
       2,

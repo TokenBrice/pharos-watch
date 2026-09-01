@@ -36,41 +36,6 @@ function createIo(): PublicationIo & { output: string[]; text: string[] } {
   };
 }
 
-function validPreviousSnapshot(): Record<string, unknown> {
-  const tiers = ["A", "B", "C", "D", "F"].map((tier) => ({
-    tier,
-    range: "0-100",
-    count: tier === "A" ? 1 : 0,
-    mcapUsd: tier === "A" ? 100 : 0,
-    sharePct: tier === "A" ? 100 : 0,
-    leaders: tier === "A"
-      ? [{ symbol: "USD", score: 90, mcapUsd: 100 }]
-      : [],
-  }));
-  return {
-    date: "2026-07-26",
-    publicationStatus: "current",
-    counts: {
-      graded: 1,
-      notRated: 0,
-      unjoined: 0,
-      missingLogos: 0,
-      byTier: { A: 1, B: 0, C: 0, D: 0, F: 0 },
-    },
-    mapSummary: {
-      date: "2026-07-26",
-      asOfSec: Date.UTC(2026, 6, 26, 8, 0, 0) / 1000,
-      methodologyVersion: "9.43",
-      gradedCount: 1,
-      notRatedCount: 0,
-      totalMcapUsd: 100,
-      floorMcapByTier: { a: 1, other: 1 },
-      tiers,
-    },
-    coins: [{ id: "usd", symbol: "USD", score: 90, grade: "A+", mcap: 100 }],
-  };
-}
-
 class MockKvAdapter implements SafetyMapKvAdapter {
   readonly puts: Array<{ key: string; path: string }> = [];
   listings = new Map<string, string[]>();
@@ -96,11 +61,9 @@ class MockKvAdapter implements SafetyMapKvAdapter {
 
 function writeRenderedState(directory: string, overrides: Partial<SafetyMapPublishState> = {}): string {
   const pngPath = join(directory, "latest.png");
-  const snapshotPath = join(directory, "latest.snapshot.json");
   const altPath = join(directory, "latest.alt.json");
   const manifestPath = join(directory, "kv-manifest.json");
   writeFileSync(pngPath, "png bytes");
-  writeFileSync(snapshotPath, "snapshot bytes");
   writeFileSync(altPath, "alt bytes");
   writeFileSync(manifestPath, "manifest bytes");
   const state: SafetyMapPublishState = {
@@ -109,7 +72,6 @@ function writeRenderedState(directory: string, overrides: Partial<SafetyMapPubli
     plannedAtSec: 1_785_283_200,
     alreadyPublished: false,
     hadManifest: false,
-    deltaGuard: "ran",
     manifestPath,
     manifest: {
       date: "2026-07-27",
@@ -117,8 +79,11 @@ function writeRenderedState(directory: string, overrides: Partial<SafetyMapPubli
       renderedAtSec: 1_785_283_200,
       edition: "daily",
       methodologyVersion: "9.44",
+      publicationStatus: "held",
+      updatedAt: "2026-07-27T07:59:00.000Z",
+      publicationHealth: { status: "held" },
       counts: { graded: 42, notRated: 3 },
-      bytes: { png: 9, alt: 9, snapshot: 14 },
+      bytes: { png: 9, alt: 9 },
     },
     ...overrides,
   };
@@ -137,8 +102,6 @@ describe("Safety Map publication CLI", () => {
 
     expect(result.phase).toBe("published");
     expect(adapter.puts.map(({ key }) => key)).toEqual([
-      "safety-map:snapshot:2026-07-27",
-      "safety-map:snapshot:latest",
       "safety-map:alt:latest",
       "safety-map:2026-07-27.png",
       "safety-map:latest.png",
@@ -176,31 +139,17 @@ describe("Safety Map publication CLI", () => {
     expect(existsSync(dryRunStatePath)).toBe(false);
   });
 
-  it("accepts an audited snapshot transition only on a manual run", async () => {
+  it("renders directly from canonical inputs and builds the KV manifest", async () => {
     const directory = temporaryDirectory();
     const statePath = join(directory, "publish-state.json");
     const adapter = new MockKvAdapter();
     const nowSec = Date.UTC(2026, 6, 27, 8, 0, 0) / 1000;
-    adapter.listings.set("safety-map:snapshot:latest", ["safety-map:snapshot:latest"]);
-    adapter.values.set("safety-map:snapshot:latest", Buffer.from(JSON.stringify(validPreviousSnapshot())));
-
-    await expect(planSafetyMapPublication({
-      acceptSnapshotTransition: true,
-      adapter,
-      eventName: "schedule",
-      nowSec,
-      statePath,
-    })).rejects.toThrow("restricted to workflow_dispatch");
-
-    const planned = await planSafetyMapPublication({
-      acceptSnapshotTransition: true,
+    await planSafetyMapPublication({
       adapter,
       eventName: "workflow_dispatch",
       nowSec,
       statePath,
     });
-    expect(planned.acceptedSnapshotTransition).toBe(true);
-    expect(planned.previousSnapshotPath).toBe(join(directory, "previous-snapshot.json"));
 
     let renderCommand = "";
     const rendered = await renderSafetyMapPublication({
@@ -208,12 +157,15 @@ describe("Safety Map publication CLI", () => {
         renderCommand = command;
         writeFileSync(join(directory, "latest.png"), "png bytes");
         writeFileSync(join(directory, "latest.alt.json"), "alt bytes");
-        writeFileSync(join(directory, "latest.snapshot.json"), JSON.stringify({
+        writeFileSync(join(directory, "latest.manifest.json"), JSON.stringify({
           date: "2026-07-27",
           asOfSec: nowSec - 60,
           renderedAtSec: nowSec,
           edition: "daily",
           methodologyVersion: "9.44",
+          publicationStatus: "held",
+          updatedAt: "2026-07-27T07:59:00.000Z",
+          publicationHealth: { status: "held" },
           counts: { graded: 43, notRated: 2 },
         }));
         return 0;
@@ -222,9 +174,8 @@ describe("Safety Map publication CLI", () => {
       statePath,
     });
 
-    expect(rendered.deltaGuard).toBe("accepted");
-    expect(renderCommand).toContain(`--previous-snapshot '${join(directory, "previous-snapshot.json")}'`);
-    expect(renderCommand).toContain("--accept-snapshot-transition");
+    expect(rendered.manifest?.publicationStatus).toBe("held");
+    expect(renderCommand).toBe(`npm run build:safety-score-map -- --out '${join(directory, "latest.png")}'`);
   });
 
   it("refuses to publish behind the live manifest before the first write", async () => {
@@ -249,8 +200,6 @@ describe("Safety Map publication CLI", () => {
     await expect(publishSafetyMapPublication({ adapter, outDir: directory, statePath }))
       .rejects.toThrow("failed SHA-256 readback comparison");
     expect(adapter.puts.map(({ key }) => key)).toEqual([
-      "safety-map:snapshot:2026-07-27",
-      "safety-map:snapshot:latest",
       "safety-map:alt:latest",
       "safety-map:2026-07-27.png",
     ]);
@@ -265,17 +214,8 @@ describe("Safety Map publication CLI", () => {
     const summary = buildSafetyMapSummary(state, "success");
 
     expect(summary).toContain("## Safety Map refresh — success");
-    expect(summary).toContain("| Day-over-day delta guard | ran |");
+    expect(summary).toContain("| Safety Score source | `held` |");
     expect(summary).toContain("`safety-map:2026-07-27.png` — the URL the digest embeds");
     expect(summary.trimEnd().endsWith("`safety-map:latest.json` — manifest, written last")).toBe(true);
-  });
-
-  it("labels transient recovery and persistent delta rejection in the summary", () => {
-    const directory = temporaryDirectory();
-    const recovered = JSON.parse(readFileSync(writeRenderedState(directory, { deltaGuard: "recovered" }), "utf8")) as SafetyMapPublishState;
-    expect(buildSafetyMapSummary(recovered, "success")).toContain("Transient rejection recovered");
-
-    const persistent = JSON.parse(readFileSync(writeRenderedState(directory, { deltaGuard: "persistent", phase: "planned" }), "utf8")) as SafetyMapPublishState;
-    expect(buildSafetyMapSummary(persistent, "failure")).toContain("Persistent delta rejection");
   });
 });

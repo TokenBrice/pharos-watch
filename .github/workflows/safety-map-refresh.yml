@@ -3,8 +3,6 @@
 # The workflow owns scheduling, credentials, runner setup, and artifact upload.
 # scripts/maintenance/publish-safety-score-map.ts owns the publication state
 # machine. Its load-bearing KV order is:
-#   safety-map:snapshot:YYYY-MM-DD
-#   safety-map:snapshot:latest
 #   safety-map:alt:latest
 #   safety-map:YYYY-MM-DD.png (then immediate byte readback verification)
 #   safety-map:latest.png
@@ -27,13 +25,7 @@ on:
     - cron: "20 2 * * *"
     - cron: "20 4 * * *"
     - cron: "20 6 * * *"
-  workflow_dispatch:
-    inputs:
-      accept_snapshot_transition:
-        description: Accept the current live snapshot as an audited methodology/census transition
-        required: false
-        default: false
-        type: boolean
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -72,26 +64,18 @@ jobs:
             exit 1
           fi
 
-      # KV listing doubles as the namespace/token probe. It also fetches the
-      # previous snapshot best-effort so the renderer can arm its delta guard.
+      # KV listing doubles as the namespace/token probe and lets scheduled
+      # retries skip a same-day publication that is already fresh.
       - name: Plan publication from live KV state
         id: plan
         env:
-          ACCEPT_SNAPSHOT_TRANSITION: ${{ inputs.accept_snapshot_transition || false }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
           KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-        run: |
-          set -euo pipefail
-          args=(
-            plan
-            "--event-name=${{ github.event_name }}"
-            "--out-dir=${MAP_OUT_DIR}"
-          )
-          if [ "${ACCEPT_SNAPSHOT_TRANSITION}" = "true" ]; then
-            args+=(--accept-snapshot-transition)
-          fi
-          npx tsx scripts/maintenance/publish-safety-score-map.ts "${args[@]}"
+        run: >-
+          npx tsx scripts/maintenance/publish-safety-score-map.ts plan
+          --event-name="${{ github.event_name }}"
+          --out-dir="${MAP_OUT_DIR}"
 
       - name: Render and validate publication files
         id: render
@@ -111,7 +95,7 @@ jobs:
           path: |
             ${{ env.MAP_OUT_DIR }}/latest.png
             ${{ env.MAP_OUT_DIR }}/latest.alt.json
-            ${{ env.MAP_OUT_DIR }}/latest.snapshot.json
+            ${{ env.MAP_OUT_DIR }}/latest.manifest.json
             ${{ env.MAP_OUT_DIR }}/kv-manifest.json
           if-no-files-found: error
           retention-days: 14

@@ -7,7 +7,6 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -19,7 +18,6 @@ import { runShellCommand, type CommandImplementation } from "../lib/command-runn
 
 const execFileAsync = promisify(execFile);
 const MANIFEST_KEY = "safety-map:latest.json";
-const SNAPSHOT_LATEST_KEY = "safety-map:snapshot:latest";
 const FRESH_SAME_DAY_SECONDS = 6 * 3600;
 const MAX_MANIFEST_BYTES = 16_384;
 
@@ -35,8 +33,6 @@ Options:
   --state <path>         Run-state JSON (default: agents/safety-score-map/ci/publish-state.json)
   --out-dir <path>       Render output directory (default: agents/safety-score-map/ci)
   --event-name <name>    GitHub event name (plan; default: GITHUB_EVENT_NAME or workflow_dispatch)
-  --accept-snapshot-transition
-                         Manual plan only: accept the current live snapshot as an audited transition
   --job-status <status>  GitHub job status (summary; default: unknown)
   --dry-run              Plan only: inspect and print the decision without KV writes
   -h, --help             Show this help`;
@@ -53,9 +49,12 @@ interface SafetyMapManifest {
   renderedAtSec: unknown;
   edition: unknown;
   methodologyVersion: unknown;
+  publicationStatus: unknown;
+  updatedAt: unknown;
+  publicationHealth: unknown;
   counts: Record<string, unknown>;
   mapSummary?: unknown;
-  bytes: { png: number; alt: number; snapshot: number };
+  bytes: { png: number; alt: number };
 }
 
 export interface SafetyMapPublishState {
@@ -64,18 +63,10 @@ export interface SafetyMapPublishState {
   plannedAtSec: number;
   alreadyPublished: boolean;
   hadManifest: boolean;
-  acceptedSnapshotTransition?: boolean;
-  deltaGuard: "ran" | "recovered" | "persistent" | "accepted" | "skipped" | "not reached";
-  previousSnapshotPath?: string;
   priorManifest?: Record<string, unknown>;
   manifest?: SafetyMapManifest;
   manifestPath?: string;
   renderSeconds?: number;
-}
-
-interface RetryStatus {
-  recovered?: boolean;
-  persistent?: boolean;
 }
 
 export interface PublicationIo {
@@ -183,7 +174,6 @@ function parseManifest(raw: Buffer): Record<string, unknown> {
 export async function planSafetyMapPublication({
   adapter,
   dryRun = false,
-  acceptSnapshotTransition = false,
   eventName,
   io = DEFAULT_IO,
   nowSec = Math.floor(Date.now() / 1000),
@@ -191,21 +181,13 @@ export async function planSafetyMapPublication({
 }: {
   adapter: SafetyMapKvAdapter;
   dryRun?: boolean;
-  acceptSnapshotTransition?: boolean;
   eventName: string;
   io?: PublicationIo;
   nowSec?: number;
   statePath: string;
 }): Promise<SafetyMapPublishState> {
-  if (acceptSnapshotTransition && eventName !== "workflow_dispatch") {
-    throw new Error("--accept-snapshot-transition is restricted to workflow_dispatch runs");
-  }
-  const [manifestNames, snapshotNames] = await Promise.all([
-    adapter.list(MANIFEST_KEY),
-    adapter.list(SNAPSHOT_LATEST_KEY),
-  ]);
+  const manifestNames = await adapter.list(MANIFEST_KEY);
   const hadManifest = manifestNames.includes(MANIFEST_KEY);
-  const hasPreviousSnapshot = snapshotNames.includes(SNAPSHOT_LATEST_KEY);
   const priorManifest = hadManifest ? parseManifest(await adapter.get(MANIFEST_KEY, { text: true })) : undefined;
 
   const today = utcDate(nowSec);
@@ -218,8 +200,6 @@ export async function planSafetyMapPublication({
     plannedAtSec: nowSec,
     alreadyPublished,
     hadManifest,
-    ...(acceptSnapshotTransition ? { acceptedSnapshotTransition: true } : {}),
-    deltaGuard: "not reached",
     ...(priorManifest ? { priorManifest } : {}),
   };
 
@@ -227,35 +207,6 @@ export async function planSafetyMapPublication({
   io.stdout.write(alreadyPublished
     ? `Manifest for ${today} is live with data ${Math.round(ageSec / 60)}m old — skipping the re-render.\n`
     : `Proceeding: manifest date=${priorManifest?.date ?? "none"}, today=${today}, event=${eventName}, data age=${Math.round(ageSec / 60)}m.\n`);
-
-  if (acceptSnapshotTransition && !hasPreviousSnapshot) {
-    throw new Error(`Cannot accept a snapshot transition without a live ${SNAPSHOT_LATEST_KEY} baseline`);
-  }
-
-  if (!alreadyPublished && hasPreviousSnapshot) {
-    const previousSnapshotPath = join(dirname(statePath), "previous-snapshot.json");
-    if (!dryRun) rmSync(previousSnapshotPath, { force: true });
-    try {
-      const raw = await adapter.get(SNAPSHOT_LATEST_KEY, { text: true });
-      const previous = asObject(extractJson(raw, "{"), "previous snapshot is not a JSON object");
-      if (!("publicationStatus" in previous)) {
-        if (acceptSnapshotTransition) throw new Error(`${SNAPSHOT_LATEST_KEY} predates the current publication-status contract`);
-        io.warning("Legacy previous snapshot", `${SNAPSHOT_LATEST_KEY} predates the current publication-status contract. The delta guard will be skipped once.`);
-      } else if (!dryRun) {
-        mkdirSync(dirname(previousSnapshotPath), { recursive: true });
-        writeFileSync(previousSnapshotPath, JSON.stringify(previous), "utf8");
-        state.previousSnapshotPath = previousSnapshotPath;
-        io.stdout.write(`Previous snapshot: date=${previous.date} graded=${(previous.counts as Record<string, unknown> | undefined)?.graded} notRated=${(previous.counts as Record<string, unknown> | undefined)?.notRated}\n`);
-      }
-    } catch (error) {
-      if (acceptSnapshotTransition) {
-        throw new Error(`Cannot accept a snapshot transition without a readable current ${SNAPSHOT_LATEST_KEY} baseline`, { cause: error });
-      }
-      io.warning("Previous snapshot unreadable", `${SNAPSHOT_LATEST_KEY} could not be read as current JSON. The delta guard will be skipped. ${error instanceof Error ? error.message : String(error)}`);
-    }
-  } else if (!dryRun) {
-    rmSync(join(dirname(statePath), "previous-snapshot.json"), { force: true });
-  }
 
   if (!dryRun) writeState(statePath, state);
   io.writeOutput("already_published", alreadyPublished);
@@ -266,24 +217,27 @@ export async function planSafetyMapPublication({
 function buildManifest(outDir: string): { manifest: SafetyMapManifest; manifestPath: string } {
   const png = join(outDir, "latest.png");
   const alt = join(outDir, "latest.alt.json");
-  const snapshot = join(outDir, "latest.snapshot.json");
-  const meta = asObject(JSON.parse(readFileSync(snapshot, "utf8")), "latest.snapshot.json must be an object");
+  const renderManifest = join(outDir, "latest.manifest.json");
+  const meta = asObject(JSON.parse(readFileSync(renderManifest, "utf8")), "latest.manifest.json must be an object");
   const required = ["date", "asOfSec", "renderedAtSec", "edition", "counts"];
   const absent = required.filter((key) => meta[key] === undefined || meta[key] === null);
-  if (absent.length > 0) throw new Error(`latest.snapshot.json is missing ${absent.join(", ")}. The generator output contract changed.`);
+  if (absent.length > 0) throw new Error(`latest.manifest.json is missing ${absent.join(", ")}. The generator output contract changed.`);
   if (meta.edition !== "daily") throw new Error(`Rendered edition is "${meta.edition}", expected "daily".`);
   if (typeof meta.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(meta.date)) throw new Error(`Bad archive date: "${meta.date}" is not YYYY-MM-DD.`);
   const runDate = utcDate(Number(meta.renderedAtSec));
-  if (meta.date !== runDate) throw new Error(`Archive date is not the run date: snapshot says ${meta.date}, renderedAtSec resolves to ${runDate} UTC.`);
+  if (meta.date !== runDate) throw new Error(`Archive date is not the run date: render manifest says ${meta.date}, renderedAtSec resolves to ${runDate} UTC.`);
   const manifest: SafetyMapManifest = {
     date: meta.date,
     asOfSec: meta.asOfSec,
     renderedAtSec: meta.renderedAtSec,
     edition: meta.edition,
     methodologyVersion: meta.methodologyVersion ?? null,
-    counts: asObject(meta.counts, "latest.snapshot.json counts must be an object"),
+    publicationStatus: meta.publicationStatus ?? null,
+    updatedAt: meta.updatedAt ?? null,
+    publicationHealth: meta.publicationHealth ?? null,
+    counts: asObject(meta.counts, "latest.manifest.json counts must be an object"),
     ...(meta.mapSummary === undefined ? {} : { mapSummary: meta.mapSummary }),
-    bytes: { png: statSync(png).size, alt: statSync(alt).size, snapshot: statSync(snapshot).size },
+    bytes: { png: statSync(png).size, alt: statSync(alt).size },
   };
   const manifestText = `${JSON.stringify(manifest, null, 2)}\n`;
   if (Buffer.byteLength(manifestText, "utf8") >= MAX_MANIFEST_BYTES) throw new Error(`KV manifest is ${Buffer.byteLength(manifestText, "utf8")} bytes; it must stay under ${MAX_MANIFEST_BYTES} bytes.`);
@@ -305,28 +259,10 @@ export async function renderSafetyMapPublication({
 }): Promise<SafetyMapPublishState> {
   const state = readState(statePath);
   if (state.alreadyPublished) return state;
-  const previousSnapshotPath = state.previousSnapshotPath ?? join(dirname(statePath), "previous-snapshot.json");
-  const retryStatusPath = join(outDir, "latest.retry.json");
-  rmSync(retryStatusPath, { force: true });
-  state.deltaGuard = state.acceptedSnapshotTransition
-    ? "accepted"
-    : existsSync(previousSnapshotPath) && statSync(previousSnapshotPath).size > 0 ? "ran" : "skipped";
-  if (state.deltaGuard === "skipped") io.warning("Delta guard skipped", `No readable ${SNAPSHOT_LATEST_KEY}; unconditional render guards still apply.`);
-  if (state.deltaGuard === "accepted") io.warning("Snapshot transition accepted", `The operator accepted the current live ${SNAPSHOT_LATEST_KEY} baseline transition; unconditional render guards still apply.`);
   const started = Date.now();
-  const command = `npm run build:safety-score-map -- --out ${shellQuote(join(outDir, "latest.png"))} --previous-snapshot ${shellQuote(previousSnapshotPath)}${state.deltaGuard === "accepted" ? " --accept-snapshot-transition" : ""}`;
-  const result = await commandRunner(command, { SAFETY_MAP_RETRY_STATUS_PATH: retryStatusPath }, {});
+  const command = `npm run build:safety-score-map -- --out ${shellQuote(join(outDir, "latest.png"))}`;
+  const result = await commandRunner(command, {}, {});
   const status = typeof result === "number" ? result : result.status;
-  let retryStatus: RetryStatus | null = null;
-  if (existsSync(retryStatusPath)) {
-    try {
-      retryStatus = JSON.parse(readFileSync(retryStatusPath, "utf8")) as RetryStatus;
-    } catch {
-      io.warning("Retry status unreadable", "The render completed without a readable retry-status record.");
-    }
-  }
-  if (retryStatus?.recovered) state.deltaGuard = "recovered";
-  if (retryStatus?.persistent) state.deltaGuard = "persistent";
   if (status !== 0) {
     writeState(statePath, state);
     throw new Error(`Safety Map render failed with status ${status}`);
@@ -341,8 +277,6 @@ export async function renderSafetyMapPublication({
 export function safetyMapPublicationEntries(state: SafetyMapPublishState, outDir: string): Array<{ key: string; path: string; verify?: true }> {
   if (!state.manifest || !state.manifestPath) throw new Error("Publication state has no rendered manifest");
   return [
-    { key: `safety-map:snapshot:${state.manifest.date}`, path: join(outDir, "latest.snapshot.json") },
-    { key: SNAPSHOT_LATEST_KEY, path: join(outDir, "latest.snapshot.json") },
     { key: "safety-map:alt:latest", path: join(outDir, "latest.alt.json") },
     { key: `safety-map:${state.manifest.date}.png`, path: join(outDir, "latest.png"), verify: true },
     { key: "safety-map:latest.png", path: join(outDir, "latest.png") },
@@ -398,20 +332,15 @@ export function buildSafetyMapSummary(state: SafetyMapPublishState | null, jobSt
     `## Safety Map refresh — ${jobStatus}`, "", "| | |", "|---|---|",
     `| Archive date (UTC) | \`${value(manifest?.date)}\` |`,
     `| Data \`asOfSec\` | \`${value(manifest?.asOfSec)}\` |`,
+    `| Safety Score source | \`${value(manifest?.publicationStatus)}\` |`,
     `| Render started | \`${value(manifest?.renderedAtSec)}\` |`,
     `| Render wall-clock | ${value(state?.renderSeconds)}s |`,
     `| Graded coins | ${value(manifest?.counts.graded)} |`,
     `| Not rated | ${value(manifest?.counts.notRated)} |`,
     `| PNG | ${value(manifest?.bytes.png)} bytes |`,
     `| Alt text | ${value(manifest?.bytes.alt)} bytes |`,
-    `| Snapshot | ${value(manifest?.bytes.snapshot)} bytes |`,
-    `| Prior manifest existed | ${value(state?.hadManifest ?? "unknown")} |`,
-    `| Day-over-day delta guard | ${value(state?.deltaGuard ?? "not reached")} |`, "",
+    `| Prior manifest existed | ${value(state?.hadManifest ?? "unknown")} |`, "",
   ];
-  if (state?.deltaGuard === "skipped") lines.push("> **Warning:** no readable `safety-map:snapshot:latest`, so the delta guard did", "> not run this time. Expected on a first run; investigate if it repeats.", "");
-  if (state?.deltaGuard === "accepted") lines.push("> **Operator acceptance:** this manual run accepted the current live snapshot transition.", "> Unconditional freshness, geometry, composition, font, and raster guards still ran.", "");
-  if (state?.deltaGuard === "recovered") lines.push("> **Transient rejection recovered:** a delta guard rejected an upstream read, then a fresh retry passed. The published map uses the recovered attempt.", "");
-  if (state?.deltaGuard === "persistent") lines.push("> **Persistent delta rejection:** all three fresh validation attempts agreed on the shift. Nothing was published; human review with `--accept-snapshot-transition` is still required.", "");
   if (state?.alreadyPublished) {
     lines.push("### Skipped — today is already published", "", "The live `safety-map:latest.json` already carries today's date with fresh", "data, so this scheduled retry slot exited without rendering or writing.");
   } else if (jobStatus === "success" && state?.phase === "published" && manifest) {
@@ -433,7 +362,6 @@ export async function runSafetyMapPublicationCli(argv: readonly string[], io: Pu
       state: { type: "string" },
       "out-dir": { type: "string" },
       "event-name": { type: "string" },
-      "accept-snapshot-transition": { type: "boolean" },
       "job-status": { type: "string" },
       "dry-run": { type: "boolean" },
     },
@@ -443,11 +371,10 @@ export async function runSafetyMapPublicationCli(argv: readonly string[], io: Pu
   const phase = positionals[0];
   assertCliUsage(["plan", "render", "publish", "summary"].includes(phase), `unknown phase: ${phase}`);
   assertCliUsage(values["dry-run"] !== true || phase === "plan", "--dry-run is only valid with plan");
-  assertCliUsage(values["accept-snapshot-transition"] !== true || phase === "plan", "--accept-snapshot-transition is only valid with plan");
   const outDir = resolve(typeof values["out-dir"] === "string" ? values["out-dir"] : "agents/safety-score-map/ci");
   const statePath = resolve(typeof values.state === "string" ? values.state : join(outDir, "publish-state.json"));
   if (phase === "plan") {
-    await planSafetyMapPublication({ adapter: defaultAdapter(), dryRun: values["dry-run"] === true, acceptSnapshotTransition: values["accept-snapshot-transition"] === true, eventName: typeof values["event-name"] === "string" ? values["event-name"] : process.env.GITHUB_EVENT_NAME ?? "workflow_dispatch", io, statePath });
+    await planSafetyMapPublication({ adapter: defaultAdapter(), dryRun: values["dry-run"] === true, eventName: typeof values["event-name"] === "string" ? values["event-name"] : process.env.GITHUB_EVENT_NAME ?? "workflow_dispatch", io, statePath });
   } else if (phase === "render") {
     await renderSafetyMapPublication({ io, outDir, statePath });
   } else if (phase === "publish") {
