@@ -46,6 +46,11 @@ import { mergeDexPriceObservationMap } from "./price-obs";
 import { DIRECT_API_FETCH_PHASE_CONCURRENCY, DIRECT_API_PROVIDER_TIMEOUT_MS } from "../direct-api-policy";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { mapWithConcurrency } from "../../../lib/concurrency";
+import {
+  applyRegisteredExecutionTargetOutput,
+  buildRegisteredDirectApiExecutionTarget,
+  type DirectApiExecutionTargetContext,
+} from "../process-pool-execution-capability";
 
 /**
  * Whether a provider's response is an exhaustive census of its protocol on the
@@ -611,6 +616,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
   symbolToIds: SymbolLookups["symbolToIds"];
   validationReferences: PriceValidationReferences;
   stablecoinPriceById: Map<string, number>;
+  executionTargetContext?: DirectApiExecutionTargetContext;
   preprocessedPoolCounts?: DirectApiPoolCompactionCounts;
   fallbackCounters?: LiquidityFallbackCounters;
 }): Promise<DirectApiIntegrationResult> {
@@ -787,8 +793,9 @@ export async function integrateDirectApiLiquidityPhase(params: {
     );
   }
 
+  let directApiGtPools = new Map<string, GtNewPool[]>();
   if (retainedDirectApiPools.length > 0) {
-    const directApiGtPools = convertToGtNewPools(
+    directApiGtPools = convertToGtNewPools(
       retainedDirectApiPools,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
@@ -801,8 +808,9 @@ export async function integrateDirectApiLiquidityPhase(params: {
     }
   }
 
+  let exactDuplicateGtPools = new Map<string, GtNewPool[]>();
   if (exactDuplicatePoolsForEvidence.length > 0) {
-    const exactDuplicateGtPools = convertToGtNewPools(
+    exactDuplicateGtPools = convertToGtNewPools(
       exactDuplicatePoolsForEvidence,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
@@ -810,6 +818,22 @@ export async function integrateDirectApiLiquidityPhase(params: {
       params.stablecoinPriceById,
     );
     retainExactDuplicatePoolEvidence(params.metrics, exactDuplicateGtPools);
+  }
+
+  if (params.executionTargetContext) {
+    const executionTargetContext = params.executionTargetContext;
+    attachRegisteredDirectApiExecutionTargets(
+      params,
+      executionTargetContext,
+      retainedDirectApiPools,
+      directApiGtPools,
+    );
+    attachRegisteredDirectApiExecutionTargets(
+      params,
+      executionTargetContext,
+      exactDuplicatePoolsForEvidence,
+      exactDuplicateGtPools,
+    );
   }
 
   const directApiPoolsForPriceObservation = [...retainedDirectApiPools, ...exactDuplicatePoolsForEvidence];
@@ -835,6 +859,43 @@ export async function integrateDirectApiLiquidityPhase(params: {
     acceptedByProtocolChain,
     excludedByReason,
   };
+}
+
+function attachRegisteredDirectApiExecutionTargets(
+  params: Parameters<typeof integrateDirectApiLiquidityPhase>[0],
+  executionTargetContext: DirectApiExecutionTargetContext,
+  exactPools: readonly DexApiPool[],
+  shapedPools: ReadonlyMap<string, readonly GtNewPool[]>,
+): void {
+  const exactPoolByKey = new Map(
+    exactPools.map((pool) => [canonicalExitRouteAssetKey(pool.chain, pool.poolAddress), pool]),
+  );
+  for (const [stablecoinId, pools] of shapedPools) {
+    const metric = params.metrics.get(stablecoinId);
+    if (!metric) continue;
+    for (const shapedPool of pools) {
+      const poolId = canonicalExitRouteAssetKey(shapedPool.chain, shapedPool.address);
+      const exactPool = exactPoolByKey.get(poolId);
+      const retainedPool = metric.topPools.find((pool) => pool.poolId === poolId);
+      if (
+        !exactPool ||
+        !retainedPool ||
+        !isCompatibleExactDuplicateEvidence(retainedPool, shapedPool)
+      ) continue;
+      const output = buildRegisteredDirectApiExecutionTarget({
+        pool: exactPool,
+        stablecoinId,
+        chainAddressToId: params.chainAddressToId,
+        symbolToChainScopedIds: params.symbolToChainScopedIds,
+        stablecoinPriceById: params.stablecoinPriceById,
+        validationReferences: params.validationReferences,
+        executionTargetContext,
+      });
+      if (!output) continue;
+      retainedPool.extra ??= {};
+      applyRegisteredExecutionTargetOutput(retainedPool.extra, output);
+    }
+  }
 }
 
 function retainExactDuplicatePoolEvidence(

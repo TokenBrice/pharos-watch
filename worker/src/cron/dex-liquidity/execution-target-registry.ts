@@ -82,6 +82,17 @@ export function buildRegisteredDexExecutionTarget(
     {},
   );
 }
+
+/**
+ * An empty reduction means no registered leaf recognized the exact pool. Keep
+ * that distinct from a fail-closed leaf result such as `target-unresolved`,
+ * which must be retained by every caller of the registry.
+ */
+export function hasRegisteredDexExecutionTargetOutput(
+  output: DexExecutionTargetFactoryOutput,
+): boolean {
+  return Object.values(output).some((value) => value !== undefined);
+}
 import type {
   PoolExecutionCapability,
   PoolProcessingContext,
