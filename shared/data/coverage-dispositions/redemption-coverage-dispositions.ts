@@ -117,19 +117,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: null,
   }),
   reviewed({
-    id: "emxn-telcoin",
-    disposition: "needs-research",
-    reasonCode: "issuer-terms-missing",
-    blocker:
-      "Telcoin's current Digital Cash pages do not publish eMXN-specific holder redemption eligibility, fees, settlement, or limits.",
-    rationale:
-      "The issuer-managed product may have a wallet or bank exit, but the public evidence is not specific enough to model one.",
-    evidenceNeeded:
-      "Official eMXN redemption terms or API documentation covering eligible holders, MXN output, limits, fees, and timing.",
-    evidenceUrls: ["https://www.telco.in/en/digital-cash", "https://bank.telco.in/"],
-    allowedRouteFamilyIfProven: "offchain-issuer",
-  }),
-  reviewed({
     id: "euro3-3a-dao",
     disposition: "add",
     reasonCode: "holder-route-confirmed",
