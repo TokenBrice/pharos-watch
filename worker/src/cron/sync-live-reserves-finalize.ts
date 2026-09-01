@@ -84,6 +84,7 @@ interface LiveReserveFinalizationBudget {
   deadlineMs: number;
   remainingMs: number;
   breakerOutcomesRecorded: number;
+  breakerOutcomeWriteFailures: number;
   breakerOutcomesSkippedBudget: number;
   breakerOutcomesSkippedClosedSuccess: number;
   breakerOutcomeBudgetExhausted: boolean;
@@ -98,6 +99,7 @@ function resolveFinalizationBudget(args: FinalizeReserveSyncRunArgs): LiveReserv
     deadlineMs,
     remainingMs: Math.max(0, deadlineMs - Date.now()),
     breakerOutcomesRecorded: 0,
+    breakerOutcomeWriteFailures: 0,
     breakerOutcomesSkippedBudget: 0,
     breakerOutcomesSkippedClosedSuccess: 0,
     breakerOutcomeBudgetExhausted: false,
@@ -175,8 +177,12 @@ async function recordBreakerOutcomesForRun(
     }
 
     const [key, success] = candidates[index]!;
-    await recordOutcomeSafe(args.db, key, success);
-    budget.breakerOutcomesRecorded++;
+    const outcome = await recordOutcomeSafe(args.db, key, success);
+    if (outcome !== null) {
+      budget.breakerOutcomesRecorded++;
+    } else {
+      budget.breakerOutcomeWriteFailures++;
+    }
   }
 }
 
@@ -492,6 +498,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
         || finalizationBudget.historyPruneSkipped,
       breakerOutcomesTotal: args.breakerOutcomes.size,
       breakerOutcomesRecorded: finalizationBudget.breakerOutcomesRecorded,
+      breakerOutcomeWriteFailures: finalizationBudget.breakerOutcomeWriteFailures,
       breakerOutcomesSkippedBudget: finalizationBudget.breakerOutcomesSkippedBudget,
       breakerOutcomesSkippedClosedSuccess: finalizationBudget.breakerOutcomesSkippedClosedSuccess,
       breakerOutcomeBudgetExhausted: finalizationBudget.breakerOutcomeBudgetExhausted,
