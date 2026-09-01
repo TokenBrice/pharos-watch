@@ -217,8 +217,8 @@ export default function GlossaryPage() {
           <p>
             <span className="font-semibold text-foreground">
               A note on version pins
-            </span>{" "}
-            — every entry pins the methodology version of the section it cites.
+            </span>:
+            every entry pins the methodology version of the section it cites.
             When a methodology version moves, the corresponding entry is
             re-read; entries whose definition the new version changes are
             re-authored before the pin is bumped.
