@@ -186,7 +186,7 @@ describe("U6 authoritative redemption output valuation", () => {
       expect(buildSafetyScoreV9RetainedRedemptionRoutes(routeInput(passing, {}), assetId)).toHaveLength(1);
 
       for (const rejected of [
-        { ...passing, routeStatus: "closed" as const },
+        { ...passing, routeStatus: "paused" as const },
         { ...passing, resolutionState: "missing-capacity" as const },
         { ...passing, capacityConfidence: "heuristic" as const },
       ]) {
