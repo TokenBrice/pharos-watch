@@ -535,6 +535,61 @@ describe("DEX placeholder deployment-census coverage", () => {
     });
   });
 
+  it("attributes a rotating attempt only to the deployment in that window", () => {
+    const latestFence = NOW_SEC - 60;
+    const rows = OVERSIZED_FOOTPRINT.map((deployed, index) =>
+      outcome({
+        chain: deployed.chain,
+        contract_address: deployed.address,
+        observed_at: latestFence - 1,
+        discovery_last_crawl_at: latestFence,
+        deployment_last_attempt_at: index === 0 ? latestFence : latestFence - 1,
+        deployment_fence_attribution_at: latestFence,
+      }),
+    );
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: OVERSIZED_FOOTPRINT,
+      outcomeRows: rows,
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("discovery-deferral");
+    expect(classification.census).toMatchObject({
+      expectedDeploymentCount: OVERSIZED_FOOTPRINT.length,
+      reviewedDeploymentCount: OVERSIZED_FOOTPRINT.length - 1,
+      supersededOutcomeCount: 1,
+      staleOutcomeCount: 0,
+    });
+    expect(classification.coverage.unsupportedReasons).toEqual({
+      deploymentCensusSupersededOutcome: 1,
+    });
+  });
+
+  it("falls back to the coin fence when a legacy writer advances it", () => {
+    const legacyFence = NOW_SEC - 30;
+    const rows = OVERSIZED_FOOTPRINT.map((deployed) =>
+      outcome({
+        chain: deployed.chain,
+        contract_address: deployed.address,
+        observed_at: legacyFence - 1,
+        discovery_last_crawl_at: legacyFence,
+        deployment_last_attempt_at: legacyFence - 1,
+        deployment_fence_attribution_at: legacyFence - 60,
+      }),
+    );
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: OVERSIZED_FOOTPRINT,
+      outcomeRows: rows,
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("discovery-deferral");
+    expect(classification.census).toMatchObject({
+      reviewedDeploymentCount: 0,
+      supersededOutcomeCount: OVERSIZED_FOOTPRINT.length,
+    });
+  });
+
   it("keeps unavailable and unreviewed censuses explicit unknown", () => {
     const unavailable = classifyDexPlaceholderCoverage({
       deployments: [deployment()],

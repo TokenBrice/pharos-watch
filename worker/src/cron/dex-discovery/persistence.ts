@@ -3,6 +3,8 @@ import { batchExecute } from "../../lib/db";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
+import type { ContractDeployment } from "@shared/types/core";
 import { tryParseJson } from "../../lib/json-parse";
 import { STAGED_POOL_MAX_TVL_USD, type DiscoveryMeta, type StagedPool } from "./types";
 
@@ -199,22 +201,75 @@ export async function updateDiscoveryMeta(
 export async function recordDiscoveryAttemptFence(
   db: D1Database,
   stablecoinId: string,
+  deployments: readonly ContractDeployment[],
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<void> {
   throwIfAborted(signal);
+  const deploymentKeysJson = JSON.stringify(
+    deployments.map((deployment) => ({
+      chain: deployment.chain,
+      address: canonicalExitRouteScopedId(deployment.chain, deployment.address),
+    })),
+  );
   await runWithOverloadRetry(
     () =>
-      db
-        .prepare(
-          `INSERT INTO dex_discovery_meta
-             (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at)
-           VALUES (?, 0, ?, NULL)
-           ON CONFLICT(stablecoin_id) DO UPDATE SET
-             last_crawl_at = excluded.last_crawl_at`,
-        )
-        .bind(stablecoinId, nowSec)
-        .run(),
+      db.batch([
+        // Reconcile a legacy writer before enabling per-deployment attribution.
+        // A legacy write changes last_crawl_at without changing the attribution
+        // marker, so every retained row inherits that conservative coin fence
+        // once. This also closes the migration-to-activation race.
+        db
+          .prepare(
+            `UPDATE dex_deployment_outcomes
+                SET last_attempt_at = MAX(
+                      COALESCE(last_attempt_at, observed_at),
+                      COALESCE(
+                        (SELECT last_crawl_at
+                           FROM dex_discovery_meta
+                          WHERE stablecoin_id = ?),
+                        observed_at
+                      )
+                    )
+              WHERE stablecoin_id = ?
+                AND EXISTS (
+                  SELECT 1
+                    FROM dex_discovery_meta
+                   WHERE stablecoin_id = ?
+                     AND (
+                       deployment_fence_attribution_at IS NULL
+                       OR deployment_fence_attribution_at <> last_crawl_at
+                     )
+                )`,
+          )
+          .bind(stablecoinId, stablecoinId, stablecoinId),
+        // Fence only rows in this rotating window. Missing outcome rows need no
+        // placeholder: they already classify as missing until a result lands.
+        db
+          .prepare(
+            `UPDATE dex_deployment_outcomes
+                SET last_attempt_at = ?
+              WHERE stablecoin_id = ?
+                AND EXISTS (
+                  SELECT 1
+                    FROM json_each(?) AS target
+                   WHERE json_extract(target.value, '$.chain') = dex_deployment_outcomes.chain
+                     AND json_extract(target.value, '$.address') = dex_deployment_outcomes.contract_address
+                )`,
+          )
+          .bind(nowSec, stablecoinId, deploymentKeysJson),
+        db
+          .prepare(
+            `INSERT INTO dex_discovery_meta
+               (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at,
+                deployment_fence_attribution_at)
+             VALUES (?, 0, ?, NULL, ?)
+             ON CONFLICT(stablecoin_id) DO UPDATE SET
+               last_crawl_at = excluded.last_crawl_at,
+               deployment_fence_attribution_at = excluded.deployment_fence_attribution_at`,
+          )
+          .bind(stablecoinId, nowSec, nowSec),
+      ]),
     3,
     signal,
   );

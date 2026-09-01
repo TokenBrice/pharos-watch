@@ -110,6 +110,7 @@ async function fenceFailedDiscoveryAttempt(
     await recordDiscoveryAttemptFence(
       db,
       candidate.stablecoinId,
+      deployments,
       nowSec,
       signal,
     );
@@ -442,6 +443,7 @@ export async function syncDexDiscovery(
         await recordDiscoveryAttemptFence(
           db,
           candidate.stablecoinId,
+          targetWindow.targets,
           nowSec,
           signal,
         );

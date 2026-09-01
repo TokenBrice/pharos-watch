@@ -67,7 +67,12 @@ export interface DexDeploymentCensusRow {
   reason: string;
   observed_pool_count: number;
   observed_at: number;
+  /** Coin-level legacy fence; replay fixtures use it as the direct row fence. */
   discovery_last_crawl_at: number | null;
+  /** Present on production reads after migration 0236. */
+  deployment_last_attempt_at?: number | null;
+  /** Equals the coin fence only when the new writer attributed that fence. */
+  deployment_fence_attribution_at?: number | null;
 }
 
 export type DexPlaceholderCoverageState =
@@ -142,6 +147,36 @@ function buildCoverage(
     evidenceCounts: {},
     unsupportedReasons: reasonCounts,
   };
+}
+
+/**
+ * Resolve the attempt fence without opening a rollout gap. Production rows use
+ * their deployment timestamp only while the attribution marker matches the
+ * latest coin-level crawl. A missing/mismatched marker means a legacy Worker
+ * may have advanced the coin fence, so every row conservatively inherits it.
+ * Replay and unit fixtures that predate the additive fields already carry a
+ * direct per-row fence in `discovery_last_crawl_at`.
+ */
+export function resolveDexDeploymentAttemptFence(
+  row: Pick<
+    DexDeploymentCensusRow,
+    | "observed_at"
+    | "discovery_last_crawl_at"
+    | "deployment_last_attempt_at"
+    | "deployment_fence_attribution_at"
+  >,
+): number | null {
+  const hasProductionAttributionFields =
+    row.deployment_last_attempt_at !== undefined ||
+    row.deployment_fence_attribution_at !== undefined;
+  if (!hasProductionAttributionFields) return row.discovery_last_crawl_at;
+  if (
+    row.deployment_fence_attribution_at == null ||
+    row.deployment_fence_attribution_at !== row.discovery_last_crawl_at
+  ) {
+    return row.discovery_last_crawl_at;
+  }
+  return row.deployment_last_attempt_at ?? row.observed_at;
 }
 
 export function buildDexKnownEmptyRouteCoverage(): ExitRouteObservationCoverage {
@@ -261,7 +296,7 @@ export function classifyDexPlaceholderCoverage(params: {
         reason: row.reason,
         observedPoolCount: row.observed_pool_count,
         observedAt: row.observed_at,
-        discoveryLastCrawlAt: row.discovery_last_crawl_at,
+        discoveryLastCrawlAt: resolveDexDeploymentAttemptFence(row),
         providerCount,
         nowSec: params.nowSec,
         maxAgeSec,

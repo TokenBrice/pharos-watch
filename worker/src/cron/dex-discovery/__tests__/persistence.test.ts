@@ -6,9 +6,11 @@ import {
   isValidStagedPoolId,
   readDiscoveryCensusSummaries,
   readDiscoveryMeta,
+  readDiscoveryTargetCursors,
   recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
+  writeDiscoveryTargetCursors,
 } from "../persistence";
 import { STAGED_POOL_MAX_TVL_USD, type StagedPool } from "../types";
 
@@ -282,32 +284,79 @@ describe("discovery persistence D1 retry coverage", () => {
     });
   });
 
+  it("round-trips the per-coin target cursor as one durable map", async () => {
+    let storedValue: string | undefined;
+    const db = {
+      prepare: (sql: string) => {
+        if (sql.startsWith("SELECT")) {
+          return {
+            bind: () => ({ first: async () => ({ value: storedValue }) }),
+          };
+        }
+        return {
+          bind: (...values: unknown[]) => ({
+            run: async () => {
+              storedValue = values[1] as string;
+              return { success: true, meta: { changes: 1 } };
+            },
+          }),
+        };
+      },
+    } as unknown as D1Database;
+    const cursors = new Map([
+      ["coin-a", "ethereum:0xaaa"],
+      ["coin-b", "osmosis:ibc/BBB"],
+    ]);
+
+    await writeDiscoveryTargetCursors(db, cursors);
+
+    expect(storedValue).toBe(JSON.stringify(Object.fromEntries(cursors)));
+    expect(await readDiscoveryTargetCursors(db)).toEqual(cursors);
+  });
+
   it("records an attempt fence without changing existing backoff counters", async () => {
     const prepared: Array<{ sql: string; binds: unknown[] }> = [];
     const db = {
       prepare: (sql: string) => ({
         bind: (...binds: unknown[]) => ({
-          run: async () => {
-            prepared.push({ sql, binds });
-            return { success: true, meta: { changes: 1 } };
-          },
+          sql,
+          binds,
         }),
       }),
+      batch: async (statements: Array<{ sql: string; binds: unknown[] }>) => {
+        prepared.push(...statements);
+        return statements.map(() => ({ success: true, meta: { changes: 1 } }));
+      },
     } as unknown as D1Database;
 
-    await recordDiscoveryAttemptFence(db, "coin-a", 1_710_000_000);
-
-    expect(prepared).toHaveLength(1);
-    expect(prepared[0]?.sql).toContain(
-      "ON CONFLICT(stablecoin_id) DO UPDATE SET",
+    await recordDiscoveryAttemptFence(
+      db,
+      "coin-a",
+      [{ chain: "ethereum", address: "0xABC", decimals: 18 }],
+      1_710_000_000,
     );
+
+    expect(prepared).toHaveLength(3);
     expect(prepared[0]?.sql).toContain(
+      "deployment_fence_attribution_at <> last_crawl_at",
+    );
+    expect(prepared[0]?.binds).toEqual(["coin-a", "coin-a", "coin-a"]);
+    expect(prepared[1]?.sql).toContain("FROM json_each(?) AS target");
+    expect(prepared[1]?.binds).toEqual([
+      1_710_000_000,
+      "coin-a",
+      JSON.stringify([{ chain: "ethereum", address: "0xabc" }]),
+    ]);
+    expect(prepared[2]?.sql).toContain(
       "last_crawl_at = excluded.last_crawl_at",
     );
-    expect(prepared[0]?.sql).not.toContain(
+    expect(prepared[2]?.sql).toContain(
+      "deployment_fence_attribution_at = excluded.deployment_fence_attribution_at",
+    );
+    expect(prepared[2]?.sql).not.toContain(
       "DO UPDATE SET\n             consecutive_misses",
     );
-    expect(prepared[0]?.binds).toEqual(["coin-a", 1_710_000_000]);
+    expect(prepared[2]?.binds).toEqual(["coin-a", 1_710_000_000, 1_710_000_000]);
   });
 
   it("honors abort signals before incrementing the run sequence", async () => {

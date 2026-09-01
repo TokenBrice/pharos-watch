@@ -5,6 +5,7 @@ import {
   DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON,
   DEX_DISCOVERY_PROVIDER_OUTAGE_REASON,
   DEX_DISCOVERY_UNSUPPORTED_SCOPE_REASON,
+  isDexCensusAttemptComplete,
   type DexCensusAttemptResult,
   type DexCensusEvidenceState,
   type DexCensusLegacyCodecValue,
@@ -22,7 +23,18 @@ export interface DexCensusAttemptSignals {
   nonExhaustiveSucceededEmpty: boolean;
   providerDegraded: boolean;
   providerFailed: boolean;
+  /** True when every provider failure was retryable (timeout, 429, or budget). */
+  retryableProviderFailure?: boolean;
   boundedReason?: "window" | "crawl-failed";
+}
+
+function hasNonNegativeInteger(value: number): boolean {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function hasValidAttemptSignals(signals: DexCensusAttemptSignals): boolean {
+  return hasNonNegativeInteger(signals.observedPoolCount) &&
+    hasNonNegativeInteger(signals.providerCount);
 }
 
 /**
@@ -32,13 +44,22 @@ export interface DexCensusAttemptSignals {
 export function resolveDexCensusAttempt(
   signals: DexCensusAttemptSignals,
 ): DexCensusLegacyCodecValue {
+  // The legacy columns have no invalid-attempt value. A malformed signal must
+  // therefore take the retryable/incomplete path rather than manufacture an
+  // empty census from a bad count or an inconsistent provider report.
+  if (!hasValidAttemptSignals(signals)) {
+    return {
+      attemptResult: "bounded_pending",
+      legacyReason: DEX_DISCOVERY_BOUNDED_CRAWL_REASON,
+    };
+  }
   if (signals.observedPoolCount > 0) {
     return { attemptResult: "observed_pools", legacyReason: OBSERVED_POOLS_REASON };
   }
-  if (signals.exhaustiveSucceeded) {
+  if (signals.exhaustiveSucceeded && signals.providerCount > 0) {
     return { attemptResult: "verified_no_pools", legacyReason: VERIFIED_NO_POOLS_REASON };
   }
-  if (signals.nonExhaustiveSucceededEmpty) {
+  if (signals.nonExhaustiveSucceededEmpty && signals.providerCount > 0) {
     return {
       attemptResult: "provider_non_exhaustive",
       legacyReason: DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON,
@@ -50,7 +71,7 @@ export function resolveDexCensusAttempt(
   if (signals.providerCount === 0) {
     return { attemptResult: "unsupported_scope", legacyReason: DEX_DISCOVERY_UNSUPPORTED_SCOPE_REASON };
   }
-  if (signals.providerFailed) {
+  if (signals.providerFailed && signals.retryableProviderFailure !== true) {
     return { attemptResult: "provider_outage", legacyReason: DEX_DISCOVERY_PROVIDER_OUTAGE_REASON };
   }
   return {
@@ -100,16 +121,27 @@ export function isStoredDexCensusEvidenceStale(input: {
   return input.observedAt > input.nowSec || input.nowSec - input.observedAt > input.maxAgeSec;
 }
 
+function hasValidObservedAt(input: Pick<DexStoredCensusRowInput, "observedAt" | "nowSec">): boolean {
+  return Number.isInteger(input.observedAt) && input.observedAt > 0 && input.observedAt <= input.nowSec;
+}
+
+function hasValidAttemptFence(input: Pick<DexStoredCensusRowInput, "discoveryLastCrawlAt" | "nowSec">): boolean {
+  return Number.isInteger(input.discoveryLastCrawlAt) &&
+    (input.discoveryLastCrawlAt ?? 0) > 0 &&
+    (input.discoveryLastCrawlAt ?? 0) <= input.nowSec;
+}
+
 /** The orthogonal persisted-row transition used by the coverage projection. */
 export function classifyStoredDexCensusState(
   row: DexStoredCensusRowInput,
 ): DexStoredCensusState {
   const attemptResult = decodeDexCensusAttemptResult(row.outcome, row.reason).attemptResult;
   if (
-    !Number.isInteger(row.observedAt) ||
-    row.observedAt <= 0 ||
-    !Number.isInteger(row.observedPoolCount) ||
-    row.observedPoolCount < 0
+    !hasValidObservedAt(row) ||
+    !hasNonNegativeInteger(row.observedPoolCount) ||
+    !hasNonNegativeInteger(row.providerCount) ||
+    !Number.isFinite(row.maxAgeSec) ||
+    row.maxAgeSec < 0
   ) {
     return { attemptResult, evidenceState: "invalid", disposition: "invalid" };
   }
@@ -120,12 +152,12 @@ export function classifyStoredDexCensusState(
 
   if (row.outcome === "verified_no_pools") {
     if (
-      !Number.isInteger(row.discoveryLastCrawlAt) ||
-      (row.discoveryLastCrawlAt ?? 0) <= 0 ||
-      (row.discoveryLastCrawlAt ?? 0) > row.nowSec ||
       row.observedPoolCount !== 0 ||
       row.providerCount === 0
     ) {
+      return { attemptResult, evidenceState: "invalid", disposition: "invalid" };
+    }
+    if (!hasValidAttemptFence(row)) {
       return { attemptResult, evidenceState: "invalid", disposition: "invalid" };
     }
     if ((row.discoveryLastCrawlAt ?? 0) > row.observedAt) {
@@ -134,9 +166,12 @@ export function classifyStoredDexCensusState(
     return { attemptResult, evidenceState, disposition: "verified-no-pools" };
   }
   if (row.outcome === "observed_pools") {
-    return row.observedPoolCount > 0 && row.providerCount > 0
-      ? { attemptResult, evidenceState, disposition: "observed-pools" }
-      : { attemptResult, evidenceState: "invalid", disposition: "invalid" };
+    if (row.observedPoolCount <= 0 || row.providerCount === 0 || !hasValidAttemptFence(row)) {
+      return { attemptResult, evidenceState: "invalid", disposition: "invalid" };
+    }
+    return (row.discoveryLastCrawlAt ?? 0) > row.observedAt
+      ? { attemptResult, evidenceState: "superseded", disposition: "superseded" }
+      : { attemptResult, evidenceState, disposition: "observed-pools" };
   }
   if (row.outcome !== "provider_inaccessible" || row.observedPoolCount !== 0) {
     return { attemptResult, evidenceState: "invalid", disposition: "invalid" };
@@ -147,8 +182,22 @@ export function classifyStoredDexCensusState(
   if (row.providerCount === 0) {
     return { attemptResult, evidenceState, disposition: "unsupported-scope" };
   }
+  if (!hasValidAttemptFence(row)) {
+    return { attemptResult, evidenceState: "invalid", disposition: "invalid" };
+  }
   if (attemptResult === "bounded_pending") {
     return { attemptResult, evidenceState, disposition: "bounded-pending" };
   }
   return { attemptResult, evidenceState, disposition: "provider-outage" };
+}
+
+/**
+ * A completed census attempt is deliberately narrower than a useful row.
+ * Evidence freshness and attempt result are independent, so callers must use
+ * both dimensions before allowing a row to certify an empty scope.
+ */
+export function isCurrentDexCensusStateComplete(
+  state: Pick<DexStoredCensusState, "attemptResult" | "evidenceState">,
+): boolean {
+  return isDexCensusAttemptComplete(state.evidenceState, state.attemptResult);
 }
