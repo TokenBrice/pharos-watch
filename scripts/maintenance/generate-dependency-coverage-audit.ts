@@ -517,6 +517,7 @@ function validateReportCardDiagnostics(value: unknown, path: string): void {
 function parseReportCardInput(payload: unknown): ParsedReportCardInput {
   const envelope = reportCardsEnvelope(payload);
   if (!Array.isArray(envelope.cards)) malformedReportCard("cards", "expected an array");
+  if (envelope.cards.length === 0) malformedReportCard("cards", "expected at least one card");
   const cardsById = new Map<string, Record<string, unknown>>();
   envelope.cards.forEach((candidate, index) => {
     const cardPath = `cards[${index}]`;

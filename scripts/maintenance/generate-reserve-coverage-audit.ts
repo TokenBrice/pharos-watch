@@ -138,7 +138,7 @@ export interface ReserveCoverageAudit {
     curatedOnlyActiveCount: number;
     curatedOnlyCandidateRankSource: "stablecoin-api-market-cap" | "local-canonical-order";
     reportCardActiveCount: number | null;
-    collateralFromLiveActiveCount: number | null;
+    backingFromLiveReservesActiveCount: number | null;
     dependencyFromLiveActiveCount: number | null;
     independentConfiguredButNotScoreGradeCount: number | null;
   };
@@ -166,10 +166,6 @@ interface CliOptions {
   format: "markdown" | "json";
   reportPath: string | null;
   generatedAt: string | null;
-}
-
-function boolValue(value: unknown): boolean {
-  return value === true;
 }
 
 function ageDays(date: string, generatedAt: string): number {
@@ -256,36 +252,38 @@ function summarizeReportCards(
   activeIds: ReadonlySet<string>,
 ): Pick<
   ReserveCoverageAudit["summary"],
-  "reportCardActiveCount" | "collateralFromLiveActiveCount" | "dependencyFromLiveActiveCount"
-> & { collateralFromLiveIds: Set<string> } {
+  "reportCardActiveCount" | "backingFromLiveReservesActiveCount" | "dependencyFromLiveActiveCount"
+> & { backingFromLiveReservesIds: Set<string> | null } {
   const rows = extractReportCardRows(payload);
-  if (!rows) {
-    throw new Error("Report-card input does not contain cards[].");
+  if (!rows || rows.length === 0) {
+    throw new Error("Report-card input must contain at least one card.");
   }
 
   const activeRows = rows.filter((row) => {
     const id = stringValue(row.id, { trim: false });
     return id != null && activeIds.has(id);
   });
-  const collateralFromLiveIds = new Set<string>();
-  let dependencyFromLiveActiveCount = 0;
+  const backingFromLiveReservesIds = new Set<string>();
+  let backingFromLiveReservesAvailable = true;
 
   for (const row of activeRows) {
     const id = stringValue(row.id, { trim: false });
-    const rawInputs = isRecord(row.rawInputs) ? row.rawInputs : {};
-    if (id && boolValue(rawInputs.collateralFromLive)) {
-      collateralFromLiveIds.add(id);
-    }
-    if (boolValue(rawInputs.dependencyFromLive)) {
-      dependencyFromLiveActiveCount += 1;
+    if (typeof row.backingFromLiveReserves !== "boolean") {
+      backingFromLiveReservesAvailable = false;
+    } else if (id && row.backingFromLiveReserves) {
+      backingFromLiveReservesIds.add(id);
     }
   }
 
   return {
     reportCardActiveCount: activeRows.length,
-    collateralFromLiveActiveCount: collateralFromLiveIds.size,
-    dependencyFromLiveActiveCount,
-    collateralFromLiveIds,
+    backingFromLiveReservesActiveCount: backingFromLiveReservesAvailable
+      ? backingFromLiveReservesIds.size
+      : null,
+    dependencyFromLiveActiveCount: null,
+    backingFromLiveReservesIds: backingFromLiveReservesAvailable
+      ? backingFromLiveReservesIds
+      : null,
   };
 }
 
@@ -456,17 +454,20 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
 
   const curatedOnlyActiveCandidates = buildCuratedOnlyCandidates(activeCoins, marketCapById);
   let reportCardActiveCount: number | null = null;
-  let collateralFromLiveActiveCount: number | null = null;
+  let backingFromLiveReservesActiveCount: number | null = null;
   let dependencyFromLiveActiveCount: number | null = null;
   let independentConfiguredButNotScoreGradeIds: string[] | null = null;
   if (input.reportCards !== undefined) {
     const reportCardSummary = summarizeReportCards(input.reportCards, activeIds);
     reportCardActiveCount = reportCardSummary.reportCardActiveCount;
-    collateralFromLiveActiveCount = reportCardSummary.collateralFromLiveActiveCount;
+    backingFromLiveReservesActiveCount = reportCardSummary.backingFromLiveReservesActiveCount;
     dependencyFromLiveActiveCount = reportCardSummary.dependencyFromLiveActiveCount;
-    independentConfiguredButNotScoreGradeIds = independentConfiguredIds
-      .filter((id) => !reportCardSummary.collateralFromLiveIds.has(id))
-      .sort();
+    const backingFromLiveReservesIds = reportCardSummary.backingFromLiveReservesIds;
+    if (backingFromLiveReservesIds) {
+      independentConfiguredButNotScoreGradeIds = independentConfiguredIds
+        .filter((id) => !backingFromLiveReservesIds.has(id))
+        .sort();
+    }
   }
 
   return {
@@ -507,7 +508,7 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
       curatedOnlyActiveCount: curatedOnlyActiveCandidates.length,
       curatedOnlyCandidateRankSource: marketCapById ? "stablecoin-api-market-cap" : "local-canonical-order",
       reportCardActiveCount,
-      collateralFromLiveActiveCount,
+      backingFromLiveReservesActiveCount,
       dependencyFromLiveActiveCount,
       independentConfiguredButNotScoreGradeCount: independentConfiguredButNotScoreGradeIds?.length ?? null,
     },
@@ -617,8 +618,8 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
     `- Live-enabled static-validated: ${audit.liveEnabledByEvidenceClass["static-validated"]}`,
     `- Live-enabled weak-live-probe: ${audit.liveEnabledByEvidenceClass["weak-live-probe"]}`,
     `- Report-card active cards: ${renderNullableCount(audit.summary.reportCardActiveCount)}`,
-    `- Active collateralFromLive cards: ${renderNullableCount(audit.summary.collateralFromLiveActiveCount)}`,
-    `- Active dependencyFromLive cards: ${renderNullableCount(audit.summary.dependencyFromLiveActiveCount)}`,
+    `- Active backingFromLiveReserves cards: ${renderNullableCount(audit.summary.backingFromLiveReservesActiveCount)}`,
+    `- Active dependency provenance cards: ${renderNullableCount(audit.summary.dependencyFromLiveActiveCount)}`,
     `- Independent configured but not score-grade: ${renderNullableCount(
       audit.summary.independentConfiguredButNotScoreGradeCount,
     )}`,
@@ -626,7 +627,9 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
     "## Independent Configured But Not Score-Grade",
     "",
     audit.independentConfiguredButNotScoreGradeIds == null
-      ? "_Report-card snapshot not supplied._"
+      ? audit.summary.reportCardActiveCount == null
+        ? "_Report-card snapshot not supplied._"
+        : "_backingFromLiveReserves unavailable in one or more active report cards._"
       : clippedGaps.length === 0
         ? "_None._"
         : clippedGaps.map((id) => `- ${id}`).join("\n"),

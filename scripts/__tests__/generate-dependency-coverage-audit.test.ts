@@ -144,7 +144,7 @@ describe("generate-dependency-coverage-audit", () => {
       activeCoins,
       stablecoins: stablecoinsPayload,
       reportCards: {
-        cards: [],
+        cards: [{ id: "wrap-usdc", overallScore: 70 }],
         dependencyGraph: {
           edges: [{ from: "usdc-circle", to: "wrap-usdc", weight: 1, type: "collateral" }],
         },
@@ -287,21 +287,21 @@ describe("generate-dependency-coverage-audit", () => {
         }], []),
         path: "contributions[0].available",
       },
-      { label: "non-array edges", value: payload([], {}), path: "dependencyGraph.edges" },
-      { label: "non-object edge", value: payload([], [null]), path: "dependencyGraph.edges[0]" },
+      { label: "non-array edges", value: payload([validCard], {}), path: "dependencyGraph.edges" },
+      { label: "non-object edge", value: payload([validCard], [null]), path: "dependencyGraph.edges[0]" },
       {
         label: "invalid edge type",
-        value: payload([], [{ ...validEdge, type: "unknown" }]),
+        value: payload([validCard], [{ ...validEdge, type: "unknown" }]),
         path: "dependencyGraph.edges[0].type",
       },
       {
         label: "invalid edge weight",
-        value: payload([], [{ ...validEdge, weight: 1.1 }]),
+        value: payload([validCard], [{ ...validEdge, weight: 1.1 }]),
         path: "dependencyGraph.edges[0].weight",
       },
       {
         label: "duplicate edges",
-        value: payload([], [validEdge, { ...validEdge, weight: 0.25 }]),
+        value: payload([validCard], [validEdge, { ...validEdge, weight: 0.25 }]),
         path: "duplicate dependency edge upstream->dependent::collateral",
       },
     ];
@@ -897,6 +897,14 @@ describe("generate-dependency-coverage-audit", () => {
     ).rejects.toThrow("--stablecoins file not found");
   });
 
+  it("rejects empty report-card input while preserving static mode", () => {
+    expect(() => buildDependencyCoverageAudit({
+      activeCoins: [],
+      reportCards: { cards: [], dependencyGraph: { edges: [] } },
+    })).toThrow("Report-card input is malformed at cards: expected at least one card.");
+    expect(() => buildDependencyCoverageAudit({ activeCoins: [] })).not.toThrow();
+  });
+
   it("sends site-origin headers when fetching prod site-data", async () => {
     const fetchMock = vi.fn<typeof fetch>(async (url) => {
       const href = String(url);
@@ -912,7 +920,7 @@ describe("generate-dependency-coverage-audit", () => {
 
     try {
       await expect(runCli(["--prod", "--json", "--generated-at", "2026-05-24T00:00:00.000Z"], process.cwd(), fetchImpl))
-        .resolves.toBe(0);
+        .rejects.toThrow("Report-card input is malformed at cards: expected at least one card.");
     } finally {
       stdout.mockRestore();
     }
