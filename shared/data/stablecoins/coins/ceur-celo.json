@@ -88,18 +88,12 @@
     },
     "params": {
       "redemption": {
-        "kind": "broker-pool",
-        "pools": [
-          {
-            "selfTokenAddress": "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
-            "counterAsset": {
-              "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
-              "label": "USDm"
-            }
-          }
-        ],
+        "kind": "fpmm-pool",
+        "poolAddress": "0x1aD2EA06502919F935D9c09028dF73a462979e29",
+        "usdmTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
         "sourceUrls": [
-          "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          "https://docs.mento.org/mento-v3/build/deployments/addresses",
+          "https://docs.mento.org/mento-v3/dive-deeper/fpmm"
         ]
       }
     }
