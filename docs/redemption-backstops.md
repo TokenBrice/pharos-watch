@@ -237,8 +237,9 @@ Each row also carries:
 - `routeStatusSource`:
   - `static-config` for normal config-derived status
   - `market-implied` for the severe active-depeg exercisability gate
-  - `operator-notice`, `protocol-api`, and `onchain` are reserved for future current-route evidence sources
-  - no operator override or standalone route-status feed is wired in the cron path today; merge precedence is live adapter evidence, then static config, with market-implied severe-depeg impairment applied last unless a strong live-direct route is explicitly open
+  - reviewed adapters may currently emit `protocol-api` or `onchain` as live current-route evidence
+  - `operator-notice` is reserved for an explicit reviewed notice; no standalone operator override or route-status feed is wired in the cron path today
+  - merge precedence is live adapter evidence, then static config, with market-implied severe-depeg impairment applied last unless a strong live-direct route is explicitly open
 - `holderEligibility`:
   - derived from the route access model by default: permissionless onchain routes are `any-holder`, whitelist routes are `whitelisted-primary`, issuer API routes are `verified-customer`, and manual routes are `issuer-discretionary`
 - `capacityConfidence`:
@@ -253,7 +254,8 @@ Each row also carries:
   - `immediate-bounded` when the model is intended to represent a current redeemable buffer
   - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity. Current V9 applies the unified Exit route ladder: reliable reviewed non-atomic issuer/protocol/eventual routes require output, evidence, failure-domain, and capacity gates and receive the applicable delay/confidence discounts. The DEX-gated primary-market bonus was historical V7.05 behavior, not a current scoring path.
 - `capacityBasis` (orthogonal to `capacityConfidence`: basis describes the model shape, confidence the evidence strength — consumers must read both; a `psm-balance-share` basis can be live-measured or a heuristic guess):
-  - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`
+  - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `fixed-buffer`, `live-direct-telemetry`, or `live-proxy-buffer`
+  - `fixed-buffer` identifies a reviewed fixed USD buffer (`capacityModel.kind === "fixed-usd"`), distinct from live-direct or live-proxy telemetry
   - reserve-sync fallback ratios use the configured `basis` when present, otherwise route-family defaults such as `psm-balance-share`, `strategy-buffer`, or `hot-buffer`; they are not labeled `live-proxy-buffer` unless live proxy telemetry produced the capacity
 - Live reserve telemetry fields are additive display/provenance context, not Safety Score eligibility by themselves:
   - `capacityKind` describes the adapter-declared evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`
@@ -376,7 +378,7 @@ Stored fields:
 
 The sync inserts a `running` row before writing immutable run rows, writes history after those rows are complete, and marks the manifest `completed` only after the immutable row count and update bounds are valid. If immutable row, history, or completion writes fail after the manifest is started, the writer best-effort marks the manifest `failed` with phase-specific failure metadata before rethrowing. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they return `503`; the legacy current-mirror write and the `MAX(updated_at)` fallback are retired.
 
-Run manifests and immutable run rows are pruned after successful writes with a 14-day retention window. The prune keeps the just-written run and the latest completed run even when either is older than the cutoff, so current API reads and legacy fallback constraints stay intact. Retention failures are recorded as completed-run warnings instead of failing the already-written snapshot.
+Run manifests and immutable run rows are pruned after successful writes with a 14-day retention window. The prune keeps the just-written run and the latest completed run even when either is older than the cutoff, so current API reads stay intact. Retention failures are recorded as completed-run warnings instead of failing the already-written snapshot.
 
 ---
 

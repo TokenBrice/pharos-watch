@@ -678,7 +678,7 @@ Returns chain-level core stablecoin and cash-equivalent aggregates with Chain He
 Returns the resolved reserve presentation for a stablecoin with `liveReservesConfig`.
 
 - Unknown IDs or coins without live reserve support return `404`.
-- Live-enabled coins return `200` even before the first successful sync; the payload includes fallback mode + sync state.
+- Live-enabled coins return `200` even before the first successful sync; when no usable snapshot or curated/template fallback exists, the payload uses `mode: "unavailable"`, empty `reserves`, and live `sync` state.
 - This endpoint powers the stablecoin detail-page reserve card. The same underlying live-reserve dataset also feeds report-card collateral quality, reserve-drift monitoring, and `/status`, but those surfaces read D1-backed reserve snapshots directly rather than calling this endpoint.
 - A response is treated as `live` only when the stored reserve snapshot matches the latest successful sync state and passes strict integrity validation; orphaned partial writes or corrupt stored snapshots fall back to the curated/template presentation instead of presenting malformed live data as authoritative.
 - Successful responses are covered by the shared `StablecoinReservesResponseSchema`; frontend API clients validate `200` payloads strictly while preserving `404` as the not-live-enabled/null path.
@@ -731,7 +731,7 @@ When present, `provenance` has:
 | `freshnessMode`   | `"verified" \| "unverified" \| "not-applicable" \| undefined` | Explicit freshness policy when the adapter emits one                                                              |
 | `scoringEligible` | `boolean`                                                     | Whether this exact snapshot is currently eligible for collateral-quality passthrough                              |
 
-**Response (404):** unknown or non-canonical IDs, known active coins without live reserve support, and live-enabled coins with no resolved reserve result return `{ "error": "Not found" }`.
+**Response (404):** unknown or non-canonical IDs and known active coins without live reserve support return `{ "error": "Not found" }`. A known live-enabled coin with no resolved reserve presentation instead returns the `200` `unavailable` shape above.
 
 ---
 
@@ -2415,9 +2415,9 @@ Current redemption-backstop dataset for redeemable assets.
 
 **Cache:** standard
 
-**Error responses:** `503` when `redemption_backstop` has no rows yet, or when the current snapshot cannot be read cleanly.
+**Error responses:** `503` when no valid completed immutable run can be read.
 
-Rows written by the current worker are grouped by a completed snapshot run manifest. The API serves the latest valid completed run when one exists, which prevents a partially written hourly sync from being treated as a fresh complete dataset. If the newest completed manifest is incomplete or its rows are unreadable, the reader tries recent earlier completed runs before returning `503`. If no completed manifest exists but the manifest table has run records and the current table contains rows with a non-null `snapshot_run_id`, the reader returns `503` instead of treating those partial manifested rows as legacy data. Legacy rows without a completed run remain readable during bootstrap and migration fallback only when the current table has no manifested rows.
+Rows written by the current worker are grouped by a completed snapshot run manifest. The API serves the newest valid completed immutable run, which prevents a partially written hourly sync from being treated as a fresh complete dataset. If the newest completed run fails validation because its rows are incomplete or unreadable, the reader tries recent earlier completed runs before returning `503`. There is no current-table or bootstrap fallback.
 
 **Response**
 
@@ -2472,7 +2472,7 @@ Rows written by the current worker are grouped by a completed snapshot run manif
     "versionLabel": "v4.4",
     "currentVersion": "4.4",
     "currentVersionLabel": "v4.4",
-    "changelogPath": "/methodology/#safety-scores-methodology",
+    "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 1773350400,
     "isCurrent": true,
     "componentWeights": {
@@ -2488,7 +2488,8 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "offchainIssuer": 65
     }
   },
-  "updatedAt": 1773350400
+  "updatedAt": 1773350400,
+  "snapshotSource": "run-rows"
 }
 ```
 
@@ -2496,7 +2497,7 @@ Rows written by the current worker are grouped by a completed snapshot run manif
 
 The `effectiveExitScore` field and the `methodology.effectiveExitModel` block were removed in redemption methodology v4.3. Same-notional exit is published by the Safety Score V9 Exit pillar (`GET /api/report-cards/v9`, `pillars.exit`), which measures completion of an explicit stress request against reviewed route capacity curves; `dexLiquidityScore` remains only as backward-compatible DEX diagnostic context and is not blended into a current score.
 
-`methodology.version` is attributed from the latest completed redemption snapshot run, falling back to the latest stored row for legacy snapshots. `methodology.currentVersion` remains the live code version when the API is serving an older snapshot that has not yet been recomputed.
+`methodology.version` is attributed from the served completed run manifest. `methodology.currentVersion` remains the live code version when the API is serving an older snapshot that has not yet been recomputed.
 
 `sourceMode`:
 
@@ -2518,11 +2519,12 @@ For v4-compatible snapshots, route-status and capacity telemetry remain part of 
 
 Top-level fields:
 
-| Field         | Type                                      | Description                                                                                                |
-| ------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `coins`       | `Record<string, RedemptionBackstopEntry>` | Current snapshot keyed by Pharos stablecoin ID                                                             |
-| `methodology` | `object`                                  | Version metadata plus standalone route-score component weights and route-family caps                        |
-| `updatedAt`   | `number`                                  | Freshest `updated_at` timestamp for the served completed run, or freshest current row for legacy snapshots |
+| Field            | Type                                      | Description                                                                 |
+| ---------------- | ----------------------------------------- | --------------------------------------------------------------------------- |
+| `coins`          | `Record<string, RedemptionBackstopEntry>` | Current snapshot keyed by Pharos stablecoin ID                              |
+| `methodology`    | `object`                                  | Version metadata plus standalone route-score component weights and route-family caps |
+| `updatedAt`      | `number`                                  | Freshest immutable-row timestamp for the served completed run               |
+| `snapshotSource` | `"run-rows"`                              | Identifies immutable completed-run rows as the response data source         |
 
 `RedemptionBackstopEntry` highlights:
 
@@ -2542,7 +2544,7 @@ Top-level fields:
 | `routeStatusReviewedAt`      | `string \| undefined`                                                                                                                                      | UTC date (`YYYY-MM-DD`) for the current route-status assessment                                                                                                                                                               |
 | `holderEligibility`          | `string`                                                                                                                                                   | Modeled holder cohort: `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown`                                                                                  |
 | `capacityConfidence`         | `string`                                                                                                                                                   | `live-direct`, `live-proxy`, `documented-bound`, `heuristic`, or legacy `dynamic` fidelity tag for the capacity model                                                                                                         |
-| `capacityBasis`              | `string \| undefined`                                                                                                                                      | Typed basis for the modeled capacity, such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`          |
+| `capacityBasis`              | `string \| undefined`                                                                                                                                      | Typed basis for the modeled capacity, such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `fixed-buffer`, `live-direct-telemetry`, or `live-proxy-buffer`; `fixed-buffer` identifies a reviewed fixed USD buffer rather than live telemetry |
 | `capacitySemantics`          | `string`                                                                                                                                                   | `immediate-bounded` or `eventual-only`, distinguishing current redeemable buffer from eventual redeemability                                                                                                                  |
 | `capacityProfile`            | `object \| undefined`                                                                                                                                      | Optional v4 capacity profile separating immediate, daily, queued, eventual, and scoring capacity with a `scoringHorizon`, `capacityProfileConfidence`, and optional `settlementBoundUnproven` boolean for an open route whose settlement completion bound is unproven |
 | `capacityKind`               | `string \| undefined`                                                                                                                                      | Optional adapter-declared live evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`. Context only; not Safety eligibility by itself |

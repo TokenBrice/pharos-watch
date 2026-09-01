@@ -330,7 +330,8 @@ When a coin has both an old latest-success snapshot and a newer failing attempt 
 
 - Unknown stablecoin ID
 - Tracked coin without live reserve support
-- Unexpected inability to resolve either live or fallback presentation data
+
+Known live-enabled IDs with no usable snapshot or curated/template fallback return HTTP `200` with `mode: "unavailable"`, empty `reserves`, and live `sync` state. This distinguishes supported coins awaiting usable data from unknown or unsupported IDs.
 
 Successful responses return `StablecoinReservesResponse` with one of these modes:
 
@@ -344,7 +345,7 @@ Successful responses return `StablecoinReservesResponse` with one of these modes
 
 `live` / `live-stale` only apply when the stored snapshot matches the latest successful sync state by `fetched_at` / `attempt_id` and passes strict integrity validation. Staleness uses the stored fetch time and, for verified metadata, the upstream source timestamp. Orphaned partial writes or corrupt stored snapshots fail closed to the fallback modes.
 
-`StablecoinReservesResponseSchema` in `shared/types/live-reserves.ts` is the runtime contract for successful `200` responses and is used by the frontend reserve API client. Adapter-specific `metadata`, `metadata.details`, and nested redemption telemetry remain passthrough so feed telemetry can evolve without breaking consumers.
+`StablecoinReservesResponseSchema` in `shared/types/live-reserves.ts` is the runtime contract for successful `200` responses, including `unavailable`, and is used by the frontend reserve API client. Adapter-specific `metadata`, `metadata.details`, and nested redemption telemetry remain passthrough so feed telemetry can evolve without breaking consumers.
 
 Cache control:
 
