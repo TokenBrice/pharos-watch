@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.41",
+    title: "Explicit scaling for on-chain redemption rates",
+    date: "2026-09-01",
+    effectiveAt: 1788220800,
+    summary:
+      "Configured on-chain redemption-rate probes now require an explicit decimal scale, restoring live Liquity-family fee telemetry that had failed closed when the scale was omitted.",
+    impact: [
+      "The six configured Liquity-style getRedemptionRateWithDecay probes now pin their contracts' 18-decimal return scale, including Liquity V1 LUSD",
+      "Fresh successful reads can populate the formula route's numeric feeBps and same-notional execution cost; an unavailable or malformed read still leaves the fee unknown rather than substituting the documented 50 bps minimum",
+      "The config schema now rejects future redemption-rate probes without an explicit positive decimal scale; component weights, score ladders, and fee formulas are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.4",
     title: "Unproven open-route settlement bounds remain unrated",
     date: "2026-08-26",

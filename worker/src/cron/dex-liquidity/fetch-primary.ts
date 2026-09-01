@@ -569,9 +569,21 @@ export async function buildCurveLookups(
           !ambiguousFingerprints.has(fingerprintKey)
         ) {
           const candidates = curvePoolCandidatesByFingerprint.get(fingerprintKey) ?? [];
-          candidates.push(entry);
+          const existingPhysicalPoolIndex = candidates.findIndex(
+            (candidate) => candidate.poolAddress?.toLowerCase() === pool.address.toLowerCase(),
+          );
+          if (existingPhysicalPoolIndex >= 0) {
+            // Curve may expose one physical pool through more than one registry
+            // view. Keep the latest address-key winner as one candidate instead
+            // of turning registry aliases into a false coin-set collision.
+            candidates[existingPhysicalPoolIndex] = entry;
+          } else {
+            candidates.push(entry);
+          }
           curvePoolCandidatesByFingerprint.set(fingerprintKey, candidates);
-          if (curvePoolMap.has(fingerprintKey)) {
+          if (existingPhysicalPoolIndex >= 0) {
+            curvePoolMap.set(fingerprintKey, entry);
+          } else if (curvePoolMap.has(fingerprintKey)) {
             curvePoolMap.delete(fingerprintKey);
             ambiguousFingerprints.add(fingerprintKey);
           } else {
@@ -579,7 +591,11 @@ export async function buildCurveLookups(
           }
         } else if (fingerprintKey && pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD) {
           const candidates = curvePoolCandidatesByFingerprint.get(fingerprintKey) ?? [];
-          candidates.push(entry);
+          const existingPhysicalPoolIndex = candidates.findIndex(
+            (candidate) => candidate.poolAddress?.toLowerCase() === pool.address.toLowerCase(),
+          );
+          if (existingPhysicalPoolIndex >= 0) candidates[existingPhysicalPoolIndex] = entry;
+          else candidates.push(entry);
           curvePoolCandidatesByFingerprint.set(fingerprintKey, candidates);
         }
         // Also store by symbol combo for fallback matching

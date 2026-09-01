@@ -65,7 +65,8 @@
       "debtSelector": "0x75755a87",
       "redemptionRateProbe": {
         "contract": "0x9de1e57049c475736289cb006212f3e1dce4711b",
-        "selector": "0xc52861f2"
+        "selector": "0xc52861f2",
+        "decimals": 18
       },
       "branches": [
         {

@@ -35,11 +35,13 @@ import { buildPoolFingerprint } from "../pool-helpers";
 import { CURVE_CHAINS } from "../constants";
 import {
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
+  CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
   CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
   CURVE_R3_METAPOOL_POOL_IDENTITIES,
   CURVE_USD1_COMPOSITE_POOL_ADDRESS,
   shouldRetainCurveCompositePoolIdentity,
 } from "../../measured-execution/curve-composite-identities";
+import { buildCurveCompositeMeasuredExecutionTarget } from "../../measured-execution/curve-composite";
 
 function createMockDb(): D1Database {
   return {
@@ -844,6 +846,83 @@ describe("buildCurveLookups", () => {
     expect(curvePoolMap.has("ethereum:0x1111111111111111111111111111111111111111")).toBe(true);
     expect(curvePoolMap.has("ethereum:0x3333333333333333333333333333333333333333")).toBe(true);
     expect(curvePoolMap.has("ethereum:0x4444444444444444444444444444444444444444")).toBe(true);
+  });
+
+  it("keeps one exact fingerprint when Curve exposes the same physical pool through two registries", async () => {
+    const LUSD = "0x5f98805a4e8be255a32880fdec7f6728c6568ba0";
+    const THREE_CRV = "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490";
+    const makeRegistryView = (registryId: "main" | "factory") => ({
+      address: CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
+      name: "LUSD/3Crv",
+      amplificationCoefficient: "500",
+      coins: [
+        {
+          symbol: "LUSD",
+          address: LUSD,
+          poolBalance: "1683708673575847743884936",
+          usdPrice: 1,
+          decimals: "18",
+          isBasePoolLpToken: false,
+        },
+        {
+          symbol: "3Crv",
+          address: THREE_CRV,
+          poolBalance: "9827744887275855307610500",
+          usdPrice: 1,
+          decimals: "18",
+          isBasePoolLpToken: true,
+        },
+      ],
+      underlyingCoins: [],
+      usdTotal: 11_900_000,
+      isMetaPool: true,
+      assetTypeName: "USD",
+      totalSupply: 0,
+      registryId,
+      isBroken: false,
+      virtualPrice: "1",
+      usdTotalExcludingBasePool: 1_700_000,
+      creationTs: 123,
+      basePoolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+      gaugeCrvApy: null,
+    });
+
+    const { curvePoolMap, curvePoolCandidatesByFingerprint } = await buildCurveLookups(
+      [{ data: { poolData: [makeRegistryView("main"), makeRegistryView("factory")] } }],
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    const fingerprint = buildPoolFingerprint("ethereum", "curve", [LUSD, THREE_CRV]);
+    if (!fingerprint) throw new Error("expected a complete LUSD/3Crv fingerprint");
+    const addressEntry = curvePoolMap.get(`ethereum:${CURVE_LUSD_3CRV_METAPOOL_ADDRESS}`);
+    expect(addressEntry?.registryId).toBe("factory");
+    expect(curvePoolMap.get(fingerprint)).toBe(addressEntry);
+    expect(curvePoolCandidatesByFingerprint.get(fingerprint)).toEqual([addressEntry]);
+    expect(buildCurveCompositeMeasuredExecutionTarget({
+      curveData: addressEntry,
+      chain: "ethereum",
+      stablecoinId: "lusd-liquity",
+      chainAddressToId: new Map([
+        [`ethereum:${LUSD}`, "lusd-liquity"],
+        ["ethereum:0x6b175474e89094c44da98b954eedeac495271d0f", "dai-makerdao"],
+        ["ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc-circle"],
+        ["ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt-tether"],
+      ]),
+      stablecoinPriceById: new Map([
+        ["lusd-liquity", 1],
+        ["dai-makerdao", 1],
+        ["usdc-circle", 1],
+        ["usdt-tether", 1],
+      ]),
+      retainedTvlUsd: 1_700_000,
+      capturedAt: 1_788_220_800,
+    })).toMatchObject({
+      stablecoinId: "lusd-liquity",
+      adapterProfileId: "curve-stableswap-ng-metapool-underlying-v1",
+      poolId: `ethereum:${CURVE_LUSD_3CRV_METAPOOL_ADDRESS}`,
+    });
   });
 
   it("keeps the appended Curve API chains at the tail of the fetch order", () => {

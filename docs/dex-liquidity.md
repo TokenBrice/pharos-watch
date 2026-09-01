@@ -4,7 +4,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.2`
+- **Current methodology version:** `v6.3`
 - **Runtime/version source:** `shared/lib/methodology-versions/liquidity-score.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/liquidity-score/`
@@ -443,7 +443,10 @@ hashes before quoting LUSD to USDC through `get_dy_underlying`. The adapter
 measures executable capacity at the common stress requests; it does not infer
 capacity from the pool's reported TVL. Identity, base-pool, price, freshness,
 or quote failure retains the capability gate rather than falling back to a
-reserve simulation.
+reserve simulation. Curve may expose that one physical address through both
+`main` and `factory` registry views. v6.3 collapses those same-address aliases
+before fingerprint ambiguity is evaluated and keeps the address-key winner;
+two distinct addresses with the same coin set remain ambiguous and fail closed.
 
 Two additional StableSwap-NG shapes are collected as shadow-only measured
 profiles. The exact Ethereum DOLA/sUSDe pool uses

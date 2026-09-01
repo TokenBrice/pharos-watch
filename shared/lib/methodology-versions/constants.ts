@@ -20,7 +20,7 @@ export const DDR_METHODOLOGY_VERSION = "4.3";
 export const DDR_METHODOLOGY_VERSION_LABEL = methodologyLabel(DDR_METHODOLOGY_VERSION);
 export const DDR_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-resolver-changelog/";
 
-export const LIQUIDITY_METHODOLOGY_VERSION = "6.2";
+export const LIQUIDITY_METHODOLOGY_VERSION = "6.3";
 export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(LIQUIDITY_METHODOLOGY_VERSION);
 export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = "/methodology/liquidity-score-changelog/";
 
@@ -36,7 +36,7 @@ export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.213";
 export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = methodologyLabel(PRICING_PIPELINE_METHODOLOGY_VERSION);
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing-pipeline-changelog/";
 
-export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.4";
+export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.41";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL = methodologyLabel(REDEMPTION_BACKSTOP_METHODOLOGY_VERSION);
 export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = "/methodology/#redemption-backstop-methodology";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH = "/methodology/redemption-backstop-changelog/";
