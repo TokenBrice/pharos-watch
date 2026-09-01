@@ -56,7 +56,9 @@ import { mapWithConcurrency } from "../../../lib/concurrency";
  */
 export type DirectApiCensusScope = "exhaustive" | "bounded-sample";
 
-export interface DirectApiFetcher {
+export interface DexPoolSourceAdapter {
+  /** Registry identity; optional only for injected focused-test adapters. */
+  slotId?: DexPoolSourceRegistrationSlot["slotId"];
   name: string;
   circuitKey: string;
   normalizedProtocol: string;
@@ -65,6 +67,42 @@ export interface DirectApiFetcher {
   censusScope?: DirectApiCensusScope;
   fn: (signal?: AbortSignal) => Promise<DexApiFetchResult>;
 }
+export type DirectApiFetcher = DexPoolSourceAdapter;
+
+export interface DexPoolSourceRegistrationSlot {
+  slotId:
+    | "fluid"
+    | "balancer"
+    | "pancakeswap"
+    | "meteora"
+    | "raydium-clmm"
+    | "orca-clmm"
+    | "aerodrome-slipstream"
+    | "uniswap-v3-bsc-shadow"
+    | "velodrome-slipstream"
+    | "evm-v4"
+    | "soroban-exhaustive"
+    | "btcusd-provider-investigation";
+  platform: "evm" | "solana" | "soroban" | "offchain";
+  lifecycle: "active" | "shadow" | "disabled";
+  implementationModule: string;
+}
+
+/** Source slots are frozen here so downstream units only fill their leaves. */
+export const DEX_POOL_SOURCE_REGISTRY: readonly DexPoolSourceRegistrationSlot[] = [
+  { slotId: "fluid", platform: "evm", lifecycle: "active", implementationModule: "../fetch-fluid" },
+  { slotId: "balancer", platform: "evm", lifecycle: "active", implementationModule: "../fetch-balancer" },
+  { slotId: "pancakeswap", platform: "evm", lifecycle: "active", implementationModule: "../fetch-pancakeswap" },
+  { slotId: "meteora", platform: "solana", lifecycle: "active", implementationModule: "../fetch-meteora" },
+  { slotId: "raydium-clmm", platform: "solana", lifecycle: "active", implementationModule: "../fetch-raydium" },
+  { slotId: "orca-clmm", platform: "solana", lifecycle: "active", implementationModule: "../fetch-orca" },
+  { slotId: "aerodrome-slipstream", platform: "evm", lifecycle: "active", implementationModule: "../fetch-slipstream" },
+  { slotId: "uniswap-v3-bsc-shadow", platform: "evm", lifecycle: "shadow", implementationModule: "../fetch-uniswap-v3-bsc" },
+  { slotId: "velodrome-slipstream", platform: "evm", lifecycle: "active", implementationModule: "../fetch-slipstream" },
+  { slotId: "evm-v4", platform: "evm", lifecycle: "disabled", implementationModule: "../subgraph-source-families" },
+  { slotId: "soroban-exhaustive", platform: "soroban", lifecycle: "disabled", implementationModule: "../../dex-discovery/providers/soroban-exhaustive" },
+  { slotId: "btcusd-provider-investigation", platform: "offchain", lifecycle: "disabled", implementationModule: "../../dex-discovery/providers/btcusd-public-https" },
+] as const;
 
 export interface DirectApiFetchPhaseEntry {
   name: string;
@@ -297,8 +335,9 @@ export function buildDexDirectApiFetchers(params: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   fallbackCounters?: LiquidityFallbackCounters;
 }): DirectApiFetcher[] {
-  return [
+  const adapters: DexPoolSourceAdapter[] = [
     {
+      slotId: "fluid",
       name: "Fluid",
       circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API,
       normalizedProtocol: "fluid",
@@ -309,6 +348,7 @@ export function buildDexDirectApiFetchers(params: {
       fn: (signal) => fetchFluidPools(signal, params.chainRpcs, params.fallbackCounters),
     },
     {
+      slotId: "balancer",
       name: "Balancer",
       circuitKey: CIRCUIT_SOURCE.BALANCER_API,
       normalizedProtocol: "balancer",
@@ -333,6 +373,7 @@ export function buildDexDirectApiFetchers(params: {
       fn: fetchBalancerPools,
     },
     {
+      slotId: "pancakeswap",
       name: "PancakeSwap",
       circuitKey: CIRCUIT_SOURCE.PANCAKESWAP_API,
       normalizedProtocol: "pancakeswap",
@@ -340,6 +381,7 @@ export function buildDexDirectApiFetchers(params: {
       fn: (signal) => fetchPancakeSwapPools(params.graphApiKey, signal, params.db),
     },
     {
+      slotId: "meteora",
       name: "Meteora",
       circuitKey: CIRCUIT_SOURCE.METEORA_API,
       normalizedProtocol: "meteora",
@@ -353,6 +395,7 @@ export function buildDexDirectApiFetchers(params: {
       fn: fetchMeteoraPools,
     },
     {
+      slotId: "raydium-clmm",
       name: "Raydium",
       circuitKey: CIRCUIT_SOURCE.RAYDIUM_API,
       normalizedProtocol: "raydium",
@@ -360,6 +403,7 @@ export function buildDexDirectApiFetchers(params: {
       fn: fetchRaydiumPools,
     },
     {
+      slotId: "orca-clmm",
       name: "Orca",
       circuitKey: CIRCUIT_SOURCE.ORCA_API,
       normalizedProtocol: "orca",
@@ -367,6 +411,7 @@ export function buildDexDirectApiFetchers(params: {
       fn: (signal) => fetchOrcaPools(signal, params.db),
     },
     {
+      slotId: "aerodrome-slipstream",
       name: "Aerodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API,
       normalizedProtocol: "aerodrome",
@@ -389,6 +434,7 @@ export function buildDexDirectApiFetchers(params: {
         ),
     },
     {
+      slotId: "uniswap-v3-bsc-shadow",
       name: "Uniswap V3 BSC shadow",
       circuitKey: CIRCUIT_SOURCE.UNISWAP_V3_BSC_SHADOW,
       normalizedProtocol: "uniswap-v3-shadow",
@@ -402,6 +448,7 @@ export function buildDexDirectApiFetchers(params: {
       }),
     },
     {
+      slotId: "velodrome-slipstream",
       name: "Velodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API,
       normalizedProtocol: "velodrome",
@@ -420,6 +467,13 @@ export function buildDexDirectApiFetchers(params: {
         ),
     },
   ];
+  const bySlot = new Map(adapters.map((adapter) => [adapter.slotId, adapter]));
+  return DEX_POOL_SOURCE_REGISTRY
+    .filter((registration) => registration.lifecycle !== "disabled")
+    .flatMap((registration) => {
+      const adapter = bySlot.get(registration.slotId);
+      return adapter ? [adapter] : [];
+    });
 }
 
 export async function runDirectApiFetchPhase(

@@ -42,6 +42,7 @@ import type {
   PoolProtocolEnrichment,
   ResolvedPoolIdentity,
 } from "./process-pool-types";
+import { buildRegisteredDexExecutionTarget } from "./execution-target-registry";
 
 /**
  * Builds the exact StableSwap execution model for an address-matched plain
@@ -777,6 +778,12 @@ export function buildPoolExecutionCapability(
     !curveCompositeMeasuredTarget
       ? curveExecutionCapability.gate
       : measuredExecutionGate;
+  const registeredTarget = buildRegisteredDexExecutionTarget({
+    context,
+    identity,
+    enrichment,
+    stablecoinId,
+  });
 
   return {
     ...(curveExecutionCapability.executionModel
@@ -794,5 +801,6 @@ export function buildPoolExecutionCapability(
     ...(curveStableSwapPhysicalPoolId
       ? { measuredExecutionPhysicalPoolId: curveStableSwapPhysicalPoolId }
       : {}),
+    ...registeredTarget,
   };
 }

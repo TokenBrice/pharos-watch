@@ -1,10 +1,12 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
-import { RATE_LIMITS } from "../../lib/rate-limit";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import { DISCOVERY_TIERS } from "./types";
+import {
+  DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY,
+  getRuntimeDexDiscoveryProviders,
+} from "./provider-registry";
 
 /**
  * Per-coin wall-clock crawl budget, shared by every provider stage of one coin
@@ -21,45 +23,6 @@ export const DEX_DISCOVERY_PER_COIN_BUDGET_MS = 25_000;
  * admitted windows that fit CoinGecko but expired before GT/DexScreener/Curve,
  * repeatedly publishing bounded-crawl gaps for the tail.
  */
-const DEPLOYMENT_CRAWL_COST_MS = {
-  coingecko: RATE_LIMITS.COINGECKO_ONCHAIN_MS + 1_200,
-  geckoterminal: RATE_LIMITS.GECKO_TERMINAL_MS + 800,
-  dexscreener: RATE_LIMITS.DEXSCREENER_MS + 600,
-  curve: 1_200,
-  horizon: RATE_LIMITS.HORIZON_MS + 600,
-  // Aquarius is one bounded index request shared across this coin's Soroban targets.
-  aquarius: 8_000,
-  // TzKT's census reads holders and then reserves serially.
-  tezos: 16_000,
-  // Balanced reads the bounded pool-id range in serial JSON-RPC batches.
-  "icon-balanced": 8_000,
-  // Kava x/swap requires serial params and pool-list reads.
-  "kava-swap": 16_000,
-  // One denom-filtered Osmosis sidecar read per deployment: the 400 ms serial
-  // pacing floor plus an allowance covering the single retry. Measured
-  // 2026-09-01, largest tracked denom (USDC, 814 pools, ~0.95 MB): 165-331 ms.
-  "osmosis-sqs": 2_800,
-  // One Noble `swap` module read (measured 68-180 ms for a ~0.6 KB payload),
-  // shared by the coin's Noble deployments but priced per deployment because
-  // the window selector prices deployments.
-  "noble-swap": 2_000,
-} as const;
-
-/** Provider stage order inside a coin crawl. */
-const COST_PROVIDER_ORDER = [
-  "coingecko",
-  "geckoterminal",
-  "dexscreener",
-  "curve",
-  "horizon",
-  "aquarius",
-  "tezos",
-  "icon-balanced",
-  "kava-swap",
-  "osmosis-sqs",
-  "noble-swap",
-] as const;
-
 export interface DiscoveryTargetWindow {
   targets: ContractDeployment[];
   windowed: boolean;
@@ -83,10 +46,12 @@ export function discoveryTargetCursorKey(deployment: ContractDeployment): string
  * their census rows are re-asserted from the static registry every run.
  */
 export function estimateDeploymentCrawlCostMs(chain: string, address?: string): number {
-  const providers = getDexDiscoveryProviders(chain, address);
-  if (providers.length === 0) return 0;
-  return COST_PROVIDER_ORDER.reduce(
-    (sum, provider) => sum + (providers.includes(provider) ? DEPLOYMENT_CRAWL_COST_MS[provider] : 0),
+  return DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY.reduce(
+    (sum, provider) => sum + (
+      provider.lifecycle === "active" && provider.supports(chain, address)
+        ? provider.requestCostMs
+        : 0
+    ),
     0,
   );
 }
@@ -123,7 +88,7 @@ export function selectDiscoveryTargetWindow({
 
   const grouped = new Map<string, ContractDeployment[]>();
   for (const target of targets) {
-    const signature = getDexDiscoveryProviders(target.chain, target.address).join("+") || "unsupported";
+    const signature = getRuntimeDexDiscoveryProviders(target.chain, target.address).join("+") || "unsupported";
     const rows = grouped.get(signature) ?? [];
     rows.push(target);
     grouped.set(signature, rows);

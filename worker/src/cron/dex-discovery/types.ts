@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import type { DexDiscoveryProvider } from "@shared/lib/dex-deployment-coverage";
 
 /** Raw pool entry written to dex_pool_staging by the discovery cron. */
 export interface StagedPool {
@@ -50,18 +51,7 @@ export type DexDeploymentProviderCheckStatus = "success" | "failure" | "degraded
 export interface DexDeploymentProviderCheck {
   chain: string;
   address: string;
-  provider:
-    | "coingecko"
-    | "geckoterminal"
-    | "dexscreener"
-    | "curve"
-    | "horizon"
-    | "aquarius"
-    | "tezos"
-    | "icon-balanced"
-    | "kava-swap"
-    | "osmosis-sqs"
-    | "noble-swap";
+  provider: DexDiscoveryProvider;
   status: DexDeploymentProviderCheckStatus;
   observedPoolCount?: number;
   /** Timeout, 429, or other transport miss — do not persist as a hard provider outage. */

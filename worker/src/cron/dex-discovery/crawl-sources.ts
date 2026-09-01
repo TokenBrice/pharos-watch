@@ -21,7 +21,11 @@ import { crawlCosmosPoolsStage } from "./crawl-cosmos-pools";
 import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
-import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
+import { getRuntimeDexDiscoveryProviders } from "./provider-registry";
+import { DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY } from "./provider-registry";
+import type { DexDiscoveryCrawlerLeafId } from "@shared/lib/dex-deployment-coverage";
+import { SOROBAN_EXHAUSTIVE_DISCOVERY_PROVIDER_SLOT } from "./providers/soroban-exhaustive";
+import { BTCUSD_PUBLIC_HTTPS_DISCOVERY_PROVIDER_SLOT } from "./providers/btcusd-public-https";
 
 export interface CrawlResult {
   pools: StagedPool[];
@@ -62,7 +66,7 @@ function selectDexScreenerFallbackTargets(
   const completedEarlierQueries = completedPoolQueryKeys(providerChecks, ["coingecko", "geckoterminal"]);
   return coinTargets
     .filter(({ chain, address }) => {
-      if (!getDexDiscoveryProviders(chain, address).includes("dexscreener")) return false;
+      if (!getRuntimeDexDiscoveryProviders(chain, address).includes("dexscreener")) return false;
       return !completedEarlierQueries.has(canonicalExitRouteAssetKey(chain, address));
     })
     .map(({ chain, address }) => [chain, address] as const);
@@ -102,177 +106,74 @@ export async function crawlCoin(
     references,
   });
 
-  const coinGeckoStage = await crawlCoinGeckoPoolsStage({
-    db,
-    coinTargets,
-    cgApiKey,
-    context,
-  });
-  providerChecks.push(...coinGeckoStage.providerChecks);
-  if (coinGeckoStage.stoppedEarly) {
-    return await finalizeOwnRun({
-      pools,
-      unresolvedChains: coinGeckoStage.unresolvedChains,
-      deploymentOutcomes: classifyDexDeploymentOutcomes({
-        stablecoinId,
-        deployments: coinTargets,
+  type ProviderStageResult = {
+    providerChecks: DexDeploymentProviderCheck[];
+    stoppedEarly?: boolean;
+    unresolvedChains?: string[];
+  };
+  const providerLeaves: Record<DexDiscoveryCrawlerLeafId, () => Promise<ProviderStageResult>> = {
+    coingecko: () => crawlCoinGeckoPoolsStage({ db, coinTargets, cgApiKey, context }),
+    geckoterminal: () => crawlGeckoTerminalPoolsStage({
+      coinTargets,
+      // Only a completed CoinGecko pool query may suppress GeckoTerminal.
+      cgPriceObservationTargets: completedPoolQueryKeys(providerChecks, ["coingecko"]),
+      context,
+    }),
+    dexscreener: () => crawlDexScreenerPoolsStage({
+      db,
+      targets: selectDexScreenerFallbackTargets(coinTargets, providerChecks),
+      context,
+      runState: dexScreenerRunState,
+    }),
+    curve: () => crawlCurvePoolsStage({ coinTargets, context }),
+    horizon: () => crawlHorizonPoolsStage({ coinTargets, context }),
+    aquarius: () => crawlSorobanPoolsStage({ coinTargets, context }),
+    tezos: () => crawlTezosPoolsStage({ coinTargets, context }),
+    "icon-balanced": () => crawlIconBalancedPoolsStage({ coinTargets, context }),
+    "kava-swap": () => crawlKavaSwapPoolsStage({ coinTargets, context }),
+    cosmos: () => crawlCosmosPoolsStage({ coinTargets, context }),
+    "soroban-exhaustive": () => SOROBAN_EXHAUSTIVE_DISCOVERY_PROVIDER_SLOT.crawl({ coinTargets, context }),
+    "btcusd-public-https": () => BTCUSD_PUBLIC_HTTPS_DISCOVERY_PROVIDER_SLOT.crawl({ coinTargets, context }),
+  };
+  const executionLeaves = [...new Set(
+    DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY
+      .filter((provider) => provider.lifecycle === "active")
+      .sort((left, right) => left.executionOrder - right.executionOrder)
+      .map((provider) => provider.crawlerLeaf),
+  )];
+  let unresolvedChains: string[] = [];
+  for (const leaf of executionLeaves) {
+    const stage = await providerLeaves[leaf]();
+    providerChecks.push(...stage.providerChecks);
+    if (stage.unresolvedChains) unresolvedChains = stage.unresolvedChains;
+    if (stage.stoppedEarly) {
+      return await finalizeOwnRun({
         pools,
-        providerChecks,
-        nowSec,
-      }),
-      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
-    });
-  }
-
-  const completedCoinGeckoQueries = completedPoolQueryKeys(coinGeckoStage.providerChecks, ["coingecko"]);
-  const geckoTerminalStage = await crawlGeckoTerminalPoolsStage({
-    coinTargets,
-    // The stage option retains its historical name, but only completed
-    // CoinGecko pool queries may suppress GeckoTerminal. A price observation
-    // by itself is not pool-query completion.
-    cgPriceObservationTargets: completedCoinGeckoQueries,
-    context,
-  });
-  providerChecks.push(...geckoTerminalStage.providerChecks);
-
-  const dexScreenerStage = await crawlDexScreenerPoolsStage({
-    db,
-    targets: selectDexScreenerFallbackTargets(coinTargets, providerChecks),
-    context,
-    runState: dexScreenerRunState,
-  });
-  providerChecks.push(...dexScreenerStage.providerChecks);
-  if (dexScreenerStage.stoppedEarly) {
-    return await finalizeOwnRun({
-      pools,
-      unresolvedChains: coinGeckoStage.unresolvedChains,
-      deploymentOutcomes: classifyDexDeploymentOutcomes({
-        stablecoinId,
-        deployments: coinTargets,
-        pools,
-        providerChecks,
-        nowSec,
-      }),
-      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
-    });
-  }
-
-  await crawlCoinGeckoTickersStage({
-    cgApiKey,
-    geckoId: stablecoinMeta?.geckoId,
-    symbol: stablecoinMeta?.symbol,
-    shouldRun: pools.length === 0 || priceObs.length === 0,
-    context,
-  });
-
-  const curveStage = await crawlCurvePoolsStage({ coinTargets, context });
-  providerChecks.push(...curveStage.providerChecks);
-
-  const horizonStage = await crawlHorizonPoolsStage({ coinTargets, context });
-  providerChecks.push(...horizonStage.providerChecks);
-  if (horizonStage.stoppedEarly) {
-    return await finalizeOwnRun({
-      pools,
-      unresolvedChains: coinGeckoStage.unresolvedChains,
-      deploymentOutcomes: classifyDexDeploymentOutcomes({
-        stablecoinId,
-        deployments: coinTargets,
-        pools,
-        providerChecks,
-        nowSec,
-      }),
-      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
-    });
-  }
-
-  const aquariusStage = await crawlSorobanPoolsStage({ coinTargets, context });
-  providerChecks.push(...aquariusStage.providerChecks);
-  if (aquariusStage.stoppedEarly) {
-    return await finalizeOwnRun({
-      pools,
-      unresolvedChains: coinGeckoStage.unresolvedChains,
-      deploymentOutcomes: classifyDexDeploymentOutcomes({
-        stablecoinId,
-        deployments: coinTargets,
-        pools,
-        providerChecks,
-        nowSec,
-      }),
-      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
-    });
-  }
-
-  const tezosStage = await crawlTezosPoolsStage({ coinTargets, context });
-  providerChecks.push(...tezosStage.providerChecks);
-  if (tezosStage.stoppedEarly) {
-    return await finalizeOwnRun({
-      pools,
-      unresolvedChains: coinGeckoStage.unresolvedChains,
-      deploymentOutcomes: classifyDexDeploymentOutcomes({
-        stablecoinId,
-        deployments: coinTargets,
-        pools,
-        providerChecks,
-        nowSec,
-      }),
-      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
-    });
-  }
-
-  const iconBalancedStage = await crawlIconBalancedPoolsStage({ coinTargets, context });
-  providerChecks.push(...iconBalancedStage.providerChecks);
-  if (iconBalancedStage.stoppedEarly) {
-    return await finalizeOwnRun({
-      pools,
-      unresolvedChains: coinGeckoStage.unresolvedChains,
-      deploymentOutcomes: classifyDexDeploymentOutcomes({
-        stablecoinId,
-        deployments: coinTargets,
-        pools,
-        providerChecks,
-        nowSec,
-      }),
-      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
-    });
-  }
-
-  const kavaSwapStage = await crawlKavaSwapPoolsStage({ coinTargets, context });
-  providerChecks.push(...kavaSwapStage.providerChecks);
-  if (kavaSwapStage.stoppedEarly) {
-    return await finalizeOwnRun({
-      pools,
-      unresolvedChains: coinGeckoStage.unresolvedChains,
-      deploymentOutcomes: classifyDexDeploymentOutcomes({
-        stablecoinId,
-        deployments: coinTargets,
-        pools,
-        providerChecks,
-        nowSec,
-      }),
-      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
-    });
-  }
-
-  const cosmosStage = await crawlCosmosPoolsStage({ coinTargets, context });
-  providerChecks.push(...cosmosStage.providerChecks);
-  if (cosmosStage.stoppedEarly) {
-    return await finalizeOwnRun({
-      pools,
-      unresolvedChains: coinGeckoStage.unresolvedChains,
-      deploymentOutcomes: classifyDexDeploymentOutcomes({
-        stablecoinId,
-        deployments: coinTargets,
-        pools,
-        providerChecks,
-        nowSec,
-      }),
-      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
-    });
+        unresolvedChains,
+        deploymentOutcomes: classifyDexDeploymentOutcomes({
+          stablecoinId,
+          deployments: coinTargets,
+          pools,
+          providerChecks,
+          nowSec,
+        }),
+        checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
+      });
+    }
+    if (leaf === "dexscreener") {
+      await crawlCoinGeckoTickersStage({
+        cgApiKey,
+        geckoId: stablecoinMeta?.geckoId,
+        symbol: stablecoinMeta?.symbol,
+        shouldRun: pools.length === 0 || priceObs.length === 0,
+        context,
+      });
+    }
   }
 
   return await finalizeOwnRun({
     pools,
-    unresolvedChains: coinGeckoStage.unresolvedChains,
+    unresolvedChains,
     deploymentOutcomes: classifyDexDeploymentOutcomes({
       stablecoinId,
       deployments: coinTargets,

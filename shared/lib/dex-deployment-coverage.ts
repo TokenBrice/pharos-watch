@@ -3,6 +3,14 @@ import { canonicalExitRouteScopedId } from "./exit-route-identity";
 import { getAddress } from "viem/utils";
 
 export type DexDeploymentOutcome = "observed_pools" | "verified_no_pools" | "provider_inaccessible";
+export type DexCensusAttemptResult =
+  | "observed_pools"
+  | "verified_no_pools"
+  | "bounded_pending"
+  | "provider_outage"
+  | "provider_non_exhaustive"
+  | "unsupported_scope";
+export type DexCensusEvidenceState = "current" | "missing" | "stale" | "superseded" | "invalid";
 export type DexDiscoveryProvider =
   | "coingecko"
   | "geckoterminal"
@@ -14,7 +22,34 @@ export type DexDiscoveryProvider =
   | "icon-balanced"
   | "kava-swap"
   | "osmosis-sqs"
-  | "noble-swap";
+  | "noble-swap"
+  | "soroban-exhaustive"
+  | "btcusd-public-https";
+
+export type DexDiscoveryCrawlerLeafId =
+  | "coingecko"
+  | "geckoterminal"
+  | "dexscreener"
+  | "curve"
+  | "horizon"
+  | "aquarius"
+  | "tezos"
+  | "icon-balanced"
+  | "kava-swap"
+  | "cosmos"
+  | "soroban-exhaustive"
+  | "btcusd-public-https";
+
+export interface DexDiscoveryProviderAdapter {
+  providerId: DexDiscoveryProvider;
+  lifecycle: "active" | "disabled";
+  supports(chain: string, address?: string): boolean;
+  scope: "exhaustive" | "supplemental";
+  requestCostMs: number;
+  executionOrder: number;
+  timeoutMs: number;
+  crawlerLeaf: DexDiscoveryCrawlerLeafId;
+}
 
 /**
  * The chains on which Curve's getPools/all endpoint is queried and counts as a
@@ -270,6 +305,121 @@ export function getGeckoTerminalDiscoveryTarget(
   };
 }
 
+export const DEX_DISCOVERY_BOUNDED_CRAWL_REASON =
+  "No provider completed a query for this deployment in the bounded crawl";
+export const DEX_DISCOVERY_FAILED_CRAWL_REASON =
+  "Bounded discovery crawl failed before a complete deployment census";
+export const DEX_DISCOVERY_PROVIDER_OUTAGE_REASON =
+  "All attempted token-pool provider queries failed";
+export const DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON =
+  "Provider census is not exhaustive for this chain";
+export const DEX_DISCOVERY_UNSUPPORTED_SCOPE_REASON =
+  "No registered token-pool provider supports this chain";
+
+export interface DexCensusLegacyCodecValue {
+  attemptResult: DexCensusAttemptResult;
+  legacyReason: string;
+}
+
+/** Lossless adapter for the existing D1 `outcome + reason` columns. */
+export function decodeDexCensusAttemptResult(
+  outcome: DexDeploymentOutcome,
+  reason: string,
+): DexCensusLegacyCodecValue {
+  if (outcome === "observed_pools") return { attemptResult: "observed_pools", legacyReason: reason };
+  if (outcome === "verified_no_pools") return { attemptResult: "verified_no_pools", legacyReason: reason };
+  if (reason === DEX_DISCOVERY_BOUNDED_CRAWL_REASON || reason === DEX_DISCOVERY_FAILED_CRAWL_REASON) {
+    return { attemptResult: "bounded_pending", legacyReason: reason };
+  }
+  if (reason === DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON) {
+    return { attemptResult: "provider_non_exhaustive", legacyReason: reason };
+  }
+  if (reason === DEX_DISCOVERY_UNSUPPORTED_SCOPE_REASON) {
+    return { attemptResult: "unsupported_scope", legacyReason: reason };
+  }
+  return { attemptResult: "provider_outage", legacyReason: reason };
+}
+
+export function encodeDexCensusAttemptResult(
+  value: DexCensusLegacyCodecValue,
+): { outcome: DexDeploymentOutcome; reason: string } {
+  const outcome =
+    value.attemptResult === "observed_pools" || value.attemptResult === "verified_no_pools"
+      ? value.attemptResult
+      : "provider_inaccessible";
+  return { outcome, reason: value.legacyReason };
+}
+
+export function isDexCensusAttemptComplete(
+  evidenceState: DexCensusEvidenceState,
+  attemptResult: DexCensusAttemptResult,
+): boolean {
+  return evidenceState === "current" &&
+    (attemptResult === "observed_pools" || attemptResult === "verified_no_pools");
+}
+
+export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapter[] = [
+  {
+    providerId: "coingecko", lifecycle: "active", supports: (chain) => Boolean(CG_CHAIN_MAP[chain]),
+    scope: "exhaustive", requestCostMs: 1_450, executionOrder: 10, timeoutMs: 15_000, crawlerLeaf: "coingecko",
+  },
+  {
+    providerId: "geckoterminal", lifecycle: "active",
+    supports: (chain, address) => getGeckoTerminalDiscoveryNetwork(chain, address) != null,
+    scope: "exhaustive", requestCostMs: 2_800, executionOrder: 20, timeoutMs: 15_000,
+    crawlerLeaf: "geckoterminal",
+  },
+  {
+    providerId: "dexscreener", lifecycle: "active", supports: (chain) => Boolean(DS_CHAIN_MAP[chain]),
+    scope: "exhaustive", requestCostMs: 1_700, executionOrder: 30, timeoutMs: 15_000,
+    crawlerLeaf: "dexscreener",
+  },
+  {
+    providerId: "curve", lifecycle: "active", supports: (chain) => CURVE_NATIVE_DISCOVERY_CHAINS.has(chain),
+    scope: "exhaustive", requestCostMs: 1_200, executionOrder: 40, timeoutMs: 15_000, crawlerLeaf: "curve",
+  },
+  {
+    providerId: "horizon", lifecycle: "active", supports: isHorizonDiscoveryDeployment,
+    scope: "exhaustive", requestCostMs: 1_600, executionOrder: 50, timeoutMs: 15_000, crawlerLeaf: "horizon",
+  },
+  {
+    providerId: "aquarius", lifecycle: "active", supports: isAquariusSorobanDeployment,
+    scope: "supplemental", requestCostMs: 8_000, executionOrder: 60, timeoutMs: 15_000, crawlerLeaf: "aquarius",
+  },
+  {
+    providerId: "tezos", lifecycle: "active", supports: isTezosDiscoveryDeployment,
+    scope: "exhaustive", requestCostMs: 16_000, executionOrder: 70, timeoutMs: 15_000, crawlerLeaf: "tezos",
+  },
+  {
+    providerId: "icon-balanced", lifecycle: "active", supports: isIconBalancedDiscoveryDeployment,
+    scope: "supplemental", requestCostMs: 8_000, executionOrder: 80, timeoutMs: 15_000,
+    crawlerLeaf: "icon-balanced",
+  },
+  {
+    providerId: "kava-swap", lifecycle: "active", supports: isKavaSwapDiscoveryDeployment,
+    scope: "supplemental", requestCostMs: 16_000, executionOrder: 90, timeoutMs: 15_000,
+    crawlerLeaf: "kava-swap",
+  },
+  {
+    providerId: "osmosis-sqs", lifecycle: "active", supports: isOsmosisSqsDiscoveryDeployment,
+    scope: "exhaustive", requestCostMs: 2_800, executionOrder: 100, timeoutMs: 15_000, crawlerLeaf: "cosmos",
+  },
+  {
+    providerId: "noble-swap", lifecycle: "active", supports: isNobleSwapDiscoveryDeployment,
+    scope: "exhaustive", requestCostMs: 2_000, executionOrder: 110, timeoutMs: 15_000, crawlerLeaf: "cosmos",
+  },
+  {
+    providerId: "soroban-exhaustive", lifecycle: "disabled", supports: () => false,
+    scope: "exhaustive", requestCostMs: 0, executionOrder: 120, timeoutMs: 15_000,
+    crawlerLeaf: "soroban-exhaustive",
+  },
+  {
+    providerId: "btcusd-public-https", lifecycle: "disabled", supports: () => false,
+    scope: "supplemental", requestCostMs: 0, executionOrder: 130, timeoutMs: 15_000,
+    crawlerLeaf: "btcusd-public-https",
+  },
+] as const;
+
 export interface DexCoverageWaiver {
   stablecoinId: string;
   chain: string;
@@ -305,40 +455,20 @@ export const DEX_COVERAGE_WAIVERS: readonly DexCoverageWaiver[] = EXCLUSIVE_UNSU
   }),
 );
 
-export const DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS: Readonly<Record<DexDiscoveryProvider, boolean>> = {
-  coingecko: true,
-  geckoterminal: true,
-  dexscreener: true,
-  curve: true,
-  horizon: true,
-  aquarius: false, // Aquarius index only; Soroswap/Phoenix are unregistered.
-  tezos: true, // TzKT token-holder census is chain-wide by construction.
-  "icon-balanced": false, // Balanced venue only, not chain-wide.
-  "kava-swap": false, // x/swap module only; Kava EVM venues exist.
-  // Osmosis' own sidecar index spans every pool module on the chain.
-  "osmosis-sqs": true,
-  // Noble's `swap` module is the chain's entire DEX surface (no CosmWasm).
-  "noble-swap": true,
-};
+export const DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS: Readonly<Record<DexDiscoveryProvider, boolean>> =
+  Object.fromEntries(
+    DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => [provider.providerId, provider.scope === "exhaustive"]),
+  ) as Record<DexDiscoveryProvider, boolean>;
 
 export function isDexDiscoveryProviderExhaustive(provider: DexDiscoveryProvider): boolean {
   return DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS[provider];
 }
 
 export function getDexDiscoveryProviders(chain: string, address?: string): DexDiscoveryProvider[] {
-  const providers: DexDiscoveryProvider[] = [];
-  if (CG_CHAIN_MAP[chain]) providers.push("coingecko");
-  if (getGeckoTerminalDiscoveryNetwork(chain, address)) providers.push("geckoterminal");
-  if (DS_CHAIN_MAP[chain]) providers.push("dexscreener");
-  if (CURVE_NATIVE_DISCOVERY_CHAINS.has(chain)) providers.push("curve");
-  if (isHorizonDiscoveryDeployment(chain, address)) providers.push("horizon");
-  if (isAquariusSorobanDeployment(chain, address)) providers.push("aquarius");
-  if (isTezosDiscoveryDeployment(chain, address)) providers.push("tezos");
-  if (isIconBalancedDiscoveryDeployment(chain, address)) providers.push("icon-balanced");
-  if (isKavaSwapDiscoveryDeployment(chain, address)) providers.push("kava-swap");
-  if (isOsmosisSqsDiscoveryDeployment(chain, address)) providers.push("osmosis-sqs");
-  if (isNobleSwapDiscoveryDeployment(chain, address)) providers.push("noble-swap");
-  return providers;
+  return DEX_DISCOVERY_PROVIDER_REGISTRY
+    .filter((provider) => provider.lifecycle === "active" && provider.supports(chain, address))
+    .sort((left, right) => left.executionOrder - right.executionOrder)
+    .map((provider) => provider.providerId);
 }
 
 /**

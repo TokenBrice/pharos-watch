@@ -1,8 +1,8 @@
 import {
   getActiveDexCoverageWaiver,
-  getDexDiscoveryProviders,
   getGeckoTerminalDiscoveryTarget,
-  isDexDiscoveryProviderExhaustive,
+  encodeDexCensusAttemptResult,
+  type DexCensusAttemptResult,
   type DexDeploymentOutcome,
 } from "@shared/lib/dex-deployment-coverage";
 import {
@@ -14,6 +14,15 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { batchExecute } from "../../lib/db";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
+import {
+  getRuntimeDexDiscoveryProviders,
+  isRuntimeDexDiscoveryProviderExhaustive,
+} from "./provider-registry";
+import {
+  isRetryableDexCensusLegacyReason,
+  resolveDexCensusAttempt,
+  type DexCensusAttemptSignals,
+} from "./census-state-machine";
 
 export interface DexDeploymentOutcomeWrite {
   stablecoinId: string;
@@ -45,6 +54,20 @@ WHERE stablecoin_id = ? AND chain = ? AND contract_address = ?`;
 
 function deploymentKey(chain: string, address: string): string {
   return canonicalExitRouteAssetKey(chain, address);
+}
+
+function legacyCensusColumns(
+  attemptResult: DexCensusAttemptResult,
+  legacyReason: string,
+): Pick<DexDeploymentOutcomeWrite, "outcome" | "reason"> {
+  return encodeDexCensusAttemptResult({ attemptResult, legacyReason });
+}
+
+function legacyCensusColumnsForSignals(
+  signals: DexCensusAttemptSignals,
+): Pick<DexDeploymentOutcomeWrite, "outcome" | "reason"> {
+  const attempt = resolveDexCensusAttempt(signals);
+  return legacyCensusColumns(attempt.attemptResult, attempt.legacyReason);
 }
 
 /**
@@ -82,7 +105,7 @@ export function classifyDexDeploymentOutcomes(params: {
 }): DexDeploymentOutcomeWrite[] {
   const exhaustiveSuccessfulChecks = new Set(
     params.providerChecks
-      .filter((check) => check.status === "success" && isDexDiscoveryProviderExhaustive(check.provider))
+      .filter((check) => check.status === "success" && isRuntimeDexDiscoveryProviderExhaustive(check.provider))
       .map((check) => deploymentKey(check.chain, check.address)),
   );
   const nonExhaustiveSuccessfulEmptyChecks = new Set(
@@ -90,7 +113,7 @@ export function classifyDexDeploymentOutcomes(params: {
       .filter(
         (check) =>
           check.status === "success" &&
-          !isDexDiscoveryProviderExhaustive(check.provider) &&
+          !isRuntimeDexDiscoveryProviderExhaustive(check.provider) &&
           (check.observedPoolCount ?? 0) === 0,
       )
       .map((check) => deploymentKey(check.chain, check.address)),
@@ -107,74 +130,28 @@ export function classifyDexDeploymentOutcomes(params: {
   );
 
   return params.deployments.map((deployment) => {
-    const providers = getDexDiscoveryProviders(deployment.chain, deployment.address);
+    const providers = getRuntimeDexDiscoveryProviders(deployment.chain, deployment.address);
     const key = deploymentKey(deployment.chain, deployment.address);
     const stagedPoolCount = params.pools.filter((pool) => matchesDeployment(pool, deployment)).length;
     const providerObservedPoolCount = params.providerChecks
       .filter((check) => check.status === "success" && deploymentKey(check.chain, check.address) === key)
       .reduce((max, check) => Math.max(max, check.observedPoolCount ?? 0), 0);
     const observedPoolCount = Math.max(stagedPoolCount, providerObservedPoolCount);
-    if (observedPoolCount > 0) {
-      return {
-        stablecoinId: params.stablecoinId,
-        chain: deployment.chain,
-        address: deployment.address,
-        outcome: "observed_pools",
-        providers,
-        reason: "At least one eligible direct-token pool was observed",
-        observedPoolCount,
-        observedAt: params.nowSec,
-      };
-    }
-    if (exhaustiveSuccessfulChecks.has(key)) {
-      return {
-        stablecoinId: params.stablecoinId,
-        chain: deployment.chain,
-        address: deployment.address,
-        outcome: "verified_no_pools",
-        providers,
-        reason: "A provider completed the direct-token query with no eligible pool",
-        observedPoolCount: 0,
-        observedAt: params.nowSec,
-      };
-    }
-    if (nonExhaustiveSuccessfulEmptyChecks.has(key)) {
-      return {
-        stablecoinId: params.stablecoinId,
-        chain: deployment.chain,
-        address: deployment.address,
-        outcome: "provider_inaccessible",
-        providers,
-        reason: DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON,
-        observedPoolCount: 0,
-        observedAt: params.nowSec,
-      };
-    }
-    if (degradedChecks.has(key)) {
-      return {
-        stablecoinId: params.stablecoinId,
-        chain: deployment.chain,
-        address: deployment.address,
-        outcome: "provider_inaccessible",
-        providers,
-        reason: "A completed direct-token provider response was schema-degraded",
-        observedPoolCount: 0,
-        observedAt: params.nowSec,
-      };
-    }
+    const attempt = resolveDexCensusAttempt({
+      observedPoolCount,
+      providerCount: providers.length,
+      exhaustiveSucceeded: exhaustiveSuccessfulChecks.has(key),
+      nonExhaustiveSucceededEmpty: nonExhaustiveSuccessfulEmptyChecks.has(key),
+      providerDegraded: degradedChecks.has(key),
+      providerFailed: failedChecks.has(key),
+    });
     return {
       stablecoinId: params.stablecoinId,
       chain: deployment.chain,
       address: deployment.address,
-      outcome: "provider_inaccessible",
+      ...legacyCensusColumns(attempt.attemptResult, attempt.legacyReason),
       providers,
-      reason:
-        providers.length === 0
-          ? "No registered token-pool provider supports this chain"
-          : failedChecks.has(key)
-            ? DEX_DISCOVERY_PROVIDER_OUTAGE_REASON
-            : DEX_DISCOVERY_BOUNDED_CRAWL_REASON,
-      observedPoolCount: 0,
+      observedPoolCount,
       observedAt: params.nowSec,
     };
   });
@@ -183,30 +160,28 @@ export function classifyDexDeploymentOutcomes(params: {
 export function buildStaticInaccessibleDeploymentOutcomes(nowSec: number): DexDeploymentOutcomeWrite[] {
   return ACTIVE_STABLECOINS.flatMap((meta) =>
     [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]
-      .filter((deployment) => getDexDiscoveryProviders(deployment.chain, deployment.address).length === 0)
+      .filter((deployment) => getRuntimeDexDiscoveryProviders(deployment.chain, deployment.address).length === 0)
       .map((deployment) => ({
         stablecoinId: meta.id,
         chain: deployment.chain,
         address: deployment.address,
-        outcome: "provider_inaccessible" as const,
+        ...legacyCensusColumnsForSignals({
+          observedPoolCount: 0,
+          providerCount: 0,
+          exhaustiveSucceeded: false,
+          nonExhaustiveSucceededEmpty: false,
+          providerDegraded: false,
+          providerFailed: false,
+        }),
         providers: [],
-        reason: "No registered token-pool provider supports this chain",
         observedPoolCount: 0,
         observedAt: nowSec,
       })),
   );
 }
 
-const DEX_DISCOVERY_BOUNDED_CRAWL_REASON =
-  "No provider completed a query for this deployment in the bounded crawl";
-const DEX_DISCOVERY_FAILED_CRAWL_REASON =
-  "Bounded discovery crawl failed before a complete deployment census";
-const DEX_DISCOVERY_PROVIDER_OUTAGE_REASON =
-  "All attempted token-pool provider queries failed";
-const DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON = "Provider census is not exhaustive for this chain";
-
 export function isRetryableDiscoveryInaccessibleReason(reason: string): boolean {
-  return reason === DEX_DISCOVERY_BOUNDED_CRAWL_REASON || reason === DEX_DISCOVERY_FAILED_CRAWL_REASON;
+  return isRetryableDexCensusLegacyReason(reason);
 }
 
 export function buildFailedCrawlDeploymentOutcomes(params: {
@@ -214,16 +189,27 @@ export function buildFailedCrawlDeploymentOutcomes(params: {
   deployments: readonly ContractDeployment[];
   nowSec: number;
 }): DexDeploymentOutcomeWrite[] {
-  return params.deployments.map((deployment) => ({
-    stablecoinId: params.stablecoinId,
-    chain: deployment.chain,
-    address: deployment.address,
-    outcome: "provider_inaccessible",
-    providers: getDexDiscoveryProviders(deployment.chain, deployment.address),
-    reason: DEX_DISCOVERY_FAILED_CRAWL_REASON,
-    observedPoolCount: 0,
-    observedAt: params.nowSec,
-  }));
+  return params.deployments.map((deployment) => {
+    const providers = getRuntimeDexDiscoveryProviders(deployment.chain, deployment.address);
+    const attempt = resolveDexCensusAttempt({
+      observedPoolCount: 0,
+      providerCount: providers.length,
+      exhaustiveSucceeded: false,
+      nonExhaustiveSucceededEmpty: false,
+      providerDegraded: false,
+      providerFailed: false,
+      boundedReason: "crawl-failed",
+    });
+    return {
+      stablecoinId: params.stablecoinId,
+      chain: deployment.chain,
+      address: deployment.address,
+      ...legacyCensusColumns(attempt.attemptResult, attempt.legacyReason),
+      providers,
+      observedPoolCount: 0,
+      observedAt: params.nowSec,
+    };
+  });
 }
 
 export async function upsertDexDeploymentOutcomes(

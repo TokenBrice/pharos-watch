@@ -1,4 +1,13 @@
 import { keccak256 } from "viem/utils";
+import {
+  DEX_EXECUTION_CAPABILITY_REGISTRY,
+  getDexExecutionCapabilityRegistration,
+  isDexExecutionProfileAdmittedForScoring,
+} from "@shared/lib/p4-exit-route-capability-policy";
+import {
+  DEX_EXACT_QUOTE_ADAPTER_IDS,
+  type DexExactQuoteAdapterId,
+} from "@shared/types/measured-execution";
 
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchEvmCodeAtBlock } from "../../lib/evm-rpc";
@@ -19,6 +28,36 @@ export interface DexMeasuredExecutionDeployment {
   factoryAddress: `0x${string}`;
   expectedFactoryCodeHash: `0x${string}`;
 }
+
+export interface DexExactQuoteAdapterRegistrationSlot {
+  adapterId: DexExactQuoteAdapterId;
+  platform: "evm" | "solana";
+  profileIds: readonly string[];
+  implementationModule: string;
+}
+
+const ADAPTER_IMPLEMENTATION_MODULES: Readonly<Record<DexExactQuoteAdapterId, string>> = {
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2]: "./adapters/quoter-v2",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4]: "./adapters/uniswap-v4",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.curveCryptoSwap]: "./curve-cryptoswap",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwap]: "./curve-stableswap",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwapNg]: "./curve-stableswap-ng",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite]: "./curve-composite",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.evmV2]: "../dex-liquidity/execution-targets/evm-v2",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.solanaClmm]: "./solana-clmm/inventory",
+};
+
+/** One predeclared adapter slot per exact execution family. */
+export const DEX_EXACT_QUOTE_ADAPTER_REGISTRY: readonly DexExactQuoteAdapterRegistrationSlot[] =
+  Object.values(DEX_EXACT_QUOTE_ADAPTER_IDS).map((adapterId) => {
+    const registrations = DEX_EXECUTION_CAPABILITY_REGISTRY.filter((entry) => entry.adapterId === adapterId);
+    return {
+      adapterId,
+      platform: registrations[0]?.platform ?? "evm",
+      profileIds: registrations.map((entry) => entry.profileId),
+      implementationModule: ADAPTER_IMPLEMENTATION_MODULES[adapterId],
+    };
+  });
 
 /**
  * Reviewed against the protocols' official deployment registries. Bytecode
@@ -137,22 +176,19 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
  * after the OOM split-invocation became permanent.
  */
 export const DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS: readonly string[] = [
-  "aerodrome-slipstream-quoter-v2:base",
-  "uniswap-v3-quoter-v2:ethereum",
-  "uniswap-v3-quoter-v2:polygon",
-  "uniswap-v3-quoter-v2:arbitrum",
-  "uniswap-v3-quoter-v2:celo",
-  "pancakeswap-v3-quoter-v2:base",
-  "pancakeswap-v3-quoter-v2:bsc",
-  "pancakeswap-v3-quoter-v2:ethereum",
+  ...new Set(
+    DEX_EXECUTION_CAPABILITY_REGISTRY.flatMap((registration) =>
+      registration.eligibleDeploymentKeys ?? [],
+    ),
+  ),
 ];
 
-function deploymentKey(adapterProfileId: string, chain: string): string {
-  return `${adapterProfileId.trim().toLowerCase()}:${chain.trim().toLowerCase()}`;
-}
-
 export function isDexMeasuredExecutionDeploymentScoreEligible(adapterProfileId: string, chain: string): boolean {
-  return DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS.includes(deploymentKey(adapterProfileId, chain));
+  const registration = getDexExecutionCapabilityRegistration(adapterProfileId);
+  return registration != null && isDexExecutionProfileAdmittedForScoring(
+    { adapterProfileId, chain },
+    registration,
+  );
 }
 
 export function getDexMeasuredExecutionDeployment(

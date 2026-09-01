@@ -1,5 +1,9 @@
 import { DEX_MEASURED_MAX_COST_BPS, getDexMeasuredExecutionFreshnessMaxSec,
-  getDexMeasuredExecutionProbeNotionals, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+  DEX_EXACT_QUOTE_ADAPTER_IDS, getDexMeasuredExecutionProbeNotionals, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import {
+  getDexExecutionCapabilityRegistration,
+  isDexExecutionProfileAdmittedForScoring,
+} from "@shared/lib/p4-exit-route-capability-policy";
 import { DexExitRouteObservationSchema, MAX_DEX_EXIT_ROUTE_OBSERVATIONS, type DexExitRouteObservation } from "@shared/types/market";
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { buildMeasuredLedgerCohortKey, countMeasuredLadderCostBoundViolations,
@@ -20,6 +24,8 @@ import { getCurveCompositePolicy, isCurveCompositeAdapterProfileId,
   type CurveCompositePoolPolicy } from "./curve-composite";
 import { UNISWAP_V4_ADAPTER_PROFILE_ID, getUniswapV4Deployment,
   type UniswapV4Deployment } from "./uniswap-v4";
+import { resolveQuoterV2AdapterDeployment } from "./adapters/quoter-v2";
+import { resolveUniswapV4AdapterDeployment } from "./adapters/uniswap-v4";
 
 export const MEASURED_EXECUTION_RPC_REQUEST_LIMIT = 1_300;
 const RPC_ADMISSION_FRAGMENTATION_HEADROOM = 80;
@@ -57,11 +63,13 @@ export type TargetDeployment =
     };
 
 export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): TargetDeployment | null {
-  if (target.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID) {
-    const deployment = getUniswapV4Deployment(target.chain);
+  const registration = getDexExecutionCapabilityRegistration(target.adapterProfileId);
+  if (!registration) return null;
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4) {
+    const deployment = resolveUniswapV4AdapterDeployment(target);
     return deployment ? { kind: "uniswap-v4", config: deployment } : null;
   }
-  if (target.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID) {
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.curveCryptoSwap) {
     const prefix = `${target.chain.trim().toLowerCase()}:`;
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
@@ -70,7 +78,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
       ? { kind: "curve-cryptoswap", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
-  if (target.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwap) {
     const prefix = `${target.chain.trim().toLowerCase()}:`;
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
@@ -79,7 +87,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
       ? { kind: "curve-stableswap", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
-  if (target.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwapNg) {
     const prefix = `${target.chain.trim().toLowerCase()}:`;
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
@@ -88,7 +96,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
       ? { kind: "curve-stableswap-ng", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
-  if (isCurveCompositeAdapterProfileId(target.adapterProfileId)) {
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite) {
     const prefix = `${target.chain.trim().toLowerCase()}:`;
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
@@ -97,13 +105,19 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
       ? { kind: "curve-composite", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
-  const deployment = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain);
+  const deployment = registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2
+    ? resolveQuoterV2AdapterDeployment(target)
+    : null;
   return deployment ? { kind: "quoter-v2", config: deployment } : null;
 }
 
 export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExecutionTarget): boolean {
+  const registration = getDexExecutionCapabilityRegistration(target.adapterProfileId);
+  if (!registration || !isDexExecutionProfileAdmittedForScoring(
+    { adapterProfileId: target.adapterProfileId, chain: target.chain },
+    registration,
+  )) return false;
   const deployment = resolveTargetDeployment(target);
-  if (isDexMeasuredExecutionDeploymentScoreEligible(target.adapterProfileId, target.chain)) return true;
   switch (deployment?.kind) {
     case "curve-cryptoswap":
     case "curve-stableswap":
@@ -112,6 +126,7 @@ export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExe
     case "uniswap-v4":
       return deployment.config.mode === "active" && deployment.config.scoreEligible === true;
     case "quoter-v2":
+      return isDexMeasuredExecutionDeploymentScoreEligible(target.adapterProfileId, target.chain);
     case "curve-composite":
     case undefined:
       return false;

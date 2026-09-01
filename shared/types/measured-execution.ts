@@ -4,6 +4,9 @@ import { ExitRouteCapacityPointSchema, ExitRouteObservationHistorySchema } from 
 
 export const DEX_MEASURED_EXECUTION_SCHEMA_VERSION = "dex-measured-execution-v1" as const;
 export const DEX_MEASURED_TARGET_SCHEMA_VERSION = "dex-measured-target-v1" as const;
+export const DEX_EXECUTION_PROFILE_SCHEMA_VERSION = "dex-execution-profile-v2" as const;
+export const DEX_EXECUTION_TARGET_SCHEMA_VERSION = "dex-execution-target-v2" as const;
+export const DEX_EXECUTION_PERSISTENCE_MODE = "v1-compatible-dual-read" as const;
 export const DEX_MEASURED_MAX_COST_BPS = 200;
 export const DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO = 1.02;
 const DEX_MEASURED_MARGINAL_NOTIONAL_USD = 1_000;
@@ -28,6 +31,105 @@ const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
 const CanonicalBytes32Schema = z.string().regex(/^0x[a-f0-9]{64}$/);
+const CanonicalSolanaIdentitySchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,64}$/);
+
+export const DEX_EXACT_QUOTE_ADAPTER_IDS = {
+  quoterV2: "evm-quoter-v2",
+  uniswapV4: "evm-uniswap-v4",
+  curveCryptoSwap: "evm-curve-cryptoswap",
+  curveStableSwap: "evm-curve-stableswap",
+  curveStableSwapNg: "evm-curve-stableswap-ng",
+  curveComposite: "evm-curve-composite",
+  evmV2: "evm-v2-reserve-exact",
+  solanaClmm: "solana-clmm",
+} as const;
+export const DEX_EXACT_QUOTE_ADAPTER_ID_VALUES = Object.values(
+  DEX_EXACT_QUOTE_ADAPTER_IDS,
+) as [DexExactQuoteAdapterId, ...DexExactQuoteAdapterId[]];
+
+export type DexExactQuoteAdapterId =
+  (typeof DEX_EXACT_QUOTE_ADAPTER_IDS)[keyof typeof DEX_EXACT_QUOTE_ADAPTER_IDS];
+export type DexExecutionProfileId = string;
+
+export interface DexRequestBudget {
+  readonly maxRequests: number;
+  readonly deadlineMs: number;
+  readonly remainingRequests: number;
+  tryConsume(count?: number): boolean;
+}
+
+export type ResolvedDexDeployment =
+  | {
+      platform: "evm";
+      chain: string;
+      endpointAddress: `0x${string}`;
+      deploymentIdentity: string;
+    }
+  | {
+      platform: "solana";
+      chain: "solana";
+      programId: string;
+      deploymentIdentity: string;
+    };
+
+export interface DexQuoteCohortContext {
+  readonly observedAt: number;
+  readonly requestBudget: DexRequestBudget;
+  readonly signal?: AbortSignal;
+}
+
+export interface DexQuoteGridInput<TTarget, TPinnedState> {
+  readonly target: TTarget;
+  readonly pinnedState: TPinnedState;
+  readonly demandedInputAmountsUsd: readonly number[];
+  readonly requestBudget: DexRequestBudget;
+  readonly signal?: AbortSignal;
+}
+
+export type DexQuoteStateIdentity =
+  | {
+      platform: "evm";
+      blockNumber: number;
+      blockHash: `0x${string}`;
+      endpointCodeHash: `0x${string}`;
+    }
+  | {
+      platform: "solana";
+      slot: number;
+      blockHash: string;
+      programId: string;
+      stateAccounts: readonly string[];
+      tickArrayAccounts: readonly string[];
+    };
+
+export interface DexQuoteGridResult<TProof> {
+  readonly targetId: string;
+  readonly demandedInputAmountsUsd: readonly number[];
+  readonly outputAmountsUsd: readonly number[];
+  readonly capacityAt200BpsUsd: number;
+  readonly observedAt: number;
+  readonly stateIdentity: DexQuoteStateIdentity;
+  readonly proof: TProof;
+}
+
+export type DexProofValidation =
+  | { ok: true }
+  | { ok: false; reasons: readonly string[] };
+
+/**
+ * Platform-neutral exact-quote seam. Implementations must consume or cancel
+ * every response body before resolving, including failure paths.
+ */
+export interface DexExactQuoteAdapter<TTarget, TPinnedState, TProof> {
+  readonly adapterId: DexExactQuoteAdapterId;
+  readonly platform: "evm" | "solana";
+  readonly profileIds: readonly DexExecutionProfileId[];
+  resolveDeployment(target: TTarget): ResolvedDexDeployment;
+  estimateRequestBudget(targets: readonly TTarget[]): DexRequestBudget;
+  pinState(context: DexQuoteCohortContext): Promise<TPinnedState>;
+  quoteGrid(input: DexQuoteGridInput<TTarget, TPinnedState>): Promise<DexQuoteGridResult<TProof>>;
+  validateProof(result: DexQuoteGridResult<TProof>): DexProofValidation;
+}
 export const DEX_MEASURED_ADAPTER_PROFILE_IDS = {
   curveStableSwap: "curve-stableswap-main-registry-get-dy-v1",
   curveStableSwapNg: "curve-stableswap-ng-factory-get-dy-v2",
@@ -273,6 +375,248 @@ export const DexMeasuredExecutionProfileSchema = z.object({
   quoteProof: z.array(DexMeasuredExecutionQuotePointProofSchema).min(1).max(16),
 });
 export type DexMeasuredExecutionProfile = z.infer<typeof DexMeasuredExecutionProfileSchema>;
+
+const DexExecutionIdentityV2Schema = z.object({
+  stablecoinId: z.string().min(1),
+  protocol: z.string().min(1).max(64),
+  chain: z.string().min(1).max(64),
+  poolId: z.string().min(1).max(256),
+  tokenIn: z.object({
+    identity: z.string().min(1).max(128),
+    symbol: z.string().min(1).max(64),
+    decimals: z.number().int().min(0).max(255),
+    referencePriceUsd: z.number().finite().positive(),
+    trackedAssetId: z.string().min(1).optional(),
+  }),
+  tokenOut: z.object({
+    identity: z.string().min(1).max(128),
+    symbol: z.string().min(1).max(64),
+    decimals: z.number().int().min(0).max(255),
+    referencePriceUsd: z.number().finite().positive(),
+    trackedAssetId: z.string().min(1).optional(),
+  }),
+});
+
+const DexExecutionTargetEvmPayloadV2Schema = z.object({
+  platform: z.literal("evm"),
+  poolIdentity: z.union([CanonicalEvmAddressSchema, CanonicalBytes32Schema]),
+  poolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
+  feePips: z.number().int().min(0).max(1_000_000).optional(),
+  tickSpacing: z.number().int().min(1).max(8_388_607).optional(),
+  hookAddress: CanonicalEvmAddressSchema.optional(),
+  legacyV1: DexMeasuredExecutionTargetSchema.optional(),
+});
+
+const DexExecutionTargetSolanaPayloadV2Schema = z.object({
+  platform: z.literal("solana"),
+  poolAccount: CanonicalSolanaIdentitySchema,
+  programId: CanonicalSolanaIdentitySchema,
+  tokenMintIn: CanonicalSolanaIdentitySchema,
+  tokenMintOut: CanonicalSolanaIdentitySchema,
+  stateAccounts: z.array(CanonicalSolanaIdentitySchema).min(1).max(32),
+  tickArrayAccounts: z.array(CanonicalSolanaIdentitySchema).max(64),
+});
+
+export const DexExecutionTargetV2Schema = z.object({
+  schemaVersion: z.literal(DEX_EXECUTION_TARGET_SCHEMA_VERSION),
+  targetId: z.string().min(1).max(512),
+  adapterId: z.enum(DEX_EXACT_QUOTE_ADAPTER_ID_VALUES),
+  profileId: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
+  identity: DexExecutionIdentityV2Schema,
+  retainedTvlUsd: z.number().finite().positive(),
+  retainedPoolPriceUsd: z.number().finite().positive(),
+  capturedAt: z.number().int().nonnegative(),
+  payload: z.discriminatedUnion("platform", [
+    DexExecutionTargetEvmPayloadV2Schema,
+    DexExecutionTargetSolanaPayloadV2Schema,
+  ]),
+});
+export type DexExecutionTargetV2 = z.infer<typeof DexExecutionTargetV2Schema>;
+
+const DexExecutionProfileEvmPayloadV2Schema = z.object({
+  platform: z.literal("evm"),
+  blockNumber: z.number().int().nonnegative(),
+  blockHash: CanonicalBytes32Schema.optional(),
+  executionEndpoint: z.object({
+    address: CanonicalEvmAddressSchema,
+    codeHash: CanonicalBytes32Schema,
+  }),
+  callProof: z.array(z.object({
+    target: CanonicalEvmAddressSchema,
+    callData: z.string().regex(/^0x[0-9a-f]+$/),
+    returnData: z.string().regex(/^0x[0-9a-f]*$/),
+  })).min(1).max(64),
+  legacyV1: DexMeasuredExecutionProfileSchema.optional(),
+});
+
+const DexExecutionProfileSolanaPayloadV2Schema = z.object({
+  platform: z.literal("solana"),
+  slot: z.number().int().nonnegative(),
+  blockHash: CanonicalSolanaIdentitySchema,
+  programId: CanonicalSolanaIdentitySchema,
+  poolAccount: CanonicalSolanaIdentitySchema,
+  stateAccounts: z.array(CanonicalSolanaIdentitySchema).min(1).max(32),
+  tickArrayAccounts: z.array(CanonicalSolanaIdentitySchema).max(64),
+  accountProof: z.array(z.object({
+    account: CanonicalSolanaIdentitySchema,
+    owner: CanonicalSolanaIdentitySchema,
+    dataHash: z.string().regex(/^[a-f0-9]{64}$/),
+  })).min(1).max(96),
+});
+
+export const DexExecutionProfileV2Schema = z.object({
+  schemaVersion: z.literal(DEX_EXECUTION_PROFILE_SCHEMA_VERSION),
+  kind: z.literal("measured-executable-depth"),
+  targetId: z.string().min(1).max(512),
+  targetGenerationId: z.string().min(1).max(128),
+  quoteGenerationId: z.string().min(1).max(128),
+  adapterId: z.enum(DEX_EXACT_QUOTE_ADAPTER_ID_VALUES),
+  profileId: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
+  identity: DexExecutionIdentityV2Schema,
+  retainedTvlUsdAtQuote: z.number().finite().positive(),
+  retainedPoolPriceUsdAtQuote: z.number().finite().positive(),
+  quotedAt: z.number().int().nonnegative(),
+  maxCostBps: z.literal(DEX_MEASURED_MAX_COST_BPS),
+  demandedInputAmountsUsd: z.array(z.number().finite().positive()).min(1).max(16),
+  outputAmountsUsd: z.array(z.number().finite().nonnegative()).min(1).max(16),
+  capacityCurve: z.array(ExitRouteCapacityPointSchema).length(DEX_MEASURED_CAPACITY_NOTIONALS_USD.length),
+  observationHistory: DexMeasuredExecutionObservationHistorySchema.optional(),
+  payload: z.discriminatedUnion("platform", [
+    DexExecutionProfileEvmPayloadV2Schema,
+    DexExecutionProfileSolanaPayloadV2Schema,
+  ]),
+}).superRefine((profile, ctx) => {
+  if (profile.demandedInputAmountsUsd.length !== profile.outputAmountsUsd.length) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["outputAmountsUsd"],
+      message: "Every demanded input amount requires one exact output amount",
+    });
+  }
+});
+export type DexExecutionProfileV2 = z.infer<typeof DexExecutionProfileV2Schema>;
+
+export const DexExecutionTargetEnvelopeSchema = z.union([
+  DexMeasuredExecutionTargetSchema,
+  DexExecutionTargetV2Schema,
+]);
+export const DexExecutionProfileEnvelopeSchema = z.union([
+  DexMeasuredExecutionProfileSchema,
+  DexExecutionProfileV2Schema,
+]);
+export type DexExecutionTargetEnvelope = z.infer<typeof DexExecutionTargetEnvelopeSchema>;
+export type DexExecutionProfileEnvelope = z.infer<typeof DexExecutionProfileEnvelopeSchema>;
+
+function adapterIdForV1Profile(profileId: string): DexExactQuoteAdapterId {
+  if (
+    profileId === "uniswap-v3-quoter-v2" ||
+    profileId === "pancakeswap-v3-quoter-v2" ||
+    profileId === "aerodrome-slipstream-quoter-v2"
+  ) return DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2;
+  if (profileId === "uniswap-v4-hook-free-quoter-v1") return DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4;
+  if (profileId === "curve-cryptoswap-get-dy-v1") return DEX_EXACT_QUOTE_ADAPTER_IDS.curveCryptoSwap;
+  if (profileId === DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap) {
+    return DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwap;
+  }
+  if (profileId === DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg) {
+    return DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwapNg;
+  }
+  return DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite;
+}
+
+function identityV2FromV1(input: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile) {
+  const stablecoinId = "stablecoinId" in input ? input.stablecoinId : input.tokenIn.trackedAssetId;
+  if (!stablecoinId) throw new Error(`V1 measured execution row has no tracked input identity: ${input.targetId}`);
+  return {
+    stablecoinId,
+    protocol: input.protocol,
+    chain: input.chain,
+    poolId: input.poolId,
+    tokenIn: { ...input.tokenIn, identity: input.tokenIn.address },
+    tokenOut: { ...input.tokenOut, identity: input.tokenOut.address },
+  };
+}
+
+/** Lossless V1 wrapper used by dual readers; active persistence remains V1. */
+export function projectDexMeasuredExecutionTargetToV2(input: DexMeasuredExecutionTarget): DexExecutionTargetV2 {
+  const target = DexMeasuredExecutionTargetSchema.parse(input);
+  return DexExecutionTargetV2Schema.parse({
+    schemaVersion: DEX_EXECUTION_TARGET_SCHEMA_VERSION,
+    targetId: target.targetId,
+    adapterId: adapterIdForV1Profile(target.adapterProfileId),
+    profileId: target.adapterProfileId,
+    identity: identityV2FromV1(target),
+    retainedTvlUsd: target.retainedTvlUsd,
+    retainedPoolPriceUsd: target.retainedPoolPriceUsd,
+    capturedAt: target.capturedAt,
+    payload: {
+      platform: "evm",
+      poolIdentity: target.poolId.slice(target.poolId.lastIndexOf(":") + 1),
+      poolTokenAddresses: target.poolTokenAddresses ?? [target.tokenIn.address, target.tokenOut.address],
+      ...(target.feePips != null ? { feePips: target.feePips } : {}),
+      ...(target.tickSpacing != null ? { tickSpacing: target.tickSpacing } : {}),
+      ...(target.hookAddress != null ? { hookAddress: target.hookAddress } : {}),
+      legacyV1: target,
+    },
+  });
+}
+
+/** Lossless V1 wrapper used by dual readers; active persistence remains V1. */
+export function projectDexMeasuredExecutionProfileToV2(input: DexMeasuredExecutionProfile): DexExecutionProfileV2 {
+  const profile = DexMeasuredExecutionProfileSchema.parse(input);
+  return DexExecutionProfileV2Schema.parse({
+    schemaVersion: DEX_EXECUTION_PROFILE_SCHEMA_VERSION,
+    kind: profile.kind,
+    targetId: profile.targetId,
+    targetGenerationId: profile.targetGenerationId,
+    quoteGenerationId: profile.quoteGenerationId,
+    adapterId: adapterIdForV1Profile(profile.adapterProfileId),
+    profileId: profile.adapterProfileId,
+    identity: identityV2FromV1(profile),
+    retainedTvlUsdAtQuote: profile.retainedTvlUsdAtQuote,
+    retainedPoolPriceUsdAtQuote: profile.retainedPoolPriceUsdAtQuote,
+    quotedAt: profile.quotedAt,
+    maxCostBps: profile.maxCostBps,
+    demandedInputAmountsUsd: profile.quoteProof.map((point) => point.inputUsd),
+    outputAmountsUsd: profile.quoteProof.map((point) => point.outputUsd),
+    capacityCurve: profile.capacityCurve,
+    payload: {
+      platform: "evm",
+      blockNumber: profile.blockNumber,
+      executionEndpoint: profile.executionEndpoint,
+      callProof: profile.quoteProof.map((point) => ({
+        target: profile.executionEndpoint.address,
+        callData: point.callData,
+        returnData: point.returnData,
+      })),
+      legacyV1: profile,
+    },
+  });
+}
+
+export function readDexExecutionTargetV2(input: unknown): DexExecutionTargetV2 {
+  const parsed = DexExecutionTargetEnvelopeSchema.parse(input);
+  return parsed.schemaVersion === DEX_MEASURED_TARGET_SCHEMA_VERSION
+    ? projectDexMeasuredExecutionTargetToV2(parsed)
+    : parsed;
+}
+
+export function readDexExecutionProfileV2(input: unknown): DexExecutionProfileV2 {
+  const parsed = DexExecutionProfileEnvelopeSchema.parse(input);
+  return parsed.schemaVersion === DEX_MEASURED_EXECUTION_SCHEMA_VERSION
+    ? projectDexMeasuredExecutionProfileToV2(parsed)
+    : parsed;
+}
+
+export function projectDexExecutionTargetToV1(input: DexExecutionTargetEnvelope): DexMeasuredExecutionTarget | null {
+  if (input.schemaVersion === DEX_MEASURED_TARGET_SCHEMA_VERSION) return input;
+  return input.payload.platform === "evm" ? input.payload.legacyV1 ?? null : null;
+}
+
+export function projectDexExecutionProfileToV1(input: DexExecutionProfileEnvelope): DexMeasuredExecutionProfile | null {
+  if (input.schemaVersion === DEX_MEASURED_EXECUTION_SCHEMA_VERSION) return input;
+  return input.payload.platform === "evm" ? input.payload.legacyV1 ?? null : null;
+}
 
 /** Public, proof-free projection retained on DEX pool rows. */
 export const DexMeasuredExecutionPublicProfileSchema = DexMeasuredExecutionProfileSchema.omit({

@@ -1,29 +1,23 @@
-import {
-  getDexDiscoveryProviders,
-  isCensusProviderSetSupersededByRegistry,
-} from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { ExitRouteObservationCoverage } from "@shared/types/market";
 import type { ContractDeployment } from "@shared/types/core";
+import {
+  getRuntimeDexDiscoveryProviders,
+  isRuntimeCensusProviderSetSupersededByRegistry,
+  DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY,
+} from "../dex-discovery/provider-registry";
 import { tryParseJson } from "../../lib/json-parse";
 import { estimateDiscoverySweepPeriodSec } from "../dex-discovery/target-window";
-import { isRetryableDiscoveryInaccessibleReason } from "../dex-discovery/deployment-outcomes";
 import { DISCOVERY_TIERS } from "../dex-discovery/types";
+import {
+  classifyStoredDexCensusState,
+  isStoredDexCensusEvidenceStale,
+} from "../dex-discovery/census-state-machine";
 
 const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
-const DEX_DISCOVERY_PROVIDER_IDS = new Set([
-  "coingecko",
-  "geckoterminal",
-  "dexscreener",
-  "curve",
-  "horizon",
-  "aquarius",
-  "tezos",
-  "icon-balanced",
-  "kava-swap",
-  "osmosis-sqs",
-  "noble-swap",
-]);
+const DEX_DISCOVERY_PROVIDER_IDS = new Set<string>(
+  DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY.map((provider) => provider.providerId),
+);
 
 /**
  * Freshness floor for every coin. The lowest-priority discovery cohort is
@@ -181,7 +175,7 @@ export function classifyDexPlaceholderCoverage(params: {
   const expectedKeys = new Set<string>();
   for (const deployment of params.deployments) {
     const key = deploymentKey(deployment.chain, deployment.address);
-    if (getDexDiscoveryProviders(deployment.chain, deployment.address).length === 0) {
+    if (getRuntimeDexDiscoveryProviders(deployment.chain, deployment.address).length === 0) {
       unsupportedChainByKey.set(key, deployment.chain);
     } else {
       expectedKeys.add(key);
@@ -252,74 +246,65 @@ export function classifyDexPlaceholderCoverage(params: {
         newestObservedAtSec === null
           ? row.observed_at
           : Math.max(newestObservedAtSec, row.observed_at);
-      if (
-        row.observed_at > params.nowSec ||
-        params.nowSec - row.observed_at > maxAgeSec
-      ) {
-        staleOutcomeCount++;
-      }
-
+      if (isStoredDexCensusEvidenceStale({
+        observedAt: row.observed_at,
+        nowSec: params.nowSec,
+        maxAgeSec,
+      })) staleOutcomeCount++;
       const providerCount = parseProviderCount(row.provider_set_json);
       if (providerCount === null) {
         invalidOutcomeCount++;
         continue;
       }
-      if (row.outcome === "verified_no_pools") {
-        if (
-          !Number.isInteger(row.discovery_last_crawl_at) ||
-          (row.discovery_last_crawl_at ?? 0) <= 0 ||
-          (row.discovery_last_crawl_at ?? 0) > params.nowSec
-        ) {
-          invalidOutcomeCount++;
-          continue;
-        }
-        if ((row.discovery_last_crawl_at ?? 0) > row.observed_at) {
-          supersededOutcomeCount++;
-          continue;
-        }
-        if (row.observed_pool_count !== 0 || providerCount === 0) {
-          invalidOutcomeCount++;
-        } else {
+      const censusState = classifyStoredDexCensusState({
+        outcome: row.outcome,
+        reason: row.reason,
+        observedPoolCount: row.observed_pool_count,
+        observedAt: row.observed_at,
+        discoveryLastCrawlAt: row.discovery_last_crawl_at,
+        providerCount,
+        nowSec: params.nowSec,
+        maxAgeSec,
+        providerSetSuperseded: isRuntimeCensusProviderSetSupersededByRegistry(
+          row.chain,
+          row.contract_address,
+          providerCount,
+        ),
+      });
+      switch (censusState.disposition) {
+        case "verified-no-pools":
           verifiedNoPoolsCount++;
-        }
-      } else if (row.outcome === "observed_pools") {
-        if (row.observed_pool_count <= 0 || providerCount === 0) {
-          invalidOutcomeCount++;
-        } else {
+          break;
+        case "observed-pools":
           observedPoolsCount++;
-        }
-      } else if (row.outcome === "provider_inaccessible") {
-        if (row.observed_pool_count !== 0) {
-          invalidOutcomeCount++;
-        } else if (
-          isCensusProviderSetSupersededByRegistry(
-            row.chain,
-            row.contract_address,
-            providerCount,
-          )
-        ) {
+          break;
+        case "superseded":
           // The row claims no registered provider supports this chain while the
           // registry now resolves one (this key is only reviewed because
-          // `getDexDiscoveryProviders()` returned a provider above). It is a
+          // `getRuntimeDexDiscoveryProviders()` returned a provider above). It is a
           // pre-coverage artifact the crawl rotation has not overwritten yet, so
           // it is superseded evidence — publishing it as a standing scope limit
           // attributed a solved integration gap to "Pharos has no method here".
           supersededOutcomeCount++;
-        } else if (providerCount === 0) {
+          break;
+        case "unsupported-scope":
           providerInaccessibleCount++;
           unsupportedMethodOutcomeCount++;
           increment(reasonCounts, "deploymentCensusUnsupportedMethod");
-        } else if (isRetryableDiscoveryInaccessibleReason(row.reason)) {
+          break;
+        case "bounded-pending":
           // Transport/budget misses stay a discovery deferral. Treating them as
           // a provider outage published "a data feed failed" for healthy
           // GeckoTerminal/DexScreener chains the crawl simply did not finish.
           missingOutcomeCount++;
-        } else {
+          break;
+        case "provider-outage":
           providerInaccessibleCount++;
           increment(reasonCounts, "deploymentCensusProviderOutage");
-        }
-      } else {
-        invalidOutcomeCount++;
+          break;
+        case "invalid":
+          invalidOutcomeCount++;
+          break;
       }
     }
   }
