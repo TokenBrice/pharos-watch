@@ -279,13 +279,12 @@ async function buildRedemptionOutputValuation(args: {
   }
 
   try {
-    const legValues: Array<{ assetId: string; valueUsd: number | null }> = [];
-    for (const leg of args.legs) {
-      legValues.push({
+    const legValues = await Promise.all(
+      args.legs.map(async (leg) => ({
         assetId: leg.assetId,
         valueUsd: await readOutputLegValueUsd(leg, args.onchain),
-      });
-    }
+      })),
+    );
     if (legValues.some((leg) => leg.valueUsd == null)) return null;
 
     const valueByAssetId = new Map<string, number>();
@@ -498,19 +497,36 @@ async function fetchReserveProtocolDtfOnchainReserves(
   const componentMetadata: Array<Record<string, unknown>> = [];
   const outputLegs: ReserveProtocolDtfOutputLeg[] = [];
 
-  for (const entry of quoteEntries) {
-    throwIfAborted(signal);
-    const [rawDecimals, rawAsset] = await Promise.all([
-      onchain.uint256(entry.address, DECIMALS_SELECTOR),
-      onchain.raw(assetRegistry, encodeAddressCallData(TO_ASSET_SELECTOR, entry.address)),
-    ]);
-    const tokenDecimals = decodeDecimals(rawDecimals, entry.address);
-    const assetAddress = parseAddressResult(rawAsset, `toAsset(${entry.address})`);
-    const [rawPrice, rawStatus] = await Promise.all([
-      onchain.raw(assetAddress, PRICE_SELECTOR),
-      onchain.uint256(assetAddress, COLLATERAL_STATUS_SELECTOR),
-    ]);
-    const price = decodePriceResult(rawPrice, entry.address);
+  const resolvedComponents = await Promise.all(
+    quoteEntries.map(async (entry) => {
+      throwIfAborted(signal);
+      const [rawDecimals, rawAsset] = await Promise.all([
+        onchain.uint256(entry.address, DECIMALS_SELECTOR),
+        onchain.raw(assetRegistry, encodeAddressCallData(TO_ASSET_SELECTOR, entry.address)),
+      ]);
+      return {
+        entry,
+        tokenDecimals: decodeDecimals(rawDecimals, entry.address),
+        assetAddress: parseAddressResult(rawAsset, `toAsset(${entry.address})`),
+      };
+    }),
+  );
+  const pricedComponents = await Promise.all(
+    resolvedComponents.map(async (component) => {
+      throwIfAborted(signal);
+      const [rawPrice, rawStatus] = await Promise.all([
+        onchain.raw(component.assetAddress, PRICE_SELECTOR),
+        onchain.uint256(component.assetAddress, COLLATERAL_STATUS_SELECTOR),
+      ]);
+      return {
+        ...component,
+        price: decodePriceResult(rawPrice, component.entry.address),
+        rawStatus,
+      };
+    }),
+  );
+
+  for (const { entry, tokenDecimals, assetAddress, price, rawStatus } of pricedComponents) {
     const value = decimalNumberFromBigInt(entry.quantity * price.mid, tokenDecimals + PRICE_DECIMALS);
     totalValue += value;
     const normalizedAddress = normalizeEvmAddress(entry.address);

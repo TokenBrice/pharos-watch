@@ -6,6 +6,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
+  fetchOnchainMulticall3,
   makeOnchainCallers,
   probeOptionalRedemptionRateBps,
   requireOnchainInput,
@@ -17,6 +18,7 @@ import {
   fetchBranchPriceMap,
   readBranchBalanceParams,
 } from "./branch-balances";
+import { decodeUint256Word } from "./abi-decode";
 
 const ADAPTER_KEY = "evm-branch-balances";
 const DEFAULT_DEBT_DECIMALS = 18;
@@ -125,6 +127,32 @@ function normalizeToWad(value: bigint, decimals: number): bigint {
     : value / 10n ** BigInt(decimals - 18);
 }
 
+async function readHoneyFactoryBatch(
+  input: ReturnType<typeof requireOnchainInput>,
+  calls: Array<{ label: string; contract: string; data: string; allowFailure: true }>,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+  rpcUrl: string | undefined,
+  fallbackRpcUrl: string | undefined,
+): Promise<Map<string, string | null>> {
+  const results = await fetchOnchainMulticall3({
+    calls,
+    chain: input.chain,
+    signal,
+    ctx,
+    rpcUrl,
+    fallbackRpcUrl,
+  });
+  if (!results) throw new Error(`${ADAPTER_KEY}: HoneyFactory Multicall3 batch failed`);
+  return new Map(
+    results.map((result) => [result.label, result.success ? result.returnData : null]),
+  );
+}
+
+function honeyUint(rawByLabel: ReadonlyMap<string, string | null>, label: string): bigint | null {
+  return decodeUint256Word(rawByLabel.get(label));
+}
+
 async function observeHoneyFactoryRedemptionCapacity(
   input: ReturnType<typeof requireOnchainInput>,
   params: HoneyFactoryRedemptionCapacityParams,
@@ -133,14 +161,27 @@ async function observeHoneyFactoryRedemptionCapacity(
   rpcUrl?: string,
   fallbackRpcUrl?: string,
 ): Promise<RedemptionCapacityObservation> {
-  const onchain = makeOnchainCallers(input, { signal, ctx, rpcUrl, fallbackRpcUrl });
   const factory = params.factoryAddress;
 
   try {
-    const [honeyAddress, assetCountRaw] = await Promise.all([
-      onchain.uint256(factory, SELECTORS.honey),
-      onchain.uint256(factory, SELECTORS.numRegisteredAssets),
-    ]);
+    const identity = await readHoneyFactoryBatch(
+      input,
+      [
+        { label: "honey:honey", contract: factory, data: SELECTORS.honey, allowFailure: true },
+        {
+          label: "honey:asset-count",
+          contract: factory,
+          data: SELECTORS.numRegisteredAssets,
+          allowFailure: true,
+        },
+      ],
+      signal,
+      ctx,
+      rpcUrl,
+      fallbackRpcUrl,
+    );
+    const honeyAddress = honeyUint(identity, "honey:honey");
+    const assetCountRaw = honeyUint(identity, "honey:asset-count");
     if (addressFromWord(honeyAddress, "honey()").toLowerCase() !== params.expectedHoneyAddress.toLowerCase()) {
       throw new Error(`${ADAPTER_KEY}: HoneyFactory honey() identity mismatch`);
     }
@@ -153,23 +194,54 @@ async function observeHoneyFactoryRedemptionCapacity(
     const assetCount = Number(assetCountBigInt);
     if (assetCount === 0) throw new Error(`${ADAPTER_KEY}: HoneyFactory has no registered assets`);
 
-    const assets = await Promise.all(
-      Array.from({ length: assetCount }, (_, index) =>
-        onchain.uint256(factory, `${SELECTORS.registeredAssets}${encodeUint256(BigInt(index))}`)
-          .then((value) => addressFromWord(value, `registeredAssets(${index})`))),
+    const registry = await readHoneyFactoryBatch(
+      input,
+      [
+        ...Array.from({ length: assetCount }, (_, index) => ({
+          label: `honey:asset:${index}`,
+          contract: factory,
+          data: `${SELECTORS.registeredAssets}${encodeUint256(BigInt(index))}`,
+          allowFailure: true as const,
+        })),
+        { label: "honey:factory-paused", contract: factory, data: SELECTORS.paused, allowFailure: true },
+        {
+          label: "honey:forced-basket-mode",
+          contract: factory,
+          data: SELECTORS.forcedBasketMode,
+          allowFailure: true,
+        },
+        {
+          label: "honey:basket-mode",
+          contract: factory,
+          data: `${SELECTORS.isBasketModeEnabled}${encodeUint256(0n)}`,
+          allowFailure: true,
+        },
+        { label: "honey:weights", contract: factory, data: SELECTORS.getWeights, allowFailure: true },
+        { label: "honey:global-cap", contract: factory, data: SELECTORS.globalCap, allowFailure: true },
+      ],
+      signal,
+      ctx,
+      rpcUrl,
+      fallbackRpcUrl,
+    );
+    const assets = Array.from({ length: assetCount }, (_, index) =>
+      addressFromWord(honeyUint(registry, `honey:asset:${index}`), `registeredAssets(${index})`)
     );
     if (new Set(assets.map((asset) => asset.toLowerCase())).size !== assets.length) {
       throw new Error(`${ADAPTER_KEY}: HoneyFactory returned duplicate registered assets`);
     }
 
-    const [factoryPaused, forcedBasketMode, basketMode, weights, globalCap] = await Promise.all([
-      onchain.uint256(factory, SELECTORS.paused).then((value) => requireBool(value, "paused()")),
-      onchain.uint256(factory, SELECTORS.forcedBasketMode).then((value) => requireBool(value, "forcedBasketMode()")),
-      onchain.uint256(factory, `${SELECTORS.isBasketModeEnabled}${encodeUint256(0n)}`)
-        .then((value) => requireBool(value, "isBasketModeEnabled(false)")),
-      onchain.raw(factory, SELECTORS.getWeights).then((value) => decodeUintArray(value, assetCount, "getWeights()")),
-      onchain.uint256(factory, SELECTORS.globalCap).then((value) => requireUint(value, "globalCap()")),
-    ]);
+    const factoryPaused = requireBool(honeyUint(registry, "honey:factory-paused"), "paused()");
+    const forcedBasketMode = requireBool(
+      honeyUint(registry, "honey:forced-basket-mode"),
+      "forcedBasketMode()",
+    );
+    const basketMode = requireBool(
+      honeyUint(registry, "honey:basket-mode"),
+      "isBasketModeEnabled(false)",
+    );
+    const weights = decodeUintArray(registry.get("honey:weights") ?? null, assetCount, "getWeights()");
+    const globalCap = requireUint(honeyUint(registry, "honey:global-cap"), "globalCap()");
     if (forcedBasketMode && !basketMode) {
       throw new Error(`${ADAPTER_KEY}: HoneyFactory returned inconsistent basket-mode state`);
     }
@@ -178,56 +250,179 @@ async function observeHoneyFactoryRedemptionCapacity(
       throw new Error(`${ADAPTER_KEY}: HoneyFactory basket weights do not sum to 100%`);
     }
 
-    const stableAssets = new Map(params.stableAssets.map((asset) => [asset.address.toLowerCase(), asset]));
-    const observations = await Promise.all(assets.map(async (asset, index) => {
-      const [vaultRaw, collectedFees, redeemRate, isPegged, relativeCap] = await Promise.all([
-        onchain.uint256(factory, encodeAddressCallData(SELECTORS.vaults, asset)),
-        onchain.uint256(factory, encodeAddressCallData(SELECTORS.collectedAssetFees, asset))
-          .then((value) => requireUint(value, `collectedAssetFees(${asset})`)),
-        onchain.uint256(factory, encodeAddressCallData(SELECTORS.redeemRates, asset))
-          .then((value) => requireUint(value, `redeemRates(${asset})`)),
-        onchain.uint256(factory, encodeAddressCallData(SELECTORS.isPegged, asset))
-          .then((value) => requireBool(value, `isPegged(${asset})`)),
-        onchain.uint256(factory, encodeAddressCallData(SELECTORS.relativeCap, asset))
-          .then((value) => requireUint(value, `relativeCap(${asset})`)),
-      ]);
-      const vault = addressFromWord(vaultRaw, `vaults(${asset})`);
-      const [vaultAssetRaw, vaultPaused, custodyInfo, factoryShares, assetDecimalsRaw] = await Promise.all([
-        onchain.uint256(vault, SELECTORS.asset),
-        onchain.uint256(vault, SELECTORS.paused).then((value) => requireBool(value, `vault ${vault} paused()`)),
-        onchain.raw(vault, SELECTORS.custodyInfo).then(decodeCustodyInfo),
-        onchain.uint256(vault, encodeAddressCallData(SELECTORS.balanceOf, factory))
-          .then((value) => requireUint(value, `vault ${vault} balanceOf(factory)`)),
-        onchain.uint256(asset, SELECTORS.decimals)
-          .then((value) => requireUint(value, `asset ${asset} decimals()`)),
-      ]);
-      if (addressFromWord(vaultAssetRaw, `vault ${vault} asset()`).toLowerCase() !== asset.toLowerCase()) {
+    const factoryState = await readHoneyFactoryBatch(
+      input,
+      assets.flatMap((asset, index) => [
+        {
+          label: `honey:vault:${index}`,
+          contract: factory,
+          data: encodeAddressCallData(SELECTORS.vaults, asset),
+          allowFailure: true as const,
+        },
+        {
+          label: `honey:collected-fees:${index}`,
+          contract: factory,
+          data: encodeAddressCallData(SELECTORS.collectedAssetFees, asset),
+          allowFailure: true as const,
+        },
+        {
+          label: `honey:redeem-rate:${index}`,
+          contract: factory,
+          data: encodeAddressCallData(SELECTORS.redeemRates, asset),
+          allowFailure: true as const,
+        },
+        {
+          label: `honey:is-pegged:${index}`,
+          contract: factory,
+          data: encodeAddressCallData(SELECTORS.isPegged, asset),
+          allowFailure: true as const,
+        },
+        {
+          label: `honey:relative-cap:${index}`,
+          contract: factory,
+          data: encodeAddressCallData(SELECTORS.relativeCap, asset),
+          allowFailure: true as const,
+        },
+      ]),
+      signal,
+      ctx,
+      rpcUrl,
+      fallbackRpcUrl,
+    );
+    const assetStates = assets.map((asset, index) => ({
+      asset,
+      index,
+      vault: addressFromWord(honeyUint(factoryState, `honey:vault:${index}`), `vaults(${asset})`),
+      collectedFees: requireUint(
+        honeyUint(factoryState, `honey:collected-fees:${index}`),
+        `collectedAssetFees(${asset})`,
+      ),
+      redeemRate: requireUint(
+        honeyUint(factoryState, `honey:redeem-rate:${index}`),
+        `redeemRates(${asset})`,
+      ),
+      isPegged: requireBool(
+        honeyUint(factoryState, `honey:is-pegged:${index}`),
+        `isPegged(${asset})`,
+      ),
+      relativeCap: requireUint(
+        honeyUint(factoryState, `honey:relative-cap:${index}`),
+        `relativeCap(${asset})`,
+      ),
+    }));
+
+    const vaultState = await readHoneyFactoryBatch(
+      input,
+      assetStates.flatMap(({ asset, vault, index }) => [
+        { label: `honey:vault-asset:${index}`, contract: vault, data: SELECTORS.asset, allowFailure: true as const },
+        { label: `honey:vault-paused:${index}`, contract: vault, data: SELECTORS.paused, allowFailure: true as const },
+        { label: `honey:custody-info:${index}`, contract: vault, data: SELECTORS.custodyInfo, allowFailure: true as const },
+        {
+          label: `honey:factory-shares:${index}`,
+          contract: vault,
+          data: encodeAddressCallData(SELECTORS.balanceOf, factory),
+          allowFailure: true as const,
+        },
+        { label: `honey:asset-decimals:${index}`, contract: asset, data: SELECTORS.decimals, allowFailure: true as const },
+      ]),
+      signal,
+      ctx,
+      rpcUrl,
+      fallbackRpcUrl,
+    );
+    const vaultStates = assetStates.map((state) => {
+      const { asset, vault, index, collectedFees, redeemRate } = state;
+      if (addressFromWord(honeyUint(vaultState, `honey:vault-asset:${index}`), `vault ${vault} asset()`).toLowerCase() !== asset.toLowerCase()) {
         throw new Error(`${ADAPTER_KEY}: vault ${vault} asset identity mismatch`);
       }
+      const vaultPaused = requireBool(
+        honeyUint(vaultState, `honey:vault-paused:${index}`),
+        `vault ${vault} paused()`,
+      );
+      const custodyInfo = decodeCustodyInfo(vaultState.get(`honey:custody-info:${index}`) ?? null);
+      const factoryShares = requireUint(
+        honeyUint(vaultState, `honey:factory-shares:${index}`),
+        `vault ${vault} balanceOf(factory)`,
+      );
+      const assetDecimalsRaw = requireUint(
+        honeyUint(vaultState, `honey:asset-decimals:${index}`),
+        `asset ${asset} decimals()`,
+      );
       if (collectedFees > factoryShares) {
         throw new Error(`${ADAPTER_KEY}: collected fees exceed factory shares for ${asset}`);
       }
       if (redeemRate > WAD) throw new Error(`${ADAPTER_KEY}: redeem rate exceeds 100% for ${asset}`);
       if (assetDecimalsRaw > 36n) throw new Error(`${ADAPTER_KEY}: asset decimals exceed 36 for ${asset}`);
-      const assetDecimals = Number(assetDecimalsRaw);
-
-      const netShares = factoryShares - collectedFees;
-      const convertedAssets = requireUint(
-        await onchain.uint256(vault, `${SELECTORS.convertToAssets}${encodeUint256(netShares)}`),
-        `vault ${vault} convertToAssets(net shares)`,
-      );
       const liquidityHolder = custodyInfo.isCustodyVault ? custodyInfo.custodyAddress : vault;
       if (liquidityHolder == null) throw new Error(`${ADAPTER_KEY}: custody vault ${vault} has no custody address`);
+      return {
+        ...state,
+        vaultPaused,
+        custodyInfo,
+        factoryShares,
+        assetDecimals: Number(assetDecimalsRaw),
+        liquidityHolder,
+      };
+    });
+
+    const derivedState = await readHoneyFactoryBatch(
+      input,
+      vaultStates.flatMap(({ asset, vault, index, custodyInfo, factoryShares, collectedFees, liquidityHolder }) => {
+        const calls = [
+          {
+            label: `honey:converted-assets:${index}`,
+            contract: vault,
+            data: `${SELECTORS.convertToAssets}${encodeUint256(factoryShares - collectedFees)}`,
+            allowFailure: true as const,
+          },
+          {
+            label: `honey:holder-balance:${index}`,
+            contract: asset,
+            data: encodeAddressCallData(SELECTORS.balanceOf, liquidityHolder),
+            allowFailure: true as const,
+          },
+        ];
+        if (custodyInfo.isCustodyVault) {
+          calls.push({
+            label: `honey:custody-allowance:${index}`,
+            contract: asset,
+            data: encodeAddressCallData(SELECTORS.allowance, liquidityHolder, vault),
+            allowFailure: true as const,
+          });
+        }
+        return calls;
+      }),
+      signal,
+      ctx,
+      rpcUrl,
+      fallbackRpcUrl,
+    );
+
+    const stableAssets = new Map(params.stableAssets.map((asset) => [asset.address.toLowerCase(), asset]));
+    const observations = vaultStates.map((state) => {
+      const {
+        asset,
+        assetDecimals,
+        custodyInfo,
+        index,
+        isPegged,
+        liquidityHolder,
+        redeemRate,
+        relativeCap,
+        vault,
+        vaultPaused,
+      } = state;
+      const convertedAssets = requireUint(
+        honeyUint(derivedState, `honey:converted-assets:${index}`),
+        `vault ${vault} convertToAssets(net shares)`,
+      );
       const holderBalance = requireUint(
-        await onchain.uint256(asset, encodeAddressCallData(SELECTORS.balanceOf, liquidityHolder)),
+        honeyUint(derivedState, `honey:holder-balance:${index}`),
         `asset ${asset} balanceOf(liquidity holder)`,
       );
       const allowance = custodyInfo.isCustodyVault
         ? requireUint(
-            await onchain.uint256(
-              asset,
-              encodeAddressCallData(SELECTORS.allowance, liquidityHolder, vault),
-            ),
+            honeyUint(derivedState, `honey:custody-allowance:${index}`),
             `asset ${asset} custody allowance`,
           )
         : convertedAssets;
@@ -246,9 +441,9 @@ async function observeHoneyFactoryRedemptionCapacity(
         relativeCap,
         redeemRate,
         immediatelyAvailable,
-        weight: weights[index],
+        weight: weights[index]!,
       };
-    }));
+    });
 
     const skippedAssets = observations
       .filter((observation) => !observation.stableAsset || !observation.isPegged)

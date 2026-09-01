@@ -3,12 +3,14 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReserveSlice } from "@shared/types/core";
 import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import type { OnchainRateProbe } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
 import { getCachedRequest } from "./request";
 import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
+  fetchOnchainMulticall3,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
@@ -16,6 +18,7 @@ import {
   slicesFromValues,
   valueUsdFromBigIntPrice,
 } from "./helpers";
+import { decodeUint256Word } from "./abi-decode";
 
 export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch-balances" | "liquity-v2-branches" | "lista">;
 
@@ -163,7 +166,7 @@ export async function fetchBranchBalances(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<BranchBalanceEntry[]> {
-  return Promise.all(
+  const fetchIndividually = () => Promise.all(
     params.branches.map(async (branch) => {
       const raw = await fetchErc20Balance(
         input,
@@ -177,6 +180,38 @@ export async function fetchBranchBalances(
       return { branch, balanceRaw: raw };
     }),
   );
+  const isSingleChainEvmConfig = params.branches.every((branch) =>
+    branch.token.chain === input.chain
+    && /^0x[0-9a-fA-F]{40}$/.test(branch.token.address)
+    && /^0x[0-9a-fA-F]{40}$/.test(branch.holder)
+  );
+  if (!isSingleChainEvmConfig) return fetchIndividually();
+
+  const calls = params.branches.map((branch, index) => ({
+    label: `branch-balance:${index}`,
+    contract: branch.token.address,
+    data: encodeBalanceOfCallData(branch.holder),
+    allowFailure: true,
+  }));
+  const results = await fetchOnchainMulticall3({
+    calls,
+    chain: input.chain,
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+  });
+  if (results) {
+    const rawByLabel = new Map(
+      results.map((result) => [result.label, result.success ? result.returnData : null]),
+    );
+    return params.branches.map((branch, index) => ({
+      branch,
+      balanceRaw: decodeUint256Word(rawByLabel.get(`branch-balance:${index}`)),
+    }));
+  }
+
+  return fetchIndividually();
 }
 
 export async function fetchBranchPriceMap(

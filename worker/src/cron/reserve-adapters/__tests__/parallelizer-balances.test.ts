@@ -5,21 +5,32 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   const fetchOnchainRawCall = vi.fn();
+  const fetchOnchainMulticall3 = vi.fn(async ({ calls, ...options }) => Promise.all(
+    calls.map(async (call: { label: string; contract: string; data: string }) => {
+      const selector = call.data.slice(0, 10);
+      const raw = selector === "0xb7181361" || selector === "0x38c269eb"
+        ? await fetchOnchainRawCall({ ...options, contract: call.contract, data: call.data })
+        : await fetchOnchainUint256({ ...options, contract: call.contract, data: call.data });
+      return {
+        label: call.label,
+        success: raw != null,
+        returnData: typeof raw === "bigint"
+          ? `0x${raw.toString(16).padStart(64, "0")}`
+          : raw ?? "0x",
+      };
+    }),
+  ));
   return {
     ...actual,
     fetchOnchainUint256,
     fetchOnchainRawCall,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
+    fetchOnchainMulticall3,
   };
 });
 
-import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
+import { fetchOnchainMulticall3, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 import { fetchParallelizerBalancesReserves } from "../parallelizer-balances";
 
 const ETH_VAULT = "0x1000000000000000000000000000000000000001";
@@ -176,6 +187,26 @@ describe("fetchParallelizerBalancesReserves", () => {
         routeStatusSource: "onchain",
       },
     });
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(6);
+    for (const chain of ["ethereum", "hyperevm"]) {
+      const stages = vi.mocked(fetchOnchainMulticall3).mock.calls
+        .map(([options]) => options)
+        .filter((options) => options.chain === chain);
+      expect(stages.map((stage) => stage.calls.map((call) => call.label))).toEqual([
+        ["token-p", "collateral-list"],
+        ["redemption-paused"],
+        ...(chain === "ethereum"
+          ? [["asset:0:decimals", "asset:0:balance", "asset:0:oracle"]]
+          : [[
+              "asset:0:decimals",
+              "asset:0:balance",
+              "asset:0:oracle",
+              "asset:1:decimals",
+              "asset:1:balance",
+              "asset:1:oracle",
+            ]]),
+      ]);
+    }
   });
 
   it("degrades the route and excludes a paused deployment's basket from capacity", async () => {

@@ -5,7 +5,11 @@ import type {
   LiveReservesConfig,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
-import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import {
+  DECIMALS_SELECTOR,
+  TOTAL_SUPPLY_SELECTOR,
+  encodeBalanceOfCallData,
+} from "../../lib/evm-selectors";
 import { rethrowIfAborted } from "../../lib/abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -49,6 +53,7 @@ const BRANCH_PRICE_SELECTOR = "0x0fdb11cf"; // fetchPrice()
 const BRANCH_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWithDecay()
 const DEFAULT_MECHANISM_PRICE_SELECTOR = "0x4ea15f37"; // getUnbackedPortionPriceAndRedeemability()
 const DEFAULT_MAX_SUPPLY_DEBT_DIVERGENCE_PCT = 0.5;
+const BRANCH_REDEMPTION_RATE_DECIMALS = 18;
 
 interface LiquityV2BranchDebt {
   entry: BranchBalanceEntry;
@@ -113,6 +118,34 @@ function computeErc4626AssetsFromShares(
   return (sharesRaw * totalAssetsRaw) / totalSupplyRaw;
 }
 
+function rateBpsFromRaw(raw: bigint | null, decimals: number): number | null {
+  if (raw == null) return null;
+  const scale = 10n ** BigInt(decimals);
+  return Number((raw * 10_000n + scale / 2n) / scale);
+}
+
+async function fetchLiquityV2Batch(
+  input: ReturnType<typeof requireOnchainInput>,
+  params: LiquityV2BranchParams,
+  calls: readonly OnchainMulticall3Call[],
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<Map<string, `0x${string}` | null> | null> {
+  const results = await fetchOnchainMulticall3({
+    calls,
+    chain: input.chain,
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs: 12_000,
+  });
+  if (!results) return null;
+  return new Map(
+    results.map((result) => [result.label, result.success ? result.returnData : null]),
+  );
+}
+
 async function tryAdaptErc4626ShareEntry(
   onchain: OnchainCallers,
   entry: BranchBalanceEntry,
@@ -148,16 +181,85 @@ async function tryAdaptErc4626ShareEntry(
   };
 }
 
-async function fetchLiquityV2BranchBalances(
+async function fetchLiquityV2BranchState(
   input: ReturnType<typeof requireOnchainInput>,
   params: LiquityV2BranchParams,
+  debtSelector: string,
+  shutdownSelector: string,
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
   onchain: OnchainCallers,
-): Promise<BranchBalanceEntry[]> {
-  const shareEntries = await Promise.all(
-    params.branches.map(async (branch) => {
-      const raw = await fetchErc20Balance(
+): Promise<LiquityV2BranchSnapshot> {
+  const calls: OnchainMulticall3Call[] = [];
+  for (const [index, branch] of params.branches.entries()) {
+    calls.push(
+      {
+        label: `branch:balance:${index}`,
+        contract: branch.token.address,
+        data: encodeBalanceOfCallData(branch.holder),
+        allowFailure: true,
+      },
+      {
+        label: `branch:debt:${index}`,
+        contract: branch.holder,
+        data: debtSelector,
+        allowFailure: true,
+      },
+      {
+        label: `branch:shutdown:${index}`,
+        contract: branch.holder,
+        data: shutdownSelector,
+        allowFailure: true,
+      },
+    );
+    if (!params.redemptionRateProbe) {
+      calls.push({
+        label: `branch:fee:${index}`,
+        contract: branch.holder,
+        data: BRANCH_REDEMPTION_RATE_SELECTOR,
+        allowFailure: true,
+      });
+    }
+  }
+  if (params.redemptionRateProbe?.decimals != null) {
+    calls.push({
+      label: "branch:fee:global",
+      contract: params.redemptionRateProbe.contract,
+      data: params.redemptionRateProbe.selector,
+      allowFailure: true,
+    });
+  }
+
+  const rawByLabel = await fetchLiquityV2Batch(input, params, calls, signal, ctx);
+  if (rawByLabel) {
+    const balances = params.branches.map((branch, index) => ({
+      branch,
+      balanceRaw: decodeRequiredOptionalUint256(rawByLabel.get(`branch:balance:${index}`)),
+    }));
+    const debts = balances.map((entry, index) => ({
+      entry,
+      debtRaw: decodeRequiredOptionalUint256(rawByLabel.get(`branch:debt:${index}`)),
+      shutDown: decodeBoolWord(rawByLabel.get(`branch:shutdown:${index}`)),
+      redemptionFeeBps: params.redemptionRateProbe
+        ? null
+        : rateBpsFromRaw(
+            decodeRequiredOptionalUint256(rawByLabel.get(`branch:fee:${index}`)),
+            BRANCH_REDEMPTION_RATE_DECIMALS,
+          ),
+    }));
+    const redemptionFeeBps = params.redemptionRateProbe?.decimals != null
+      ? rateBpsFromRaw(
+          decodeRequiredOptionalUint256(rawByLabel.get("branch:fee:global")),
+          params.redemptionRateProbe.decimals,
+        )
+      : null;
+    return { balances, debts, redemptionFeeBps };
+  }
+
+  const [balances, redemptionFeeBps] = await Promise.all([
+    Promise.all(params.branches.map(async (branch) => ({
+      branch,
+      balanceRaw: await fetchErc20Balance(
         input,
         branch.token.address,
         branch.holder,
@@ -165,21 +267,139 @@ async function fetchLiquityV2BranchBalances(
         ctx,
         params.rpcUrl,
         params.fallbackRpcUrl,
-      );
-      return { branch, balanceRaw: raw };
-    }),
-  );
+      ),
+    }))),
+    probeOptionalRedemptionRateBps(
+      input,
+      params.redemptionRateProbe,
+      signal,
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    ),
+  ]);
+  const debts = await Promise.all(balances.map(async (entry) => {
+    const [debtRaw, shutDownRaw, branchRedemptionFeeBps] = await Promise.all([
+      onchain.uint256(entry.branch.holder, debtSelector),
+      onchain.raw(entry.branch.holder, shutdownSelector),
+      params.redemptionRateProbe
+        ? Promise.resolve(null)
+        : probeBranchRedemptionFeeBps(input, entry.branch, signal, ctx, params),
+    ]);
+    return {
+      entry,
+      debtRaw,
+      shutDown: decodeBoolWord(shutDownRaw),
+      redemptionFeeBps: branchRedemptionFeeBps,
+    };
+  }));
+  return { balances, debts, redemptionFeeBps };
+}
 
-  return Promise.all(
-    shareEntries.map((entry) => tryAdaptErc4626ShareEntry(onchain, entry)),
-  );
+function decodeRequiredOptionalUint256(raw: `0x${string}` | null | undefined): bigint | null {
+  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
+  return BigInt(raw);
+}
+
+async function adaptErc4626ShareEntries(
+  input: ReturnType<typeof requireOnchainInput>,
+  params: LiquityV2BranchParams,
+  entries: BranchBalanceEntry[],
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+  onchain: OnchainCallers,
+): Promise<BranchBalanceEntry[]> {
+  const positiveEntries = entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => entry.balanceRaw != null && entry.balanceRaw > 0n);
+  if (positiveEntries.length === 0) return entries;
+
+  const assetCalls = positiveEntries.map(({ entry, index }) => ({
+    label: `branch:asset:${index}`,
+    contract: entry.branch.token.address,
+    data: ERC4626_ASSET_SELECTOR,
+    allowFailure: true,
+  }));
+  const assetRawByLabel = await fetchLiquityV2Batch(input, params, assetCalls, signal, ctx);
+  if (!assetRawByLabel) {
+    return Promise.all(entries.map((entry) => tryAdaptErc4626ShareEntry(onchain, entry)));
+  }
+
+  const probedEntries = positiveEntries
+    .map(({ entry, index }) => ({
+      entry,
+      index,
+      assetAddress: decodeAddressWord(assetRawByLabel.get(`branch:asset:${index}`)),
+    }))
+    .filter(
+      (entry): entry is typeof entry & { assetAddress: `0x${string}` } => entry.assetAddress != null,
+    );
+  if (probedEntries.length === 0) return entries;
+
+  const metadataCalls = probedEntries.flatMap(({ entry, index, assetAddress }) => [
+    {
+      label: `branch:total-assets:${index}`,
+      contract: entry.branch.token.address,
+      data: ERC4626_TOTAL_ASSETS_SELECTOR,
+      allowFailure: true,
+    },
+    {
+      label: `branch:total-supply:${index}`,
+      contract: entry.branch.token.address,
+      data: TOTAL_SUPPLY_SELECTOR,
+      allowFailure: true,
+    },
+    {
+      label: `branch:asset-decimals:${index}`,
+      contract: assetAddress,
+      data: DECIMALS_SELECTOR,
+      allowFailure: true,
+    },
+  ]);
+  const metadataRawByLabel = await fetchLiquityV2Batch(input, params, metadataCalls, signal, ctx);
+  if (!metadataRawByLabel) {
+    const adapted = await Promise.all(probedEntries.map(({ entry }) => tryAdaptErc4626ShareEntry(onchain, entry)));
+    const adaptedByIndex = new Map(probedEntries.map(({ index }, offset) => [index, adapted[offset]]));
+    return entries.map((entry, index) => adaptedByIndex.get(index) ?? entry);
+  }
+
+  const probedByIndex = new Map(probedEntries.map((entry) => [entry.index, entry]));
+  return entries.map((entry, index) => {
+    const probed = probedByIndex.get(index);
+    if (!probed || entry.balanceRaw == null) return entry;
+    const totalAssetsRaw = decodeRequiredOptionalUint256(
+      metadataRawByLabel.get(`branch:total-assets:${index}`),
+    );
+    const totalSupplyRaw = decodeRequiredOptionalUint256(
+      metadataRawByLabel.get(`branch:total-supply:${index}`),
+    );
+    if (totalAssetsRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n) return entry;
+    return {
+      ...entry,
+      balanceRaw: computeErc4626AssetsFromShares(entry.balanceRaw, totalAssetsRaw, totalSupplyRaw),
+      branch: {
+        ...entry.branch,
+        token: {
+          ...entry.branch.token,
+          address: probed.assetAddress,
+          decimals: decodeUint8Word(
+            metadataRawByLabel.get(`branch:asset-decimals:${index}`),
+          ) ?? entry.branch.token.decimals,
+        },
+      },
+    };
+  });
 }
 
 async function fetchBranchProtocolPriceMap(
+  input: ReturnType<typeof requireOnchainInput>,
+  params: LiquityV2BranchParams,
   onchain: OnchainCallers,
   balances: BranchBalanceEntry[],
   existingPriceMap: Map<string, number>,
   warnings: LiveReserveWarning[],
+  signal: AbortSignal,
+  ctx?: AdapterContext,
 ): Promise<Map<string, number>> {
   const missingPricedBranches = balances.filter(
     ({ branch, balanceRaw }) => balanceRaw != null
@@ -190,8 +410,17 @@ async function fetchBranchProtocolPriceMap(
   if (missingPricedBranches.length === 0) return new Map();
 
   const protocolPriceMap = new Map<string, number>();
-  await Promise.all(missingPricedBranches.map(async ({ branch }) => {
-    const priceRaw = await onchain.uint256(branch.holder, BRANCH_PRICE_SELECTOR);
+  const calls = missingPricedBranches.map(({ branch }, index) => ({
+    label: `branch:protocol-price:${index}`,
+    contract: branch.holder,
+    data: BRANCH_PRICE_SELECTOR,
+    allowFailure: true,
+  }));
+  const rawByLabel = await fetchLiquityV2Batch(input, params, calls, signal, ctx);
+  await Promise.all(missingPricedBranches.map(async ({ branch }, index) => {
+    const priceRaw = rawByLabel
+      ? decodeRequiredOptionalUint256(rawByLabel.get(`branch:protocol-price:${index}`))
+      : await onchain.uint256(branch.holder, BRANCH_PRICE_SELECTOR);
     if (priceRaw == null || priceRaw <= 0n) return;
     const priceUsd = decimalNumberFromBigInt(priceRaw, 18);
     if (Number.isFinite(priceUsd) && priceUsd > 0) {
@@ -610,34 +839,27 @@ export async function fetchLiquityV2BranchReserves(
     timeoutMs,
   });
 
-  const [balances, redemptionFeeBps] = await Promise.all([
-    fetchLiquityV2BranchBalances(input, params, signal, ctx, onchain),
-    probeOptionalRedemptionRateBps(
-      input,
-      params.redemptionRateProbe,
-      signal,
-      ctx,
-      params.rpcUrl,
-      params.fallbackRpcUrl,
-    ),
-  ]);
-  const debts = await Promise.all(
-    balances.map(async (entry) => {
-      const [debtRaw, shutDownRaw, branchRedemptionFeeBps] = await Promise.all([
-        onchain.uint256(entry.branch.holder, debtSelector),
-        onchain.raw(entry.branch.holder, shutdownSelector),
-        params.redemptionRateProbe
-          ? Promise.resolve(null)
-          : probeBranchRedemptionFeeBps(input, entry.branch, signal, ctx, params),
-      ]);
-      return {
-        entry,
-        debtRaw,
-        shutDown: decodeBoolWord(shutDownRaw),
-        redemptionFeeBps: branchRedemptionFeeBps,
-      };
-    }),
+  const branchState = await fetchLiquityV2BranchState(
+    input,
+    params,
+    debtSelector,
+    shutdownSelector,
+    signal,
+    ctx,
+    onchain,
   );
+  const balances = await adaptErc4626ShareEntries(
+    input,
+    params,
+    branchState.balances,
+    signal,
+    ctx,
+    onchain,
+  );
+  const debts = branchState.debts.map((debt, index) => ({
+    ...debt,
+    entry: balances[index] ?? debt.entry,
+  }));
 
   const unreadableDebtBranches = debts
     .filter((entry) => entry.debtRaw == null)
@@ -649,7 +871,7 @@ export async function fetchLiquityV2BranchReserves(
   const snapshot = {
     balances,
     debts,
-    redemptionFeeBps: chooseSnapshotRedemptionFeeBps(redemptionFeeBps, debts),
+    redemptionFeeBps: chooseSnapshotRedemptionFeeBps(branchState.redemptionFeeBps, debts),
   };
   const priceMapWarnings: LiveReserveWarning[] = [];
   const [priceMap, mechanismMetrics] = await Promise.all([
@@ -657,10 +879,14 @@ export async function fetchLiquityV2BranchReserves(
     fetchLiquityV2MechanismMetrics(input, params, snapshot, signal, ctx),
   ]);
   const protocolPriceMap = await fetchBranchProtocolPriceMap(
+    input,
+    params,
     onchain,
     balances,
     priceMap,
     priceMapWarnings,
+    signal,
+    ctx,
   );
   for (const [name, price] of protocolPriceMap) {
     if (!priceMap.has(name)) {
