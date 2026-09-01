@@ -50,7 +50,9 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       // clock onto a different shock-coverage measurement: the 2026-08-31
       // curation batch moved the clock to 2026-09-01T00:00:00Z and this ratio
       // with it, from 0.235898946423.
-      stressLiquidationCoverageRatio: 0.190908008704,
+      // Re-pinned 2026-09-01: bd-basedollar's blacklistability review was
+      // re-derived with a current reviewedAt, which feeds the evidence-age term.
+      stressLiquidationCoverageRatio: 0.190902714164,
     });
   });
 

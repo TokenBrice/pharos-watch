@@ -3244,7 +3244,7 @@
     {
       "assetId": "pht-pht",
       "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewer": "Claude ACC-B TRANSFER-FACT; Claude ODR-A5 Tron deployment review",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -3277,6 +3277,31 @@
             {
               "label": "Polygon public RPC used for the block 90573891 reads",
               "url": "https://polygon-bor-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "tron",
+          "contractOrTokenId": "TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Tron carried 44,489,606 PHT of the 225,011,900 PHT DefiLlama reports across the three registry deployments (19.8%), so this leg is material and had no reviewed row. Read at Tron block 85862220 (state) and 85862243 (storage): name() \"PHT Stablecoin\", symbol() \"PHT\", decimals() 18, totalSupply() 44,489,605 PHT, sharedDecimals() 6, owner() 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee, endpoint() 0x0af59750d5db5460e5d89e268c474d5f7407c061, msgInspector() and preCrime() both the zero address. Tronscan does not hold verified source for this address (verify_status 0), so the surface was established from contract state rather than source: the EIP-1967 implementation and admin slots both read zero, Tronscan reports is_proxy false, and the account's on-chain ABI declares a 42-function PhtOFT with no mint, burn, pause, blacklist, freeze, allowlist, seizure or upgrade entry point. That ABI was corroborated against the 15,551-byte runtime bytecode: every one of the 42 declared functions appears as a PUSH4 dispatch selector, and none of pause()/unpause()/paused(), mint(address,uint256), burn(uint256), burn(address,uint256), isBlacklisted/isBlackListed/addBlackList/removeBlackList/blacklist/destroyBlackFunds, freeze/unfreeze/frozen/isFrozen, wipeFrozenAddress, seize, upgradeTo or upgradeToAndCall is present anywhere in the dispatch table. Same-chain holder transfer and transferFrom are therefore plain ERC-20 with no discretionary restriction, and Tron contract code is immutable, so no authority can add one. owner() retains the LayerZero OFT rail controls (setPeer, setDelegate, setEnforcedOptions, setMsgInspector); a msgInspector could revert an outbound cross-chain send, but that is the bridge rail rather than same-chain holder transfer, which is how the rest of this overlay scopes OFT owner authority.",
+          "sources": [
+            {
+              "label": "PHT on Tronscan",
+              "url": "https://tronscan.org/#/contract/TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+            },
+            {
+              "label": "TronGrid full-node API used for the block 85862220 contract, ABI, bytecode and constant-call reads",
+              "url": "https://api.trongrid.io"
+            },
+            {
+              "label": "TronGrid JSON-RPC used for the block 85862243 EIP-1967 slot reads",
+              "url": "https://api.trongrid.io/jsonrpc"
+            },
+            {
+              "label": "DefiLlama PHT per-chain circulating used for the materiality split",
+              "url": "https://stablecoins.llama.fi/stablecoin/299"
             }
           ]
         }
@@ -4156,7 +4181,7 @@
     {
       "assetId": "syzusd-yuzu",
       "reviewedAt": "2026-07-30",
-      "reviewer": "Kimi T38 unknown-reduction wave 2",
+      "reviewer": "Kimi T38 unknown-reduction wave 2; Claude ODR-A5 Ethereum deployment review",
       "deployments": [
         {
           "chainId": "plasma",
@@ -4189,6 +4214,31 @@
             {
               "label": "Yuzu syzUSD documentation",
               "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+            }
+          ]
+        },
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "The third registry deployment, previously unreviewed. At Ethereum block 25881805 this is a transparent proxy: EIP-1967 implementation 0x692d91e94b55ec1360f20970010538263ce29b58, admin 0xab08de77a15ae9dc675eeeb89b3bd558069341a9, beacon slot zero. name() returned 'Staked Yuzu USD', symbol() 'syzUSD', decimals() 18 and totalSupply() 809,744.18 syzUSD. Sourcify holds an exact creation-and-runtime match for the implementation as BridgeableTokenUpgradeable (solc 0.8.22), a LayerZero OFT built on OpenZeppelin ERC20Upgradeable, OwnableUpgradeable and AccessControlUpgradeable: it does not override _update or _beforeTokenTransfer, so holder transfer and allowance-gated transferFrom are unmodified ERC-20, and its only privileged supply entry points are mint(address,uint256) behind CCIP_MINTER_ROLE and burn(uint256), which burns the caller's own balance. Live probes at the same block confirm the absence of a restriction surface: paused(), isBlacklisted(address), isBlackListed(address), frozen(address), isFrozen(address), wards(address), PAUSER_ROLE() and MINTER_ROLE() all revert; owner() is the live EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, which holds only OFT rail authority (setPeer, setDelegate, setEnforcedOptions, setMsgInspector, setPreCrime). The deployment is restrictable because the ProxyAdmin can replace the implementation with one that does restrict holders: it is owned by 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38, a Sourcify exact-match OpenZeppelin TimelockController whose getMinDelay() returned 300 seconds, so an upgrade is gated by five minutes rather than by a meaningful holder exit window. This matches the restrictable posture already recorded for the Plasma and Monad vaults.",
+          "sources": [
+            {
+              "label": "Sourcify exact-match BridgeableTokenUpgradeable implementation (chain 1)",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x692d91e94b55ec1360f20970010538263ce29b58"
+            },
+            {
+              "label": "Sourcify exact-match TimelockController owning the syzUSD ProxyAdmin (chain 1)",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38"
+            },
+            {
+              "label": "syzUSD on Etherscan",
+              "url": "https://etherscan.io/address/0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12"
+            },
+            {
+              "label": "Ethereum public RPC used for the block 25881805 reads",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         }
@@ -4793,16 +4843,28 @@
     },
     {
       "assetId": "xdai-gnosis",
-      "reviewedAt": "2026-07-30",
-      "reviewer": "Grok T19 safety-v9 unknown-reduction w2",
+      "reviewedAt": "2026-09-01",
+      "reviewer": "Grok T19 safety-v9 unknown-reduction w2; Claude ODR-A5 deployment re-key",
       "deployments": [
         {
           "chainId": "gnosis",
-          "contractOrTokenId": "xDAI",
+          "contractOrTokenId": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "xDAI is the native Gnosis Chain gas balance. Ordinary holder transfers are consensus/ledger value transfers with no issuer ERC-20 transfer hook, blacklist, freeze, pause, or allowlist. Bridge mint/burn (Home Bridge 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6 + BlockReward 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA) only creates or destroys balances on bridge execution, not selective transfer restriction of existing holders. Observed against Gnosis block 47473648. Traded WXDAI 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d is a plain WETH-style wrapper and is not the canonical native supply contract.",
+          "evidence": "The registry's canonical contract deployment for xDAI is the WXDAI wrapper 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d, re-read at Gnosis block 48024275. Sourcify holds a creation-and-runtime match for WXDAI.sol (solc 0.4.26, optimizer off), a verbatim WETH9 clone: transfer/transferFrom check only the holder balance and, for a third-party spender, the allowance; there is no owner, pause, blacklist, freeze, allowlist, seizure, mint, or transfer hook in the source, and the contract is not upgradeable. At that block all three EIP-1967 slots (implementation, admin, beacon) read zero, name() returned \"Wrapped XDAI\", symbol() \"WXDAI\", decimals() 18 and totalSupply() 53,871,464.34 WXDAI. Probes for owner(), paused(), isBlacklisted(address), isBlackListed(address), frozen(address), isFrozen(address), hasRole, admin(), implementation() and proxiableUUID() all returned empty data because no such function exists and the WETH-style payable fallback swallows the unmatched selector. The underlying native xDAI gas balance the wrapper holds is a consensus/ledger value with no issuer transfer hook either; the xDAI bridge (Home Bridge 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6 plus BlockReward 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA) only creates or destroys balances on bridge execution and cannot selectively restrict an existing holder. Previously keyed as the non-contract token id \"xDAI\", which does not match the registry deployment inventory the transfer material-scope test resolves against.",
           "sources": [
+            {
+              "label": "Sourcify verified WXDAI source (chain 100)",
+              "url": "https://sourcify.dev/server/v2/contract/100/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+            },
+            {
+              "label": "WXDAI contract on Gnosis Blockscout",
+              "url": "https://gnosis.blockscout.com/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d?tab=contract"
+            },
+            {
+              "label": "Gnosis public RPC used for the block 48024275 reads",
+              "url": "https://rpc.gnosischain.com"
+            },
             {
               "label": "Gnosis Chain token docs",
               "url": "https://docs.gnosischain.com/about/tokens/"
@@ -4810,14 +4872,6 @@
             {
               "label": "Gnosis xDAI bridge docs",
               "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
-            },
-            {
-              "label": "Gnosis block 47473648",
-              "url": "https://gnosis.blockscout.com/block/47473648"
-            },
-            {
-              "label": "WXDAI wrapper contract",
-              "url": "https://gnosis.blockscout.com/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d?tab=contract"
             }
           ]
         }

@@ -71,9 +71,13 @@ function resolve(rows = [observation()], capturedAtSec = CLOCK_SEC - 60) {
 }
 
 describe("Safety Score V9 transfer deployment materiality", () => {
-  it("pins the approved cohort to exactly 40 assets", () => {
-    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toHaveLength(40);
+  it("pins the approved cohort to exactly 41 assets", () => {
+    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toHaveLength(41);
     expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("sfrxusd-frax");
+    // bd-basedollar admitted 2026-09-01: it has a complete deployment-scoped
+    // transfer review but no llamaId/geckoId, so without cohort membership the
+    // review stays permanently bounded-unknown.
+    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("bd-basedollar");
   });
 
   it("resolves a cohort asset's reviewed transfer posture from a fresh raw-unit observation", () => {
