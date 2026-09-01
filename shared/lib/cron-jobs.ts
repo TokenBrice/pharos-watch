@@ -93,8 +93,13 @@ const CRON_SCHEDULE_DEFINITIONS = {
   },
   twoHourlyDexDiscovery: { schedule: "6 */2 * * *", ...CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery },
   // Keep the minute-long extended scan clear of the DEX/V9 publication chain.
+  // The logical cadence remains half-hourly, but each physical trigger is an
+  // hourly expression so Cloudflare grants the hourly Cron CPU class. The
+  // combined sub-hourly expression repeatedly exhausted its 30-second CPU
+  // class and was reconciled as platform-abandoned in production on 2026-09-01.
   halfHourlyMintBurnExtended: {
     schedule: "18,48 * * * *",
+    triggerSchedules: ["18 * * * *", "48 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMintBurnExtended,
   },
   halfHourlyMeasuredExecution: {
@@ -165,12 +170,15 @@ export const CRON_CONNECTION_BUDGET = {
  * v9PublicationOffset writer. Removing the neutral DEX `:40` trigger lowered
  * the reviewed topology to 34; ADR-22 raises it to 38 to isolate the zero-fetch
  * DDR heap from supply attribution; the same review pairs the existing mint/
- * burn cadence for one net expression, bringing the topology to 39. The binding constraints remain the
- * fetch-capable-entry and per-trigger connection limits below, plus Cloudflare's
- * 250-Cron-Triggers-per-account platform ceiling.
+ * burn cadence for one net expression, bringing the topology to 39. ADR-23
+ * pairs the extended mint/burn cadence after same-version production runs
+ * proved the same CPU-class fault, bringing the topology to 40 without adding
+ * logical work, fetch surface, or connection pressure. The binding constraints
+ * remain the fetch-capable-entry and per-trigger connection limits below, plus
+ * Cloudflare's 250-Cron-Triggers-per-account platform ceiling.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
-  maxPhysicalTriggersBeforeRebalance: 39,
+  maxPhysicalTriggersBeforeRebalance: 40,
   // The digest publication watchdog is a one-connection serial sidecar on the
   // existing status lane; admit that reviewed entry without changing trigger
   // topology or the per-trigger peak.
