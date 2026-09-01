@@ -59,7 +59,8 @@
       ],
       "redemptionRateProbe": {
         "contract": "0x9474206bc035D03d142264fd9913d1D51246d3AC",
-        "selector": "0xc52861f2"
+        "selector": "0xc52861f2",
+        "decimals": 18
       },
       "branches": [
         {

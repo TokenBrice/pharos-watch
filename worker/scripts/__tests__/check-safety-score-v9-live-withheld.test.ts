@@ -63,12 +63,16 @@ function healthyReplay() {
 describe("buildLiveWithheldCounterfactualReport", () => {
   it("reports a live-backed grade drop with fallback details and omits a held grade", () => {
     const { replay, metaById } = healthyReplay();
+    const alpha = replay.pipeline.evaluatedSet.assets.find((asset) => asset.assetId === "alpha");
+    if (!alpha?.stressState?.exitPortfolio) throw new Error("Fixture has no alpha exit portfolio");
+    alpha.stressState.exitPortfolio.circulatingUsd = null;
 
     const rows = buildLiveWithheldCounterfactualReport(replay, metaById);
 
     expect(rows).toEqual([
       expect.objectContaining({
         assetId: "alpha",
+        supplyUsd: 0,
         liveGrade: "C",
         fallbackScore: null,
         fallbackGrade: "NR",

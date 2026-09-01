@@ -9,6 +9,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // are newest-first by version.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.3",
+    title: "Curve physical-pool alias normalization",
+    date: "2026-09-01",
+    effectiveAt: 1788220800,
+    summary:
+      "Curve registry aliases for one physical pool now collapse by canonical chain and address before coin-set ambiguity is evaluated, allowing the reviewed LUSD/3Crv execution target to enter measurement without weakening collision handling.",
+    impact: [
+      "When Curve exposes the same pool address through multiple registry views, the latest address-key representation replaces the earlier alias in the fingerprint candidate set instead of being counted as a second physical pool",
+      "Distinct pool addresses with the same token-set fingerprint remain ambiguous and fail closed, preserving the address-grade identity requirement",
+      "The LUSD/3Crv DeFiLlama UUID row can now join its reviewed physical pool and publish the v6.2 exact get_dy_underlying target; aggregate DEX TVL and Liquidity Score formulas are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.2",
     title: "Exact LUSD/3Crv metapool execution",
     date: "2026-09-01",

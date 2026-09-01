@@ -2464,14 +2464,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.4"
+      "methodologyVersion": "4.41"
     }
   },
   "methodology": {
-    "version": "4.4",
-    "versionLabel": "v4.4",
-    "currentVersion": "4.4",
-    "currentVersionLabel": "v4.4",
+    "version": "4.41",
+    "versionLabel": "v4.41",
+    "currentVersion": "4.41",
+    "currentVersionLabel": "v4.41",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 1773350400,
     "isCurrent": true,

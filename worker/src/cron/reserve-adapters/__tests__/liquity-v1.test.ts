@@ -37,6 +37,7 @@ const config: LiveReservesConfig = {
     redemptionRateProbe: {
       contract: "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
       selector: "0xc52861f2",
+      decimals: 18,
     },
   },
 };
