@@ -14,6 +14,7 @@ const WORKER_RELEASE_EXACT_PATHS = new Set<string>(DEPLOY_IMPACT_REGISTRY.worker
 const WORKER_SHARED_EXCLUDED_PATHS = new Set<string>(DEPLOY_IMPACT_REGISTRY.worker.sharedExcludedPaths ?? []);
 const WORKER_RELEASE_SHARED_EXCLUDED_PATHS = new Set<string>(DEPLOY_IMPACT_REGISTRY.workerRelease.sharedExcludedPaths);
 const PAGES_UI_EXACT_PATHS = new Set<string>(["next.config.ts", "package.json", "package-lock.json"]);
+const DOCS_ONLY_EXCLUDED_PATHS = new Set<string>(["docs/editorial-style.md"]);
 const FULL_DEPLOY_INFRA_PREFIXES = DEPLOY_IMPACT_REGISTRY.fullDeployInfra.prefixes;
 const PAGES_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.pages.prefixes;
 const WORKER_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.worker.prefixes;
@@ -101,7 +102,11 @@ export function hasOnlyInternalDocsImpact(files: readonly string[]): boolean {
   return (
     files.length > 0 &&
     !hasDeployImpact(files) &&
-    files.every((file) => file.startsWith("docs/") || (!file.includes("/") && file.endsWith(".md")))
+    files.every(
+      (file) =>
+        !DOCS_ONLY_EXCLUDED_PATHS.has(file) &&
+        (file.startsWith("docs/") || (!file.includes("/") && file.endsWith(".md"))),
+    )
   );
 }
 

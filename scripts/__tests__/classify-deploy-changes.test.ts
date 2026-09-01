@@ -367,6 +367,13 @@ describe("classifyDeployChanges", () => {
     expect(result.changedFiles).toEqual(["docs/process/notes.md", "docs/testing.md"]);
   });
 
+  it("routes the editorial-style generator source through full PR checks", () => {
+    const result = classifyChangedFiles(["docs/editorial-style.md"]);
+
+    expect(result.deployRequired).toBe(false);
+    expect(result.docsOnly).toBe(false);
+  });
+
   it("validates test-only Pages changes without publishing them", () => {
     const execFile = () => "src/components/__tests__/header.test.tsx\0";
 

@@ -124,6 +124,17 @@ describe("adaptive PR checks", () => {
     expect(artifactCommand?.args[0]).toContain("safety-score-v9-evaluation-build");
   });
 
+  it("checks the editorial-style artifact for its docs source", () => {
+    const plan = buildPrStaticCheckPlan(["docs/editorial-style.md"]);
+    const artifactCommand = plan.commands.find(
+      (command): command is { name: string; args: string[] } =>
+        command.name === "check:generated-artifacts" && "args" in command,
+    );
+
+    expect(plan.classification.docsOnly).toBe(false);
+    expect(artifactCommand?.args[0]).toContain("editorial-style");
+  });
+
   it("selects structural checks for production and validation surfaces", () => {
     for (const path of [
       "src/lib/feature-flags.ts",
