@@ -75,7 +75,10 @@ const REASON_CODE_LABELS = {
   "nonmaterial-dependency-unavailable": "A minor dependency could not be scored",
   "no-viable-exit-path": "No viable exit path found",
   "parent-cycle": "Circular dependency between assets",
-  "partial-reserve-review": "Reserve review only partly complete",
+  // Neutral on cause: most carriers are wrappers whose inherited parent
+  // exposure has no live verification, not reviews someone left unfinished;
+  // the same code also covers a genuinely partial standalone review.
+  "partial-reserve-review": "Reserve backing only partly verified",
   "runtime-bridge-materiality-unavailable": "Live bridge exposure unavailable",
   "scoped-control-question": "Reviewer-scoped control question open",
   "selected-bridge-route-missing": "Selected bridge route not found",
