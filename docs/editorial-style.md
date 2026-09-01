@@ -1,6 +1,6 @@
 # Pharos Editorial Style
 
-Version 1.1. This is the sole style authority for Pharos-owned prose. Surface prompts, agent skills, and lints derive from it; none may add or relax a voice rule locally. Surface-specific factual and structural rules (lead selection, anti-repetition, length contracts) live in the register table here and in each surface's factual contract.
+Version 1.2. This is the sole style authority for Pharos-owned prose. Surface prompts, agent skills, and lints derive from it; none may add or relax a voice rule locally. Surface-specific factual and structural rules (lead selection, anti-repetition, length contracts) live in the register table here and in each surface's factual contract.
 
 The fenced `editorial-policy` block at the end of this document is the machine-readable source of truth. `shared/lib/editorial-style.generated.ts` is generated from it; never hand-edit that file, and never maintain a second phrase list.
 
@@ -62,12 +62,12 @@ Prefer one useful comparison over a fourth statistic. Give the baseline, denomin
 
 ## Claim safety
 
-Hard rules for every product surface (profiles, OG cards, SEO metadata, Telegram product copy, UI), extending the existing Selector policy repo-wide:
+Claim-safety rules for every product surface (profiles, OG cards, SEO metadata, Telegram product copy, UI), extending the existing Selector policy repo-wide. The first two are hard; the last two are advisory, because a scanner cannot judge whether nearby context supplies the qualification:
 
 - No unqualified "safe", "safest", "low-risk", "risk-free", or guarantees (`no-unqualified-safety`).
 - No recommendations to buy, hold, sell, or switch (`no-investment-recommendation`).
-- Rankings and superlatives should name the metric, scope, and date ("highest liquidity score among tracked USD coins, June 2026"). Bare forms trigger advisory review because a scanner cannot determine whether nearby context supplies the qualification safely enough to block publication.
-- Technical risk terms should attribute to a defined methodology or source. Missing attribution is advisory for the same context-dependent reason.
+- Rankings and superlatives should name the metric, scope, and date ("highest liquidity score among tracked USD coins, June 2026"). Bare forms trigger advisory review, in product and editorial registers alike, because a scanner cannot determine whether nearby context supplies the qualification safely enough to block publication.
+- Technical risk terms should attribute to a defined methodology or source. Missing attribution is advisory for the same context-dependent reason, in product and editorial registers alike.
 
 `docs/design-context.md` owns product posture; this document owns sentences. On mechanics, this document wins.
 
@@ -80,7 +80,7 @@ Two classes. **Hard** rules are exact, scanner-safe, and can block a runtime edi
 - Clause dashes: em, en, figure, and horizontal-bar dashes (U+2012 through U+2015) in prose (`no-clause-dash`). Hyphens stay valid in compounds and compact ranges.
 - The mathematical minus (U+2212) used as a clause dash (`no-minus-as-dash`). A signed numeric value is exempt: `−5%` and `−0.3bps` are correct data and never trip this rule; only a minus separating words does.
 - The suspense opener, anchored to a sentence boundary (`no-suspense-opener`).
-- Context-independent stale phrases (`no-stale-phrase`): "testament to", "time will tell", "it remains to be seen", "in a world where", "game-changing", "cutting-edge", "needless to say", "it's worth noting".
+- Context-independent stale phrases (`no-stale-phrase`): "testament to", "time will tell", "it remains to be seen", "in a world where", "game-changing", "cutting-edge", "needless to say", "it's worth noting" and "it is worth noting", and the sentence-opening boilerplate transitions "In summary," and "In conclusion,".
 - Closer position only (`no-hedged-closer`): "worth watching", "worth monitoring", "bears watching", "for now", "the question is whether". Say what to watch, when, and what it would mean.
 - Decorative dead metaphors in editorial registers (`no-dead-metaphor`): "beneath the calm", "surface calm", "restless depths", "something moving underneath". Literal physical descriptions and ordinary verbs such as "belies" are not in the hard set.
 - Claim-safety patterns above, in product scopes.
@@ -89,7 +89,8 @@ Two classes. **Hard** rules are exact, scanner-safe, and can block a runtime edi
 
 - Repeated rule-of-three cadence: the abstract-noun triad plus verdict. Factual enumeration of N evidenced items is legal; N=3 is not a smell.
 - Corrective clefts, including the bounded within-sentence and split-sentence forms, because necessary technical distinctions share their grammar.
-- Ambiguous stale lexemes (`no-ambiguous-stale-phrase`): "at its core", "delve", and lowercase "revolutionary". They are prompts to rewrite where practical, not blocking findings.
+- Ambiguous stale lexemes (`no-ambiguous-stale-phrase`): "at its core", "delve", lowercase "revolutionary", bare "worth noting", and the sentence-opening "Overall,". They are prompts to rewrite where practical, not blocking findings; "worth noting" and "Overall," stay advisory because both have live legitimate uses.
+- Fashionable tells (`no-fashionable-tell`): "underscores the", "poised to", "stark reminder", "marks a significant". Current-generation model idiom; state the consequence and let the size of the number carry the significance.
 - Broader rhetorical flips beyond the bounded cleft; "not merely X", "isn't just X" used as recategorization rather than fact.
 - Personification of named metrics (regex-detected for the known verb set, advisory because the general case needs judgment).
 - Hedge stacks: two or more qualifiers on one claim ("could potentially", "might arguably"). One warranted "may" is required honesty, not a tell; technical and notice registers must keep it.
@@ -101,6 +102,7 @@ Two classes. **Hard** rules are exact, scanner-safe, and can block a runtime edi
 ## Punctuation and labels
 
 - Prose: do not use the em, en, figure, or horizontal-bar dash (U+2012 through U+2015), or a mathematical minus, between clauses in any register. Other Unicode dash-like glyphs are not scanner-enforced. This ban is anti-tell, not anti-journalism: the FT allows the dash; our generators were trained to overuse it as a signature.
+- The ban must not mint a replacement tic. Answering every removed dash with a semicolon is the same signature in new punctuation, exactly as a uniform colon habit is in labels. Most clause dashes split into two sentences; reach for a colon or semicolon only where the logic calls for one.
 - Signed values and arithmetic keep their correct glyphs. A style rule never rewrites a number.
 - Ranges in running prose: "0 to 100". Compact UI ranges, compounds, identifiers: hyphen (`0-100`).
 - Structured labels migrate off the " — " delimiter deterministically: source references become `Publisher: external title`; field/value controls become `Label: value`; annotation titles drop the delimiter, taking a comma for a simple apposition ("AUSD native launch on Sui, the first institutional USD stablecoin there") and a colon only when the gloss is a finite clause. Do not convert every dash to a colon: a uniform colon habit is the same tic wearing different punctuation. Right-hand sides that already contain a colon go to human review. Quoted external titles keep their original punctuation, always; a label that is a verbatim external headline is skipped and recorded, never rewritten.
@@ -115,7 +117,7 @@ The voice stays fixed. Length, temperature, and job change. The enforcement regi
 | --- | --- | --- |
 | Daily editorial | Daily digest | Lead with the highest-impact fact, numbers and historical context, 150 to 280 words plus a compact hook. Zero sharp lines is the default; one is the cap; sardonic stays available as a rare tone, never the default and never in consecutive editions (rotation-enforced). No manufactured menace on calm days. When the evidence contains a material observable trigger, name it; do not force a threshold ending onto every edition or into the final sentence. Anti-repetition rules (lead family, opening shape, tone rotation) are register rules and survive prompt composition. |
 | Weekly synthesis | Weekly recap | The strictest temperature, not the loosest: it synthesizes a week and is the corpus most prone to performance. Causal arc from daily evidence, persistent moves vs reversals, honest scoring of prior expectations. No personified indexes. |
-| Coin summary | AI summaries, `oneLiner` | 120 to 180 words, one main claim per sentence; shorter is legal when the evidence is complete. Title is a descriptor ("ETH-only immutable dollar"), never a nickname or mascot. What the asset is, the central trade-off, what Pharos data reveals that a listing page would miss. Close on the durable constraint; no punch required. |
+| Coin summary | AI summaries, `oneLiner` | 120 to 180 words as guidance, 250 as the hard ceiling; shorter is legal when the evidence is complete, and length above the band must be carried by evidence, not narration. One main claim per sentence. Title is a plain descriptor ("ETH-only immutable dollar") or a characterization this coin's own record supports ("Latency Ate the Backing", when it did); puns, mascots, rhymes, and generic slogans are banned, and the test is the same names-and-figures test as everywhere else: a title that would fit any other coin is generic, cut it. What the asset is, the central trade-off, what Pharos data reveals that a listing page would miss. Close on the durable constraint; no punch required. |
 | Profile reference | `collateral`, `pegMechanism`, link labels | Compressed reference copy. Specific, factual, no wit, no marketing. Terms of art (PSM, CDP, attestation) allowed. |
 | Pre-launch record | `launchPhaseDetail`, milestones, featured content | Dated factual record: what was announced, by whom, with what commitment. No predictions, no launch-copy excitement, no dash-glossed titles. |
 | Notice | Exploit and incident notices | Urgent register: the event, the effect on holders, the source. Direct, calm, complete. No wit. |
@@ -145,10 +147,18 @@ Surface prompts carry full structural skeletons. Two compact calibration exempla
 
 > The design has not changed since launch: spot BTC under institutional custody, hedged with COIN-M shorts. What has changed is the share of collateral at a single custodian, up from a third to over half in six months. The durable constraint is that redemption speed depends on one firm's operations desk.
 
+**Daily paragraph at the ceiling, one earned dry line.** This is the cap, not the target; most editions use none:
+
+> EXAUSD's issuer bought back $198M of its own coin across three venues on Tuesday, then described the week's 2.1% supply decline as organic rotation. The buyback wallet has carried the issuer's treasury tag since January and accounts for all but $26M of the $224M in net outflows. Redemptions at the official window stayed near zero. On this tape, the organic share of the rotation is $26M.
+
+The closing line is legal because it is arithmetic against the issuer's own claim. Remove the figures and the claim, and the line has nothing left to say; that is the test every sharp line must pass.
+
 ## Scope and enforcement
 
 - Only rules marked `hard` can block publication or fail CI; advisory findings feed prompts and review queues and never block on their own.
 - Severity is declared per rule and register in the policy block; a word banned in editorial registers can be unrestricted in technical ones.
+- The corrective cleft stays advisory, with a measured promotion path: cleft emission is read from the per-edition `editorialStyleGate` telemetry, and if clefts keep appearing in editorial registers across a full shadow window (more than one edition in 30), the rule is promoted to hard in daily, weekly, and coin-summary, where the one-retry contract bounds a false positive to a single regeneration rather than a blocked document.
+- The advisory lexeme set is reviewed at each minor version against a sample of recent generated editions. Banned-phrase lists are a snapshot of model idiom and fossilize without re-examination.
 - Applies to Pharos-owned prose on surfaces registered for corpus or runtime scanning. The registry is the operational scope; unregistered documentation and source families are not implicitly covered. Out of scope: quoted source text and external titles, user-submitted content, donor messages, issuer-provided text, code, identifiers, formulas, JSON keys, URLs, version strings.
 - Runtime LLM surfaces: hard findings on model-owned fields get one corrective retry naming rule, field, and excerpt; unresolved hard findings block the edition. No silent punctuation repair. Wrapper-owned failures are channel-local: skip and alert that channel, never respend the model.
 - Published editions carry the style version and policy hash that produced them. Editions authored before this policy carry no version and are surfaced as `pre-policy` at read time; archives are never edited or retroactively tagged.
@@ -169,12 +179,12 @@ Generated consumers read this block only. Editing it requires a monotonic `versi
 
 ```json editorial-policy
 {
-  "version": "1.1",
+  "version": "1.2",
   "oneLineDirective": "Write like an FT markets reporter with the tape in front of you: strongest verified fact first, distinguish observation from inference, explain the consequence plainly, no clause dashes, no corrective \"this is not X, it is Y\", no personified metrics, no nickname titles, no slogan closers. Wit only if deleting the names and figures kills the line; the default is none.",
   "registers": [
     { "id": "daily", "label": "Daily editorial", "group": "editorial", "promptLine": "Lead with the highest-impact verified fact in 150 to 280 words plus a compact hook. Zero sharp lines is the default and one is the cap; sardonic is rare, never consecutive, and rotation-enforced. Preserve lead-family, opening-shape, and tone anti-repetition rules. Name a material observable trigger when the evidence contains one; never force a threshold ending." },
     { "id": "weekly", "label": "Weekly synthesis", "group": "editorial", "promptLine": "Build the week's causal arc from daily evidence, separate persistent moves from reversals, and score prior expectations honestly. This is the strictest temperature, not the loosest; never personify indexes." },
-    { "id": "coin-summary", "label": "Coin summary", "group": "editorial", "promptLine": "120 to 180 words, one main claim per sentence. The title is a descriptor, never a nickname. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss. Close on the durable constraint; no punch required." },
+    { "id": "coin-summary", "label": "Coin summary", "group": "editorial", "promptLine": "120 to 180 words as guidance with a hard ceiling of 250; shorter is legal when the evidence is complete, and length above the band must be carried by evidence, not narration. One main claim per sentence. The title is a plain descriptor or a characterization this coin's own record supports; puns, mascots, rhymes, and generic slogans are banned, and a title that would fit any other coin is generic. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss. Close on the durable constraint; no punch required." },
     { "id": "cemetery", "label": "Cemetery", "group": "editorial", "promptLine": "Obituary: chronological, sober, complete. Epitaph: short, with one evidence-backed barb permitted because the outcome is settled. No animal or mascot nicknames." },
     { "id": "long-form", "label": "Long-form", "group": "editorial", "promptLine": "Narrative and first person are allowed where they add provenance. Claims need dates, scope, and receipts." },
     { "id": "profile-reference", "label": "Profile reference", "group": "technical", "promptLine": "Compressed reference copy: specific, factual, no wit, no marketing. Terms of art are allowed." },
@@ -199,7 +209,7 @@ Generated consumers read this block only. Editing it requires a monotonic `versi
       "patterns": [{ "source": "[\\u2012\\u2013\\u2014\\u2015]", "flags": "gu" }],
       "severity": { "default": "hard" },
       "exceptions": ["quoted-source", "external-title", "code", "identifier"],
-      "replacementAdvice": "Split the clause or use a colon, comma, or semicolon.",
+      "replacementAdvice": "Most clause dashes split into two sentences; use a colon, comma, or semicolon only where the logic calls for one, and never answer every dash with the same mark.",
       "introducedIn": "1.0",
       "examples": {
         "violating": ["Supply fell — the peg held."],
@@ -266,7 +276,7 @@ Generated consumers read this block only. Editing it requires a monotonic `versi
     },
     {
       "id": "no-stale-phrase",
-      "promptLabel": "Never use context-independent boilerplate: testament to, time will tell, it remains to be seen, in a world where, game-changing, cutting-edge, needless to say, or it's worth noting.",
+      "promptLabel": "Never use context-independent boilerplate: testament to, time will tell, it remains to be seen, in a world where, game-changing, cutting-edge, needless to say, it's worth noting or it is worth noting, or a sentence opened with In summary, or In conclusion,.",
       "patterns": [
         { "source": "\\btestament to\\b", "flags": "giu" },
         { "source": "\\btime will tell\\b", "flags": "giu" },
@@ -275,32 +285,53 @@ Generated consumers read this block only. Editing it requires a monotonic `versi
         { "source": "\\bgame[- ]changing\\b", "flags": "giu" },
         { "source": "\\bcutting[- ]edge\\b", "flags": "giu" },
         { "source": "\\bneedless to say\\b", "flags": "giu" },
-        { "source": "\\bit['\\u2019]s worth noting\\b", "flags": "giu" }
+        { "source": "\\bit(?:['\\u2019]s|\\s+is)\\s+worth noting\\b", "flags": "giu" },
+        { "source": "(?:^|[.!?]\\s+)In (?:summary|conclusion),", "flags": "gmu" }
       ],
       "severity": { "default": "hard" },
       "exceptions": ["quoted-source", "external-title"],
       "replacementAdvice": "Delete the phrase and state the fact.",
       "introducedIn": "1.0",
       "examples": {
-        "violating": ["The growth is a testament to demand."],
-        "clean": ["The testamentary trust holds the shares."]
+        "violating": ["The growth is a testament to demand.", "It is worth noting that supply fell.", "In conclusion, the peg held."],
+        "clean": ["The testamentary trust holds the shares.", "The conclusion of the audit is dated June 2026."]
       }
     },
     {
       "id": "no-ambiguous-stale-phrase",
-      "promptLabel": "Avoid ambiguous stale phrasing where context permits: at its core, delve, and lowercase revolutionary.",
+      "promptLabel": "Avoid ambiguous stale phrasing where context permits: at its core, delve, lowercase revolutionary, bare worth noting, and a sentence opened with Overall,.",
       "patterns": [
         { "source": "\\bat its core\\b", "flags": "giu" },
         { "source": "\\bdelv(?:e|es|ed|ing)\\b", "flags": "giu" },
-        { "source": "\\brevolutionary\\b", "flags": "gu" }
+        { "source": "\\brevolutionary\\b", "flags": "gu" },
+        { "source": "\\bworth noting\\b", "flags": "giu" },
+        { "source": "(?:^|[.!?]\\s+)Overall,", "flags": "gmu" }
       ],
       "severity": { "default": "advisory" },
       "exceptions": ["quoted-source", "external-title"],
       "replacementAdvice": "Prefer the specific mechanism; preserve legitimate historical or proper-name use.",
       "introducedIn": "1.1",
       "examples": {
-        "violating": ["At its core, the protocol is a CDP.", "We delve into the reserve report.", "The design is revolutionary."],
-        "clean": ["Revolutionary Finance Ltd. issued the token."]
+        "violating": ["At its core, the protocol is a CDP.", "We delve into the reserve report.", "The design is revolutionary.", "Overall, the design held up.", "The reserve mix is worth noting."],
+        "clean": ["Revolutionary Finance Ltd. issued the token.", "The overall grade stayed at B+."]
+      }
+    },
+    {
+      "id": "no-fashionable-tell",
+      "promptLabel": "Avoid the fashionable tells: underscores the, poised to, stark reminder, marks a significant. State the consequence and let the size of the number carry the significance.",
+      "patterns": [
+        { "source": "\\bunderscor(?:es|ed|ing)\\s+(?:the|its|their|how|that|why|a|an)\\b", "flags": "giu" },
+        { "source": "\\bpoised to\\b", "flags": "giu" },
+        { "source": "\\bstark reminder\\b", "flags": "giu" },
+        { "source": "\\bmark(?:s|ed)? a significant\\b", "flags": "giu" }
+      ],
+      "severity": { "default": "advisory" },
+      "exceptions": ["quoted-source", "external-title"],
+      "replacementAdvice": "Name the consequence directly; a number that matters does not need to be told it is significant.",
+      "introducedIn": "1.2",
+      "examples": {
+        "violating": ["The freeze underscores the custodian's control.", "The issuer is poised to expand.", "The outage is a stark reminder of oracle dependence.", "The vote marks a significant shift."],
+        "clean": ["Provider ids with underscores are normalized before matching.", "The freeze shows the custodian can halt transfers unilaterally."]
       }
     },
     {
@@ -434,7 +465,7 @@ Generated consumers read this block only. Editing it requires a monotonic `versi
       "patterns": [
         { "source": "(?:^|[.!?]\\s+)(?=[^.!?]{0,180}\\b(?:largest|strongest|highest[- ]quality|best)\\b)(?![^.!?]{0,180}\\b(?:among|within|as of|liquidity score|market cap(?:italization)?|circulating supply|redemption depth|yield|20\\d{2})\\b)[^.!?]{0,180}(?:[.!?]|$)", "flags": "gimu" }
       ],
-      "severity": { "default": "off", "byRegister": { "profile-reference": "advisory", "page-description": "advisory", "analytical-explanation": "advisory", "product-utility": "advisory", "brand": "advisory", "alert": "advisory", "delivery-wrapper": "advisory" } },
+      "severity": { "default": "off", "byRegister": { "daily": "advisory", "weekly": "advisory", "coin-summary": "advisory", "profile-reference": "advisory", "page-description": "advisory", "analytical-explanation": "advisory", "product-utility": "advisory", "brand": "advisory", "alert": "advisory", "delivery-wrapper": "advisory" } },
       "exceptions": ["quoted-source", "external-title"],
       "replacementAdvice": "Add the metric, comparison universe, and date, or remove the ranking.",
       "introducedIn": "1.1",
@@ -449,7 +480,7 @@ Generated consumers read this block only. Editing it requires a monotonic `versi
       "patterns": [
         { "source": "(?:^|[.!?]\\s+)(?=[^.!?]{0,180}\\b(?:high|medium|low)[- ]risk\\b)(?![^.!?]{0,180}\\b(?:according to|under|rated|methodology|score|audit|report|source|Pharos V\\d+)\\b)[^.!?]{0,180}(?:[.!?]|$)", "flags": "gimu" }
       ],
-      "severity": { "default": "off", "byRegister": { "profile-reference": "advisory", "page-description": "advisory", "analytical-explanation": "advisory", "product-utility": "advisory", "brand": "advisory", "alert": "advisory", "delivery-wrapper": "advisory" } },
+      "severity": { "default": "off", "byRegister": { "daily": "advisory", "weekly": "advisory", "coin-summary": "advisory", "profile-reference": "advisory", "page-description": "advisory", "analytical-explanation": "advisory", "product-utility": "advisory", "brand": "advisory", "alert": "advisory", "delivery-wrapper": "advisory" } },
       "exceptions": ["quoted-source", "external-title"],
       "replacementAdvice": "Name the methodology, rating, audit, or source behind the risk label.",
       "introducedIn": "1.1",

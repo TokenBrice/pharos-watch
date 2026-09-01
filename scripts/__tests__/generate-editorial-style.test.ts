@@ -12,6 +12,8 @@ import {
 
 type MutablePolicy = Record<string, unknown> & {
   version: string;
+  oneLineDirective: string;
+  registers: Array<Record<string, unknown>>;
   rules: Array<Record<string, unknown>>;
 };
 
@@ -22,6 +24,12 @@ function readPolicy(): ReturnType<typeof validatePolicy> {
 
 function clonePolicy(policy: ReturnType<typeof validatePolicy>): MutablePolicy {
   return JSON.parse(JSON.stringify(policy)) as MutablePolicy;
+}
+
+/** Next MINOR above the committed policy, so these probes never go stale on a real bump. */
+function bumpedVersion(policy: ReturnType<typeof validatePolicy>): string {
+  const [major, minor] = policy.version.split(".");
+  return `${major}.${Number(minor) + 1}`;
 }
 
 describe("editorial policy generator", () => {
@@ -38,28 +46,28 @@ describe("editorial policy generator", () => {
     const changed = clonePolicy(current);
     const firstPattern = (changed.rules[0]!.patterns as Array<Record<string, unknown>>)[0]!;
     firstPattern.source = `${String(firstPattern.source)}(?:)`;
-    expect(() => assertMonotonicPolicyVersion(current, changed as ReturnType<typeof validatePolicy>)).toThrow(
+    expect(() => assertMonotonicPolicyVersion(current, changed as unknown as ReturnType<typeof validatePolicy>)).toThrow(
       /semantic policy changes require a version above/,
     );
 
-    changed.version = "1.2";
-    expect(() => assertMonotonicPolicyVersion(current, changed as ReturnType<typeof validatePolicy>)).not.toThrow();
+    changed.version = bumpedVersion(current);
+    expect(() => assertMonotonicPolicyVersion(current, changed as unknown as ReturnType<typeof validatePolicy>)).not.toThrow();
   });
 
   it("requires new rules to declare the version that introduced them", () => {
     const current = readPolicy();
     const next = clonePolicy(current);
-    next.version = "1.2";
+    next.version = bumpedVersion(current);
     const added = JSON.parse(JSON.stringify(next.rules[0])) as Record<string, unknown>;
     added.id = "new-test-rule";
     added.introducedIn = "0.9";
     next.rules.push(added);
     const validated = validatePolicy(JSON.stringify(next));
     expect(() => assertMonotonicPolicyVersion(current, validated)).toThrow(
-      /must set introducedIn to policy version 1.2/,
+      new RegExp(`must set introducedIn to policy version ${next.version.replace(".", "\\.")}`),
     );
 
-    added.introducedIn = "1.2";
+    added.introducedIn = next.version;
     expect(() =>
       assertMonotonicPolicyVersion(current, validatePolicy(JSON.stringify(next))),
     ).not.toThrow();
@@ -68,7 +76,7 @@ describe("editorial policy generator", () => {
   it("does not allow an existing rule's introducedIn history to be rewritten", () => {
     const current = readPolicy();
     const next = clonePolicy(current);
-    next.version = "1.2";
+    next.version = bumpedVersion(current);
     next.rules[0]!.introducedIn = "0.9";
     expect(() =>
       assertMonotonicPolicyVersion(current, validatePolicy(JSON.stringify(next))),
@@ -89,7 +97,7 @@ describe("editorial policy generator", () => {
     const changed = clonePolicy(policy);
     const firstPattern = (changed.rules[0]!.patterns as Array<Record<string, unknown>>)[0]!;
     firstPattern.source = `${String(firstPattern.source)}(?:)`;
-    expect(policyHash(policy)).not.toBe(policyHash(changed as ReturnType<typeof validatePolicy>));
+    expect(policyHash(policy)).not.toBe(policyHash(changed as unknown as ReturnType<typeof validatePolicy>));
   });
 
   it.each([

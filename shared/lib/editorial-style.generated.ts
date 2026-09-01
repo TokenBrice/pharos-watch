@@ -3,13 +3,13 @@
 // edit the document and regenerate. Serialized data only, no logic.
 import type { EditorialPolicy } from "./editorial-style";
 
-export const EDITORIAL_STYLE_VERSION = "1.1";
+export const EDITORIAL_STYLE_VERSION = "1.2";
 
 /** Deterministic hash of the policy block. Bumps whenever enforcement changes. */
-export const EDITORIAL_STYLE_HASH = "9edd984e2cae9e14";
+export const EDITORIAL_STYLE_HASH = "baf6b0f7f9efd4cc";
 
 export const EDITORIAL_POLICY: EditorialPolicy = {
-  "version": "1.1",
+  "version": "1.2",
   "oneLineDirective": "Write like an FT markets reporter with the tape in front of you: strongest verified fact first, distinguish observation from inference, explain the consequence plainly, no clause dashes, no corrective \"this is not X, it is Y\", no personified metrics, no nickname titles, no slogan closers. Wit only if deleting the names and figures kills the line; the default is none.",
   "registers": [
     {
@@ -28,7 +28,7 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
       "id": "coin-summary",
       "label": "Coin summary",
       "group": "editorial",
-      "promptLine": "120 to 180 words, one main claim per sentence. The title is a descriptor, never a nickname. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss. Close on the durable constraint; no punch required."
+      "promptLine": "120 to 180 words as guidance with a hard ceiling of 250; shorter is legal when the evidence is complete, and length above the band must be carried by evidence, not narration. One main claim per sentence. The title is a plain descriptor or a characterization this coin's own record supports; puns, mascots, rhymes, and generic slogans are banned, and a title that would fit any other coin is generic. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss. Close on the durable constraint; no punch required."
     },
     {
       "id": "cemetery",
@@ -146,7 +146,7 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "code",
         "identifier"
       ],
-      "replacementAdvice": "Split the clause or use a colon, comma, or semicolon.",
+      "replacementAdvice": "Most clause dashes split into two sentences; use a colon, comma, or semicolon only where the logic calls for one, and never answer every dash with the same mark.",
       "introducedIn": "1.0",
       "examples": {
         "violating": [
@@ -279,7 +279,7 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
     },
     {
       "id": "no-stale-phrase",
-      "promptLabel": "Never use context-independent boilerplate: testament to, time will tell, it remains to be seen, in a world where, game-changing, cutting-edge, needless to say, or it's worth noting.",
+      "promptLabel": "Never use context-independent boilerplate: testament to, time will tell, it remains to be seen, in a world where, game-changing, cutting-edge, needless to say, it's worth noting or it is worth noting, or a sentence opened with In summary, or In conclusion,.",
       "patterns": [
         {
           "source": "\\btestament to\\b",
@@ -310,8 +310,12 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
           "flags": "giu"
         },
         {
-          "source": "\\bit['\\u2019]s worth noting\\b",
+          "source": "\\bit(?:['\\u2019]s|\\s+is)\\s+worth noting\\b",
           "flags": "giu"
+        },
+        {
+          "source": "(?:^|[.!?]\\s+)In (?:summary|conclusion),",
+          "flags": "gmu"
         }
       ],
       "severity": {
@@ -325,16 +329,19 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
       "introducedIn": "1.0",
       "examples": {
         "violating": [
-          "The growth is a testament to demand."
+          "The growth is a testament to demand.",
+          "It is worth noting that supply fell.",
+          "In conclusion, the peg held."
         ],
         "clean": [
-          "The testamentary trust holds the shares."
+          "The testamentary trust holds the shares.",
+          "The conclusion of the audit is dated June 2026."
         ]
       }
     },
     {
       "id": "no-ambiguous-stale-phrase",
-      "promptLabel": "Avoid ambiguous stale phrasing where context permits: at its core, delve, and lowercase revolutionary.",
+      "promptLabel": "Avoid ambiguous stale phrasing where context permits: at its core, delve, lowercase revolutionary, bare worth noting, and a sentence opened with Overall,.",
       "patterns": [
         {
           "source": "\\bat its core\\b",
@@ -347,6 +354,14 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         {
           "source": "\\brevolutionary\\b",
           "flags": "gu"
+        },
+        {
+          "source": "\\bworth noting\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "(?:^|[.!?]\\s+)Overall,",
+          "flags": "gmu"
         }
       ],
       "severity": {
@@ -362,10 +377,56 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
         "violating": [
           "At its core, the protocol is a CDP.",
           "We delve into the reserve report.",
-          "The design is revolutionary."
+          "The design is revolutionary.",
+          "Overall, the design held up.",
+          "The reserve mix is worth noting."
         ],
         "clean": [
-          "Revolutionary Finance Ltd. issued the token."
+          "Revolutionary Finance Ltd. issued the token.",
+          "The overall grade stayed at B+."
+        ]
+      }
+    },
+    {
+      "id": "no-fashionable-tell",
+      "promptLabel": "Avoid the fashionable tells: underscores the, poised to, stark reminder, marks a significant. State the consequence and let the size of the number carry the significance.",
+      "patterns": [
+        {
+          "source": "\\bunderscor(?:es|ed|ing)\\s+(?:the|its|their|how|that|why|a|an)\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\bpoised to\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\bstark reminder\\b",
+          "flags": "giu"
+        },
+        {
+          "source": "\\bmark(?:s|ed)? a significant\\b",
+          "flags": "giu"
+        }
+      ],
+      "severity": {
+        "default": "advisory"
+      },
+      "exceptions": [
+        "quoted-source",
+        "external-title"
+      ],
+      "replacementAdvice": "Name the consequence directly; a number that matters does not need to be told it is significant.",
+      "introducedIn": "1.2",
+      "examples": {
+        "violating": [
+          "The freeze underscores the custodian's control.",
+          "The issuer is poised to expand.",
+          "The outage is a stark reminder of oracle dependence.",
+          "The vote marks a significant shift."
+        ],
+        "clean": [
+          "Provider ids with underscores are normalized before matching.",
+          "The freeze shows the custodian can halt transfers unilaterally."
         ]
       }
     },
@@ -688,6 +749,9 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
       "severity": {
         "default": "off",
         "byRegister": {
+          "daily": "advisory",
+          "weekly": "advisory",
+          "coin-summary": "advisory",
           "profile-reference": "advisory",
           "page-description": "advisory",
           "analytical-explanation": "advisory",
@@ -726,6 +790,9 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
       "severity": {
         "default": "off",
         "byRegister": {
+          "daily": "advisory",
+          "weekly": "advisory",
+          "coin-summary": "advisory",
           "profile-reference": "advisory",
           "page-description": "advisory",
           "analytical-explanation": "advisory",
