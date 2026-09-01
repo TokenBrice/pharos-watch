@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
-import { isDexExitRouteScoreEligible } from "@shared/lib/p4-exit-route-capability-policy";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import {
   createV9EvidenceReference,
@@ -389,19 +388,20 @@ function buildRoute(
   // V9 reviews may conservatively worsen those semantics (for example, an
   // atomic producer route can become an unbounded queue), so re-apply the
   // score-bearing contract after the review has been materialized.
-  const scoreEligible = isDexExitRouteScoreEligible({
-    producerScoreEligible: args.observation.scoreEligible,
-    routeState,
-    outputState: output.status.observationState,
-    coverageClass: args.review.coverageClass,
-    holderAccess: args.review.holderAccess,
-    executionModel: args.review.executionModel,
-    executionCertainty: args.review.executionCertainty,
-    observationConfidence: args.observation.confidence,
-    settlementModel: args.review.settlementModel,
-    settlementSlaSec: args.review.settlementSlaSec,
-    physicalResourceKeys: args.review.physicalResourceKeys,
-  });
+  const reviewedSemanticsAreScoreable =
+    args.review.holderAccess !== "unknown" &&
+    args.review.executionModel !== "unknown" &&
+    args.review.executionCertainty !== "unknown" &&
+    args.observation.confidence !== "unknown" &&
+    args.review.settlementModel !== "unknown" &&
+    args.review.physicalResourceKeys.length > 0 &&
+    (args.review.settlementModel === "atomic" || args.review.settlementSlaSec !== null);
+  const scoreEligible =
+    args.observation.scoreEligible &&
+    routeState === "known" &&
+    output.status.observationState === "known" &&
+    args.review.coverageClass !== "diagnostic" &&
+    reviewedSemanticsAreScoreable;
   return {
     routeKey,
     routeId: args.observation.routeId,
