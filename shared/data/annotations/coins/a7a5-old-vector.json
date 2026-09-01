@@ -1,5 +1,5 @@
 [
   {"date":"2025-05-01","kind":"regulatory","label":"UK sanctions A7A5 issuer network","severity":"high","note":"2025-05: UK sanctions A7A5 network"},
-  {"date":"2025-07-01","kind":"regulatory","label":"EU sanctions A7A5: direct token-level restriction","severity":"high","note":"2025-07: EU sanctions A7A5"},
+  {"date":"2025-07-01","kind":"regulatory","label":"EU sanctions A7A5, direct token-level restriction","severity":"high","note":"2025-07: EU sanctions A7A5"},
   {"date":"2025-08-14","kind":"regulatory","label":"OFAC sanctions A7A5 issuer Old Vector","severity":"high","href":"https://home.treasury.gov/news/press-releases","note":"2025-08-14: OFAC designates A7 LLC and Old Vector for sanctions-evasion infrastructure"}
 ]

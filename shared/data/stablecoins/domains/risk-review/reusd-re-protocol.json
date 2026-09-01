@@ -72,7 +72,7 @@
       "rationale": "Re Protocol recalculates reUSD's NAV and token price daily at UTC 00:00 from the reviewed yield references and publishes the accepted price through an onchain JSON/Chainlink feed. This is a price-sensitive top-level redemption and valuation authority, but reUSD has no borrower-specific debt or liquidation branches, so the disposition is top-level-only.",
       "sources": [
         {
-          "label": "Re Protocol — How the Re Protocol Works (last updated 2026-06-25)",
+          "label": "How Re works",
           "quoted": true,
           "url": "https://docs.re.xyz/protocol/how-the-re-protocol-work"
         },

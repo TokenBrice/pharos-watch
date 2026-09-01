@@ -17,17 +17,16 @@
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "A7A5 introduction (What is A7A5?) — re-opened 2026-07-30",
+        "label": "What is A7A5?",
         "quoted": true,
         "url": "https://docs.a7a5.io/introduction-to-a7a5/readme.md"
       },
       {
-        "label": "A7A5 terms of use §4.2–4.3 — re-opened 2026-07-30",
-        "quoted": true,
+        "label": "A7A5: Terms of Use §4.2–4.3",
         "url": "https://docs.a7a5.io/legal/terms-of-use.md"
       },
       {
-        "label": "A7A5 how-to-earn (overnight deposits) — re-opened 2026-07-30",
+        "label": "How to Earn Using A7A5?",
         "quoted": true,
         "url": "https://docs.a7a5.io/introduction-to-a7a5/how-to-earn-using-a7a5.md"
       },
@@ -79,17 +78,16 @@
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "A7A5 introduction (What is A7A5?) — re-opened 2026-07-30",
+        "label": "What is A7A5?",
         "quoted": true,
         "url": "https://docs.a7a5.io/introduction-to-a7a5/readme.md"
       },
       {
-        "label": "A7A5 terms of use §4.3 — re-opened 2026-07-30",
-        "quoted": true,
+        "label": "A7A5: Terms of Use §4.3",
         "url": "https://docs.a7a5.io/legal/terms-of-use.md"
       },
       {
-        "label": "A7A5 information on the risks (custodial risks) — re-opened 2026-07-30",
+        "label": "Information on the Risks",
         "quoted": true,
         "url": "https://docs.a7a5.io/additional/information-on-the-risks.md"
       }

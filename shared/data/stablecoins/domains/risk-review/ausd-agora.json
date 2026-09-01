@@ -39,12 +39,12 @@
         "url": "https://docs.agora.finance/developer/contract-deployments"
       },
       {
-        "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+        "label": "AUSD: Now Borderless Onchain",
         "quoted": true,
         "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
       },
       {
-        "label": "LayerZero — Agora and LayerZero bring AUSD to 5 blockchains",
+        "label": "Agora Partners with LayerZero to Make AUSD Stablecoin Compatible with All Blockchains",
         "quoted": true,
         "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
       },
@@ -53,7 +53,7 @@
         "url": "https://etherscan.io/address/0x9CaB7Ede13dc56652E44D2404E969C212f22689b"
       },
       {
-        "label": "Wormhole — Agora selects Wormhole for AUSD interoperability (2024, historical)",
+        "label": "Agora selects Wormhole as core interoperability solution for AUSD stablecoin",
         "quoted": true,
         "url": "https://wormhole.com/blog/agora-selects-wormhole-as-core-interoperability-solution-for-ausd-stablecoin"
       }
@@ -83,7 +83,7 @@
             "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a#code"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -113,7 +113,7 @@
             "url": "https://arbiscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a#code"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -143,7 +143,7 @@
             "url": "https://basescan.org/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -173,7 +173,7 @@
             "url": "https://snowtrace.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a/contract/43114/code"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -203,7 +203,7 @@
             "url": "https://bscscan.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -233,7 +233,7 @@
             "url": "https://polygonscan.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a#code"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -263,7 +263,7 @@
             "url": "https://mainnet-beta.monvision.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -294,7 +294,7 @@
             "url": "https://explorer.solana.com/address/AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -354,7 +354,7 @@
             "url": "https://explorer.mantle.xyz/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -384,7 +384,7 @@
             "url": "https://explorer.katanarpc.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a?tab=contract"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -415,7 +415,7 @@
             "url": "https://explorer.immutable.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -439,7 +439,7 @@
         "observedBlock": 29979305,
         "sources": [
           {
-            "label": "LayerZero — Agora and LayerZero bring AUSD to 5 blockchains",
+            "label": "Agora Partners with LayerZero to Make AUSD Stablecoin Compatible with All Blockchains",
             "quoted": true,
             "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
           },
@@ -448,7 +448,7 @@
             "url": "https://plasma-explorer.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }
@@ -538,7 +538,7 @@
             "url": "https://eth.blockscout.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           },
           {
-            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "label": "AUSD: Now Borderless Onchain",
             "quoted": true,
             "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
           }

@@ -1,4 +1,4 @@
 [
   {"date":"2024-07-01","kind":"regulatory","label":"StablR USDR launch, MFSA EMI license, MiCA-compliant via Hadron","severity":"med"},
-  {"date":"2026-05-24","kind":"depeg","label":"StablR multisig key compromise: unbacked mint, USDR depeg low ~$0.64","severity":"high","href":"https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens","note":"2026-05-24: Same StablR 1-of-3 minting multisig key compromise; attacker minted ~8.35M unbacked USDR. USDR fell to ~$0.64, repegged to ~$0.994 by 05-26 after StablR froze mint/redeem and asked exchanges to halt trading."}
+  {"date":"2026-05-24","kind":"depeg","label":"StablR multisig key compromise, unbacked mint, USDR depeg low ~$0.64","severity":"high","href":"https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens","note":"2026-05-24: Same StablR 1-of-3 minting multisig key compromise; attacker minted ~8.35M unbacked USDR. USDR fell to ~$0.64, repegged to ~$0.994 by 05-26 after StablR froze mint/redeem and asked exchanges to halt trading."}
 ]

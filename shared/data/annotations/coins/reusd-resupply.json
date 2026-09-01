@@ -1,3 +1,3 @@
 [
-  {"date":"2025-06-26","kind":"depeg","label":"Resupply exploit: ~$10M drained, reUSD depeg ~3.2%","severity":"high","href":"https://resupply.fi/","note":"2025-06-26: Empty-market donation attack on cvcrvUSD vault drained ~$10M; reUSD lost ~3.2% peg briefly. Companion to crvUSD pin."}
+  {"date":"2025-06-26","kind":"depeg","label":"Resupply exploit, ~$10M drained, reUSD depeg ~3.2%","severity":"high","href":"https://resupply.fi/","note":"2025-06-26: Empty-market donation attack on cvcrvUSD vault drained ~$10M; reUSD lost ~3.2% peg briefly. Companion to crvUSD pin."}
 ]

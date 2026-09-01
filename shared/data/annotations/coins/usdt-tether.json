@@ -1,6 +1,6 @@
 [
-  {"date":"2018-10-15","kind":"depeg","label":"Bitfinex banking stress: USDT depeg low ~$0.85","severity":"high","note":"2018-10-15: Bitfinex/Noble Bank banking stress; USDT to ~$0.85"},
-  {"date":"2021-02-23","kind":"regulatory","label":"NY AG settlement: forced reserve disclosures ($18.5M)","severity":"med","note":"2021-02-23: NY AG settlement (resolution of the 2019 iFinex order). Imposed quarterly reserve attestations on Tether: first ongoing reserve-disclosure mandate on the issuer."},
-  {"date":"2021-10-15","kind":"regulatory","label":"CFTC order: reserve misrepresentation ($41M penalty)","severity":"med","href":"https://www.cftc.gov/PressRoom/PressReleases/8450-21","note":"2021-10-15: CFTC order over reserve misrepresentations 2016 to 2018. $41M penalty plus ongoing reporting requirements."},
-  {"date":"2022-05-12","kind":"depeg","label":"Terra/UST collapse contagion: USDT depeg ~$0.95","severity":"high","note":"2022-05-12: UST/LUNA collapse contagion; USDT briefly traded ~$0.95 on Kraken as redemptions spiked. Largest USDT depeg since 2018."}
+  {"date":"2018-10-15","kind":"depeg","label":"Bitfinex banking stress, USDT depeg low ~$0.85","severity":"high","note":"2018-10-15: Bitfinex/Noble Bank banking stress; USDT to ~$0.85"},
+  {"date":"2021-02-23","kind":"regulatory","label":"NY AG settlement, forced reserve disclosures ($18.5M)","severity":"med","note":"2021-02-23: NY AG settlement (resolution of the 2019 iFinex order). Imposed quarterly reserve attestations on Tether: first ongoing reserve-disclosure mandate on the issuer."},
+  {"date":"2021-10-15","kind":"regulatory","label":"CFTC order, reserve misrepresentation ($41M penalty)","severity":"med","href":"https://www.cftc.gov/PressRoom/PressReleases/8450-21","note":"2021-10-15: CFTC order over reserve misrepresentations 2016 to 2018. $41M penalty plus ongoing reporting requirements."},
+  {"date":"2022-05-12","kind":"depeg","label":"Terra/UST collapse contagion, USDT depeg ~$0.95","severity":"high","note":"2022-05-12: UST/LUNA collapse contagion; USDT briefly traded ~$0.95 on Kraken as redemptions spiked. Largest USDT depeg since 2018."}
 ]

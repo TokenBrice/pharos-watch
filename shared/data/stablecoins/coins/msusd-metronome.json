@@ -2,7 +2,7 @@
   "id": "msusd-metronome",
   "name": "Metronome Synth USD",
   "symbol": "MSUSD",
-  "oneLiner": "msUSD is Metronome's overcollateralized stablecoin minted against USDC, DAI, ETH, WBTC, and Vesper yield tokens at 75% to 85% CF, with no direct redemption.",
+  "oneLiner": "msUSD is Metronome's overcollateralized synth stablecoin minted against USDC, DAI, ETH, WBTC, and Vesper yield tokens at 75%-85% CF, with no direct redemption.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
