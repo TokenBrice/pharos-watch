@@ -1,5 +1,23 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_ADJUDICATED_MECHANISM_NON_DISCLOSURE: MethodologyChangelogEntry = {
+  version: "9.451",
+  title: "An adjudicated mechanism non-disclosure says so",
+  date: "2026-09-01",
+  effectiveAt: 1788220800,
+  summary:
+    "A mechanism component the reviewer covered and found unpublished now publishes that finding — the review date, the reason, and the source checked — instead of the generic \"not a current known fact\" sentence it shared with components nobody has reviewed yet. Scores, grades, owners, and the open-gap count are unchanged by construction: the fact stays bounded-unknown and the gap stays issuer-undisclosed.",
+  impact: [
+    "A curated `applicability: \"unavailable\"` mechanism component carries a written rationale and a cited source. The compiler passed both through for `not-applicable` and dropped them for `unavailable`, so the reader saw only the generic bounded-unknown sentence. The gap message now reads `Reviewed <date>: the <component> input is not published by the issuer. <rationale> Source checked: <url>`.",
+    "The `bounded-mechanism-review` reason-code label changes from \"Mechanism review incomplete\" to \"A mechanism detail is unresolved\". The old label was false for the adjudicated majority: their review is complete, and its finding is that the issuer publishes nothing to review.",
+    "Nothing about scoring moves. The fact remains bounded-unknown at the policy bounded-unknown quality, the gap keeps `bounded-mechanism-review` and its `issuer-undisclosed` owner, and the open data-point count is unchanged. `MECHANISM_REVIEW.completionCriteria` already admits a reviewed unavailable disposition that retains the bounded-unknown gap without changing score or grade; this release makes that disposition legible rather than acting on it.",
+    "The same-UTC-day overlay clock guard is untouched. It reports a review the exact admission policy cannot use yet and stays `method-unsupported`; it is mutually exclusive with the adjudicated path, which requires a current overlay.",
+    "Measured over the 2026-09-01 production capture: 183 adjudicated component rows across 98 assets carry a rationale and a source. Replaying that capture against this change produced zero score and zero grade movers.",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_UNPROVEN_SETTLEMENT_BOUND: MethodologyChangelogEntry = {
   version: "9.45",
   title: "Unproven settlement bounds become bounded exit evidence gaps",

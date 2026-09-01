@@ -18,7 +18,12 @@ import { formatProseList } from "@shared/lib/format";
  * render an empty inventory row. Completeness for live codes is enforced below.
  */
 const REASON_CODE_LABELS = {
-  "bounded-mechanism-review": "Mechanism review incomplete",
+  // Neutral on cause, because the code carries two shapes: a component the
+  // reviewer has not covered yet, and one the reviewer covered and found the
+  // issuer does not publish (methodology 9.451). "Review incomplete" was false
+  // for the second, which is most of them; the gap's own message now says which
+  // shape it is, including the source checked and the date.
+  "bounded-mechanism-review": "A mechanism detail is unresolved",
   "bounded-unknown-reserve-exposure": "Part of the reserve is unidentified",
   "correlated-exit-routes": "Exit routes share the same failure point",
   "critical-unresolved": "A rating-critical input is unresolved",

@@ -66,7 +66,11 @@ export function SafetyScoresOverview() {
         every originating owner downstream. Every attributed root receives a causal-root-qualified score path even
         when it is the only root, so adding another root cannot rename an existing public fact; only unattributed
         fallbacks retain aggregate base paths, and ownership never becomes part of fact identity.
-        Applicable but unpublished mechanism metrics remain issuer-undisclosed rather than measured-adverse. A
+        Applicable but unpublished mechanism metrics remain issuer-undisclosed rather than measured-adverse. Since
+        methodology v9.451, one a reviewer has covered and found unpublished says so: the published gap carries the
+        review date, the reason, and the source that was checked, instead of the sentence used for a component nobody
+        has reviewed yet. The input stays bounded-unknown and the owner stays issuer-undisclosed, so no score, grade,
+        or open-data-point count moves. A
         reviewed external exit output whose identity is known but cannot be valued is attributed to producer failure,
         while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only
         dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that

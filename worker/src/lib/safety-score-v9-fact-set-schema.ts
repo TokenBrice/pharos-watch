@@ -450,6 +450,21 @@ const AssetExtensionSchema = z
       })
       .strict()
       .optional(),
+    // Mechanism components the reviewer adjudicated as reviewed-but-unpublished.
+    // The facts stay bounded-unknown, so this changes no score; it carries the
+    // adjudication to the gap message, which is the only place a reader can
+    // tell a completed review from an outstanding one.
+    mechanismReviewedUnavailable: canonicalArrayBy(
+      z
+        .object({
+          componentKey: CanonicalTextSchema,
+          rationale: CanonicalTextSchema,
+          sourceUrl: CanonicalTextSchema,
+          reviewedAt: CanonicalTextSchema,
+        })
+        .strict(),
+      (row) => row.componentKey,
+    ).optional(),
     mechanismExitFacts: canonicalArrayBy(
       MechanismExitFactOverlaySchema,
       (fact) => fact.factKey,

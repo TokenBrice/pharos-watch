@@ -19,7 +19,9 @@ const EVIDENCE_ONLY_TARGETS = {
   "xaum-matrixdock": [],
   "chfau-allunity": ["assuranceAndReconciliation", "custodyContinuity"],
   "jupusd-jupiter": ["claimAndSegregation"],
-  "brz-transfero": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
+  // assuranceAndReconciliation was retired from the overlay when a reviewed
+  // proofOfReserves.latestReport began supplying it as a known fact (b25f2c542).
+  "brz-transfero": ["claimAndSegregation", "custodyContinuity"],
   "eusd-electronic-usd": [],
   "aid-gaib": ["claimAndSegregation", "custodyContinuity"],
   "usdm-moneta": ["custodyContinuity"],
@@ -56,7 +58,7 @@ const REVIEW_DATE_OVERRIDES: Partial<Record<keyof typeof EVIDENCE_ONLY_TARGETS, 
 describe("Safety Score V9 evidence-only mechanism curation", () => {
   it("keeps every reviewed nondisclosure target bounded and non-scoring", () => {
     expect(Object.keys(EVIDENCE_ONLY_TARGETS)).toHaveLength(34);
-    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(62);
+    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(61);
 
     const overlayById = new Map(
       mechanismReviewOverlaysAsset.overlays.map((overlay) => [overlay.assetId, overlay]),

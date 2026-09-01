@@ -210,6 +210,37 @@ describe("buildDataCoverageModel", () => {
     expect(model.gapOwners.map((owner) => owner.responsibility)).toEqual(["method-unsupported"]);
   });
 
+  it("labels a bounded mechanism review neutrally on whether the review happened", () => {
+    // Methodology 9.451: most carriers of this code are adjudicated
+    // non-disclosures — the review IS complete and found the issuer publishes
+    // nothing — so a label claiming the review is incomplete was false for
+    // them. The gap's own message carries which shape it is.
+    const response = makeReportCardsV9Response({
+      cards: [
+        withGaps(makeV9Card({ id: "aaa-one" }), [
+          {
+            responsibility: "issuer-undisclosed",
+            factCount: 3,
+            criticalFactCount: 0,
+            reasonCodes: ["bounded-mechanism-review"],
+          },
+        ]),
+      ],
+    });
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(model.gapTypes).toEqual([
+      { code: "bounded-mechanism-review", label: "A mechanism detail is unresolved", assetCount: 1 },
+    ]);
+    expect(model.gapTypes[0]!.label).not.toMatch(/incomplete|not reviewed/i);
+    expect(model.gapOwners[0]).toMatchObject({
+      responsibility: "issuer-undisclosed",
+      count: 3,
+    });
+    expect(model.openGapCount).toBe(3);
+  });
+
   it("counts an asset once when one reason code is split across two owners", () => {
     // v9.04 reclassification: the DEX exit codes are producer-failed for some
     // gaps and method-unsupported for others, so a single asset can raise the

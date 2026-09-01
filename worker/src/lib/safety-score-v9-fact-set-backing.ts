@@ -67,6 +67,26 @@ export function buildImplementation(context: AssetBuildContext): V9AssetFactsV2[
   };
 }
 
+/**
+ * The gap message for a mechanism component whose review is complete and whose
+ * finding is that the issuer does not publish the input. The gap, its owner and
+ * its bounded-unknown treatment are unchanged — only the sentence differs, so a
+ * reader can tell an adjudicated non-disclosure from an outstanding review.
+ */
+function reviewedUnavailableMessage(
+  context: AssetBuildContext,
+  componentKey: string,
+  observationState: V9FactStatusV2["observationState"],
+): string | null {
+  if (observationState !== "bounded-unknown") return null;
+  const reviewed = context.asset.mechanismReviewedUnavailable?.find((row) => row.componentKey === componentKey);
+  if (reviewed === undefined) return null;
+  return (
+    `Reviewed ${reviewed.reviewedAt}: the ${componentKey} input is not published by the issuer. ` +
+    `${reviewed.rationale} Source checked: ${reviewed.sourceUrl}`
+  );
+}
+
 function normalizeMechanismReview(
   context: AssetBuildContext,
   review: V9MechanismRiskReview,
@@ -128,7 +148,8 @@ function normalizeMechanismReview(
         message:
           context.asset.mechanismReviewGapDisposition?.componentKeys.includes(componentKey) === true
             ? context.asset.mechanismReviewGapDisposition.rationale
-            : `The ${componentKey} mechanism review is not a current known fact.`,
+            : (reviewedUnavailableMessage(context, componentKey, original.observationState) ??
+              `The ${componentKey} mechanism review is not a current known fact.`),
         evidenceRefIds:
           original.observationState === "stale" || original.observationState === "bounded-unknown" ? evidenceIds : [],
         evidenceHistory: evidenceHistoryFor(context, evidenceIds),
