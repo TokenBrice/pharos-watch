@@ -163,6 +163,7 @@ import source147 from "./coins/bd-basedollar.json";
 import source148 from "./coins/kusd-kerne.json";
 import source149 from "./coins/usr-resolv.json";
 import source150 from "./coins/zeusd-zoth.json";
+import source151 from "./coins/idrt-rupiah-token.json";
 
 type CuratedAnnotationSource = Readonly<Record<string, unknown>>;
 type CuratedAnnotationSourceAsset = readonly CuratedAnnotationSource[];
@@ -319,6 +320,7 @@ const CURATED_SOURCES: Readonly<Record<string, CuratedAnnotationSourceAsset>> = 
   "kusd-kerne": source148,
   "usr-resolv": source149,
   "zeusd-zoth": source150,
+  "idrt-rupiah-token": source151,
 };
 
 const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);
