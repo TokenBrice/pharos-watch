@@ -67,7 +67,10 @@ describe("runFourHourlyReserveSyncSlot", () => {
       fallbackCoins: [],
     } as never);
     vi.mocked(getMaxSyncAge).mockResolvedValue(0);
-    vi.mocked(computeReserveCompositionOverview).mockResolvedValue(emptyReserveCompositionOverview());
+    vi.mocked(computeReserveCompositionOverview).mockResolvedValue({
+      ...emptyReserveCompositionOverview(),
+      historyWriteGapCheckFailed: false,
+    });
     vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue(recoveryCheckpoint());
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 

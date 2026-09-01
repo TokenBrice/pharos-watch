@@ -273,7 +273,8 @@ describe("adapter registry completeness", () => {
     const tetherFixture = JSON.parse(
       readFileSync(resolve(TEST_DIR, "fixtures", "tether-transparency.json"), "utf8"),
     );
-    const upstreamUrl = coins[0].liveReservesConfig!.inputs.primary.url;
+    const primaryInput = coins[0].liveReservesConfig!.inputs.primary;
+    const upstreamUrl = "url" in primaryInput ? primaryInput.url : undefined;
     const upstreamFetches: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
