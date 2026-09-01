@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { OnchainRateProbe } from "../onchain";
 
 const evmRpcMocks = vi.hoisted(() => ({
@@ -18,6 +18,26 @@ vi.mock("../../../lib/evm-rpc", async (importOriginal) => {
 import { fetchOnchainRateBps } from "../onchain";
 
 describe("fetchOnchainRateBps", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("scales an explicitly 18-decimal redemption rate into basis points", async () => {
+    evmRpcMocks.fetchEvmUint256AtBlock.mockResolvedValue(5_000_000_394_208_505n);
+
+    await expect(
+      fetchOnchainRateBps(
+        { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+        {
+          contract: "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+          selector: "0xc52861f2",
+          decimals: 18,
+        },
+        AbortSignal.timeout(5_000),
+      ),
+    ).resolves.toBe(50);
+  });
+
   it("skips a rate probe when decimals are missing", async () => {
     const probe: OnchainRateProbe = {
       contract: "0x0000000000000000000000000000000000000001",

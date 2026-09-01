@@ -71,7 +71,8 @@
       ],
       "redemptionRateProbe": {
         "contract": "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
-        "selector": "0xc52861f2"
+        "selector": "0xc52861f2",
+        "decimals": 18
       },
       "mechanismMetrics": {
         "supplyTokenAddress": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",

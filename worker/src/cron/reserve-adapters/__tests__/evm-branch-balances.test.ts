@@ -373,6 +373,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
         redemptionRateProbe: {
           contract: "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
           selector: "0xc52861f2",
+          decimals: 18,
         },
       },
     });

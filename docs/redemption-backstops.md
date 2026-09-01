@@ -8,12 +8,12 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.4`
+- **Current methodology version:** `v4.41`
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.4` update: an open route whose settlement completion bound is unproven publishes unestablished capacity and remains unrated (`null`, `missing-capacity`) instead of being treated as a measured zero; the marker is withheld for paused routes, which keep their measured impairment. The public `capacityProfile` and exit route observations expose `settlementBoundUnproven`, while scoring weights and formulas remain unchanged.
+Latest `v4.41` update: on-chain redemption-rate probes require an explicit decimal scale. The six configured Liquity-style probes now pin their 18-decimal contract returns, so fresh successful reads can populate formula-route fee telemetry while an unavailable read remains unknown. Scoring weights and formulas remain unchanged.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
@@ -289,6 +289,7 @@ Each row also carries:
 
 - `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
 - Formula-based routes can also populate `feeBps` from fresh latest-success live reserve snapshot metadata when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
+- Every on-chain rate probe must explicitly pin the return-value decimal scale; missing scale fails configuration validation rather than silently publishing an unknown fee
 - Reviewed fixed-fee routes may also consume fresh authoritative live fee telemetry when the protocol exposes the current active redemption fee and the static config is only a safe fallback bound
 - `feeModelKind` distinguishes fixed-fee routes from documented formulas, documented variable schedules, and reviewed-but-undisclosed fee rails
 - `feeDescription` is used to surface:

@@ -580,7 +580,7 @@ const redemptionRateProbeSchema = z
   .object({
     contract: z.string(),
     selector: EvmSelectorSchema,
-    decimals: z.number().int().positive().optional(),
+    decimals: z.number().int().positive(),
   })
   .strict();
 
