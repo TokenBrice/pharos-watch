@@ -118,19 +118,36 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "chainlink-por",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
+    "scoring": {
+      "maxSourceAgeSec": 4000000,
+      "allowedDegradedWarningCodes": [
+        "partial-supply-read-failure"
+      ]
+    },
     "breakerScope": "bc3m-backed",
     "display": {
-      "url": "https://app.backed.fi/issuance",
-      "label": "Backed Finance issuance dashboard"
+      "url": "https://data.chain.link/feeds/polygon/mainnet/bc3m-por",
+      "label": "Chainlink LedgerLens PoR (Polygon)"
     },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
-        "chain": "ethereum",
+        "chain": "polygon",
         "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "porFeedAddress": "0x648e0ff6a36d58f6fce5927cb77601b73cadc2af",
+      "assetLabel": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares",
+      "assetRisk": "very-low",
+      "reserveUnit": "SHARES",
+      "issuerCirculationProbe": {
+        "kind": "backed-graphql",
+        "url": "https://api.backed.fi/graphql",
+        "reserveSymbol": "C3M.MI"
       }
     }
   },
@@ -146,8 +163,8 @@
     },
     {
       "type": "info",
-      "title": "No on-chain reserve feed today",
-      "message": "Unlike bIB01, Backed has not published a Chainlink LedgerLens Proof-of-Reserve or NAV feed for bC3M on any chain. Reserves remain on the curated path until an on-chain feed is available."
+      "title": "Reserves proven by Chainlink LedgerLens",
+      "message": "bC3M reserves are proven by the Chainlink LedgerLens Proof-of-Reserve feed on Polygon, which publishes the underlying AMUNDI GOVIES 0-6M ETF share count. Coverage compares that share quantity against Backed's published circulating supply rather than gross on-chain supply, because Backed pre-mints unsold inventory into its own custody."
     }
   ],
   "launchDate": "2023-06-15"
