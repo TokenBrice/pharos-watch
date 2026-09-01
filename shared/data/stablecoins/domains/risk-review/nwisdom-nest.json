@@ -245,10 +245,11 @@
         "routeChecks": {
           "trustedPeerOrRemote": "Nest documents Solana USDC transfer through CCTP to Plume, the Plume NestVaultComposer, and return of nWISDOM through the Solana OFT store. The exact LayerZero peer and DVN set were not enumerated.",
           "rateLimits": "No route-specific CCTP, LayerZero, composer, or OFT-store rate limits were enumerated.",
+          "caps": "At Solana slot 443401251 and Plume block 90787123 on 2026-09-01, no leg of the rail exposed a mint ceiling. The Solana nWISDOM SPL mint 77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT carries only the standard SPL u64 bound (supply 2,910,340.262008, mintAuthority 9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y), and the LayerZero OFT store RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq decoded to oft_type 0 (native mint/burn) with default_fee_bps 0, paused false, and no cap field. On Plume, cap(), maxSupply(), mintCap(), supplyCap(), and mintingLimit() reverted on both nWISDOM 0x29bf22381a5811dec89dc7b46a5ce57ad02c0240 and NestVaultComposer 0x312a0219e8af66c4e8849a3fef4047415c3b4974, whose EIP-1967 implementation was 0x677d0b6fb441b58de21d91ca22c17d8b0faf8eeb.",
           "pausersAdminsUpgraders": "The composer is identified, but its exact pause, upgrade, role-administrator, and keeper/relayer control graph was not enumerated."
         },
         "capDescription": "This is the Solana-to-Plume transfer rail for a native Solana route; its cross-chain mint/burn capability is scored here separately from the Solana SPL mint-authority multisig in Mint Authority.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "sources": [
           {

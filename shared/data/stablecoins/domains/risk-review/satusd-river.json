@@ -2772,10 +2772,11 @@
         "routeChecks": {
           "trustedPeerOrRemote": "The reviewed fixed-block route inventory identified owner-gated setPeer(...) and peers(...) on the BEVM DebtTokenWithLz route; current peer state was not re-read because the BEVM RPC endpoint did not return state in the 2026-08-16 pass.",
           "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; current aggregate, per-lane, and endpoint-side limits were not enumerated because the BEVM RPC endpoint was unavailable.",
+          "caps": "At BEVM block 13014518 on 2026-09-01, the route exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), and mintingLimit() all reverted on 0x2031c8848775a5efb7cff2a4edbe3f04c50a1478. The address is an ERC-1967 proxy whose implementation 0xa9ecf240b4621cf703adc3985a084770d8df1f3a contains proxiableUUID(), upgradeToAndCall(address,bytes), and mint(address,uint256) but no cap selector, so the owner-gated UUPS path can replace the mint logic and nothing caps bridge minting.",
           "pausersAdminsUpgraders": "The reviewed route inventory identified owner-gated UUPS upgrade, setDelegate(), and LayerZero configuration paths. Current owner, endpoint address, delegate, and DVN/executor configuration remain unresolved because the BEVM RPC endpoint did not return state in the 2026-08-16 pass."
         },
-        "capDescription": "The reviewed River owner identity remains the BEVM route's administrative controller, and the route's burn/mint delivery semantics remain covered. Because the BEVM endpoint and implementation are unresolved, this control claims no upgrade or peer-configuration capability; local SatoshiXApp/CDP issuance remains separately authored in Mint Authority.",
-        "canRaiseCap": "unknown",
+        "capDescription": "The reviewed River owner identity remains the BEVM route's administrative controller, and the route's burn/mint delivery semantics remain covered. The BEVM endpoint, ERC-1967 implementation, and owner were re-read on 2026-09-01 and the route exposes no mint cap; admitting upgrade and peer-configuration capability is deferred to a full BEVM route re-review, so this control still claims neither; local SatoshiXApp/CDP issuance remains separately authored in Mint Authority.",
+        "canRaiseCap": true,
         "observedAt": "2026-07-20",
         "sources": [
           {

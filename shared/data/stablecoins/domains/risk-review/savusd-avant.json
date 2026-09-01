@@ -614,9 +614,10 @@
           "contract:avalanche:0x3524609c4d8111d45afc912bf1e1270cd5a1bd85"
         ],
         "authorityType": "contract",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "The official Avant registry identifies 0x3524609C4D8111d45aFC912bf1e1270Cd5A1bd85 as the Avalanche savUSD LayerZero OFT adapter; current delegate and peer bindings remain unresolved.",
+          "caps": "At Avalanche block 94194052 on 2026-09-01, adapter 0x3524609c4d8111d45afc912bf1e1270cd5a1bd85 exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), and mintingLimit() all reverted, approvalRequired() returned true, and token() returned savUSD 0x06d47f3fb376649c3a9dafe069b3d6e35572219e, whose own cap getters also reverted at block 94194054. Both contracts are non-proxy with an empty EIP-1967 implementation slot, and owner() returned 0xd4d23209aae8630bf386b7393763a5b7865e57cb on each, so no cap bounds the route.",
           "pausersAdminsUpgraders": "The adapter is cross-chain machinery only. Current admin, pause, and upgrade authority was not independently resolved, so no stronger canonical mint authority is inferred."
         },
         "observedAt": "2026-08-16",

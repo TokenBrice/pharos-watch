@@ -239,10 +239,11 @@
         "routeChecks": {
           "trustedPeerOrRemote": "The adapter is identified as a LayerZero StablecoinMintBurnOFTAdapter serving the AUDF native deployments; the exact destination peers and remote-token configuration were not enumerated.",
           "rateLimits": "No adapter-specific bridge rate-limit state was enumerated in the reviewed primary sources.",
+          "caps": "At Ethereum block 25881779 on 2026-09-01, adapter 0xd1ccc777949bd8c25a0c73ba0d20303c36ee6a91 exposed no cap(), maxSupply(), mintCap(), supplyCap(), or mintingLimit(), and hasRole(MINT_ROLE, adapter) on AUDF 0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b returned true. The AUDF Stablecoin implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 behind that proxy has no supply-cap state at all: mint(address,uint256) is gated only by MINT_ROLE, whose administrator can grant further minters. Bridge minting is not cap-limited.",
           "pausersAdminsUpgraders": "The adapter owner() returned the AUDF Admin Safe, but exact adapter pause, upgrade, emergency, DVN, and destination administrator controls were not enumerated."
         },
         "capDescription": "The adapter can mint and burn AUDF as part of the cross-chain OFT path. Its route-level conservation, rate limits, and emergency controls remain unresolved and are not compiled into native Mint Authority.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 25770091,
         "sources": [

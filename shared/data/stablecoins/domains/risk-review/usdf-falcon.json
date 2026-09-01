@@ -382,10 +382,11 @@
         "routeChecks": {
           "trustedPeerOrRemote": "At BSC block 116358048 on 2026-08-16, the pool supported only the Ethereum selector and getRemotePools(Ethereum) returned the Ethereum LockRelease pool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78. The route is subject to CCIP message validation.",
           "rateLimits": "At the reviewed BSC pool read, EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate. The pool owner can change per-lane rate-limit configuration.",
-          "caps": "The local BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. This is a token-level bridge representation property, not an independent native USDf liability cap.",
+          "caps": "The local BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. This is a token-level bridge representation property, not an independent native USDf liability cap. Re-read at BSC block 119327110 on 2026-09-01: maxSupply() still returned zero, the token remained non-proxy with an empty EIP-1967 implementation slot, hasRole(MINTER_ROLE, pool) returned true, and the pool's getRateLimitAdmin() returned zero, so no cap bounds pool minting.",
           "pausersAdminsUpgraders": "The pool was the sole local MINTER_ROLE and BURNER_ROLE holder. owner() returned Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7, which also held the token DEFAULT_ADMIN_ROLE and can replace local role assignments and pool route administration."
         },
         "capDescription": "BSC USDf is an immutable BurnMintERC20 representation with maxSupply() = 0, the source's unlimited-supply sentinel; normal pool minting remains dependent on validated CCIP ingress.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 116358048,
         "sources": [
@@ -429,10 +430,11 @@
         "routeChecks": {
           "trustedPeerOrRemote": "At Base block 50066251 on 2026-08-16, the pool supported only the Ethereum selector and getRemotePools(Ethereum) returned the Ethereum LockRelease pool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78. The route is subject to CCIP message validation.",
           "rateLimits": "At the reviewed Base pool read, EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate. The pool owner can change per-lane rate-limit configuration.",
-          "caps": "The local BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. This is a token-level bridge representation property, not an independent native USDf liability cap.",
+          "caps": "The local BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. This is a token-level bridge representation property, not an independent native USDf liability cap. Re-read at Base block 50734519 on 2026-09-01: maxSupply() still returned zero, the token remained non-proxy with an empty EIP-1967 implementation slot, hasRole(MINTER_ROLE, pool) returned true, and the pool's getRateLimitAdmin() returned zero, so no cap bounds pool minting.",
           "pausersAdminsUpgraders": "The pool was the sole local MINTER_ROLE and BURNER_ROLE holder. owner() returned Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7, which also held the token DEFAULT_ADMIN_ROLE and can replace local role assignments and pool route administration."
         },
         "capDescription": "Base USDf is an immutable BurnMintERC20 representation with maxSupply() = 0, the source's unlimited-supply sentinel; normal pool minting remains dependent on validated CCIP ingress.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 50066251,
         "sources": [
@@ -476,10 +478,11 @@
         "routeChecks": {
           "trustedPeerOrRemote": "At XDC block 106142724 on 2026-08-16, the pool supported only the Ethereum selector and getRemotePools(Ethereum) returned the Ethereum LockRelease pool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78. The route is subject to CCIP message validation.",
           "rateLimits": "At the reviewed XDC pool read, EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate. The pool owner can change per-lane rate-limit configuration.",
-          "caps": "The local BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. This is a token-level bridge representation property, not an independent native USDf liability cap.",
+          "caps": "The local BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. This is a token-level bridge representation property, not an independent native USDf liability cap. Re-read at XDC block 106715374 on 2026-09-01: maxSupply() still returned zero, the token remained non-proxy with an empty EIP-1967 implementation slot, hasRole(MINTER_ROLE, pool) returned true, and the pool's getRateLimitAdmin() returned zero, so no cap bounds pool minting.",
           "pausersAdminsUpgraders": "The pool was the sole local MINTER_ROLE and BURNER_ROLE holder. owner() returned Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7, which also held the token DEFAULT_ADMIN_ROLE and can replace local role assignments and pool route administration."
         },
         "capDescription": "XDC USDf is an immutable BurnMintERC20 representation with maxSupply() = 0, the source's unlimited-supply sentinel; normal pool minting remains dependent on validated CCIP ingress.",
+        "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 106142724,
         "sources": [
@@ -548,10 +551,11 @@
         "routeChecks": {
           "trustedPeerOrRemote": "The shared Safe owns the reviewed Ethereum LockRelease pool and the BSC, Base, and XDC BurnMintTokenPools. Those pools' current remote mappings point back to the Ethereum LockRelease pool; the Safe can change the remote-pool mappings and router configuration.",
           "rateLimits": "Current EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate on the reviewed pools. The pool owner Safe can change per-lane rate-limit configuration; the Ethereum pool reported getRateLimitAdmin() = zero.",
-          "caps": "BSC, Base, and XDC BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. The Safe can administer local roles and pool owners but does not turn those representations into independent native issuance routes.",
+          "caps": "BSC, Base, and XDC BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. The Safe can administer local roles and pool owners but does not turn those representations into independent native issuance routes. Re-read on 2026-09-01 at BSC block 119327110, Base block 50734519, and XDC block 106715374: every representation still returned maxSupply() zero and remained non-proxy, the Safe still held DEFAULT_ADMIN_ROLE on each and owner() on each BurnMintTokenPool 1.5.1, and getRateLimitAdmin() returned zero on each pool, leaving the Safe the sole administrator of role grants and per-lane limits under no supply cap.",
           "pausersAdminsUpgraders": "The same 4-of-6 Safe held DEFAULT_ADMIN_ROLE on the BSC, Base, and XDC representation tokens, owned their CCIP pools, and could grant or replace local MINTER_ROLE and BURNER_ROLE assignments. Native Ethereum token upgrade and native minter authority remain separately recorded in Mint Authority."
         },
         "capDescription": "The shared Safe administers representation-token roles and CCIP pool owners across the reviewed EVM routes; these controls can authorize bridge mint/burn machinery but do not define independent native USDf liabilities.",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "Chainlink CCIP DON/RMN validator configuration and message execution are external failure domains and were not independently enumerated in this review."
         ],
