@@ -194,7 +194,7 @@ describe("buildCurveStableswapExecutionModel", () => {
     ).toEqual({ family: "curve-stableswap", reason: "metapool-unsupported" });
   });
 
-  it("routes only the nine reviewed metapools into measured execution", () => {
+  it("routes only the ten reviewed metapools into measured execution", () => {
     for (const policy of CURVE_R3_METAPOOL_POLICIES) {
       const source: CurvePoolEntry = {
         ...entry(),

@@ -14,6 +14,7 @@ import { getUniswapV4Deployment } from "../uniswap-v4";
 import {
   CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
   CURVE_GUSD_3CRV_METAPOOL_POLICY,
+  CURVE_LUSD_3CRV_METAPOOL_POLICY,
 } from "../curve-composite-policies";
 
 describe("measured deployment policy registry", () => {
@@ -75,6 +76,15 @@ describe("measured deployment policy registry", () => {
       basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
       expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
       basePoolTokens: CURVE_STABLESWAP_DEPLOYMENT.poolTokens,
+    });
+    expect(CURVE_LUSD_3CRV_METAPOOL_POLICY).toMatchObject({
+      factoryPoolIndex: 16,
+      implementationAddress: "0x5f890841f657d90e081babdb532a05996af79fe6",
+      metapool: {
+        basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
+        expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
+        basePoolTokens: CURVE_STABLESWAP_DEPLOYMENT.poolTokens,
+      },
     });
   });
 });

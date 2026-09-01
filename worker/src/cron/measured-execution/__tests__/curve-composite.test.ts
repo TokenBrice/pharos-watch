@@ -592,14 +592,15 @@ function compositeProfile(
 }
 
 describe("reviewed Curve rate-bearing and metapool targets", () => {
-  it("admits exactly the nine owner-ratified metapools as active underlying routes", () => {
-    expect(CURVE_R3_METAPOOL_POLICIES).toHaveLength(9);
+  it("admits exactly the ten owner-ratified metapools as active underlying routes", () => {
+    expect(CURVE_R3_METAPOOL_POLICIES).toHaveLength(10);
     expect(new Set(CURVE_R3_METAPOOL_POLICIES.map((policy) => policy.stablecoinId))).toEqual(
       new Set([
         "alusd-alchemix",
         "dola-inverse-finance",
         "eusd-electronic-usd",
         "gusd-gemini",
+        "lusd-liquity",
         "mai-qidao",
         "meusd-mezo",
         "msusd-metronome",

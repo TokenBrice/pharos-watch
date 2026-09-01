@@ -7,7 +7,8 @@ import {
 import {
   CURVE_ALUSD_3CRV_METAPOOL_ADDRESS, CURVE_DOLA_FRAXBP_METAPOOL_ADDRESS,
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS, CURVE_EUSD_FRAXBP_METAPOOL_ADDRESS,
-  CURVE_GUSD_3CRV_METAPOOL_ADDRESS, CURVE_MAI_AM3CRV_METAPOOL_ADDRESS,
+  CURVE_GUSD_3CRV_METAPOOL_ADDRESS, CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
+  CURVE_MAI_AM3CRV_METAPOOL_ADDRESS,
   CURVE_MEUSD_CRV2POOL_METAPOOL_ADDRESS, CURVE_MSUSD_FRAXBP_METAPOOL_ADDRESS,
   CURVE_NXUSD_COMPOSITE_POOL_ADDRESS, CURVE_OUSD_3CRV_METAPOOL_ADDRESS,
   CURVE_TUSD_AM3CRV_METAPOOL_ADDRESS, CURVE_USD1_COMPOSITE_POOL_ADDRESS,
@@ -533,6 +534,50 @@ export const CURVE_GUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
   },
 });
 
+export const CURVE_LUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
+  chain: "ethereum",
+  stablecoinId: "lusd-liquity",
+  poolAddress: CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
+  expectedPoolCodeHash: "0x156700a4060f3d62786914b50cc60b2b840e6440401bea9a99c0acce0b58beda",
+  factoryAddress: "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
+  expectedFactoryCodeHash: "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
+  factoryPoolIndex: 16,
+  expectedRegistryId: "factory",
+  factoryArrayEncoding: "legacy-fixed",
+  implementationBinding: "factory-lookup",
+  implementationAddress: "0x5f890841f657d90e081babdb532a05996af79fe6",
+  expectedImplementationCodeHash:
+    "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
+  poolTokens: [
+    {
+      address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
+      symbol: "LUSD",
+      decimals: 18,
+      trackedAssetId: "lusd-liquity",
+    },
+    ETHEREUM_3CRV,
+  ],
+  executionTokens: [
+    {
+      address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
+      symbol: "LUSD",
+      decimals: 18,
+      trackedAssetId: "lusd-liquity",
+    },
+    ETHEREUM_DAI,
+    ETHEREUM_USDC,
+    ETHEREUM_USDT,
+  ],
+  inputIndex: 0,
+  outputIndex: 2,
+  metapool: {
+    basePoolBinding: "factory-get-base-pool",
+    basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
+    expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
+    basePoolTokens: [ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
+  },
+});
+
 const CURVE_MEUSD_CRV2POOL_METAPOOL_POLICY = activeMetapoolPolicy({
   chain: "ethereum",
   stablecoinId: "meusd-mezo",
@@ -686,6 +731,7 @@ export const CURVE_R3_METAPOOL_POLICIES = [
   CURVE_DOLA_FRAXBP_METAPOOL_POLICY,
   CURVE_EUSD_FRAXBP_METAPOOL_POLICY,
   CURVE_GUSD_3CRV_METAPOOL_POLICY,
+  CURVE_LUSD_3CRV_METAPOOL_POLICY,
   CURVE_MAI_AM3CRV_METAPOOL_POLICY,
   CURVE_MEUSD_CRV2POOL_METAPOOL_POLICY,
   CURVE_MSUSD_FRAXBP_METAPOOL_POLICY,

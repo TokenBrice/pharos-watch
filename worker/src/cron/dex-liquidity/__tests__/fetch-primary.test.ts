@@ -459,7 +459,7 @@ describe("buildCurveLookups", () => {
   });
 
   it("retains every owner-ratified metapool physical identity and no address variants", () => {
-    expect(CURVE_R3_METAPOOL_POOL_IDENTITIES).toHaveLength(9);
+    expect(CURVE_R3_METAPOOL_POOL_IDENTITIES).toHaveLength(10);
     for (const [chain, poolAddress] of CURVE_R3_METAPOOL_POOL_IDENTITIES) {
       expect(shouldRetainCurveCompositePoolIdentity(chain, poolAddress)).toBe(true);
       expect(
