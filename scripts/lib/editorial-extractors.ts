@@ -80,11 +80,47 @@ const NON_PROSE_FIELDS = new Set([
   "reviewedAt",
   "reviewer",
   "controlRef",
+  "callback_data",
+  "className",
+  "style",
+  "children",
+  "role",
+  "width",
+  "height",
+  "viewBox",
+  "fill",
+  "stroke",
+  "strokeWidth",
+  "strokeLinecap",
+  "strokeDasharray",
+  "opacity",
+  "d",
+  "tableId",
+  "tableClassName",
+  "rowIntent",
+  "target",
+  "rel",
+  "variant",
+  "size",
+  "entityType",
+  "key",
+  "dateTime",
+  "timeZone",
+  "hourCycle",
+  "month",
+  "year",
+  "left",
+  "chrome",
+  "scope",
+  "as",
+  "day",
+  "hour",
+  "minute",
 ]);
 const USER_CONTENT_FIELD_RE = /(?:user|donor|submitted|issuerProvided|issuerText|feedback)/i;
 const URL_RE = /(?:https?:\/\/|www\.)[^\s<>{}\[\]"']+/gi;
 const CODE_SPAN_RE = /`[^`\n]*`/g;
-const NUMBER_RE = /(?<![A-Za-z])[-+]?\d[\d.,]*(?:\s*[%a-zA-Z]+)?(?:\s*[\u2012-\u2015\u2212-]\s*[-+]?\d[\d.,]*(?:\s*[%a-zA-Z]+)?)?/g;
+const NUMBER_RE = /(?<![A-Za-z])(?:[-+\u2212]\s*)?(?:(?:[$€£¥₹₽₩₺₴₪₫฿]|[A-Z]{3})\s*)?\d[\d.,]*(?:\s*[%a-zA-Z]+)?(?:\s*[\u2012-\u2015\u2212-]\s*(?:[-+\u2212]\s*)?(?:(?:[$€£¥₹₽₩₺₴₪₫฿]|[A-Z]{3})\s*)?\d[\d.,]*(?:\s*[%a-zA-Z]+)?)?/g;
 
 function blankRange(text: string, start: number, end: number): string {
   let result = "";
@@ -128,6 +164,32 @@ function pathPatternMatches(pattern: string, path: readonly string[]): boolean {
 
 function selectedJsonPath(path: readonly string[], fields: readonly string[]): boolean {
   return fields.some((pattern) => pathPatternMatches(pattern, path));
+}
+function jsonRecordMatchesScope(root: unknown, path: readonly string[], options: EditorialExtractorOptions): boolean {
+  if (!options.recordScope || !Array.isArray(root) || path.length === 0 || !/^\d+$/.test(path[0]!)) return true;
+  const index = Number(path[0]);
+  const groupField = options.recordGroupField;
+  const groupValue = options.recordGroupValue;
+  const item = root[index];
+  const itemGroup = groupField && item && typeof item === "object" && !Array.isArray(item)
+    ? (item as Record<string, unknown>)[groupField]
+    : undefined;
+  if (groupValue !== undefined && itemGroup !== groupValue) return false;
+
+  const currentIndexes = new Set<number>();
+  const seenGroups = new Set<string>();
+  for (let candidateIndex = 0; candidateIndex < root.length; candidateIndex += 1) {
+    const candidate = root[candidateIndex];
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+    const candidateGroup = groupField ? (candidate as Record<string, unknown>)[groupField] : undefined;
+    if (groupValue !== undefined && candidateGroup !== groupValue) continue;
+    const groupKey = groupField ? `${typeof candidateGroup}:${String(candidateGroup)}` : "all";
+    if (!seenGroups.has(groupKey)) {
+      seenGroups.add(groupKey);
+      currentIndexes.add(candidateIndex);
+    }
+  }
+  return options.recordScope === "current" ? currentIndexes.has(index) : !currentIndexes.has(index);
 }
 
 function lastPathPart(path: readonly string[]): string {
@@ -325,6 +387,7 @@ export function extractJsonEditorialUnits(input: EditorialExtractionInput): read
   const fields = options.fields ?? ["**"];
   const nodes = collectJsonStringNodes(input.source, parsed);
   return nodes
+    .filter((node) => jsonRecordMatchesScope(node.root, node.path, options))
     .filter((node) => selectedJsonPath(node.path, fields))
     .filter((node) => !isSkippedJsonPath(node.path, node.value, options))
     .map((node) => ({
@@ -351,6 +414,34 @@ function unwrapTsExpression(node: ts.Expression): ts.Expression {
   }
   return current;
 }
+function topLevelTsInitializers(sourceFile: ts.SourceFile): ReadonlyMap<string, ts.Expression> {
+  const initializers = new Map<string, ts.Expression>();
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      const name = propertyName(declaration.name);
+      if (name && declaration.initializer) initializers.set(name, declaration.initializer);
+    }
+  }
+  return initializers;
+}
+
+function resolveStaticTsExpression(
+  node: ts.Expression,
+  initializers: ReadonlyMap<string, ts.Expression> | undefined,
+): ts.Expression {
+  if (!initializers) return unwrapTsExpression(node);
+  let current = unwrapTsExpression(node);
+  const seen = new Set<string>();
+  while (ts.isIdentifier(current) && !seen.has(current.text)) {
+    const initializer = initializers.get(current.text);
+    if (!initializer) break;
+    seen.add(current.text);
+    current = unwrapTsExpression(initializer);
+  }
+  return current;
+}
+
 
 function staticTsProperty(object: ts.ObjectLiteralExpression, name: string): string | null {
   const property = object.properties.find((candidate) => {
@@ -391,7 +482,31 @@ function tsTextNode(node: ts.Expression): { text: string; offset: number } | nul
   }
   return null;
 }
-
+/**
+ * Keep template literals source-aligned while hiding interpolated expressions.
+ * The gate reports source lines using `sourceOffset + finding.index`, so the
+ * replacement must preserve every UTF-16 code unit in the template body.
+ */
+function tsTemplateTextNode(
+  node: ts.Expression,
+  source: string,
+): { text: string; offset: number } | null {
+  const unwrapped = unwrapTsExpression(node);
+  if (!ts.isTemplateExpression(unwrapped)) return null;
+  const start = unwrapped.getStart();
+  const end = unwrapped.getEnd();
+  const bodyStart = start + 1;
+  const bodyEnd = Math.max(bodyStart, end - 1);
+  let text = source.slice(bodyStart, bodyEnd);
+  for (const span of unwrapped.templateSpans) {
+    const expressionStart = Math.max(bodyStart, span.expression.getStart() - 2);
+    const expressionEnd = Math.min(bodyEnd, span.literal.getStart() + 1);
+    const relativeStart = expressionStart - bodyStart;
+    const relativeEnd = expressionEnd - bodyStart;
+    text = `${text.slice(0, relativeStart)}${blankRange(text, relativeStart, relativeEnd)}${text.slice(relativeEnd)}`;
+  }
+  return { text, offset: bodyStart };
+}
 function shouldSkipStructuredField(path: readonly string[], text: string): boolean {
   const last = lastPathPart(path);
   if (NON_PROSE_FIELDS.has(last) || USER_CONTENT_FIELD_RE.test(last)) return true;
@@ -399,6 +514,7 @@ function shouldSkipStructuredField(path: readonly string[], text: string): boole
   if (last === "className" || last === "style" || last === "children") return true;
   return text.trim().length === 0;
 }
+
 
 function collectStructuredValue(
   node: ts.Expression,
@@ -408,10 +524,12 @@ function collectStructuredValue(
   input: EditorialExtractionInput,
   options: EditorialExtractorOptions,
   units: ExtractedEditorialUnit[],
+  staticInitializers?: ReadonlyMap<string, ts.Expression>,
 ): void {
-  const unwrapped = unwrapTsExpression(node);
-  const literal = tsTextNode(unwrapped);
+  const unwrapped = resolveStaticTsExpression(node, staticInitializers);
+  const literal = tsTextNode(unwrapped) ?? tsTemplateTextNode(unwrapped, input.source);
   if (literal) {
+    if (path.length === 0 && field.length === 0) return;
     if (!shouldSkipStructuredField(path, literal.text)) {
       units.push({
         record,
@@ -427,13 +545,13 @@ function collectStructuredValue(
   if (ts.isArrayLiteralExpression(unwrapped)) {
     for (const element of unwrapped.elements) {
       if (ts.isSpreadElement(element)) continue;
-      collectStructuredValue(element, record, field, path, input, options, units);
+      collectStructuredValue(element, record, field, path, input, options, units, staticInitializers);
     }
     return;
   }
   if (ts.isObjectLiteralExpression(unwrapped)) {
     const nestedRecord = structuredRecord(unwrapped, record, options, input.path);
-    collectStructuredObject(unwrapped, nestedRecord, path, input, options, units);
+    collectStructuredObject(unwrapped, nestedRecord, path, input, options, units, staticInitializers);
   }
 }
 
@@ -444,20 +562,37 @@ function collectStructuredObject(
   input: EditorialExtractionInput,
   options: EditorialExtractorOptions,
   units: ExtractedEditorialUnit[],
+  staticInitializers?: ReadonlyMap<string, ts.Expression>,
 ): void {
   const fields = options.fields ?? [];
   for (const property of object.properties) {
+    const shorthand = ts.isShorthandPropertyAssignment(property) ? property : null;
+    if (shorthand) {
+      const key = propertyName(shorthand.name);
+      if (key && selectedStructuredField(key, fields)) {
+        collectStructuredValue(shorthand.name, record, key, [...parentPath, key], input, options, units, staticInitializers);
+      }
+      continue;
+    }
     if (!ts.isPropertyAssignment(property)) continue;
     const key = propertyName(property.name);
     if (!key) continue;
     const path = [...parentPath, key];
     if (selectedStructuredField(key, fields)) {
-      collectStructuredValue(property.initializer, record, key, path, input, options, units);
+      collectStructuredValue(property.initializer, record, key, path, input, options, units, staticInitializers);
       continue;
     }
-    const initializer = unwrapTsExpression(property.initializer);
+    const initializer = resolveStaticTsExpression(property.initializer, staticInitializers);
     if (ts.isObjectLiteralExpression(initializer)) {
-      collectStructuredObject(initializer, structuredRecord(initializer, record, options, input.path), path, input, options, units);
+      collectStructuredObject(
+        initializer,
+        structuredRecord(initializer, record, options, input.path),
+        path,
+        input,
+        options,
+        units,
+        staticInitializers,
+      );
     } else if (ts.isArrayLiteralExpression(initializer)) {
       for (const element of initializer.elements) {
         if (ts.isObjectLiteralExpression(element)) {
@@ -468,6 +603,7 @@ function collectStructuredObject(
             input,
             options,
             units,
+            staticInitializers,
           );
         }
       }
@@ -475,23 +611,135 @@ function collectStructuredObject(
   }
 }
 
+function functionTextField(node: ts.Node, ancestors: readonly ts.Node[]): string | null {
+  let child = node;
+  for (let index = ancestors.length - 1; index >= 0; index -= 1) {
+    const ancestor = ancestors[index]!;
+    if (
+      ts.isParenthesizedExpression(ancestor)
+      || ts.isAsExpression(ancestor)
+      || ts.isTypeAssertionExpression(ancestor)
+      || ts.isArrayLiteralExpression(ancestor)
+      || ts.isJsxExpression(ancestor)
+      || ts.isConditionalExpression(ancestor)
+    ) {
+      child = ancestor;
+      continue;
+    }
+    if (ts.isPropertyAssignment(ancestor)) {
+      const key = propertyName(ancestor.name);
+      if (key) return key;
+    }
+    if (ts.isJsxAttribute(ancestor)) {
+      // JsxAttributeName widens to JsxNamespacedName, which is not a property name.
+      const key = ts.isIdentifier(ancestor.name) ? ancestor.name.text : null;
+      if (key) return key;
+    }
+    if (ts.isVariableDeclaration(ancestor) && ancestor.initializer === child) {
+      const key = propertyName(ancestor.name);
+      if (key) return key;
+    }
+    if (ts.isReturnStatement(ancestor) && ancestor.expression === child) return "return";
+    break;
+  }
+  return null;
+}
+
+type NamedStructuredFunction = ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression;
+
+function topLevelNamedFunctions(
+  sourceFile: ts.SourceFile,
+  names: readonly string[],
+): Array<[string, NamedStructuredFunction]> {
+  const result: Array<[string, NamedStructuredFunction]> = [];
+  for (const statement of sourceFile.statements) {
+    if (ts.isFunctionDeclaration(statement)) {
+      const name = propertyName(statement.name);
+      if (name && names.includes(name)) result.push([name, statement]);
+      continue;
+    }
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      const name = propertyName(declaration.name);
+      if (!name || !names.includes(name) || !declaration.initializer) continue;
+      const initializer = unwrapTsExpression(declaration.initializer);
+      if (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) {
+        result.push([name, initializer]);
+      }
+    }
+  }
+  return result;
+}
+function collectFunctionEditorialUnits(
+  functionName: string,
+  functionNode: NamedStructuredFunction,
+  fallbackRecord: string,
+  input: EditorialExtractionInput,
+  options: EditorialExtractorOptions,
+  units: ExtractedEditorialUnit[],
+): void {
+  const fields = options.fields ?? [];
+  const record = `${fallbackRecord}/${functionName}`;
+  const push = (node: ts.Expression | ts.JsxText, ancestors: readonly ts.Node[]): void => {
+    const isJsxText = ts.isJsxText(node);
+    const field = isJsxText ? "jsx-text" : functionTextField(node, ancestors);
+    if (!field || !selectedStructuredField(field, fields)) return;
+    if (
+      !isJsxText
+      && ts.isPropertyAssignment(node.parent)
+      && node.parent.name === node
+    ) {
+      return;
+    }
+    const literal = isJsxText
+      ? { text: node.getText(), offset: node.getStart() }
+      : tsTextNode(node) ?? tsTemplateTextNode(node, input.source);
+    if (!literal || shouldSkipStructuredField([field], literal.text)) return;
+    units.push({
+      record,
+      field,
+      text: maskEditorialSourceText(literal.text),
+      sourceOffset: literal.offset,
+      ownership: ownershipForPath(input.ownership, [field]),
+      exemptions: options.exemptions,
+    });
+  };
+  const visit = (node: ts.Node, ancestors: readonly ts.Node[]): void => {
+    if (ts.isJsxText(node)) {
+      push(node, ancestors);
+    } else if (ts.isTemplateExpression(node)) {
+      push(node, ancestors);
+      return;
+    } else if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      push(node, ancestors);
+    }
+    ts.forEachChild(node, (child) => visit(child, [...ancestors, node]));
+  };
+  visit(functionNode, []);
+}
+
 function metadataObjectLiterals(sourceFile: ts.SourceFile): ts.ObjectLiteralExpression[] {
   const roots: ts.ObjectLiteralExpression[] = [];
+  const addObjectArgument = (call: ts.CallExpression): void => {
+    const argument = call.arguments.find((candidate) => ts.isObjectLiteralExpression(candidate));
+    if (argument) roots.push(argument);
+  };
   const visit = (node: ts.Node): void => {
     if (ts.isVariableDeclaration(node) && propertyName(node.name) === "metadata") {
       const initializer = node.initializer && unwrapTsExpression(node.initializer);
       if (initializer && ts.isObjectLiteralExpression(initializer)) roots.push(initializer);
-      if (initializer && ts.isCallExpression(initializer)) {
-        const argument = initializer.arguments.find(ts.isObjectLiteralExpression);
-        if (argument) roots.push(argument);
-      }
+      if (initializer && ts.isCallExpression(initializer)) addObjectArgument(initializer);
     }
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "buildPageMetadata") {
-      const argument = node.arguments.find(ts.isObjectLiteralExpression);
-      if (argument) roots.push(argument);
+    if (
+      ts.isCallExpression(node)
+      && ts.isIdentifier(node.expression)
+      && (node.expression.text === "buildPageMetadata" || node.expression.text === "createClientFeaturePage")
+    ) {
+      addObjectArgument(node);
     }
     ts.forEachChild(node, visit);
   };
+  visit(sourceFile);
   return [...new Set(roots)];
 }
 
@@ -518,6 +766,7 @@ export function extractStructuredEditorialUnits(input: EditorialExtractionInput)
   const options = input.options ?? {};
   const units: ExtractedEditorialUnit[] = [];
   const fallbackRecord = normalizedFileRecord(input.path);
+  const staticInitializers = options.metadataOnly ? topLevelTsInitializers(sourceFile) : undefined;
   const roots: ts.Expression[] = options.metadataOnly
     ? metadataObjectLiterals(sourceFile)
     : sourceFile.statements
@@ -526,14 +775,17 @@ export function extractStructuredEditorialUnits(input: EditorialExtractionInput)
         .map((declaration) => declaration.initializer)
         .filter((initializer): initializer is ts.Expression => initializer !== undefined);
   for (const root of roots) {
-    const unwrapped = unwrapTsExpression(root);
+    const unwrapped = resolveStaticTsExpression(root, staticInitializers);
     const record = ts.isObjectLiteralExpression(unwrapped)
       ? structuredRecord(unwrapped, fallbackRecord, options, input.path)
       : fallbackRecord;
-    collectStructuredValue(root, record, "", [], input, options, units);
+    collectStructuredValue(root, record, "", [], input, options, units, staticInitializers);
   }
   for (const [name, initializer] of topLevelNamedInitializers(sourceFile, options.topLevelNames ?? [])) {
     collectStructuredValue(initializer, fallbackRecord, name, [name], input, options, units);
+  }
+  for (const [name, functionNode] of topLevelNamedFunctions(sourceFile, options.functionNames ?? [])) {
+    collectFunctionEditorialUnits(name, functionNode, fallbackRecord, input, options, units);
   }
   return units.filter((unit) => unit.text.trim().length > 0);
 }

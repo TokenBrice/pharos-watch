@@ -1,5 +1,4 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- CI-only corpus discovery uses reviewed registry paths. */
-import { existsSync, globSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
@@ -9,191 +8,86 @@ import {
   EDITORIAL_STYLE_HASH,
   EDITORIAL_STYLE_VERSION,
   scanEditorialText,
-  type EditorialFinding,
 } from "@shared/lib/editorial-style";
 
 import {
   EDITORIAL_BASELINE_PATH,
-  EDITORIAL_EXCEPTIONS_PATH,
   EDITORIAL_SURFACE_REGISTRY,
   EDITORIAL_POLICY_TEST_PATH,
-  editorialPathMatches,
   validateEditorialSurfaceRegistry,
-  type EditorialSurfaceEntry,
 } from "../lib/editorial-surface-registry";
 import {
   applyEditorialExceptions,
   buildEditorialBaseline,
   compareEditorialBaseline,
   editorialBaselineKey,
-  readEditorialBaseline,
+  fingerprintEditorialObservation,
   readEditorialExceptions,
   validateEditorialExceptions,
-  type EditorialBaselineRegression,
+  type EditorialBaselineFile,
+  type EditorialException,
   type EditorialObservation,
 } from "../lib/editorial-baseline";
 import { extractUnitsForSurface } from "../lib/editorial-extractors";
+import {
+  assertEditorialSourcesRegistered,
+  collectGateObservations,
+  EDITORIAL_POLICY_MODE,
+  formatGateDiagnostics,
+  runEditorialPolicyGate,
+} from "../lib/editorial-gate";
 
-interface GateObservation extends EditorialObservation {
-  readonly path: string;
-  readonly line: number;
-  readonly finding: EditorialFinding;
-}
+const FIXED_GENERATED_AT = "2026-09-01T00:00:00.000Z";
 
-export interface EditorialGateResult {
-  readonly observations: readonly GateObservation[];
-  readonly regressions: readonly EditorialBaselineRegression[];
-}
-
-const INLINE_ALLOW_RE = /editorial-style-allow:\s*([a-z0-9-]+)\s*--\s*(\S.*)$/i;
-export type EditorialPolicyMode = "shadow" | "enforce";
-/** Shadow is the rollout default; setting EDITORIAL_POLICY_MODE=enforce flips one config value. */
-export const EDITORIAL_POLICY_MODE: EditorialPolicyMode =
-  process.env.EDITORIAL_POLICY_MODE === "enforce" ? "enforce" : "shadow";
-const UNSCOPED_ALLOW_RE = /(?:banned-phrase-allow|editorial-style-allow)\s*:/i;
-
-function normalizeRelativePath(root: string, path: string): string {
-  const absolute = resolve(root, path);
-  return absolute.startsWith(`${root}/`) ? absolute.slice(root.length + 1) : path.replaceAll("\\", "/");
-}
-
-function sourceLineAt(source: string, offset: number): { line: number; text: string } {
-  const safeOffset = Math.max(0, Math.min(offset, source.length));
-  const lineStart = source.lastIndexOf("\n", Math.max(0, safeOffset - 1)) + 1;
-  const lineEnd = source.indexOf("\n", safeOffset);
+function fixtureObservation({
+  context = "Supply fell — the peg held.",
+  severity = "hard",
+  rule = "no-clause-dash",
+}: {
+  context?: string;
+  severity?: "hard" | "advisory";
+  rule?: string;
+} = {}): EditorialObservation {
   return {
-    line: source.slice(0, lineStart).split("\n").length,
-    text: source.slice(lineStart, lineEnd < 0 ? source.length : lineEnd).trim().slice(0, 240),
+    surface: "fixture-json",
+    record: "fixture",
+    field: "text",
+    rule,
+    excerpt: "—",
+    context,
+    finding: {
+      ruleId: rule,
+      severity,
+      promptLabel: "Fixture policy rule.",
+      excerpt: "—",
+      index: context.indexOf("—"),
+    },
   };
 }
 
-function discoverSurfacePaths(surface: EditorialSurfaceEntry, root: string): string[] {
-  const paths = surface.paths.flatMap((pattern) => globSync(pattern, { cwd: root, nodir: true }) as string[]);
-  const unique = [...new Set(paths.map((path) => normalizeRelativePath(root, path)))].sort();
-  if (unique.length === 0) throw new Error(`[editorial-style] Surface "${surface.id}" has no discovered source: ${surface.paths.join(", ")}`);
-  return unique;
+function fixtureBaseline(observations: readonly EditorialObservation[]): EditorialBaselineFile {
+  return buildEditorialBaseline(observations, {
+    policyVersion: EDITORIAL_STYLE_VERSION,
+    policyHash: EDITORIAL_STYLE_HASH,
+    generatedAt: FIXED_GENERATED_AT,
+  });
 }
 
-export function discoverEditorialSources(
-  root = process.cwd(),
-  registry: readonly EditorialSurfaceEntry[] = EDITORIAL_SURFACE_REGISTRY,
-): Array<{ surface: EditorialSurfaceEntry; path: string }> {
-  validateEditorialSurfaceRegistry(registry, new Set(EDITORIAL_REGISTER_IDS));
-  return registry.flatMap((surface) => discoverSurfacePaths(surface, root).map((path) => ({ surface, path })));
-}
-
-/** Refuses prose paths that are not declared by an editorial surface. */
-export function assertEditorialSourcesRegistered(
-  paths: readonly string[],
-  registry: readonly EditorialSurfaceEntry[] = EDITORIAL_SURFACE_REGISTRY,
-): void {
-  validateEditorialSurfaceRegistry(registry, new Set(EDITORIAL_REGISTER_IDS));
-  const unregistered = paths.filter((path) => !registry.some((surface) => surface.paths.some((pattern) => editorialPathMatches(pattern, path))));
-  if (unregistered.length > 0) {
-    throw new Error(`[editorial-style] Unregistered editorial corpus path(s): ${unregistered.join(", ")}`);
-  }
-}
-
-function surfaceOnlyObservations(
-  observations: readonly GateObservation[],
-  surfaceById: ReadonlyMap<string, EditorialSurfaceEntry>,
-): GateObservation[] {
-  return observations.filter((observation) => surfaceById.get(observation.surface)?.tier !== "historical-exempt");
-}
-
-function digestMatchesSurface(surface: EditorialSurfaceEntry, record: string): boolean {
-  if (surface.id === "daily-digests") return record.includes("digestType=daily");
-  if (surface.id === "weekly-digests") return record.includes("digestType=weekly");
-  return true;
-}
-
-function collectGateObservations(
-  root: string,
-  registry: readonly EditorialSurfaceEntry[],
-): { observations: GateObservation[]; sourceAllowErrors: string[] } {
-  const observations: GateObservation[] = [];
-  const sourceAllowErrors: string[] = [];
-  for (const { surface, path } of discoverEditorialSources(root, registry)) {
-    const source = readFileSync(resolve(root, path), "utf8");
-    const units = extractUnitsForSurface(surface, path, source);
-    const usedInlineAllows = new Set<string>();
-    for (const unit of units) {
-      if (!digestMatchesSurface(surface, unit.record) || unit.ownership !== "pharos") continue;
-      const findings = scanEditorialText(unit.text, {
-        register: surface.register,
-        field: unit.field,
-        ownership: unit.ownership,
-        exemptions: unit.exemptions,
-      });
-      for (const finding of findings) {
-        const location = sourceLineAt(source, unit.sourceOffset + finding.index);
-        const allow = location.text.match(INLINE_ALLOW_RE);
-        if (UNSCOPED_ALLOW_RE.test(location.text) && !allow) {
-          sourceAllowErrors.push(`${path}:${location.line} uses an unscoped editorial allow; use editorial-style-allow: <rule-id> -- <reason>`);
-        }
-        const key = editorialBaselineKey({ surface: surface.id, record: unit.record, field: unit.field, rule: finding.ruleId });
-        if (allow?.[1]?.toLowerCase() === finding.ruleId.toLowerCase() && !usedInlineAllows.has(key)) {
-          usedInlineAllows.add(key);
-          continue;
-        }
-        observations.push({
-          surface: surface.id,
-          record: unit.record,
-          field: unit.field,
-          rule: finding.ruleId,
-          excerpt: finding.excerpt,
-          context: location.text,
-          finding,
-          path,
-          line: location.line,
-        });
-      }
-    }
-  }
-  return { observations, sourceAllowErrors };
-}
-
-export function runEditorialPolicyGate({
-  root = process.cwd(),
-  baselinePath = resolve(root, EDITORIAL_BASELINE_PATH),
-  exceptionsPath = resolve(root, EDITORIAL_EXCEPTIONS_PATH),
-  now = new Date(),
-  registry = EDITORIAL_SURFACE_REGISTRY,
-}: {
-  root?: string;
-  baselinePath?: string;
-  exceptionsPath?: string;
-  now?: Date;
-  registry?: readonly EditorialSurfaceEntry[];
-} = {}): EditorialGateResult {
-  const { observations, sourceAllowErrors } = collectGateObservations(root, registry);
-  if (sourceAllowErrors.length > 0) throw new Error(sourceAllowErrors.join("\n"));
-  const exceptionFile = readEditorialExceptions(exceptionsPath);
-  const rawKeys = new Set(observations.map((observation) => editorialBaselineKey(observation)));
-  validateEditorialExceptions(exceptionFile.exceptions, rawKeys, { now });
-  const observationsWithSidecar = applyEditorialExceptions(observations, exceptionFile.exceptions);
-  const surfaceById = new Map(registry.map((surface) => [surface.id, surface]));
-  const baselineObservations = surfaceOnlyObservations(observationsWithSidecar, surfaceById);
-  const baseline = readEditorialBaseline(baselinePath);
-  if (baseline.policyVersion !== EDITORIAL_STYLE_VERSION || baseline.policyHash !== EDITORIAL_STYLE_HASH) {
-    throw new Error(
-      `[editorial-style] Baseline policy ${baseline.policyVersion}/${baseline.policyHash} does not match ${EDITORIAL_STYLE_VERSION}/${EDITORIAL_STYLE_HASH}; regenerate with node --import tsx scripts/maintenance/generate-editorial-baseline.ts.`,
-    );
-  }
-  const regressions = compareEditorialBaseline(baselineObservations, baseline);
-  return { observations: baselineObservations, regressions };
-}
-
-function formatGateDiagnostics(result: EditorialGateResult): string {
-  const byKey = new Map(result.observations.map((observation) => [editorialBaselineKey(observation), observation]));
-  return result.regressions
-    .map((regression) => {
-      const observation = byKey.get(regression.key);
-      return observation
-        ? `${observation.path}:${observation.line} [${observation.rule}] ${observation.excerpt}\n${regression.message}`
-        : regression.message;
-    })
-    .join("\n");
+function fixtureException(
+  observation: EditorialObservation,
+  fingerprints = [fingerprintEditorialObservation(observation)],
+): EditorialException {
+  return {
+    surface: observation.surface,
+    record: observation.record,
+    field: observation.field,
+    ruleId: observation.rule,
+    excerpt: observation.excerpt,
+    fingerprints,
+    reason: "Retained external quotation.",
+    owner: "content",
+    permanent: true,
+  };
 }
 
 describe("editorial corpus policy gate", () => {
@@ -201,7 +95,7 @@ describe("editorial corpus policy gate", () => {
     const result = runEditorialPolicyGate();
     expect(result.observations).toEqual(expect.any(Array));
     if (EDITORIAL_POLICY_MODE === "enforce") {
-      expect(result.regressions, formatGateDiagnostics(result)).toEqual([]);
+      expect(result.blockingRegressions, formatGateDiagnostics(result)).toEqual([]);
     }
   });
 
@@ -218,13 +112,28 @@ describe("editorial corpus policy gate", () => {
   });
 
   it("does not permit an unscoped Selector-style allow", () => {
-    expect(() => {
-      const root = "fixture.ts";
-      const source = "const text = 'Supply fell — the peg held.'; // banned-phrase-allow: old\n";
-      const location = sourceLineAt(source, source.indexOf("Supply"));
-      if (UNSCOPED_ALLOW_RE.test(location.text) && !INLINE_ALLOW_RE.test(location.text)) throw new Error("unscoped");
-      void root;
-    }).toThrow("unscoped");
+    const root = mkdtempSync(resolve(tmpdir(), "pharos-editorial-allow-"));
+    try {
+      writeFileSync(resolve(root, "fixture.json"), JSON.stringify({
+        text: "Supply fell — the peg held.",
+        allow: "banned-phrase-allow: old",
+      }));
+      expect(() => collectGateObservations({
+        root,
+        exceptions: [],
+        registry: [{
+          id: "fixture-json",
+          register: "daily",
+          paths: ["fixture.json"],
+          extractor: "json-fields",
+          ownership: "pharos",
+          tier: "committed-corpus",
+          options: { fields: ["text"], rootRecord: "file" },
+        }],
+      })).toThrow(/unscoped editorial allow/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
   it("records a newly injected hard violation as a regression without blocking shadow mode", () => {
     const root = mkdtempSync(resolve(tmpdir(), "pharos-editorial-gate-"));
@@ -257,6 +166,7 @@ describe("editorial corpus policy gate", () => {
       });
       expect(result.observations.length).toBeGreaterThan(0);
       expect(result.regressions.length).toBeGreaterThan(0);
+      expect(result.blockingRegressions.length).toBeGreaterThan(0);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -268,6 +178,7 @@ describe("editorial corpus policy gate", () => {
       record: "fixture",
       field: "text",
       ruleId: "no-clause-dash",
+      fingerprints: ["0123456789abcdef"],
       reason: "Statutory quotation retained until legal review.",
       owner: "content",
     };
@@ -300,24 +211,124 @@ describe("editorial corpus policy gate", () => {
     )).toThrow(/Orphaned/);
   });
 
-  it("consumes only one occurrence for a field-level exception", () => {
-    const observation = {
-      surface: "fixture-json",
-      record: "fixture",
-      field: "text",
-      rule: "no-clause-dash",
-      excerpt: "—",
-    } satisfies EditorialObservation;
-    const exception = {
-      surface: observation.surface,
-      record: observation.record,
-      field: observation.field,
-      ruleId: observation.rule,
-      reason: "One retained legal quotation.",
-      owner: "content",
-      permanent: true,
-    };
-    expect(applyEditorialExceptions([observation, observation], [exception])).toHaveLength(1);
+  it("does not let exact-fingerprint exceptions absorb a new authored violation inserted first", () => {
+    const authored = fixtureObservation({ context: "Authored claim — new conclusion." });
+    const quotedOne = fixtureObservation({ context: "Evidence cites 'Report — first title'." });
+    const quotedTwo = fixtureObservation({ context: "Evidence cites 'Study — second title'." });
+    const exception = fixtureException(quotedOne, [
+      fingerprintEditorialObservation(quotedOne),
+      fingerprintEditorialObservation(quotedTwo),
+    ]);
+    expect(applyEditorialExceptions([authored, quotedOne, quotedTwo], [exception])).toEqual([authored]);
+  });
+
+  it("reports new hard findings as blocking and new advisory findings as report-only", () => {
+    const hard = compareEditorialBaseline([fixtureObservation()], fixtureBaseline([]));
+    const advisoryObservation = fixtureObservation({
+      context: "Supply quietly changed.",
+      rule: "scoped-decorative-word",
+      severity: "advisory",
+    });
+    const advisory = compareEditorialBaseline([advisoryObservation], fixtureBaseline([]));
+    expect(hard).toEqual([expect.objectContaining({ kind: "new", severity: "hard", blocking: true })]);
+    expect(advisory).toEqual([expect.objectContaining({ kind: "new", severity: "advisory", blocking: false })]);
+  });
+
+  it("reports fixed debt as a blocking stale regression with the regeneration command", () => {
+    const regressions = compareEditorialBaseline([], fixtureBaseline([fixtureObservation()]));
+    expect(regressions).toEqual([expect.objectContaining({
+      kind: "stale",
+      blocking: true,
+      message: expect.stringContaining("npm run generate:editorial-baseline"),
+    })]);
+  });
+
+  it("detects an identical violation reintroduced after the stale baseline was regenerated", () => {
+    const observation = fixtureObservation();
+    const baselineAfterRemoval = fixtureBaseline([]);
+    expect(compareEditorialBaseline([observation], baselineAfterRemoval)).toEqual([
+      expect.objectContaining({ kind: "new", blocking: true }),
+    ]);
+  });
+
+  it("rejects partially consumed exact-fingerprint allowances", () => {
+    const observation = fixtureObservation();
+    const exception = fixtureException(observation, [
+      fingerprintEditorialObservation(observation),
+      "0000000000000000",
+    ]);
+    expect(() => applyEditorialExceptions([observation], [exception])).toThrow(/only partially consumed/);
+  });
+
+  it("rejects an exact-fingerprint exception that matches nothing", () => {
+    const observation = fixtureObservation();
+    const exception = fixtureException(observation, ["0000000000000000"]);
+    expect(() => applyEditorialExceptions([observation], [exception])).toThrow(/matches nothing/);
+  });
+
+  it("rejects unknown exception surface and rule ids distinctly", () => {
+    const observation = fixtureObservation();
+    const exception = fixtureException(observation);
+    const key = editorialBaselineKey(observation);
+    expect(() => validateEditorialExceptions(
+      [{ ...exception, surface: "unknown-surface" }],
+      new Set([editorialBaselineKey({ ...observation, surface: "unknown-surface" })]),
+      { knownSurfaceIds: new Set([observation.surface]), knownRuleIds: new Set([observation.rule]) },
+    )).toThrow(/unknown surface id/);
+    expect(() => validateEditorialExceptions(
+      [{ ...exception, ruleId: "unknown-rule" }],
+      new Set([editorialBaselineKey({ ...observation, rule: "unknown-rule" })]),
+      { knownSurfaceIds: new Set([observation.surface]), knownRuleIds: new Set([observation.rule]) },
+    )).toThrow(/unknown rule id/);
+    expect(key).not.toBe("");
+  });
+
+  it("rejects malformed fingerprints and missing reasons distinctly", () => {
+    const observation = fixtureObservation();
+    const exception = fixtureException(observation);
+    const key = new Set([editorialBaselineKey(observation)]);
+    expect(() => validateEditorialExceptions([{ ...exception, fingerprints: ["not-a-fingerprint"] }], key))
+      .toThrow(/malformed fingerprint/);
+    expect(() => validateEditorialExceptions([{ ...exception, reason: "" }], key))
+      .toThrow(/non-empty reason/);
+  });
+
+  it("rejects malformed exception selectors", () => {
+    const observation = fixtureObservation();
+    const exception = fixtureException(observation);
+    expect(() => validateEditorialExceptions(
+      [{ ...exception, field: "text\u001fno-clause-dash" }],
+      new Set([editorialBaselineKey(observation)]),
+    )).toThrow(/incomplete selector/);
+  });
+
+  it("rejects typoed exception fields during strict file validation", () => {
+    const root = mkdtempSync(resolve(tmpdir(), "pharos-editorial-exception-"));
+    const path = resolve(root, "exceptions.json");
+    try {
+      const exception = fixtureException(fixtureObservation());
+      const { excerpt: _excerpt, ...withoutExcerpt } = exception;
+      writeFileSync(path, JSON.stringify({
+        version: 1,
+        exceptions: [{ ...withoutExcerpt, exerpt: "—" }],
+      }));
+      expect(() => readEditorialExceptions(path)).toThrow(/Unknown field "exerpt"/);
+      const { reason: _reason, ...withoutReason } = exception;
+      writeFileSync(path, JSON.stringify({ version: 1, exceptions: [withoutReason] }));
+      expect(() => readEditorialExceptions(path)).toThrow(/field "reason" must be a string/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves generatedAt so identical baseline builds serialize byte-for-byte", () => {
+    const first = fixtureBaseline([fixtureObservation()]);
+    const second = buildEditorialBaseline([fixtureObservation()], {
+      policyVersion: EDITORIAL_STYLE_VERSION,
+      policyHash: EDITORIAL_STYLE_HASH,
+      previousBaseline: first,
+    });
+    expect(`${JSON.stringify(second, null, 2)}\n`).toBe(`${JSON.stringify(first, null, 2)}\n`);
   });
 
   it("keeps identity labels out of the prose unit set", () => {

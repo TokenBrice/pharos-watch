@@ -16,6 +16,14 @@ export interface EditorialExtractorOptions {
   readonly metadataOnly?: boolean;
   /** Additional top-level TS constants whose string values are prose. */
   readonly topLevelNames?: readonly string[];
+  /** Top-level functions whose returned or rendered strings are prose. */
+  readonly functionNames?: readonly string[];
+  /** Limit a root JSON array to its first or subsequent records. */
+  readonly recordScope?: "current" | "historical";
+  /** Optional field used to determine the current record in each group. */
+  readonly recordGroupField?: string;
+  /** Optional value selecting one record group (for example, "daily"). */
+  readonly recordGroupValue?: string;
   /** Proven exceptions applied to every unit from this surface. */
   readonly exemptions?: readonly string[];
 }
@@ -32,8 +40,10 @@ export interface EditorialSurfaceEntry {
 const JSON_PROFILE_PATHS = ["shared/data/stablecoins/coins/*.json"] as const;
 
 /**
- * Every committed prose family is listed once here. Keep this table CI-only:
- * runtime packages must not import scripts/lib/editorial-*.
+ * Every committed corpus family in the ratchet's current scope is listed once
+ * here. The docs corpus remains a tracked exclusion until policy examples can
+ * be self-referenced without flagging the authority itself. Keep this table
+ * CI-only: runtime packages must not import scripts/lib/editorial-*.
  */
 export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
   {
@@ -51,8 +61,14 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
     paths: ["data/digests.json"],
     extractor: "json-fields",
     ownership: "pharos",
-    tier: "historical-exempt",
-    options: { fields: ["*.title", "*.text", "*.extended"], identityFields: ["date", "digestType"] },
+    tier: "committed-corpus",
+    options: {
+      fields: ["*.title", "*.text", "*.extended"],
+      identityFields: ["date", "digestType"],
+      recordScope: "current",
+      recordGroupField: "digestType",
+      recordGroupValue: "daily",
+    },
   },
   {
     id: "weekly-digests",
@@ -60,8 +76,37 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
     paths: ["data/digests.json"],
     extractor: "json-fields",
     ownership: "pharos",
+    tier: "committed-corpus",
+    options: {
+      fields: ["*.title", "*.text", "*.extended"],
+      identityFields: ["date", "digestType"],
+      recordScope: "current",
+      recordGroupField: "digestType",
+      recordGroupValue: "weekly",
+    },
+  },
+  {
+    id: "historical-digests",
+    register: "technical-evidence",
+    paths: ["data/digests.json"],
+    extractor: "json-fields",
+    ownership: "pharos",
     tier: "historical-exempt",
-    options: { fields: ["*.title", "*.text", "*.extended"], identityFields: ["date", "digestType"] },
+    options: {
+      fields: ["*.title", "*.text", "*.extended"],
+      identityFields: ["date", "digestType"],
+      recordScope: "historical",
+      recordGroupField: "digestType",
+    },
+  },
+  {
+    id: "coin-summaries",
+    register: "coin-summary",
+    paths: [...JSON_PROFILE_PATHS],
+    extractor: "json-fields",
+    ownership: "pharos",
+    tier: "committed-corpus",
+    options: { fields: ["oneLiner"], rootRecord: "id" },
   },
   {
     id: "coin-profile-prose",
@@ -70,7 +115,7 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
     extractor: "json-fields",
     ownership: "pharos",
     tier: "committed-corpus",
-    options: { fields: ["oneLiner", "collateral", "pegMechanism", "links.*.label"], rootRecord: "id" },
+    options: { fields: ["collateral", "pegMechanism", "links.*.label"], rootRecord: "id" },
   },
   {
     id: "pre-launch-records",
@@ -242,24 +287,155 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
     },
   },
   {
+    id: "selector-explanations",
+    register: "analytical-explanation",
+    paths: [
+      "shared/lib/selector/what-to-watch-templates.ts",
+      "shared/lib/selector/selector-labels.ts",
+      "shared/lib/selector/output-helpers.ts",
+      "shared/lib/selector/recommendation.ts",
+    ],
+    extractor: "structured-data",
+    ownership: "pharos",
+    tier: "committed-corpus",
+    options: {
+      fields: ["**"],
+      functionNames: [
+        "sourceRiskWatchText",
+        "thinTvlWatchText",
+        "renderWatchText",
+        "labelForSelectorReason",
+        "getLowerRankedText",
+        "selectorProfileLabel",
+        "selectorExclusionReasonLabel",
+        "selectorComponentLowestSubDimensionLabel",
+        "liveReadingFor",
+        "buildRelaxableConstraints",
+        "buildWhyText",
+        "buildRecommendation",
+      ],
+    },
+  },
+  {
     id: "page-metadata",
     register: "page-description",
     paths: ["src/app/**/page.tsx", "src/app/**/page.ts", "src/lib/page-metadata.ts"],
     extractor: "structured-data",
     ownership: "pharos",
     tier: "committed-corpus",
-    options: { fields: ["title", "description"], metadataOnly: true },
+    options: { fields: ["title", "description", "leadParagraphs"], metadataOnly: true },
   },
   {
-    id: "about-prose",
-    register: "brand",
-    paths: ["src/lib/about-*.ts"],
+    id: "command-palette-copy",
+    register: "product-utility",
+    paths: ["src/components/command-palette-actions.ts"],
     extractor: "structured-data",
     ownership: "pharos",
     tier: "committed-corpus",
     options: {
-      fields: ["title", "body", "description", "question", "answer", "ariaLabel", "lead", "sources"],
+      fields: ["label", "sublabel"],
+      functionNames: ["buildVerbPreview"],
+    },
+  },
+  {
+    id: "page-error-copy",
+    register: "product-utility",
+    paths: ["src/components/page-error-editorial.tsx"],
+    extractor: "structured-data",
+    ownership: "pharos",
+    tier: "committed-corpus",
+    options: {
+      fields: ["reloadMessage", "fallbackMessage"],
+      functionNames: ["PageErrorEditorial"],
+    },
+  },
+  {
+    id: "funding-narrative",
+    register: "brand",
+    paths: ["src/components/funding/funding-page-sections.tsx"],
+    extractor: "structured-data",
+    ownership: "pharos",
+    tier: "committed-corpus",
+    options: {
+      fields: ["**"],
+      topLevelNames: ["PHAROS_SHARE_MESSAGE"],
+      functionNames: [
+        "buildThisMonthLabel",
+        "buildCommunityLabel",
+        "FundingKpiRow",
+        "FundingMiniStat",
+        "CostBreakdown",
+        "DonorList",
+        "SupportCtas",
+        "PrimaryGivethTile",
+        "WalletTile",
+        "SocialButton",
+        "YearEndHorizon",
+        "FundingFaq",
+      ],
+    },
+  },
+  {
+    id: "telegram-alert-copy",
+    register: "alert",
+    paths: ["worker/src/lib/telegram-alerts-formatting.ts"],
+    extractor: "structured-data",
+    ownership: "pharos",
+    tier: "committed-corpus",
+    options: {
+      fields: ["**"],
+      functionNames: [
+        "formatDisambiguation",
+        "formatDewsLine",
+        "formatDepegTriggeredLine",
+        "formatDepegResolvedLine",
+        "formatDepegWorseningLine",
+        "formatSafetyLine",
+        "formatLaunchLine",
+        "formatFreezeLine",
+        "freezeSectionHeader",
+        "formatReserveLine",
+        "formatBurstSummaryLine",
+        "formatConsolidatedMessage",
+      ],
+    },
+  },
+  {
+    id: "telegram-delivery-wrappers",
+    register: "delivery-wrapper",
+    paths: ["worker/src/lib/telegram-recap-formatting.ts"],
+    extractor: "structured-data",
+    ownership: "pharos",
+    tier: "committed-corpus",
+    options: {
+      fields: ["**"],
+      functionNames: [
+        "recapMiniAppUrl",
+        "factLine",
+        "windowLabel",
+        "formatTelegramRecap",
+      ],
+    },
+  },
+  {
+    id: "about-prose",
+    register: "brand",
+    paths: ["src/lib/about-*.ts", "src/components/about/about-page-content.tsx"],
+    extractor: "structured-data",
+    ownership: "pharos",
+    tier: "committed-corpus",
+    options: {
+      fields: ["title", "body", "description", "question", "answer", "ariaLabel", "lead", "sources", "jsx-text"],
       identityFields: ["id", "title", "name"],
+      functionNames: [
+        "PipelineSources",
+        "AboutFeatureRow",
+        "FeaturedAppearance",
+        "AppearanceRow",
+        "AboutSection",
+        "AboutFeatureSection",
+        "AboutPageContent",
+      ],
     },
   },
   {
@@ -323,17 +499,46 @@ export function findEditorialSurfacesForPath(path: string): readonly EditorialSu
   return EDITORIAL_SURFACE_REGISTRY.filter((surface) => surface.paths.some((pattern) => editorialPathMatches(pattern, path)));
 }
 
+const EDITORIAL_POLICY_CONTROL_PATHS: readonly string[] = [
+  "docs/editorial-style.md",
+  "scripts/lib/editorial-surface-registry.ts",
+  "scripts/lib/editorial-extractors.ts",
+  "scripts/lib/editorial-baseline.ts",
+  "scripts/maintenance/generate-editorial-baseline.ts",
+  "scripts/lib/editorial-gate.ts",
+  "scripts/maintenance/generate-editorial-style.ts",
+  "shared/lib/editorial-style.ts",
+  "shared/lib/editorial-style.generated.ts",
+  EDITORIAL_POLICY_TEST_PATH,
+];
+
 export function hasEditorialPolicyImpact(changedFiles: readonly string[]): boolean {
   return changedFiles.some((file) => {
     const normalized = normalizePath(file);
     return (
-      normalized === EDITORIAL_BASELINE_PATH ||
-      normalized === EDITORIAL_EXCEPTIONS_PATH ||
-      findEditorialSurfacesForPath(normalized).length > 0
+      EDITORIAL_POLICY_CONTROL_PATHS.some((path) => path === normalized)
+      || findEditorialSurfacesForPath(normalized).length > 0
     );
   });
 }
 
+/**
+ * Assert that each committed surface produced at least one extracted unit.
+ * Callers should accumulate counts by surface id across every discovered path
+ * before invoking this check; historical surfaces are intentionally exempt.
+ */
+export function validateEditorialSurfaceCoverage(
+  registry: readonly EditorialSurfaceEntry[],
+  unitCounts: ReadonlyMap<string, number>,
+): void {
+  const empty = registry
+    .filter((surface) => surface.tier === "committed-corpus")
+    .filter((surface) => (unitCounts.get(surface.id) ?? 0) < 1)
+    .map((surface) => surface.id);
+  if (empty.length > 0) {
+    throw new Error(`[editorial-style] Committed surface(s) extracted no units: ${empty.join(", ")}`);
+  }
+}
 export function validateEditorialSurfaceRegistry(
   registry: readonly EditorialSurfaceEntry[] = EDITORIAL_SURFACE_REGISTRY,
   knownRegisters?: ReadonlySet<string>,

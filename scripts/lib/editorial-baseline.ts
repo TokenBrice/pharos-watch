@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 
-import type { EditorialFinding } from "@shared/lib/editorial-style";
+import type { EditorialFinding, EditorialSeverity } from "@shared/lib/editorial-style";
 
 import { EDITORIAL_BASELINE_PATH, EDITORIAL_EXCEPTIONS_PATH } from "./editorial-surface-registry";
 
@@ -29,12 +29,15 @@ export interface EditorialException {
   readonly ruleId: string;
   readonly reason: string;
   readonly owner: string;
-  /** Optional exact finding excerpt when one field contains multiple matches. */
+  /** Diagnostic assertion for the exact finding excerpt. */
   readonly excerpt?: string;
-  /** Number of matching occurrences this selector is allowed to retain. */
+  /** Exact observation fingerprints this exception suppresses. Duplicates represent repeated occurrences. */
+  readonly fingerprints: readonly string[];
+  /** Must equal fingerprints.length when retained for human-readable allowance counts. */
   readonly occurrences?: number;
   readonly expiresAt?: string;
   readonly permanent?: boolean;
+  readonly reviewedAt?: string;
 }
 
 export interface EditorialExceptionFile {
@@ -55,7 +58,11 @@ export interface EditorialObservation {
 }
 
 export interface EditorialBaselineRegression {
+  readonly kind: "new" | "stale";
   readonly key: string;
+  readonly fingerprint?: string;
+  readonly severity?: Exclude<EditorialSeverity, "off">;
+  readonly blocking: boolean;
   readonly message: string;
   readonly observation?: EditorialObservation;
 }
@@ -74,7 +81,7 @@ function normalizeFingerprintText(value: string): string {
   return value.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-/** Hashes the offending excerpt with only the source line's minimal context. */
+/** Hashes the offending excerpt with the collector's bounded, occurrence-local context. */
 export function fingerprintEditorialObservation(observation: EditorialObservation): string {
   const normalized = [observation.rule, observation.excerpt, observation.context ?? ""]
     .map(normalizeFingerprintText)
@@ -112,18 +119,24 @@ export function observationToEntry(observations: readonly EditorialObservation[]
 
 export function buildEditorialBaseline(
   observations: readonly EditorialObservation[],
-  { policyVersion, policyHash, generatedAt = new Date().toISOString() }: {
+  { policyVersion, policyHash, generatedAt, previousBaseline }: {
     policyVersion: string;
     policyHash: string;
     generatedAt?: string;
+    previousBaseline?: EditorialBaselineFile;
   },
 ): EditorialBaselineFile {
+  const entries = observationToEntry(observations);
+  const semanticStateMatches = previousBaseline !== undefined
+    && previousBaseline.policyVersion === policyVersion
+    && previousBaseline.policyHash === policyHash
+    && JSON.stringify(previousBaseline.entries) === JSON.stringify(entries);
   return {
     version: EDITORIAL_BASELINE_SCHEMA_VERSION,
     policyVersion,
     policyHash,
-    generatedAt,
-    entries: observationToEntry(observations),
+    generatedAt: generatedAt ?? (semanticStateMatches ? previousBaseline.generatedAt : new Date().toISOString()),
+    entries,
   };
 }
 
@@ -160,6 +173,82 @@ function assertExceptionFile(value: unknown): asserts value is EditorialExceptio
   if (!Array.isArray(candidate.exceptions)) {
     throw new Error("[editorial-style] Editorial exceptions must contain an exceptions array.");
   }
+  const allowedFileFields = new Set(["version", "exceptions"]);
+  for (const field of Object.keys(value)) {
+    if (!allowedFileFields.has(field)) throw new Error(`[editorial-style] Unknown editorial exception file field "${field}".`);
+  }
+  const allowedEntryFields = new Set([
+    "surface", "record", "field", "ruleId", "excerpt", "fingerprints", "occurrences",
+    "reason", "owner", "expiresAt", "permanent", "reviewedAt",
+  ]);
+  candidate.exceptions.forEach((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`[editorial-style] Exception entry ${index} must be an object.`);
+    }
+    for (const field of Object.keys(entry)) {
+      if (!allowedEntryFields.has(field)) {
+        throw new Error(`[editorial-style] Unknown field "${field}" in exception entry ${index}.`);
+      }
+    }
+    const exception = entry as Record<string, unknown>;
+    for (const field of ["surface", "record", "field", "ruleId", "reason", "owner"] as const) {
+      if (typeof exception[field] !== "string") {
+        throw new Error(`[editorial-style] Exception entry ${index} field "${field}" must be a string.`);
+      }
+    }
+    if (!Array.isArray(exception.fingerprints) || exception.fingerprints.some((fingerprint) => typeof fingerprint !== "string")) {
+      throw new Error(`[editorial-style] Exception entry ${index} fingerprints must be an array of strings.`);
+    }
+    if (exception.excerpt !== undefined && typeof exception.excerpt !== "string") {
+      throw new Error(`[editorial-style] Exception entry ${index} excerpt must be a string.`);
+    }
+    if (exception.occurrences !== undefined && typeof exception.occurrences !== "number") {
+      throw new Error(`[editorial-style] Exception entry ${index} occurrences must be a number.`);
+    }
+    for (const field of ["expiresAt", "reviewedAt"] as const) {
+      if (exception[field] !== undefined && typeof exception[field] !== "string") {
+        throw new Error(`[editorial-style] Exception entry ${index} field "${field}" must be a string.`);
+      }
+    }
+    if (exception.permanent !== undefined && typeof exception.permanent !== "boolean") {
+      throw new Error(`[editorial-style] Exception entry ${index} permanent must be a boolean.`);
+    }
+    const selector = [exception.surface, exception.record, exception.field, exception.ruleId] as string[];
+    if (
+      selector.some((part) => !part.trim() || part.includes("\u001f"))
+      || !/^[a-z0-9-]+$/.test(exception.surface as string)
+      || !/^[a-z0-9-]+$/.test(exception.ruleId as string)
+    ) {
+      throw new Error(`[editorial-style] Exception entry ${index} has a malformed selector.`);
+    }
+    if (!(exception.reason as string).trim()) {
+      throw new Error(`[editorial-style] Exception entry ${index} needs a non-empty reason.`);
+    }
+    if (!(exception.owner as string).trim()) {
+      throw new Error(`[editorial-style] Exception entry ${index} needs a non-empty owner.`);
+    }
+    if (exception.excerpt !== undefined && !(exception.excerpt as string).trim()) {
+      throw new Error(`[editorial-style] Exception entry ${index} excerpt must be non-empty when provided.`);
+    }
+    const fingerprints = exception.fingerprints as string[];
+    if (fingerprints.length === 0 || fingerprints.some((fingerprint) => !/^[a-f0-9]{16}$/.test(fingerprint))) {
+      throw new Error(`[editorial-style] Exception entry ${index} has a malformed fingerprint.`);
+    }
+    if (
+      exception.occurrences !== undefined
+      && (!Number.isInteger(exception.occurrences) || exception.occurrences < 1 || exception.occurrences !== fingerprints.length)
+    ) {
+      throw new Error(`[editorial-style] Exception entry ${index} occurrences must be positive and equal fingerprints.length.`);
+    }
+    for (const field of ["expiresAt", "reviewedAt"] as const) {
+      if (exception[field] !== undefined && !Number.isFinite(Date.parse(exception[field] as string))) {
+        throw new Error(`[editorial-style] Exception entry ${index} field "${field}" must be an ISO date.`);
+      }
+    }
+    if (exception.permanent === true && exception.expiresAt !== undefined) {
+      throw new Error(`[editorial-style] Permanent exception entry ${index} must not carry expiresAt.`);
+    }
+  });
 }
 
 export function readEditorialExceptions(path = EDITORIAL_EXCEPTION_FILE): EditorialExceptionFile {
@@ -182,11 +271,6 @@ function exceptionBaseKey(exception: EditorialException): string {
   });
 }
 
-function exceptionKey(exception: EditorialException): string {
-  const base = exceptionBaseKey(exception);
-  return exception.excerpt === undefined ? base : `${base}\u001f${exception.excerpt}`;
-}
-
 function validFutureExpiry(expiresAt: string, now: Date): boolean {
   const parsed = Date.parse(expiresAt);
   return Number.isFinite(parsed) && parsed > now.getTime();
@@ -195,24 +279,55 @@ function validFutureExpiry(expiresAt: string, now: Date): boolean {
 export function validateEditorialExceptions(
   exceptions: readonly EditorialException[],
   knownFindingKeys: ReadonlySet<string>,
-  { now = new Date() }: { now?: Date } = {},
+  {
+    now = new Date(),
+    knownRuleIds,
+    knownSurfaceIds,
+  }: {
+    now?: Date;
+    knownRuleIds?: ReadonlySet<string>;
+    knownSurfaceIds?: ReadonlySet<string>;
+  } = {},
 ): void {
   const seen = new Set<string>();
   for (const exception of exceptions) {
-    const key = exceptionKey(exception);
+    const key = exceptionBaseKey(exception);
     if (seen.has(key)) throw new Error(`[editorial-style] Duplicate exception entry: ${key}.`);
     seen.add(key);
-    if (!exception.surface || !exception.record || !exception.field || !exception.ruleId) {
+    if (
+      !exception.surface.trim() || !exception.record.trim() || !exception.field.trim() || !exception.ruleId.trim()
+      || [exception.surface, exception.record, exception.field, exception.ruleId].some((part) => part.includes("\u001f"))
+      || !/^[a-z0-9-]+$/.test(exception.surface)
+      || !/^[a-z0-9-]+$/.test(exception.ruleId)
+    ) {
       throw new Error(`[editorial-style] Exception ${key} has an incomplete selector.`);
+    }
+    if (knownSurfaceIds && !knownSurfaceIds.has(exception.surface)) {
+      throw new Error(`[editorial-style] Exception ${key} names unknown surface id "${exception.surface}".`);
+    }
+    if (knownRuleIds && !knownRuleIds.has(exception.ruleId)) {
+      throw new Error(`[editorial-style] Exception ${key} names unknown rule id "${exception.ruleId}".`);
     }
     if (exception.excerpt !== undefined && !exception.excerpt.trim()) {
       throw new Error(`[editorial-style] Exception ${key} excerpt must be non-empty when provided.`);
     }
-    if (!exception.reason.trim() || !exception.owner.trim()) {
-      throw new Error(`[editorial-style] Exception ${key} needs a reason and owner.`);
+    if (!exception.reason.trim()) {
+      throw new Error(`[editorial-style] Exception ${key} needs a non-empty reason.`);
+    }
+    if (!exception.owner.trim()) {
+      throw new Error(`[editorial-style] Exception ${key} needs a non-empty owner.`);
+    }
+    if (exception.fingerprints.length === 0 || exception.fingerprints.some((fingerprint) => !/^[a-f0-9]{16}$/.test(fingerprint))) {
+      throw new Error(`[editorial-style] Exception ${key} has a malformed fingerprint; expected 16 lowercase hexadecimal characters.`);
     }
     if (exception.occurrences !== undefined && (!Number.isInteger(exception.occurrences) || exception.occurrences < 1)) {
       throw new Error(`[editorial-style] Exception ${key} occurrences must be a positive integer.`);
+    }
+    if (exception.occurrences !== undefined && exception.occurrences !== exception.fingerprints.length) {
+      throw new Error(`[editorial-style] Exception ${key} occurrences must equal fingerprints.length.`);
+    }
+    if (exception.reviewedAt !== undefined && !Number.isFinite(Date.parse(exception.reviewedAt))) {
+      throw new Error(`[editorial-style] Exception ${key} reviewedAt must be an ISO date.`);
     }
     if (exception.permanent) {
       if (exception.expiresAt !== undefined) {
@@ -222,32 +337,62 @@ export function validateEditorialExceptions(
       throw new Error(`[editorial-style] Exception ${key} is expired or missing a future expiresAt.`);
     }
     if (!knownFindingKeys.has(exceptionBaseKey(exception))) {
-      throw new Error(`[editorial-style] Orphaned exception entry: ${key}.`);
+      throw new Error(`[editorial-style] Orphaned exception entry matches no current selector: ${key}.`);
     }
   }
 }
 /**
- * Consumes the configured number of occurrences for a selector. A field-level
- * allowance defaults to one occurrence and cannot silently authorize a second.
+ * Consumes only fingerprint-exact occurrences. Every configured allowance must
+ * be consumed, so reordered or repaired prose cannot leave reusable exemptions.
  */
-export function applyEditorialExceptions(
-  observations: readonly EditorialObservation[],
+export function applyEditorialExceptions<T extends EditorialObservation>(
+  observations: readonly T[],
   exceptions: readonly EditorialException[],
-): EditorialObservation[] {
-  const available = new Map<string, number>();
-  for (const exception of exceptions) {
-    const key = exceptionKey(exception);
-    available.set(key, (available.get(key) ?? 0) + (exception.occurrences ?? 1));
+): T[] {
+  const states = exceptions.map((exception) => ({
+    exception,
+    initial: exception.fingerprints.length,
+    remaining: exception.fingerprints.length,
+  }));
+  const available = new Map<string, { state: (typeof states)[number]; remaining: number }>();
+  for (const state of states) {
+    const { exception } = state;
+    const base = exceptionBaseKey(exception);
+    for (const fingerprint of exception.fingerprints) {
+      const key = `${base}\u001f${fingerprint}`;
+      const existing = available.get(key);
+      if (existing) {
+        existing.remaining += 1;
+      } else {
+        available.set(key, { state, remaining: 1 });
+      }
+    }
   }
-  return observations.filter((observation) => {
+  const remainingObservations = observations.filter((observation) => {
     const baseKey = editorialBaselineKey(observation);
-    const excerptKey = `${baseKey}\u001f${observation.excerpt}`;
-    const key = available.has(excerptKey) ? excerptKey : baseKey;
-    const remaining = available.get(key) ?? 0;
-    if (remaining <= 0) return true;
-    available.set(key, remaining - 1);
+    const fingerprint = fingerprintEditorialObservation(observation);
+    const key = `${baseKey}\u001f${fingerprint}`;
+    const allowance = available.get(key);
+    if (
+      !allowance || allowance.remaining <= 0
+      || (allowance.state.exception.excerpt !== undefined && allowance.state.exception.excerpt !== observation.excerpt)
+    ) {
+      return true;
+    }
+    allowance.remaining -= 1;
+    allowance.state.remaining -= 1;
     return false;
   });
+  for (const state of states) {
+    if (state.remaining === 0) continue;
+    const key = exceptionBaseKey(state.exception);
+    const consumed = state.initial - state.remaining;
+    const message = consumed === 0 ? "matches nothing" : "was only partially consumed";
+    throw new Error(
+      `[editorial-style] Exception allowance ${key} ${message}: consumed ${consumed} of ${state.initial} exact fingerprint occurrence(s).`,
+    );
+  }
+  return remainingObservations;
 }
 
 function multiset(values: readonly string[]): Map<string, number> {
@@ -263,30 +408,56 @@ export function compareEditorialBaseline(
   const current = observationToEntry(observations);
   const previousByKey = new Map(baseline.entries.map((entry) => [editorialBaselineKey(entry), entry]));
   const regressions: EditorialBaselineRegression[] = [];
+  const observationByFingerprint = new Map<string, EditorialObservation>();
+  for (const observation of observations) {
+    observationByFingerprint.set(
+      `${editorialBaselineKey(observation)}\u001f${fingerprintEditorialObservation(observation)}`,
+      observation,
+    );
+  }
   for (const entry of current) {
     const key = editorialBaselineKey(entry);
     const previous = previousByKey.get(key);
-    if (!previous) {
-      regressions.push({
-        key,
-        message: `New editorial violation ${key}: ${entry.count} occurrence(s).`,
-      });
-      continue;
-    }
-    if (entry.count > previous.count) {
-      regressions.push({
-        key,
-        message: `Editorial violation count increased for ${key}: ${previous.count} -> ${entry.count}.`,
-      });
-    }
-    const oldFingerprints = multiset(previous.fingerprints);
+    const oldFingerprints = multiset(previous?.fingerprints ?? []);
     for (const fingerprint of entry.fingerprints) {
       const remaining = oldFingerprints.get(fingerprint) ?? 0;
       if (remaining > 0) oldFingerprints.set(fingerprint, remaining - 1);
       else {
-        regressions.push({ key, message: `New editorial fingerprint for ${key}: ${fingerprint}.` });
-        break;
+        const observation = observationByFingerprint.get(`${key}\u001f${fingerprint}`);
+        const severity = observation?.finding?.severity;
+        regressions.push({
+          kind: "new",
+          key,
+          fingerprint,
+          severity,
+          blocking: severity !== "advisory",
+          observation,
+          message: `New editorial fingerprint for ${key}: ${fingerprint} (${severity ?? "unknown"} severity).`,
+        });
       }
+    }
+    for (const [fingerprint, remaining] of oldFingerprints) {
+      for (let index = 0; index < remaining; index += 1) {
+        regressions.push({
+          kind: "stale",
+          key,
+          fingerprint,
+          blocking: true,
+          message: `Stale editorial baseline fingerprint for ${key}: ${fingerprint}. Regenerate with npm run generate:editorial-baseline.`,
+        });
+      }
+    }
+    previousByKey.delete(key);
+  }
+  for (const [key, previous] of previousByKey) {
+    for (const fingerprint of previous.fingerprints) {
+      regressions.push({
+        kind: "stale",
+        key,
+        fingerprint,
+        blocking: true,
+        message: `Stale editorial baseline fingerprint for ${key}: ${fingerprint}. Regenerate with npm run generate:editorial-baseline.`,
+      });
     }
   }
   return regressions;

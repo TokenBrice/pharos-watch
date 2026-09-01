@@ -7,6 +7,7 @@
       "field": "mica.references.*.label",
       "ruleId": "no-clause-dash",
       "excerpt": "–",
+      "fingerprints": ["94cca9e533c6c0db"],
       "reason": "The cited legal title preserves the statutory section range Titles II–IV; changing the punctuation would alter the citation.",
       "owner": "pharos",
       "permanent": true
@@ -17,6 +18,7 @@
       "field": "mica.references.*.label",
       "ruleId": "no-clause-dash",
       "excerpt": "–",
+      "fingerprints": ["9ceaf59944388e26"],
       "reason": "The cited legal title preserves the statutory section range Titles II–IV; changing the punctuation would alter the citation.",
       "owner": "pharos",
       "permanent": true
@@ -27,6 +29,7 @@
       "field": "mica.references.*.label",
       "ruleId": "no-clause-dash",
       "excerpt": "–",
+      "fingerprints": ["9ceaf59944388e26"],
       "reason": "The cited legal title preserves the statutory section range Titles II–IV; changing the punctuation would alter the citation.",
       "owner": "pharos",
       "permanent": true
@@ -37,6 +40,7 @@
       "field": "mintAuthority.review.evidence",
       "ruleId": "no-clause-dash",
       "excerpt": "—",
+      "fingerprints": ["90de0a09c5e0480a", "a12dd34089966aff"],
       "occurrences": 2,
       "reason": "Both dashes are inside single-quoted verbatim external report titles reproduced as evidence; changing them would falsify the cited document titles.",
       "owner": "pharos",
