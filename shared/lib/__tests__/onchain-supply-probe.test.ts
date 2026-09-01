@@ -533,6 +533,137 @@ describe("curated on-chain supply paths", () => {
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["susde-ethena"]).toBe("ethereum");
   });
 
+  // ODR-E4: the five `runtime-bridge-materiality-unavailable` assets whose
+  // chainCirculating was empty only because llamaId is null. Shapes below.
+
+  // Shape: canonical-chain burn on the outbound bridge leg, so the reviewed
+  // deployments sum and the near-zero representation stays zero-tolerant.
+  it("sums BRLV's Base issuance and its burn/mint Ethereum representation", () => {
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "base", address: "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", decimals: 18 },
+      { chain: "ethereum", address: "0xd7ca0e2c36d647446b782d1b72308e598373e2f5", decimals: 18 },
+    ], "brlv-crown"));
+
+    expect(selected?.map((entry) => entry.config.chain)).toEqual(["base", "ethereum"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["brlv-crown"]).toBeUndefined();
+    expect(selected?.find((entry) => entry.config.chain === "ethereum")?.config.allowZeroSupply).toBe(true);
+    // Both chains are in the worker registry, so neither needs a pinned endpoint.
+    expect(selected?.every((entry) => entry.config.rpcUrl === undefined)).toBe(true);
+  });
+
+  // Shape: CCIP LockRelease escrow on the native chain against BurnMint spokes,
+  // i.e. the same reallocation as savUSD and syrupUSDT but anchored on Plasma.
+  it("reallocates syzUSD's canonical Plasma total across its CCIP spokes", () => {
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "plasma", address: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6", decimals: 18 },
+      { chain: "ethereum", address: "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12", decimals: 18 },
+      { chain: "monad", address: "0x484be0540ad49f351eaa04eeb35df0f937d4e73f", decimals: 18 },
+    ], "syzusd-yuzu"));
+
+    expect(selected?.map((entry) => entry.config.chain)).toEqual(["plasma", "ethereum", "monad"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["syzusd-yuzu"]).toBe("plasma");
+    // The escrowing chain must be configured, or the reallocation has no anchor.
+    expect(selected?.some((entry) => entry.config.chain === "plasma")).toBe(true);
+    expect(selected?.find((entry) => entry.config.chain === "plasma")?.config.rpcUrl).toBe("https://rpc.plasma.to");
+    expect(selected?.find((entry) => entry.config.chain === "monad")?.config.rpcUrl).toBe("https://rpc.monad.xyz");
+    // No leg may be zero-tolerant here: all three carry material supply.
+    expect(selected?.every((entry) => entry.config.allowZeroSupply === undefined)).toBe(true);
+  });
+
+  // Shape: independent Ownable mints on three chains plus one dormant legacy
+  // bridge representation. Harmony is the only CHAIN_META EVM chain in the file
+  // that buildChainRpcs() cannot serve, so it must carry pinned endpoints.
+  it("sums IDRT's native mints and pins Harmony's shard-0 endpoints", () => {
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "ethereum", address: "0x998ffe1e43facffb941dc337dd0468d52ba5b48a", decimals: 2 },
+      { chain: "bsc", address: "0x66207e39bb77e6b99aab56795c7c340c08520d83", decimals: 2 },
+      { chain: "harmony", address: "0xcefbea899cfccdc653b171d063481b622086be3f", decimals: 2 },
+      { chain: "polygon", address: "0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b", decimals: 6 },
+    ], "idrt-rupiah-token"));
+
+    expect(selected?.map((entry) => entry.config.chain)).toEqual(["ethereum", "bsc", "polygon", "harmony"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["idrt-rupiah-token"]).toBeUndefined();
+    const harmony = selected?.find((entry) => entry.config.chain === "harmony")?.config;
+    expect(harmony?.rpcUrl).toBe("https://api.harmony.one");
+    expect(harmony?.fallbackRpcUrl).toBe("https://api.s0.t.hmny.io");
+    expect(harmony?.allowZeroSupply).toBe(true);
+  });
+
+  // Shape: four native BoringVault issuances plus a burn/mint Solana OFT leg,
+  // with two dust legs that must tolerate a zero read.
+  it("sums nTBILL's native vaults and its Solana OFT representation", () => {
+    const vault = "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9";
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "ethereum", address: vault, decimals: 6 },
+      { chain: "plume", address: vault, decimals: 6 },
+      { chain: "arbitrum", address: vault, decimals: 6 },
+      { chain: "bsc", address: vault, decimals: 18 },
+      { chain: "solana", address: "2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4", decimals: 6 },
+    ], "ntbill-nest"));
+
+    expect(selected?.map((entry) => entry.config.chain)).toEqual([
+      "ethereum",
+      "plume",
+      "arbitrum",
+      "bsc",
+      "solana",
+    ]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["ntbill-nest"]).toBeUndefined();
+    expect(selected?.map((entry) => entry.config.allowZeroSupply)).toEqual([
+      undefined,
+      undefined,
+      true,
+      true,
+      undefined,
+    ]);
+    expect(selected?.find((entry) => entry.config.chain === "plume")?.config.rpcUrl).toBe("https://rpc.plume.org");
+  });
+
+  // Shape: every reviewed leg is a lock/mint representation of an untracked
+  // canonical ledger (Bantu). There is nothing readable to reallocate out of and
+  // no leg escrows another, so the representations sum.
+  it("sums cNGN's representations without naming an unreadable canonical chain", () => {
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "base", address: "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f", decimals: 6 },
+      { chain: "ethereum", address: "0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab", decimals: 6 },
+      { chain: "bsc", address: "0xa8aea66b361a8d53e8865c62d142167af28af058", decimals: 6 },
+      { chain: "polygon", address: "0x52828daa48c1a9a06f37500882b42daf0be04c3b", decimals: 6 },
+      { chain: "solana", address: "3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8", decimals: 6 },
+      { chain: "celo", address: "0xf6829d7393dae24509eb1e52ee8e572e2e271a4f", decimals: 6 },
+    ], "cngn-compliant-naira"));
+
+    expect(selected?.map((entry) => entry.config.chain)).toEqual([
+      "base",
+      "bsc",
+      "celo",
+      "solana",
+      "ethereum",
+      "polygon",
+    ]);
+    // Bantu is untracked, so no canonical entry may claim one of these legs.
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["cngn-compliant-naira"]).toBeUndefined();
+    expect(selected?.find((entry) => entry.config.chain === "ethereum")?.config.allowZeroSupply).toBe(true);
+    expect(selected?.find((entry) => entry.config.chain === "polygon")?.config.allowZeroSupply).toBe(true);
+    // Celo is served by the worker's dRPC registry entry, so it needs no pin.
+    expect(selected?.find((entry) => entry.config.chain === "celo")?.config.rpcUrl).toBeUndefined();
+  });
+
+  // The whole probe must fail closed: drop any one reviewed leg and the asset
+  // resolves to null rather than publishing a partial per-chain split.
+  it("refuses every ODR-E4 aggregate when a reviewed leg is missing", () => {
+    const cases = [
+      ["brlv-crown", [{ chain: "base", address: "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", decimals: 18 }]],
+      ["syzusd-yuzu", [{ chain: "plasma", address: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6", decimals: 18 }]],
+      ["idrt-rupiah-token", [{ chain: "ethereum", address: "0x998ffe1e43facffb941dc337dd0468d52ba5b48a", decimals: 2 }]],
+      ["ntbill-nest", [{ chain: "plume", address: "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9", decimals: 6 }]],
+      ["cngn-compliant-naira", [{ chain: "base", address: "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f", decimals: 6 }]],
+    ] as const;
+
+    for (const [id, contracts] of cases) {
+      expect(selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([...contracts], id))).toBeNull();
+    }
+  });
+
 });
 
 describe("hasRuntimeOnchainSupplyPath", () => {

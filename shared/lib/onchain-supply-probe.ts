@@ -619,6 +619,105 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // Verified 2026-08-19: Optimism 6,641,129.778467 + Base 992,314.925958 =
   // 7,633,444.704425, exact CoinGecko circulating. Base is 13.00% of the total.
   "jpyt-dephaser": [{ chain: "optimism" }, { chain: "base" }],
+  // BRLV is Crown's Base-native token. The Base BRLVCanonicalGateway's outbound
+  // path calls BRLV burnAssets (and its inbound path mintAssets) rather than
+  // escrowing, and the Ethereum bridgedBRLV is a relayer-minted representation,
+  // so the two reviewed deployments sum. Verified 2026-09-01: Base
+  // 373,483,803.832830 (block 50734266) + Ethereum 24.500000 (block 25881782)
+  // = 373,483,828.332830, bit-for-bit CoinGecko's total supply
+  // 373,483,828.3328299. The Ethereum leg is 0.0000066% of the total and can be
+  // burned to nothing, so allow it to read zero.
+  "brlv-crown": [{ chain: "base" }, { chain: "ethereum", allowZeroSupply: true }],
+  // syzUSD is natively issued on Plasma and carried to Ethereum and Monad by
+  // Chainlink CCIP BurnMintTokenPool 1.6.1 spokes whose Plasma counterparty is
+  // LockReleaseTokenPool 0x31672de4726227feb22f2dfbcfa985c71bea86b2. Verified
+  // 2026-09-01: that pool escrows 23,243,788.814824 syzUSD at Plasma block
+  // 31317318 against an Ethereum 809,744.184523 (block 25881782) + Monad
+  // 10,153,703.107279 (block 101016246) spoke total of 10,963,447.291802, so the
+  // Plasma totalSupply 53,725,933.522240 already contains the remote float and is
+  // reallocated rather than summed. CoinGecko's total supply 63,879,636.629519 is
+  // its Plasma+Monad platform sum to the wei (it does not index Ethereum) and
+  // therefore double counts Monad; conserving the canonical total restates the
+  // published supply by -15.82% (krwq-iq double-count precedent). Plasma and
+  // Monad are absent from buildChainRpcs(), so pin reviewed public endpoints.
+  "syzusd-yuzu": [
+    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+    { chain: "ethereum" },
+    { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },
+  ],
+  // IDRT is minted natively on Ethereum, BSC and Polygon: each is a
+  // non-upgradeable Ownable ERC-20 whose owner() is the same PT Rupiah Token
+  // Indonesia 4-of-6 Safe, so no leg escrows another and the deployments sum.
+  // Harmony is a dormant legacy lock-mint representation frozen at 1,201,000 IDRT
+  // (0.0013% of the total, unchanged across the last ~25M Harmony blocks); it is
+  // configured so the route publishes a share, and may read zero if the issuer
+  // ever retires it. Verified 2026-09-01: Ethereum 44,876,696,516.00 (block
+  // 25881782) + BSC 31,739,108,295.00 (block 119325993) + Polygon
+  // 14,040,000,000.000000 (block 93035233) + Harmony 1,201,000.00 (block 93230607)
+  // = 90,657,005,811.00. RESTATEMENT: CoinGecko has been frozen at exactly
+  // 173,856,905,811 IDRT (circulating === total) on 2026-02-01, 2026-05-01,
+  // 2026-07-01 and today, while every reviewed chain has been shrinking through
+  // that window - Ethereum 76,400,225,541 -> 44,876,696,516, BSC 49,607,657,295 ->
+  // 31,739,108,295, Polygon 16,310,000,000 -> 14,040,000,000 - so the frozen
+  // figure reconciles to no on-chain combination. Publishing the pinned reads
+  // restates supply by -47.86% (ftUSD/CHFAU/ACRDX stale-upstream precedent).
+  // Harmony is in CHAIN_META but absent from buildChainRpcs(); both official
+  // shard-0 endpoints were verified 2026-09-01 (eth_chainId 1666600000).
+  "idrt-rupiah-token": [
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    { chain: "polygon" },
+    {
+      chain: "harmony",
+      rpcUrl: "https://api.harmony.one",
+      fallbackRpcUrl: "https://api.s0.t.hmny.io",
+      allowZeroSupply: true,
+    },
+  ],
+  // nTBILL is issuer-native Nest BoringVault issuance on Ethereum, Plume,
+  // Arbitrum and BNB Chain; the Solana leg is a LayerZero OFT representation that
+  // burns/debits on the source instead of escrowing. Verified 2026-09-01: the
+  // Plume composer 0x719e01497ed0e4e917fd0482355b9a64ddbad873 and the Plume
+  // NestCCTPRelayer 0x7de01896d36bea9cf072ac64e41685418941d8be both hold 0 nTBILL
+  // at block 90785605, so nothing escrows and the five legs sum: Ethereum
+  // 2,955.015774 (block 25881782) + Plume 2,488,459.187098 (block 90785605) +
+  // Arbitrum 7.923304 (block 500602971) + BSC 83.632247 (block 119325999, 18
+  // decimals) + Solana 3,273.899133 (slot 443398872) = 2,494,779.657556, -0.0008%
+  // against CoinGecko's 2,494,800.266208 (which indexes only Ethereum, Plume and
+  // Arbitrum). Arbitrum and BSC hold seed dust, so allow them to read zero. Plume
+  // is absent from buildChainRpcs().
+  "ntbill-nest": [
+    { chain: "ethereum" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+    { chain: "arbitrum", allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true },
+    { chain: "solana" },
+  ],
+  // cNGN is canonically issued on Bantu, which locks Bantu cNGN and mints each
+  // destination representation. Bantu is not a tracked chain and has no probe
+  // family, so there is no readable canonical total to reallocate out of; the six
+  // reviewed representations are minted against Bantu locks and never against one
+  // another, so summing them cannot double count and yields the tracked bridged
+  // float. Verified 2026-09-01: Base 2,078,532,783.999372 (block 50734268) + BSC
+  // 954,400,390.667190 (block 119326002) + Celo 133,788,554.003925 (block
+  // 76357127) + Solana 60,250,023.000000 (slot 443398878) + Ethereum
+  // 137,326.400001 (block 25881783) + Polygon 12,575.400000 (block 93035235) =
+  // 3,227,121,653.470488, -3.09% against CoinGecko's live (not frozen)
+  // 3,329,961,223.913752. Known gaps that stay outside this aggregate rather than
+  // failing it closed (mRe7YIELD/TAC precedent): the unreadable Bantu-native
+  // float, a Lisk representation (0xc7ab2c35ea37236e644c24a4e4a1911c082887c0,
+  // 5,023 cNGN; Lisk has no chain registry entry) and a second Base cNGN
+  // (0xc930784d6e14e2fc2a1f49be1068dc40f24762d3, 1,000,370) that CoinGecko indexes
+  // in place of the reviewed 0x46c85152 deployment. Ethereum and Polygon are each
+  // under 0.005% of supply, so allow them to read zero.
+  "cngn-compliant-naira": [
+    { chain: "base" },
+    { chain: "bsc" },
+    { chain: "celo" },
+    { chain: "solana" },
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true },
+  ],
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
@@ -639,6 +738,7 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "syrupusdc-maple": "ethereum",
   "srusd-reservoir": "ethereum",
   "pgold-pleasing": "arbitrum",
+  "syzusd-yuzu": "plasma",
 };
 
 export interface CuratedAggregateEscrowResidualConfig {
