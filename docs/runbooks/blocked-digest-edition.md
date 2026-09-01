@@ -48,7 +48,7 @@ Use the evidence below before retriggering:
 
 1. Review the rule findings and confirm that the deployed prompt and editorial policy are current. Do not edit the blocked row or insert a replacement row by hand.
 
-2. Use the normal Access-authenticated operator action. The service-token variables are provisioned as described in [`operator-origin-access.md`](../operator-origin-access.md#pages---ops-api-service-token). This command preserves both current style modes because the body does not supply `styleGateMode`:
+2. Use the normal Access-authenticated operator action. The service-token variables are provisioned as described in [`operator-origin-access.md`](../operator-origin-access.md#pages-ops-api-service-token). This command preserves both current style modes because the body does not supply `styleGateMode`:
 
    ```bash
    curl -fsS -X POST "https://ops-api.pharos.watch/api/trigger-digest" \
