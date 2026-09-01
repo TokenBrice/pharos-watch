@@ -9,11 +9,10 @@
       "summary": "sUSDe is a reward-accruing ERC-4626 staking receipt for USDe, with a changing exchange rate and no fixed-value payment function; Ethena also excludes EU and EEA acquisition.",
       "references": [
         {
-          "label": "Ethena — Staking USDe",
+          "label": "Ethena: Staking USDe",
           "url": "https://docs.ethena.fi/solution-design/staking-usde",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14",
-          "quoted": true
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Ethena Terms of Service",
@@ -38,11 +37,10 @@
     "notes": "sUSDe is a yield-bearing savings wrapper: users stake USDe, receive sUSDe, and the sUSDe/USDe exchange rate rises as rewards accrue. It is not a fixed-value payment stablecoin, and Ethena states that acquisition is not offered to EU/EEA persons.",
     "references": [
       {
-        "label": "Ethena — Staking USDe",
+        "label": "Ethena: Staking USDe",
         "url": "https://docs.ethena.fi/solution-design/staking-usde",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14",
-        "quoted": true
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Ethena Terms of Service",

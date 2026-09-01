@@ -30,18 +30,16 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Maple — syrupUSDC live on Balancer",
+          "label": "Maple: syrupUSDC live on Balancer",
           "url": "https://maple.finance/insights/syrupusdc-live-on-balancer",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14",
-          "quoted": true
+          "accessedAt": "2026-08-14"
         },
         {
-          "label": "Maple — syrupUSDC live on Morpho",
+          "label": "Maple: syrupUSDC live on Morpho",
           "url": "https://maple.finance/insights/syrupusdc-is-now-live-on-morpho-curated-by-gauntlet-and-mev-capital",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14",
-          "quoted": true
+          "accessedAt": "2026-08-14"
         }
       ]
     },
@@ -59,18 +57,16 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Maple — syrupUSDC live on Balancer",
+        "label": "Maple: syrupUSDC live on Balancer",
         "url": "https://maple.finance/insights/syrupusdc-live-on-balancer",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14",
-        "quoted": true
+        "accessedAt": "2026-08-14"
       },
       {
-        "label": "Maple — syrupUSDC live on Morpho",
+        "label": "Maple: syrupUSDC live on Morpho",
         "url": "https://maple.finance/insights/syrupusdc-is-now-live-on-morpho-curated-by-gauntlet-and-mev-capital",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14",
-        "quoted": true
+        "accessedAt": "2026-08-14"
       }
     ],
     "reviewer": "Pharos compliance research",

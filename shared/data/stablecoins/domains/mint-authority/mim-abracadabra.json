@@ -12,8 +12,7 @@
         "summary": "Abracadabra cauldron borrow logic was exploited to enable unauthorized MIM borrowing, turning the stablecoin mint/borrow route into bad debt.",
         "sources": [
           {
-            "label": "Neptune Mutual — Abracadabra exploit analysis",
-            "quoted": true,
+            "label": "Neptune Mutual: Abracadabra exploit analysis",
             "url": "https://medium.com/neptune-mutual/how-was-abracadabra-money-exploited-77c6b0701819"
           },
           {
@@ -28,18 +27,15 @@
         "summary": "Flawed collateral accounting in Abracadabra's GMX-integrated gmCauldrons left phantom collateral after failed deposit orders and self-liquidation, letting the attacker borrow about 13.4M MIM (~$13M in ETH) against collateral the system failed to remove.",
         "sources": [
           {
-            "label": "CoinDesk — Abracadabra gmCauldron exploit",
-            "quoted": true,
+            "label": "CoinDesk: Abracadabra gmCauldron exploit",
             "url": "https://www.coindesk.com/business/2025/03/25/abracadabra-drained-of-usd13m-in-exploit-targeting-cauldrons-tied-to-gmx-liquidity-tokens"
           },
           {
-            "label": "Halborn — Abracadabra March 2025 hack explained",
-            "quoted": true,
+            "label": "Halborn: Abracadabra March 2025 hack explained",
             "url": "https://www.halborn.com/blog/post/explained-the-abracadabra-money-hack-march-2025"
           },
           {
-            "label": "Three Sigma — gmCauldron exploit breakdown",
-            "quoted": true,
+            "label": "Three Sigma: gmCauldron exploit breakdown",
             "url": "https://threesigma.xyz/blog/exploit/abracadabra-gmx-defi-exploit-explained"
           }
         ]
@@ -51,13 +47,11 @@
         "summary": "A cook() action-sequencing flaw in deprecated CauldronV4 contracts reset the solvency-check flag, letting attackers borrow about 1.79M MIM with no collateral; the DAO bought back the supply to defend the peg.",
         "sources": [
           {
-            "label": "Halborn — Abracadabra October 2025 hack explained",
-            "quoted": true,
+            "label": "Halborn: Abracadabra October 2025 hack explained",
             "url": "https://www.halborn.com/blog/post/explained-the-abracadabra-hack-october-2025"
           },
           {
-            "label": "rekt.news — Abracadabra third exploit",
-            "quoted": true,
+            "label": "rekt.news: Abracadabra third exploit",
             "url": "https://rekt.news/abracadabra-rekt3"
           }
         ]

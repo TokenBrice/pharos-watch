@@ -51,10 +51,9 @@
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Fortune — Invesco takes over Superstate USTB (March 2026)",
+        "label": "Fortune: Invesco takes over Superstate USTB (March 2026)",
         "url": "https://fortune.com/2026/03/24/invesco-superstate-ustb/",
-        "sourceKind": "news",
-        "quoted": true
+        "sourceKind": "news"
       },
       {
         "label": "SEC EDGAR N-1A filing for Superstate USTB Money Market Fund (April 2025)",

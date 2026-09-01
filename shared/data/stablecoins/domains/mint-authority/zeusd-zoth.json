@@ -27,13 +27,11 @@
         "summary": "A compromised Zoth admin/deployer key enabled a malicious proxy upgrade of USD0PPSubVaultUpgradeable and drained roughly $8.4M-$8.85M of USD0++ before funds were swapped and moved off-chain.",
         "sources": [
           {
-            "label": "Halborn — Zoth March 2025 hack explained",
-            "quoted": true,
+            "label": "Halborn: Zoth March 2025 hack explained",
             "url": "https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025"
           },
           {
-            "label": "Rekt News — Zoth admin-key compromise",
-            "quoted": true,
+            "label": "Rekt News: Zoth admin-key compromise",
             "url": "https://rekt.news/zoth-rekt"
           }
         ]

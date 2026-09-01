@@ -28,13 +28,11 @@
         "summary": "Inverse Finance's Anchor/Frontier oracle-manipulation incident let an attacker borrow and withdraw DOLA against manipulated collateral, leaving bad debt through the stablecoin issuance route.",
         "sources": [
           {
-            "label": "CoinDesk — Inverse Finance exploit",
-            "quoted": true,
+            "label": "CoinDesk: Inverse Finance exploit",
             "url": "https://www.coindesk.com/tech/2022/04/02/defi-lender-inverse-finance-exploited-for-156-million"
           },
           {
-            "label": "BlockSec — Inverse oracle manipulation analysis",
-            "quoted": true,
+            "label": "BlockSec: Inverse oracle manipulation analysis",
             "url": "https://blocksecteam.medium.com/price-oracle-manipulation-attack-on-inverse-finance-a5544218ea91"
           }
         ]

@@ -84,8 +84,7 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "M0 Research — approved collateral structures for Minters (2024-11-20)",
-        "quoted": true,
+        "label": "M0 Research: approved collateral structures for Minters (2024-11-20)",
         "url": "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
       },
       {
@@ -93,8 +92,7 @@
         "url": "https://docs.m0.org/protocol/roles"
       },
       {
-        "label": "M0 Adopted Guidance — Validators",
-        "quoted": true,
+        "label": "M0 Adopted Guidance: Validators",
         "url": "https://docs.m0.org/home/fundamentals/adopted-guidance/validators"
       },
       {

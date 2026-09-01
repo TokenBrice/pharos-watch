@@ -12,13 +12,11 @@
         "summary": "A compromised off-chain SERVICE_ROLE key and unchecked mint parameters let the attacker mint about 80M unbacked USR and extract roughly $25M.",
         "sources": [
           {
-            "label": "The Block — Resolv USR 80M unbacked mint",
-            "quoted": true,
+            "label": "The Block: Resolv USR 80M unbacked mint",
             "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
           },
           {
-            "label": "CoinDesk — Resolv stablecoin exploit",
-            "quoted": true,
+            "label": "CoinDesk: Resolv stablecoin exploit",
             "url": "https://www.coindesk.com/markets/2026/03/23/resolv-stablecoin-drops-70-after-usd80-million-exploit-after-attacker-mints-usr"
           }
         ]
@@ -99,8 +97,7 @@
           "url": "https://eth.blockscout.com/address/0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110"
         },
         {
-          "label": "The Block — Resolv USR depeg / 80M unbacked mint",
-          "quoted": true,
+          "label": "The Block: Resolv USR depeg / 80M unbacked mint",
           "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
         },
         {

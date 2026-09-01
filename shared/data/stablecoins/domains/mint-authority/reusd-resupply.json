@@ -31,13 +31,11 @@
         "summary": "Resupply's crvUSD/wstUSR market exploit manipulated exchange-rate and solvency logic so negligible collateral could borrow up to the reUSD debt limit, leaving bad debt through the stablecoin borrow route.",
         "sources": [
           {
-            "label": "Halborn — Resupply hack explained",
-            "quoted": true,
+            "label": "Halborn: Resupply hack explained",
             "url": "https://www.halborn.com/blog/post/explained-the-resupply-hack-june-2025"
           },
           {
-            "label": "BlockSec — Resupply attack analysis",
-            "quoted": true,
+            "label": "BlockSec: Resupply attack analysis",
             "url": "https://blocksecteam.medium.com/blocksec-in-depth-analysis-and-reflections-on-the-resupply-protocol-attack-incident-932be23e1433"
           }
         ]

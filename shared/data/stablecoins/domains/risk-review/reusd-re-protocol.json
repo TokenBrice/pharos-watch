@@ -73,12 +73,10 @@
       "sources": [
         {
           "label": "How Re works",
-          "quoted": true,
           "url": "https://docs.re.xyz/protocol/how-the-re-protocol-work"
         },
         {
-          "label": "Re Protocol FAQ — daily NAV and price update",
-          "quoted": true,
+          "label": "Re Protocol FAQ: daily NAV and price update",
           "url": "https://docs.re.xyz/"
         }
       ]

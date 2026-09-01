@@ -86,8 +86,7 @@
           "url": "https://api.koios.rest/api/v1/script_info"
         },
         {
-          "label": "Aiken glossary — PolicyId is the minting-policy script hash",
-          "quoted": true,
+          "label": "Aiken glossary: PolicyId is the minting-policy script hash",
           "url": "https://aiken-lang.org/glossary"
         }
       ]
@@ -107,8 +106,7 @@
           "url": "https://api.koios.rest/api/v1/asset_info"
         },
         {
-          "label": "Aiken glossary — PolicyId is the minting-policy script hash",
-          "quoted": true,
+          "label": "Aiken glossary: PolicyId is the minting-policy script hash",
           "url": "https://aiken-lang.org/glossary"
         },
         {

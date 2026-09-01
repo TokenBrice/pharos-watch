@@ -40,11 +40,10 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Noble blog – introducing USDN",
+        "label": "Noble blog: introducing USDN",
         "url": "https://noble.xyz/blog/introducing-usdn",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07",
-        "quoted": true
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "M0 dashboard: reserve transparency",

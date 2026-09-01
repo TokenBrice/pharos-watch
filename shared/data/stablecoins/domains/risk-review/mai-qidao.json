@@ -46,8 +46,7 @@
         "url": "https://chain.link/case-studies/qidao"
       },
       {
-        "label": "DL News — QiDao settles Multichain-era bad debt on Polygon",
-        "quoted": true,
+        "label": "DL News: QiDao settles Multichain-era bad debt on Polygon",
         "url": "https://www.dlnews.com/articles/defi/qidao-settles-bad-debt-on-polygon-to-save-stablecoin/"
       }
     ],
@@ -220,8 +219,7 @@
             "url": "https://www.mai.finance/"
           },
           {
-            "label": "DL News — QiDao Multichain bad-debt reporting",
-            "quoted": true,
+            "label": "DL News: QiDao Multichain bad-debt reporting",
             "url": "https://www.dlnews.com/articles/defi/qidao-settles-bad-debt-on-polygon-to-save-stablecoin/"
           }
         ]
@@ -2416,8 +2414,7 @@
             "url": "https://fraxscan.com/address/0xb84df10966a5d7e1ab46d9276f55d57bd336afc7#code"
           },
           {
-            "label": "QIP250 Snapshot — Deprecate QiDao deployment on Fraxtal",
-            "quoted": true,
+            "label": "QIP250 Snapshot: Deprecate QiDao deployment on Fraxtal",
             "url": "https://snapshot.box/#/s:qidao.eth/proposal/0x76868a1b00f4792f47016b3afef53be0b4ed981e6cfbbbade098c8f4d6ad0078"
           },
           {

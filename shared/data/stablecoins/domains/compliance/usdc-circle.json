@@ -12,9 +12,8 @@
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Circle – First Global Stablecoin Issuer to Comply with MiCA (Business Wire, 1 Jul 2024)",
-        "url": "https://www.businesswire.com/news/home/20240701820713/en/Circle-is-First-Global-Stablecoin-Issuer-to-Comply-with-MiCA-EU%E2%80%99s-Landmark-Crypto-Law",
-        "quoted": true
+        "label": "Circle is First Global Stablecoin Issuer to Comply with MiCA (Business Wire, 1 Jul 2024)",
+        "url": "https://www.businesswire.com/news/home/20240701820713/en/Circle-is-First-Global-Stablecoin-Issuer-to-Comply-with-MiCA-EU%E2%80%99s-Landmark-Crypto-Law"
       },
       {
         "label": "Circle USDC MiCA white paper",
@@ -49,10 +48,9 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "Circle – OCC Conditional Approval for National Trust Charter (Business Wire, 12 Dec 2025)",
+        "label": "Circle Receives Conditional Approval from OCC for National Trust Charter (Business Wire, 12 Dec 2025)",
         "url": "https://www.businesswire.com/news/home/20251210456415/en/Circle-Receives-Conditional-Approval-from-OCC-for-National-Trust-Charter",
-        "sourceKind": "issuer-disclosure",
-        "quoted": true
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "Circle GENIUS Act hub",

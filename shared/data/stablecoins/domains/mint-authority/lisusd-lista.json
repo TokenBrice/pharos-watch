@@ -12,18 +12,15 @@
         "summary": "After the Ankr aBNBc infinite-mint exploit crashed the collateral's market price, an attacker borrowed about 16.4M HAY (now lisUSD) against near-worthless aBNBc because Helio's oracle still priced it at the Chainlink BNB feed, leaving roughly 19M HAY of bad debt through the issuance route.",
         "sources": [
           {
-            "label": "CoinDesk — Helio attacker nets $15M after Ankr exploit",
-            "quoted": true,
+            "label": "CoinDesk: Helio attacker nets $15M after Ankr exploit",
             "url": "https://www.coindesk.com/tech/2022/12/02/how-attackers-made-15m-from-staking-platform-helio-after-ankr-exploit"
           },
           {
-            "label": "rekt.news — Ankr & Helio",
-            "quoted": true,
+            "label": "rekt.news: Ankr & Helio",
             "url": "https://rekt.news/ankr-helio-rekt"
           },
           {
-            "label": "Helio post-mortem — aBNBc exploit impact",
-            "quoted": true,
+            "label": "Helio post-mortem: aBNBc exploit impact",
             "url": "https://medium.com/@Helio-HAY/helio-protocols-impact-in-the-abnbc-exploit-6954e0199096"
           }
         ]

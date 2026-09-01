@@ -67,8 +67,7 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "Virtue CDP documentation — supported collateral and repay-to-unlock flow",
-        "quoted": true,
+        "label": "Virtue CDP documentation: supported collateral and repay-to-unlock flow",
         "url": "https://docs.virtue.money/mechanisms/cdp-collateralized-debt-position"
       },
       {

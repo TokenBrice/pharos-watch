@@ -24,18 +24,15 @@
     "confidence": "probable",
     "sources": [
       {
-        "label": "Ondo Stocks available assets — What is USDon?",
-        "quoted": true,
+        "label": "Ondo Stocks available assets: What is USDon?",
         "url": "https://docs.ondo.finance/ondo-stocks/available-assets"
       },
       {
-        "label": "Ondo Stocks investing and redeeming — cash or equivalents backing",
-        "quoted": true,
+        "label": "Ondo Stocks investing and redeeming (cash or equivalents backing)",
         "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming"
       },
       {
-        "label": "Ondo Stocks trust and transparency — Ankura scope and broker-dealers",
-        "quoted": true,
+        "label": "Ondo Stocks trust and transparency (Ankura scope and broker-dealers)",
         "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
       },
       {
