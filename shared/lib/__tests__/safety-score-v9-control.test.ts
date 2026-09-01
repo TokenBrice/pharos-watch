@@ -1904,6 +1904,44 @@ describe("Safety Score v9 economic control", () => {
       expect(result.score).toBe(25);
     });
 
+    it("HARD RULE: grades a validator quorum at or below issuer-backend, never above a named multisig", () => {
+      // AUTHORITY-LADDER 9.46. The rung is KNOWN (it no longer holds the flat
+      // default because the authority is unresolved) but it earns no lift: an
+      // anonymous rotating quorum is not stronger than a 3-of-5 Safe.
+      const gradeFor = (authority: NonNullable<V9DeploymentControlFactV2["authority"]>) => {
+        const result = evaluateV9EconomicControl(
+          args({
+            facts: materialityGappedBridgeFacts({ authority, delaySec: null }),
+            bridge: knownBridge,
+          }),
+        );
+        return result.components.find((component) => component.componentKey === "bridge:unverified")!.score;
+      };
+      const quorum = gradeFor({
+        authorityKey: "bridge-route:protocol:layerzero-dvns",
+        model: "validator-quorum",
+        threshold: null,
+      });
+      const issuerBackend = gradeFor({
+        authorityKey: "authority:issuer",
+        model: "issuer-backend",
+        threshold: null,
+      });
+      const namedMultisig = gradeFor({
+        authorityKey: "safe:base:0xbbbb",
+        model: "multisig",
+        threshold: { required: 3, total: 5 },
+      });
+
+      expect(quorum).toBeLessThanOrEqual(issuerBackend);
+      expect(quorum).toBeLessThan(namedMultisig);
+      expect(quorum).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
+      // The multisig branch starts from the concentrated rung, which is strictly
+      // above this one, so naming a validation domain can never lift a control
+      // into the multisig class.
+      expect(quorum).toBeLessThan(CONTROL_POLICY.mintPostureQuality["concentrated-admin"]);
+    });
+
     it("keeps the flat 45 default when the gapped control authority is NOT verified", () => {
       // Same bridge-materiality shape, but the control row is bounded-unknown
       // (unverified authority) -> genuinely unknown posture, no lift, no drop.

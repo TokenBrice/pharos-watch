@@ -944,10 +944,11 @@
         "threshold": 1,
         "signerCount": 1,
         "modulesOrGuardsStatus": "not-applicable",
-        "canRaiseCap": false,
+        "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "At Starknet block 13501913, token owner()=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox()=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, interchain_security_module()=0. Prior 2026-08-16 router-table reads (Ethereum/zkSync/Sophon/TAC) are not re-litigated here.",
-          "pausersAdminsUpgraders": "Owner account class hash 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a. get_public_key()=0x38156224d6c067d825a4f6838e674ee2d2f71127a27c3110af7934bc4125f0b. get_signers()=[count=1, that key, 0, 0] (no guardian / backup). get_threshold() is not implemented. get_version() felt 0x3030312e3030322e303030 decodes to ASCII 001.002.000. This is a single-signer account contract, not a multi-signer quorum.",
+          "caps": "Re-adjudicated 2026-09-01 under the ODR-D2 rule at Starknet block 14197601 (rpc.starknet.lava.build). The representation's class hash is 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d, unchanged, and the deployed class ABI declares 35 functions with no ceiling entrypoint of any kind; cap, max_supply, get_cap and mint_limit each return \"Requested entrypoint does not exist in the contract\". owner=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, interchain_security_module=0, total_supply=0x61983eab91df84e59000. No numeric mint ceiling exists, and the owner additionally holds the class upgrade entrypoint, so the fail-closed value is raiseable rather than bounded.",
+        "pausersAdminsUpgraders": "Owner account class hash 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a. get_public_key()=0x38156224d6c067d825a4f6838e674ee2d2f71127a27c3110af7934bc4125f0b. get_signers()=[count=1, that key, 0, 0] (no guardian / backup). get_threshold() is not implemented. get_version() felt 0x3030312e3030322e303030 decodes to ASCII 001.002.000. This is a single-signer account contract, not a multi-signer quorum.",
           "attestorQuorum": "Token-level ISM is zero; Hyperlane mailbox default ISM (decoded on starknet-hyperlane-mailbox-owner) is effective."
         },
         "capDescription": "The Starknet owner account governs the upgradeable Hyperlane representation and its router table; this is bridge representation authority, not an independent native USN issuance route. Signer quorum is 1-of-1.",

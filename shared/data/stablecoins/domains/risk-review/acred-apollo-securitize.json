@@ -320,9 +320,9 @@
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
-          "caps": "No finite Token-2022 token cap applies to this issuer path; the exact ACRED Wormhole receipt validation and route-level conservation bound were not identified."
+          "caps": "No finite Token-2022 token cap applies to this issuer path; the exact ACRED Wormhole receipt validation and route-level conservation bound were not identified. Re-adjudicated 2026-09-01 under the ODR-D2 rule at Solana slot 443414051 (api.mainnet-beta.solana.com). Token-2022 mint FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8 carries exactly five extensions - metadataPointer, mintCloseAuthority, transferHook, permanentDelegate and tokenMetadata - none of which is a supply ceiling, and Token-2022 has no cap extension at all. mintAuthority and freezeAuthority are both Fr3R4632hv5LU2YNXYMnErnLE1XYMe1KPjR8q91KTYbH and supply is 16526675787 base units at six decimals. No numeric mint ceiling exists on this path, so the fail-closed value is raiseable rather than bounded."
         },
-        "canRaiseCap": false,
+        "canRaiseCap": true,
         "observedAt": "2026-07-13",
         "observedBlock": 432714278,
         "sources": [
@@ -353,7 +353,10 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "present",
-        "canRaiseCap": false,
+        "routeChecks": {
+          "caps": "Re-adjudicated 2026-09-01 under the ODR-D2 rule at Solana slot 443414051 (api.mainnet-beta.solana.com). Token-2022 mint FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8 carries exactly five extensions - metadataPointer, mintCloseAuthority, transferHook, permanentDelegate and tokenMetadata - none of which is a supply ceiling, and Token-2022 has no cap extension at all. mintAuthority and freezeAuthority are both Fr3R4632hv5LU2YNXYMnErnLE1XYMe1KPjR8q91KTYbH and supply is 16526675787 base units at six decimals. No numeric mint ceiling exists on this path, so the fail-closed value is raiseable rather than bounded. The on-ramp program's IssueTokens CPI is gated by subscription, NAV, asset-provider and compliance checks, none of which is a contract-enforced supply ceiling this control cannot lift."
+        },
+        "canRaiseCap": true,
         "observedAt": "2026-07-13",
         "observedBlock": 432714278,
         "sources": [
@@ -458,7 +461,10 @@
         ],
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "none-detected",
-        "canRaiseCap": false,
+        "routeChecks": {
+          "caps": "Re-adjudicated 2026-09-01 under the ODR-D2 rule at Aptos ledger version 7029391729 (api.mainnet.aptoslabs.com). On metadata object 0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88, ds_token::CustomMetadata.cap is still 0, which the deployed ds_token logic treats as unset/uncapped - the same reading the verified Ethereum DSToken source pins, where setCap requires cap == 0 and _cap > 0. The framework-level 0x1::fungible_asset::ConcurrentSupply.max_value is 340282366920938463463374607431768211455, the u128 sentinel rather than a ceiling, against a current value of 14147628991. No numeric mint ceiling exists, so the fail-closed value is raiseable rather than bounded."
+        },
+        "canRaiseCap": true,
         "observedAt": "2026-07-13",
         "observedBlock": 6262999136,
         "sources": [
@@ -485,7 +491,10 @@
         ],
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "none-detected",
-        "canRaiseCap": false,
+        "routeChecks": {
+          "caps": "Re-adjudicated 2026-09-01 under the ODR-D2 rule at Aptos ledger version 7029391729 (api.mainnet.aptoslabs.com). On metadata object 0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88, ds_token::CustomMetadata.cap is still 0, which the deployed ds_token logic treats as unset/uncapped - the same reading the verified Ethereum DSToken source pins, where setCap requires cap == 0 and _cap > 0. The framework-level 0x1::fungible_asset::ConcurrentSupply.max_value is 340282366920938463463374607431768211455, the u128 sentinel rather than a ceiling, against a current value of 14147628991. No numeric mint ceiling exists, so the fail-closed value is raiseable rather than bounded."
+        },
+        "canRaiseCap": true,
         "observedAt": "2026-07-13",
         "observedBlock": 6262999136,
         "sources": [

@@ -300,7 +300,19 @@ const ControlOverlaySchema = z
     authority: z
       .object({
         authorityKey: CanonicalTextSchema,
-        model: z.enum(["none", "eoa", "multisig", "governance", "contract", "issuer-backend", "unknown"]),
+        // AUTHORITY-LADDER 9.46: mirrors the published fact schema's model union
+        // (`shared/types/safety-score-v9-facts.ts`); `validator-quorum` is the
+        // external message-validation quorum rung.
+        model: z.enum([
+          "none",
+          "eoa",
+          "multisig",
+          "governance",
+          "contract",
+          "issuer-backend",
+          "validator-quorum",
+          "unknown",
+        ]),
         threshold: z
           .object({ required: z.number().int().positive(), total: z.number().int().positive() })
           .strict()

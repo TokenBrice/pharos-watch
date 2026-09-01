@@ -70,7 +70,12 @@ export function SafetyScoresOverview() {
         methodology v9.451, one a reviewer has covered and found unpublished says so: the published gap carries the
         review date, the reason, and the source that was checked, instead of the sentence used for a component nobody
         has reviewed yet. The input stays bounded-unknown and the owner stays issuer-undisclosed, so no score, grade,
-        or open-data-point count moves. A
+        or open-data-point count moves. Since methodology v9.46, a bridge control whose controlling party is an
+        external message-validation quorum — a LayerZero DVN set, a Chainlink CCIP DON/RMN, a Bantu AMTP validator
+        group — is graded as the known, weak authority it is instead of compiling as unknown and publishing an
+        issuer-owned unresolved-control gap for a fact the issuer had published. The rung grades at or below a named
+        issuer backend and never above a named multisig: naming a validation domain cannot lift a control, and a
+        route co-controlled by an unattested single key still reports that key as its weakest link. A
         reviewed external exit output whose identity is known but cannot be valued is attributed to producer failure,
         while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only
         dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that

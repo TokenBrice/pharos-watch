@@ -473,7 +473,7 @@
         "address": "WDZGUOESONZCBTQQNF6WHBMJ3O34MGIASSN4OQENUOLHH2GUL5HCH2E4ZQ",
         "label": "EURE Algorand ASA manager/reserve authority",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "deploymentRefs": [
           "algorand:83209012"
@@ -494,9 +494,13 @@
           {
             "label": "Algorand current round",
             "url": "https://mainnet-api.algonode.cloud/v2/blocks/64135589"
+          },
+          {
+            "label": "EURE Algorand manager account",
+            "url": "https://mainnet-idx.algonode.cloud/v2/accounts/WDZGUOESONZCBTQQNF6WHBMJ3O34MGIASSN4OQENUOLHH2GUL5HCH2E4ZQ"
           }
         ],
-        "evidence": "At Algorand round 64135589, ASA 83209012 was Monerium EUR emoney/EURe with manager WDZGUOESONZCBTQQNF6WHBMJ3O34MGIASSN4OQENUOLHH2GUL5HCH2E4ZQ, reserve/freeze account XSAED32VYAQK42TQHKCRHYK7P6LBBPQ2237PALQZAGL2XJTNNOPD523CNA, and Monerium as creator/clawback authority. The protocol-level total maximum is 18446744073709551615 and the manager remains live; the manager account's signer model is not exposed by the reviewed indexer data."
+        "evidence": "At Algorand round 64135589, ASA 83209012 was Monerium EUR emoney/EURe with manager WDZGUOESONZCBTQQNF6WHBMJ3O34MGIASSN4OQENUOLHH2GUL5HCH2E4ZQ, reserve/freeze account XSAED32VYAQK42TQHKCRHYK7P6LBBPQ2237PALQZAGL2XJTNNOPD523CNA, and Monerium as creator/clawback authority. The protocol-level total maximum is 18446744073709551615 and the manager remains live; the manager account's signer model is not exposed by the reviewed indexer data. Signer-model read 2026-09-01 at Algorand round 64625481 (mainnet-idx.algonode.cloud): the manager account reports sig-type \"sig\" with auth-addr null, so it is a single-key account under Monerium's own operation, not a multisig, not a logic-signature, and not rekeyed. Classified issuer-backend under AUTHORITY-LADDER 9.46, matching the sibling Monerium issuer-operated mint authority and EURE Noble native issuer module rows on this profile and the eurq-quantoz Algorand ASA manager precedent. Off-chain key custody for that single key is still not attested, which is what the issuer-backend rung already prices."
       }
     ],
     "economicCapSemantics": "unbounded",

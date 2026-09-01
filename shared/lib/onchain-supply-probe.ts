@@ -638,8 +638,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // reallocated rather than summed. CoinGecko's total supply 63,879,636.629519 is
   // its Plasma+Monad platform sum to the wei (it does not index Ethereum) and
   // therefore double counts Monad; conserving the canonical total restates the
-  // published supply by -15.82% (krwq-iq double-count precedent). Plasma and
-  // Monad are absent from buildChainRpcs(), so pin reviewed public endpoints.
+  // published supply by -15.82% (krwq-iq double-count precedent). Monad is
+  // absent from buildChainRpcs() and Plasma only entered it for the reviewed
+  // Curve factory capture, so both legs pin reviewed public endpoints here and
+  // stay independent of that registry.
   "syzusd-yuzu": [
     { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
     { chain: "ethereum" },

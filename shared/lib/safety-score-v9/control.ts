@@ -629,6 +629,14 @@ function applyMergedMintSignals(
  * facts, and grades UP or DOWN relative to the 45 default: a live compromise or an
  * economically unbounded control grades below it, a hardened governed/multisig
  * path above it. issuer-backend and unknown authority stay at the neutral default.
+ *
+ * AUTHORITY-LADDER 9.46: `validator-quorum` — an external message-validation
+ * quorum (LayerZero DVN set, CCIP DON/RMN, Bantu AMTP group, IBC light-client
+ * validator set) — is known-but-weak and also holds at the neutral default. The
+ * adopted ruling is that it grades at or below `issuer-backend` and never above a
+ * named multisig; the multisig branch below starts from `concentrated-admin`,
+ * which is strictly above this rung, so naming a validation domain can never lift
+ * a control into the multisig class.
  */
 function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy): number {
   const quality = controlPolicy.mintPostureQuality;
@@ -674,6 +682,11 @@ function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, contr
     case "issuer-backend":
       // A centralized backend key with a bounded claim is neither a lift nor a
       // clear danger on static facts alone: hold at the neutral default.
+      return controlPolicy.boundedUnknownQuality;
+    case "validator-quorum":
+      // An external validation quorum is a named, public failure domain — it is
+      // no longer unknown — but its membership rotates and no individual signer
+      // is accountable, so it earns no lift over the centralized-backend rung.
       return controlPolicy.boundedUnknownQuality;
     case "eoa":
       // Safety 9.1: an externally-owned key under reviewed MPC or HSM custody is

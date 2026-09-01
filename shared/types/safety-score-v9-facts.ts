@@ -654,7 +654,20 @@ const V9DeploymentControlFactV2Schema = z
     authority: z
       .object({
         authorityKey: CanonicalTextSchema,
-        model: z.enum(["none", "eoa", "multisig", "governance", "contract", "issuer-backend", "unknown"]),
+        // AUTHORITY-LADDER 9.46: `validator-quorum` is an external
+        // message-validation quorum (LayerZero DVN set, CCIP DON/RMN, Bantu AMTP
+        // group, IBC light-client validator set). Known-but-weak: it grades at or
+        // below `issuer-backend` and never above a named multisig.
+        model: z.enum([
+          "none",
+          "eoa",
+          "multisig",
+          "governance",
+          "contract",
+          "issuer-backend",
+          "validator-quorum",
+          "unknown",
+        ]),
         threshold: z
           .object({ required: z.number().int().positive(), total: z.number().int().positive() })
           .strict()

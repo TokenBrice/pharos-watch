@@ -52,7 +52,19 @@ function bridgeAuthority(
     if (control.authorityType === "eoa") return "eoa";
     if (control.authorityType === "dao-governor") return "governance";
     if (control.authorityType === "issuer-backend") return "issuer-backend";
+    // AUTHORITY-LADDER 9.46: an external message-validation quorum is its own
+    // rung — known, but weaker than a named issuer backend and never stronger
+    // than a named multisig.
+    if (control.authorityType === "validator-quorum") return "validator-quorum";
+    // 9.46 also closes a fall-through defect: `bridge` and `custodian` are
+    // authored `MINT_AUTHORITY_TYPE_VALUES` members with no branch here, so a
+    // curator who recorded them still landed on `unknown`. Bridge machinery is a
+    // contract-scoped authority (the same treatment `timelock` takes), and a
+    // custodian is an institutional operator — the grouping `issuerAuthorityKey`
+    // in `safety-score-v9-extension.ts` already applies to it.
     if (control.authorityType === "contract" || control.authorityType === "timelock") return "contract";
+    if (control.authorityType === "bridge") return "contract";
+    if (control.authorityType === "custodian") return "issuer-backend";
     if (control.authorityType === "none") return "none";
     return "unknown";
   })();
@@ -166,6 +178,17 @@ export function mergedBridgeCapSemantics(
   return { kind: "bounded", bound: firstBound };
 }
 
+/**
+ * Weakness ordering for the merged route authority: higher is weaker, and
+ * `mergedBridgeAuthority` keeps the weakest contributor. Only the relative order
+ * is meaningful — the numbers carry no other semantics.
+ *
+ * AUTHORITY-LADDER 9.46: `validator-quorum` sits strictly below `issuer-backend`
+ * and strictly above `eoa`. That is the adopted owner ruling: an external
+ * validator quorum is known-but-weak — no stronger than a named issuer backend,
+ * and never stronger than a named multisig — but a rotating quorum that must
+ * collude is still a harder failure than one unattested single key.
+ */
 function bridgeAuthoritySeverity(model: NonNullable<ControlOverlay["authority"]>["model"]): number {
   return {
     none: 0,
@@ -173,8 +196,9 @@ function bridgeAuthoritySeverity(model: NonNullable<ControlOverlay["authority"]>
     governance: 1,
     contract: 2,
     "issuer-backend": 3,
-    eoa: 4,
-    unknown: 5,
+    "validator-quorum": 4,
+    eoa: 5,
+    unknown: 6,
   }[model];
 }
 

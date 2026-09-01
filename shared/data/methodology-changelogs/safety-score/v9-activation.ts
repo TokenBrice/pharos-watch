@@ -1,5 +1,23 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_VALIDATOR_QUORUM_AUTHORITY: MethodologyChangelogEntry = {
+  version: "9.46",
+  title: "An external validator quorum is a named authority, not an unknown one",
+  date: "2026-09-01",
+  effectiveAt: 1788220800,
+  summary:
+    "Bridge routes whose message validation is performed by an external quorum — a LayerZero DVN set, a Chainlink CCIP DON/RMN, a Bantu AMTP validator group — had no authority model that could express them, so a reviewer who wrote the quorum down with its failure domains and sources still compiled to `unknown` and published an unresolved-control gap on every route the quorum covered. The authority ladder gains a `validator-quorum` rung: known, but weak. It grades at or below a named issuer backend and never above a named multisig.",
+  impact: [
+    "`validator-quorum` joins the authored authority-type vocabulary and the compiled authority-model union. It names an external message-validation quorum whose membership rotates and whose individual signers are not accountable parties, so there is no single controller address to record.",
+    "The rung is deliberately weak. On the control-quality ladder it holds the bounded-unknown default, exactly where a named issuer backend sits, and strictly below the concentrated-admin rung a multisig starts from: naming a validation domain can never lift a control into the multisig class. On the route-level weakest-authority merge it sits below `issuer-backend` and above `eoa`, so a route co-controlled by an unattested single key still reports that key as its weakest link.",
+    "Two authored authority types, `bridge` and `custodian`, had no branch in either authority mapper and silently fell through to `unknown`. `bridge` now compiles to `contract` (the treatment `timelock` already takes) and `custodian` to `issuer-backend` (the grouping the issuer authority-key derivation already applied to it). No active asset authored either value, so this closes a latent defect rather than moving a published score.",
+    "Measured over the 2026-09-01 production capture: 44 `selected-bridge-route-unresolved` and 27 `unresolved-control-identity` facts across 14 assets close, 70 open data points in total, all of them previously attributed to issuer non-disclosure for what was a Pharos schema limit. Control-pillar evidence rises off the limited rung on 10 assets. Three assets gain (cash-phantom 43 to 45, krwq-iq 50 to 53, iauon-ondo 54 to 57 and C- to C); no asset loses a point and no cap changes, because every 55 evidence ceiling the closed gaps carried was already non-binding.",
+    "Independently, an Algorand ASA manager/reserve account that the reviewer read as a single-key issuer-operated account is now recorded as `issuer-backend` rather than `unknown`, matching the treatment its sibling rows on the same profiles already carried.",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_ADJUDICATED_MECHANISM_NON_DISCLOSURE: MethodologyChangelogEntry = {
   version: "9.451",
   title: "An adjudicated mechanism non-disclosure says so",
