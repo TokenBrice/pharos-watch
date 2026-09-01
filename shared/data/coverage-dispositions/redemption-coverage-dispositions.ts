@@ -117,22 +117,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: null,
   }),
   reviewed({
-    id: "euro3-3a-dao",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "The route is documented; config work must still verify current contracts, minHF availability, dynamic fee, and executable capacity.",
-    rationale:
-      "3A states that holders can exchange EURO3 for vault collateral, subject to vault health conditions and a governance-set fee.",
-    evidenceNeeded:
-      "Current contract addresses, reachable collateral capacity, dynamic fee bounds, and route-status evidence.",
-    evidenceUrls: [
-      "https://docs.3adao.org/3a-protocol/protocol-documentation/lending/redemptions",
-      "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin/euro3-price-stability",
-    ],
-    allowedRouteFamilyIfProven: "collateral-redeem",
-  }),
-  reviewed({
     id: "eurot-token-teknoloji",
     disposition: "hard-reject",
     reasonCode: "secondary-market-only",
@@ -158,32 +142,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceNeeded: "New official holder-facing redemption terms with callable mechanics, output, fees, and capacity.",
     evidenceUrls: ["https://docs.frax.finance/"],
     allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
-    id: "hchf-hedera-swiss-franc",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "The permissionless route is documented; executable HBAR capacity, current frontend status, and the dynamic fee require capture.",
-    rationale:
-      "HLiquity explicitly states any HCHF holder can redeem at face value for HBAR from the lowest-ratio Troves.",
-    evidenceNeeded:
-      "Live redemption capacity, fee formula inputs, contract addresses, and current route-status evidence.",
-    evidenceUrls: ["https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability"],
-    allowedRouteFamilyIfProven: "collateral-redeem",
-  }),
-  reviewed({
-    id: "hlusd-hela",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "StableHodl documents the sell flow, but config work must verify current OTC capacity, claim timing, and geographic access.",
-    rationale:
-      "Connected holders can sell HLUSD for USDT or USDC and claim the output after a disclosed one-percent fee.",
-    evidenceNeeded:
-      "Current route status, maximum capacity, claim settlement time, supported jurisdictions, and contract or operator evidence.",
-    evidenceUrls: ["https://docs.stablehodl.com/product/trade-hlusd"],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
   reviewed({
     id: "home-homecoin",
@@ -214,17 +172,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     ],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewed({
-    id: "iusd-indigo-protocol",
-    disposition: "defer",
-    reasonCode: "borrower-repay-only",
-    blocker:
-      "Indigo documents synthetic debt repayment and liquidation but no broad iUSD-holder collateral redemption.",
-    rationale: "Closing an individual CDP is not an exit available to holders who did not originate the debt.",
-    evidenceNeeded: "Official holder redemption documentation plus live route, capacity, fee, and settlement evidence.",
-    evidenceUrls: ["https://docs.indigoprotocol.io/"],
-    allowedRouteFamilyIfProven: "collateral-redeem",
-  }),
   reviewedOn("2026-08-12", {
     id: "iusd-initia",
     disposition: "needs-research",
@@ -237,52 +184,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "Official iUSD product docs, contract address, holder exit mechanics, underlying asset, fees, and current status.",
     evidenceUrls: ["https://docs.initia.xyz/home/tools/bridge", "https://scan.initia.xyz"],
     allowedRouteFamilyIfProven: null,
-  }),
-  reviewedOn("2026-08-09", {
-    id: "jpysc-sbi-startale",
-    disposition: "defer",
-    reasonCode: "issuer-terms-missing",
-    blocker:
-      "SBI VC Trade states that JPYSC deposits and withdrawals are not supported at the start of service, so the tracked Ethereum token has no exit a holder can exercise outside the closed SBI VC Trade loop, and Shinsei Trust & Banking publishes no beneficiary-right redemption schedule.",
-    rationale:
-      "The documented par exit is the distributor's in-app sales desk (販売所) at a fixed 1 JPYSC = 1 JPY with no spread, no fee, and no size cap, available only to SBI VC Trade account holders; that is a venue rail inside a closed loop, not a redemption claim the on-chain token carries.",
-    evidenceNeeded:
-      "Trust-issuer redemption terms for JPYSC holders, plus evidence that public-chain circulation and JPYSC withdrawals have been enabled with stated eligibility, limits, fees, and settlement.",
-    evidenceUrls: ["https://www.sbivc.co.jp/jpysc", "https://startale.com/en/blog/jpysc"],
-    allowedRouteFamilyIfProven: "offchain-issuer",
-  }),
-  reviewed({
-    id: "jpyt-dephaser",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "The route is documented and live; config work must measure current USDT/USDC capacity, exchange-rate formula, and delayed settlement.",
-    rationale:
-      "DePhaser documents an on-chain burn of JPYT to recover USDT or USDC, with redemption completing within 24 hours.",
-    evidenceNeeded:
-      "Live contract balances, rate calculation, any fee, chain-specific capacity, and route-status evidence.",
-    evidenceUrls: [
-      "https://docs.dephaser.com/how-it-works/money-flow/",
-      "https://docs.dephaser.com/policy/terms-of-service",
-      "https://app.dephaser.com/en",
-    ],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
-  }),
-  reviewed({
-    id: "jusd-juicedollar",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "The bridge burn path is documented; current bridge assets, limits, stopped state, fees, and deployed capacity remain to be captured.",
-    rationale:
-      "Juice Dollar's StablecoinBridge exposes public JUSD burn functions that return the configured external stablecoin.",
-    evidenceNeeded:
-      "Deployed bridge address, current output stablecoin, limit and minted values, stopped state, fees, and transaction tests.",
-    evidenceUrls: [
-      "https://docs.juicedollar.com/smart-contracts/functions",
-      "https://docs.juicedollar.com/smart-contracts/deployments",
-    ],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
   reviewed({
     id: "luausd-lumi-finance",
@@ -383,23 +284,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
   reviewed({
-    id: "rusd-reservoir",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "The permissionless PSM route is documented; a config still needs live per-asset balances and route-status capture.",
-    rationale:
-      "Reservoir states anyone can convert rUSD to USDC at parity and documents 1:1 mint and redemption for USDC, USDT, and USD1.",
-    evidenceNeeded:
-      "Live PSM balances by output asset, contract status, fees, geographic access policy, and failure behavior.",
-    evidenceUrls: [
-      "https://docs.reservoir.xyz/products/stablecoin-rusd",
-      "https://docs.reservoir.xyz/security-and-compliance/faq",
-      "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses",
-    ],
-    allowedRouteFamilyIfProven: "psm-swap",
-  }),
-  reviewed({
     id: "spusd-soulpeg",
     disposition: "hard-reject",
     reasonCode: "no-holder-route",
@@ -424,19 +308,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "queue-redeem",
   }),
   reviewed({
-    id: "suiusde-sui",
-    disposition: "needs-research",
-    reasonCode: "documentation-insufficient",
-    blocker:
-      "Sui's launch material describes suiUSDe but not a holder redemption or conversion rail, output asset, capacity, or fees.",
-    rationale:
-      "A whitelabel relationship to Ethena does not prove that Ethena's primary-market route is inherited on Sui.",
-    evidenceNeeded:
-      "Official suiUSDe mint and redeem docs, deployed contract or app route, eligibility, output, fees, and capacity.",
-    evidenceUrls: ["https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
     id: "susd-hedgecore",
     disposition: "hard-reject",
     reasonCode: "no-holder-route",
@@ -447,19 +318,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "New public reverse conversion and USDC withdrawal mechanics with audited contracts and current capacity.",
     evidenceUrls: ["https://docs.hedgecore.io/docs/protocol/yield-generation"],
     allowedRouteFamilyIfProven: null,
-  }),
-  reviewedOn("2026-08-09", {
-    id: "trusd-tori",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "The route is documented; config work must still confirm the live mint/redeem contracts or API, executable USDC/USDT capacity, settlement timing, and route status.",
-    rationale:
-      "Tori documents direct mint and redemption of trUSD at NAV for verified participants at a 10 bps fee, and verified access is open to applicants including individuals rather than a closed facilitator set; unverified holders are left with app swaps at market rates.",
-    evidenceNeeded:
-      "Whitelist onboarding terms, redemption settlement timing and any queue, reachable USDC/USDT capacity, and current route-status evidence.",
-    evidenceUrls: ["https://docs.tori.finance/resources/institutional", "https://docs.tori.finance/faq/trusd"],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
   reviewed({
     id: "usda-alpha-partner",
@@ -472,23 +330,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceNeeded: "Audited reserve evidence and binding official redemption terms backed by a live route.",
     evidenceUrls: ["https://alphapartner.vip/", "https://ap-organization-1.gitbook.io/alpha-partners"],
     allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
-    id: "usdm-monetrix",
-    disposition: "needs-research",
-    reasonCode: "route-status-unverified",
-    blocker:
-      "Monetrix claims 1:1 USDC mint and redemption, but its current official docs could not be fetched and route limits, fees, and status remain unverified.",
-    rationale:
-      "The claimed route family is plausible, but inaccessible source terms and missing live evidence preclude an add decision.",
-    evidenceNeeded:
-      "Reachable official redemption docs plus live vault status, USDC capacity, fees, settlement, and access terms.",
-    evidenceUrls: [
-      "https://www.monetrix.xyz/",
-      "https://doc.monetrix.xyz/",
-      "https://www.monetrix.xyz/app/transparency",
-    ],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
   reviewed({
     id: "usdr-ring",
