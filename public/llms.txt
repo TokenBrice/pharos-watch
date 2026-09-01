@@ -133,6 +133,8 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 
 ## Digest
 
+- [DAI Adds Depth, Loses Confidence](https://pharos.watch/digest/2026-09-01/): One day brought $17.15M of DAI against $11.71M for the whole trailing week, and its DEX pools gained 11.4% TVL while the liquidity score slid 73 to 62. A $25M single-day print turns drift into rotation.
+- [USDS Yield Reading Arrives Without Receipts](https://pharos.watch/digest/2026-08-31-weekly/): USDS tops the risk board at 5.68% APY with no evidence to back it, and five yield flags outshouted a shrinking depeg field. USDC added billions, mcap moved +0.15%, and 13 of last week's calls missed.
 - [Small Flows, Maxed Signals](https://pharos.watch/digest/2026-08-30/): USD1 took in $4.00M and fxUSD $3.02M while rwaUSDi shed $3.96M, all three pinning intensity at 100 on flows worth a rounding error; if the Bank Run Gauge slips to negative 10, this stops being noise.
 - [Cash Grows, Yield Empties](https://pharos.watch/digest/2026-08-29/): USDC booked $319.98M of its $518M weekly gain in a single day, nearly the $400M rotation line; USYC shed $101.90M in the same session, dumping most of its weekly bleed at once. Cash in, yield out.
 - [apxUSD Recovers As The Gauge Flips](https://pharos.watch/digest/2026-08-28/): apxUSD tightened to 294 bps from 337 as the Bank Run Gauge flipped +21.2 to -19.3; PYUSD bled $42M, FDUSD $11.9M, 21 depegs still open. One coin healing, the flows turning.
@@ -151,8 +153,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Nine Names In ALERT](https://pharos.watch/digest/2026-08-17/): DEWS ALERTs climbed from six to nine as RLUSD, XAUT, TUSD and USX all shed liquidity in one session. PSI's 92.2 registers none of it; the Bank Run Gauge, sinking to -12.6, does.
 - [USDf's Score Outruns Its Cash](https://pharos.watch/digest/2026-08-16/): USDf's liquidity score jumped 11 to 58 while $1.9M left its pools; satUSD's fell with its TVL, down 72% to $732K. The grade rewards how depth sits, not how much shows up.
 - [apxUSD Widens, Fifty-Nine Days In](https://pharos.watch/digest/2026-08-15/): apxUSD slid another 206bps to 713 below peg, now $0.928; on a $300M float it edges even pmUSD for the board's largest depeg impact. The STRC drawdown that opened it in June still hasn't closed.
-- [USDC's Reward Wears Thin](https://pharos.watch/digest/2026-08-14/): USDC's best yield fell to 9.48% from 13.8% a day earlier, while USDT held 4.12% and lost $350M of float this week; the dollar-yield complex is deflating, not panicking.
-- [XAUT's Overnight Market Cap](https://pharos.watch/digest/2026-08-13/): XAUT's +$2.67B weekly supply move equals its entire market cap, and its yield spiked to 5.22% from a 2.14% base while every dollar token cooled. Real bid or reclassification? Tomorrow's yield print decides.
 
 ## Stablecoins Index
 

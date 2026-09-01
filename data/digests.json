@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-09-01",
+    "title": "DAI Adds Depth, Loses Confidence",
+    "text": "One day brought $17.15M of DAI against $11.71M for the whole trailing week, and its DEX pools gained 11.4% TVL while the liquidity score slid 73 to 62. A $25M single-day print turns drift into rotation.",
+    "extended": "DAI added $17.15M in a single day against $11.71M for the entire trailing week, so yesterday supplied the week and then some. The pools tell a less flattering version: DAI's DEX liquidity composite slid from 73 to 62 while pool TVL climbed 11.4% to $233.73M, a depth move that on its own accounts for roughly half a point upward.\n\nA pool that gains $23.85M of depth and sheds eleven points of score is not describing a drain; it is describing coverage marked mixed and a component measuring something other than dollars. DAI holds an A- at 80, sitting inside the 14 A-tier coins that carry 82.4% of mapped supply. This is a confidence question, not a solvency one.\n\nUSDC shed $337.35M over seven days to $73.54B, still 8% under its April peak of $79.75B. USDe pulled in $58.25M net with pressure intensity pinned at 100, while Ethereum ran $36.75M negative on the day and the Bank Run Gauge sat at -26.1, CAUTIOUS. Total supply of $318.24B is 0.25% below the Digest-window high set three days ago.\n\napxUSD widened from 301 to 359 bps at $0.964, day 77 of the STRC drawdown that first took it to $0.89 in June. GUSD closed a 108-hour, 201 bps excursion. DEWS cut ALERTs from 12 to eight but printed a WARNING in GGBR at 57. PSI held 91.5 on its seventieth BEDROCK day. Clear $25M of DAI in one session and the drift becomes rotation.",
+    "generatedAt": 1788249945,
+    "digestType": "daily",
+    "editionNumber": 189
+  },
+  {
+    "date": "2026-08-31-weekly",
+    "title": "USDS Yield Reading Arrives Without Receipts",
+    "text": "USDS tops the risk board at 5.68% APY with no evidence to back it, and five yield flags outshouted a shrinking depeg field. USDC added billions, mcap moved +0.15%, and 13 of last week's calls missed.",
+    "extended": "The top of this week's risk board is not a depeg but USDS flashing a yield warning: 5.68% APY against a 7d average of 5.59% and a 30d of 6.01%, on a $6.70B book, tagged opportunity-evidence-missing. PSI slid from 92.6 to 91.2, its worst reading landing Aug 30, yet the band never left BEDROCK. The largest severity score of the week, 6729.1, came from a coin nobody is positioned to fear.\n\nUSDS was one of five NEW THIS WEEK yield flags: USD1 spiked to 2.06% APY against a 30d of 1.01%, USDe read 4.27%, PYUSD sagged to 4.82% on tvl-outflow, and XAUT printed 8.8% while its benchmark degraded. USDS itself repeated the same 5.5-to-5.7% reading four straight days from Aug 25 to Aug 28 with corroboration never arriving. The through-line across those five names was yields drifting while nothing else moved.\n\nThe depeg field, by contrast, was entirely inherited: pmUSD held 4663 bps below peg on $50.16M, the week's only critical, but it carried over from before Monday. cNGN cratered 9993 bps yet on $2.78M mcap it barely registers. Unique depeg signals fell to 11 from 14, active observations to 121 from 140, and grade transitions held at zero for a second straight week.\n\nUSDC was the largest weekly mover all six days, adding $1.91B on Aug 26 and still accelerating $319.98M on Aug 29, yet total mcap crept only +0.15% to $318.79B. The Bank Run Gauge midpoint jumped from 8.9 to 21.9 week over week even as it dipped to -19.3 on Aug 28. Blacklist events exploded to 437 from 85, though the $19.28M frozen barely cleared last week's $16.15M: a locksmith rekeying every door in the building to catch one shoplifter, almost all of it USDT on Tron.\n\nThat gauge climb of 13 points against flat supply is the tension carried into next week. The forward scoreboard was unkind: 1 hit, 13 missed, 1 expired, 3 pending, so most of last week's calls landed wrong. Next week decides whether USDS's evidence-missing yield either corroborates above 5.68% or clears its tag, and whether the Bank Run Gauge can hold the 21.9 line.",
+    "generatedAt": 1788163811,
+    "digestType": "weekly",
+    "editionNumber": 25
+  },
+  {
     "date": "2026-08-30",
     "title": "Small Flows, Maxed Signals",
     "text": "USD1 took in $4.00M and fxUSD $3.02M while rwaUSDi shed $3.96M, all three pinning intensity at 100 on flows worth a rounding error; if the Bank Run Gauge slips to negative 10, this stops being noise.",
