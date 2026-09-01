@@ -73,7 +73,7 @@ const ReplaySchema = z
                   stressState: z
                     .object({
                       exitPortfolio: z
-                        .object({ circulatingUsd: z.number().finite().optional() })
+                        .object({ circulatingUsd: z.number().finite().nullable().optional() })
                         .loose()
                         .optional(),
                     })
