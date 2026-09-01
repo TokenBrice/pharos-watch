@@ -73,7 +73,7 @@ export const CURVE_STABLESWAP_FACTORY_DEPLOYMENTS: readonly CurveStableswapFacto
 ] as const;
 
 /** A source-stage capture must reflect the current head, not a reusable quote profile. */
-export const CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC = 10 * 60;
+const CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC = 10 * 60;
 
 const CURVE_STABLESWAP_FEE_DENOMINATOR = 10n ** 10n;
 const MAX_POOL_COINS = 8;
@@ -269,7 +269,7 @@ function toTokenUnits(value: bigint, decimals: number): number | null {
  * reviewed model and belongs to `curve-stableswap-rates.ts`, which keeps its
  * own `rate-bearing-inputs` gate.
  */
-export function buildCurveStableswapFactoryExecutionModel(input: {
+function buildCurveStableswapFactoryExecutionModel(input: {
   chain: string;
   stablecoinId: string;
   state: FactoryPoolState;
