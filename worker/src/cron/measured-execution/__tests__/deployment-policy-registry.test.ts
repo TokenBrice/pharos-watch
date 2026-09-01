@@ -14,6 +14,8 @@ import { getUniswapV4Deployment } from "../uniswap-v4";
 import {
   CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
   CURVE_GUSD_3CRV_METAPOOL_POLICY,
+  CURVE_LUSD_3CRV_METAPOOL_POLICY,
+  CURVE_R3_METAPOOL_POLICIES,
 } from "../curve-composite-policies";
 
 describe("measured deployment policy registry", () => {
@@ -76,5 +78,49 @@ describe("measured deployment policy registry", () => {
       expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
       basePoolTokens: CURVE_STABLESWAP_DEPLOYMENT.poolTokens,
     });
+    expect(CURVE_LUSD_3CRV_METAPOOL_POLICY).toMatchObject({
+      factoryPoolIndex: 16,
+      implementationAddress: "0x5f890841f657d90e081babdb532a05996af79fe6",
+      metapool: {
+        basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
+        expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
+        basePoolTokens: CURVE_STABLESWAP_DEPLOYMENT.poolTokens,
+      },
+    });
+  });
+
+  it("keeps legacy Ethereum factory/3Crv policies on one reviewed template", () => {
+    const policies = CURVE_R3_METAPOOL_POLICIES.filter((policy) =>
+      ["alusd-alchemix", "lusd-liquity", "ousd-origin-protocol"].includes(
+        policy.stablecoinId,
+      ));
+
+    expect(policies).toHaveLength(3);
+    for (const policy of policies) {
+      expect(policy).toMatchObject({
+        chain: "ethereum",
+        expectedPoolCodeHash:
+          "0x156700a4060f3d62786914b50cc60b2b840e6440401bea9a99c0acce0b58beda",
+        factoryAddress: "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
+        expectedFactoryCodeHash:
+          "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
+        expectedRegistryId: "factory",
+        factoryArrayEncoding: "legacy-fixed",
+        implementationBinding: "factory-lookup",
+        implementationAddress: "0x5f890841f657d90e081babdb532a05996af79fe6",
+        expectedImplementationCodeHash:
+          "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
+        inputIndex: 0,
+        outputIndex: 2,
+        metapool: {
+          basePoolBinding: "factory-get-base-pool",
+          basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
+          expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
+          basePoolTokens: CURVE_STABLESWAP_DEPLOYMENT.poolTokens,
+        },
+      });
+      expect(policy.poolTokens[0].trackedAssetId).toBe(policy.stablecoinId);
+      expect(policy.executionTokens[0]).toEqual(policy.poolTokens[0]);
+    }
   });
 });

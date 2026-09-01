@@ -4,7 +4,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.1`
+- **Current methodology version:** `v6.2`
 - **Runtime/version source:** `shared/lib/methodology-versions/liquidity-score.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/liquidity-score/`
@@ -432,6 +432,18 @@ allowlist does not enable other StableSwap-NG pools or generic Curve factory
 discovery. A semantic hash, unproven or mismatched identity, order, decimal, or
 quote failure cannot fall back through a retained measured profile; only an
 operational transport failure may use a still-fresh last-known-good profile.
+
+Reviewed legacy Curve metapools use the active
+`curve-stableswap-ng-metapool-underlying-v1` profile only for explicitly pinned
+physical deployments. The LUSD/3Crv route pins Ethereum pool
+`0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca`, legacy factory
+`pool_list(16)`, the factory-selected implementation, the 3pool base
+relationship, direct and underlying token order, decimals, and runtime code
+hashes before quoting LUSD to USDC through `get_dy_underlying`. The adapter
+measures executable capacity at the common stress requests; it does not infer
+capacity from the pool's reported TVL. Identity, base-pool, price, freshness,
+or quote failure retains the capability gate rather than falling back to a
+reserve simulation.
 
 Two additional StableSwap-NG shapes are collected as shadow-only measured
 profiles. The exact Ethereum DOLA/sUSDe pool uses

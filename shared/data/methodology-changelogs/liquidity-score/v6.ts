@@ -9,6 +9,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // are newest-first by version.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.2",
+    title: "Exact LUSD/3Crv metapool execution",
+    date: "2026-09-01",
+    effectiveAt: 1788220800,
+    summary:
+      "The reviewed LUSD/3Crv deployment now uses the existing exact Curve metapool adapter, replacing its unresolved execution gate with pinned on-chain get_dy_underlying measurements.",
+    impact: [
+      "The producer pins the Ethereum LUSD/3Crv pool, legacy factory registration at pool_list(16), shared metapool implementation, 3pool base relationship, token order, decimals, and runtime code hashes before quoting LUSD to USDC",
+      "Fresh repeated measurements can make the pool score-eligible for Safety Score V9 Exit; TVL alone still provides no execution credit, and any identity, base-pool, quote, or freshness failure remains fail-closed",
+      "The change adds no new RPC lane or source family and does not alter aggregate DEX TVL or the standalone Liquidity Score formula",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.1",
     title: "Family-scoped authoritative confirmation for classic v2 pools",
     date: "2026-08-21",
