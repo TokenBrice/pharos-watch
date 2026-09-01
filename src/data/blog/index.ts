@@ -41,7 +41,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     slug: "pharos-at-six-months",
     title: "Pharos at Six Months: The Lighthouse Is Lit",
     description:
-      "Six months ago, Pharos was a one-person side project. Now it forecasts how long a stablecoin depeg lasts at ~90% accuracy, and bids to run Curve's risk.",
+      "Six months ago, Pharos was a one-person side project. Now it forecasts depeg duration, has delivered 89.1% recovery-call accuracy across 46 scored events, and bids to run Curve's risk.",
     datePublished: "2026-07-21",
     coverImage: "/blog/pharos-at-six-months-cover.png",
     coverAlt:

@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "Safety Score v8.0 folds in mint authority, report cards score chain and oracle risk, and a depeg control board ships.",
   fieldNotes:
-    "The week's spine was scoring: mint authority finally counts toward decentralization in Safety Score v8.0, and report cards learned to weigh chain and oracle risk, each backed by on-chain verification rather than assertion. Around that, reserves and redemption gained real evidence, the depeg view became a working control board, and a long platform pass folded the app's tables and helpers into shared foundations. Plenty shipped; most of it quietly load-bearing.",
+    "The week's spine was scoring: mint authority finally counts toward decentralization in Safety Score v8.0, and report cards learned to weigh chain and oracle risk, with each risk backed by on-chain verification rather than assertion. Around that, reserves and redemption gained real evidence, the depeg view became a working control board, and a long platform pass folded the app's tables and helpers into shared foundations. Plenty shipped; most of it quietly load-bearing.",
   summary: [
     {
       label: "Safety Score v8.0",
@@ -45,7 +45,7 @@ export const entry: ChangelogEntry = {
       label: "Verification passport",
       tag: "design",
       description:
-        "The coin detail hero becomes a verification passport: visas for Issued, MiCA, GENIUS, and track record, and the contract wall becomes labeled rows with inline verify actions. An MRZ experiment was reverted.",
+        "The coin detail hero becomes a verification passport with visas for Issued, MiCA, GENIUS, and track record. The contract wall becomes labeled rows with inline verify actions. An MRZ experiment was reverted.",
     },
     {
       label: "Search, a11y & performance",

@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "The Depeg Resolver (DDR/DDRR) v2 ships at /depeg, dashboard cards flatten, and the data layer gets a two-pass audit.",
   fieldNotes:
-    "After last week's design-system sprint, the new tone moves into product. The Depeg Resolver opens to the public: DDR predicts how long a current depeg will last, DDRR scores how well past predictions held up, and the rest of the dashboard quietly harmonizes around the flat-card baseline. Two data-enhancement passes also work through a backlog of reserve, redemption, and classification follow-ups.",
+    "After last week's design-system sprint, the new tone moves into product. The Depeg Resolver opens to the public. DDR predicts how long a current depeg will last, DDRR scores how well past predictions held up, and the rest of the dashboard quietly harmonizes around the flat-card baseline. Two data-enhancement passes also work through a backlog of reserve, redemption, and classification follow-ups.",
   summary: [
     {
       label: "Depeg Resolver (DDR/DDRR) v2",

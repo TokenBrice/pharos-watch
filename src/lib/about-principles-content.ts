@@ -27,12 +27,12 @@ export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
   },
   {
     id: "decentralization-is-governance",
-    title: "Decentralization depends on governance permissions.",
+    title: "Control determines decentralization.",
     body: "Pharos classifies stablecoins by where the actual permission to mint, freeze, pause, and reconfigure lives. A coin with a decentralized front end and a centralized fallback is CeFi-dependent, regardless of what the marketing says. The classification records the infrastructure's permissions for holders and issuers alike.",
   },
   {
     id: "yield-tokens-are-nav",
-    title: "Yield-bearing stablecoins follow NAV.",
+    title: "NAV-accreting tokens require separate peg treatment.",
     body: "A token designed to drift upward in value to capture yield follows a NAV model rather than a fixed peg. Pharos flags these separately, withholds PegScore where the asset is not meant to hold a fixed price, and renders them in their own analytical surface.",
   },
   {

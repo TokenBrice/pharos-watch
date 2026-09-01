@@ -26,7 +26,7 @@ And then there's **the depeg arsenal**: the beating heart of Pharos. When a depe
 
 ![The Depeg Duration Resolver showing ten live depeg forecasts alongside a track record of 89.1% recovery-call accuracy across 46 scored events.](/blog/ddr-track-record.png "The DDR in action: live duration and recovery forecasts, backed by a running and verifiable 89.1% recovery-call accuracy.")
 
-The full loop is covered, from detection through alerting to forecasting, and Pharos is a pioneer across these lanes. Where else have you found an engine able to anticipate the duration and the criticality of a stablecoin depeg, with almost 90% accuracy?
+The full loop is covered, from detection through alerting to forecasting, and Pharos is a pioneer across these lanes. Its measured record is 89.1% recovery-call accuracy across 46 scored events; that figure measures the recovery call, not duration-forecast precision.
 
 The DeFi crowd noticed, fast. Several, if not most, of the major depeg events of the past six months were first reported on Pharos, and some were anticipated outright. Pharos consistently gave them the best coverage here. pmUSD. USDX. EURR. apxUSD. Each time, when the water got rough, people came to the lighthouse. There is no better feeling than watching the tool do exactly the job it was built for, exactly when it matters.
 

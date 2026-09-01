@@ -62,7 +62,7 @@ export const entry: ChangelogEntry = {
       label: "Mint Authority transparency",
       tag: "feature",
       description:
-        "A new Mint Authority section on coin pages surfaces who can mint and control supply: control addresses with on-chain evidence, Safe-module display, and risk-tone posture cues, with coverage expanded across the top stablecoins.",
+        "A new Mint Authority section on coin pages surfaces who can mint and control supply. It includes control addresses with on-chain evidence, Safe-module display, and risk-tone posture cues. Coverage expands across the top stablecoins.",
     },
     {
       label: "Broader coverage",

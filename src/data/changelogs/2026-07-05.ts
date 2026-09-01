@@ -11,7 +11,7 @@ export const entry: ChangelogEntry = {
       label: "Site-wide design canon",
       tag: "design",
       description:
-        "Every nav group, Markets, Risk, Learn, Reference, Analyze, and the coin detail template adopt the redesigned homepage canon: new hero surfaces, flat cards, the Whyte display face, and sidebar remnants removed.",
+        "Every nav group (Markets, Risk, Learn, Reference, and Analyze) and the coin detail template adopt the redesigned homepage canon. The rollout adds new hero surfaces, flat cards, the Whyte display face, and removes sidebar remnants.",
     },
     {
       label: "Tablet table workbench",

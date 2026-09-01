@@ -50,7 +50,7 @@ export const entry: ChangelogEntry = {
       label: "Coin page & bot hero",
       tag: "design",
       description:
-        "The stablecoin detail page completes its Figma template, pill-tab nav, hero KPI band, xl right rail, Sources modal, and the PharosWatchBot page gets a benefits-led signal-board hero with a lighthouse watch beam.",
+        "The stablecoin detail page completes its Figma template, pill-tab nav, hero KPI band, xl right rail, and Sources modal. The PharosWatchBot page gets a benefits-led signal-board hero with a lighthouse watch beam.",
     },
     {
       label: "Pipeline correctness",
