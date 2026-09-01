@@ -13,8 +13,25 @@ vi.mock("../helpers", async (importOriginal) => {
   const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   const fetchOnchainRawCall = vi.fn();
+  const fetchOnchainMulticall3 = vi.fn(async (options: {
+    calls: Array<{ label: string; contract: string; data: string }>;
+    [key: string]: unknown;
+  }) => Promise.all(options.calls.map(async (call) => {
+    const request = { ...options, ...call };
+    const value = call.data === "0xfeaf968c"
+      ? await fetchOnchainRawCall(request)
+      : await fetchOnchainUint256(request);
+    return {
+      label: call.label,
+      success: value != null,
+      returnData: typeof value === "bigint"
+        ? `0x${value.toString(16).padStart(64, "0")}`
+        : value ?? "0x",
+    };
+  })));
   return {
     ...actual,
+    fetchOnchainMulticall3,
     fetchOnchainUint256,
     fetchOnchainRawCall,
     makeOnchainCallers: makeOnchainCallersMock({
@@ -241,6 +258,17 @@ describe("fetchChainlinkNavCore", () => {
       new AbortController().signal,
       { nowSec: updatedAt + maxOracleAgeSec + 1 },
     )).rejects.toThrow(`chainlink-nav: oracle data is stale (${maxOracleAgeSec + 1}s > ${maxOracleAgeSec}s)`);
+
+    expect(helpers.fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
+    expect(helpers.fetchOnchainMulticall3).toHaveBeenCalledWith(expect.objectContaining({
+      chain: "ethereum",
+      calls: [
+        { label: "token-decimals", contract: TOKEN_ADDRESS, data: DECIMALS_SELECTOR },
+        { label: "token-total-supply", contract: TOKEN_ADDRESS, data: TOTAL_SUPPLY_SELECTOR },
+        { label: "oracle-decimals", contract: ORACLE_ADDRESS, data: DECIMALS_SELECTOR },
+        { label: "oracle-latest-round-data", contract: ORACLE_ADDRESS, data: LATEST_ROUND_DATA_SELECTOR },
+      ],
+    }));
   });
 
   it("reads getPriceData directly and marks freshness verified", async () => {

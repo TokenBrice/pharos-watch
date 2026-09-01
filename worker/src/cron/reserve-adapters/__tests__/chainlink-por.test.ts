@@ -7,11 +7,28 @@ vi.mock("../helpers", async (importOriginal) => {
   const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   const fetchOnchainRawCall = vi.fn();
+  const fetchOnchainMulticall3 = vi.fn(async (options: {
+    calls: Array<{ label: string; contract: string; data: string }>;
+    [key: string]: unknown;
+  }) => Promise.all(options.calls.map(async (call) => {
+    const request = { ...options, ...call };
+    const value = call.data === "0xfeaf968c"
+      ? await fetchOnchainRawCall(request)
+      : await fetchOnchainUint256(request);
+    return {
+      label: call.label,
+      success: value != null,
+      returnData: typeof value === "bigint"
+        ? `0x${value.toString(16).padStart(64, "0")}`
+        : value ?? "0x",
+    };
+  })));
   return {
     ...actual,
     fetchErc20TotalSupply: vi.fn(),
     fetchTronErc20TotalSupply: vi.fn(),
     fetchJsonPostWithRetry: vi.fn(),
+    fetchOnchainMulticall3,
     fetchOnchainUint256,
     fetchOnchainRawCall,
     makeOnchainCallers: makeOnchainCallersMock({
@@ -31,6 +48,7 @@ import {
 import {
   fetchErc20TotalSupply,
   fetchJsonPostWithRetry,
+  fetchOnchainMulticall3,
   fetchOnchainRawCall,
   fetchOnchainUint256,
   fetchTronErc20TotalSupply,
@@ -492,6 +510,15 @@ describe("fetchChainlinkPorReserves", () => {
     vi.mocked(fetchTronErc20TotalSupply).mockResolvedValueOnce(400_000000000000000000n);
 
     const result = await fetchChainlinkPorReserves(coin, config, signal, { nowSec: now });
+
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
+    expect(fetchOnchainMulticall3).toHaveBeenCalledWith(expect.objectContaining({
+      chain: "ethereum",
+      calls: [
+        { label: "feed-decimals", contract: baseParams.porFeedAddress, data: "0x313ce567" },
+        { label: "feed-latest-round-data", contract: baseParams.porFeedAddress, data: "0xfeaf968c" },
+      ],
+    }));
 
     // reserves = $1010, multichain supply (600 EVM + 400 tron) = 1000 -> ratio ~1.01 (healthy)
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.01, 5);
