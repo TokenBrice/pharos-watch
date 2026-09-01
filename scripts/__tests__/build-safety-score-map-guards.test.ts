@@ -20,7 +20,7 @@ import {
  *
  * The generator runs unattended every day and publishes to a public URL, so the
  * failure that matters is not a crash — it is a successful exit that ships a
- * blank or stale poster. Every guard below is asserted through the real CLI
+ * blank or malformed poster. Every guard below is asserted through the real CLI
  * against a fixture API, because the guards live inside `main()` and are not
  * individually exported. Each fixture is shaped to stop the run *before* the
  * headless-Firefox render, so the suite needs no browser and no credentials.
@@ -186,7 +186,7 @@ interface RunResult {
  *
  * `stopBeforeRender` pre-writes a future-dated manifest at the output path. The
  * backwards-publish guard (§11.2b rule 5) then aborts the run *after* fetch,
- * freshness, join, delta, layout and the composition linter have all passed but
+ * input validation, join, layout and the composition linter have all passed but
  * *before* Firefox launches — so a test can assert "the run got this far"
  * without paying for a real render.
  */
@@ -227,9 +227,6 @@ async function runGenerator(
       ...process.env,
       PHAROS_API_BASE: baseUrl,
       PHAROS_API_KEY: "fixture-key",
-      // Persistent-rejection cases re-fetch three times; the real backoff is
-      // dead wait here and pushed these past the suite timeout under load.
-      PHAROS_DELTA_GUARD_BACKOFF_SCALE: "0",
     },
   });
   let stdout = "";
@@ -243,39 +240,18 @@ async function runGenerator(
 /** Marker proving the run reached the pre-render stop, i.e. every guard passed. */
 const REACHED_RENDER_GATE = /rendered in the future/;
 
-describe("safety-score map — freshness guard (§11.2b rule 1)", () => {
-  it("refuses to render a report-card capture older than 48h", async () => {
-    const run = await runGenerator({ ...universe(), asOfSec: Math.floor(Date.now() / 1000) - 49 * HOUR });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Report-card capture is 49\.\dh old \(must be under 48h\) — refusing to render stale scores/);
-    expect(existsSync(run.pngPath)).toBe(false);
-  });
-
-  it("does not trip on a capture just inside the 48h ceiling", async () => {
+describe("safety-score map — canonical publication provenance", () => {
+  it("renders an aged report-card capture with its source timestamp intact", async () => {
     const run = await runGenerator(
-      { ...universe(), asOfSec: Math.floor(Date.now() / 1000) - 47 * HOUR },
+      { ...universe(), asOfSec: Math.floor(Date.now() / 1000) - 49 * HOUR },
       { stopBeforeRender: true },
     );
-    expect(run.stderr).not.toMatch(/refusing to render stale scores/);
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
   });
 
-  it("refuses a future-dated capture", async () => {
-    const run = await runGenerator({ ...universe(), asOfSec: Math.floor(Date.now() / 1000) + HOUR });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/future-dated capture/);
-  });
-
-  it("refuses a capture at the 48h boundary", async () => {
-    const run = await runGenerator({ ...universe(), asOfSec: Math.floor(Date.now() / 1000) - 48 * HOUR });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/must be under 48h/);
-  });
-
-  it("refuses a held publication even when the capture is fresh", async () => {
-    const run = await runGenerator({ ...universe() }, { publicationStatus: "held" });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/publication status is "held".*non-current/);
+  it("renders a held canonical publication instead of re-auditing upstream health", async () => {
+    const run = await runGenerator({ ...universe() }, { publicationStatus: "held", stopBeforeRender: true });
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
   });
 
   it("rejects a non-numeric capture clock rather than rendering an epoch-stamped poster", async () => {
@@ -435,350 +411,25 @@ describe("safety-score map — grade-letter integrity", () => {
   });
 });
 
-describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () => {
-  function snapshot(dir: string, body: unknown): string {
-    const path = join(dir, "previous.snapshot.json");
-    writeFileSync(path, typeof body === "string" ? body : JSON.stringify(body));
-    return path;
-  }
-
-  function validSnapshot(fixture: { cards: Card[]; assets: Asset[] }) {
-    const byAsset = new Map(fixture.assets.map((asset) => [asset.id, asset]));
-    const rated = fixture.cards.filter((card) => card.grade !== "NR");
-    const tierOrder = ["A", "B", "C", "D", "F"] as const;
-    const byTier = Object.fromEntries(tierOrder.map((tier) => [tier, rated.filter((card) => card.grade.charAt(0) === tier)]));
-    const mcapOf = (id: string) => {
-      const value = byAsset.get(id)?.circulating?.peggedUSD ?? 0;
-      return Math.max(0, value);
-    };
-    const totalMcap = rated.reduce((sum, card) => sum + mcapOf(card.id), 0);
-    return {
-      publicationStatus: "current",
-      counts: {
-        graded: rated.length,
-        notRated: fixture.cards.length - rated.length,
-        unjoined: rated.filter((card) => mcapOf(card.id) <= 0).length,
-        missingLogos: rated.length,
-        byTier: Object.fromEntries(tierOrder.map((tier) => [tier, byTier[tier].length])),
+describe("safety-score map — availability-first rendering", () => {
+  it("fetches one canonical input set and has no historical movement gate", async () => {
+    const fixture = universe({ count: 20 });
+    const payload = makeSafetyMapStablecoinsPayload(fixture.assets);
+    let stablecoinReads = 0;
+    const run = await runGenerator(fixture, {
+      stopBeforeRender: true,
+      stablecoinsPayload: () => {
+        stablecoinReads += 1;
+        return payload;
       },
-      mapSummary: {
-        date: "2026-08-24",
-        asOfSec: Math.floor(Date.now() / 1000) - HOUR,
-        methodologyVersion: "9.19",
-        gradedCount: rated.length,
-        notRatedCount: fixture.cards.length - rated.length,
-        totalMcapUsd: totalMcap,
-        floorMcapByTier: { a: 1, other: 1 },
-        tiers: tierOrder.map((tier) => {
-          const cards = byTier[tier];
-          const tierMcap = cards.reduce((sum, card) => sum + mcapOf(card.id), 0);
-          return {
-            tier,
-            range: "0-100",
-            count: cards.length,
-            mcapUsd: tierMcap,
-            sharePct: totalMcap > 0 ? (tierMcap / totalMcap) * 100 : 0,
-            leaders: [...cards]
-              .sort((a, b) => mcapOf(b.id) - mcapOf(a.id))
-              .slice(0, 3)
-              .map((card) => ({ symbol: byAsset.get(card.id)?.symbol ?? card.id, score: card.score as number, mcapUsd: mcapOf(card.id) })),
-          };
-        }),
-      },
-      coins: rated.map((card) => ({
-        id: card.id,
-        symbol: byAsset.get(card.id)?.symbol ?? card.id,
-        score: card.score as number,
-        grade: card.grade,
-        mcap: mcapOf(card.id),
-      })),
-    };
-  }
-
-  const scratch = scratchDir("pharos-safety-map-snapshots-");
-
-  it("refuses to publish a census that shrank more than 2% overnight", async () => {
-    const path = snapshot(scratch, validSnapshot(universe({ count: 100 })));
-    const run = await runGenerator(universe({ count: 20 }), { args: ["--previous-snapshot", path] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Graded count fell from 100 to 20 \(>2%\) since the previous snapshot/);
-    expect(run.stderr).toMatch(/refusing to publish a shrunken census/);
-  });
-
-  it("refuses when the not-rated count moves more than 5 overnight", async () => {
-    const path = snapshot(scratch, validSnapshot(universe({ count: 20 })));
-    const run = await runGenerator(universe({ count: 20, notRated: 6 }), { args: ["--previous-snapshot", path] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Not-rated count moved from 0 to 6 \(>5\) since the previous snapshot/);
-    expect(run.stderr).toMatch(/scoring producer looks half-broken/);
-  });
-
-  it("falls back to the previous snapshot's coin array when counts are absent", async () => {
-    const path = snapshot(scratch, { coins: Array.from({ length: 100 }, (_, i) => ({ id: `c${i}` })) });
-    const run = await runGenerator(universe({ count: 20 }), { args: ["--previous-snapshot", path] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/is malformed/);
-  });
-
-  it("passes a census that held steady, and says so", async () => {
-    const path = snapshot(scratch, validSnapshot(universe({ count: 20, notRated: 2 })));
-    const run = await runGenerator(universe({ count: 20, notRated: 2 }), {
-      args: ["--previous-snapshot", path],
-      stopBeforeRender: true,
     });
-    expect(run.stdout).toMatch(/Delta guard OK vs previous snapshot \(graded 20 -> 20, not rated 2 -> 2\)/);
+
+    expect(stablecoinReads).toBe(1);
+    expect(run.stdout).toMatch(/Fetching canonical data/);
+    expect(run.stdout).toMatch(/Render input graded=20/);
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-
-  it("tolerates a drop inside the 2% band and a not-rated move of exactly 5", async () => {
-    const path = snapshot(scratch, validSnapshot(universe({ count: 20 })));
-    const run = await runGenerator(universe({ count: 20, notRated: 5 }), {
-      args: ["--previous-snapshot", path],
-      stopBeforeRender: true,
-    });
-    expect(run.stderr).not.toMatch(/Not-rated count moved/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-
-  it("re-fetches live data when a transient supply delta rejection recovers", async () => {
-    const prior = universe({ count: 20 });
-    const badAssets = prior.assets.map((asset) => asset.id === "coin-11"
-      ? { ...asset, circulating: { peggedUSD: (asset.circulating?.peggedUSD ?? 0) * 5 } }
-      : asset);
-    const badPayload = makeSafetyMapStablecoinsPayload(badAssets);
-    const goodPayload = makeSafetyMapStablecoinsPayload(prior.assets);
-    let reads = 0;
-    const path = snapshot(scratch, validSnapshot(prior));
-    const run = await runGenerator(prior, {
-      args: ["--previous-snapshot", path],
-      stopBeforeRender: true,
-      stablecoinsPayload: () => reads++ === 0 ? badPayload : goodPayload,
-    });
-    // stopBeforeRender deliberately trips the future-manifest guard after all
-    // fetch, retry, and validation work has passed; reaching that marker is
-    // the success signal for this no-browser fixture.
-    expect(reads).toBeGreaterThanOrEqual(2);
-    expect(run.stderr).toMatch(/Validation attempt 1\/3 rejected by delta guard/);
-    expect(run.stdout).toMatch(/Delta guard transient rejection recovered on attempt 2/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-    expect(run.stderr).not.toMatch(/Persistent delta guard rejection/);
-  });
-
-  it("fails closed after a persistent delta rejection on all three fresh attempts", async () => {
-    const prior = universe({ count: 20 });
-    const badAssets = prior.assets.map((asset) => asset.id === "coin-11"
-      ? { ...asset, circulating: { peggedUSD: (asset.circulating?.peggedUSD ?? 0) * 5 } }
-      : asset);
-    const badPayload = makeSafetyMapStablecoinsPayload(badAssets);
-    const path = snapshot(scratch, validSnapshot(prior));
-    const run = await runGenerator(prior, {
-      args: ["--previous-snapshot", path],
-      stablecoinsPayload: () => badPayload,
-    });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Validation attempt 1\/3 rejected by delta guard/);
-    expect(run.stderr).toMatch(/Validation attempt 2\/3 rejected by delta guard/);
-    expect(run.stderr).toMatch(/Validation attempt 3\/3 rejected by delta guard/);
-    expect(run.stderr).toMatch(/Persistent delta guard rejection after 3 attempts/);
-  });
-
-  it("keeps the 25% supply threshold unchanged", async () => {
-    const prior = universe({ count: 20 });
-    const withinThreshold = prior.assets.map((asset) => asset.id === "coin-11"
-      ? { ...asset, circulating: { peggedUSD: (asset.circulating?.peggedUSD ?? 0) * 1.24 } }
-      : asset);
-    const path = snapshot(scratch, validSnapshot(prior));
-    const run = await runGenerator({ cards: prior.cards, assets: withinThreshold }, {
-      args: ["--previous-snapshot", path],
-      stopBeforeRender: true,
-    });
-    expect(run.stderr).not.toMatch(/supply moved.*>25%/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-
-  it("rejects a malformed baseline instead of treating it as a first run", async () => {
-    const path = snapshot(scratch, { counts: { graded: 0, notRated: 0 } });
-    const run = await runGenerator(universe({ count: 20 }), { args: ["--previous-snapshot", path] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/is malformed/);
-  });
-
-  it("accepts reviewed deltas only after validating the full previous-snapshot contract", async () => {
-    const prior = universe({ count: 20 });
-    let moved = 0;
-    const nextCards = prior.cards.map((card) => {
-      if (moved >= 3 || !card.grade.startsWith("B")) return card;
-      moved += 1;
-      return { ...card, grade: "C+", score: 62 };
-    });
-    const path = snapshot(scratch, validSnapshot(prior));
-    const run = await runGenerator({ cards: nextCards, assets: prior.assets }, {
-      args: ["--previous-snapshot", path, "--accept-snapshot-transition"],
-      stopBeforeRender: true,
-    });
-
-    expect(run.stderr).toMatch(/Operator accepted the validated previous snapshot transition/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-
-  it("rejects a malformed baseline even when snapshot-transition acceptance is requested", async () => {
-    const path = snapshot(scratch, { publicationStatus: "current" });
-    const run = await runGenerator(universe({ count: 20 }), {
-      args: ["--previous-snapshot", path, "--accept-snapshot-transition"],
-    });
-
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/is malformed/);
-  });
-
-  it("rejects a large per-tier reclassification even when the total census is unchanged", async () => {
-    const prior = universe({ count: 20 });
-    const nextCards = prior.cards.map((card) => card.grade.startsWith("A") ? { ...card, grade: "B+", score: 77 } : card);
-    const path = snapshot(scratch, validSnapshot(prior));
-    const run = await runGenerator({ cards: nextCards, assets: prior.assets }, { args: ["--previous-snapshot", path] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Tier A count moved/);
-  });
-
-  it("tolerates a near-tie leader swap when the prior census explains the new leader", async () => {
-    const prior = universe({ count: 20 });
-    const body = validSnapshot(prior);
-    // Yesterday C1 narrowly led tier A over C0; today the live data has C0
-    // ahead again. The prior census knows C0 at its current supply, so this is
-    // ordinary market movement, not a broken join.
-    const leaders = body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders;
-    [leaders[0], leaders[1]] = [leaders[1], leaders[0]];
-    const path = snapshot(scratch, body);
-    const run = await runGenerator(prior, { args: ["--previous-snapshot", path], stopBeforeRender: true });
-    expect(run.stderr).not.toMatch(/leader/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-
-  it("tolerates a new leader from outside the recorded top-3 when the census explains it", async () => {
-    const prior = universe({ count: 20 });
-    const body = validSnapshot(prior);
-    // Yesterday's recorded top-3 omitted C0 entirely (it sat 4th); today it
-    // leads tier A. The prior census still carries coin-00 at its current
-    // supply, so the crossover is explained without any recorded-top-3 seat.
-    const leaders = body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders;
-    leaders.splice(0, leaders.length, ...leaders.filter((leader) => leader.symbol !== "C0"));
-    const path = snapshot(scratch, body);
-    const run = await runGenerator(prior, { args: ["--previous-snapshot", path], stopBeforeRender: true });
-    expect(run.stderr).not.toMatch(/leader/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-
-  it("refuses a leader the previous census never saw", async () => {
-    const prior = universe({ count: 20 });
-    const body = validSnapshot(prior);
-    // Rewrite yesterday's identity for coin-00 so today's tier A leader C0 is
-    // a coin the previous census has no record of.
-    body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders[0].symbol = "CX";
-    const row = body.coins.find((coin) => coin.id === "coin-00")!;
-    row.id = "coin-xx";
-    row.symbol = "CX";
-    const path = snapshot(scratch, body);
-    const run = await runGenerator(prior, { args: ["--previous-snapshot", path] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Tier A leader changed to C0, absent from the previous census — refusing an unexplained leader shift/);
-  });
-
-  it("refuses a leader swap when the new leader's own supply moved more than 25%", async () => {
-    const prior = universe({ count: 20 });
-    const body = validSnapshot(prior);
-    const leaders = body.mapSummary.tiers.find((tier) => tier.tier === "A")!.leaders;
-    [leaders[0], leaders[1]] = [leaders[1], leaders[0]];
-    // The prior census has the new leader at double its current supply, so the
-    // swap is no longer explained by bounded day-over-day movement.
-    body.coins.find((coin) => coin.id === "coin-00")!.mcap *= 2;
-    const path = snapshot(scratch, body);
-    const run = await runGenerator(prior, { args: ["--previous-snapshot", path] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Tier A leader C0 supply moved from \d+ to \d+ \(>25%\) since the previous snapshot — refusing an unexplained leader shift/);
-  });
-
-  it("tolerates a single immaterial join flip and draws the coin at the size floor", async () => {
-    const path = snapshot(scratch, validSnapshot(universe({ count: 20 })));
-    const run = await runGenerator(universe({ count: 20, unjoined: 1 }), {
-      args: ["--previous-snapshot", path],
-      stopBeforeRender: true,
-    });
-    expect(run.stderr).toMatch(/Supply join identity changed for 1 coin\(s\) since the previous snapshot \(coin-19; \$[\d,]+ affected\) — within tolerance/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-
-  it("refuses when more than three coins flip join identity overnight", async () => {
-    const path = snapshot(scratch, validSnapshot(universe({ count: 100 })));
-    const run = await runGenerator(universe({ count: 100, unjoined: 4 }), { args: ["--previous-snapshot", path] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Supply join identity changed for 4 coin\(s\)/);
-    expect(run.stderr).toMatch(/beyond the tolerance .* refusing to publish an ambiguous census/);
-  });
-
-  it("refuses a single join flip that carries material supply", async () => {
-    const prior = universe({ count: 20 });
-    const path = snapshot(scratch, validSnapshot(prior));
-    const current = {
-      cards: prior.cards,
-      assets: prior.assets.map((row) => (row.id === "coin-06" ? { ...row, circulating: { peggedUSD: 0 } } : row)),
-    };
-    const run = await runGenerator(current, { args: ["--previous-snapshot", path] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Supply join identity changed for 1 coin\(s\) since the previous snapshot \(coin-06;/);
-    expect(run.stderr).toMatch(/beyond the tolerance/);
-  });
-
-  it("does not treat a census addition as a join flip", async () => {
-    const path = snapshot(scratch, validSnapshot(universe({ count: 20 })));
-    // The all-logoless fixture universe makes the addition trip the separate
-    // missing-logo guard (20 -> 21), which runs after the delta guard — so the
-    // join-identity check demonstrably let the addition through.
-    const run = await runGenerator(universe({ count: 21 }), { args: ["--previous-snapshot", path] });
-    expect(run.stderr).not.toMatch(/Supply join identity changed/);
-    expect(run.stdout).toMatch(/Delta guard OK vs previous snapshot \(graded 20 -> 21/);
-    expect(run.stderr).toMatch(/Missing-logo count moved from 20 to 21/);
   });
 });
-
-describe("safety-score map — delta guard skips are never fatal (bootstrap path)", () => {
-  const scratch = scratchDir("pharos-safety-map-skips-");
-
-  // A first run has nothing to compare against and must still boot. Each case
-  // proves the guard warned and execution continued past it; the run is then
-  // stopped at the pre-render gate rather than paying for a real render.
-  const cases: Array<[string, string[], RegExp]> = [
-    ["no --previous-snapshot at all", [], /No --previous-snapshot supplied — day-over-day delta guard skipped/],
-    [
-      "a --previous-snapshot path that does not exist",
-      ["--previous-snapshot", join(scratch, "absent.json")],
-      /Could not read --previous-snapshot .*absent\.json .* — delta guard skipped/,
-    ],
-  ];
-
-  it.each(cases)("skips with a warning: %s", async (_label, args, expected) => {
-    const run = await runGenerator(universe(), { args, stopBeforeRender: true });
-    expect(`${run.stdout}${run.stderr}`).toMatch(expected);
-    expect(run.stderr).not.toMatch(/Graded count fell|Not-rated count moved/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
-  });
-
-  it("rejects an unparseable previous snapshot", async () => {
-    const path = join(scratch, "corrupt.json");
-    writeFileSync(path, "{ not json");
-    const run = await runGenerator(universe(), { args: ["--previous-snapshot", path], stopBeforeRender: true });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/is malformed/);
-  });
-
-  it("rejects a previous snapshot with no graded count", async () => {
-    const path = join(scratch, "countless.json");
-    writeFileSync(path, JSON.stringify({ edition: "daily", date: "2026-08-20" }));
-    const run = await runGenerator(universe(), { args: ["--previous-snapshot", path], stopBeforeRender: true });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/is malformed/);
-  });
-});
-
 describe("safety-score map — backwards-publish guard (§11.2b rule 5)", () => {
   it("refuses to overwrite a manifest rendered in the future", async () => {
     const run = await runGenerator(universe(), { stopBeforeRender: true });
@@ -801,9 +452,4 @@ describe("safety-score map — CLI contract", () => {
     expect(run.stderr).toMatch(/--issue must be a positive integer/);
   });
 
-  it("requires a previous snapshot when accepting a snapshot transition", async () => {
-    const run = await runGenerator(universe(), { args: ["--accept-snapshot-transition"] });
-    expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/--accept-snapshot-transition requires --previous-snapshot/);
-  });
 });
