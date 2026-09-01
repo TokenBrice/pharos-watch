@@ -96,7 +96,7 @@ export const content: CaseStudy = {
       kind: "peg-deviation",
       coinId: "usyc-hashnote",
       caption:
-        "USYC on Pharos — a NAV-priced tokenized fund share. The chart is useful less as a classic dollar-peg tape and more as evidence of how slowly and institutionally NAV assets move compared with DeFi liquidation clocks.",
+        "USYC on Pharos: a NAV-priced tokenized fund share. The chart is useful less as a classic dollar-peg tape and more as evidence of how slowly and institutionally NAV assets move compared with DeFi liquidation clocks.",
     },
   ],
   watchpoints: [
@@ -119,27 +119,27 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "USYC docs — Introduction",
+      label: "USYC docs: Introduction",
       href: "https://usyc.docs.hashnote.com/",
     },
     {
-      label: "USYC docs — Token price calculation",
+      label: "USYC docs: Token price calculation",
       href: "https://usyc.docs.hashnote.com/overview/token-price",
     },
     {
-      label: "LlamaRisk — PegKeeper onboarding review: Usual USD0",
+      label: "LlamaRisk: PegKeeper onboarding review: Usual USD0",
       href: "https://www.llamarisk.com/research/pegkeeper-onboarding-usd0",
     },
     {
-      label: "Blockworks — Usual depeg spurs instability in DeFi markets",
+      label: "Blockworks: Usual depeg spurs instability in DeFi markets",
       href: "https://blockworks.co/news/usual-depeg-spurs-defi-instability",
     },
     {
-      label: "Circle — Acquisition of Hashnote and USYC",
+      label: "Circle: Acquisition of Hashnote and USYC",
       href: "https://www.circle.com/pressroom/circle-announces-acquisition-of-hashnote-and-usyc-tokenized-money-market-fund-alongside-strategic-partnership-with-global-trading-firm-drw",
     },
     {
-      label: "Circle — USYC supported as yield-bearing off-exchange collateral",
+      label: "Circle: USYC supported as yield-bearing off-exchange collateral",
       href: "https://www.circle.com/pressroom/circles-usyc-now-supported-as-yield-bearing-off-exchange-collateral-for-binances-institutional-clients",
     },
   ],

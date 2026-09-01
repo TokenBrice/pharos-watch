@@ -116,23 +116,23 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "CoinDesk — Real-estate-backed USDR depegs after treasury drained",
+      label: "CoinDesk: Real-estate-backed USDR depegs after treasury drained",
       href: "https://www.coindesk.com/markets/2023/10/11/real-estate-backed-stablecoin-usdr-de-pegs-after-treasury-was-drained-of-liquid-assets",
     },
     {
-      label: "CoinDesk — USDR issuer to salvage failed stablecoin assets",
+      label: "CoinDesk: USDR issuer to salvage failed stablecoin assets",
       href: "https://www.coindesk.com/business/2023/10/12/usdr-issuer-to-salvage-failed-property-backed-stablecoins-assets-make-users-whole",
     },
     {
-      label: "CoinDesk — Collapsed real-estate-backed stablecoin charts recovery path",
+      label: "CoinDesk: Collapsed real-estate-backed stablecoin charts recovery path",
       href: "https://www.coindesk.com/business/2024/02/21/collapsed-real-estate-backed-stablecoin-charts-path-to-recovery",
     },
     {
-      label: "Blockworks — USDR shows illiquid real-world assets can break a stablecoin",
+      label: "Blockworks: USDR shows illiquid real-world assets can break a stablecoin",
       href: "https://blockworks.com/news/tangible-real-usd-illiquid-stablecoin-real-world-assets",
     },
     {
-      label: "DL News — Real-estate-backed stablecoin USDR collapses",
+      label: "DL News: Real-estate-backed stablecoin USDR collapses",
       href: "https://www.dlnews.com/articles/defi/usdr-stablecoin-backed-by-real-estate-collapses/",
     },
   ],

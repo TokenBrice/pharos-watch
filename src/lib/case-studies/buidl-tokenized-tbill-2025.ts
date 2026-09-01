@@ -98,7 +98,7 @@ export const content: CaseStudy = {
       kind: "peg-deviation",
       coinId: "buidl-blackrock",
       caption:
-        "BUIDL on Pharos — the flat line is the point. A tokenized T-bill fund should read as NAV discipline, not as a volatile peg-defense drama.",
+        "BUIDL on Pharos: the flat line is the point. A tokenized T-bill fund should read as NAV discipline, not as a volatile peg-defense drama.",
     },
   ],
   watchpoints: [
@@ -121,23 +121,23 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "BlackRock / BusinessWire — BUIDL launch",
+      label: "BlackRock / BusinessWire: BUIDL launch",
       href: "https://www.businesswire.com/news/home/20240320771318/en/BlackRock-Launches-Its-First-Tokenized-Fund-BUIDL-on-the-Ethereum-Network",
     },
     {
-      label: "Securitize — BUIDL product page",
+      label: "Securitize: BUIDL product page",
       href: "https://securitize.io/blackrock/buidl",
     },
     {
-      label: "Securitize / PR Newswire — BUIDL surpasses $1B AUM",
+      label: "Securitize / PR Newswire: BUIDL surpasses $1B AUM",
       href: "https://www.prnewswire.com/news-releases/blackrock-usd-institutional-digital-liquidity-fund-buidl-tokenized-by-securitize-surpasses-1b-in-aum-302401480.html",
     },
     {
-      label: "Securitize — BUIDL launches multichain",
+      label: "Securitize: BUIDL launches multichain",
       href: "https://securitize.io/learn/press/blackrocks-buidl-tokenized-by-securitize-launches-multi-chain",
     },
     {
-      label: "Securitize / PR Newswire — BUIDL collateral on Binance and BNB Chain",
+      label: "Securitize / PR Newswire: BUIDL collateral on Binance and BNB Chain",
       href: "https://www.prnewswire.com/news-releases/blackrocks-buidl-tokenized-by-securitize-now-accepted-as-collateral-for-trading-on-binance-and-launches-on-bnb-chain-302613374.html",
     },
   ],

@@ -5,7 +5,7 @@ export const content: CaseStudy = {
   eyebrow: "Venue oracle dislocation",
   title: "USDe and the October 2025 Binance oracle print",
   subtitle:
-    "During the 10 October 2025 crypto-wide deleveraging, USDe printed as low as ~$0.65 on Binance while its backing and primary-market redemption stayed intact — a venue artifact, not a peg break.",
+    "During the 10 October 2025 crypto-wide deleveraging, USDe printed as low as ~$0.65 on Binance while its backing and primary-market redemption stayed intact: a venue artifact, not a peg break.",
   lead: [
     "On 10 October 2025 the broader crypto market suffered one of its largest single-day liquidation cascades, and for roughly forty minutes the price of Ethena's USDe on Binance fell to about $0.65. To anyone watching that single screen, it looked like a synthetic dollar coming apart in real time. It was not. The dislocation was confined to one venue while USDe traded within a tight band of its peg on the deepest on-chain pools, and Ethena's primary-market mint and redeem channel kept clearing at one dollar throughout.",
     "The distinction matters because the failure mode here is the opposite of a backing failure. A backing failure shows up everywhere at once and persists until reserves are repaired or the asset is wound down. What happened on Binance was a pricing-and-liquidity artifact: the exchange referenced its own thin order book to value USDe used as margin collateral, and with deposits and withdrawals impaired, the arbitrageurs who normally close that gap could not. The print fed forced liquidations, the liquidations deepened the print, and the loop ran until conditions eased.",
@@ -13,9 +13,9 @@ export const content: CaseStudy = {
   ],
   takeaways: [
     "The ~$0.65 low was a single-venue oracle artifact: Binance priced USDe off its own thin order book during impaired settlement, so the arbitrage loop that would close the gap was severed.",
-    "It was the opposite of a backing failure — deep on-chain pools held within ~100 bps of par and primary mint-and-redeem cleared at $1 the entire time, redeeming ~$2B in 24 hours while staying overcollateralized.",
+    "It was the opposite of a backing failure: deep on-chain pools held within ~100 bps of par and primary mint-and-redeem cleared at $1 the entire time, redeeming ~$2B in 24 hours while staying overcollateralized.",
     "Collateral pricing is a system property: the same USDe was sound and catastrophically mispriced at once, depending only on which oracle a venue trusted.",
-    "Surviving is not being unscarred — confidence and supply still bled ~$8B over the following months even though the mechanism performed as designed.",
+    "Surviving is not being unscarred. Confidence and supply still bled ~$8B over the following months even though the mechanism performed as designed.",
   ],
   primaryCoinId: "usde-ethena",
   depegEventSlug: "usde-2025-10-10",
@@ -74,7 +74,7 @@ export const content: CaseStudy = {
     {
       heading: "Venue print vs. peg break",
       paragraphs: [
-        "A peg break and a venue print look similar on a single chart and behave nothing alike underneath. A genuine peg break is a backing problem: it appears across venues at once, primary redemption either halts or clears below par, and the deviation persists until reserves are restored or the asset is retired. The 2023 USDC episode is the reference case — the deviation was global and redemption was effectively paused over a weekend until the reserve shortfall was backstopped.",
+        "A peg break and a venue print look similar on a single chart and behave nothing alike underneath. A genuine peg break is a backing problem: it appears across venues at once, primary redemption either halts or clears below par, and the deviation persists until reserves are restored or the asset is retired. The 2023 USDC episode is the reference case: the deviation was global and redemption was effectively paused over a weekend until the reserve shortfall was backstopped.",
         "October 2025 was the inverse on every axis. The deviation was local to one order book; the deepest pools stayed within about a percent of par; and Ethena's primary mint-and-redeem channel cleared at a dollar the entire time, absorbing billions in outflows. A holder who could reach primary redemption or a deep venue never faced a 35-cent loss; only accounts marked against the distressed local index did.",
         "Pharos encodes exactly this separation. PegScore reads price stability across the venues a coin actually trades on, and DEWS is built to flag sustained, structural deviation rather than a single-venue spike that mean-reverts within hours. Treating the $0.65 tick as a peg break would overstate the event; treating it as nothing would understate a real, if exogenous, stress on holders who used USDe as exchange collateral.",
       ],
@@ -83,8 +83,8 @@ export const content: CaseStudy = {
       heading: "How the delta-neutral design held",
       paragraphs: [
         "The deleveraging that caused the chaos elsewhere was, mechanically, favorable to Ethena's backing. As spot crypto fell, the short perpetual hedges that offset the BTC and ETH collateral moved into profit, which cushions rather than erodes the dollar value of the position. This is the structural difference from an undercollateralized algorithmic design, where a falling market and a falling token reinforce each other into a death spiral.",
-        "The redemption record is the cleaner proof. The protocol reported roughly $2 billion redeemed within about 24 hours while primary redemption kept clearing at par, and it did not need to unwind basis positions to honor that flow because a large share of backing already sat in liquid stablecoins. Independent attestors reported the book stayed modestly overcollateralized throughout, on the order of $66 million, rather than tipping into a shortfall. The bleed did not stop at the event window: USDe's market value fell from roughly $14.7 billion on the eve of the crash toward about $6 billion over the following two months — on the order of $8 billion in net outflows — as capital rotated into overcollateralized alternatives, a sustained confidence drain rather than a single-day shock.",
-        "The genuine exposure the delta-neutral model carries is venue and counterparty risk on the hedge, and auto-deleveraging is its sharpest edge. When an exchange's insurance fund is exhausted, it can force-close profitable positions — which can include Ethena's protective shorts — leaving the corresponding spot temporarily unhedged. The mitigant is that hedges can be re-established and profit-and-loss realized to restore neutrality, and that backing is spread across multiple venues and custodians rather than concentrated on one exchange.",
+        "The redemption record is the cleaner proof. The protocol reported roughly $2 billion redeemed within about 24 hours while primary redemption kept clearing at par, and it did not need to unwind basis positions to honor that flow because a large share of backing already sat in liquid stablecoins. Independent attestors reported the book stayed modestly overcollateralized throughout, on the order of $66 million, rather than tipping into a shortfall. The bleed did not stop at the event window: USDe's market value fell from roughly $14.7 billion on the eve of the crash toward about $6 billion over the following two months (on the order of $8 billion in net outflows) as capital rotated into overcollateralized alternatives, a sustained confidence drain rather than a single-day shock.",
+        "The genuine exposure the delta-neutral model carries is venue and counterparty risk on the hedge, and auto-deleveraging is its sharpest edge. When an exchange's insurance fund is exhausted, it can force-close profitable positions, which can include Ethena's protective shorts, leaving the corresponding spot temporarily unhedged. The mitigant is that hedges can be re-established and profit-and-loss realized to restore neutrality, and that backing is spread across multiple venues and custodians rather than concentrated on one exchange.",
       ],
     },
     {
@@ -92,7 +92,7 @@ export const content: CaseStudy = {
       paragraphs: [
         "The first lesson is to read deviation by venue and by liquidity depth, never off a single screen. The headline number that circulated was the worst tick on the thinnest book; the price that mattered for solvency was where primary redemption and the deepest pools cleared. A pricing source that references only its own order book will manufacture artifacts under stress.",
         "The second is that collateral pricing is a system property, not a token property. The same USDe was perfectly sound and catastrophically mispriced at the same instant depending on which oracle a counterparty trusted. Money markets that referenced deep liquidity or a hardcoded peg avoided liquidations entirely; the venue that referenced its own book did not. When a stablecoin is accepted as margin, the oracle design of every venue that accepts it becomes part of that coin's risk surface.",
-        "The third is that surviving an event is not the same as being unscarred by it. USDe held its backing and its peg where it counted, yet confidence and supply fell materially in the following weeks. For a synthetic dollar whose stability rests on funding markets and exchange relationships, perception-driven outflows are a live risk even when the mechanism performs exactly as designed — which is why the durable signals to track are the mechanism's behavior and its venue dependencies rather than a single day's recovery.",
+        "The third is that surviving an event is not the same as being unscarred by it. USDe held its backing and its peg where it counted, yet confidence and supply fell materially in the following weeks. For a synthetic dollar whose stability rests on funding markets and exchange relationships, perception-driven outflows are a live risk even when the mechanism performs exactly as designed, which is why the durable signals to track are the mechanism's behavior and its venue dependencies rather than a single day's recovery.",
       ],
     },
   ],
@@ -101,14 +101,14 @@ export const content: CaseStudy = {
       kind: "peg-deviation",
       coinId: "usde-ethena",
       caption:
-        "USDe peg deviation around 10 October 2025 — the ~$0.65 low was a Binance-only print; the asset held near par on deep venues and recovered within hours.",
+        "USDe peg deviation around 10 October 2025. The ~$0.65 low was a Binance-only print; the asset held near par on deep venues and recovered within hours.",
     },
   ],
   watchpoints: [
-    "Whether venues that accept USDe as margin collateral price it off deep external liquidity rather than their own order book — single-venue index design is the recurring failure surface.",
+    "Whether venues that accept USDe as margin collateral price it off deep external liquidity rather than their own order book; single-venue index design is the recurring failure surface.",
     "Health of the primary mint-and-redeem channel during stress: par redemption clearing without unwinding basis positions is the real solvency signal, not the worst exchange tick.",
     "Hedge concentration and auto-deleveraging risk across the centralized venues holding Ethena's short perpetuals, and how quickly neutrality is re-established after a forced close.",
-    "Supply and confidence trajectory after a shock — outflows can persist even when collateral and peg held, because a synthetic dollar's stability is partly reflexive.",
+    "Supply and confidence trajectory after a shock: outflows can persist even when collateral and peg held, because a synthetic dollar's stability is partly reflexive.",
   ],
   crossLinks: [
     {
@@ -130,27 +130,27 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "Binance — Resolution of USDE, BNSOL, and WBETH Price Depeg and Risk Control Enhancements",
+      label: "Binance: Resolution of USDE, BNSOL, and WBETH Price Depeg and Risk Control Enhancements",
       href: "https://www.binance.com/en/support/announcement/detail/0989d6c7f32545bfb019e3249eaabc3f",
     },
     {
-      label: "CoinDesk — No, Ethena's USDe Didn't De-peg During Friday's Crash (Guy Young statement)",
+      label: "CoinDesk: No, Ethena's USDe Didn't De-peg During Friday's Crash (Guy Young statement)",
       href: "https://www.coindesk.com/markets/2025/10/13/no-ethena-s-usde-didn-t-de-peg",
     },
     {
-      label: "Cointelegraph — Ethena founder says USDe depeg due to Binance oracle issue",
+      label: "Cointelegraph: Ethena founder says USDe depeg due to Binance oracle issue",
       href: "https://cointelegraph.com/news/usde-depeg-oracle-issues-ethena-founder",
     },
     {
-      label: "Ethena — USDe transparency dashboard (live collateral and attestations)",
+      label: "Ethena: USDe transparency dashboard (live collateral and attestations)",
       href: "https://app.ethena.fi/dashboards/transparency",
     },
     {
-      label: "Ethena documentation — protocol mechanism and risk",
+      label: "Ethena documentation: protocol mechanism and risk",
       href: "https://docs.ethena.fi/",
     },
   ],
   metaDescription:
-    "How USDe printed ~$0.65 on Binance in the 10 October 2025 crash — a venue oracle artifact, not a backing failure. Delta-neutral backing and redemption held.",
+    "How USDe printed ~$0.65 on Binance in the 10 October 2025 crash: a venue oracle artifact, not a backing failure. Delta-neutral backing and redemption held.",
   datePublished: "2026-05-23",
 };

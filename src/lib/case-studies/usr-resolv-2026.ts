@@ -13,7 +13,7 @@ export const content: CaseStudy = {
   takeaways: [
     "Minting authority, not hedge design, was the failure point: a single EOA could complete mints with no oracle check, no per-transaction amount limit, and no supply cap.",
     "On 22 March 2026 ~80M unbacked USR were minted against six figures of real collateral and sold for ~$25M of ETH; USR fell below $0.80 within minutes and printed as low as ~$0.025.",
-    "A sound delta-neutral book and real-time reserve attestation protect the value of issued supply — they say nothing about whether tokens can be issued without assets behind them.",
+    "A sound delta-neutral book and real-time reserve attestation protect the value of issued supply; they say nothing about whether tokens can be issued without assets behind them.",
     "Burns and an allowlist trimmed the net loss toward ~$34M, but the arithmetic was fixed once the supply existed; USR was left ~55% collateralized and frozen on 27 April 2026.",
   ],
   primaryCoinId: "usr-resolv",
@@ -135,27 +135,27 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "The Block — USR depegs after attacker mints 80M unbacked tokens",
+      label: "The Block: USR depegs after attacker mints 80M unbacked tokens",
       href: "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million",
     },
     {
-      label: "CoinDesk — Resolv stablecoin drops 70% after attacker extracts $25M in ETH",
+      label: "CoinDesk: Resolv stablecoin drops 70% after attacker extracts $25M in ETH",
       href: "https://www.coindesk.com/markets/2026/03/23/resolv-stablecoin-drops-70-after-usd80-million-exploit-after-attacker-mints-usr",
     },
     {
-      label: "Cointelegraph — Resolv says no assets lost as DeFi partners respond to USR depeg",
+      label: "Cointelegraph: Resolv says no assets lost as DeFi partners respond to USR depeg",
       href: "https://cointelegraph.com/news/resolv-says-no-assets-lost-as-defi-partners-respond-to-usr-depeg",
     },
     {
-      label: "Blockaid — How a compromised key minted $80M in USR",
+      label: "Blockaid: How a compromised key minted $80M in USR",
       href: "https://blockaid.io/blog/how-a-compromised-key-minted-80m-in-resolvs-usr-stablecoin-and-triggered-a-depeg",
     },
     {
-      label: "Cryptonews — Resolv Labs burns hacked USR as exploit losses hit $34M",
+      label: "Cryptonews: Resolv Labs burns hacked USR as exploit losses hit $34M",
       href: "https://cryptonews.net/news/security/32662430/",
     },
   ],
   metaDescription:
-    "USR collapsed in March 2026 when one privileged key minted ~80M unbacked tokens, cratering it to ~$0.098 — a minting-authority failure, not a hedge failure.",
+    "USR collapsed in March 2026 when one privileged key minted ~80M unbacked tokens, cratering it to ~$0.098: a minting-authority failure, not a hedge failure.",
   datePublished: "2026-05-23",
 };
