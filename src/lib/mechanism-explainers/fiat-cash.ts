@@ -11,14 +11,17 @@ export const content: ArchetypeContent = {
   ],
   howItWorks: [
     {
+      id: "user-wires-usd",
       title: "User wires USD",
       body: "A KYC-verified customer wires dollars to the issuer's bank account or its Mint partner. Retail users usually access the token through an exchange instead; that secondary access is why the asset feels 'always at $1' even though only the primary market actually redeems.",
     },
     {
+      id: "issuer-holds-reserves",
       title: "Issuer holds reserves",
       body: "Cash sits in a Tier 1 mix (bank deposits, overnight Treasury repos, short-duration T-Bills) at named custodians (BNY Mellon for USDC, DBS and Standard Chartered for USDG), attested monthly or quarterly by an external auditor.",
     },
     {
+      id: "token-minted-on-chain",
       title: "Token minted on-chain",
       body: "The issuer mints token 1:1 onto a target chain (natively on multiple chains, or via canonical or third-party bridges). Primary-market holders redeem for cash through the issuer at T+0 or T+1; secondary-market traders rely on arbitrageurs to push price back to par.",
     },
@@ -65,14 +68,17 @@ export const content: ArchetypeContent = {
   ],
   variations: [
     {
+      id: "pure-cash-repo",
       title: "Pure cash and repo",
       body: "The Circle Reserve Fund model: majority short Treasuries, a smaller overnight-repo sleeve, and a thin bank-cash float, all in a regulated money-market wrapper. USDC, EURC, USDG, RLUSD, and FDUSD sit close to this template.",
     },
     {
+      id: "mixed-cash-bitcoin-gold-loans",
       title: "Mixed cash with Bitcoin, gold, and loans",
       body: "USDT's reserve mix includes Bitcoin, gold, and secured loans alongside Treasuries. The peg has held, but the Collateral Quality column on the Safety Score reflects heavier-tail exposure than the pure cash-and-repo profile.",
     },
     {
+      id: "mica-non-usd-yield-wrappers",
       title: "MiCA-regulated non-USD pegs and yield-passthrough wrappers",
       body: "EURC, EURI, and EURCV are fiat-cash mechanisms wrapped in a different regulatory shell with ECB-rate dynamics. sUSDC, sUSDT, and equivalents are fiat-cash plus a savings vault; the redemption rail is still the issuer's primary market.",
     },

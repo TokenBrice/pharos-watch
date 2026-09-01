@@ -68,6 +68,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "For much of its life USDD's published reserves included a large Bitcoin position: on the order of 12,000 BTC, worth roughly $726 million in August 2024. That holding was the reserve's single largest asset that had nothing to do with the TRON ecosystem: an exogenous, deeply liquid store of value that could hold its worth even if TRX did not.",
@@ -76,6 +77,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "reflexive-collateral",
       heading: "Reflexive collateral",
       paragraphs: [
         "The structural problem is that the remaining backing was correlated to the issuer. TRX is TRON's native token; its value rises and falls with confidence in the same ecosystem that issues USDD. A stablecoin backed mostly by its sponsor's own asset has no independent floor; in the precise scenario where you would most want hard backing, a loss of faith in the ecosystem, the collateral is falling for the very same reason.",
@@ -84,6 +86,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "transparency-problem",
       heading: "The transparency problem",
       paragraphs: [
         "The substance of the change was compounded by how it was made. A roughly $726 million reserve decision surfaced through an individual's social-media account, not through the entity nominally responsible for the reserve, and without a governance vote on record. For a project that markets itself around a decentralized reserve, that gap between the decentralization claim and the observed control was the sharper story.",
@@ -92,6 +95,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "usdd-2-0-redesign",
       heading: "The USDD 2.0 redesign",
       paragraphs: [
         "In January 2025 USDD relaunched as USDD 2.0, a materially different system. The earlier model leaned on TRON DAO subsidies and hybrid-algorithmic mechanics; the new one is an overcollateralized Collateralized Debt Position protocol. Users lock TRX, sTRX, or USDT into publicly verifiable vaults and mint USDD against them under enforced minimum collateral ratios, with undercollateralized vaults cleared through permissionless liquidations and a Peg Stability Module offering 1:1 swaps against USDT and USDC.",
@@ -100,6 +104,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Collateral quality is about independence, not just amount. A high headline collateralization ratio means little if the collateral is the issuer's own ecosystem token, because that backing falls in the same crisis it is meant to cushion. Removing the one uncorrelated reserve asset can weaken a stablecoin structurally even when its price never moves. That is why this is read as a wounding, not a death.",

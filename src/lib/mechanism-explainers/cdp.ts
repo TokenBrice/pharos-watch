@@ -11,14 +11,17 @@ export const content: ArchetypeContent = {
   ],
   howItWorks: [
     {
+      id: "crypto-collateral",
       title: "Crypto collateral",
       body: "A user deposits ETH, an LST, BTC, or, where allowed, another stablecoin into a vault. The minimum collateral ratio (110% for Liquity v1, 130-175% for most Maker vaults, system-set in Aave V3 for GHO) sets the safety buffer.",
     },
     {
+      id: "vault-psm",
       title: "Vault / PSM",
       body: "The user mints stablecoin against the collateral up to the protocol's debt ceiling. Most systems also operate a PSM that swaps an upstream stablecoin (typically USDC) for the new stablecoin at 1:1. That second path tightens the peg in calm markets and imports upstream-stablecoin risk in stressed markets.",
     },
     {
+      id: "stablecoin-minted-or-liquidated",
       title: "Stablecoin minted (or position liquidated)",
       body: "If collateral breaches the minimum ratio, the vault is liquidated. Maker auctions it; Liquity and BOLD absorb it through a Stability Pool, an on-chain pool that buys the seized collateral at a discount using deposited stablecoin; crvUSD soft-arbitrages it through LLAMMA, an internal AMM that continuously rebalances collateral across price bands rather than liquidating at a single threshold. On-chain redemption also lets holders swap the stablecoin for $1 of collateral from the riskiest vault, functioning as a hard price floor.",
     },
@@ -69,14 +72,17 @@ export const content: ArchetypeContent = {
   ],
   variations: [
     {
+      id: "pure-eth-only-cdp",
       title: "Pure ETH-only CDP",
       body: "LUSD and BOLD. The simplest, most legible exposure: ETH price falls, redemption activity rises, peg defended at $1 of ETH per token. Immutable code, no governance, no PSM. Single-asset concentration is the price of that simplicity.",
     },
     {
+      id: "multi-collateral-cdp-psm",
       title: "Multi-collateral CDP with PSM",
       body: "DAI/USDS and GHO. The most common modern shape; PSMs make the peg feel tighter in calm markets and import upstream-stablecoin risk during stress. Pharos tracks each PSM coupling as a `mechanism` dependency edge.",
     },
     {
+      id: "soft-liquidation-savings-wrappers",
       title: "Soft-liquidation and savings wrappers",
       body: "crvUSD's LLAMMA continuously arbitrages collateral between paired bands rather than liquidating at one threshold: collateral attrition during chop instead of a one-shot liquidation in a crash. sDAI, sUSDS, and scrvUSD wrap the underlying CDP stablecoin in a savings vault that routes protocol revenue to holders.",
     },

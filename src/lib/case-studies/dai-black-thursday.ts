@@ -75,6 +75,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "black-thursday-2020",
       heading: "Black Thursday 2020",
       paragraphs: [
         "Maker's design assumes that when a vault falls below its minimum collateralization ratio, anyone can liquidate it: the collateral is auctioned for Dai, the debt is repaid, and a penalty is applied. The assumption that quietly underpins all of this is that the auction will attract competing bids. On 2020-03-12 that assumption broke.",
@@ -83,6 +84,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "how-the-cdp-design-recovered",
       heading: "How the CDP design recovered",
       paragraphs: [
         "Crucially, Maker did not need an emergency shutdown. The protocol already had a recapitalization path written into its mechanism: when collateral auctions fail to cover a vault's debt and the Dai buffer is empty, the system triggers a debt auction. Debt auctions mint new MKR and sell it for Dai, deliberately diluting MKR holders: the governance token absorbs losses that the stablecoin holders should not.",
@@ -91,6 +93,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "2023-the-psm-and-the-usdc-dependency",
       heading: "2023: the PSM and the USDC dependency",
       paragraphs: [
         "By 2023 Dai looked very different. To hold the peg tightly and scale supply, Maker had introduced the Peg Stability Module, a contract that swaps Dai for USDC (and similar stablecoins) one-to-one. The PSM made the peg far more robust in normal conditions, but it also meant that a large share of Dai's backing was simply USDC. By the time SVB failed, USDC made up roughly half of the collateral behind circulating Dai, over $2 billion sitting in the PSM.",
@@ -99,6 +102,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Two failure modes, one mechanism. In 2020 the danger was endogenous: the liquidation system that defines a CDP could not execute under congestion. In 2023 the danger was inherited: the PSM collateral chosen to stabilize the peg carried someone else's reserve risk. A CDP stablecoin has to be evaluated on both axes at once: can it liquidate, and what is actually behind the peg-stability rails.",

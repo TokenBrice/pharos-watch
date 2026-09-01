@@ -74,6 +74,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "FDUSD is a fiat-backed stablecoin: each token is meant to be redeemable 1:1 against a reserve of short-dated US Treasury bills, overnight deposits, and cash, held by First Digital Trust, a Hong Kong custodian. The reserve sits below the token, and the entity that holds and attests to that reserve is the custodian. FDUSD's design depends on trusting that custodian to keep the backing intact and to honor redemptions on demand.",
@@ -81,6 +82,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "custodian-counterparty-risk",
       heading: "Custodian counterparty risk",
       paragraphs: [
         "The accusation was not, strictly, about FDUSD. It grew out of a dispute over TrueUSD: Sun alleged that First Digital Trust had moved roughly $456 million of TUSD-linked custodial funds to a private entity in Dubai without authorization. FDUSD's reserve (attested near $2.05 billion in T-bills and overnight term deposits against about $2.04 billion issued, using a March 1, 2025 record date) was a separate pool. But FDUSD and TUSD shared the same trustee, so a question about how that trustee handled one client's money read, to the market, as a question about its solvency overall.",
@@ -88,6 +90,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "reflexive-run-a-tweet-versus-a-bank-failure",
       heading: "The reflexive run: a tweet versus a bank failure",
       paragraphs: [
         "This is the cleanest counterexample to USDC's March 2023 depeg. There, a bank holding part of the reserve actually failed: about $3.3 billion of Circle's cash was genuinely trapped at Silicon Valley Bank, and the discount priced a real, measurable impairment. Here, no reserve was impaired. The depeg priced a claim, amplified by the reach of the person making it and by the structure of where FDUSD trades.",
@@ -95,6 +98,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "recovery-via-redemption",
       heading: "Recovery via redemption",
       paragraphs: [
         "What closed the gap was not a policy backstop or an external rescue but the redemption mechanism working as designed. First Digital reaffirmed that FDUSD was fully backed, pointed to its T-bill reserve report, and, crucially, kept burning tokens against dollars. On-chain data showed roughly $26 million of FDUSD redeemed in the days after the post, each redemption a demonstration that par was available to anyone who wanted it.",
@@ -102,6 +106,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Custodian counterparty trust is a distinct risk from reserve quality. A coin can hold conservative, fully-sized T-bill reserves and still depeg if the market doubts the institution that holds them, especially when that institution backs other tokens whose own affairs are contested. Monitoring should track not just what backs a coin but who custodies it, what else that custodian is responsible for, and how exposed the issuer is to a single trustee.",

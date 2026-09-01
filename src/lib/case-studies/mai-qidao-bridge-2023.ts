@@ -63,6 +63,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "MAI is a CDP stablecoin issued by QiDao: a borrower locks crypto collateral in a vault and mints MAI against it, overcollateralized, and recovers the collateral by repaying. The system is supposed to be fully backed because every MAI in circulation traces to a vault holding more value than it minted. That invariant held chain by chain, as long as the collateral in each chain's vaults remained worth what the oracle said.",
@@ -71,6 +72,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "bridge-dependency-as-a-depeg-vector",
       heading: "Bridge dependency as a depeg vector",
       paragraphs: [
         "The instructive part of this case is the causal chain. MAI did not depeg because crypto collateral prices fell, the usual way a CDP stablecoin breaks. It depegged because a bridge failed. The collateral inside the Fantom vaults was destroyed not by a market move but by the disappearance of the bridge that held the assets backing those collateral tokens. The CDP mechanism behaved correctly given its inputs; the inputs were corrupted by infrastructure QiDao did not run.",
@@ -79,6 +81,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "cross-chain-bad-debt",
       heading: "Cross-chain bad debt",
       paragraphs: [
         "Bad debt confined to one chain is a contained accounting problem; bad debt smeared across a dozen is a slow-motion one. The MAI minted on Fantom had been bridged elsewhere, so the chains that imported it were holding tokens with no collateral standing behind them, and there was no single ledger where the shortfall sat to be cleared in one motion. QiDao had to find the unbacked supply and retire it chain by chain.",
@@ -87,6 +90,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "deprecation-pressure",
       heading: "Deprecation pressure",
       paragraphs: [
         "A sustained sub-peg is not only a problem for holders; it is a problem for every lending market that listed the coin as collateral or as a borrowable asset. MAI had been integrated into Aave v3 across several chains. As the deviation persisted and deepened, the risk managers who parameterize those markets moved to limit the protocol's exposure rather than wait for a recovery that kept not arriving.",
@@ -95,6 +99,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "First, a CDP stablecoin's collateral risk is not only price risk. Anything that can corrupt the value of vault collateral (a bridge that holds the underlying assets, a wrapper that can be drained, an oracle that can be manipulated) is a depeg vector, even when crypto prices never move against the borrower. For MAI, the failure was an infrastructure dependency, not a market one, and a collateral-price lens alone would have missed it entirely.",

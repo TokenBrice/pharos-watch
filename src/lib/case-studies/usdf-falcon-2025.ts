@@ -84,6 +84,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "USDf is an overcollateralized synthetic dollar. Falcon mints it 1:1 against stablecoins, or at dynamic ratios against volatile collateral like BTC, ETH, SOL, and select altcoins, and runs market-neutral strategies on that backing to generate the yield paid to the staked sUSDf wrapper. By July 2025 it had grown into a top-15 stablecoin with roughly $550 million in circulation.",
@@ -91,6 +92,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "opacity-discount",
       heading: "The opacity discount",
       paragraphs: [
         "The phrase that fits this episode is an opacity discount: the gap between what a token's backing is worth and what holders will pay when they cannot independently see or quickly reach it. USDf's discount had two ingredients, and neither was a mechanism flaw.",
@@ -99,6 +101,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-transparency-is-a-peg-input",
       heading: "Why transparency is a peg input",
       paragraphs: [
         "The instinctive read is that transparency is a governance virtue: nice to have, orthogonal to whether the peg holds. USDf shows it is a peg input in the literal sense. The same backing, at the same overcollateralization ratio, trades at a different price depending on whether holders can verify and reach it. A 116% claim that cannot be independently checked, redeemed against on demand, or seen on-chain is worth less than backing a holder can confirm, and that difference shows up directly in the secondary-market price.",
@@ -107,6 +110,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "recovery-and-the-audit",
       heading: "Recovery and the audit",
       paragraphs: [
         "USDf recovered to near par within days, with no collateral loss realized, consistent with a confidence shock rather than an insolvency. The mechanism had never stopped working; the panic simply ran ahead of the backing's visibility and then eased. But recovering the price did not retire the underlying critique, which was about what holders could see, not what existed.",
@@ -115,6 +119,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "The first lesson is that a synthetic dollar can be solvent and still be wounded. USDf's collateral was real, its hedges were market-neutral, and its overcollateralization claim later survived an audit, yet it still printed to $0.887 because holders could not verify or quickly reach the backing while the panic was live. Solvency is necessary for a peg; it is not sufficient when the proof of solvency is slower than the doubt.",

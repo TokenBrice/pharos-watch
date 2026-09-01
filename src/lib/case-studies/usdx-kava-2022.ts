@@ -73,6 +73,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "Kava Mint let users lock crypto collateral and draw USDX against it as overcollateralized debt, with liquidations retiring positions that fell below their required ratio. The accepted-collateral set included TerraUSD (UST) alongside KAVA, ATOM, wrapped Bitcoin, and Ether. That whitelist was a governance decision, and it is where the failure originated.",
@@ -81,6 +82,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "collateral-whitelist-as-an-attack-surface",
       heading: "The collateral whitelist as an attack surface",
       paragraphs: [
         "A CDP stablecoin does not choose its risk by mechanism alone; it chooses it by what it accepts as collateral. Every asset added to the whitelist is a potential failure path, because the stablecoin inherits that asset's worst-case behavior the moment it is locked against new debt. Adding UST imported the full fragility of an uncollateralized algorithmic peg into a system whose whole pitch was that it was not algorithmic.",
@@ -89,6 +91,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-overcollateralization-didnt-save-it",
       heading: "Why overcollateralization didn't save it",
       paragraphs: [
         "Overcollateralization protects against ordinary price moves: if collateral drifts down a few tens of percent, liquidations close positions while there is still surplus value to cover the debt. It is a buffer sized for volatility, not for a collateral asset going to near-zero faster than the system can unwind it.",
@@ -97,6 +100,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "slow-fade",
       heading: "The slow fade",
       paragraphs: [
         "Acute depegs usually resolve one of two ways: the coin recovers to par, or it is wound down. USDX did neither cleanly. The toxic collateral was removed and the contagion stopped, but the peg never came back, and the token was not retired. It settled into a long half-life as a discounted legacy claim.",
@@ -105,6 +109,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "One toxic collateral asset can be terminal even under nominal overcollateralization. The mechanism's soundness is bounded by the worst name on the whitelist, so collateral hygiene (what is accepted, in what size, and how correlated it is) is the real safety control, not the headline collateral ratio.",

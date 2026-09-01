@@ -77,6 +77,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "Stream Finance issued xUSD as a yield-bearing synthetic dollar. Deposits funded positions run by an external fund manager, and the returns were packaged into an on-chain token that could be lent, borrowed against, and re-deposited across DeFi. The hedge and the trading book lived off-chain, behind a single manager, with no multisig over the capital, no published custody arrangement, and no live attestation tying circulating xUSD to verifiable backing.",
@@ -85,6 +86,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "re-hypothecation-map",
       heading: "The re-hypothecation map",
       paragraphs: [
         "The mechanism that turned one fund's loss into a market-wide event was leverage built on top of leverage. xUSD was not simply deposited and held; on Morpho, Euler, and Silo, curators created isolated vaults where users supplied real stablecoins (USDC, USDT, USD1) against xUSD collateral, and the borrowed stablecoins were looped back into more xUSD positions. Each turn of the loop manufactured more apparent xUSD footprint without adding any real backing behind it.",
@@ -93,6 +95,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "hardcoded-oracle-trap",
       heading: "The hardcoded-oracle trap",
       paragraphs: [
         "A lending market's safety rests on one mechanism: when collateral falls below a threshold, it is liquidated and the loan is made whole before the position goes underwater. That mechanism only works if the market can see the collateral's real price. The vaults holding xUSD did not: many priced it at a hardcoded $1, a fixed peg assumption rather than a live feed reflecting traded value.",
@@ -101,6 +104,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "contagion-through-curated-lending-markets",
       heading: "Contagion through curated lending markets",
       paragraphs: [
         "The contagion ran along the curator model. Permissionless lending venues like Morpho and Euler let third-party risk managers spin up isolated vaults and allocate depositor capital to high-yield strategies. That allocation decision (which collateral to accept, at what loan-to-value, against which price feed) is where the risk was concentrated, and several curators had routed large sums into Stream-linked exposure. TelosC carried the single largest position near $124M; MEV Capital and Re7 Labs held tens of millions each.",
@@ -109,6 +113,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Composability is a risk multiplier, not just a feature. A token that is re-hypothecated as collateral across protocols becomes a transmission line: one issuer's failure radiates through every market that accepted it, and recursive loops inflate the footprint far beyond the real backing. Assess a synthetic dollar not only on its own mechanism but on how widely and how deeply it has been pledged, looped, and re-pledged elsewhere.",

@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
@@ -105,6 +105,20 @@ describe("editorial corpus policy gate", () => {
     expect(new Set(EDITORIAL_SURFACE_REGISTRY.map((surface) => surface.extractor))).toEqual(
       new Set(["json-fields", "structured-data", "markdown-body"]),
     );
+  });
+
+  it("rejects prose fields as configured record identity", () => {
+    for (const identityField of ["label", "heading", "title", "name", "term"]) {
+      expect(() => validateEditorialSurfaceRegistry([{
+        id: `fixture-${identityField}`,
+        register: "daily",
+        paths: ["fixture.json"],
+        extractor: "json-fields",
+        ownership: "pharos",
+        tier: "committed-corpus",
+        options: { identityFields: [identityField] },
+      }])).toThrow(/uses prose identity field/);
+    }
   });
 
   it("refuses an unregistered prose corpus instead of silently ignoring it", () => {
@@ -329,6 +343,90 @@ describe("editorial corpus policy gate", () => {
       previousBaseline: first,
     });
     expect(`${JSON.stringify(second, null, 2)}\n`).toBe(`${JSON.stringify(first, null, 2)}\n`);
+  });
+
+  it("keeps JSON records stable when prose identity candidates change", () => {
+    const surface = {
+      id: "fixture-json",
+      register: "daily",
+      paths: ["fixture.json"],
+      extractor: "json-fields",
+      ownership: "pharos",
+      tier: "committed-corpus",
+      options: { fields: ["*.note"], rootRecord: "file" },
+    } as const;
+    for (const field of ["label", "heading", "title", "name", "term"]) {
+      const source = (value: string) => JSON.stringify([{ id: "stable-record", [field]: value, note: "Supply remains stable." }]);
+      const before = extractUnitsForSurface(surface, "fixture.json", source("Before"));
+      const after = extractUnitsForSurface(surface, "fixture.json", source("After"));
+      expect(after.map((unit) => unit.record), field).toEqual(before.map((unit) => unit.record));
+      expect(before.map((unit) => unit.record)).toEqual(["fixture/id=stable-record"]);
+    }
+  });
+
+  it("keeps structured records stable when prose identity candidates change", () => {
+    const surface = {
+      id: "fixture-structured",
+      register: "daily",
+      paths: ["fixture.ts"],
+      extractor: "structured-data",
+      ownership: "pharos",
+      tier: "committed-corpus",
+      options: { fields: ["note"] },
+    } as const;
+    for (const field of ["label", "heading", "title", "name", "term"]) {
+      const source = (value: string) => `const records = [{ id: "stable-record", ${field}: "${value}", note: "Supply remains stable." }];`;
+      const before = extractUnitsForSurface(surface, "fixture.ts", source("Before"));
+      const after = extractUnitsForSurface(surface, "fixture.ts", source("After"));
+      expect(after.map((unit) => unit.record), field).toEqual(before.map((unit) => unit.record));
+      expect(before.map((unit) => unit.record)).toEqual(["fixture/id=stable-record"]);
+    }
+  });
+
+  it("keys structured roots once and metadata roots by syntactic kind", () => {
+    const structuredSurface = {
+      id: "fixture-structured",
+      register: "daily",
+      paths: ["fixture.ts"],
+      extractor: "structured-data",
+      ownership: "pharos",
+      tier: "committed-corpus",
+      options: { fields: ["description"], identityFields: ["slug"] },
+    } as const;
+    const structuredUnits = extractUnitsForSurface(
+      structuredSurface,
+      "fixture.ts",
+      'const record = { slug: "stable-slug", description: "Supply remains stable." };',
+    );
+    expect(structuredUnits.map((unit) => unit.record)).toEqual(["fixture/slug=stable-slug"]);
+
+    const metadataSurface = EDITORIAL_SURFACE_REGISTRY.find((candidate) => candidate.id === "page-metadata")!;
+    const metadataUnits = extractUnitsForSurface(metadataSurface, "src/app/fixture/page.tsx", `
+      export const metadata = { title: "Metadata title", description: "Metadata description" };
+      buildPageMetadata({ title: "Builder title", description: "Builder description" });
+      createClientFeaturePage({ title: "Client title", description: "Client description" });
+    `);
+    expect(new Set(metadataUnits.map((unit) => unit.record))).toEqual(new Set([
+      "src/app/fixture/page/metadata",
+      "src/app/fixture/page/buildPageMetadata",
+      "src/app/fixture/page/createClientFeaturePage",
+    ]));
+  });
+
+  it("keeps annotation date and kind unique within each source file", () => {
+    const directory = resolve(process.cwd(), "shared/data/annotations/coins");
+    for (const filename of readdirSync(directory).filter((candidate) => candidate.endsWith(".json"))) {
+      const records = JSON.parse(readFileSync(resolve(directory, filename), "utf8")) as Array<{
+        date?: unknown;
+        kind?: unknown;
+      }>;
+      const identities = records.map((record) => {
+        expect(typeof record.date, `${filename} annotation date`).toBe("string");
+        expect(typeof record.kind, `${filename} annotation kind`).toBe("string");
+        return `${record.date}|${record.kind}`;
+      });
+      expect(new Set(identities).size, `${filename} duplicate date|kind`).toBe(identities.length);
+    }
   });
 
   it("keeps identity labels out of the prose unit set", () => {

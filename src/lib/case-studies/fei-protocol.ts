@@ -75,6 +75,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "direct-incentive-experiment",
       heading: "The direct-incentive experiment",
       paragraphs: [
         "Fei's central claim was that a stablecoin could hold its peg without a bank account full of dollars and without locking up far more crypto collateral than the coins it issued. FEI minted along a bonding curve against ETH, and the protocol kept the ETH it received as Protocol Controlled Value, reserves owned by the protocol rather than by individual depositors who could withdraw at will.",
@@ -83,6 +84,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-it-depegged-at-birth",
       heading: "Why it depegged at birth",
       paragraphs: [
         "The genesis event raised far more than the mechanism was tuned for. A large cohort of participants had bought FEI below a dollar expecting it to converge upward, and many also wanted their ETH back. When FEI failed to snap to a dollar, those holders tried to leave at once.",
@@ -91,6 +93,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "rari-hack-and-the-end",
       heading: "The Rari hack and the end",
       paragraphs: [
         "Fei removed direct incentives in its V2 redesign in late 2021 and made FEI redeemable one-to-one against PCV, a meaningful move toward genuine backing. It then merged with Rari Capital to form Tribe DAO, binding the stablecoin's treasury and governance to Rari's Fuse lending pools.",
@@ -99,6 +102,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Reflexive incentives are fragile peg defenses. A penalty that punishes sellers does not create buyers; under stress it traps holders and can intensify the very flight it was meant to prevent. Fei demonstrated this within days of launch, before any external shock.",

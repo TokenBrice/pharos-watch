@@ -11,14 +11,17 @@ export const content: ArchetypeContent = {
   ],
   howItWorks: [
     {
+      id: "burn-governance-token",
       title: "Burn governance token",
       body: "A user burns a governance token of value `V`, and the protocol mints `V` worth of stablecoin. There is no 1:1 reserve in a custodian: the only \"backing\" is the governance-token market float, itself partly determined by the stablecoin's success. The reverse trip exists too: redeem the stablecoin for `V` of newly minted governance token. Pharos now tracks this as mint-authority and mechanism risk rather than a FreezeWatch freeze tier.",
     },
     {
+      id: "mint-burn-amo",
       title: "Mint/burn AMO",
       body: "An AMO (Algorithmic Market Operations module) is an autonomous on-chain agent that issues or retires stablecoin to nudge the price back to peg. Above $1 it lets anyone mint at $1 and sell higher; below $1 it lets anyone buy on market and redeem for $1 of governance token. The arbitrage is supposed to close the gap. There are no reserves to draw down. Every defense action expands or contracts the governance-token float.",
     },
     {
+      id: "stablecoin-minted",
       title: "Stablecoin minted (no 1:1 backing)",
       body: "Peg stability now depends on governance-token liquidity, market confidence, and arbitrageur willingness. In calm markets the loop closes. In a panic the governance token sells off, the burn-to-mint arbitrage stops being profitable (the freshly minted governance token is worth less than the stablecoin being redeemed), and the peg breaks reflexively. The DEWS supply-velocity signal frequently surfaces this contraction first.",
     },
@@ -61,14 +64,17 @@ export const content: ArchetypeContent = {
   ],
   variations: [
     {
+      id: "pure-mint-burn",
       title: "Pure mint/burn (uncollateralized)",
       body: "The canonical UST model: burn governance token, mint stablecoin, with no segregated collateral. The cleanest version of the design, and the one with the most decisive failure mode. Not a live design at scale today; UST itself survives only as a Pharos shadow asset for PSI replay.",
     },
     {
+      id: "fractional-conversion-based",
       title: "Fractional and conversion-based",
       body: "FRAX v1 paired partial collateral with an algorithmic remainder before migrating to a fully collateralized model. HBD and ZSD mint against a single protocol-native base coin under conversion rules with safety thresholds (HBD's haircut, ZSD's 400% reserve ratio). These designs limit the death-spiral surface by capping issuance rather than relying purely on arbitrage.",
     },
     {
+      id: "cdp-psm-hybrids",
       title: "CDP-plus-PSM hybrids retained under the label",
       body: "USDD 2.0 is structurally a CDP with a Peg Stability Module, close to the `cdp` archetype in mechanism, but it is classified `algorithmic` because of its depeg history and privileged mint path. FPI is a 100%-collateralized CPI tracker with seigniorage-token dilution as its algorithmic backstop. The bucket is broader than its name suggests.",
     },

@@ -16,6 +16,7 @@
   "mechanismArchetype": "cdp",
   "links": [
     {
+      "id": "website",
       "label": "Website",
       "url": "https://djed.xyz/"
     },
@@ -28,6 +29,7 @@
       "url": "https://faq.coticommunity.com/djed-and-shen/djed"
     },
     {
+      "id": "dapp",
       "label": "Dapp",
       "url": "https://djed.xyz/"
     }

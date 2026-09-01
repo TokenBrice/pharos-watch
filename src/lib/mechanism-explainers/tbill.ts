@@ -11,14 +11,17 @@ export const content: ArchetypeContent = {
   ],
   howItWorks: [
     {
+      id: "investor-cash",
       title: "Investor cash",
       body: "A KYC-verified investor, typically a Qualified Purchaser (a U.S. accreditation tier above accredited investor that requires roughly $5M+ in investments) or an accredited investor, subscribes USD through a transfer agent such as Securitize or NAV Consulting. Some funds also accept tokenized USDC and convert inside the fund.",
     },
     {
+      id: "t-bills-repos",
       title: "T-Bills + Repos",
       body: "The fund deploys cash into short-duration U.S. T-Bills, overnight reverse-repos, and a small cash buffer. The administrator publishes a daily NAV; the on-chain token records the holder list and accretes yield.",
     },
     {
+      id: "token-units",
       title: "Token units",
       body: "How the yield reaches the holder depends on the wrapper, and this archetype carries two families. NAV-accreting share classes let per-unit price drift up: USDY and OUSG appreciate at the published NAV. Par-stable tokens hold the unit at $1 and move the yield elsewhere: BENJI rebases share count daily, BUIDL mints new units, and the reserve-backed $1 tokens built on the same T-Bill collateral (USDtb, USD0, frxUSD) pass yield through a separate staked wrapper or retain it at the issuer. Roughly half the coins Pharos tracks under this archetype are par-stable rather than NAV-accreting; the detail page reads the coin’s NAV flag. Redemption is bank-wire or stablecoin-out, settled at NAV for fund shares and at par for the rest.",
     },
@@ -65,14 +68,17 @@ export const content: ArchetypeContent = {
   ],
   variations: [
     {
+      id: "tokenized-money-market-funds",
       title: "Tokenized money-market funds with stable $1 NAV",
       body: "BENJI and similar share tokens operate as $1-stable funds where yield is paid out by rebasing share count. UX looks fiat-cash; the legal wrapper is a fund.",
     },
     {
+      id: "nav-accruing-fund-shares",
       title: "NAV-accreting fund shares",
       body: "USDY, OUSG, and USYC let per-unit price drift up over time. Pharos flags these as NAV tokens and shows \"NAV\" instead of bps on peg-deviation tables: price drift is signal, not depeg.",
     },
     {
+      id: "hybrid-yield-bearing-stablecoins",
       title: "Hybrid yield-bearing stablecoins",
       body: "USDtb (Ethena) and the M0-built family use T-Bill reserves to back a token that does target $1. The exit rail differs from a pure NAV token; the reserve mechanics are the same.",
     },

@@ -11,14 +11,17 @@ export const content: ArchetypeContent = {
   ],
   howItWorks: [
     {
+      id: "buyer-funds-issuer-buys-metal",
       title: "Buyer funds, issuer buys metal",
       body: "A KYC-verified buyer sends fiat or stablecoins to the issuer, which purchases metal on a wholesale market. Retail holders almost always arrive through a secondary venue instead; as with fiat-cash, only the primary market touches the metal.",
     },
     {
+      id: "allocated-metal-vault",
       title: "Metal is allocated in a named vault",
       body: "The issuer takes delivery into a vault operated by a specialist custodian (Brink's, Loomis, an LBMA-accredited Swiss or Singapore facility, a DMCC vault in Dubai) and allocates specific bars, identified by serial number, refiner, and weight, to the token's reserve. 'Allocated' is the load-bearing word: allocated metal is identified property held for the holders' benefit, while unallocated metal is an unsecured claim on the issuer's own inventory.",
     },
     {
+      id: "token-minted-as-metal-title",
       title: "Token minted as title to that metal",
       body: "Tokens are minted against the allocated weight, typically one token per troy ounce of gold or per ounce of silver, sometimes per gram. Holders can redeem for physical delivery under the issuer's terms, or sell into secondary liquidity. The published bar list, refreshed alongside a periodic inventory attestation, is what lets a holder tie a token to specific metal.",
     },
@@ -73,18 +76,22 @@ export const content: ArchetypeContent = {
   ],
   variations: [
     {
+      id: "allocated-versus-unallocated",
       title: "Allocated versus unallocated",
       body: "The sharpest split in the archetype. Allocated structures name specific bars and hold them for the holders' benefit; unallocated structures give a claim on a quantity of metal from the issuer's pool. Pharos treats the difference as a title question, not a disclosure question. The absence of segregation language is itself the finding.",
     },
     {
+      id: "per-ounce-per-gram-silver",
       title: "Per-ounce, per-gram, and silver",
       body: "Gold tokens are usually denominated per troy ounce (XAUT, PAXG, XAUm) or per gram (KAU, CGO). Silver tokens (XAGm, KAG) share the mechanism but have very different storage economics, because the same dollar of reserve is roughly eighty times the physical volume.",
     },
     {
+      id: "etf-wrappers",
       title: "ETF wrappers are a different mechanism",
       body: "A token whose reserve is a share of a physically-backed commodity ETF is a fund-share claim on the trust, not title to allocated metal. The holder's counterparty is the fund and its transfer agent, redemption follows the fund's rules, and Pharos classifies those under the tokenized-fund archetypes rather than here.",
     },
     {
+      id: "metal-collateralized-dollar-tokens",
       title: "Metal-collateralized dollar tokens",
       body: "A dollar-pegged token that happens to hold gold as collateral is not a commodity claim: its reference price is $1, its peg mechanism is overcollateralization or issuer redemption, and its metal exposure is a reserve-quality fact. Those assets stay in the dollar archetypes with their gold recorded as allocated-commodity reserve.",
     },

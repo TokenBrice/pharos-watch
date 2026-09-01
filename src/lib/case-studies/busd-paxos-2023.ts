@@ -83,6 +83,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "BUSD was a plain fiat-backed stablecoin issued by Paxos Trust Company, a New York limited-purpose trust company under NYDFS supervision. Each token was redeemable one-for-one against a reserve of short-dated US Treasuries and overnight reverse repo, segregated and held in bankruptcy-remote accounts. As of January 31, 2023, that reserve stood at roughly $16 billion. There was no structural fragility in the backing: no algorithmic stabilizer, no volatile collateral, no thin liquidity base.",
@@ -91,6 +92,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-a-solvent-coin-still-died",
       heading: "Why a solvent coin still died",
       paragraphs: [
         "Every other failure in this archive is a market failure: a peg that could not hold because the mechanism, the collateral, or the liquidity gave way under stress. BUSD inverts the pattern. The mechanism was sound, the collateral was cash and Treasuries, and the peg never broke. What ended the coin was an exercise of authority: a securities regulator and a state banking regulator acting on supervisory and legal grounds unrelated to whether the token was money-good.",
@@ -99,6 +101,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "orderly-wind-down",
       heading: "The orderly wind-down",
       paragraphs: [
         "Because the backing was real, the death looked nothing like a depeg. Paxos publicly committed to keep BUSD fully supported and redeemable through at least February 2024, with holders able to take US dollars or convert into Pax Dollar (USDP), Paxos's other regulated stablecoin. The NYDFS framed its own role as ensuring redemptions proceeded in an orderly fashion under enhanced compliance protocols. No holder who wanted out at par was prevented from getting out at par.",
@@ -107,6 +110,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "successor-shuffle",
       heading: "The successor shuffle",
       paragraphs: [
         "BUSD's demand was never broadly organic; it was concentrated on Binance, where the exchange's trading pairs, fee structure, and promotion had made it the house stablecoin. Once issuance was frozen, that concentration determined how the float would disperse. Binance announced a gradual exit, ended BUSD support on December 15, 2023, and from December 31 auto-converted remaining balances to First Digital USD (FDUSD) at 1:1.",
@@ -115,6 +119,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Redeemability is not survival. A stablecoin can be fully reserved, perfectly solvent, and redeemable at par and still be retired by an order it cannot appeal at the protocol level. Risk frameworks that grade only backing quality and peg stability will miss this entirely; issuer jurisdiction, charter, and the regulator's demonstrated willingness to act are first-order inputs, not footnotes.",

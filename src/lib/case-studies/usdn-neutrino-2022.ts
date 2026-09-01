@@ -79,6 +79,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "Neutrino USD was an algorithmic, crypto-collateralized stablecoin on the Waves blockchain, pegged to the dollar but backed by WAVES rather than cash or Treasuries. Minting one USDN required locking a dollar's worth of WAVES in Neutrino's contracts; redeeming USDN burned it to release WAVES. The arrangement borrowed the language of over-collateralization (the protocol cited a backing ratio above 2), but the collateral was a single reflexive token whose value moved with the same sentiment that drove demand for the stablecoin.",
@@ -87,6 +88,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "waves-reflexivity-loop",
       heading: "The WAVES reflexivity loop",
       paragraphs: [
         "The structural flaw was single-asset reflexive backing. Because USDN was minted against WAVES and WAVES alone, the stablecoin's solvency was a direct function of one volatile token's market capitalization. When WAVES rose, the protocol could mint more USDN against the same locked tokens and the system looked robustly over-collateralized; when WAVES fell, the value standing behind every USDN fell with it, in lockstep.",
@@ -95,6 +97,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "vires-leverage-circle",
       heading: "The Vires leverage circle",
       paragraphs: [
         "What turned a fragile design into an acute crisis was the alleged leverage loop on Vires.finance, the largest lending market on Waves. As described by 0xHamZ on 31 March, the cycle ran: deposit USDN as collateral on Vires and borrow USDC and USDT against it; use the borrowed stablecoins to buy WAVES on exchanges such as Binance; stake that WAVES through Neutrino to mint fresh USDN; deposit the new USDN back on Vires and borrow again. Each turn of the loop pushed WAVES higher and printed more USDN, with the whole edifice financed by borrowed dollars rather than organic demand.",
@@ -103,6 +106,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "slow-death-and-the-xtn-rebrand",
       heading: "The slow death and the XTN rebrand",
       paragraphs: [
         "Unlike Terra, USDN did not vaporize in a single week. After the April break it bounced into the high-$0.80s and low-$0.90s without ever durably reclaiming a dollar, then broke again in May 2022 as the Terra collapse drained confidence across every reflexive design at once. Each recovery restored a price without restoring the trust the peg actually required, and the gap between the two only widened as WAVES kept sliding through the year.",
@@ -111,6 +115,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Collateral correlated with the run is not collateral. A stablecoin backed by a single reflexive token inherits that token's volatility directly into its solvency, so a headline over-collateralization ratio computed at the top of a rally can evaporate on the way down. The buffer has to be uncorrelated with the stress event to be a buffer at all; WAVES backing USDN was a second bet on the same outcome.",

@@ -1,4 +1,4 @@
-import type { EditorialExtractorKind } from "./editorial-extractors";
+import { PROSE_IDENTITY_FIELDS, type EditorialExtractorKind } from "./editorial-extractors";
 
 export type EditorialSurfaceOwnership = "pharos" | "quoted" | "mixed";
 export type EditorialSurfaceTier = "committed-corpus" | "historical-exempt";
@@ -115,7 +115,11 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
     extractor: "json-fields",
     ownership: "pharos",
     tier: "committed-corpus",
-    options: { fields: ["collateral", "pegMechanism", "links.*.label"], rootRecord: "id" },
+    options: {
+      fields: ["collateral", "pegMechanism", "links.*.label"],
+      identityFields: ["id", "url"],
+      rootRecord: "id",
+    },
   },
   {
     id: "pre-launch-records",
@@ -174,7 +178,7 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
     tier: "committed-corpus",
     options: {
       fields: ["*.label", "*.note"],
-      identityFields: ["date", "kind", "label"],
+      identityFields: ["date", "kind"],
       rootRecord: "file",
     },
   },
@@ -199,7 +203,7 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
         "reserves.*.name",
         "custodyProfile.providers.*.name",
       ],
-      identityFields: ["id", "key", "slug", "name", "label", "date", "chain", "component", "branch"],
+      identityFields: ["id", "slug", "url", "sourceKey", "coinId", "date", "chain", "address"],
       excludedFields: {
         "mintAuthority.controls.*.label":
           "Identity key: upgradeability.controlRef may resolve this label; changing it can break referential integrity.",
@@ -258,7 +262,7 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
         "caption",
         "metaDescription",
       ],
-      identityFields: ["slug", "dateISO", "heading"],
+      identityFields: ["id", "slug", "dateISO", "coinId"],
     },
   },
   {
@@ -271,7 +275,7 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
     options: {
       fields: ["term", "definition"],
       topLevelNames: ["GLOSSARY_LEAD"],
-      identityFields: ["id", "term"],
+      identityFields: ["id"],
     },
   },
   {
@@ -283,7 +287,7 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
     tier: "committed-corpus",
     options: {
       fields: ["headline", "subtitle", "lead", "title", "body", "whatToWatch", "label", "note", "obituary"],
-      identityFields: ["archetype", "name", "coinId", "title"],
+      identityFields: ["id", "archetype", "coinId"],
     },
   },
   {
@@ -426,7 +430,7 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
     tier: "committed-corpus",
     options: {
       fields: ["title", "body", "description", "question", "answer", "ariaLabel", "lead", "sources", "jsx-text"],
-      identityFields: ["id", "title", "name"],
+      identityFields: ["id", "href"],
       functionNames: [
         "PipelineSources",
         "AboutFeatureRow",
@@ -544,6 +548,7 @@ export function validateEditorialSurfaceRegistry(
   knownRegisters?: ReadonlySet<string>,
 ): void {
   const ids = new Set<string>();
+  const proseIdentityFields = new Set<string>(PROSE_IDENTITY_FIELDS);
   for (const surface of registry) {
     if (!surface.id || ids.has(surface.id)) throw new Error(`[editorial-style] Duplicate or empty surface id: ${surface.id}`);
     ids.add(surface.id);
@@ -552,5 +557,12 @@ export function validateEditorialSurfaceRegistry(
       throw new Error(`[editorial-style] Surface "${surface.id}" references unknown register "${surface.register}".`);
     }
     if (surface.paths.length === 0) throw new Error(`[editorial-style] Surface "${surface.id}" has no source paths.`);
+    const prohibitedIdentityFields = (surface.options?.identityFields ?? [])
+      .filter((field) => proseIdentityFields.has(field));
+    if (prohibitedIdentityFields.length > 0) {
+      throw new Error(
+        `[editorial-style] Surface "${surface.id}" uses prose identity field(s): ${prohibitedIdentityFields.join(", ")}`,
+      );
+    }
   }
 }

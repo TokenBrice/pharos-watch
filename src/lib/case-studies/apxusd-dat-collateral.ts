@@ -80,6 +80,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-apxusd-actually-holds",
       heading: "What apxUSD actually holds",
       paragraphs: [
         "apxUSD's reserve is reported through Apyx's Accountable dashboard as a collateral mix, and the live split is lopsided. Around 62% sits in STRC, the preferred equity of Strategy (formerly MicroStrategy), with a negligible fraction in Strive's SATA preferred and the rest, about 38%, in cash, short-term U.S. Treasury Bills, and USDC held for liquidity. Redemptions settle in USDC, and under stress the protocol sells preferred-share positions into USDC to meet them. A Protocol-Owned-Liquidity buffer is meant to smooth the secondary market during dislocations.",
@@ -87,6 +88,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-a-real-world-asset-moved-with-crypto",
       heading: "Why a real-world asset moved with crypto",
       paragraphs: [
         "A stablecoin's reserve does its job when it holds value precisely in the moments the peg is tested. T-Bill-backed dollars work because the collateral is, to a first approximation, uncorrelated with the crypto markets where the token trades: when crypto sells off, the bills are still worth par. apxUSD inverts that property. Its dominant leg is a Bitcoin-correlated preferred share, so a crypto drawdown weakens the reserve at the same instant redemption pressure rises. The collateral and the stress share a common factor, and a common factor is exactly what a stablecoin reserve is supposed to avoid.",
@@ -95,6 +97,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "who-can-actually-arbitrage-the-peg",
       heading: "Who can actually arbitrage the peg",
       paragraphs: [
         "A healthy dollar holds par because arbitrage is cheap and symmetric: below $1, someone redeems for a dollar of value; above $1, someone mints and sells. apxUSD weakens both legs. Minting is an attested-minter flow: an OpenZeppelin AccessManager gates a Gnosis Safe (3-of-6) and a backend-signed MinterV0 contract, with an externally-owned account as admin. Supply is created by a small set of controllers on signed orders, not by open arbitrage. Redemption is whitelisted: only approved participants mint and redeem against the protocol directly. Retail holders do not have that door.",
@@ -103,6 +106,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "how-pharos-saw-it",
       heading: "How Pharos saw it",
       paragraphs: [
         "The signal was structural before it was a price. Pharos scores apxUSD's collateral quality as RWA with a single-entity governance posture, flags the STRC and SATA legs as high-risk in the live reserve map, and routes the asset through the RWA-credit-fund mechanism rather than treating it as a cash-backed dollar. Those classifications are why a token that spent its first months near par still carried structural caution rather than a clean bill of health.",
@@ -110,6 +114,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "The asset-class label is not the risk profile. 'RWA-backed' tells you what the reserve is made of; it does not tell you whether the reserve holds value when the peg is tested. The question that matters is correlation: a dollar backed by an instrument that falls with crypto carries the same factor risk as the market it trades in, and it will weaken exactly when holders most want par. A buffer sized below the volatile leg cannot change that: it can delay the discount, not prevent it.",

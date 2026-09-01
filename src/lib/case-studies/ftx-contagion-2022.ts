@@ -87,6 +87,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened-an-exchange-not-a-stablecoin-failed",
       heading: "What happened: an exchange, not a stablecoin, failed",
       paragraphs: [
         "FTX was the second-largest crypto exchange and Alameda Research was its affiliated trading firm and one of the market's dominant liquidity providers. The trigger was a 2 November 2022 CoinDesk report on Alameda's balance sheet: of roughly $14.6B in assets, a large block (about $5.8B) was FTX's own FTT token, an illiquid asset Alameda itself could not sell at quoted prices without crashing it. The disclosure exposed that FTX's market-making arm was effectively capitalized by paper it minted.",
@@ -95,6 +96,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "contagion-by-proximity-to-the-counterparty",
       heading: "Contagion by proximity to the counterparty",
       paragraphs: [
         "Because Alameda was a top-tier market maker and lender, its forced deleveraging hit whatever it touched: positions it held, collateral it had pledged, and liquidity pools it traded against. As the firm scrambled for cash, on-chain observers and exchanges saw stablecoin selling that pushed individual pegs off the dollar, not because those pegs were unsound, but because a very large, distressed seller was unwinding into them over a thin weekend.",
@@ -103,6 +105,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "husd-the-casualty-that-didnt-recover",
       heading: "HUSD: the casualty that didn't recover",
       paragraphs: [
         "HUSD was a fiat-backed dollar tied to the Huobi exchange ecosystem. Its decline began before FTX's final days: after Justin Sun took a senior position at Huobi, the exchange moved to delist HUSD and shift trading volume into Sun's own stablecoin, USDD. With its home venue actively winding it down and helping users swap into USDT, HUSD lost the one thing a custodial dollar depends on: a credible redemption path.",
@@ -111,6 +114,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "wobbles-that-held-usdd-and-usdt",
       heading: "The wobbles that held: USDD and USDT",
       paragraphs: [
         "USDD was the more genuinely strained survivor. Around 9-10 November it slid to roughly $0.96 on several exchanges, which Justin Sun publicly attributed to Alameda selling USDD to fund FTX. At a market cap near $725M, USDD's collateral looked ample on paper but was largely staked and illiquid; counting only liquid reserves, its effective coverage was much tighter. The Tron DAO Reserve announced plans to buy up to $1B of USDT to reinforce backing, and the peg recovered, though it had clearly absorbed real damage.",
@@ -119,6 +123,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "The peg that breaks is not always the weakest design but the one nearest the failing counterparty. FTX impaired no stablecoin's reserves, yet it killed HUSD and dented USDD and USDT, because contagion travelled through Alameda's positions and the venues it traded on. Counterparty and venue proximity belong in a peg's risk picture alongside collateral quality.",

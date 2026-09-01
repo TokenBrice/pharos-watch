@@ -58,11 +58,13 @@ export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
 ];
 
 export const PRINCIPLES_AI_POLICY = {
+  id: "ai-policy",
   title: "On AI-authored content.",
   body: "Narrative summaries on coin pages and the daily digest are drafted by a large language model against the same data the dashboard renders. Each panel names the model and facts date; a reviewer is named only after approving that exact text. Static adoption, funding, address, TVL, supply, and market-cap claims require a displayed source, date, chain scope, and denominator. Address counts are not presented as users without a dedicated methodology, and project financing is not compared with token supply unless the quantities are economically comparable. The numeric outputs, including scores, peg deviations, supply, liquidity, and freezes, are computed by the worker pipeline, not by the model.",
 } as const;
 
 export const PRINCIPLES_CORRECTIONS = {
+  id: "corrections",
   title: "On corrections.",
   body: "Pharos publishes data that other people will cite, which means it has to be wrong in public when it is wrong. If a number is off, a classification is wrong, or a methodology choice does not survive scrutiny, the correction path is the same as for every Pharos data point: a GitHub issue, the on-page feedback link, or a message via Telegram. Verified corrections are applied and dated.",
 } as const;

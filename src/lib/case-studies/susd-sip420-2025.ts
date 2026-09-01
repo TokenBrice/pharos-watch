@@ -83,6 +83,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "sUSD is minted against staked SNX, which makes it a collateralized debt position in the same family as Dai or crvUSD: value comes from over-collateralized backing, not from a bank reserve or a delta-neutral hedge. Through 2025 nothing went wrong with that backing in the conventional sense. There was no exploit, no oracle failure, and no insolvency event in which collateral fell short of the debt it secured. The coin simply stopped trading at a dollar and stayed there.",
@@ -90,6 +91,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "sip-420-and-the-broken-repeg-incentive",
       heading: "SIP-420 and the broken repeg incentive",
       paragraphs: [
         "Every CDP stablecoin needs a force that pushes the price back up when it trades below peg. In sUSD's original design that force was the staker. Because each staker personally owed a share of the outstanding sUSD, a price below a dollar was an opportunity: buy sUSD cheap on the market, burn it against your own debt, and close your position for less than a dollar of value per unit retired. Thousands of self-interested stakers running that trade was the repeg engine. It was reflexive, decentralized, and required no treasury.",
@@ -98,6 +100,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "oversupply-spiral",
       heading: "The oversupply spiral",
       paragraphs: [
         "With the repeg buyer gone and minting cheaper, sUSD accumulated faster than the market wanted to hold it. The clearest on-chain tell was pool composition: sUSD came to make up the large majority (at points well over 75%, and on some pairs far higher) of the Curve liquidity meant to keep it near a dollar. A stablecoin dominating its own pools is the visible shape of one-way selling: holders rotating out, with the automated market maker absorbing the imbalance and the price grinding lower as it does.",
@@ -105,6 +108,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "road-back-lockups-and-the-staking-ratchet",
       heading: "The road back: lockups and the staking ratchet",
       paragraphs: [
         "Synthetix chose not to reverse SIP-420. Rather than re-raising the collateral ratio to resurrect the old per-staker arbitrage, it set out to manufacture demand and throttle supply directly. The first lever was the 420 Pool itself: locking sUSD for a year against SNX rewards (with rewards vesting over a further three months) pulled float out of circulation and out of the liquidity pools that had been pricing the discount.",
@@ -113,6 +117,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "how-it-ended-sip-423-and-the-wind-down",
       heading: "How it ended: SIP-423 and the wind-down",
       paragraphs: [
         "The demand engineering bought time but not a peg. Lockups, the staking ratchet, and fee-funded buybacks narrowed the discount in stretches, yet sUSD never reclaimed a durable dollar; it kept changing hands well below par on a float that refused either to recover or to disappear. Synthetix's own framing shifted from repair to triage: founder Kain Warwick described the remaining tail as functionally insolvent without exchange revenue to backstop it, and the treasury had already absorbed roughly a third of the supply over the prior year.",
@@ -120,6 +125,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Governance is part of the peg. A CDP stablecoin's stability rests not only on its collateral but on the incentive that pulls it back to par, and that incentive can be legislated away by a vote even when the backing is untouched. When assessing a crypto-collateralized dollar, the question is not only \"what backs it\" but \"who is structurally motivated to buy it below a dollar, and could that motivation be changed by governance?\" SIP-420 answered that question the hard way.",

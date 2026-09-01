@@ -73,6 +73,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "failure-it-was-built-against",
       heading: "The failure it was built against",
       paragraphs: [
         "Liquity was conceived as a response to two distinct failures. The first was Black Thursday in March 2020, when a market-wide crash overwhelmed MakerDAO's liquidation auctions and let some vaults be seized for zero-bid Dai. The episode demonstrated that a CDP system is only as safe as the speed of its liquidations. The second, broader failure was dependency itself: every dollar stablecoin that leaned on off-chain reserves inherited the fragility of the institutions that held them.",
@@ -81,6 +82,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "redemption-floor-and-the-1-00-1-10-corridor",
       heading: "The redemption floor and the $1.00-$1.10 corridor",
       paragraphs: [
         "LUSD does not target an exact dollar; it trades inside a corridor enforced at both ends by arbitrage. The floor is the load-bearing one. At any time, anyone can redeem LUSD against the protocol for a dollar's worth of the underlying ETH collateral. If LUSD trades below $1.00, an arbitrageur buys the discounted token and redeems it for a full dollar of ETH, pocketing the gap and removing LUSD from supply until the price climbs back. This is an enforced floor, not an assumed one: it runs at the contract level and needs no banking hours.",
@@ -89,6 +91,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "march-2023-contagion-inverted",
       heading: "March 2023: contagion inverted",
       paragraphs: [
         "When SVB failed, the contagion that swept the fiat-backed cluster ran straight past LUSD. USDC fell to about $0.87, Dai to roughly $0.85 through its USDC-backed PSM, and FRAX to about $0.88 on its hardcoded-dollar collateral leg. LUSD's only downward move was a brief dip to roughly $0.985, shallow enough to be read as a momentary liquidity opening rather than a depeg, and immediately closed by the redemption floor.",
@@ -97,6 +100,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "resilience-by-subtraction-and-its-costs",
       heading: "Resilience by subtraction and its costs",
       paragraphs: [
         "Reading the premium as an unalloyed win misses the design's tradeoffs. The upward bias is structural: the hard ETH-redemption floor defends the downside far more aggressively than the softer minting ceiling defends the upside, so in a flight to safety LUSD will tend to overshoot par rather than hold it. A premium is a feature for holders during a crisis, but it is also a real cost for anyone who needs to acquire LUSD at exactly that moment, and it is why LUSD spends much of its life slightly above a dollar rather than on it.",
@@ -105,6 +109,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Dependencies are the depeg vector, not collateral quality alone. The fiat-backed coins that broke in March 2023 were not undercollateralized; they were dependent on a banking channel that closed for a weekend. LUSD held because it had nothing equivalent to lose. Monitoring should weight where a coin's redemption path runs, and how exposed that path is to actors a holder cannot see, at least as heavily as the headline quality of the backing.",

@@ -159,6 +159,14 @@ export const StablecoinFlagsSchema = z
 
 export const StablecoinLinkSchema = z
   .object({
+    /**
+     * editorial-selector identity for links whose url is not unique within the
+     * coin; immutable after publication.
+     */
+    id: z
+      .string()
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Expected a kebab-case link id")
+      .optional(),
     label: z.string(),
     url: HttpUrlSchema,
     /**

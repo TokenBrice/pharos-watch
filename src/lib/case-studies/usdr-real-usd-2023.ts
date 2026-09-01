@@ -65,6 +65,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "USDR was built around a simple but dangerous maturity stack. The token itself was redeemable and tradable on-chain, where holders can exit in seconds. Part of the backing was liquid stablecoins, but a meaningful portion sat in tokenized real estate, an asset class whose liquidation process runs through brokers, buyers, financing, legal transfer, and settlement.",
@@ -72,6 +73,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "rwa-backing-is-not-rwa-liquidity",
       heading: "RWA backing is not RWA liquidity",
       paragraphs: [
         "The usual defense of real-world-asset stablecoins is that the collateral is real. USDR shows why that is not enough. Real estate may have appraised value, rental income, and legal ownership documentation, but none of those properties make it a same-day liquidity source. A stablecoin run does not wait for a listing process.",
@@ -79,6 +81,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-the-peg-could-not-be-defended",
       heading: "Why the peg could not be defended",
       paragraphs: [
         "A peg defense requires a buyer of last resort or a redemption path at par. USDR had neither once DAI was exhausted. Arbitrageurs could not buy discounted USDR and confidently redeem for $1 of liquid assets, because the remaining backing was not available in liquid form. The price therefore reflected the time, uncertainty, and haircut required to liquidate real estate.",
@@ -86,6 +89,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "The key RWA question is not just 'does the asset exist?' It is 'can this asset become redemption liquidity before holders finish running?' For stablecoins, time-to-cash is collateral quality. A reserve that is valuable over months can still be worthless for defending a peg over hours.",

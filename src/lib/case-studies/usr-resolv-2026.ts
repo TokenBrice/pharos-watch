@@ -65,6 +65,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "USR's issuance flow used a two-step swap: a request to mint, then a privileged completion that released the minted tokens. The role that completed those requests was held by a single externally owned account rather than a multisig or guarded module, and the path it executed had no oracle to value the deposit, no per-transaction amount check, and no maximum-mint ceiling. Whatever ratio the completion was instructed to honor, it honored.",
@@ -73,6 +74,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-delta-neutral-backing-did-not-matter",
       heading: "Why delta-neutral backing did not matter",
       paragraphs: [
         "A synthetic-delta-neutral dollar earns trust by making its collateral predictable: long spot, short perp, net exposure near zero, with a junior tranche to absorb funding and liquidation noise. Resolv had all of that, plus a real-time reserve attestation. Those properties govern whether the assets behind each legitimately issued token hold their value. They say nothing about whether tokens can be issued without assets behind them.",
@@ -81,6 +83,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "single-key-attack-surface",
       heading: "The single-key attack surface",
       paragraphs: [
         "The decisive weakness was governance plumbing, not financial engineering. A role with authority to release minted tokens was held by one externally owned account, and the code path it drove lacked the checks that would have made the authority survivable: an oracle to sanity-check deposit value against tokens issued, a per-call amount limit, and a hard cap on supply growth per interval. Any one of those would have bounded the damage; together their absence turned a single credential into an unlimited mint.",
@@ -89,6 +92,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Treat minting authority as the primary attack surface. For any issuer, the question is not only what backs the token but who, or what, can create it, under what limits, and behind how many independent approvals. A single-EOA mint role with no oracle, amount check, or supply cap is a maximum-severity finding regardless of how strong the reserve looks.",

@@ -63,6 +63,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-usyc-is",
       heading: "What USYC is",
       paragraphs: [
         "USYC represents shares of the Hashnote International Short Duration Yield Fund. The fund invests in short-term U.S. Treasury bills and performs repo and reverse-repo activity; the token's price is calculated from the fund's NAV divided by the total USYC outstanding. In other words, the asset is designed to accrete yield rather than sit mechanically at $1.",
@@ -70,6 +71,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "january-2025-wound",
       heading: "The January 2025 wound",
       paragraphs: [
         "The January 2025 Usual episode was not a USYC portfolio failure. Usual changed the early-redemption terms for USD0++, a locked claim built on top of USD0, and the market repriced that claim below par. But USD0's reserve stack included tokenized Treasury exposure such as USYC, so the episode pulled USYC into a wider lesson about how DeFi treats NAV assets.",
@@ -77,6 +79,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "nav-is-not-an-oracle",
       heading: "NAV is not an oracle",
       paragraphs: [
         "A fund NAV is a valuation process; a DeFi oracle is a liquidation input. NAV can be perfectly reasonable for subscriptions and redemptions while still being too slow, gated, or inaccessible for a lending market that needs to liquidate collateral now. Conversely, a secondary-market price can be executable but too thin to represent the fund's actual asset value.",
@@ -84,6 +87,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "The lesson is not that tokenized Treasuries are unsafe. USYC is backed by high-quality short-duration assets and became more institutionally integrated after Circle acquired Hashnote. The lesson is that asset quality does not eliminate market-structure risk. A permissioned fund share can be excellent collateral for the right user and fragile collateral for an ungated protocol that assumes instant liquidity.",

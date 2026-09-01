@@ -84,6 +84,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "EURT was Tether's euro-denominated stablecoin, structurally a sibling of USDT: a fiat-backed token redeemable one-for-one against a reserve, with its peg referenced to one euro rather than one dollar. It launched in 2016, expanded across more chains in 2021, and at its high point carried circulation in the low hundreds of millions on Pharos, with secondary market summaries placing the broader peak above $500M, modest by USDT standards but enough to lead the thin euro-stablecoin segment for a stretch.",
@@ -92,6 +93,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "micas-e-money-token-regime-and-what-authorization-requires",
       heading: "MiCA's e-money-token regime and what authorization requires",
       paragraphs: [
         "The EU's Markets in Crypto-Assets regulation (Regulation (EU) 2023/1114) entered into force in 2023 but phased in its substance. The provisions governing stablecoins (Title III for asset-referenced tokens and Title IV for e-money tokens) became applicable on 30 June 2024, ahead of the broader service-provider rules that followed on 30 December 2024.",
@@ -100,6 +102,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "retirement-not-a-depeg",
       heading: "Retirement, not a depeg",
       paragraphs: [
         "It is worth being precise about how EURT died, because it is unlike every price-driven case in this archive. The token did not trade away from one euro and fail to recover. Its reserve was not impaired, its redemption was not gated by a banking shock, and no reflexive mechanism unwound. The peg was healthy at the moment the coin was discontinued.",
@@ -108,6 +111,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "compliant-successors",
       heading: "The compliant successors",
       paragraphs: [
         "The euro float EURT gave up did not vanish; it migrated to issuers that did the regulatory work. Circle announced MiCA compliance on 1 July 2024, one day after the EMT rules applied, issuing EURC as an e-money token through Circle Mint Europe SAS under an electronic-money-institution authorization from France's ACPR. EURC went on to become the largest MiCA-compliant euro stablecoin, capturing much of the segment as non-compliant tokens left.",
@@ -116,6 +120,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Jurisdiction is a terminal risk for a non-dollar peg, independent of solvency. A euro, sterling, or other non-USD stablecoin lives or dies by whether its issuer is authorized in the jurisdiction that owns the currency. EURT was fully backed and on-peg and still could not survive its home market once MiCA defined who may issue a euro token. Reserve quality answers a different question from market access.",

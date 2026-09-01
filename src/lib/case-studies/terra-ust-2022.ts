@@ -83,6 +83,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "UST was a seigniorage-style algorithmic stablecoin: no reserve account stood behind it, only an arbitrage relationship with LUNA. Holders could always burn one UST to mint a dollar's worth of LUNA, and vice versa, so when UST drifted off par the protocol expected traders to close the gap for profit. That worked while LUNA was large and liquid relative to UST.",
@@ -92,6 +93,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "mint-burn-doom-loop",
       heading: "The mint-burn doom loop",
       paragraphs: [
         "The convertibility that kept UST at a dollar in calm markets is the same mechanism that destroyed it under stress. Burning UST minted a fixed dollar value of LUNA regardless of LUNA's price, so as LUNA fell, each redemption required minting more and more tokens. Supply that started in the hundreds of millions ran into the trillions within days.",
@@ -100,6 +102,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-anchors-yield-mattered",
       heading: "Why Anchor's yield mattered",
       paragraphs: [
         "Demand for UST was not organic; it was largely manufactured by Anchor's advertised yield of roughly 20%. By spring 2022, on the order of three-quarters of all circulating UST was deposited in Anchor chasing that rate, which concentrated the entire stablecoin's float in a single venue with a single exit.",
@@ -108,6 +111,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "contagion",
       heading: "Contagion",
       paragraphs: [
         "Terra was deeply wired into the rest of crypto, so the collapse did not stay contained. As redemptions spiked on 2022-05-12, even the largest fiat-backed stablecoin wobbled: USDT briefly traded near $0.95 on some venues before market makers arbitraged it back to par. The deviation was shallow and short-lived, but it showed how a single algorithmic failure can stress otherwise unrelated, reserve-backed assets.",
@@ -116,6 +120,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "An uncollateralized peg defended only by a sister token has no floor. The same convertibility that holds the line in calm markets becomes a dilution engine in a run, and once the backing token's market value falls below the stablecoin's float, the design cannot make every holder whole. Reflexive backing should be read as a fragility, not a feature.",

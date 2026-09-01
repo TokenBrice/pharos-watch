@@ -10,6 +10,13 @@ import type {
 export type EditorialExtractorKind = "json-fields" | "structured-data" | "markdown-body";
 export type EditorialUnitOwnership = "pharos" | "quoted" | "user";
 
+export const PROSE_IDENTITY_FIELDS = ["label", "heading", "title", "name", "term"] as const;
+const PROSE_IDENTITY_FIELD_SET = new Set<string>(PROSE_IDENTITY_FIELDS);
+
+function stableIdentityFields(fields: readonly string[]): readonly string[] {
+  return fields.filter((field) => !PROSE_IDENTITY_FIELD_SET.has(field));
+}
+
 export interface ExtractedEditorialUnit {
   readonly record: string;
   readonly field: string;
@@ -312,11 +319,11 @@ function collectJsonStringNodes(source: string, root: unknown): JsonStringNode[]
 function primitiveIdentity(value: unknown, fields: readonly string[]): string | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const object = value as Record<string, unknown>;
-  const explicit = fields
+  const explicit = stableIdentityFields(fields)
     .map((field) => [field, object[field]] as const)
     .filter(([, candidate]) => typeof candidate === "string" && candidate.length > 0);
   if (explicit.length > 0) return explicit.map(([field, candidate]) => `${field}=${candidate}`).join("|");
-  const fallbackFields = ["id", "slug", "key", "name", "label", "date", "dateISO", "type", "kind", "chain", "component", "branch"];
+  const fallbackFields = ["id", "slug", "key", "date", "dateISO", "type", "kind", "chain", "component", "branch"];
   const fallback = fallbackFields
     .map((field) => [field, object[field]] as const)
     .find(([, candidate]) => typeof candidate === "string" && candidate.length > 0);
@@ -459,12 +466,12 @@ function structuredRecord(
   options: EditorialExtractorOptions,
   filePath: string,
 ): string {
-  const fields = options.identityFields ?? [];
+  const fields = stableIdentityFields(options.identityFields ?? []);
   const values = fields
     .map((field) => [field, staticTsProperty(object, field)] as const)
     .filter(([, value]) => value !== null && value.length > 0);
   if (values.length > 0) return `${inherited}/${values.map(([field, value]) => `${field}=${value}`).join("|")}`;
-  const fallbackFields = ["id", "slug", "version", "archetype", "dateISO", "heading", "title", "name", "coinId"];
+  const fallbackFields = ["id", "slug", "version", "archetype", "dateISO", "coinId"];
   const fallback = fallbackFields
     .map((field) => [field, staticTsProperty(object, field)] as const)
     .find(([, value]) => value !== null && value.length > 0);
@@ -718,29 +725,35 @@ function collectFunctionEditorialUnits(
   visit(functionNode, []);
 }
 
-function metadataObjectLiterals(sourceFile: ts.SourceFile): ts.ObjectLiteralExpression[] {
-  const roots: ts.ObjectLiteralExpression[] = [];
-  const addObjectArgument = (call: ts.CallExpression): void => {
+type MetadataRootKind = "metadata" | "buildPageMetadata" | "createClientFeaturePage";
+
+interface MetadataObjectLiteral {
+  readonly object: ts.ObjectLiteralExpression;
+  readonly kind: MetadataRootKind;
+}
+
+function metadataObjectLiterals(sourceFile: ts.SourceFile): MetadataObjectLiteral[] {
+  const roots = new Map<ts.ObjectLiteralExpression, MetadataRootKind>();
+  const addObjectArgument = (call: ts.CallExpression, kind: MetadataRootKind): void => {
     const argument = call.arguments.find((candidate) => ts.isObjectLiteralExpression(candidate));
-    if (argument) roots.push(argument);
+    if (argument) roots.set(argument, kind);
   };
   const visit = (node: ts.Node): void => {
     if (ts.isVariableDeclaration(node) && propertyName(node.name) === "metadata") {
       const initializer = node.initializer && unwrapTsExpression(node.initializer);
-      if (initializer && ts.isObjectLiteralExpression(initializer)) roots.push(initializer);
-      if (initializer && ts.isCallExpression(initializer)) addObjectArgument(initializer);
+      if (initializer && ts.isObjectLiteralExpression(initializer)) roots.set(initializer, "metadata");
     }
     if (
       ts.isCallExpression(node)
       && ts.isIdentifier(node.expression)
       && (node.expression.text === "buildPageMetadata" || node.expression.text === "createClientFeaturePage")
     ) {
-      addObjectArgument(node);
+      addObjectArgument(node, node.expression.text);
     }
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  return [...new Set(roots)];
+  return [...roots].map(([object, kind]) => ({ object, kind }));
 }
 
 function topLevelNamedInitializers(sourceFile: ts.SourceFile, names: readonly string[]): Array<[string, ts.Expression]> {
@@ -767,19 +780,28 @@ export function extractStructuredEditorialUnits(input: EditorialExtractionInput)
   const units: ExtractedEditorialUnit[] = [];
   const fallbackRecord = normalizedFileRecord(input.path);
   const staticInitializers = options.metadataOnly ? topLevelTsInitializers(sourceFile) : undefined;
-  const roots: ts.Expression[] = options.metadataOnly
-    ? metadataObjectLiterals(sourceFile)
+  const roots: Array<{ expression: ts.Expression; record: string; keyRoot: boolean }> = options.metadataOnly
+    ? metadataObjectLiterals(sourceFile).map(({ object, kind }) => ({
+        expression: object,
+        record: `${fallbackRecord}/${kind}`,
+        keyRoot: false,
+      }))
     : sourceFile.statements
         .filter(ts.isVariableStatement)
         .flatMap((statement) => statement.declarationList.declarations)
         .map((declaration) => declaration.initializer)
-        .filter((initializer): initializer is ts.Expression => initializer !== undefined);
+        .filter((initializer): initializer is ts.Expression => initializer !== undefined)
+        .map((expression) => ({ expression, record: fallbackRecord, keyRoot: true }));
   for (const root of roots) {
-    const unwrapped = resolveStaticTsExpression(root, staticInitializers);
-    const record = ts.isObjectLiteralExpression(unwrapped)
-      ? structuredRecord(unwrapped, fallbackRecord, options, input.path)
-      : fallbackRecord;
-    collectStructuredValue(root, record, "", [], input, options, units, staticInitializers);
+    const unwrapped = resolveStaticTsExpression(root.expression, staticInitializers);
+    const record = root.keyRoot && ts.isObjectLiteralExpression(unwrapped)
+      ? structuredRecord(unwrapped, root.record, options, input.path)
+      : root.record;
+    if (ts.isObjectLiteralExpression(unwrapped)) {
+      collectStructuredObject(unwrapped, record, [], input, options, units, staticInitializers);
+    } else {
+      collectStructuredValue(root.expression, record, "", [], input, options, units, staticInitializers);
+    }
   }
   for (const [name, initializer] of topLevelNamedInitializers(sourceFile, options.topLevelNames ?? [])) {
     collectStructuredValue(initializer, fallbackRecord, name, [name], input, options, units);

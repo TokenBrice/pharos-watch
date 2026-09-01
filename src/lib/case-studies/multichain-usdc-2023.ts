@@ -70,6 +70,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "Multichain (formerly Anyswap) was a cross-chain router. To put USDC on Fantom, you locked native USDC in Multichain's wallet on a source chain and the bridge minted a wrapped representation, USDC.m, on Fantom. The wrapper was supposed to be redeemable one-for-one for the locked deposit, and as long as that redemption was credible, USDC.m traded at a dollar and circulated through Fantom DeFi as if it were the real thing.",
@@ -78,6 +79,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "wrapped-is-not-native-the-backing-lives-on-the-bridge",
       heading: "Wrapped is not native: the backing lives on the bridge",
       paragraphs: [
         "The crucial fact is that USDC.m and USDC were never the same asset, even though they shared a ticker and a price chart. Native USDC is a fiat-backed token whose dollar reserve sits with Circle. USDC.m was a derivative of that token: a Fantom-chain claim whose backing was a pile of real USDC locked inside a bridge wallet. The wrapper inherited none of Circle's reserve guarantees; it inherited the bridge's custody risk.",
@@ -86,6 +88,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "single-point-of-failure-decentralization",
       heading: "Single-point-of-failure decentralization",
       paragraphs: [
         "Multichain marketed itself as decentralized, secured by multi-party computation so that no single party could move the locked funds. The post-mortem showed that was a fiction. The MPC node servers all ran under founder Zhaojun's personal cloud account, and no other team member could log in. The cryptographic ceremony was distributed; the servers running it were not.",
@@ -94,6 +97,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-native-usdc-was-untouched",
       heading: "Why native USDC was untouched",
       paragraphs: [
         "Through the entire episode, real USDC held its dollar peg. Circle's reserve of cash and short-dated Treasuries was never involved: the assets that disappeared were USDC deposits that holders had voluntarily locked into a third party's bridge. The failure was downstream of Circle entirely, in infrastructure Circle neither built nor controlled.",
@@ -102,6 +106,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "A wrapped stablecoin is not the stablecoin it names. It is a claim on a bridge, and it carries the bridge's custody, key-management, and operator risk on top of whatever the native issuer brings. Track the wrapper as its own exposure: who holds the locked backing, on what infrastructure, and what happens to your claim if that infrastructure goes dark.",

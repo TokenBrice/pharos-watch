@@ -79,6 +79,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "USDC is a fiat-backed stablecoin: each token is meant to be redeemable 1:1 against a reserve of short-dated Treasuries, overnight repo, and cash. The cash leg is the part that lives inside the conventional banking system, spread across a small set of commercial banks. Silicon Valley Bank was one of those banks.",
@@ -86,6 +87,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-a-fully-reserved-coin-still-broke",
       heading: "Why a fully-reserved coin still broke",
       paragraphs: [
         "The lesson here is not that USDC was undercollateralized. It was that even an over-reserved, transparently attested stablecoin is only as liquid as the weakest link in its redemption path. For a fiat-backed coin, that path runs through commercial banks that keep limited weekend hours and can themselves fail.",
@@ -94,6 +96,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "contagion-through-defi",
       heading: "Contagion through DeFi",
       paragraphs: [
         "USDC is not just a token people hold; it is collateral and plumbing for much of on-chain finance. Any protocol that treated USDC as a hard dollar inherited the depeg directly. The cleanest channel was MakerDAO's Peg Stability Module, which let users swap USDC for Dai 1:1. With roughly half of Dai's collateral in USDC, the PSM passed the discount straight through and Dai fell with it, while a corrective governance vote sat behind a 48-hour timelock until after the worst had passed.",
@@ -102,6 +105,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Reserve quality and reserve access are different risks. A coin can be fully and conservatively reserved and still depeg if part of the backing is briefly unreachable. Monitoring should track not only what backs a coin but where the cash leg is custodied and how concentrated it is.",

@@ -11,14 +11,17 @@ export const content: ArchetypeContent = {
   ],
   howItWorks: [
     {
+      id: "institutional-subscription",
       title: "Institutional subscription",
       body: "A KYC/AML-verified accredited investor or qualified purchaser subscribes through a transfer agent (Securitize for the Apollo and Hamilton Lane funds, Anemoy for the Janus Henderson CLO, Tradable for the structured-receivable PC-series) with USD or an approved stablecoin. The fund manager deploys capital into senior secured loans, CLO tranches, direct-lending facilities, or structured receivables according to the disclosed mandate.",
     },
     {
+      id: "credit-portfolio-nav",
       title: "Credit portfolio + NAV calculation",
       body: "The fund administrator marks the portfolio to model or to market and publishes a NAV, typically monthly or quarterly. The on-chain token accretes NAV as income is earned. Credit losses, defaults, or downward mark-to-markets flow directly into NAV; there is no separate equity tranche to absorb losses ahead of the token holder.",
     },
     {
+      id: "nav-accruing-fund-share",
       title: "Fund-share token, NAV-accruing",
       body: "The token is a legal fund share. Redemption requests are queued and honored at the next NAV publication, subject to a fund-level gate if aggregate redemptions exceed the fund's liquid buffer (typically 2-5% of NAV per quarter for diversified private-credit funds). Secondary-market liquidity exists only where a licensed marketplace operates, and transfers are restricted to whitelisted counterparties.",
     },
@@ -77,14 +80,17 @@ export const content: ArchetypeContent = {
   ],
   variations: [
     {
+      id: "senior-secured-private-credit",
       title: "Senior secured private credit",
       body: "ACRED, ACRDX, and HLSCOPE hold first-lien direct loans on private companies. Recovery expectations are highest in this sub-category; the spread above Treasuries is the smallest within the credit-fund cohort.",
     },
     {
+      id: "clo-tranche-tokens",
       title: "CLO tranche tokens",
       body: "JAAA and STAC expose holders to the AAA-rated tranche of collateralized loan obligations. Investment-grade rated but subject to CLO structural complexity: the AAA tranche has never failed in a U.S. CLO, but it is not bankruptcy-remote in an extreme credit cycle.",
     },
     {
+      id: "multi-strategy-structured-credit",
       title: "Multi-strategy and structured credit vaults",
       body: "The Midas family (mAPOLLO, mF-ONE, mGLOBAL, mRe7YIELD, mMEV, mHYPER) wraps fund-managed mandates with monthly or quarterly redemption schedules. The Tradable PC-series (PC0000031, PC0000033, PC0000089, PC0000101) tokenizes specific structured-finance receivables (rent financing, post-settlement legal financing) outside the diversified-fund template.",
     },

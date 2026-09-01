@@ -62,6 +62,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "exotic-collateral-stack",
       heading: "An exotic collateral stack",
       paragraphs: [
         "pmUSD's backing runs through three layers, each abstracting away from the asset below it. At the top, pmUSD is the stable fToken in an f(x)-style design; xPM is the paired token that is meant to soak up gold-price volatility so pmUSD can hold a stable net asset value. Below pmUSD sits TokenBlender (TB), a base token held in RAAC's RWf(x) treasury. TB in turn is minted against ION.au, the gold-linked digital security held in the TokenBlender contract. Only at the bottom of this chain does one reach gold, and even there it is not vaulted metal.",
@@ -70,6 +71,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-it-persistently-trades-below-1",
       heading: "Why it persistently trades below $1",
       paragraphs: [
         "A stablecoin holds par when arbitrage is cheap and symmetric in both directions: when the token is below $1, someone can profitably acquire it and redeem or swap for a dollar of value; when it is above $1, someone can mint and sell. pmUSD's design weakens both legs of that loop. Minting is manager-only (system operations run through authorized silo multisigs rather than open, permissionless minting), so ordinary market participants cannot freely create supply to arbitrage a premium, and the supply side of the peg is governed by a small number of controllers.",
@@ -78,6 +80,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "may-2026-crater",
       heading: "The May 2026 crater",
       paragraphs: [
         "In early May 2026, the same asymmetry produced a much larger move. pmUSD fell from near par into a selloff that reached roughly $0.116 on May 4. In a deep, freely arbitraged market, an 88% gap in a dollar token would invite overwhelming buy-side pressure; here it only partially closed, recovering into the low-to-mid $0.70s by mid-June rather than snapping back to par. The crater is best read as the chronic fragility expressed under stress rather than as a new, separate failure mode.",
@@ -86,6 +89,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "what-is-and-isnt-verifiable",
       heading: "What is and isn't verifiable",
       paragraphs: [
         "Several elements of pmUSD's stack are genuinely checkable on-chain or in public filings. The pmUSD contract, its supply, and its trading history are observable; the f(x)-fork mechanism, the manager-controlled operations pattern, and the PSM's reserve-gated behavior are documented in RAAC's materials and visible in contract logic. I-ON Digital is a reporting public company, and its disclosures, audit opinion, and reserve-classification references can be examined directly. The price record (including the chronic discount, the May 4 all-time low, and the partial recovery visible on aggregators) is the firmest fact in this study.",
@@ -94,6 +98,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Persistent sub-peg drift is itself a signal, not noise. A token that lives at a 100-to-200 bps discount for months is telling the market that its peg defense is finite or its backing is doubted; PegScore and DEWS treat sustained drift as a standing condition rather than waiting for a single dramatic print. The 337 recorded sub-peg events here are not 337 surprises; they are one continuous structural fact.",

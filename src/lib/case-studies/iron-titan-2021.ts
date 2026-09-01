@@ -61,6 +61,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened",
       heading: "What happened",
       paragraphs: [
         "IRON Finance ran a fractional-algorithmic stablecoin on Polygon, modeled on Frax. Minting one IRON required depositing USDC plus an amount of TITAN set by the target collateral ratio; redeeming one IRON returned the same split of value. The design had walked the ratio down from fully collateralized toward roughly 75% USDC and 25% TITAN, so a meaningful slice of every redemption settled in a token whose only support was protocol demand.",
@@ -69,6 +70,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "fractional-algorithmic-redemption-loop",
       heading: "The fractional-algorithmic redemption loop",
       paragraphs: [
         "The fatal property was that redemption did not merely transfer TITAN: it minted it. When IRON traded below a dollar, anyone could buy the discounted stablecoin and redeem it for roughly $0.75 in USDC plus $0.25 in newly issued TITAN, then sell that TITAN immediately. Each pass through the loop printed fresh supply into a market that was already falling, so the more aggressively arbitrageurs closed the discount, the faster TITAN diluted toward zero.",
@@ -77,6 +79,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-it-was-the-terra-prequel",
       heading: "Why it was the Terra prequel",
       paragraphs: [
         "TITAN was to IRON what LUNA would become to UST: a volatile share token absorbing the stablecoin's demand shocks through a mint-and-burn redemption mechanism. In both systems the stabilizing arbitrage was symmetric only in calm markets. Once confidence broke and redemptions ran one way, the mechanism that was supposed to defend the peg instead minted the share token into hyperinflation: the same reflexive death spiral, differing mainly in scale and in the absence of an oracle lag in Terra's case.",
@@ -85,6 +88,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "A stablecoin whose collateral includes its own protocol's share token carries the peg's stress directly into that token's supply. When the share token is minted on redemption, selling pressure on the stablecoin becomes inflationary pressure on the share token, and the two reinforce each other downward. Partial collateralization softens the landing (IRON holders kept a cash claim), but it does not remove the reflexive core.",

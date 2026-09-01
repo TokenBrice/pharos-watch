@@ -57,6 +57,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-usual-changed",
       heading: "What Usual changed",
       paragraphs: [
         "Before the announcement, the market's working model was that one USD0++ could be redeemed for one USD0 at will. Usual replaced that with a two-path exit. Holders could leave immediately at a floor that began at $0.87 and was scheduled to rise toward $1 across the asset's four-year term, or they could take a conditional 1:1 unstake that required surrendering accrued USUAL rewards. Either path made the true cost of leaving early explicit for the first time.",
@@ -64,6 +65,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "stablecoin-or-bond",
       heading: "Stablecoin or bond?",
       paragraphs: [
         "USD0++ was always closer to a fixed-term instrument than a dollar. Locking USD0 for roughly four years in exchange for token rewards is the economic shape of a zero-coupon-style claim, and a claim that pays out at par only at maturity should trade at a discount before then. At a few percent of annual yield over four years, a fair present value sits in the high-80-cent range rather than at $1. Viewed that way, the $0.87 floor was not a loss of backing; it was the issuer codifying the discounted value of an early exit.",
@@ -71,6 +73,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "morpho-collateral-cascade",
       heading: "The Morpho collateral cascade",
       paragraphs: [
         "The repricing propagated through DeFi because lending markets had priced away the very risk the floor exposed. Several Morpho markets accepting USD0++ as collateral used oracles that valued it at a fixed 1:1 to USD0 rather than tracking a floating market rate. While USD0++ held near parity, leveraged and looped positions built on that assumption looked safe.",
@@ -78,6 +81,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "Redemption terms are part of the peg. A soft peg that rests on an issuer's redemption promise is only as firm as the issuer's discretion to revise it, and a change made without prior holder consent can reprice an asset overnight even when its backing is untouched. Track who controls exit terms and how those terms can change.",

@@ -64,6 +64,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-happened-on-binance",
       heading: "What happened on Binance",
       paragraphs: [
         "USDe is a synthetic dollar: rather than holding fiat in a bank, Ethena keeps backing in liquid stablecoins and in spot crypto (predominantly BTC and ETH) that is hedged one-for-one with short perpetual futures on centralized venues. The hedge is what keeps the dollar value of the collateral roughly constant as crypto prices swing, and funding paid on those shorts is the source of yield. None of that mechanism broke on 10 October.",
@@ -72,6 +73,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "venue-print-vs-peg-break",
       heading: "Venue print vs. peg break",
       paragraphs: [
         "A peg break and a venue print look similar on a single chart and behave nothing alike underneath. A genuine peg break is a backing problem: it appears across venues at once, primary redemption either halts or clears below par, and the deviation persists until reserves are restored or the asset is retired. The 2023 USDC episode is the reference case: the deviation was global and redemption was effectively paused over a weekend until the reserve shortfall was backstopped.",
@@ -80,6 +82,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "how-the-delta-neutral-design-held",
       heading: "How the delta-neutral design held",
       paragraphs: [
         "The deleveraging that caused the chaos elsewhere was, mechanically, favorable to Ethena's backing. As spot crypto fell, the short perpetual hedges that offset the BTC and ETH collateral moved into profit, which cushions rather than erodes the dollar value of the position. This is the structural difference from an undercollateralized algorithmic design, where a falling market and a falling token reinforce each other into a death spiral.",
@@ -88,6 +91,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "The first lesson is to read deviation by venue and by liquidity depth, never off a single screen. The headline number that circulated was the worst tick on the thinnest book; the price that mattered for solvency was where primary redemption and the deepest pools cleared. A pricing source that references only its own order book will manufacture artifacts under stress.",

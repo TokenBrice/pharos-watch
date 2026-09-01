@@ -11,14 +11,17 @@ export const content: ArchetypeContent = {
   ],
   howItWorks: [
     {
+      id: "fund-collateral-leg",
       title: "Fund the collateral leg",
       body: "A user or whitelisted minter deposits stablecoins or crypto. Perp-short systems may custody volatile spot assets with off-exchange settlement providers. Borrow-and-stake systems supply stablecoins to on-chain lending markets as collateral.",
     },
     {
+      id: "offsetting-exposure",
       title: "Create the offsetting exposure",
       body: "A perp-short implementation opens a short derivative matching its volatile spot notional. A borrow-and-stake implementation borrows the native asset against stablecoin collateral and stakes the borrowed exposure. Both target matched economic legs, but only the first relies on perpetual funding and exchange margin.",
     },
     {
+      id: "base-claim-route-carry",
       title: "Mint the base claim and route carry",
       body: "The protocol mints a stablecoin against the combined reserve strategy. Carry can come from perpetual funding, lending spreads, staking rewards, or several sources together. It may accrue to the base token, a separate staking wrapper such as sUSDe or sftUSD, a reserve fund, or the protocol treasury.",
     },
@@ -65,18 +68,22 @@ export const content: ArchetypeContent = {
   ],
   variations: [
     {
+      id: "on-chain-borrow-stake",
       title: "On-chain borrow and stake",
       body: "ftUSD supplies stablecoin collateral to lending markets, borrows native assets, and stakes the borrowed exposure. Carry comes from lending and staking yield net of borrow costs; the critical risks are venue oracles, liquidation thresholds, smart contracts, and withdrawal buffers rather than CEX funding rates.",
     },
     {
+      id: "liquid-stable-heavy-basis-trade",
       title: "Liquid-stable-heavy basis trade",
       body: "Modern Ethena. The non-hedged portion of backing is held in liquid stablecoins rather than volatile spot, and only a minority of the book carries a delta-neutral structure. Reduces negative-funding sensitivity at the cost of importing the underlying stablecoins' risk through the lending vaults that hold them.",
     },
     {
+      id: "pure-delta-neutral",
       title: "Pure delta-neutral",
       body: "Older or smaller implementations keep most backing in volatile spot plus a matched short. Yield is higher when funding is positive; negative-funding sensitivity is correspondingly higher, and exchange-venue concentration matters more because there is less stablecoin float to absorb a venue outage.",
     },
     {
+      id: "nav-accruing-yield-variants",
       title: "Wrapped / NAV-accruing yield variants",
       body: "sUSDe, sUSDf, and similar staked variants are the actual yield-bearing claim. The underlying stablecoin tracks parity with the dollar; the wrapper is where the funding rate accumulates as NAV. Pharos treats the wrapper as a separate coin with peg reference to its parent.",
     },
