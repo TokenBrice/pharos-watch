@@ -14,9 +14,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-18",
-    "reviewer": "Inherited-claim re-curation 2026-08-18",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-01",
+    "reviewer": "Pharos reserve research (ODR-C5 fixed-height M principal verification)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Noble USDN overview",
@@ -33,11 +33,15 @@
       {
         "label": "M0 minting and burning",
         "url": "https://docs.m0.org/protocol/minting-burning"
+      },
+      {
+        "label": "Noble public REST: dollar-module stats, index, and uusdn bank supply at height 58284069 (2026-09-01T10:27:17Z)",
+        "url": "https://noble-api.polkachu.com/noble/dollar/v1/stats"
       }
     ],
-    "rationale": "USDN is the Noble representation of M0's M, not an independently issued Noble liability. Noble's architecture documentation describes the portal locking the original $M on Ethereum and minting USDN on arrival; the exit is the reverse bridge back into $M. A USDN holder's claim therefore runs against M0's M, and M0's own Treasury and cash collateral is M0's reserve view rather than a second, parallel claim held by USDN holders. This entry previously carried M0's collateral composition slice for slice, identical to the tracked m-m0 entry, which double-counted the same Treasury exposure across the dependency graph and left no serial-claim edge to the parent. Confidence is probable rather than verified because the absence of a direct collateral claim rests on consistent silence across Noble's and M0's published material rather than an explicit disclaimer.",
-    "compositionBasis": "Noble USDN architecture and M0 portal documentation establishing a serial claim on M0's M",
-    "compositionAsOf": "2026-08-18",
+    "rationale": "USDN is the Noble representation of M0's M, not an independently issued Noble liability. Noble's architecture documentation states that because the Noble Dollar is collateralized by $M, issuance can only happen by locking $M as collateral on Ethereum through M0's Portal, with both principal and accrued yield bridged to Noble over Wormhole NTT; the exit is the reverse bridge back into $M. Verified directly on chain at Noble height 58284069 (2026-09-01T10:27:17Z): the dollar module reports total_principal 1,835,201.076317 $M and an M index of 1.093272766999, giving a present value of 2,006,375.358705, against a uusdn bank supply of 2,006,375.358704 - a 1:1 match to the last micro-unit, so every circulating USDN is covered by locked $M principal and nothing else. A USDN holder's claim therefore runs against M0's M, and M0's own Treasury and cash collateral is reviewed on the tracked m-m0 parent rather than duplicated here as a second, parallel claim.",
+    "compositionBasis": "Noble USDN architecture and M0 portal documentation plus fixed-height Noble dollar-module principal, index, and uusdn supply reads",
+    "compositionAsOf": "2026-09-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No direct reserve asset remains unidentified: the whole claim is the tracked m-m0 parent, whose own collateral composition is reviewed on that entry.",
     "knownUnknownExposurePct": 0

@@ -14,9 +14,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-18",
-    "reviewer": "Inherited-claim re-curation 2026-08-18",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-01",
+    "reviewer": "Pharos reserve research (ODR-C5 fixed-block M extension verification)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "M0 case study on KAST Dollar",
@@ -27,13 +27,25 @@
         "url": "https://docs.m0.org/protocol/extensions"
       },
       {
+        "label": "M0 on Solana documentation (m_ext wrap/unwrap and the m_vault PDA that holds the backing $M)",
+        "url": "https://docs.m0.org/protocol/solana"
+      },
+      {
         "label": "KAST Dollar launch announcement",
         "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins"
+      },
+      {
+        "label": "Solana public RPC: USDK extension identity and m_vault $M reads at slot 443400427 (2026-09-01T10:26:09Z)",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Solana USDK unwrap transaction (m_ext Unwrap burns USDK and debits the m_vault, 2026-07-29)",
+        "url": "https://solscan.io/tx/3cbcHNnLSwE4DQvQppJ74TVRDwC1sqEL4321MZKhBpAJb51v48Pa3jXS67q317Uvb1UUgd51Xe6N36iGhYE5zG4q"
       }
     ],
-    "rationale": "USDK is an M0 extension, not an independently issued KAST liability. M0's extension documentation describes each extension as maintaining a vault holding the underlying $M, with unwrap burning the extension token to release $M. A USDK holder's claim therefore runs against M0's M, and M0's own Treasury and cash collateral is M0's reserve view rather than a second, parallel claim held by USDK holders. This entry previously carried M0's collateral composition slice for slice, identical to the tracked m-m0 entry, which double-counted the same Treasury exposure across the dependency graph and left no serial-claim edge to the parent. Confidence is probable rather than verified because KAST publishes no USDK-specific technical documentation, so the extension relationship rests on M0's material and the reviewed on-chain route inventory rather than on an issuer statement.",
-    "compositionBasis": "M0 extension vault model establishing a serial claim on M0's M",
-    "compositionAsOf": "2026-08-18",
+    "rationale": "USDK is an M0 extension, not an independently issued KAST liability. M0's extension and Solana documentation describe each extension as maintaining an m_vault PDA that holds the backing $M, with wrap transferring $M into the vault and unwrap burning the extension token to release it. Verified directly on chain at Solana slot 443400427 (2026-09-01T10:26:09Z): the m_ext program extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw holds the USDK extension state at AiiXk9Rztiv9E72Ying8byGzvxnVmyaeunysYEmvG1NU, which records the extension mint usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX and the backing mint mzerojk9tg56ebsrEAhfkyc9VgKjTW2zDqp6C5mhjzH ($M by M0, whose scaled-UI multiplier 1.093277352384 is the M0 index propagated on chain and matches Noble's independently queried M index of 1.093272766999). The USDK m_vault token account EHNaRY1ZdtaoPVMqE3TW6pacACzEoU1e9V1ToLyavowN (authority HGXvfS2MmJ1k6aGji7u13AtaiM62w2m7egwW3o5qLqqo) held 22,255,150.855475 principal units, or 24,331,052.404180 $M at the current index, against a USDK supply of 23,939,622.844939 - 101.64% coverage by $M alone. The 2026-07-29 unwrap transaction independently shows the m_ext Unwrap instruction burning USDK and debiting that exact vault, confirming it is USDK's backing account. The complete direct claim is therefore the tracked m-m0 parent, whose own Treasury and cash collateral stays reviewed on that entry rather than being duplicated here.",
+    "compositionBasis": "M0 extension and Solana documentation plus fixed-slot USDK extension-state, m_vault $M balance, and USDK total-supply reads",
+    "compositionAsOf": "2026-09-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No direct reserve asset remains unidentified: the whole claim is the tracked m-m0 parent, whose own collateral composition is reviewed on that entry.",
     "knownUnknownExposurePct": 0
