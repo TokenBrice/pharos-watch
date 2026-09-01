@@ -62,7 +62,11 @@ const DRPC_CHAINS: Record<string, string> = {
   celo: "celo",
 };
 
-const PUBLIC_ONLY_EVM_CHAINS = ["tempo"] as const;
+// `plasma` is here for the reviewed Curve StableSwap-NG factory capture in
+// `cron/dex-liquidity/curve-stableswap-factory.ts`: Curve's own getPools
+// endpoint does not serve Plasma, so the factory is the only pool census, and
+// it is read over this public RPC.
+const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma"] as const;
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 

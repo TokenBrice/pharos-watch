@@ -65,6 +65,7 @@ import {
   buildUniV3DirectMeasuredExecutionTargets,
 } from "../measured-execution/inventory";
 import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
+import { enrichCurveStableswapFactoryExecutionModels } from "./curve-stableswap-factory";
 import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
 import {
   loadDexLiquidityScoringStage,
@@ -825,6 +826,16 @@ async function buildDexLiquidityPoolState(
   await enrichCurveStableswapRateInputExecutionModels({
     metrics,
     chainAddressToId: sourceState.lookups.chainAddressToId,
+    chainRpcs: ctx.chainRpcs,
+    signal: ctx.signal,
+  });
+  // Last of the three on-chain capture stages: it only touches Curve rows the
+  // source-only join could not resolve at all, so it never competes with the
+  // rate-bearing capture above for the same pool.
+  await enrichCurveStableswapFactoryExecutionModels({
+    metrics,
+    chainAddressToId: sourceState.lookups.chainAddressToId,
+    stablecoinPriceById: sourceState.stablecoinPriceById,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
   });
