@@ -195,6 +195,24 @@ describe("resolveRedemptionCapacity — supply ratio capacity", () => {
   const now = 1_780_000_000;
   const db = {} as D1Database;
 
+  it.each([0, -1])("leaves non-positive supply %s unrated", async (supplyUsd) => {
+    const result = await resolveRedemptionCapacity(
+      db,
+      "test-stablecoin",
+      { kind: "supply-ratio", ratio: 0.1 },
+      supplyUsd,
+      now,
+    );
+
+    expect(result).toMatchObject({
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      scoringCapacityUsd: null,
+      scoringCapacityRatio: null,
+      resolutionState: "missing-capacity",
+    });
+  });
+
   it("labels scoring horizon immediate when the configured daily limit does not bind", async () => {
     const result = await resolveRedemptionCapacity(
       db,

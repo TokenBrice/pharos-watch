@@ -60,6 +60,7 @@ interface AccountableParams {
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
 const TOTAL_RESERVES_RELATIVE_TOLERANCE = 0.01;
 const TOTAL_RESERVES_ABSOLUTE_TOLERANCE = 1;
+const EXPOSURE_SPLIT_TIMELINE_MAX_GAP_SECONDS = 24 * 60 * 60;
 /** The dashboard publishes `collateralization` to six decimals, so cent-level rounding of the
  *  reserve/supply inputs moves a derived ratio by <1e-6. This stays far below the ~2e-2 spread
  *  between the gross and net-of-protocol-owned bases it has to tell apart. */
@@ -317,6 +318,9 @@ function findNearestExposureSplitReserveTotal(
   const nearest = candidates[0];
   if (!nearest) {
     throw new Error("Accountable exposure_split has no valid timeline reserve total for reconciliation");
+  }
+  if (Math.abs(nearest.timestamp - sourceTimestamp) > EXPOSURE_SPLIT_TIMELINE_MAX_GAP_SECONDS) {
+    throw new Error("Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation");
   }
   return nearest;
 }
