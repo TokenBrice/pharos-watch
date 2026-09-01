@@ -37,10 +37,10 @@ export const DEPEG_DEWS_V4: readonly MethodologyChangelogEntry[] = [
     date: "2026-03-21",
     effectiveAt: 1774051200,
     summary:
-      "Peg score is now emitted after 7 days of tracking instead of 30, with an 'Early score' label for the 7–30 day window.",
+      "Peg score is now emitted after 7 days of tracking instead of 30, with an 'Early score' label for the 7-30 day window.",
     impact: [
-      "Minimum tracking threshold reduced from 30 to 7 days — coins receive a composite peg score after their first week",
-      "Scores based on 7–30 days of data are labelled 'Early score' in the hero card (amber text with tooltip)",
+      "Minimum tracking threshold reduced from 30 to 7 days, so coins receive a composite peg score after their first week",
+      "Scores based on 7-30 days of data are labelled 'Early score' in the hero card (amber text with tooltip)",
       "Report card peg-stability dimension is now rated from day 7; NR only appears for coins with < 7 days of history",
     ],
     commits: [],
