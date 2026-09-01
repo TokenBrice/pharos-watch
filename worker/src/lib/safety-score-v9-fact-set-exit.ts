@@ -644,7 +644,8 @@ export function buildRoutes(context: AssetBuildContext): {
     // reclassified gap `path-kind-not-permitted` in the evidence queue. The
     // `unsupported` observation state plus the explicit responsibility already
     // carry the ruling; the code swap rides the v9.04 policy bump.
-    if (classifyUnsupportedDexSurface(emptyCoverage) === "census-unsupported") {
+    const zeroRouteUnsupportedSurface = classifyUnsupportedDexSurface(emptyCoverage);
+    if (zeroRouteUnsupportedSurface === "census-unsupported") {
       return {
         exitStatus: missingLocalFact(context, {
           componentKey: "exit-routes",
@@ -654,6 +655,26 @@ export function buildRoutes(context: AssetBuildContext): {
           policyRuleId: "v9.exit.same-notional-route",
           message:
             "The deployment census carries no registered discovery provider for at least one deployment chain, so no same-notional exit route can be observed.",
+          observationState: "unsupported",
+        }).status,
+        exitRoutes: [],
+      };
+    }
+    // 2026-08-12 owner ruling, extended here: retained pools exist but
+    // no reviewed execution model recognises any of them — the same
+    // `no-exact-capable-venue` classification the portfolio-coverage branch
+    // below already routes to `method-unsupported`. One condition, one
+    // responsibility, regardless of which branch happens to fire.
+    if (zeroRouteUnsupportedSurface === "no-exact-capable-venue") {
+      return {
+        exitStatus: missingLocalFact(context, {
+          componentKey: "exit-routes",
+          reasonCode: "missing-runtime-route-evidence",
+          ownerDomain: "exit",
+          responsibility: "method-unsupported",
+          policyRuleId: "v9.exit.same-notional-route",
+          message:
+            "No reviewed execution model recognizes any retained pool, so this asset has no exact-capable DEX venue.",
           observationState: "unsupported",
         }).status,
         exitRoutes: [],

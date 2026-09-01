@@ -596,6 +596,34 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       }),
     );
 
+    // ODR-B3 (2026-08-12 ruling, extended to the zero-route branch): retained
+    // pools exist but no reviewed execution model recognises any of them.
+    // Before this fix the zero-route branch only ever consulted the census
+    // classifier and fell through to `producer-failed` here; it must now
+    // match the portfolio-coverage branch's `method-unsupported` attribution.
+    // The reason code stays `missing-runtime-route-evidence` — the swap to
+    // `unsupported-same-notional-route` rides the pending v9.04 policy bump.
+    const zeroRouteNoExactCapableVenue = zeroRouteAsset(
+      withCoverage({
+        status: "unsupported",
+        retainedPoolCount: 4,
+        scoreEligiblePoolCount: 0,
+        scoreEligibleCapabilityPoolCount: 0,
+        unsupportedPoolCount: 4,
+        unsupportedReasons: { "nonExecutableEvidence:defillama-pool-shaped": 4 },
+      }),
+    );
+    expect(zeroRouteNoExactCapableVenue.exitRoutes).toEqual([]);
+    expect(zeroRouteNoExactCapableVenue.exitStatus.observationState).toBe("unsupported");
+    expect(zeroRouteNoExactCapableVenue.gaps).toContainEqual(
+      expect.objectContaining({
+        gapId: "alpha:gap:exit-routes",
+        reasonCode: "missing-runtime-route-evidence",
+        responsibility: "method-unsupported",
+        observationState: "unsupported",
+      }),
+    );
+
     // Every reclassified gap must still bind cleanly to its policy entry. Only
     // `incomplete-dex-route-coverage` and `missing-runtime-route-evidence` are
     // registered for a `local-component` exit path; swapping in a code that is
@@ -609,9 +637,19 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       unsupportedPoolCount: 0,
       unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
     };
+    const noExactCapableVenueCoverage = {
+      status: "unsupported" as const,
+      retainedPoolCount: 4,
+      scoreEligiblePoolCount: 0,
+      scoreEligibleCapabilityPoolCount: 0,
+      unsupportedPoolCount: 4,
+      unsupportedReasons: { "nonExecutableEvidence:defillama-pool-shaped": 4 },
+    };
     for (const fixed of [
       withCoverage(censusUnsupportedCoverage, { withRedemptionRoute: true }),
       withCoverage(censusUnsupportedCoverage),
+      withCoverage(noExactCapableVenueCoverage, { withRedemptionRoute: true }),
+      withCoverage(noExactCapableVenueCoverage),
     ]) {
       const queue = buildV9EvidenceGapQueue({
         factSet: compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewedWithoutDexRoutes()),
