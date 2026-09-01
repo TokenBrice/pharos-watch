@@ -42,6 +42,7 @@ const cronMocks = vi.hoisted(() => ({
   })),
   runStatusSelfCheck: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runCronStalenessWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runDigestPublicationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotChainSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncSafetyScoreV9SupplyAttribution: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -244,6 +245,9 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
 vi.mock("../cron/cron-staleness-watchdog", () => ({
   runCronStalenessWatchdog: cronMocks.runCronStalenessWatchdog,
+}));
+vi.mock("../cron/digest-publication-watchdog", () => ({
+  runDigestPublicationWatchdog: cronMocks.runDigestPublicationWatchdog,
 }));
 vi.mock("../cron/snapshot-supply", () => ({ snapshotSupply: cronMocks.snapshotSupply }));
 vi.mock("../cron/snapshot-chain-supply", () => ({ snapshotChainSupply: cronMocks.snapshotChainSupply }));
