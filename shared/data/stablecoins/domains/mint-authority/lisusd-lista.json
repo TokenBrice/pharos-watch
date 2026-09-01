@@ -13,14 +13,17 @@
         "sources": [
           {
             "label": "CoinDesk — Helio attacker nets $15M after Ankr exploit",
+            "quoted": true,
             "url": "https://www.coindesk.com/tech/2022/12/02/how-attackers-made-15m-from-staking-platform-helio-after-ankr-exploit"
           },
           {
             "label": "rekt.news — Ankr & Helio",
+            "quoted": true,
             "url": "https://rekt.news/ankr-helio-rekt"
           },
           {
             "label": "Helio post-mortem — aBNBc exploit impact",
+            "quoted": true,
             "url": "https://medium.com/@Helio-HAY/helio-protocols-impact-in-the-abnbc-exploit-6954e0199096"
           }
         ]
@@ -73,7 +76,7 @@
           "observedBlock": 103638487,
           "source": "onchain"
         },
-        "evidence": "At BSC block 103638487: wards(0x8d3881…) = 2 (MANAGER role — per Sourcify LisUSD source, role 2 can only setSupplyCap and updateDomainSeparator, not mint). getOwners() returned 6 owners, getThreshold() = 3, getModulesPaginated empty (no modules), guard slot = 0x59828a98… (transaction guard present), masterCopy = 0x3e5c6364… (GnosisSafeL2 1.3.0)."
+        "evidence": "At BSC block 103638487: wards(0x8d3881…) = 2 (MANAGER role, per Sourcify LisUSD source, role 2 can only setSupplyCap and updateDomainSeparator, not mint). getOwners() returned 6 owners, getThreshold() = 3, getModulesPaginated empty (no modules), guard slot = 0x59828a98… (transaction guard present), masterCopy = 0x3e5c6364… (GnosisSafeL2 1.3.0)."
       },
       {
         "chain": "bsc",

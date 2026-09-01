@@ -18,7 +18,7 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "On-chain enumeration on 2026-08-08 of 71 QiDao vault contracts across 12 chains found ~2,099,471 MAI of recorded vault debt in 63 debt-bearing markets. ~71.7% of that debt sits in 15 Fantom markets whose price sources all revert (Multichain-era stranded debt), and a further ~1.3% sits in other dead-oracle markets (Polygon Celsius-era cxETH/cxADA/cxDOGE/CEL/FXS/dQUICK, Polygon stMATIC, Moonbeam GLMR, BSC DODO), where liquidation, withdrawal, and borrowing are all bricked. Every live market reads exactly one Chainlink feed — or a QiDao custom composite over one Chainlink feed — and the vault contract consumes only the answer field of latestRoundData() with no staleness check, no heartbeat enforcement, and no fallback; the only remedy is an owner-gated changeEthPriceSource by QiDao Safes. No stability pool, insurance fund, or bad-debt backstop exists on any observed deployment (stabilityPool is the zero address), and deeply underwater vaults cannot be liquidated at all because the SafeMath collateral payout underflows. Direct eth_call probes on 2026-08-09 (Fantom 122814200, Polygon 91727016-91727114, Moonbeam 16786674-16786696) confirm the dead-oracle markets are uncallable rather than merely undelayed: liquidateVault reverts with empty return data inside the price read, while the identical call on a live market returns the 'Vault is not below minimum collateral percentage' require string. liquidationDelaySec is therefore recorded as 0 only on branches with at least one operable market, and is deliberately left unrecorded on the four wholly dead-oracle branches (fantom-dead-oracle-legacy, polygon-dead-oracle-legacy, polygon-stmatic, moonbeam-glmr), whose true waiting time is unbounded and cannot be expressed in a non-negative-integer field.",
+    "summary": "On-chain enumeration on 2026-08-08 of 71 QiDao vault contracts across 12 chains found ~2,099,471 MAI of recorded vault debt in 63 debt-bearing markets. ~71.7% of that debt sits in 15 Fantom markets whose price sources all revert (Multichain-era stranded debt), and a further ~1.3% sits in other dead-oracle markets (Polygon Celsius-era cxETH/cxADA/cxDOGE/CEL/FXS/dQUICK, Polygon stMATIC, Moonbeam GLMR, BSC DODO), where liquidation, withdrawal, and borrowing are all bricked. Every live market reads exactly one Chainlink feed: either a QiDao custom composite over one Chainlink feed or a direct feed, and the vault contract consumes only the answer field of latestRoundData() with no staleness check, no heartbeat enforcement, and no fallback; the only remedy is an owner-gated changeEthPriceSource by QiDao Safes. No stability pool, insurance fund, or bad-debt backstop exists on any observed deployment (stabilityPool is the zero address), and deeply underwater vaults cannot be liquidated at all because the SafeMath collateral payout underflows. Direct eth_call probes on 2026-08-09 (Fantom 122814200, Polygon 91727016-91727114, Moonbeam 16786674-16786696) confirm the dead-oracle markets are uncallable rather than merely undelayed: liquidateVault reverts with empty return data inside the price read, while the identical call on a live market returns the 'Vault is not below minimum collateral percentage' require string. liquidationDelaySec is therefore recorded as 0 only on branches with at least one operable market, and is deliberately left unrecorded on the four wholly dead-oracle branches (fantom-dead-oracle-legacy, polygon-dead-oracle-legacy, polygon-stmatic, moonbeam-glmr), whose true waiting time is unbounded and cannot be expressed in a non-negative-integer field.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "reviewedAt": "2026-08-08",
@@ -34,11 +34,11 @@
         "url": "https://www.mai.finance/"
       },
       {
-        "label": "QiDao protocol repo — erc20Stablecoin.sol (liquidateVault, getEthPriceSource, no staleness check; re-read 2026-08-09 confirming liquidateVault carries no delay, grace-period, auction, or timestamp term)",
+        "label": "QiDao protocol repo: erc20Stablecoin.sol (liquidateVault, getEthPriceSource, no staleness check; re-read 2026-08-09 confirming liquidateVault carries no delay, grace-period, auction, or timestamp term)",
         "url": "https://github.com/0xlaozi/qidao/blob/main/contracts/erc20Stablecoin/erc20Stablecoin.sol"
       },
       {
-        "label": "QiDao protocol repo — PriceSource.sol (latestRoundData interface; answer-only consumption)",
+        "label": "QiDao protocol repo: PriceSource.sol (latestRoundData interface; answer-only consumption)",
         "url": "https://github.com/0xlaozi/qidao/blob/main/contracts/PriceSource.sol"
       },
       {
@@ -47,6 +47,7 @@
       },
       {
         "label": "DL News — QiDao settles Multichain-era bad debt on Polygon",
+        "quoted": true,
         "url": "https://www.dlnews.com/articles/defi/qidao-settles-bad-debt-on-polygon-to-save-stablecoin/"
       }
     ],
@@ -75,7 +76,7 @@
         "id": "fantom-dead-oracle-legacy",
         "label": "Fantom legacy markets (15 debt-bearing, all oracles dead)",
         "tier": "opaque-or-unknown",
-        "summary": "All 19 probed Fantom vault contracts revert on getEthPriceSource() at Fantom block 122806117 — every price source on the chain is dead (Chainlink retired Fantom feeds and QiDao's custom sources fail). 15 markets still record a combined 1,505,695.60 MAI of debt (Bitcoin vault 0xE5996a2c alone: 1,001,100.56 MAI; yvDAI 240,944.14; yvBTC 136,734.08; Moo Scream BTC 69,528.16; Moo Scream DAI 29,531.94; Moo Scream WETH 21,812.25; smaller dust elsewhere). Because the price call reverts, liquidateVault, withdrawCollateral, and borrowToken all revert: this debt cannot be liquidated and the collateral cannot be withdrawn. This is the Multichain-collapse stranded branch QiDao's own site references ('tokens held on Fantom return to holders once its dispute is resolved').",
+        "summary": "All 19 probed Fantom vault contracts revert on getEthPriceSource() at Fantom block 122806117, every price source on the chain is dead (Chainlink retired Fantom feeds and QiDao's custom sources fail). 15 markets still record a combined 1,505,695.60 MAI of debt (Bitcoin vault 0xE5996a2c alone: 1,001,100.56 MAI; yvDAI 240,944.14; yvBTC 136,734.08; Moo Scream BTC 69,528.16; Moo Scream DAI 29,531.94; Moo Scream WETH 21,812.25; smaller dust elsewhere). Because the price call reverts, liquidateVault, withdrawCollateral, and borrowToken all revert: this debt cannot be liquidated and the collateral cannot be withdrawn. This is the Multichain-collapse stranded branch QiDao's own site references ('tokens held on Fantom return to holders once its dispute is resolved').",
         "collateralAssets": [
           "WFTM (vault 0x1066b8FC999c1eE94241344818486D5f944331A0)",
           "yvWFTM (vault 0x7efB260662a6FA95c1CE1092c53Ca23733202798)",
@@ -137,7 +138,7 @@
           {
             "asset": "BTC (vault 0xE5996a2cB60eA57F03bf332b5ADC517035d8d094)",
             "minimumCollateralRatioPct": 10000,
-            "note": "Wind-down: debtRatio=1, gainRatio=1500; 30 vaults with debt totaling 1,001,100.56 MAI — the single largest debt-bearing QiDao market observed anywhere."
+            "note": "Wind-down: debtRatio=1, gainRatio=1500; 30 vaults with debt totaling 1,001,100.56 MAI, the single largest debt-bearing QiDao market observed anywhere."
           },
           {
             "asset": "LINK (vault 0xd6488d586E8Fcd53220e4804D767F19F5C846086)",
@@ -190,9 +191,9 @@
             "note": "Wind-down: debtRatio=67 (liquidator repays ~1.5%), gainRatio=1500; 4 vaults with debt totaling 19.75 MAI."
           }
         ],
-        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault() — any MAI holder repays 1/debtRatio of a below-minimum vault's debt and extracts collateral worth the repayment times gainRatio/10 at the oracle price. In practice no liquidation can execute on Fantom because the oracle call itself reverts. Re-proved by direct eth_call at Fantom block 122814200 (2026-08-09) against the BTC vault 0xE5996a2c, corroborated byte-identically on a second endpoint (rpc.fantom.network): stabilityPool() is the zero address and liquidateVault(uint256) is present in the deployed bytecode, so liquidation is permissionless and dispatchable, and vault 34 is a live position (ownerOf 0xd53064c88994119c281cc9e66c01a669e4a7715d, 0.00055772 BTC collateral, 6.652475 MAI debt) — yet checkCollateralPercentage(34), checkLiquidation(34), and liquidateVault(34) all revert with empty return data, while ownerOf(999999) on the same contract still returns its ERC721 revert string, placing the failure inside the price read rather than in any require. liquidationDelaySec is deliberately left unrecorded on this branch: erc20Stablecoin.liquidateVault contains no delay, grace-period, auction, or timestamp term at all (source re-read 2026-08-09), so the branch has no positive delay to report, but liquidation here is not undelayed — it is uncallable at every block, an unbounded wait the schema's non-negative-integer field cannot express. Recording 0 would render as 'liquidation delay: none' on a branch where liquidation cannot execute.",
+        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault(), any MAI holder repays 1/debtRatio of a below-minimum vault's debt and extracts collateral worth the repayment times gainRatio/10 at the oracle price. In practice no liquidation can execute on Fantom because the oracle call itself reverts. Re-proved by direct eth_call at Fantom block 122814200 (2026-08-09) against the BTC vault 0xE5996a2c, corroborated byte-identically on a second endpoint (rpc.fantom.network): stabilityPool() is the zero address and liquidateVault(uint256) is present in the deployed bytecode, so liquidation is permissionless and dispatchable, and vault 34 is a live position (ownerOf 0xd53064c88994119c281cc9e66c01a669e4a7715d, 0.00055772 BTC collateral, 6.652475 MAI debt), yet checkCollateralPercentage(34), checkLiquidation(34), and liquidateVault(34) all revert with empty return data, while ownerOf(999999) on the same contract still returns its ERC721 revert string, placing the failure inside the price read rather than in any require. liquidationDelaySec is deliberately left unrecorded on this branch: erc20Stablecoin.liquidateVault contains no delay, grace-period, auction, or timestamp term at all (source re-read 2026-08-09), so the branch has no positive delay to report, but liquidation here is uncallable at every block. That creates an unbounded wait the schema's non-negative-integer field cannot express. Recording 0 would render as 'liquidation delay: none' on a branch where liquidation cannot execute.",
         "backstop": "No protocol backstop: stabilityPool is the zero address on the observed deployments and there is no stability pool, insurance fund, or committed bad-debt buyer. QiDao historically settled Multichain-era bad debt ad hoc from the DAO treasury on Polygon ($668k, per DL News); the Fantom residue (~1.51M MAI) remains unsettled with the chain's tokens in dispute.",
-        "shutdownOrBadDebtBehavior": "The vault contract defines no global shutdown, settlement, or debt-socialization path. On Fantom the entire deployment is de facto frozen: dead oracles brick liquidation, withdrawal, and borrowing, and the recorded bad debt (Multichain-era, collateral devalued) remains on the books indefinitely. QiDao's site says Fantom tokens 'return to holders once its dispute is resolved' — an off-chain process, not a contract mechanism.",
+        "shutdownOrBadDebtBehavior": "The vault contract defines no global shutdown, settlement, or debt-socialization path. On Fantom the entire deployment is de facto frozen: dead oracles brick liquidation, withdrawal, and borrowing, and the recorded bad debt (Multichain-era, collateral devalued) remains on the books indefinitely. QiDao's site says Fantom tokens 'return to holders once its dispute is resolved', an off-chain process, not a contract mechanism.",
         "debtSharePct": 71.72,
         "failureDomainKeys": [
           "chainlink:fantom:feeds-retired",
@@ -220,6 +221,7 @@
           },
           {
             "label": "DL News — QiDao Multichain bad-debt reporting",
+            "quoted": true,
             "url": "https://www.dlnews.com/articles/defi/qidao-settles-bad-debt-on-polygon-to-save-stablecoin/"
           }
         ]
@@ -228,7 +230,7 @@
         "id": "ethereum-legacy",
         "label": "Ethereum legacy markets (WETH, cbETH, LDO)",
         "tier": "single-source-or-laggy",
-        "summary": "Three debt-bearing Ethereum vaults totalling 305,913.46 MAI at block 25712353. The WETH vault (0x98eb27E5, Chainlink ETH/USD direct) records 266,513.35 MAI of debt against only 64.5 WETH (~$124k) of collateral in one residual vault — deeply underwater bad debt that cannot be cleared because the SafeMath collateral payout underflows. cbETH (0x4ce4C542, QiDao composite over the Coinbase cbETH exchange-rate oracle) records 12,390.82 MAI against 3.47 cbETH; LDO (0x954ac12c, QiDao custom composite) records 27,009.29 MAI against 14,710.79 LDO.",
+        "summary": "Three debt-bearing Ethereum vaults totalling 305,913.46 MAI at block 25712353. The WETH vault (0x98eb27E5, Chainlink ETH/USD direct) records 266,513.35 MAI of debt against only 64.5 WETH (~$124k) of collateral in one residual vault, deeply underwater bad debt that cannot be cleared because the SafeMath collateral payout underflows. cbETH (0x4ce4C542, QiDao composite over the Coinbase cbETH exchange-rate oracle) records 12,390.82 MAI against 3.47 cbETH; LDO (0x954ac12c, QiDao custom composite) records 27,009.29 MAI against 14,710.79 LDO.",
         "collateralAssets": [
           "WETH (vault 0x98eb27E5F24FB83b7D129D789665b08C258b4cCF)",
           "cbETH (vault 0x4ce4C542D96Ce1872fEA4fa3fbB2E7aE31862Bad)",
@@ -283,7 +285,7 @@
           {
             "asset": "WETH (vault 0x98eb27E5F24FB83b7D129D789665b08C258b4cCF)",
             "minimumCollateralRatioPct": 120,
-            "note": "debtRatio=2 (liquidator repays 50%), gainRatio=1100 (10% bonus), closingFee=0; 1 vault with debt totaling 266,513.35 MAI against 64.5 WETH collateral — underwater and structurally un-liquidatable (payout underflow)."
+            "note": "debtRatio=2 (liquidator repays 50%), gainRatio=1100 (10% bonus), closingFee=0; 1 vault with debt totaling 266,513.35 MAI against 64.5 WETH collateral, underwater and structurally un-liquidatable (payout underflow)."
           },
           {
             "asset": "cbETH (vault 0x4ce4C542D96Ce1872fEA4fa3fbB2E7aE31862Bad)",
@@ -293,7 +295,7 @@
           {
             "asset": "LDO (vault 0x954ac12c339c60eafbb32213b15af3f7c7a0dec2)",
             "minimumCollateralRatioPct": 130,
-            "note": "debtRatio=2, gainRatio=1100, closingFee=0; 1 vault with debt totaling 27,009.29 MAI against 14,710.79 LDO (~$4.3k) — underwater."
+            "note": "debtRatio=2, gainRatio=1100, closingFee=0; 1 vault with debt totaling 27,009.29 MAI against 14,710.79 LDO (~$4.3k), underwater."
           }
         ],
         "liquidationMechanism": "Permissionless partial liquidation via liquidateVault(): when a vault's oracle-priced collateral ratio falls below _minimumCollateralPercentage, any MAI holder repays 1/debtRatio (50%) of the debt and extracts collateral worth the repayment times gainRatio/10 (110% = 10% bonus) at the oracle price; no auction, no grace period. Deeply underwater vaults cannot be liquidated: the collateral extraction underflows SafeMath and reverts, so the recorded bad debt persists.",
@@ -327,7 +329,7 @@
         "id": "metis-legacy",
         "label": "Metis legacy markets (METIS x2, WETH, WBTC)",
         "tier": "single-source-or-laggy",
-        "summary": "Four debt-bearing Metis vaults totalling 82,176.85 MAI at block 23014200, all on live single Chainlink feeds. The legacy METIS vault (0x10dcbee8) records 75,388.98 MAI against 2,386 METIS (~$6k) — deeply underwater bad debt; the second METIS vault (0x19Cb63CC) records 6,015.48 MAI against 113 METIS — also underwater. WETH and WBTC residue is small (688.39 and 84.00 MAI).",
+        "summary": "Four debt-bearing Metis vaults totalling 82,176.85 MAI at block 23014200, all on live single Chainlink feeds. The legacy METIS vault (0x10dcbee8) records 75,388.98 MAI against 2,386 METIS (~$6k), deeply underwater bad debt; the second METIS vault (0x19Cb63CC) records 6,015.48 MAI against 113 METIS, also underwater. WETH and WBTC residue is small (688.39 and 84.00 MAI).",
         "collateralAssets": [
           "METIS (vault 0x10dcbee8afa39a847707e16aea5eb34c6b01aba9)",
           "METIS (vault 0x19Cb63CCbfAC2f28B1fd79923f6aDfC096e6EBB4)",
@@ -382,12 +384,12 @@
           {
             "asset": "METIS (vault 0x10dcbee8afa39a847707e16aea5eb34c6b01aba9)",
             "minimumCollateralRatioPct": 155,
-            "note": "debtRatio=2, gainRatio=1100 (10% bonus), closingFee=50 (0.5%); 18 vaults with debt totaling 75,388.98 MAI against 2,386 METIS (~$6k) — underwater and un-liquidatable (payout underflow)."
+            "note": "debtRatio=2, gainRatio=1100 (10% bonus), closingFee=50 (0.5%); 18 vaults with debt totaling 75,388.98 MAI against 2,386 METIS (~$6k), underwater and un-liquidatable (payout underflow)."
           },
           {
             "asset": "METIS (vault 0x19Cb63CCbfAC2f28B1fd79923f6aDfC096e6EBB4)",
             "minimumCollateralRatioPct": 130,
-            "note": "debtRatio=2, gainRatio=1100, closingFee=0; 3 vaults with debt totaling 6,015.48 MAI against 113 METIS — underwater."
+            "note": "debtRatio=2, gainRatio=1100, closingFee=0; 3 vaults with debt totaling 6,015.48 MAI against 113 METIS, underwater."
           },
           {
             "asset": "WETH (vault 0xc09c73f7b32573d178138e76c0e286ba21085c20)",
@@ -804,7 +806,7 @@
             "note": "Wind-down: raw _minimumCollateralPercentage=50000; debtRatio=1, gainRatio=1010; 18 vaults with debt totaling 2.40 MAI; 56.70 dQUICK collateral."
           }
         ],
-        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault() with debtRatio=1 (full-debt repayment) and a 1% gainRatio bonus under wind-down parameters. In practice no liquidation can execute because the oracle call reverts. Re-proved by direct eth_call at Polygon block 91727016 (2026-08-09): getEthPriceSource() reverts with empty return data on all six vaults (cxETH 0x7d36999a, cxADA 0x506533B9, cxDOGE 0x7CbF49E4, CEL 0x178f1c95, FXS 0xff2c44fb, dQUICK 0x649Aa6E6), stabilityPool() on cxETH is the zero address, and on the live cxETH position 36 (34.752181 MAI debt) checkCollateralPercentage(36), checkLiquidation(36), and liquidateVault(36) all revert empty. The control is decisive: on the live Polygon WETH market 0xb5b31e6a at the same block, the identical liquidateVault call reverts with the reason string 'Vault is not below minimum collateral percentage', proving the endpoint returns revert strings and that the collateral-ratio require is the only gate on a working market. liquidationDelaySec is deliberately left unrecorded on this branch: the QiDao vault contract has no delay, grace-period, auction, or timestamp term anywhere in liquidateVault, but these markets are not undelayed — they are uncallable at every block, an unbounded wait the schema's non-negative-integer field cannot express, and recording 0 would render as 'liquidation delay: none'.",
+        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault() with debtRatio=1 (full-debt repayment) and a 1% gainRatio bonus under wind-down parameters. In practice no liquidation can execute because the oracle call reverts. Re-proved by direct eth_call at Polygon block 91727016 (2026-08-09): getEthPriceSource() reverts with empty return data on all six vaults (cxETH 0x7d36999a, cxADA 0x506533B9, cxDOGE 0x7CbF49E4, CEL 0x178f1c95, FXS 0xff2c44fb, dQUICK 0x649Aa6E6), stabilityPool() on cxETH is the zero address, and on the live cxETH position 36 (34.752181 MAI debt) checkCollateralPercentage(36), checkLiquidation(36), and liquidateVault(36) all revert empty. The control is decisive: on the live Polygon WETH market 0xb5b31e6a at the same block, the identical liquidateVault call reverts with the reason string 'Vault is not below minimum collateral percentage', proving the endpoint returns revert strings and that the collateral-ratio require is the only gate on a working market. liquidationDelaySec is deliberately left unrecorded on this branch: the QiDao vault contract has no delay, grace-period, auction, or timestamp term anywhere in liquidateVault, but these markets are uncallable at every block. That creates an unbounded wait the schema's non-negative-integer field cannot express, and recording 0 would render as 'liquidation delay: none'.",
         "backstop": "No protocol backstop: stabilityPool is the zero address at the observed block; no stability pool, insurance fund, or committed bad-debt buyer exists. The 2023 Polygon bad-debt settlement ($668k from the DAO treasury, per DL News) was an ad hoc governance action and did not cover these markets.",
         "shutdownOrBadDebtBehavior": "No global shutdown, settlement, or debt-socialization path exists in the vault contract. These markets are de facto frozen: dead oracles brick liquidation, withdrawal, and borrowing, so the 25.1k MAI of mostly Celsius-collateralized bad debt remains on the books indefinitely.",
         "debtSharePct": 1.2,
@@ -1028,7 +1030,7 @@
         "id": "polygon-stmatic",
         "label": "Polygon stMATIC vault (current, oracle dead)",
         "tier": "opaque-or-unknown",
-        "summary": "719.60 MAI of debt across 28 vaults at Polygon block 91674649 in the newer stMATIC market (0x9A05b116), whose composite price source 0x1526f06F8938c9E622f57e960B89eBC3C587A9bD wraps the legacy stMATIC source 0x97371dF4492605486e23Da797fA68e55Fc38a13f — and that inner source reverts, so getEthPriceSource() reverts: liquidation, withdrawal, and borrowing are bricked despite this being a 'current' wind-down-era market.",
+        "summary": "719.60 MAI of debt across 28 vaults at Polygon block 91674649 in the newer stMATIC market (0x9A05b116), whose composite price source 0x1526f06F8938c9E622f57e960B89eBC3C587A9bD wraps the legacy stMATIC source 0x97371dF4492605486e23Da797fA68e55Fc38a13f, and that inner source reverts, so getEthPriceSource() reverts: liquidation, withdrawal, and borrowing are bricked despite this being a 'current' wind-down-era market.",
         "collateralAssets": [
           "stMATIC (vault 0x9A05b116b56304F5f4B3F1D5DA4641bFfFfae6Ab)"
         ],
@@ -1059,7 +1061,7 @@
             "note": "debtRatio=2 (50% repayment), gainRatio=1100 (10% bonus), closingFee=0, openingFee=0; 28 vaults with debt totaling 719.60 MAI; 26,700.64 stMATIC collateral; remaining mint capacity 9,633.59 MAI."
           }
         ],
-        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault(vaultID, front) with 50% repayment and a 10% bonus — this newer vault build exposes liquidateVault(uint256,uint256), not the legacy liquidateVault(uint256). In practice no liquidation can execute because the oracle call reverts. Re-proved by direct eth_call at Polygon block 91727016-91727114 (2026-08-09): stabilityPool() is the zero address, debtRatio()=2 and gainRatio()=1100 are unchanged, getEthPriceSource() reverts with empty return data, and on the live position 5 (448.290758 MAI debt) checkCollateralPercentage(5), checkLiquidation(5), and liquidateVault(5,0) all revert empty — whereas the same liquidateVault(id,0) call on the live Polygon WETH market 0xb5b31e6a returns the reason string 'Vault is not below minimum collateral percentage', so the empty reverts here originate in the price read, not in a require. liquidationDelaySec is deliberately left unrecorded on this branch: the vault contract has no delay, grace-period, auction, or timestamp term, but this market is not undelayed — it is uncallable at every block, an unbounded wait the schema's non-negative-integer field cannot express, and recording 0 would render as 'liquidation delay: none'.",
+        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault(vaultID, front) with 50% repayment and a 10% bonus, this newer vault build exposes liquidateVault(uint256,uint256), not the legacy liquidateVault(uint256). In practice no liquidation can execute because the oracle call reverts. Re-proved by direct eth_call at Polygon block 91727016-91727114 (2026-08-09): stabilityPool() is the zero address, debtRatio()=2 and gainRatio()=1100 are unchanged, getEthPriceSource() reverts with empty return data, and on the live position 5 (448.290758 MAI debt) checkCollateralPercentage(5), checkLiquidation(5), and liquidateVault(5,0) all revert empty, whereas the same liquidateVault(id,0) call on the live Polygon WETH market 0xb5b31e6a returns the reason string 'Vault is not below minimum collateral percentage', so the empty reverts here originate in the price read, not in a require. liquidationDelaySec is deliberately left unrecorded on this branch: the vault contract has no delay, grace-period, auction, or timestamp term, but this market is uncallable at every block. That creates an unbounded wait the schema's non-negative-integer field cannot express, and recording 0 would render as 'liquidation delay: none'.",
         "backstop": "No protocol backstop: stabilityPool is the zero address at the observed block; no stability pool, insurance fund, or committed bad-debt buyer exists.",
         "shutdownOrBadDebtBehavior": "No global shutdown, settlement, or debt-socialization path exists in the vault contract. With the oracle dead, the 719.60 MAI of debt and the deposited stMATIC are frozen in place until the owner Safe repoints changeEthPriceSource.",
         "debtSharePct": 0.03,
@@ -1671,7 +1673,7 @@
           {
             "asset": "WETH (vault 0x5c49b268c9841AFF1Cc3B0a418ff5c3442eE3F3b)",
             "minimumCollateralRatioPct": 130,
-            "note": "debtRatio=10 (liquidator repays 10%), gainRatio=1100 (10% bonus), closingFee=50; 9 vaults with debt totaling 818.24 MAI; 0.48 WETH collateral — underwater at the observed price."
+            "note": "debtRatio=10 (liquidator repays 10%), gainRatio=1100 (10% bonus), closingFee=50; 9 vaults with debt totaling 818.24 MAI; 0.48 WETH collateral, underwater at the observed price."
           },
           {
             "asset": "GNO (vault 0x014a177e9642d1b4e970418f894985dc1b85657f)",
@@ -1819,7 +1821,7 @@
             "note": "debtRatio=2 (50% repayment), gainRatio=1100 (10% bonus), closingFee=50; 31 vaults with debt totaling 1,494.39 MAI; 19,808.99 GLMR collateral."
           }
         ],
-        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault(vaultID, front) with 50% repayment and a 10% bonus — this newer vault build exposes liquidateVault(uint256,uint256), not the legacy liquidateVault(uint256). In practice no liquidation can execute because the oracle call reverts. Re-proved by direct eth_call at Moonbeam blocks 16786674-16786696 (2026-08-09): ethPriceSource() is 0x4497B606be93e773bbA5eaCFCb2ac5E2214220Eb and its latestRoundData() reverts, stabilityPool() is the zero address, debtRatio()=2 and gainRatio()=1100 are unchanged, getEthPriceSource() reverts, and on the live position 42 (8.330497 MAI debt, ownerOf 0x02282d4342b0258e202b8e1a3497a5102720f703) checkCollateralPercentage(42), checkLiquidation(42), and liquidateVault(42,0) all revert with empty return data. liquidationDelaySec is deliberately left unrecorded on this branch: the vault contract has no delay, grace-period, auction, or timestamp term, but this market is not undelayed — it is uncallable at every block, an unbounded wait the schema's non-negative-integer field cannot express, and recording 0 would render as 'liquidation delay: none'.",
+        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault(vaultID, front) with 50% repayment and a 10% bonus, this newer vault build exposes liquidateVault(uint256,uint256), not the legacy liquidateVault(uint256). In practice no liquidation can execute because the oracle call reverts. Re-proved by direct eth_call at Moonbeam blocks 16786674-16786696 (2026-08-09): ethPriceSource() is 0x4497B606be93e773bbA5eaCFCb2ac5E2214220Eb and its latestRoundData() reverts, stabilityPool() is the zero address, debtRatio()=2 and gainRatio()=1100 are unchanged, getEthPriceSource() reverts, and on the live position 42 (8.330497 MAI debt, ownerOf 0x02282d4342b0258e202b8e1a3497a5102720f703) checkCollateralPercentage(42), checkLiquidation(42), and liquidateVault(42,0) all revert with empty return data. liquidationDelaySec is deliberately left unrecorded on this branch: the vault contract has no delay, grace-period, auction, or timestamp term, but this market is uncallable at every block. That creates an unbounded wait the schema's non-negative-integer field cannot express, and recording 0 would render as 'liquidation delay: none'.",
         "backstop": "No protocol backstop: no stability pool, insurance fund, or committed bad-debt buyer exists on this deployment.",
         "shutdownOrBadDebtBehavior": "No global shutdown, settlement, or debt-socialization path exists in the vault contract. With the oracle dead, the 1,494.39 MAI of debt and the deposited GLMR are frozen in place until the owner Safe repoints changeEthPriceSource.",
         "debtSharePct": 0.07,
@@ -2012,7 +2014,7 @@
           {
             "asset": "DODO (vault 0x7333fd58d8d73a8e5fc1a16c8037ada4f580fa2b)",
             "minimumCollateralRatioPct": 150,
-            "note": "debtRatio=2, gainRatio=1100, closingFee=0; 1 vault with debt totaling 12.70 MAI; oracle dead — frozen."
+            "note": "debtRatio=2, gainRatio=1100, closingFee=0; 1 vault with debt totaling 12.70 MAI; oracle dead, frozen."
           }
         ],
         "liquidationMechanism": "Permissionless partial liquidation via liquidateVault(): any MAI holder repays 1/debtRatio (50%) of a below-minimum vault's debt and extracts collateral worth the repayment times gainRatio/10 (110% = 10% bonus) at the oracle price; no auction, no grace period. Inoperative on the DODO market because its oracle reverts.",
@@ -2415,6 +2417,7 @@
           },
           {
             "label": "QIP250 Snapshot — Deprecate QiDao deployment on Fraxtal",
+            "quoted": true,
             "url": "https://snapshot.box/#/s:qidao.eth/proposal/0x76868a1b00f4792f47016b3afef53be0b4ed981e6cfbbbade098c8f4d6ad0078"
           },
           {

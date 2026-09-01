@@ -32,7 +32,7 @@
         "url": "https://data.chain.link/feeds/ethereum/mainnet/acred-nav"
       }
     ],
-    "rationale": "ACRED is an ERC-4626 feeder share into the Apollo Diversified Credit Fund, so the fund NAV — tracked live by the Chainlink ACRED NAV oracle that backs the configured reserve adapter — is the reserve asset. Securitize describes the fund as multi-strategy private credit (direct lending, structured credit, performing credit, and dislocated credit) without dated public position weights, so the NAV is retained as one classified fund-share slice with the internal allocation recorded as the known unknown.",
+    "rationale": "ACRED is an ERC-4626 feeder share into the Apollo Diversified Credit Fund, so the fund NAV, tracked live by the Chainlink ACRED NAV oracle that backs the configured reserve adapter, is the reserve asset. Securitize describes the fund as multi-strategy private credit (direct lending, structured credit, performing credit, and dislocated credit) without dated public position weights, so the NAV is retained as one classified fund-share slice with the internal allocation recorded as the known unknown.",
     "compositionBasis": "Chainlink ACRED NAV oracle (the configured live-reserve surface) and Securitize fund disclosures",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",

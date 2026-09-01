@@ -12,7 +12,7 @@
         "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
       },
       {
-        "label": "AMF GECO — Spiko US T-Bills fund record",
+        "label": "AMF GECO: Spiko US T-Bills fund record",
         "url": "https://geco.amf-france.org/produit-d-epargne/c79398"
       }
     ]
@@ -23,7 +23,7 @@
       "summary": "USTBL is a tokenized share of an AMF-approved French UCITS money-market fund. Its value and yield track the fund's NAV and U.S. Treasury-bill portfolio, rather than being a fixed-value payment instrument; the GENIUS Act excludes securities from its payment-stablecoin definition.",
       "references": [
         {
-          "label": "GENIUS Act Public Law 119-27 — payment-stablecoin definition and securities exclusion",
+          "label": "GENIUS Act Public Law 119-27: payment-stablecoin definition and securities exclusion",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
@@ -41,7 +41,7 @@
     "issuerPathway": "not-applicable",
     "issuerEntity": "Spiko US T-Bills Money Market Fund (managed by Twenty First Capital)",
     "issuerDomicile": "France",
-    "licensingRegulator": "Autorité des marchés financiers (AMF) — UCITS money-market fund approval",
+    "licensingRegulator": "Autorité des marchés financiers (AMF): UCITS money-market fund approval",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
@@ -71,7 +71,7 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "AMF GECO — Spiko US T-Bills fund record",
+        "label": "AMF GECO: Spiko US T-Bills fund record",
         "url": "https://geco.amf-france.org/produit-d-epargne/c79398",
         "sourceKind": "foreign-regulator",
         "accessedAt": "2026-08-14"

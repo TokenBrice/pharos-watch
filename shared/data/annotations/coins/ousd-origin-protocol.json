@@ -1,3 +1,3 @@
 [
-  {"date":"2020-11-17","kind":"depeg","label":"Reentrancy exploit — $7M drained (~33% supply), peg break","severity":"high","href":"https://blog.originprotocol.com/origin-dollar-ousd-hack-detailed-analysis-of-the-flash-loan-attack-on-nov-17-58939bef9c11","note":"2020-11-17 — Reentrancy exploit drained ~$7M (~33% of supply); OUSD briefly broke peg before Origin compensation plan."}
+  {"date":"2020-11-17","kind":"depeg","label":"Reentrancy exploit: $7M drained (~33% supply), peg break","severity":"high","href":"https://blog.originprotocol.com/origin-dollar-ousd-hack-detailed-analysis-of-the-flash-loan-attack-on-nov-17-58939bef9c11","note":"2020-11-17: Reentrancy exploit drained ~$7M (~33% of supply); OUSD briefly broke peg before Origin compensation plan."}
 ]

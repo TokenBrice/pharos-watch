@@ -64,7 +64,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Web 3 Dollar', symbol USD3, 18 decimals — Reserve Protocol issuer-native deployment on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Web 3 Dollar', symbol USD3, 18 decimals, Reserve Protocol issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

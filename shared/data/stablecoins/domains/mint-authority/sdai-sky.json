@@ -40,7 +40,7 @@
             "url": "https://chainlog.sky.money/api/mainnet/active.json"
           }
         ],
-        "evidence": "At Ethereum block 25294731: asset() returned DAI 0x6B175474E89094C44Da98b954EedeAC495271d0F; name() returned 'Savings Dai'. EIP-1967 proxy admin slot = 0x0 (not upgradeable); owner() reverts (no owner). No privileged mint function — shares minted only on DAI deposit via ERC-4626 deposit/mint. Wrapper is immutable with no upgrade surface."
+        "evidence": "At Ethereum block 25294731: asset() returned DAI 0x6B175474E89094C44Da98b954EedeAC495271d0F; name() returned 'Savings Dai'. EIP-1967 proxy admin slot = 0x0 (not upgradeable); owner() reverts (no owner). No privileged mint function, shares minted only on DAI deposit via ERC-4626 deposit/mint. Wrapper is immutable with no upgrade surface."
       }
     ],
     "economicCapSemantics": "bounded",

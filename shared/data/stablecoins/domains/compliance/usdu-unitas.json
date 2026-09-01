@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register — ART/EMT issuer files reviewed; no Unitas or USDu match found on 2026-08-14",
+        "label": "ESMA Interim MiCA Register: ART/EMT issuer files reviewed; no Unitas or USDu match found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Unitas minting documentation — USDu is a crypto-native digital dollar backed by a delta-neutral strategy",
+        "label": "Unitas minting documentation: USDu is a crypto-native digital dollar backed by a delta-neutral strategy",
         "url": "https://docs.unitas.so/solution-design/minting-usdu"
       },
       {
-        "label": "Unitas Terms of Service — USDu is issued through Unipay smart contracts and direct redemption is subject to protocol rules",
+        "label": "Unitas Terms of Service: USDu is issued through Unipay smart contracts and direct redemption is subject to protocol rules",
         "url": "https://docs.unitas.so/resources"
       }
     ]
@@ -23,13 +23,13 @@
       "summary": "USDu is marketed as a dollar-referenced stablecoin and can be minted or redeemed against collateral, but direct access is whitelist-restricted and the backing is a delta-neutral JLP/perpetual strategy rather than GENIUS-style reserve assets. The payment-stablecoin classification is therefore unresolved.",
       "references": [
         {
-          "label": "Unitas minting USDu — issuance, whitelist and delta-neutral collateral mechanics",
+          "label": "Unitas minting USDu: issuance, whitelist and delta-neutral collateral mechanics",
           "url": "https://docs.unitas.so/solution-design/minting-usdu",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "GENIUS Act — payment stablecoin fixed-value and reserve framework",
+          "label": "GENIUS Act: payment stablecoin fixed-value and reserve framework",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "accessedAt": "2026-08-14"
@@ -51,25 +51,25 @@
     "notes": "Unitas is treated as unclear rather than as an official GENIUS pathway: issuer materials use stablecoin/digital-dollar language and describe mint/redemption, but the strategy-backed design, whitelist restrictions, secondary-market access, and no-guarantee language do not resolve whether it meets the statutory payment-stablecoin test. No public U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found. The GENIUS rulemaking phase remains proposed-rules.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC Digital Assets Licensing Applications — current pending-application table",
+        "label": "OCC Digital Assets Licensing Applications: current pending-application table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Federal Register 91 FR 10202 — payment stablecoin definition and proposed framework",
+        "label": "Federal Register 91 FR 10202: payment stablecoin definition and proposed framework",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Unitas Terms of Service — Unipay Pte. Ltd. and USDu/sUSDu legal terms",
+        "label": "Unitas Terms of Service: Unipay Pte. Ltd. and USDu/sUSDu legal terms",
         "url": "https://docs.unitas.so/resources",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

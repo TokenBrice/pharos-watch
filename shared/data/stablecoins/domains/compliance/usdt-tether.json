@@ -35,7 +35,7 @@
     "reserveDisclosureUrl": "https://tether.to/en/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Tether CEO Paolo Ardoino publicly committed on July 18 2025 (day the GENIUS Act was signed) that Tether will comply via the GENIUS Act foreign issuer pathway, with three years to meet all requirements including AML and audited reserves. Tether's January 27 2026 USAT press release explicitly states USDT is 'progressing towards GENIUS Act compliance' while USAT (issued by Anchorage Digital Bank, N.A.) serves the U.S. domestic market. No formal foreign-issuer registration has been filed for USDT — the Treasury equivalency-determination process is still in NPRM phase as of June 2026 and no comparability determination for El Salvador/Tether has been issued. foreignExceptionStatus remains unknown (more conservative than registration-pending) because no application framework is finalized and no formal filing exists. Historical CFTC and NYAG actions are tracked as enforcement-warning evidence for Tether/USDT history; they do not establish a current GENIUS authorization decision.",
+    "notes": "Tether CEO Paolo Ardoino publicly committed on July 18 2025 (day the GENIUS Act was signed) that Tether will comply via the GENIUS Act foreign issuer pathway, with three years to meet all requirements including AML and audited reserves. Tether's January 27 2026 USAT press release explicitly states USDT is 'progressing towards GENIUS Act compliance' while USAT (issued by Anchorage Digital Bank, N.A.) serves the U.S. domestic market. No formal foreign-issuer registration has been filed for USDT: the Treasury equivalency-determination process is still in NPRM phase as of June 2026 and no comparability determination for El Salvador/Tether has been issued. foreignExceptionStatus remains unknown (more conservative than registration-pending) because no application framework is finalized and no formal filing exists. Historical CFTC and NYAG actions are tracked as enforcement-warning evidence for Tether/USDT history; they do not establish a current GENIUS authorization decision.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -44,7 +44,7 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Tether USAT launch press release — USDT progressing towards GENIUS Act compliance",
+        "label": "Tether USAT launch press release: USDT progressing towards GENIUS Act compliance",
         "url": "https://tether.io/news/tether-announces-the-launch-of-usat-the-federally-regulated-dollar-backed-stablecoin-made-in-america/",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-01-27",

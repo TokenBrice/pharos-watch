@@ -73,7 +73,7 @@
         "url": "https://api.koios.rest/api/v1/address_info"
       }
     ],
-    "uncertainty": "Reserves are ADA locked at a dedicated Cardano script address with no custodian; the current Koios address_info read returned 28,300,277.449032 ADA, with the newest returned UTxO at block 13,840,791. COTI has not officially published the contract addresses — the inventory comes from the community-maintained open-djed registry — and the pre-launch audit COTI announced was never published with an auditor name or report. Legal bankruptcy-remoteness and rehypothecation terms do not apply to script custody; the reserve is delegated (staked) but not lent out.",
+    "uncertainty": "Reserves are ADA locked at a dedicated Cardano script address with no custodian; the current Koios address_info read returned 28,300,277.449032 ADA, with the newest returned UTxO at block 13,840,791. COTI has not officially published the contract addresses, the inventory comes from the community-maintained open-djed registry, and the pre-launch audit COTI announced was never published with an auditor name or report. Legal bankruptcy-remoteness and rehypothecation terms do not apply to script custody; the reserve is delegated (staked) but not lent out.",
     "knownUnknownExposurePct": 0
   }
 }

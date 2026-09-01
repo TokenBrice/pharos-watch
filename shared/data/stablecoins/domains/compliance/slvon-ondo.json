@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — no SLVon EMT/ART authorization located in the reviewed register",
+        "label": "ESMA MiCA register landing page: no SLVon EMT/ART authorization located in the reviewed register",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "EUR-Lex MiCA Regulation — financial instruments are outside MiCA scope",
+        "label": "EUR-Lex MiCA Regulation: financial instruments are outside MiCA scope",
         "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
       },
       {
-        "label": "Ondo Important Notes — Ondo Stocks are tokenized securities offered in the EEA under qualified-investor/professional-client restrictions",
+        "label": "Ondo Important Notes: Ondo Stocks are tokenized securities offered in the EEA under qualified-investor/professional-client restrictions",
         "url": "https://docs.ondo.finance/ondo-stocks/important-notes"
       }
     ]
@@ -37,7 +37,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Ondo Important Notes — tokenized stocks and ETFs are security exposures, not underlying shares",
+          "label": "Ondo Important Notes: tokenized stocks and ETFs are security exposures, not underlying shares",
           "url": "https://docs.ondo.finance/ondo-stocks/important-notes",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"

@@ -1,4 +1,4 @@
 [
-  {"date":"2024-08-27","kind":"governance","label":"MakerDAO rebrands to Sky; USDS launch announced","severity":"med","href":"https://www.coindesk.com/business/2024/08/27/makerdao-is-now-sky-as-7b-crypto-lender-rolls-out-new-stablecoin-governance-token","note":"2024-08-27 — MakerDAO announces Sky rebrand and USDS launch schedule"},
-  {"date":"2024-09-18","kind":"governance","label":"USDS mainnet launch — DAI upgradable 1:1","severity":"high","href":"https://sky.money/","note":"2024-09-18 — USDS and SKY tokens go live; DAI upgradable 1:1 to USDS"}
+  {"date":"2024-08-27","kind":"governance","label":"MakerDAO rebrands to Sky; USDS launch announced","severity":"med","href":"https://www.coindesk.com/business/2024/08/27/makerdao-is-now-sky-as-7b-crypto-lender-rolls-out-new-stablecoin-governance-token","note":"2024-08-27: MakerDAO announces Sky rebrand and USDS launch schedule"},
+  {"date":"2024-09-18","kind":"governance","label":"USDS mainnet launch — DAI upgradable 1:1","severity":"high","href":"https://sky.money/","note":"2024-09-18: USDS and SKY tokens go live; DAI upgradable 1:1 to USDS"}
 ]

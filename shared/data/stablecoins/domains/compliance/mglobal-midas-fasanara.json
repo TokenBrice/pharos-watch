@@ -4,11 +4,11 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Midas mGLOBAL disclosure — security token and NAV-linked investment product, explicitly not a stablecoin",
+        "label": "Midas mGLOBAL disclosure: security token and NAV-linked investment product, explicitly not a stablecoin",
         "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
       },
       {
-        "label": "ESMA MiCA Article 2 scope — financial instruments and funds are excluded from MiCA",
+        "label": "ESMA MiCA Article 2 scope: financial instruments and funds are excluded from MiCA",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
@@ -45,7 +45,7 @@
     "notes": "Explicit GENIUS exclusion: Midas describes mGLOBAL as a security token with fluctuating NAV and a dedicated Luxembourg securitisation vehicle. The product is tracked here for boundary clarity because its on-chain stablecoin collateral use could otherwise be confused with payment-stablecoin compliance.",
     "references": [
       {
-        "label": "Midas mGLOBAL disclosure — security token, not a stablecoin",
+        "label": "Midas mGLOBAL disclosure: security token, not a stablecoin",
         "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

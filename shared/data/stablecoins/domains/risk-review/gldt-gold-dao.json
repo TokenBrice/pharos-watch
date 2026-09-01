@@ -8,11 +8,11 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x86856814e74456893cfc8946bedcbb472b5fa856"
       },
       {
-        "label": "ICRC API — GLDT ledger (read 2026-07-30)",
+        "label": "ICRC API: GLDT ledger (read 2026-07-30)",
         "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers/6c7su-kiaaa-aaaar-qaira-cai"
       },
       {
-        "label": "GoldDAO/gold-dao repository — dfx.json DFINITY ICRC-1 ledger wasm pin",
+        "label": "GoldDAO/gold-dao repository: dfx.json DFINITY ICRC-1 ledger wasm pin",
         "url": "https://github.com/GoldDAO/gold-dao"
       },
       {
@@ -20,7 +20,7 @@
         "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "Re-derived 2026-08-10 across all four deployments. EVM (Ethereum/Base/Arbitrum, 0x86856814e74456893cfc8946bedcbb472b5fa856): the verified Ethereum Token source is OpenZeppelin ERC20+Ownable+ERC20Permit with stock transfer/transferFrom — no blacklist, freeze, pause, or seize path; burn1-burn4 burn only msg.sender for the ICP bridge route; onlyOwner covers mint/batchMint/withdrawEth/updateMinAmount/updateOwner, and owner() read at Ethereum block 25648434 returned the bridge operator 0x70AE25592209B57F62b3a3e832ab356228a2192C, so owner reach is mint-only and never holder-burn; the 2026-07-20 bridge-route review verified the identical function set on Base and Arbitrum (a 2026-07-30 Base source re-check was unavailable, explorer error). Canonical ICP ledger 6c7su-kiaaa-aaaar-qaira-cai: Gold DAO's dfx.json pins the stock DFINITY ICRC-1 ledger-suite wasm and candid (dfinity/ic commit 75dd48c), whose current interface exposes only ICRC-1/2/3/21 methods with no freeze, blacklist, block-account, or pause entrypoint; a live on-chain standards query on 2026-07-30 returned exactly ICRC-1/2/3/21, and the ICRC API shows the sole minting account is the GLDT swap canister. However, the canonical ledger controller is Gold DAO SNS root tw2vt-hqaaa-aaaaq-aab6a-cai, and the transfer-review overlay establishes that this controller can install replacement ledger Wasm and change holder-transfer behavior behind live balances. That mutable holder-transfer surface is direct Possible FreezeWatch exposure even though no current deployment exposes an active holder-targeted blacklist or freeze entrypoint. The earlier untracked-upstream signal remains suppressed as a same-symbol/text false positive: GLDT's backing is locked GLD NFTs over physical gold, not a tracked freezable upstream stablecoin.",
+    "evidence": "Re-derived 2026-08-10 across all four deployments. EVM (Ethereum/Base/Arbitrum, 0x86856814e74456893cfc8946bedcbb472b5fa856): the verified Ethereum Token source is OpenZeppelin ERC20+Ownable+ERC20Permit with stock transfer/transferFrom, no blacklist, freeze, pause, or seize path; burn1-burn4 burn only msg.sender for the ICP bridge route; onlyOwner covers mint/batchMint/withdrawEth/updateMinAmount/updateOwner, and owner() read at Ethereum block 25648434 returned the bridge operator 0x70AE25592209B57F62b3a3e832ab356228a2192C, so owner reach is mint-only and never holder-burn; the 2026-07-20 bridge-route review verified the identical function set on Base and Arbitrum (a 2026-07-30 Base source re-check was unavailable, explorer error). Canonical ICP ledger 6c7su-kiaaa-aaaar-qaira-cai: Gold DAO's dfx.json pins the stock DFINITY ICRC-1 ledger-suite wasm and candid (dfinity/ic commit 75dd48c), whose current interface exposes only ICRC-1/2/3/21 methods with no freeze, blacklist, block-account, or pause entrypoint; a live on-chain standards query on 2026-07-30 returned exactly ICRC-1/2/3/21, and the ICRC API shows the sole minting account is the GLDT swap canister. However, the canonical ledger controller is Gold DAO SNS root tw2vt-hqaaa-aaaaq-aab6a-cai, and the transfer-review overlay establishes that this controller can install replacement ledger Wasm and change holder-transfer behavior behind live balances. That mutable holder-transfer surface is direct Possible FreezeWatch exposure even though no current deployment exposes an active holder-targeted blacklist or freeze entrypoint. The earlier untracked-upstream signal remains suppressed as a same-symbol/text false positive: GLDT's backing is locked GLD NFTs over physical gold, not a tracked freezable upstream stablecoin.",
     "reviewer": "OpenAI Codex FreezeWatch consistency review",
     "reviewedAt": "2026-08-10"
   },
@@ -114,7 +114,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The ethereum GLDT token is the verified custom Ownable ERC-20 (owner-only payable mint()/batchMint() and burn1-burn4 events carrying bytes32 ICP destinations — a canister/chain-key bridge pattern) whose owner() on all three EVM chains is the bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (read 2026-07-20). Omnity's official token table lists GLDT (ICP ledger 6c7su-kiaaa-aaaar-qaira-cai) for ICP-to-EVM routes, so the bridge is attributed to Omnity Network; the EOA's operational identity is not officially labeled (attribution inferred). EVM footprint is tiny (~5.3k GLDT on Base, single-digit elsewhere).",
+        "reviewNote": "The ethereum GLDT token is the verified custom Ownable ERC-20 (owner-only payable mint()/batchMint() and burn1-burn4 events carrying bytes32 ICP destinations, a canister/chain-key bridge pattern) whose owner() on all three EVM chains is the bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (read 2026-07-20). Omnity's official token table lists GLDT (ICP ledger 6c7su-kiaaa-aaaar-qaira-cai) for ICP-to-EVM routes, so the bridge is attributed to Omnity Network; the EOA's operational identity is not officially labeled (attribution inferred). EVM footprint is tiny (~5.3k GLDT on Base, single-digit elsewhere).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "icp",
@@ -126,7 +126,7 @@
         ],
         "sources": [
           {
-            "label": "Omnity docs — references (GLDT listed token)",
+            "label": "Omnity docs: references (GLDT listed token)",
             "url": "https://docs.omnity.network/docs/Omnity-Hub/references"
           },
           {
@@ -146,7 +146,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The base GLDT token is the verified custom Ownable ERC-20 (owner-only payable mint()/batchMint() and burn1-burn4 events carrying bytes32 ICP destinations — a canister/chain-key bridge pattern) whose owner() on all three EVM chains is the bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (read 2026-07-20). Omnity's official token table lists GLDT (ICP ledger 6c7su-kiaaa-aaaar-qaira-cai) for ICP-to-EVM routes, so the bridge is attributed to Omnity Network; the EOA's operational identity is not officially labeled (attribution inferred). EVM footprint is tiny (~5.3k GLDT on Base, single-digit elsewhere).",
+        "reviewNote": "The base GLDT token is the verified custom Ownable ERC-20 (owner-only payable mint()/batchMint() and burn1-burn4 events carrying bytes32 ICP destinations, a canister/chain-key bridge pattern) whose owner() on all three EVM chains is the bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (read 2026-07-20). Omnity's official token table lists GLDT (ICP ledger 6c7su-kiaaa-aaaar-qaira-cai) for ICP-to-EVM routes, so the bridge is attributed to Omnity Network; the EOA's operational identity is not officially labeled (attribution inferred). EVM footprint is tiny (~5.3k GLDT on Base, single-digit elsewhere).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "icp",
@@ -158,7 +158,7 @@
         ],
         "sources": [
           {
-            "label": "Omnity docs — references (GLDT listed token)",
+            "label": "Omnity docs: references (GLDT listed token)",
             "url": "https://docs.omnity.network/docs/Omnity-Hub/references"
           },
           {
@@ -178,7 +178,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The arbitrum GLDT token is the verified custom Ownable ERC-20 (owner-only payable mint()/batchMint() and burn1-burn4 events carrying bytes32 ICP destinations — a canister/chain-key bridge pattern) whose owner() on all three EVM chains is the bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (read 2026-07-20). Omnity's official token table lists GLDT (ICP ledger 6c7su-kiaaa-aaaar-qaira-cai) for ICP-to-EVM routes, so the bridge is attributed to Omnity Network; the EOA's operational identity is not officially labeled (attribution inferred). EVM footprint is tiny (~5.3k GLDT on Base, single-digit elsewhere).",
+        "reviewNote": "The arbitrum GLDT token is the verified custom Ownable ERC-20 (owner-only payable mint()/batchMint() and burn1-burn4 events carrying bytes32 ICP destinations, a canister/chain-key bridge pattern) whose owner() on all three EVM chains is the bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (read 2026-07-20). Omnity's official token table lists GLDT (ICP ledger 6c7su-kiaaa-aaaar-qaira-cai) for ICP-to-EVM routes, so the bridge is attributed to Omnity Network; the EOA's operational identity is not officially labeled (attribution inferred). EVM footprint is tiny (~5.3k GLDT on Base, single-digit elsewhere).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "icp",
@@ -190,7 +190,7 @@
         ],
         "sources": [
           {
-            "label": "Omnity docs — references (GLDT listed token)",
+            "label": "Omnity docs: references (GLDT listed token)",
             "url": "https://docs.omnity.network/docs/Omnity-Hub/references"
           },
           {
@@ -215,11 +215,12 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "ICRC API — GLDT ledger (minting account read 2026-07-20)",
+            "label": "ICRC API: GLDT ledger (minting account read 2026-07-20)",
             "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers/6c7su-kiaaa-aaaar-qaira-cai"
           },
           {
             "label": "Gold DAO whitepaper — GLDT swap canister",
+            "quoted": true,
             "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2F1ybIyXj78WyXQ1UO6Clj%2FGoldDAO_Whitepaper.pdf?alt=media&token=7dce3beb-cc89-406f-a2df-a83b3737a021"
           }
         ]

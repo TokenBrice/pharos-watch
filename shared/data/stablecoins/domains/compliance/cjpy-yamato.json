@@ -4,19 +4,19 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — ART/EMT issuer registers",
+        "label": "ESMA MiCA register landing page: ART/EMT issuer registers",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA interim MiCA register — EMT issuers (checked 2026-08-14)",
+        "label": "ESMA interim MiCA register: EMT issuers (checked 2026-08-14)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Yamato Protocol documentation — decentralized, non-custodial CJPY CDP",
+        "label": "Yamato Protocol documentation: decentralized, non-custodial CJPY CDP",
         "url": "https://docs.yamato.fi/en"
       },
       {
-        "label": "Yamato Protocol source repository — CJPY collateralized lending design",
+        "label": "Yamato Protocol source repository: CJPY collateralized lending design",
         "url": "https://github.com/DeFiGeek-Community/yamato"
       }
     ]

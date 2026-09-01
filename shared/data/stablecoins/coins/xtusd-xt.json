@@ -14,7 +14,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-07-30",
     "reviewer": "GPT SOL-NR-A wave6; Kimi T53 archetype re-verification",
-    "rationale": "XT.COM describes XTUSD as an XTDao vault system in which users mint debt against overcollateralized assets and unsafe vaults are auctioned. Those borrower-vault and liquidation mechanics establish the cdp archetype even though the current live collateral and control graph remain opaque. 2026-07-30 re-verification: at XSC block 47,929,909 the live MakerDAO DSS-style system is unchanged — the XTUSD token 0x1a6131ea… still has the DaiJoin 0xa57cde05… as its ward (wards = 1) and the Vat 0xf9d4810f… still returns live() = 1, so the borrower-vault mint path that grounds the cdp classification remains the live stabilization structure. A fresh v9 baseline replay compiles archetype = cdp with no missing-archetype gap.",
+    "rationale": "XT.COM describes XTUSD as an XTDao vault system in which users mint debt against overcollateralized assets and unsafe vaults are auctioned. Those borrower-vault and liquidation mechanics establish the cdp archetype even though the current live collateral and control graph remain opaque. 2026-07-30 re-verification: at XSC block 47,929,909 the live MakerDAO DSS-style system is unchanged. The XTUSD token 0x1a6131ea… still has the DaiJoin 0xa57cde05… as its ward (wards = 1) and the Vat 0xf9d4810f… still returns live() = 1, so the borrower-vault mint path that grounds the cdp classification remains the live stabilization structure. A fresh v9 baseline replay compiles archetype = cdp with no missing-archetype gap.",
     "sources": [
       {
         "label": "XT.COM TAI to XTUSD announcement",

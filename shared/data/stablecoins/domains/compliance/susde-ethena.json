@@ -12,7 +12,8 @@
           "label": "Ethena — Staking USDe",
           "url": "https://docs.ethena.fi/solution-design/staking-usde",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-08-14",
+          "quoted": true
         },
         {
           "label": "Ethena Terms of Service",
@@ -21,7 +22,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "GENIUS Act — Public Law 119-27",
+          "label": "GENIUS Act: Public Law 119-27",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
@@ -40,7 +41,8 @@
         "label": "Ethena — Staking USDe",
         "url": "https://docs.ethena.fi/solution-design/staking-usde",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-08-14",
+        "quoted": true
       },
       {
         "label": "Ethena Terms of Service",

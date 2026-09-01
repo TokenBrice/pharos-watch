@@ -1,4 +1,4 @@
 [
-  {"date":"2025-10-15","kind":"governance","label":"Neutrl NUSD pre-deposit vaults open","severity":"low","note":"2025-10-15 — Pre-deposit vaults open for public; NUSD private beta TVL ~$52M"},
-  {"date":"2025-11-11","kind":"governance","label":"Neutrl NUSD public launch — LayerZero OFT live","severity":"med","href":"https://blockchainreporter.net/neutrl-partners-with-layerzero-for-oft-standard-unlocks-nusd-snusd-stablecoins-defi-cross-chain-interoperability/","note":"2025-11-11 — NUSD/sNUSD adopt LayerZero OFT for omni-chain transfer"}
+  {"date":"2025-10-15","kind":"governance","label":"Neutrl NUSD pre-deposit vaults open","severity":"low","note":"2025-10-15: Pre-deposit vaults open for public; NUSD private beta TVL ~$52M"},
+  {"date":"2025-11-11","kind":"governance","label":"Neutrl NUSD public launch: LayerZero OFT live","severity":"med","href":"https://blockchainreporter.net/neutrl-partners-with-layerzero-for-oft-standard-unlocks-nusd-snusd-stablecoins-defi-cross-chain-interoperability/","note":"2025-11-11: NUSD/sNUSD adopt LayerZero OFT for omni-chain transfer"}
 ]

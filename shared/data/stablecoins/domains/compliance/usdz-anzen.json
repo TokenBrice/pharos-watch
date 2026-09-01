@@ -25,13 +25,13 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Anzen Terms of Service \u2014 confirms Anzen Group Ltd (BVI), no regulatory registration",
+        "label": "Anzen Terms of Service: confirms Anzen Group Ltd (BVI), no regulatory registration",
         "url": "https://anzen.finance/terms",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Anzen docs \u2014 no GENIUS or regulatory disclosures",
+        "label": "Anzen docs: no GENIUS or regulatory disclosures",
         "url": "https://docs.anzen.finance/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
@@ -46,8 +46,8 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
-        "Anzen Terms of Service (anzen.finance/terms) \u2014 entity confirmed as Anzen Group Ltd, BVI; explicitly states not registered with any regulatory body in any jurisdiction",
-        "Anzen docs and website \u2014 no GENIUS PPSI application, state-qualified, or foreign-issuer exception disclosure found",
+        "Anzen Terms of Service (anzen.finance/terms): entity confirmed as Anzen Group Ltd, BVI; explicitly states not registered with any regulatory body in any jurisdiction",
+        "Anzen docs and website: no GENIUS PPSI application, state-qualified, or foreign-issuer exception disclosure found",
         "Web search: no news or regulator source linking Anzen/USDz to any GENIUS authorization pathway",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",

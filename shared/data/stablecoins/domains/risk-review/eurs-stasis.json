@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "EURS is issuer-minted natively by STASIS on Ethereum, Algorand, Stellar, and XDC. Polygon EURS is a Polygon PoS lock/mint representation, Arbitrum EURS is a Multichain lock/mint representation, and Gnosis EURS is a Gnosis OmniBridge lock/unlock-and-mint representation; their controllers and upgrade, validator, and limit domains are assessed in structured Bridge Risk controls rather than Mint Authority. DefiLlama additionally reports EURS supply under the raw chain label Everscale, which does not canonicalize to any CHAIN_META entry — a policy-maintainer-routed label pool, not fixable from coin data (verified 2026-07-30: Everscale is the only uncanonicalized label and its €1,587.58 equals the full unmatched-chain-label pool).",
+    "summary": "EURS is issuer-minted natively by STASIS on Ethereum, Algorand, Stellar, and XDC. Polygon EURS is a Polygon PoS lock/mint representation, Arbitrum EURS is a Multichain lock/mint representation, and Gnosis EURS is a Gnosis OmniBridge lock/unlock-and-mint representation; their controllers and upgrade, validator, and limit domains are assessed in structured Bridge Risk controls rather than Mint Authority. DefiLlama additionally reports EURS supply under the raw chain label Everscale, which does not canonicalize to any CHAIN_META entry, a policy-maintainer-routed label pool, not fixable from coin data (verified 2026-07-30: Everscale is the only uncanonicalized label and its €1,587.58 equals the full unmatched-chain-label pool).",
     "reviewedAt": "2026-08-28",
     "reviewer": "Codex",
     "confidence": "verified",

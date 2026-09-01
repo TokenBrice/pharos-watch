@@ -64,7 +64,7 @@
             "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
           }
         ],
-        "evidence": "RLUSD ETH (0x8292) is a StablecoinProxy (UUPS), implementation StablecoinUpgradeableV2 at 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. hasRole(MINTER_ROLE, 0x97e9) = true (MINTER_ROLE bytes32 obtained via MINTER_ROLE() getter 0xd5391393). Contract 0x97e9 verified on Blockscout as Ripple's MultiSign (EIP-712 multisig): signers() returns 31 addresses, quorum() = 2, each signerWeight = 1, nonce = 350. No GnosisSafe module structure — custom Ripple EIP-712 multisig."
+        "evidence": "RLUSD ETH (0x8292) is a StablecoinProxy (UUPS), implementation StablecoinUpgradeableV2 at 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. hasRole(MINTER_ROLE, 0x97e9) = true (MINTER_ROLE bytes32 obtained via MINTER_ROLE() getter 0xd5391393). Contract 0x97e9 verified on Blockscout as Ripple's MultiSign (EIP-712 multisig): signers() returns 31 addresses, quorum() = 2, each signerWeight = 1, nonce = 350. No GnosisSafe module structure, custom Ripple EIP-712 multisig."
       },
       {
         "deploymentRefs": [

@@ -4,19 +4,19 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — no AID EMT/ART authorization located; the separate GAIB white-paper record is not AID",
+        "label": "ESMA MiCA register landing page: no AID EMT/ART authorization located; the separate GAIB white-paper record is not AID",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "EUR-Lex MiCA Regulation — Union offer/admission scope and EMT/ART framework",
+        "label": "EUR-Lex MiCA Regulation: Union offer/admission scope and EMT/ART framework",
         "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
       },
       {
-        "label": "GAIB introduction — AID described as a synthetic dollar backed by Treasury and stable assets",
+        "label": "GAIB introduction: AID described as a synthetic dollar backed by Treasury and stable assets",
         "url": "https://docs.gaib.ai/"
       },
       {
-        "label": "GAIB terms — Good AI Pte. Ltd. group disclosures and location-based access limitations",
+        "label": "GAIB terms: Good AI Pte. Ltd. group disclosures and location-based access limitations",
         "url": "https://docs.gaib.ai/legal/terms-of-use"
       }
     ]

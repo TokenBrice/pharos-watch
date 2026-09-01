@@ -801,7 +801,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "TON jetton master EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f ('Ethena USDe', tonapi.io whitelisted, queried 2026-07-20) reports mintable=true with admin 0:ab8feb26323e8940202f6fe04fc2531aef520003ba4adca35a15c54e75e602ea (EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7, active account). DefiLlama attributes TON USDe supply to this jetton as the bridging representation; LayerZero's OFT registry does not enumerate TON, and the admin account's internal signer set is not enumerable via public APIs — controller identity recorded, composition unverified.",
+        "reviewNote": "TON jetton master EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f ('Ethena USDe', tonapi.io whitelisted, queried 2026-07-20) reports mintable=true with admin 0:ab8feb26323e8940202f6fe04fc2531aef520003ba4adca35a15c54e75e602ea (EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7, active account). DefiLlama attributes TON USDe supply to this jetton as the bridging representation; LayerZero's OFT registry does not enumerate TON, and the admin account's internal signer set is not enumerable via public APIs, controller identity recorded, composition unverified.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",

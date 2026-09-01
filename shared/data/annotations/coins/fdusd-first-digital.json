@@ -1,6 +1,6 @@
 [
-  {"date":"2023-06-01","kind":"governance","label":"FDUSD launch by First Digital Labs","severity":"low","note":"2023-06-01 — FDUSD launched by FD121 Limited (BVI); FDT custodian"},
-  {"date":"2023-07-26","kind":"governance","label":"Binance lists FDUSD with zero-fee promo (BUSD replacement)","severity":"low","note":"2023-07-26 — Binance lists FDUSD with zero-fee promo as BUSD winds down"},
-  {"date":"2025-04-02","kind":"depeg","label":"Sun insolvency claim vs. FDT — FDUSD depeg low ~$0.87","severity":"high","href":"https://www.theblock.co/post/349289/tron-justin-sun-trueusd-fiduciary-insolvent-techteryx-tusd-first-digital-aria","note":"2025-04-02 — Justin Sun alleges FDT insolvency; FDUSD depegs to ~$0.87"},
-  {"date":"2025-08-01","kind":"regulatory","label":"HK Stablecoins Ordinance in force — FDUSD enters licensing regime","severity":"med","href":"https://www.hkma.gov.hk/eng/key-functions/international-financial-centre/stablecoin-issuers/","note":"2025-08-01 — Hong Kong Stablecoins Ordinance in force; FDUSD enters licensing regime"}
+  {"date":"2023-06-01","kind":"governance","label":"FDUSD launch by First Digital Labs","severity":"low","note":"2023-06-01: FDUSD launched by FD121 Limited (BVI); FDT custodian"},
+  {"date":"2023-07-26","kind":"governance","label":"Binance lists FDUSD with zero-fee promo (BUSD replacement)","severity":"low","note":"2023-07-26: Binance lists FDUSD with zero-fee promo as BUSD winds down"},
+  {"date":"2025-04-02","kind":"depeg","label":"Sun insolvency claim vs. FDT: FDUSD depeg low ~$0.87","severity":"high","href":"https://www.theblock.co/post/349289/tron-justin-sun-trueusd-fiduciary-insolvent-techteryx-tusd-first-digital-aria","note":"2025-04-02: Justin Sun alleges FDT insolvency; FDUSD depegs to ~$0.87"},
+  {"date":"2025-08-01","kind":"regulatory","label":"HK Stablecoins Ordinance in force: FDUSD enters licensing regime","severity":"med","href":"https://www.hkma.gov.hk/eng/key-functions/international-financial-centre/stablecoin-issuers/","note":"2025-08-01: Hong Kong Stablecoins Ordinance in force; FDUSD enters licensing regime"}
 ]

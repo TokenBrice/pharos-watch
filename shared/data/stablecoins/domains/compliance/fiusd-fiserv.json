@@ -16,7 +16,7 @@
     "reserveDisclosureUrl": "https://www.fiserv.com/en/solutions/embedded-finance/fiusd-stablecoin.html",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Fiserv describes FIUSD as fully reserved and redeemable at $1. The model is 'issued through banks, accepted through merchants': Fiserv is the technology/infrastructure platform; participating FI clients (e.g. Bank of North Dakota, Huntington) are the actual PPSI issuers via the IDI-subsidiary pathway under GENIUS. CEO Lyons confirmed July 2026 live date at Bernstein Strategic Decisions conference (June 3, 2026). StoneCastle acquisition (completed Dec 2025) includes a stablecoin/crypto custody license. No PPSI approval exists — the approval framework itself remains in proposed rulemaking as of June 2026.",
+    "notes": "Fiserv describes FIUSD as fully reserved and redeemable at $1. The model is 'issued through banks, accepted through merchants': Fiserv is the technology/infrastructure platform; participating FI clients (e.g. Bank of North Dakota, Huntington) are the actual PPSI issuers via the IDI-subsidiary pathway under GENIUS. CEO Lyons confirmed July 2026 live date at Bernstein Strategic Decisions conference (June 3, 2026). StoneCastle acquisition (completed Dec 2025) includes a stablecoin/crypto custody license. No PPSI approval exists: the approval framework itself remains in proposed rulemaking as of June 2026.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

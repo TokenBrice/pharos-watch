@@ -36,7 +36,7 @@
   "announcedDate": "2026-05",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Announced May 13 2026 by Japan Blockchain Foundation Co., Ltd. (JBFD), operator of Japan Open Chain (JOC), as a trust-type JPY-pegged stablecoin. Structured as a Type III electronic payment instrument under Japan's Payment Services Act — exempt from the ¥1M/transaction cap that constrains fund-transfer-type issuers such as JPYC — with JBFD as settlor and reserves to be held by a licensed trust bank (trustee in active negotiation, not yet named). Targeted for issuance and circulation on JOC within FY2026 (through March 2027), with Ethereum next and broader multi-chain expansion under consideration; actual issuance and handling dates to be formally announced once determined. Aimed at B2B payments, remittances, and settlement. Reserve composition not yet disclosed.",
+  "launchPhaseDetail": "Announced May 13 2026 by Japan Blockchain Foundation Co., Ltd. (JBFD), operator of Japan Open Chain (JOC), as a trust-type JPY-pegged stablecoin. Structured as a Type III electronic payment instrument under Japan's Payment Services Act (exempt from the ¥1M/transaction cap that constrains fund-transfer-type issuers such as JPYC), with JBFD as settlor and reserves to be held by a licensed trust bank (trustee in active negotiation, not yet named). Targeted for issuance and circulation on JOC within FY2026 (through March 2027), with Ethereum next and broader multi-chain expansion under consideration; actual issuance and handling dates to be formally announced once determined. Aimed at B2B payments, remittances, and settlement. Reserve composition not yet disclosed.",
   "featuredContent": [
     {
       "type": "blog",

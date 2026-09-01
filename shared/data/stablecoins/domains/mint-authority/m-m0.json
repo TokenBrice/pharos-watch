@@ -15,35 +15,35 @@
       "observedBlock": 25783884,
       "sources": [
         {
-          "label": "MToken.sol — immutable minterGateway/ttgRegistrar, onlyMinterGateway mint/burn",
+          "label": "MToken.sol: immutable minterGateway/ttgRegistrar, onlyMinterGateway mint/burn",
           "url": "https://github.com/m0-foundation/protocol/blob/main/src/MToken.sol"
         },
         {
-          "label": "MinterGateway.sol — immutable mToken/ttgRegistrar, no upgrade entrypoint",
+          "label": "MinterGateway.sol: immutable mToken/ttgRegistrar, no upgrade entrypoint",
           "url": "https://github.com/m0-foundation/protocol/blob/main/src/MinterGateway.sol"
         },
         {
-          "label": "M0 M Token docs — contract designed immutable; TTG changes parameters not bytecode",
+          "label": "M0 M Token docs: contract designed immutable; TTG changes parameters not bytecode",
           "url": "https://docs.m0.org/protocol/m-token"
         },
         {
-          "label": "M0 TTG research — core protocol completely immutable and non-upgradeable",
+          "label": "M0 TTG research: core protocol completely immutable and non-upgradeable",
           "url": "https://research.m0.org/research/introducing-the-two-token-governor"
         },
         {
-          "label": "M0 platform addresses — Ethereum M, MinterGateway, Registrar, Hub Portal",
+          "label": "M0 platform addresses: Ethereum M, MinterGateway, Registrar, Hub Portal",
           "url": "https://docs.m0.org/resources/addresses/m0-platform"
         },
         {
-          "label": "Blockscout MToken — verified MToken.sol, proxy_type null, constructor immutables",
+          "label": "Blockscout MToken: verified MToken.sol, proxy_type null, constructor immutables",
           "url": "https://eth.blockscout.com/address/0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b"
         },
         {
-          "label": "Blockscout MinterGateway — verified MinterGateway.sol, proxy_type null",
+          "label": "Blockscout MinterGateway: verified MinterGateway.sol, proxy_type null",
           "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
         },
         {
-          "label": "Ethereum PublicNode RPC — slots and calls at block 25783884",
+          "label": "Ethereum PublicNode RPC: slots and calls at block 25783884",
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
@@ -152,10 +152,12 @@
         },
         {
           "label": "M0 Adopted Guidance — Validators",
+          "quoted": true,
           "url": "https://docs.m0.org/home/fundamentals/adopted-guidance/validators"
         },
         {
           "label": "M0 Research — approved collateral structures for Minters (2024-11-20)",
+          "quoted": true,
           "url": "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
         }
       ],

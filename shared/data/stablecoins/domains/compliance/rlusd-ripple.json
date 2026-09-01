@@ -5,11 +5,11 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Kraken EEA stablecoin restrictions — RLUSD delisted for EEA clients",
+        "label": "Kraken EEA stablecoin restrictions: RLUSD delisted for EEA clients",
         "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
       },
       {
-        "label": "ESMA interim MiCA EMT issuer register — Ripple/RLUSD not listed",
+        "label": "ESMA interim MiCA EMT issuer register: Ripple/RLUSD not listed",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
@@ -38,7 +38,7 @@
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "latestReportDate": "2026-04-30",
-    "notes": "RLUSD is issued by Standard Custody & Trust Company, LLC (SCTC), a NYDFS-chartered limited purpose trust company. Ripple also received a conditional OCC approval (December 12, 2025) to establish Ripple National Trust Bank (RNTB) as a de novo national trust bank to manage RLUSD reserves — this is an OCC trust bank charter under existing authority, not a GENIUS Act PPSI approval. Ripple's stated GENIUS compliance pathway is NYDFS state equivalency (SCTC). No PPSI application or approval exists as of 2026-06-18; the GENIUS Act rulemaking remains at the NPRM stage.",
+    "notes": "RLUSD is issued by Standard Custody & Trust Company, LLC (SCTC), a NYDFS-chartered limited purpose trust company. Ripple also received a conditional OCC approval (December 12, 2025) to establish Ripple National Trust Bank (RNTB) as a de novo national trust bank to manage RLUSD reserves: this is an OCC trust bank charter under existing authority, not a GENIUS Act PPSI approval. Ripple's stated GENIUS compliance pathway is NYDFS state equivalency (SCTC). No PPSI application or approval exists as of 2026-06-18; the GENIUS Act rulemaking remains at the NPRM stage.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

@@ -18,18 +18,21 @@
     "sources": [
       {
         "label": "A7A5 introduction (What is A7A5?) — re-opened 2026-07-30",
+        "quoted": true,
         "url": "https://docs.a7a5.io/introduction-to-a7a5/readme.md"
       },
       {
         "label": "A7A5 terms of use §4.2–4.3 — re-opened 2026-07-30",
+        "quoted": true,
         "url": "https://docs.a7a5.io/legal/terms-of-use.md"
       },
       {
         "label": "A7A5 how-to-earn (overnight deposits) — re-opened 2026-07-30",
+        "quoted": true,
         "url": "https://docs.a7a5.io/introduction-to-a7a5/how-to-earn-using-a7a5.md"
       },
       {
-        "label": "A7A5 transparency page (no reserve schedule) — re-opened 2026-07-30",
+        "label": "A7A5 transparency page (no reserve schedule): re-opened 2026-07-30",
         "url": "https://docs.a7a5.io/legal/transparency.md"
       },
       {
@@ -37,15 +40,15 @@
         "url": "https://www.a7a5.io/audit.pdf"
       },
       {
-        "label": "U.S. Treasury designation of Old Vector LLC and A7A5 as ruble-backed (2025-08-14) — re-opened 2026-07-30",
+        "label": "U.S. Treasury designation of Old Vector LLC and A7A5 as ruble-backed (2025-08-14): re-opened 2026-07-30",
         "url": "https://home.treasury.gov/news/press-releases/sb0225"
       },
       {
-        "label": "UK designation of Old Vector LLC and A7A5 network (2025-08-20) — re-opened 2026-07-30",
+        "label": "UK designation of Old Vector LLC and A7A5 network (2025-08-20): re-opened 2026-07-30",
         "url": "https://www.gov.uk/government/news/uk-targets-sanctions-circumvention-and-crypto-networks-exploited-by-russia"
       }
     ],
-    "rationale": "Independent write-time re-derivation 2026-07-30 (rejected-redo cohort; no prior claims reused). The issuer introduction still states a 1:1 Russian-rouble peg with 'Fiat deposits in Roubles… held in top-tier banks with a correspondent network connected to Kyrgyz Republic and high overnight interest rates,' and income from overnight bank deposits. Terms §4.2–4.3 still describe the token as 'collateralised by RUR fiat' and as a diversified basket of 'fiat deposits held in leading banks… as well as high interest rates on short-term assets,' without constituent weights, institutions, or a reserve schedule. How-to-earn still describes overnight bank-deposit income at the CBR key rate minus 1 pp, banks unnamed. The transparency page still contains no reserve composition, attestation, or bank identities — only distribution through licensed brokers/exchanges. The previously cited issuer reserve document at a7a5.io/audit.pdf no longer serves a PDF: as of 2026-07-30 it returns the SPA HTML shell, so no issuer or independent assurance artifact is currently published at that address. Because the live issuer descriptions still conflict in scope (deposits/overnight emphasis vs deposits-plus-short-term-asset basket) and no instrument-level schedule or independent assurance artifact exists, the complete reserve remains one unresolved aggregate at 100% known-unknown; the documented unknown residual is preserved rather than forced into unsupported slices. U.S. Treasury (re-opened 2026-07-30) still designates Old Vector LLC and describes A7A5 as a ruble-backed digital asset created with Garantex for A7 (Shor/Promsvyazbank-owned); UK FCDO (re-opened 2026-07-30) still lists OLD VECTOR LLC in the 2025-08-20 package targeting the A7A5 network. Sanctions create material legal and access risk but do not establish that any specific reserve account is frozen. Third-party investigative claims naming Promsvyazbank as the deposit bank are not adopted into composition because the issuer does not currently name reserve banks and no dual primary pin for a present-day PSB allocation was re-verified. Kyrgyz VASP registration is not prudential reserve verification.",
+    "rationale": "Independent write-time re-derivation 2026-07-30 (rejected-redo cohort; no prior claims reused). The issuer introduction still states a 1:1 Russian-rouble peg with 'Fiat deposits in Roubles… held in top-tier banks with a correspondent network connected to Kyrgyz Republic and high overnight interest rates,' and income from overnight bank deposits. Terms §4.2 to 4.3 still describe the token as 'collateralised by RUR fiat' and as a diversified basket of 'fiat deposits held in leading banks… as well as high interest rates on short-term assets,' without constituent weights, institutions, or a reserve schedule. How-to-earn still describes overnight bank-deposit income at the CBR key rate minus 1 pp, banks unnamed. The transparency page still contains no reserve composition, attestation, or bank identities, only distribution through licensed brokers/exchanges. The previously cited issuer reserve document at a7a5.io/audit.pdf no longer serves a PDF: as of 2026-07-30 it returns the SPA HTML shell, so no issuer or independent assurance artifact is currently published at that address. Because the live issuer descriptions still conflict in scope (deposits/overnight emphasis vs deposits-plus-short-term-asset basket) and no instrument-level schedule or independent assurance artifact exists, the complete reserve remains one unresolved aggregate at 100% known-unknown; the documented unknown residual is preserved rather than forced into unsupported slices. U.S. Treasury (re-opened 2026-07-30) still designates Old Vector LLC and describes A7A5 as a ruble-backed digital asset created with Garantex for A7 (Shor/Promsvyazbank-owned); UK FCDO (re-opened 2026-07-30) still lists OLD VECTOR LLC in the 2025-08-20 package targeting the A7A5 network. Sanctions create material legal and access risk but do not establish that any specific reserve account is frozen. Third-party investigative claims naming Promsvyazbank as the deposit bank are not adopted into composition because the issuer does not currently name reserve banks and no dual primary pin for a present-day PSB allocation was re-verified. Kyrgyz VASP registration is not prudential reserve verification.",
     "compositionBasis": "Conflicting current issuer descriptions of the eligible Russian-ruble reserve envelope (deposits/overnight vs deposits plus short-term assets); no published weights",
     "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
@@ -77,14 +80,17 @@
     "sources": [
       {
         "label": "A7A5 introduction (What is A7A5?) — re-opened 2026-07-30",
+        "quoted": true,
         "url": "https://docs.a7a5.io/introduction-to-a7a5/readme.md"
       },
       {
         "label": "A7A5 terms of use §4.3 — re-opened 2026-07-30",
+        "quoted": true,
         "url": "https://docs.a7a5.io/legal/terms-of-use.md"
       },
       {
         "label": "A7A5 information on the risks (custodial risks) — re-opened 2026-07-30",
+        "quoted": true,
         "url": "https://docs.a7a5.io/additional/information-on-the-risks.md"
       }
     ],

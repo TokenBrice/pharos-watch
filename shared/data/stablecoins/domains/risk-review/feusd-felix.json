@@ -358,7 +358,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'feUSD', symbol feUSD, 18 decimals on HyperEVM; EIP-1967 admin 0x44a600c031dbdf652500f4a6d84b168056f13692 — Felix issuer-native deployment.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'feUSD', symbol feUSD, 18 decimals on HyperEVM; EIP-1967 admin 0x44a600c031dbdf652500f4a6d84b168056f13692, Felix issuer-native deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

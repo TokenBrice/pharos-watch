@@ -79,7 +79,7 @@
         "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
       }
     ],
-    "uncertainty": "GAIB documents the on-chain Minter and Redeemer contracts that accept USDC/USDT, but what happens to proceeds after minting — conversion into Treasuries, custodian identities, account segregation, insolvency protections, and reuse terms — is off-chain and undocumented. The June 2026 Spiceflow assurance report covers GPU-financing asset deployment, not AID reserve custody, and no AID reserve attestation is publicly retrievable.",
+    "uncertainty": "GAIB documents the on-chain Minter and Redeemer contracts that accept USDC/USDT, but what happens to proceeds after minting, conversion into Treasuries, custodian identities, account segregation, insolvency protections, and reuse terms, is off-chain and undocumented. The June 2026 Spiceflow assurance report covers GPU-financing asset deployment, not AID reserve custody, and no AID reserve attestation is publicly retrievable.",
     "knownUnknownExposurePct": 100
   }
 }

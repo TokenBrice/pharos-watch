@@ -5,11 +5,11 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Binance EEA MiCA restrictions — FDUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+        "label": "Binance EEA MiCA restrictions: FDUSD among non-MiCA-compliant stablecoins delisted for EEA users",
         "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
       },
       {
-        "label": "ESMA interim MiCA EMT issuer register — First Digital/FDUSD not listed",
+        "label": "ESMA interim MiCA EMT issuer register: First Digital/FDUSD not listed",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
@@ -71,11 +71,11 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act NPRM (FR 2026-04089) and public releases — no FDUSD or FD121 foreign-issuer registration found",
-        "Federal Register FDIC GENIUS Act NPRM (FR 2026-06974) — no FD121 reference",
-        "First Digital Labs news and transparency pages — licensing intent stated but no GENIUS application announced",
-        "SEC enforcement actions public list — no action against First Digital or FDUSD",
-        "OCC conditional trust-charter approvals list — FD121 not present",
+        "OCC GENIUS Act NPRM (FR 2026-04089) and public releases: no FDUSD or FD121 foreign-issuer registration found",
+        "Federal Register FDIC GENIUS Act NPRM (FR 2026-06974): no FD121 reference",
+        "First Digital Labs news and transparency pages: licensing intent stated but no GENIUS application announced",
+        "SEC enforcement actions public list: no action against First Digital or FDUSD",
+        "OCC conditional trust-charter approvals list: FD121 not present",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",

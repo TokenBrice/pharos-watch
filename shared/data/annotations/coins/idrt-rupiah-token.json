@@ -1,3 +1,3 @@
 [
-  {"date":"2026-09-01","kind":"mint-burn-spike","label":"IDRT supply restated 173.86B→90.66B; unreadable legacy ledgers excluded","severity":"high","note":"2026-09-01 — Pharos restated IDRT circulating supply from 173.86B to 90.66B tokens after reconciling the frozen upstream total to readable Ethereum, BSC, Polygon, and Harmony contracts; an issuer-declared 40B attributed to unreadable legacy BNB Beacon Chain and Luniverse ledgers remains excluded as a known gap."}
+  {"date":"2026-09-01","kind":"mint-burn-spike","label":"IDRT supply restated 173.86B→90.66B; unreadable legacy ledgers excluded","severity":"high","note":"2026-09-01: Pharos restated IDRT circulating supply from 173.86B to 90.66B tokens after reconciling the frozen upstream total to readable Ethereum, BSC, Polygon, and Harmony contracts; an issuer-declared 40B attributed to unreadable legacy BNB Beacon Chain and Luniverse ledgers remains excluded as a known gap."}
 ]

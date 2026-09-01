@@ -5,19 +5,19 @@
     "tokenType": "ART",
     "references": [
       {
-        "label": "ESMA MiCA interim register — ART issuer CSV reviewed; no KMS Labs/KAU entry found on 2026-08-14",
+        "label": "ESMA MiCA interim register: ART issuer CSV reviewed; no KMS Labs/KAU entry found on 2026-08-14",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
       },
       {
-        "label": "KMS Labs terms — KMS Labs S.A. issues ERC20 KAU against Kinesis-native KAU and does not list an EU prohibition",
+        "label": "KMS Labs terms: KMS Labs S.A. issues ERC20 KAU against Kinesis-native KAU and does not list an EU prohibition",
         "url": "https://kmslabs.money/kms-labs-tcs/"
       },
       {
-        "label": "Kinesis supported assets — KAU is available on Kinesis Pay and the platform supports SEPA/EUR rails",
+        "label": "Kinesis supported assets: KAU is available on Kinesis Pay and the platform supports SEPA/EUR rails",
         "url": "https://support.kinesis.money/hc/en-gb/articles/23830420583069-What-currencies-are-supported-on-the-Kinesis-platform-and-exchange"
       },
       {
-        "label": "ESMA MiCA Article 3 definitions — ART covers crypto-assets referencing value or rights other than a single official currency",
+        "label": "ESMA MiCA Article 3 definitions: ART covers crypto-assets referencing value or rights other than a single official currency",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
@@ -35,7 +35,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Kinesis support — KAU and KAG are digitalized, redeemable physical-metal payment assets",
+          "label": "Kinesis support: KAU and KAG are digitalized, redeemable physical-metal payment assets",
           "url": "https://support.kinesis.money/hc/en-gb/articles/12356541049117-What-are-KAU-and-KAG",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
@@ -58,7 +58,7 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "KMS Labs terms — ERC20 KAU issuer and gold backing",
+        "label": "KMS Labs terms: ERC20 KAU issuer and gold backing",
         "url": "https://kmslabs.money/kms-labs-tcs/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

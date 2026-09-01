@@ -8,11 +8,11 @@
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Tempo pathUSD documentation — routing and quote-token infrastructure",
+        "label": "Tempo pathUSD documentation: routing and quote-token infrastructure",
         "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
       },
       {
-        "label": "Bridge issuance FAQ — partner-issued stablecoins and Bridge issuer-of-record infrastructure",
+        "label": "Bridge issuance FAQ: partner-issued stablecoins and Bridge issuer-of-record infrastructure",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
       }
     ]
@@ -24,7 +24,7 @@
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "federal-qualified-nonbank",
-    "issuerEntity": "Bridge Building Inc. (USDB/stablecoin issuer; a subsidiary of Bridge Ventures LLC — the Stripe-owned Delaware entity and OCC national trust bank charter applicant)",
+    "issuerEntity": "Bridge Building Inc. (USDB/stablecoin issuer; a subsidiary of Bridge Ventures LLC: the Stripe-owned Delaware entity and OCC national trust bank charter applicant)",
     "issuerDomicile": "United States",
     "licensingRegulator": "OCC (conditional trust charter, Feb 2026); FinCEN / state money transmitter regulators (current)",
     "primaryFederalRegulator": "OCC",
@@ -35,7 +35,7 @@
     "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge (OCC filing ID 343543) received conditional approval for a federally chartered national trust bank on Feb 12, 2026 — the same track as Circle, Ripple, Paxos, BitGo, and Fidelity Digital Assets. This is a trust charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act; the PPSI application framework itself remains in proposed-rulemaking. Bridge publicly describes its stack as GENIUS Act-ready. pathUSD is Tempo's TIP-20 quote token issued via Bridge infrastructure; no token-specific GENIUS authorization was located.",
+    "notes": "Bridge (OCC filing ID 343543) received conditional approval for a federally chartered national trust bank on Feb 12, 2026: the same track as Circle, Ripple, Paxos, BitGo, and Fidelity Digital Assets. This is a trust charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act; the PPSI application framework itself remains in proposed-rulemaking. Bridge publicly describes its stack as GENIUS Act-ready. pathUSD is Tempo's TIP-20 quote token issued via Bridge infrastructure; no token-specific GENIUS authorization was located.",
     "references": [
       {
         "label": "Tempo pathUSD docs",
@@ -67,7 +67,7 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "OCC Corporate Decision #1365 — Bridge Ventures LLC conditional national trust bank charter",
+        "label": "OCC Corporate Decision #1365: Bridge Ventures LLC conditional national trust bank charter",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-12",

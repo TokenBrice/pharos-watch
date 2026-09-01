@@ -148,32 +148,32 @@
           "external-lock-mint",
           "oft-adapter"
         ],
-        "note": "Hydra locks native asset on source chain (Protocol Locked Liquidity) and mints an OFT representation on the destination — an OFT-adapter lock/mint pattern."
+        "note": "Hydra locks native asset on source chain (Protocol Locked Liquidity) and mints an OFT representation on the destination, an OFT-adapter lock/mint pattern."
       }
     ],
     "sources": [
       {
-        "label": "Money On Chain — DOC on Arbitrum (issuer announcement naming Stargate)",
+        "label": "Money On Chain: DOC on Arbitrum (issuer announcement naming Stargate)",
         "url": "https://moneyonchain.com/doc-arbitrum/"
       },
       {
-        "label": "Arbiscan — Arbitrum DOC token (LayerZero V2 OFT 'MyOFT', endpoint 0x1a44076050...)",
+        "label": "Arbiscan: Arbitrum DOC token (LayerZero V2 OFT 'MyOFT', endpoint 0x1a44076050...)",
         "url": "https://arbiscan.io/token/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
       },
       {
-        "label": "DefiLlama DOC adapter — Ethereum eDOC contract mapping",
+        "label": "DefiLlama DOC adapter: Ethereum eDOC contract mapping",
         "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/doc/index.ts"
       },
       {
-        "label": "Blockscout — verified Ethereum eDOC SideToken",
+        "label": "Blockscout: verified Ethereum eDOC SideToken",
         "url": "https://eth.blockscout.com/address/0x69f6d4d4813f8e2e618dae7572e04b6d5329e207"
       },
       {
-        "label": "Rootstock — LayerZero integration (rBTC/RIF via OFT; Stargate Hydra)",
+        "label": "Rootstock: LayerZero integration (rBTC/RIF via OFT; Stargate Hydra)",
         "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/"
       },
       {
-        "label": "Stargate Hydra docs — Pool-to-OFT lock/mint architecture",
+        "label": "Stargate Hydra docs: Pool-to-OFT lock/mint architecture",
         "url": "https://stargateprotocol.gitbook.io/stargate/v2-user-docs/whats-new-in-stargate-v2/hydra"
       }
     ],

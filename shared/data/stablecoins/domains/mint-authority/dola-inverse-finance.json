@@ -29,10 +29,12 @@
         "sources": [
           {
             "label": "CoinDesk — Inverse Finance exploit",
+            "quoted": true,
             "url": "https://www.coindesk.com/tech/2022/04/02/defi-lender-inverse-finance-exploited-for-156-million"
           },
           {
             "label": "BlockSec — Inverse oracle manipulation analysis",
+            "quoted": true,
             "url": "https://blocksecteam.medium.com/price-oracle-manipulation-attack-on-inverse-finance-a5544218ea91"
           }
         ]

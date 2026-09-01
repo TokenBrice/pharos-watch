@@ -1,4 +1,4 @@
 [
-  {"date":"2025-02-11","kind":"governance","label":"Satoshi Protocol V2 launch — first Omni-CDP via LayerZero","severity":"med","href":"https://blog.river.inc/introducing-satoshi-v2/","note":"2025-02-11 — Satoshi Protocol V2 launches first Omni-CDP with LayerZero"},
-  {"date":"2025-05-01","kind":"governance","label":"Satoshi Protocol rebrands to River","severity":"low","href":"https://blog.river.inc/river-layerzero/","note":"2025-05 — Satoshi Protocol rebrands to River"}
+  {"date":"2025-02-11","kind":"governance","label":"Satoshi Protocol V2 launch, first Omni-CDP via LayerZero","severity":"med","href":"https://blog.river.inc/introducing-satoshi-v2/","note":"2025-02-11: Satoshi Protocol V2 launches first Omni-CDP with LayerZero"},
+  {"date":"2025-05-01","kind":"governance","label":"Satoshi Protocol rebrands to River","severity":"low","href":"https://blog.river.inc/river-layerzero/","note":"2025-05: Satoshi Protocol rebrands to River"}
 ]

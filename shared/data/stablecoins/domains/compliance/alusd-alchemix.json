@@ -9,7 +9,8 @@
       },
       {
         "label": "Alchemix Q4 2025 financial report — DeFi lending and synthetic alAssets",
-        "url": "https://docs.alchemix.fi/Alchemix_Q4_2025_Financial_Report.pdf"
+        "url": "https://docs.alchemix.fi/Alchemix_Q4_2025_Financial_Report.pdf",
+        "quoted": true
       }
     ]
   }

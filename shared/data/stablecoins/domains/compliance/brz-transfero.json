@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register — ART/EMT issuer files reviewed; no Transfero or BRZ match found on 2026-08-14",
+        "label": "ESMA Interim MiCA Register: ART/EMT issuer files reviewed; no Transfero or BRZ match found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Transfero BRZ — BRL stablecoin for global transfers, payments, and DeFi",
+        "label": "Transfero BRZ: BRL stablecoin for global transfers, payments, and DeFi",
         "url": "https://transfero.com/brz-stablecoin"
       },
       {
-        "label": "BRZ whitepaper — Transfero Asset Management LTD named as Bahamas mint administrator",
+        "label": "BRZ whitepaper: Transfero Asset Management LTD named as Bahamas mint administrator",
         "url": "https://www.brztoken.io/files/white_paper_BRZ_2023.pdf"
       }
     ]
@@ -29,7 +29,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "GENIUS Act — payment stablecoin and foreign payment stablecoin issuer definitions",
+          "label": "GENIUS Act: payment stablecoin and foreign payment stablecoin issuer definitions",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "accessedAt": "2026-08-14"
@@ -51,19 +51,19 @@
     "notes": "The base-entry Switzerland/VQF hint applies to Transfero Swiss AG, which its official site describes as a Swiss VASP and VQF member; the BRZ whitepaper names Transfero Asset Management LTD in the Bahamas as the mint administrator. This issuer-affiliate distinction matters for GENIUS. No public U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located. The GENIUS rulemaking phase remains proposed-rules.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC Digital Assets Licensing Applications — current pending-application table",
+        "label": "OCC Digital Assets Licensing Applications: current pending-application table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Federal Register 91 FR 10202 — foreign payment stablecoin framework",
+        "label": "Federal Register 91 FR 10202: foreign payment stablecoin framework",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
         "accessedAt": "2026-08-14"
@@ -75,13 +75,13 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "BRZ whitepaper — mint administrator and reserve/redemption structure",
+        "label": "BRZ whitepaper: mint administrator and reserve/redemption structure",
         "url": "https://www.brztoken.io/files/white_paper_BRZ_2023.pdf",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Transfero Swiss AG — VQF SRO membership disclosure",
+        "label": "Transfero Swiss AG: VQF SRO membership disclosure",
         "url": "https://transferoswiss.ch/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

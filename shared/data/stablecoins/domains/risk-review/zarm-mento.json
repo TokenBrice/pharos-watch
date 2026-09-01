@@ -128,7 +128,7 @@
             "url": "https://celoscan.io/address/0x4c35853a3b4e647fd266f4de678dcc8fec410bf6"
           }
         ],
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Mento South African Rand', symbol ZARm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento governance) — native issuance on Celo (the asset's home chain)."
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Mento South African Rand', symbol ZARm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento governance), native issuance on Celo (the asset's home chain)."
       }
     ]
   }

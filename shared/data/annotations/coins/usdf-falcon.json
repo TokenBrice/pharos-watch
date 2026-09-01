@@ -1,5 +1,5 @@
 [
-  {"date":"2025-04-01","kind":"governance","label":"USDf launch — DWF Labs synthetic dollar","severity":"med","note":"2025-04 — Falcon Finance / DWF Labs publicly launches USDf synthetic dollar"},
-  {"date":"2025-07-08","kind":"depeg","label":"USDf depeg low ~$0.89 — collateral concerns","severity":"high","href":"https://thedefiant.io/news/tokens/dwf-labs-usdf-stablecoin-briefly-depegs-amid-doubts-over-collateral-and-yield","note":"2025-07-08 — USDf depegs to ~$0.887 amid collateral / yield-sustainability concerns"},
-  {"date":"2025-10-01","kind":"governance","label":"First independent audit — 103.87% backing confirmed","severity":"low","note":"2025-10-01 — First independent audit confirms 103.87% backing"}
+  {"date":"2025-04-01","kind":"governance","label":"USDf launch, DWF Labs synthetic dollar","severity":"med","note":"2025-04: Falcon Finance / DWF Labs publicly launches USDf synthetic dollar"},
+  {"date":"2025-07-08","kind":"depeg","label":"USDf depeg low ~$0.89: collateral concerns","severity":"high","href":"https://thedefiant.io/news/tokens/dwf-labs-usdf-stablecoin-briefly-depegs-amid-doubts-over-collateral-and-yield","note":"2025-07-08: USDf depegs to ~$0.887 amid collateral / yield-sustainability concerns"},
+  {"date":"2025-10-01","kind":"governance","label":"First independent audit: 103.87% backing confirmed","severity":"low","note":"2025-10-01: First independent audit confirms 103.87% backing"}
 ]

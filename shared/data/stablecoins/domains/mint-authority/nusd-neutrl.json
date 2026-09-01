@@ -64,7 +64,7 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The NUSD token admin (DEFAULT_ADMIN_ROLE, with transferAdmin/acceptAdmin) can grant/revoke MINTER_ROLE and DENYLIST_MANAGER_ROLE, concentrating mint-authorization and denylist control in a single admin.",
-        "evidence": "At Ethereum block 25294779, eth_getCode(0x51De41ec06e779715d7FB71Ef83A736cFc903217) returned 0x (empty bytecode) — confirmed EOA. hasRole(DEFAULT_ADMIN_ROLE) previously confirmed true for this address.",
+        "evidence": "At Ethereum block 25294779, eth_getCode(0x51De41ec06e779715d7FB71Ef83A736cFc903217) returned 0x (empty bytecode), confirmed EOA. hasRole(DEFAULT_ADMIN_ROLE) previously confirmed true for this address.",
         "sources": [
           {
             "label": "NUSD token (Etherscan)",

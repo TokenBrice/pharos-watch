@@ -14,7 +14,7 @@
     "reserveDisclosureUrl": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "USDF is a Coinbase Custom Stablecoin backed 1:1 by USDC; Coinbase is the functional issuer per its User Agreement and manages issuance, reserves, and smart contract deployment. Flipcash holds the branded identity. No token-specific GENIUS PPSI approval or state-qualified approval has been located. Coinbase received conditional OCC approval for a national trust charter (Coinbase National Trust Company) on April 2, 2026 — this is a custody/trust charter, not a PPSI approval under the GENIUS Act, and does not alter the authorization status here. GENIUS Act rulemaking remains at NPRM stage as of 2026-06-18; no PPSI approvals exist for any issuer.",
+    "notes": "USDF is a Coinbase Custom Stablecoin backed 1:1 by USDC; Coinbase is the functional issuer per its User Agreement and manages issuance, reserves, and smart contract deployment. Flipcash holds the branded identity. No token-specific GENIUS PPSI approval or state-qualified approval has been located. Coinbase received conditional OCC approval for a national trust charter (Coinbase National Trust Company) on April 2, 2026: this is a custody/trust charter, not a PPSI approval under the GENIUS Act, and does not alter the authorization status here. GENIUS Act rulemaking remains at NPRM stage as of 2026-06-18; no PPSI approvals exist for any issuer.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -46,7 +46,7 @@
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases (Bulletin 2026-3)",
         "Coinbase Custom Stablecoin platform page and blog disclosures",
-        "Coinbase OCC conditional national trust charter (April 2026) — custody-only, not PPSI",
+        "Coinbase OCC conditional national trust charter (April 2026): custody-only, not PPSI",
         "Issuer disclosures and token documentation",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
         "NYDFS virtual currency business registry",

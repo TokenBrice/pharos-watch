@@ -81,7 +81,7 @@
         "url": "https://docs.metronome.io/metronome-synth/contracts"
       }
     ],
-    "uncertainty": "Collateral is pooled per asset in non-custodial DepositToken contracts with per-user debt tracked separately; plain assets (ETH, WBTC, USDC, DAI, FRAX) sit idle in those contracts, while Vesper va-token collateral (vaETH, vaUSDC, vaFRAX, and similar) represents positions whose underlying Vesper pools deploy capital into yield strategies by design — hence conditional reuse. No legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody; published audits could not be located in primary sources.",
+    "uncertainty": "Collateral is pooled per asset in non-custodial DepositToken contracts with per-user debt tracked separately; plain assets (ETH, WBTC, USDC, DAI, FRAX) sit idle in those contracts, while Vesper va-token collateral (vaETH, vaUSDC, vaFRAX, and similar) represents positions whose underlying Vesper pools deploy capital into yield strategies by design, hence conditional reuse. No legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody; published audits could not be located in primary sources.",
     "knownUnknownExposurePct": 100
   }
 }

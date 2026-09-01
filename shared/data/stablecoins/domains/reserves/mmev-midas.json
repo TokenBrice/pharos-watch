@@ -38,7 +38,7 @@
         "url": "https://docs.midas.app/legal/investment-risks-1-0-1"
       }
     ],
-    "rationale": "Midas identifies the live mMEV exposure as a MEV Capital managed DeFi strategy NAV — the issuer disclosures describe dynamic allocation across DeFi lending, liquidity provision, arbitrage, carry, and liquidation strategies — but does not disclose the current underlying assets, venue allocations, or custody providers. The slice is named to match the live chainlink-nav reserve adapter capture (assetLabel 'MEV Capital DeFi strategy NAV') so the reviewed classification overlays the captured exposure; it remains a bounded aggregate with the underlying allocation explicitly unresolved.",
+    "rationale": "Midas identifies the live mMEV exposure as a MEV Capital managed DeFi strategy NAV. The issuer disclosures describe dynamic allocation across DeFi lending, liquidity provision, arbitrage, carry, and liquidation strategies, but does not disclose the current underlying assets, venue allocations, or custody providers. The slice is named to match the live chainlink-nav reserve adapter capture (assetLabel 'MEV Capital DeFi strategy NAV') so the reviewed classification overlays the captured exposure; it remains a bounded aggregate with the underlying allocation explicitly unresolved.",
     "compositionBasis": "Midas mMEV product, risk, and transparency disclosures",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete current underlying strategy allocation, venue exposures, and custody providers are undisclosed; the single NAV slice is the whole envelope, with the strategy internals intentionally unresolved.",

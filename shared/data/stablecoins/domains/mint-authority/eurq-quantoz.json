@@ -115,7 +115,7 @@
             "url": "https://www.quantoz.com/products/eurq-usdq"
           }
         ],
-        "evidence": "XRPL account rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs confirmed active (no RegularKey, no signer list, master key enabled — single-key issuer custody). Issuer-backend model corroborated by Quantoz EMI/MiCA licensing."
+        "evidence": "XRPL account rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs confirmed active (no RegularKey, no signer list, master key enabled, single-key issuer custody). Issuer-backend model corroborated by Quantoz EMI/MiCA licensing."
       },
       {
         "deploymentRefs": [

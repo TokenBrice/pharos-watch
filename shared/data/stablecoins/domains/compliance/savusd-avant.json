@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA Article 2 — MiCA scope and exclusions",
+        "label": "ESMA MiCA Article 2: MiCA scope and exclusions",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       },
       {
-        "label": "ESMA MiCA Article 3 — EMT must reference one official currency and an issuer",
+        "label": "ESMA MiCA Article 3: EMT must reference one official currency and an issuer",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       },
       {
-        "label": "Avant — savUSD is a yield-bearing senior-tranche token received by staking avUSD",
+        "label": "Avant: savUSD is a yield-bearing senior-tranche token received by staking avUSD",
         "url": "https://docs.avantprotocol.com/overview/core-tokens"
       }
     ]
@@ -23,13 +23,13 @@
       "summary": "savUSD is a yield-bearing senior-tranche wrapper received by staking avUSD; its exchange rate accrues value and its exit is a conversion back to avUSD, not fixed-value payment redemption.",
       "references": [
         {
-          "label": "GENIUS Act text — payment stablecoin definition and yield restriction",
+          "label": "GENIUS Act text: payment stablecoin definition and yield restriction",
           "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
           "sourceKind": "statute",
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Avant — savUSD senior tranche and accruing exchange rate",
+          "label": "Avant: savUSD senior tranche and accruing exchange rate",
           "url": "https://docs.avantprotocol.com/overview/core-tokens",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"

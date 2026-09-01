@@ -12,7 +12,7 @@
     "m0"
   ],
   "collateral": "M0 M held through the USDK extension relationship. USDK-specific sources do not publish the current upstream M issuer allocation, collateral composition, or custody split; those risks are inherited from M. KAST retains the underlying yield rather than passing it to USDK holders.",
-  "pegMechanism": "1:1 wrapper around M (M0) on Solana — KAST mints USDK by depositing/wrapping M into the USDK SPL Token-2022 mint, and unwraps back to M for redemption; user-facing fiat on/off-ramp and redemption are mediated by the KAST app via licensed partners (Tazapay, BitGo, Fireblocks). The Token-2022 mint has transfer hooks and confidential-transfer extensions with authority held by KAST",
+  "pegMechanism": "1:1 wrapper around M (M0) on Solana: KAST mints USDK by depositing/wrapping M into the USDK SPL Token-2022 mint, and unwraps back to M for redemption; user-facing fiat on/off-ramp and redemption are mediated by the KAST app via licensed partners (Tazapay, BitGo, Fireblocks). The Token-2022 mint has transfer hooks and confidential-transfer extensions with authority held by KAST",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "proofOfReserves": {

@@ -1,4 +1,4 @@
 [
-  {"date":"2023-04-20","kind":"governance","label":"EURCV launch on Ethereum — whitelisted institutional use","severity":"low"},
-  {"date":"2024-07-01","kind":"regulatory","label":"EURCV MiCA relaunch — free transferability under ACPR EMI","severity":"med","href":"https://www.sgforge.com/stablecoin-elevation/","note":"2024-07 — EURCV MiCA relaunch; whitelisting removed under SG-Forge's ACPR EMI license, becoming a free-transfer MiCA EMT."}
+  {"date":"2023-04-20","kind":"governance","label":"EURCV launch on Ethereum, whitelisted institutional use","severity":"low"},
+  {"date":"2024-07-01","kind":"regulatory","label":"EURCV MiCA relaunch, free transferability under ACPR EMI","severity":"med","href":"https://www.sgforge.com/stablecoin-elevation/","note":"2024-07: EURCV MiCA relaunch; whitelisting removed under SG-Forge's ACPR EMI license, becoming a free-transfer MiCA EMT."}
 ]

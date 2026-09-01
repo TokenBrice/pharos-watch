@@ -126,7 +126,7 @@
     "controls": [
       {
         "id": "brlv-base-canonical-gateway",
-        "label": "BRLV Base MINTER_ROLE — BRLVCanonicalGateway proxy",
+        "label": "BRLV Base MINTER_ROLE: BRLVCanonicalGateway proxy",
         "routeRefs": [
           "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
         ],
@@ -414,7 +414,7 @@
       },
       {
         "id": "brlv-ethereum-bridged-minter",
-        "label": "BRLV Ethereum bridgedBRLV MINTER_ROLE — off-chain relayer EOA 0x039b41",
+        "label": "BRLV Ethereum bridgedBRLV MINTER_ROLE: off-chain relayer EOA 0x039b41",
         "routeRefs": [
           "ethereum:0xd7ca0e2c36d647446b782d1b72308e598373e2f5"
         ],

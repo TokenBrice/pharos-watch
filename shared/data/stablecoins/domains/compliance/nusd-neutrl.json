@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register — ART/EMT issuer files reviewed; no Neutrl or NUSD match found on 2026-08-14",
+        "label": "ESMA Interim MiCA Register: ART/EMT issuer files reviewed; no Neutrl or NUSD match found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Neutrl Terms of Use — NUSD is a synthetic dollar and EU persons are listed among restricted jurisdictions",
+        "label": "Neutrl Terms of Use: NUSD is a synthetic dollar and EU persons are listed among restricted jurisdictions",
         "url": "https://www.neutrl.finance/legal/terms-of-use"
       },
       {
-        "label": "RWA.xyz NUSD profile — non-U.S. investor, non-regulated synthetic dollar profile",
+        "label": "RWA.xyz NUSD profile: non-U.S. investor, non-regulated synthetic dollar profile",
         "url": "https://app.rwa.xyz/assets/NUSD"
       }
     ]
@@ -23,13 +23,13 @@
       "summary": "NUSD is described as a DeFi-composable synthetic dollar backed by yield-bearing crypto assets and hedged strategies rather than cash, and Neutrl materials describe the token as a claim on strategy yield rather than a fixed-value payment claim. U.S. persons are also excluded from the reviewed service terms.",
       "references": [
         {
-          "label": "Neutrl Terms of Use — synthetic-dollar design and restricted jurisdictions",
+          "label": "Neutrl Terms of Use: synthetic-dollar design and restricted jurisdictions",
           "url": "https://www.neutrl.finance/legal/terms-of-use",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "GENIUS Act — payment stablecoin fixed-value and security/deposit boundaries",
+          "label": "GENIUS Act: payment stablecoin fixed-value and security/deposit boundaries",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "accessedAt": "2026-08-14"
@@ -50,7 +50,7 @@
     "notes": "NUSD is treated as an explicit GENIUS exclusion because the reviewed materials describe a synthetic, strategy-backed DeFi asset rather than an issuer-obligated fixed-value payment stablecoin; this is not a finding about general U.S. legality. The current Terms identify Caverna Auctus Inc. in Panama, while the RWA profile leaves issuer domicile blank; the issuer/token relationship should be re-checked. The dedicated Accountable dashboard was linked as the public reserve/solvency disclosure. No GENIUS authorization posture is applicable.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"

@@ -42,14 +42,14 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "GHSm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — it is immutable.",
+        "capDescription": "GHSm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot. It is immutable.",
         "sources": [
           {
             "label": "Mento V3 deployments",
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "At Celo block 69291577, eth_getCode returned 46358 bytes for 0x8ec9A81871F816F1EF007a82293703057A943B8A; owner() returned empty; EIP-1967 impl and admin slots are zero — confirmed immutable, no upgrade path."
+        "evidence": "At Celo block 69291577, eth_getCode returned 46358 bytes for 0x8ec9A81871F816F1EF007a82293703057A943B8A; owner() returned empty; EIP-1967 impl and admin slots are zero, confirmed immutable, no upgrade path."
       },
       {
         "chain": "celo",
@@ -67,7 +67,7 @@
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "At Celo block 69291577, GHSm owner() returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() returned 172800. hasRole(PROPOSER_ROLE, 0x47036d78bB3169b4F5560dD77BF93f4412A59852) returned true (MentoGovernor is sole proposer); hasRole(EXECUTOR_ROLE, 0x0) returned true (open executor — standard OZ TimelockController pattern)."
+        "evidence": "At Celo block 69291577, GHSm owner() returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() returned 172800. hasRole(PROPOSER_ROLE, 0x47036d78bB3169b4F5560dD77BF93f4412A59852) returned true (MentoGovernor is sole proposer); hasRole(EXECUTOR_ROLE, 0x0) returned true (open executor, standard OZ TimelockController pattern)."
       }
     ],
     "economicCapSemantics": "raiseable",

@@ -31,7 +31,7 @@
     "reserveDisclosureUrl": "https://www.sgforge.com/product/coinvertible/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "MiCA authorization and SG-FORGE reserve/redemption disclosures do not establish a public U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception. SG-FORGE actively restricts US persons from holding USDCV (Regulation S offshore-transaction carve-out only). The GENIUS Act foreign-issuer exception requires a Treasury MiCA-comparability determination plus OCC registration — a pathway still in proposed-rulemaking as of 2026-06-18 with no determination issued. No public indication SG-FORGE has initiated or intends to initiate that process.",
+    "notes": "MiCA authorization and SG-FORGE reserve/redemption disclosures do not establish a public U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception. SG-FORGE actively restricts US persons from holding USDCV (Regulation S offshore-transaction carve-out only). The GENIUS Act foreign-issuer exception requires a Treasury MiCA-comparability determination plus OCC registration: a pathway still in proposed-rulemaking as of 2026-06-18 with no determination issued. No public indication SG-FORGE has initiated or intends to initiate that process.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -56,10 +56,10 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act NPRM (Bulletin 2026-3, Federal Register 2026-04089) — no SG-FORGE or USDCV-specific approval",
-        "SG-FORGE product page and USDCV white paper v2.0 — confirms US selling restrictions, no GENIUS mention",
-        "Paul Hastings GENIUS Act foreign issuer alert — confirms Treasury comparability + OCC registration pathway still in proposed-rulemaking, no determination issued",
-        "Web search for SG-FORGE GENIUS Act application, foreign-issuer registration, qualifying foreign issuer status — no results found",
+        "OCC GENIUS Act NPRM (Bulletin 2026-3, Federal Register 2026-04089): no SG-FORGE or USDCV-specific approval",
+        "SG-FORGE product page and USDCV white paper v2.0: confirms US selling restrictions, no GENIUS mention",
+        "Paul Hastings GENIUS Act foreign issuer alert: confirms Treasury comparability + OCC registration pathway still in proposed-rulemaking, no determination issued",
+        "Web search for SG-FORGE GENIUS Act application, foreign-issuer registration, qualifying foreign issuer status: no results found",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",

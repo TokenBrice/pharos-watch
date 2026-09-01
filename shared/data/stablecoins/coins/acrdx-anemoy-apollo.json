@@ -135,7 +135,7 @@
     "breakerScope": "acrdx-anemoy-apollo",
     "display": {
       "url": "https://chroniclelabs.org/dashboard/proof-of-asset/anemoy-tokenized-apollo-acrdx",
-      "label": "Chronicle Proof of Asset — Apollo ACRDX"
+      "label": "Chronicle Proof of Asset: Apollo ACRDX"
     },
     "inputs": {
       "primary": {

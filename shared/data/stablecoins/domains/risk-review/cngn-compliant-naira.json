@@ -42,7 +42,7 @@
     ],
     "sources": [
       {
-        "label": "cNGN FAQ — Bantu native issuance and supported networks",
+        "label": "cNGN FAQ: Bantu native issuance and supported networks",
         "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
       },
       {
@@ -76,7 +76,7 @@
         "observedBlock": 25770803,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -106,7 +106,7 @@
         "observedBlock": 50066095,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -136,7 +136,7 @@
         "observedBlock": 116357377,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -166,7 +166,7 @@
         "observedBlock": 92151009,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -196,7 +196,7 @@
         "observedBlock": 75053963,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -627,7 +627,7 @@
             "url": "https://docs.cngn.co/api-reference/bridge.md"
           }
         ],
-        "evidence": "The reviewed Bantu Foundation case study and cNGN bridge API establish the Bantu AMTP lock-and-mint delivery architecture, and the six route rows identify the destination delivery contracts. The 2026-08-28 review found no primary source that discloses current AMTP validator/attestor membership, peer/remote bindings, rate-limit authority, or adapter identities. Polygon and Celo 2-of-2 Safe plus AdminOperations controls resolve destination cap administration, but those delivery and cap-admin identities cannot stand in for the AMTP validation domain; this common validation control remains unknown. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external Bantu AMTP validator/attestor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum — known but weak, graded no higher than a named issuer backend and never above a named multisig — rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
+        "evidence": "The reviewed Bantu Foundation case study and cNGN bridge API establish the Bantu AMTP lock-and-mint delivery architecture, and the six route rows identify the destination delivery contracts. The 2026-08-28 review found no primary source that discloses current AMTP validator/attestor membership, peer/remote bindings, rate-limit authority, or adapter identities. Polygon and Celo 2-of-2 Safe plus AdminOperations controls resolve destination cap administration, but those delivery and cap-admin identities cannot stand in for the AMTP validation domain; this common validation control remains unknown. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external Bantu AMTP validator/attestor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum, known but weak, graded no higher than a named issuer backend and never above a named multisig, rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
       }
     ]
   }

@@ -79,7 +79,7 @@
         "observedBlock": 50064039,
         "sources": [
           {
-            "label": "Base blockscout — cdxUSD owner contract",
+            "label": "Base blockscout: cdxUSD owner contract",
             "url": "https://base.blockscout.com/address/0xc0D3700924301AC384E5Eae3272E08220752DE3D"
           }
         ],
@@ -136,7 +136,7 @@
           "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
         },
         {
-          "label": "Base blockscout — owner TimelockController",
+          "label": "Base blockscout: owner TimelockController",
           "url": "https://base.blockscout.com/address/0xc0D3700924301AC384E5Eae3272E08220752DE3D"
         }
       ],

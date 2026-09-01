@@ -42,14 +42,14 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "ZARm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — immutable.",
+        "capDescription": "ZARm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot, immutable.",
         "sources": [
           {
             "label": "Mento V3 deployments",
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 slots zero — immutable. Prior read also confirmed ZARm broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD."
+        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 slots zero, immutable. Prior read also confirmed ZARm broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD."
       },
       {
         "chain": "celo",

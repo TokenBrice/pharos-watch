@@ -8,15 +8,15 @@
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA MiCA Q&A — Union offer and admission requirements",
+        "label": "ESMA MiCA Q&A: Union offer and admission requirements",
         "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
       },
       {
-        "label": "Ripio wFIAT — Latin American product scope and wARS reserves",
+        "label": "Ripio wFIAT: Latin American product scope and wARS reserves",
         "url": "https://www.ripio.com/en/wfiat"
       },
       {
-        "label": "Ripio local stablecoins — wARS issuance, parity, and markets",
+        "label": "Ripio local stablecoins: wARS issuance, parity, and markets",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ]
@@ -50,7 +50,7 @@
     "notes": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer registration was located for wARS or its Ripio/Moonbird issuer. Ripio materials identify an Argentine PSAV registration and regional compliance, not a U.S. permitted-issuer pathway. The GENIUS rulemaking remains in proposed-rules phase as of this review.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS proposed rule",
+        "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
@@ -62,20 +62,20 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC GENIUS proposed rule — 91 FR 10202",
+        "label": "OCC GENIUS proposed rule: 91 FR 10202",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-03-02",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Ripio wFIAT — wARS markets, reserves, and regional scope",
+        "label": "Ripio wFIAT: wARS markets, reserves, and regional scope",
         "url": "https://www.ripio.com/en/wfiat",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Ripio Argentina wallet terms — Moonbird S.R.L. and PSAV disclosure",
+        "label": "Ripio Argentina wallet terms: Moonbird S.R.L. and PSAV disclosure",
         "url": "https://terms.ripio.com/ar/wallet",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
@@ -94,7 +94,7 @@
       "reviewedAt": "2026-08-14",
       "references": [
         {
-          "label": "OCC Bulletin 2026-3 — GENIUS proposed rule",
+          "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
           "accessedAt": "2026-08-14"
@@ -106,7 +106,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Ripio Argentina wallet terms — issuer and regulatory disclosure",
+          "label": "Ripio Argentina wallet terms: issuer and regulatory disclosure",
           "url": "https://terms.ripio.com/ar/wallet",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"

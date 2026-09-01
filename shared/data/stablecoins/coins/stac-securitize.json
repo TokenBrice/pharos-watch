@@ -83,7 +83,7 @@
     "breakerScope": "stac-securitize",
     "display": {
       "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac",
-      "label": "Chronicle Proof of Asset — Securitize STAC"
+      "label": "Chronicle Proof of Asset: Securitize STAC"
     },
     "inputs": {
       "primary": {

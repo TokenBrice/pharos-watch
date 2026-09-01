@@ -147,7 +147,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native XRPL issued currency. Read 2026-07-19: the issuer account has disableMasterKey=true, no RegularKey and no SignerList — the account is cryptographically locked, so no mint capability remains on this deployment.",
+        "reviewNote": "Issuer-native XRPL issued currency. Read 2026-07-19: the issuer account has disableMasterKey=true, no RegularKey and no SignerList, the account is cryptographically locked, so no mint capability remains on this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -206,7 +206,7 @@
             "url": "https://www.audd.digital/audd-launches-on-hedera/"
           },
           {
-            "label": "Hedera mirror node — AUDD token",
+            "label": "Hedera mirror node: AUDD token",
             "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.8317071"
           }
         ]

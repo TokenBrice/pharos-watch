@@ -44,7 +44,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'EURITE', symbol EURI, 18 decimals on ethereum; uniform address, uniform owner() 0xfca77c0891578e371ee9ff34d6f653d8ec3d9e9d and uniform EIP-1967 admin 0xe0c6d43e59ef5c56339214e1ddc9f869805d82ec on both Ethereum and BSC — issuer-native Banking Circle deployment, consistent with the verified mint-authority review.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'EURITE', symbol EURI, 18 decimals on ethereum; uniform address, uniform owner() 0xfca77c0891578e371ee9ff34d6f653d8ec3d9e9d and uniform EIP-1967 admin 0xe0c6d43e59ef5c56339214e1ddc9f869805d82ec on both Ethereum and BSC, issuer-native Banking Circle deployment, consistent with the verified mint-authority review.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -65,7 +65,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'EURITE', symbol EURI, 18 decimals on bsc; uniform address, uniform owner() 0xfca77c0891578e371ee9ff34d6f653d8ec3d9e9d and uniform EIP-1967 admin 0xe0c6d43e59ef5c56339214e1ddc9f869805d82ec on both Ethereum and BSC — issuer-native Banking Circle deployment, consistent with the verified mint-authority review.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'EURITE', symbol EURI, 18 decimals on bsc; uniform address, uniform owner() 0xfca77c0891578e371ee9ff34d6f653d8ec3d9e9d and uniform EIP-1967 admin 0xe0c6d43e59ef5c56339214e1ddc9f869805d82ec on both Ethereum and BSC, issuer-native Banking Circle deployment, consistent with the verified mint-authority review.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

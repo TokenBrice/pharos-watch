@@ -73,10 +73,12 @@
       "sources": [
         {
           "label": "Re Protocol — How the Re Protocol Works (last updated 2026-06-25)",
+          "quoted": true,
           "url": "https://docs.re.xyz/protocol/how-the-re-protocol-work"
         },
         {
           "label": "Re Protocol FAQ — daily NAV and price update",
+          "quoted": true,
           "url": "https://docs.re.xyz/"
         }
       ]
@@ -472,7 +474,7 @@
         "observedBlock": 440124852,
         "sources": [
           {
-            "label": "Chainlink CCIP directory — solana-mainnet",
+            "label": "Chainlink CCIP directory: solana-mainnet",
             "url": "https://docs.chain.link/ccip/directory/mainnet/chain/solana-mainnet"
           },
           {

@@ -39,7 +39,7 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "syrupUSDT shares are minted/burned by the Maple ERC-4626 vault against USDT deposits and FIFO-queued withdrawals; this share accounting cannot create or destroy base USDT supply.",
-        "evidence": "At Ethereum block 25295160: EIP-1967 impl slot = 0x0 and proxy admin slot = 0x0; contract bytecode is 11660 bytes (non-proxy). owner() and admin() calls revert — no owner surface. Vault is immutable with no upgrade path. Slot 0 encodes the token name 'syrupUSDT', confirming contract identity."
+        "evidence": "At Ethereum block 25295160: EIP-1967 impl slot = 0x0 and proxy admin slot = 0x0; contract bytecode is 11660 bytes (non-proxy). owner() and admin() calls revert, no owner surface. Vault is immutable with no upgrade path. Slot 0 encodes the token name 'syrupUSDT', confirming contract identity."
       },
       {
         "chain": "ethereum",

@@ -74,7 +74,7 @@
     "compositionBasis": "KAP Jojo Sunarjo & Rekan agreed-upon-procedures Reserve Account Report as of 2026-06-19, institution-level balances",
     "compositionAsOf": "2026-06-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "The AUP names every institution and reports institution-level balances, but it is not an assurance opinion; it does not establish account segregation, bankruptcy remoteness, or maturity detail beyond demand balances, and the escrow's underlying USD depository institution at GHP Consulting is not named.",
+    "knownUnknownExposure": "The AUP names every institution and reports institution-level balances, but it is not an assurance opinion. It does not establish account segregation, bankruptcy remoteness, or maturity detail beyond demand balances, and the escrow's underlying USD depository institution at GHP Consulting is not named.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

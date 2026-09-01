@@ -766,7 +766,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "wsrUSD SPL mint 7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE (supply 10,000 raw at 9 decimals, read 2026-07-20 via Solana RPC) has mintAuthority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp — a program-owned PDA (owner program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq) consistent with the LayerZero OFT mint-authority account; freezeAuthority is unset.",
+        "reviewNote": "wsrUSD SPL mint 7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE (supply 10,000 raw at 9 decimals, read 2026-07-20 via Solana RPC) has mintAuthority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp, a program-owned PDA (owner program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq) consistent with the LayerZero OFT mint-authority account; freezeAuthority is unset.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "solana",

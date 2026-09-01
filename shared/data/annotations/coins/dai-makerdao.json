@@ -1,4 +1,4 @@
 [
-  {"date":"2020-03-12","kind":"governance","label":"Black Thursday — collateral auctions fail, MKR backstop","severity":"high","note":"2020-03-12 — Black Thursday: ETH crash, $0-bid collateral auctions, system shortfall"},
-  {"date":"2023-03-11","kind":"depeg","label":"USDC contagion via PSM — Dai depeg low","severity":"high","note":"2023-03-11 — Dai depegs alongside USDC due to PSM collateral exposure"}
+  {"date":"2020-03-12","kind":"governance","label":"Black Thursday: collateral auctions fail, MKR backstop","severity":"high","note":"2020-03-12: Black Thursday: ETH crash, $0-bid collateral auctions, system shortfall"},
+  {"date":"2023-03-11","kind":"depeg","label":"USDC contagion via PSM: Dai depeg low","severity":"high","note":"2023-03-11: Dai depegs alongside USDC due to PSM collateral exposure"}
 ]

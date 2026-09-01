@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USDU BSC token is owned by a Gnosis Safe 3-of-5 (all EOA signers, no modules, v1.4.1) that can call mint(); the Solana Token-2022 mint has its mintAuthority set to the mint address itself — a self-referential pattern that prevents standard key-based verification.",
+    "summary": "USDU BSC token is owned by a Gnosis Safe 3-of-5 (all EOA signers, no modules, v1.4.1) that can call mint(); the Solana Token-2022 mint has its mintAuthority set to the mint address itself, a self-referential pattern that prevents standard key-based verification.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -71,7 +71,7 @@
           "solana:9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
         ],
         "canRaiseCap": "unknown",
-        "evidence": "Solana Token-2022 mint 9ckR7pPP…: mintAuthority = the mint address itself (self-referential). Extensions present: metadataPointer and tokenMetadata (updateAuthority also = mint address). No freezeAuthority. Supply = 10,951,433 USDU. This pattern cannot be verified via standard key-based authority reads — the controlling program or keypair is unknown from on-chain state alone. Judgment per the moveUSD precedent: a self-referential Token-2022 mintAuthority (the mint address itself) is a non-executable, non-signing account, so no party can invoke MintTo on Solana; the Solana supply is effectively frozen.",
+        "evidence": "Solana Token-2022 mint 9ckR7pPP…: mintAuthority = the mint address itself (self-referential). Extensions present: metadataPointer and tokenMetadata (updateAuthority also = mint address). No freezeAuthority. Supply = 10,951,433 USDU. This pattern cannot be verified via standard key-based authority reads, the controlling program or keypair is unknown from on-chain state alone. Judgment per the moveUSD precedent: a self-referential Token-2022 mintAuthority (the mint address itself) is a non-executable, non-signing account, so no party can invoke MintTo on Solana; the Solana supply is effectively frozen.",
         "sources": [
           {
             "label": "USDU Solana mint",

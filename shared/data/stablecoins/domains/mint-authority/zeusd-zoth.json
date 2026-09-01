@@ -28,10 +28,12 @@
         "sources": [
           {
             "label": "Halborn — Zoth March 2025 hack explained",
+            "quoted": true,
             "url": "https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025"
           },
           {
             "label": "Rekt News — Zoth admin-key compromise",
+            "quoted": true,
             "url": "https://rekt.news/zoth-rekt"
           }
         ]

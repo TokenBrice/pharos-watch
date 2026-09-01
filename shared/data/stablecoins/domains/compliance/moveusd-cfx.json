@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA Article 48 — Union EMT offer/admission requirements",
+        "label": "ESMA MiCA Article 48: Union EMT offer/admission requirements",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-48-requirements-offer-public-or"
       },
       {
-        "label": "CFX — MoveUSD services are limited to verified residents of listed U.S. states",
+        "label": "CFX: MoveUSD services are limited to verified residents of listed U.S. states",
         "url": "https://cfx.to/"
       },
       {
-        "label": "ESMA interim MiCA register — EMT issuers",
+        "label": "ESMA interim MiCA register: EMT issuers",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]
@@ -33,7 +33,7 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "MOVEUSD public materials describe CFX issuance and designated redemption channels, but Pharos found no public GENIUS issuer intent, PPSI approval, state-qualified approval, or official application source. CFX's July 30 2025 press release describes MOVEUSD as 'GENIUS-ready' (first on Ethereum and Base), framing this as architectural alignment with reserve and redemption requirements — this is marketing language, not a formal PPSI pathway announcement, and does not meet the bar for issuer-announced-intent. The original reserveDisclosureUrl (docs.moveusd.com/docs/disclosures-disclaimers) now redirects to docs.cfx.to with no dedicated reserve disclosure page found; reserveDisclosurePresent updated to false accordingly.",
+    "notes": "MOVEUSD public materials describe CFX issuance and designated redemption channels, but Pharos found no public GENIUS issuer intent, PPSI approval, state-qualified approval, or official application source. CFX's July 30 2025 press release describes MOVEUSD as 'GENIUS-ready' (first on Ethereum and Base), framing this as architectural alignment with reserve and redemption requirements: this is marketing language, not a formal PPSI pathway announcement, and does not meet the bar for issuer-announced-intent. The original reserveDisclosureUrl (docs.moveusd.com/docs/disclosures-disclaimers) now redirects to docs.cfx.to with no dedicated reserve disclosure page found; reserveDisclosurePresent updated to false accordingly.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -58,10 +58,10 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
-        "CFX Labs homepage (cfx.to) — NMLS and MSB registrations confirmed, no PPSI application or GENIUS pathway mentioned",
-        "CFX documentation (docs.cfx.to, formerly docs.moveusd.com) — no reserve disclosure page or GENIUS Act filing found",
-        "CFX July 2025 'GENIUS-ready' press release — marketing language only, no formal authorization intent",
-        "FDIC and FinCEN GENIUS Act NPRM public releases — no CFX Labs application listed",
+        "CFX Labs homepage (cfx.to): NMLS and MSB registrations confirmed, no PPSI application or GENIUS pathway mentioned",
+        "CFX documentation (docs.cfx.to, formerly docs.moveusd.com): no reserve disclosure page or GENIUS Act filing found",
+        "CFX July 2025 'GENIUS-ready' press release: marketing language only, no formal authorization intent",
+        "FDIC and FinCEN GENIUS Act NPRM public releases: no CFX Labs application listed",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",

@@ -15,7 +15,7 @@
     "reserveDisclosureUrl": "https://jupusd.money/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "JupUSD's primary reserve asset (USDtb) is now issued in the US by Anchorage Digital Bank N.A. under a GENIUS-compliant framework (announced July 24, 2025; Anchorage is the USDtb issuer, not JupUSD's issuer). JupUSD itself has no GENIUS authorization — it is a separate token issued by Jupiter on Solana with no disclosed US legal entity or regulatory registration. Jupiter restricts US users in its ToS but no formal foreign-exception determination has been made. No public GENIUS approval, application, or issuer pathway source for JupUSD itself was located.",
+    "notes": "JupUSD's primary reserve asset (USDtb) is now issued in the US by Anchorage Digital Bank N.A. under a GENIUS-compliant framework (announced July 24, 2025; Anchorage is the USDtb issuer, not JupUSD's issuer). JupUSD itself has no GENIUS authorization: it is a separate token issued by Jupiter on Solana with no disclosed US legal entity or regulatory registration. Jupiter restricts US users in its ToS but no formal foreign-exception determination has been made. No public GENIUS approval, application, or issuer pathway source for JupUSD itself was located.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -33,25 +33,25 @@
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Anchorage Digital — Ethena USDtb GENIUS-compliant issuance announcement (July 24 2025)",
+        "label": "Anchorage Digital: Ethena USDtb GENIUS-compliant issuance announcement (July 24 2025)",
         "url": "https://www.anchorage.com/insights/anchorage-digital-partners-with-ethena-labs-to-launch-first-genius-compliant-federally-regulated-stablecoin",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-07-24",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "JupUSD launch — The Block (Jan 2026)",
+        "label": "JupUSD launch: The Block (Jan 2026)",
         "url": "https://www.theblock.co/post/384366/jupiter-rolls-out-native-jupusd-stablecoin-backed-90-by-blackrock-and-ethenas-usdtb",
         "sourceKind": "news"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule (Bulletin 2026-3) and public releases — no JupUSD or Jupiter issuer listing",
-        "Anchorage Digital / Ethena Labs USDtb GENIUS-compliant launch (July 24 2025) — confirms USDtb is GENIUS-compliant via Anchorage Digital Bank N.A.; JupUSD is a separate token not covered by this authorization",
-        "JupUSD issuer disclosures and developer documentation — no regulatory authorization disclosed",
-        "Web search across US permitted-issuer, state-qualified, official-application, and foreign-exception materials — no Jupiter or JupUSD-specific result found",
-        "Jupiter Terms of Service (US user access restriction noted) — no formal foreign-exception determination found",
+        "OCC GENIUS Act proposed rule (Bulletin 2026-3) and public releases: no JupUSD or Jupiter issuer listing",
+        "Anchorage Digital / Ethena Labs USDtb GENIUS-compliant launch (July 24 2025): confirms USDtb is GENIUS-compliant via Anchorage Digital Bank N.A.; JupUSD is a separate token not covered by this authorization",
+        "JupUSD issuer disclosures and developer documentation: no regulatory authorization disclosed",
+        "Web search across US permitted-issuer, state-qualified, official-application, and foreign-exception materials: no Jupiter or JupUSD-specific result found",
+        "Jupiter Terms of Service (US user access restriction noted): no formal foreign-exception determination found",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",

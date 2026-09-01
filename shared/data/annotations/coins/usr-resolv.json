@@ -1,3 +1,3 @@
 [
-  {"date":"2026-03-22","kind":"depeg","label":"Resolv signing-key exploit — 80M unbacked USR minted, ~70% crash","severity":"high","href":"https://resolv.xyz/blog/resolv-postmortem-march-22-2026-incident","note":"2026-03-22 — Attacker compromised a Resolv signing key (AWS KMS) and exploited a missing max-mint check to print 80M unbacked USR from ~$100K USDC, dumping on Curve. USR crashed ~70% (lows near $0.02), recovered only to ~$0.80; ~$25M extracted, protocol paused."}
+  {"date":"2026-03-22","kind":"depeg","label":"Resolv signing-key exploit: 80M unbacked USR minted, ~70% crash","severity":"high","href":"https://resolv.xyz/blog/resolv-postmortem-march-22-2026-incident","note":"2026-03-22: Attacker compromised a Resolv signing key (AWS KMS) and exploited a missing max-mint check to print 80M unbacked USR from ~$100K USDC, dumping on Curve. USR crashed ~70% (lows near $0.02), recovered only to ~$0.80; ~$25M extracted, protocol paused."}
 ]

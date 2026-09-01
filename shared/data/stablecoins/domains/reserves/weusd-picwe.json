@@ -45,11 +45,11 @@
         "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
       },
       {
-        "label": "Movement Aptos REST — current PicWe package resources (MintState dual-reserve fields)",
+        "label": "Movement Aptos REST: current PicWe package resources (MintState dual-reserve fields)",
         "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
       },
       {
-        "label": "Movement Aptos REST — legacy WEUSD package resources (move_reserves + stablecoin_reserves; dominant supply)",
+        "label": "Movement Aptos REST: legacy WEUSD package resources (move_reserves + stablecoin_reserves; dominant supply)",
         "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xed805e77c40d7e6ac5cd3e67514c485176621a2aa21e860cd515121d44a2f83d/resources"
       },
       {
@@ -65,7 +65,7 @@
         "url": "https://web.archive.org/web/20260210025231/https://docs.picwe.org/what-is-weusd"
       }
     ],
-    "rationale": "2026-07-30 re-review. Current PicWe docs and gitbook still assert Phase 1 100% USDC backing with 1:1 mint/redeem and 'on-chain reserves' / 'real-time auditability', but publish no itemized reserve inventory, attestation, or PoR report (docs.picwe.org transparency/reserves/proof-of-reserves paths 404). On-chain pins contradict a simple full USDC float: BSC block 113074656 (2026-07-30T20:34:28Z) WEUSD totalSupply 32433.922065 with mint/redeem contract 0x5D54…F22C holding only ~0.624899 USDC (BSC USDC 0x8AC7…580d balanceOf); Movement legacy package 0xed80…f83d (DefiLlama Movement supply source) reports weusd::total_supply 465086.702603 while weusd_operations::MintState holds stablecoin_reserves 58.232342 (6-dec) and move_reserves 1343.060443 with move_ratio 1000 — dual-asset mint state, not pure USDC, and far below circulating supply; current PicWe package 0xf39c…1ff6 MintState holds stablecoin_reserves 841.166803 + cross_chain_reserves 16637.901559 against weusd::total_supply 841.166803. CoinGecko WEUSD ~$0.64. No public ratio table reconciles docs, legacy dual-reserve mint-state, EVM mint underfill, and market price. Composition therefore remains a single unresolved 100% residual (not a forced USDC link).",
+    "rationale": "2026-07-30 re-review. Current PicWe docs and gitbook still assert Phase 1 100% USDC backing with 1:1 mint/redeem and 'on-chain reserves' / 'real-time auditability', but publish no itemized reserve inventory, attestation, or PoR report (docs.picwe.org transparency/reserves/proof-of-reserves paths 404). On-chain pins contradict a simple full USDC float: BSC block 113074656 (2026-07-30T20:34:28Z) WEUSD totalSupply 32433.922065 with mint/redeem contract 0x5D54…F22C holding only ~0.624899 USDC (BSC USDC 0x8AC7…580d balanceOf); Movement legacy package 0xed80…f83d (DefiLlama Movement supply source) reports weusd::total_supply 465086.702603 while weusd_operations::MintState holds stablecoin_reserves 58.232342 (6-dec) and move_reserves 1343.060443 with move_ratio 1000, dual-asset mint state, not pure USDC, and far below circulating supply; current PicWe package 0xf39c…1ff6 MintState holds stablecoin_reserves 841.166803 + cross_chain_reserves 16637.901559 against weusd::total_supply 841.166803. CoinGecko WEUSD ~$0.64. No public ratio table reconciles docs, legacy dual-reserve mint-state, EVM mint underfill, and market price. Composition therefore remains a single unresolved 100% residual (not a forced USDC link).",
     "compositionBasis": "Issuer Phase-1 USDC documentation re-checked against multi-chain mint/reserve contract reads and market price; unresolved dual-disclosure conflict retained",
     "compositionAsOf": "2026-07-30",
     "scope": "full-composition",

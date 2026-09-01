@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "EURO3 on Polygon and Linea uses a MintableToken + MintableTokenOwner pattern. Authorized vault contracts (VaultFactory 0x47608470... and a second contract) are registered as minters in MintableTokenOwner and call mint() on the token. The MintableTokenOwner is owned by an OwnerProxy, which is owned by a single EOA (0x84d28251143df55df1768870fc26983f50364557) — no multisig. This EOA can add/revoke minters and transfer control unilaterally, making this a concentrated-admin posture.",
+    "summary": "EURO3 on Polygon and Linea uses a MintableToken + MintableTokenOwner pattern. Authorized vault contracts (VaultFactory 0x47608470... and a second contract) are registered as minters in MintableTokenOwner and call mint() on the token. The MintableTokenOwner is owned by an OwnerProxy, which is owned by a single EOA (0x84d28251143df55df1768870fc26983f50364557), no multisig. This EOA can add/revoke minters and transfer control unilaterally, making this a concentrated-admin posture.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,

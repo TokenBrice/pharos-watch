@@ -9,7 +9,7 @@
       "summary": "Nest describes nTBILL as a vault token representing a share of a Treasury portfolio, with returns reinvested into the token price and redemptions processed as vault-share exits. That is tokenized fund or vault exposure, not a fixed-value payment stablecoin.",
       "references": [
         {
-          "label": "Nest available vaults — nTBILL share-token description",
+          "label": "Nest available vaults: nTBILL share-token description",
           "url": "https://docs.nest.credit/about/available-vaults",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
@@ -27,7 +27,7 @@
     "notes": "nTBILL is a NAV-accreting Treasury vault share. It is explicitly assessed as an excluded security for this tracker because its value changes with underlying portfolio NAV and it represents a share of a vault rather than a GENIUS payment stablecoin.",
     "references": [
       {
-        "label": "Nest available vaults — nTBILL share-token description",
+        "label": "Nest available vaults: nTBILL share-token description",
         "url": "https://docs.nest.credit/about/available-vaults",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

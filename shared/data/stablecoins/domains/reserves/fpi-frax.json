@@ -83,7 +83,7 @@
         "url": "https://frax.com/transparency"
       }
     ],
-    "rationale": "The first-party FPI collateral endpoint was re-read on 2026-08-08 (block 25711761). Ferry/liability entries (FPI tokens locked in FraxFerry) were excluded because they represent bridged supply rather than reserve assets. The remaining reserve positions — Ethereum and Fraxtal comptroller FRAX balances plus the FPI Controller FRAX balance, staked Convex FPI/FRAX LP, Fraxswap V2 FRAX/FPIS, and a negligible FXS dust balance — were normalized to four classified rows. Each LP, governance-token, market, and upstream-stablecoin failure domain is retained rather than folding the portfolio into a single FRAX claim.",
+    "rationale": "The first-party FPI collateral endpoint was re-read on 2026-08-08 (block 25711761). Ferry/liability entries (FPI tokens locked in FraxFerry) were excluded because they represent bridged supply rather than reserve assets. The remaining reserve positions, Ethereum and Fraxtal comptroller FRAX balances plus the FPI Controller FRAX balance, staked Convex FPI/FRAX LP, Fraxswap V2 FRAX/FPIS, and a negligible FXS dust balance, were normalized to four classified rows. Each LP, governance-token, market, and upstream-stablecoin failure domain is retained rather than folding the portfolio into a single FRAX claim.",
     "compositionBasis": "Frax FPI collateral API snapshot captured on 2026-08-08; ferry/liability entries excluded from the reserve mix",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",

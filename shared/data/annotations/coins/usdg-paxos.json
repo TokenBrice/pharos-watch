@@ -1,5 +1,5 @@
 [
-  {"date":"2024-11-01","kind":"governance","label":"USDG launch — Paxos Singapore under MAS framework","severity":"med","href":"https://www.paxos.com/newsroom/paxos-introduces-global-dollar-usdg","note":"2024-11-01 — Paxos Singapore launches USDG under MAS framework"},
-  {"date":"2024-11-04","kind":"governance","label":"Global Dollar Network launched — yield-sharing model","severity":"low","href":"https://globaldollar.com/","note":"2024-11-04 — Global Dollar Network unveiled with Robinhood, Kraken, Galaxy, et al."},
-  {"date":"2025-07-01","kind":"regulatory","label":"USDG EU launch under MiCA (FIN-FSA)","severity":"low","href":"https://www.paxos.com/newsroom/global-dollar-(usdg)-launches-in-the-eu","note":"2025-07-01 — USDG launches in EU under MiCA via Finnish FIN-FSA"}
+  {"date":"2024-11-01","kind":"governance","label":"USDG launch, Paxos Singapore under MAS framework","severity":"med","href":"https://www.paxos.com/newsroom/paxos-introduces-global-dollar-usdg","note":"2024-11-01: Paxos Singapore launches USDG under MAS framework"},
+  {"date":"2024-11-04","kind":"governance","label":"Global Dollar Network launched, yield-sharing model","severity":"low","href":"https://globaldollar.com/","note":"2024-11-04: Global Dollar Network unveiled with Robinhood, Kraken, Galaxy, et al."},
+  {"date":"2025-07-01","kind":"regulatory","label":"USDG EU launch under MiCA (FIN-FSA)","severity":"low","href":"https://www.paxos.com/newsroom/global-dollar-(usdg)-launches-in-the-eu","note":"2025-07-01: USDG launches in EU under MiCA via Finnish FIN-FSA"}
 ]

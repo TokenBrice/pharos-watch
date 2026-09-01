@@ -27,7 +27,7 @@
           "url": "https://docs.picwe.org/developers/contracts"
         },
         {
-          "label": "Movement Aptos REST — WEUSD package registry",
+          "label": "Movement Aptos REST: WEUSD package registry",
           "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
         },
         {
@@ -94,11 +94,11 @@
             "url": "https://docs.picwe.org/developers/contracts"
           },
           {
-            "label": "Movement Aptos REST — WEUSD account",
+            "label": "Movement Aptos REST: WEUSD account",
             "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
           },
           {
-            "label": "Movement Aptos REST — WEUSD package registry",
+            "label": "Movement Aptos REST: WEUSD package registry",
             "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
           },
           {
@@ -129,7 +129,7 @@
           "url": "https://docs.picwe.org/what-is-weusd"
         },
         {
-          "label": "Movement Aptos REST — WEUSD contract resources",
+          "label": "Movement Aptos REST: WEUSD contract resources",
           "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
         },
         {

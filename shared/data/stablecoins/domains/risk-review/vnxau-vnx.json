@@ -149,7 +149,7 @@
             "url": "https://horizon.stellar.org/accounts/GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
           }
         ],
-        "reviewNote": "Native VNXAU issuance on stellar: the classic VNXAU asset's issuer account GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3 carries low/medium/high thresholds 0 and a sole weight-1 master signer (Horizon-verified 2026-07-20) — VNX's own issuer account; no bridge representation."
+        "reviewNote": "Native VNXAU issuance on stellar: the classic VNXAU asset's issuer account GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3 carries low/medium/high thresholds 0 and a sole weight-1 master signer (Horizon-verified 2026-07-20), VNX's own issuer account; no bridge representation."
       },
       {
         "id": "solana:9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",

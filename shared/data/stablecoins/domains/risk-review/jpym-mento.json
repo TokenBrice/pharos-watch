@@ -181,26 +181,32 @@
     "sources": [
       {
         "label": "Mento docs — Getting Mento stables from other chains (names Wormhole NTT)",
+        "quoted": true,
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/from-other-chains"
       },
       {
         "label": "Wormhole blog — Mento selects Wormhole as official interoperability provider (NTT)",
+        "quoted": true,
         "url": "https://wormhole.com/blog/mento-selects-wormhole-as-its-official-interoperability-provider"
       },
       {
         "label": "Mento blog — Mento selects Wormhole to power multichain FX",
+        "quoted": true,
         "url": "https://www.mento.org/blog/mento-selects-wormhole-as-its-official-interoperability-provider-to-power-multichain-fx"
       },
       {
         "label": "Mento blog — Mento is bringing onchain FX to the Monad ecosystem (Celo-anchored issuance, Monad liquidity)",
+        "quoted": true,
         "url": "https://www.mento.org/blog/mento-is-bringing-onchain-fx-to-the-monad-ecosystem"
       },
       {
         "label": "The Block — Mento launches on Monad, powered by Wormhole NTT (Mar 12 2026)",
+        "quoted": true,
         "url": "https://www.theblock.co/press-releases/393188/mento-launches-on-monad-bringing-fx-markets-to-a-high-performance-l1"
       },
       {
         "label": "Wormhole docs — Native Token Transfers overview (hub-and-spoke vs burn-mint, Manager/Transceiver, Guardian attestation)",
+        "quoted": true,
         "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/"
       }
     ],

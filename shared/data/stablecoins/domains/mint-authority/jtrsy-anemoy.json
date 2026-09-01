@@ -38,7 +38,7 @@
             "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
           },
           {
-            "label": "Ethereum explorer — JTRSY Tranche token",
+            "label": "Ethereum explorer: JTRSY Tranche token",
             "url": "https://etherscan.io/token/0x8c213ee79581ff4984583c6a801e5263418c4b86"
           }
         ],
@@ -83,11 +83,11 @@
         },
         "sources": [
           {
-            "label": "Safe API — Centrifuge protocol Safe",
+            "label": "Safe API: Centrifuge protocol Safe",
             "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
           }
         ],
-        "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Shared with JAAA — same Centrifuge protocol Safe.",
+        "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Shared with JAAA, same Centrifuge protocol Safe.",
         "chain": "ethereum",
         "address": "0x9711730060C73Ee7Fcfe1890e8A0993858a7D225",
         "deploymentRefs": [
@@ -126,7 +126,7 @@
           "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
         },
         {
-          "label": "Safe API — Centrifuge protocol Safe",
+          "label": "Safe API: Centrifuge protocol Safe",
           "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
         }
       ]

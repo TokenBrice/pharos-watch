@@ -68,14 +68,15 @@
     "sources": [
       {
         "label": "Virtue CDP documentation — supported collateral and repay-to-unlock flow",
+        "quoted": true,
         "url": "https://docs.virtue.money/mechanisms/cdp-collateralized-debt-position"
       },
       {
-        "label": "Virtue technical resources — mainnet package and object IDs",
+        "label": "Virtue technical resources: mainnet package and object IDs",
         "url": "https://docs.virtue.money/resources/technical-resources"
       },
       {
-        "label": "IOTA mainnet JSON-RPC — iota_getLatestCheckpointSequenceNumber and iota_getObject reads at checkpoint 172877784",
+        "label": "IOTA mainnet JSON-RPC: iota_getLatestCheckpointSequenceNumber and iota_getObject reads at checkpoint 172877784",
         "url": "https://api.mainnet.iota.cafe"
       },
       {
@@ -83,7 +84,7 @@
         "url": "https://graphql.mainnet.iota.cafe"
       },
       {
-        "label": "Pyth Hermes — IOTA/USD and BTC/USD feed values published 2026-07-30",
+        "label": "Pyth Hermes: IOTA/USD and BTC/USD feed values published 2026-07-30",
         "url": "https://hermes.pyth.network/api/latest_price_feeds?ids[]=c7b72e5d860034288c9335d4d325da4272fe50c92ab72249d58f6cbba30e4c44&ids[]=e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"
       }
     ],
@@ -110,7 +111,7 @@
     "confidence": "probable",
     "sources": [
       {
-        "label": "Virtue CDP documentation — collateral locked in protocol positions",
+        "label": "Virtue CDP documentation: collateral locked in protocol positions",
         "url": "https://docs.virtue.money/mechanisms/cdp-collateralized-debt-position"
       },
       {
@@ -118,11 +119,11 @@
         "url": "https://docs.virtue.money/resources/technical-resources"
       },
       {
-        "label": "IOTA mainnet JSON-RPC — vault and shared Stability Pool reads at checkpoint 172877784",
+        "label": "IOTA mainnet JSON-RPC: vault and shared Stability Pool reads at checkpoint 172877784",
         "url": "https://api.mainnet.iota.cafe"
       },
       {
-        "label": "IOTA mainnet GraphQL — current NativePool and metadata object reads",
+        "label": "IOTA mainnet GraphQL: current NativePool and metadata object reads",
         "url": "https://graphql.mainnet.iota.cafe"
       }
     ],

@@ -5,19 +5,19 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "ESMA interim MiCA register — EMT issuers",
+        "label": "ESMA interim MiCA register: EMT issuers",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "ESMA MiCA Article 48 — Union EMT offer/admission requires an authorised credit or e-money institution",
+        "label": "ESMA MiCA Article 48: Union EMT offer/admission requires an authorised credit or e-money institution",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-48-requirements-offer-public-or"
       },
       {
-        "label": "Frax — frxUSD is globally accessible and available through DEXs",
+        "label": "Frax: frxUSD is globally accessible and available through DEXs",
         "url": "https://docs.frax.com/frxusd"
       },
       {
-        "label": "FraxNet — EUR/SEPA conversion to frxUSD is live in Europe",
+        "label": "FraxNet: EUR/SEPA conversion to frxUSD is live in Europe",
         "url": "https://docs.frax.com/frxusd/fiat-onramp-offramp"
       }
     ]
@@ -36,7 +36,7 @@
     "reserveDisclosureUrl": "https://frax.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Frax governance passed FIP-430 (April 2025) and FIP-432 (July 2025) to prepare frxUSD for U.S. GENIUS Act payment-stablecoin charter compliance and formally transfer compliance and collateral management to FRAX Inc (formerly FinresPBC / Financial Reserves and Asset Exploration Inc.). The OCC digital-assets licensing application tracker (checked 2026-06-18) lists no pending application from Frax Finance, Financial Reserves and Asset Exploration Inc., or FRAX Inc. StableCharter.com categorizes status as 'PREPARING.' The GENIUS Act application framework itself remains in proposed-rule stage. authorizationStatus remains issuer-announced-intent — issuer intent is clear and well-documented but no official PPSI application has been filed. issuerPathway set to federal-qualified-nonbank reflecting the OCC nonbank PPSI route being pursued (not an IDI subsidiary, not foreign-registered); neither FIP explicitly names OCC but FRAX Inc. is a US nonbank entity with no state PPSI registration found, making the OCC federal nonbank pathway the only consistent federal route.",
+    "notes": "Frax governance passed FIP-430 (April 2025) and FIP-432 (July 2025) to prepare frxUSD for U.S. GENIUS Act payment-stablecoin charter compliance and formally transfer compliance and collateral management to FRAX Inc (formerly FinresPBC / Financial Reserves and Asset Exploration Inc.). The OCC digital-assets licensing application tracker (checked 2026-06-18) lists no pending application from Frax Finance, Financial Reserves and Asset Exploration Inc., or FRAX Inc. StableCharter.com categorizes status as 'PREPARING.' The GENIUS Act application framework itself remains in proposed-rule stage. authorizationStatus remains issuer-announced-intent: issuer intent is clear and well-documented but no official PPSI application has been filed. issuerPathway set to federal-qualified-nonbank reflecting the OCC nonbank PPSI route being pursued (not an IDI subsidiary, not foreign-registered); neither FIP explicitly names OCC but FRAX Inc. is a US nonbank entity with no state PPSI registration found, making the OCC federal nonbank pathway the only consistent federal route.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

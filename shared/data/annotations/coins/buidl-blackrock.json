@@ -1,4 +1,4 @@
 [
-  {"date":"2024-03-20","kind":"governance","label":"BUIDL launch — BlackRock's first tokenized fund onchain","severity":"high","href":"https://www.prnewswire.com/news-releases/blackrock-usd-institutional-digital-liquidity-fund-buidl-tokenized-by-securitize-surpasses-1b-in-aum-302401480.html","note":"2024-03-20 — BlackRock USD Institutional Digital Liquidity Fund (BUIDL) launches on Ethereum via Securitize"},
-  {"date":"2025-03-13","kind":"governance","label":"BUIDL crosses $1B AUM — largest tokenized T-bill fund","severity":"low","note":"2025-03-13 — BUIDL crosses $1B AUM, becomes largest tokenized treasury fund"}
+  {"date":"2024-03-20","kind":"governance","label":"BUIDL launch, BlackRock's first tokenized fund onchain","severity":"high","href":"https://www.prnewswire.com/news-releases/blackrock-usd-institutional-digital-liquidity-fund-buidl-tokenized-by-securitize-surpasses-1b-in-aum-302401480.html","note":"2024-03-20: BlackRock USD Institutional Digital Liquidity Fund (BUIDL) launches on Ethereum via Securitize"},
+  {"date":"2025-03-13","kind":"governance","label":"BUIDL crosses $1B AUM, largest tokenized T-bill fund","severity":"low","note":"2025-03-13: BUIDL crosses $1B AUM, becomes largest tokenized treasury fund"}
 ]

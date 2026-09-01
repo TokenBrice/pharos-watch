@@ -56,7 +56,7 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "Ondo docs — contract addresses",
+            "label": "Ondo docs: contract addresses",
             "url": "https://docs.ondo.finance/addresses"
           },
           {
@@ -76,12 +76,12 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the Polygon OUSG proxy's EIP-1967 admin chain resolves to a 3-of-6 Safe 0x4413073440A568790c1b2b06B47F7D0a443574d0 whose signers overlap Ondo's Ethereum OUSG admin Safes (read 2026-07-20), and the token has no active MINTER_ROLE member — no bridge minter remains on this deployment.",
+        "reviewNote": "Issuer-native deployment: the Polygon OUSG proxy's EIP-1967 admin chain resolves to a 3-of-6 Safe 0x4413073440A568790c1b2b06B47F7D0a443574d0 whose signers overlap Ondo's Ethereum OUSG admin Safes (read 2026-07-20), and the token has no active MINTER_ROLE member. No bridge minter remains on this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "Ondo docs — OUSG technical (available on Ethereum, Polygon, Solana, XRPL)",
+            "label": "Ondo docs: OUSG technical (available on Ethereum, Polygon, Solana, XRPL)",
             "url": "https://docs.ondo.finance/qualified-access-products/ousg/technical"
           },
           {
@@ -110,7 +110,7 @@
             "url": "https://solscan.io/token/i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc"
           },
           {
-            "label": "Ondo docs — OUSG technical",
+            "label": "Ondo docs: OUSG technical",
             "url": "https://docs.ondo.finance/qualified-access-products/ousg/technical"
           }
         ]
@@ -136,6 +136,7 @@
           },
           {
             "label": "Ripple blog — tokenized treasuries on XRPL",
+            "quoted": true,
             "url": "https://ripple.com/insights/tokenized-treasuries-go-live-on-the-xrpl/"
           }
         ]

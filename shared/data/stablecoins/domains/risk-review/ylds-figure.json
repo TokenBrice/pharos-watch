@@ -43,7 +43,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The Solana YLDS deployment is Hastra wYLDS — a wrapped token backed 1:1 by YLDS from Hastra, the liquidity protocol incubated by Figure and Provenance Blockchain, with cross-chain interoperability on Chainlink CCIP. At finalized slot 439721114 on 2026-08-16, the SPL mint had supply 171,231,691.550686 wYLDS, direct mint authority AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM, and freeze authority 8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6. The mint account has no protocol-enforced aggregate or per-call cap; both authority keys returned no account state, so signer identity and custody remain unresolved.",
+        "reviewNote": "The Solana YLDS deployment is Hastra wYLDS, a wrapped token backed 1:1 by YLDS from Hastra, the liquidity protocol incubated by Figure and Provenance Blockchain, with cross-chain interoperability on Chainlink CCIP. At finalized slot 439721114 on 2026-08-16, the SPL mint had supply 171,231,691.550686 wYLDS, direct mint authority AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM, and freeze authority 8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6. The mint account has no protocol-enforced aggregate or per-call cap; both authority keys returned no account state, so signer identity and custody remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 439721114,
@@ -58,6 +58,7 @@
         "sources": [
           {
             "label": "Figure press release — RWA Consortium / Hastra wYLDS (2025-12-04)",
+            "quoted": true,
             "url": "https://investors.figure.com/news-releases/news-release-details/figure-and-leading-crypto-partners-launch-rwa-consortium-onchain"
           },
           {
@@ -109,7 +110,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The Ethereum YLDS-tracked token is Hastra wYLDS (name/symbol verified 2026-08-16), an ERC1967 UUPS proxy wrapped token backed 1:1 by YLDS from Hastra — the Figure/Provenance-incubated liquidity protocol — with cross-chain interoperability on Chainlink CCIP. At Ethereum block 25770387, verified YieldVaultV2 roles DEFAULT_ADMIN_ROLE, UPGRADER_ROLE, and WHITELIST_ADMIN_ROLE were held by TimelockController 0x4acd2c83616d42b87788ecef4039e7355dd23a39, whose getMinDelay() was 86400 seconds. Former Safe 0x8d358b8ae881f8ea92c3d07783abca21727c6309 no longer held those roles after revocations at block 25749373; it remains the Timelock proposer/admin, and the zero executor address makes execution open after delay. The complete current Timelock role roster was not independently enumerated. Figure's legal disclaimer notes Figure does not itself issue wYLDS.",
+        "reviewNote": "The Ethereum YLDS-tracked token is Hastra wYLDS (name/symbol verified 2026-08-16), an ERC1967 UUPS proxy wrapped token backed 1:1 by YLDS from Hastra, the Figure/Provenance-incubated liquidity protocol, with cross-chain interoperability on Chainlink CCIP. At Ethereum block 25770387, verified YieldVaultV2 roles DEFAULT_ADMIN_ROLE, UPGRADER_ROLE, and WHITELIST_ADMIN_ROLE were held by TimelockController 0x4acd2c83616d42b87788ecef4039e7355dd23a39, whose getMinDelay() was 86400 seconds. Former Safe 0x8d358b8ae881f8ea92c3d07783abca21727c6309 no longer held those roles after revocations at block 25749373; it remains the Timelock proposer/admin, and the zero executor address makes execution open after delay. The complete current Timelock role roster was not independently enumerated. Figure's legal disclaimer notes Figure does not itself issue wYLDS.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ethereum",
         "controllerAddress": "0x4acd2c83616d42b87788ecef4039e7355dd23a39",
@@ -127,6 +128,7 @@
           },
           {
             "label": "Figure press release — RWA Consortium / Hastra wYLDS (2025-12-04)",
+            "quoted": true,
             "url": "https://investors.figure.com/news-releases/news-release-details/figure-and-leading-crypto-partners-launch-rwa-consortium-onchain"
           },
           {
@@ -165,7 +167,7 @@
             "url": "https://www.ylds.com/.well-known/stellar.toml"
           },
           {
-            "label": "Stellar Expert — YLDS asset",
+            "label": "Stellar Expert: YLDS asset",
             "url": "https://stellar.expert/explorer/public/asset/YLDS-GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3"
           }
         ]

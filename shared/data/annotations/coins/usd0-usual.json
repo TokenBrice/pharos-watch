@@ -1,5 +1,5 @@
 [
-  {"date":"2024-07-10","kind":"governance","label":"USD0 / USD0++ public launch","severity":"med","note":"2024-07-10 — USD0 enters public phase; USD0++ liquid-staked variant goes live"},
-  {"date":"2025-01-10","kind":"governance","label":"Usual sets $0.87 floor exit for USD0++","severity":"high","href":"https://blockworks.co/news/usual-depeg-spurs-defi-instability","note":"2025-01-10 — Usual unilaterally introduces $0.87 floor exit for USD0++"},
-  {"date":"2025-01-13","kind":"depeg","label":"USD0++ depeg low ~$0.89 — Morpho cascade","severity":"high","note":"2025-01-13 — USD0++ tumbles to ~$0.89; Morpho cascade liquidations; revenue switch activated"}
+  {"date":"2024-07-10","kind":"governance","label":"USD0 / USD0++ public launch","severity":"med","note":"2024-07-10: USD0 enters public phase; USD0++ liquid-staked variant goes live"},
+  {"date":"2025-01-10","kind":"governance","label":"Usual sets $0.87 floor exit for USD0++","severity":"high","href":"https://blockworks.co/news/usual-depeg-spurs-defi-instability","note":"2025-01-10: Usual unilaterally introduces $0.87 floor exit for USD0++"},
+  {"date":"2025-01-13","kind":"depeg","label":"USD0++ depeg low ~$0.89: Morpho cascade","severity":"high","note":"2025-01-13: USD0++ tumbles to ~$0.89; Morpho cascade liquidations; revenue switch activated"}
 ]

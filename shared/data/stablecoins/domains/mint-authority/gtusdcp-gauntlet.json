@@ -43,7 +43,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 25527215,
-        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy slots — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is the Gauntlet Safe 4/7 managing parameters only.",
+        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy slots, vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is the Gauntlet Safe 4/7 managing parameters only.",
         "sources": [
           {
             "label": "Morpho vault page",

@@ -26,6 +26,7 @@
     "sources": [
       {
         "label": "SEC Form D/A — Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (CIK 0001976710; filed 2025-08-01)",
+        "quoted": true,
         "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml"
       },
       {
@@ -88,10 +89,12 @@
     "sources": [
       {
         "label": "Hamilton Lane SCOPE SA SICAV-RAIF private placement memorandum (December 2025) — BBH depositary",
+        "quoted": true,
         "url": "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US"
       },
       {
         "label": "SEC Form D/A — Hamilton Lane SCOPE Securitize Tokenized Feeder, LP",
+        "quoted": true,
         "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml"
       },
       {

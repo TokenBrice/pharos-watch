@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Nest nOPAL disclosure — yield-bearing vault token representing exposure to BlackOpal LiquidStone II",
+        "label": "Nest nOPAL disclosure: yield-bearing vault token representing exposure to BlackOpal LiquidStone II",
         "url": "https://docs.nest.credit/about/available-vaults/"
       },
       {
-        "label": "Nest terms — vault tokens accrue yield based on baskets of digital and real-world assets",
+        "label": "Nest terms: vault tokens accrue yield based on baskets of digital and real-world assets",
         "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
       },
       {
-        "label": "ESMA MiCA Article 2 scope — funds and financial instruments are excluded from MiCA",
+        "label": "ESMA MiCA Article 2 scope: funds and financial instruments are excluded from MiCA",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
@@ -29,7 +29,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Nest terms and conditions — vault-token structure and Nest DAO LLC",
+          "label": "Nest terms and conditions: vault-token structure and Nest DAO LLC",
           "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
@@ -49,7 +49,7 @@
     "notes": "Explicitly recorded as outside the GENIUS payment-stablecoin authorization posture because nOPAL is a yield-bearing vault share with NAV/yield exposure, not a payment stablecoin. The underlying and vault-token legal classification should be rechecked if Nest changes the product structure or begins U.S. payment-token marketing.",
     "references": [
       {
-        "label": "Nest terms and conditions — Nest DAO LLC and yield-bearing vault tokens",
+        "label": "Nest terms and conditions: Nest DAO LLC and yield-bearing vault tokens",
         "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

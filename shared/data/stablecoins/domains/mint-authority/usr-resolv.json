@@ -13,10 +13,12 @@
         "sources": [
           {
             "label": "The Block — Resolv USR 80M unbacked mint",
+            "quoted": true,
             "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
           },
           {
             "label": "CoinDesk — Resolv stablecoin exploit",
+            "quoted": true,
             "url": "https://www.coindesk.com/markets/2026/03/23/resolv-stablecoin-drops-70-after-usd80-million-exploit-after-attacker-mints-usr"
           }
         ]
@@ -98,6 +100,7 @@
         },
         {
           "label": "The Block — Resolv USR depeg / 80M unbacked mint",
+          "quoted": true,
           "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
         },
         {

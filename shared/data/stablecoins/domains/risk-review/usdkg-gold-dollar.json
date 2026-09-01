@@ -24,19 +24,20 @@
         "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
       },
       {
-        "label": "USDKG official site — lists separate Ethereum and Tron addresses, no bridge/cross-chain mechanism documented; direct mint/redeem for institutional clients only",
+        "label": "USDKG official site: lists separate Ethereum and Tron addresses, no bridge/cross-chain mechanism documented; direct mint/redeem for institutional clients only",
         "url": "https://www.usdkg.com/"
       },
       {
-        "label": "USDKG transparency page — Kreston Global reserve audit confirming issuer controls mint/burn wallets with test transactions on Ethereum and Tron",
+        "label": "USDKG transparency page: Kreston Global reserve audit confirming issuer controls mint/burn wallets with test transactions on Ethereum and Tron",
         "url": "https://www.usdkg.com/transparency"
       },
       {
-        "label": "USDKG Ethereum token on Etherscan — non-upgradeable ERC-20, owner is 3-of-7 multisig, issue()/redeem() mint/burn",
+        "label": "USDKG Ethereum token on Etherscan: non-upgradeable ERC-20, owner is 3-of-7 multisig, issue()/redeem() mint/burn",
         "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3"
       },
       {
         "label": "CryptoBriefing — Kyrgyzstan launches USDKG, Tron-first deployment with Ethereum next phase, supply growth via additional gold + minting",
+        "quoted": true,
         "url": "https://cryptobriefing.com/kyrgyzstan-usdkg-gold-backed-stablecoin-tron/"
       }
     ],
@@ -62,6 +63,7 @@
           },
           {
             "label": "ConsenSys Diligence — USDKG smart contract audit",
+            "quoted": true,
             "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
           }
         ]
@@ -88,6 +90,7 @@
           },
           {
             "label": "ConsenSys Diligence — USDKG smart contract audit",
+            "quoted": true,
             "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
           }
         ]

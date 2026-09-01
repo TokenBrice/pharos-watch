@@ -101,7 +101,7 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "observedAt": "2026-07-16",
-        "evidence": "Solana mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L: mintAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG; freezeAuthority = same. The authority account is owned by the System Program (EOA-equivalent on Solana — no on-chain multisig structure). Cannot be independently verified as a multisig; treated as issuer-backend EOA-equivalent.",
+        "evidence": "Solana mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L: mintAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG; freezeAuthority = same. The authority account is owned by the System Program (EOA-equivalent on Solana, no on-chain multisig structure). Cannot be independently verified as a multisig; treated as issuer-backend EOA-equivalent.",
         "sources": [
           {
             "label": "Solana Explorer eUSD mint",
