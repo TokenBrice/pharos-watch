@@ -21,10 +21,12 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const GENERATED_ASSET = join(REPO_ROOT, "shared/data/stablecoins/coins.generated.json");
+const CANONICAL_ORDER_ASSET = join(REPO_ROOT, "shared/data/stablecoins/canonical-order.json");
 const CLIENT_ARTIFACTS = [
   "shared/data/stablecoins/coins.client.generated.json",
   "shared/data/stablecoins/coins.compliance.generated.json",
   "shared/data/stablecoins/coins.telegram-mini-app.generated.json",
+  "shared/data/stablecoins/coins.worker-runtime.generated.json",
 ].map((rel) => join(REPO_ROOT, rel));
 const CLIENT_BUILDER = join(REPO_ROOT, "scripts/build-data/build-client-registry.mjs");
 
@@ -66,7 +68,7 @@ export default async function ensureFreshStablecoinArtifacts(): Promise<void> {
     }
   }
 
-  if (isStale(CLIENT_ARTIFACTS, [GENERATED_ASSET, CLIENT_BUILDER])) {
+  if (isStale(CLIENT_ARTIFACTS, [GENERATED_ASSET, CANONICAL_ORDER_ASSET, CLIENT_BUILDER])) {
     execFileSync(process.execPath, [CLIENT_BUILDER], { cwd: REPO_ROOT, stdio: "pipe" });
     console.log("[vitest-setup] rebuilt stale stablecoin client registry artifacts");
   }

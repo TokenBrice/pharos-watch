@@ -74,6 +74,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/check-env-contract.ts", "read-only"),
     exempt("scripts/ci/check-fetch-body-timeouts.ts", "read-only"),
     exempt("scripts/ci/check-hook-polling-window.ts", "read-only"),
+    exempt("scripts/ci/check-mint-burn-runtime-imports.ts", "read-only"),
     exempt("scripts/ci/check-oracle-risk-coverage.ts", "read-only"),
     exempt("scripts/ci/check-redemption-backstops.ts", "build"),
     exempt("scripts/ci/check-script-entrypoints.ts", "read-only"),

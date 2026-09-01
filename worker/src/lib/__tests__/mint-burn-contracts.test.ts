@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { resolveTrackedContractConfig } from "@shared/lib/tracked-stablecoin-utils";
 import {
   buildMintBurnScope,
   collectMintBurnBridgeValidationErrors,
@@ -9,6 +10,7 @@ import {
   MINT_BURN_CONFIGS,
   validateMintBurnBridgeDetection,
 } from "../mint-burn-contracts";
+import { MINT_BURN_CONFIG_SPECS } from "../mint-burn-contracts-data";
 
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -165,6 +167,23 @@ describe("mint-burn-contracts configured scope", () => {
 });
 
 describe("mint-burn-contracts shared metadata alignment", () => {
+  it("matches the legacy rich-registry resolver for every authored spec", () => {
+    expect(MINT_BURN_CONFIGS).toHaveLength(MINT_BURN_CONFIG_SPECS.length);
+    MINT_BURN_CONFIG_SPECS.forEach((spec, index) => {
+      const legacy = resolveTrackedContractConfig(spec.stablecoinId, spec.chain.chainId, {
+        source: spec.contractSource,
+        addressOverride: spec.contractAddressOverride,
+        decimalsOverride: spec.decimalsOverride,
+      });
+      expect(legacy, `legacy resolver failed for ${spec.stablecoinId}`).not.toBeNull();
+      expect(MINT_BURN_CONFIGS[index]).toMatchObject({
+        symbol: legacy!.stablecoin.symbol,
+        contractAddress: legacy!.contractAddress,
+        decimals: legacy!.decimals,
+      });
+    });
+  });
+
   it("resolves tracked token identities from shared metadata unless explicitly overridden", () => {
     for (const config of MINT_BURN_CONFIGS) {
       const meta = TRACKED_META_BY_ID.get(config.stablecoinId);

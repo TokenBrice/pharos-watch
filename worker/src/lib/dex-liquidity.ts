@@ -8,7 +8,7 @@ import {
 } from "@shared/types/market";
 import { classifyLiquidityEvidence } from "@shared/lib/dex-liquidity-evidence";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { parseJsonObject } from "./json-parse";
 
 interface DexLiquidityRow {
@@ -71,7 +71,7 @@ export function deploymentKey(stablecoinId: string, chain: string, address: stri
 }
 
 export const CURRENT_DEPLOYMENT_KEYS = new Set(
-  ACTIVE_STABLECOINS.flatMap((meta) =>
+  WORKER_ACTIVE_STABLECOINS.flatMap((meta) =>
     [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])].map((deployment) =>
       deploymentKey(meta.id, deployment.chain, deployment.address),
     ),
