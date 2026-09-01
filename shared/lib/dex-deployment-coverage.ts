@@ -460,10 +460,6 @@ export const DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS: Readonly<Record<DexDiscovery
     DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => [provider.providerId, provider.scope === "exhaustive"]),
   ) as Record<DexDiscoveryProvider, boolean>;
 
-export function isDexDiscoveryProviderExhaustive(provider: DexDiscoveryProvider): boolean {
-  return DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS[provider];
-}
-
 export function getDexDiscoveryProviders(chain: string, address?: string): DexDiscoveryProvider[] {
   return DEX_DISCOVERY_PROVIDER_REGISTRY
     .filter((provider) => provider.lifecycle === "active" && provider.supports(chain, address))

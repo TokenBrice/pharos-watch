@@ -157,7 +157,7 @@ function buildCoverage(
  * Replay and unit fixtures that predate the additive fields already carry a
  * direct per-row fence in `discovery_last_crawl_at`.
  */
-export function resolveDexDeploymentAttemptFence(
+function resolveDexDeploymentAttemptFence(
   row: Pick<
     DexDeploymentCensusRow,
     | "observed_at"

@@ -43,13 +43,12 @@ export const DEX_EXACT_QUOTE_ADAPTER_IDS = {
   evmV2: "evm-v2-reserve-exact",
   solanaClmm: "solana-clmm",
 } as const;
-export const DEX_EXACT_QUOTE_ADAPTER_ID_VALUES = Object.values(
+const DEX_EXACT_QUOTE_ADAPTER_ID_VALUES = Object.values(
   DEX_EXACT_QUOTE_ADAPTER_IDS,
 ) as [DexExactQuoteAdapterId, ...DexExactQuoteAdapterId[]];
 
 export type DexExactQuoteAdapterId =
   (typeof DEX_EXACT_QUOTE_ADAPTER_IDS)[keyof typeof DEX_EXACT_QUOTE_ADAPTER_IDS];
-export type DexExecutionProfileId = string;
 
 export interface DexRequestBudget {
   readonly maxRequests: number;
@@ -58,78 +57,6 @@ export interface DexRequestBudget {
   tryConsume(count?: number): boolean;
 }
 
-export type ResolvedDexDeployment =
-  | {
-      platform: "evm";
-      chain: string;
-      endpointAddress: `0x${string}`;
-      deploymentIdentity: string;
-    }
-  | {
-      platform: "solana";
-      chain: "solana";
-      programId: string;
-      deploymentIdentity: string;
-    };
-
-export interface DexQuoteCohortContext {
-  readonly observedAt: number;
-  readonly requestBudget: DexRequestBudget;
-  readonly signal?: AbortSignal;
-}
-
-export interface DexQuoteGridInput<TTarget, TPinnedState> {
-  readonly target: TTarget;
-  readonly pinnedState: TPinnedState;
-  readonly demandedInputAmountsUsd: readonly number[];
-  readonly requestBudget: DexRequestBudget;
-  readonly signal?: AbortSignal;
-}
-
-export type DexQuoteStateIdentity =
-  | {
-      platform: "evm";
-      blockNumber: number;
-      blockHash: `0x${string}`;
-      endpointCodeHash: `0x${string}`;
-    }
-  | {
-      platform: "solana";
-      slot: number;
-      blockHash: string;
-      programId: string;
-      stateAccounts: readonly string[];
-      tickArrayAccounts: readonly string[];
-    };
-
-export interface DexQuoteGridResult<TProof> {
-  readonly targetId: string;
-  readonly demandedInputAmountsUsd: readonly number[];
-  readonly outputAmountsUsd: readonly number[];
-  readonly capacityAt200BpsUsd: number;
-  readonly observedAt: number;
-  readonly stateIdentity: DexQuoteStateIdentity;
-  readonly proof: TProof;
-}
-
-export type DexProofValidation =
-  | { ok: true }
-  | { ok: false; reasons: readonly string[] };
-
-/**
- * Platform-neutral exact-quote seam. Implementations must consume or cancel
- * every response body before resolving, including failure paths.
- */
-export interface DexExactQuoteAdapter<TTarget, TPinnedState, TProof> {
-  readonly adapterId: DexExactQuoteAdapterId;
-  readonly platform: "evm" | "solana";
-  readonly profileIds: readonly DexExecutionProfileId[];
-  resolveDeployment(target: TTarget): ResolvedDexDeployment;
-  estimateRequestBudget(targets: readonly TTarget[]): DexRequestBudget;
-  pinState(context: DexQuoteCohortContext): Promise<TPinnedState>;
-  quoteGrid(input: DexQuoteGridInput<TTarget, TPinnedState>): Promise<DexQuoteGridResult<TProof>>;
-  validateProof(result: DexQuoteGridResult<TProof>): DexProofValidation;
-}
 export const DEX_MEASURED_ADAPTER_PROFILE_IDS = {
   curveStableSwap: "curve-stableswap-main-registry-get-dy-v1",
   curveStableSwapNg: "curve-stableswap-ng-factory-get-dy-v2",
@@ -592,20 +519,6 @@ export function projectDexMeasuredExecutionProfileToV2(input: DexMeasuredExecuti
       legacyV1: profile,
     },
   });
-}
-
-export function readDexExecutionTargetV2(input: unknown): DexExecutionTargetV2 {
-  const parsed = DexExecutionTargetEnvelopeSchema.parse(input);
-  return parsed.schemaVersion === DEX_MEASURED_TARGET_SCHEMA_VERSION
-    ? projectDexMeasuredExecutionTargetToV2(parsed)
-    : parsed;
-}
-
-export function readDexExecutionProfileV2(input: unknown): DexExecutionProfileV2 {
-  const parsed = DexExecutionProfileEnvelopeSchema.parse(input);
-  return parsed.schemaVersion === DEX_MEASURED_EXECUTION_SCHEMA_VERSION
-    ? projectDexMeasuredExecutionProfileToV2(parsed)
-    : parsed;
 }
 
 export function projectDexExecutionTargetToV1(input: DexExecutionTargetEnvelope): DexMeasuredExecutionTarget | null {

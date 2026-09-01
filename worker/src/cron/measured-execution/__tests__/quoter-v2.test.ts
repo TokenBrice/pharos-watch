@@ -16,7 +16,6 @@ import {
   DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
   DEX_MEASURED_MAX_COST_BPS,
   buildDexMeasuredExecutionTargetId,
-  toDexMeasuredExecutionPublicProfile,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
@@ -39,6 +38,7 @@ import {
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { projectQuoterV2ProfileToV2 } from "../adapters/quoter-v2";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
+import { toMaturePublicProfile } from "./profile.test-support";
 
 const DEMANDED_GRID_USD = [
   1_000,
@@ -289,18 +289,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
           fixture.chain,
         )
       ) {
-        const measuredExecution = toDexMeasuredExecutionPublicProfile(profile, {
-          observationHistory: {
-            completeProducerCycleCount: 2,
-            successfulObservationCount: 2,
-            consecutiveSuccessCount: 2,
-            observationWindowStartedAt: profile.quotedAt - 60,
-            observationWindowEndedAt: profile.quotedAt,
-            latestOperationalFailureAt: null,
-            conservativeStatistic: "pointwise-minimum",
-            conservativeCapacityCurve: profile.capacityCurve,
-          },
-        });
+        const measuredExecution = toMaturePublicProfile(profile);
         const p4 = buildP4DexExitRouteObservations({
           stablecoinId: target.stablecoinId,
           observedAt: profile.quotedAt + 60,

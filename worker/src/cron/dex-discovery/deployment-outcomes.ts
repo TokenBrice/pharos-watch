@@ -19,7 +19,6 @@ import {
   isRuntimeDexDiscoveryProviderExhaustive,
 } from "./provider-registry";
 import {
-  isRetryableDexCensusLegacyReason,
   resolveDexCensusAttempt,
   type DexCensusAttemptSignals,
 } from "./census-state-machine";
@@ -178,10 +177,6 @@ export function buildStaticInaccessibleDeploymentOutcomes(nowSec: number): DexDe
         observedAt: nowSec,
       })),
   );
-}
-
-export function isRetryableDiscoveryInaccessibleReason(reason: string): boolean {
-  return isRetryableDexCensusLegacyReason(reason);
 }
 
 export function buildFailedCrawlDeploymentOutcomes(params: {

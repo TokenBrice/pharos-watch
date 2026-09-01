@@ -1,18 +1,5 @@
-import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { CronProgressReporter, CronResult } from "../../../lib/cron-logger";
-
-export interface SolanaClmmDeploymentSlot {
-  platform: "solana";
-  chain: "solana";
-  programId: string;
-}
-
-export function resolveSolanaClmmAdapterDeployment(
-  _target: DexMeasuredExecutionTarget,
-): SolanaClmmDeploymentSlot | null {
-  return null;
-}
 
 export interface SolanaClmmShadowLaneContext {
   db: D1Database;

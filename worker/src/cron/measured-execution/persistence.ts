@@ -21,14 +21,14 @@ export { buildDexMeasuredQuoteGenerationId, buildDexShadowMeasuredQuoteGeneratio
 export { isOperationalDexMeasuredFailure, loadLatestPublishedDexMeasuredQuoteEvidence, materializeDexMeasuredQuoteProfile } from "./evidence-reader";
 export type { LoadedDexMeasuredQuoteEvidence } from "./evidence-reader";
 
-export function parsePersistedDexExecutionTargetV1(input: unknown): DexMeasuredExecutionTarget {
+function parsePersistedDexExecutionTargetV1(input: unknown): DexMeasuredExecutionTarget {
   const envelope = DexExecutionTargetEnvelopeSchema.parse(input);
   const projected = projectDexExecutionTargetToV1(envelope);
   if (!projected) throw new Error("Native V2 execution target requires a V2-aware persistence consumer");
   return DexMeasuredExecutionTargetSchema.parse(projected);
 }
 
-export function parsePersistedDexExecutionProfileV1(input: unknown): DexMeasuredExecutionProfile {
+function parsePersistedDexExecutionProfileV1(input: unknown): DexMeasuredExecutionProfile {
   const envelope = DexExecutionProfileEnvelopeSchema.parse(input);
   const projected = projectDexExecutionProfileToV1(envelope);
   if (!projected) throw new Error("Native V2 execution profile requires a V2-aware persistence consumer");

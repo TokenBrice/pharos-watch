@@ -209,5 +209,4 @@ export function hasBlockingEditorialFindings(findings: readonly EditorialFinding
   return findings.some((finding) => finding.severity === "hard");
 }
 
-export const EDITORIAL_ONE_LINE_DIRECTIVE = EDITORIAL_POLICY.oneLineDirective;
 export const EDITORIAL_REGISTER_IDS: readonly string[] = EDITORIAL_POLICY.registers.map((register) => register.id);

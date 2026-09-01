@@ -82,10 +82,6 @@ export function resolveDexCensusAttempt(
   };
 }
 
-export function isRetryableDexCensusLegacyReason(reason: string): boolean {
-  return decodeDexCensusAttemptResult("provider_inaccessible", reason).attemptResult === "bounded_pending";
-}
-
 export type DexStoredCensusDisposition =
   | "observed-pools"
   | "verified-no-pools"

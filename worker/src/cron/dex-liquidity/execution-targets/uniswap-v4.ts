@@ -4,6 +4,7 @@ import {
   buildUniswapV4MeasuredExecutionTarget,
   parseUniV3FeePips,
 } from "../../measured-execution/inventory";
+import { buildRegisteredTargetInput, toRegisteredTargetOutput } from "./shared";
 
 function retainedPoolId(poolId: string): string | null {
   const normalized = poolId.trim().toLowerCase();
@@ -14,7 +15,7 @@ function retainedPoolId(poolId: string): string | null {
 export function buildUniswapV4RegisteredExecutionTarget(
   input: DexExecutionTargetFactoryInput,
 ): DexExecutionTargetFactoryOutput | null {
-  const { context, identity, enrichment, stablecoinId } = input;
+  const { context, identity } = input;
   if (identity.protocol !== "uniswap-v4") return null;
 
   const feePips = parseUniV3FeePips(identity.pool.poolMeta);
@@ -39,22 +40,8 @@ export function buildUniswapV4RegisteredExecutionTarget(
     };
   }
 
-  const measuredExecutionTarget = buildUniswapV4MeasuredExecutionTarget({
-    stablecoinId,
-    candidate: matchingCandidates[0]!,
-    stablecoinPriceById: context.stablecoinPriceById,
-    chainAddressToId: context.chainAddressToId,
-    symbolToChainScopedIds: context.symbolToChainScopedIds,
-    validationReferences: context.validationReferences,
-    retainedTvlUsd: enrichment.rawContribTvl,
-    capturedAt: context.measuredTargetCapturedAt,
-  });
-  return measuredExecutionTarget
-    ? { measuredExecutionTarget, executionCapabilityGate: undefined }
-    : {
-        executionCapabilityGate: {
-          family: "measured-execution",
-          reason: "target-unresolved",
-        },
-      };
+  const measuredExecutionTarget = buildUniswapV4MeasuredExecutionTarget(
+    buildRegisteredTargetInput(input, matchingCandidates[0]!),
+  );
+  return toRegisteredTargetOutput(measuredExecutionTarget);
 }

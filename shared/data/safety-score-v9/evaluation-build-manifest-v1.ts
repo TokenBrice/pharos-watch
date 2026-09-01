@@ -370,7 +370,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/measured-execution.ts",
-      "sha256": "4b436f5d0e09422091eaf49997d53bb539307cb15682226bdd28adb25a2796bd"
+      "sha256": "99ee0ca2610c2e10865f0b510c91ea179c92971e399fb7035e81683d6cf03002"
     },
     {
       "path": "shared/types/redemption.ts",
@@ -601,7 +601,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "82e310aca34db967e500903bba9c1f6bf9b8e0f0b9e1bd2c1713a3df1cd93061"
+  "digest": "43ca52acd4382409daf174310d696fb6c585e0b60d84b89757d89db28ec98683"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

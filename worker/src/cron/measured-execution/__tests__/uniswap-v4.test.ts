@@ -41,9 +41,9 @@ import {
 import { projectUniswapV4ProfileToV2 } from "../adapters/uniswap-v4";
 import {
   DEX_MEASURED_CAPACITY_NOTIONALS_USD,
-  toDexMeasuredExecutionPublicProfile,
 } from "@shared/types/measured-execution";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
+import { toMaturePublicProfile } from "./profile.test-support";
 
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
@@ -335,18 +335,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
       payload: { platform: "evm", blockNumber: BLOCK },
     });
     expect(v2Profile?.payload.platform === "evm" && v2Profile.payload.callProof).toHaveLength(5);
-    const measuredExecution = toDexMeasuredExecutionPublicProfile(profile, {
-      observationHistory: {
-        completeProducerCycleCount: 2,
-        successfulObservationCount: 2,
-        consecutiveSuccessCount: 2,
-        observationWindowStartedAt: profile.quotedAt - 60,
-        observationWindowEndedAt: profile.quotedAt,
-        latestOperationalFailureAt: null,
-        conservativeStatistic: "pointwise-minimum",
-        conservativeCapacityCurve: profile.capacityCurve,
-      },
-    });
+    const measuredExecution = toMaturePublicProfile(profile);
     expect(buildP4DexExitRouteObservations({
       stablecoinId: profile.tokenIn.trackedAssetId!,
       observedAt: profile.quotedAt + 60,

@@ -24,7 +24,7 @@ import {
 } from "../../lib/digest-style-gate";
 
 export type { DigestStyleGateMode } from "../../lib/digest-style-gate";
-export const STYLE_GATE_MODE = DEFAULT_DIGEST_STYLE_GATE_MODE;
+const STYLE_GATE_MODE = DEFAULT_DIGEST_STYLE_GATE_MODE;
 
 const OPENING_FINGERPRINT_WINDOW = 7;
 const STRUCTURAL_REPETITION_WINDOW = 7;
