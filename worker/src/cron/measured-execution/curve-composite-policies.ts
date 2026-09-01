@@ -370,51 +370,60 @@ function activeMetapoolPolicy(
 }
 
 /**
+ * Builds one reviewed deployment in Curve's legacy Ethereum factory/3Crv
+ * family. Callers must still register the exact pool identity in the leaf
+ * retention roster; sharing this template does not auto-admit discovered pools.
+ */
+function ethereumLegacyFactory3CrvMetapool(input: {
+  stablecoinId: string;
+  poolAddress: `0x${string}`;
+  factoryPoolIndex: number;
+  token: Pick<CurveCompositeToken, "address" | "symbol" | "decimals">;
+}): CurveMetapoolPolicy {
+  const trackedToken = {
+    ...input.token,
+    trackedAssetId: input.stablecoinId,
+  };
+  return activeMetapoolPolicy({
+    chain: "ethereum",
+    stablecoinId: input.stablecoinId,
+    poolAddress: input.poolAddress,
+    expectedPoolCodeHash: "0x156700a4060f3d62786914b50cc60b2b840e6440401bea9a99c0acce0b58beda",
+    factoryAddress: "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
+    expectedFactoryCodeHash: "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
+    factoryPoolIndex: input.factoryPoolIndex,
+    expectedRegistryId: "factory",
+    factoryArrayEncoding: "legacy-fixed",
+    implementationBinding: "factory-lookup",
+    implementationAddress: "0x5f890841f657d90e081babdb532a05996af79fe6",
+    expectedImplementationCodeHash:
+      "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
+    poolTokens: [trackedToken, ETHEREUM_3CRV],
+    executionTokens: [trackedToken, ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
+    inputIndex: 0,
+    outputIndex: 2,
+    metapool: {
+      basePoolBinding: "factory-get-base-pool",
+      basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
+      expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
+      basePoolTokens: [ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
+    },
+  });
+}
+
+/**
  * Owner-ratified metapool routes. Each entry is an exact physical deployment
  * with pinned registry, implementation, base-pool, token-order, and runtime
  * code identities. No other metapool is admitted by this adapter.
  */
-const CURVE_ALUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
-  chain: "ethereum",
+const CURVE_ALUSD_3CRV_METAPOOL_POLICY = ethereumLegacyFactory3CrvMetapool({
   stablecoinId: "alusd-alchemix",
   poolAddress: CURVE_ALUSD_3CRV_METAPOOL_ADDRESS,
-  expectedPoolCodeHash: "0x156700a4060f3d62786914b50cc60b2b840e6440401bea9a99c0acce0b58beda",
-  factoryAddress: "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
-  expectedFactoryCodeHash: "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
   factoryPoolIndex: 12,
-  expectedRegistryId: "factory",
-  factoryArrayEncoding: "legacy-fixed",
-  implementationBinding: "factory-lookup",
-  implementationAddress: "0x5f890841f657d90e081babdb532a05996af79fe6",
-  expectedImplementationCodeHash:
-    "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
-  poolTokens: [
-    {
-      address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
-      symbol: "alUSD",
-      decimals: 18,
-      trackedAssetId: "alusd-alchemix",
-    },
-    ETHEREUM_3CRV,
-  ],
-  executionTokens: [
-    {
-      address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
-      symbol: "alUSD",
-      decimals: 18,
-      trackedAssetId: "alusd-alchemix",
-    },
-    ETHEREUM_DAI,
-    ETHEREUM_USDC,
-    ETHEREUM_USDT,
-  ],
-  inputIndex: 0,
-  outputIndex: 2,
-  metapool: {
-    basePoolBinding: "factory-get-base-pool",
-    basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
-    expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
-    basePoolTokens: [ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
+  token: {
+    address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
+    symbol: "alUSD",
+    decimals: 18,
   },
 });
 
@@ -534,47 +543,14 @@ export const CURVE_GUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
   },
 });
 
-export const CURVE_LUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
-  chain: "ethereum",
+export const CURVE_LUSD_3CRV_METAPOOL_POLICY = ethereumLegacyFactory3CrvMetapool({
   stablecoinId: "lusd-liquity",
   poolAddress: CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
-  expectedPoolCodeHash: "0x156700a4060f3d62786914b50cc60b2b840e6440401bea9a99c0acce0b58beda",
-  factoryAddress: "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
-  expectedFactoryCodeHash: "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
   factoryPoolIndex: 16,
-  expectedRegistryId: "factory",
-  factoryArrayEncoding: "legacy-fixed",
-  implementationBinding: "factory-lookup",
-  implementationAddress: "0x5f890841f657d90e081babdb532a05996af79fe6",
-  expectedImplementationCodeHash:
-    "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
-  poolTokens: [
-    {
-      address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-      symbol: "LUSD",
-      decimals: 18,
-      trackedAssetId: "lusd-liquity",
-    },
-    ETHEREUM_3CRV,
-  ],
-  executionTokens: [
-    {
-      address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-      symbol: "LUSD",
-      decimals: 18,
-      trackedAssetId: "lusd-liquity",
-    },
-    ETHEREUM_DAI,
-    ETHEREUM_USDC,
-    ETHEREUM_USDT,
-  ],
-  inputIndex: 0,
-  outputIndex: 2,
-  metapool: {
-    basePoolBinding: "factory-get-base-pool",
-    basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
-    expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
-    basePoolTokens: [ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
+  token: {
+    address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
+    symbol: "LUSD",
+    decimals: 18,
   },
 });
 
@@ -622,47 +598,14 @@ const CURVE_MEUSD_CRV2POOL_METAPOOL_POLICY = activeMetapoolPolicy({
   },
 });
 
-const CURVE_OUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
-  chain: "ethereum",
+const CURVE_OUSD_3CRV_METAPOOL_POLICY = ethereumLegacyFactory3CrvMetapool({
   stablecoinId: "ousd-origin-protocol",
   poolAddress: CURVE_OUSD_3CRV_METAPOOL_ADDRESS,
-  expectedPoolCodeHash: "0x156700a4060f3d62786914b50cc60b2b840e6440401bea9a99c0acce0b58beda",
-  factoryAddress: "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
-  expectedFactoryCodeHash: "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
   factoryPoolIndex: 9,
-  expectedRegistryId: "factory",
-  factoryArrayEncoding: "legacy-fixed",
-  implementationBinding: "factory-lookup",
-  implementationAddress: "0x5f890841f657d90e081babdb532a05996af79fe6",
-  expectedImplementationCodeHash:
-    "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
-  poolTokens: [
-    {
-      address: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
-      symbol: "OUSD",
-      decimals: 18,
-      trackedAssetId: "ousd-origin-protocol",
-    },
-    ETHEREUM_3CRV,
-  ],
-  executionTokens: [
-    {
-      address: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
-      symbol: "OUSD",
-      decimals: 18,
-      trackedAssetId: "ousd-origin-protocol",
-    },
-    ETHEREUM_DAI,
-    ETHEREUM_USDC,
-    ETHEREUM_USDT,
-  ],
-  inputIndex: 0,
-  outputIndex: 2,
-  metapool: {
-    basePoolBinding: "factory-get-base-pool",
-    basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
-    expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
-    basePoolTokens: [ETHEREUM_DAI, ETHEREUM_USDC, ETHEREUM_USDT],
+  token: {
+    address: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+    symbol: "OUSD",
+    decimals: 18,
   },
 });
 
