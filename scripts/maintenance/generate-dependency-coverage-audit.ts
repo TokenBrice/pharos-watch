@@ -205,6 +205,16 @@ export interface AdapterMappingReviewGapRow {
   detail: string;
 }
 
+interface AdapterMappingRequirement {
+  coinId: string;
+  adapter: string;
+}
+
+export type AdapterMappingReviewCoverageStatus =
+  | "evaluated-clean"
+  | "evaluated-with-gaps"
+  | "not-evaluated";
+
 export interface MissingDependencyCandidateRow {
   coinId: string;
   symbol: string;
@@ -260,6 +270,8 @@ export interface DependencyCoverageAudit {
     unavailableTargetDispositionGapCount: number;
     targetDispositionValidationIssueCount: number;
     adapterMappingReviewGapCount: number;
+    adapterMappingReviewCoverageEvaluated: boolean;
+    adapterMappingReviewCoverageStatus: AdapterMappingReviewCoverageStatus;
     dependencyProvenanceCount: number;
     dependencyAvailableWeight: number | null;
     dependencyUnavailableWeight: number | null;
@@ -1214,10 +1226,12 @@ function validateTargetDispositions(input: {
 
 function validateAdapterMappingReviews(input: {
   activeCoins: readonly StablecoinMeta[];
-  provenance: readonly DependencySetProvenanceRow[];
   reviews: readonly DependencyAdapterMappingReview[];
-  hasReportCards: boolean;
-}): AdapterMappingReviewGapRow[] {
+  requiredMappings: readonly AdapterMappingRequirement[] | null;
+}): {
+  gaps: AdapterMappingReviewGapRow[];
+  coverageEvaluated: boolean;
+} {
   const gaps: AdapterMappingReviewGapRow[] = [];
   const activeAdapters = new Set<string>(
     input.activeCoins.flatMap((coin) => coin.liveReservesConfig?.adapter ? [coin.liveReservesConfig.adapter] : []),
@@ -1259,24 +1273,24 @@ function validateAdapterMappingReviews(input: {
     }
   }
 
-  if (!input.hasReportCards) return gaps;
-  const activeById = new Map(input.activeCoins.map((coin) => [coin.id, coin]));
-  for (const row of input.provenance) {
-    if (row.baseSource !== "live-reserve") continue;
-    const adapter = activeById.get(row.coinId)?.liveReservesConfig?.adapter;
-    if (adapter && reviewByAdapter.has(adapter)) continue;
+  if (input.requiredMappings === null) return { gaps, coverageEvaluated: false };
+  for (const requirement of input.requiredMappings) {
+    if (requirement.adapter !== "unknown" && reviewByAdapter.has(requirement.adapter)) continue;
     gaps.push({
-      coinId: row.coinId,
-      adapter: adapter ?? "unknown",
+      coinId: requirement.coinId,
+      adapter: requirement.adapter,
       reason: "missing-review",
-      detail: adapter
+      detail: requirement.adapter !== "unknown"
         ? "Mapped live dependency set has no reviewed adapter-mapping rule."
         : "Mapped live dependency set has no configured adapter identity.",
     });
   }
-  return gaps.sort((left, right) => (
-    left.adapter.localeCompare(right.adapter) || (left.coinId ?? "").localeCompare(right.coinId ?? "")
-  ));
+  return {
+    gaps: gaps.sort((left, right) => (
+      left.adapter.localeCompare(right.adapter) || (left.coinId ?? "").localeCompare(right.coinId ?? "")
+    )),
+    coverageEvaluated: true,
+  };
 }
 
 function findReserveSlicesMissingCoinId(
@@ -1426,6 +1440,16 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   const rawAuthoredDuplicates = findRawAuthoredDuplicates(activeCoins);
   const overweightEffectiveSets = findOverweightEffectiveSets(activeCoins, cardsById, hasReportCards);
   const dependencyProvenance = extractDependencyProvenance(activeCoins, cardsById, hasReportCards);
+  const activeById = new Map(activeCoins.map((coin) => [coin.id, coin]));
+  const requiredAdapterMappings: AdapterMappingRequirement[] | null = hasReportCards
+    ? dependencyProvenance.flatMap((row) => {
+        if (row.baseSource !== "live-reserve") return [];
+        return [{
+          coinId: row.coinId,
+          adapter: activeById.get(row.coinId)?.liveReservesConfig?.adapter ?? "unknown",
+        }];
+      })
+    : null;
   const targetDispositionValidationIssues = validateTargetDispositions({
     trackedCoins,
     edges: dependencyEdges,
@@ -1433,12 +1457,18 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
     dispositions: targetDispositions,
     hasReportCards,
   });
-  const adapterMappingReviewGaps = validateAdapterMappingReviews({
+  const adapterMappingReviewValidation = validateAdapterMappingReviews({
     activeCoins,
-    provenance: dependencyProvenance,
     reviews: adapterMappingReviews,
-    hasReportCards,
+    requiredMappings: requiredAdapterMappings,
   });
+  const adapterMappingReviewGaps = adapterMappingReviewValidation.gaps;
+  const adapterMappingReviewCoverageStatus: AdapterMappingReviewCoverageStatus =
+    !adapterMappingReviewValidation.coverageEvaluated
+      ? "not-evaluated"
+      : adapterMappingReviewGaps.length > 0
+        ? "evaluated-with-gaps"
+        : "evaluated-clean";
   const l2beatDeploymentContext = findL2BeatDeploymentContextRows(activeCoins);
   const unavailableTargetEdges = dependencyEdges.filter((edge) => (
     edge.targetScoreability !== "scoreable" && edge.targetScoreability !== "not-evaluated"
@@ -1484,6 +1514,8 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
       unavailableTargetDispositionGapCount: unavailableTargetDispositionGaps.size,
       targetDispositionValidationIssueCount: targetDispositionValidationIssues.length,
       adapterMappingReviewGapCount: adapterMappingReviewGaps.length,
+      adapterMappingReviewCoverageEvaluated: adapterMappingReviewValidation.coverageEvaluated,
+      adapterMappingReviewCoverageStatus,
       dependencyProvenanceCount: dependencyProvenance.length,
       dependencyAvailableWeight: availableWeights.length > 0
         ? availableWeights.reduce((sum, weight) => sum + weight, 0)
@@ -1727,6 +1759,7 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     `- Unavailable target edges: ${audit.summary.unavailableTargetEdgeCount}`,
     `- Unavailable target disposition gaps: ${audit.summary.unavailableTargetDispositionGapCount}`,
     `- Target disposition validation issues: ${audit.summary.targetDispositionValidationIssueCount}`,
+    `- Adapter mapping review coverage: ${audit.summary.adapterMappingReviewCoverageStatus}`,
     `- Adapter mapping review gaps: ${audit.summary.adapterMappingReviewGapCount}`,
     `- Dependency available / unavailable weight: ${audit.summary.dependencyAvailableWeight ?? "not supplied"} / ${audit.summary.dependencyUnavailableWeight ?? "not supplied"}`,
     `- Average live mapped / unmapped reserve share: ${audit.summary.liveMappedReserveShare ?? "not supplied"} / ${audit.summary.liveUnmappedReserveShare ?? "not supplied"}`,
@@ -1822,15 +1855,25 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
 }
 
 /**
- * Zero-tolerance dependency-graph invariants plus the four review-coverage
- * counters that are legitimately at zero and must stay there. This is the
- * gate half of the audit (`npm run check:dependency-review-gaps`, wired into
- * `check:structural`); the backlog counters it deliberately ignores
+ * Zero-tolerance dependency-graph invariants plus the structurally knowable
+ * review and registry-integrity counters that must stay at zero. Callers with
+ * report-card inputs can additionally require adapter-mapping coverage. This
+ * is the gate half of the audit (`npm run check:dependency-review-gaps`, wired
+ * into `check:structural`); the backlog counters it deliberately ignores
  * (`reserveSlicesMissingCoinId`, `unresolvedMaterialReserveSlices`,
  * `targetDispositionValidationIssues`) stay visible in the manual report.
  */
-export function evaluateDependencyCoverageStructure(audit: DependencyCoverageAudit): string[] {
+export function evaluateDependencyCoverageStructure(
+  audit: DependencyCoverageAudit,
+  options: { requireAdapterMappingCoverage?: boolean } = {},
+): string[] {
   const failures: string[] = [];
+  if (
+    options.requireAdapterMappingCoverage
+    && !audit.summary.adapterMappingReviewCoverageEvaluated
+  ) {
+    failures.push("adapter mapping review coverage was not evaluated");
+  }
   const zeroTolerance: Array<[string, number]> = [
     ["static self-edge", audit.summary.staticSelfEdgeCount],
     ["static duplicate-edge group", audit.summary.staticDuplicateEdgeCount],

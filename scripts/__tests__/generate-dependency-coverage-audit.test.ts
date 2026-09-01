@@ -760,6 +760,69 @@ describe("generate-dependency-coverage-audit", () => {
     expect(audit.adapterMappingReviewGaps).toEqual([
       expect.objectContaining({ coinId: "mapped", adapter: "accountable", reason: "missing-review" }),
     ]);
+    expect(audit.summary).toMatchObject({
+      adapterMappingReviewCoverageEvaluated: true,
+      adapterMappingReviewCoverageStatus: "evaluated-with-gaps",
+    });
+  });
+
+  it("distinguishes clean, gap, and not-evaluated adapter mapping review coverage", () => {
+    const mapped = coin({ id: "mapped", liveReservesConfig: liveConfig("accountable") });
+    const reportCards = {
+      cards: [{
+        id: "mapped",
+        overallScore: 70,
+        rawInputs: { dependencyBaseSource: "live-reserve" },
+        dimensions: { dependencyRisk: {} },
+      }],
+      dependencyGraph: { edges: [] },
+    };
+    const review = {
+      adapter: "accountable" as const,
+      reviewer: "reviewer",
+      reviewedAt: "2026-09-01",
+      sourceFiles: ["worker/src/cron/reserve-adapters/accountable.ts"],
+      rationale: "Fixture adapter mapping review.",
+    };
+
+    const evaluatedClean = buildDependencyCoverageAudit({
+      activeCoins: [mapped],
+      reportCards,
+      adapterMappingReviews: [review],
+    });
+    const evaluatedWithGaps = buildDependencyCoverageAudit({
+      activeCoins: [mapped],
+      reportCards,
+      adapterMappingReviews: [],
+    });
+    const notEvaluated = buildDependencyCoverageAudit({
+      activeCoins: [mapped],
+      adapterMappingReviews: [],
+    });
+
+    expect(evaluatedClean.summary).toMatchObject({
+      adapterMappingReviewGapCount: 0,
+      adapterMappingReviewCoverageEvaluated: true,
+      adapterMappingReviewCoverageStatus: "evaluated-clean",
+    });
+    expect(evaluatedWithGaps.summary).toMatchObject({
+      adapterMappingReviewGapCount: 1,
+      adapterMappingReviewCoverageEvaluated: true,
+      adapterMappingReviewCoverageStatus: "evaluated-with-gaps",
+    });
+    expect(notEvaluated.summary).toMatchObject({
+      adapterMappingReviewGapCount: 0,
+      adapterMappingReviewCoverageEvaluated: false,
+      adapterMappingReviewCoverageStatus: "not-evaluated",
+    });
+    expect(evaluateDependencyCoverageStructure(evaluatedClean)).toEqual([]);
+    expect(evaluateDependencyCoverageStructure(evaluatedWithGaps)).toEqual([
+      "adapter mapping review gap invariant failed with 1 finding",
+    ]);
+    expect(evaluateDependencyCoverageStructure(notEvaluated)).toEqual([]);
+    expect(evaluateDependencyCoverageStructure(notEvaluated, {
+      requireAdapterMappingCoverage: true,
+    })).toEqual(["adapter mapping review coverage was not evaluated"]);
   });
 
   it("reports a retained link missing from the current report even when the static registry still has it", () => {
@@ -807,6 +870,7 @@ describe("generate-dependency-coverage-audit", () => {
     expect(markdown).toContain("## Dependency Edges And Target Status");
     expect(markdown).toContain("## Dependency Provenance");
     expect(markdown).toContain("## Material Stablecoin-Looking Unlinked Reserves");
+    expect(markdown).toContain("- Adapter mapping review coverage: not-evaluated");
     expect(markdown).toContain("## Adapter Mapping Review Gaps");
     expect(markdown).toContain("## Highest-Market-Cap Missing Candidates");
     expect(markdown).toContain("LONE (lone-high)");
@@ -821,7 +885,7 @@ describe("generate-dependency-coverage-audit", () => {
       generatedAt: "2026-08-28T00:00:00.000Z",
     }));
 
-    expect(sha256(markdown)).toBe("3161bfb850cb54fc1d0c675aea7386bb38212320c66f5ba7b23b7f187c18858f");
+    expect(sha256(markdown)).toBe("ee9b04ca912dd9a96c7ba55f186dfee32fd1b129cce7d06cadb55f312c46944e");
   });
 
   it("preserves clipped rows and the over-limit Markdown golden", () => {
@@ -835,7 +899,7 @@ describe("generate-dependency-coverage-audit", () => {
       generatedAt: "2026-08-28T00:00:00.000Z",
     }));
 
-    expect(sha256(markdown)).toBe("b28782601e9a5cc1ef6da51db7f2472c8364acb5dcf95567c6973d4e8a3b6412");
+    expect(sha256(markdown)).toBe("7781d4ad6838b94a8bf54cf89110d298828ccfc4a8097d2b4ab47326134714f1");
     expect(markdown).toContain("coin | mcap | local rank\n--- | ---: | ---:");
     expect(markdown).toContain("_Plus 1 more rows._");
     expect(markdown).not.toContain("C51 (candidate-51)");
