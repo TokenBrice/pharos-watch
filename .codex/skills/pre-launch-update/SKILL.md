@@ -3,6 +3,7 @@ name: pre-launch-update
 description: Use when asked to update pre-launch stablecoin data, add milestones, refresh launch phases, or check for promotions. Runs weekly to keep the upcoming stablecoins module current.
 user_invocable: true
 ---
+Read `docs/editorial-style.md` before writing. Its universal rules and the named `pre-launch` and `coin-summary` registers govern all Pharos-owned prose; this skill adds only factual, sourcing, schema, and format requirements.
 
 ## Pre-Launch Module Update
 
@@ -10,7 +11,7 @@ Weekly full-lifecycle update of all pre-launch stablecoins tracked by Pharos. Up
 
 ### Scope of Updates
 
-Valid enum values for `launchPhase`, milestone `type`, and `featuredContent.type` live in `shared/types/core.ts` as `LAUNCH_PHASE_VALUES`, `LAUNCH_MILESTONE_TYPE_VALUES`, and `FEATURED_CONTENT_TYPE_VALUES`. Read that file for the authoritative list — this document may drift.
+Valid enum values for `launchPhase`, milestone `type`, and `featuredContent.type` live in `shared/types/core.ts` as `LAUNCH_PHASE_VALUES`, `LAUNCH_MILESTONE_TYPE_VALUES`, and `FEATURED_CONTENT_TYPE_VALUES`. Read that file for the authoritative list. This document may drift.
 
 Extended reference (edge cases, history, examples): read ./reference.md when needed.
 
@@ -37,7 +38,7 @@ Skip cosmetic updates: single promotional tweets, blog restyles, minor PR mentio
 
 ### Process
 
-#### Step 0 — Staleness radar
+#### Step 0: Staleness radar
 
 Rank coins by staleness before researching so attention lands on the most-outdated entries.
 
@@ -47,15 +48,15 @@ Rank coins by staleness before researching so attention lands on the most-outdat
 
 Any coin with no milestones, or with a latest milestone older than 8 weeks, is an automatic deep-research candidate and also a stall-flag candidate (the issuer may have quietly delayed or abandoned the project).
 
-Also read the deferred-items ledger at `agents/pre-launch-deferred.md` (create it on first run). It records prior runs' dead-ends — preview-only listings, lapsed dates with no sourced replacement, unresolved identity matches — each with a checked-on date and a re-check trigger. For ledger items, do a cheap re-verification against the trigger (usually one API call) instead of a full deep-research pass, unless the trigger fires or the entry is older than 4 weeks.
+Also read the deferred-items ledger at `agents/pre-launch-deferred.md` (create it on first run). It records prior runs' dead-ends, including preview-only listings, lapsed dates with no sourced replacement, and unresolved identity matches. Each item has a checked-on date and a re-check trigger. For ledger items, do a cheap re-verification against the trigger (usually one API call) instead of a full deep-research pass, unless the trigger fires or the entry is older than 4 weeks.
 
-#### Step 1 — Read current state
+#### Step 1: Read current state
 
 1. Read all `shared/data/stablecoins/coins/*.json` entries where `status` is `"pre-launch"` and list every coin with its current `launchPhase`, `expectedLaunchDate`, `launchPhaseDetail`, milestone count, and `featuredContent` count
 2. Read `data/ai-summaries.json` to see which pre-launch coins have summaries and when they were last updated
 3. Present a summary table to the user: coin name, phase, expected date, milestones count, last summary update
 
-#### Step 2 — Research each coin
+#### Step 2: Research each coin
 
 For each pre-launch coin, run these searches **in parallel** where possible. Prioritize depth on coins flagged stalest in Step 0.
 
@@ -65,16 +66,16 @@ For each pre-launch coin, run these searches **in parallel** where possible. Pri
 - **Official website**: `WebFetch` the coin's website (from `links[]` entries labeled "Website") for press releases, blog posts, status updates
 - **Web search**: `WebSearch` for `"{coin name}" stablecoin` to find: news articles, regulatory filings, partnership announcements
 - **Link liveness**: HEAD-check (or GET-and-check-status) every entry in `links[]` plus the top 3 `featuredContent[].url` values. Flag any non-2xx responses in the findings report so dead references can be fixed or replaced in Step 4.
-- **DefiLlama/CoinGecko**: Check if the coin has appeared on either platform (search by name/symbol). If found, evaluate against promotion criteria in Step 5 — do not flag based on listing existence alone
+- **DefiLlama/CoinGecko**: Check if the coin has appeared on either platform (search by name/symbol). If found, evaluate against promotion criteria in Step 5: do not flag based on listing existence alone
   - DefiLlama: `WebFetch` `https://stablecoins.llama.fi/stablecoins` and search response for the coin name/symbol
-  - CoinGecko: `WebFetch` `https://api.coingecko.com/api/v3/search?query={symbol}` — then fetch the detail endpoint to read `market_data.market_cap.usd` and `circulating_supply`
+  - CoinGecko: `WebFetch` `https://api.coingecko.com/api/v3/search?query={symbol}`; then fetch the detail endpoint to read `market_data.market_cap.usd` and `circulating_supply`
 
-#### Step 3 — Present findings
+#### Step 3: Present findings
 
 For each coin with updates, present:
 
 ```
-## {Name} ({Symbol}) — {current phase}
+## {Name} ({Symbol}): {current phase}
 
 ### Changes found
 - **launchPhase**: {old} → {new} (source: {URL})
@@ -85,7 +86,7 @@ For each coin with updates, present:
   - {type} | {title} | {URL}
 
 ### Promotion candidate?
-{Yes/No — explain why}
+{Yes/No: explain why}
 
 ### No changes
 {List coins where nothing new was found}
@@ -93,22 +94,22 @@ For each coin with updates, present:
 
 **Important**: Flag any conflicts between sources. If unsure about a value, say so explicitly.
 
-#### Step 4 — Apply changes (after per-coin user approval)
+#### Step 4: Apply changes (after per-coin user approval)
 
 Approval is **per coin**, not bulk. For each coin with proposed changes, wait for explicit user confirmation (e.g., "yes / approved / go") before editing that coin's entry.
 
 1. Edit the coin's entry in the appropriate JSON file using the `Edit` tool
-2. When updating `expectedLaunchDate`, you **must** follow the Date History Protocol (below) first — no exceptions, even for minor shifts inside the same year
+2. When updating `expectedLaunchDate`, you **must** follow the Date History Protocol (below) first. This applies without exception, even for minor shifts inside the same year
 3. Add new milestones to the `milestones[]` array, sorted oldest-first by date
 4. Add new featured content to `featuredContent[]`
 5. Update AI summaries in `data/ai-summaries.json` only for coins that meet the Material Change Definition (follow `write-ai-summaries` voice guidelines)
 6. Verify:
-   - `npm run bootstrap:generated` — regenerates the aggregate and all bootstrap-safe stablecoin projections from the approved source edit. **Required.**
-   - `npm run check:stablecoin-data` — validates the zod schema for the tracked registry (including pre-launch entries). **Required.**
+   - `npm run bootstrap:generated`: regenerates the aggregate and all bootstrap-safe stablecoin projections from the approved source edit. **Required.**
+   - `npm run check:stablecoin-data`: validates the zod schema for the tracked registry (including pre-launch entries). **Required.**
    - If the approved changes will be published, use `pharos-release-runner` after the focused checks. GitHub's required `PR gate` is authoritative; the heavy local merge gate is optional rehearsal work.
-   - `npm run build` alone is not sufficient — it does not enforce the pre-launch schema.
+   - `npm run build` alone is not sufficient. It does not enforce the pre-launch schema.
 
-#### Step 5 — Flag promotions (with explicit evidence)
+#### Step 5: Flag promotions (with explicit evidence)
 
 A coin is ready-to-promote only if **all three** of the following hold.
 
@@ -116,7 +117,7 @@ Before recommending promotion, also run `stablecoin-runtime-price-marketcap-gate
 
 Before using methodology terminology, read `shared/lib/methodology-versions/current-version.json`.
 
-State the current Safety Score methodology consequences in the promotion report: a freshly promoted coin scores under launch-age track-record ceilings (`trackRecordCeilings` in `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` — the policy file wins) and typically publishes as NR until reserve/custody/reconciliation evidence is curated. Do not imply it will grade like an established asset on day one.
+State the current Safety Score methodology consequences in the promotion report: a freshly promoted coin scores under launch-age track-record ceilings (`trackRecordCeilings` in `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`; the policy file wins) and typically publishes as NR until reserve/custody/reconciliation evidence is curated. Do not imply it will grade like an established asset on day one.
 
 1. **Listed externally with real supply:**
    - DefiLlama: entry on `https://stablecoins.llama.fi/stablecoins` with non-zero `circulating`, **OR**
@@ -128,17 +129,17 @@ State the current Safety Score methodology consequences in the promotion report:
 
 Report format:
 
-- Ready: `**{Name} ready for promotion** — {source}, circulating=${X}, geckoId={id}, identity match confirmed`
-- Preview only: `**{Name} has a preview listing, not ready** — CoinGecko entry exists but circulating/market-cap are zero; keep tracking`
-- Ambiguous: `**{Name} possible match, unverified** — {reason}; recommend manual confirmation before next run`
+- Ready: `**{Name} ready for promotion**: {source}, circulating=${X}, geckoId={id}, identity match confirmed`
+- Preview only: `**{Name} has a preview listing, not ready**: CoinGecko entry exists but circulating/market-cap are zero; keep tracking`
+- Ambiguous: `**{Name} possible match, unverified**: {reason}; recommend manual confirmation before next run`
 
-Do **NOT** execute the promotion (removing `status: "pre-launch"`, adding `llamaId`, normalizing across chains, moving the entry out of `shared/data/stablecoins/coins/*.json` by status change, etc.) — that's a manual, coordinated process owned by `stablecoin-addition-orchestrator`; hand the ready-to-promote report off to it.
+Do **NOT** execute the promotion (removing `status: "pre-launch"`, adding `llamaId`, normalizing across chains, moving the entry out of `shared/data/stablecoins/coins/*.json` by status change, etc.). This is a manual, coordinated process owned by `stablecoin-addition-orchestrator`; hand the ready-to-promote report off to it.
 
-After reporting, update `agents/pre-launch-deferred.md`: one line per unresolved outcome (`{coin} — {finding} — checked {YYYY-MM-DD} — re-check when {trigger}`). Refresh the checked date on re-verified items and delete entries that resolved this run.
+After reporting, update `agents/pre-launch-deferred.md`: one line per unresolved outcome (`{coin}: {finding}; checked {YYYY-MM-DD}; re-check when {trigger}`). Refresh the checked date on re-verified items and delete entries that resolved this run.
 
 ### Date History Protocol
 
-**Mandatory.** Every change to `expectedLaunchDate` — including minor shifts inside the same year (e.g., `2026-Q2` → `2026-Q3`) — must append a `dateHistory` entry before the new value is written.
+**Mandatory.** Every change to `expectedLaunchDate`, including minor shifts inside the same year (e.g., `2026-Q2` → `2026-Q3`), must append a `dateHistory` entry before the new value is written.
 
 When `expectedLaunchDate` changes:
 
@@ -146,7 +147,7 @@ When `expectedLaunchDate` changes:
 2. Append `{ "date": "{current value}", "setOn": "{today YYYY-MM-DD}" }` to the `dateHistory[]` array (create the array if it doesn't exist)
 3. Then update `expectedLaunchDate` to the new value
 
-Do **not** backfill `dateHistory` from guessed prior values. Only the first shift observed under this protocol gets recorded — if a coin has no `dateHistory` today, leave it empty until an actual live shift is observed.
+Do **not** backfill `dateHistory` from guessed prior values. Only the first shift observed under this protocol gets recorded. If a coin has no `dateHistory` today, leave it empty until an actual live shift is observed.
 
 ### Milestone Guidelines
 
@@ -165,7 +166,7 @@ Each milestone entry:
 - **date**: Always `YYYY-MM-DD` format
 - **type**: Must be one of the values in `LAUNCH_MILESTONE_TYPE_VALUES`. Read `shared/types/core.ts` for the authoritative list.
 - **title**: Short factual description (not marketing language)
-- **sourceUrl**: Always include when available — milestones without sources are less trustworthy
+- **sourceUrl**: Always include when available. Milestones without sources are less trustworthy
 - **description**: Optional, only when the title alone is insufficient
 
 ### Featured Content Guidelines
@@ -179,23 +180,23 @@ Each milestone entry:
 }
 ```
 
-- **type**: Must be one of the values in `FEATURED_CONTENT_TYPE_VALUES` (`shared/types/core.ts`). Current values are `tweet`, `blog`, `video`, `article` — read the type file for the authoritative list.
+- **type**: Must be one of the values in `FEATURED_CONTENT_TYPE_VALUES` (`shared/types/core.ts`). Current values are `tweet`, `blog`, `video`, `article`. Read the type file for the authoritative list.
 - For tweets: include the `source` as `@handle`
 - For articles/blogs: include `description` and `image` (relative path `/featured/*.{jpg,png}`) when available
-- Don't add routine promotional tweets — only significant announcements, milestones, or technical updates
+- Don't add routine promotional tweets. Add only significant announcements, milestones, or technical updates
 
 ### Quality Standards
 
 - Phase advances require evidence (a tweet saying "coming soon" is not enough for `launching-soon`)
-- Do not speculate on launch dates — only update when officially communicated
+- Do not speculate on launch dates. Only update when officially communicated
 - Milestones should be factual events, not predictions
-- AI summary updates follow the `write-ai-summaries` voice: sardonic, data-driven, opinionated but fair
+- AI summary updates follow the `coin-summary` register in `docs/editorial-style.md`.
 
 ### What NOT to Do
 
 - Do **NOT** execute promotions from pre-launch to active
 - Do **NOT** remove existing milestones (they're historical records)
-- Do **NOT** backdate milestone entries — use the date the event actually occurred
-- Do **NOT** change `flags` (backing, pegCurrency, governance) — these are set intentionally
-- Do **NOT** change `id`, `name`, `symbol` — canonical identifiers
+- Do **NOT** backdate milestone entries. Use the date the event actually occurred
+- Do **NOT** change `flags` (backing, pegCurrency, governance). These are set intentionally
+- Do **NOT** change `id`, `name`, `symbol`. These are canonical identifiers
 - Do **NOT** add coins to the pre-launch tracker without user approval

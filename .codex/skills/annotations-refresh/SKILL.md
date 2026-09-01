@@ -3,6 +3,7 @@ name: annotations-refresh
 description: Drain the annotation-candidates queue (from `npm run candidates:annotations`) into the per-coin JSON assets under shared/data/annotations/coins/. Use weekly during active event periods, monthly otherwise.
 user_invocable: true
 ---
+Read `docs/editorial-style.md` before writing. Its universal rules and the named `technical-evidence` register govern all Pharos-owned prose; this skill adds only factual, sourcing, schema, and format requirements.
 
 # Annotations Refresh
 
@@ -24,22 +25,22 @@ Promotion is always editorial. Do not auto-write annotations from the queue.
 
 ## Inputs
 
-- `agents/annotation-candidates.md` — append-only queue. Each row already
+- `agents/annotation-candidates.md`: append-only queue. Each row already
   carries a date, coin id, kind hint, severity hint, and a source pointer.
   The file footer `<!-- last_swept_at: YYYY-MM-DD -->` records the previous
   sweep date.
-- `shared/data/annotations/coins/<coin-id>.json` — current curated set,
+- `shared/data/annotations/coins/<coin-id>.json`: current curated set,
   one file per coin. `shared/data/annotations/curated-annotations.ts` is
   the typed loader (validation rules + severity vocabulary in its header).
-- `shared/types/chart-annotation.ts` — `CHART_ANNOTATION_KINDS` and the
+- `shared/types/chart-annotation.ts`: `CHART_ANNOTATION_KINDS` and the
   `ChartAnnotation` shape (ts, kind, label ≤80 chars, severity?, href?).
 
 ## Process
 
-### Step 1 — Read the queue and the current annotations file
+### Step 1: Read the queue and the current annotations file
 
 If the queue has no candidate rows at all (fresh or deferred), report "queue
-empty" with the `last_swept_at` date and stop — no edits anywhere.
+empty" with the `last_swept_at` date and stop. No edits anywhere.
 
 1. Read `agents/annotation-candidates.md` from top to bottom. Group rows by
    date header so the older candidates surface first.
@@ -47,10 +48,10 @@ empty" with the `last_swept_at` date and stop — no edits anywhere.
    referenced in the queue, note the existing annotations so duplicates
    can be detected.
 3. Read `shared/types/chart-annotation.ts` to confirm the current
-   `CHART_ANNOTATION_KINDS` enum — do not rely on this document's list,
+   `CHART_ANNOTATION_KINDS` enum. Do not rely on this document's list,
    the source file wins.
 
-### Step 2 — Per-row decision
+### Step 2: Per-row decision
 
 For each candidate, choose one of three actions:
 
@@ -84,15 +85,15 @@ Author `date` as a string (omit optional `severity`, `href`, or `note` when not 
 
 Place each new entry inside the per-coin array in `date` ascending order.
 
-Queue rows with kind hint `launch` have no matching enum kind — existing
+Queue rows with kind hint `launch` have no matching enum kind. Existing
 launch annotations curate under `governance` (e.g. the USDe/USDS mainnet
 launch entries); follow that precedent.
 
 #### Drop
 
 Add a `dropped: <one-line reason>` annotation next to the row in the
-queue (a same-line suffix is safe — the producer only parses the leading
-`date | coin | kind` fields). Do not delete the row in place — instead,
+queue (a same-line suffix is safe. The producer only parses the leading
+`date | coin | kind` fields). Do not delete the row in place. Instead,
 when finishing the sweep, strip dropped rows wholesale as part of the
 queue rewrite (Step 4).
 
@@ -101,7 +102,7 @@ Common drop reasons:
 - Below severity bar (depeg low ≥ $0.98 with no grade impact).
 - Already curated under a different `ts` within the same incident.
 - Press cycle without a discrete event (e.g. opinion piece, recap).
-- Insufficient source — only social-media chatter.
+- Insufficient source: only social-media chatter.
 - Promotional / launch announcement without a confirmed live transition.
 
 #### Defer
@@ -110,7 +111,7 @@ Mark the row with `defer: <reason>` and leave it in the queue. Use when
 the event is real but the source set is incomplete (e.g. a regulator
 filing is rumored but not yet public). Re-evaluate next sweep.
 
-### Step 3 — Apply the edits
+### Step 3: Apply the edits
 
 1. Edit `shared/data/annotations/coins/<coin-id>.json` with the promoted
    rows. Entries use `{date: "YYYY-MM-DD", kind, label, severity?, href?,
@@ -121,7 +122,7 @@ filing is rumored but not yet public). Re-evaluate next sweep.
    shorter `label` and put the long phrasing in the source-page title at
    the `href` end.
 
-### Step 4 — Update the queue
+### Step 4: Update the queue
 
 After all per-row decisions, rewrite `agents/annotation-candidates.md`:
 
@@ -134,7 +135,7 @@ After all per-row decisions, rewrite `agents/annotation-candidates.md`:
 5. Prepend a short header noting the sweep (e.g. `<!-- swept 2026-05-23:
    12 promoted, 8 dropped, 3 deferred -->`).
 
-### Step 5 — Validate
+### Step 5: Validate
 
 Run the local gates before declaring done:
 
@@ -162,9 +163,9 @@ Report at the end of the sweep:
 - Do not invent dates. If the queue row's `ts` is fuzzy, defer rather
   than guess.
 - Do not promote a row whose only source is the producer script's own
-  signal (the producer surfaces the candidate, but a primary source —
-  issuer post-mortem, regulator filing, methodology changelog, on-chain
-  proof — must exist before the event becomes a curated annotation).
+  signal (the producer surfaces the candidate, but a primary source must exist, such as
+  an issuer post-mortem, regulator filing, methodology changelog, or on-chain
+  proof, before the event becomes a curated annotation).
 - Do not collapse multi-day depegs into a single entry; one annotation
   per discrete event, per the file header rules.
 - Do not edit the producer script's queue layout. The producer rewrites

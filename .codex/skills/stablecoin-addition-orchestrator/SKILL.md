@@ -3,6 +3,7 @@ name: stablecoin-addition-orchestrator
 description: Coordinate the full Pharos stablecoin addition process from eligibility through validation. Use when adding a new tracked stablecoin, promoting a pre-launch asset, or auditing whether an addition is complete.
 user_invocable: true
 ---
+Read `docs/editorial-style.md` before writing. Its universal rules and the named `profile-reference`, `technical-evidence`, `coin-summary`, and `pre-launch` registers govern all Pharos-owned prose; this skill adds only factual, sourcing, schema, and format requirements.
 
 # Stablecoin Addition Orchestrator
 
@@ -37,13 +38,13 @@ Use `stablecoin-runtime-price-marketcap-gate` before editing active metadata. Pr
 - Populate verified contract coverage.
 - Curate `reserves[]`.
 - Add only resilience overrides that differ from defaults.
-- Author the `blacklistabilityReview` — required on **every** coin, including pre-launch; `check:stablecoin-data` fails without it (see the Phase 3 field rules in `docs/process/adding-a-stablecoin.md`).
+- Author the `blacklistabilityReview`: required on **every** coin, including pre-launch; `check:stablecoin-data` fails without it (see the Phase 3 field rules in `docs/process/adding-a-stablecoin.md`).
 - Research the compliance fields when the coin is plausibly in EU or U.S. GENIUS scope; leave them undefined for the clearly out-of-scope long tail.
 - For Mint Authority, use Phase 5f in `docs/process/adding-a-stablecoin.md`; the local scanner (`tsx scripts/maintenance/audit-mint-authority.ts --coin <id>`) is a candidate producer only and must not be copied directly into metadata.
 - Maintain `data/ai-summaries.json`.
 - Handle pre-launch milestones, phase, featured content, and promotion checks.
 
-3.5. **Editorial coverage gate** — before Phase 4 saves the per-coin JSON, run the required-or-waived gate from Phase 3.5 of `docs/process/adding-a-stablecoin.md`. The field table there (`oneLiner`, `mechanismArchetype`, `proofOfReserves.attestorTier`, the `mintAuthority` coverage decision, `data/ai-summaries.json`) and the CI backstop list are canonical — read the doc rather than relying on any copy here.
+3.5. **Editorial coverage gate**: before Phase 4 saves the per-coin JSON, run the required-or-waived gate from Phase 3.5 of `docs/process/adding-a-stablecoin.md`. The field table there (`oneLiner`, `mechanismArchetype`, `proofOfReserves.attestorTier`, the `mintAuthority` coverage decision, `data/ai-summaries.json`) and the CI backstop list are canonical. Read the doc rather than relying on any copy here.
 
 Each missing field must either be filled (by re-calling the appropriate specialist skill from step 3) or recorded as an intentional gap in the Phase 5 coverage notes with a one-line reason. Do not declare success while a required field is missing without a recorded gap. The CI backstops cover the non-Mint-Authority editorial fields; the Mint Authority coverage decision itself is manual.
 
@@ -56,7 +57,7 @@ Each missing field must either be filled (by re-calling the appropriate speciali
 
 5. **Record downstream coverage decisions**
 - For each branch, mark `added`, `not applicable`, or `intentional gap`: logo/summary, live reserves, yield, redemption backstop, mint/burn, Mint Authority, Bluechip, price/discovery, history backfill.
-- **Current Safety Score methodology scoreability:** a bare new coin publishes as NR, not low-scored — mechanism components and mint facts stay `missing` until a hand-authored mechanism review overlay exists (`docs/process/mechanism-overlay-evidence-standard.md`); nothing auto-picks a new coin up, the measurement producers iterate curated allowlists. Record the outcome as overlay authored or an intentional NR-until-overlay gap. Caution: `shared/data/safety-score-v9/mechanism-review-overlays-v1.json` is identity-bound — authoring an overlay rotates the evaluation-build identity, so land it as a deliberate, reviewed change.
+- **Current Safety Score methodology scoreability:** a bare new coin publishes as NR, not low-scored. Mechanism components and mint facts stay `missing` until a hand-authored mechanism review overlay exists (`docs/process/mechanism-overlay-evidence-standard.md`); nothing auto-picks a new coin up, the measurement producers iterate curated allowlists. Record the outcome as overlay authored or an intentional NR-until-overlay gap. Caution: `shared/data/safety-score-v9/mechanism-review-overlays-v1.json` is identity-bound. Authoring an overlay rotates the evaluation-build identity, so land it as a deliberate, reviewed change.
 - If a new data source is added, update the about page and relevant methodology/docs.
 - If the coin is active and entered Pharos via a recent launch (status transitioned from `pre-launch` within the last 90 days, or DefiLlama first observation is within 90 days), append a `launch` candidate row to `agents/annotation-candidates.md` so the chart-annotation editorial loop catches it.
 
@@ -65,7 +66,7 @@ Each missing field must either be filled (by re-calling the appropriate speciali
 - Do not treat `npm run build` alone as sufficient.
 - If the user asked for research only, stop before edits and present the missing artifact/gate checklist.
 
-7. **After merge and deploy** — follow Phases 8-9 in `docs/process/adding-a-stablecoin.md`: run the history backfill (`POST /api/backfill-supply-history` for coins with `llamaId`; `POST /api/backfill-cg-prices` for geckoId-only coins) or record it as explicitly deferred — without it an active coin ships with an empty market-cap chart — then do the post-deploy verification.
+7. **After merge and deploy**: follow Phases 8-9 in `docs/process/adding-a-stablecoin.md`: run the history backfill (`POST /api/backfill-supply-history` for coins with `llamaId`; `POST /api/backfill-cg-prices` for geckoId-only coins) or record it as explicitly deferred. Without it an active coin ships with an empty market-cap chart. Then do the post-deploy verification.
 
 ## Completion Checklist
 
@@ -80,7 +81,7 @@ Before saying the addition is complete, report:
 - `blacklistabilityReview` present with matching reviewed status
 - compliance fields (`mica`/`genius`) authored or intentionally left undefined
 - logo and summary status
-- editorial coverage decisions per the Phase 3.5 field table (the doc is canonical) — each marked filled or recorded intentional gap with reason
+- editorial coverage decisions per the Phase 3.5 field table (the doc is canonical): each marked filled or recorded intentional gap with reason
 - Mint Authority status: reviewed `mintAuthority` profile, intentional gap with reason, or not applicable
 - Current Safety Score methodology scoreability outcome: mechanism overlay authored, or intentional NR-until-overlay gap
 - downstream coverage decision notes
