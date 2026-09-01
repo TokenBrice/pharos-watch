@@ -31,7 +31,7 @@ Every published main and CoinGecko-supply-fallback `sync-stablecoins` run writes
 
 ## Versioning
 
-- **Current methodology version:** `v6.213`
+- **Current methodology version:** `v6.214`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -255,6 +255,8 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `steakusdt-steakhouse`   | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price               |
 | `steakusdc-steakhouse`   | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `bbqusdc-steakhouse`     | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
+| `susds-sky`              | registry ERC-4626 `convertToAssets(1 share)` × tracked `usds-sky` price         |
+| `susde-ethena`           | registry ERC-4626 `convertToAssets(1 share)` × tracked `usde-ethena` price      |
 | `srusde-strata`          | ERC-4626 `convertToAssets(1 share)` × tracked `usde-ethena` price               |
 | `gtusdc-gauntlet`        | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `gtusdcp-gauntlet`       | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
@@ -294,6 +296,12 @@ stale rate cannot feed depeg state or replay continuity. Cached-rate resolutions
 grouped `protocol-redeem` circuit — an open circuit would skip the provider entirely and disable the rescue — while a
 failure with no trusted cached rate still records the pre-existing failure and circuit semantics. Cron metadata exposes
 `cachedRateFallbacks` and the attempt ledger records the cached source per asset.
+
+Registry-backed ERC-4626 routes bind to the reviewed canonical chain deployment and keep the vault rate denominated in
+the tracked parent asset. In particular, sUSDS reads its canonical Ethereum vault against tracked USDS, while sUSDe reads
+its canonical Ethereum staking vault against tracked USDe. The rate becomes a USD price only after multiplication by a
+fresh trusted parent price; there is no synthetic `$1` parent or wrapper fallback, so a missing or untrusted parent leaves
+the wrapper unpriced.
 
 For tracked-base inheritance paths, the authoritative layer does not query a bespoke contract path; it inherits the tracked parent asset's live price and historical replay because Pharos models the child as an instantly redeemable wrapper or extension of that parent rail.
 
