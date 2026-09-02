@@ -53,6 +53,28 @@ export function mockD1Strict(tables: MockTableConfig[] = []): MockD1Database {
   return mockD1(tables, { strict: true });
 }
 
+export function createMockD1Preset(defaults: readonly MockTableConfig[]) {
+  return (overrides: MockTableConfig[] = []): MockD1Database => mockD1([...overrides, ...defaults]);
+}
+
+export function filterD1HistoryEntries(
+  db: MockD1Database,
+  sqlIncludes: string,
+  bindAt?: readonly [index: number, value: unknown],
+): Array<{ sql: string; binds: unknown[] }> {
+  return db.getHistory().filter(({ sql, binds }) => (
+    sql.includes(sqlIncludes) && (!bindAt || binds[bindAt[0]] === bindAt[1])
+  ));
+}
+
+export function findD1HistoryEntry(
+  db: MockD1Database,
+  sqlIncludes: string,
+  bindAt?: readonly [index: number, value: unknown],
+) {
+  return filterD1HistoryEntries(db, sqlIncludes, bindAt)[0];
+}
+
 export function assertAllD1MatchesUsed(db: Pick<MockD1Database, "assertAllMatchesUsed">): void {
   db.assertAllMatchesUsed();
 }

@@ -18,7 +18,7 @@ vi.mock("../helpers", async (importOriginal) => {
 import { fetchLiquityV1Reserves } from "../liquity-v1";
 import { fetchDefiLlamaPrices, fetchOnchainUint256, probeOptionalRedemptionRateBps } from "../helpers";
 
-const signal = AbortSignal.timeout(5_000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 const coin = { id: "lusd-liquity" } as StablecoinMeta;
 
 const config: LiveReservesConfig = {

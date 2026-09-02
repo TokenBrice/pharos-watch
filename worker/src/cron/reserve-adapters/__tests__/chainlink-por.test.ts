@@ -42,7 +42,7 @@ import {
   fetchTronErc20TotalSupply,
 } from "../helpers";
 
-const signal = AbortSignal.timeout(5_000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 
 beforeEach(() => {
   vi.clearAllMocks();

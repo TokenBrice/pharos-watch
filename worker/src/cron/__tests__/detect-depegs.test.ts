@@ -1,15 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([
-    ...tables,
-    { match: "FROM dex_price_challenger_snapshots", rows: [] },
-    { match: "FROM dex_price_challengers", rows: [] },
-    { match: "SELECT stablecoin_id, top_pools_json", rows: [] },
-    { match: "INSERT INTO depeg_pending", rows: [] },
-  ]);
-}
+const mockD1 = createMockD1Preset([
+  { match: "FROM dex_price_challenger_snapshots", rows: [] },
+  { match: "FROM dex_price_challengers", rows: [] },
+  { match: "SELECT stablecoin_id, top_pools_json", rows: [] },
+  { match: "INSERT INTO depeg_pending", rows: [] },
+]);
 
 // Stub psi-eligible to avoid importing the full stablecoins list
 vi.mock("@shared/lib/psi-eligible", () => ({

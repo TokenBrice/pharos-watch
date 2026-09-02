@@ -16,3 +16,14 @@ export function createLatestSchemaSqlite(): { sqlite: DatabaseSync; db: D1Databa
   }
   return { sqlite, db: createSqliteD1(sqlite) };
 }
+
+export function createLatestSchemaFixtureTracker() {
+  const openDatabases: DatabaseSync[] = [];
+  const open = () => {
+    const fixture = createLatestSchemaSqlite();
+    openDatabases.push(fixture.sqlite);
+    return fixture;
+  };
+  const closeAll = () => openDatabases.splice(0).forEach((sqlite) => sqlite.close());
+  return { open, closeAll };
+}

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -82,8 +81,7 @@ describe("adaptSuperstateLiquidity", () => {
     expect(result.metadata?.sourceTimestamp).toBe(1_776_000_000);
     expect(result.metadata?.redemption?.sourceTimestamp).toBeUndefined();
 
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("superstate-liquidity") ?? undefined }).valid)
-      .toBe(true);
+    expectValidAdapterOutput("superstate-liquidity", result);
   });
 
   it("marks the route paused when the on-chain RedemptionIdle balance is zero", () => {
@@ -177,8 +175,7 @@ describe("fetchSuperstateLiquidityReserves", () => {
         capacityKind: "live-direct-bounded",
       },
     });
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("superstate-liquidity") ?? undefined }).valid)
-      .toBe(true);
+    expectValidAdapterOutput("superstate-liquidity", result);
   });
 
   it("fails closed when the on-chain RedemptionIdle balance cannot be read", async () => {

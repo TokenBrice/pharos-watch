@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { filterD1HistoryEntries, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 import {
   CONFIGURED_COINS,
@@ -71,11 +71,7 @@ function parseMetadata(metadata: string | undefined): RunMetadata {
 }
 
 function getCursorWrites(db: MockD1Database): Array<Record<string, unknown>> {
-  return db.getHistory()
-    .filter((entry) => (
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
-      && entry.binds[0] === CURSOR_CACHE_KEY
-    ))
+  return filterD1HistoryEntries(db, "INSERT OR REPLACE INTO cache", [0, CURSOR_CACHE_KEY])
     .map((entry) => JSON.parse(entry.binds[1] as string) as Record<string, unknown>);
 }
 

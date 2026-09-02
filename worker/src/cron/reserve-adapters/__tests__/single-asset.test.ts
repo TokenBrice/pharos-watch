@@ -21,7 +21,7 @@ import {
   probeOptionalRedemptionRateBps,
 } from "../helpers";
 
-const signal = AbortSignal.timeout(5000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 
 function makeSingleAssetConfig(
   overrides: {

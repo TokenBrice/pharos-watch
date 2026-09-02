@@ -21,6 +21,7 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { adaptReserveProtocolDtfRows, fetchReserveProtocolDtfReserves } from "../reserve-protocol-dtf";
 import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 
 const coin = {
   id: "usd3-reserve-protocol",
@@ -68,8 +69,6 @@ const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 const COMET_USDC = "0xc3d688b66703497daa19211eedff47f25384cdc3";
 const COMET_USDT = "0x3afdc9bca9213a35503b077a6072f3d0d5ab0840";
 const ONE = 1_000_000_000_000_000_000n;
-
-const signal = AbortSignal.timeout(5_000);
 
 function encodeAddressResult(address: string): `0x${string}` {
   return `0x${encodeAddress(address)}`;

@@ -18,7 +18,7 @@ import { adaptAbracadabraReserves, fetchAbracadabraReserves } from "../abracadab
 import type { CauldronCollateralReading } from "../abracadabra";
 import { fetchDefiLlamaPrices, fetchOnchainUint256 } from "../helpers";
 
-const signal = AbortSignal.timeout(5_000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 const coin = { id: "mim-abracadabra" } as StablecoinMeta;
 const BENTOBOX = "0xd96f48665a1410c0cd669a88898eca36b9fc2cce";
 const YVDAI_ADDRESS = "0x1111111111111111111111111111111111111111";

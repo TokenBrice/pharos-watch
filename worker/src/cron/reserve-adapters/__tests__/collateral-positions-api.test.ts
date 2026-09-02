@@ -14,8 +14,7 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { adaptCollateralPositions, fetchCollateralPositionsApiReserves } from "../collateral-positions-api";
 import { fetchJsonWithRetry, fetchOnchainMulticall3 } from "../helpers";
-
-const signal = AbortSignal.timeout(5_000);
+import { mockedReserveHelper, TEST_SIGNAL } from "./reserve-adapter.test-support";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -423,7 +422,7 @@ function primeBridgeBasketMocks(options: {
   failedLabel?: string;
   underlyingOverride?: string;
 } = {}) {
-  vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
+  mockedReserveHelper(fetchJsonWithRetry).mockImplementation(async (url: string) => {
     if (url.endsWith("/positions")) {
       return {
         wbtc: {
@@ -454,7 +453,7 @@ function primeBridgeBasketMocks(options: {
     "bridge:1:inventory": word(balances[1]),
     "bridge:1:minter": word(true),
   };
-  vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => calls.map((call) => ({
+  mockedReserveHelper(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => calls.map((call) => ({
     label: call.label,
     success: call.label !== options.failedLabel,
     returnData: defaults[call.label] ?? word(0n),
@@ -464,7 +463,7 @@ function primeBridgeBasketMocks(options: {
 describe("fetchCollateralPositionsApiReserves bridge basket", () => {
   it("sums every verified bridge inventory and converts the EUR total to USD", async () => {
     primeBridgeBasketMocks();
-    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, TEST_SIGNAL);
 
     expect(result.metadata).toMatchObject({
       immediateRedeemableUsd: 120.912,
@@ -484,7 +483,7 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
 
   it("withholds the whole redemption block when one bridge read fails", async () => {
     primeBridgeBasketMocks({ failedLabel: "bridge:1:inventory" });
-    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, TEST_SIGNAL);
 
     expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
     expect(result.metadata).not.toHaveProperty("redemption");
@@ -492,7 +491,7 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
 
   it("withholds the whole redemption block on an underlying identity mismatch", async () => {
     primeBridgeBasketMocks({ underlyingOverride: "0x0000000000000000000000000000000000000001" });
-    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, TEST_SIGNAL);
 
     expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
     expect(result.metadata).not.toHaveProperty("redemption");
@@ -500,7 +499,7 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
 
   it("publishes zero capacity without asserting the route open", async () => {
     primeBridgeBasketMocks({ balances: [0n, 0n] });
-    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, TEST_SIGNAL);
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 0,

@@ -19,6 +19,7 @@ vi.mock("../../../lib/evm-rpc", () => ({
 import { fetchDefiLlamaPrices, fetchJsonWithRetry, fetchOnchainMulticall3 } from "../helpers";
 import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
 import { adaptCrvUsd, adaptCrvUsdOnchain, fetchCrvUsdReserves } from "../crvusd";
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 
 type FetchOnchainMulticall3Options = Parameters<typeof fetchOnchainMulticall3>[0];
 type TestHexAddress = `0x${string}`;
@@ -52,7 +53,6 @@ const LT_ABI = parseAbi([
   "function preview_emergency_withdraw(uint256 shares) view returns (uint256,int256)",
 ]);
 const ERC20_ABI = parseAbi(["function symbol() view returns (string)", "function decimals() view returns (uint8)"]);
-const signal = AbortSignal.timeout(5_000);
 
 type EvmRpcCallArgs = Parameters<typeof fetchEvmCallHexAtBlock>;
 type EvmRpcCallHandler = (...args: EvmRpcCallArgs) => ReturnType<typeof fetchEvmCallHexAtBlock>;

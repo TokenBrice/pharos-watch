@@ -10,7 +10,7 @@ import {
   loadFanoutSubscriptionInputs,
   type FanoutSubscriptionInputs,
 } from "../dispatch-telegram-alerts-fanout";
-import { type SubscriberRow } from "../dispatch-telegram-routing";
+import { makeSubscriberRow as subscriber } from "./telegram-subscriber.test-support";
 
 const NOW_SEC = 1_800_000_000;
 
@@ -22,23 +22,6 @@ const DEWS_WARNING: DewsChange = {
   score: 42,
   topSignals: [{ name: "Supply", value: 74 }],
 };
-
-function subscriber(overrides: Partial<SubscriberRow>): SubscriberRow {
-  return {
-    chat_id: "100",
-    last_active_at: NOW_SEC,
-    dews_min_band: null,
-    safety_mode: null,
-    depeg_worsening_bps_step: null,
-    global_depeg_worsening_bps_step: null,
-    quiet_hours_enabled: 0,
-    quiet_hours_start_utc: null,
-    quiet_hours_end_utc: null,
-    timezone: null,
-    isGlobal: false,
-    ...overrides,
-  };
-}
 
 function emptyExplicitlyOffMaps(): FanoutSubscriptionInputs["perCoinExplicitlyOffMaps"] {
   return {

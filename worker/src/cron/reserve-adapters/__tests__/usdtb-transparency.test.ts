@@ -16,10 +16,11 @@ import {
   type UsdtbBackingAndSupplyPayload,
 } from "../usdtb-transparency";
 import { fetchJsonAdapterInput } from "../helpers";
-import { validateAdapterOutput } from "../validate";
-import { getReserveAdapter } from "../index";
-
-const signal = AbortSignal.timeout(5000);
+import {
+  expectValidAdapterOutput,
+  mockedReserveHelper,
+  TEST_SIGNAL,
+} from "./reserve-adapter.test-support";
 
 function makeCoin(): StablecoinMeta {
   return { id: "usdtb-ethena", name: "Ethena USDtb", ticker: "USDTB" } as unknown as StablecoinMeta;
@@ -153,10 +154,7 @@ describe("adaptUsdtbTransparency", () => {
       lastUpdatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     };
     const result = adaptUsdtbTransparency(stale);
-    const adapter = getReserveAdapter("usdtb-transparency") ?? undefined;
-    const report = validateAdapterOutput(result, { adapter });
-
-    expect(report.valid).toBe(true);
+    const report = expectValidAdapterOutput("usdtb-transparency", result);
     expect(report.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "stale-source-data", effect: "degraded" })]),
     );
@@ -165,15 +163,15 @@ describe("adaptUsdtbTransparency", () => {
 
 describe("fetchUsdtbTransparencyReserves", () => {
   it("fetches the configured backing-and-supply endpoint and adapts the payload", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockResolvedValue(USDTB_BACKING);
+    mockedReserveHelper(fetchJsonAdapterInput).mockResolvedValue(USDTB_BACKING);
     const config = makeConfig();
 
-    const result = await fetchUsdtbTransparencyReserves(makeCoin(), config, signal);
+    const result = await fetchUsdtbTransparencyReserves(makeCoin(), config, TEST_SIGNAL);
 
     expect(fetchJsonAdapterInput).toHaveBeenCalledWith(
       config,
       "usdtb-transparency",
-      signal,
+      TEST_SIGNAL,
       12_000,
       undefined,
     );
@@ -181,9 +179,9 @@ describe("fetchUsdtbTransparencyReserves", () => {
   });
 
   it("propagates an error when the endpoint request fails", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockRejectedValue(new Error("HTTP 500 for https://usdtb.money/api/transparency/backing-and-supply/current"));
+    mockedReserveHelper(fetchJsonAdapterInput).mockRejectedValue(new Error("HTTP 500 for https://usdtb.money/api/transparency/backing-and-supply/current"));
     const config = makeConfig();
 
-    await expect(fetchUsdtbTransparencyReserves(makeCoin(), config, signal)).rejects.toThrow("HTTP 500");
+    await expect(fetchUsdtbTransparencyReserves(makeCoin(), config, TEST_SIGNAL)).rejects.toThrow("HTTP 500");
   });
 });

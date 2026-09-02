@@ -20,10 +20,7 @@ import {
   type TetherTransparencyResponse,
 } from "../tether-transparency";
 import { fetchJsonAdapterInput } from "../helpers";
-import { validateAdapterOutput } from "../validate";
-import { getReserveAdapter } from "../index";
-
-const signal = AbortSignal.timeout(5000);
+import { expectValidAdapterOutput, TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 // Captured 2026-07-09 from GET https://tether.to/transparency.json
@@ -172,10 +169,7 @@ describe("adaptTetherTransparency", () => {
     };
 
     const result = adaptTetherTransparency(stale, USDT_PARAMS);
-    const adapter = getReserveAdapter("tether-transparency") ?? undefined;
-    const report = validateAdapterOutput(result, { adapter });
-
-    expect(report.valid).toBe(true);
+    const report = expectValidAdapterOutput("tether-transparency", result);
     expect(report.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "stale-source-data", effect: "degraded" })]),
     );

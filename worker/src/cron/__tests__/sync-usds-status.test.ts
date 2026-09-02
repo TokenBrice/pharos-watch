@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset, findD1HistoryEntry, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
@@ -13,13 +13,9 @@ const DEFAULT_USDS_D1_TABLES: MockTableConfig[] = [
   { match: "INSERT OR REPLACE INTO cache", rows: [] },
 ];
 
-function mockD1(tables: MockTableConfig[] = []): MockD1Database {
-  return createMockD1([...tables, ...DEFAULT_USDS_D1_TABLES]);
-}
+const mockD1 = createMockD1Preset(DEFAULT_USDS_D1_TABLES);
 
-function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
-  return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "usds-status");
-}
+const getCacheInsert = (db: MockD1Database) => findD1HistoryEntry(db, "INSERT INTO cache", [0, "usds-status"]);
 
 describe("syncUsdsStatus", () => {
   beforeEach(() => {

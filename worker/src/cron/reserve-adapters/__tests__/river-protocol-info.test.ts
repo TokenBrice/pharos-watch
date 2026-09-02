@@ -15,6 +15,7 @@ import { fetchJsonAdapterInput, fetchOnchainMulticall3 } from "../helpers";
 import { adaptRiverProtocolInfo, fetchRiverProtocolInfoReserves } from "../river-protocol-info";
 import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 const SATUSD_BY_CHAIN: Record<string, string> = {
   ethereum: "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
@@ -243,8 +244,7 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
     });
     // Aggregate protocol TVL stays a separate, unrelated reserve figure.
     expect(result.metadata?.totalReserveUsd).toBe(250_000_000);
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("river-protocol-info") ?? undefined }).valid)
-      .toBe(true);
+    expectValidAdapterOutput("river-protocol-info", result);
   });
 
   it("never probes a chain without a pinned Satoshi app", async () => {
@@ -302,8 +302,7 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
 
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 0, feeBps: 50 });
     expect(result.metadata?.redemption?.routeStatus).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("river-protocol-info") ?? undefined }).valid)
-      .toBe(true);
+    expectValidAdapterOutput("river-protocol-info", result);
   });
 
   it("withholds the whole redemption block when no chain verifies", async () => {
@@ -318,7 +317,6 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
         expect.objectContaining({ code: "river-redemption-unreadable", effect: "info" }),
       ]),
     );
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("river-protocol-info") ?? undefined }).valid)
-      .toBe(true);
+    expectValidAdapterOutput("river-protocol-info", result);
   });
 });

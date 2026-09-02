@@ -18,16 +18,8 @@ import {
   fixtureYieldConfigModule,
   fixtureEvmRpcModule,
 } from "./sync-yield-data.test-support";
-import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import { cacheRow, dlPoolsCacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
-import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
-
-function dlPoolsCacheRow(
-  pools: Parameters<typeof buildDlStablecoinPoolsCache>[0],
-  updatedAt: number,
-) {
-  return cacheRow(buildDlStablecoinPoolsCache(pools, updatedAt), updatedAt);
-}
 
 function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
   return createFixtureMockD1([

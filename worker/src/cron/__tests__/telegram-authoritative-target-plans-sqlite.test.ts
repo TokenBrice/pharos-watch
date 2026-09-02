@@ -30,6 +30,7 @@ import {
 } from "../telegram-alert-source-events";
 import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { resolveTelegramTargetExpiresAt } from "../telegram-alert-target-plans/materialization";
+import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const NOW = 1_800_000_000;
 const databases: DatabaseSync[] = [];
@@ -94,13 +95,12 @@ function insertSource(
 }
 
 function insertSubscriber(sqlite: DatabaseSync, chatId: string, generation = 1, createdAt = NOW - 100): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-       chat_id, created_at, last_active_at, preference_generation
-     ) VALUES (?, ?, ?, ?)`,
-    )
-    .run(chatId, createdAt, NOW - 10, generation);
+  insertTelegramSubscriber(sqlite, {
+    chatId,
+    createdAt,
+    lastActiveAt: NOW - 10,
+    preferenceGeneration: generation,
+  });
 }
 
 function routed(

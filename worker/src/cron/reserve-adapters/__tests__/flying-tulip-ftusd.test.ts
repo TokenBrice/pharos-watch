@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptFlyingTulipFtUsd } from "../flying-tulip-ftusd";
 import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 function payload() {
   return {
@@ -65,7 +65,7 @@ describe("adaptFlyingTulipFtUsd", () => {
       },
     });
     const adapter = getReserveAdapter("flying-tulip-ftusd") ?? undefined;
-    expect(validateAdapterOutput(result, { adapter, now: 1786311000 }).valid).toBe(true);
+    expectValidAdapterOutput("flying-tulip-ftusd", result, { now: 1786311000 });
     expect(adapter?.evidenceClass).toBe("weak-live-probe");
   });
 

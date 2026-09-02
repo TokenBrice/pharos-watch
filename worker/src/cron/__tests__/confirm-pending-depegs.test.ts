@@ -5,9 +5,9 @@ import {
   insertDexPrice,
   insertPendingDepeg,
   makePendingDepegRow,
-  openLatestSchemaFixture,
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
@@ -54,11 +54,8 @@ import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 
 const NOW_SEC = 1_700_000_000;
-const openSqliteDatabases: DatabaseSync[] = [];
-
-function openFixture(): { sqlite: DatabaseSync; db: D1Database } {
-  return openLatestSchemaFixture({ openDatabases: openSqliteDatabases });
-}
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+const openFixture = sqliteFixtures.open;
 
 const makePendingRow = makePendingDepegRow;
 const insertPending = insertPendingDepeg;
@@ -110,7 +107,7 @@ afterEach(() => {
       }],
     },
   });
-  for (const sqlite of openSqliteDatabases.splice(0)) sqlite.close();
+  sqliteFixtures.closeAll();
 });
 
 describe("confirmPendingDepegs", () => {

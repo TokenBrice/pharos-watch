@@ -34,7 +34,7 @@ import {
   probeOptionalRedemptionRateBps,
 } from "../helpers";
 
-const signal = AbortSignal.timeout(5000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 const coin = { id: "test-coin" } as unknown as StablecoinMeta;
 
 const HONEY_FACTORY = "0xa4afef880f5ce1f63c9fb48f661e27f8b4216401";

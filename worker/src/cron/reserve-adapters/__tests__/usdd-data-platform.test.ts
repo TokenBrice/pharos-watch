@@ -16,8 +16,7 @@ import {
   buildUsddHistoryUrl,
   fetchUsddDataPlatformReserves,
 } from "../usdd-data-platform";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput, TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 
 const coin = {
   id: "usdd-decentralized-usd",
@@ -32,8 +31,6 @@ const coin = {
     navToken: false,
   },
 } as const satisfies StablecoinMeta;
-const signal = AbortSignal.timeout(5_000);
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -80,7 +77,7 @@ describe("adaptUsddLatestCollateral", () => {
       stableVaultUsd: expect.closeTo(82_982_829.02, 2),
     });
     expect(result.metadata?.redemption).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("usdd-data-platform") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("usdd-data-platform", result);
   });
 
   it("preserves unknown vault types as an explicit high-risk slice and warning", () => {
@@ -248,8 +245,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
       "https://docs.usdd.io/user-guide/psm-peg-stability-module",
     ]);
     expect(result.metadata?.psmGemJoinBalanceRaw).toBe("33195883987282");
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("usdd-data-platform") ?? undefined }).valid)
-      .toBe(true);
+    expectValidAdapterOutput("usdd-data-platform", result);
   });
 
   it("reads the balance of the address the PSM itself reports as its GemJoin", async () => {

@@ -37,8 +37,7 @@ import {
   MULTICALL3_ADDRESS,
 } from "../../../lib/evm-rpc";
 import { fetchAnzenUsdzReserves } from "../anzen-usdz";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 const signal = new AbortController().signal;
 const ETHEREUM = "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067";
@@ -204,7 +203,7 @@ describe("fetchAnzenUsdzReserves", () => {
       "https://ethereum-rpc.publicnode.com",
       "https://eth.drpc.org",
     ]);
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("anzen-usdz") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("anzen-usdz", result);
   });
 
   it("fails closed when pooled SPCT is below liabilities, held SPCT is short, or surplus exceeds tolerance", async () => {

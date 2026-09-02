@@ -29,7 +29,7 @@ import {
   YAMATO_PRIORITY_REGISTRY_SELECTOR,
 } from "../yamato";
 
-const signal = AbortSignal.timeout(5_000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 const coin = { id: "cjpy-yamato" } as StablecoinMeta;
 const YAMATO_ADDRESS = "0x1111111111111111111111111111111111111111" as const;
 const PRICE_FEED_ADDRESS = "0x2222222222222222222222222222222222222222" as const;
