@@ -5,7 +5,7 @@ Applies to `src/`.
 ## Read First
 
 - Route-specific docs from `docs/README.md`; architecture boundaries from `docs/architecture.md` § “Frontend Runtime And SEO Surface”.
-- Design work: `docs/design-context.md`, `docs/design-language.md`, and `docs/design-tokens.md`.
+- Design work: `docs/design-language.md#context`, `docs/design-language.md`, and `docs/design-tokens.md`.
 
 Route with `node --import tsx scripts/ci/pharos-change-contract.ts --file <path>`.
 

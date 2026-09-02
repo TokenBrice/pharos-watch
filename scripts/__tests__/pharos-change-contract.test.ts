@@ -11,6 +11,7 @@ import {
   buildSessionStartHookOutput,
   classifyChangedFiles,
   formatContract,
+  getHookHarness,
   normalizeChangedFiles,
 } from "../ci/pharos-change-contract.ts";
 
@@ -24,11 +25,16 @@ function requireBlockingReason(output: unknown): string {
 
 type HookMode = "pre-tool-use" | "permission-request" | "session-start";
 
-function runHookCliProcess(hook: HookMode, input = "") {
+function runHookCliProcess(
+  hook: HookMode,
+  input = "",
+  env: NodeJS.ProcessEnv = process.env,
+  extraArgs: readonly string[] = [],
+) {
   const result = spawnSync(
     process.execPath,
-    ["--import", "tsx", resolve(process.cwd(), "scripts/ci/pharos-change-contract.ts"), `--hook=${hook}`],
-    { cwd: process.cwd(), encoding: "utf8", input },
+    ["--import", "tsx", resolve(process.cwd(), "scripts/ci/pharos-change-contract.ts"), `--hook=${hook}`, ...extraArgs],
+    { cwd: process.cwd(), encoding: "utf8", env, input },
   );
   return {
     ...result,
@@ -119,7 +125,7 @@ describe("classifyChangedFiles", () => {
     ]);
 
     expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("telegram-dispatch");
-    expect(docKeys(contract)).toContain("docs/telegram-alerts.md#dispatch-cron");
+    expect(docKeys(contract)).toContain("docs/telegram-alerts.md#dispatch");
     expect(docKeys(contract)).not.toContain("docs/telegram-mini-app.md");
   });
 
@@ -234,9 +240,16 @@ describe("representative --file routing", () => {
     const contract = route("worker/src/api/telegram-webhook.ts");
     expect(contract.mappings.map((mapping) => mapping.id)).toContain("telegram-api");
     expect(docKeys(contract)).toContain("docs/telegram-architecture.md#1-ingress");
-    expect(docKeys(contract)).not.toContain("docs/telegram-alerts.md#dispatch-cron");
+    expect(docKeys(contract)).not.toContain("docs/telegram-alerts.md#dispatch");
     expect(docKeys(contract)).not.toContain("docs/telegram-mini-app.md");
     expect(contract.checks).toContain("npm run test:critical-contracts");
+  });
+
+  it("routes Telegram command handlers to the commands contract", () => {
+    const contract = route("worker/src/api/webhook-commands/subscribe.ts");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("telegram-commands");
+    expect(docKeys(contract)).toContain("docs/telegram-alerts.md#commands");
+    expect(docKeys(contract)).not.toContain("docs/telegram-architecture.md#1-ingress");
   });
 
   it("keeps dynamic guidance out of Read first", () => {
@@ -433,7 +446,7 @@ describe("Codex hook outputs", () => {
       "Pharos change contract — explicit files (1 files) — deploy: pages=y, worker=n",
       "Read first: docs/homepage.md, docs/agent-task-router.md, docs/architecture.md",
       "Scoped context: src/app/AGENTS.md, src/AGENTS.md",
-      "Focused checks: npm run build, npm run seo:check, npx vitest run src/lib/__tests__/homepage-hero-snapshot.test.ts src/lib/__tests__/homepage-cohort-config.test.ts, npx vitest run src",
+      "Focused checks: npm run lint:changed, npm run typecheck, npm run build, npm run seo:check",
       "Route a planned path: npm run agent:route -- --file <path>",
     ]);
     expect(context).not.toContain("Hints:");
@@ -481,6 +494,38 @@ describe("Codex hook outputs", () => {
 
   it("does not throw for empty hook stdin", () => {
     expect(runHookCli("pre-tool-use")).toEqual({});
+  });
+});
+
+describe("hook harness classification", () => {
+  it("recognizes a Claude-shaped payload before shared session metadata", () => {
+    expect(getHookHarness({
+      session_id: "claude-session",
+      transcript_path: "/tmp/claude-transcript.jsonl",
+      cwd: process.cwd(),
+      hook_event_name: "PreToolUse",
+      tool_name: "Bash",
+      tool_input: { command: "git status" },
+    })).toBe("claude");
+  });
+
+  it("recognizes a Codex-specific payload", () => {
+    expect(getHookHarness({
+      session_id: "codex-session",
+      cwd: process.cwd(),
+      model: "codex",
+      hookEventName: "PermissionRequest",
+      toolName: "Bash",
+      toolInput: { command: "git status" },
+    })).toBe("codex");
+  });
+
+  it("does not infer a harness from ambiguous shared metadata", () => {
+    expect(getHookHarness({
+      session_id: "session",
+      transcript_path: "/tmp/transcript.jsonl",
+      cwd: process.cwd(),
+    })).toBe("unknown");
   });
 });
 
@@ -566,7 +611,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(requireBlockingReason(output)).toBe("opaque shell construct around a guarded command; run it directly");
+    expect(requireBlockingReason(output)).toContain("opaque shell construct around a guarded command; run it directly");
   });
 
   it("blocks remote D1 mutation commands", () => {
@@ -820,7 +865,7 @@ describe("W2.7 opaque shell guards", () => {
   it.each(blockedOpaqueCommands)("blocks a guarded %s construct", (_label, command) => {
     const output = buildPreToolUseHookOutput({ tool_input: { command } });
 
-    expect(requireBlockingReason(output)).toBe("opaque shell construct around a guarded command; run it directly");
+    expect(requireBlockingReason(output)).toContain("opaque shell construct around a guarded command; run it directly");
   });
 
   const allowedOpaqueCommands = [
@@ -1104,6 +1149,150 @@ describe("W2.7 malformed hook payloads", () => {
   });
 });
 
+describe("hook diagnostics", () => {
+  it("does not write diagnostics when disabled", () => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-off-"));
+    const diagnosticsPath = join(directory, "hook-diagnostics.jsonl");
+
+    try {
+      const result = runHookCliProcess(
+        "pre-tool-use",
+        JSON.stringify({ tool_name: "Bash", tool_input: { command: "git reset --hard HEAD" } }),
+        {
+          ...process.env,
+          PHAROS_HOOK_DIAGNOSTICS: "0",
+          PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
+        },
+      );
+
+      expect(result.status).toBe(0);
+      expect(() => readFileSync(diagnosticsPath, "utf8")).toThrow();
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
+  });
+
+  it("writes one secret-free record per hook invocation", () => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-on-"));
+    const diagnosticsPath = join(directory, "hook-diagnostics.jsonl");
+    const env = {
+      ...process.env,
+      PHAROS_HOOK_DIAGNOSTICS: "1",
+      PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
+    };
+    const command = "git reset --hard HEAD";
+
+    try {
+      const results = [
+        runHookCliProcess(
+          "pre-tool-use",
+          JSON.stringify({
+            hook_event_name: "PreToolUse",
+            tool_name: "Bash",
+            tool_input: { command },
+          }),
+          env,
+        ),
+        runHookCliProcess(
+          "permission-request",
+          JSON.stringify({
+            session_id: "codex-session",
+            cwd: process.cwd(),
+            model: "codex",
+            hookEventName: "PermissionRequest",
+            toolName: "Bash",
+            toolInput: { command },
+          }),
+          env,
+        ),
+        runHookCliProcess("session-start", JSON.stringify({ hook_event_name: "SessionStart" }), env),
+      ];
+      const contents = readFileSync(diagnosticsPath, "utf8");
+      const records = contents
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+
+      expect(results.every((result) => result.status === 0)).toBe(true);
+      expect(records).toHaveLength(3);
+      expect(records[0]).toMatchObject({
+        harness: "claude",
+        event: "PreToolUse",
+        tool: "Bash",
+        decision: "deny",
+        rule: "git-destructive",
+        pathsProtected: 0,
+      });
+      expect(records[1]).toMatchObject({
+        harness: "codex",
+        event: "PermissionRequest",
+        tool: "Bash",
+        decision: "deny",
+        rule: "git-destructive",
+      });
+      expect(records[2]).toMatchObject({
+        harness: "unknown",
+        event: "SessionStart",
+        tool: null,
+        decision: "none",
+        rule: null,
+      });
+      expect(records[0].ts).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(records[0].commandDigest).toMatch(/^[0-9a-f]{12}$/);
+      expect(contents).not.toContain(command);
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
+  });
+
+  it("keeps the hook decision and exit status when diagnostics cannot be written", () => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-failure-"));
+
+    try {
+      const result = runHookCliProcess(
+        "pre-tool-use",
+        JSON.stringify({ tool_name: "Bash", tool_input: { command: "git reset --hard HEAD" } }),
+        {
+          ...process.env,
+          PHAROS_HOOK_DIAGNOSTICS: "1",
+          PHAROS_HOOK_DIAGNOSTICS_FILE: directory,
+        },
+      );
+
+      expect(result.status).toBe(0);
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        decision: "block",
+        hookSpecificOutput: { permissionDecision: "deny" },
+      });
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
+  });
+
+  it("enables diagnostics with the CLI flag", () => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-flag-"));
+    const diagnosticsPath = join(directory, "hook-diagnostics.jsonl");
+
+    try {
+      const result = runHookCliProcess(
+        "pre-tool-use",
+        JSON.stringify({ tool_name: "Bash", tool_input: { command: "echo ready" } }),
+        {
+          ...process.env,
+          PHAROS_HOOK_DIAGNOSTICS: "0",
+          PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
+        },
+        ["--diagnostics"],
+      );
+
+      expect(result.status).toBe(0);
+      expect(readFileSync(diagnosticsPath, "utf8").trim()).toContain('"decision":"allow"');
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
+  });
+});
+
 describe("W2.7 PermissionRequest parity", () => {
   it.each([
     ["git reset", "git reset --hard HEAD"],
@@ -1144,7 +1333,10 @@ describe("W2.7 PermissionRequest parity", () => {
     expect(output).toMatchObject({
       hookSpecificOutput: {
         hookEventName: "PermissionRequest",
-        decision: { behavior: "deny", message: "opaque shell construct around a guarded command; run it directly" },
+        decision: {
+          behavior: "deny",
+          message: expect.stringContaining("opaque shell construct around a guarded command; run it directly"),
+        },
       },
     });
   });

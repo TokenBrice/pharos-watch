@@ -1,6 +1,6 @@
 # Scripts
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Safety Score Map Refresh · Operator CLI Contract · D1 Insights Capture · Routing Index · Operational Notes · Safe Usage Guidelines.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Safety Score Map Refresh · Operator CLI Contract · D1 Insights Capture · Routing Index · Validation Command Index · Build And Generated Artifacts · PR And Release Gates · Operational Notes · Pre-Commit Hook Mechanics · Release Ownership · Safe Usage Guidelines.
 
 ## Overview
 
@@ -57,13 +57,40 @@ Compare captures before and after an infrastructure change by `period`, `sortBy`
 
 The command name, composition, and default invocation are owned by the root [`package.json`](../package.json). Run the selected npm command with `-- --help`, or invoke a direct entrypoint with `--help`, for its current flags and defaults. `scripts/lib/cli-argv-policy.mjs` owns argument-safety classification; do not copy its roster into documentation.
 
+### Validation Command Index
+
+```bash
+npm test
+npm run test:all
+npm run test:pr -- --base=origin/main
+npm run test:watch
+npm run lint
+npm run lint:changed -- --base=origin/main
+npm run lint:typed
+npm run typecheck
+npm run typecheck:tests
+npm run typecheck:worker
+npm run check:pr -- --base=origin/main
+npm run check:bootstrap
+npm run check:structural
+npm run check:release
+npm run test:a11y
+npm run test:a11y:hydrated
+```
+
+[Testing: Commands](./testing.md#commands) owns the validation behavior behind this discoverable command roster; use `package.json` for the full live npm-script list.
+
 ### Build And Generated Artifacts
 
-Use the generated-artifact commands in `package.json` for generation, freshness checks, bootstrap, and staged-artifact synchronization. `scripts/lib/automation-registry.mjs` is the authority for artifact dependencies, lifecycle, output paths, checkability, and automatic staging. Build and release behavior is documented in [Testing](./testing.md#ci-pipeline) and [Deployment Process](./deployment-process.md#ci-deploy-sequence); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
+Use the generated-artifact commands in `package.json` for generation, freshness checks, bootstrap, and staged-artifact synchronization. `scripts/lib/automation-registry.mjs` is the authority for artifact dependencies, lifecycle, output paths, checkability, and automatic staging. Every registry entry declares a build lifecycle: `compile-input` for files the static export needs before compilation, `post-refresh` for projections rebuilt after release data refresh, or `maintenance-only` for explicitly maintained outputs. Plain `prebuild` selects only compile inputs.
+
+Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
 ### PR And Release Gates
 
-Use `npm run check:pr -- --base=<ref>` for the adaptive local PR contract and the focused check commands in `package.json` for diagnosis. [Testing](./testing.md#ci-pipeline) owns lane membership and check selection. The workflows under `.github/workflows/` own the actual protected-PR and production release sequence; [Deployment Process](./deployment-process.md) owns operator procedure, rollback, and acceptance. A local script or green local check does not authorize or perform a production release. Boundary exceptions are documented in [Worker Import Boundary Waivers](./process/boundary-waivers.md).
+Use `npm run check:pr -- --base=<ref>` for the adaptive local PR contract and the focused check commands in `package.json` for diagnosis. [Testing: Commands](./testing.md#commands) owns their behavior and [Testing: CI Pipeline](./testing.md#ci-pipeline) owns lane membership and check selection. The [release snapshot state machine](./deployment-process.md#release-snapshot-state-machine) owns the protected-PR and production release sequence. Boundary exceptions are documented in [Worker Import Boundary Waivers](./process/boundary-waivers.md).
+
+For `check:focused` selection and preview behavior, use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area).
 
 ### Smoke And Operations
 
@@ -95,15 +122,25 @@ For live mutation, use the script-specific execute and confirmation guards and f
 
 Scratch reports, evidence captures, calibration output, and operator handoffs belong under the ignored `agents/` tree. Promote only durable policy or reviewed source changes into `docs/` or the owning data source.
 
-Generated-artifact destinations and version-control policy are owned by `scripts/lib/automation-registry.mjs`. Do not redirect or manually normalize registered outputs. The pre-commit hook runs `npm run sync:staged-artifacts` and may regenerate and stage affected committed artifacts. Its auto-stage path is strictly offline: no `autoStage` entry may be `network-derived`, so outputs such as `public-datasets` require manual regeneration with `npm run generate:public-datasets`. Staged selection includes deletions, and the sync preflights all selected generators and source state before running them; it stages outputs in one all-or-nothing operation only after every generator succeeds. The source guard includes untracked paths that match registered source globs. `PHAROS_SKIP_ARTIFACT_HOOK=1` is an explicit bypass, not evidence that generated outputs are current.
+Generated-artifact destinations and version-control policy are owned by `scripts/lib/automation-registry.mjs`. Do not redirect or manually normalize registered outputs. See [Pre-Commit Hook Mechanics](#pre-commit-hook-mechanics) for staged-artifact synchronization.
 
 D1 Insights captures are the specific exception documented above: they write `agents/d1-insights-<timestamp>.json`. Other commands' `--help`, registry entry, or runbook owns the exact destination.
 
+### Pre-Commit Hook Mechanics
+
+In the standard local npm setup, `package.json` runs `scripts/maintenance/prepare-workspace.ts` via the `prepare` script. Local installs materialize bootstrap-safe generated projections, materialize the history-derived projections with `npm run bootstrap:generated:history`, and run `git config core.hooksPath .githooks`, so the repo pre-commit hook is configured automatically after install. GitHub Actions skips that implicit prepare work and runs `npm run bootstrap:generated` explicitly through `.github/actions/setup-workspace/action.yml`, opting into the history-derived projections per job with its `bootstrap-history` input. If hooks were disabled or overridden locally, re-enable them with:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+The pre-commit hook runs `npm run sync:staged-artifacts` and regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. Its auto-stage path is strictly offline: no `autoStage` entry may be `network-derived`, so outputs such as `public-datasets` require manual regeneration with `npm run generate:public-datasets`. Staged selection includes deletions, and the sync preflights all selected generators and source state before running them; it stages outputs in one all-or-nothing operation only after every generator succeeds. The source guard includes untracked paths that match registered source globs. `PHAROS_SKIP_ARTIFACT_HOOK=1` is an explicit bypass, not evidence that generated outputs are current.
+
+The hook does not run a local test/build gate; [Testing](./testing.md#commands) owns local validation behavior.
+
 ### Release Ownership
 
-GitHub Actions owns the authoritative release gate. Production Worker deployment, remote D1 migrations, Pages publication, release-marker proof, and post-deploy acceptance run through the protected-main workflows described in [Deployment Process](./deployment-process.md). Operator scripts may prepare, classify, observe, or recover a release; they do not replace that path.
-
-A successful deploy proves activation or publication, not runtime health. For cron, scheduler, memory, migration, or ingestion-risk changes, observe the first relevant production execution before claiming operational success. Rollback is operator-led; follow the deployment procedure and remember that a Worker rollback does not automatically revert D1 or other bound resources.
+The [release snapshot state machine](./deployment-process.md#release-snapshot-state-machine) owns the authoritative gate and production mutation, [Operational Acceptance](./deployment-process.md#operational-acceptance) owns release-marker proof and first-execution observation, and [Failure Policy](./deployment-process.md#failure-policy) owns rollback semantics.
 
 ## Safe Usage Guidelines
 

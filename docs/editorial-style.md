@@ -71,7 +71,7 @@ Claim-safety rules for every product surface (profiles, OG cards, SEO metadata, 
 - Rankings and superlatives should name the metric, scope, and date ("highest liquidity score among tracked USD coins, June 2026"). Bare forms trigger advisory review, in product and editorial registers alike, because a scanner cannot determine whether nearby context supplies the qualification safely enough to block publication.
 - Technical risk terms should attribute to a defined methodology or source. Missing attribution is advisory for the same context-dependent reason, in product and editorial registers alike.
 
-`docs/design-context.md` owns product posture; this document owns sentences. On mechanics, this document wins.
+[`docs/design-language.md#context`](./design-language.md#context) owns product posture; this document owns sentences. On mechanics, this document wins.
 
 ## Banned constructions
 

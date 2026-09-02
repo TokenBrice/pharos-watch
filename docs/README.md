@@ -44,6 +44,9 @@ rg -n '/route-name/|src/app/route-name' docs
 ## Cross-Cutting Contracts
 
 - [pharos-urn.md](./pharos-urn.md) - stable citation identifiers and JSON-LD integration
+- [telegram-architecture.md](./telegram-architecture.md) - Telegram seam index; routes ingress/storage to Architecture, commands/dispatch/delivery to Alerts, and client/auth/state to the Mini App contract
+- [pricing-pipeline.md](./pricing-pipeline.md), [supply-snapshot.md](./supply-snapshot.md), [stability-index.md](./stability-index.md), [depeg-detection.md](./depeg-detection.md), and [blacklist-tracker.md](./blacklist-tracker.md) - authoritative data-pipeline feature contracts; [data-flow-map.md](./data-flow-map.md) remains the routing diagram
+- [design-language.md](./design-language.md#context) - design context and reusable UI rules; [design-tokens.md](./design-tokens.md) owns implementation tokens
 
 ## Process Index
 
@@ -51,7 +54,7 @@ Start with [Agent Start Here](./process/agent-start-here.md), then open only the
 
 | Process document | Kind | Skill wrapper | Primary command | Verification command |
 | --- | --- | --- | --- | --- |
-| [Adding a Stablecoin](./process/adding-a-stablecoin.md) | runbook | `contract-enrich`, `contract-populate`, `mica-research`, `resilience-classify`, `reserve-research`, `stablecoin-addition-orchestrator`, `stablecoin-info-fetch` | `npm run bootstrap:generated` | `npm run check:stablecoin-data` |
+| [Adding a Stablecoin](./process/adding-a-stablecoin.md) | runbook | `stablecoin-identity-contracts`, `compliance-research`, `resilience-classify`, `reserve-research`, `stablecoin-addition-orchestrator` | `npm run bootstrap:generated` | `npm run check:stablecoin-data` |
 | [Agent Artifacts](./process/agent-artifacts.md) | convention | `pharos-docs-sync-audit`, `pharos-release-runner` | none | `npm run check:agent-skills` |
 | [Blog Publishing](./process/blog-publishing.md) | runbook | none | edit the post body and registry | `npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts` |
 | [Worker Import Boundary Waivers](./process/boundary-waivers.md) | policy | none | none; review and document the waiver | `npx vitest run scripts/__tests__/eslint-import-boundaries.test.ts` |
@@ -65,7 +68,7 @@ Start with [Agent Start Here](./process/agent-start-here.md), then open only the
 | [Safety Score Curation-Expiry Sweep](./process/safety-score-curation-expiry-sweep.md) | runbook | none | `npm run safety-score-v9:replay -- --input <capture> --output <replay> --published-at <clock>` | complete the five closeout gates in the runbook |
 | [Safety Score Equivalence Harness](./process/safety-score-equivalence-harness.md) | methodology | none | `npm run safety-score-v9:replay -- --input <capture> --output <replay> --published-at <clock>` | `npm run safety-score-v9:diff -- --baseline <baseline> --candidate <candidate> --assert-empty` |
 | [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md) | runbook | `pharos-ci-failure-triage` | `npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset <asset>` | `node --import tsx scripts/ci/check-shock-coverage-freshness.ts` |
-| [Stablecoin Research Sidecars](./process/stablecoin-research-sidecars.md) | runbook | `genius-research`, `mica-research`, `reserve-research`, `stablecoin-addition-orchestrator`, `stablecoin-info-fetch` | `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` | `npm run check:stablecoin-data` |
+| [Stablecoin Research Sidecars](./process/stablecoin-research-sidecars.md) | runbook | `compliance-research`, `reserve-research`, `stablecoin-addition-orchestrator` | `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` | `npm run check:stablecoin-data` |
 | [Worker Runtime Experiments](./process/worker-runtime-experiments.md) | runbook | none | `npm run ops:benchmark-worker-compatibility -- --candidate-date YYYY-MM-DD` | compare both bundle/startup checks and local smoke runs |
 
 ## Methodology History

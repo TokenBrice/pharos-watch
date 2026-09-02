@@ -7,7 +7,7 @@ Applies to reusable product components under `src/components/`.
 - [Design language](../../docs/design-language.md)
 - [Design tokens](../../docs/design-tokens.md)
 - [Data visualization](../../docs/data-visualization.md)
-- [Design context](../../docs/design-context.md)
+- [Design context](../../docs/design-language.md#context)
 
 ## Invariants
 

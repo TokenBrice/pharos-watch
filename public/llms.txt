@@ -110,7 +110,6 @@
 - [API Reference](https://pharos.watch/docs/api-reference/): Public Pharos API contracts for stablecoin data: endpoints, authentication, response schemas, pagination, freshness headers, and dataset exports.
 - [Architecture](https://pharos.watch/docs/architecture/): How Pharos is built: static Next.js export, Cloudflare Pages Functions, Worker API lanes, D1 storage, route ownership, and SEO metadata rules.
 - [Data Flow Map](https://pharos.watch/docs/data-flow-map/): Source-to-UI map for Pharos stablecoin data, covering market prices, peg monitoring, liquidity, report cards, alerts, and generated public artifacts.
-- [Data Pipeline](https://pharos.watch/docs/data-pipeline/): Stablecoin data pipeline guide for price enrichment, source priority, freshness checks, integrity guardrails, fallback behavior, and sync cadence.
 - [Worker and API Limits](https://pharos.watch/docs/worker-and-api-limits/): Operational limits for the Pharos Worker and API: cron budgets, fetch connection caps, polling intervals, cache behavior, and guardrail checks.
 - [Classification](https://pharos.watch/docs/classification/): Stablecoin classification methodology for peg currencies, backing models, governance labels, commodity pegs, lifecycle status, and taxonomy pages.
 - [Stablecoin Listing Policy](https://pharos.watch/docs/listing-policy/): How Pharos admits, classifies, quarantines, delists, and preserves stablecoin records while separating catalog policy from runtime pricing failures.
@@ -125,7 +124,6 @@
 - [Mint Burn Flows](https://pharos.watch/docs/mint-burn-flows/): Mint and burn flow methodology covering issuance-chain ingestion, pressure scoring, Bank Run Gauge inputs, reconciliation, and backfills.
 - [Yield Intelligence](https://pharos.watch/docs/yield-intelligence/): Yield Intelligence methodology for stablecoin APY resolution, Pharos Yield Score, source confidence, reward warnings, and risk-adjusted ranking.
 - [Shadow Stablecoins](https://pharos.watch/docs/shadow-stablecoins/): Shadow stablecoin policy for PSI-only assets, eligibility boundaries, UI exclusions, data handling, and why these assets stay out of main rankings.
-- [Design Context](https://pharos.watch/docs/design-context/): Pharos design context for product direction, user needs, brand posture, information density, and how the dashboard should feel in daily use.
 - [Design Language](https://pharos.watch/docs/design-language/): Pharos design language reference for live UI patterns, typography, spacing, responsive behavior, visual hierarchy, and route-specific conventions.
 - [Design Tokens](https://pharos.watch/docs/design-tokens/): Design token reference for Pharos CSS variables, semantic layers, colors, spacing, component styling, and token ownership rules.
 

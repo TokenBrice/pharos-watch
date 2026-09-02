@@ -112,7 +112,7 @@ It explicitly rejects the Web3-marketing aesthetic (purple gradients, glassmorph
 > the mark is the identity at avatar scale, the drawn lighthouse is the identity in the product.
 > This is a deliberate split, not drift — do not "reconcile" one to the other.
 
-**Source of truth.** This file is faithful to the **as-built code** and is the machine-readable mirror for AI agents generating screens. Its tokens mirror `src/styles/tokens/primitives.css` + `semantic.css` (the live source, resolved through `src/app/globals.css`). The canonical human-facing rationale lives in `docs/design-context.md` (canonical), `docs/design-language.md` (live baseline), and `docs/design-tokens.md`. The Figma inventory lives in `agents/figma-redesign/`. Regenerate this file (`/impeccable document`) when tokens or the homepage composition change.
+**Source of truth.** This file is faithful to the **as-built code** and is the machine-readable mirror for AI agents generating screens. Its tokens mirror `src/styles/tokens/primitives.css` + `semantic.css` (the live source, resolved through `src/app/globals.css`). The canonical human-facing rationale lives in `docs/design-language.md#context` (canonical), `docs/design-language.md` (live baseline), and `docs/design-tokens.md`. The Figma inventory lives in `agents/figma-redesign/`. Regenerate this file (`/impeccable document`) when tokens or the homepage composition change.
 
 > **History:** a Figma handoff proposed retiring frost-blue for a neutral/Radix palette; the owner's final call (2026-06-27) **kept frost-blue + the lighthouse identity** and neutralized only the global nav (sidebar → top-nav). This doc reflects that decision and the shipped code, not the superseded retirement proposal.
 

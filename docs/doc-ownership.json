@@ -19,7 +19,7 @@
       "docs": ["docs/stablecoin-data.md", { "path": "docs/process/adding-a-stablecoin.md", "anchor": "source-of-truth" }],
       "background": ["docs/listing-policy.md", "docs/about-page.md"],
       "alsoRead": ["shared/data/stablecoins/AGENTS.md"],
-      "checks": ["npm run check:stablecoin-data", "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts"],
+      "checks": ["npm run lint:changed", "npm run check:stablecoin-data", "npm run check:generated-artifacts -- --only=stablecoin-client-projections", "npm run typecheck", "npm run typecheck:worker", "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts"],
       "rules": ["Keep canonical order, generated data, and schemas aligned.", "Commit base coin sources before final sitemap-date generation.", "Do not add ad hoc supply overrides outside documented fail-closed admission paths."],
       "hints": ["Update methodology docs only when scoring or classification semantics change."]
     },
@@ -38,8 +38,8 @@
       "label": "Pricing pipeline or source roster",
       "risk": "high",
       "sources": ["worker/src/cron/sync-stablecoins/**", "worker/src/lib/price*.ts", "worker/src/lib/address-price-providers/**", "worker/src/lib/authoritative-price-sources/**", "shared/lib/pricing-*.ts", "shared/lib/pricing-provider-config.ts"],
-      "docs": [{ "path": "docs/pricing-pipeline.md", "anchor": "primary-consensus" }, "docs/data-pipeline.md", "docs/about-page.md"],
-      "checks": ["npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
+      "docs": [{ "path": "docs/pricing-pipeline.md", "anchor": "primary-consensus" }, { "path": "docs/supply-snapshot.md", "anchor": "supply-pipeline" }, "docs/about-page.md"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
       "rules": ["Consume or cancel failed fetch bodies before opening more Worker fetches.", "Do not multiply DefiLlama list-endpoint supply by price."],
       "hints": ["Structured methodology history lives under shared/data/methodology-changelogs/pricing-pipeline/."]
     },
@@ -50,7 +50,7 @@
       "sources": ["shared/lib/api-endpoints/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/api/**", "worker/src/handlers/http/**", "src/hooks/api-hooks.ts", "src/lib/api.ts"],
       "docs": ["docs/api-endpoint-authoring.md", { "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling" }],
       "background": [{ "path": "docs/api-reference.md", "anchor": "public-endpoints" }, "docs/data-flow-map.md"],
-      "checks": ["npm run test:critical-contracts"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts"],
       "rules": ["Route flags, auth lane behavior, cache metadata, and site-data allowlists are centralized."]
     },
     {
@@ -59,7 +59,7 @@
       "risk": "medium",
       "sources": ["worker/src/api/feedback.ts", "worker/src/api/feedback/**"],
       "docs": ["docs/feedback-pipeline.md", { "path": "docs/api-reference.md", "anchor": "post-apifeedback" }],
-      "checks": ["npx vitest run worker/src/api/feedback"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npx vitest run worker/src/api/feedback"],
       "rules": ["Use getCirculatingRaw(); cached DefiLlama circulating values are already USD-denominated.", "Feedback verification thresholds follow the shared peg-type depeg policy."]
     },
     {
@@ -71,7 +71,7 @@
       "docs": ["docs/process/cron-trigger-policy.md"],
       "background": ["docs/worker-and-api-limits.md", "docs/data-flow-map.md", { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" }],
       "alsoRead": ["worker/AGENTS.md"],
-      "checks": ["npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron worker/src/handlers/scheduled"],
+      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron worker/src/handlers/scheduled"],
       "rules": ["Pick the trigger slot before adding fetch-heavy work.", "Cron jobs use Pharos's conservative six-connection trigger budget; consume response bodies before opening more fetches."]
     },
     {
@@ -80,7 +80,7 @@
       "risk": "high",
       "sources": ["worker/src/cron/yield-sync/**", "worker/src/cron/sync-yield-data.ts", "worker/src/cron/sync-yield-supplemental.ts", "worker/src/cron/yield-*.ts", "worker/src/handlers/scheduled/*yield*.ts", "shared/lib/yield*.ts", "shared/data/yield/**"],
       "docs": [{ "path": "docs/yield-intelligence.md", "anchor": "engineering-contract" }, "docs/yield-intelligence-operations.md"],
-      "checks": ["npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron/yield-sync worker/src/cron/__tests__/sync-yield-data-lending-degradation.test.ts"],
+      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron/yield-sync worker/src/cron/__tests__/sync-yield-data-lending-degradation.test.ts"],
       "rules": ["Yield source and publication changes must preserve fail-closed freshness and provenance behavior."]
     },
     {
@@ -89,25 +89,34 @@
       "risk": "high",
       "sources": ["shared/types/digest*.ts", "worker/src/lib/digest-safety-map.ts", "worker/src/cron/daily-digest.ts", "worker/src/cron/daily-digest/**", "worker/src/cron/digest/**", "worker/src/cron/digest-publication-watchdog.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts", "scripts/maintenance/publish-safety-score-map.ts"],
       "docs": [{ "path": "docs/digest-pipeline.md", "anchor": "generation" }, { "path": "docs/safety-score-map.md", "anchor": "digest-map-pairing-bounded-carry-forward" }],
-      "checks": ["npm run check:cron-sync", "npx vitest run worker/src/cron/digest worker/src/cron/daily-digest worker/src/cron/__tests__/digest-publication-watchdog.test.ts"],
+      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:cron-sync", "npx vitest run worker/src/cron/digest worker/src/cron/daily-digest worker/src/cron/__tests__/digest-publication-watchdog.test.ts"],
       "rules": ["The digest embeds the dated map URL and never blocks on map publication."]
     },
     {
       "id": "telegram-api",
       "label": "Telegram ingress and API",
       "risk": "high",
-      "sources": ["worker/src/api/telegram*.ts", "worker/src/api/telegram-*/**", "worker/src/api/webhook-commands/**", "worker/src/handlers/http/*telegram*.ts"],
+      "sources": ["worker/src/api/telegram*.ts", "worker/src/api/telegram-*/**", "worker/src/handlers/http/*telegram*.ts"],
       "docs": [{ "path": "docs/telegram-architecture.md", "anchor": "1-ingress" }, "docs/runbooks/telegram-webhook-ingress.md", { "path": "docs/api-reference.md", "anchor": "post-apitelegram-webhook" }],
-      "checks": ["npx vitest run worker/src/api worker/src/handlers/http/__tests__/telegram-ingress-abuse.test.ts"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npx vitest run worker/src/api worker/src/handlers/http/__tests__/telegram-ingress-abuse.test.ts"],
       "rules": ["Preserve webhook authentication, signed initData validation, and idempotent update handling."]
+    },
+    {
+      "id": "telegram-commands",
+      "label": "Telegram bot commands and user behavior",
+      "risk": "high",
+      "sources": ["worker/src/api/webhook-commands/**"],
+      "docs": [{ "path": "docs/telegram-alerts.md", "anchor": "commands" }],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npx vitest run worker/src/api/webhook-commands"],
+      "rules": ["Preserve command authorization, user-visible replies, and replay-safe state mutations."]
     },
     {
       "id": "telegram-dispatch",
       "label": "Telegram dispatch and delivery",
       "risk": "high",
       "sources": ["worker/src/cron/*telegram*.ts", "worker/src/cron/dispatch-telegram*.ts", "worker/src/cron/telegram-*/**", "worker/src/handlers/scheduled/*telegram*.ts", "worker/src/lib/telegram-*.ts", "shared/lib/telegram-*.ts", "shared/lib/telegram-delivery-policy.ts"],
-      "docs": [{ "path": "docs/telegram-alerts.md", "anchor": "dispatch-cron" }, "docs/runbooks/telegram-no-delivery.md", "docs/runbooks/telegram-rate-limit-storm.md"],
-      "checks": ["npm run check:telegram-load", "npm run check:cron-sync", "npx vitest run worker/src/cron/__tests__/dispatch-telegram-alerts-delivery-queue.test.ts worker/src/handlers/scheduled/__tests__/five-minute-telegram.test.ts"],
+      "docs": [{ "path": "docs/telegram-alerts.md", "anchor": "dispatch" }, "docs/runbooks/telegram-no-delivery.md", "docs/runbooks/telegram-rate-limit-storm.md"],
+      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:telegram-load", "npm run check:cron-sync", "npx vitest run worker/src/cron/__tests__/dispatch-telegram-alerts-delivery-queue.test.ts worker/src/handlers/scheduled/__tests__/five-minute-telegram.test.ts"],
       "rules": ["Preserve the durable delivery evidence trail.", "Do not replace dead-letter and target-state transitions with direct pending-row deletes."]
     },
     {
@@ -117,7 +126,7 @@
       "sources": ["src/app/pharoswatchbot/**"],
       "docs": ["docs/telegram-mini-app.md"],
       "alsoRead": ["src/AGENTS.md"],
-      "checks": ["npm run typecheck", "npx vitest run src/app/pharoswatchbot"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/app/pharoswatchbot"],
       "rules": ["Preserve signed initData authentication and browser-safe state handling."]
     },
     {
@@ -127,7 +136,7 @@
       "sources": ["worker/migrations/**", "worker/src/lib/db*.ts", "worker/src/lib/*store*.ts", "worker/src/api/backfill-*.ts"],
       "docs": ["docs/deployment-process.md", { "path": "docs/worker-infrastructure.md", "anchor": "shared-database-helpers" }],
       "background": ["worker/migrations/MANIFEST.md", "docs/process/d1-baseline-squash-plan.md"],
-      "checks": ["npm run check:migrations", "npx vitest run worker/src"],
+      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:migrations", "npx vitest run worker/src"],
       "rules": ["Migrations must be backward-compatible because CI applies D1 migrations before the new Worker is live.", "Destructive cleanup requires a separate coordinated rollout."]
     },
     {
@@ -137,7 +146,7 @@
       "sources": ["src/app/page.tsx", "src/components/home-*.tsx", "src/lib/home*.ts"],
       "docs": ["docs/homepage.md"],
       "alsoRead": ["src/AGENTS.md"],
-      "checks": ["npm run build", "npm run seo:check", "npx vitest run src/lib/__tests__/homepage-hero-snapshot.test.ts src/lib/__tests__/homepage-cohort-config.test.ts"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run build", "npm run seo:check", "npx vitest run src/lib/__tests__/homepage-hero-snapshot.test.ts src/lib/__tests__/homepage-cohort-config.test.ts"],
       "rules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."]
     },
     {
@@ -147,7 +156,7 @@
       "sources": ["src/app/screener/**", "src/components/screener/**", "src/lib/screener*.ts"],
       "docs": ["docs/screener-page.md"],
       "alsoRead": ["src/AGENTS.md"],
-      "checks": ["npm run typecheck", "npx vitest run src/app/screener src/components/screener src/lib/__tests__/screener-filters.test.ts"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/app/screener src/components/screener src/lib/__tests__/screener-filters.test.ts"],
       "rules": ["Keep filtering, column semantics, URL state, and export behavior aligned."]
     },
     {
@@ -157,7 +166,7 @@
       "sources": ["src/app/screener/picker/**"],
       "docs": ["docs/screener-picker-page.md"],
       "alsoRead": ["src/AGENTS.md"],
-      "checks": ["npm run typecheck", "npx vitest run src/app/screener/picker"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/app/screener/picker"],
       "rules": ["Preserve picker handoff and browser-session semantics."]
     },
     {
@@ -168,7 +177,7 @@
       "sources": ["src/**", "shared/lib/public-docs.ts", "next.config.ts"],
       "docs": ["docs/architecture.md"],
       "alsoRead": ["src/AGENTS.md"],
-      "checks": ["npm run build", "npm run seo:check", "npx vitest run src"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run build", "npm run seo:check", "npx vitest run src"],
       "rules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."]
     },
     {
@@ -177,7 +186,7 @@
       "risk": "medium",
       "sources": ["src/components/**"],
       "docs": ["docs/design-language.md"],
-      "checks": ["npm run typecheck", "npx vitest run src/components"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/components"],
       "rules": ["Keep Tailwind classes static and preserve the established component patterns."]
     },
     {
@@ -186,7 +195,7 @@
       "risk": "medium",
       "sources": ["src/lib/**"],
       "docs": ["docs/architecture.md"],
-      "checks": ["npm run typecheck", "npx vitest run src/lib"]
+      "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/lib"]
     },
     {
       "id": "editorial-publishing",
@@ -212,8 +221,8 @@
       "risk": "medium",
       "sources": ["src/app/globals.css", "src/styles/**", "src/components/ui/**", "src/assets/**", "worker/assets/**", "docs/data-visualization.md"],
       "docs": ["docs/design-language.md", "docs/design-tokens.md"],
-      "background": ["docs/design-context.md", "docs/data-visualization.md"],
-      "checks": ["npm run typecheck", "npx vitest run src/components"],
+      "background": [{ "path": "docs/design-language.md", "anchor": "context" }, "docs/data-visualization.md"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/components"],
       "rules": ["Preserve the existing Pharos design language.", "Do not edit src/components/ui/ shadcn primitives unless explicitly required."]
     },
     {
@@ -234,7 +243,7 @@
       "sources": ["functions/**", "shared/lib/site-data-lane.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts", "scripts/maintenance/serve-static-export.ts", "next.config.ts"],
       "docs": ["docs/architecture.md", { "path": "docs/operator-origin-access.md", "anchor": "pages-functions-proxy" }, "docs/deployment-process.md"],
       "alsoRead": ["functions/AGENTS.md"],
-      "checks": ["npx vitest run functions", "npm run check:env-contract", "npm run test:smoke-transport"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npx vitest run functions", "npm run check:env-contract", "npm run test:smoke-transport"],
       "rules": ["Browser reads should use same-origin /_site-data/* unless explicitly exempt."]
     },
     {
@@ -270,7 +279,7 @@
       "risk": "low",
       "sources": ["docs/**", "README.md"],
       "docs": ["docs/README.md", "docs/doc-ownership.json"],
-      "checks": ["npm run check:verified-doc-links", "npm run check:doc-source-paths", "npm run check:doc-sync"],
+      "checks": ["npm run check:verified-doc-links", "npm run check:doc-source-paths", "npm run check:doc-sync", "npm run check:generated-artifacts -- --only=agents-doc"],
       "rules": ["Treat docs/ and README.md as the verified documentation corpus."]
     },
     {
@@ -321,7 +330,7 @@
       "docs": ["docs/architecture.md"],
       "background": ["docs/data-flow-map.md"],
       "alsoRead": ["shared/AGENTS.md"],
-      "checks": ["npm run typecheck", "npm run typecheck:worker"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker"],
       "rules": ["Use @shared/lib/... and @shared/types... for shared runtime imports; avoid relative cross-boundary imports."]
     },
     {
@@ -330,7 +339,7 @@
       "risk": "medium",
       "sources": ["shared/lib/**"],
       "docs": ["docs/data-flow-map.md"],
-      "checks": ["npm run typecheck", "npm run typecheck:worker", "npx vitest run shared/lib"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npx vitest run shared/lib"],
       "rules": ["Use @shared/lib/... and @shared/types... for shared runtime imports."]
     },
     {
@@ -385,7 +394,7 @@
       "label": "Font assets",
       "risk": "medium",
       "sources": ["src/assets/fonts/**", "data/fonts/glyphs-allowlist.txt", "scripts/maintenance/subset-fonts.mjs", "scripts/maintenance/install-whyte-fonts.ts", "src/lib/fonts/**", "worker/assets/fonts/**"],
-      "docs": ["docs/process/font-assets.md", "docs/design-context.md", "docs/design-language.md"],
+      "docs": ["docs/process/font-assets.md", { "path": "docs/design-language.md", "anchor": "context" }],
       "checks": ["npm run subset:fonts", "npm run typecheck"],
       "rules": ["Tracked webfonts, subset inputs, licensed local-only assets, and runtime loaders form one production contract."]
     },

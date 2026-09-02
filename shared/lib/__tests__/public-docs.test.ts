@@ -10,7 +10,7 @@ const DOCS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..",
 
 describe("PUBLIC_DOCS registry", () => {
   it("contains the reviewed initial public set", () => {
-    expect(PUBLIC_DOCS.length).toBe(21);
+    expect(PUBLIC_DOCS.length).toBe(19);
   });
 
   it("points every entry at an existing single-file markdown source", () => {

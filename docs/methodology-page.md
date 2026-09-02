@@ -83,7 +83,7 @@ If the pricing pipeline's source roster or live-price selection semantics change
 
 1. `docs/pricing-pipeline.md`
 2. `shared/data/methodology-changelogs/pricing-pipeline/`
-3. `docs/data-pipeline.md`
+3. `docs/pricing-pipeline.md#data-integrity-guardrails` and `docs/supply-snapshot.md#supply-pipeline`
 4. `docs/about-page.md` plus `src/app/about/page.tsx`
 
 For the safety-score changelog specifically, update both:

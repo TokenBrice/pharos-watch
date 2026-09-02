@@ -11,6 +11,14 @@
 /telegram/ /pharoswatchbot/ 301
 /telegram /pharoswatchbot/ 301
 
+# Consolidated public documentation routes.
+/docs/data-pipeline/* /docs/data-flow-map/ 301
+/docs/data-pipeline/ /docs/data-flow-map/ 301
+/docs/data-pipeline /docs/data-flow-map/ 301
+/docs/design-context/* /docs/design-language/ 301
+/docs/design-context/ /docs/design-language/ 301
+/docs/design-context /docs/design-language/ 301
+
 # Stablecoin selector route was renamed to picker; preserve old snapshot links.
 /screener/selector/* /screener/picker/:splat 301
 /screener/selector/ /screener/picker/ 301

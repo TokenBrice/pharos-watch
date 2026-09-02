@@ -62,24 +62,11 @@ git worktree prune --dry-run
 
 ## Repo Pre-Commit Hook
 
-In the standard local npm setup, `package.json` runs `scripts/maintenance/prepare-workspace.ts` via the `prepare` script. Local installs materialize bootstrap-safe generated projections, materialize the history-derived projections with `npm run bootstrap:generated:history`, and run `git config core.hooksPath .githooks`, so the repo pre-commit hook is configured automatically after install. GitHub Actions skips that implicit prepare work and runs `npm run bootstrap:generated` explicitly through `.github/actions/setup-workspace/action.yml`, opting into the history-derived projections per job with its `bootstrap-history` input. If hooks were disabled or overridden locally, re-enable them with:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-Hook behavior:
-
-1. The pre-commit hook regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. Its selection, abort, no-op, and bypass semantics are owned by [scripts.md](./scripts.md#operational-notes).
-2. The hook does not run a local test/build gate. GitHub branch protection and the aggregate PR gate are authoritative.
+Hook installation, generated-artifact synchronization, staging, abort, no-op, bypass, and non-validation behavior are owned by [Pre-Commit Hook Mechanics](./scripts.md#pre-commit-hook-mechanics).
 
 ## Local Validation Commands
 
-`npm run check:pr -- --base=<ref>` is the local counterpart to a normal code PR. It reads the committed `base...HEAD` diff, runs changed-file lint and source typing, adds Pages/Worker/Telegram guardrails only when relevant, checks affected generated artifacts, and runs the critical plus dependency-selected Vitest files.
-
-`npm run check:release` is the optional deeper rehearsal. It performs the Pages build, the shared Pages release artifact checks, and a credential-free Worker bundle proof. It does not mutate Cloudflare, D1, or production state and does not replace the protected GitHub gate.
-
-Use focused checks while iterating. Run `test:all`, full lint, typed lint, or `typecheck:tests` directly when a change affects those broad contracts; they also run in nightly/manual validation.
+Validation behavior for `check:pr`, `check:release`, focused iteration, and nightly/manual lanes is owned by [Testing: Commands](./testing.md#commands) and the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area).
 
 ## Yield History Cleanup Windows
 
@@ -97,12 +84,12 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 
 Production responsibility is split deliberately:
 
-- `.github/workflows/pull-request-checks.yml` owns adaptive source validation before merge; `.github/workflows/nightly-validation.yml` retains broad regression coverage.
-- `.github/workflows/zizmor.yml` analyzes workflow and composite-action changes before merge, after merge to `main`, and on its weekly backstop.
+- Validation workflow ownership and lane composition are documented in [Testing: CI Pipeline](./testing.md#ci-pipeline).
 - `.github/workflows/deploy-cloudflare.yml` selects and deploys the changed production surfaces after a protected `main` merge.
 - `.github/workflows/pages-release.yml` builds and publishes one exact Pages artifact.
 - `.github/workflows/rebuild-pages.yml` performs the one daily API-backed Pages data refresh.
-- Broad UI, accessibility, ops, analytics, asset-coherence, and transport checks remain PR, scheduled-monitor, or explicit operator commands; they do not control production mutation or automatic rollback.
+
+PRs do not build the static site. A successful protected merge triggers the dependency-free production deploy classifier after Node setup without installing the workspace, and the production Pages workflow performs the one authoritative build. Worker mutation retains migration checks and activation proof, then records a best-effort write-once D1 activation marker keyed by the verified Cloudflare version ID and timestamped from the matched Cloudflare deployment's `created_on`; Pages publication retains artifact checks and the release-marker proof. Static, Next compiler, and Playwright caches are separate so a job restores only the state it can consume.
 
 Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 

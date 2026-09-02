@@ -263,3 +263,12 @@ When changing blacklist coverage or behavior:
    npm run check:generated-artifacts -- --only=api-reference
    npm run check:cron-connections
    ```
+
+## Blacklist Sync State Semantics
+
+The `blacklist_sync_state.last_block` column has different semantics per chain type:
+
+- **EVM chains**: stores actual block numbers
+- **Tron**: stores millisecond timestamps (Tron events are ordered by timestamp, not block number)
+
+This is intentional — do not mix these values across chain types.

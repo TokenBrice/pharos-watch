@@ -39,13 +39,6 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
     group: "system",
   },
   {
-    slug: "data-pipeline",
-    title: "Data Pipeline",
-    summary:
-      "Stablecoin data pipeline guide for price enrichment, source priority, freshness checks, integrity guardrails, fallback behavior, and sync cadence.",
-    group: "system",
-  },
-  {
     slug: "worker-and-api-limits",
     title: "Worker and API Limits",
     summary:
@@ -142,13 +135,6 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
     summary:
       "Shadow stablecoin policy for PSI-only assets, eligibility boundaries, UI exclusions, data handling, and why these assets stay out of main rankings.",
     group: "methodology",
-  },
-  {
-    slug: "design-context",
-    title: "Design Context",
-    summary:
-      "Pharos design context for product direction, user needs, brand posture, information density, and how the dashboard should feel in daily use.",
-    group: "design",
   },
   {
     slug: "design-language",

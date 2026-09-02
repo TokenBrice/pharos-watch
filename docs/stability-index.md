@@ -143,3 +143,11 @@ See [API Reference](./api-reference.md) for the full response shape.
 ## Digest Integration
 
 The daily digest cron (08:05 UTC) queries the latest PSI sample plus daily rows (current and yesterday) and passes PSI score, band, components, and yesterday's score into the Anthropic digest prompt. Its market-cap, trend, supply-mover, and stress aggregates use the same core-universe boundary as PSI, so wrapper or investment supply is not narrated as independent stablecoin growth. The digest uses PSI as a market-regime frame within the body rather than the opener; the generation policy leads from the highest-impact editorial candidate, and PSI "is rarely the protagonist." The digest runs on its own 08:05 UTC trigger, five minutes after the daily PSI snapshot (`snapshot-psi`) at 08:00 UTC, so it reads today's stored row without an explicit promise chain.
+
+## Stability Index (PSI) Computation
+
+`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 30 minutes on the DB-only DEWS/PSI lane (`26,56 * * * *`) and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. If the DEWS dependency query is unavailable, empty, missing usable `computed_at`, or stale beyond two `compute-dews` intervals, the run returns `status: "degraded"` with `fallbackMode: "dews-unavailable"` and `preservedCurrentSample: true`, then skips fresh PSI sample publication instead of treating missing stress breadth as zero. If the active-depeg query is unavailable, the run also fails closed and skips publication instead of treating that outage as an empty depeg set. See [Pharos Stability Index](./stability-index.md) for the full algorithm, calibration examples, and band definitions.
+
+**Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
+
+**Storage:** 30-minute samples go into `stability_index_samples`; daily averages are aggregated by `snapshotPsiDaily()` into `stability_index`. Both tables store `score`, `band`, `components` (JSON), `input_snapshot` (JSON). Schema definitions are in `worker/migrations/0000_baseline.sql`.
