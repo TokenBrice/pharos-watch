@@ -85,6 +85,7 @@ function buildTargetExpiryUpdateSql(step: TargetExpiryStep): string {
 }
 
 function buildTargetExpiryRemainingSql(step: TargetExpiryStep): string {
+  // SAFETY: `step` is one of the TARGET_EXPIRY_STEPS `as const` descriptors above; table/predicate are literals.
   return `SELECT COUNT(*) FROM ${step.table}
            WHERE source_event_id = ? AND plan_generation = ? AND ${step.predicate}`;
 }

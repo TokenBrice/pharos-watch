@@ -58,6 +58,7 @@ function buildHistoryInsertStatement(
   target: HistoryTarget,
   values: unknown[],
 ): D1PreparedStatement {
+  // SAFETY: `target` is one of the HISTORY_TARGETS `as const` descriptors above; table/columns are literals.
   return db.prepare(
     `INSERT OR IGNORE INTO ${target.table} (
          ${target.columns.join(",\n         ")}
@@ -71,6 +72,7 @@ function buildHistoryRepairStatement(
   stablecoinId: string,
   attemptId: string,
 ): D1PreparedStatement {
+  // SAFETY: `target` is one of the HISTORY_TARGETS `as const` descriptors above; table/columns/projection are literals.
   return db.prepare(
     `INSERT OR IGNORE INTO ${target.table} (
          ${target.columns.join(",\n         ")}
