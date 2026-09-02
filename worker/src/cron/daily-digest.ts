@@ -13,7 +13,6 @@ import { buildDailyDigestInput, buildDigestSafetyMapCapture } from "./daily-dige
 import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
 import { reportCronProgress } from "../lib/cron-progress";
-import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
@@ -34,9 +33,10 @@ import {
   type DigestCredentialDiagnostics,
 } from "./digest/publish";
 import {
-  buildDigestLlmTelemetry,
   buildDigestQualityAssessment,
   classifyDigestChannelStatus,
+  finalizeDigestCronResult,
+  hasNonDeliveringDisposition,
   reportDigestCircuitOpen,
   reportDigestGenerationComplete,
   reportDigestLlmAttempt,
@@ -54,14 +54,6 @@ const TWITTER_SENT_MARKER_PREFIX = "daily-digest:twitter-sent:";
 
 function getTwitterSentMarkerKey(date: string): string {
   return `${TWITTER_SENT_MARKER_PREFIX}${date}`;
-}
-
-function hasNonDeliveringDisposition(
-  dispositions: Record<"twitter" | "telegram", "delivered" | "retryable" | "terminal-unsent" | "not-configured">,
-): boolean {
-  return Object.values(dispositions).some(
-    (disposition) => disposition === "retryable" || disposition === "terminal-unsent",
-  );
 }
 
 export async function generateDailyDigest(
@@ -358,56 +350,33 @@ export async function generateDailyDigest(
       error: err,
     });
   }
-  const qualityMetadata = formatQualityMetadata(qualityIssues);
-  await reportCronProgress(reportProgress, {
-    stage: "complete",
-    message: "Completed daily digest generation",
-    providerFamily: "digest",
-    itemsDone: 1,
-    itemsTotal: 1,
-    metadata: {
-      countTotals: {
-        editionNumber,
-        textChars: digestCopy.digestText.length,
-        extendedChars: digestCopy.digestExtended.length,
-        degradedReasons: degradedReasons.length,
-        qualityIssues: qualityIssues.length,
-        lifecycleFlags: lifecycleFlags.length,
-      },
-      twitterStatus: tweetStatus,
-      telegramStatus,
-      llmAttempts: digestCopy.llmAttempts,
-      editorialStyleGate: digestCopy.editorialStyleGate,
-    },
-  });
-  logWorkerEventArgs("handler", "info", `[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
   const lifecycleMetadata = lifecycleFlags.length > 0
     ? `, lifecycle-review: ${lifecycleFlags.map((flag) => `${flag.symbol}:${flag.kind}`).join("|")}`
     : "";
-  return {
-    itemCount: 1,
-    ...(degradedReasons.length > 0 || hasBlockingQualityIssues || hasNonDeliveringDisposition(delivery.dispositions)
-      ? { status: "degraded" as const }
-      : {}),
-    metadata: JSON.stringify({
-      summary: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}${qualityMetadata}${lifecycleMetadata}`,
-      channels: {
-        twitter: {
-          status: tweetStatus,
-          disposition: delivery.dispositions.twitter,
-          missingCredentialNames: credentialDiagnostics.twitterMissing ?? [],
-        },
-        telegram: {
-          status: telegramStatus,
-          disposition: delivery.dispositions.telegram,
-          missingCredentialNames: credentialDiagnostics.telegramMissing ?? [],
-        },
-      },
-      llm: buildDigestLlmTelemetry(resolvedLlmConfig, digestCopy.llmAttempts),
-      editorialStyleGate: digestCopy.editorialStyleGate,
-      wrapperEditorialAlerts: delivery.wrapperEditorialAlerts,
-    }),
-  };
+  return finalizeDigestCronResult({
+    reportProgress,
+    completionMessage: "Completed daily digest generation",
+    progressCountTotals: {
+      editionNumber,
+      textChars: digestCopy.digestText.length,
+      extendedChars: digestCopy.digestExtended.length,
+      degradedReasons: degradedReasons.length,
+      qualityIssues: qualityIssues.length,
+      lifecycleFlags: lifecycleFlags.length,
+    },
+    summaryBeforeQuality: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}`,
+    summaryAfterQuality: lifecycleMetadata,
+    publication: delivery,
+    credentialDiagnostics,
+    degradedReasons,
+    qualityIssues,
+    hasBlockingQualityIssues,
+    llmConfig: resolvedLlmConfig,
+    digestCopy,
+    onQualityMetadata: (qualityMetadata) => {
+      logWorkerEventArgs("handler", "info", `[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
+    },
+  });
 }
 
 export type ResumeDailyDigestDeliveryOutcome =

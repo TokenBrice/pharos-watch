@@ -192,6 +192,17 @@ function getInsertDigestBinds(db: MockD1Database): unknown[] | undefined {
   return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"))?.binds;
 }
 
+function expectExactDailyFinalMetadata(metadataText: string | undefined): void {
+  const metadata = JSON.parse(String(metadataText));
+  expect(metadataText).toBe(JSON.stringify({
+    summary: metadata.summary,
+    channels: metadata.channels,
+    llm: metadata.llm,
+    editorialStyleGate: metadata.editorialStyleGate,
+    wrapperEditorialAlerts: metadata.wrapperEditorialAlerts,
+  }));
+}
+
 function styleGateModeTables(modes: { daily: "shadow" | "enforce"; weekly: "shadow" | "enforce" }) {
   return (Object.entries(modes) as Array<[keyof typeof modes, "shadow" | "enforce"]>).map(([kind, mode]) => ({
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -281,6 +292,7 @@ describe("generateDailyDigest", () => {
     expect(result.itemCount).toBe(1);
     expect(result.metadata).toContain("tweet: ok");
     expect(result.metadata).toContain("telegram: ok");
+    expectExactDailyFinalMetadata(result.metadata);
 
     const insertBinds = getInsertDigestBinds(db as MockD1Database);
     expect(insertBinds).toBeDefined();
@@ -554,6 +566,7 @@ describe("generateDailyDigest", () => {
       },
       editorialStyleGate: { mode: "enforce" },
     });
+    expectExactDailyFinalMetadata(result.metadata);
   });
 
   it("skips only a wrapper-failing channel without another model generation", async () => {

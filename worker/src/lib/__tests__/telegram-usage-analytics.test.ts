@@ -120,8 +120,8 @@ describe("telegram usage analytics", () => {
 
     const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
     expect(inserts).toHaveLength(2);
-    expect(inserts[0]?.binds).toEqual(["42", 101, 101, null, 101]);
-    expect(inserts[1]?.binds).toEqual(["43", null, 103, "network", 103]);
+    expect(inserts[0]?.binds).toEqual(["42", 101, null, 101, null, 101]);
+    expect(inserts[1]?.binds).toEqual(["43", null, null, 103, "network", 103]);
   });
 
   it("merges explicit top-coin follows with the preset-aware shape", async () => {

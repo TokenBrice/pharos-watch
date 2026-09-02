@@ -56,6 +56,16 @@ export async function recordProviderEnvironmentBlocked(
   status: number,
   nowSec: number,
 ): Promise<void> {
+  return recordProviderBlockedUntil(db, providerId, status, nowSec, nowSec + BINANCE_ENVIRONMENT_BLOCK_TTL_SEC);
+}
+
+async function recordProviderBlockedUntil(
+  db: D1Database,
+  providerId: string,
+  status: number,
+  nowSec: number,
+  nextProbeAt: number,
+): Promise<void> {
   try {
     await db.prepare(
       `INSERT INTO pricing_provider_runtime_state
@@ -74,7 +84,7 @@ export async function recordProviderEnvironmentBlocked(
       providerId,
       status,
       nowSec,
-      nowSec + BINANCE_ENVIRONMENT_BLOCK_TTL_SEC,
+      nextProbeAt,
       nowSec,
       nowSec,
     ).run();
@@ -115,24 +125,7 @@ export async function suppressProviderUntil(
   nowSec: number,
   nextProbeAt: number,
 ): Promise<void> {
-  try {
-    await db.prepare(
-      `INSERT INTO pricing_provider_runtime_state
-         (provider_id, availability, blocked_status, blocked_at, next_probe_at, last_probe_at,
-          consecutive_blocked, target_cursor, updated_at)
-       VALUES (?, 'blocked', ?, ?, ?, ?, 1, 0, ?)
-       ON CONFLICT(provider_id) DO UPDATE SET
-         availability = 'blocked',
-         blocked_status = excluded.blocked_status,
-         blocked_at = excluded.blocked_at,
-         next_probe_at = excluded.next_probe_at,
-         last_probe_at = excluded.last_probe_at,
-         consecutive_blocked = pricing_provider_runtime_state.consecutive_blocked + 1,
-         updated_at = excluded.updated_at`,
-    ).bind(providerId, status, nowSec, Math.max(nowSec + 1, nextProbeAt), nowSec, nowSec).run();
-  } catch (error) {
-    tolerateStateTableError(error);
-  }
+  return recordProviderBlockedUntil(db, providerId, status, nowSec, Math.max(nowSec + 1, nextProbeAt));
 }
 
 export async function readProviderNegativeCache(

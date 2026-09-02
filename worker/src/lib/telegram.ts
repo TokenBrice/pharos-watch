@@ -376,18 +376,8 @@ export interface BatchMessage {
   safetyScoreIdentity?: import("@shared/types/safety-score-publication").SafetyScorePublicationIdentity;
 }
 
-export interface BatchResult {
+export interface BatchResult extends SendToChatResult {
   chatId: string;
-  ok: boolean;
-  blocked: boolean;
-  retryable: boolean;
-  permanentFailure: boolean;
-  statusCode: number | null;
-  errorClass: TelegramSendErrorClass | null;
-  delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
-  retryAfterSec: number | null;
-  rateLimitScope?: "chat" | "global";
-  migrateToChatId?: string;
   attempted?: boolean;
   skippedReason?:
     | "predecessor_failure"

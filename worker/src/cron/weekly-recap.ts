@@ -11,10 +11,11 @@ import { SECONDS } from "../lib/time-constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseJson } from "../lib/json-parse";
 import {
-  buildDigestLlmTelemetry,
   buildDigestQualityAssessment,
   classifyDigestChannelStatus,
   didDigestChannelDeliver,
+  finalizeDigestCronResult,
+  hasNonDeliveringDisposition,
   markDigestMetaBlocked,
   reportDigestCircuitOpen,
   reportDigestGenerationComplete,
@@ -25,7 +26,6 @@ import {
   resolveDigestLlmConfig,
 } from "./digest/platform";
 import { reportCronProgress } from "../lib/cron-progress";
-import { formatQualityMetadata } from "./digest/quality-metadata";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { getMetaString } from "./daily-digest/digest-intelligence-utils";
@@ -169,15 +169,6 @@ async function updateWeeklyDeliveryMeta(
     )
     .bind(digestMeta, row.generated_at)
     .run();
-}
-
-function hasNonDeliveringDisposition(dispositions: {
-  twitter: "delivered" | "retryable" | "terminal-unsent" | "not-configured";
-  telegram: "delivered" | "retryable" | "terminal-unsent" | "not-configured";
-}): boolean {
-  return Object.values(dispositions).some(
-    (disposition) => disposition === "retryable" || disposition === "terminal-unsent",
-  );
 }
 
 export async function generateWeeklyRecap(
@@ -646,53 +637,23 @@ export async function generateWeeklyRecap(
     },
   );
 
-  const qualityMetadata = formatQualityMetadata(qualityIssues);
-
-  await reportCronProgress(reportProgress, {
-    stage: "complete",
-    message: "Completed weekly recap generation",
-    providerFamily: "digest",
-    itemsDone: 1,
-    itemsTotal: 1,
-    metadata: {
-      countTotals: {
-        textChars: digestCopy.digestText.length,
-        extendedChars: digestCopy.digestExtended.length,
-        qualityIssues: qualityIssues.length,
-      },
-      twitterStatus: publication.tweetStatus,
-      telegramStatus: publication.telegramStatus,
-      usedRawTextFallback: digestCopy.usedRawTextFallback,
-      llmAttempts: digestCopy.llmAttempts,
-      editorialStyleGate: digestCopy.editorialStyleGate,
+  return finalizeDigestCronResult({
+    reportProgress,
+    completionMessage: "Completed weekly recap generation",
+    progressCountTotals: {
+      textChars: digestCopy.digestText.length,
+      extendedChars: digestCopy.digestExtended.length,
+      qualityIssues: qualityIssues.length,
     },
+    progressMetadata: { usedRawTextFallback: digestCopy.usedRawTextFallback },
+    summaryBeforeQuality: `weekly: ${digestCopy.digestText.length} chars, tweet: ${publication.tweetStatus}, telegram: ${publication.telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}`,
+    metadataAfterSummary: { digestDate, scheduledAtSec },
+    publication,
+    credentialDiagnostics,
+    degradedReasons,
+    qualityIssues,
+    hasBlockingQualityIssues,
+    llmConfig: resolvedLlmConfig,
+    digestCopy,
   });
-  return {
-    itemCount: 1,
-    ...(degradedReasons.length > 0 ||
-    hasBlockingQualityIssues ||
-    hasNonDeliveringDisposition(publication.dispositions)
-      ? { status: "degraded" as const }
-      : {}),
-    metadata: JSON.stringify({
-      summary: `weekly: ${digestCopy.digestText.length} chars, tweet: ${publication.tweetStatus}, telegram: ${publication.telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}${qualityMetadata}`,
-      digestDate,
-      scheduledAtSec,
-      channels: {
-        twitter: {
-          status: publication.tweetStatus,
-          disposition: publication.dispositions.twitter,
-          missingCredentialNames: credentialDiagnostics.twitterMissing ?? [],
-        },
-        telegram: {
-          status: publication.telegramStatus,
-          disposition: publication.dispositions.telegram,
-          missingCredentialNames: credentialDiagnostics.telegramMissing ?? [],
-        },
-      },
-      llm: buildDigestLlmTelemetry(resolvedLlmConfig, digestCopy.llmAttempts),
-      editorialStyleGate: digestCopy.editorialStyleGate,
-      wrapperEditorialAlerts: publication.wrapperEditorialAlerts,
-    }),
-  };
 }
