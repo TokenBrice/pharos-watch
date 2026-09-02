@@ -38,7 +38,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 
 - Run the smallest adequate checks for the touched area: `docs/testing.md#smallest-adequate-check-per-area`. Larger committed batches: `npm run check:pr -- --base=<ref>`; `npm run check:release` only for an explicit production-build rehearsal. GitHub Actions owns the release gate.
 - Commit thematically with a descriptive subject and a why-focused body. The pre-commit hook regenerates and stages affected registered artifacts.
-- Do not create a branch, worktree, or PR unless asked. A request to push/publish/release authorizes the protected-main PR path; never push `main` directly.
+- Do not create a branch, worktree, or PR unless asked. A request to push/publish/release authorizes the protected-main PR path; never push `main` directly. Merge release PRs with `gh pr merge --merge`; never squash or rebase them.
 - A green deploy is not runtime health: for cron, scheduler, memory, migration, or ingestion changes, observe the first production execution before claiming success.
 
 ## Generated context

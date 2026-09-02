@@ -1,5 +1,5 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   alertSafetyIdentitiesAreComparable,
   buildAlertSafetySnapshotEnvelope,
@@ -344,7 +344,7 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
     launch:
       mustSeedSnapshots && previousLaunchIds != null
         ? previousLaunchIds
-        : PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
+        : WORKER_PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
     reserveDispatched,
   };
   const previousReserveDriftIds = reserveNeedsColdSeed

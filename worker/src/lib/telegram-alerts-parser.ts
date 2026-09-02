@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   resolveTelegramPresetAlias,
   type TelegramPresetId,
@@ -95,7 +95,7 @@ function levenshteinDistance(a: string, b: string): number {
 
 // ---------- Ticker Resolution ----------
 
-function buildSymbolIndex(coins: readonly typeof TRACKED_STABLECOINS[number][]): Map<string, ResolvedCoin[]> {
+function buildSymbolIndex(coins: readonly typeof WORKER_TRACKED_STABLECOINS[number][]): Map<string, ResolvedCoin[]> {
   const map = new Map<string, ResolvedCoin[]>();
   for (const meta of coins) {
     const key = meta.symbol.toLowerCase();
@@ -110,7 +110,7 @@ function buildSymbolIndex(coins: readonly typeof TRACKED_STABLECOINS[number][]):
   return map;
 }
 
-function buildIdIndex(coins: readonly typeof TRACKED_STABLECOINS[number][]): Map<string, ResolvedCoin> {
+function buildIdIndex(coins: readonly typeof WORKER_TRACKED_STABLECOINS[number][]): Map<string, ResolvedCoin> {
   return new Map(coins.map((meta) => [
     meta.id.toLowerCase(),
     { id: meta.id, symbol: meta.symbol, name: meta.name },
@@ -120,8 +120,8 @@ function buildIdIndex(coins: readonly typeof TRACKED_STABLECOINS[number][]): Map
 /** Build lowercase symbol / id indexes once at module load. */
 const SUBSCRIBABLE_SYMBOL_INDEX = buildSymbolIndex(TELEGRAM_SUBSCRIBABLE_STABLECOINS);
 const SUBSCRIBABLE_ID_INDEX = buildIdIndex(TELEGRAM_SUBSCRIBABLE_STABLECOINS);
-const TRACKED_SYMBOL_INDEX = buildSymbolIndex(TRACKED_STABLECOINS);
-const TRACKED_ID_INDEX = buildIdIndex(TRACKED_STABLECOINS);
+const TRACKED_SYMBOL_INDEX = buildSymbolIndex(WORKER_TRACKED_STABLECOINS);
+const TRACKED_ID_INDEX = buildIdIndex(WORKER_TRACKED_STABLECOINS);
 
 function indexesForScope(scope: TickerResolutionScope): {
   symbols: Map<string, ResolvedCoin[]>;

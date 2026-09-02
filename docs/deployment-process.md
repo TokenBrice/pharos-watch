@@ -10,7 +10,8 @@ This document defines the production deploy flow, the GitHub Actions release gat
 
 1. Pull requests into protected `main` must pass the aggregate validation gate. The resulting merge push triggers production deployment, while a separate Pages-only rebuild workflow refreshes the static export daily. Manual production dispatch is main-only.
 2. Agents and routine maintenance default to the current `main` checkout. Do not create a branch, worktree, or PR unless the maintainer explicitly asks for one. A request to push, publish, release, or take work to production is authorization to use the required protected-main branch/PR path; it is not authorization for a direct `main` push.
-3. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Run focused checks before opening its PR; GitHub Actions owns the authoritative release gate.
+3. Merge release pull requests with a merge commit (`gh pr merge --merge`), never with squash or rebase merge. Before declaring the release merged, verify the resulting `main` commit has two parents and contains the recorded PR head SHA.
+4. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Run focused checks before opening its PR; GitHub Actions owns the authoritative release gate.
 
 ## Release Snapshot State Machine
 

@@ -1,4 +1,8 @@
-import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  WORKER_ACTIVE_IDS,
+  WORKER_PRE_LAUNCH_STABLECOINS,
+  WORKER_TRACKED_META_BY_ID,
+} from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { DepegEventCloseReason } from "@shared/types/market";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../lib/abort";
@@ -155,7 +159,7 @@ function isRecoveryClosure(row: Pick<ClosedDepegResolutionRow, "close_reason" | 
 
 function eventPriceCurrency(stablecoinId: string, pegReference: number): string {
   if (pegReference !== 1) return "USD";
-  return TRACKED_META_BY_ID.get(stablecoinId)?.flags.pegCurrency ?? "USD";
+  return WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.pegCurrency ?? "USD";
 }
 
 function activeDepegDisplayPrice(row: { start_price: number; peak_price?: number | null }): number {
@@ -294,9 +298,9 @@ export async function buildTelegramDispatchEvents(
   const prevLaunchIds = previousLaunchSnapshot.status === "ok" && Array.isArray(previousLaunchSnapshot.data)
     ? new Set<string>(previousLaunchSnapshot.data)
     : new Set<string>();
-  const currentLaunchIds = new Set(PRE_LAUNCH_STABLECOINS.map((c) => c.id));
+  const currentLaunchIds = new Set(WORKER_PRE_LAUNCH_STABLECOINS.map((c) => c.id));
 
-  const launchPromoted = buildLaunchPromotions(prevLaunchIds, currentLaunchIds, ACTIVE_IDS, TRACKED_META_BY_ID);
+  const launchPromoted = buildLaunchPromotions(prevLaunchIds, currentLaunchIds, WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID);
 
   // Reserve-drift (C123): diff the producer's current drift set against the
   // dispatch baseline; both come from snapshotState (the dispatch cron never
@@ -304,7 +308,7 @@ export async function buildTelegramDispatchEvents(
   const reservePromoted = buildReserveTransitions(
     new Set(snapshotState.previousReserveDriftIds),
     new Set(snapshotState.currentReserveDriftIds),
-    TRACKED_META_BY_ID,
+    WORKER_TRACKED_META_BY_ID,
   );
 
   const dewsIds = dewsChanges.map((c) => c.stablecoinId);

@@ -1,9 +1,9 @@
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
-  ACTIVE_STABLECOINS,
-  TRACKED_STABLECOINS,
-  TRACKED_META_BY_ID,
-} from "@shared/lib/stablecoins/registry";
+  WORKER_ACTIVE_STABLECOINS,
+  WORKER_TRACKED_META_BY_ID,
+  WORKER_TRACKED_STABLECOINS,
+} from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   TELEGRAM_PRESET_DEFINITIONS,
   type TelegramPresetDefinition,
@@ -58,7 +58,7 @@ const PRESET_ALIAS_TO_ID = (() => {
 })();
 
 const CANONICAL_ORDER_INDEX = new Map(
-  TRACKED_STABLECOINS.map((stablecoin, index) => [stablecoin.id, index] as const),
+  WORKER_TRACKED_STABLECOINS.map((stablecoin, index) => [stablecoin.id, index] as const),
 );
 
 export function listTelegramPresets(): TelegramPresetDefinition[] {
@@ -85,7 +85,7 @@ function compareStablecoinIdsByMarketCap(
 
 function idsToResolvedCoins(ids: string[]): ResolvedCoin[] {
   return ids.flatMap((id) => {
-    const meta = TRACKED_META_BY_ID.get(id);
+    const meta = WORKER_TRACKED_META_BY_ID.get(id);
     if (!meta) return [];
     return [{ id: meta.id, symbol: meta.symbol, name: meta.name }];
   });
@@ -116,13 +116,13 @@ export async function resolveTelegramPresetTargets(
 
     let stablecoinIds: string[];
     if (definition.kind === "peg-top") {
-      stablecoinIds = ACTIVE_STABLECOINS
+      stablecoinIds = WORKER_ACTIVE_STABLECOINS
         .filter((stablecoin) => {
           if (definition.pegCurrency != null) {
-            return stablecoin.flags.pegCurrency === definition.pegCurrency;
+            return stablecoin.pegCurrency === definition.pegCurrency;
           }
           if (definition.excludePegCurrency != null) {
-            return stablecoin.flags.pegCurrency !== definition.excludePegCurrency;
+            return stablecoin.pegCurrency !== definition.excludePegCurrency;
           }
           return true;
         })
@@ -130,7 +130,7 @@ export async function resolveTelegramPresetTargets(
         .sort((a, b) => compareStablecoinIdsByMarketCap(a, b, marketCapsById))
         .slice(0, definition.topN);
     } else {
-      stablecoinIds = ACTIVE_STABLECOINS
+      stablecoinIds = WORKER_ACTIVE_STABLECOINS
         .filter((stablecoin) => (marketCapsById.get(stablecoin.id) ?? 0) >= (definition.minMarketCapUsd ?? 0))
         .map((stablecoin) => stablecoin.id)
         .sort((a, b) => compareStablecoinIdsByMarketCap(a, b, marketCapsById));

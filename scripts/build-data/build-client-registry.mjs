@@ -571,10 +571,20 @@ export function projectWorkerRuntimeCoin(coin, index) {
   if (typeof coin.symbol !== "string" || coin.symbol.length === 0) {
     throw new Error(`[client-registry] Worker runtime entry ${index} (${coin.id}): invalid or missing symbol`);
   }
+  if (typeof coin.name !== "string" || coin.name.length === 0) {
+    throw new Error(`[client-registry] Worker runtime entry ${index} (${coin.id}): invalid or missing name`);
+  }
+  if (typeof coin.flags?.pegCurrency !== "string" || coin.flags.pegCurrency.length === 0) {
+    throw new Error(`[client-registry] Worker runtime entry ${index} (${coin.id}): invalid or missing flags.pegCurrency`);
+  }
 
+  // Telegram alert/preset/recap modules read name and peg currency; keeping
+  // them here lets the five-minute Telegram lane run without the full registry.
   const projected = {
     id: coin.id,
     symbol: coin.symbol,
+    name: coin.name,
+    pegCurrency: coin.flags.pegCurrency,
   };
   if (Object.prototype.hasOwnProperty.call(coin, "status")) {
     projected.status = coin.status;

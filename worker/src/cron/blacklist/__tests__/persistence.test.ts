@@ -1,6 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { insertBlacklistRows } from "../persistence";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
+import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+
+afterEach(() => fixtures.closeAll());
 
 function makeRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {
   return {
@@ -34,6 +39,29 @@ function makeRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {
 }
 
 describe("insertBlacklistRows", () => {
+  // 2026-08-29 dropped the legacy `amount` column from the statement but left its
+  // placeholder behind; production rejected every new event for four days with
+  // `D1_ERROR: 26 values for 25 columns`. Run the real statement against the
+  // migrated schema so bind/column arity drift fails here, not in the cron.
+  it("persists rows through the migrated schema and ignores duplicates", async () => {
+    const { db, sqlite } = fixtures.open();
+    const rows = [
+      makeRow({ id: "usdt:ethereum:0xa:0", amount_native: 1_000, amount_usd_at_event: 1_000 }),
+      makeRow({ id: "usdt:ethereum:0xb:0" }),
+    ];
+
+    await expect(insertBlacklistRows(db, rows)).resolves.toBe(2);
+    await expect(insertBlacklistRows(db, [rows[1]!, makeRow({ id: "usdt:ethereum:0xc:0" })])).resolves.toBe(1);
+
+    expect(
+      sqlite.prepare("SELECT id, amount_native, amount_status FROM blacklist_events ORDER BY id").all(),
+    ).toEqual([
+      { id: "usdt:ethereum:0xa:0", amount_native: 1_000, amount_status: "recoverable_pending" },
+      { id: "usdt:ethereum:0xb:0", amount_native: null, amount_status: "recoverable_pending" },
+      { id: "usdt:ethereum:0xc:0", amount_native: null, amount_status: "recoverable_pending" },
+    ]);
+  });
+
   it("writes amount_native once without the deployed legacy amount column", async () => {
     const sqls: string[] = [];
     const binds: unknown[][] = [];
@@ -57,6 +85,11 @@ describe("insertBlacklistRows", () => {
     expect(sqls[0]).not.toContain(" amount, ");
     expect(sqls[0]).not.toContain("amount =");
     expect(binds[0]?.filter((value) => value === row.amount_native)).toHaveLength(1);
+    const columnCount = /\(([^()]*)\)\s*VALUES/i.exec(sqls[0]!)![1]!.split(",").length;
+    const placeholderCount = /VALUES\s*\(([^()]*)\)/i.exec(sqls[0]!)![1]!.split(",").length;
+    expect(columnCount).toBe(25);
+    expect(placeholderCount).toBe(columnCount);
+    expect(binds[0]).toHaveLength(columnCount);
   });
 
   it("retries transient D1 overloads through batchExecute", async () => {

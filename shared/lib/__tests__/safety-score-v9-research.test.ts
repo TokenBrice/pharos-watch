@@ -109,6 +109,33 @@ describe("v9 research handoff contracts", () => {
     });
   });
 
+  it("withholds cap-causal attribution when the outcome is NR", () => {
+    // apyusd-apyx, 2026-09-02 17:52 UTC: an active depeg bound the candidate
+    // score while the required parent was unrated. The card publishes no
+    // binding cap for NR, so the compile-time schema rejected the attribution.
+    const trace = scoreV9Input(
+      {
+        assetId: "nr-active-depeg-child",
+        pillars: { backing: 60, exit: 55, control: 50 },
+        pegScore: 100,
+        pegApplicable: true,
+        evidenceLevel: "strong",
+        trackRecordMonths: 12,
+        activeDepegBps: 10_000,
+        parentRequired: true,
+        parentScore: null,
+        structuralSignals: [],
+        unresolved: [],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalScore).toBeNull();
+    expect(trace.nrReasons).toContainEqual(expect.objectContaining({ code: "missing-parent-score" }));
+    expect(trace.caps).toContainEqual(expect.objectContaining({ source: "active-depeg" }));
+    expect(trace.adverseAttribution).toEqual([]);
+  });
+
   it.each([
     ["material-unknown-reserve-exposure", "issuer-undisclosed", 69],
     ["missing-latest-assurance-report", "issuer-undisclosed", 84],
