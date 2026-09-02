@@ -337,6 +337,12 @@ function findTrackedSourceHits(
     },
   );
   if (result.error) {
+    if ((result.error as NodeJS.ErrnoException).code === "ENOENT") {
+      return findSourceHits(
+        normalizedTokens,
+        sourcePaths.map((path) => ({ path, content: readFileSync(resolve(repoRoot, path), "utf8") })),
+      );
+    }
     throw new Error(`Unable to search tracked source files with rg: ${result.error.message}`);
   }
   if (result.status !== 0 && result.status !== 1) {

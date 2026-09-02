@@ -14,6 +14,8 @@ Use the [validation command index](./scripts.md#validation-command-index) for th
 
 Use `package.json` for the full live npm-script list. `scripts/lib/automation-registry.mjs` owns generated artifacts and deploy-impact classification; `scripts/lib/critical-test-files.mts` and `scripts/lib/critical-coverage.mjs` own critical-suite membership.
 
+`check:doc-symbols`, included by `check:doc-sync`, uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners.
+
 ### Smallest adequate check per area
 
 Use `npm run check:focused -- --file <path>` to route one path through the change contract and run the checks selected by its ownership mappings, preferring specific-tier mappings over fallback-tier mappings for each path; add `--plan-only` to inspect the plan without executing it.

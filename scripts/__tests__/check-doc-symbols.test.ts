@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { collectCodePaths, scanDocSymbols } from "../ci/check-doc-symbols.ts";
+import { collectCodePaths, findSourceHits, scanDocSymbols } from "../ci/check-doc-symbols.ts";
 
 describe("check-doc-symbols", () => {
   it("collects tracked and standard untracked code paths with the shared extension filter", () => {
@@ -52,5 +52,12 @@ describe("check-doc-symbols", () => {
     expect(result.violations.some(({ token }) => token === "src/hooks/staleSymbol")).toBe(false);
     expect(result.violations.some(({ token }) => token === "abcDe")).toBe(false);
     expect(result.violations.some(({ token }) => token === "missingInFence")).toBe(false);
+  });
+
+  it("finds exact symbols with the in-process search used when ripgrep is unavailable", () => {
+    expect(findSourceHits(["presentSymbol", "presentCall()", "absentSymbol"], [
+      { path: "src/fixture.ts", content: "const presentSymbolExtra = 1; presentCall();" },
+      { path: "src/other.ts", content: "export const presentSymbol = 2;" },
+    ])).toEqual(new Set(["presentSymbol", "presentCall"]));
   });
 });
