@@ -1,10 +1,9 @@
 import { resolveChainId } from "@shared/lib/chains";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import { sha256Hex } from "@shared/lib/sha256";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ContractDeployment } from "@shared/types/core";
 import { safetyScoreV9TransferDeploymentKey } from "@shared/types/safety-score-v9-transfer-overlays";
 import { z } from "zod";
+import { createCanonicalGenerationCodec } from "./canonical-generation-codec";
 import type { V9ExtensionRegistryMeta } from "./safety-score-v9-extension-shared";
 import type { SafetyScoreV9TransferMaterialScope } from "./safety-score-v9-extension-transfer";
 import { reviewedDeploymentObservationTimingIssue } from "./safety-score-v9-supply-attribution-contract";
@@ -50,33 +49,19 @@ const GenerationPayloadSchema = z.object({
   observationsByAssetId: z.record(z.string(), z.array(DeploymentObservationSchema)),
 }).strict();
 
-const GenerationSchema = GenerationPayloadSchema.extend({
-  generationId: z.string().regex(/^safety-score-v9-transfer-materiality:v1:[a-f0-9]{64}$/),
-}).strict().superRefine((generation, ctx) => {
-  const { generationId, ...payload } = generation;
-  if (generationId !== computeGenerationId(payload)) ctx.addIssue({ code: "custom", path: ["generationId"], message: "Transfer materiality generation ID mismatch" });
+const generationCodec = createCanonicalGenerationCodec({
+  payloadSchema: GenerationPayloadSchema,
+  generationIdSchema: z.string().regex(/^safety-score-v9-transfer-materiality:v1:[a-f0-9]{64}$/),
+  generationIdPrefix: "safety-score-v9-transfer-materiality:v1:",
+  digestPayload: (payload) => payload,
+  mismatchMessage: "Transfer materiality generation ID mismatch",
 });
 
-export type SafetyScoreV9TransferMaterialityGeneration = z.infer<typeof GenerationSchema>;
+export type SafetyScoreV9TransferMaterialityGeneration = z.infer<typeof generationCodec.schema>;
 
-function computeGenerationId(payload: z.infer<typeof GenerationPayloadSchema>): string {
-  return `safety-score-v9-transfer-materiality:v1:${sha256Hex(stableJsonStringifyV1(payload))}`;
-}
-
-export function createSafetyScoreV9TransferMaterialityGeneration(
-  payload: z.infer<typeof GenerationPayloadSchema>,
-): SafetyScoreV9TransferMaterialityGeneration {
-  return GenerationSchema.parse({ ...payload, generationId: computeGenerationId(payload) });
-}
-
-export function parseSafetyScoreV9TransferMaterialityGeneration(value: unknown): SafetyScoreV9TransferMaterialityGeneration {
-  const parsed = typeof value === "string" ? JSON.parse(value) : value;
-  return GenerationSchema.parse(parsed);
-}
-
-export function serializeSafetyScoreV9TransferMaterialityGeneration(generation: SafetyScoreV9TransferMaterialityGeneration): string {
-  return stableJsonStringifyV1(generation);
-}
+export const createSafetyScoreV9TransferMaterialityGeneration = generationCodec.create;
+export const parseSafetyScoreV9TransferMaterialityGeneration = generationCodec.parse;
+export const serializeSafetyScoreV9TransferMaterialityGeneration = generationCodec.serialize;
 
 function authoritativeDeployments(meta: V9ExtensionRegistryMeta): Array<{ deployment: ContractDeployment; key: string }> | null {
   const rows = (meta.contracts ?? []).map((deployment) => {

@@ -1,5 +1,5 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineRecordEntries, finalizeBackstopRegistry } from "./factory";
+import { configsFromBackstopEntries, defineRecordEntries, finalizeBackstopRegistry } from "./factory";
 import {
   basketRedeemBase,
   documentedBoundSupplyFull,
@@ -587,5 +587,5 @@ const FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   ],
 );
 
-export const PSM_AND_BASKET_BACKSTOP_CONFIGS = FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY.configs;
+export const PSM_AND_BASKET_BACKSTOP_CONFIGS = configsFromBackstopEntries(FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY.entries);
 export const PSM_AND_BASKET_BACKSTOP_ENTRIES = FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY.entries;

@@ -1,4 +1,4 @@
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type {
@@ -51,20 +51,8 @@ interface ReserveProtocolDtfRow {
   basket?: ReserveProtocolDtfBasketEntry[];
 }
 
-interface ReserveProtocolDtfAssetDescriptor {
-  address: string;
-  name: string;
-  risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-  blacklistable?: boolean;
-}
-
-interface ReserveProtocolDtfParams {
-  assets?: ReserveProtocolDtfAssetDescriptor[];
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-}
+type ReserveProtocolDtfParams = LiveReserveAdapterParamsByKey["reserve-protocol-dtf"];
+type ReserveProtocolDtfAssetDescriptor = NonNullable<ReserveProtocolDtfParams["assets"]>[number];
 
 const MAIN_SELECTOR = "0xdffeadd0";
 const ASSET_REGISTRY_SELECTOR = "0x979d7e86";
@@ -426,7 +414,7 @@ export async function fetchReserveProtocolDtfReserves(
   }
 
   const input = requireJsonInputFromConfig(config, "reserve-protocol-dtf");
-  const params = parseLiveReserveAdapterParams("reserve-protocol-dtf", config.params) as ReserveProtocolDtfParams;
+  const params = parseLiveReserveAdapterParams("reserve-protocol-dtf", config.params);
   const payload = await fetchJsonWithRetry<unknown>(input.url, signal, 10_000, ctx);
   return adaptReserveProtocolDtfRows(payload, coin, params.assets, input.url);
 }
@@ -438,7 +426,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "reserve-protocol-dtf");
-  const params = parseLiveReserveAdapterParams("reserve-protocol-dtf", config.params) as ReserveProtocolDtfParams;
+  const params = parseLiveReserveAdapterParams("reserve-protocol-dtf", config.params);
   const descriptorByAddress = buildDescriptorMap(params.assets);
   const rTokenContract = coin.contracts?.find((contract) => contract.chain === input.chain);
   if (!rTokenContract) {

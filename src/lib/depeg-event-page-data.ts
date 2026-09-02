@@ -1,10 +1,6 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import {
-  DepegEventStoredSnapshotSchema,
-  type DepegEventEntry,
-} from "@shared/types/market";
+import type { DepegEventEntry } from "@shared/types/market";
 import { selectStaticDepegEventPages } from "@/lib/depeg-event-config";
+import { DEPEG_EVENT_SNAPSHOT_PATH, readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
 import {
   buildSameDayDirectionCollisionSlugs,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
@@ -13,12 +9,11 @@ import {
 export type { DepegEventEntry } from "@shared/types/market";
 
 function readDepegEventEntries(): readonly DepegEventEntry[] {
-  const filePath = join(process.cwd(), "data/depeg-events.json");
   try {
-    return DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(filePath, "utf8")));
+    return readDepegEventSnapshot({ missing: "throw" });
   } catch (cause) {
     throw new Error(
-      `Failed to read depeg events from ${filePath}; run scripts/maintenance/sync-depeg-events.ts before building.`,
+      `Failed to read depeg events from ${DEPEG_EVENT_SNAPSHOT_PATH}; run scripts/maintenance/sync-depeg-events.ts before building.`,
       { cause },
     );
   }

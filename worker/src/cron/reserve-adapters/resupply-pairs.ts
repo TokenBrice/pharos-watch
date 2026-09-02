@@ -1,5 +1,5 @@
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import { throwIfAborted } from "../../lib/abort";
@@ -17,26 +17,8 @@ import { decodeAddressWord, decodeUint256Word } from "./abi-decode";
 import { normalizeEvmAddress } from "./evm";
 import { multicallResultByLabel } from "./onchain-identity";
 
-interface ResupplyUnderlyingDescriptor {
-  address: string;
-  name: string;
-  risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-}
-
-interface ResupplyPairsParams {
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  redemptionHandlerAddress?: string;
-  pairs?: ResupplyPairConfig[];
-  underlyings?: ResupplyUnderlyingDescriptor[];
-}
-
-interface ResupplyPairConfig {
-  key: string;
-  address: string;
-}
+type ResupplyPairsParams = LiveReserveAdapterParamsByKey["resupply-pairs"];
+type ResupplyUnderlyingDescriptor = ResupplyPairsParams["underlyings"][number];
 
 interface ResupplyPairSnapshot {
   pairKey: string;
@@ -276,7 +258,7 @@ export async function fetchResupplyPairsReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "resupply-pairs");
-  const params = parseLiveReserveAdapterParams("resupply-pairs", config.params) as ResupplyPairsParams;
+  const params = parseLiveReserveAdapterParams("resupply-pairs", config.params);
   if (!params.pairs || params.pairs.length === 0) {
     throw new Error("resupply-pairs requires at least one configured pair");
   }

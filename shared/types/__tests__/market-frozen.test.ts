@@ -47,9 +47,9 @@ describe("/api/stablecoins payload shape — frozen fields", () => {
     expect(entry.frozenAt).toBe("2026-04-27");
   });
 
-  it("rejects malformed frozenAt values", () => {
+  it.each(["not-a-registry-date", "2026-02-31"])("rejects invalid frozenAt value %s", (frozenAt) => {
     expect(() => StablecoinListResponseSchema.parse({
-      peggedAssets: [makeRawAsset({ id: "frozen-coin", frozen: true, frozenAt: "not-a-registry-date" })],
+      peggedAssets: [makeRawAsset({ id: "frozen-coin", frozen: true, frozenAt })],
     })).toThrow();
   });
 

@@ -82,7 +82,7 @@ import {
 } from "./core";
 import { validateMintAuthorityProfile } from "./stablecoin-meta-mint-authority-refinements";
 import { HttpUrlSchema } from "./validators";
-import { isValidIsoDateOnly } from "./date-primitives";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
 
 const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
 const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
@@ -93,9 +93,6 @@ const BlacklistabilityReviewStatusSchema = z.union([
 ]);
 const PositiveIntegerSchema = z.number().finite().int().positive();
 
-const StrictIsoDateSchema = z.string().refine(isValidIsoDateOnly, {
-  message: "Expected YYYY-MM-DD",
-});
 const ReviewDateSchema = StrictIsoDateSchema;
 
 // Shape only. `shared/types` must not import `shared/lib`, so the canonical-form
@@ -120,7 +117,7 @@ export const FuzzyDateSchema = z.string().refine(
     if (/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return true;
     if (/^\d{4}-Q[1-4]$/.test(value)) return true;
     if (/^\d{4}-H[1-2]$/.test(value)) return true;
-    return isValidIsoDateOnly(value);
+    return StrictIsoDateSchema.safeParse(value).success;
   },
   {
     message: "Expected YYYY, YYYY-MM, YYYY-MM-DD, YYYY-Q[1-4], or YYYY-H[1-2]",

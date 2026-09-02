@@ -1,17 +1,40 @@
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { sha256Hex } from "@shared/lib/sha256";
 import {
   beginReserveSyncAttempt,
   pruneLiveReserveHistory,
 } from "../live-reserves-store";
-import { buildReserveSyncRecordDeferredStatement } from "../live-reserves-store-statements";
+import { buildReserveCompositionHistoryInsertStatement, buildReserveCompositionHistoryRepairStatement, buildReserveSyncAttemptHistoryInsertStatement, buildReserveSyncAttemptHistoryRepairStatement, buildReserveSyncRecordDeferredStatement } from "../live-reserves-store-statements";
 import {
   finalizeReserveSuccess,
   mockReserveD1 as mockD1,
+  reserveCompositionInput,
   reserveSyncAttemptInput,
 } from "./live-reserves-store.test-support";
 
 describe("live-reserves-store", () => {
+  it("preserves history-target SQL and bind order", () => {
+    const db = mockD1();
+    const attemptId = "attempt-history-spec";
+    const composition = reserveCompositionInput(attemptId);
+    const attempt = {
+      stablecoinId: composition.stablecoinId, attemptedAt: composition.fetchedAt, adapterKey: composition.source,
+      breakerKey: "live-reserves:test", attemptId, status: "degraded" as const, warnings: [],
+      warningCount: 0, lastError: null, metadata: {},
+    };
+    const prepared = [
+      buildReserveCompositionHistoryInsertStatement(db, composition),
+      buildReserveSyncAttemptHistoryInsertStatement(db, attempt),
+      buildReserveCompositionHistoryRepairStatement(db, composition.stablecoinId, attemptId),
+      buildReserveSyncAttemptHistoryRepairStatement(db, composition.stablecoinId, attemptId),
+    ] as unknown as Array<{ sql: string; boundValues: unknown[] }>;
+
+    expect(prepared.map(({ sql, boundValues }) => sha256Hex(JSON.stringify([sql, boundValues])))).toEqual([
+      "2c285906db9d95105d793760d4ad9efe796e513099ab176b9d6ea5ccab6d9d4b", "fc98a361dec5e601605c4d93b1a38f95276a5d0677e2600d8e645e232dcf287a", "7a6c72d8c03fbcd510f78cd461f3d318b981045099a437fa3bd349ac36ea8f6e", "65c7da7ed37dd8deaed6d8f7de43f01a25c87e698aab391bf69eed06191002a7",
+    ]);
+  });
+
   it("fences the composition upsert so a late attempt cannot overwrite a newer row", async () => {
     const db = mockD1();
     const attemptId = "attempt-late";

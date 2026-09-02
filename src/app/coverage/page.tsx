@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeeAlsoFooter } from "@/components/see-also-footer";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { SEE_ALSO_GRAPH } from "@/lib/see-also-graph";
 import { buildCoverageDatasetJsonLd } from "@/lib/analytics-dataset-json-ld";
@@ -88,10 +89,7 @@ const route = createClientFeaturePage({
       </>,
     ],
     preface: (
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(COVERAGE_DATASET_JSON_LD) }}
-      />
+      <JsonLdScript json={safeJsonLd(COVERAGE_DATASET_JSON_LD)} />
     ),
   },
   beforeClient: COVERAGE_STATIC_SECTION,

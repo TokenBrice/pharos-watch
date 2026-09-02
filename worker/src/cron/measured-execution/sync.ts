@@ -76,7 +76,6 @@ import {
   type UniswapV4Deployment,
   type UniswapV4RuntimeEvidence,
 } from "./uniswap-v4";
-import { runSolanaClmmShadowLane } from "./solana-clmm/inventory";
 import {
   MAX_ADMISSION_ROTATION_CYCLES, MAX_EXPIRING_PRIORITY_RPC_REQUESTS, MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   MEASURED_EXECUTION_ADMISSION_SOURCE_KEY, MEASURED_EXECUTION_REFINEMENT_ROUNDS,
@@ -986,12 +985,5 @@ export async function syncDexShadowMeasuredExecution(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
-  const baseResult = await syncDexMeasuredExecutionLane(db, chainRpcs, signal, reportProgress, "shadow");
-  return runSolanaClmmShadowLane({
-    db,
-    chainRpcs,
-    baseResult,
-    signal,
-    reportProgress,
-  });
+  return syncDexMeasuredExecutionLane(db, chainRpcs, signal, reportProgress, "shadow");
 }

@@ -1,8 +1,16 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import {
+  parseDigestSafetyMapManifest,
+  parseDigestSafetyMapUtcDateMs as parseUtcDateMs,
+  type DigestSafetyMapManifest as SafetyMapManifest,
+  type DigestSafetyMapSummary,
+  type DigestSafetyMapTierSummary,
+} from "@shared/lib/digest-safety-map-contract";
 import { throwIfAborted } from "./abort";
 import { readResponseTextBoundedWithSignal } from "./response-body";
+export type { DigestSafetyMapSummary } from "@shared/lib/digest-safety-map-contract";
 
 const MANIFEST_URL = `${SITE_ORIGIN}/safety-scores/map.json`;
 const IMAGE_PATH = "/safety-scores/map.png";
@@ -19,49 +27,9 @@ const MAP_DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-interface SafetyMapManifest {
-  date: string;
-  asOfSec: number;
-  renderedAtSec: number;
-  edition: "daily";
-  bytes: { png: number };
-  mapSummary?: DigestSafetyMapSummary;
-}
-
-const SAFETY_MAP_TIERS = ["A", "B", "C", "D", "F"] as const;
-type SafetyMapTier = typeof SAFETY_MAP_TIERS[number];
-
-interface DigestSafetyMapTierSummary {
-  tier: SafetyMapTier;
-  range: string;
-  count: number;
-  mcapUsd: number;
-  sharePct: number;
-  leaders: Array<{ symbol: string; score: number; mcapUsd: number }>;
-}
-
-export interface DigestSafetyMapSummary {
-  date: string;
-  asOfSec: number;
-  methodologyVersion: string;
-  gradedCount: number;
-  notRatedCount: number;
-  totalMcapUsd: number;
-  floorMcapByTier: { a: number; other: number };
-  tiers: DigestSafetyMapTierSummary[];
-}
-
 export interface DigestSafetyMapCaptions {
   tweetHook: string;
   telegramAppendixHtml: string;
-}
-
-function parseUtcDateMs(value: unknown): number | null {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const parsed = new Date(`${value}T00:00:00Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
-    ? parsed.getTime()
-    : null;
 }
 
 function formatMapDateLabel(date: string): string {
@@ -78,148 +46,6 @@ export type DigestSafetyMapResolution =
       ageDays: number;
     }
   | { kind: "unavailable"; reason: string };
-
-function parseManifest(value: unknown): SafetyMapManifest | null {
-  if (!value || typeof value !== "object") return null;
-  const candidate = value as Partial<SafetyMapManifest>;
-  if (
-    typeof candidate.date !== "string"
-    || parseUtcDateMs(candidate.date) === null
-    || !Number.isFinite(candidate.asOfSec)
-    || !Number.isFinite(candidate.renderedAtSec)
-    || candidate.edition !== "daily"
-    || !candidate.bytes
-    || !Number.isFinite(candidate.bytes.png)
-    || candidate.bytes.png <= 0
-  ) {
-    return null;
-  }
-  const manifest: SafetyMapManifest = {
-    date: candidate.date,
-    asOfSec: candidate.asOfSec as number,
-    renderedAtSec: candidate.renderedAtSec as number,
-    edition: candidate.edition,
-    bytes: { png: candidate.bytes.png },
-  };
-  const mapSummary = parseMapSummary((value as { mapSummary?: unknown }).mapSummary);
-  return mapSummary && mapSummary.date === manifest.date && mapSummary.asOfSec === manifest.asOfSec
-    ? { ...manifest, mapSummary }
-    : manifest;
-}
-
-function isNonNegativeFinite(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
-}
-
-function isNonNegativeInteger(value: unknown): value is number {
-  return isNonNegativeFinite(value) && Number.isInteger(value);
-}
-
-function parseMapSummary(value: unknown): DigestSafetyMapSummary | null {
-  if (!value || typeof value !== "object") return null;
-  const candidate = value as Record<string, unknown>;
-  const floorMcapByTier = candidate.floorMcapByTier;
-  if (
-    typeof candidate.date !== "string"
-    || parseUtcDateMs(candidate.date) === null
-    || !isNonNegativeInteger(candidate.asOfSec)
-    || typeof candidate.methodologyVersion !== "string"
-    || candidate.methodologyVersion.trim().length === 0
-    || !isNonNegativeInteger(candidate.gradedCount)
-    || !isNonNegativeInteger(candidate.notRatedCount)
-    || !isNonNegativeFinite(candidate.totalMcapUsd)
-    || !floorMcapByTier
-    || typeof floorMcapByTier !== "object"
-    || !isNonNegativeFinite((floorMcapByTier as { a?: unknown }).a)
-    || !isNonNegativeFinite((floorMcapByTier as { other?: unknown }).other)
-    || !Array.isArray(candidate.tiers)
-    || candidate.tiers.length !== SAFETY_MAP_TIERS.length
-  ) {
-    return null;
-  }
-  const gradedCount = candidate.gradedCount;
-  const totalMcapUsd = candidate.totalMcapUsd;
-
-  const seenTiers = new Set<SafetyMapTier>();
-  const tiers: DigestSafetyMapTierSummary[] = [];
-  for (const rawTier of candidate.tiers) {
-    if (!rawTier || typeof rawTier !== "object") return null;
-    const tier = rawTier as Record<string, unknown>;
-    if (
-      typeof tier.tier !== "string"
-      || !SAFETY_MAP_TIERS.includes(tier.tier as SafetyMapTier)
-      || seenTiers.has(tier.tier as SafetyMapTier)
-      || typeof tier.range !== "string"
-      || tier.range.trim().length === 0
-      || !isNonNegativeInteger(tier.count)
-      || !isNonNegativeFinite(tier.mcapUsd)
-      || !isNonNegativeFinite(tier.sharePct)
-      || tier.sharePct > 100
-      || !Array.isArray(tier.leaders)
-      || tier.leaders.length > 3
-    ) {
-      return null;
-    }
-    const leaders: DigestSafetyMapTierSummary["leaders"] = [];
-    for (const rawLeader of tier.leaders) {
-      if (!rawLeader || typeof rawLeader !== "object") return null;
-      const leader = rawLeader as Record<string, unknown>;
-      if (
-        typeof leader.symbol !== "string"
-        || leader.symbol.trim().length === 0
-        || !isNonNegativeFinite(leader.score)
-        || leader.score > 100
-        || !isNonNegativeFinite(leader.mcapUsd)
-      ) {
-        return null;
-      }
-      leaders.push({
-        symbol: leader.symbol,
-        score: leader.score,
-        mcapUsd: leader.mcapUsd,
-      });
-    }
-    const parsedTier = {
-      tier: tier.tier as SafetyMapTier,
-      range: tier.range,
-      count: tier.count,
-      mcapUsd: tier.mcapUsd,
-      sharePct: tier.sharePct,
-      leaders,
-    };
-    seenTiers.add(parsedTier.tier);
-    tiers.push(parsedTier);
-  }
-  if (!SAFETY_MAP_TIERS.every((tier) => seenTiers.has(tier))) return null;
-  const tierCount = tiers.reduce((sum, tier) => sum + tier.count, 0);
-  const tierMcapUsd = tiers.reduce((sum, tier) => sum + tier.mcapUsd, 0);
-  const mcapTolerance = Math.max(0.01, totalMcapUsd * 1e-9);
-  if (tierCount !== gradedCount || Math.abs(tierMcapUsd - totalMcapUsd) > mcapTolerance) {
-    return null;
-  }
-  if (tiers.some((tier) => {
-    const computedShare = totalMcapUsd === 0
-      ? 0
-      : (tier.mcapUsd / totalMcapUsd) * 100;
-    return Math.abs(computedShare - tier.sharePct) > 0.11;
-  })) {
-    return null;
-  }
-
-  return {
-    date: candidate.date,
-    asOfSec: candidate.asOfSec,
-    methodologyVersion: candidate.methodologyVersion,
-    gradedCount,
-    notRatedCount: candidate.notRatedCount,
-    totalMcapUsd,
-    floorMcapByTier: {
-      a: (floorMcapByTier as { a: number }).a,
-      other: (floorMcapByTier as { other: number }).other,
-    },
-    tiers,
-  };
-}
 
 function formatSharePct(mcapUsd: number, totalMcapUsd: number): string {
   return ((mcapUsd / totalMcapUsd) * 100).toFixed(1);
@@ -246,7 +72,7 @@ export function buildDigestSafetyMapCaptions(
   const byTier = new Map(summary.tiers.map((tier) => [tier.tier, tier]));
   const aTier = byTier.get("A");
   const outerTiers = ["C", "D", "F"]
-    .map((tier) => byTier.get(tier as SafetyMapTier))
+    .map((tier) => byTier.get(tier as DigestSafetyMapTierSummary["tier"]))
     .filter((tier): tier is DigestSafetyMapTierSummary => Boolean(tier));
   if (!aTier || outerTiers.length !== 3) return null;
   const outerCount = outerTiers.reduce((sum, tier) => sum + tier.count, 0);
@@ -305,7 +131,7 @@ export async function resolveDigestSafetyMap(
     } catch {
       return { kind: "unavailable", reason: "manifest-invalid-json" };
     }
-    const manifest = parseManifest(decoded);
+    const manifest = parseDigestSafetyMapManifest(decoded, "canonical");
     if (!manifest) return { kind: "unavailable", reason: "manifest-invalid" };
     let freshness: "current" | "carried-forward";
     let ageDays: number;

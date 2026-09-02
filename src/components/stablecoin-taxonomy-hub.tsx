@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import type { BreadcrumbItem } from "@/components/breadcrumb-json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import type { InfrastructureTaxonomyValue, StablecoinTaxonomyPage } from "@/lib/stablecoin-taxonomy";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -33,10 +34,8 @@ export function StablecoinTaxonomyHub({
       title={title}
       leadParagraphs={leadParagraphs}
       preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(
+        <JsonLdScript
+          json={safeJsonLd(
               buildCollectionItemListJsonLd({
                 url: `${SITE_URL}${path}`,
                 name: title,
@@ -46,8 +45,7 @@ export function StablecoinTaxonomyHub({
                   url: `${SITE_URL}${page.href}`,
                 })),
               }),
-            ),
-          }}
+            )}
         />
       }
     >

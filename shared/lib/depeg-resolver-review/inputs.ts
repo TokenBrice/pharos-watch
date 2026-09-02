@@ -32,7 +32,7 @@ function hasMapLookup(
   return typeof (lookup as ReadonlyMap<number, DdrrActualEventInput | null | undefined>).get === "function";
 }
 
-export interface DdrrV2CoverageInput {
+export interface DdrrV2IncidentInputBase {
   eventId: number;
   currentEventId?: number | null;
   incidentKey: string;
@@ -44,6 +44,9 @@ export interface DdrrV2CoverageInput {
   direction: DepegDirection;
   startedAt: number;
   eligibleAt: number;
+}
+
+export interface DdrrV2CoverageInput extends DdrrV2IncidentInputBase {
   sourceEventState: DdrrSourceEventState;
   terminalEvidenceAt?: number | null;
   terminalEvidenceInterval?: DdrrTerminalEvidenceInterval | null;
@@ -59,18 +62,7 @@ export interface DdrrV2CoverageInput {
   failedPublication?: DdrrFailedPublication | null;
 }
 
-export interface DdrrV2InvalidatedPredictionInput {
-  eventId: number;
-  currentEventId?: number | null;
-  incidentKey: string;
-  stablecoinId: string;
-  symbol: string;
-  name: string;
-  pegCurrency: string;
-  governance: string;
-  direction: DepegDirection;
-  startedAt: number;
-  eligibleAt: number;
+export interface DdrrV2InvalidatedPredictionInput extends DdrrV2IncidentInputBase {
   sourceEventState?: DdrrSourceEventState;
   terminalEvidenceAt?: number | null;
   terminalEvidenceInterval?: DdrrTerminalEvidenceInterval | null;

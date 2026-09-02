@@ -1,5 +1,5 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineRecordEntries, finalizeBackstopRegistry } from "./factory";
+import { configsFromBackstopEntries, defineRecordEntries, finalizeBackstopRegistry } from "./factory";
 import {
   cloneRedemptionBackstopConfig,
   documentedBoundSupplyFull,
@@ -887,5 +887,5 @@ const FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   [{ stablecoinIds: ["iusd-infinifi"], reviewedAt: REVIEWED_REMEDIATION_AT }],
 );
 
-export const QUEUE_REDEEM_BACKSTOP_CONFIGS = FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY.configs;
+export const QUEUE_REDEEM_BACKSTOP_CONFIGS = configsFromBackstopEntries(FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY.entries);
 export const QUEUE_REDEEM_BACKSTOP_ENTRIES = FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY.entries;

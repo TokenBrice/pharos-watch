@@ -49,6 +49,7 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     };
     malformed.overlays[0] = { ...malformed.overlays[0], unexpectedPublishedField: true };
     expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse(malformed).success).toBe(false);
+    expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse({ ...malformed, overlays: [{ ...mechanismOverlays.overlays[0], reviewedAt: "2026-02-31" }] }).success).toBe(false);
   });
 
   it("rejects transfer rows without a canonical deployment", () => {

@@ -4,7 +4,11 @@ import { logTelegramEvent } from "../lib/telegram-log";
 import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../lib/telegram-broadcast-targets";
 import { listTelegramPresets, type TelegramPresetResolveOptions } from "../lib/telegram-presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
-import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
+import {
+  TELEGRAM_FANOUT_FAMILIES,
+  type LegacyFanoutAlertType,
+  type PresetSubscriberLoadResult,
+} from "./dispatch-telegram-alerts-fanout";
 import {
   loadActivePresetFollowers,
   projectPresetFollowers,
@@ -12,26 +16,23 @@ import {
   type PresetAlertType,
 } from "./telegram-preset-subscriber-store";
 
-const ALERT_COLUMN_BY_TYPE = {
-  dews: "alert_dews",
-  depeg: "alert_depeg",
-  safety: "alert_safety",
-  launch: "alert_launch",
-  reserve: "alert_reserve",
-  freeze: "alert_freeze",
-} as const;
+function fanoutColumns(key: "directColumn" | "globalColumn" | "overrideColumn") {
+  return Object.fromEntries(TELEGRAM_FANOUT_FAMILIES.map((spec) => [spec.family, spec[key]])) as
+    Record<LegacyFanoutAlertType, string>;
+}
 
+const ALERT_COLUMN_BY_TYPE = { ...fanoutColumns("directColumn"), freeze: "alert_freeze" };
+const GLOBAL_COLUMN_BY_TYPE = {
+  ...fanoutColumns("globalColumn"),
+  freeze: GLOBAL_ALERT_COLUMN_BY_TYPE.freeze,
+};
 const ALERT_OVERRIDE_COLUMN_BY_TYPE = {
-  dews: "alert_dews_override",
-  depeg: "alert_depeg_override",
-  safety: "alert_safety_override",
-  launch: "alert_launch_override",
-  reserve: "alert_reserve_override",
+  ...fanoutColumns("overrideColumn"),
   freeze: "alert_freeze_override",
-} as const;
+};
 
 const VALID_ALERT_COLUMNS = new Set(Object.values(ALERT_COLUMN_BY_TYPE));
-const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_TYPE));
+const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_COLUMN_BY_TYPE));
 const VALID_ALERT_OVERRIDE_COLUMNS = new Set(Object.values(ALERT_OVERRIDE_COLUMN_BY_TYPE));
 
 type LoadedSubscriberRow = Omit<SubscriberRow, "isGlobal" | "hasLocalOverride"> & {
@@ -126,7 +127,7 @@ export async function loadGlobalSubscriberRows(
   nowSec: number,
   options: TelegramSubscriberLoadOptions = {},
 ): Promise<SubscriberRow[]> {
-  const alertColumn = GLOBAL_ALERT_COLUMN_BY_TYPE[type];
+  const alertColumn = GLOBAL_COLUMN_BY_TYPE[type];
   if (!VALID_GLOBAL_ALERT_COLUMNS.has(alertColumn)) {
     throw new Error(`Invalid global alert subscription column for ${type}`);
   }

@@ -15,11 +15,6 @@ import { buildDocumentedRedemptionTelemetry } from "./redemption";
 const USD1_BUNDLE_ORACLE = "0x691b74146cdba162449012aa32d3cbf5df77d4c4";
 const USD1_RESERVE_LABEL = "U.S. Treasury Bills, Money Market Funds & Cash";
 
-interface Usd1BundleOracleParams {
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-}
-
 const USD1_BUNDLE_ORACLE_ABI = parseAbi([
   "function latestBundle() view returns (bytes)",
   "function latestBundleTimestamp() view returns (uint256)",
@@ -113,7 +108,7 @@ export async function fetchUsd1BundleOracleReserves(
   if (input.chain !== "ethereum") {
     throw new Error(`usd1-bundle-oracle only supports ethereum, got "${input.chain}"`);
   }
-  const params = parseLiveReserveAdapterParams("usd1-bundle-oracle", config.params) as Usd1BundleOracleParams;
+  const params = parseLiveReserveAdapterParams("usd1-bundle-oracle", config.params);
   const tokenContract = coin.contracts?.find((contract) => contract.chain === input.chain);
   if (!tokenContract) {
     throw new Error(`usd1-bundle-oracle missing ${input.chain} USD1 contract metadata`);

@@ -3,7 +3,7 @@ import {
   PageLoadingRowList,
   PageLoadingStatGrid,
 } from "@/components/page-loading-skeleton";
-import { PageLoadingRoute } from "@/app/page-loading-route";
+import { createPageLoadingRoute } from "@/app/page-loading-route";
 
 // Analytics tier: KPI strip, heatmap placeholder, then recent depeg rows.
 const DEPEG_SKELETON_ROW_COUNT = 8;
@@ -31,10 +31,7 @@ export function DepegContentLoadingState() {
   );
 }
 
-export default function Loading() {
-  return (
-    <PageLoadingRoute sectionWidth="w-28" titleWidth="w-64 sm:w-80">
-      <DepegContentLoadingState />
-    </PageLoadingRoute>
-  );
-}
+export default createPageLoadingRoute(DepegContentLoadingState, {
+  sectionWidth: "w-28",
+  titleWidth: "w-64 sm:w-80",
+});

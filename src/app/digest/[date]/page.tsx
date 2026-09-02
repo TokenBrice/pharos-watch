@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { DigestSnapshot } from "@/components/digest-snapshot";
 import { EditorialColophon } from "@/components/editorial-colophon";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
@@ -74,10 +75,8 @@ function renderDigestDetail(digest: DigestContentEntry) {
           { name: `${isWeekly ? "Weekly Recap" : "Daily Digest"}: ${formatted}`, url: `/digest/${digest.date}/` },
         ]}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(
+      <JsonLdScript
+        json={safeJsonLd(
             buildArticleJsonLd({
               headline: `${digest.title} (${formatted})`,
               description: buildDigestMetadataDescription(digest, formatted),
@@ -86,8 +85,7 @@ function renderDigestDetail(digest: DigestContentEntry) {
               dateModified: formatIsoTimestamp(digest.generatedAt),
               mainEntityOfPage: `${SITE_URL}/digest/${digest.date}/`,
             }),
-          ),
-        }}
+          )}
       />
       <EditorialMasthead date={formatted} editor="Claude Opus 4.8" />
       <div className="space-y-2">

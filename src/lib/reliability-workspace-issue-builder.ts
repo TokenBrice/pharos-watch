@@ -4,6 +4,7 @@ import type { StatusHealthValue } from "@shared/types";
 import { normalizeStatusIssues } from "@/lib/status-dashboard-model";
 import { worstSeverity as worstWorkspaceSeverity } from "@/lib/status/workspace-mode";
 import {
+  RELIABILITY_ISSUE_KIND_RANK,
   RELIABILITY_MODES,
   type ReliabilityIssue,
   type ReliabilityIssueKind,
@@ -18,14 +19,6 @@ import {
 } from "@/lib/reliability-workspace-endpoint-builder";
 import { buildDependenciesModel } from "@/lib/reliability-workspace-dependency-builder";
 import { collectReliabilityEvidenceGaps } from "@/lib/reliability-workspace-evidence-gap-builder";
-
-const ISSUE_KIND_RANK: Record<ReliabilityIssueKind, number> = {
-  informational: 0,
-  maintenance: 1,
-  warning: 2,
-  unknown: 3,
-  critical: 4,
-};
 
 function issueSeverity(kind: ReliabilityIssueKind): ReliabilitySeverity {
   if (kind === "critical") return "critical";
@@ -52,7 +45,7 @@ function addIssue(map: Map<string, ReliabilityIssue>, issue: ReliabilityIssue): 
     return;
   }
 
-  const preferred = ISSUE_KIND_RANK[issue.kind] > ISSUE_KIND_RANK[current.kind] ? issue : current;
+  const preferred = RELIABILITY_ISSUE_KIND_RANK[issue.kind] > RELIABILITY_ISSUE_KIND_RANK[current.kind] ? issue : current;
   const details = [...new Set([current.detail, issue.detail].filter(Boolean))].join(" ");
   map.set(issue.id, { ...preferred, detail: details });
 }
@@ -261,7 +254,7 @@ export function buildReliabilityWorkspaceModel(input: ReliabilityWorkspaceInput)
   });
 
   const issueList = [...issues.values()].sort((left, right) => {
-    const severityDelta = ISSUE_KIND_RANK[right.kind] - ISSUE_KIND_RANK[left.kind];
+    const severityDelta = RELIABILITY_ISSUE_KIND_RANK[right.kind] - RELIABILITY_ISSUE_KIND_RANK[left.kind];
     if (severityDelta !== 0) return severityDelta;
     const modeDelta =
       RELIABILITY_MODES.findIndex((mode) => mode.id === left.mode) -

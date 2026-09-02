@@ -4,7 +4,7 @@ import {
   V9MechanismProfileReviewSchema,
   safetyScoreV9MechanismProfileArchetype,
 } from "./safety-score-v9-mechanism-profile";
-import { uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
+import { StrictIsoDateSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
 
 const SafetyScoreV9MechanismArchetypeSchema = z.enum([
   "cdp",
@@ -61,7 +61,7 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
   .object({
     assetId: z.string().min(1),
     archetype: SafetyScoreV9MechanismArchetypeSchema,
-    reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    reviewedAt: StrictIsoDateSchema,
     sources: z.array(SafetyScoreV9MechanismOverlaySourceSchema).min(1),
     notes: z.string().min(1),
     metrics: z.record(z.string(), z.number().finite().nullable()),

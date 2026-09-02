@@ -10,6 +10,7 @@ import { deploymentCountLabel, stablecoinCountLabel } from "@/lib/chain-labels";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { ChainProfileClient } from "./client";
 import {
   CHAIN_STABLECOIN_FEATURE_LINKS,
@@ -309,12 +310,7 @@ export default async function ChainProfilePage({ params }: { params: Promise<{ c
       title={chainPageTitle(meta.name, deployments)}
       leadParagraphs={buildChainEditorialIntro({ chainName: meta.name, meta, deployments })}
       preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(buildChainProfileJsonLd({ chainId: chain, meta, deployments })),
-          }}
-        />
+        <JsonLdScript json={safeJsonLd(buildChainProfileJsonLd({ chainId: chain, meta, deployments }))} />
       }
     >
       <ChainProfileClient chainId={chain} />

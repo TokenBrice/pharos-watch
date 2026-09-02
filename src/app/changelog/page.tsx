@@ -5,6 +5,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ChangelogEntryCard } from "@/components/changelog-entry-card";
 import { ChangelogWeekNav } from "@/components/changelog-week-nav";
 import { EditorialMasthead } from "@/components/editorial-masthead";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { changelogs } from "@/data/changelogs";
@@ -61,10 +62,7 @@ export default function ChangelogPage() {
       variant="longform"
       preface={(
         <>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: changelogJsonLd }}
-          />
+          <JsonLdScript json={changelogJsonLd} />
           <EditorialMasthead
             issueNumber={`Volume ${latestYear}`}
             date={mastheadDate}

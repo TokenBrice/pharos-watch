@@ -202,6 +202,19 @@ function fallbackPublicationSnapshotToken(assessment: DdrrAssessmentInput): stri
   return assessment.publicationSnapshotToken ?? "legacy-unmanifested";
 }
 
+function publicationFieldsFromAssessment<State extends "frozen" | "no_call">(assessment: DdrrAssessmentInput, predictionState: State, lockedAt: number) {
+  return {
+    publicPredictionId: fallbackPublicPredictionId(assessment),
+    assessmentId: fallbackAssessmentId(assessment),
+    predictionState,
+    predictionMethodologyVersion: assessment.predictionMethodologyVersion ?? assessment.methodologyVersion,
+    predictionPolicyVersion: fallbackPredictionPolicyVersion(assessment),
+    lockedAt,
+    publishedAt: assessment.publishedAt ?? lockedAt,
+    publicationSnapshotToken: fallbackPublicationSnapshotToken(assessment),
+  };
+}
+
 function baseRowFromAssessment(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrV2BaseRow {
   return {
     eventId: assessment.eventId,
@@ -249,14 +262,7 @@ export function reviewDepegResolverAssessment(
   return {
     ...baseRowFromAssessment(assessment, outcome),
     kind: "prediction_review",
-    publicPredictionId: fallbackPublicPredictionId(assessment),
-    assessmentId: fallbackAssessmentId(assessment),
-    predictionState: "frozen",
-    predictionMethodologyVersion: assessment.predictionMethodologyVersion ?? assessment.methodologyVersion,
-    predictionPolicyVersion: fallbackPredictionPolicyVersion(assessment),
-    lockedAt,
-    publishedAt: assessment.publishedAt ?? lockedAt,
-    publicationSnapshotToken: fallbackPublicationSnapshotToken(assessment),
+    ...publicationFieldsFromAssessment(assessment, "frozen", lockedAt),
     frozen: {
       resolutionTier: assessment.resolutionTier,
       predictedRemainingSec: assessment.predictedRemainingSec,
@@ -288,14 +294,7 @@ export function reviewDepegResolverNoCall(
   return {
     ...baseRowFromAssessment(assessment, outcome),
     kind: "no_call_review",
-    publicPredictionId: fallbackPublicPredictionId(assessment),
-    assessmentId: fallbackAssessmentId(assessment),
-    predictionState: "no_call",
-    predictionMethodologyVersion: assessment.predictionMethodologyVersion ?? assessment.methodologyVersion,
-    predictionPolicyVersion: fallbackPredictionPolicyVersion(assessment),
-    lockedAt,
-    publishedAt: assessment.publishedAt ?? lockedAt,
-    publicationSnapshotToken: fallbackPublicationSnapshotToken(assessment),
+    ...publicationFieldsFromAssessment(assessment, "no_call", lockedAt),
     missingReasons: assessment.durationSuppressedReason == null ? [] : [assessment.durationSuppressedReason],
     actual: actualDetail(outcome, nowSec),
     verdictReview: "unscored_insufficient_signal",

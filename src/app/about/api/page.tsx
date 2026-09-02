@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/copy-button";
 import { FaqSection } from "@/components/faq-section";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { markdownLinkComponent } from "@/components/markdown-link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ApiReferenceLayout } from "@/components/api-reference-layout";
@@ -398,12 +399,7 @@ export default async function AboutApiPage() {
         </>,
       ]}
       preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(buildApiArtifactCatalogJsonLd()),
-          }}
-        />
+        <JsonLdScript json={safeJsonLd(buildApiArtifactCatalogJsonLd())} />
       }
     >
       <div className="space-y-8">

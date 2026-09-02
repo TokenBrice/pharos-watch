@@ -1,5 +1,5 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineBatch, defineConfigFamily, defineRecordEntries, finalizeBackstopRegistry } from "./factory";
+import { configsFromBackstopEntries, defineBatch, defineConfigFamily, defineRecordEntries, finalizeBackstopRegistry } from "./factory";
 import {
   collateralRedeemBase,
   documentedBoundSupplyFull,
@@ -908,5 +908,5 @@ const FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
 );
 
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
-  FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY.configs;
+  configsFromBackstopEntries(FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY.entries);
 export const COLLATERAL_REDEEM_BACKSTOP_ENTRIES = FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY.entries;

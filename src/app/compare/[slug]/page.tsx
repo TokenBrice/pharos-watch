@@ -3,6 +3,7 @@ import { ArrowRight, Bell, Code2, Rss, Star } from "lucide-react";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { JsonLdScript } from "@/components/json-ld-script";
 import {
   TableBody,
   TableCaption,
@@ -69,10 +70,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
       title={`${page.left.name} (${page.left.symbol}) vs ${page.right.name} (${page.right.symbol})`}
       leadParagraphs={[page.intro]}
       preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd(buildStaticComparisonJsonLd(page)) }}
-        />
+        <JsonLdScript json={safeJsonLd(buildStaticComparisonJsonLd(page))} />
       }
     >
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.58fr)]">

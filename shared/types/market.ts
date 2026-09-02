@@ -13,6 +13,7 @@ import {
   ExitRouteObservationCoverageSchema,
 } from "./exit-route";
 import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
 
 export {
   BluechipRatingSchema,
@@ -51,7 +52,6 @@ export {
 } from "./exit-route";
 
 const PegBucketsSchema = z.record(z.string(), z.number());
-const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const PriceSourceConfidenceProfileSchema = z.object({
   activeDexLanes: z.number().int().min(0),
   freshestDexLaneAgeSec: z.number().int().min(0).nullable(),
@@ -96,7 +96,7 @@ const StablecoinDataRawSchema = z.object({
   chains: z.array(z.string()),
   contracts: z.array(ContractDeploymentSchema).optional(),
   frozen: z.boolean().optional(),
-  frozenAt: IsoDateSchema.optional(),
+  frozenAt: StrictIsoDateSchema.optional(),
 });
 
 export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  configsFromBackstopEntries,
   defineBackstopRegistry,
   defineBatch,
   finalizeBackstopRegistry,
@@ -110,7 +111,7 @@ describe("redemption backstop config helpers", () => {
     ]);
 
     expect(finalized.entries.map((entry) => entry.id)).toEqual(["alpha", "beta"]);
-    expect(finalized.entries[0]!.config).toBe(finalized.configs["alpha"]);
+    expect(finalized.entries[0]!.config).toBe(configsFromBackstopEntries(finalized.entries)["alpha"]);
     expect(finalized.entries[0]!.config.reviewedAt).toBe("2026-01-02");
     expect(finalized.entries[0]!.sourceFilePath).toBe("shared/base.ts");
     expect(entries[0]!.config.reviewedAt).toBeUndefined();

@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageLoadingStatGrid } from "@/components/page-loading-skeleton";
-import { PageLoadingRoute } from "@/app/page-loading-route";
+import { createPageLoadingRoute } from "@/app/page-loading-route";
 
 // Analytics tier: headline stats strip, distribution band, then ~12 graded rows.
 const SAFETY_SKELETON_ROW_COUNT = 12;
@@ -44,10 +44,7 @@ export function SafetyScoresContentLoadingState() {
   );
 }
 
-export default function Loading() {
-  return (
-    <PageLoadingRoute sectionWidth="w-28" titleWidth="w-64 sm:w-80">
-      <SafetyScoresContentLoadingState />
-    </PageLoadingRoute>
-  );
-}
+export default createPageLoadingRoute(SafetyScoresContentLoadingState, {
+  sectionWidth: "w-28",
+  titleWidth: "w-64 sm:w-80",
+});

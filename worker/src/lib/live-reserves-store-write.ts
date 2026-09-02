@@ -11,6 +11,7 @@ import {
   type ReserveSyncStateRecord,
 } from "./live-reserves-store-shared";
 import {
+  buildReserveAttemptAuthoritativeReadbackStatement,
   buildReserveAuthoritativeHistoryRepairReadbackStatement,
   buildReserveCompositionHistoryRepairStatement,
   buildReserveCompositionHistoryInsertStatement,
@@ -58,21 +59,7 @@ export async function didReserveSyncAttemptBecomeAuthoritative(
   attemptId: string,
 ): Promise<boolean> {
   const row = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `SELECT 1 AS finalized
-           FROM reserve_composition c
-           JOIN reserve_sync_state s
-             ON s.stablecoin_id = c.stablecoin_id
-          WHERE c.stablecoin_id = ?
-            AND c.attempt_id = ?
-            AND s.last_success_at = c.fetched_at
-            AND s.last_attempt_id = c.attempt_id
-            AND s.last_success_attempt_id = c.attempt_id
-            AND s.pending_attempt_id IS NULL
-          LIMIT 1`,
-      )
-      .bind(stablecoinId, attemptId)
+    buildReserveAttemptAuthoritativeReadbackStatement(db, stablecoinId, attemptId)
       .first<{ finalized: number }>(),
   );
   return row?.finalized === 1;

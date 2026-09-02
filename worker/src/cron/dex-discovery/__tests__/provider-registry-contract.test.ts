@@ -11,13 +11,13 @@ describe("discovery provider runtime registry", () => {
       .toBe(expected);
   });
 
-  it("imports future provider leaves as disabled runtime slots", () => {
+  it("retains disabled provider descriptors without crawler leaves", () => {
     expect(DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY
       .filter((entry) => entry.providerId === "soroban-exhaustive" || entry.providerId === "btcusd-public-https")
-      .map((entry) => [entry.providerId, entry.lifecycle]))
+      .map((entry) => [entry.providerId, entry.lifecycle, entry.crawlerLeaf]))
       .toEqual([
-        ["soroban-exhaustive", "disabled"],
-        ["btcusd-public-https", "disabled"],
+        ["soroban-exhaustive", "disabled", undefined],
+        ["btcusd-public-https", "disabled", undefined],
       ]);
   });
 });

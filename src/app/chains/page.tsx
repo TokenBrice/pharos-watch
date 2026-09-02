@@ -10,6 +10,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { buildChainDirectoryJsonLd } from "@/lib/chain-json-ld";
 import type { FaqItem } from "@/lib/faq";
 import { FaqSection } from "@/components/faq-section";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { ChainsLeaderboardClient } from "./client";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -87,10 +88,7 @@ export default function ChainsPage() {
       }}
       leadParagraphs={["Blockchain networks ranked by stablecoin supply and ecosystem health."]}
       preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd(chainDirectoryJsonLd) }}
-        />
+        <JsonLdScript json={safeJsonLd(chainDirectoryJsonLd)} />
       }
     >
       <ChainsLeaderboardClient />

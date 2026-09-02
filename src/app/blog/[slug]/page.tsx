@@ -7,6 +7,7 @@ import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import ReactMarkdown from "react-markdown";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { markdownLinkComponent } from "@/components/markdown-link";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -73,10 +74,8 @@ function renderBlogPost(post: (typeof BLOG_POST_BY_SLUG extends ReadonlyMap<stri
         </p>
       }
     >
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(
+      <JsonLdScript
+        json={safeJsonLd(
             buildArticleJsonLd({
               type: "BlogPosting",
               headline: post.title,
@@ -86,8 +85,7 @@ function renderBlogPost(post: (typeof BLOG_POST_BY_SLUG extends ReadonlyMap<stri
               image: `${SITE_URL}${socialImage}`,
               mainEntityOfPage: canonical,
             }),
-          ),
-        }}
+          )}
       />
       {post.coverImage ? (
         // Plain <img>: static export runs with images.unoptimized and

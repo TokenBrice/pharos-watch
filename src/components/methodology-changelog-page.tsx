@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { MethodologyVersionCard, type MethodologyChangelogEntry } from "@/components/methodology-version-card";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
@@ -62,10 +63,8 @@ export function MethodologyChangelogPage({
         ]}
       />
       {entries.length > 0 && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(
+        <JsonLdScript
+          json={safeJsonLd(
               buildArticleJsonLd({
                 additionalType: "https://schema.org/TechArticle",
                 headline: `${title} - Version History`,
@@ -77,8 +76,7 @@ export function MethodologyChangelogPage({
                 mainEntityOfPage: `${SITE_URL}${path}`,
                 ...(jsonLdIdentifier ? { identifier: [jsonLdIdentifier] } : {}),
               }),
-            ),
-          }}
+            )}
         />
       )}
 

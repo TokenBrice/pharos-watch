@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { PageLoadingHeader, PageLoadingShell } from "@/components/page-loading-skeleton";
 
 interface PageLoadingRouteProps {
@@ -8,6 +8,8 @@ interface PageLoadingRouteProps {
   eyebrowWidth?: string;
   includeEyebrow?: boolean;
 }
+
+type PageLoadingHeaderProps = Omit<PageLoadingRouteProps, "children">;
 
 export function PageLoadingRoute({
   children,
@@ -27,4 +29,14 @@ export function PageLoadingRoute({
       {children}
     </PageLoadingShell>
   );
+}
+
+export function createPageLoadingRoute(Content: ComponentType, headerProps: PageLoadingHeaderProps) {
+  return function Loading() {
+    return (
+      <PageLoadingRoute {...headerProps}>
+        <Content />
+      </PageLoadingRoute>
+    );
+  };
 }

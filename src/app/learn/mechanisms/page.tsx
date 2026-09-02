@@ -12,6 +12,7 @@ import {
 import { countActiveByArchetype, getCoinsByLifecycleStatus } from "@shared/lib/stablecoins/by-mechanism";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { MechanismJsonLd } from "@/lib/mechanism-json-ld";
@@ -153,12 +154,7 @@ export default function MechanismExplainersHub() {
       >
         <MechanismDistribution counts={counts} />
       </LearnHero>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(buildPublicDatasetMirrorJsonLd("peg-mechanism-distribution")),
-        }}
-      />
+      <JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("peg-mechanism-distribution"))} />
       <MechanismJsonLd />
       <section aria-labelledby="mechanism-start-here-title" className="space-y-4 border-y border-border/60 py-5">
         <div className="space-y-2">

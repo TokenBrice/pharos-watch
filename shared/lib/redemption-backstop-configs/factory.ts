@@ -16,10 +16,7 @@ export interface RedemptionBackstopReviewedDocsPatch {
   reviewedAt?: string;
 }
 
-export interface FinalizedRedemptionBackstopRegistry {
-  entries: readonly RedemptionBackstopRegistryEntry[];
-  configs: Record<string, RedemptionBackstopConfig>;
-}
+export interface FinalizedRedemptionBackstopRegistry { entries: readonly RedemptionBackstopRegistryEntry[] }
 
 export function defineBackstopRegistry(
   entries: readonly RedemptionBackstopRegistryEntry[],
@@ -64,9 +61,14 @@ export function finalizeBackstopRegistry(
   }
 
   return {
-    configs,
     entries: entries.map((entry) => ({ ...entry, config: configs[entry.id] ?? entry.config })),
   };
+}
+
+export function configsFromBackstopEntries(
+  entries: readonly RedemptionBackstopRegistryEntry[],
+): Record<string, RedemptionBackstopConfig> {
+  return Object.fromEntries(entries.map((entry) => [entry.id, entry.config]));
 }
 
 /**

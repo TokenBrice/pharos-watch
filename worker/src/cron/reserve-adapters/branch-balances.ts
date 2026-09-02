@@ -1,10 +1,8 @@
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { ReserveSlice } from "@shared/types/core";
 import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
-import type { OnchainRateProbe } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
 import { getCachedRequest } from "./request";
 import {
@@ -24,34 +22,8 @@ export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch
 
 const STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC = 2 * 60 * 60;
 
-export interface BranchConfig {
-  name: string;
-  holder: string;
-  token: {
-    chain: string;
-    address: string;
-    decimals: number;
-  };
-  priceToken?: {
-    chain: string;
-    address: string;
-  };
-  risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-  priceUsd?: number;
-}
-
-export interface BranchBalanceParams {
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  branches: BranchConfig[];
-  sourceUrls?: string[];
-  redemptionRateProbe?: OnchainRateProbe;
-  debtSelector?: string;
-  debtContract?: string;
-  debtDecimals?: number;
-}
+export type BranchBalanceParams = LiveReserveAdapterParamsByKey["evm-branch-balances"];
+export type BranchConfig = BranchBalanceParams["branches"][number];
 
 export interface BranchBalanceEntry {
   branch: BranchConfig;
@@ -68,11 +40,11 @@ export interface AdaptBranchBalanceInput {
 
 type OnchainInput = ReturnType<typeof requireOnchainInput>;
 
-export function readBranchBalanceParams(
+export function readBranchBalanceParams<K extends BranchBalanceAdapterKey>(
   config: LiveReservesConfig,
-  adapterKey: BranchBalanceAdapterKey,
-): BranchBalanceParams {
-  return parseLiveReserveAdapterParams(adapterKey, config.params) as BranchBalanceParams;
+  adapterKey: K,
+): LiveReserveAdapterParamsByKey[K] {
+  return parseLiveReserveAdapterParams(adapterKey, config.params);
 }
 
 function isUsdPeggedBranch(branch: BranchConfig): boolean {

@@ -4,7 +4,7 @@ import {
   PageLoadingRowList,
   PageLoadingStatGrid,
 } from "@/components/page-loading-skeleton";
-import { PageLoadingRoute } from "@/app/page-loading-route";
+import { createPageLoadingRoute } from "@/app/page-loading-route";
 
 // Analytics tier: filter strip + DEX depth chart placeholder + cohort table.
 const LIQUIDITY_SKELETON_ROW_COUNT = 10;
@@ -45,10 +45,7 @@ export function LiquidityContentLoadingState() {
   );
 }
 
-export default function Loading() {
-  return (
-    <PageLoadingRoute sectionWidth="w-24" titleWidth="w-64 sm:w-80">
-      <LiquidityContentLoadingState />
-    </PageLoadingRoute>
-  );
-}
+export default createPageLoadingRoute(LiquidityContentLoadingState, {
+  sectionWidth: "w-24",
+  titleWidth: "w-64 sm:w-80",
+});

@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
 import { STABLECOIN_TAXONOMY_HUB_ROUTES } from "@/lib/stablecoin-taxonomy";
-import { buildStablecoinTaxonomyHubMetadata, createStablecoinTaxonomyHubPage } from "../taxonomy-page";
+import { createStablecoinTaxonomyHubRoute } from "../taxonomy-page";
 
-const ROUTE = STABLECOIN_TAXONOMY_HUB_ROUTES.backing;
+const route = createStablecoinTaxonomyHubRoute(STABLECOIN_TAXONOMY_HUB_ROUTES.backing);
 
-export const metadata: Metadata = buildStablecoinTaxonomyHubMetadata(ROUTE);
-
-const StablecoinBackingHubPage = createStablecoinTaxonomyHubPage(ROUTE);
-
-export default StablecoinBackingHubPage;
+export const metadata = route.metadata;
+export default route.Page;

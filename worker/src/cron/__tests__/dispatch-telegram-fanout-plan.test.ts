@@ -52,19 +52,13 @@ function emptyExplicitlyOffMaps(): FanoutSubscriptionInputs["perCoinExplicitlyOf
 
 function fanoutInputs(overrides: Partial<FanoutSubscriptionInputs> = {}): FanoutSubscriptionInputs {
   return {
-    directDewsSubs: new Map(),
-    directDepegSubs: new Map(),
-    directSafetySubs: new Map(),
-    launchSubs: new Map(),
-    reserveSubs: new Map(),
-    presetDewsResult: { kind: "ok", rows: new Map() },
-    presetDepegResult: { kind: "ok", rows: new Map() },
-    presetSafetyResult: { kind: "ok", rows: new Map() },
-    globalDewsSubs: [],
-    globalDepegSubs: [],
-    globalSafetySubs: [],
-    globalLaunchSubs: [],
-    globalReserveSubs: [],
+    direct: { dews: new Map(), depeg: new Map(), safety: new Map(), launch: new Map(), reserve: new Map() },
+    preset: {
+      dews: { kind: "ok", rows: new Map() },
+      depeg: { kind: "ok", rows: new Map() },
+      safety: { kind: "ok", rows: new Map() },
+    },
+    global: { dews: [], depeg: [], safety: [], launch: [], reserve: [] },
     perCoinSnoozeMap: new Map(),
     perCoinExplicitlyOffMaps: emptyExplicitlyOffMaps(),
     ...overrides,
@@ -85,17 +79,38 @@ function fanoutEvents(overrides: Partial<TelegramFanoutPlanEvents> = {}): Telegr
 }
 
 describe("dispatch telegram fanout planning", () => {
-  it("does not load subscription branches for inactive alert families", async () => {
-    const direct = vi.fn(async () => new Map());
-    const preset = vi.fn(async () => ({ kind: "ok" as const, rows: new Map() }));
-    const global = vi.fn(async () => []);
-    const snooze = vi.fn(async () => new Map());
-    const explicitlyOff = vi.fn(async () => new Map());
-    const loaderFamilies: string[] = [];
+  it("loads every active family in the established fanout order", async () => {
+    const transcript: string[] = [];
+    const direct = vi.fn(async (_db: D1Database, _ids: string[], type: string) => {
+      transcript.push(`direct:${type}`);
+      return new Map();
+    });
+    const preset = vi.fn(async (_db: D1Database, _ids: string[], type: string) => {
+      transcript.push(`preset:${type}`);
+      return { kind: "ok" as const, rows: new Map() };
+    });
+    const global = vi.fn(async (_db: D1Database, type: string) => {
+      transcript.push(`global:${type}`);
+      return [];
+    });
+    const snooze = vi.fn(async () => {
+      transcript.push("snooze");
+      return new Map();
+    });
+    const explicitlyOff = vi.fn(async (_db: D1Database, _ids: readonly string[], type: string) => {
+      transcript.push(`explicit-off:${type}`);
+      return new Map();
+    });
 
     await loadFanoutSubscriptionInputs(
       {} as D1Database,
-      { dewsIds: [], depegIds: ["usdc-circle"], safetyIds: [], launchIds: [], reserveIds: [] },
+      {
+        dewsIds: ["dews-coin"],
+        depegIds: ["depeg-coin"],
+        safetyIds: ["safety-coin"],
+        launchIds: ["launch-coin"],
+        reserveIds: ["reserve-coin"],
+      },
       {
         loadSubscriberRowsBatch: direct,
         loadPresetSubscriberRowsBatch: preset,
@@ -104,29 +119,25 @@ describe("dispatch telegram fanout planning", () => {
         loadPerCoinExplicitlyOffMap: explicitlyOff,
       },
       NOW_SEC,
-      { onLoaderTiming: (family) => loaderFamilies.push(family) },
     );
 
-    expect(direct).toHaveBeenCalledOnce();
-    expect(direct).toHaveBeenCalledWith(expect.anything(), ["usdc-circle"], "depeg", NOW_SEC, expect.anything());
-    expect(preset).toHaveBeenCalledOnce();
-    expect(global).toHaveBeenCalledOnce();
-    expect(snooze).toHaveBeenCalledOnce();
-    expect(explicitlyOff).toHaveBeenCalledOnce();
-    expect(loaderFamilies.sort()).toEqual([
-      "direct",
-      "global",
-      "preset",
-      "snooze-explicit-off",
-      "snooze-explicit-off",
+    expect(transcript).toEqual([
+      "direct:dews", "direct:depeg", "direct:safety", "direct:launch", "direct:reserve",
+      "preset:dews", "preset:depeg", "preset:safety",
+      "global:dews", "global:depeg", "global:safety", "global:launch", "global:reserve",
+      "snooze",
+      "explicit-off:dews", "explicit-off:depeg", "explicit-off:safety",
+      "explicit-off:launch", "explicit-off:reserve",
     ]);
   });
 
   it("counts preset query and resolution failures without treating failed presets as subscribers", () => {
     const summary = summarizePresetFanoutFailures(fanoutInputs({
-      presetDewsResult: { kind: "query-failed", error: new Error("d1 unavailable") },
-      presetDepegResult: { kind: "resolution-failed" },
-      presetSafetyResult: { kind: "ok", rows: new Map() },
+      preset: {
+        dews: { kind: "query-failed", error: new Error("d1 unavailable") },
+        depeg: { kind: "resolution-failed" },
+        safety: { kind: "ok", rows: new Map() },
+      },
     }));
 
     expect(summary).toEqual({
@@ -138,25 +149,34 @@ describe("dispatch telegram fanout planning", () => {
 
   it("routes direct, preset, and global subscribers before applying the format budget", () => {
     const inputs = fanoutInputs({
-      directDewsSubs: new Map([
-        [
-          "usdc-circle",
+      direct: {
+        ...fanoutInputs().direct,
+        dews: new Map([
           [
-            subscriber({ chat_id: "direct", last_active_at: 100 }),
-            subscriber({ chat_id: "direct-off", last_active_at: 400 }),
+            "usdc-circle",
+            [
+              subscriber({ chat_id: "direct", last_active_at: 100 }),
+              subscriber({ chat_id: "direct-off", last_active_at: 400 }),
+            ],
           ],
-        ],
-      ]),
-      presetDewsResult: {
-        kind: "ok",
-        rows: new Map([
-          ["usdc-circle", [subscriber({ chat_id: "preset", last_active_at: 200 })]],
         ]),
       },
-      globalDewsSubs: [
-        subscriber({ chat_id: "global", last_active_at: 300, isGlobal: true }),
-        subscriber({ chat_id: "global-off", last_active_at: 350, isGlobal: true }),
-      ],
+      preset: {
+        ...fanoutInputs().preset,
+        dews: {
+          kind: "ok",
+          rows: new Map([
+            ["usdc-circle", [subscriber({ chat_id: "preset", last_active_at: 200 })]],
+          ]),
+        },
+      },
+      global: {
+        ...fanoutInputs().global,
+        dews: [
+          subscriber({ chat_id: "global", last_active_at: 300, isGlobal: true }),
+          subscriber({ chat_id: "global-off", last_active_at: 350, isGlobal: true }),
+        ],
+      },
       perCoinExplicitlyOffMaps: {
         ...emptyExplicitlyOffMaps(),
         dews: new Map([["usdc-circle", new Set(["direct-off", "global-off"])]]),
@@ -185,9 +205,12 @@ describe("dispatch telegram fanout planning", () => {
     const routing = buildTelegramAlertsByChat({
       events: fanoutEvents({ dewsChanges: [DEWS_WARNING] }),
       inputs: fanoutInputs({
-        directDewsSubs: new Map([
-          ["usdc-circle", [subscriber({ chat_id: "eligible" })]],
-        ]),
+        direct: {
+          ...fanoutInputs().direct,
+          dews: new Map([
+            ["usdc-circle", [subscriber({ chat_id: "eligible" })]],
+          ]),
+        },
       }),
       burstMarkers: {},
       nowSec: NOW_SEC,

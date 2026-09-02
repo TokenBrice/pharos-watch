@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -204,12 +205,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(id) },
           ]}
         />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(buildPreLaunchStablecoinJsonLd(coin)),
-          }}
-        />
+        <JsonLdScript json={safeJsonLd(buildPreLaunchStablecoinJsonLd(coin))} />
       </>
     );
   }
@@ -237,12 +233,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(id) },
           ]}
         />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(buildStablecoinDatasetJsonLd(coin, { dateModified: summary?.updatedAt })),
-          }}
-        />
+        <JsonLdScript json={safeJsonLd(buildStablecoinDatasetJsonLd(coin, { dateModified: summary?.updatedAt }))} />
       </>
     );
   }
@@ -317,16 +308,13 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(id) },
         ]}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(
+      <JsonLdScript
+        json={safeJsonLd(
             buildStablecoinDatasetJsonLd(coin, {
               dateModified: structuredDataDateModified,
               logoPath: logosById[coin.id],
             }),
-          ),
-        }}
+          )}
       />
     </>
   );

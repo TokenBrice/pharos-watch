@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   PageLoadingRowList,
 } from "@/components/page-loading-skeleton";
-import { PageLoadingRoute } from "@/app/page-loading-route";
+import { createPageLoadingRoute } from "@/app/page-loading-route";
 
 // Power-user tier: dense rows, minimal chrome, mono-heavy.
 // Mirrors FeaturePageShell header geometry then the screener
@@ -42,14 +42,8 @@ export function ScreenerContentLoadingState() {
   );
 }
 
-export default function Loading() {
-  return (
-    <PageLoadingRoute
-      sectionWidth="w-24"
-      titleWidth="w-72 sm:w-96"
-      includeEyebrow={false}
-    >
-      <ScreenerContentLoadingState />
-    </PageLoadingRoute>
-  );
-}
+export default createPageLoadingRoute(ScreenerContentLoadingState, {
+  sectionWidth: "w-24",
+  titleWidth: "w-72 sm:w-96",
+  includeEyebrow: false,
+});
