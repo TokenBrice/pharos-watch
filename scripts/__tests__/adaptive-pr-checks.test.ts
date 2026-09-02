@@ -7,9 +7,80 @@ import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection
 import {
   buildPrStaticCheckPlan,
   partitionPrStaticCheckPlan,
+  runPrStaticChecks,
 } from "../maintenance/run-pr-static-checks.ts";
+import { runPrChecks } from "../maintenance/run-pr-checks.ts";
 
 describe("adaptive PR checks", () => {
+  it("emits the stable check:pr JSON envelope through the adaptive harness", async () => {
+    const stdout = { write: vi.fn<(chunk: string) => unknown>() };
+    const stderr = { write: vi.fn<(chunk: string) => unknown>() };
+    const runCommandImpl = vi.fn(async (command: { cmd: string }) => {
+      if (command.cmd.startsWith("git rev-parse")) return { status: 0, aborted: false, output: "HEAD\n" };
+      if (command.cmd.startsWith("git show")) return { status: 0, aborted: false, output: "0\n" };
+      return { status: 0, aborted: false, output: "" };
+    });
+
+    await expect(runPrChecks(["--json", "--base=HEAD", "--head=HEAD", "--no-fetch"], process.env, {
+      now: () => 0,
+      runCommandImpl: runCommandImpl as never,
+      stderr,
+      stdout,
+    })).resolves.toBe(0);
+
+    const report = JSON.parse(stdout.write.mock.calls.map(([chunk]) => chunk).join("")) as Record<string, unknown>;
+    expect(report).toMatchObject({
+      base: "HEAD",
+      head: "HEAD",
+      changedFiles: [],
+      status: "passed",
+      durationMs: expect.any(Number),
+    });
+    expect(report.classification).toEqual(expect.objectContaining({ docsOnly: false }));
+    expect(report.lanes).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: "classifier-smoke",
+        command: expect.any(String),
+        status: "passed",
+        durationMs: expect.any(Number),
+        failureTail: "",
+      }),
+    ]));
+    expect(stderr.write.mock.calls.map(([chunk]) => chunk).join("")).not.toContain("{\"base\"");
+  });
+
+  it("emits the stable check:pr:static JSON envelope", async () => {
+    const stdout = { write: vi.fn<(chunk: string) => unknown>() };
+    const stderr = { write: vi.fn<(chunk: string) => unknown>() };
+    const runCommandImpl = vi.fn(async () => ({ status: 0, aborted: false, output: "" }));
+
+    await expect(runPrStaticChecks({
+      argv: ["--json", "--base=HEAD", "--head=HEAD"],
+      env: process.env,
+      runCommandImpl: runCommandImpl as never,
+      stderr,
+      stdout,
+    })).resolves.toBe(0);
+
+    const report = JSON.parse(stdout.write.mock.calls.map(([chunk]) => chunk).join("")) as Record<string, unknown>;
+    expect(report).toMatchObject({
+      base: "HEAD",
+      head: "HEAD",
+      changedFiles: [],
+      status: "passed",
+      durationMs: expect.any(Number),
+    });
+    expect(report.lanes).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: "lint:changed",
+        status: "passed",
+        durationMs: expect.any(Number),
+        failureTail: "",
+      }),
+    ]));
+    expect(stderr.write.mock.calls.map(([chunk]) => chunk).join("")).not.toContain("{\"base\"");
+  });
+
   it("parses diff arguments without swallowing downstream options", () => {
     expect(parseChangedFileArgs(["--base=abc", "--head", "def", "--shard=1/2"], {} as NodeJS.ProcessEnv)).toEqual({
       base: "abc",

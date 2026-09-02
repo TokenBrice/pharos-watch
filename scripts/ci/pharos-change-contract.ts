@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -72,7 +73,17 @@ type ChangeSource = "explicit files" | "staged index" | "base/head range" | "wor
 interface HookViolation {
   file?: string;
   reason: string;
+  rule: HookRuleId;
 }
+
+type HookRuleId =
+  | "deploy"
+  | "d1-remote-mutation"
+  | "git-destructive"
+  | "migration-sql"
+  | "opaque-shell"
+  | "protected-write"
+  | "shell-indirection";
 
 interface ShellInvocation {
   name: string;
@@ -89,6 +100,7 @@ interface ChangedFileOptions {
 interface CliOptions {
   allowMissing: boolean;
   baseRef?: string;
+  diagnostics: boolean;
   format: "json" | "text";
   headRef?: string;
   help: boolean;
@@ -1248,6 +1260,10 @@ function extractInlineScriptWritePaths(command: unknown): string[] {
   return path ? [path] : [];
 }
 
+function withHookRule(rule: HookRuleId, reason: string): string {
+  return `[rule:${rule}] ${reason}`;
+}
+
 function collectToolPaths(hookInput: UnknownRecord = {}): string[] {
   const toolInput = getToolInput(hookInput);
   const command = getCommandFromHookInput(hookInput);
@@ -1312,7 +1328,11 @@ function findProtectedWrite(paths: readonly string[]): HookViolation | null {
     if (rule) {
       return {
         file,
-        reason: `Direct writes to ${rule.label} are blocked by the Pharos agent hook: ${file}.`,
+        reason: withHookRule(
+          "protected-write",
+          `Direct writes to ${rule.label} are blocked by the Pharos agent hook: ${file}.`,
+        ),
+        rule: "protected-write",
       };
     }
   }
@@ -1600,35 +1620,69 @@ function findUnsafeMigrationSql(paths: readonly string[], hookInput: UnknownReco
   }
 
   return {
-    reason: "Obvious destructive migration SQL is blocked. D1 cleanup needs a separate coordinated rollout.",
+    reason: withHookRule(
+      "migration-sql",
+      "Obvious destructive migration SQL is blocked. D1 cleanup needs a separate coordinated rollout.",
+    ),
+    rule: "migration-sql",
   };
 }
 
-function findCommandViolation(command: unknown): string | null {
+function findCommandViolation(command: unknown): HookViolation | null {
   if (!command) return null;
 
   if (commandHasUnresolvedShellIndirection(command)) {
-    return UNRESOLVED_SHELL_INDIRECTION_VIOLATION_REASON;
+    return {
+      reason: withHookRule("shell-indirection", UNRESOLVED_SHELL_INDIRECTION_VIOLATION_REASON),
+      rule: "shell-indirection",
+    };
   }
 
   if (commandHasOpaqueGuardedConstruct(command)) {
-    return OPAQUE_SHELL_VIOLATION_REASON;
+    return {
+      reason: withHookRule("opaque-shell", OPAQUE_SHELL_VIOLATION_REASON),
+      rule: "opaque-shell",
+    };
   }
 
   if (commandInvokesGitResetHard(command)) {
-    return "Destructive `git reset --hard` is blocked. Preserve existing user/worktree changes.";
+    return {
+      reason: withHookRule(
+        "git-destructive",
+        "Destructive `git reset --hard` is blocked. Preserve existing user/worktree changes.",
+      ),
+      rule: "git-destructive",
+    };
   }
 
   if (commandInvokesGitCleanForceDelete(command)) {
-    return "Destructive `git clean -f`/`-fd` style cleanup is blocked. Preserve untracked user/worktree changes.";
+    return {
+      reason: withHookRule(
+        "git-destructive",
+        "Destructive `git clean -f`/`-fd` style cleanup is blocked. Preserve untracked user/worktree changes.",
+      ),
+      rule: "git-destructive",
+    };
   }
 
   if (commandInvokesRawProductionDeploy(command)) {
-    return "Raw production deploy commands are blocked. Use the documented Pharos release flow instead.";
+    return {
+      reason: withHookRule(
+        "deploy",
+        "Raw production deploy commands are blocked. Use the documented Pharos release flow instead.",
+      ),
+      rule: "deploy",
+    };
   }
 
   if (commandInvokesRemoteD1Mutation(command)) {
-    return "Remote D1 mutation commands are blocked by default. Use dry-runs or the coordinated production runbook.";
+    return {
+      reason: withHookRule(
+        "d1-remote-mutation",
+        "Remote D1 mutation commands are blocked by default. Use dry-runs or the coordinated production runbook.",
+      ),
+      rule: "d1-remote-mutation",
+    };
   }
 
   return null;
@@ -1638,7 +1692,7 @@ export function findPreToolUseViolation(hookInput: UnknownRecord = {}): HookViol
   const command = getCommandFromHookInput(hookInput);
   const commandViolation = findCommandViolation(command);
   if (commandViolation) {
-    return { reason: commandViolation };
+    return commandViolation;
   }
 
   const paths = collectToolPaths(hookInput);
@@ -1662,12 +1716,20 @@ export function findPermissionRequestViolation(hookInput: UnknownRecord = {}): H
   const command = getCommandFromHookInput(hookInput);
   if (!commandHasOpaqueGuardedConstruct(command) && commandInvokesRawProductionDeploy(command)) {
     return {
-      reason: "Production deploy permission is denied by the Pharos hook. Use the documented release workflow.",
+      reason: withHookRule(
+        "deploy",
+        "Production deploy permission is denied by the Pharos hook. Use the documented release workflow.",
+      ),
+      rule: "deploy",
     };
   }
   if (!commandHasOpaqueGuardedConstruct(command) && commandInvokesRemoteD1Mutation(command)) {
     return {
-      reason: "Remote D1 mutation permission is denied by the Pharos hook. Use a dry-run or coordinated runbook.",
+      reason: withHookRule(
+        "d1-remote-mutation",
+        "Remote D1 mutation permission is denied by the Pharos hook. Use a dry-run or coordinated runbook.",
+      ),
+      rule: "d1-remote-mutation",
     };
   }
   return violation;
@@ -1819,6 +1881,84 @@ interface HookInputResult {
   malformed: boolean;
 }
 
+type HookMode = "pre-tool-use" | "permission-request" | "session-start";
+
+function hookEventName(hookMode: HookMode): "PreToolUse" | "PermissionRequest" | "SessionStart" {
+  if (hookMode === "pre-tool-use") return "PreToolUse";
+  if (hookMode === "permission-request") return "PermissionRequest";
+  return "SessionStart";
+}
+
+export function getHookHarness(hookInput: UnknownRecord): "claude" | "codex" | "unknown" {
+  const claudeEvent = hookInput.hook_event_name;
+  if (
+    typeof claudeEvent === "string" &&
+    /^[A-Z][A-Za-z0-9]*$/.test(claudeEvent) &&
+    typeof hookInput.tool_name === "string"
+  ) {
+    return "claude";
+  }
+
+  const codexFields = [
+    "hookEventName",
+    "toolName",
+    "toolInput",
+    "sessionId",
+    "source",
+    "model",
+    "turn_id",
+    "permission_mode",
+    "event",
+    "tool",
+    "arguments",
+  ];
+  if (codexFields.some((field) => Object.prototype.hasOwnProperty.call(hookInput, field))) return "codex";
+  return "unknown";
+}
+
+function getDiagnosticTool(hookInput: UnknownRecord): string | null {
+  const tool = hookInput.tool_name ?? hookInput.toolName;
+  return typeof tool === "string" ? tool : null;
+}
+
+function sha256Prefix(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 12);
+}
+
+function countProtectedPaths(hookInput: UnknownRecord): number {
+  return collectToolPaths(hookInput).filter(
+    (path) =>
+      PROTECTED_WRITE_RULES.some((rule) => rule.test(path)) || /^worker\/migrations\/.*\.sql$/i.test(path),
+  ).length;
+}
+
+function appendHookDiagnostic(
+  hookMode: HookMode,
+  hookInput: UnknownRecord,
+  violation: HookViolation | null,
+  malformed: boolean,
+): void {
+  try {
+    const configuredPath = process.env.PHAROS_HOOK_DIAGNOSTICS_FILE || "agents/hook-diagnostics.jsonl";
+    const diagnosticPath = isAbsolute(configuredPath) ? configuredPath : resolve(REPO_ROOT, configuredPath);
+    const command = getCommandFromHookInput(hookInput);
+    const record = {
+      ts: new Date().toISOString(),
+      harness: getHookHarness(hookInput),
+      event: hookEventName(hookMode),
+      tool: getDiagnosticTool(hookInput),
+      decision: malformed || hookMode === "session-start" ? "none" : violation ? "deny" : "allow",
+      rule: violation?.rule ?? null,
+      commandDigest: sha256Prefix(command),
+      pathsProtected: countProtectedPaths(hookInput),
+    };
+    mkdirSync(dirname(diagnosticPath), { recursive: true });
+    appendFileSync(diagnosticPath, `${JSON.stringify(record)}\n`, "utf8");
+  } catch {
+    // Diagnostics are best-effort and must never affect hook policy or status.
+  }
+}
+
 function readHookInput(): HookInputResult {
   try {
     const raw = readFileSync(0, "utf8").trim();
@@ -1885,6 +2025,7 @@ function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options:
   const options: CliOptions = {
     allowMissing: false,
     baseRef: process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
+    diagnostics: false,
     format: "text",
     headRef: process.env.PHAROS_CHANGE_CONTRACT_HEAD_REF,
     help: false,
@@ -1897,6 +2038,8 @@ function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options:
     const arg = argv[i];
     if (arg === "--json") {
       options.format = "json";
+    } else if (arg === "--diagnostics") {
+      options.diagnostics = true;
     } else if (arg === "--new-file") {
       options.allowMissing = true;
     } else if (arg === "--staged") {
@@ -1940,6 +2083,7 @@ Classify the current Pharos diff into docs, checks, and agent guardrails.
 
 Options:
   --json                  Emit the contract as JSON instead of text
+  --diagnostics            Append safe per-hook diagnostics when a hook is selected
   --staged                Classify staged files only
   --new-file              Suppress missing explicit-file warnings (repeatable)
   --base-ref <ref>        Classify git diff base...head
@@ -1963,6 +2107,9 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
   const hookMode = normalizeHookMode(options.hook);
 
   if (options.hook && hookRead.malformed) {
+    if (options.diagnostics || process.env.PHAROS_HOOK_DIAGNOSTICS === "1") {
+      appendHookDiagnostic(normalizeHookMode(options.hook) as HookMode, {}, null, true);
+    }
     console.error("pharos-change-contract: empty or malformed hook payload; no policy applied");
     console.log(JSON.stringify({}));
     return;
@@ -1971,11 +2118,19 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
   const hookInput = hookRead.input;
 
   if (hookMode === "pre-tool-use") {
+    const violation = findPreToolUseViolation(hookInput);
+    if (options.diagnostics || process.env.PHAROS_HOOK_DIAGNOSTICS === "1") {
+      appendHookDiagnostic(hookMode, hookInput, violation, false);
+    }
     console.log(JSON.stringify(buildPreToolUseHookOutput(hookInput)));
     return;
   }
 
   if (hookMode === "permission-request") {
+    const violation = findPermissionRequestViolation(hookInput);
+    if (options.diagnostics || process.env.PHAROS_HOOK_DIAGNOSTICS === "1") {
+      appendHookDiagnostic(hookMode, hookInput, violation, false);
+    }
     console.log(JSON.stringify(buildPermissionRequestHookOutput(hookInput)));
     return;
   }
@@ -2016,6 +2171,9 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
   const contract = classifyChangedFilesWithSource(changedFiles, source);
 
   if (hookMode === "session-start") {
+    if (options.diagnostics || process.env.PHAROS_HOOK_DIAGNOSTICS === "1") {
+      appendHookDiagnostic(hookMode, hookInput, null, false);
+    }
     console.log(JSON.stringify(buildSessionStartHookOutput(contract)));
     return;
   }

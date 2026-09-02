@@ -659,12 +659,14 @@ describe("api endpoint registry", () => {
 
   it("limits status-action runbooks to known repository documents", () => {
     const allowedRunbookPaths = new Set([
-      "docs/data-pipeline.md",
+      "docs/blacklist-tracker.md",
+      "docs/data-flow-map.md",
       "docs/depeg-detection.md",
       "docs/dews.md",
       "docs/mint-burn-flows.md",
       "docs/pricing-pipeline.md",
       "docs/stability-index.md",
+      "docs/supply-snapshot.md",
       "docs/yield-intelligence.md",
     ]);
     const referencedRunbooks = getStatusPageActions().flatMap((action) =>

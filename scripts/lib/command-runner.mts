@@ -243,6 +243,7 @@ export async function runExecutionUnit<TCommand extends RunnerCommand>(
         failedCmd: cmd,
         aborted: result.aborted,
         ...(result.signal ? { signal: result.signal } : {}),
+        ...(result.output !== undefined ? { output: result.output } : {}),
       };
     }
     const durationMs = Date.now() - startedAt;

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
 import {
   parseStrictCliArgs,
@@ -30,6 +30,9 @@ const CAMEL_CASE_BOUNDARY = /[a-z][A-Z]/;
 // These are reviewed documentation references that are intentionally not
 // required to resolve to a current Pharos code/config identifier.
 const SYMBOL_EXCLUSIONS = Object.freeze({
+  collateralFromLive: "Historical Safety v5.8-v8.17 snapshot field named in live-reserves history; retired from source.",
+  WebSearch: "Claude Code tool name in the harness capability table; not a Pharos identifier.",
+  WebFetch: "Claude Code tool name in the harness capability table; not a Pharos identifier.",
   ChainCirculating: "API reference response label; source owns ChainCirculatingPoint instead.",
   TokenPoint: "API reference example type; no standalone tracked runtime identifier.",
   DexPriceCheck: "API reference response label; the current response shape is inferred in source.",
@@ -149,11 +152,23 @@ export function getRoutedDocPaths(
   ) as RoutedDocOwnership,
 ): string[] {
   const candidates: string[] = ["README.md"];
+  const pushDocEntries = (owner: Record<string, unknown>, key: string) => {
+    const entries = owner[key];
+    if (!Array.isArray(entries)) return;
+    for (const entry of entries) {
+      if (typeof entry === "string") candidates.push(entry);
+      else if (isRecord(entry) && typeof entry.path === "string") candidates.push(entry.path);
+    }
+  };
+  if (isRecord(ownership)) pushDocEntries(ownership, "baseDocs");
   for (const family of Array.isArray(ownership.taskFamilies) ? ownership.taskFamilies : []) {
     if (isRecord(family)) candidates.push(...getStringArray(family, "docsToRead"));
   }
   for (const mapping of Array.isArray(ownership.mappings) ? ownership.mappings : []) {
-    if (isRecord(mapping)) candidates.push(...getStringArray(mapping, "docs"));
+    if (!isRecord(mapping)) continue;
+    pushDocEntries(mapping, "docs");
+    pushDocEntries(mapping, "background");
+    pushDocEntries(mapping, "alsoRead");
   }
 
   return [...new Set(candidates.map((candidate) => canonicalRepoPath(repoRoot, candidate)).filter((path): path is string => path !== null))].sort();
@@ -282,7 +297,9 @@ export function collectCodePaths(
   ];
   return [...new Set(outputs.flatMap((output) => output.split("\0")))]
     .filter(Boolean)
-    .filter((filePath) => CODE_EXTENSIONS.has(extname(filePath)));
+    .filter((filePath) => CODE_EXTENSIONS.has(extname(filePath)))
+    // `git ls-files` still lists paths deleted in the working tree; rg cannot read those.
+    .filter((filePath) => existsSync(resolve(repoRoot, filePath)));
 }
 
 function findTrackedSourceHits(

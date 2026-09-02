@@ -9,9 +9,18 @@ import {
   runExecutionUnit,
   runParallelExecutionUnits,
   runSpawnCommand,
+  type CommandImplementation,
+  type CommandResult,
   type ExecutionResult,
   type NpmScriptCommand,
 } from "../lib/command-runner.mts";
+import {
+  formatFailureTail,
+  reportGateResult,
+  type GateLaneReport,
+  type GateReport,
+  type OutputWriter,
+} from "../lib/report-violations.mts";
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
 import {
   EDITORIAL_POLICY_TEST_COMMAND,
@@ -25,6 +34,9 @@ const STRUCTURAL_CHECK_PREFIXES = [".github/", "functions/", "scripts/", "shared
 interface PrStaticCheckOptions {
   argv?: readonly string[];
   env?: NodeJS.ProcessEnv;
+  runCommandImpl?: CommandImplementation<NpmScriptCommand>;
+  stderr?: OutputWriter;
+  stdout?: OutputWriter;
 }
 
 interface PrStaticCheckCommand {
@@ -47,6 +59,11 @@ function hasStructuralCheckImpact(changedFiles: readonly string[]): boolean {
   );
 }
 
+function formatNpmFailure(result: ExecutionResult): string {
+  const name = result.failedCmd?.match(/^npm run (\S+)/)?.[1] ?? "unknown";
+  return `npm run ${name} failed (${result.signal ? `signal ${result.signal}` : `exit ${result.status}`}).`;
+}
+
 export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckCommand[]) {
   return {
     sequential: commands.filter((command) => !PARALLEL_STATIC_CHECKS.has(command.name)),
@@ -54,10 +71,6 @@ export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckComma
   };
 }
 
-function formatNpmFailure(result: ExecutionResult): string {
-  const name = result.failedCmd?.match(/^npm run (\S+)/)?.[1] ?? "unknown";
-  return `npm run ${name} failed (${result.signal ? `signal ${result.signal}` : `exit ${result.status}`}).`;
-}
 
 export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
   const classification = classifyChangedFiles(changedFiles);
@@ -126,13 +139,20 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
 export async function runPrStaticChecks({
   argv = process.argv.slice(2),
   env = process.env,
+  runCommandImpl = runSpawnCommand,
+  stderr = process.stderr,
+  stdout = process.stdout,
 }: PrStaticCheckOptions = {}): Promise<number> {
+  const startedAt = Date.now();
   const { base, head, rest } = parseChangedFileArgs(argv, env);
-  if (rest.length > 0) throw new Error(`Unknown option(s): ${rest.join(", ")}`);
+  const json = rest.includes("--json");
+  const unknownOptions = rest.filter((arg) => arg !== "--json");
+  if (unknownOptions.length > 0) throw new Error(`Unknown option(s): ${unknownOptions.join(", ")}`);
   const changedFiles = collectChangedFiles({ base, head });
   const { classification, commands } = buildPrStaticCheckPlan(changedFiles);
-
-  console.log(
+  const logOutput = json ? stderr : stdout;
+  const log = (message: string) => logOutput.write(message + "\n");
+  log(
     `[check:pr:static] ${changedFiles.length} changed file(s); ` +
       `pages=${classification.pagesChanged}, worker=${classification.workerChanged}.`,
   );
@@ -147,15 +167,56 @@ export async function runPrStaticChecks({
   const configuredParallel = Number.parseInt(env.PR_STATIC_MAX_PARALLEL ?? "3", 10);
   const maxParallel = Number.isFinite(configuredParallel) && configuredParallel > 0 ? configuredParallel : 3;
   const reporter = {
-    start: (cmd: string) => console.log(`[check:pr:static] ${cmd}`),
+    start: (cmd: string) => log(`[check:pr:static] ${cmd}`),
   };
-  const getCommandEnv = () => env as Record<string, string>;
+  const laneReports: GateLaneReport[] = runnableCommands.map((command) => ({
+    id: command.name,
+    command: createNpmScriptCommand(command.name, command.args ?? []).cmd,
+    status: "skipped",
+    durationMs: 0,
+    failureTail: "",
+  }));
+  const laneIndexes = new WeakMap<NpmScriptCommand, number>();
+  const createTrackedCommand = (command: PrStaticCheckCommand): NpmScriptCommand => {
+    const index = runnableCommands.findIndex((candidate) => candidate === command);
+    const npmCommand = createNpmScriptCommand(command.name, command.args ?? []);
+    const trackedCommand = json ? { ...npmCommand, captureOutput: true } : npmCommand;
+    laneIndexes.set(trackedCommand, index);
+    return trackedCommand;
+  };
   const sequentialUnit = createExecutionUnit(
-    sequential.map((command) => createNpmScriptCommand(command.name, command.args ?? [])),
+    sequential.map((command) => createTrackedCommand(command)),
   );
   const parallelUnits = parallel.map((command) => createExecutionUnit([
-    createNpmScriptCommand(command.name, command.args ?? []),
+    createTrackedCommand(command),
   ]));
+  const trackedRunner: CommandImplementation<NpmScriptCommand> = async (command, extraEnv, options) => {
+    const index = laneIndexes.get(command);
+    const commandStartedAt = Date.now();
+    let rawResult: number | CommandResult;
+    try {
+      rawResult = await runCommandImpl(command, extraEnv, options);
+    } catch (error) {
+      rawResult = {
+        status: 1,
+        aborted: false,
+        output: error instanceof Error ? error.message : String(error),
+      };
+    }
+    const result = typeof rawResult === "number" ? { status: rawResult, aborted: false } : rawResult;
+    if (index !== undefined) {
+      laneReports[index] = {
+        ...laneReports[index],
+        durationMs: Math.max(0, Date.now() - commandStartedAt),
+        failureTail: result.status === 0 || result.aborted
+          ? ""
+          : formatFailureTail(result.output ?? formatNpmFailure({ ...result, failedCmd: command.cmd })),
+        status: result.status === 0 ? "passed" : result.aborted ? "skipped" : "failed",
+      };
+    }
+    return result;
+  };
+  const getCommandEnv = () => env as Record<string, string>;
   const controller = new AbortController();
   const stopOnFailure = <T extends ExecutionResult>(promise: Promise<T>): Promise<T> => promise.then((result) => {
     if (result.status !== 0) controller.abort();
@@ -165,27 +226,41 @@ export async function runPrStaticChecks({
     stopOnFailure(runExecutionUnit<NpmScriptCommand>(sequentialUnit, {
       getCommandEnv,
       reporter,
-      runCommandImpl: runSpawnCommand,
+      runCommandImpl: trackedRunner,
       signal: controller.signal,
     })),
     stopOnFailure(runParallelExecutionUnits(parallelUnits, {
       getCommandEnv,
       maxParallel,
       reporter,
-      runCommandImpl: runSpawnCommand,
+      runCommandImpl: trackedRunner,
       signal: controller.signal,
     })),
   ]);
+  const failed = laneReports.some((lane) => lane.status === "failed") ||
+    [sequentialResult, parallelResult].some((result) => result.status !== 0 && !result.aborted);
+  const report: GateReport<typeof classification> = {
+    base,
+    head,
+    changedFiles,
+    classification,
+    lanes: laneReports,
+    status: failed ? "failed" : "passed",
+    durationMs: Math.max(0, Date.now() - startedAt),
+  };
   const failure = [sequentialResult, parallelResult].find((result) => result.status !== 0 && !result.aborted);
-  if (failure) throw new Error(formatNpmFailure(failure));
-  return 0;
+  if (!json && failure) throw new Error(formatNpmFailure(failure));
+  reportGateResult(report, { json, label: "check:pr:static", stderr, stdout });
+  return failed ? 1 : 0;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   runPrStaticChecks()
-    .then((code) => process.exit(code))
+    .then((code) => {
+      process.exitCode = code;
+    })
     .catch((error) => {
       console.error(`[check:pr:static] ${error instanceof Error ? error.message : String(error)}`);
-      process.exit(1);
+      process.exitCode = 1;
     });
 }

@@ -12,6 +12,13 @@ import {
   type CommandResult,
   type SpawnCommand,
 } from "../lib/command-runner.mts";
+import {
+  formatFailureTail,
+  reportGateResult,
+  type GateLaneReport,
+  type GateReport,
+  type OutputWriter,
+} from "../lib/report-violations.mts";
 
 const DOC_CHECK_LANES = [
   "verified-doc-links",
@@ -51,6 +58,8 @@ interface PrCheckCommand extends SpawnCommand {
 export interface RunPrChecksOptions {
   now?: () => number;
   runCommandImpl?: CommandImplementation<SpawnCommand>;
+  stderr?: OutputWriter;
+  stdout?: OutputWriter;
 }
 
 function hasDocsImpact(changedFiles: readonly string[]): boolean {
@@ -69,6 +78,8 @@ export function extractPrCheckFlags(rest: readonly string[]): PrCheckFlags {
       noFetch = true;
     } else if (arg === "--skip-coverage") {
       skipCoverage = true;
+    } else if (arg === "--json") {
+      // The output mode belongs to this runner, not the downstream test lane.
     } else {
       forwardedTestArgs.push(arg);
     }
@@ -116,6 +127,10 @@ async function resolveBaseSha(
   env: NodeJS.ProcessEnv,
   runCommandImpl: CommandImplementation<SpawnCommand>,
   now: () => number,
+  { log = console.log, warn = console.warn }: {
+    log?: (message: string) => void;
+    warn?: (message: string) => void;
+  } = {},
 ): Promise<string> {
   try {
     const resolveResult = normalizeCommandResult(await runCommandImpl({
@@ -124,7 +139,7 @@ async function resolveBaseSha(
     }, env as Record<string, string>));
     const sha = resolveResult.output?.trim();
     if (resolveResult.status !== 0 || !sha) {
-      console.warn(`[check:pr] Warning: could not resolve base ref ${base}; continuing with the ref name.`);
+      warn(`[check:pr] Warning: could not resolve base ref ${base}; continuing with the ref name.`);
       return base;
     }
 
@@ -134,19 +149,19 @@ async function resolveBaseSha(
     }, env as Record<string, string>));
     const timestampSeconds = Number.parseInt(timestampResult.output?.trim() ?? "", 10);
     if (timestampResult.status !== 0 || !Number.isFinite(timestampSeconds)) {
-      console.log(`[check:pr] Base ${base} resolved to ${sha} (commit age unavailable).`);
-      console.warn(`[check:pr] Warning: could not determine the age of base commit ${sha}.`);
+      log(`[check:pr] Base ${base} resolved to ${sha} (commit age unavailable).`);
+      warn(`[check:pr] Warning: could not determine the age of base commit ${sha}.`);
       return sha;
     }
 
     const ageMs = Math.max(0, now() - timestampSeconds * 1000);
-    console.log(`[check:pr] Base ${base} resolved to ${sha} (commit age ${formatAge(ageMs)}).`);
+    log(`[check:pr] Base ${base} resolved to ${sha} (commit age ${formatAge(ageMs)}).`);
     if (ageMs > ONE_DAY_MS) {
-      console.warn(`[check:pr] Warning: base commit ${sha} is older than 24h.`);
+      warn(`[check:pr] Warning: base commit ${sha} is older than 24h.`);
     }
     return sha;
   } catch (error) {
-    console.warn(
+    warn(
       `[check:pr] Warning: could not inspect base ref ${base}; continuing with the ref name (${error instanceof Error ? error.message : String(error)}).`,
     );
     return base;
@@ -212,16 +227,76 @@ export function createLaneCommand(
   }
 }
 
+async function runPrCheckLanes(
+  commands: readonly PrCheckCommand[],
+  { env, json, log, runCommandImpl }: {
+    env: NodeJS.ProcessEnv;
+    json: boolean;
+    log: (message: string) => void;
+    runCommandImpl: CommandImplementation<SpawnCommand>;
+  },
+): Promise<GateLaneReport[]> {
+  const lanes: GateLaneReport[] = commands.map((command) => ({
+    id: command.lane,
+    command: command.cmd,
+    status: "skipped",
+    durationMs: 0,
+    failureTail: "",
+  }));
+  let stopped = false;
+
+  for (const [index, originalCommand] of commands.entries()) {
+    if (stopped) continue;
+    const command: PrCheckCommand = json ? { ...originalCommand, captureOutput: true } : originalCommand;
+    const startedAt = Date.now();
+    log(`[check:pr] ${command.cmd}`);
+    let result: CommandResult;
+    try {
+      result = await runExecutionUnit(createExecutionUnit([command]), {
+        getCommandEnv: (currentCommand) => ({
+          ...(env as Record<string, string>),
+          ...currentCommand.extraEnv,
+        }),
+        reporter: {},
+        runCommandImpl: (currentCommand, extraEnv, options) => runCommandImpl(currentCommand, extraEnv, options),
+      });
+    } catch (error) {
+      result = {
+        status: 1,
+        aborted: false,
+        output: error instanceof Error ? error.message : String(error),
+      };
+    }
+
+    lanes[index] = {
+      ...lanes[index],
+      durationMs: Math.max(0, Date.now() - startedAt),
+      failureTail: result.status === 0 || result.aborted ? "" : formatFailureTail(result.output),
+      status: result.aborted ? "skipped" : result.status === 0 ? "passed" : "failed",
+    };
+    if (result.status !== 0) stopped = true;
+  }
+
+  return lanes;
+}
+
 export async function runPrChecks(
   argv: readonly string[] = process.argv.slice(2),
   env: NodeJS.ProcessEnv = process.env,
   {
     now = Date.now,
     runCommandImpl = runSpawnCommand,
+    stderr = process.stderr,
+    stdout = process.stdout,
   }: RunPrChecksOptions = {},
 ): Promise<number> {
   const { base, head, rest } = parseChangedFileArgs(argv, env);
   const flags = extractPrCheckFlags(rest);
+  const json = rest.includes("--json");
+  const logOutput = json ? stderr : stdout;
+  const log = (message: string) => logOutput.write(message + "\n");
+  const warn = (message: string) => stderr.write(message + "\n");
+  const startedAt = Date.now();
 
   if (base === "origin/main" && !flags.noFetch && env.PHAROS_PR_NO_FETCH !== "1") {
     try {
@@ -233,22 +308,22 @@ export async function runPrChecks(
         captureOutput: true,
       }, env as Record<string, string>));
       if (fetchResult.status !== 0) {
-        console.warn("[check:pr] Warning: could not refresh origin/main; continuing with the local ref.");
+        warn("[check:pr] Warning: could not refresh origin/main; continuing with the local ref.");
       }
     } catch (error) {
-      console.warn(
+      warn(
         `[check:pr] Warning: could not refresh origin/main; continuing with the local ref (${error instanceof Error ? error.message : String(error)}).`,
       );
     }
   }
 
-  const resolvedBaseSha = await resolveBaseSha(base, env, runCommandImpl, now);
+  const resolvedBaseSha = await resolveBaseSha(base, env, runCommandImpl, now, { log, warn });
   const changedFiles = collectChangedFiles({ base, head });
   const classification = classifyChangedFiles(changedFiles);
   const lanes = buildPrCheckPlan(changedFiles, classification, flags);
 
   if (classification.criticalCoverageChanged && flags.skipCoverage) {
-    console.log("[check:pr] Skipping touched critical coverage locally; the remote PR gate WILL run it.");
+    log("[check:pr] Skipping touched critical coverage locally; the remote PR gate WILL run it.");
   }
 
   const commands = lanes.map((lane) => createLaneCommand(lane, {
@@ -258,28 +333,29 @@ export async function runPrChecks(
     head,
     resolvedBaseSha,
   }));
-  const result = await runExecutionUnit(createExecutionUnit(commands), {
-    getCommandEnv: (command) => ({
-      ...(env as Record<string, string>),
-      ...command.extraEnv,
-    }),
-    reporter: {
-      start: (cmd) => console.log(`[check:pr] ${cmd}`),
-    },
-    runCommandImpl: (command, extraEnv, options) => runCommandImpl(command, extraEnv, options),
-  });
+  const laneReports = await runPrCheckLanes(commands, { env, json, log, runCommandImpl });
+  const report: GateReport<typeof classification> = {
+    base,
+    head,
+    changedFiles,
+    classification,
+    lanes: laneReports,
+    status: laneReports.some((lane) => lane.status === "failed") ? "failed" : "passed",
+    durationMs: Math.max(0, Date.now() - startedAt),
+  };
 
-  if (result.status === 0 && classification.pagesChanged) {
-    console.log(
+  if (report.status === "passed" && classification.pagesChanged) {
+    log(
       "[check:pr] Pages changed: consider `npm run check:release` with " +
         "SEO_PREVIOUS_SITEMAP_URL=https://stablecoin-dashboard.pages.dev/sitemap.xml before release batches.",
     );
   }
-  return result.status;
+  reportGateResult(report, { json, label: "check:pr", stderr, stdout });
+  return report.status === "passed" ? 0 : 1;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   runPrChecks().then((status) => {
-    process.exit(status);
+    process.exitCode = status;
   });
 }
