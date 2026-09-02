@@ -225,6 +225,7 @@ export function findSourceHits(
 ): Set<string> {
   const hits = new Set<string>();
   for (const token of new Set(tokens)) {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- token comes from a repo-controlled doc code span and is escaped
     const pattern = new RegExp(`\\b${escapeRegExp(searchToken(token))}\\b`);
     if (sourceFiles.some((sourceFile) => pattern.test(sourceFile.content))) {
       hits.add(searchToken(token));
