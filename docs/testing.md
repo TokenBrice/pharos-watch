@@ -14,7 +14,7 @@ Use the [validation command index](./scripts.md#validation-command-index) for th
 
 Use `package.json` for the full live npm-script list. `scripts/lib/automation-registry.mjs` owns generated artifacts and deploy-impact classification; `scripts/lib/critical-test-files.mts` and `scripts/lib/critical-coverage.mjs` own critical-suite membership.
 
-`check:doc-symbols`, included by `check:doc-sync`, uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners.
+`check:doc-symbols`, included by `check:doc-sync`, uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners. The static runner defers the corpus-wide editorial policy test until its bounded parallel typecheck, structural, and generated-artifact phase completes so Firefox-backed artifact checks cannot starve the test's unchanged timeout.
 
 ### Smallest adequate check per area
 

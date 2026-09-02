@@ -163,7 +163,10 @@ describe("adaptive PR checks", () => {
   });
 
   it("runs typechecks, structural checks, and generated verification in the bounded parallel phase", () => {
-    const { commands } = buildPrStaticCheckPlan(["worker/src/lib/safety-score-v9-extension.ts"]);
+    const { commands } = buildPrStaticCheckPlan([
+      "worker/src/lib/safety-score-v9-extension.ts",
+      "docs/editorial-style.md",
+    ]);
     const partition = partitionPrStaticCheckPlan(commands);
 
     expect(partition.parallel.map((command) => command.name)).toEqual(
@@ -174,6 +177,7 @@ describe("adaptive PR checks", () => {
         "check:generated-artifacts",
       ]),
     );
+    expect(partition.deferred.map((command) => command.name)).toEqual(["test"]);
     expect(partition.sequential.map((command) => command.name)).toContain("check:worker-package");
   });
 
