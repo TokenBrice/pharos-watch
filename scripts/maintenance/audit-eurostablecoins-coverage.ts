@@ -66,7 +66,7 @@ function parseArgs(argv: readonly string[]) {
 }
 
 function printHelp() {
-  console.log(`Usage: node scripts/maintenance/audit-eurostablecoins-coverage.mjs [--json] [--report <path>] [--api-url <url>]
+  console.log(`Usage: node --import tsx scripts/maintenance/audit-eurostablecoins-coverage.ts [--json] [--report <path>] [--api-url <url>]
 
 Compares Pharos' checked-in EUR stablecoin metadata against eurostablecoins.xyz.
 The script is read-only unless --report is provided.`);

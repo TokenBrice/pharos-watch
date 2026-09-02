@@ -1,10 +1,10 @@
-import type { RedemptionBackstopConfig } from "../shared";
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
   expandIds,
   undisclosedReviewedFee,
   fixedFee,
+  type RedemptionBackstopConfig,
   issuerBase,
   sourceRef,
   sourceRefFull,

@@ -4,14 +4,7 @@ import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import {
-  TableBody,
-  TableCell,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/table";
+import { TableBody, TableCell, TableFrame, TableRow } from "@/components/table";
 
 describe("TableFrame virtual defaults", () => {
 
@@ -33,14 +26,10 @@ describe("TableFrame virtual defaults", () => {
         topSlot={<div>Virtual toolbar</div>}
         footerSlot={<div>Virtual footer</div>}
       >
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-          </TableRow>
-        </TableHeader>
         <TableBody>
           <TableRow>
             <TableCell>USDC</TableCell>
+            <TableCell>USDT</TableCell>
           </TableRow>
         </TableBody>
       </TableFrame>,
