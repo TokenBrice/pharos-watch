@@ -103,16 +103,18 @@ Repo-local omp settings live in `.omp/config.yml` (tracked). It sets `task.isola
 | MCP | None configured (harness-managed `node_repl` only) | None configured | `node_repl` enabled |
 | Subagents | Native typed agents (`task`) | Agents/workflows + `codex-agent` wrapper | Standalone `codex exec` sessions via wrapper |
 | Isolation/approval | Overlay: no worktree isolation, yolo | Permission prompts/rules | Workspace-write sandbox rooted at `-C` |
+| Web search | Use the available web-search capability | `WebSearch` when enabled | Built-in web search when enabled |
+| Primary-source fetch | Native fetch/HTTP capability; shell client fallback | `WebFetch`; shell client fallback | Built-in fetch or shell client fallback |
+| Browser inspection | Browser capability when configured | Browser/Playwright integration when configured | Browser MCP/automation when configured |
+| Read-only reviewer | Spawn `task` with an explicit no-write contract | Read-only agent/`Explore` contract | Isolated `codex exec` reviewer via wrapper |
+
+Skills describe these operations by capability and link here instead of embedding harness-specific branches. If a capability is unavailable, use the next safe read-only option; never move credentials into URLs or process arguments, and never infer write/delegation authority from tool availability.
 
 ## Claude Workflow Orchestrators
 
-Checked-in `.claude/workflows/*.mjs` files are saved Claude orchestration entrypoints, not product runtime code and not Codex skills. Keep only repeatable Pharos-specific workflows here.
-
-The workflow directory is the source of truth; do not maintain a second filename roster here. Keep orchestration only when it is repeatable, delegates meaningful parallel work, and is not already expressed by a skill or deterministic script. Workflows must resolve repo paths dynamically, accept volatile dates or scope as arguments, and read schemas/enums from their owning source files.
-
-Documentation verification and remediation share one workflow with a mode argument. Static-data and compliance review remain separate because their source sets and adjudication rules differ. One-off broad reviews and generic model-verification harnesses belong in ignored scratch space or global tooling, not in the repository.
-
-Generated reports from these workflows should stay under ignored scratch paths such as `/agents/` unless their durable rules are distilled into `/docs/`.
+Batch orchestration now lives in canonical skills as capability-level fan-out instructions.
+Compliance, whole-corpus stablecoin data, and documentation maintenance are routed through their respective skills.
+Retired adapters are not preserved; durable guidance belongs in `docs/`, and scratch output belongs in `agents/`.
 
 ## Recurring Maintenance
 
@@ -135,3 +137,7 @@ PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup
 The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The former `agent:doctor` posture check was removed; agent-infrastructure drift is now reviewed by hand, and `AGENTS.md` cannot drift from `CLAUDE.md` because it is generated (`npm run check:generated-artifacts -- --only=agents-doc`).
 
 Codex hook matchers are narrowed to shell/write tools. `npm run agent:setup` reports whether the generated hooks are installed/current and whether each hook is enabled in Codex. Enabling is a one-time Codex-side step (`/hooks` or `enabled = true`); disabled or unrecorded state does not change setup's installation exit status. Codex hooks are per-checkout, so rerun the opt-in command in each worktree.
+
+Set `PHAROS_HOOK_DIAGNOSTICS=1` or pass `--diagnostics` to append one safe JSONL record per hook invocation.
+The default diagnostic file is `agents/hook-diagnostics.jsonl`; set `PHAROS_HOOK_DIAGNOSTICS_FILE` for another local path.
+Records contain the event, decision, rule, path count, and a short command digest, never command text or secrets.

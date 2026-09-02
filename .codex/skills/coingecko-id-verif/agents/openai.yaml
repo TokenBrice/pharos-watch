@@ -1,4 +1,0 @@
-interface:
-  display_name: "CoinGecko ID Verify"
-  short_description: "Verify tracked stablecoin CoinGecko IDs"
-  default_prompt: "Use $coingecko-id-verif to verify the correct CoinGecko slug for this stablecoin before editing shared/data/stablecoins/coins/*.json."

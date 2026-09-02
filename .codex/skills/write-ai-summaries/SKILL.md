@@ -1,97 +1,28 @@
 ---
 name: write-ai-summaries
-description: Write, update, or refresh AI editorial summaries for stablecoin detail pages, including draining the queue from `npm run candidates:ai-summaries` after scoring changes or on a monthly cadence.
+description: Write or refresh evidence-grounded editorial summaries for stablecoin detail pages, including draining the AI-summary candidate queue after scoring changes.
 user_invocable: true
 ---
-Read `docs/editorial-style.md` before writing. Its universal rules and the named `coin-summary` register govern all Pharos-owned prose; this skill adds only factual, sourcing, schema, and format requirements.
 
-## AI Summary Writer
-Write data-grounded editorial summaries for stablecoin detail pages on Pharos. Summaries are stored in `data/ai-summaries.json` and rendered by `src/components/ai-summary.tsx`.
+Read `docs/editorial-style.md`; the `coin-summary` register owns voice, title style, length, and closing structure. Follow [Adding a Stablecoin §6b](../../../docs/process/adding-a-stablecoin.md#6b-editorial-summary) for addition-time coverage.
 
-The summary sits in the Overview section of the detail page alongside the reserve treemap, redemption backstop card, DEWS stress panel, and price transparency card. Above it, the hero card shows live price, market cap, peg score, liquidity score, and depeg event count. Below, the report card, charts, and depeg history provide granular data. The reader sees all of this. The summary's job is to interpret the data, not restate it.
+# AI Summary Writer
 
-### Summary Register
+Write `StablecoinAiSummary` entries in `data/ai-summaries.json`; `shared/types/editorial.ts` owns the schema. Read the base coin, all sidecars for that ID, and the field catalog in [reference.md](reference.md). For new/high-profile/refresh work, inspect the live detail page with available browser capability; see `docs/process/agent-artifacts.md#harness-configuration`.
 
-The `coin-summary` register in `docs/editorial-style.md` governs voice and sets this surface's output contract: use a descriptive title, write 120-180 words, and close on the durable constraint. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss.
+## Editorial Contract
 
-### Structure per Summary
+- Interpret the central design trade-off and what Pharos evidence reveals; do not repeat classification badges or dashboard numbers.
+- Prefer durable relative wording for market cap, APY, TVL, event counts, and stress bands. A retained static adoption/funding/holder/TVL/supply/market-cap fact needs a displayed source, fact date, chain scope, and denominator.
+- Never call addresses users/holders without a defined method, compare unlike financing and token-supply quantities, or invent certainty for missing evidence.
+- Use current pillar/grade vocabulary only after reading `shared/lib/methodology-versions/current-version.json`. Missing reviewed evidence is NR, not safety.
+- AI drafts set actual `authoredBy`, `model`, `updatedAt`, and `factsAsOf`; only a named reviewer may add `reviewedBy`/`reviewedAt` after approving the exact text.
 
-Each summary is a `StablecoinAiSummary`. The authoritative shape is in `shared/types/editorial.ts`. AI-authored entries carry provenance alongside the editorial core:
+## Queue And Workflow
 
-```json
-{
-  "ID": {
-    "title": "Descriptive Title",
-    "text": "120-180 words of editorial narrative.",
-    "updatedAt": "YYYY-MM-DD",
-    "authoredBy": "ai",
-    "model": "<authoring model id>",
-    "factsAsOf": "YYYY-MM-DD"
-  }
-}
-```
+1. Run `npm run candidates:ai-summaries` for queue work; prioritize `high`, then `medium`.
+2. For each coin, inventory current prose claims against static metadata and current live analytics. Preserve sound text/title; correct stale facts and de-brittle volatile wording rather than rewriting for variety.
+3. Draft the schema-valid entry and present it for review when approval is requested. Keep one main claim per sentence and close on the durable constraint.
+4. After edits, run `npm run typecheck`. For queue work, rerun `npm run candidates:ai-summaries` and confirm refreshed entries leave the selected severity bands.
 
-`reviewedBy`/`reviewedAt` exist too but are set only after the named reviewer approves. Never pre-stamp them.
-Optional `sources` entries are labeled HTTP links rendered directly beneath the summary. Add them whenever a static adoption, funding, holder/address, TVL, supply, or market-cap fact is retained.
-
-- **title**: Follow the `coin-summary` register's descriptor-title requirement: use a descriptive title in title case, never a nickname or mascot
-- **text**: Follow the register's 120-180-word band, with one main claim per sentence. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss. Close on the durable constraint.
-- **updatedAt**: Today's date in ISO format
-
-### Data Sources
-
-Summaries must be grounded in Pharos's own data, not just external research. The field-by-field catalog of what to read is in ./reference.md. It covers static metadata and live analytical data. Read it when authoring.
-
-### Process
-
-1. **Read metadata**: Read the coin's base entry in `shared/data/stablecoins/coins/*.json` plus any domain sidecars under `shared/data/stablecoins/domains/`, or use its merged generated runtime entry in `coins.generated.json`. Read all fields: classification, collateral description, pegMechanism, reserves, jurisdiction, dependencies, resilience sub-factors (custodyModel, collateralQuality, governanceQuality), notices, yield config, blacklist status, and deployment footprint. Load `data/ai-summaries.json` to see existing summaries and avoid repeating patterns
-2. **Check live data** (for refreshes and high-profile coins): Open `https://pharos.watch/stablecoin/{id}` with the browser tool (claude-in-chrome or Playwright in Claude Code; `agent-browser` in Codex) to check the report card, peg score, liquidity score, redemption backstop, and DEWS band. Note anything the raw metadata doesn't capture, particularly depeg event history, safety grade trends, and exit liquidity quality
-3. **Research if needed**: Use web search for recent events (depegs, regulatory actions, governance changes) that would make the summary more current and specific. Check the coin's `links` for official sources
-4. **Write the summary**: Follow the `coin-summary` register in `docs/editorial-style.md` for voice. Weave Pharos-specific insights into the narrative where they add editorial value. Don't just describe the coin generically. Interpret what our data reveals about its risks, strengths, and contradictions
-5. **Update the file**: Add/update entries in `data/ai-summaries.json`. Set `updatedAt` to today's date. Preserve existing entries unless explicitly asked to remove them
-
-### Queue-Driven Refresh
-
-Use the staleness producer after a methodology change, a cluster of depeg events, or on a monthly cadence:
-
-```bash
-PHAROS_API_KEY=... npm run candidates:ai-summaries
-```
-
-It writes `agents/ai-summary-candidates.{md,json}` and never edits summaries. Process `high` findings first, then `medium`; leave `low` findings for a deliberate full sweep. For each candidate:
-
-1. Read its `findings[]`, the current summary, and the merged `shared/data/stablecoins/coins.generated.json` entry (or the base file plus every domain sidecar for that ID).
-2. Correct each stale claim using the candidate's `current` value, then de-brittle the prose so the same volatile number does not immediately go stale again.
-3. Preserve still-correct claims and the existing title unless the title itself is stale. Do not rewrite sound prose for variety.
-4. Re-run the producer and confirm refreshed entries no longer appear as `high` or `medium`.
-
-DEWS bands and exact event counts are especially volatile; describe tendencies unless the current value is the editorial point. Overall letter grades may be cited, but exact numeric scores should be exceptional. Grade vocabulary follows the current Safety Score methodology; read `shared/lib/methodology-versions/current-version.json` before using methodology terminology. The producer reconciles the overall grade and the three pillar grades (backing, exit, economic control). Retired dimension names (peg stability, liquidity, resilience, decentralization, dependency risk) are flagged as stale on the next producer run, so never write new prose in those terms.
-
-For AI-drafted entries set `authoredBy`, `model`, `updatedAt`, and `factsAsOf` to the actual authoring context. Set `reviewedBy` and `reviewedAt` only after the named reviewer has approved the batch; never pre-stamp owner review.
-
-### What to Cover
-
-When choosing what to highlight, consider these angles (pick the most interesting 2-3):
-
-- **Market position**: Is it dominant, rising, declining, niche?
-- **Structural novelty**: What makes its design different from competitors?
-- **Key tension**: What's the central risk or trade-off? (e.g., centralization vs. decentralization, yield vs. safety, regulation vs. innovation)
-- **Notable history**: Depegs, regulatory actions, governance drama, pivots
-- **Competitive dynamics**: Who does it compete with and why might it win or lose?
-- **Irony or contradiction**: The most interesting stablecoins contain contradictions worth pointing out
-- **Safety profile**: What does the report card reveal? A strong grade with one weak pillar, a coin held under a binding cap ("why not higher"), an NR on missing evidence, or a coin that scores well despite its reputation. These are editorial gold
-
-### Content, sourcing, and schema constraints
-
-- **Don't repeat classification data verbatim**: The page already shows "centralized, RWA-backed, pegged to USD"; the summary should interpret, not restate
-- **Don't hard-code volatile numbers**: Market caps, TVL, and APY change weekly. Frame them relatively ("one of the largest", "sub-$10M market cap", "modest circulation") unless the specific number is central to the editorial point and you've verified it today. If you do cite a number, accept it will go stale
-- **Scope adoption claims**: Any static adoption, funding, address/holder, TVL, supply, or market-cap figure requires a displayed source and fact date. State the chain scope and denominator. Never call an address count "users" or "holders" without a defined method that distinguishes contracts and EOAs and deduplicates cross-chain controllers.
-- **Keep quantities economically comparable**: Do not divide parent or project financing by one product's token supply, market cap, or circulation unless both quantities measure the same economic concept. Token supply is not capital "used."
-- **Do not inherit provenance**: `factsAsOf` is the date the body was actually researched. Formatting, disclosure, or model-field edits do not justify carrying forward or adding `reviewedBy`/`reviewedAt`; those fields require approval of the exact text by the named reviewer.
-- **Don't duplicate the dashboard**: The page already displays report card grades, peg scores, and liquidity metrics as data visualizations. The summary should _interpret_ what those numbers mean in context, not restate them as raw figures. "Pharos rates it B+" is useless; "the B+ overall grade hides a D in economic control, which tells you where the design still concentrates power" is editorial
-- **Don't ignore our data**: When Pharos has scored, graded, or analyzed a stablecoin, the summary should reflect that analysis. The reader sees the scores alongside the summary. Connect the dots. A summary that could appear on CoinGecko with zero modification is a wasted opportunity
-- **Don't write thin summaries**: If you can't find enough material for a substantive 120-180-word summary after reading the metadata and checking the live page, the coin may need more research, not less text
-
-### Verify
-
-Run `npm run typecheck` after editing `data/ai-summaries.json`. Queue-driven work also re-runs `npm run candidates:ai-summaries` as described above.
+Report changed IDs, evidence dates/sources, review state, remaining candidates, and validation.

@@ -1,66 +1,27 @@
-# Pharos CI Failure Triage Subagents
+# Pharos CI Failure Triage Reviewers
 
-Codex currently exposes generic `explorer` and `worker` subagent roles; in Claude Code, use the read-only `Explore` agent type for both roles below. Use these templates for bounded CI/deploy investigations when the user authorizes subagent use.
+Use these prompts with any capability that can spawn a bounded read-only reviewer. Harness mappings live in `docs/process/agent-artifacts.md#harness-configuration`. Delegate only when the user authorizes it.
 
-## github-actions-log-investigator
+## GitHub Actions Log Investigator
 
-Use with: `explorer`
-
-Purpose: read one failed GitHub Actions run and identify the first actionable failure.
-
-Prompt:
+Capability: spawn a read-only reviewer.
 
 ```text
-You are the github-actions-log-investigator for the current Pharos repository checkout.
+Investigate Pharos GitHub Actions run <RUN_ID>. Do not edit files.
 
-Task: investigate GitHub Actions run <RUN_ID>. Do not edit files.
+Read the run metadata and failed logs with gh, then docs/testing.md and docs/deployment-process.md.
 
-Run/read:
-- gh run view <RUN_ID> --repo TokenBrice/pharos-watch --json status,conclusion,event,headSha,workflowName,url,jobs
-- gh run view <RUN_ID> --repo TokenBrice/pharos-watch --log-failed
-- docs/testing.md
-- docs/deployment-process.md
-
-Return:
-- workflow name, run URL, head SHA
-- failed job and step
-- first actionable error, not just aggregate failure
-- likely local repro command and required Node/environment scope
-- whether this is generated artifact/docs/test/pages/worker/deploy infra/post-deploy runtime/external transient
-- whether skipped jobs are expected from the outer workflow classifier
-- any files likely involved
-
-Do not suggest broad rewrites. Keep it concise and evidence-backed.
+Return: workflow/run URL/head SHA; failed job and step; first actionable error; smallest local repro and required runtime/environment; failure class; whether skipped jobs match classifier behavior; likely files. Stay evidence-backed and avoid broad fixes.
 ```
 
-## ci-repro-mapper
+## CI Reproduction Mapper
 
-Use with: `explorer`
-
-Purpose: map a failed CI step to the smallest local reproduction and likely owning docs/scripts.
-
-Prompt:
+Capability: spawn a read-only reviewer.
 
 ```text
-You are the ci-repro-mapper for the current Pharos repository checkout.
+Map the pasted Pharos CI failure to local reproduction and ownership. Do not edit files.
 
-Task: map this failed CI step to local reproduction commands and ownership docs. Do not edit files.
+Read docs/testing.md, docs/deployment-process.md, docs/scripts.md, package.json scripts, and only the relevant adaptive-check or artifact-registry source.
 
-Input failure:
-<PASTE FAILED STEP OR ERROR>
-
-Read:
-- docs/testing.md
-- docs/deployment-process.md
-- docs/scripts.md
-- package.json scripts
-- scripts/maintenance/run-pr-static-checks.ts and scripts/lib/deploy-impact.mts if adaptive PR selection failed
-- scripts/lib/automation-registry.mjs if generated artifacts failed
-
-Return:
-- smallest local repro command
-- broader gate that should pass after the fix
-- likely source files/scripts responsible
-- docs likely affected
-- common false leads to avoid
+Return: smallest repro; broader post-fix gate; likely source/scripts; affected docs; common false leads.
 ```

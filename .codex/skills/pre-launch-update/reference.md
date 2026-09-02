@@ -26,8 +26,8 @@ Listing existence alone is not enough — CoinGecko accepts issuer-submitted pre
 After updating existing coins, sweep for pre-launch stablecoins we don't yet track. Use all three lanes:
 
 - **DefiLlama diff**: Fetch `https://stablecoins.llama.fi/stablecoins`. Surface entries with near-zero `circulating` or with "preview" / "upcoming" / "testnet" markers in name or description.
-- **News sweep**: `WebSearch` for phrases in the last 14 days — `"announces stablecoin"`, `"launches stablecoin"`, `"unveils stablecoin"`, `"stablecoin pilot"`. Filter out issuers already tracked across `shared/data/stablecoins/coins.generated.json` and `shared/data/stablecoins/canonical-order.json`.
-- **Regulatory sweep**: `WebSearch` for `"stablecoin license"`, `"stablecoin charter"`, `"BitLicense"`, `"EMI license stablecoin"`, `"MiCA stablecoin approval"`. Jurisdictional first-movers often foreshadow tracked-worthy launches.
+- **News sweep**: use web search for recent stablecoin announcements and pilots. Filter out issuers already tracked across `shared/data/stablecoins/coins.generated.json` and `shared/data/stablecoins/canonical-order.json`.
+- **Regulatory sweep**: use web search for stablecoin licenses, charters, EMI/MiCA approvals, and comparable primary regulator signals. Jurisdictional first-movers often foreshadow tracked-worthy launches.
 
 For each candidate, report: name, symbol, issuer, peg currency, backing type, and a 1-line "why notable" (issuer size, novel mechanism, jurisdictional significance). Let the user decide whether to add. Do **NOT** add coins without user approval.
 

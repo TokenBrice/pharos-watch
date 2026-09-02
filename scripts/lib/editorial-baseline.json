@@ -2,7 +2,7 @@
   "version": 1,
   "policyVersion": "1.2",
   "policyHash": "baf6b0f7f9efd4cc",
-  "generatedAt": "2026-09-01T19:19:16.048Z",
+  "generatedAt": "2026-09-02T13:59:08.971Z",
   "entries": [
     {
       "surface": "about-prose",
@@ -5445,52 +5445,42 @@
     },
     {
       "surface": "prose-authoring-skills",
-      "record": ".codex/skills/annotations-refresh/SKILL",
-      "field": "body",
-      "rule": "no-booster-language",
-      "count": 1,
-      "fingerprints": [
-        "92f880ce20dc6fa9"
-      ]
-    },
-    {
-      "surface": "prose-authoring-skills",
-      "record": ".codex/skills/annotations-refresh/SKILL",
-      "field": "body",
-      "rule": "no-unqualified-safety",
-      "count": 1,
-      "fingerprints": [
-        "d4a029f2b8220ef2"
-      ]
-    },
-    {
-      "surface": "prose-authoring-skills",
       "record": ".codex/skills/issuer-questionnaire/SKILL",
       "field": "body",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "2af2abad475a1323"
+        "5befa424369e837a"
       ]
     },
     {
       "surface": "prose-authoring-skills",
-      "record": ".codex/skills/stablecoin-info-fetch/SKILL",
+      "record": ".codex/skills/reserve-research/SKILL",
       "field": "body",
-      "rule": "no-unqualified-safety",
+      "rule": "no-clause-dash",
       "count": 1,
       "fingerprints": [
-        "4cf70d9fe83aa20e"
+        "eef9e218737f5a41"
       ]
     },
     {
       "surface": "prose-authoring-skills",
-      "record": ".codex/skills/yield-coverage-audit-drain/SKILL",
+      "record": ".codex/skills/reserve-research/SKILL",
       "field": "body",
       "rule": "no-unqualified-safety",
       "count": 1,
       "fingerprints": [
-        "af8ec8c1b2d0f152"
+        "c1d6c2ae0a5c4e06"
+      ]
+    },
+    {
+      "surface": "prose-authoring-skills",
+      "record": ".codex/skills/stablecoin-identity-contracts/SKILL",
+      "field": "body",
+      "rule": "no-clause-dash",
+      "count": 1,
+      "fingerprints": [
+        "3a048b72698b8d28"
       ]
     },
     {

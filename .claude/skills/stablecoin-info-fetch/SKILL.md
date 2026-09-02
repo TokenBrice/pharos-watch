@@ -1,1 +1,0 @@
-../../../.codex/skills/stablecoin-info-fetch/SKILL.md

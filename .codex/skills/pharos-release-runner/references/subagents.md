@@ -1,69 +1,27 @@
-# Pharos Release Runner Subagents
+# Pharos Release Runner Reviewers
 
-Codex currently exposes generic `explorer` and `worker` subagent roles; in Claude Code, use the read-only `Explore` agent type for both. Use these prompt templates to create bounded Pharos-specific subagents when the user authorizes subagent use.
+Use these prompts with any capability that can spawn a bounded read-only reviewer. Harness mappings live in `docs/process/agent-artifacts.md#harness-configuration`. Delegate only when the user authorizes it.
 
-## pharos-release-reviewer
+## Release Readiness Reviewer
 
-Use with: `explorer`
-
-Purpose: independently review the committed stack or staged release surface before push.
-
-Prompt:
+Capability: spawn a read-only reviewer.
 
 ```text
-You are the pharos-release-reviewer for the current Pharos repository checkout.
+Review the intended Pharos release surface for production readiness. Do not edit files.
 
-Task: review the intended release surface for production readiness. Do not edit files.
+Read docs/agent-task-router.md, docs/deployment-process.md, docs/testing.md, and the committed diff against origin/main.
 
-Read:
-- docs/agent-task-router.md
-- docs/deployment-process.md
-- docs/testing.md
-- git diff origin/main..HEAD --stat
-- git diff origin/main..HEAD
-
-Focus on:
-- mismatched generated artifacts or docs drift, especially committed generated output that was not regenerated with its source change
-- missing targeted checks for touched task families
-- Pages vs Worker deploy impact
-- exact `.nvmrc` runtime, clean release snapshot, and correctly scoped production Pages environment
-- stale methodology/version/timeline updates
-- accidental inclusion of unrelated local artifacts
-- obvious release blockers that the merge gate might not explain clearly
-
-Return:
-- Blocking findings first, with file paths and exact rationale.
-- Then non-blocking risks.
-- Then the minimal validation commands you recommend.
-
-Do not summarize every touched file. Do not propose broad refactors.
+Check generated/docs drift, missing routed checks, Pages-versus-Worker impact, runtime/environment scope, methodology updates, unrelated artifacts, and release blockers. Return blocking findings, non-blocking risks, then minimal recommended validation. Do not summarize every file or propose broad refactors.
 ```
 
-## release-scope-classifier
+## Release Scope Classifier
 
-Use with: `explorer`
-
-Purpose: classify a noisy dirty tree into release-owned vs unrelated files before staging.
-
-Prompt:
+Capability: spawn a read-only reviewer.
 
 ```text
-You are the release-scope-classifier for the current Pharos repository checkout.
+Inspect the Pharos dirty tree and classify files into release batches. Do not edit files.
 
-Task: inspect the local dirty state and classify files into release batches. Do not edit files.
+Read git status, cached/uncached diff stats, and docs/process/agent-artifacts.md.
 
-Read:
-- git status --short --branch
-- git diff --stat
-- git diff --cached --stat
-- docs/process/agent-artifacts.md
-
-Return a concise table with:
-- file/path group
-- likely theme
-- include in current release? yes/no/unclear
-- reason
-- suggested commit message for included groups
-
-Preserve unrelated user or other-agent work. If unsure, mark unclear instead of guessing.
+Return a concise table: path group, theme, include yes/no/unclear, reason, and suggested commit subject for included groups. Preserve unrelated work; mark uncertainty instead of guessing.
 ```

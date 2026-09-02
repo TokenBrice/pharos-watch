@@ -1,6 +1,6 @@
 # GENIUS Compliance Tracker
 
-**Status: shipped as part of `/compliance/`.** U.S. GENIUS Act metadata is the `genius` metadata extension on each tracked stablecoin. It renders in the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`, which keeps the exhaustive registry, and per coin on stablecoin detail pages through the Regulatory Standing card (`src/lib/regulatory-standing.ts`) and the hero passport item. This doc is the **source of truth for the `genius` schema, the status criteria, sourcing requirements, and legal framing** — the companion to [mica-tracker.md](./mica-tracker.md). The `genius-research` skill encodes the workflow; this spec encodes the rules.
+**Status: shipped as part of `/compliance/`.** U.S. GENIUS Act metadata is the `genius` metadata extension on each tracked stablecoin. It renders in the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`, which keeps the exhaustive registry, and per coin on stablecoin detail pages through the Regulatory Standing card (`src/lib/regulatory-standing.ts`) and the hero passport item. This doc is the **source of truth for the `genius` schema, the status criteria, sourcing requirements, and legal framing** — the companion to [mica-tracker.md](./mica-tracker.md). The `compliance-research` skill (`genius` regime) encodes the workflow; this spec encodes the rules.
 
 GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins Act** (Public Law, signed 18 Jul 2025), the U.S. federal payment-stablecoin regime. It is an **informational, source-backed tracking surface, not legal advice** — see [Legal framing](#legal-framing-non-goals).
 
@@ -140,7 +140,7 @@ For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer 
 
 ## Sourcing & source kinds
 
-Map token → legal issuer entity → public posture. This mapping is manual and not cleanly API-able; treat it like the `reserve-research` / `mica-research` editorial workflows.
+Map token → legal issuer entity → public posture. This mapping is manual and not cleanly API-able; treat it like the `reserve-research` / `compliance-research` editorial workflows.
 
 `GeniusReference.sourceKind`, in descending authority for U.S. authorization claims:
 
@@ -185,7 +185,7 @@ npm run check:generated-artifacts
 
 After route/crawlability edits: `npm run typecheck`, `npm run build`, `npm run seo:check`.
 
-Ongoing refresh runs through the `genius-research` skill (single coin / audit) or the saved `compliance-research` workflow (broad MiCA + GENIUS pass). GENIUS status is a tracked attribute, **not** a methodology-scored value — assignment criteria live in this doc, not in `/methodology` versioning.
+Ongoing refresh runs through the `compliance-research` skill (`genius` regime for a single coin or audit; `both` for a broad MiCA + GENIUS pass). GENIUS status is a tracked attribute, **not** a methodology-scored value — assignment criteria live in this doc, not in `/methodology` versioning.
 
 ---
 
