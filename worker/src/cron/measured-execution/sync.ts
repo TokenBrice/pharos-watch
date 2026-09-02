@@ -15,6 +15,7 @@ import {
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
 import { fetchEvmBlockNumber } from "../../lib/evm-rpc";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
@@ -312,10 +313,10 @@ async function syncDexMeasuredExecutionLane(
     ? await loadLatestPublishedDexShadowMeasuredTargets(db, signal)
     : await loadLatestPublishedDexMeasuredTargets(db, signal);
   if (!targetGeneration || targetGeneration.targets.length === 0) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         reason: "target-generation-missing",
         // A shadow run with no generation still writes an empty durable
         // Record B so the ledger distinguishes "no generation" from "no row".
@@ -329,9 +330,9 @@ async function syncDexMeasuredExecutionLane(
               }),
             )
           : {}),
-      }),
+      },
       productivity: { productive: false, reason: "target-generation-missing" },
-    };
+    });
   }
 
   const quoteGenerationId = lane === "shadow"

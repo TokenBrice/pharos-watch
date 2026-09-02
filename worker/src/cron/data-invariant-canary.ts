@@ -1,4 +1,5 @@
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import {
   normalizeWorkerCanaryMode,
   runAndPersistCanaryChecks,
@@ -24,15 +25,11 @@ export async function runDataInvariantCanary(
   throwIfAborted(options.signal);
   const mode = resolveDataInvariantCanaryMode(options.mode);
   if (mode === "off") {
-    return {
+    return createCronResult({
       status: "skipped_neutral",
       itemCount: 0,
-      metadata: JSON.stringify({
-        mode,
-        skipped: true,
-        reason: "worker-canary-mode-off",
-      }),
-    };
+      metadata: { mode, skipped: true, reason: "worker-canary-mode-off" },
+    });
   }
 
   const observedAt = options.observedAt ?? Math.floor(Date.now() / 1000);
@@ -49,16 +46,11 @@ export async function runDataInvariantCanary(
   throwIfAborted(options.signal);
 
   if (!summary) {
-    return {
+    return createCronResult({
       status: mode === "shadow" ? "ok" : mode === "alert" ? "error" : "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        mode,
-        observedAt,
-        persistFailed: true,
-        persistError,
-      }),
-    };
+      metadata: { mode, observedAt, persistFailed: true, persistError },
+    });
   }
 
   const observedStatus = summary.errorCount > 0 || summary.degradedCount > 0 ? "degraded" : "ok";
@@ -68,10 +60,10 @@ export async function runDataInvariantCanary(
       ? "error"
       : observedStatus;
 
-  return {
+  return createCronResult({
     status: operationalStatus,
     itemCount: summary.totalChecks,
-    metadata: JSON.stringify({
+    metadata: {
       mode,
       observedStatus,
       observedAt: summary.observedAt,
@@ -89,6 +81,6 @@ export async function runDataInvariantCanary(
         durationMs: result.durationMs,
         ...(result.error ? { error: result.error } : {}),
       })),
-    }),
-  };
+    },
+  });
 }

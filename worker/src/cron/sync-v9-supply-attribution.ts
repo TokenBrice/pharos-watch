@@ -1,5 +1,6 @@
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import {
   getCaches,
@@ -54,59 +55,56 @@ export async function syncSafetyScoreV9SupplyAttribution(
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   );
   if (!sourceCache) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        stage: "source-fixed-input",
-        reason: "source-fixed-input-missing",
-      }),
+      metadata: { stage: "source-fixed-input", reason: "source-fixed-input-missing" },
       productivity: {
         productive: false,
         reason: "source-fixed-input-missing",
       },
-    };
+    });
   }
 
   let fixedInput: SafetyScoreV9SupplyAttributionSource;
   try {
     fixedInput = parseSafetyScoreV9SupplyAttributionSource(sourceCache.value);
   } catch (error) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         stage: "source-fixed-input",
         reason: "source-fixed-input-invalid",
         code:
           error instanceof Error && error.name
             ? error.name.slice(0, 160)
             : "Error",
-      }),
+      },
       productivity: {
         productive: false,
         reason: "source-fixed-input-invalid",
       },
-    };
+    });
   }
   if (
     fixedInput.clockSec > startedAtSec ||
     startedAtSec - fixedInput.clockSec > SOURCE_FIXED_INPUT_MAX_AGE_SEC
   ) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         stage: "source-fixed-input",
         reason: "source-fixed-input-stale",
         sourceClockSec: fixedInput.clockSec,
         ageSec: startedAtSec - fixedInput.clockSec,
-      }),
+      },
       productivity: {
         productive: false,
         reason: "source-fixed-input-stale",
       },
-    };
+    });
   }
 
   let priorGenerationStatus:
@@ -131,10 +129,10 @@ export async function syncSafetyScoreV9SupplyAttribution(
           nextSafetyScoreV9SupplyAttributionDueAtSec(priorGeneration)
       ) {
         priorGenerationStatus = "fresh";
-        return {
+        return createCronResult({
           status: "skipped_neutral",
           itemCount: priorGeneration.acceptedAssetIds.length,
-          metadata: JSON.stringify({
+          metadata: {
             stage: "cooldown",
             generationId: priorGeneration.generationId,
             acceptedCount: priorGeneration.acceptedAssetIds.length,
@@ -143,12 +141,12 @@ export async function syncSafetyScoreV9SupplyAttribution(
               nextSafetyScoreV9SupplyAttributionDueAtSec(
                 priorGeneration,
               ),
-          }),
+          },
           productivity: {
             productive: false,
             reason: "supply-attribution-generation-fresh",
           },
-        };
+        });
       }
       priorGenerationStatus = "due";
     } catch {
@@ -194,19 +192,15 @@ export async function syncSafetyScoreV9SupplyAttribution(
     signal,
   );
   if (!cacheWrite.written) {
-    return {
+    return createCronResult({
       status: "skipped_neutral",
       itemCount: 0,
-      metadata: JSON.stringify({
-        stage: "publication",
-        reason: "newer-generation-present",
-        generationId: generation.generationId,
-      }),
+      metadata: { stage: "publication", reason: "newer-generation-present", generationId: generation.generationId },
       productivity: {
         productive: false,
         reason: "newer-supply-attribution-generation-present",
       },
-    };
+    });
   }
 
   const diagnosticRejected = diagnosticRejectedAssetIds(generation);
@@ -215,10 +209,10 @@ export async function syncSafetyScoreV9SupplyAttribution(
     (assetId) => !diagnosticRejectedSet.has(assetId),
   );
   const complete = blockingRejectedAssetIds.length === 0;
-  return {
+  return createCronResult({
     status: complete ? "ok" : "degraded",
     itemCount: generation.acceptedAssetIds.length,
-    metadata: JSON.stringify({
+    metadata: {
       stage: "published",
       generationId: generation.generationId,
       sourceBaseInputGenerationId:
@@ -236,7 +230,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       blockingRejectedCount: blockingRejectedAssetIds.length,
       blockingRejectedAssetIds,
       priorGenerationStatus,
-    }),
+    },
     productivity: {
       productive: true,
       reason: complete
@@ -245,5 +239,5 @@ export async function syncSafetyScoreV9SupplyAttribution(
           : "supply-attribution-generation-published"
         : "supply-attribution-generation-published-with-blocking-rejections",
     },
-  };
+  });
 }

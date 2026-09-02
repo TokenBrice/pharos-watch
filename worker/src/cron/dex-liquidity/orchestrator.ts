@@ -1,6 +1,7 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -354,25 +355,19 @@ export async function reuseCurrentDexLiquidityScoringGeneration(
 ): Promise<CronResult> {
   const generationId = await loadCurrentDexScoringGenerationId(db, signal);
   if (!generationId) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "current-dex-liquidity-generation-missing",
-        persistence: { generationId: null, skipped: true, skippedReason: "hourly-price-not-due" },
-      }),
+      metadata: { reason: "current-dex-liquidity-generation-missing", persistence: { generationId: null, skipped: true, skippedReason: "hourly-price-not-due" } },
       productivity: { productive: false, reason: "current-dex-liquidity-generation-missing" },
-    };
+    });
   }
-  return {
+  return createCronResult({
     status: "skipped_neutral",
     itemCount: 0,
-    metadata: JSON.stringify({
-      cadenceReuse: true,
-      persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" },
-    }),
+    metadata: { cadenceReuse: true, persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" } },
     productivity: { productive: false, reason: "liquidity-cadence-reuse" },
-  };
+  });
 }
 
 export interface DexLiquidityRunContext {

@@ -8,6 +8,7 @@ import type {
   CronProgressReporter,
   CronResult,
 } from "../lib/cron-logger";
+import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { loadReportCardEvidenceJournalByIdV1 } from "../lib/report-card-evidence-journal-store";
 import {
   NATIVE_V9_INPUT_CACHE_KEY,
@@ -40,21 +41,21 @@ import {
 
 function unavailable(
   reason: string,
-  metadata: Record<string, unknown> = {},
+  metadata: CronMetadataRecord = {},
 ): CronResult {
-  return {
+  return createCronResult({
     status: "degraded",
     itemCount: 0,
-    metadata: JSON.stringify({
+    metadata: {
       stage: "input-load",
       reason,
       ...metadata,
-    }),
+    },
     productivity: {
       productive: false,
       reason: "v9-publication-source-unavailable",
     },
-  };
+  });
 }
 
 export async function computeSafetyScoreV9(
@@ -216,11 +217,11 @@ export async function computeSafetyScoreV9(
       parsedSupplyAttributionGeneration,
     )
   ) {
-    return {
+    return createCronResult({
       status: "skipped_neutral",
       itemCount:
         parsedSupplyAttributionGeneration.acceptedAssetIds.length,
-      metadata: JSON.stringify({
+      metadata: {
         stage: "supply-generation",
         reason: "supply-attribution-generation-cadence-deferred",
         sourceGenerationId: fixedInput.sourceGeneration,
@@ -238,12 +239,12 @@ export async function computeSafetyScoreV9(
           parsedSupplyAttributionGeneration.acceptedAssetIds.length,
         rejectedCount:
           parsedSupplyAttributionGeneration.rejectedAssetIds.length,
-      }),
+      },
       productivity: {
         productive: false,
         reason: "supply-attribution-generation-cadence-deferred",
       },
-    };
+    });
   }
 
   let supplyAttributionGenerationState:

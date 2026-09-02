@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import type { TwitterCreds } from "../lib/twitter";
 import type { TelegramCreds } from "../lib/telegram";
@@ -139,15 +140,11 @@ export async function generateDailyDigest(
         stablecoinsCacheReason,
       },
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "stablecoins-cache-unavailable",
-        stablecoinsCacheReason,
-        skipped: true,
-      }),
-    };
+      metadata: { reason: "stablecoins-cache-unavailable", stablecoinsCacheReason, skipped: true },
+    });
   }
   const now = Math.floor(Date.now() / 1000);
   const digestDate = formatIsoDate(now);

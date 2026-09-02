@@ -8,6 +8,7 @@ import {
 } from "../lib/constants";
 import { fetchTextWithRetry } from "../lib/fetch-retry";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 
 interface KinesisChainConfig {
@@ -151,11 +152,11 @@ export async function syncKinesisSupply(
     chainResults.push({ chain: config.chain, status: "ok", circulation: parsed.circulation });
   }
 
-  return {
+  return createCronResult({
     itemCount: synced,
     status: failed === 0
       ? (skipped > 0 ? "degraded" : "ok")
       : (synced > 0 ? "degraded" : "error"),
-    metadata: JSON.stringify({ synced, failed, skipped, chains: chainResults }),
-  };
+    metadata: { synced, failed, skipped, chains: chainResults },
+  });
 }

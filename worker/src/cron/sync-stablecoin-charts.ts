@@ -1,5 +1,6 @@
 import { getCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { fetchTextWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
 import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-state";
@@ -133,11 +134,11 @@ async function runStablecoinChartsPublication(
       message: "DefiLlama charts API error",
       status: chartResult?.response.status ?? "no response",
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "DL API unavailable", apiStatus: chartResult?.response.status ?? null }),
-    };
+      metadata: { reason: "DL API unavailable", apiStatus: chartResult?.response.status ?? null },
+    });
   }
   const res = chartResult.response;
 
@@ -151,11 +152,11 @@ async function runStablecoinChartsPublication(
       message: "Failed to parse JSON from DefiLlama charts API",
       status: res.status,
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "DL API invalid JSON", apiStatus: res.status }),
-    };
+      metadata: { reason: "DL API invalid JSON", apiStatus: res.status },
+    });
   }
   const raw = parsedBody.value as RawChartPoint[];
 
@@ -167,11 +168,11 @@ async function runStablecoinChartsPublication(
       message: "Unexpected data length; skipping cache write",
       metadata: { rawLength: raw?.length },
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "DL API payload too small", rawLength: raw?.length ?? 0 }),
-    };
+      metadata: { reason: "DL API payload too small", rawLength: raw?.length ?? 0 },
+    });
   }
 
   let normalizedRaw: NormalizedRawChartPoint[] = raw.flatMap((point) => {
@@ -272,15 +273,11 @@ async function runStablecoinChartsPublication(
       message: "Downsampled payload too small; preserving existing cache",
       metadata: { downsampledPointCount: downsampled.length },
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "downsampled-payload-too-small",
-        rawPoints: normalizedRaw.length,
-        downsampledPoints: downsampled.length,
-      }),
-    };
+      metadata: { reason: "downsampled-payload-too-small", rawPoints: normalizedRaw.length, downsampledPoints: downsampled.length },
+    });
   }
 
   const cacheResult = await setCacheIfNewer(
@@ -325,9 +322,9 @@ async function runStablecoinChartsPublication(
       });
     }
   }
-  return {
+  return createCronResult({
     itemCount: cacheResult.written ? downsampled.length : 0,
-    metadata: JSON.stringify({
+    metadata: {
       rawPoints: normalizedRaw.length,
       downsampledPoints: downsampled.length,
       fxFixes: fixes,
@@ -339,6 +336,6 @@ async function runStablecoinChartsPublication(
       casSkipped: cacheResult.skippedBecauseNewer,
       lastWriteAdvanced,
       canonicalReadbackUpdatedAt,
-    }),
-  };
+    },
+  });
 }

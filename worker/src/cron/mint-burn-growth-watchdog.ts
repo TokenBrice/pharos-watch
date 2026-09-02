@@ -1,4 +1,5 @@
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 
 /**
@@ -22,18 +23,15 @@ export async function runMintBurnGrowthWatchdog(
   const rowCount = row?.row_count ?? 0;
 
   if (rowCount < MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD) {
-    return {
+    return createCronResult({
       itemCount: rowCount,
-      metadata: JSON.stringify({ rowCount, thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD }),
-    };
+      metadata: { rowCount, thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD },
+    });
   }
 
-  return {
+  return createCronResult({
     status: "degraded",
     itemCount: rowCount,
-    metadata: JSON.stringify({
-      rowCount,
-      thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD,
-    }),
-  };
+    metadata: { rowCount, thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD },
+  });
 }

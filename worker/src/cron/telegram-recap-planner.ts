@@ -25,6 +25,7 @@ import {
 import { localDateInIanaTimezone, nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import type { TelegramPresetId } from "@shared/lib/telegram-presets";
 import { throwIfAborted } from "../lib/abort";
+import { createCronResult } from "../lib/cron-result";
 import { buildInClause } from "../lib/db";
 import { sha256Hex } from "../lib/hash";
 import { serializePendingMarkupPolicy } from "../lib/telegram-pending-provenance";
@@ -380,10 +381,10 @@ export async function planTelegramPersonalizedRecaps(
     oldestDueAgeSec: 0,
     nextDueAt: null as number | null,
   };
-  const finish = (status: "ok" | "degraded", tapeFreshness: "fresh" | "stale"): TelegramRecapPlannerResult => ({
+  const finish = (status: "ok" | "degraded", tapeFreshness: "fresh" | "stale"): TelegramRecapPlannerResult => createCronResult({
     status,
     itemCount: counts.queued + counts.noChanges + counts.paused + counts.stale,
-    metadata: JSON.stringify({
+    metadata: {
       ...counts,
       tapeFreshness,
       wallDurationMs: Math.max(0, Date.now() - startedAtMs),
@@ -395,8 +396,8 @@ export async function planTelegramPersonalizedRecaps(
       },
       aiCalls: 0,
       externalPlanningFetches: 0,
-    }),
-  });
+    },
+  }) as TelegramRecapPlannerResult;
   const deadlineReached = () => Date.now() - startedAtMs >= softDeadlineMs;
 
   if (rolloutPolicy.mode === "off") return finish("ok", "fresh");

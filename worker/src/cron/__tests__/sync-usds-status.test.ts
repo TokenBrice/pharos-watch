@@ -43,12 +43,9 @@ describe("syncUsdsStatus", () => {
 
     expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(1);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      implementationAddress: string;
-      freezeCapabilityPresent: boolean;
-    };
-    expect(metadata.implementationAddress).toBe("0x1923dfee706a8e78157416c29cbccfde7cdf4102");
-    expect(metadata.freezeCapabilityPresent).toBe(false);
+    expect(result.metadata).toBe(
+      `{"implementationAddress":"0x1923dfee706a8e78157416c29cbccfde7cdf4102","freezeCapabilityPresent":false,"cacheKey":"usds-status","syncStartSec":${Math.floor(Date.now() / 1000)},"cacheWriteMode":"published","casSkipped":false}`,
+    );
 
     const insert = getCacheInsert(db as MockD1Database);
     expect(insert).toBeDefined();

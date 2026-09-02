@@ -3,7 +3,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { formatIsoDate } from "@shared/lib/format";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
-import { createNeutralSkippedCronResult } from "../lib/cron-result";
+import { createCronResult, createNeutralSkippedCronResult } from "../lib/cron-result";
 import type { TelegramCreds } from "../lib/telegram";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { TwitterCreds } from "../lib/twitter";
@@ -346,20 +346,20 @@ export async function generateWeeklyRecap(
         telegramStatus: retry.telegramStatus,
       },
     });
-    return {
+    return createCronResult({
       itemCount: 0,
       ...(retryDegradedReasons.length > 0 || hasNonDeliveringDisposition(retry.dispositions)
         ? { status: "degraded" as const }
         : {}),
-      metadata: JSON.stringify({
+      metadata: {
         summary: `weekly: existing recap delivery retry, tweet: ${retry.tweetStatus}, telegram: ${retry.telegramStatus}`,
         channels: {
           twitter: { status: retry.tweetStatus, disposition: retry.dispositions.twitter },
           telegram: { status: retry.telegramStatus, disposition: retry.dispositions.telegram },
         },
         degradedReasons: retryDegradedReasons,
-      }),
-    };
+      },
+    });
   }
 
   const recentWeeklyRows = await db
