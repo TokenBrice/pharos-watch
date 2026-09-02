@@ -21,7 +21,7 @@ Do not use for a read-only review or while another writer owns overlapping files
 
 Run routed focused checks. GitHub’s required PR gate is authoritative; `npm run check:pr -- --base=<ref>` is the committed-diff rehearsal and `npm run check:release` is only an explicit local production rehearsal.
 
-A request to push/publish/release authorizes the necessary release branch and protected-main PR path, never a direct push to `main`. Push the release branch, create the PR, wait for required checks, and merge through GitHub. Record PR head SHA and merged `main` SHA. If a gate fails, switch to `pharos-ci-failure-triage`.
+A request to push/publish/release authorizes the necessary release branch and protected-main PR path, never a direct push to `main`. Push the release branch, create the PR, wait for required checks, and merge through GitHub with `gh pr merge --merge`; never use squash or rebase merge. Verify the resulting `main` commit has two parents and contains the recorded PR head SHA, then record both SHAs. If a gate fails, switch to `pharos-ci-failure-triage`.
 
 ## Deployment And Acceptance
 
