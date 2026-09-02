@@ -1,1 +1,0 @@
-../../../.codex/skills/contract-enrich/SKILL.md

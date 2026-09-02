@@ -84,7 +84,7 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `liveReservesConfig?: LiveReservesConfig` — live reserve sync configuration (see `docs/live-reserves.md`)
 - `notices?: CoinNotice[]` — per-coin alert notices shown on detail pages
 - `status?: "pre-launch" | "active" | "quarantined" | "delisted" | "frozen"` — lifecycle state; omitted rows are active
-- `listingStatusReview?: ListingStatusReview` — dated reason and review provenance required for quarantined and delisted records; quarantined reviews also require `reviewBy`
+- `listingStatusReview?: StablecoinListingStatusReview` — dated reason and review provenance required for quarantined and delisted records; quarantined reviews also require `reviewBy`
 - `priceBasis?: StablecoinPriceBasis` / `exitMechanism?: StablecoinExitMechanism` — enums owned by `STABLECOIN_PRICE_BASIS_VALUES` and `STABLECOIN_EXIT_MECHANISM_VALUES` in `shared/types/stablecoin-taxonomy.ts`; sourced delisting evidence only; CI forbids these fields on non-delisted rows
 - `frozenAt?: string` / `obituary?: StablecoinObituary` — freeze date and cemetery/detail-page obituary content required for frozen tracked coins
 - `launchDate?`, `announcedDate?`, `expectedLaunchDate?`, `launchPhase?`, `launchPhaseDetail?`, `featuredContent?`, `milestones?`, `dateHistory?` — launch/upcoming timeline metadata for pre-launch and newly launched assets

@@ -1,1 +1,0 @@
-../../../.codex/skills/genius-research/SKILL.md

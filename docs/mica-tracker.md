@@ -184,7 +184,7 @@ This is the dominant cost, not the code.
 - **Sources of truth:** ESMA register of authorized entities; EBA registers of EMT/ART issuers; national authority registers (ACPR REGAFI, BaFin, DNB/AFM, MFSA, CBI, Bank of Lithuania).
 - **Mapping is manual:** token → issuer entity → authorization is not cleanly API-able. Treat like the existing `reserve-research` / `resilience-classify` editorial workflows.
 - **Backfill scope:** Prioritize EUR coins, major EU-traded USD coins, existing structured `mica` metadata, and records whose licenses mention MiCA. Assets without structured metadata remain unassessed, not implicitly out of scope; use the live compliance surface or source metadata for current status totals.
-- **Maintenance:** statuses change as authorizations are granted/refused and venues delist. Recommend a `mica-research` skill (modeled on `reserve-research`) for periodic refresh against the registers.
+- **Maintenance:** statuses change as authorizations are granted/refused and venues delist. Periodic refresh against the registers runs through the `compliance-research` skill (`mica` regime).
 
 ### Worked reference examples (verify before entry)
 
@@ -201,7 +201,7 @@ These illustrate the model only — confirm each against the ESMA/EBA/NCA regist
 
 ## Maintenance
 
-MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; status values remain in `shared/types/core.ts`. Ongoing work is data refresh through the `mica-research` skill plus normal route/build checks.
+MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; status values remain in `shared/types/core.ts`. Ongoing work is data refresh through the `compliance-research` skill (`mica` regime) plus normal route/build checks.
 
 - Data refresh: update or create the compliance sidecar's `mica` block with sourced register references, then run `npm run bootstrap:generated`, `npm run check:stablecoin-data`, and `npm run check:generated-artifacts`.
 - Route verification: run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm run seo:check` when route/UI behavior changes.

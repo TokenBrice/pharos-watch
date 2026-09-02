@@ -2,35 +2,41 @@
 
 Use this page to enter the documentation corpus without loading unrelated reference material.
 
-The machine-readable routing source of truth is [doc-ownership.json](./doc-ownership.json). It maps source areas to the docs, checks, and hard rules that apply to a change. Do not maintain a second task-family inventory in this file.
+The machine-readable routing source of truth is [doc-ownership.json](./doc-ownership.json). Its `mappings` array is the only authored routing model; the registry loader derives the runtime task-family projection from it.
+
+Each mapping has an `id`, `label`, `risk`, source `sources` globs, exact `docs`, and executable `checks`. A doc is either a path string or `{ "path": "...", "anchor": "..." }`; long docs use verified heading anchors. Optional `rules`, scoped-context `alsoRead`, and non-path `hints` stay separate. `exclusions` records intentionally implementation-only areas with a source glob and reason. Tests reject missing paths and anchors, dead mappings, invalid npm aliases, placeholders in doc slots, and routing coverage below 95%.
 
 ## Route A Task
 
 From the repository root, run:
 
 ```bash
-node --import tsx scripts/ci/pharos-change-contract.ts
+npm run agent:route
 ```
 
 Before editing a clean tree, pass each planned path with repeatable `--file <path>` options so the contract can route the task before files are changed:
 
 ```bash
-node --import tsx scripts/ci/pharos-change-contract.ts \
+npm run agent:route -- \
   --file worker/src/cron/sync-yield-data.ts \
   --file docs/worker-and-api-limits.md
 ```
 
+The `agent:route` alias invokes `scripts/ci/pharos-change-contract.ts`.
+
+`--file` accepts repository-relative paths, `./` paths, absolute paths under the repository, and absolute paths under the current linked worktree; separators are normalized before routing. A missing explicit path is routed as a planned new file with a warning; add repeatable `--new-file` to suppress those warnings for the invocation. Selection precedence is `--file` > `--staged` > `--base-ref`/`--head-ref` flags > `PHAROS_CHANGE_CONTRACT_*_REF` environment range > working tree.
+
 Use `--staged` when the intended change is staged but not committed. The command reports:
 
-- matched task families and risk
+- matched ownership mappings and risk
 - changed source files
 - the smallest useful docs set
-- docs that may need updates
 - focused checks and hard rules
+- hints, separately from the exact `Read first` paths
 
 Then:
 
-1. Read only the reported docs. For large docs with an `Agent navigation` block, Grep or offset-read the matched section.
+1. Read only the reported `path#anchor` sections and scoped context files.
 2. Inspect the reported source entrypoints and follow local imports only as needed.
 3. Treat code, schemas, registries, and checked runtime data as authoritative when prose disagrees.
 4. Update the nearest owning doc only when behavior, API contracts, methodology, operations, or data-source policy changed.

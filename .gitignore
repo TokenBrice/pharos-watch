@@ -2,6 +2,7 @@
 
 # worktrees
 .worktrees/
+/.claude/worktrees/
 
 # dependencies
 /node_modules
@@ -66,10 +67,6 @@ yarn-error.log*
 
 # vercel
 .vercel
-
-# worktrees
-.worktrees/
-worktrees
 
 # claude/codex local agent config
 .claude/settings.local.json
@@ -148,5 +145,4 @@ output/playwright/
 /*-screenshot.png
 .superpowers/
 
-/agents/
 __pycache__/

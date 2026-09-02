@@ -1,5 +1,7 @@
 # Operator Origin Access Setup
 
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Repo-Side Changes · Worker route declarations · CORS allowlist · Runtime origin bindings · Pages Functions Proxy · Proxy contract · Pages project bindings needed now · Cloudflare Account Setup And Recovery · Recommended Cloudflare Values · Verification · Recovery.
+
 Runbook for the operator-origin split that now fronts `/admin/`, `/admin-api/`, and browser admin calls with Access-protected ops hosts while leaving `/status/` public and read-only.
 
 ---

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Stablecoin Identity & Contracts"
+  short_description: "Verify identity and curate chain deployments"
+  default_prompt: "Use $stablecoin-identity-contracts in the appropriate verify, populate, or discover mode for this stablecoin."

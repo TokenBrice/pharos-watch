@@ -1,4 +1,0 @@
-interface:
-  display_name: "Stablecoin Info Fetch"
-  short_description: "Verify per-coin stablecoin metadata fields"
-  default_prompt: "Use $stablecoin-info-fetch to verify and populate metadata fields in this stablecoin's routed base or domain-sidecar source."

@@ -2,7 +2,9 @@
 
 Runtime reference for the Telegram Mini App control panel that ships alongside PharosWatchBot. This doc covers launch surfaces, the `?startapp=` payload registry, seam rules, auth model, BotFather operator state, debugging, and test fixtures.
 
-For the broader Telegram subsystem behavior (commands, alert pipelines, schema), see [`telegram-alerts.md`](./telegram-alerts.md). For the worker-side seam ownership rules, see [`telegram-architecture.md`](./telegram-architecture.md).
+For bot commands, dispatch, and delivery persistence, see [`telegram-alerts.md`](./telegram-alerts.md). For ingress, storage, bindings, and the worker-side seam ownership rules, see [`telegram-architecture.md`](./telegram-architecture.md).
+
+> **Agent navigation** — Start with the [Telegram architecture seam map](./telegram-architecture.md). Client/auth/state sections: [overview](#overview) · [launch surfaces](#launch-surfaces) · [payload scheme](#payload-scheme) · [client state](#client-state-and-control-semantics) · [auth](#auth-model) · [Mini App launch entrypoints](#mini-app-launch-entrypoints) · [frontend main page](#frontend-main-page) · [public pulse](#public-pulse-privacy-and-freshness).
 
 ## Overview
 
@@ -47,7 +49,7 @@ Owned files:
 
 ## Launch Surfaces
 
-The full inventory of launch entrypoints and their reconciliation paths is documented in [`telegram-alerts.md`](./telegram-alerts.md#mini-app-launch-entrypoints). Summary:
+The full inventory of launch entrypoints and their reconciliation paths is documented in [Mini App Launch Entrypoints](#mini-app-launch-entrypoints). Summary:
 
 - **Persistent menu button.** The five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/` via `setChatMenuButton`. The cache TTL is 15 minutes, so drift heals within one cache cycle.
 - **Bot profile Main Mini App.** Configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code. See [`runbooks/telegram-mini-app-botfather.md`](./runbooks/telegram-mini-app-botfather.md) for the operator-owned state.
@@ -224,3 +226,62 @@ The automated `200%` case changes the root font size and is a text-resize/reflow
 5. Verify group read-only and stale-auth copy with edits disabled. Use a non-production test subscriber for the destructive forgotten-state check.
 
 Record the Telegram/client version, OS/device, appearance, assistive setting, and result in the release handoff. These are operator checks; CI does not report them as automated passes.
+
+## Mini App Launch Entrypoints
+
+PharosWatchBot exposes the Mini App control panel at `https://pharos.watch/pharoswatchbot/app/`. The first launch phase is private-chat scoped: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies because Telegram `InlineKeyboardButton.web_app` is private-chat-only and the MVP does not support group mutation. The private settings panel can toggle global alert families, choose the global depeg worsening step, and manage quiet hours through signed Mini App mutations.
+
+Launch paths:
+
+- Persistent bot menu button: the five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/`.
+- Bot profile Main Mini App: configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code.
+- Private command replies: `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status <ticker>`, `/why <ticker>`, `/coverage <ticker>`, `/set`, `/mute`, `/unmutehours`, `/timezone`, `/unsnooze`, `/pause`, `/health`, and `/forget` include Web App buttons in private chats. These buttons attach `startapp` context (`home`, `settings`, `watchlist`, `presets`, `quiet-hours`, `snooze`, `health`, `forget`, `coin_<stablecoinId>`, `why_<stablecoinId>`, or `coverage_<stablecoinId>`) so the Mini App opens on the matching panel. Private `quicksub:<stablecoinId>` confirmations also include a `coin_<stablecoinId>` tuning button. Group and supergroup replies keep the existing command and callback keyboards. `/recap` uses callback controls rather than a Web App launch button.
+- Direct Mini App deep links: `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter; backend authorization for every Mini App read and mutation validates Telegram `initData`. Telegram reports private direct-link launches as `chat_type="sender"`, which the backend treats as the user's private alert settings context.
+
+Group behavior is intentionally unchanged. Group setup, settings, and subscription mutations remain available only through addressed bot commands and existing callback flows, with the same fresh admin checks as before. The Mini App must not mutate group, supergroup, or channel rows until a fresh admin verification path and group-scoped launch ownership model exist.
+
+BotFather-owned release checklist:
+
+- Configure the bot profile Main Mini App as `Launch app` with URL `https://pharos.watch/pharoswatchbot/app/`.
+- Enable the profile launch surface in BotFather separately from the reconciled persistent menu button.
+- Upload current preview screenshots/video and confirm they match the private-chat control-panel flow.
+- Configure the Mini App loading-screen icon and color in BotFather.
+- Enable Inline Mode with BotFather `/setinline` and use a status-oriented placeholder. Worker reconciliation registers `inline_query` and `chosen_inline_result`, but it cannot toggle BotFather-owned Inline Mode.
+- If chosen-card measurement is required, configure a conservative BotFather `/setinlinefeedback` sample. Feedback is aggregate-only and is not a functional delivery signal.
+- Test direct links for `https://t.me/PharosWatchBot?startapp=settings`, `watchlist`, `coin_usdc-circle`, `why_usdc-circle`, and `coverage_usdc-circle` on Telegram mobile, desktop, and web.
+- Verify the page loads inside Telegram with the Telegram bridge script, signed `initData`, and no frame denial headers.
+
+## Frontend Main Page
+
+`src/app/pharoswatchbot/page.tsx` is the product-facing main page for PharosWatchBot and the wider Telegram feature set. It is linked from the top-nav menus ("Alert Bot") and the homepage status strip.
+
+- Route: `/pharoswatchbot/`
+- Legacy alias: `/telegram` redirects to `/pharoswatchbot/`, and `/telegram/*` redirects to the matching `/pharoswatchbot/*` path
+- Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
+- Art direction: the page is one night of alerts told as a scrollytelling descent from dusk to dawn — drawn lighthouse hero → six alert-family signal cards arriving on a timeline → two-minute setup → live adoption board → Mini App showcase → daily recap and final CTA → the reference shelf (full command reference, reliability contract, FAQ). The page follows the site theme: dark theme renders the night world; light theme renders the same scene as day (pale sky, ink lighthouse) via the page-scoped ladder and scene variables in `night-watch.css`.
+- Reads `/_site-data/telegram-pulse` for snapshot-first watcher/subscription telemetry: the hero's live "watchers on tonight's shift" count-up, the instrument panel's active watchers / alert follows (explicit + preset-implied split) / daily lifecycle deltas / top-followed coins summary, and the Telegram chat lifecycle chart — all rendered on the surface, not folded behind disclosure. Public adoption metrics only: no operational Mini App or queued-delivery counts.
+- Does not call the webhook or any other mutating bot API; it links users to Telegram plus the on-site digest archive
+- Presents the bot around low-noise growth paths: the recommended `/subscribe dews,depeg usd-top25` default, preset cohorts, group-addressed commands, reasoned safety-grade alerts, the private personalized Daily Recap (`/recap`, `/recap on|off`, and `/recap time <hour>`), quiet hours, inline snooze, and the overflow delivery queue
+- Documents Daily Recap in the command reference, Mini App capability list, and FAQ, including its private-chat scope, confirmed-timezone requirement, material-change suppression, and separation from the market-wide Daily Digest
+- The recommended setup deep link preloads a Telegram confirmation for `dews,depeg usd-top25`; it does not silently subscribe the user before they confirm in Telegram.
+- Renders a visible FAQ section with matching `FAQPage` JSON-LD, plus `HowTo` and `SoftwareApplication` JSON-LD for the bot setup flow
+- The command reference is filterable client-side and fully visible (no collapsed defaults); alert examples remain the verbatim `shared/lib/telegram-alert-samples.ts` text with plain-language family framing.
+
+## Public Pulse Privacy And Freshness
+
+The public pulse keeps the exact `activeWatchers` total visible by product decision, because it is the primary adoption signal on the public page. Low-cardinality supporting metrics are more sensitive while the bot is small: nonzero values below 5 are suppressed for daily new/churn/reactivation deltas, pending deliveries when available, Mini App session/mutation totals, and lifecycle-history delta fields. Suppressed fields are listed in `privacy.suppressedFields`; consumers should omit those tiles instead of rendering zero. Mini App denied counters are an explicit exception: they are abuse/health counters, so they remain visible even below the threshold and are not listed in `privacy.suppressedFields`. Replay-class auth counters are reserved for future telemetry unless a producer is wired.
+
+Pulse publication reuses heavy public sections on a 15-minute cadence, but only within the same UTC day. Mini App "today" counters reload after midnight UTC even when the previous heavy-section snapshot is still inside the reuse window.
+
+Publication is ordered so the heavy-section reuse marker can never claim work that was not durably published: the snapshot cache write commits first, and only then does the marker advance. A failed snapshot write surfaces as an `error` outcome on the `telegram-pulse-snapshot` scheduled sidecar (with `snapshotPublished: false` and the write error preserved in the cron metadata) instead of being swallowed; a failed marker write after a successful snapshot write degrades the sidecar and leaves the marker behind so the next run recomputes the heavy sections.
+
+`quality.status` is `partial` when a non-critical public telemetry loader failed. Public copy stays generic and never includes raw D1 or provider errors; Access-gated `/api/status` keeps field-level Telegram telemetry diagnostics for operators. Unavailable telemetry takes precedence over privacy suppression: if `pendingDeliveries` cannot be loaded, the response returns `pendingDeliveries: null` and lists `pendingDeliveries` in `quality.unavailableFields`, not in `privacy.suppressedFields`.
+
+Freshness is split deliberately:
+
+- `currentSnapshotAt` / `updatedAt` describe the current aggregate pulse, refreshed on the 5-minute Telegram pulse cadence.
+- `lifecycleHistoryUpdatedAt` describes the latest daily lifecycle-history snapshot when any lifecycle snapshot exists, including periods where `historySource="live-fallback"` because older active-chat cohort points are prefixed ahead of the fixed daily snapshots.
+- `lifecycleHistoryEverySeconds=900` documents the lifecycle snapshot refresh cadence.
+- Heavy public pulse sections (`topCoins`, lifecycle history, and Mini App daily usage counters) are reused for up to 15 minutes when the cached pulse is valid. The current aggregate counts still refresh on the 5-minute pulse cadence, and pending-delivery count can reuse the dispatch lane's pending-capacity snapshot.
+
+The public chart labels snapshot-backed history as daily lifecycle snapshots. It keeps the full lifecycle visible by permanently prefixing fixed daily snapshots with live fallback points whenever active chats predate the first snapshot row. Those fallback prefix points are cumulative current active chats by subscriber-created date and should not be presented as stable churn-adjusted lifecycle history.

@@ -79,9 +79,9 @@ const ABOUT_PAGE_JSON_LD = {
     },
     {
       "@type": "TechArticle",
-      "@id": `${SITE_ORIGIN}/docs/data-pipeline/#tech-article`,
-      name: "Data Pipeline",
-      url: `${SITE_ORIGIN}/docs/data-pipeline/`,
+      "@id": `${SITE_ORIGIN}/docs/data-flow-map/#tech-article`,
+      name: "Data Flow Map",
+      url: `${SITE_ORIGIN}/docs/data-flow-map/`,
     },
     {
       "@type": "WebPage",

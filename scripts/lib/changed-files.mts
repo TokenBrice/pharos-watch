@@ -105,10 +105,11 @@ export function collectChangedFiles({
  */
 export function collectStagedFiles({
   cwd = process.cwd(),
+  diffFilter = "ACMR",
   execFile = execFileSync as GitDiffExec,
-}: Pick<ChangedFileOptions, "cwd" | "execFile"> = {}) {
+}: { cwd?: string; diffFilter?: string; execFile?: GitDiffExec } = {}) {
   return [...new Set(collectGitPaths(
-    { kind: "staged", diffFilter: "ACMR" },
+    { kind: "staged", diffFilter },
     { cwd, execFile },
   ))].sort();
 }

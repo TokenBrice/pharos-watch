@@ -1,0 +1,22 @@
+# Pharos repo-local omp overlay.
+# Keep task isolation and approval aligned with repository policy.
+# Route Pharos task roles to the approved model/effort profiles.
+# Missing roles fall through to the user's global config.
+# Owner decisions are final for this repository.
+# Edit only via the plan / agent-artifacts.md.
+task:
+  isolation:
+    mode: none
+modelRoles:
+  task: openai-codex/gpt-5.6-luna:xhigh
+  smol: openai-codex/gpt-5.6-luna:medium
+  review: openai-codex/gpt-5.6-sol:high
+  security: openai-codex/gpt-5.6-sol:high
+  research: openai-codex/gpt-5.6-sol:medium
+  designer: openai-codex/gpt-5.6-sol:high
+retry:
+  fallbackChains:
+    tiny:
+      - openai-codex/gpt-5.6-luna:medium
+tools:
+  approvalMode: yolo

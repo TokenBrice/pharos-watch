@@ -22,6 +22,7 @@ export const CLI_ARGV_EXEMPTION_CATEGORIES = Object.freeze({
 export const CLI_ARGV_POLICY = Object.freeze({
   strict: Object.freeze([
     strict("scripts/ci/check-dex-census-provider-drift.ts"),
+    strict("scripts/ci/check-doc-symbols.ts"),
     strict("scripts/ci/guard-worker-deploy.ts"),
     strict("scripts/ci/open-automated-refresh-pr.ts"),
     strict("scripts/maintenance/diff-safety-score-v9-movers.ts"),
@@ -38,7 +39,9 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/purge-cloudflare-zone-cache.mjs"),
     strict("scripts/maintenance/refresh-pages-release-data.ts"),
     strict("scripts/maintenance/register-telegram.ts"),
+    strict("scripts/maintenance/run-focused-checks.ts"),
     strict("scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts"),
+    strict("scripts/maintenance/sync-agent-skills.mjs"),
     strict("scripts/maintenance/sync-depeg-events.ts"),
     strict("scripts/maintenance/sync-digests.ts"),
     strict("scripts/maintenance/wait-pages-release-marker.ts"),

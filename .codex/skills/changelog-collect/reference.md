@@ -1,13 +1,13 @@
 ## Changelog Collection — Extended Reference
 
-Material moved verbatim from `SKILL.md`: render-context notes, theme/signal catalogs, headline models, href route map, quality guidelines, and future ideas.
+Material moved verbatim from `SKILL.md`: render-context notes, theme/signal catalogs, headline models, href route map, and quality guidelines.
 
 ### Where the output lands
 
 - **File**: `src/data/changelogs/<YYYY-MM-DD>.ts` (the `to` date).
 - **Barrel**: `src/data/changelogs/index.ts` — generated artifact (`changelog-registry`); regenerate with `npm run prebuild -- --only=changelog-registry` (the `.sort()` handles runtime order).
 - **Rendered at**: `/changelog/` via `ChangelogEntryCard` inside a timeline `<ol>`. Each entry's `id` is `dateRange.to`, used by both the card's hash anchor and `ChangelogWeekNav`.
-- **Displayed fields**: date range, "Latest" badge on the newest entry, `stats.totalCommits`, `headline`, `fieldNotes` editor note, summary list (label + tag + description + optional `href`), and a collapsed disclosure of the first 20 commits with an "and N more" tail.
+- **Displayed fields**: date range, "Latest" badge on the newest entry, `stats.totalCommits`, `headline`, `fieldNotes` editor note, summary list (label + tag + description + optional `href`), and a collapsed disclosure of the newest 20 non-noise commits with an "and N more" tail.
 
 ### Noise filter — rationale
 
@@ -42,7 +42,7 @@ Reference models:
 
 ### Methodology href routes
 
-List the current routes from the directory — it wins over any snapshot here:
+List the current routes from the directory; the source file wins over this snapshot:
 
 ```bash
 ls src/app/methodology/ | grep changelog
@@ -57,12 +57,4 @@ Non-obvious name mappings: Safety Score → `scoring-changelog`; PegScore / DEWS
 - Prefer combining over enumeration: "Telegram delivery hardened (rate-limit handling, HTML repair, retry cap)" beats listing each fix.
 - Labels are noun phrases, parallel in structure.
 - Headlines name shipped features with concrete numbers when available.
-- `commits[]` is exhaustive after noise filtering — every surviving commit appears.
-
-### Future enrichment opportunities
-
-Not implemented yet — documented here so future sessions can pick them up without re-deriving the design:
-
-- **Diffstat in `stats`**: extending `ChangelogEntry.stats` with `filesChanged?: number; linesAdded?: number; linesRemoved?: number;` (via `git log --shortstat --no-merges --since=… --until=…`, summed) gives the card a denser at-a-glance metric than commit count alone. Requires adding the fields to `src/data/changelogs/types.ts` and rendering them in `ChangelogEntryCard`.
-- **PR-ref hyperlinks in the commit list**: commit messages already contain `(#NN)` in plain text. A small `String.prototype.replace` in the commit `<li>` of `ChangelogEntryCard` can turn them into links to `https://github.com/TokenBrice/pharos-watch/pull/NN`.
-- **Per-entry stats delta**: surface "+N stablecoins", "+N live-reserve adapters" automatically by comparing the previous entry's computed counts. Would require either a small metadata block per entry or an on-render computation against the tracked-coins data set.
+- The manifest's `commits[]` records at most the newest 20 non-noise commits; `stats.totalCommits` and the prose summary cover the whole selected range.

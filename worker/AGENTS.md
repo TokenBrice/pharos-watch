@@ -1,30 +1,25 @@
 # Worker Agent Notes
 
-Applies to `worker/**`.
+Applies to `worker/`.
 
 ## Read First
 
-- `docs/worker-infrastructure.md`
-- `docs/worker-and-api-limits.md`
-- `docs/data-flow-map.md`
-- `docs/deployment-process.md` for migration or deploy-path work
-- `docs/process/cron-trigger-policy.md` for cron trigger, schedule, or slot work
+- `docs/worker-infrastructure.md`, `docs/worker-and-api-limits.md`, and `docs/data-flow-map.md`.
+- Migration/deploy work: `docs/deployment-process.md` § “CI Deploy Sequence” and `worker/migrations/MANIFEST.md` § “Baseline (0000)” / § “Individual Migrations (current active files)”. Never reuse a migration sequence.
+- Safety Score V9: `docs/report-cards.md` § “V9 Model”, `docs/process/safety-score-equivalence-harness.md` § “When to use it”, and `docs/process/safety-score-curation-expiry-sweep.md` § “1. Capture the current production input”.
+- DEX work: `docs/dex-liquidity.md` § “Discovery Cron”; Telegram/digest work: `docs/telegram-architecture.md` § “Seam overview” and `docs/digest-pipeline.md` § “Overview”.
 
-Per-change routing is owned by `docs/doc-ownership.json`; run `node --import tsx scripts/ci/pharos-change-contract.ts` for the docs, checks, and rules that match the exact files you touch. The list above is the offline starting point, not the full contract.
+Route with `node --import tsx scripts/ci/pharos-change-contract.ts --file <path>`.
 
 ## Rules
 
-See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file only documents worker-specific items.
-
-- Do not read `Env` bindings at module initialization time. Derive runtime config inside request or scheduled contexts.
-- Preserve the `worker/src` boundary: worker code may import `@shared/*`, but must not import frontend `src/*` modules.
-- Treat cron trigger slots as capacity decisions. Heavy fetch work competes for the same per-trigger connection pool.
-- `value != null` is the intentional D1 null/undefined guard style in worker code.
+- Do not read `Env` bindings at module initialization; derive runtime config inside request or scheduled contexts.
+- Worker code may import `@shared/*`, but must not import frontend `src/` modules.
+- For cron capacity and connection rules, follow `docs/process/cron-trigger-policy.md` § “Target”.
+- For D1 row null normalization and identity checks, follow `loadBlacklistCurrentBalanceMap()` in `worker/src/lib/blacklist-current-balances.ts`.
+- `worker/wrangler.toml` changes require `npm run check:worker-config`; migration changes require `npm run check:migrations`.
 
 ## Common Checks
 
-- `cd worker && npx tsc --noEmit`
-- `npm run check:cron-sync`
-- `npm run check:cron-connections`
-- `npm run check:migrations`
-- Focused worker API or cron Vitest suites for the touched module
+- Typecheck with `cd worker && npx tsc --noEmit`; check schedules with `npm run check:cron-sync` and `npm run check:cron-connections`.
+- Focused tests live under `worker/src/cron/__tests__/`, `worker/src/lib/__tests__/`, `worker/src/api/__tests__/`, and `worker/src/__tests__/`.

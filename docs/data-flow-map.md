@@ -151,7 +151,7 @@ Cron expressions are deployed from `worker/wrangler.toml`; `shared/lib/cron-jobs
 
 ## Freshness Contract (Frontend)
 
-API hooks that use `useApiQuery` follow the interval supplied by their caller:
+API hooks that use `useRegisteredApiQuery` follow the interval supplied by their caller:
 
 - `staleTime = interval`
 - `refetchInterval = 2 * interval`

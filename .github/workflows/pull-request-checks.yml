@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       critical_coverage_changed: ${{ steps.classify.outputs.critical_coverage_changed }}
+      docs_changed: ${{ steps.classify.outputs.docs_changed }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
       playwright_firefox_required: ${{ steps.classify.outputs.playwright_firefox_required }}
     steps:
@@ -173,7 +174,7 @@ jobs:
   docs:
     name: Documentation checks
     needs: preflight
-    if: ${{ needs.preflight.outputs.docs_only == 'true' }}
+    if: ${{ needs.preflight.outputs.docs_changed == 'true' }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
@@ -215,6 +216,7 @@ jobs:
           fi
 
           if { [ "${STATIC_RESULT}" = "success" ] && [ "${TEST_RESULT}" = "success" ] && [ "${DOCS_RESULT}" = "skipped" ]; } \
+            || { [ "${STATIC_RESULT}" = "success" ] && [ "${TEST_RESULT}" = "success" ] && [ "${DOCS_RESULT}" = "success" ]; } \
             || { [ "${STATIC_RESULT}" = "skipped" ] && [ "${TEST_RESULT}" = "skipped" ] && [ "${DOCS_RESULT}" = "success" ]; }; then
             exit 0
           fi

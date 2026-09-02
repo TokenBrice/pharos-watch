@@ -2,7 +2,7 @@
 
 Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs every 15 minutes as part of the `sync-stablecoins` cron and writes every threshold-crossing onset to `depeg_pending`. Stage 2 runs immediately after and promotes only candidates that have remained beyond the full trigger threshold for at least 15 minutes and satisfy the applicable source-trust rule.
 
-> **Agent navigation** — Grep the heading you need: Methodology Versioning · Downstream: Depeg Duration Resolver · Thresholds & Constants · Database Schema · Cron Scheduling · Stage 1 -- Detection · Stage 2 -- Confirmation · Historical Backfill Validation · Event Lifecycle · Types · API · Frontend · Peg Stability Metrics (`peg-stability.ts`) · Peg Score (`peg-score.ts`) · Edge Cases & Guardrails.
+> **Agent navigation** — Grep the heading you need: Methodology Versioning · Downstream: Depeg Duration Resolver · Thresholds & Constants · Database Schema · Cron Scheduling · Stage 1 -- Detection · Stage 2 -- Confirmation · Historical Backfill Validation · Event Lifecycle · Types · API · Frontend · Peg Stability Metrics (`peg-stability.ts`) · Peg Score (`peg-score.ts`) · Edge Cases & Guardrails · Pending Depeg Confirmation.
 
 ## Methodology Versioning
 
@@ -601,3 +601,12 @@ Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as 
 | DEX freshness | Prices > 75 min old ignored |
 | Orphaned events | Closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL` when coin drops off tracking |
 | Non-USD threshold | 150bps accounts for FX noise and thin liquidity |
+
+## Pending Depeg Confirmation
+
+For stablecoins at or above the large-cap confirmation floor, plus tiered near-large-cap cases, depeg detection uses a two-phase confirmation system:
+
+1. **Phase 1** (`detect-depegs.ts`): When a coin requires confirmation instead of direct mutation, a record is inserted into `depeg_pending` (schema in `worker/migrations/0000_baseline.sql`). This now covers large-cap supply (`>= $1B`), tiered near-large-cap checks (`>= $750M` with weak source depth or >= 2x severity; `>= $500M` only when both weak-source and severe), low-confidence/cached/stale primary prices, and extreme moves (`abs(bps) >= 5000`)
+2. **Phase 2** (`confirm-pending-depegs.ts`): On the next cron cycle, pending records are re-checked. If the depeg persists and a secondary source agrees, a real depeg event is opened. If an **authoritative** primary price recovered, the pending record is deleted
+
+This prevents false positive depeg events for systemically important stablecoins during brief price feed glitches.

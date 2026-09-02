@@ -550,8 +550,8 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 | --------------------------------------------------------- | ------------------- | --------------------------------------- |
 | `worker/src/cron/detect-depegs.ts`                        | `syncStablecoins()` | [Depeg Detection](./depeg-detection.md) |
 | `worker/src/cron/confirm-pending-depegs.ts`               | `syncStablecoins()` | [Depeg Detection](./depeg-detection.md) |
-| `worker/src/cron/sync-stablecoins/enrich-prices.ts`       | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md)     |
-| `worker/src/cron/sync-stablecoins/supplemental-assets.ts` | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md)     |
+| `worker/src/cron/sync-stablecoins/enrich-prices.ts`       | `syncStablecoins()` | [Pricing Pipeline](./pricing-pipeline.md) |
+| `worker/src/cron/sync-stablecoins/supplemental-assets.ts` | `syncStablecoins()` | [Supply Pipeline](./supply-snapshot.md#supply-pipeline) |
 
 ---
 
@@ -842,7 +842,7 @@ Feature guides own producer-specific algorithms and schemas; this document owns 
 
 | Producer family      | Source                                         | Feature contract                                  |
 | -------------------- | ---------------------------------------------- | ------------------------------------------------- |
-| Stablecoin charts    | `worker/src/cron/sync-stablecoin-charts.ts`    | [Data Pipeline](./data-pipeline.md)               |
+| Stablecoin charts    | `worker/src/cron/sync-stablecoin-charts.ts`    | [Supply Pipeline](./supply-snapshot.md#supply-pipeline) |
 | USDS state           | `worker/src/cron/sync-usds-status.ts`          | [Stablecoin Data](./stablecoin-data.md)           |
 | Live reserves        | `worker/src/cron/sync-live-reserves.ts`        | [Live Reserve Sync](./live-reserves.md)           |
 | Redemption backstops | `worker/src/cron/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |

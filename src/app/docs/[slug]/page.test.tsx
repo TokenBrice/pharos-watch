@@ -10,7 +10,7 @@ vi.mock("next/link", async () => {
 
 describe("DocPage", () => {
   it("marks external markdown links as new-tab safe links", async () => {
-    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "data-pipeline" }) }));
+    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "pricing-pipeline" }) }));
 
     expect(html).toContain('href="https://gold-api.com"');
     expect(html).toContain('href="https://gold-api.com" target="_blank" rel="noopener noreferrer"');

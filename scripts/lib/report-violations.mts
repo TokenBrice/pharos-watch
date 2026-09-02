@@ -1,7 +1,64 @@
 import { formatScannedOk } from "./source-files.mts";
 
-interface OutputWriter {
+export interface OutputWriter {
   write(chunk: string): unknown;
+}
+
+export type GateLaneStatus = "failed" | "passed" | "skipped";
+
+export interface GateLaneReport {
+  id: string;
+  command: string;
+  status: GateLaneStatus;
+  durationMs: number;
+  failureTail: string;
+}
+
+export interface GateReport<TClassification = unknown> {
+  base: string;
+  changedFiles: string[];
+  classification: TClassification;
+  durationMs: number;
+  head: string;
+  lanes: GateLaneReport[];
+  status: "failed" | "passed";
+}
+
+const FAILURE_TAIL_MAX_CHARS = 4_000;
+let stdoutPipeErrorHandlerInstalled = false;
+
+function installStdoutPipeErrorHandler(output: OutputWriter): void {
+  if (output !== process.stdout || stdoutPipeErrorHandlerInstalled) return;
+  process.stdout.on("error", (error) => {
+    if ((error as NodeJS.ErrnoException).code !== "EPIPE") throw error;
+  });
+  stdoutPipeErrorHandlerInstalled = true;
+}
+
+export function writeJsonReport(value: unknown, output: OutputWriter = process.stdout): void {
+  installStdoutPipeErrorHandler(output);
+  output.write(`${JSON.stringify(value)}\n`);
+}
+
+export function formatFailureTail(output: unknown, maxChars = FAILURE_TAIL_MAX_CHARS): string {
+  const normalized = String(output ?? "").trim();
+  if (!normalized) return "";
+  if (normalized.length <= maxChars) return normalized;
+  return `[...tail truncated...]\n${normalized.slice(-maxChars)}`;
+}
+
+export interface GateReportOutputOptions {
+  json: boolean;
+  label: string;
+  stderr?: OutputWriter;
+  stdout?: OutputWriter;
+}
+
+export function reportGateResult<TClassification>(
+  report: GateReport<TClassification>,
+  { json, stdout = process.stdout }: GateReportOutputOptions,
+): void {
+  if (json) writeJsonReport(report, stdout);
 }
 
 interface ReportViolationOptions {

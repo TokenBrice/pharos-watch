@@ -1,49 +1,49 @@
-# Stablecoin Dashboard (Pharos)
+# Pharos (stablecoin analytics dashboard)
 
-Stablecoin analytics dashboard. Static Next.js 16 export to Cloudflare Pages. API: Cloudflare Worker + D1.
+Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. Live: https://pharos.watch — local dev: http://localhost:3000/
 
-Live: https://pharos.watch
-Local dev-server: http://localhost:3000/
+`CLAUDE.md` is the authored source; `AGENTS.md` is its generated, byte-identical mirror (never hand-edit `AGENTS.md`).
 
-`CLAUDE.md` and `AGENTS.md` carry the same content; `AGENTS.md` is generated, so edit `CLAUDE.md`. Durable process guidance belongs in `/docs/process/` or the nearest verified doc.
+## Do this first
 
-## Start Here
+1. Locate a likely file, then route it: `npm run agent:route -- --file <path>` (repeatable).
+2. Read only the docs, anchors, and scoped `AGENTS.md` it returns; inspect the reported entrypoints and local imports.
+3. Onboarding, scratch, handoff, and commit conventions: `docs/process/agent-start-here.md`.
 
-- For non-trivial edits, classify the task with `docs/agent-task-router.md`, read only the matched docs, then inspect source entrypoints and local imports.
-- Follow scoped `AGENTS.md` files under `src/`, `shared/`, `functions/`, `worker/`, and `shared/data/stablecoins/` when editing there.
-- Treat `/docs/` and `README.md` as the verified documentation corpus.
-- Use `/agents/` only for ignored scratch notes, research, screenshots, and handoffs.
+## Tool routing
 
-## Working Rules
+- Native read/grep/glob/edit tools first; Bash only for commands that need a shell. If the harness rejects a shell command as shadowed by a native tool, switch tools — never retry it.
+- Codex/omp: once root `AGENTS.md` is loaded, do not reread `CLAUDE.md`; read only the nearest scoped `AGENTS.md`.
 
-- State assumptions for non-trivial work; ask only when ambiguity blocks a safe choice.
-- Prefer the smallest root-cause fix. Match existing style and avoid unrelated refactors.
-- Pharos intentionally has no canonical formatter. Preserve existing layout, match nearby style, avoid formatting-only churn, and use `git diff --check`; generated artifacts retain generator-owned formatting. Do not add or run an ad hoc formatter without an explicit repository-wide migration decision. See `docs/testing.md#source-formatting-policy`.
-- Preserve existing product and design-system patterns unless explicitly asked for a redesign.
-- Before reporting a required local credential as missing, check the ignored root `.env.local` and the command's documented environment source. Report presence or absence by variable name only; never print, copy, or log secret values. Production Worker secrets remain Cloudflare/Wrangler-managed and must not be copied into local files.
-- Update matching docs for behavior, API, pipeline, methodology, or data-source changes; new data sources also update the about page.
-- Methodology changes update every target ADR-3 lists in `docs/architecture.md`, the runtime version source included. Versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
-- When committing, use a descriptive and informative subject plus a useful body that explains what changed and why. Group pending work into logical/thematic commits; avoid empty, generic, or placeholder commit messages.
-- Do not create a branch, worktree, or PR unless explicitly asked. A request to push, publish, release, or take work to production authorizes the required protected-main branch/PR path; never attempt a direct `main` push or stop only to re-ask about that required mechanism.
-- Before pushing, run focused checks. GitHub Actions owns the authoritative release gate. The pre-commit hook regenerates and stages the committed generated artifacts marked `autoStage` that your staged sources affect, so they land in the source commit rather than a trailing chore commit.
-- For larger committed batches, use `npm run check:pr -- --base=<ref>` for the adaptive PR contract. Use `npm run check:release` only when an explicit local production-build rehearsal is useful.
-- A green deploy proves Worker activation and/or a Pages release marker, not runtime health. For cron, scheduler, memory, migration, or ingestion-risk changes, observe the first relevant production execution before claiming operational success.
+## Working rules
 
-## Hard Rules
+- State assumptions; ask only when ambiguity blocks a safe choice. Smallest root-cause fix; no unrelated refactors; preserve existing product/design patterns and unrelated dirty work.
+- Use your harness's native delegation for independent, disjoint work; never assume it exists.
+- No canonical formatter: match nearby style, no formatting-only churn, `git diff --check` clean (`docs/testing.md#source-formatting-policy`).
+- Credentials: check the ignored root `.env.local` and the documented source before reporting one missing; names only, never values. Worker secrets stay Wrangler-managed.
+- Scratch lives in ignored `agents/`; durable guidance in `docs/` (`docs/process/agent-artifacts.md`).
+- Update the owning doc for behavior, API, pipeline, methodology, or data-source changes (new sources also update the about page). Methodology changes update every ADR-3 target in `docs/architecture.md`; versions increase numerically (`v5.9` → `v5.91` or `v6.0`, never `v5.10`).
 
-The _why_ behind these locked decisions lives in the [Architectural Decision Records](docs/architecture.md#architectural-decision-records).
+## Hard rules
 
-- Tailwind classes must be static strings.
-- Classification labels/colors live in `shared/lib/classification.ts`.
-- Use `getCirculatingRaw()` from `shared/lib/supply.ts`; DefiLlama list `circulating` values are already USD-denominated.
-- Do not multiply DefiLlama list-endpoint supply values by price.
-- Do not replace DefiLlama list supply with manual/on-chain/CMC/DEX overrides; supplemental supply admission paths must be explicit, documented, fail-closed, and double-count safe.
-- Use `@shared/lib/...` and `@shared/types...` for shared runtime imports; avoid relative cross-boundary imports.
-- Root TS config excludes `worker/`; runtime-neutral shared logic belongs in `shared/lib/`.
-- Cron-backed hooks normally use `staleTime = producer interval` and `refetchInterval = 2x producer interval`.
-- Worker cron jobs share Cloudflare's per-trigger 6-connection pool; consume response bodies before opening more fetches.
-- D1 migrations run before the new Worker is live; destructive cleanup needs a separate coordinated rollout.
-- Docs over ~1,500 lines (notably `docs/api-reference.md`): use the top navigation block, then Grep or offset-read only the matched section — never read wholesale.
+- Tailwind classes must be static strings. Classification labels/colors live only in `shared/lib/classification.ts`.
+- Supply: `getCirculatingRaw()` from `shared/lib/supply.ts`; DefiLlama list `circulating` is already USD — never multiply by price, never replace it with manual/on-chain/CMC/DEX values (supplemental paths: explicit, documented, fail-closed, double-count safe).
+- Imports: `@shared/lib/...` / `@shared/types...`, no relative cross-boundary imports. Root TS config excludes `worker/`; runtime-neutral logic belongs in `shared/lib/`.
+- Cron-backed hooks: `staleTime = producer interval`, `refetchInterval = 2x producer interval` (checked by `npm run check:hook-polling-window`).
+- Worker fetches: Cloudflare caps six simultaneous requests waiting on response headers; Pharos enforces a stricter trigger-wide six-connection budget (`npm run check:cron-connections`) — consume bodies before opening more fetches (`docs/worker-and-api-limits.md#connection-budget-operating-assumption`).
+- D1 migrations run before the new Worker is live; destructive cleanup is a separate coordinated rollout (`npm run check:migrations`).
+- Long docs (notably `docs/api-reference.md`): use the top navigation block, then read only the matched section.
+
+## Verify and ship
+
+- Run the smallest adequate checks for the touched area: `docs/testing.md#smallest-adequate-check-per-area`. Larger committed batches: `npm run check:pr -- --base=<ref>`; `npm run check:release` only for an explicit production-build rehearsal. GitHub Actions owns the release gate.
+- Commit thematically with a descriptive subject and a why-focused body. The pre-commit hook regenerates and stages affected registered artifacts.
+- Do not create a branch, worktree, or PR unless asked. A request to push/publish/release authorizes the protected-main PR path; never push `main` directly.
+- A green deploy is not runtime health: for cron, scheduler, memory, migration, or ingestion changes, observe the first production execution before claiming success.
+
+## Generated context
+
+`AGENTS.md` regenerates from this file (`npm run check:generated-artifacts -- --only=agents-doc`). `next dev` may rewrite the managed block below in `AGENTS.md`; copy it back here and regenerate before committing.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

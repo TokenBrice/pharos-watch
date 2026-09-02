@@ -1,1 +1,0 @@
-../../../.codex/skills/funding-update/reference.md

@@ -26,12 +26,14 @@ export type StatusPageActionRisk = "read-only" | "low" | "moderate" | "high";
 export type StatusPageActionResultMode = "immediate" | "queued" | "continuation";
 export type StatusPageActionAuditMode = "canonical" | "handler";
 export type StatusPageActionRunbookPath =
-  | "docs/data-pipeline.md"
+  | "docs/blacklist-tracker.md"
+  | "docs/data-flow-map.md"
   | "docs/depeg-detection.md"
   | "docs/dews.md"
   | "docs/mint-burn-flows.md"
   | "docs/pricing-pipeline.md"
   | "docs/stability-index.md"
+  | "docs/supply-snapshot.md"
   | "docs/yield-intelligence.md";
 
 export type StatusPageActionScope =
@@ -672,7 +674,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds; replay continues on scheduled syncs",
       preconditions: ["Use only when blacklist cursors require a controlled replay."],
       rollback: "No direct rollback; later syncs advance the rewound cursors.",
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/blacklist-tracker.md",
   }),
   adminGet({
     key: "debug-sync-state",
@@ -691,7 +693,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       preconditions: [],
       blockedBy: [],
       resultMode: "immediate",
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/blacklist-tracker.md",
     },
   }),
   adminAction({
@@ -713,7 +715,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds to minutes; bounded to 200 rows",
       preconditions: ["Review the dry-run candidate and resolution counts before live remediation."],
       blockedBy: ["Live mode requires configured chain RPCs."],
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/blacklist-tracker.md",
   }),
   adminAction({
     key: "backfill-blacklist-current-balances",
@@ -734,7 +736,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds to minutes; bounded per configuration",
       preconditions: ["Review the dry-run candidate totals before writing balance cache rows."],
       blockedBy: ["At least one active matching blacklist configuration is required."],
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/blacklist-tracker.md",
   }),
   adminAction({
     key: "backfill-depegs",
@@ -766,7 +768,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       preconditions: ["Prefer a single asset for targeted repair; batch mode processes a bounded registry slice."],
       blockedBy: ["Unknown targets, invalid windows, and malformed continuation cursors are rejected."],
       resultMode: "continuation",
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/supply-snapshot.md",
   }),
   adminAction({
     key: "backfill-cg-prices",
@@ -872,7 +874,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds to minutes, depending on projector backlog",
       preconditions: ["Review per-class dry-run counts before advancing projector watermarks."],
       rollback: "Projector writes are idempotent; rerun the corrected scope when needed.",
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/data-flow-map.md",
   }),
   adminAction({
     key: "reclassify-atomic-roundtrips",

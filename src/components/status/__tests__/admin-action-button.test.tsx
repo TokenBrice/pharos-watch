@@ -190,7 +190,7 @@ describe("AdminActionButton", () => {
         expectedDuration: "Up to one minute",
         preconditions: ["Review candidate counts."],
         blockedBy: ["Live mode requires chain RPCs."],
-        runbookPath: "docs/data-pipeline.md",
+        runbookPath: "docs/blacklist-tracker.md",
       }),
     ]);
 
@@ -204,7 +204,7 @@ describe("AdminActionButton", () => {
       name: /Open operator reference.*opens in a new tab/i,
     });
     expect(runbookLink.getAttribute("href")).toBe(
-      "https://github.com/TokenBrice/pharos-watch/blob/main/docs/data-pipeline.md",
+      "https://github.com/TokenBrice/pharos-watch/blob/main/docs/blacklist-tracker.md",
     );
     expect(runbookLink.getAttribute("target")).toBe("_blank");
     expect(runbookLink.getAttribute("rel")).toBe("noopener noreferrer");

@@ -102,13 +102,19 @@ npm run check:generated-artifacts -- --only=api-reference,openapi,postman
 
 For broad docs work, prefer the specific failing check first, then `npm run check:pr -- --base=<ref>` after commit if the user asked for PR readiness.
 
-### 5. Broad Audit With Subagents
+### 5. Broad Audit With Reviewers
 
-For a broad docs-vs-code audit in Claude Code, use `.claude/workflows/docs-maintenance.mjs`. Its default mode verifies and adjudicates the corpus; pass `mode: "remediate"` to apply grouped, adjudicated fixes. Supply `{docs:[{path, lines, category, sourceHints}]}` in the workflow arguments when the caller already has the corpus inventory. For standalone reuse without that argument, author the gitignored `agents/doc-verify/manifest.json` first; no script generates it automatically.
-
-In Codex, or for a narrower family-scoped pass, use `references/subagents.md` to split the audit by docs family. Subagents should be read-only unless assigned a narrow doc write set.
+When the user authorizes delegation, use `references/subagents.md` to split a broad audit by documentation family. Prefer read-only reviewers; grant a writer only a narrow, disjoint docs set. Capability mappings are in `docs/process/agent-artifacts.md#harness-configuration`.
 
 The parent agent owns final edits, de-duplication, and validation.
+
+### 6. Scalable audit mode
+
+For a whole-corpus pass, read `docs/doc-ownership.json` and enumerate the unique paths in its `mappings[].docs` entries. Resolve object entries through `path`, retain the owning category and source globs as reviewer hints, reject missing paths, and do not invent a second filename roster. Keep the inventory in memory or ignored scratch space; do not commit a manifest.
+
+Partition the inventory into N disjoint doc sets and fan out read-only verifiers. Each verifier audits only its assigned files, using `light` depth for timeline archives, `targeted` navigation/offset reads for `docs/api-reference.md`, and `deep` reads elsewhere; explicitly skipped rows are omitted. If an expected row count is supplied, fail when the loaded inventory is shorter. It must report concrete semantic discrepancies only; CI-owned path/link/generated checks stay out of scope. For every non-empty result, an independent skeptic reopens the doc and cited source, defaults to `REJECTED`, and returns only `CONFIRMED` or `REVISED` findings when code clearly contradicts the prose. Deterministically deduplicate and split adjudicated findings into auto-fixable versus needs-decision.
+
+Remediation is opt-in. Give one writer a narrow per-document scope; it must re-find the claim, reopen the evidence, skip stale findings, apply the smallest doc-only edit, and return applied/skipped entries. The parent owns synthesis, approval, edits, and the final checks. See `references/subagents.md` for the inventory, verifier, skeptic, and remediation contracts.
 
 ## Completion Report
 

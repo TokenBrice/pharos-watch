@@ -87,7 +87,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Transfer and freeze access review", stream: "CTRL",
     instructions: "Research the current transfer-restriction and freeze/blacklist posture, including reach, controlling authority, inherited upstream exposure, and failure-domain identity. Add a dated, sourced blacklistabilityReview in the risk-review sidecar or base coin record.",
     completionCriteria: "A fresh exact replay reports known transfer and freeze access facts and the listed access gapId is absent.",
-    recommendedSkill: "stablecoin-info-fetch", likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"],
+    recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"],
     cautions: ["Review every material deployment and inherited wrapper exposure; a token-level boolean alone is insufficient."],
     ownerDomain: "control", defaultResolutionMode: "agent-curation",
     reasonCodes: [
@@ -119,7 +119,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   BRIDGE_MATERIALITY: {
     title: "Bridge deployment materiality", stream: "BRDG",
     instructions: "Reconcile current chain-level circulating USD to reviewed deployment routes so selected, unknown, and unreviewed bridge supply shares are explicit. This usually needs both complete route metadata and a fresh chain-supply producer capture.",
-    completionCriteria: "A fresh exact replay has current bridge supply shares and removes the runtime-bridge-materiality-unavailable gapId.", recommendedSkill: "contract-enrich",
+    completionCriteria: "A fresh exact replay has current bridge supply shares and removes the runtime-bridge-materiality-unavailable gapId.", recommendedSkill: "stablecoin-identity-contracts",
     likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9-extension-supply.ts", "worker/src/cron/snapshot-chain-supply.ts"],
     cautions: ["Do not add a manual supply override or multiply DefiLlama list-endpoint circulating USD by price."], ownerDomain: "control", defaultResolutionMode: "mixed-curation-and-runtime",
     reasonCodes: [
@@ -138,7 +138,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   BRIDGE_ROUTE_REVIEW: {
     title: "Bridge route control review", stream: "BRDG",
     instructions: "Populate the material bridgeRouteRisk route rows with route identity, scope, issuance model, verification/control model, risk tier, sources, reviewer, and review date. Explicitly rule native-only deployments not applicable when supported.",
-    completionCriteria: "A fresh exact replay resolves the bridge economic-control review and removes the listed bridge gapId.", recommendedSkill: "stablecoin-info-fetch",
+    completionCriteria: "A fresh exact replay resolves the bridge economic-control review and removes the listed bridge gapId.", recommendedSkill: "stablecoin-addition-orchestrator",
     likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"], cautions: ["Only reviewed, runtime-selected material routes should influence the score."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
@@ -267,7 +267,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   IMPLEMENTATION_DATE: {
     title: "Current mechanism implementation date", stream: "EVID",
     instructions: "Research the launch date of the currently scored mechanism boundary and populate implementationLaunchDate. Use the conservative range end for fuzzy dates and cite the source in the surrounding reviewed metadata or batch report.",
-    completionCriteria: "The compiled launchedAtSec is known and a fresh exact replay removes the missing-implementation-date gapId.", recommendedSkill: "stablecoin-info-fetch", likelyRepoAreas: ["shared/data/stablecoins/coins/"], cautions: ["Do not use an earlier predecessor launch if the current mechanism was materially replaced."],
+    completionCriteria: "The compiled launchedAtSec is known and a fresh exact replay removes the missing-implementation-date gapId.", recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/coins/"], cautions: ["Do not use an earlier predecessor launch if the current mechanism was materially replaced."],
     ownerDomain: "evidence",
     defaultResolutionMode: "agent-curation",
     reasonCodes: ["missing-implementation-date"],
@@ -342,7 +342,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   PEG_INPUT: {
     title: "Current peg input", stream: "PEG",
     instructions: "Provide a resolvable peg reference and current peg observation with score, deviation, active-depeg state, tracking span, and failure-domain identity. Repair metadata/reference mapping or producer coverage as required; pure NAV assets need an explicit NAV disposition.",
-    completionCriteria: "The exact fixed input contains a complete current peg row and a fresh replay removes the missing-peg-input gapId.", recommendedSkill: "stablecoin-info-fetch", likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/api/peg-summary.ts", "worker/src/lib/safety-score-v9-extension.ts", "shared/lib/peg-score.ts"], cautions: ["Do not invent a USD peg for an OTHER, index, commodity, or NAV reference."],
+    completionCriteria: "The exact fixed input contains a complete current peg row and a fresh replay removes the missing-peg-input gapId.", recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/api/peg-summary.ts", "worker/src/lib/safety-score-v9-extension.ts", "shared/lib/peg-score.ts"], cautions: ["Do not invent a USD peg for an OTHER, index, commodity, or NAV reference."],
     ownerDomain: "peg",
     defaultResolutionMode: "mixed-curation-and-runtime",
     reasonCodes: [

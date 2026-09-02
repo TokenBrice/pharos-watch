@@ -1,1 +1,0 @@
-../../../.codex/skills/coingecko-id-verif/SKILL.md
