@@ -24,6 +24,8 @@ describe("client registry field contract", () => {
     const expected = TRACKED_STABLECOINS.map((coin) => ({
       id: coin.id,
       symbol: coin.symbol,
+      name: coin.name,
+      pegCurrency: coin.flags.pegCurrency,
       ...(coin.status != null ? { status: coin.status } : {}),
       ...(coin.contracts != null ? { contracts: coin.contracts } : {}),
       ...(coin.tradedContracts != null ? { tradedContracts: coin.tradedContracts } : {}),
@@ -41,6 +43,8 @@ describe("client registry field contract", () => {
         Object.keys(coin).every((key) => [
           "id",
           "symbol",
+          "name",
+          "pegCurrency",
           "status",
           "contracts",
           "tradedContracts",

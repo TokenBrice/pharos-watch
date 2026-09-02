@@ -5,8 +5,14 @@ import { build } from "esbuild";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
+// Every scheduled entrypoint that runs inside the 128 MB isolate without the
+// evidence-rich registry. Telegram joined on 2026-09-02 after Cloudflare
+// analytics attributed the five-minute lane's platform abandonment to
+// `exceededMemory` (196/7d) rather than the CPU class, and the lane only reads
+// id/symbol/name/status/pegCurrency.
 const ENTRYPOINTS = [
   "worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts",
+  "worker/src/handlers/scheduled/five-minute-telegram.ts",
 ] as const;
 const FORBIDDEN_RUNTIME_INPUTS = new Set([
   "shared/data/stablecoins/coins.generated.json",
@@ -49,16 +55,15 @@ export async function checkMintBurnRuntimeImports(): Promise<number> {
   }
 
   if (violations.length > 0) {
-    process.stderr.write("Mint/burn runtime import boundary failed:\n\n");
+    process.stderr.write("Worker runtime import boundary failed:\n\n");
     for (const violation of violations) process.stderr.write(`  ${violation}\n`);
     process.stderr.write(
-      "\nUse the lightweight Worker runtime registry; the full stablecoin registry exceeds the mint/burn lane's memory budget.\n",
+      "\nUse the lightweight Worker runtime registry; the full stablecoin registry exceeds the lane's isolate memory budget.\n",
     );
     return 1;
   }
 
-  const entrypointLabel = ENTRYPOINTS.length === 1 ? "entrypoint" : "entrypoints";
-  process.stdout.write(`Mint/burn runtime import boundary: OK (${ENTRYPOINTS.length} ${entrypointLabel})\n`);
+  process.stdout.write(`Worker runtime import boundary: OK (${ENTRYPOINTS.length} entrypoints)\n`);
   return 0;
 }
 

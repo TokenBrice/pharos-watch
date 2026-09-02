@@ -3,7 +3,7 @@ import {
   type TelegramRecapFactFamily,
   type TelegramRecapFactType,
 } from "@shared/lib/telegram-recap-policy";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isFiniteNumber } from "@shared/lib/type-guards";
 import { parseJsonObject } from "./json-parse";
 
@@ -85,7 +85,7 @@ function hasSupportedPayload(type: TelegramRecapFactType, payload: Record<string
 export function parseTelegramRecapFact(row: TelegramRecapTapeRow): TelegramRecapFact | null {
   if (!isTelegramRecapFactType(row.type) || !isString(row.event_id) || !isFiniteNumber(row.ts)) return null;
   if (!isString(row.coin_id)) return null;
-  const coin = ACTIVE_META_BY_ID.get(row.coin_id);
+  const coin = WORKER_ACTIVE_META_BY_ID.get(row.coin_id);
   if (!coin) return null;
   const severity = parseSeverity(row.severity);
   if (!severity) return null;

@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type {
   TelegramBotStats,
   TelegramDeliverySliRollup,
@@ -495,7 +495,7 @@ export function mapTelegramBotStats(input: {
     },
     topStablecoins: topStablecoins.map((row) => ({
       stablecoinId: row.stablecoin_id,
-      symbol: TRACKED_META_BY_ID.get(row.stablecoin_id)?.symbol ?? row.stablecoin_id,
+      symbol: WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.symbol ?? row.stablecoin_id,
       subscribers: coerceCount(row.subscribers),
       explicitSubscribers: coerceCount(row.explicit_subscribers ?? row.subscribers),
       presetImpliedSubscribers: coerceCount(row.preset_implied_subscribers),

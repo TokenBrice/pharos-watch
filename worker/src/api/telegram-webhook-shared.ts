@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import { DISAMBIGUATION_TTL_SEC } from "../lib/telegram-constants";
 
@@ -409,7 +409,7 @@ export function canActOnPendingOwner(initiatorUserId: string | null, actorUserId
 }
 
 export const STABLECOIN_BY_ID = new Map<string, ResolvedCoin>(
-  TRACKED_STABLECOINS.map((coin) => [
+  WORKER_TRACKED_STABLECOINS.map((coin) => [
     coin.id,
     {
       id: coin.id,

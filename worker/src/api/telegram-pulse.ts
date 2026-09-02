@@ -1,6 +1,6 @@
 import { withErrorHandler, jsonResponse } from "../lib/api-response";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   TelegramPulseSchema,
   type TelegramPulse,
@@ -364,7 +364,7 @@ async function buildTelegramPulseSnapshot(
         }
         return {
           topCoins: topRows.map(
-            (row) => TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
+            (row) => WORKER_TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
           ),
           historySource: lifecycleHistory.source,
           watcherHistory: sanitizeWatcherHistory(lifecycleHistory.points, suppressedFields),
