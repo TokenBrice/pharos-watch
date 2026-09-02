@@ -7,10 +7,10 @@ import {
   type DigestSafetyMapManifest as SafetyMapManifest,
   type DigestSafetyMapSummary,
   type DigestSafetyMapTierSummary,
-} from "@shared/lib/digest-safety-map-contract";
+} from "@shared/types/digest-safety-map-contract";
 import { throwIfAborted } from "./abort";
 import { readResponseTextBoundedWithSignal } from "./response-body";
-export type { DigestSafetyMapSummary } from "@shared/lib/digest-safety-map-contract";
+export type { DigestSafetyMapSummary } from "@shared/types/digest-safety-map-contract";
 
 const MANIFEST_URL = `${SITE_ORIGIN}/safety-scores/map.json`;
 const IMAGE_PATH = "/safety-scores/map.png";

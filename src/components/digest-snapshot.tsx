@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
-import { parseDigestSafetyMapCapture, type DigestSafetyMapArchiveTier as StoredSafetyMapTier } from "@shared/lib/digest-safety-map-contract";
+import { parseDigestSafetyMapCapture, type DigestSafetyMapArchiveTier as StoredSafetyMapTier } from "@shared/types/digest-safety-map-contract";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore, getNetColor } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";

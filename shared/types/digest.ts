@@ -5,7 +5,7 @@ import {
   getDigestSafetyMapSummaryIssues,
   isDigestSafetyMapUtcDate,
   type DigestSafetyMapCapture,
-} from "@shared/lib/digest-safety-map-contract";
+} from "./digest-safety-map-contract";
 import type { DepegDirection } from "./market";
 import {
   SafetyScorePublicationIdentitySchema,
@@ -15,7 +15,7 @@ import {
   type SafetyScoreV8PublicationIdentity,
   type SafetyScoreV9PublicationIdentity,
 } from "./safety-score-publication";
-export type { DigestSafetyMapCapture, DigestSafetyMapSummary } from "@shared/lib/digest-safety-map-contract";
+export type { DigestSafetyMapCapture, DigestSafetyMapSummary } from "./digest-safety-map-contract";
 
 export const DigestSafetyContextSchema = z
   .discriminatedUnion("status", [
