@@ -75,6 +75,49 @@ export interface PathExclusion {
   sourceGlobs: string[];
 }
 
+type OwnershipGlobMatcher = (file: string) => boolean;
+
+const ownershipGlobMatchers = new Map<string, OwnershipGlobMatcher>();
+
+function escapeRegexCharacter(value: string): string {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+}
+
+function compileSimpleOwnershipGlob(pattern: string): RegExp | null {
+  if (!/^[\w./*-]+$/.test(pattern)) return null;
+
+  let source = "^";
+  for (let index = 0; index < pattern.length; index += 1) {
+    const character = pattern[index];
+    if (character === "*") {
+      if (index === 0 || pattern[index - 1] === "/") source += "(?!\\.)";
+      if (pattern[index + 1] === "*") {
+        source += "(?!.*\\/\\.)";
+        source += ".*";
+        index += 1;
+      } else {
+        source += "[^/]*";
+      }
+    } else {
+      source += escapeRegexCharacter(character);
+    }
+  }
+  // eslint-disable-next-line security/detect-non-literal-regexp -- the source is built from a restricted glob alphabet
+  return new RegExp(`${source}$`);
+}
+
+export function createOwnershipGlobMatcher(pattern: string): OwnershipGlobMatcher {
+  const cached = ownershipGlobMatchers.get(pattern);
+  if (cached) return cached;
+
+  const compiled = compileSimpleOwnershipGlob(pattern);
+  const matcher = compiled
+    ? (file: string) => compiled.test(file)
+    : (file: string) => matchesGlob(file, pattern);
+  ownershipGlobMatchers.set(pattern, matcher);
+  return matcher;
+}
+
 function readDocOwnership(path: string = DOC_OWNERSHIP_PATH): DocOwnershipRegistry {
   return JSON.parse(readFileSync(path, "utf8")) as DocOwnershipRegistry;
 }
@@ -101,7 +144,7 @@ function normalizeMapping(mapping: RawMapping): PathFamily {
 }
 
 export function matchesOwnershipGlob(file: string, pattern: string): boolean {
-  return matchesGlob(file, pattern);
+  return createOwnershipGlobMatcher(pattern)(file);
 }
 
 const registry = readDocOwnership();

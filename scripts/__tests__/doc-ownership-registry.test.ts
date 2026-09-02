@@ -1,7 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { matchesGlob, resolve } from "node:path";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+
+import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const COVERAGE_ROOTS = ["src/", "shared/", "worker/", "functions/", "scripts/", "docs/", ".github/"];
@@ -71,7 +73,12 @@ function headingAnchors(path: string): Set<string> {
 }
 
 function matchesAny(file: string, patterns: readonly string[]): boolean {
-  return patterns.some((pattern) => matchesGlob(file, pattern));
+  return patterns.some((pattern) => createOwnershipGlobMatcher(pattern)(file));
+}
+
+function getMappingMatcher(sources: readonly string[]): (file: string) => boolean {
+  const matchers = sources.map(createOwnershipGlobMatcher);
+  return (file: string) => matchers.some((matcher) => matcher(file));
 }
 
 describe("doc-ownership registry integrity", () => {
@@ -181,17 +188,26 @@ describe("doc-ownership registry integrity", () => {
     const inScope = trackedFiles.filter((file) => COVERAGE_ROOTS.some((root) => file.startsWith(root)));
     const specificMappings = mappings.filter((mapping) => mapping.tier !== "fallback");
     const fallbackMappings = mappings.filter((mapping) => mapping.tier === "fallback");
+    const specificMatchers = specificMappings.map((mapping) => getMappingMatcher(mapping.sources));
+    const fallbackMatchers = fallbackMappings.map((mapping) => getMappingMatcher(mapping.sources));
+    const exclusionMatchers = exclusions.map((exclusion) => getMappingMatcher(exclusion.sources));
     let specificallyCoveredCount = 0;
     const fallbackOnly: string[] = [];
     const uncovered: string[] = [];
     for (const file of inScope) {
-      const excluded = exclusions.some((exclusion) => matchesAny(file, exclusion.sources));
-      const specific = specificMappings.some((mapping) => matchesAny(file, mapping.sources));
+      const excluded = exclusionMatchers.some((matcher) => matcher(file));
+      let specific = false;
+      for (const matcher of specificMatchers) {
+        if (matcher(file)) {
+          specific = true;
+          break;
+        }
+      }
       if (specific || excluded) {
         specificallyCoveredCount += 1;
         continue;
       }
-      if (fallbackMappings.some((mapping) => matchesAny(file, mapping.sources))) {
+      if (fallbackMatchers.some((matcher) => matcher(file))) {
         fallbackOnly.push(file);
       } else {
         uncovered.push(file);

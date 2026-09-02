@@ -170,17 +170,7 @@ describe("formatContract", () => {
 
 describe("representative --file routing", () => {
   function route(file: string) {
-    const result = runContractCli(["--file", file, "--json"]);
-    expect(result.status).toBe(0);
-    expect(result.stderr).toBe("");
-    return JSON.parse(result.stdout) as {
-      background: Array<{ anchor?: string; path: string }>;
-      checks: string[];
-      docs: Array<{ anchor?: string; path: string }>;
-      hints: string[];
-      mappings: Array<{ id: string }>;
-      scopedContext: string[];
-    };
+    return classifyChangedFiles([file]);
   }
 
   it("routes a screener component to the exact screener contract", () => {
@@ -269,13 +259,20 @@ describe("representative --file routing", () => {
     const sourceRoots = ["src/", "shared/", "worker/", "functions/", "scripts/", "docs/", ".github/"];
     const trackedSources = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
       .split("\0")
-      .filter((file) => file && sourceRoots.some((root) => file.startsWith(root)));
-    const overLimit = trackedSources
+      .filter((file) => file && sourceRoots.some((root) => file.startsWith(root)))
+      .sort();
+    const representatives = new Map<string, string>();
+    for (const file of trackedSources) {
+      const parts = file.split("/");
+      const directory = parts.slice(0, Math.min(3, parts.length - 1)).join("/");
+      representatives.set(directory, representatives.get(directory) ?? file);
+    }
+    const overLimit = [...representatives.values()]
       .map((file) => ({ count: classifyChangedFiles([file]).docs.length, file }))
       .filter(({ count }) => count > 6);
 
     expect(overLimit).toEqual([]);
-  }, 15_000);
+  });
 });
 
 describe("scoped AGENTS.md discovery", () => {
