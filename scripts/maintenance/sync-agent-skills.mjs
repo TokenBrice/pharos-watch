@@ -245,8 +245,8 @@ function isAllowlistedCompanion(skillName, skillPath, entryPath) {
   ));
 }
 
-/** @param {string} rootDir @param {string} skillName @param {string} agentsPath */
-function listAllowlistedEntries(rootDir, skillName, agentsPath) {
+/** @param {string} rootDir @param {string} agentsPath */
+function listAllowlistedEntries(rootDir, agentsPath) {
   const entries = collectPhysicalFiles(agentsPath);
   if (entries.length === 0) return [displayPath(rootDir, agentsPath)];
   return entries.map((entryPath) => displayPath(rootDir, entryPath));
@@ -274,7 +274,7 @@ function checkFacadeSkill(
 
   for (const canonicalEntry of canonicalEntries) {
     if (isAllowlistedCompanion(skillName, canonicalSkillPath, canonicalEntry.path)) {
-      allowlisted.push(...listAllowlistedEntries(rootDir, skillName, canonicalEntry.path));
+      allowlisted.push(...listAllowlistedEntries(rootDir, canonicalEntry.path));
       continue;
     }
 
