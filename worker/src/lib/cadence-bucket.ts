@@ -55,7 +55,7 @@ export function cadenceBucketFor(scheduledAtSec: number, cadenceSec: number): nu
   return Math.floor(scheduledAtSec / cadenceSec);
 }
 
-export function appendCadenceResultMetadata(
+function appendCadenceResultMetadata(
   result: CronResult,
   cadence: Record<string, unknown>,
 ): CronResult {

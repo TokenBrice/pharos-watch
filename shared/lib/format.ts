@@ -88,12 +88,10 @@ export function formatCompactUsdWithOptions(
 
 const DEX_PRICING_AUDIT_USD = { decimals: { trillion: 2, billion: 2, million: 2, thousand: 1, unit: 0 }, invalidFallback: "$0", maximumTier: "billion", signPosition: "after-currency" } as const;
 const SAFETY_MAP_USD = { decimals: { trillion: 1, billion: 1, million: 0, thousand: 0, unit: 0 }, forcedLowestTier: "thousand", invalidFallback: "$0K", signPosition: "after-currency" } as const;
-const CURATION_WORKLIST_USD = { decimals: { trillion: 2, billion: 2, million: 1, thousand: 0, unit: 0 }, forcedLowestTier: "thousand", invalidFallback: "$0", maximumTier: "billion", signPosition: "after-currency", suffixes: { thousand: "k" } } as const;
 const V9_PRESENTATION_USD = { compactNegative: false, decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 }, invalidFallback: "$0", maximumTier: "million", signPosition: "after-currency", suffixes: { million: "m", thousand: "k" } } as const;
 
 export const formatDexPricingAuditUsd = (value: number): string => formatCompactUsdWithOptions(value, DEX_PRICING_AUDIT_USD);
 export const formatSafetyMapUsd = (value: number): string => formatCompactUsdWithOptions(value < 0 ? Math.round(value / 1e3) * 1e3 : value, value < 0 ? { ...SAFETY_MAP_USD, maximumTier: "thousand" } : SAFETY_MAP_USD);
-export const formatCurationWorklistUsd = (value: number): string => !value ? "$0" : formatCompactUsdWithOptions(value < 0 ? Math.round(value / 1e3) * 1e3 : value, value < 0 ? { ...CURATION_WORKLIST_USD, maximumTier: "thousand" } : CURATION_WORKLIST_USD);
 export const formatV9PresentationUsd = (value: number): string => formatCompactUsdWithOptions(value, { ...V9_PRESENTATION_USD, decimals: { ...V9_PRESENTATION_USD.decimals, million: value >= 1e7 ? 0 : 1, thousand: value >= 1e4 ? 0 : 1 }, useGrouping: value < 1e3 });
 
 function abbreviateNumber(value: number, decimals: number): string {

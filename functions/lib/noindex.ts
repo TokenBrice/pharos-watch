@@ -1,9 +1,9 @@
-import { cloneResponseWithPolicy } from "@shared/lib/response-policy";
+import { cloneResponse } from "@shared/lib/http-response";
 
 export const NOINDEX_HEADER_VALUE = "noindex, nofollow";
 
 export function withNoindex(response: Response): Response {
-  return cloneResponseWithPolicy(response, {
+  return cloneResponse(response, {
     mutateHeaders: (headers) => headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE),
   });
 }

@@ -373,7 +373,7 @@ export async function reportDigestGenerationComplete(
   });
 }
 
-export function buildDigestLlmTelemetry(
+function buildDigestLlmTelemetry(
   config: DigestLlmConfig,
   attempts: DigestLlmAttemptTelemetry[],
 ): DigestLlmTelemetry {

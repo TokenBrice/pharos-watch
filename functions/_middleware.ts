@@ -5,7 +5,7 @@ import {
   getGeneratedMarkdownAssetPath,
   isNegotiableMarkdownRoute,
 } from "@shared/lib/markdown-route-policy";
-import { cloneResponseWithPolicy } from "@shared/lib/response-policy";
+import { cloneResponse } from "@shared/lib/http-response";
 import { injectHtmlCsp } from "./lib/csp-inject";
 
 interface MiddlewareEnv {
@@ -97,7 +97,7 @@ function addDirectMarkdownAssetSeoHeaders(headers: Headers, canonicalPath: strin
 }
 
 function withNegotiationHeaders(response: Response, method: string): Response {
-  return cloneResponseWithPolicy(response, {
+  return cloneResponse(response, {
     method,
     mutateHeaders: addNegotiationCacheHeaders,
   });
@@ -123,7 +123,7 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
     const directMarkdownResponse = await ctx.next();
     if (!directMarkdownResponse.ok) return directMarkdownResponse;
 
-    return cloneResponseWithPolicy(directMarkdownResponse, {
+    return cloneResponse(directMarkdownResponse, {
       method: ctx.request.method,
       mutateHeaders: (headers) => addDirectMarkdownAssetSeoHeaders(headers, directMarkdownCanonicalPath),
     });
@@ -139,7 +139,7 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
     const mdResponse = await ctx.env.ASSETS.fetch(new Request(mdUrl.toString(), { method: "GET" }));
 
     if (mdResponse.ok) {
-      return cloneResponseWithPolicy(mdResponse, {
+      return cloneResponse(mdResponse, {
         method: ctx.request.method,
         mutateHeaders: (headers) => {
           headers.set("Content-Type", "text/markdown; charset=utf-8");

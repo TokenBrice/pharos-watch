@@ -17,7 +17,6 @@ import { evaluateV9SyntheticDeltaNeutralBacking } from "./synthetic-delta-neutra
 
 
 export type { V9MechanismRiskReview } from "../../../types/safety-score-v9-backing";
-export { resolveV9MetricApplicability } from "./rwa-credit-fund";
 
 export interface V9UnknownMechanismRiskReview {
   readonly archetype: string;
@@ -63,7 +62,7 @@ const V9_SIMPLE_ARCHETYPE_DESCRIPTORS: {
   ],
 };
 
-export function evaluateV9SimpleArchetypeBacking(
+function evaluateV9SimpleArchetypeBacking(
   asset: V9BackingAssetInput,
   review: V9SimpleReview,
   policy: V9BackingEvaluationPolicy,

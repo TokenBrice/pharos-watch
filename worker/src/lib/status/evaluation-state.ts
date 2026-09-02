@@ -10,7 +10,6 @@ import {
   type ReserveCompositionAssessment,
 } from "./evaluation-rules";
 
-export { STATUS_RESERVE_HIGH_DEFERRED_RATIO, STATUS_RESERVE_REPEATED_TRUNCATION_COUNT } from "./evaluation-rules";
 export type { ReserveCompositionAssessment } from "./evaluation-rules";
 
 const STATUS_SEVERITY: Record<StatusLevel, number> = {

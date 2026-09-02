@@ -2,7 +2,7 @@ import { getEndpointOpsProxyTimeoutMs, isAdminPath, validateEndpointMethod } fro
 import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
 import { createCappedReadableStream, parseDeclaredLength } from "@shared/lib/bounded-stream";
 import { verifyAccessJwtUserIdentity } from "@shared/lib/cloudflare-access-jwt";
-import { cloneResponseWithPolicy } from "@shared/lib/response-policy";
+import { cloneResponse } from "@shared/lib/http-response";
 import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
 import { NOINDEX_HEADER_VALUE } from "../../lib/noindex";
 import {
@@ -94,7 +94,7 @@ function buildProxyResponse(upstreamResponse: Response, method: string): Respons
 }
 
 function applyAdminResponsePolicy(response: Response): Response {
-  return cloneResponseWithPolicy(response, {
+  return cloneResponse(response, {
     mutateHeaders: (headers) => {
       headers.set("Cache-Control", "private, no-store");
       headers.set("CDN-Cache-Control", "no-store");

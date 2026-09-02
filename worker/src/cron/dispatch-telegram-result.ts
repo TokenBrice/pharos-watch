@@ -87,7 +87,7 @@ export function pendingTailState(snapshot: PendingCapacitySnapshot | null | unde
   };
 }
 
-export function safetySourceFields(
+function safetySourceFields(
   assessment: AlertSafetySourceAssessment,
   suppressed: boolean,
 ) {
@@ -99,7 +99,7 @@ export function safetySourceFields(
   };
 }
 
-export function reserveSourceFields(assessment: AlertReserveSourceAssessment) {
+function reserveSourceFields(assessment: AlertReserveSourceAssessment) {
   return {
     reserveAlertSourceState: assessment.state,
     reserveAlertSourceAgeSeconds: assessment.ageSeconds,
@@ -125,7 +125,7 @@ export type PendingDispatchFields = Pick<
   | "pendingExpired"
 >;
 
-export function pendingDispatchFields(
+function pendingDispatchFields(
   drainResult: PendingDrainResult,
   {
     expiredCount,
@@ -217,7 +217,7 @@ function emptyPendingCapacity() {
   } satisfies Awaited<ReturnType<typeof readTelegramPendingCapacitySnapshot>>;
 }
 
-export function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
+function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
   return {
     eventsDetected: {
       dews: 0,

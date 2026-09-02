@@ -21,7 +21,7 @@ const MONTH_INDEX_BY_PREFIX: Readonly<Record<string, number>> = Object.fromEntri
   MONTH_LABEL.map((label, index) => [label.slice(0, 3).toLowerCase(), index]),
 );
 
-export function monthIndexFromLabel(rawMonth: string): number | null {
+function monthIndexFromLabel(rawMonth: string): number | null {
   const key = rawMonth.toLowerCase().replace(/[^a-z]/g, "").slice(0, 3);
   return MONTH_INDEX_BY_PREFIX[key] ?? null;
 }

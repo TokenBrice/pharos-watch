@@ -19,8 +19,8 @@ const STATUS_SEVERITY: Record<StatusLevel, number> = {
   stale: 2,
 };
 
-export const STATUS_RESERVE_HIGH_DEFERRED_RATIO = 0.25;
-export const STATUS_RESERVE_REPEATED_TRUNCATION_COUNT = 2;
+const STATUS_RESERVE_HIGH_DEFERRED_RATIO = 0.25;
+const STATUS_RESERVE_REPEATED_TRUNCATION_COUNT = 2;
 
 export interface ReserveCompositionAssessment {
   bootstrap: boolean;
@@ -75,7 +75,7 @@ export interface StatusRuleEvaluation {
 
 export type StatusRule<Input> = (input: Input) => Partial<StatusRuleEvaluation> | null;
 
-export function evaluateStatusRuleSet<Input>(
+function evaluateStatusRuleSet<Input>(
   input: Input,
   rules: readonly StatusRule<Input>[],
   initialStatus: StatusLevel = "healthy",
