@@ -25,9 +25,14 @@ import type {
   SafetyScoreHistoryV2Response,
 } from "@shared/types/safety-score-history";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
-import type { HealthResponse } from "@shared/types/status/public-health";
+import type {
+  HealthResponse,
+  PublicStatusHistoryResponse,
+  PublicStatusHistoryWindow,
+} from "@shared/types/status/public-health";
 import type { TelegramPulse } from "@shared/types/status/telegram";
 import type { UsdsStatusResponse } from "@shared/types/stability";
+import type { TapeEventsResponse } from "@shared/types/tape-event";
 import type { YieldAdapterManifestResponse, YieldHistoryResponse, YieldRankingsResponse } from "@shared/types/yield";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import {
@@ -39,6 +44,7 @@ import { STABILITY_INDEX_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stabil
 import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-detail";
 import {
   CRON_15MIN,
+  CRON_1MIN,
   CRON_BLACKLIST,
   CRON_BLUECHIP,
   CRON_CHARTS,
@@ -48,6 +54,7 @@ import {
   CRON_SAFETY_GRADE_HISTORY,
   CRON_SUPPLY_SNAPSHOT,
   CRON_TELEGRAM_PULSE,
+  CRON_TAPE,
   CRON_USDS_STATUS,
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@shared/lib/schema-like";
@@ -67,6 +74,25 @@ type BlacklistEventsDescriptorInput = {
   queryKey: readonly unknown[];
   path: string;
 };
+
+type TapeEventsResponseBody = Omit<TapeEventsResponse, "_meta">;
+
+type TapeEventsDescriptorInput = {
+  queryKey: readonly unknown[];
+  path: string;
+};
+
+export const TAPE_EVENTS_RESPONSE_BODY_SCHEMA = createLazySchema<TapeEventsResponseBody>(async () =>
+  (await import("@shared/types/tape-event")).TapeEventsResponseSchema.omit({ _meta: true }),
+);
+
+function defineTapeEventsQuery() {
+  return defineParameterizedApiQuery(
+    "meta",
+    TAPE_EVENTS_RESPONSE_BODY_SCHEMA,
+    ({ queryKey, path }: TapeEventsDescriptorInput) => ({ queryKey, path, producerIntervalMs: CRON_TAPE }),
+  );
+}
 
 const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
   stablecoins: DATA_SURFACE_DESCRIPTORS.stablecoins.producerIntervalSec * 1000,
@@ -181,6 +207,19 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       async () => (await import("@shared/types/status/public-health")).HealthResponseSchema,
     ),
   ),
+  publicStatusHistory: defineParameterizedApiQuery(
+    "plain",
+    createLazySchema<PublicStatusHistoryResponse>(
+      async () => (await import("@shared/types/status/public-health")).PublicStatusHistoryResponseSchema,
+    ),
+    (window: PublicStatusHistoryWindow) => ({
+      queryKey: ["public-status-history", window] as const,
+      path: API_PATHS.publicStatusHistory({ window, limit: 200 }),
+      producerIntervalMs: CRON_1MIN,
+    }),
+  ),
+  latestEvents: defineTapeEventsQuery(),
+  chartAnnotationEvents: defineTapeEventsQuery(),
   blacklistSummary: defineApiQuery(
     {
       queryKey: ["blacklist-summary"] as const,

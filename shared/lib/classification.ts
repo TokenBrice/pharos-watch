@@ -2,7 +2,16 @@ import type { BackingType, GovernanceType } from "../types";
 import { BACKING_BADGE_STYLES } from "./classification/badges";
 import { PEG_HERO_CHIP_LABELS } from "./peg-taxonomy";
 
-export * from "./classification/index";
+export * from "./classification/domain";
+export * from "./classification/pegs";
+export * from "./classification/badges";
+export * from "./classification/risk";
+export * from "./classification/control-posture";
+export * from "./classification/grades";
+export * from "./classification/mechanism-archetypes";
+export * from "./classification/resolve-mechanism-archetype";
+export * from "./classification/resolve-implementation-launch-date";
+export type { BadgeStyle } from "./classification/common";
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
 export { PEG_TAXONOMY } from "./peg-taxonomy";

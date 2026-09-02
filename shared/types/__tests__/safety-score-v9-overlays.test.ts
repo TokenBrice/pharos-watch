@@ -69,6 +69,16 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     expect(SafetyScoreV9OperationalResilienceOverlayFileSchema.safeParse(malformed).success).toBe(false);
   });
 
+  it.each([
+    [SafetyScoreV9MechanismReviewOverlayFileSchema, { ...mechanismOverlays, overlays: [...mechanismOverlays.overlays, mechanismOverlays.overlays[0]!] }, "overlays", "Duplicate overlay assetId"],
+    [SafetyScoreV9OperationalResilienceOverlayFileSchema, { ...operationalResilienceOverlays, overlays: [...operationalResilienceOverlays.overlays, operationalResilienceOverlays.overlays[0]!] }, "overlays", "Duplicate operational-resilience overlay assetId"],
+    [SafetyScoreV9ReviewedTransferFileSchema, { ...transferOverlays, reviews: [...transferOverlays.reviews, transferOverlays.reviews[0]!] }, "reviews", "Duplicate reviewed transfer assetId"],
+  ])("keeps duplicate asset issue paths and messages stable", (schema, input, path, message) => {
+    const result = schema.safeParse(input);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues).toEqual([{ code: "custom", path: [path], message }]);
+  });
+
   it("never curates an unavailable assurance component the compiler already grades known from proofOfReserves.latestReport", () => {
     const assetIdsWithLatestReport = new Set(
       (stablecoinsGenerated as Array<{ id: string; proofOfReserves?: { latestReport?: unknown } }>)

@@ -3,6 +3,8 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { CHAIN_META } from "@shared/lib/chains";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_API_URL = "https://www.eurostablecoins.xyz/api/v1/coins";
 const SOURCE_URL = "https://www.eurostablecoins.xyz/";
@@ -18,10 +20,30 @@ const MARKET_STATUS_MAP = {
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const COIN_DIR = path.join(ROOT_DIR, "shared/data/stablecoins/coins");
 const DEAD_STABLECOINS_PATH = path.join(ROOT_DIR, "shared/data/dead-stablecoins.json");
-const CHAINS_PATH = path.join(ROOT_DIR, "shared/lib/chains/index.ts");
+interface AuditCoin {
+  id?: string;
+  symbol?: string;
+  status?: string;
+  marketAvailability?: string;
+  contracts?: { chain?: string }[];
+  coin_id?: unknown;
+  ticker?: unknown;
+  name?: unknown;
+  issuer_full?: unknown;
+  issuer?: unknown;
+  market_status?: string;
+  mica_status?: unknown;
+  mica_jurisdiction?: unknown;
+  total_supply?: unknown;
+  circulating_supply?: unknown;
+  treasury_held?: unknown;
+  recorded_at?: unknown;
+  chains?: unknown[];
+  _sourceFile?: string;
+}
 
-function parseArgs(argv) {
-  const options = {
+function parseArgs(argv: readonly string[]) {
+  const options: { apiUrl: string; format: string; reportPath: string | null } = {
     apiUrl: DEFAULT_API_URL,
     format: "markdown",
     reportPath: null,
@@ -59,32 +81,32 @@ Compares Pharos' checked-in EUR stablecoin metadata against eurostablecoins.xyz.
 The script is read-only unless --report is provided.`);
 }
 
-function isRecord(value) {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function normalizeSymbol(value) {
+function normalizeSymbol(value: unknown) {
   return String(value ?? "")
     .trim()
     .toUpperCase();
 }
 
-function normalizeChain(value) {
+function normalizeChain(value: unknown) {
   return String(value ?? "")
     .trim()
     .toLowerCase();
 }
 
-function normalizeMarketStatus(value) {
-  return MARKET_STATUS_MAP[value] ?? value ?? null;
+function normalizeMarketStatus(value: unknown) {
+  return (typeof value === "string" ? MARKET_STATUS_MAP[value as keyof typeof MARKET_STATUS_MAP] ?? value : value) ?? null;
 }
 
-function formatNumber(value) {
+function formatNumber(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "n/a";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
 }
 
-async function readJson(filePath) {
+async function readJson(filePath: string): Promise<unknown> {
   return JSON.parse(await readFile(filePath, "utf8"));
 }
 
@@ -92,7 +114,7 @@ async function loadLocalCoins() {
   const filenames = (await readdir(COIN_DIR)).filter((file) => file.endsWith(".json")).sort();
   const coins = [];
   for (const filename of filenames) {
-    const coin = await readJson(path.join(COIN_DIR, filename));
+    const coin = await readJson(path.join(COIN_DIR, filename)) as AuditCoin;
     coins.push({ ...coin, _sourceFile: path.join("shared/data/stablecoins/coins", filename) });
   }
   return coins;
@@ -103,28 +125,14 @@ async function loadDeadStablecoins() {
   if (!Array.isArray(rows)) {
     throw new Error("dead-stablecoins.json must be an array");
   }
-  return rows;
+  return rows as AuditCoin[];
 }
 
-async function loadSupportedChains() {
-  const source = await readFile(CHAINS_PATH, "utf8");
-  const start = source.indexOf("export const CHAIN_META");
-  const end = source.indexOf("\n};", start);
-  if (start === -1 || end === -1) {
-    throw new Error("Could not locate CHAIN_META in shared/lib/chains/index.ts");
-  }
-
-  const supported = new Set();
-  const body = source.slice(start, end);
-  for (const line of body.split("\n")) {
-    const match = line.match(/^\s*(?:"([^"]+)"|([A-Za-z][A-Za-z0-9_-]*))\s*:/);
-    const key = match?.[1] ?? match?.[2];
-    if (key) supported.add(key);
-  }
-  return supported;
+export function loadSupportedChains(): Set<string> {
+  return new Set(Object.keys(CHAIN_META));
 }
 
-async function fetchEurostablecoins(apiUrl) {
+async function fetchEurostablecoins(apiUrl: string): Promise<AuditCoin[]> {
   const response = await fetch(apiUrl, {
     headers: {
       accept: "application/json",
@@ -139,11 +147,11 @@ async function fetchEurostablecoins(apiUrl) {
   if (!isRecord(payload) || !Array.isArray(payload.coins)) {
     throw new Error("eurostablecoins API returned an unexpected payload");
   }
-  return payload.coins;
+  return payload.coins as AuditCoin[];
 }
 
-function buildSymbolIndex(coins) {
-  const index = new Map();
+function buildSymbolIndex(coins: readonly AuditCoin[]) {
+  const index = new Map<string, AuditCoin[]>();
   for (const coin of coins) {
     const symbol = normalizeSymbol(coin.symbol);
     if (!symbol) continue;
@@ -157,15 +165,29 @@ function buildSymbolIndex(coins) {
   return index;
 }
 
-function contractChains(coin) {
-  const chains = new Set();
+function contractChains(coin: AuditCoin) {
+  const chains = new Set<string>();
   for (const deployment of coin.contracts ?? []) {
     if (deployment?.chain) chains.add(normalizeChain(deployment.chain));
   }
   return chains;
 }
 
-function buildAudit({ externalCoins, localCoins, deadCoins, supportedChains, generatedAt, apiUrl }) {
+export function buildAudit({
+  externalCoins,
+  localCoins,
+  deadCoins,
+  supportedChains,
+  generatedAt,
+  apiUrl,
+}: {
+  externalCoins: readonly AuditCoin[];
+  localCoins: readonly AuditCoin[];
+  deadCoins: readonly AuditCoin[];
+  supportedChains: ReadonlySet<string>;
+  generatedAt: string;
+  apiUrl: string;
+}) {
   const localBySymbol = buildSymbolIndex(localCoins);
   const deadBySymbol = buildSymbolIndex(deadCoins);
   const externalRows = externalCoins.map((coin) => ({
@@ -283,7 +305,7 @@ function buildAudit({ externalCoins, localCoins, deadCoins, supportedChains, gen
   };
 }
 
-function markdownTable(headers, rows) {
+function markdownTable(headers: readonly string[], rows: readonly (readonly unknown[])[]) {
   if (rows.length === 0) return "_None._";
   const header = `| ${headers.join(" | ")} |`;
   const separator = `| ${headers.map(() => "---").join(" | ")} |`;
@@ -291,7 +313,7 @@ function markdownTable(headers, rows) {
   return [header, separator, ...body].join("\n");
 }
 
-function renderMarkdown(audit) {
+export function renderMarkdown(audit: ReturnType<typeof buildAudit>) {
   const lines = [
     "# Eurostablecoins Coverage Audit",
     "",
@@ -402,7 +424,9 @@ async function main() {
   process.stdout.write(output);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

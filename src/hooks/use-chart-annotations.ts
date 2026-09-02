@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { z } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { TapeEventsResponseSchema, type TapeEvent } from "@shared/types/tape-event";
+import type { TapeEvent, TapeEventsResponse } from "@shared/types/tape-event";
 import type {
   ChartAnnotation,
   ChartAnnotationKind,
@@ -11,9 +10,9 @@ import type {
 import { getCuratedAnnotations } from "@shared/data/annotations/curated-annotations";
 import { caseStudySlugForEvent } from "@/lib/case-study-client-index";
 import { DAY_MS } from "@/lib/constants";
-import { CRON_TAPE } from "@/lib/cron-intervals";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { isChartAnnotationsEnabled } from "@/lib/feature-flags";
-import { useApiQueryWithMeta } from "./use-api-query";
+import { useRegisteredApiQuery } from "./api-hooks";
 
 /**
  * Idea 4 phase 2 — event-annotated price/supply charts.
@@ -45,9 +44,7 @@ interface UseChartAnnotationsResult {
 
 const EMPTY_ANNOTATIONS: ChartAnnotation[] = [];
 
-// `apiFetchWithMeta` lifts `_meta` off the body before schema parsing.
-const TapeEventsResponseBodySchema = TapeEventsResponseSchema.omit({ _meta: true });
-type TapeEventsResponseBody = z.infer<typeof TapeEventsResponseBodySchema>;
+type TapeEventsResponseBody = Omit<TapeEventsResponse, "_meta">;
 
 const TAPE_EVENTS_LIMIT = 200;
 const ANNOTATION_QUERY_BUCKET_MS = 30 * DAY_MS;
@@ -144,19 +141,20 @@ export function useChartAnnotations(
     ? buildAnnotationEventsPath(stablecoinId, queryWindow)
     : API_PATHS.events();
 
-  const query = useApiQueryWithMeta<TapeEventsResponseBody>(
-    [
-      "events",
-      "chart-annotations",
-      {
-        coin: stablecoinId,
-        since: queryWindow?.since ?? null,
-        until: queryWindow?.until ?? null,
-      },
-    ],
-    path,
-    CRON_TAPE,
-    { enabled, schema: TapeEventsResponseBodySchema },
+  const query = useRegisteredApiQuery<TapeEventsResponseBody>(
+    FRONTEND_API_QUERY_DESCRIPTORS.chartAnnotationEvents({
+      queryKey: [
+        "events",
+        "chart-annotations",
+        {
+          coin: stablecoinId,
+          since: queryWindow?.since ?? null,
+          until: queryWindow?.until ?? null,
+        },
+      ],
+      path,
+    }),
+    { enabled },
   );
 
   return useMemo<UseChartAnnotationsResult>(() => {

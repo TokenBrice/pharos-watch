@@ -51,6 +51,7 @@ import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9-publication-store";
+import { buildStablecoinsCacheFreshnessGateResult } from "../lib/supply-snapshot-completion";
 
 type StableMethodologyVersions = {
   pegScore: string;
@@ -202,27 +203,6 @@ async function loadExistingSnapshot(db: D1Database, snapshotDate: string): Promi
     .first<ExistingSnapshotRow>();
 }
 
-function buildStablecoinsCacheBeforeSlotResult(
-  cacheUpdatedAt: number,
-  requiredUpdatedAt: number,
-  freshnessGateLabel?: string,
-  retry?: { attempts: number; firstCacheUpdatedAt: number },
-): CronResult {
-  return {
-    status: "degraded",
-    itemCount: 0,
-    metadata: JSON.stringify({
-      reason: "stablecoins_cache_before_slot",
-      cacheUpdatedAt,
-      requiredUpdatedAt,
-      freshnessGateLabel,
-      ...(retry && retry.attempts > 0
-        ? { retryAttempts: retry.attempts, firstCacheUpdatedAt: retry.firstCacheUpdatedAt }
-        : {}),
-    }),
-  };
-}
-
 function stablecoinsCachePredatesGate(
   updatedAt: number,
   options: SnapshotPublicDatasetOptions,
@@ -306,12 +286,12 @@ export async function snapshotPublicDataset(
     }
   }
   if (stablecoinsCachePredatesGate(stablecoinsCache.updatedAt, options)) {
-    return buildStablecoinsCacheBeforeSlotResult(
-      stablecoinsCache.updatedAt,
-      options.minStablecoinsCacheUpdatedAtSec,
-      options.freshnessGateLabel,
-      { attempts: stablecoinsCacheRetryAttempts, firstCacheUpdatedAt: firstStablecoinsCacheUpdatedAt },
-    );
+    return buildStablecoinsCacheFreshnessGateResult({
+      cacheUpdatedAt: stablecoinsCache.updatedAt,
+      requiredUpdatedAt: options.minStablecoinsCacheUpdatedAtSec,
+      freshnessGateLabel: options.freshnessGateLabel,
+      retry: { attempts: stablecoinsCacheRetryAttempts, firstCacheUpdatedAt: firstStablecoinsCacheUpdatedAt },
+    });
   }
 
   // --- 2. Active Safety Score publication (required and identity-bound) ---

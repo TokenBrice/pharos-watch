@@ -2,7 +2,8 @@ import {
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
 } from "../lib/telegram-constants";
-import type { TelegramDispatchEvents } from "./dispatch-telegram-events";
+import type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
+export type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
 import type { FanoutSubscriptionInputs } from "./dispatch-telegram-alerts-fanout";
 import { buildOverflowAwareSubscriberQueue } from "./dispatch-telegram-overflow";
 import {
@@ -26,18 +27,6 @@ import {
 } from "./dispatch-telegram-result";
 import { mergeSubscriberMaps } from "./dispatch-telegram-subscribers";
 import { removeHandledTelegramAlertItems } from "./telegram-alert-event-lineage";
-
-export type TelegramFanoutPlanEvents = Pick<
-  TelegramDispatchEvents,
-  | "dewsChanges"
-  | "depegTriggered"
-  | "depegResolved"
-  | "depegWorsening"
-  | "safetyChanges"
-  | "safetyScoreIdentity"
-  | "launchPromoted"
-  | "reservePromoted"
->;
 
 export interface PresetFanoutFailureSummary {
   presetQueryFailures: number;

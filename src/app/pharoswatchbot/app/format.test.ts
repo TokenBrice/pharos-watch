@@ -1,25 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { computeEffectiveSource } from "./format";
-import type { FollowedPreset, SubscribedCoin, TelegramMiniAppState } from "./types";
+import { makeSubscribedCoin as makeCoin } from "./mini-app-test-fixtures";
+import type { FollowedPreset, TelegramMiniAppState } from "./types";
 
 type GlobalAlerts = TelegramMiniAppState["subscriber"]["globalAlerts"];
-
-function makeCoin(
-  alertTypes: Partial<SubscribedCoin["alertTypes"]>,
-  alertOverrides: Partial<NonNullable<SubscribedCoin["alertOverrides"]>> = {},
-): SubscribedCoin {
-  return {
-    stablecoinId: "usdc-circle",
-    symbol: "USDC",
-    name: "USD Coin",
-    alertTypes: { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, ...alertTypes },
-    alertOverrides: { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, ...alertOverrides },
-    dewsMinBand: null,
-    depegStepBps: null,
-    safetyMode: null,
-    snoozeUntilTs: null,
-  };
-}
 
 const NO_GLOBAL: GlobalAlerts = { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null };
 

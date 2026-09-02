@@ -1,3 +1,5 @@
+import { parseEpochSeconds } from "@shared/lib/epoch";
+
 export function verifiedFreshnessMetadata(
   sourceTimestamp: number,
 ): { sourceTimestamp: number; freshnessMode: "verified" } {
@@ -74,10 +76,13 @@ export function summarizeSourceTimestamps(values: readonly unknown[]): SourceTim
   };
 }
 
-function normalizeUnixTimestampSeconds(value: number): number | null {
-  if (!Number.isFinite(value) || value <= 0) return null;
-  return Math.floor(value >= 1_000_000_000_000 ? value / 1000 : value);
-}
+const FRESHNESS_EPOCH_OPTIONS = {
+  numericTextPolicy: "digits-only",
+  millisecondsThreshold: 1_000_000_000_000,
+  millisecondsThresholdInclusive: true,
+  floor: true,
+  minExclusive: 0,
+} as const;
 
 /**
  * Parse a timestamp-like value (epoch number, epoch string, `DD/MM/YY`, or a
@@ -94,7 +99,7 @@ function normalizeUnixTimestampSeconds(value: number): number | null {
  */
 export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
   if (typeof value === "number") {
-    return normalizeUnixTimestampSeconds(value);
+    return parseEpochSeconds(value, FRESHNESS_EPOCH_OPTIONS);
   }
 
   if (typeof value !== "string") {
@@ -105,7 +110,7 @@ export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
   if (!trimmed) return null;
 
   if (/^\d+$/.test(trimmed)) {
-    return normalizeUnixTimestampSeconds(Number(trimmed));
+    return parseEpochSeconds(trimmed, FRESHNESS_EPOCH_OPTIONS);
   }
 
   const shortDateMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
@@ -134,15 +139,15 @@ export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
     ) {
       return null;
     }
-    return normalizeUnixTimestampSeconds(parsed);
+    return parseEpochSeconds(parsed, FRESHNESS_EPOCH_OPTIONS);
   }
 
   const longDateOnlyMatch = trimmed.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),\s*(\d{4})$/);
   if (longDateOnlyMatch) {
     const parsed = Date.parse(`${trimmed} 00:00:00 UTC`);
-    return Number.isFinite(parsed) ? normalizeUnixTimestampSeconds(parsed) : null;
+    return Number.isFinite(parsed) ? parseEpochSeconds(parsed, FRESHNESS_EPOCH_OPTIONS) : null;
   }
 
   const parsed = Date.parse(trimmed);
-  return Number.isFinite(parsed) ? normalizeUnixTimestampSeconds(parsed) : null;
+  return Number.isFinite(parsed) ? parseEpochSeconds(parsed, FRESHNESS_EPOCH_OPTIONS) : null;
 }

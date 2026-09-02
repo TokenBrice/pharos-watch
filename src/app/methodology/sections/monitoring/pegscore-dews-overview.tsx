@@ -2,6 +2,7 @@ import {
   METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyFacts,
+  MethodologyPreconditions,
   WorkedExample,
 } from "../../methodology-shared";
 
@@ -90,10 +91,8 @@ export function PegScoreDewsOverview() {
           { label: "Refresh", value: "Peg 15m / DEWS 30m" },
         ]}
       />
-      <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-        <MethodologyFacts
-          facts={[
+      <MethodologyPreconditions
+        facts={[
             {
               label: "Minimum data",
               value:
@@ -108,9 +107,8 @@ export function PegScoreDewsOverview() {
               label: "Failure behavior",
               value: "PegScore can be null; DEWS returns null when signal coverage is below threshold; stablecoins-cache failure aborts writes, while other source failures or stale DEX liquidity/mint-burn freshness publish partial rows and mark the cron degraded",
             },
-          ]}
-        />
-      </div>
+        ]}
+      />
       <WorkedExample summary="Worked examples (verified against computePegScore and computeDEWS)">
         <p className="pharos-numeric">PegScore input: 100-day tracking window, 1 event (2 days, 220 bps, inactive)</p>
         <p className="pharos-numeric">pegPct=98.0, severityScore=99.86, spread=0, activePenalty=0 &rarr; pegScore=99</p>

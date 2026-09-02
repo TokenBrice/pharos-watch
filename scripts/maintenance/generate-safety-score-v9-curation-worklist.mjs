@@ -8,6 +8,9 @@
 //   node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs \
 //     --replay <replay-v9.json> [--output <worklist.md>]
 import { readFileSync, writeFileSync } from "node:fs";
+import { require as tsxRequire } from "tsx/cjs/api";
+
+const { formatCompactUsdWithOptions } = tsxRequire("../../shared/lib/format.ts", import.meta.url);
 
 const STREAMS = [
   {
@@ -202,11 +205,24 @@ for (const stream of STREAMS) {
 const codeToStream = new Map();
 for (const stream of STREAMS) for (const code of stream.codes) codeToStream.set(code, stream.key);
 
+const CURATION_WORKLIST_USD_PROFILE = Object.freeze({
+  decimals: Object.freeze({ trillion: 2, billion: 2, million: 1, thousand: 0, unit: 0 }),
+  forcedLowestTier: "thousand",
+  invalidFallback: "$0",
+  maximumTier: "billion",
+  signPosition: "after-currency",
+  suffixes: Object.freeze({ thousand: "k" }),
+});
+
 function money(value) {
   if (!value) return "$0";
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-  return `$${Math.round(value / 1e3)}k`;
+  if (value < 0) {
+    return formatCompactUsdWithOptions(Math.round(value / 1e3) * 1e3, {
+      ...CURATION_WORKLIST_USD_PROFILE,
+      maximumTier: "thousand",
+    });
+  }
+  return formatCompactUsdWithOptions(value, CURATION_WORKLIST_USD_PROFILE);
 }
 
 const items = new Map(); // `${stream}:${assetId}` -> { codes: Map(code -> Set(path)) }

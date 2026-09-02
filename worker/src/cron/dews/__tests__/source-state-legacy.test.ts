@@ -309,14 +309,16 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     expect(sourceState.blacklistCounts.has("usda-anzens")).toBe(false);
   });
 
-  it("starts independent D1 source hydrators without waiting for the first query to finish", async () => {
+  it("preserves replay, coverage, and state order when source reads settle out of order", async () => {
     type PendingCall = {
       label: string;
       kind: "all" | "first";
       resolve: (value: unknown) => void;
+      reject: (error: Error) => void;
     };
     const pending: PendingCall[] = [];
     const started: string[] = [];
+    const replayOrder: string[] = [];
 
     const labelSql = (sql: string, binds: unknown[]): string => {
       if (sql.includes("FROM dex_liquidity_history")) return "dex-liquidity-history";
@@ -344,10 +346,10 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     };
 
     const stmt = (sql: string, binds: unknown[] = []) => {
-      const enqueue = (kind: "all" | "first") => new Promise<unknown>((resolve) => {
+      const enqueue = (kind: "all" | "first") => new Promise<unknown>((resolve, reject) => {
         const label = labelSql(sql, binds);
         started.push(label);
-        pending.push({ label, kind, resolve });
+        pending.push({ label, kind, resolve, reject });
       });
       return {
         bind: (...args: unknown[]) => stmt(sql, args),
@@ -369,7 +371,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       db,
       nowSec,
       bootstrapPending: false,
-      registerSourceFailure: () => {},
+      registerSourceFailure: (source) => replayOrder.push(source),
       registerMalformedPersistedInput: () => {},
     }).finally(() => {
       settled = true;
@@ -389,14 +391,40 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       "latest-psi-score",
     ]));
 
+    const failedReads = new Set([
+      "dex-liquidity",
+      "dex-prices",
+      "dex-liquidity-history",
+      "blacklist-events",
+      "previous-stress-latest",
+      "mint-burn-24h",
+      "yield-warnings",
+      "cache:yield-rankings",
+      "latest-psi-score",
+    ]);
     for (let guard = 0; !settled && guard < 10; guard++) {
       const batch = pending.splice(0);
-      for (const call of batch) {
-        call.resolve(resultFor(call));
+      for (const call of batch.reverse()) {
+        if (failedReads.has(call.label)) {
+          call.reject(new Error(call.label));
+        } else {
+          call.resolve(resultFor(call));
+        }
       }
       await Promise.resolve();
     }
 
-    await loadPromise;
+    const sourceState = await loadPromise;
+    expect({
+      replayOrder: replayOrder.join(","),
+      coverageKeys: Object.keys(sourceState.sourceCoverage).join(","),
+      stateKeys: Object.keys(sourceState).join(","),
+    }).toMatchInlineSnapshot(`
+      {
+        "coverageKeys": "dexLiquidity,dexLiquidityFreshRows,dexLiquidityStaleRows,dexPrices,dexLiquidityHistory,blacklistEvents,previousStressSignals,previousStressSignalsFreshRows,previousStressSignalsStaleRows,mintBurnHourly,mintBurnHourlyFreshRows,mintBurnHourlyStaleRows,yieldWarnings,yieldStructuredRows",
+        "replayOrder": "dex-liquidity,dex-prices,dex-liquidity-history,blacklist-events,stress-signals-latest,mint-burn-hourly,yield-data,yield-rankings,stability-index-samples",
+        "stateKeys": "dexLiqRows,dexLiqMap,dexLiqAgeSecById,dexLiqStaleIds,dexPriceMap,dexPriceAgeSecById,dexPriceStaleIds,liqHist7dMap,liqHistRowsRead,blacklistCounts,prevSignals,prevSignalStaleIds,mintBurnMap,mintBurnAgeSecById,mintBurnStaleIds,yieldWarnings,yieldSourceRisk,yieldRankChangeAttribution,latestPsiScore,sourceCoverage,dependencyDiagnostics",
+      }
+    `);
   });
 });

@@ -5,6 +5,17 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { fetchSafetyScoreHistoryCompatibilityRows } from "../lib/safety-score-history-v2";
 
+export async function safetyScoreHistoryFreshness(context: {
+  db: D1Database;
+  history: readonly { date: number }[];
+}): Promise<{ updatedAt: number; maxAgeSec: number }> {
+  const latestTs = context.history[context.history.length - 1]?.date ?? Math.floor(Date.now() / 1000);
+  return {
+    updatedAt: await getLatestSuccessfulCronTimestamp(context.db, "snapshot-safety-grade-history", latestTs),
+    maxAgeSec: DAY_SECONDS,
+  };
+}
+
 export const handleSafetyScoreHistory = async (db: D1Database, url: URL): Promise<Response> => {
     return handleStablecoinHistoryRequest(db, url, {
       query: STABLECOIN_HISTORY_QUERY_CONTRACTS.safetyScore,
@@ -20,13 +31,6 @@ export const handleSafetyScoreHistory = async (db: D1Database, url: URL): Promis
         prevScore: row.prev_score,
         methodologyVersion: row.methodology_version,
       }),
-      freshness: async ({ db: database, history }) => {
-        const latestTs =
-          history.length > 0
-            ? (history[history.length - 1]?.date ?? Math.floor(Date.now() / 1000))
-            : Math.floor(Date.now() / 1000);
-        const updatedAt = await getLatestSuccessfulCronTimestamp(database, "snapshot-safety-grade-history", latestTs);
-        return { updatedAt, maxAgeSec: DAY_SECONDS };
-      },
+      freshness: safetyScoreHistoryFreshness,
     });
   };

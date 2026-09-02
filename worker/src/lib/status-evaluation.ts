@@ -11,18 +11,15 @@ import {
 } from "./status/evaluation-context";
 import type { StatusLevel } from "./status-reliability";
 import {
-  deriveAvailabilityStatus,
-  deriveDataQualityStatus,
   deriveReserveCompositionStatus,
   maxStatus,
   scoreStatusConfidence,
 } from "./status/evaluation-state";
 import {
-  buildAvailabilityCauses,
-  buildDataQualityCauses,
   synthesizeOverallCauses,
   withRunbook,
 } from "./status/evaluation-causes";
+import { evaluateAvailabilityStatus, evaluateDataQualityStatus } from "./status/evaluation-rules";
 import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
@@ -166,13 +163,19 @@ export async function computeRawStatus(db: D1Database, now: number) {
   });
   applyCronHealthSectionErrors(sectionErrors, cronHealth);
 
-  const availabilityStatus = deriveAvailabilityStatus({
+  const availabilityEvaluation = evaluateAvailabilityStatus({
     publicHealth,
     availabilityImpactingCronErrors,
     availabilityImpactingUnhealthyCrons,
     availabilityImpactingConsecutiveCronErrors,
+    watchUnhealthyCrons,
+    degradedCronRuns,
+    cronErrorCount,
+    cronHistoryQueryFailed,
+    cronProgressQueryFailed,
+    cronLeaseQueryFailed,
   });
-  const dataQualityStatus = deriveDataQualityStatus({
+  const dataQualityEvaluation = evaluateDataQualityStatus({
     dataQuality,
     missingPriceRatio,
     blacklistMissingRatio,
@@ -180,32 +183,19 @@ export async function computeRawStatus(db: D1Database, now: number) {
     onchainAssessment,
     reserveCompositionStatus: reserveAssessment.status,
     activePriceCoverageImpactStatus: publicHealth.activePriceCoverageImpactStatus,
-  });
-
-  const rawOverallStatus = maxStatus(availabilityStatus, dataQualityStatus);
-  const availabilityCauses = buildAvailabilityCauses({
-    publicHealth,
-    availabilityImpactingUnhealthyCrons,
-    watchUnhealthyCrons,
-    degradedCronRuns,
-    cronErrorCount,
-    availabilityImpactingCronErrors,
-    availabilityImpactingConsecutiveCronErrors,
-    cronHistoryQueryFailed,
-    cronProgressQueryFailed,
-    cronLeaseQueryFailed,
-  });
-  const dataQualityCauses = buildDataQualityCauses({
-    dataQuality,
     repairRunnerAutoRepairCount: readRepairRunnerAutoRepairCount(crons),
     activePriceCoverage: publicHealth.activePriceCoverage,
-    missingPriceRatio,
-    blacklistMissingRatio,
-    blacklistRecentMissing,
     onchainAssessmentCauses: onchainAssessment.causes,
     reserveCompositionQueryFailed,
     reserveComposition,
   });
+
+  const availabilityStatus = availabilityEvaluation.status;
+  const dataQualityStatus = dataQualityEvaluation.status;
+
+  const rawOverallStatus = maxStatus(availabilityStatus, dataQualityStatus);
+  const availabilityCauses = availabilityEvaluation.causes;
+  const dataQualityCauses = dataQualityEvaluation.causes;
 
   const confidence = scoreStatusConfidence({
     availabilityStatus,

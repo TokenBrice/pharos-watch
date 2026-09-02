@@ -1,6 +1,48 @@
 import type { ReactNode } from "react";
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
-import { ChangelogTable, WeightRow, changelogTableClassNames } from "./content-shared";
+import { ChangelogDataTable, WeightRow } from "./content-shared";
+
+const PEGSCORE_MULTIPLIER_COLUMNS = [
+  { id: "pegScore", label: "pegScore", rowHeader: true },
+  { id: "multiplier", label: "Multiplier" },
+  { id: "impact", label: "Impact" },
+];
+const PEGSCORE_MULTIPLIER_ROWS = [
+  ["100", "1.000", "none"], ["90", "≈0.979", "−2%"], ["50", "≈0.870", "−13%"],
+  ["10", "≈0.631", "−37%"], ["0", "0", "dead"],
+].map(([pegScore, multiplier, impact]) => ({ id: pegScore, cells: { pegScore, multiplier, impact } }));
+
+const RESERVE_RISK_COLUMNS = [
+  { id: "tier", label: "Reserve risk tier", rowHeader: true },
+  { id: "score", label: "Score" },
+];
+const RESERVE_RISK_ROWS = [
+  ["very-low", "100"], ["low", "75"], ["medium", "50"], ["high", "25"], ["very-high", "5"],
+].map(([tier, score]) => ({ id: tier, cells: { tier, score } }));
+
+const RESILIENCE_COLUMNS = [
+  { id: "factor", label: "Sub-factor", rowHeader: true },
+  { id: "tiers", label: <>Tiers &amp; scores</> },
+];
+const RESILIENCE_ROWS = [
+  ["Chain Risk", "ethereum=100, stage1-l2=66, established-alt-l1=20, unproven=0"],
+  ["Collateral Quality", "native=100, eth-lst=66, alt-lst-bridged-or-mixed=20, rwa=50, exotic=0"],
+  ["Custody Model", "onchain=100, institutional=50, cex=0"],
+  ["Blacklist Capability", "not-blacklistable=100, possible=50, blacklistable=0"],
+].map(([factor, tiers]) => ({ id: factor, cells: { factor, tiers } }));
+
+const WEIGHTED_DIMENSION_COLUMNS = [
+  { id: "dimension", label: "Dimension", rowHeader: true },
+  { id: "weight", label: "Weight" },
+  { id: "approach", label: "Approach" },
+];
+const WEIGHTED_DIMENSION_ROWS = [
+  ["Peg Stability", "25%", "pegScore passthrough, capped at 65 during active depeg, +3 bonus if last depeg > 12 months ago"],
+  ["Liquidity", "25%", "liquidityScore from DEX data, HHI penalty (−5 if >0.5, −10 if >0.8)"],
+  ["Safety", "20%", "Bluechip rating passthrough (A+=100 … F=25), NR if no rating"],
+  ["Resilience", "15%", "2-factor: chain distribution 60% + freeze rate 40%"],
+  ["Decentralization", "10%", "3-tier: decentralized=95, centralized-dependent=70, centralized=50"],
+  ["Dependency Risk", "5%", "CeFi-Dependent only, unweighted avg of upstream scores"],
+].map(([dimension, weight, approach]) => ({ id: dimension, cells: { dimension, weight, approach } }));
 
 export const scoringChangelogLegacyDetails: Record<string, ReactNode> = {
   "4.1": (
@@ -22,52 +64,13 @@ export const scoringChangelogLegacyDetails: Record<string, ReactNode> = {
       <div className="rounded-lg border p-3 pharos-numeric text-xs bg-muted">
         final = base &times; (pegScore / 100) ^ 0.20
       </div>
-      <ChangelogTable
+      <ChangelogDataTable
         ariaLabel="Safety Score v4 pegScore multiplier examples"
         tableId="scoring-v4-pegscore-multiplier"
         testId="scoring-v4-pegscore-multiplier-table"
-      >
-        <TableHeader>
-          <TableRow>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              pegScore
-            </TableHead>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              Multiplier
-            </TableHead>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              Impact
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>100</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>1.000</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>none</TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>90</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>&asymp;0.979</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>&minus;2%</TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>50</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>&asymp;0.870</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>&minus;13%</TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>10</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>&asymp;0.631</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>&minus;37%</TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>0</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>0</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>dead</TableCell>
-          </TableRow>
-        </TableBody>
-      </ChangelogTable>
+        columns={PEGSCORE_MULTIPLIER_COLUMNS}
+        rows={PEGSCORE_MULTIPLIER_ROWS}
+      />
       <p>
         Grade thresholds lowered 5 points to compensate for structural deflation. Minimum rated base dimensions reduced
         from 3 to 2.
@@ -81,36 +84,13 @@ export const scoringChangelogLegacyDetails: Record<string, ReactNode> = {
         For coins with curated reserve composition data, collateral quality is computed as a weighted average of
         per-slice risk scores instead of using the enum fallback:
       </p>
-      <ChangelogTable
+      <ChangelogDataTable
         ariaLabel="Safety Score v3.3 reserve risk tiers"
         tableId="scoring-v3-reserve-risk-tiers"
         testId="scoring-v3-reserve-risk-tiers-table"
-      >
-        <TableHeader>
-          <TableRow>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              Reserve risk tier
-            </TableHead>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              Score
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {[
-            ["very-low", "100"],
-            ["low", "75"],
-            ["medium", "50"],
-            ["high", "25"],
-            ["very-high", "5"],
-          ].map(([tier, score]) => (
-            <TableRow key={tier}>
-              <TableCell className={changelogTableClassNames.rowHeader}>{tier}</TableCell>
-              <TableCell className={changelogTableClassNames.cell}>{score}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </ChangelogTable>
+        columns={RESERVE_RISK_COLUMNS}
+        rows={RESERVE_RISK_ROWS}
+      />
     </>
   ),
   "3.2": (
@@ -141,46 +121,13 @@ export const scoringChangelogLegacyDetails: Record<string, ReactNode> = {
         Complete redesign of Resilience from 2 factors (chain distribution + freeze rate) to 4 equal sub-factors (25%
         each):
       </p>
-      <ChangelogTable
+      <ChangelogDataTable
         ariaLabel="Safety Score v3 resilience sub-factors"
         tableId="scoring-v3-resilience-subfactors"
         testId="scoring-v3-resilience-subfactors-table"
-      >
-        <TableHeader>
-          <TableRow>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              Sub-factor
-            </TableHead>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              Tiers &amp; scores
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Chain Risk</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>
-              ethereum=100, stage1-l2=66, established-alt-l1=20, unproven=0
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Collateral Quality</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>
-              native=100, eth-lst=66, alt-lst-bridged-or-mixed=20, rwa=50, exotic=0
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Custody Model</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>onchain=100, institutional=50, cex=0</TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Blacklist Capability</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>
-              not-blacklistable=100, possible=50, blacklistable=0
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </ChangelogTable>
+        columns={RESILIENCE_COLUMNS}
+        rows={RESILIENCE_ROWS}
+      />
       <WeightRow values={["25%", "20%", "\u2014", "20%", "10%", "25%"]} />
     </>
   ),
@@ -212,69 +159,13 @@ export const scoringChangelogLegacyDetails: Record<string, ReactNode> = {
   "1.0": (
     <>
       <p>Six weighted dimensions:</p>
-      <ChangelogTable
+      <ChangelogDataTable
         ariaLabel="Safety Score v1 weighted dimensions"
         tableId="scoring-v1-weighted-dimensions"
         testId="scoring-v1-weighted-dimensions-table"
-      >
-        <TableHeader>
-          <TableRow>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              Dimension
-            </TableHead>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              Weight
-            </TableHead>
-            <TableHead scope="col" className={changelogTableClassNames.head}>
-              Approach
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Peg Stability</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>25%</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>
-              pegScore passthrough, capped at 65 during active depeg, +3 bonus if last depeg &gt; 12 months ago
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Liquidity</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>25%</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>
-              liquidityScore from DEX data, HHI penalty (&minus;5 if &gt;0.5, &minus;10 if &gt;0.8)
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Safety</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>20%</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>
-              Bluechip rating passthrough (A+=100 &hellip; F=25), NR if no rating
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Resilience</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>15%</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>
-              2-factor: chain distribution 60% + freeze rate 40%
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Decentralization</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>10%</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>
-              3-tier: decentralized=95, centralized-dependent=70, centralized=50
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className={changelogTableClassNames.rowHeader}>Dependency Risk</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>5%</TableCell>
-            <TableCell className={changelogTableClassNames.cell}>
-              CeFi-Dependent only, unweighted avg of upstream scores
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </ChangelogTable>
+        columns={WEIGHTED_DIMENSION_COLUMNS}
+        rows={WEIGHTED_DIMENSION_ROWS}
+      />
       <p>
         Grade thresholds: A+&ge;97, A&ge;93, A&minus;&ge;90, B+&ge;85, B&ge;80, B&minus;&ge;75, C+&ge;70, C&ge;65,
         C&minus;&ge;60, D&ge;50. Minimum 3 rated dimensions required.

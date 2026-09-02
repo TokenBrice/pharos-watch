@@ -120,6 +120,18 @@ describe("analyze-gsc-coverage", () => {
     expect(rendered).toContain("Crawled - currently not indexed | urls=1 | pathQueryGroups=1 | matchedIssue=yes");
   });
 
+  it("truncates decimal counts without clamping negative coverage values", async () => {
+    const root = fixtureDir();
+    writeFileSync(
+      join(root, "Critical issues.csv"),
+      ["Reason,Pages", '"Negative fixture",-2.9'].join("\n"),
+    );
+
+    const report = await analyzeGscCoverageInputs([root]);
+
+    expect(report.issueCounts[0]).toMatchObject({ issueName: "Negative fixture", pages: -2 });
+  });
+
   it.each([
     { argv: ["--help"], expectedCode: 0, stream: "stdout", text: "Usage: npm run analyze:gsc-coverage" },
     { argv: ["--unknown"], expectedCode: 1, stream: "stderr", text: "Unknown option: --unknown" },

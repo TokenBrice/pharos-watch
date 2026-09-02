@@ -120,7 +120,27 @@ describe("BlacklistSection", () => {
     const eventBadge = screen.getByText("Freeze");
     expect(eventBadge.className).toContain("bg-red-500/15");
     expect(screen.queryByText("Blacklist")).toBeNull();
+    const transactionLink = getByRole("link", { name: "View transaction on block explorer" });
+    expect(transactionLink.textContent).toBe("0x0000...0000");
+    expect(transactionLink.getAttribute("target")).toBe("_blank");
+    expect(transactionLink.getAttribute("rel")).toBe("noopener noreferrer");
     expect(getByRole("link", { name: "See all events →" }).getAttribute("href")).toBe("/freezewatch/?stablecoin=USDC");
+  });
+
+  it("keeps all three metric-card skeletons in the loading state", () => {
+    vi.mocked(useBlacklistSummary).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useBlacklistSummary>);
+
+    const { container } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+
+    expect(container.querySelectorAll('.h-4.w-24[data-slot="skeleton"]')).toHaveLength(3);
+    expect(container.querySelectorAll('.h-8.w-16[data-slot="skeleton"]')).toHaveLength(3);
   });
 
   it("BlacklistHistorySection returns null for a supported coin with zero events", () => {

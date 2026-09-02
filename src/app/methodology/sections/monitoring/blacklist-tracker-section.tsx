@@ -5,6 +5,7 @@ import {
 import {
   MethodologyDetails,
   MethodologyFacts,
+  MethodologyPreconditions,
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
@@ -56,17 +57,14 @@ export function BlacklistTrackerMethodologySection() {
                   { label: "Update frequency", value: "Every 6 hours (`3 */6 * * *`) + backlog reconciliation" },
                 ]}
               />
-              <div className="rounded-lg border border-border/60 bg-muted/20 p-4 space-y-2">
-                <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs">
-                  <dt className="text-foreground font-medium">Minimum data</dt>
-                  <dd>At least one indexed block range per chain</dd>
-                  <dt className="text-foreground font-medium">Required sources</dt>
-                  <dd>Block explorer event logs with valid ABI decoding</dd>
-                  <dt className="text-foreground font-medium">Failure behavior</dt>
-                  <dd>Preserves last-known snapshots; stale/provider-failed status shown</dd>
-                </dl>
-              </div>
+              <MethodologyPreconditions
+                variant="compact"
+                facts={[
+                  { label: "Minimum data", value: "At least one indexed block range per chain" },
+                  { label: "Required sources", value: "Block explorer event logs with valid ABI decoding" },
+                  { label: "Failure behavior", value: "Preserves last-known snapshots; stale/provider-failed status shown" },
+                ]}
+              />
               <WorkedExample summary="Worked example: blacklist event reconciliation">
                 <p className="pharos-numeric">Event: AddedBlackList(0xabc...def) on USDT (Ethereum), block 19,234,567</p>
                 <p className="pharos-numeric">Ledger update: +1 frozen address, total frozen balance recalculated from on-chain balanceOf</p>

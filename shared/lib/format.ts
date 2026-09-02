@@ -5,19 +5,23 @@ import { formatRelativeAgeSeconds } from "./relative-time";
 import { ratioToPercentage, relativeChangeRatio } from "./stats";
 import { getPegTaxonomyByCurrency } from "./peg-taxonomy";
 
-type CompactUsdTier = "trillion" | "billion" | "million" | "thousand" | "unit";
+export type CompactUsdTier = "trillion" | "billion" | "million" | "thousand" | "unit";
 
 export interface CompactUsdFormatOptions {
   currencyPrefix?: string;
   decimals: Readonly<Record<CompactUsdTier, number>>;
   invalidFallback: string | ((value: number | null | undefined) => string);
   compactNegative?: boolean;
+  /** Use this abbreviation even when the value is below its normal threshold. */
+  forcedLowestTier?: Exclude<CompactUsdTier, "unit">;
   /** Highest abbreviation tier to allow; null disables abbreviation. */
   maximumTier?: Exclude<CompactUsdTier, "unit"> | null;
   /** Smallest abbreviation tier to allow; lower values render as units. */
   minimumTier?: Exclude<CompactUsdTier, "unit">;
   positiveSign?: boolean;
   signPosition?: "before-currency" | "after-currency";
+  suffixes?: Readonly<Partial<Record<CompactUsdTier, string>>>;
+  /** @deprecated Prefer suffixes.thousand. */
   thousandSuffix?: "K" | "k";
   trimTrailingZeros?: boolean;
   useGrouping?: boolean;
@@ -58,12 +62,16 @@ export function formatCompactUsdWithOptions(
     ? undefined
     : COMPACT_USD_TIERS
         .slice(maximumTierIndex, minimumTierIndex + 1)
-        .find(({ divisor }) => abs >= divisor);
+        .find(({ divisor }) => abs >= divisor)
+        ?? (options.forcedLowestTier
+          ? COMPACT_USD_TIERS.find(({ tier }) => tier === options.forcedLowestTier)
+          : undefined);
   const tier: CompactUsdTier = selected?.tier ?? "unit";
   const scaled = selected ? abs / selected.divisor : abs;
-  const suffix = selected?.tier === "thousand"
-    ? (options.thousandSuffix ?? selected.suffix)
-    : (selected?.suffix ?? "");
+  const suffix = options.suffixes?.[tier]
+    ?? (selected?.tier === "thousand" ? options.thousandSuffix : undefined)
+    ?? selected?.suffix
+    ?? "";
   const decimals = options.decimals[tier];
   const formatted = options.useGrouping || options.trimTrailingZeros
     ? new Intl.NumberFormat("en-US", {

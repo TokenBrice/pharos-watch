@@ -2,7 +2,6 @@ import {
   decodeFunctionData,
   decodeFunctionResult,
   encodeFunctionData,
-  keccak256,
   parseAbi,
 } from "viem/utils";
 
@@ -23,7 +22,6 @@ import {
   fetchEvmCallHexAtBlock,
   fetchEvmCodeStatusAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmCodeAtBlockResult,
   type EvmBlockHeader,
   type EvmMulticall3Call,
   type EvmMulticall3Result,
@@ -41,12 +39,14 @@ import {
 import {
   CURVE_STABLESWAP_MULTICALL_BATCH_SIZE,
   CURVE_STABLESWAP_MULTICALL_GAS,
+  createCurveStableSwapDeploymentVerifier as createCurveStableSwapDeploymentVerifierPipeline,
   createCurveStableSwapExecutionPipeline,
-  createCurveStableSwapPinnedReaders,
   decodeCurveStableSwapGetDyResult,
   encodeCurveStableSwapGetDyCall,
+  evaluateCurveStableSwapBaseEligibility,
   validateCurveStableSwapExecutionProfile,
   verifyCurveStableSwapPoolTokens,
+  type CurveStableSwapDeploymentDependencies,
 } from "./curve-stableswap-execution-pipeline";
 
 const CURVE_STABLESWAP_NG_FACTORY_ABI = parseAbi([
@@ -166,33 +166,14 @@ export function evaluateCurveStableSwapNgEligibility(input: {
   nowSec: number;
   evidence?: CurveStableSwapNgRuntimeEvidence;
 }): CurveStableSwapNgEligibility {
-  const policy = getCurveStableSwapNgPolicy(input.chain, input.endpointAddress);
-  if (!policy) return { ok: false, reason: "pool-not-reviewed" };
-  if (canonicalEvmAddress(input.endpointAddress) !== policy.poolAddress) {
-    return { ok: false, reason: "execution-endpoint-mismatch" };
-  }
-  if (!Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {
-    return { ok: false, reason: "invalid-pinned-block" };
-  }
-  const evidence = input.evidence;
-  if (!evidence || !Number.isSafeInteger(evidence.blockTimestamp) || evidence.blockTimestamp <= 0) {
-    return { ok: false, reason: "block-header-unavailable" };
-  }
-  if (evidence.blockTimestamp > input.nowSec + 60) {
-    return { ok: false, reason: "future-pinned-block" };
-  }
-  if (
-    input.nowSec - evidence.blockTimestamp >
-    DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC
-  ) {
-    return { ok: false, reason: "stale-pinned-block" };
-  }
-  if (canonicalEvmHash(evidence.poolCodeHash) == null) {
-    return { ok: false, reason: "runtime-code-unavailable" };
-  }
-  if (evidence.poolCodeHash !== policy.expectedPoolCodeHash) {
-    return { ok: false, reason: "runtime-code-hash-mismatch" };
-  }
+  const base = evaluateCurveStableSwapBaseEligibility(
+    input,
+    getCurveStableSwapNgPolicy,
+    DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
+    "block-header-unavailable",
+  );
+  if (!base.ok) return base;
+  const { policy, evidence } = base;
   const proof = evidence.factoryBindingProof;
   if (proof.blockNumber !== input.blockNumber) {
     return { ok: false, reason: "block-header-mismatch" };
@@ -237,26 +218,20 @@ export function evaluateCurveStableSwapNgEligibility(input: {
   return { ok: true };
 }
 
-interface CurveStableSwapNgVerificationDependencies {
-  fetchCodeStatus(
-    chain: string,
-    address: string,
-    blockNumber: number,
-    options: Parameters<typeof fetchEvmCodeStatusAtBlock>[3],
-  ): Promise<EvmCodeAtBlockResult>;
-  fetchCall(
-    chain: string,
-    address: string,
-    callData: string,
-    blockNumber: number,
-    options: Parameters<typeof fetchEvmCallHexAtBlock>[4],
-  ): Promise<`0x${string}` | null>;
+interface CurveStableSwapNgVerificationDependencies extends CurveStableSwapDeploymentDependencies {
   fetchBlockHeader(
     chain: string,
     blockNumber: number | "finalized",
     options: Parameters<typeof fetchEvmBlockHeader>[2],
   ): Promise<EvmBlockHeader | null>;
-  hashCode?(code: `0x${string}`): `0x${string}`;
+}
+
+interface CurveStableSwapNgVerificationInput {
+  policy?: CurveStableSwapNgPoolPolicy;
+  nowSec: number;
+  chainRpcs: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  rpcBudget?: DexMeasuredExecutionRpcBudget;
 }
 
 export type CurveStableSwapNgDeploymentVerification =
@@ -273,179 +248,171 @@ export type CurveStableSwapNgDeploymentVerification =
 export function createCurveStableSwapNgDeploymentVerifier(
   dependencies: CurveStableSwapNgVerificationDependencies,
 ) {
-  return async function verifyCurveStableSwapNgDeployment(input: {
-    policy?: CurveStableSwapNgPoolPolicy;
-    nowSec: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<CurveStableSwapNgDeploymentVerification> {
-    const policy = input.policy ?? CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
-    const requestOptions = {
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-      maxRetries: 0,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
-    };
-
-    const blockHeader = await dependencies.fetchBlockHeader(
-      policy.chain,
-      "finalized",
+  const verifyBase = createCurveStableSwapDeploymentVerifierPipeline<
+    CurveStableSwapNgPoolPolicy,
+    CurveStableSwapNgVerificationInput,
+    DexMeasuredExecutionStableSwapNgFactoryBindingProof,
+    CurveStableSwapNgEligibilityFailure
+  >(dependencies, {
+    defaultPolicy: CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
+    freshnessMaxSec: DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
+    acquireBlock: async (input, policy, requestOptions) => {
+      const blockHeader = await dependencies.fetchBlockHeader(
+        policy.chain,
+        "finalized",
+        requestOptions,
+      );
+      input.rpcBudget?.recordChainResult(policy.chain, blockHeader != null);
+      if (blockHeader == null) return { ok: false, reason: "block-header-unavailable" };
+      if (!/^0x[0-9a-f]{64}$/.test(blockHeader.hash)) {
+        return { ok: false, reason: "block-hash-invalid" };
+      }
+      return {
+        ok: true,
+        value: {
+          blockNumber: blockHeader.number,
+          blockTimestamp: blockHeader.timestamp,
+          blockHash: blockHeader.hash,
+        },
+      };
+    },
+    bindingCode: {
+      address: (policy) => policy.factoryAddress,
+      expectedHash: (policy) => policy.expectedFactoryCodeHash,
+      beforePoolHash: true,
+      unavailable: "factory-code-unavailable",
+      absent: "factory-code-absent",
+      mismatch: "factory-code-hash-mismatch",
+    },
+    verifyBinding: async ({
+      input,
+      policy,
+      blockNumber,
+      blockTimestamp,
+      blockHash,
       requestOptions,
-    );
-    input.rpcBudget?.recordChainResult(policy.chain, blockHeader != null);
-    if (blockHeader == null) return { ok: false, reason: "block-header-unavailable" };
-    if (!/^0x[0-9a-f]{64}$/.test(blockHeader.hash)) {
-      return { ok: false, reason: "block-hash-invalid" };
-    }
-    const blockTimestamp = blockHeader.timestamp;
-    if (blockTimestamp > input.nowSec + 60) return { ok: false, reason: "future-pinned-block" };
-    if (
-      input.nowSec - blockTimestamp >
-      DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC
-    ) {
-      return { ok: false, reason: "stale-pinned-block" };
-    }
-
-    const { readCode, readCall } = createCurveStableSwapPinnedReaders(
-      { policy, blockNumber: blockHeader.number, rpcBudget: input.rpcBudget },
-      dependencies,
-      requestOptions,
-    );
-
-    const poolCodeResult = await readCode(policy.poolAddress);
-    if (poolCodeResult.status === "unavailable") {
-      return { ok: false, reason: "runtime-code-unavailable" };
-    }
-    if (poolCodeResult.status === "absent") {
-      return { ok: false, reason: "runtime-code-absent" };
-    }
-    const factoryCodeResult = await readCode(policy.factoryAddress);
-    if (factoryCodeResult.status === "unavailable") {
-      return { ok: false, reason: "factory-code-unavailable" };
-    }
-    if (factoryCodeResult.status === "absent") {
-      return { ok: false, reason: "factory-code-absent" };
-    }
-    const hashCode = dependencies.hashCode ?? ((code: `0x${string}`) => keccak256(code));
-    const poolCodeHash = hashCode(poolCodeResult.code).toLowerCase() as `0x${string}`;
-    if (poolCodeHash !== policy.expectedPoolCodeHash) {
-      return { ok: false, reason: "runtime-code-hash-mismatch" };
-    }
-    const factoryCodeHash = hashCode(factoryCodeResult.code).toLowerCase() as `0x${string}`;
-    if (factoryCodeHash !== policy.expectedFactoryCodeHash) {
-      return { ok: false, reason: "factory-code-hash-mismatch" };
-    }
-
-    const poolListCallData = encodeFunctionData({
-      abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
-      functionName: "pool_list",
-      args: [BigInt(policy.factoryPoolIndex)],
-    }).toLowerCase() as `0x${string}`;
-    const factoryCoinsCallData = encodeFunctionData({
-      abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
-      functionName: "get_coins",
-      args: [policy.poolAddress],
-    }).toLowerCase() as `0x${string}`;
-    const poolListReturnData = await readCall(policy.factoryAddress, poolListCallData);
-    const factoryCoinsReturnData = await readCall(policy.factoryAddress, factoryCoinsCallData);
-    if (poolListReturnData == null || factoryCoinsReturnData == null) {
-      return { ok: false, reason: "factory-membership-unproven" };
-    }
-
-    let registeredPoolAddress: `0x${string}` | null;
-    let factoryCoins: readonly (`0x${string}` | null)[];
-    try {
-      registeredPoolAddress = canonicalEvmAddress(decodeFunctionResult({
+      readCall,
+      bindingCodeHash: factoryCodeHash,
+    }) => {
+      const poolListCallData = encodeFunctionData({
         abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
         functionName: "pool_list",
-        data: poolListReturnData,
-      }));
-      factoryCoins = (decodeFunctionResult({
+        args: [BigInt(policy.factoryPoolIndex)],
+      }).toLowerCase() as `0x${string}`;
+      const factoryCoinsCallData = encodeFunctionData({
         abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
         functionName: "get_coins",
-        data: factoryCoinsReturnData,
-      }) as readonly string[]).map((coin) => canonicalEvmAddress(coin));
-    } catch {
-      return { ok: false, reason: "factory-membership-mismatch" };
-    }
-    const expectedAddresses = policy.poolTokens.map((token) => token.address);
-    if (
-      registeredPoolAddress !== policy.poolAddress ||
-      factoryCoins.length !== expectedAddresses.length ||
-      expectedAddresses.some((address, index) => factoryCoins[index] !== address)
-    ) {
-      return { ok: false, reason: "factory-membership-mismatch" };
-    }
+        args: [policy.poolAddress],
+      }).toLowerCase() as `0x${string}`;
+      const poolListReturnData = await readCall(policy.factoryAddress, poolListCallData);
+      const factoryCoinsReturnData = await readCall(policy.factoryAddress, factoryCoinsCallData);
+      if (poolListReturnData == null || factoryCoinsReturnData == null) {
+        return { ok: false, reason: "factory-membership-unproven" };
+      }
 
-    const tokenProof = await verifyCurveStableSwapPoolTokens({
-      policy,
-      signal: input.signal,
-      readCall,
-      failures: {
-        poolTokenUnavailable: "pool-token-order-unproven",
-        poolTokenMismatch: "pool-token-order-mismatch",
-        tokenDecimalsUnavailable: "token-decimals-unproven",
-        tokenDecimalsMismatch: "token-decimals-mismatch",
-      },
-    });
-    if (!tokenProof.ok) return tokenProof;
+      let registeredPoolAddress: `0x${string}` | null;
+      let factoryCoins: readonly (`0x${string}` | null)[];
+      try {
+        registeredPoolAddress = canonicalEvmAddress(decodeFunctionResult({
+          abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
+          functionName: "pool_list",
+          data: poolListReturnData,
+        }));
+        factoryCoins = (decodeFunctionResult({
+          abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
+          functionName: "get_coins",
+          data: factoryCoinsReturnData,
+        }) as readonly string[]).map((coin) => canonicalEvmAddress(coin));
+      } catch {
+        return { ok: false, reason: "factory-membership-mismatch" };
+      }
+      const expectedAddresses = policy.poolTokens.map((token) => token.address);
+      if (
+        registeredPoolAddress !== policy.poolAddress ||
+        factoryCoins.length !== expectedAddresses.length ||
+        expectedAddresses.some((address, index) => factoryCoins[index] !== address)
+      ) {
+        return { ok: false, reason: "factory-membership-mismatch" };
+      }
 
-    const revalidatedBlockHeader = await dependencies.fetchBlockHeader(
-      policy.chain,
-      blockHeader.number,
-      requestOptions,
-    );
-    input.rpcBudget?.recordChainResult(policy.chain, revalidatedBlockHeader != null);
-    if (revalidatedBlockHeader == null) {
-      return { ok: false, reason: "block-header-unavailable" };
-    }
-    if (
-      revalidatedBlockHeader.number !== blockHeader.number ||
-      revalidatedBlockHeader.timestamp !== blockHeader.timestamp ||
-      revalidatedBlockHeader.hash !== blockHeader.hash
-    ) {
-      return { ok: false, reason: "block-header-mismatch" };
-    }
+      const tokenProof = await verifyCurveStableSwapPoolTokens({
+        policy,
+        signal: input.signal,
+        readCall,
+        failures: {
+          poolTokenUnavailable: "pool-token-order-unproven",
+          poolTokenMismatch: "pool-token-order-mismatch",
+          tokenDecimalsUnavailable: "token-decimals-unproven",
+          tokenDecimalsMismatch: "token-decimals-mismatch",
+        },
+      });
+      if (!tokenProof.ok) return tokenProof;
 
-    const factoryBindingProof: DexMeasuredExecutionStableSwapNgFactoryBindingProof = {
-      blockNumber: blockHeader.number,
-      blockHash: blockHeader.hash,
-      blockCommitment: "finalized",
-      factoryAddress: policy.factoryAddress,
-      factoryCodeHash,
-      poolIndex: policy.factoryPoolIndex,
-      registeredPoolAddress: policy.poolAddress,
-      poolTokenAddresses: expectedAddresses,
-      poolListCallData,
-      poolListReturnData: poolListReturnData.toLowerCase() as `0x${string}`,
-      factoryCoinsCallData,
-      factoryCoinsReturnData: factoryCoinsReturnData.toLowerCase() as `0x${string}`,
-      poolCoinsProof: tokenProof.poolCoinsProof,
-      tokenDecimalsProof: tokenProof.tokenDecimalsProof,
-    };
+      const revalidatedBlockHeader = await dependencies.fetchBlockHeader(
+        policy.chain,
+        blockNumber,
+        requestOptions,
+      );
+      input.rpcBudget?.recordChainResult(policy.chain, revalidatedBlockHeader != null);
+      if (revalidatedBlockHeader == null) {
+        return { ok: false, reason: "block-header-unavailable" };
+      }
+      if (
+        blockHash == null ||
+        revalidatedBlockHeader.number !== blockNumber ||
+        revalidatedBlockHeader.timestamp !== blockTimestamp ||
+        revalidatedBlockHeader.hash !== blockHash
+      ) {
+        return { ok: false, reason: "block-header-mismatch" };
+      }
+
+      return {
+        ok: true,
+        value: {
+          blockNumber,
+          blockHash,
+          blockCommitment: "finalized",
+          factoryAddress: policy.factoryAddress,
+          factoryCodeHash,
+          poolIndex: policy.factoryPoolIndex,
+          registeredPoolAddress: policy.poolAddress,
+          poolTokenAddresses: expectedAddresses,
+          poolListCallData,
+          poolListReturnData: poolListReturnData.toLowerCase() as `0x${string}`,
+          factoryCoinsCallData,
+          factoryCoinsReturnData: factoryCoinsReturnData.toLowerCase() as `0x${string}`,
+          poolCoinsProof: tokenProof.poolCoinsProof,
+          tokenDecimalsProof: tokenProof.tokenDecimalsProof,
+        },
+      };
+    },
+  });
+  return async (
+    input: CurveStableSwapNgVerificationInput,
+  ): Promise<CurveStableSwapNgDeploymentVerification> => {
+    const result = await verifyBase(input);
+    if (!result.ok) return result;
     const runtimeEvidence: CurveStableSwapNgRuntimeEvidence = {
-      blockTimestamp,
-      poolCodeHash,
-      factoryBindingProof,
+      blockTimestamp: result.blockTimestamp,
+      poolCodeHash: result.codeHash,
+      factoryBindingProof: result.bindingProof,
     };
+    const policy = input.policy ?? CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
     const eligibility = evaluateCurveStableSwapNgEligibility({
       chain: policy.chain,
       endpointAddress: policy.poolAddress,
-      blockNumber: blockHeader.number,
+      blockNumber: result.blockNumber,
       nowSec: input.nowSec,
       evidence: runtimeEvidence,
     });
     return eligibility.ok
       ? {
           ok: true,
-          codeHash: poolCodeHash,
-          blockNumber: blockHeader.number,
-          blockTimestamp,
+          codeHash: result.codeHash,
+          blockNumber: result.blockNumber,
+          blockTimestamp: result.blockTimestamp,
           runtimeEvidence,
-          factoryBindingProof,
+          factoryBindingProof: result.bindingProof,
         }
       : eligibility;
   };

@@ -67,6 +67,8 @@ export interface HydrationContext extends HydrationCallbacks {
   bootstrapPending: boolean;
 }
 
+export type HydrationLoader<T> = (ctx: HydrationContext) => Promise<T>;
+
 function getRowAgeSec(updatedAt: number | null | undefined, nowSec: number): number | null {
   return typeof updatedAt === "number" && Number.isFinite(updatedAt) ? Math.max(0, nowSec - updatedAt) : null;
 }

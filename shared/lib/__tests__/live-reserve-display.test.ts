@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   getReserveDisplayBadgeKindForAdapter,
-  inferReserveDisplayBadgeKindFromEvidenceClass,
 } from "../live-reserve-display";
+import { inferReserveDisplayBadgeKindFromEvidenceClass } from "../live-reserve-adapter-descriptors";
 
 describe("live-reserve display badge inference", () => {
   it("maps every supported evidence class through the canonical resolver", () => {

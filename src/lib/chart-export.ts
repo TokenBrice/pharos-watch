@@ -1,4 +1,5 @@
 import { formatUtcDateOnly } from "@shared/lib/format";
+import { triggerUrlDownload } from "@/lib/exports/download";
 
 export async function downloadChartPng(
   elementRef: React.RefObject<HTMLElement | null>,
@@ -10,10 +11,7 @@ export async function downloadChartPng(
     const dataUrl = await toPng(elementRef.current, {
       pixelRatio: 2,
     });
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = `${filename}-${formatUtcDateOnly(new Date())}.png`;
-    a.click();
+    triggerUrlDownload(dataUrl, `${filename}-${formatUtcDateOnly(new Date())}.png`);
     return true;
   } catch (err) {
     console.error("Chart export failed:", err);

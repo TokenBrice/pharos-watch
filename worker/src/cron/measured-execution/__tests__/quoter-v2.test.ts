@@ -32,11 +32,11 @@ import {
   verifyDexMeasuredExecutionDeployment,
 } from "../registry";
 import {
+  buildDexMeasuredExecutionProfile,
   createDexMeasuredExecutionRpcBudget,
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+  projectProfileForAdapter,
 } from "../profiles";
-import { buildDexMeasuredExecutionProfile } from "../profiles";
-import { projectQuoterV2ProfileToV2 } from "../adapters/quoter-v2";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
 import { toMaturePublicProfile } from "./profile.test-support";
 
@@ -276,7 +276,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       });
 
       expect(validateQuoterV2ProfileProof(profile)).toEqual([]);
-      const v2Profile = projectQuoterV2ProfileToV2(profile);
+      const v2Profile = projectProfileForAdapter(profile, "evm-quoter-v2");
       expect(v2Profile).toMatchObject({
         adapterId: "evm-quoter-v2",
         demandedInputAmountsUsd: DEMANDED_GRID_USD,

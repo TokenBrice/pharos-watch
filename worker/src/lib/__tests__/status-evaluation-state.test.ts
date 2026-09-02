@@ -1,13 +1,21 @@
 import { describe, expect, it } from "vitest";
+import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { makePublicHealth } from "./public-health.test-support";
-import { buildAvailabilityCauses, buildDataQualityCauses, synthesizeOverallCauses } from "../status/evaluation-causes";
+import {
+  buildAvailabilityCauses,
+  buildDataQualityCauses,
+  evaluateAvailabilityStatus,
+  evaluateDataQualityStatus,
+  synthesizeOverallCauses,
+} from "../status/evaluation-causes";
 import {
   deriveAvailabilityStatus,
   deriveDataQualityStatus,
   deriveReserveCompositionStatus,
 } from "../status/evaluation-state";
+import type { AvailabilityEvaluationInput, DataQualityEvaluationInput } from "../status/evaluation-rules";
 
 function makeReserveComposition(
   overrides?: Partial<StatusResponse["reserveComposition"]>,
@@ -102,6 +110,26 @@ function makeAvailabilityCauseInput(publicHealth: PublicHealthAssessment) {
     cronHistoryQueryFailed: false,
     cronProgressQueryFailed: false,
     cronLeaseQueryFailed: false,
+  };
+}
+
+function makeDataQualityEvaluationInput(
+  overrides: Partial<DataQualityEvaluationInput> = {},
+): DataQualityEvaluationInput {
+  const publicHealth = makePublicHealth();
+  return {
+    dataQuality: makeDataQuality(),
+    activePriceCoverage: publicHealth.activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessment: { status: "healthy", causes: [], representative: false },
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition: makeReserveComposition(),
+    reserveCompositionStatus: "healthy",
+    activePriceCoverageImpactStatus: "healthy",
+    ...overrides,
   };
 }
 
@@ -950,5 +978,56 @@ describe("deriveAvailabilityStatus cron-error semantic", () => {
         }),
       }),
     ).toBe("healthy");
+  });
+});
+
+describe("status rule-set parity at policy boundaries", () => {
+  it("preserves availability diagnostic cause ordering", () => {
+    const input: AvailabilityEvaluationInput = {
+      ...makeAvailabilityCauseInput(makePublicHealth()),
+      availabilityImpactingCronErrors: 1,
+      availabilityImpactingUnhealthyCrons: 1,
+      availabilityImpactingConsecutiveCronErrors: 0,
+      watchUnhealthyCrons: 1,
+      degradedCronRuns: 1,
+      cronErrorCount: 2,
+      cronHistoryQueryFailed: true,
+      cronProgressQueryFailed: true,
+      cronLeaseQueryFailed: true,
+    };
+
+    const combined = evaluateAvailabilityStatus(input);
+    expect(deriveAvailabilityStatus(input)).toBe(combined.status);
+    expect(buildAvailabilityCauses(input)).toEqual(combined.causes);
+    expect(combined.causes.map((cause) => cause.code)).toEqual([
+      "cron_history_query_failed",
+      "cron_progress_query_failed",
+      "cron_lease_query_failed",
+      "cron_error_runs",
+      "watch_cron_error_runs",
+      "unhealthy_crons_present",
+      "watch_unhealthy_crons_present",
+      "degraded_cron_warning",
+    ]);
+  });
+
+  it.each([
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated }, "healthy"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded }, "healthy"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded + 0.0001 }, "degraded"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale }, "degraded"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale + 0.0001 }, "stale"],
+    [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded }, "degraded"],
+    [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale }, "stale"],
+    [{ blacklistRecentMissing: STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded }, "degraded"],
+    [{ blacklistRecentMissing: STATUS_BLACKLIST_THRESHOLDS.missingRecentStale }, "stale"],
+    [{ reserveCompositionStatus: "degraded", reserveComposition: makeReserveComposition({ status: "degraded" }) }, "degraded"],
+    [{ reserveCompositionStatus: "stale", reserveComposition: makeReserveComposition({ status: "stale" }) }, "stale"],
+  ] as Array<[Partial<DataQualityEvaluationInput>, StatusResponse["dataQualityStatus"]]>)("keeps data-quality projections aligned at a policy boundary", (overrides, status) => {
+    const fullInput = makeDataQualityEvaluationInput(overrides);
+    const combined = evaluateDataQualityStatus(fullInput);
+    expect(combined.status).toBe(status);
+    expect(deriveDataQualityStatus(fullInput)).toBe(combined.status);
+    expect(buildDataQualityCauses(fullInput)).toEqual(combined.causes);
   });
 });

@@ -4,13 +4,10 @@ import { recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
-import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 import { executeSourceRecoveryQueueSidecar } from "./dispatch-telegram-queue-paths";
 import {
-  emptyResult,
+  buildDispatchResult,
   pendingTailState,
-  reserveSourceFields,
-  safetySourceFields,
   type DispatchResult,
 } from "./dispatch-telegram-result";
 import {
@@ -79,20 +76,17 @@ export async function executeSeedPath({
   await writeSnapshots(db, currentSnapshots);
   await writePresetFailureCount(db, 0);
   await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
-  const result = emptyResult(true, chatsWithActiveSnooze);
-  result.pendingCapacityBefore = pendingCapacityBefore;
-  result.pendingCapacityAfter = pendingCapacityBefore;
-  Object.assign(result, pendingCapacityFields(pendingCapacityBefore));
-  Object.assign(
-    result,
-    safetySourceFields(
-      safetySourceAssessment,
-      safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
-    ),
-  );
-  result.suppressedSafetyChangesAtSeed = suppressedSafetyChangesAtSeed;
-  result.reserveSourceUnavailable = reserveSourceUnavailable;
-  Object.assign(result, reserveSourceFields(reserveSourceAssessment));
+  const result = buildDispatchResult({
+    snapshotSeeded: true,
+    chatsWithActiveSnooze,
+    capacity: { before: pendingCapacityBefore, after: pendingCapacityBefore },
+    reserve: { assessment: reserveSourceAssessment, unavailable: reserveSourceUnavailable },
+    safety: {
+      assessment: safetySourceAssessment,
+      suppressed: safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
+    },
+    overrides: { suppressedSafetyChangesAtSeed },
+  });
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
   await reportCronProgress(reportProgress, {
     stage: "complete",

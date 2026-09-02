@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chains/circulating";
+import { canonicalizeChainCirculating, type RawChainCirculating } from "@shared/lib/chains/circulating";
 import { type ChainsResponse } from "@shared/types/chains";
 import { useRegisteredApiQuery } from "./api-hooks";
 import { useStablecoins } from "./use-stablecoins";
@@ -66,10 +66,7 @@ export function useChainStablecoins(chainId: string) {
       const cc = asset.chainCirculating;
       if (!cc || typeof cc !== "object") continue;
 
-      const chainData = findCanonicalChainData(
-        cc as RawChainCirculating,
-        chainId,
-      );
+      const chainData = canonicalizeChainCirculating(cc as RawChainCirculating).get(chainId) ?? null;
       if (!chainData || chainData.current <= 0) continue;
 
       const supplyOnChain = chainData.current;

@@ -49,8 +49,10 @@ import {
   unixNow,
 } from "./telegram-webhook-store";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
-import { createTelegramWebhookIntent } from "./telegram-webhook-effect-fence";
-import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
+import {
+  createTelegramWebhookIntent,
+  type TelegramMutationContext,
+} from "./telegram-webhook-effect-fence";
 
 const ALERT_TYPE_ORDER = ["dews", "depeg", "safety", "launch"] as const;
 
@@ -250,14 +252,9 @@ export async function sendWizardIntro(
   botToken: string,
   chatId: string,
   initiatorUserId: string | null,
-  options: {
+  options: Omit<TelegramMutationContext, "storedIntent"> & {
     adoptionToken?: string | null;
     includeMiniAppButton?: boolean;
-    beforeIrreversibleEffect?: (kind: string) => Promise<void>;
-    planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-    prepareMutationAppliedStatement?: () => D1PreparedStatement;
-    confirmAtomicMutationApplied?: () => void;
-    wasMutationApplied?: boolean;
   } = {},
 ): Promise<void> {
   const existingPending = await loadPendingDisambiguation(db, chatId);
@@ -304,18 +301,12 @@ export async function sendWizardIntro(
   });
 }
 
-interface CallbackContext {
+interface CallbackContext extends TelegramMutationContext {
   db: D1Database;
   botToken: string;
   chatId: string;
   actorUserId: string | null;
   username: string | null;
-  beforeIrreversibleEffect?: (kind: string) => Promise<void>;
-  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-  prepareMutationAppliedStatement?: () => D1PreparedStatement;
-  confirmAtomicMutationApplied?: () => void;
-  storedIntent?: TelegramWebhookOperationIntent | null;
-  wasMutationApplied?: boolean;
 }
 
 async function recordSetupAdoptionMilestones(

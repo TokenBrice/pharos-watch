@@ -1,5 +1,5 @@
 import type { KVNamespace } from "@shared/types/cloudflare-runtime";
-import { cloneResponseWithPolicy } from "./response-policy";
+import { cloneResponseWithPolicy } from "@shared/lib/response-policy";
 
 export interface SafetyMapEnv {
   SELECTOR_SNAPSHOTS?: KVNamespace;

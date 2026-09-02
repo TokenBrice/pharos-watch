@@ -5,8 +5,8 @@ import {
   getGeneratedMarkdownAssetPath,
   isNegotiableMarkdownRoute,
 } from "@shared/lib/markdown-route-policy";
+import { cloneResponseWithPolicy } from "@shared/lib/response-policy";
 import { injectHtmlCsp } from "./lib/csp-inject";
-import { cloneResponseWithPolicy } from "./lib/response-policy";
 
 interface MiddlewareEnv {
   ASSETS?: { fetch: typeof fetch };

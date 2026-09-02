@@ -42,7 +42,7 @@ import {
   type KnownPoolIdentityIndex,
 } from "../pool-identity";
 import type { DexPriceObs, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, SymbolLookups } from "../types";
-import { mergeDexPriceObservationMap } from "./price-obs";
+import { mergeDexPriceObservationMap } from "../subgraph-helpers";
 import { DIRECT_API_FETCH_PHASE_CONCURRENCY, DIRECT_API_PROVIDER_TIMEOUT_MS } from "../direct-api-policy";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { mapWithConcurrency } from "../../../lib/concurrency";

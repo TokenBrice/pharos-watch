@@ -1,3 +1,4 @@
+import { parseEpochSeconds } from "@shared/lib/epoch";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { USER_AGENT } from "../constants";
 import { logWorkerEventArgs } from "../structured-log";
@@ -40,9 +41,13 @@ function getFiniteNumber(value: unknown): number | null {
 function parseUnixSecondsHeader(res: Response, headerName: string): number | null {
   const raw = res.headers.get(headerName);
   if (!raw) return null;
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  return parsed > 10_000_000_000 ? Math.floor(parsed / 1000) : Math.floor(parsed);
+  return parseEpochSeconds(Number(raw), {
+    numericTextPolicy: "any",
+    millisecondsThreshold: 10_000_000_000,
+    millisecondsThresholdInclusive: false,
+    floor: true,
+    minExclusive: 0,
+  });
 }
 
 export async function fetchZephyrZysSource(signal?: AbortSignal): Promise<ZephyrYieldSourceResult | null> {

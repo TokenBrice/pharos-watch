@@ -41,6 +41,43 @@ export const DigestSafetyContextSchema = z
   });
 export type DigestSafetyContext = z.output<typeof DigestSafetyContextSchema>;
 
+const DigestV9SafetyPillarSchema = z
+  .object({
+    score: z.number().nullable(),
+    evidenceLevel: z.string(),
+    freshness: z.string(),
+    reasons: z.array(z.object({ code: z.string(), message: z.string() }).passthrough()),
+  })
+  .passthrough();
+
+const DigestV9SafetyCapSchema = z
+  .object({
+    kind: z.string(),
+    limit: z.number(),
+    reason: z.string(),
+    binding: z.boolean(),
+  })
+  .passthrough();
+
+export const DigestV9SafetyCoinSchema = z
+  .object({
+    symbol: z.string(),
+    grade: z.string(),
+    score: z.number().nullable(),
+    pillars: z
+      .object({
+        backing: DigestV9SafetyPillarSchema,
+        exit: DigestV9SafetyPillarSchema,
+        control: DigestV9SafetyPillarSchema,
+      })
+      .passthrough(),
+    reasonCodes: z.array(z.string()),
+    caps: z.array(DigestV9SafetyCapSchema),
+    bindingCap: DigestV9SafetyCapSchema.nullable(),
+  })
+  .passthrough();
+
+/** Normalized V8 digest coin after legacy snapshot defaults are applied. */
 export interface DigestV8SafetyCoin {
   symbol: string;
   grade: string;
@@ -49,33 +86,9 @@ export interface DigestV8SafetyCoin {
   liq: number | null;
 }
 
-export interface DigestV9SafetyPillar {
-  score: number | null;
-  evidenceLevel: string;
-  freshness: string;
-  reasons: { code: string; message: string }[];
-}
-
-export interface DigestV9SafetyCap {
-  kind: string;
-  limit: number;
-  reason: string;
-  binding: boolean;
-}
-
-export interface DigestV9SafetyCoin {
-  symbol: string;
-  grade: string;
-  score: number | null;
-  pillars: {
-    backing: DigestV9SafetyPillar;
-    exit: DigestV9SafetyPillar;
-    control: DigestV9SafetyPillar;
-  };
-  reasonCodes: string[];
-  caps: DigestV9SafetyCap[];
-  bindingCap: DigestV9SafetyCap | null;
-}
+export type DigestV9SafetyCoin = z.output<typeof DigestV9SafetyCoinSchema>;
+export type DigestV9SafetyPillar = DigestV9SafetyCoin["pillars"]["backing"];
+export type DigestV9SafetyCap = DigestV9SafetyCoin["caps"][number];
 
 export type DigestSafetyScores =
   | {
@@ -711,24 +724,6 @@ const DigestV9SafetyProvenanceSchema = SafetyScoreV9PublicationIdentitySchema.ex
   publishedAt: z.number().int().nonnegative(),
 });
 
-const DigestV9SafetyPillarSchema = z
-  .object({
-    score: z.number().nullable(),
-    evidenceLevel: z.string(),
-    freshness: z.string(),
-    reasons: z.array(z.object({ code: z.string(), message: z.string() }).passthrough()),
-  })
-  .passthrough();
-
-const DigestV9SafetyCapSchema = z
-  .object({
-    kind: z.string(),
-    limit: z.number(),
-    reason: z.string(),
-    binding: z.boolean(),
-  })
-  .passthrough();
-
 const DigestV8SafetyScoresSnapshotSchema = z
   .object({
     model: z.literal("v8").optional(),
@@ -753,25 +748,7 @@ const DigestV8SafetyScoresSnapshotSchema = z
 const DigestV9SafetyScoresSnapshotSchema = z
   .object({
     model: z.literal("v9"),
-    mentionedCoins: z.array(
-      z
-        .object({
-          symbol: z.string(),
-          grade: z.string(),
-          score: z.number().nullable(),
-          pillars: z
-            .object({
-              backing: DigestV9SafetyPillarSchema,
-              exit: DigestV9SafetyPillarSchema,
-              control: DigestV9SafetyPillarSchema,
-            })
-            .passthrough(),
-          reasonCodes: z.array(z.string()),
-          caps: z.array(DigestV9SafetyCapSchema),
-          bindingCap: DigestV9SafetyCapSchema.nullable(),
-        })
-        .passthrough(),
-    ),
+    mentionedCoins: z.array(DigestV9SafetyCoinSchema),
     gradeDistribution: z.record(z.string(), z.number()),
     provenance: DigestV9SafetyProvenanceSchema,
   })

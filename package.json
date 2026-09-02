@@ -44,7 +44,7 @@
     "test:pr": "node --import tsx scripts/maintenance/run-pr-tests.ts",
     "test:profile": "node scripts/maintenance/profile-vitest.mjs",
     "test:critical-contracts": "node --import tsx scripts/maintenance/run-critical-contracts.ts",
-    "audit:eurostablecoins-coverage": "node scripts/maintenance/audit-eurostablecoins-coverage.mjs",
+    "audit:eurostablecoins-coverage": "node --import tsx scripts/maintenance/audit-eurostablecoins-coverage.ts",
     "coverage:critical": "node --import tsx scripts/maintenance/run-critical-coverage.ts",
     "coverage:critical:shard": "node --import tsx scripts/maintenance/run-critical-coverage-shard.ts",
     "coverage:critical:merge": "node --import tsx scripts/maintenance/merge-critical-coverage.ts",

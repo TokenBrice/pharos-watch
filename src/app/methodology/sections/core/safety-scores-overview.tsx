@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   METHODOLOGY_LINK_CLASS,
   MethodologyFacts,
+  MethodologyPreconditions,
 } from "../../methodology-shared";
 
 export function SafetyScoresOverview() {
@@ -163,19 +164,16 @@ export function SafetyScoresOverview() {
           { label: "Publication state", value: "Current or held; never V8 fallback" },
         ]}
       />
-      <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-        <MethodologyFacts
-          facts={[
-            { label: "Minimum data", value: "Mechanism-appropriate required facts for all material pillars" },
-            { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
-            {
-              label: "Failure behavior",
-              value: "Unbounded evidence gaps return NR; transient producer failures hold the last accepted publication",
-            },
-          ]}
-        />
-      </div>
+      <MethodologyPreconditions
+        facts={[
+          { label: "Minimum data", value: "Mechanism-appropriate required facts for all material pillars" },
+          { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
+          {
+            label: "Failure behavior",
+            value: "Unbounded evidence gaps return NR; transient producer failures hold the last accepted publication",
+          },
+        ]}
+      />
     </>
   );
 }

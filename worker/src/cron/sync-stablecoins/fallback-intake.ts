@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
+import type { CronProgressReporter } from "../../lib/cron-logger";
 import { throwIfAborted } from "../../lib/abort";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import type { CronResult } from "./shared";
@@ -10,11 +11,24 @@ import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
 import { buildSupplementalAsset, pegTypeKey, toPositiveFiniteNumber, type CoinGeckoMcapData } from "./supplemental-assets/shared";
-import type {
-  FallbackIntakeInput,
-  FallbackIntakeOutput,
-  FallbackStablecoinMetadata,
-} from "./fallback-types";
+
+interface FallbackStablecoinMetadata {
+  id: string;
+  name: string;
+  symbol: string;
+  geckoId?: string;
+  flags: {
+    pegCurrency: string;
+    backing: string;
+  };
+}
+
+interface FallbackIntakeInput {
+  cgData: CoinGeckoMcapData;
+  syncStartSec: number;
+  reportProgress?: CronProgressReporter;
+  stablecoins?: readonly FallbackStablecoinMetadata[];
+}
 
 export function buildInsufficientFallbackResult(assetCount: number): CronResult {
   return {
@@ -86,7 +100,7 @@ export function buildFallbackAssetsFromCoinGecko(
 
 export async function runFallbackIntakePhase(
   input: FallbackIntakeInput,
-): Promise<FallbackIntakeOutput | CronResult> {
+): Promise<{ assets: PeggedAsset[] } | CronResult> {
   await reportStablecoinsStage(input.reportProgress, "fallback-intake", "Building CoinGecko fallback intake");
   const assets = buildFallbackAssetsFromCoinGecko(input);
 

@@ -9,7 +9,11 @@ import { IsolateLocalState } from "../../lib/isolate-local-state";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../dex-liquidity/constants";
 import { type CrawlStageContext, toStagedPool } from "./staged-pool";
 import { fetchDexDiscoveryJsonEndpoint } from "./fetch-json-endpoint";
-import { STAGED_POOL_MAX_TVL_USD, type DexDeploymentProviderCheck } from "./types";
+import {
+  STAGED_POOL_MAX_TVL_USD,
+  makeDexDeploymentProviderCheck,
+  type DexDeploymentProviderCheck,
+} from "./types";
 
 /**
  * Osmosis' sidecar query server. `GET /pools?filter[denom]=<denom>` is the only
@@ -88,22 +92,6 @@ async function fetchCosmosEndpoint(
     maxResponseBytes,
     timeoutMs: COSMOS_STAGE_TIMEOUT_MS,
   });
-}
-
-function makeProviderCheck(
-  target: ContractDeployment,
-  provider: DexDeploymentProviderCheck["provider"],
-  status: DexDeploymentProviderCheck["status"],
-  options?: { observedPoolCount?: number; retryable?: true },
-): DexDeploymentProviderCheck {
-  return {
-    chain: target.chain,
-    address: target.address,
-    provider,
-    status,
-    ...(options?.observedPoolCount !== undefined ? { observedPoolCount: options.observedPoolCount } : {}),
-    ...(options?.retryable === true ? { retryable: true } : {}),
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -292,13 +280,13 @@ async function crawlOsmosisTargets(
     if (context.signal?.aborted) throw context.signal.reason;
     if (result.kind === "failure") {
       providerChecks.push(
-        makeProviderCheck(target, OSMOSIS_PROVIDER, "failure", { retryable: result.retryable }),
+        makeDexDeploymentProviderCheck(target, OSMOSIS_PROVIDER, "failure", { retryable: result.retryable }),
       );
       continue;
     }
     const pools = parseOsmosisPools(result.body);
     if (pools == null) {
-      providerChecks.push(makeProviderCheck(target, OSMOSIS_PROVIDER, "degraded"));
+      providerChecks.push(makeDexDeploymentProviderCheck(target, OSMOSIS_PROVIDER, "degraded"));
       continue;
     }
 
@@ -319,8 +307,8 @@ async function crawlOsmosisTargets(
 
     providerChecks.push(
       unresolvedPoolCount > 0
-        ? makeProviderCheck(target, OSMOSIS_PROVIDER, "degraded")
-        : makeProviderCheck(target, OSMOSIS_PROVIDER, "success", { observedPoolCount }),
+        ? makeDexDeploymentProviderCheck(target, OSMOSIS_PROVIDER, "degraded")
+        : makeDexDeploymentProviderCheck(target, OSMOSIS_PROVIDER, "success", { observedPoolCount }),
     );
   }
   return { providerChecks };
@@ -429,13 +417,17 @@ async function crawlNobleTargets(
   if (result.kind === "failure") {
     return {
       providerChecks: targets.map((target) =>
-        makeProviderCheck(target, NOBLE_PROVIDER, "failure", { retryable: result.retryable }),
+        makeDexDeploymentProviderCheck(target, NOBLE_PROVIDER, "failure", { retryable: result.retryable }),
       ),
     };
   }
   const pools = parseNoblePools(result.body);
   if (pools == null) {
-    return { providerChecks: targets.map((target) => makeProviderCheck(target, NOBLE_PROVIDER, "degraded")) };
+    return {
+      providerChecks: targets.map((target) =>
+        makeDexDeploymentProviderCheck(target, NOBLE_PROVIDER, "degraded"),
+      ),
+    };
   }
 
   return {
@@ -446,7 +438,7 @@ async function crawlNobleTargets(
         observedPoolCount += 1;
         stageNoblePool(pool, target, context);
       }
-      return makeProviderCheck(target, NOBLE_PROVIDER, "success", { observedPoolCount });
+      return makeDexDeploymentProviderCheck(target, NOBLE_PROVIDER, "success", { observedPoolCount });
     }),
   };
 }

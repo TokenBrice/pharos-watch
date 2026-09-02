@@ -1,13 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { DepegEventsResponse } from "@shared/types";
 import { DepegEventsResponseSchema } from "@shared/types/market";
-import { apiFetchWithMeta } from "@/lib/api";
 import { CRON_15MIN } from "@/lib/cron-intervals";
-import { getPollingWindow } from "./use-api-query";
+import { createApiInfinitePollingQueryOptions, useCursorPages } from "./use-api-query";
 import { useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
 
 const DEPEG_EVENTS_PAGE_SIZE = 100;
@@ -49,32 +48,24 @@ export function depegEventsInfiniteQueryOptions(
 ) {
   // Cursor pagination and active/pending variants intentionally stay outside
   // the static query registry; the path builder still comes from API_PATHS.
-  const { staleTime, refetchInterval } = getPollingWindow(CRON_15MIN);
-  return infiniteQueryOptions({
-    queryKey: [
+  return createApiInfinitePollingQueryOptions<DepegEventsResponse>(
+    [
       "depeg-events",
       "infinite",
       stablecoinId ?? null,
       { activeOnly: options.activeOnly === true, includePending: options.includePending === true },
     ] as const,
-    initialPageParam: null as string | null,
-    staleTime,
-    refetchInterval,
-    retry: 2,
-    queryFn: async ({ pageParam, signal }) =>
-      apiFetchWithMeta<DepegEventsResponse>(
-        buildDepegEventsPath({
-          stablecoinId,
-          limit: DEPEG_EVENTS_PAGE_SIZE,
-          cursor: pageParam,
-          activeOnly: options.activeOnly,
-          includePending: options.includePending,
-        }),
-        DepegEventsResponseSchema,
-        { signal },
-      ),
-    getNextPageParam: (lastPage) => lastPage.data.nextCursor ?? undefined,
-  });
+    CRON_15MIN,
+    DepegEventsResponseSchema,
+    (cursor) => buildDepegEventsPath({
+      stablecoinId,
+      limit: DEPEG_EVENTS_PAGE_SIZE,
+      cursor,
+      activeOnly: options.activeOnly,
+      includePending: options.includePending,
+    }),
+    (page) => page.nextCursor,
+  );
 }
 
 export function useInfiniteDepegEvents({
@@ -98,21 +89,17 @@ export function useInfiniteDepegEvents({
     isFetchingNextPage,
   });
 
-  // Keep page-derived values stable across unrelated rerenders. The events
-  // page already carries the cursor-specific fetch behavior, while the depeg
-  // response schema/total semantics differ enough that a shared query-options
-  // helper would add more abstraction than it removes.
+  // Keep page-derived values stable across unrelated rerenders while retaining
+  // the depeg-specific total, pending, and count semantics below.
   const pages = query.data?.pages;
-  const events = useMemo(
-    () => pages?.flatMap((page) => page.data.events) ?? [],
-    [pages],
-  );
+  const { events, nextCursor, meta } = useCursorPages<
+    DepegEventsResponse["events"][number],
+    DepegEventsResponse
+  >(pages);
   const total = useMemo(() => pages?.[0]?.data.total ?? 0, [pages]);
   const totalExact = useMemo(() => pages?.[0]?.data.totalExact ?? true, [pages]);
-  const nextCursor = useMemo(() => pages?.[pages.length - 1]?.data.nextCursor ?? null, [pages]);
   const pending = useMemo(() => pages?.[0]?.data.pending ?? [], [pages]);
   const counts = useMemo(() => pages?.[0]?.data.counts ?? null, [pages]);
-  const meta = useMemo(() => pages?.[0]?.meta ?? null, [pages]);
   const data = useMemo(
     () => ({ events, total, totalExact, nextCursor, pending, counts }),
     [counts, events, nextCursor, pending, total, totalExact],

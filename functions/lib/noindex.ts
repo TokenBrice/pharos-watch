@@ -1,4 +1,4 @@
-import { cloneResponseWithPolicy } from "./response-policy";
+import { cloneResponseWithPolicy } from "@shared/lib/response-policy";
 
 export const NOINDEX_HEADER_VALUE = "noindex, nofollow";
 

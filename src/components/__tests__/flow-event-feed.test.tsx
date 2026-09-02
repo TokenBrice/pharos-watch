@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { FlowEventFeed } from "@/components/flow-event-feed";
 import type { MintBurnEvent } from "@shared/types";
 
@@ -81,5 +81,18 @@ describe("FlowEventFeed row fold", () => {
 
     expect(tableRowCount()).toBe(4);
     expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull();
+  });
+
+  it("keeps the desktop transaction link contract", () => {
+    mockEvents(1);
+
+    render(<FlowEventFeed stablecoinId="dai-makerdao" />);
+
+    const table = screen.getByTestId("mint-burn-event-feed-table");
+    const link = within(table).getByRole("link", { name: "View transaction on block explorer" });
+    expect(link.getAttribute("href")).toBe("https://etherscan.io/tx/0x0");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.textContent).toBe("0x0000...0000");
   });
 });

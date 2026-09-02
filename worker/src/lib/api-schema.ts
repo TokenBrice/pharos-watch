@@ -1,11 +1,6 @@
+import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
 import { logWorkerEventArgs } from "./structured-log";
-import type { ZodIssue, ZodType } from "zod";
-
-function formatSchemaIssues(issues: readonly ZodIssue[]): string {
-  return issues
-    .map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`)
-    .join(", ");
-}
+import type { ZodType } from "zod";
 
 export function validatePayloadWithSchema<T>(
   schema: ZodType<T>,
@@ -14,7 +9,7 @@ export function validatePayloadWithSchema<T>(
 ): { ok: true; data: T } | { ok: false; issues: string } {
   const parsed = schema.safeParse(payload);
   if (parsed.success) return { ok: true, data: parsed.data };
-  const issues = formatSchemaIssues(parsed.error.issues);
+  const issues = formatSchemaLikeIssues(parsed.error.issues);
   logWorkerEventArgs("lib", "error", `[validate] ${context} schema validation failed: ${issues}`);
   return { ok: false, issues };
 }

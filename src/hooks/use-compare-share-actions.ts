@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { canvasToBlob, loadImage, renderCompareShareImage } from "@/lib/compare-share-image";
 import { copyText } from "@/lib/clipboard";
+import { triggerBlobDownload } from "@/lib/exports/download";
 import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -202,12 +203,7 @@ export function useCompareShareActions({
       const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
       if (!canvas) return;
       const blob = await canvasToBlob(canvas);
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = "pharos-compare.png";
-      anchor.click();
-      URL.revokeObjectURL(url);
+      triggerBlobDownload(blob, "pharos-compare.png", "sync");
       trackEvent("comparison_exported", { method: "download", coin_count: comparisonCoins.length });
     } catch (error) {
       console.warn("Share image render failed:", error);

@@ -7,46 +7,31 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
 } from "./evm-rpc";
-import {
-  DECIMALS_SELECTOR,
-  TOTAL_SUPPLY_SELECTOR,
-  encodeAddress,
-} from "./evm-selectors";
+import { encodeAddress } from "./evm-selectors";
 import {
   expectedCentrifugeDeploymentIdentity,
-  normalizeReviewedDeploymentAddress,
   reviewedDeploymentIdentityValidationError,
   type ReviewedDeploymentSupplyObservation,
   type ReviewedDeploymentUnitPartitionV1,
 } from "./safety-score-v9-supply-attribution-contract";
 import {
-  decodeEvmHexBytes,
   decodeEvmUint256,
   fetchReviewedDeploymentSolanaObservation,
+  observeReviewedEvmDeployment,
   observeReviewedDeploymentUnitPartitionAttempt,
-  rewindEvmBlockHeaderToScoringClock,
-  safetyScoreV9EvmObservationOptions,
+  type ReviewedDeploymentEvmObserverDependencies,
   type SafetyScoreV9SolanaRpcFetcher,
   type ReviewedDeploymentObservationAttempt,
   type ReviewedDeploymentObservationRejectionCode,
   type ReviewedDeploymentObservationResult,
 } from "./safety-score-v9-supply-observation-primitives";
 
-const EIP1967_IMPLEMENTATION_SLOT =
-  "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 const WARDS_SELECTOR = "0xbf353dbb";
 const ZERO_STORAGE_WORD = `0x${"0".repeat(64)}`;
 export type CentrifugeReviewedDeploymentRejectionCode = ReviewedDeploymentObservationRejectionCode;
 export type CentrifugeReviewedDeploymentObservationAttempt = ReviewedDeploymentObservationAttempt;
 
-interface CentrifugeObserverDependencies {
-  sha256HexFromBytes: typeof sha256HexFromBytes;
-  fetchEvmBlockNumber: typeof fetchEvmBlockNumber;
-  fetchEvmBlockHeader: typeof fetchEvmBlockHeader;
-  fetchEvmCodeAtBlock: typeof fetchEvmCodeAtBlock;
-  fetchEvmMulticall3Aggregate3AtBlock:
-    typeof fetchEvmMulticall3Aggregate3AtBlock;
-  fetchEvmStorageAtBlock: typeof fetchEvmStorageAtBlock;
+interface CentrifugeObserverDependencies extends ReviewedDeploymentEvmObserverDependencies {
   fetchSolanaObservation: (
     assetId: string,
     routeId: string,
@@ -67,15 +52,6 @@ const DEFAULT_DEPENDENCIES: CentrifugeObserverDependencies = {
   fetchSolanaObservation: fetchSolanaCentrifugeDeploymentObservation,
 };
 
-type DeploymentObservationResult = ReviewedDeploymentObservationResult;
-
-function rejectDeployment(
-  failedRouteId: string,
-  rejectionCode: CentrifugeReviewedDeploymentRejectionCode,
-): DeploymentObservationResult {
-  return { status: "rejected", rejectionCode, failedRouteId };
-}
-
 async function observeCentrifugeEvmDeployment(
   assetId: string,
   routeId: string,
@@ -85,130 +61,43 @@ async function observeCentrifugeEvmDeployment(
   chainRpcs: Map<string, ChainRpcConfig>,
   dependencies: CentrifugeObserverDependencies,
   signal?: AbortSignal,
-): Promise<DeploymentObservationResult> {
-  const identity = expectedCentrifugeDeploymentIdentity(assetId, routeId);
-  if (!identity || identity.runtime !== "evm") {
-    return rejectDeployment(routeId, "deployment-identity-unavailable");
-  }
-  if (!chainRpcs.has(chainId) && (identity.extraRpcUrls?.length ?? 0) === 0) {
-    return rejectDeployment(routeId, "chain-rpc-unavailable");
-  }
-
-  const options = safetyScoreV9EvmObservationOptions({
-    chainRpcs,
-    extraRpcUrls: identity.extraRpcUrls,
-    signal,
-  });
-  const headBlockNumber = await dependencies.fetchEvmBlockNumber(
+): Promise<ReviewedDeploymentObservationResult> {
+  return observeReviewedEvmDeployment({
+    routeId,
     chainId,
-    options,
-  );
-  if (
-    headBlockNumber === null ||
-    !Number.isSafeInteger(identity.safeBlockLag) ||
-    identity.safeBlockLag <= 0 ||
-    headBlockNumber < identity.safeBlockLag
-  ) {
-    return rejectDeployment(routeId, "safe-block-unavailable");
-  }
-
-  const blockHeader = await rewindEvmBlockHeaderToScoringClock({
-    initialBlockNumber: headBlockNumber - identity.safeBlockLag,
+    contractAddress,
     scoringClockSec,
+    chainRpcs,
+    dependencies,
     signal,
-    fetchHeader: (blockNumber) => dependencies.fetchEvmBlockHeader(chainId, blockNumber, options),
-  });
-  if (blockHeader === null) {
-    return rejectDeployment(routeId, "safe-block-unavailable");
-  }
-  const blockNumber = blockHeader.number;
-
-  const calls = [
-    {
-      label: "total-supply",
-      target: contractAddress,
-      callData: TOTAL_SUPPLY_SELECTOR,
-      allowFailure: false,
+    identity: (deploymentRouteId) => {
+      const identity = expectedCentrifugeDeploymentIdentity(
+        assetId,
+        deploymentRouteId,
+      );
+      return identity?.runtime === "evm" ? identity : undefined;
     },
-    {
-      label: "decimals",
-      target: contractAddress,
-      callData: DECIMALS_SELECTOR,
-      allowFailure: false,
-    },
-    {
+    safeBlockLag: (identity) => identity.safeBlockLag,
+    extraRpcUrls: (identity) => identity.extraRpcUrls,
+    protocolCalls: (identity) => [{
       label: "spoke-ward",
       target: contractAddress,
       callData: `${WARDS_SELECTOR}${encodeAddress(
         identity.controllerAddress,
       )}` as `0x${string}`,
       allowFailure: false,
-    },
-  ];
-  const [results, runtimeCode, implementationSlot] = await Promise.all([
-    dependencies.fetchEvmMulticall3Aggregate3AtBlock(
-      chainId,
-      calls,
-      blockNumber,
-      options,
-    ),
-    dependencies.fetchEvmCodeAtBlock(
-      chainId,
-      contractAddress,
-      blockNumber,
-      options,
-    ),
-    dependencies.fetchEvmStorageAtBlock(
-      chainId,
-      contractAddress,
-      EIP1967_IMPLEMENTATION_SLOT,
-      blockNumber,
-      options,
-    ),
-  ]);
-  if (
-    !results ||
-    results.length !== calls.length ||
-    !runtimeCode ||
-    !implementationSlot
-  ) {
-    return rejectDeployment(routeId, "deployment-state-unavailable");
-  }
-
-  const totalSupplyRaw = decodeEvmUint256(results[0]);
-  const decimalsRaw = decodeEvmUint256(results[1]);
-  const spokeWard = decodeEvmUint256(results[2]);
-  const runtimeBytes = decodeEvmHexBytes(runtimeCode);
-  if (
-    totalSupplyRaw === null ||
-    decimalsRaw === null ||
-    decimalsRaw > 36n ||
-    spokeWard !== 1n ||
-    implementationSlot.toLowerCase() !== ZERO_STORAGE_WORD ||
-    runtimeBytes === null
-  ) {
-    return rejectDeployment(routeId, "deployment-state-invalid");
-  }
-
-  const observation: ReviewedDeploymentSupplyObservation = {
-    routeId,
-    chainId,
-    contractAddress: normalizeReviewedDeploymentAddress(
-      chainId,
-      contractAddress,
-    ),
-    decimals: Number(decimalsRaw),
-    rawSupply: totalSupplyRaw.toString(),
-    blockNumberOrSlot: blockNumber.toString(),
-    blockTimeSec: blockHeader.timestamp,
-    blockHash: blockHeader.hash,
-    runtimeCodeSha256: dependencies.sha256HexFromBytes(runtimeBytes),
-    controllerAddress: identity.controllerAddress,
-  };
-  return reviewedDeploymentIdentityValidationError(observation, assetId) ===
-    null
-    ? { status: "accepted", observation }
-    : rejectDeployment(routeId, "deployment-identity-mismatch");
+    }],
+    decodeProtocolObservation: ({ identity, results, implementationSlot }) =>
+      decodeEvmUint256(results[2]) !== 1n ||
+      implementationSlot.toLowerCase() !== ZERO_STORAGE_WORD
+        ? { status: "rejected", rejectionCode: "deployment-state-invalid" }
+        : {
+            status: "accepted",
+            observation: { controllerAddress: identity.controllerAddress },
+          },
+    identityValidationError: (observation) =>
+      reviewedDeploymentIdentityValidationError(observation, assetId),
+  });
 }
 
 export type CentrifugeSolanaRpcFetcher = SafetyScoreV9SolanaRpcFetcher;

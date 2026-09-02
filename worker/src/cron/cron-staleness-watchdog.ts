@@ -11,7 +11,8 @@ import type { CronResult } from "../lib/cron-logger";
 import { runChunkedInFilter } from "../lib/db";
 import { buildCacheStatuses } from "../lib/api-freshness";
 import { getCache, setCache } from "../lib/db-cache";
-import { escapeHtml, sendToChat, type TelegramCreds } from "../lib/telegram";
+import { escapeHtml, type TelegramCreds } from "../lib/telegram";
+import { deliverWatchdogTransitions } from "./shared/watchdog-transition-alert";
 
 const NO_CONSUMER_FRESHNESS_SURFACE_JOBS = new Set([
   // Control-plane observers and watchdogs produce telemetry, not consumer data.
@@ -391,29 +392,25 @@ async function alertOnFreshnessTransitions(params: {
   }
   await setCache(params.db, WATCHDOG_STATE_KEY, JSON.stringify(next));
 
-  if (stale.length === 0 && recovered.length === 0) {
-    return { stale, recovered, sent: false, cooldown: false };
-  }
-  const lastAlertAt = Number(alertCache?.value);
-  const cooldown = Number.isFinite(lastAlertAt) && params.nowSec - lastAlertAt < CRON_STALENESS_ALERT_COOLDOWN_SEC;
-  if (cooldown || !params.operatorTelegramCreds) {
-    return { stale, recovered, sent: false, cooldown };
-  }
-
-  const sections = [
-    stale.length > 0 ? `<b>Stale producers</b>: ${stale.map(escapeHtml).join(", ")}` : null,
-    recovered.length > 0 ? `<b>Recovered producers</b>: ${recovered.map(escapeHtml).join(", ")}` : null,
-  ].filter((section): section is string => section != null);
-  const delivery = await sendToChat(
-    params.operatorTelegramCreds.chatId,
-    `<b>Pharos freshness watchdog</b>\n\n${sections.join("\n")}`,
-    params.operatorTelegramCreds.botToken,
-    { disableWebPagePreview: true, signal: params.signal },
-  );
-  if (delivery.ok) {
-    await setCache(params.db, WATCHDOG_ALERT_KEY, String(params.nowSec));
-  }
-  return { stale, recovered, sent: delivery.ok, cooldown: false };
+  return deliverWatchdogTransitions({
+    db: params.db,
+    stale,
+    recovered,
+    hasCooldownConsumingTransition: stale.length > 0 || recovered.length > 0,
+    alertCacheKey: WATCHDOG_ALERT_KEY,
+    lastAlertValue: alertCache?.value,
+    cooldownSec: CRON_STALENESS_ALERT_COOLDOWN_SEC,
+    nowSec: params.nowSec,
+    operatorTelegramCreds: params.operatorTelegramCreds,
+    buildAlertText: () => {
+      const sections = [
+        stale.length > 0 ? `<b>Stale producers</b>: ${stale.map(escapeHtml).join(", ")}` : null,
+        recovered.length > 0 ? `<b>Recovered producers</b>: ${recovered.map(escapeHtml).join(", ")}` : null,
+      ].filter((section): section is string => section != null);
+      return `<b>Pharos freshness watchdog</b>\n\n${sections.join("\n")}`;
+    },
+    signal: params.signal,
+  });
 }
 
 export async function runCronStalenessWatchdog(

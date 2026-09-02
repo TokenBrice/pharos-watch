@@ -7,7 +7,7 @@ import {
 import {
   loadPublishedDexPoolChallengers,
   type DexPriceChallengerLoadRow,
-} from "../cron/dex-liquidity/challenger-persistence";
+} from "../cron/dex-liquidity/challenger-load";
 import { decodeJsonString } from "./cache-json";
 import {
   deriveDepegSignal,

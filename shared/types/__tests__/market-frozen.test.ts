@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { StablecoinListResponseSchema } from "../market";
+import { DexLiquidityHistoryPointSchema, StablecoinListResponseSchema } from "../market";
+import { RedemptionCapacityProfileSchema } from "../redemption";
 
 function makeRawAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -23,6 +24,16 @@ function makeRawAsset(overrides: Record<string, unknown> = {}): Record<string, u
     ...overrides,
   };
 }
+
+const EXIT_ROUTE_BASE = {
+  routeId: "route",
+  requestedNotionalUsd: 100, settlementHorizonSec: 60, maxCostBps: 100,
+  executableUsd: 100, completionRatio: 1,
+  output: { kind: "fiat", currency: "USD" },
+  confidence: "high", scoreEligible: true,
+  observedAt: 1, freshnessSeconds: 0,
+  commonModeKeys: [],
+};
 
 describe("/api/stablecoins payload shape — frozen fields", () => {
   it("includes frozen and frozenAt when present on the raw asset", () => {
@@ -95,5 +106,22 @@ describe("/api/stablecoins payload shape — chain supply", () => {
     chainCirculating.Ethereum[field] = value;
 
     expect(StablecoinListResponseSchema.safeParse({ peggedAssets: [asset] }).success).toBe(false);
+  });
+});
+
+describe("exit-route lane issue parity", () => {
+  it("keeps exact wrong-route issues for both API lanes", () => {
+    const cases = [
+      [DexLiquidityHistoryPointSchema.pick({ exitRouteObservations: true }), { ...EXIT_ROUTE_BASE, routeFamily: "issuer-redemption", scope: { kind: "issuer", issuerId: "issuer" }, evidenceKind: "documented-terms" }, "invalid DEX exit-route observation"],
+      [RedemptionCapacityProfileSchema.pick({ exitRouteObservations: true }), { ...EXIT_ROUTE_BASE, routeFamily: "dex-amm", scope: { kind: "venue", venue: "venue", protocol: "protocol" }, evidenceKind: "measured-executable-depth" }, "invalid redemption exit-route observation"],
+    ] as const;
+
+    for (const [schema, observation, message] of cases) {
+      const result = schema.safeParse({ exitRouteObservations: [observation] });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues).toEqual([{ code: "custom", path: ["exitRouteObservations", 0], message }]);
+      }
+    }
   });
 });

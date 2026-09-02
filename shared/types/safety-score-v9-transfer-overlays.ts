@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CanonicalTextSchema, StrictIsoDateSchema } from "./safety-schema-primitives";
+import { CanonicalTextSchema, StrictIsoDateSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
 
 const SafetyScoreV9TransferPostureSchema = z.enum([
   "permissionless",
@@ -66,18 +66,11 @@ const SafetyScoreV9ReviewedTransferFactSchema = z
     }
   });
 
-export const SafetyScoreV9ReviewedTransferFileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    note: CanonicalTextSchema,
-    reviews: z.array(SafetyScoreV9ReviewedTransferFactSchema),
-  })
-  .strict()
-  .superRefine((file, ctx) => {
-    const assetIds = file.reviews.map((review) => review.assetId);
-    if (new Set(assetIds).size !== assetIds.length) {
-      ctx.addIssue({ code: "custom", path: ["reviews"], message: "Duplicate reviewed transfer assetId" });
-    }
-  });
+export const SafetyScoreV9ReviewedTransferFileSchema = uniqueKeyedCollectionSchema({
+  itemSchema: SafetyScoreV9ReviewedTransferFactSchema,
+  collectionKey: "reviews",
+  duplicateMessage: "Duplicate reviewed transfer assetId",
+  noteSchema: CanonicalTextSchema,
+});
 
 export type SafetyScoreV9ReviewedTransferFact = z.infer<typeof SafetyScoreV9ReviewedTransferFactSchema>;

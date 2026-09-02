@@ -221,12 +221,12 @@ describe("snapshotPublicDataset", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(result.metadata).toBe(JSON.stringify({
       reason: "stablecoins_cache_before_slot",
       cacheUpdatedAt: staleForSlotUpdatedAt,
       requiredUpdatedAt: NOW_SEC,
       freshnessGateLabel: "daily0800Utc",
-    });
+    }));
     expect(getInsertBinds(db)).toBeUndefined();
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stability_index"))).toBe(false);
   });
@@ -251,14 +251,14 @@ describe("snapshotPublicDataset", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(result.metadata).toBe(JSON.stringify({
       reason: "stablecoins_cache_before_slot",
       cacheUpdatedAt: staleForSlotUpdatedAt,
       requiredUpdatedAt: NOW_SEC,
       freshnessGateLabel: "daily0800Utc",
       retryAttempts: 2,
       firstCacheUpdatedAt: staleForSlotUpdatedAt,
-    });
+    }));
     expect(db.getHistory().filter((entry) => entry.sql.includes("FROM cache WHERE key"))).toHaveLength(3);
     expect(getInsertBinds(db)).toBeUndefined();
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stability_index"))).toBe(false);

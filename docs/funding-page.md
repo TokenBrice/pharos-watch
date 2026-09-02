@@ -29,7 +29,7 @@ Two hand-maintained JSON files:
 
 The Monthly costs card separately discloses $5,800 in exceptional, one-time design expenses for the full website redesign and logo. TokenBrice paid and sponsored those expenses, so they are not included in the recurring monthly total.
 
-Row shape for donations is defined in `shared/lib/funding/types.ts` (`Donation`) and validated by `shared/lib/funding/schema.ts`. Each row carries `usd_at_receipt` priced at the transfer's block date, a `kind` field (`founder | pool | community`), and a `display` field with a forward-verified ENS name, custom/human label, or truncated-address fallback.
+Row shape for donations is defined and validated by `shared/lib/funding/schema.ts` (`DonationSchema`, with the `Donation` type inferred from it). Each row carries `usd_at_receipt` priced at the transfer's block date, a `kind` field (`founder | pool | community`), and a `display` field with a forward-verified ENS name, custom/human label, or truncated-address fallback.
 
 ## Intentional simplifications
 

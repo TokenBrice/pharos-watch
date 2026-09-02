@@ -53,6 +53,50 @@ export function ChangelogTable({
   );
 }
 
+type ChangelogDataTableColumn = {
+  id: string; label: ReactNode; headClassName?: string; cellClassName?: string; rowHeader?: boolean;
+};
+type ChangelogDataTableRow = { id: string; cells: Record<string, ReactNode> };
+
+export function ChangelogDataTable({
+  columns,
+  rows,
+  ...tableProps
+}: {
+  columns: ChangelogDataTableColumn[];
+  rows: ChangelogDataTableRow[];
+  ariaLabel?: string;
+  tableId?: string;
+  testId?: string;
+}) {
+  return (
+    <ChangelogTable {...tableProps}>
+      <TableHeader>
+        <TableRow>
+          {columns.map((column) => (
+            <TableHead key={column.id} scope="col" className={column.headClassName ?? changelogTableClassNames.head}>
+              {column.label}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.id}>
+            {columns.map((column) => (
+              <TableCell key={column.id} className={column.cellClassName ?? (column.rowHeader
+                ? changelogTableClassNames.rowHeader
+                : changelogTableClassNames.cell)}>
+                {row.cells[column.id]}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </ChangelogTable>
+  );
+}
+
 /**
  * Renders a changelog entry straight from its structured
  * `shared/data/methodology-changelogs/` record. Every V9-era entry uses this;
@@ -104,25 +148,14 @@ export function VersionCard({
 export function WeightRow({ values }: { values: [string, string, string, string, string, string] }) {
   const headers = ["Peg", "Liquidity", "Safety", "Resilience", "Decentralization", "Dep Risk"];
   return (
-    <ChangelogTable>
-      <TableHeader>
-        <TableRow>
-          {headers.map((h) => (
-            <TableHead key={h} scope="col" className={changelogTableClassNames.numericHead}>
-              {h}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        <TableRow>
-          {values.map((v, i) => (
-            <TableCell key={headers[i]} className={changelogTableClassNames.numericCell}>
-              {v}
-            </TableCell>
-          ))}
-        </TableRow>
-      </TableBody>
-    </ChangelogTable>
+    <ChangelogDataTable
+      columns={headers.map((header) => ({
+        id: header,
+        label: header,
+        headClassName: changelogTableClassNames.numericHead,
+        cellClassName: changelogTableClassNames.numericCell,
+      }))}
+      rows={[{ id: "weights", cells: Object.fromEntries(headers.map((header, index) => [header, values[index]])) }]}
+    />
   );
 }

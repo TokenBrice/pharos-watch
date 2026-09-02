@@ -65,6 +65,74 @@ export interface TelegramDispatchEvents {
   reserveIds: string[];
 }
 
+export type TelegramFanoutPlanEvents = Pick<
+  TelegramDispatchEvents,
+  | "dewsChanges"
+  | "depegTriggered"
+  | "depegResolved"
+  | "depegWorsening"
+  | "safetyChanges"
+  | "safetyScoreIdentity"
+  | "launchPromoted"
+  | "reservePromoted"
+>;
+
+export function summarizeTelegramDispatchEvents(events: TelegramDispatchEvents) {
+  const transitionCounts = {
+    dews: events.dewsChanges.length,
+    depegTriggered: events.depegTriggered.length,
+    depegResolved: events.depegResolved.length,
+    depegWorsening: events.depegWorsening.length,
+    safety: events.safetyChanges.length,
+    launch: events.launchPromoted.length,
+    reserve: events.reservePromoted.length,
+  };
+  return {
+    total: Object.values(transitionCounts).reduce((total, count) => total + count, 0),
+    transitionCounts,
+    eventsDetected: {
+      dews: transitionCounts.dews,
+      depeg:
+        transitionCounts.depegTriggered +
+        transitionCounts.depegResolved +
+        transitionCounts.depegWorsening,
+      depegTriggered: transitionCounts.depegTriggered,
+      depegResolved: transitionCounts.depegResolved,
+      depegWorsening: transitionCounts.depegWorsening,
+      safety: transitionCounts.safety,
+      launch: transitionCounts.launch,
+      reserve: transitionCounts.reserve,
+      suppressedMethodologyChanges: events.suppressedMethodologyChanges,
+    },
+  };
+}
+
+export function activeTelegramEventFamilies(events: TelegramDispatchEvents): string[] {
+  const { eventsDetected } = summarizeTelegramDispatchEvents(events);
+  return [
+    eventsDetected.dews > 0 ? "dews" : null,
+    eventsDetected.depeg > 0 ? "depeg" : null,
+    eventsDetected.safety > 0 ? "safety" : null,
+    eventsDetected.launch > 0 ? "launch" : null,
+    eventsDetected.reserve > 0 ? "reserve" : null,
+  ].filter((family): family is string => family != null);
+}
+
+export function toTelegramFanoutPlanEvents(
+  events: TelegramDispatchEvents,
+): TelegramFanoutPlanEvents {
+  return {
+    dewsChanges: events.dewsChanges,
+    depegTriggered: events.depegTriggered,
+    depegResolved: events.depegResolved,
+    depegWorsening: events.depegWorsening,
+    safetyChanges: events.safetyChanges,
+    safetyScoreIdentity: events.safetyScoreIdentity ?? null,
+    launchPromoted: events.launchPromoted,
+    reservePromoted: events.reservePromoted,
+  };
+}
+
 export function countSuppressedSafetyChangesAtSeed(
   snapshotState: DispatchSnapshotState,
   getSymbol: (stablecoinId: string, fallback?: string) => string,

@@ -7,20 +7,21 @@ import { describe, expect, it } from "vitest";
 import {
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
-  VirtualTableFrame,
 } from "@/components/table";
 
-describe("VirtualTableFrame", () => {
+describe("TableFrame virtual defaults", () => {
 
   it("composes shell identity, slots, viewport overflow, and table slots without a nested shadcn container", () => {
     const surfaceRef = React.createRef<HTMLDivElement>();
     const viewportRef = React.createRef<HTMLDivElement>();
 
     render(
-      <VirtualTableFrame
+      <TableFrame
+        viewportDefaults="virtual"
         tableId="stablecoin-overview"
         testId="stablecoin-overview-shell"
         className="animate-in"
@@ -42,7 +43,7 @@ describe("VirtualTableFrame", () => {
             <TableCell>USDC</TableCell>
           </TableRow>
         </TableBody>
-      </VirtualTableFrame>,
+      </TableFrame>,
     );
 
     const shell = screen.getByTestId("stablecoin-overview-shell");
@@ -75,7 +76,8 @@ describe("VirtualTableFrame", () => {
     const viewportRef = React.createRef<HTMLDivElement>();
 
     render(
-      <VirtualTableFrame
+      <TableFrame
+        viewportDefaults="virtual"
         viewportProps={{ ref: viewportRef, mobileScrollHint: false }}
       >
         <TableBody>
@@ -83,7 +85,7 @@ describe("VirtualTableFrame", () => {
             <TableCell>USDT</TableCell>
           </TableRow>
         </TableBody>
-      </VirtualTableFrame>,
+      </TableFrame>,
     );
 
     const viewport = screen.getByRole("table").parentElement;
@@ -97,13 +99,13 @@ describe("VirtualTableFrame", () => {
     const surfaceRef = React.createRef<HTMLDivElement>();
 
     render(
-      <VirtualTableFrame ref={ref} surfaceRef={surfaceRef} testId="virtual-shell">
+      <TableFrame ref={ref} surfaceRef={surfaceRef} viewportDefaults="virtual" testId="virtual-shell">
         <TableBody>
           <TableRow>
             <TableCell>USDT</TableCell>
           </TableRow>
         </TableBody>
-      </VirtualTableFrame>,
+      </TableFrame>,
     );
 
     const shell = screen.getByTestId("virtual-shell");
@@ -122,7 +124,8 @@ describe("VirtualTableFrame", () => {
     };
 
     const { rerender } = render(
-      <VirtualTableFrame
+      <TableFrame
+        viewportDefaults="virtual"
         surfaceRef={surfaceRef}
         viewportRef={viewportRef}
         testId="virtual-shell"
@@ -133,7 +136,7 @@ describe("VirtualTableFrame", () => {
             <TableCell>USDT</TableCell>
           </TableRow>
         </TableBody>
-      </VirtualTableFrame>,
+      </TableFrame>,
     );
 
     const shell = screen.getByTestId("virtual-shell");
@@ -143,7 +146,8 @@ describe("VirtualTableFrame", () => {
     expect(viewportCalls).toEqual([viewport]);
 
     rerender(
-      <VirtualTableFrame
+      <TableFrame
+        viewportDefaults="virtual"
         surfaceRef={surfaceRef}
         viewportRef={viewportRef}
         testId="virtual-shell"
@@ -154,7 +158,7 @@ describe("VirtualTableFrame", () => {
             <TableCell>USDC</TableCell>
           </TableRow>
         </TableBody>
-      </VirtualTableFrame>,
+      </TableFrame>,
     );
 
     expect(screen.getByText("Updated toolbar")).toBeTruthy();

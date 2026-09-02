@@ -39,7 +39,7 @@ import {
   parseCallbackData,
   SNOOZE_SECONDS,
 } from "./webhook-callbacks/_shared";
-import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
+import type { TelegramCallbackMutationContext } from "./telegram-webhook-effect-fence";
 import { handleSetupCallback } from "./webhook-callbacks/setup";
 import { handleSettingsInlineCallback } from "./webhook-callbacks/settings";
 import {
@@ -55,14 +55,7 @@ export async function handleCallbackQuery(
   db: D1Database,
   botToken: string,
   cb: TelegramCallbackQuery,
-  effect: {
-    beforeIrreversibleEffect: (kind: string) => Promise<void>;
-    markMutationApplied: () => Promise<void>;
-    planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-    prepareMutationAppliedStatement?: () => D1PreparedStatement;
-    confirmAtomicMutationApplied?: () => void;
-    storedIntent?: TelegramWebhookOperationIntent | null;
-    wasMutationApplied?: boolean;
+  effect: TelegramCallbackMutationContext & {
     recapRollout?: TelegramRecapRolloutPolicy;
   } = {
     beforeIrreversibleEffect: async () => undefined,
@@ -86,26 +79,12 @@ export async function handleCallbackQuery(
   // registry-driven path; keep them as direct calls so the registry stays a
   // pure lookup.
   if (parsed.action === "setup") {
-    await handleSetupCallback(db, botToken, cb, chatId, parsed, {
-      beforeIrreversibleEffect: effect.beforeIrreversibleEffect,
-      planIntent: effect.planIntent,
-      prepareMutationAppliedStatement: effect.prepareMutationAppliedStatement,
-      confirmAtomicMutationApplied: effect.confirmAtomicMutationApplied,
-      storedIntent: effect.storedIntent,
-      wasMutationApplied: effect.wasMutationApplied,
-    });
+    await handleSetupCallback(db, botToken, cb, chatId, parsed, effect);
     return;
   }
 
   if (parsed.action === "settings") {
-    await handleSettingsInlineCallback(db, botToken, cb, chatId, parsed, {
-      beforeIrreversibleEffect: effect.beforeIrreversibleEffect,
-      planIntent: effect.planIntent,
-      prepareMutationAppliedStatement: effect.prepareMutationAppliedStatement,
-      confirmAtomicMutationApplied: effect.confirmAtomicMutationApplied,
-      storedIntent: effect.storedIntent,
-      wasMutationApplied: effect.wasMutationApplied,
-    });
+    await handleSettingsInlineCallback(db, botToken, cb, chatId, parsed, effect);
     return;
   }
 

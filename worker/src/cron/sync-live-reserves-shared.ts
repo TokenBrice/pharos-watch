@@ -82,6 +82,40 @@ export interface ReserveAdapterAttemptChainError extends Error {
   attemptSummaries: ReserveAttemptFailureSummary[];
 }
 
+export type LiveReserveCursorTailState = "recording" | "incomplete" | "complete";
+
+export interface LiveReserveDeferredTailOutcome {
+  nextCursorStablecoinId: string | null;
+  cursorTailState: LiveReserveCursorTailState | null;
+  cursorRecordedAt: number | null;
+  cursorTailCompletedAt: number | null;
+  cursorTailFailedAt: number | null;
+  cursorTailError: string | null;
+  runBudgetTruncationCount: number;
+}
+
+export interface LiveReserveQueueCounts {
+  synced: number;
+  failed: number;
+  skipped: number;
+  circuitSkipped: number;
+  deferredSkipped: number;
+  deferredCoins: number;
+  attemptedCoins: number;
+}
+
+export interface LiveReserveBreakerOutcome {
+  breakerKeys: ReadonlySet<string>;
+  breakerOutcomes: ReadonlyMap<string, boolean>;
+}
+
+export interface LiveReservePhaseTimings {
+  setup: number;
+  queue: number;
+  adapter: number;
+  d1CoinPersistence: number;
+}
+
 export type ReserveFailureCategory =
   | "adapter-config"
   | "circuit-open"

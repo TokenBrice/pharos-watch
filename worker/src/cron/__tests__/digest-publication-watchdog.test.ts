@@ -155,6 +155,22 @@ describe("digest publication watchdog", () => {
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
   });
 
+  it("does not consume cooldown when transition delivery fails", async () => {
+    sendToChatMock.mockResolvedValueOnce({ ok: false });
+    const db = fakeDb({ dailyRow: false, twitterState: JSON.stringify({ state: "sent" }) });
+    const result = await runDigestPublicationWatchdog(
+      db,
+      at("2026-08-31T08:31:00Z"),
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    expect(JSON.parse(result.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["daily-row"],
+      sent: false,
+      cooldown: false,
+    });
+    expect(db.cache.has("digest-publication-watchdog:alert:v1")).toBe(false);
+  });
+
   it("alerts when the Telegram edition is not sent", async () => {
     const result = await runDigestPublicationWatchdog(
       fakeDb({ dailyTelegram: "pending", twitterState: JSON.stringify({ state: "sent" }) }),

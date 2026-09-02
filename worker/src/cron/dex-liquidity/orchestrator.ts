@@ -14,7 +14,7 @@ import {
   buildKnownPoolAddresses,
   type PrimaryPoolCompactionResult,
 } from "./fetch-primary";
-import { publishDexPriceChallengerSnapshots } from "./challenger-persistence";
+import { publishDexPriceChallengerSnapshots } from "./challenger-publish";
 import {
   POOL_REJECTION_MATERIAL_TVL_USD,
   hasMaterialPoolRejections,
@@ -35,17 +35,22 @@ import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
   buildAuthoritativeStagedPoolConfirmationIndex,
+} from "./orchestrator-phases/authoritative";
+import {
   buildDexDirectApiFetchers,
-  fetchSubgraphEnrichmentPhase,
-  fetchDirectCexOrderbookDepthTelemetry,
   integrateDirectApiLiquidityPhase,
-  loadTrackedStablecoinMaps,
-  mergeDexPriceObservationMap,
   runDirectApiFetchPhase,
-  runFallbackCrawlerPhase,
   type DirectApiIntegrationResult,
-} from "./orchestrator-phases";
-import { compactDirectApiFetchPhasePools, type DirectApiPoolCompactionCounts } from "./orchestrator-phases/direct-api";
+  compactDirectApiFetchPhasePools,
+  type DirectApiPoolCompactionCounts,
+} from "./orchestrator-phases/direct-api";
+import { fetchSubgraphEnrichmentPhase } from "./orchestrator-phases/subgraph-enrichment";
+import {
+  fetchDirectCexOrderbookDepthTelemetry,
+  runFallbackCrawlerPhase,
+} from "./orchestrator-phases/fallback";
+import { loadTrackedStablecoinMaps } from "./orchestrator-phases/lookups";
+import { mergeDexPriceObservationMap } from "./subgraph-helpers";
 import {
   buildPoolIdentity,
   clearKnownPoolIdentityIndex,

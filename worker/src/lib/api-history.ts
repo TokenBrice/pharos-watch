@@ -52,11 +52,14 @@ interface StablecoinHistoryContext<TRow, THistory> {
   history: THistory[];
 }
 
-interface StablecoinHistoryHandlerConfig<TRow, THistory> {
+interface StablecoinHistoryHandlerConfig<TRow, THistory, TBody = THistory[]> {
   query: StablecoinHistoryQueryOptions;
   cacheControl: string;
   fetchRows: (ctx: { db: D1Database; stablecoinId: string; cutoff: number }) => Promise<TRow[]>;
   mapRow: (row: TRow) => THistory;
+  buildBody?: (
+    ctx: StablecoinHistoryContext<TRow, THistory>,
+  ) => Promise<TBody> | TBody;
   freshness?: (
     ctx: StablecoinHistoryContext<TRow, THistory>,
   ) => Promise<{ updatedAt: number; maxAgeSec: number } | null> | { updatedAt: number; maxAgeSec: number } | null;
@@ -65,10 +68,10 @@ interface StablecoinHistoryHandlerConfig<TRow, THistory> {
   ) => Promise<Record<string, string>> | Record<string, string>;
 }
 
-export async function handleStablecoinHistoryRequest<TRow, THistory>(
+export async function handleStablecoinHistoryRequest<TRow, THistory, TBody = THistory[]>(
   db: D1Database,
   url: URL,
-  config: StablecoinHistoryHandlerConfig<TRow, THistory>,
+  config: StablecoinHistoryHandlerConfig<TRow, THistory, TBody>,
 ): Promise<Response> {
   const parsed = parseStablecoinHistoryQuery(url, config.query);
   if (parsed instanceof Response) {
@@ -82,16 +85,6 @@ export async function handleStablecoinHistoryRequest<TRow, THistory>(
   });
   const history = rows.map(config.mapRow);
 
-  const extraHeaders = config.buildHeaders
-    ? await config.buildHeaders({
-        db,
-        stablecoinId: parsed.stablecoinId,
-        cutoff: parsed.cutoff,
-        rows,
-        history,
-      })
-    : undefined;
-
   const context = {
     db,
     stablecoinId: parsed.stablecoinId,
@@ -99,10 +92,16 @@ export async function handleStablecoinHistoryRequest<TRow, THistory>(
     rows,
     history,
   };
+  const body = config.buildBody ? await config.buildBody(context) : history;
+
+  const extraHeaders = config.buildHeaders
+    ? await config.buildHeaders(context)
+    : undefined;
+
   const freshness = config.freshness ? await config.freshness(context) : null;
 
   if (!freshness) {
-    return jsonResponse(history, {
+    return jsonResponse(body, {
       headers: {
         "Cache-Control": config.cacheControl,
         ...(extraHeaders ?? {}),
@@ -110,7 +109,7 @@ export async function handleStablecoinHistoryRequest<TRow, THistory>(
     });
   }
 
-  return jsonFreshResponse(history, {
+  return jsonFreshResponse(body, {
     cacheControl: config.cacheControl,
     updatedAt: freshness.updatedAt,
     maxAgeSec: freshness.maxAgeSec,

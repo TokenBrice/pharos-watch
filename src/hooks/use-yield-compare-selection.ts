@@ -1,13 +1,23 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useUrlState } from "@/hooks/use-url-state";
 import { trackEvent } from "@/lib/analytics";
-import { parseIdList } from "@/lib/compare-config";
+import type { UrlStateSchema } from "@/lib/url-state";
 
 export const MAX_YIELD_COMPARE_IDS = 4;
 
-const COMPARE_PARAM = "compare";
+interface YieldCompareUrlState {
+  compare: string[];
+}
+
+const YIELD_COMPARE_URL_STATE_SCHEMA: UrlStateSchema<YieldCompareUrlState> = {
+  compare: {
+    kind: "enumList",
+    defaultValue: [],
+    maxItems: MAX_YIELD_COMPARE_IDS,
+  },
+};
 
 export interface UseYieldCompareSelectionResult {
   ids: string[];
@@ -22,28 +32,17 @@ export interface UseYieldCompareSelectionResult {
  * Capped at MAX_YIELD_COMPARE_IDS entries; toggling a new id past the cap is a no-op.
  */
 export function useYieldCompareSelection(): UseYieldCompareSelectionResult {
-  const { searchParams, replaceParams } = useUrlFilters();
-
-  const rawCompare = searchParams.get(COMPARE_PARAM);
-  const ids = useMemo(
-    () => parseIdList(rawCompare, { max: MAX_YIELD_COMPARE_IDS }),
-    [rawCompare],
-  );
+  const { state, replaceState } = useUrlState(YIELD_COMPARE_URL_STATE_SCHEMA);
+  const ids = state.compare;
   const idSet = useMemo(() => new Set(ids), [ids]);
 
   const has = useCallback((id: string) => idSet.has(id), [idSet]);
 
   const writeIds = useCallback(
     (nextIds: string[]) => {
-      replaceParams((params) => {
-        if (nextIds.length > 0) {
-          params.set(COMPARE_PARAM, nextIds.join(","));
-        } else {
-          params.delete(COMPARE_PARAM);
-        }
-      });
+      replaceState({ compare: nextIds });
     },
-    [replaceParams],
+    [replaceState],
   );
 
   const toggle = useCallback(

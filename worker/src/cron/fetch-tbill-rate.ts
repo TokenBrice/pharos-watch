@@ -22,6 +22,7 @@ import type { YieldBenchmarkKey } from "@shared/types/yield";
 import type { Env } from "../lib/env";
 
 import type {
+  BenchmarkDescriptor,
   BenchmarkFetchResult,
   BenchmarkProviderAttemptDiagnostic,
   BenchmarkProvider,
@@ -54,25 +55,8 @@ function buildMetadata(fields: Record<string, unknown>): string {
 
 type MetadataBenchmarkKey = Exclude<YieldBenchmarkKey, "SGD">;
 
-const BENCHMARK_METADATA_PREFIXES: Record<MetadataBenchmarkKey, string> = {
-  USD: "usd",
-  USD_EFFR: "usdEffr",
-  EUR: "eur",
-  CHF: "chf",
-  GBP: "gbp",
-  JPY: "jpy",
-  MXN: "mxn",
-  BRL: "brl",
-  AUD: "aud",
-  CAD: "cad",
-  RUB: "rub",
-  TRY: "try",
-};
-
-const BENCHMARK_METADATA_KEYS = Object.keys(BENCHMARK_METADATA_PREFIXES) as MetadataBenchmarkKey[];
-
 function buildFallbackBenchmarkMetadata(benchmarks: ParsedYieldBenchmarkRegistry): Array<Record<string, unknown>> {
-  return BENCHMARK_METADATA_KEYS.flatMap((key) => {
+  return BENCHMARK_METADATA_DESCRIPTORS.flatMap(({ key }) => {
     const benchmark = benchmarks[key];
     if (!benchmark?.isFallback) return [];
     return [
@@ -317,8 +301,7 @@ function buildBenchmarkRunMetadata(params: {
   fields.retainedFallbackBenchmarkCount = retainedFallbackBenchmarks.length;
   fields.fallbackBenchmarks = fallbackBenchmarks;
   fields.retainedFallbackBenchmarks = retainedFallbackBenchmarks;
-  for (const key of BENCHMARK_METADATA_KEYS) {
-    const prefix = BENCHMARK_METADATA_PREFIXES[key];
+  for (const { key, metadataPrefix: prefix } of BENCHMARK_METADATA_DESCRIPTORS) {
     const benchmark = params.benchmarks[key];
     fields[`${prefix}Source`] = benchmark?.source ?? null;
     if (params.includeDetails) {
@@ -351,25 +334,16 @@ function toCacheEntry(benchmark: ParsedYieldBenchmarkMeta | null) {
 }
 
 async function writeStructuredBenchmarks(db: D1Database, benchmarks: ParsedYieldBenchmarkRegistry) {
+  const cacheEntries = Object.fromEntries(
+    BENCHMARK_DESCRIPTORS
+      .filter((descriptor) => descriptor.includeInCache)
+      .map(({ key }) => [key, toCacheEntry(benchmarks[key] ?? null)]),
+  ) as Parameters<typeof buildRiskFreeRatesCachePayload>[0];
   await setCache(
     db,
     RISK_FREE_RATES_CACHE_KEY,
     serializeRiskFreeRatesCache(
-      buildRiskFreeRatesCachePayload({
-        USD: toCacheEntry(benchmarks.USD)!,
-        USD_EFFR: toCacheEntry(benchmarks.USD_EFFR ?? null),
-        EUR: toCacheEntry(benchmarks.EUR),
-        CHF: toCacheEntry(benchmarks.CHF),
-        GBP: toCacheEntry(benchmarks.GBP),
-        JPY: toCacheEntry(benchmarks.JPY),
-        MXN: toCacheEntry(benchmarks.MXN),
-        BRL: toCacheEntry(benchmarks.BRL),
-        AUD: toCacheEntry(benchmarks.AUD),
-        CAD: toCacheEntry(benchmarks.CAD),
-        RUB: toCacheEntry(benchmarks.RUB),
-        TRY: toCacheEntry(benchmarks.TRY),
-        SGD: toCacheEntry(benchmarks.SGD),
-      }),
+      buildRiskFreeRatesCachePayload(cacheEntries),
     ),
   );
   await setCache(db, LEGACY_USD_RISK_FREE_RATE_CACHE_KEY, serializeRiskFreeRateCache(toCacheEntry(benchmarks.USD)!));
@@ -466,127 +440,80 @@ async function tryUsdEffrBenchmark(signal?: AbortSignal): Promise<BenchmarkFetch
   return fred ? { ...fred, source: "fred-dff" } : null;
 }
 
-const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkProvider> = {
-  EUR: {
-    key: "EUR",
-    fetch: ({ signal }) => tryEcbCompoundedEstrCsv(signal),
-    source: "ecb-estr-3m",
-    fallbackMode: "ecb-failed",
-  },
-  CHF: {
-    key: "CHF",
-    fetch: ({ signal }) => trySixSar3mcCsv(signal),
-    source: "six-sar3mc",
-    fallbackMode: "six-saron-failed",
-  },
-  GBP: {
-    key: "GBP",
-    // Primary: St. Louis Fed mirrors of the SONIA Compounded Index (IUDZOS2).
-    // The BoE IADB host blocks Cloudflare Worker egress, so BoE is last resort.
-    fetch: async ({ signal }) => {
-      const responseDiagnostics: BenchmarkProviderAttemptDiagnostic[] = [];
-      const observe = (provider: string) => (diagnostic: Omit<BenchmarkProviderAttemptDiagnostic, "provider">) => {
-        responseDiagnostics.push({ provider, ...diagnostic });
-      };
-      const fred = await tryFredSoniaCompoundedIndex(signal, observe("fred-sonia-compounded-index"));
-      if (fred) return { ...fred, source: "fred-sonia-compounded-index", responseDiagnostics };
-      const alfred = await tryAlfredSoniaCompoundedIndex(signal, observe("alfred-sonia-compounded-index"));
-      if (alfred) return { ...alfred, source: "alfred-sonia-compounded-index", responseDiagnostics };
-      const boe = await tryBoeSoniaCompoundedIndex(signal, observe("boe-sonia-compounded-index"));
-      return boe
-        ? { ...boe, source: "boe-sonia-compounded-index", responseDiagnostics }
-        : {
-            result: null,
-            responseDiagnostics,
-          };
-    },
-    source: "fred-sonia-compounded-index",
-    fallbackMode: "gbp-sonia-compounded-index-failed",
-  },
-  JPY: {
-    key: "JPY",
-    fetch: ({ signal }) => tryBojCallRate(signal),
-    source: "boj-call-rate",
-    fallbackMode: "jpy-call-rate-failed",
-  },
-  USD_EFFR: {
-    key: "USD_EFFR",
-    fetch: ({ signal }) => tryUsdEffrBenchmark(signal),
-    source: "nyfed-effr",
-    fallbackMode: "usd-effr-sources-failed",
-  },
-  AUD: {
-    key: "AUD",
-    fetch: ({ signal }) => tryRbaCashRateTarget(signal),
-    source: "rba-cash-rate-target",
-    fallbackMode: "aud-cash-rate-failed",
-  },
-  BRL: {
-    key: "BRL",
-    fetch: ({ signal }) => tryBcbSelic(signal),
-    source: "bcb-selic",
-    fallbackMode: "bcb-selic-failed",
-  },
-  CAD: {
-    key: "CAD",
-    fetch: ({ signal }) => tryBocCorra(signal),
-    source: "boc-valet-v122530",
-    fallbackMode: "boc-corra-failed",
-  },
-  RUB: {
-    key: "RUB",
-    fetch: ({ signal }) => tryCbrKeyRate(signal),
-    source: "cbr-key-rate",
-    fallbackMode: "cbr-key-rate-failed",
-  },
-  TRY: {
-    key: "TRY",
-    fetch: ({ signal }) => tryCbrtTlref(signal),
-    source: "cbrt-evds-tlref",
-    fallbackMode: "cbrt-tlref-failed",
-  },
-} as const;
+function standardBenchmarkDescriptor(
+  key: StandardBenchmarkProviderKey,
+  metadataPrefix: string,
+  fetchOrder: number,
+  degradationOrder: number,
+  fetch: BenchmarkProvider["fetch"],
+  source: string,
+  fallbackMode: string,
+): BenchmarkDescriptor {
+  return {
+    key,
+    metadataPrefix,
+    fetchOrder,
+    degradationOrder,
+    provider: { key, fetch, source, fallbackMode },
+    includeInCache: true,
+  };
+}
 
-const BENCHMARK_PROVIDER_ORDER = [
-  "USD_EFFR",
-  "EUR",
-  "CHF",
-  "GBP",
-  "JPY",
-  "AUD",
-  "MXN",
-  "BRL",
-  "CAD",
-  "RUB",
-  "TRY",
-] as const satisfies readonly BenchmarkProviderKey[];
+async function tryGbpBenchmark({ signal }: { signal?: AbortSignal }) {
+  const responseDiagnostics: BenchmarkProviderAttemptDiagnostic[] = [];
+  const observe = (provider: string) => (diagnostic: Omit<BenchmarkProviderAttemptDiagnostic, "provider">) => {
+    responseDiagnostics.push({ provider, ...diagnostic });
+  };
+  const fred = await tryFredSoniaCompoundedIndex(signal, observe("fred-sonia-compounded-index"));
+  if (fred) return { ...fred, source: "fred-sonia-compounded-index", responseDiagnostics };
+  const alfred = await tryAlfredSoniaCompoundedIndex(signal, observe("alfred-sonia-compounded-index"));
+  if (alfred) return { ...alfred, source: "alfred-sonia-compounded-index", responseDiagnostics };
+  const boe = await tryBoeSoniaCompoundedIndex(signal, observe("boe-sonia-compounded-index"));
+  return boe
+    ? { ...boe, source: "boe-sonia-compounded-index", responseDiagnostics }
+    : { result: null, responseDiagnostics };
+}
 
-// Degradation reporting keeps AUD below MXN/BRL even though fetch order queries AUD earlier.
-const BENCHMARK_DEGRADATION_ORDER = [
-  "USD_EFFR",
-  "EUR",
-  "CHF",
-  "GBP",
-  "JPY",
-  "MXN",
-  "BRL",
-  "AUD",
-  "CAD",
-  "RUB",
-  "TRY",
-] as const satisfies readonly BenchmarkProviderKey[];
+// Descriptor order is the serialized registry/cache order. AUD intentionally fetches
+// before MXN/BRL but degrades after them; USD, credentialed MXN, and unfetched SGD
+// retain their exceptional paths.
+const BENCHMARK_DESCRIPTORS: readonly BenchmarkDescriptor[] = [
+  { key: "USD", metadataPrefix: "usd", fetchOrder: 0, degradationOrder: 0, provider: "USD", includeInCache: true },
+  standardBenchmarkDescriptor("USD_EFFR", "usdEffr", 1, 1, ({ signal }) => tryUsdEffrBenchmark(signal), "nyfed-effr", "usd-effr-sources-failed"),
+  standardBenchmarkDescriptor("EUR", "eur", 2, 2, ({ signal }) => tryEcbCompoundedEstrCsv(signal), "ecb-estr-3m", "ecb-failed"),
+  standardBenchmarkDescriptor("CHF", "chf", 3, 3, ({ signal }) => trySixSar3mcCsv(signal), "six-sar3mc", "six-saron-failed"),
+  standardBenchmarkDescriptor("GBP", "gbp", 4, 4, tryGbpBenchmark, "fred-sonia-compounded-index", "gbp-sonia-compounded-index-failed"),
+  standardBenchmarkDescriptor("JPY", "jpy", 5, 5, ({ signal }) => tryBojCallRate(signal), "boj-call-rate", "jpy-call-rate-failed"),
+  { key: "MXN", metadataPrefix: "mxn", fetchOrder: 7, degradationOrder: 6, provider: "MXN", includeInCache: true },
+  standardBenchmarkDescriptor("BRL", "brl", 8, 7, ({ signal }) => tryBcbSelic(signal), "bcb-selic", "bcb-selic-failed"),
+  standardBenchmarkDescriptor("AUD", "aud", 6, 8, ({ signal }) => tryRbaCashRateTarget(signal), "rba-cash-rate-target", "aud-cash-rate-failed"),
+  standardBenchmarkDescriptor("CAD", "cad", 9, 9, ({ signal }) => tryBocCorra(signal), "boc-valet-v122530", "boc-corra-failed"),
+  standardBenchmarkDescriptor("RUB", "rub", 10, 10, ({ signal }) => tryCbrKeyRate(signal), "cbr-key-rate", "cbr-key-rate-failed"),
+  standardBenchmarkDescriptor("TRY", "try", 11, 11, ({ signal }) => tryCbrtTlref(signal), "cbrt-evds-tlref", "cbrt-tlref-failed"),
+  { key: "SGD", metadataPrefix: null, fetchOrder: null, degradationOrder: null, provider: "SGD", includeInCache: true },
+];
 
-// Compile-time guard: the fetch order and degradation-reporting order must cover
-// the identical key set (only the ordering may differ). Adding a benchmark to one
-// array but not the other is a type error here.
-type _AssertSameBenchmarkKeys =
-  Exclude<(typeof BENCHMARK_PROVIDER_ORDER)[number], (typeof BENCHMARK_DEGRADATION_ORDER)[number]> extends never
-    ? Exclude<(typeof BENCHMARK_DEGRADATION_ORDER)[number], (typeof BENCHMARK_PROVIDER_ORDER)[number]> extends never
-      ? true
-      : ["benchmark key in degradation order missing from provider order"]
-    : ["benchmark key in provider order missing from degradation order"];
-const _assertSameBenchmarkKeys: _AssertSameBenchmarkKeys = true;
-void _assertSameBenchmarkKeys;
+type MetadataBenchmarkDescriptor = BenchmarkDescriptor & {
+  key: MetadataBenchmarkKey;
+  metadataPrefix: string;
+};
+type FetchBenchmarkDescriptor = BenchmarkDescriptor & {
+  key: BenchmarkProviderKey;
+  fetchOrder: number;
+  provider: BenchmarkProvider | "MXN";
+};
+
+const BENCHMARK_METADATA_DESCRIPTORS = BENCHMARK_DESCRIPTORS.filter(
+  (descriptor): descriptor is MetadataBenchmarkDescriptor => descriptor.metadataPrefix != null,
+);
+const BENCHMARK_FETCH_DESCRIPTORS = BENCHMARK_DESCRIPTORS
+  .filter((descriptor): descriptor is FetchBenchmarkDescriptor => (
+    descriptor.fetchOrder != null && descriptor.provider !== "USD" && descriptor.provider !== "SGD"
+  ))
+  .sort((a, b) => a.fetchOrder - b.fetchOrder);
+const BENCHMARK_DEGRADATION_DESCRIPTORS = BENCHMARK_DESCRIPTORS
+  .filter((descriptor) => descriptor.degradationOrder != null)
+  .sort((a, b) => a.degradationOrder! - b.degradationOrder!);
 
 async function resolveBenchmarkProvider(params: {
   provider: BenchmarkProvider;
@@ -658,13 +585,13 @@ async function resolveBenchmarkProviderMap(params: {
   signal?: AbortSignal;
 }): Promise<Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>> {
   const resolvedProviders: ResolvedBenchmarkProvider[] = [];
-  for (const key of BENCHMARK_PROVIDER_ORDER) {
+  for (const descriptor of BENCHMARK_FETCH_DESCRIPTORS) {
     throwIfAborted(params.signal);
     resolvedProviders.push(
-      key === "MXN"
+      descriptor.provider === "MXN"
         ? await resolveMxnBenchmarkProvider(params)
         : await resolveBenchmarkProvider({
-            provider: BENCHMARK_PROVIDER_BY_KEY[key],
+            provider: descriptor.provider,
             previous: params.previous,
             fetchedAt: params.fetchedAt,
             signal: params.signal,
@@ -682,21 +609,15 @@ function buildBenchmarkRegistry(
   usdMeta: ParsedYieldBenchmarkMeta,
   resolvedByKey: Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>,
 ): ParsedYieldBenchmarkRegistry {
-  return {
-    USD: usdMeta,
-    USD_EFFR: resolvedByKey.USD_EFFR.meta,
-    EUR: resolvedByKey.EUR.meta,
-    CHF: resolvedByKey.CHF.meta,
-    GBP: resolvedByKey.GBP.meta,
-    JPY: resolvedByKey.JPY.meta,
-    MXN: resolvedByKey.MXN.meta,
-    BRL: resolvedByKey.BRL.meta,
-    AUD: resolvedByKey.AUD.meta,
-    CAD: resolvedByKey.CAD.meta,
-    RUB: resolvedByKey.RUB.meta,
-    TRY: resolvedByKey.TRY.meta,
-    SGD: null,
-  };
+  const registry: Partial<ParsedYieldBenchmarkRegistry> = {};
+  for (const descriptor of BENCHMARK_DESCRIPTORS) {
+    if (descriptor.provider === "USD") registry.USD = usdMeta;
+    else if (descriptor.provider === "MXN") registry.MXN = resolvedByKey.MXN.meta;
+    else if (descriptor.provider === "SGD") registry.SGD = null;
+    else registry[descriptor.provider.key] = resolvedByKey[descriptor.provider.key].meta;
+  }
+  // The descriptor table is the exhaustive registry inventory; the loop assigns every key once.
+  return registry as ParsedYieldBenchmarkRegistry;
 }
 
 function buildBenchmarkDegradationReasons(
@@ -704,10 +625,13 @@ function buildBenchmarkDegradationReasons(
   resolvedByKey: Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>,
 ): string[] {
   const degradationReasons: string[] = [];
-  if (usdMeta.isFallback) degradationReasons.push(`usd:${usdMeta.fallbackMode}`);
-  for (const key of BENCHMARK_DEGRADATION_ORDER) {
-    const failureMode = resolvedByKey[key].failureMode;
-    if (failureMode) degradationReasons.push(`${key.toLowerCase()}:${failureMode}`);
+  for (const descriptor of BENCHMARK_DEGRADATION_DESCRIPTORS) {
+    if (descriptor.provider === "USD") {
+      if (usdMeta.isFallback) degradationReasons.push(`usd:${usdMeta.fallbackMode}`);
+      continue;
+    }
+    const failureMode = resolvedByKey[descriptor.key as BenchmarkProviderKey].failureMode;
+    if (failureMode) degradationReasons.push(`${descriptor.key.toLowerCase()}:${failureMode}`);
   }
   return degradationReasons;
 }
@@ -746,7 +670,7 @@ export async function fetchTbillRate(
     const degradationReasons = buildBenchmarkDegradationReasons(usdBenchmark, resolvedByKey);
     return {
       status: "degraded",
-      itemCount: BENCHMARK_METADATA_KEYS.filter((key) => benchmarks[key] != null).length,
+      itemCount: BENCHMARK_METADATA_DESCRIPTORS.filter(({ key }) => benchmarks[key] != null).length,
       metadata: buildBenchmarkRunMetadata({
         fallbackMode: degradationReasons.join(","),
         benchmarks,
@@ -798,7 +722,7 @@ export async function fetchTbillRate(
 
   return {
     status: degradationReasons.length > 0 ? "degraded" : "ok",
-    itemCount: BENCHMARK_METADATA_KEYS.filter((key) => benchmarks[key] != null).length,
+    itemCount: BENCHMARK_METADATA_DESCRIPTORS.filter(({ key }) => benchmarks[key] != null).length,
     metadata: buildBenchmarkRunMetadata({
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
       benchmarks,

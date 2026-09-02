@@ -6,7 +6,10 @@ import { ContentTable } from "@/components/table";
 import {
   MethodologyDetails,
   MethodologyFacts,
+  MethodologyPreconditions,
   MethodologySectionShell,
+  ResponsiveMethodologyPipeline,
+  type ResponsiveMethodologyPipelineProps,
   WorkedExample,
 } from "../../methodology-shared";
 import { MINT_BURN_FLOW_SECTION_CONTENT } from "@/lib/methodology-content";
@@ -26,6 +29,47 @@ const BANK_RUN_GAUGE_ROWS = [
   { id: "confident", cells: { band: "CONFIDENT", scoreRange: "40 to 70", meaning: "Strong positive pressure shift across major coins" } },
   { id: "surge", cells: { band: "SURGE", scoreRange: "70 to 100", meaning: "Exceptional improvement versus recent norms" } },
 ];
+
+const MINT_BURN_CARD_CLASSES = {
+  desktop: ["rounded-lg border p-3 text-center flex-1", "text-foreground font-medium", "text-xs text-muted-foreground mt-0.5"],
+  desktopCenter: ["rounded-lg border p-3 text-center flex-1 flex flex-col justify-center", "text-foreground font-medium", "text-xs text-muted-foreground mt-0.5"],
+  mobile: ["rounded-lg border p-3 text-center", "text-foreground font-medium", "text-xs text-muted-foreground mt-0.5"],
+  mobileCompact: ["rounded-lg border p-3 text-center", "text-foreground font-medium text-xs", "text-xs text-muted-foreground"],
+  mobileCenter: ["w-full rounded-lg border p-3 text-center", "text-foreground font-medium", "text-xs text-muted-foreground mt-0.5"],
+} as const;
+
+const MINT_BURN_CARDS = {
+  inputs: [{ title: "Mints", subtitle: "Transfer from 0x0" }, { title: "Burns", subtitle: "Transfer to 0x0" }],
+  buckets: [{ title: "Hourly Buckets", subtitle: "Trailing 30 closed daily issuance-chain buckets" }],
+  signals: [{ title: "Net Flow 24h", subtitle: "Current mint minus burn direction" }, { title: "Pressure Shift vs 30D", subtitle: "-100 worsening · 0 baseline · +100 improving" }],
+  desktopOutputs: [{ title: "Bank Run Gauge", subtitle: "market-cap weighted" }, { title: "Flight-to-Quality", subtitle: "dual threshold detection" }],
+  mobileOutputs: [{ title: "Bank Run Gauge", subtitle: "market-cap weighted" }, { title: "Flight-to-Quality", subtitle: "dual threshold" }],
+};
+
+const MINT_BURN_PIPELINE = {
+  desktop: {
+    wrapperClassName: "hidden md:flex items-stretch gap-4",
+    arrow: { className: "flex items-center text-muted-foreground text-xl font-bold", symbol: "→" },
+    exactClassNames: MINT_BURN_CARD_CLASSES.desktop,
+    stages: [
+      { wrapperClassName: "flex flex-col gap-2 flex-1", cards: MINT_BURN_CARDS.inputs },
+      { exactClassNames: MINT_BURN_CARD_CLASSES.desktopCenter, cards: MINT_BURN_CARDS.buckets },
+      { wrapperClassName: "flex flex-col gap-2 flex-1", cards: MINT_BURN_CARDS.signals },
+      { wrapperClassName: "flex flex-col gap-2 flex-1", cards: MINT_BURN_CARDS.desktopOutputs },
+    ],
+  },
+  mobile: {
+    wrapperClassName: "flex flex-col items-center gap-3 md:hidden",
+    arrow: { className: "text-muted-foreground text-xl font-bold", symbol: "↓" },
+    exactClassNames: MINT_BURN_CARD_CLASSES.mobile,
+    stages: [
+      { wrapperClassName: "grid grid-cols-2 gap-2 w-full", exactClassNames: MINT_BURN_CARD_CLASSES.mobileCompact, cards: MINT_BURN_CARDS.inputs },
+      { exactClassNames: MINT_BURN_CARD_CLASSES.mobileCenter, cards: MINT_BURN_CARDS.buckets },
+      { wrapperClassName: "grid w-full gap-2", cards: MINT_BURN_CARDS.signals },
+      { wrapperClassName: "grid grid-cols-2 gap-2 w-full", exactClassNames: MINT_BURN_CARD_CLASSES.mobileCompact, cards: MINT_BURN_CARDS.mobileOutputs },
+    ],
+  },
+} satisfies ResponsiveMethodologyPipelineProps;
 
 export function MintBurnFlowMethodologySection() {
   return (
@@ -50,10 +94,8 @@ export function MintBurnFlowMethodologySection() {
                   { label: "Main outputs", value: "Net flow, gauge, and FtQ" },
                 ]}
               />
-              <div className="space-y-2">
-                <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-                <MethodologyFacts
-                  facts={[
+              <MethodologyPreconditions
+                facts={[
                     {
                       label: "Minimum data",
                       value: "Pressure Shift vs 30D requires at least 7 days of flow history per coin",
@@ -68,9 +110,8 @@ export function MintBurnFlowMethodologySection() {
                       label: "Counted rows",
                       value: "Economic-flow aggregates count standard rows only, which in practice means non-bridge mints plus effective burns",
                     },
-                  ]}
-                />
-              </div>
+                ]}
+              />
               <WorkedExample summary="Worked example (verified against computeFlowIntensity)">
                 <p className="pharos-numeric">Inputs: currentNet=-$0.2M, baselineNet=-$7.5M, baselineAbs=$40M</p>
                 <p className="pharos-numeric">denominator=max(40M*0.3,1M)=12M; z=(-0.2M-(-7.5M))/12M=0.608</p>
@@ -81,90 +122,7 @@ export function MintBurnFlowMethodologySection() {
               </WorkedExample>
 
               <MethodologyDetails summary="Technical details: two-signal pipeline, pressure formula, and gauge bands">
-                {/* Flow pipeline diagram — desktop: horizontal */}
-                <div className="hidden md:flex items-stretch gap-4">
-                  {/* Inputs */}
-                  <div className="flex flex-col gap-2 flex-1">
-                    <div className="rounded-lg border p-3 text-center flex-1">
-                      <p className="text-foreground font-medium">Mints</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Transfer from 0x0</p>
-                    </div>
-                    <div className="rounded-lg border p-3 text-center flex-1">
-                      <p className="text-foreground font-medium">Burns</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Transfer to 0x0</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
-                  {/* Aggregation */}
-                  <div className="rounded-lg border p-3 text-center flex-1 flex flex-col justify-center">
-                    <p className="text-foreground font-medium">Hourly Buckets</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Trailing 30 closed daily issuance-chain buckets</p>
-                  </div>
-                  <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
-                  <div className="flex flex-col gap-2 flex-1">
-                    <div className="rounded-lg border p-3 text-center flex-1">
-                      <p className="text-foreground font-medium">Net Flow 24h</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Current mint minus burn direction</p>
-                    </div>
-                    <div className="rounded-lg border p-3 text-center flex-1">
-                      <p className="text-foreground font-medium">Pressure Shift vs 30D</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">-100 worsening · 0 baseline · +100 improving</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
-                  {/* Outputs */}
-                  <div className="flex flex-col gap-2 flex-1">
-                    <div className="rounded-lg border p-3 text-center flex-1">
-                      <p className="text-foreground font-medium">Bank Run Gauge</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">market-cap weighted</p>
-                    </div>
-                    <div className="rounded-lg border p-3 text-center flex-1">
-                      <p className="text-foreground font-medium">Flight-to-Quality</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">dual threshold detection</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Flow pipeline diagram — mobile: vertical */}
-                <div className="flex flex-col items-center gap-3 md:hidden">
-                  <div className="grid grid-cols-2 gap-2 w-full">
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-foreground font-medium text-xs">Mints</p>
-                      <p className="text-xs text-muted-foreground">Transfer from 0x0</p>
-                    </div>
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-foreground font-medium text-xs">Burns</p>
-                      <p className="text-xs text-muted-foreground">Transfer to 0x0</p>
-                    </div>
-                  </div>
-                  <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-                  <div className="w-full rounded-lg border p-3 text-center">
-                    <p className="text-foreground font-medium">Hourly Buckets</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Trailing 30 closed daily issuance-chain buckets</p>
-                  </div>
-                  <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-                  <div className="grid w-full gap-2">
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-foreground font-medium">Net Flow 24h</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Current mint minus burn direction</p>
-                    </div>
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-foreground font-medium">Pressure Shift vs 30D</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">-100 worsening · 0 baseline · +100 improving</p>
-                    </div>
-                  </div>
-                  <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-                  <div className="grid grid-cols-2 gap-2 w-full">
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-foreground font-medium text-xs">Bank Run Gauge</p>
-                      <p className="text-xs text-muted-foreground">market-cap weighted</p>
-                    </div>
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-foreground font-medium text-xs">Flight-to-Quality</p>
-                      <p className="text-xs text-muted-foreground">dual threshold</p>
-                    </div>
-                  </div>
-                </div>
+                <ResponsiveMethodologyPipeline {...MINT_BURN_PIPELINE} />
 
                 {/* Net Flow */}
                 <div className="space-y-2">

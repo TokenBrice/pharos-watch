@@ -494,6 +494,11 @@ describe("parseTimestampLikeToUnixSeconds", () => {
     expect(parseTimestampLikeToUnixSeconds("20/03/26")).toBe(Date.UTC(2026, 2, 20) / 1000);
   });
 
+  it("keeps the inclusive 10^12 milliseconds threshold", () => {
+    expect(parseTimestampLikeToUnixSeconds(999_999_999_999)).toBe(999_999_999_999);
+    expect(parseTimestampLikeToUnixSeconds(1_000_000_000_000)).toBe(1_000_000_000);
+  });
+
   it("returns null for unsupported timestamp values", () => {
     expect(parseTimestampLikeToUnixSeconds("")).toBeNull();
     expect(parseTimestampLikeToUnixSeconds("not-a-date")).toBeNull();

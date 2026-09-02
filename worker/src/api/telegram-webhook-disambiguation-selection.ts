@@ -1,5 +1,8 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
+import type {
+  TelegramPendingWriteContext,
+} from "./telegram-webhook-effect-fence";
 import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 import { dedupeCoins } from "./telegram-webhook-parsing";
 import type { ParsedSetCommand, PendingAction } from "./telegram-webhook-shared";
@@ -35,20 +38,7 @@ export type NormalizedPendingSelection =
       clearPending: boolean;
     };
 
-export interface PendingSelectionOperationContext {
-  beforeIrreversibleEffect?: (kind: string) => Promise<void>;
-  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-  prepareMutationAppliedStatement?: () => D1PreparedStatement;
-  preparePendingMutationAppliedStatement?: (input: {
-    chatId: string;
-    actionType: string;
-    actionPayload: string;
-    expiresAt: number;
-  }) => D1PreparedStatement;
-  confirmAtomicMutationApplied?: () => void;
-  markMutationApplied?: () => Promise<void>;
-  storedIntent?: TelegramWebhookOperationIntent | null;
-  wasMutationApplied?: boolean;
+export interface PendingSelectionOperationContext extends TelegramPendingWriteContext {
   operationNowSec?: number;
 }
 

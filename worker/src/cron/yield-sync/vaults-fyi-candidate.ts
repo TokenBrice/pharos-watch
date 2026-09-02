@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
+import { parseEpochSeconds } from "@shared/lib/epoch";
 import { isRecord } from "@shared/lib/type-guards";
 import { MIN_LENDING_POOL_TVL_USD } from "../../lib/constants";
 import { buildYieldIdentityLookups, resolveYieldCandidateStablecoinId } from "./identity";
@@ -15,22 +16,14 @@ import {
 } from "./vaults-fyi-normalization";
 import type { VaultsFyiTelemetry } from "./vaults-fyi-types";
 
-function parseUnixSeconds(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    return value > 10_000_000_000 ? Math.floor(value / 1000) : Math.floor(value);
-  }
-  if (typeof value === "string" && value.trim()) {
-    const numeric = Number(value);
-    if (Number.isFinite(numeric) && numeric > 0) {
-      return numeric > 10_000_000_000 ? Math.floor(numeric / 1000) : Math.floor(numeric);
-    }
-    const parsed = Date.parse(value);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      return Math.floor(parsed / 1000);
-    }
-  }
-  return null;
-}
+const VAULTS_FYI_EPOCH_OPTIONS = {
+  numericTextPolicy: "any",
+  millisecondsThreshold: 10_000_000_000,
+  millisecondsThresholdInclusive: false,
+  floor: true,
+  minExclusive: 0,
+  numericTextMinRejectionPolicy: "iso-fallback",
+} as const;
 
 function parseAssetAddress(asset: Record<string, unknown>): string | null {
   const direct = getString(asset.address);
@@ -242,7 +235,9 @@ export function parseVaultsFyiCandidateFromDetailedVault(
       yieldType: "lending-opportunity",
       project: protocolSlug,
       chain,
-      sourceObservedAt: parseUnixSeconds(row.lastUpdateTimestamp ?? row.updatedAt) ?? options.sourceObservedAt,
+      sourceObservedAt:
+        parseEpochSeconds(row.lastUpdateTimestamp ?? row.updatedAt, VAULTS_FYI_EPOCH_OPTIONS) ??
+        options.sourceObservedAt,
       comparisonAnchorObservedAt: null,
       sourceRisk: {
         venueProtocol: protocolSlug,

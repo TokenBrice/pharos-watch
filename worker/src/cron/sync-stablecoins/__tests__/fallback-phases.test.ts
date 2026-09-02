@@ -6,7 +6,7 @@ import {
   overlayFallbackCuratedAggregateSupply,
   resolveFreshCoinGeckoFallbackEntry,
 } from "../fallback-intake";
-import { restoreFallbackCacheState } from "../fallback-cache";
+import { restoreFallbackCacheState } from "../fallback";
 import { loadPreviousStablecoinsById } from "../shared";
 import { checkStablecoinsPriceStaleness } from "../runtime";
 import { buildFallbackStablecoinsSyncResult } from "../metadata";

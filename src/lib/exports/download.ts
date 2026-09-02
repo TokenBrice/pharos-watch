@@ -4,17 +4,32 @@ export function formatDatedExportFilename(filename: string, extension: string): 
   return `${filename}-${formatUtcDateOnly(new Date())}.${extension}`;
 }
 
-export function triggerFileDownload(content: BlobPart[], mime: string, filename: string): void {
-  const blob = new Blob(content, { type: mime });
-  const url = URL.createObjectURL(blob);
+export function triggerUrlDownload(
+  url: string,
+  filename: string,
+  revoke?: "sync" | "deferred",
+): void {
   try {
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     // a.click() requires a user-activation context; some browsers silently
-    // suppress programmatic clicks, but the URL is still revoked below.
+    // suppress programmatic clicks; object URLs are still revoked as requested.
     a.click();
   } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    if (revoke === "sync") URL.revokeObjectURL(url);
+    if (revoke === "deferred") setTimeout(() => URL.revokeObjectURL(url), 0);
   }
+}
+
+export function triggerBlobDownload(
+  blob: Blob,
+  filename: string,
+  revoke: "sync" | "deferred" = "deferred",
+): void {
+  triggerUrlDownload(URL.createObjectURL(blob), filename, revoke);
+}
+
+export function triggerFileDownload(content: BlobPart[], mime: string, filename: string): void {
+  triggerBlobDownload(new Blob(content, { type: mime }), filename);
 }

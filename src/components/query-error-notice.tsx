@@ -1,8 +1,9 @@
 "use client";
 
-import { AlertCircle, RefreshCw, WifiOff, Database, type LucideIcon } from "lucide-react";
+import { AlertCircle, WifiOff, Database, type LucideIcon } from "lucide-react";
 import { ApiFetchError } from "@/lib/api";
 import { NOTICE_TONE_COLORS } from "@shared/lib/classification";
+import { QueryNoticeSurface } from "@/components/query-notice-surface";
 
 interface QueryErrorNoticeProps {
   error: unknown | null | undefined;
@@ -40,30 +41,16 @@ export function QueryErrorNotice({ error, hasData = false, onRetry }: QueryError
   const detail = type === "error" ? getErrorDetail(error) : NOTICE_TONE_COLORS[type].detail;
 
   return (
-    <div
+    <QueryNoticeSurface
+      layout="detailed"
       role="status"
-      aria-live="polite"
-      className={`rounded-lg border px-4 py-3 shadow-sm ${tone}`}
-    >
-      <div className="flex items-start gap-3">
-        <div className={`shrink-0 rounded-full ${iconBg} p-1.5`}>
-          <Icon className="h-4 w-4" aria-hidden="true" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">{title}</p>
-          <p className="mt-1 text-sm opacity-90">{message}</p>
-          {detail ? <p className="mt-1 text-xs opacity-80">{detail}</p> : null}
-          {onRetry && (
-            <button type="button"
-              onClick={onRetry}
-              className="pharos-focus-ring mt-2.5 inline-flex items-center gap-1.5 rounded-md border border-current/20 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/10 dark:hover:bg-black/10"
-            >
-              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-              Retry
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+      icon={Icon}
+      toneClassName={tone}
+      iconBgClassName={iconBg}
+      title={title}
+      body={message}
+      detail={detail}
+      onRetry={onRetry}
+    />
   );
 }

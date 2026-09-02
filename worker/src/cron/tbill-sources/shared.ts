@@ -38,6 +38,17 @@ export interface BenchmarkProvider {
   fallbackMode: string;
 }
 
+export type BenchmarkDescriptorProvider = BenchmarkProvider | "USD" | "MXN" | "SGD";
+
+export interface BenchmarkDescriptor {
+  key: YieldBenchmarkKey;
+  metadataPrefix: string | null;
+  fetchOrder: number | null;
+  degradationOrder: number | null;
+  provider: BenchmarkDescriptorProvider;
+  includeInCache: boolean;
+}
+
 export function parseRate(rateRaw: string | number | null | undefined): number {
   if (typeof rateRaw === "number") return rateRaw;
   if (typeof rateRaw !== "string") return Number.NaN;

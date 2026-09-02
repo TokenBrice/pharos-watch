@@ -4,9 +4,10 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import { markdownValue } from "./markdown-report";
 import { isDirectRun } from "./smoke-runtime.mjs";
 
-export { isRecord, numberValue, stringValue };
+export { isRecord, markdownValue, numberValue, stringValue };
 
 export const PROD_ORIGIN = "https://pharos.watch";
 const PROD_REPORT_CARDS_URL = `${PROD_ORIGIN}/_site-data/report-cards/v9`;
@@ -99,11 +100,6 @@ export function formatUsd(value: number | null): string {
     trimTrailingZeros: true,
     useGrouping: true,
   });
-}
-
-export function markdownValue(value: unknown): string {
-  if (value == null || value === "") return "";
-  return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
 export function readJsonFile(path: string): unknown {

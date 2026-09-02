@@ -3,13 +3,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import {
-  cadenceBucketFor,
-  claimCadenceBucket,
-  completeCadenceBucket,
-  failCadenceBucket,
-  appendCadenceResultMetadata,
-} from "../lib/cadence-bucket";
+import { runCadenceBucketPublication } from "../lib/cadence-bucket";
 import { loadFxRateState } from "../lib/fx-rate-state";
 import {
   EXPECTED_FX_PEG_KEYS,
@@ -30,8 +24,6 @@ import {
   loadFrankfurterPayload,
   loadSecondaryCurrencyCandidate,
 } from "./sync-fx-rates-sources";
-import { logWorkerEvent } from "../lib/structured-log";
-import { parseJsonObject } from "../lib/json-parse";
 
 /**
  * Fetches live FX rates from the European Central Bank (via api.frankfurter.dev)
@@ -67,31 +59,16 @@ export async function syncFxRates(
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   const scheduledAtSec = options.scheduledAtSec ?? syncStartSec;
-  const bucket = cadenceBucketFor(scheduledAtSec, FX_CADENCE_SEC);
-  const claimResult = await claimCadenceBucket(db, {
+  return runCadenceBucketPublication(db, {
     key: FX_CADENCE_KEY,
-    bucket,
-    nowSec: syncStartSec,
+    cadenceSec: FX_CADENCE_SEC,
     staleClaimAfterSec: FX_STALE_CLAIM_SEC,
-  });
-  if (claimResult.kind === "skip") {
-    return {
-      itemCount: 0,
-      metadata: JSON.stringify({
-        reason: claimResult.reason === "already-completed"
-          ? "cadence_bucket_completed"
-          : "cadence_bucket_in_progress",
-        cadence: {
-          bucket,
-          observedBucket: claimResult.bucket,
-          cadenceSec: FX_CADENCE_SEC,
-        },
-      }),
-    };
-  }
-
-  try {
-    const result = await runFxRatePublication(
+    scheduledAtSec,
+    startedAtSec: syncStartSec,
+    job: "sync-fx-rates",
+    releaseFailureEvent: "sync_fx_rates.cadence_claim_release_failed",
+    releaseFailureMessage: "Failed to release FX cadence claim after publication failure",
+    publication: () => runFxRatePublication(
       db,
       syncStartSec,
       signal,
@@ -99,36 +76,8 @@ export async function syncFxRates(
       chainRpcs,
       drpcApiKey,
       etherscanApiKey,
-    );
-    const resultMetadata = parseJsonObject(result.metadata) ?? {};
-    if (resultMetadata.lastWriteAdvanced !== true) {
-      await failCadenceBucket(db, claimResult.claim);
-      return appendCadenceResultMetadata(
-        { ...result, status: "degraded" },
-        { bucket, cadenceSec: FX_CADENCE_SEC, completed: false, retryable: true },
-      );
-    }
-    const completed = await completeCadenceBucket(db, claimResult.claim);
-    return appendCadenceResultMetadata(
-      completed ? result : { ...result, status: "degraded" },
-      { bucket, cadenceSec: FX_CADENCE_SEC, completed, retryable: !completed },
-    );
-  } catch (error) {
-    try {
-      await failCadenceBucket(db, claimResult.claim);
-    } catch (transitionError) {
-      logWorkerEvent({
-        scope: "lib",
-        level: "warn",
-        event: "sync_fx_rates.cadence_claim_release_failed",
-        job: "sync-fx-rates",
-        message: "Failed to release FX cadence claim after publication failure",
-        error: transitionError,
-        metadata: { bucket },
-      });
-    }
-    throw error;
-  }
+    ),
+  });
 }
 
 async function runFxRatePublication(

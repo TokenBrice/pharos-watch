@@ -7,6 +7,10 @@ import {
   fixedFee,
   issuerBase,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
+  sourceRefRouteCapacityFees,
 } from "../shared";
 import { reviewedDirectRedemptionSupplyFull } from "./shared";
 import { REVIEWED_EXIT_CREDIT_WAVE3_AT, REVIEWED_WRAPPER_WAVE_AT } from "../review-dates";
@@ -17,7 +21,7 @@ const quantozBase: RedemptionBackstopConfig = {
   ...reviewedDirectRedemptionSupplyFull,
   costModel: fixedFee(0, "Issuer docs describe redemption as free of charge; bank fees may still apply"),
   docs: [
-    sourceRef("Quantoz transparency", "https://www.quantoz.com/transparency", ["route", "capacity"]),
+    sourceRefRouteCapacity("Quantoz transparency", "https://www.quantoz.com/transparency"),
     sourceRef("Quantoz fees", "https://www.quantoz.com/fees", ["fees"]),
   ],
 };
@@ -33,7 +37,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Paxos states it does not charge a PYUSD redemption fee; bank or network fees may still apply",
     ),
     docs: [
-      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/"),
       sourceRef(
         "Paxos USD stablecoin terms",
         "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
@@ -50,14 +54,14 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee("Redeemable 1:1; public fee schedule not disclosed"),
     docs: [
-      sourceRef("First Digital Labs FDUSD", "https://www.firstdigitallabs.com/fdusd", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("First Digital Labs FDUSD", "https://www.firstdigitallabs.com/fdusd"),
     ],
   },
   "rlusd-ripple": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee("Redeemable 1:1 less fees; public fee schedule not disclosed"),
-    docs: [sourceRef("Ripple USD stablecoin", "https://ripple.com/solutions/stablecoin/", ["route", "capacity"])],
+    docs: [sourceRefRouteCapacity("Ripple USD stablecoin", "https://ripple.com/solutions/stablecoin/")],
   },
   "usdon-ondo": {
     ...issuerBase,
@@ -67,10 +71,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Ondo Global Markets docs describe 1:1 USDC <-> USDon platform conversion when swapper liquidity is available; public materials reviewed do not publish a standalone fixed USDon redemption fee",
     ),
     docs: [
-      sourceRef("Ondo available assets", "https://docs.ondo.finance/ondo-global-markets/available-assets", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacity("Ondo available assets", "https://docs.ondo.finance/ondo-global-markets/available-assets"),
       sourceRef(
         "Ondo investing and redeeming",
         "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
@@ -93,10 +94,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ),
     docs: [
       sourceRef("Sui Dollar launch", "https://blog.sui.io/sui-dollar-launch-bridge/", ["route"]),
-      sourceRef("Bridge issuance overview", "https://apidocs.bridge.xyz/platform/issuance/overview", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacity("Bridge issuance overview", "https://apidocs.bridge.xyz/platform/issuance/overview"),
       sourceRef("Bridge reserve management", "https://apidocs.bridge.xyz/platform/issuance/reserve-management", [
         "capacity",
       ]),
@@ -116,7 +114,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     docs: [
       sourceRef("Crown BRLV website", "https://www.crown-brlv.com/en/", ["route"]),
       sourceRef("Crown BRLV transparency", "https://crown-brlv.com/en/transparency/", ["capacity"]),
-      sourceRef("Crown BRLV whitepaper", "https://crown-2b36dce9.mintlify.app/whitepaper", ["route", "capacity"]),
+      sourceRefRouteCapacity("Crown BRLV whitepaper", "https://crown-2b36dce9.mintlify.app/whitepaper"),
     ],
     notes: [
       "Modeled against documented BRL issuer redemption for approved users; standard settlement can extend to T+3, so the route remains offchain-issuer rather than instant stablecoin swap capacity",
@@ -130,10 +128,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Brale pricing includes 1:1 stablecoin swaps for platform users; bank payout rails can still carry fixed processing fees",
     ),
     docs: [
-      sourceRef("Glo Dollar contracts and reserves", "https://www.glodollar.org/articles/smart-contract-addresses", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacity("Glo Dollar contracts and reserves", "https://www.glodollar.org/articles/smart-contract-addresses"),
       sourceRef("Brale USDGLO", "https://brale.xyz/stablecoins/USDGLO", ["capacity"]),
       sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
     ],
@@ -151,7 +146,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Macropod states it charges no fee to purchase or redeem AUDM; non-NPP bank/payment fees and gas may still apply",
     ),
     docs: [
-      sourceRef("AUDM product", "https://www.macropod.com/product/audm", ["route", "capacity"]),
+      sourceRefRouteCapacity("AUDM product", "https://www.macropod.com/product/audm"),
       sourceRef("AUDM reserves", "https://www.macropod.com/transparency/reserves", ["capacity"]),
       sourceRef("AUDM legal", "https://www.macropod.com/transparency/legal", ["route", "fees", "access"]),
     ],
@@ -170,7 +165,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     docs: [
       sourceRef("Forte home", "https://www.forteaud.com/", ["route"]),
       sourceRef("Forte reserve reports", "https://www.forteaud.com/new-page", ["capacity"]),
-      sourceRef("Forte PDS", "https://www.forteaud.com/s/AUDF_PDS.pdf", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("Forte PDS", "https://www.forteaud.com/s/AUDF_PDS.pdf"),
       sourceRef("Forte terms", "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf", [
         "route",
         "access",
@@ -188,7 +183,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: documentedVariableFee("EEA burn fee is 0 bps; other Circle redemption fees may vary"),
     docs: [
       sourceRef("Circle Mint", "https://www.circle.com/circle-mint", ["route", "capacity", "access", "settlement"]),
-      sourceRef("Circle EURC", "https://www.circle.com/eurc", ["route", "capacity"]),
+      sourceRefRouteCapacity("Circle EURC", "https://www.circle.com/eurc"),
     ],
   },
   "usdc-circle": {
@@ -217,7 +212,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     reviewedAt: "2026-06-10",
     costModel: fixedFee(0, "Paxos states it does not charge a USDP redemption fee"),
     docs: [
-      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/"),
       sourceRef(
         "Paxos USD stablecoin terms",
         "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
@@ -255,8 +250,8 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     reviewedAt: "2026-06-10",
     costModel: fixedFee(0, "Paxos states it does not charge a USDG redemption fee"),
     docs: [
-      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/", ["route", "capacity", "fees"]),
-      sourceRef("Paxos USDG overview", "https://docs.paxos.com/stablecoin/usdg", ["route", "capacity"]),
+      sourceRefRouteCapacityFees("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/"),
+      sourceRefRouteCapacity("Paxos USDG overview", "https://docs.paxos.com/stablecoin/usdg"),
       sourceRef(
         "Paxos USD stablecoin terms",
         "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
@@ -273,7 +268,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee("Redeemable through approved parties; public fee schedule not disclosed"),
     docs: [
-      sourceRef("HT Digital Assets USDX", "https://www.htdigitalassets.com/", ["route", "capacity"]),
+      sourceRefRouteCapacity("HT Digital Assets USDX", "https://www.htdigitalassets.com/"),
       sourceRef("HT Digital Assets disclaimer", "https://www.htdigitalassets.com/disclaimer", ["route", "access"]),
     ],
   },
@@ -295,10 +290,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "StraitsX terms require the prevailing website redemption fee plus an S$1 administrative fee and applicable network fees",
     ),
     docs: [
-      sourceRef(
+      sourceRefRouteCapacityFees(
         "StraitsX XUSD overview",
         "https://support.straitsx.com/hc/en-us/articles/40297191431961-What-is-XUSD",
-        ["route", "capacity", "fees"],
       ),
     ],
   },
@@ -307,10 +301,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("No platform conversion fee; bank or network fees may apply"),
     docs: [
-      sourceRef(
+      sourceRefRouteCapacityFees(
         "StraitsX XSGD overview",
         "https://support.straitsx.com/support/solutions/articles/157000363433-what-is-xsgd-",
-        ["route", "capacity", "fees"],
       ),
     ],
   },
@@ -320,11 +313,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     costModel: fixedFee(0, "Issuer docs describe EURI redemption as fee-free at par"),
     docs: [
-      sourceRef("EURI white paper", "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefRouteCapacityFees("EURI white paper", "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"),
     ],
     notes: [
       "Banking Circle documents redemption at par within five business days after the request and required checks",
@@ -351,7 +340,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       ],
     },
     costModel: undisclosedReviewedFee(),
-    docs: [sourceRef("World Liberty Financial USD1", "https://worldlibertyfinancial.com/usd1", ["route", "capacity"])],
+    docs: [sourceRefRouteCapacity("World Liberty Financial USD1", "https://worldlibertyfinancial.com/usd1")],
   },
   "ausd-agora": {
     ...issuerBase,
@@ -371,7 +360,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     reviewedAt: "2026-08-14",
     costModel: fixedFee(10, "OpenEden docs list a 10 bps redemption fee"),
-    docs: [sourceRef("OpenEden Transparency", "https://openeden.com/usdo/transparency", ["route", "capacity", "fees"])],
+    docs: [sourceRefRouteCapacityFees("OpenEden Transparency", "https://openeden.com/usdo/transparency")],
     notes: [
       "Live reserve-sync capacity telemetry remains suspended: a 2026-08-13 re-enable probe confirmed prod-gw.openeden.com serves ordinary clients but returns HTTP 500 to all Cloudflare Worker fetch strategies (first production cron, 2026-08-14). Falls back to documented 1:1 USDC redemption until the issuer unblocks Worker egress",
     ],
@@ -382,7 +371,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     costModel: undisclosedReviewedFee("Eligible users can redeem USDM 1:1 for USD; public fee schedule not disclosed"),
     docs: [
-      sourceRef("USDM litepaper", "https://moneta.global/resources/litepaper/", ["route", "capacity"]),
+      sourceRefRouteCapacity("USDM litepaper", "https://moneta.global/resources/litepaper/"),
       sourceRef("USDM retail launch", "https://moneta.global/retail-launch/", ["route", "settlement"]),
     ],
     notes: ["Retail exchange documentation describes 1-3 business day processing driven by bank-transfer timing"],
@@ -392,7 +381,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "USDH docs state onboarded institutions can mint and redeem 1:1 with no fees"),
     docs: [
-      sourceRef("USDH minting and redeeming", "https://docs.usdh.com/usdh/minting", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("USDH minting and redeeming", "https://docs.usdh.com/usdh/minting"),
       sourceRef("USDH transparency", "https://www.usdh.com/transparency", ["capacity"]),
     ],
   },
@@ -403,15 +392,8 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Eligible Fidelity clients can buy, sell, and redeem FIDD at a guaranteed $1 price; public fee schedule not disclosed",
     ),
     docs: [
-      sourceRef("Fidelity Digital Dollar overview", "https://www.fidelitydigitalassets.com/stablecoin", [
-        "route",
-        "capacity",
-      ]),
-      sourceRef("FIDD terms and conditions", "https://www.fidelitydigitalassets.com/fidd-terms", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefRouteCapacity("Fidelity Digital Dollar overview", "https://www.fidelitydigitalassets.com/stablecoin"),
+      sourceRefRouteCapacityAccess("FIDD terms and conditions", "https://www.fidelitydigitalassets.com/fidd-terms"),
     ],
   },
   "usdcv-societe-generale-forge": {
@@ -422,11 +404,10 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Redeemable 1:1 in USD directly with SG-FORGE; public fee schedule not disclosed",
     ),
     docs: [
-      sourceRef("SG-FORGE CoinVertible", "https://www.sgforge.com/product/coinvertible/", ["route", "capacity"]),
-      sourceRef(
+      sourceRefRouteCapacity("SG-FORGE CoinVertible", "https://www.sgforge.com/product/coinvertible/"),
+      sourceRefRouteCapacity(
         "USDCV white paper",
         "https://www.sgforge.com/wp-content/uploads/2025/06/USDCV-White-Paper_iXBRL-1.html",
-        ["route", "capacity"],
       ),
     ],
     notes: ["White paper describes issuer-side redemption subject to KYC/AML and permitted-transferee checks"],
@@ -438,12 +419,11 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Redeemable at NAV through Securitize; public docs do not publish a separate redemption fee (50 bps annual management fee is charged separately)",
     ),
     docs: [
-      sourceRef(
+      sourceRefRouteCapacityAccess(
         "BlackRock BUIDL press release",
         "https://www.blackrock.com/corporate/newsroom/press-releases/article/corporate-one/press-releases/blackrock-introduces-buidl-the-blackrock-usd-institutional-digital-liquidity-fund",
-        ["route", "capacity", "access"],
       ),
-      sourceRef("Securitize BUIDL", "https://securitize.io/blackrock/buidl", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("Securitize BUIDL", "https://securitize.io/blackrock/buidl"),
     ],
     notes: ["Restricted to qualified purchasers under SEC Reg D; redemptions processed through Securitize platform"],
   },
@@ -452,13 +432,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Redeemable 1:1 through Techteryx; minting gated by Chainlink Proof of Reserve"),
     docs: [
-      sourceRef("TrueUSD mint and redeem", "https://www.tusd.io/", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("TrueUSD mint and redeem", "https://www.tusd.io/"),
     ],
   },
   "eurs-stasis": {
@@ -466,7 +440,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee("1:1 redemption through STSS (Malta) Limited; public fee schedule not disclosed"),
     docs: [
-      sourceRef("STASIS transparency", "https://stasis.net/transparency", ["route", "capacity"]),
+      sourceRefRouteCapacity("STASIS transparency", "https://stasis.net/transparency"),
       sourceRef("STASIS website", "https://stasis.net/", ["route"]),
     ],
   },
@@ -475,10 +449,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(100, "Transfero documents a 1% redemption fee in Brazil"),
     docs: [
-      sourceRef(
+      sourceRefRouteCapacityAccess(
         "Transfero BRZ stablecoin",
         "https://transferopayments.zendesk.com/hc/en-001/articles/42892203357587-BRZ-The-Brazilian-Real-BRL-Stablecoin",
-        ["route", "capacity", "access"],
       ),
       sourceRef(
         "BRZ deposit and withdrawal fees",
@@ -503,13 +476,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
         "access",
         "settlement",
       ]),
-      sourceRef("Figure Certificate Company disclosures", "https://www.figuremarkets.com/disclosures/", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Figure Certificate Company disclosures", "https://www.figuremarkets.com/disclosures/"),
       sourceRef(
         "Figure Certificate Company prospectus",
         "https://www.sec.gov/Archives/edgar/data/1974395/000149315226018903/form497.htm",
@@ -526,7 +493,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ),
     reviewedAt: "2026-05-17",
     docs: [
-      sourceRef("USDtb docs", "https://docs.usdtb.money/", ["route", "capacity"]),
+      sourceRefRouteCapacity("USDtb docs", "https://docs.usdtb.money/"),
       sourceRef("USDtb reserve attestations", "https://www.anchorage.com/platform/usdtb-reserve-attestations", [
         "capacity",
       ]),
@@ -540,7 +507,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Zero-fee mint/redeem at 1:1 for USDC per Plume documentation"),
     docs: [
-      sourceRef("Plume pUSD docs", "https://docs.plume.org/plume/tokens/plume-usd", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("Plume pUSD docs", "https://docs.plume.org/plume/tokens/plume-usd"),
       sourceRef("Plume pUSD page", "https://plume.org/pusd", ["route"]),
     ],
     notes: [
@@ -555,10 +522,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Anchorage redeems at Par Value net of any applicable fees disclosed in its Covered Stablecoin Fee Schedule, which is not published publicly",
     ),
     docs: [
-      sourceRef(
+      sourceRefFull(
         "Anchorage Digital Bank covered stablecoin terms",
         "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
       sourceRef("Anchorage stablecoin issuance", "https://www.anchorage.com/platform/stablecoin-issuance", ["route"]),
       sourceRef(
@@ -584,7 +550,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee("Direct 1:1 redemption through GMO Trust; public fee schedule not disclosed"),
     docs: [
-      sourceRef("GMO Trust stablecoin docs", "https://stablecoin.z.com/what-are-gyen-and-zusd/", ["route", "capacity"]),
+      sourceRefRouteCapacity("GMO Trust stablecoin docs", "https://stablecoin.z.com/what-are-gyen-and-zusd/"),
       sourceRef("GMO Trust attestation", "https://stablecoin.z.com/attestation/", ["capacity"]),
     ],
   },

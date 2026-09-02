@@ -89,14 +89,16 @@ describe("recordDeferredTail", () => {
     const result = await recordDeferredTail(db, coins, 1_700_000_000);
 
     expect(result).toEqual({
-      deferredCoins: 61,
-      nextCursorStablecoinId: "coin-0",
-      cursorTailState: "complete",
-      cursorRecordedAt: 1_700_000_000,
-      cursorTailCompletedAt: expect.any(Number),
-      cursorTailFailedAt: null,
-      cursorTailError: null,
-      runBudgetTruncationCount: 1,
+      counts: { deferredCoins: 61 },
+      deferredTail: {
+        nextCursorStablecoinId: "coin-0",
+        cursorTailState: "complete",
+        cursorRecordedAt: 1_700_000_000,
+        cursorTailCompletedAt: expect.any(Number),
+        cursorTailFailedAt: null,
+        cursorTailError: null,
+        runBudgetTruncationCount: 1,
+      },
       additionalBreakerKeys: expect.any(Set),
     });
     expect(result.additionalBreakerKeys.size).toBe(1);
@@ -298,7 +300,7 @@ describe("recordDeferredTail", () => {
 
     const result = await recordDeferredTail(db, [makeCoin("coin-a")], 1_700_000_000);
 
-    expect(result.cursorTailState).toBe("complete");
+    expect(result.deferredTail.cursorTailState).toBe("complete");
     expect(cursorWriteAttempts).toBe(3);
     const cursorWrites = history.filter((entry) => (
       entry.sql.includes("INSERT OR REPLACE INTO cache")

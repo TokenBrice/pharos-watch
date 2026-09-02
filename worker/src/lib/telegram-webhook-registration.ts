@@ -209,6 +209,54 @@ function isNotModifiedDescription(description: string | null | undefined): boole
   return /is not modified/i.test(description);
 }
 
+type TelegramReconciliationCallResult<T extends TelegramApiResponse> =
+  | { kind: "ok"; parsed: T; responseText: string }
+  | { kind: "throttled" };
+
+async function executeTelegramReconciliationCall<T extends TelegramApiResponse = TelegramApiResponse>(
+  db: D1Database,
+  botToken: string,
+  method: string,
+  payload: unknown,
+  options: {
+    rateLimitKey?: string;
+    acceptNotModified?: boolean;
+    signal?: AbortSignal;
+    errorAction: "registration" | "reconciliation";
+    errorContext?: string;
+  },
+): Promise<TelegramReconciliationCallResult<T>> {
+  if (options.rateLimitKey && await isRateLimited(db, options.rateLimitKey)) {
+    return { kind: "throttled" };
+  }
+
+  const response = await postTelegramBotApi(botToken, method, payload, { signal: options.signal });
+  const responseText = await response.text();
+  let parsed: T | null = null;
+  try {
+    parsed = JSON.parse(responseText) as T;
+  } catch {
+    parsed = null;
+  }
+
+  const retryAfter = extractRetryAfter(response, parsed);
+  if (options.rateLimitKey && retryAfter !== null) {
+    await recordRateLimit(db, options.rateLimitKey, retryAfter);
+    return { kind: "throttled" };
+  }
+  if (parsed && (parsed.ok === true || (options.acceptNotModified && isNotModifiedDescription(parsed.description)))) {
+    return { kind: "ok", parsed, responseText };
+  }
+
+  const context = options.errorContext ?? "";
+  if (!response.ok) {
+    throw new Error(`Telegram ${method} HTTP ${response.status}${context}: ${responseText.slice(0, 300)}`);
+  }
+  throw new Error(
+    `Telegram ${method} rejected ${options.errorAction}${context}: ${(parsed?.description ?? responseText).slice(0, 300)}`,
+  );
+}
+
 async function applyProfileField(
   db: D1Database,
   botToken: string,
@@ -216,47 +264,31 @@ async function applyProfileField(
   payload: Record<string, string>,
   signal?: AbortSignal,
 ): Promise<{ throttled: boolean }> {
-  if (await isRateLimited(db, method)) {
-    return { throttled: true };
-  }
-
-  const response = await postTelegramBotApi(botToken, method, payload, { signal });
-
-  const responseText = await response.text();
-  let parsed: TelegramApiResponse | null = null;
-  try {
-    parsed = JSON.parse(responseText) as TelegramApiResponse;
-  } catch {
-    parsed = null;
-  }
-
-  const retryAfter = extractRetryAfter(response, parsed);
-  if (retryAfter !== null) {
-    await recordRateLimit(db, method, retryAfter);
-    return { throttled: true };
-  }
-
-  if (parsed?.ok === true) return { throttled: false };
-  if (isNotModifiedDescription(parsed?.description)) return { throttled: false };
-
-  if (!response.ok) {
-    throw new Error(`Telegram ${method} HTTP ${response.status}: ${responseText.slice(0, 300)}`);
-  }
-  throw new Error(`Telegram ${method} rejected registration: ${(parsed?.description ?? responseText).slice(0, 300)}`);
+  const result = await executeTelegramReconciliationCall(db, botToken, method, payload, {
+    rateLimitKey: method,
+    acceptNotModified: true,
+    signal,
+    errorAction: "registration",
+  });
+  return { throttled: result.kind === "throttled" };
 }
 
-async function fetchTelegramMenuButton(botToken: string, signal?: AbortSignal): Promise<unknown | null> {
-  const response = await postTelegramBotApi(botToken, "getChatMenuButton", {}, { signal });
-  const responseText = await response.text();
-  let parsed: TelegramChatMenuButtonResponse | null = null;
-  try {
-    parsed = JSON.parse(responseText) as TelegramChatMenuButtonResponse;
-  } catch {
-    parsed = null;
-  }
-  if (parsed?.ok === true) return parsed.result ?? null;
-  if (!response.ok) throw new Error(`Telegram getChatMenuButton HTTP ${response.status}: ${responseText.slice(0, 300)}`);
-  throw new Error(`Telegram getChatMenuButton rejected reconciliation: ${(parsed?.description ?? responseText).slice(0, 300)}`);
+async function fetchTelegramMenuButton(
+  db: D1Database,
+  botToken: string,
+  signal?: AbortSignal,
+): Promise<unknown | null> {
+  const result = await executeTelegramReconciliationCall<TelegramChatMenuButtonResponse>(
+    db,
+    botToken,
+    "getChatMenuButton",
+    {},
+    {
+      signal,
+      errorAction: "reconciliation",
+    },
+  );
+  return result.kind === "ok" ? result.parsed.result ?? null : null;
 }
 
 function menuButtonMatches(current: unknown, miniAppUrl: string): boolean {
@@ -292,36 +324,17 @@ export async function reconcileTelegramWebhookRegistration(
     return { attempted: false, skipped: true, reason: "fresh-cache", expectedUrl };
   }
 
-  if (await isRateLimited(db, "setWebhook")) {
-    return { attempted: false, skipped: true, reason: "rate-limited", expectedUrl };
-  }
-
-  const response = await postTelegramBotApi(botToken, "setWebhook", {
+  const result = await executeTelegramReconciliationCall(db, botToken, "setWebhook", {
     url: expectedUrl,
     secret_token: webhookSecret,
     allowed_updates: [...TELEGRAM_ALLOWED_UPDATES],
-  }, { signal: options.signal });
-
-  const responseText = await response.text();
-  let parsed: TelegramApiResponse | null = null;
-  try {
-    parsed = JSON.parse(responseText) as TelegramApiResponse;
-  } catch {
-    parsed = null;
-  }
-
-  const retryAfter = extractRetryAfter(response, parsed);
-  if (retryAfter !== null) {
-    await recordRateLimit(db, "setWebhook", retryAfter);
+  }, {
+    rateLimitKey: "setWebhook",
+    signal: options.signal,
+    errorAction: "registration",
+  });
+  if (result.kind === "throttled") {
     return { attempted: false, skipped: true, reason: "rate-limited", expectedUrl };
-  }
-
-  if (!response.ok) {
-    throw new Error(`Telegram setWebhook HTTP ${response.status}: ${responseText.slice(0, 300)}`);
-  }
-
-  if (parsed?.ok !== true) {
-    throw new Error(`Telegram setWebhook rejected registration: ${(parsed?.description ?? responseText).slice(0, 300)}`);
   }
 
   await setCache(db, TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY, expectedCacheValue);
@@ -336,38 +349,13 @@ async function setMyCommandsForScope(
   signal?: AbortSignal,
 ): Promise<{ throttled: boolean }> {
   const endpoint = `setMyCommands:${scope.type}`;
-  if (await isRateLimited(db, endpoint)) {
-    return { throttled: true };
-  }
-
-  const response = await postTelegramBotApi(botToken, "setMyCommands", { commands, scope }, { signal });
-
-  const responseText = await response.text();
-  let parsed: TelegramApiResponse | null = null;
-  try {
-    parsed = JSON.parse(responseText) as TelegramApiResponse;
-  } catch {
-    parsed = null;
-  }
-
-  const retryAfter = extractRetryAfter(response, parsed);
-  if (retryAfter !== null) {
-    await recordRateLimit(db, endpoint, retryAfter);
-    return { throttled: true };
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      `Telegram setMyCommands HTTP ${response.status} (scope=${scope.type}): ${responseText.slice(0, 300)}`,
-    );
-  }
-
-  if (parsed?.ok !== true) {
-    throw new Error(
-      `Telegram setMyCommands rejected registration (scope=${scope.type}): ${(parsed?.description ?? responseText).slice(0, 300)}`,
-    );
-  }
-  return { throttled: false };
+  const result = await executeTelegramReconciliationCall(db, botToken, "setMyCommands", { commands, scope }, {
+    rateLimitKey: endpoint,
+    signal,
+    errorAction: "registration",
+    errorContext: ` (scope=${scope.type})`,
+  });
+  return { throttled: result.kind === "throttled" };
 }
 
 export async function reconcileTelegramCommandRegistration(
@@ -465,34 +453,21 @@ export async function reconcileTelegramMenuButton(
     return { attempted: false, skipped: true, reason: "fresh-cache", miniAppUrl };
   }
 
-  const current = await fetchTelegramMenuButton(botToken, options.signal);
+  const current = await fetchTelegramMenuButton(db, botToken, options.signal);
   if (menuButtonMatches(current, miniAppUrl)) {
     await setCache(db, TELEGRAM_MENU_RECONCILED_CACHE_KEY, expectedCacheValue);
     return { attempted: true, skipped: false, reason: "already-current", miniAppUrl };
   }
 
-  if (await isRateLimited(db, "setChatMenuButton")) {
-    return { attempted: false, skipped: true, reason: "rate-limited", miniAppUrl };
-  }
-
-  const response = await postTelegramBotApi(botToken, "setChatMenuButton", {
+  const result = await executeTelegramReconciliationCall(db, botToken, "setChatMenuButton", {
     menu_button: buildTelegramMenuButton(miniAppUrl),
-  }, { signal: options.signal });
-  const responseText = await response.text();
-  let parsed: TelegramApiResponse | null = null;
-  try {
-    parsed = JSON.parse(responseText) as TelegramApiResponse;
-  } catch {
-    parsed = null;
-  }
-  const retryAfter = extractRetryAfter(response, parsed);
-  if (retryAfter !== null) {
-    await recordRateLimit(db, "setChatMenuButton", retryAfter);
+  }, {
+    rateLimitKey: "setChatMenuButton",
+    signal: options.signal,
+    errorAction: "reconciliation",
+  });
+  if (result.kind === "throttled") {
     return { attempted: false, skipped: true, reason: "rate-limited", miniAppUrl };
-  }
-  if (parsed?.ok !== true) {
-    if (!response.ok) throw new Error(`Telegram setChatMenuButton HTTP ${response.status}: ${responseText.slice(0, 300)}`);
-    throw new Error(`Telegram setChatMenuButton rejected reconciliation: ${(parsed?.description ?? responseText).slice(0, 300)}`);
   }
 
   await setCache(db, TELEGRAM_MENU_RECONCILED_CACHE_KEY, expectedCacheValue);

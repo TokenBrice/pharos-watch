@@ -3,8 +3,7 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import { mergeDexPriceObservationMap } from "./orchestrator-phases/price-obs";
-import type { SubgraphPriceObservation } from "./subgraph-helpers";
+import { mergeDexPriceObservationMap, type SubgraphPriceObservation } from "./subgraph-helpers";
 import type {
   AerodromeLookups,
   DexPriceObs,

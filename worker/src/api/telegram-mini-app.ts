@@ -170,6 +170,31 @@ async function parseMiniAppRequestJson<T>(
   return parsed.data;
 }
 
+async function prepareMiniAppRequest<T extends { contractVersion?: string; catalogVersion?: string }>(
+  request: Request,
+  botToken: string | undefined,
+  schema: ZodType<T>,
+  invalidPayloadMessage: string,
+): Promise<Response | {
+  parsed: T;
+  compatibility: Extract<TelegramMiniAppVersionCompatibility, "legacy" | "compatible">;
+  start: number;
+  botToken: string;
+}> {
+  const start = Date.now();
+  if (!botToken?.trim()) {
+    return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
+  }
+  const parsed = await parseMiniAppRequestJson(request, schema, invalidPayloadMessage);
+  if (parsed instanceof Response) return parsed;
+
+  const compatibility = requestVersionCompatibility(request, parsed);
+  if (compatibility === "contract-version-mismatch" || compatibility === "catalog-version-mismatch") {
+    return versionMismatchResponse(compatibility);
+  }
+  return { parsed, compatibility, start, botToken };
+}
+
 function sourceCategory(auth?: TelegramMiniAppAuthContext | null, startParam?: string | null): string {
   return (auth?.startParam ?? startParam)?.trim() ? "startapp" : "menu_or_main_app";
 }
@@ -361,22 +386,16 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     botTokenPrevious?: string | undefined,
     recapRollout: TelegramRecapRolloutPolicy = TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   ): Promise<Response> => {
-    const start = Date.now();
-    if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
-    const parsed = await parseMiniAppRequestJson(
+    const prepared = await prepareMiniAppRequest(
       request,
+      botToken,
       TelegramMiniAppSessionRequestSchema,
       "Invalid Mini App session payload",
     );
-    if (parsed instanceof Response) {
-      return parsed;
-    }
-    const compatibility = requestVersionCompatibility(request, parsed);
-    if (compatibility === "contract-version-mismatch" || compatibility === "catalog-version-mismatch") {
-      return versionMismatchResponse(compatibility);
-    }
+    if (prepared instanceof Response) return prepared;
+    const { parsed, compatibility, start, botToken: configuredBotToken } = prepared;
 
-    const auth = await validateOrResponse(db, parsed.initData, botToken, {
+    const auth = await validateOrResponse(db, parsed.initData, configuredBotToken, {
       maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
       start,
       cooldownKey: "mini-app:session",
@@ -443,20 +462,14 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     botTokenPrevious?: string | undefined,
     recapRollout: TelegramRecapRolloutPolicy = TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   ): Promise<Response> => {
-    const start = Date.now();
-    if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
-    const parsed = await parseMiniAppRequestJson(
+    const prepared = await prepareMiniAppRequest(
       request,
+      botToken,
       TelegramMiniAppMutationRequestSchema,
       "Invalid Mini App mutation payload",
     );
-    if (parsed instanceof Response) {
-      return parsed;
-    }
-    const compatibility = requestVersionCompatibility(request, parsed);
-    if (compatibility === "contract-version-mismatch" || compatibility === "catalog-version-mismatch") {
-      return versionMismatchResponse(compatibility);
-    }
+    if (prepared instanceof Response) return prepared;
+    const { parsed, compatibility, start, botToken: configuredBotToken } = prepared;
 
     const portabilityOperation = isTelegramMiniAppPortabilityOperation(parsed.operation)
       ? parsed.operation
@@ -467,7 +480,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     const readOnlyPortability = portabilityOperation?.kind === "export-watchlist"
       || portabilityOperation?.kind === "preview-watchlist-import"
       || bulkPreviewOperation != null;
-    const auth = await validateOrResponse(db, parsed.initData, botToken, {
+    const auth = await validateOrResponse(db, parsed.initData, configuredBotToken, {
       // Export and preview are signed reads. They keep the 24h session
       // freshness contract and must not consume the edit burst budget.
       maxAgeSec: readOnlyPortability

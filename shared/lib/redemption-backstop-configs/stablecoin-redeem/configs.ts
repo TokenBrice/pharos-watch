@@ -4,6 +4,10 @@ import {
   fixedFee,
   type RedemptionBackstopConfig,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
+  sourceRefRouteCapacityFees,
   undisclosedReviewedFee,
 } from "../shared";
 import {
@@ -39,15 +43,10 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
         "formula",
       ),
       docs: [
-        sourceRef("Reservoir Savings (srUSD & wsrUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd", [
-          "route",
-          "capacity",
-          "fees",
-        ]),
-        sourceRef(
+        sourceRefRouteCapacityFees("Reservoir Savings (srUSD & wsrUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"),
+        sourceRefRouteCapacity(
           "Reservoir Peg Stability Module",
           "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
-          ["route", "capacity"],
         ),
         sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
       ],
@@ -65,10 +64,9 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
         "The rUSD-to-USDC Peg Stability Module redeem burns rUSD 1:1 and transfers USDC; the verified PSM source contains no fee logic",
       ),
       docs: [
-        sourceRef(
+        sourceRefFull(
           "Reservoir Peg Stability Module",
           "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
-          ["route", "capacity", "fees", "access", "settlement"],
         ),
         sourceRef(
           "Reservoir smart-contract addresses",
@@ -90,17 +88,10 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
         "formula",
       ),
       docs: [
-        sourceRef("Reservoir Savings (srUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd", [
-          "route",
-          "capacity",
-          "fees",
-          "access",
-          "settlement",
-        ]),
-        sourceRef(
+        sourceRefFull("Reservoir Savings (srUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"),
+        sourceRefRouteCapacity(
           "Reservoir Peg Stability Module",
           "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
-          ["route", "capacity"],
         ),
         sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
       ],
@@ -134,17 +125,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     routeExitCorrelation: "same-protocol-liquidity",
     reviewedAt: "2026-07-13",
     docs: [
-      sourceRef("3Jane supplier withdrawals", "https://docs.3jane.xyz/architecture/core-money-market/suppliers", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
+      sourceRefFull("3Jane supplier withdrawals", "https://docs.3jane.xyz/architecture/core-money-market/suppliers"),
+      sourceRefFull(
         "3Jane USD3 implementation",
         "https://github.com/3jane-protocol/moneymarket-contracts/blob/main/src/usd3/USD3.sol",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
     ],
     notes: [
@@ -190,19 +174,15 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(25, "Origin docs list a 0.25% exit fee on OUSD redemptions"),
     docs: [
-      sourceRef("Origin Dollar (OUSD)", "https://docs.originprotocol.com/yield-bearing-tokens/origin-dollar-ousd", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacity("Origin Dollar (OUSD)", "https://docs.originprotocol.com/yield-bearing-tokens/origin-dollar-ousd"),
       sourceRef(
         "Origin March 2023 token holder update",
         "https://www.originprotocol.com/blog/march-2023-token-holder-update?lang=en",
         ["route", "fees"],
       ),
-      sourceRef(
+      sourceRefRouteCapacity(
         "Origin pricing and peg management",
         "https://docs.originprotocol.com/security-and-risk/price-oracles",
-        ["route", "capacity"],
       ),
     ],
     notes: [
@@ -251,7 +231,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
     docs: [
-      sourceRef("Superstate USTB", "https://superstate.com/assets/ustb", ["route", "capacity"]),
+      sourceRefRouteCapacity("Superstate USTB", "https://superstate.com/assets/ustb"),
       sourceRef("Superstate liquidity API", "https://api.superstate.com/v1/funds/liquidity", ["capacity"]),
       sourceRef("Superstate smart contracts", "https://docs.superstate.com/investors/smart-contracts", [
         "route",
@@ -292,11 +272,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
-      sourceRef("Ethena peg arbitrage mechanism", "https://docs.ethena.fi/solution-overview/peg-arbitrage-mechanism", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefRouteCapacityAccess("Ethena peg arbitrage mechanism", "https://docs.ethena.fi/solution-overview/peg-arbitrage-mechanism"),
       sourceRef("USDe terms and conditions", "https://docs.ethena.fi/resources/usde-terms-and-conditions", [
         "route",
         "fees",
@@ -317,10 +293,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     reviewedAt: REVIEWED_ZCHF_BRIDGE_AT,
     docs: [
-      sourceRef(
+      sourceRefRouteCapacityFees(
         "Frankencoin StablecoinBridge (CHFAU)",
         "https://etherscan.io/address/0x3e445ff4dddf0ff8ae7458c9746ed80bd664f6c1",
-        ["route", "capacity", "fees"],
       ),
       sourceRef("Frankencoin overview", "https://docs.frankencoin.com/", ["route"]),
       sourceRef("AllUnity CHFAU", "https://allunity.com/chfau/", ["capacity"]),
@@ -352,11 +327,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     reviewedAt: "2026-05-17",
     feeDescription: "Sky docs describe sUSDS vault deposits and withdrawals with no fee",
     docs: [
-      sourceRef("Sky sUSDS docs", "https://developers.sky.money/core-protocol/susds/", ["route", "capacity", "fees"]),
-      sourceRef("Sky protocol token routes", "https://developers.sky.money/quick-start/protocol-token-routes/", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacityFees("Sky sUSDS docs", "https://developers.sky.money/core-protocol/susds/"),
+      sourceRefRouteCapacity("Sky protocol token routes", "https://developers.sky.money/quick-start/protocol-token-routes/"),
     ],
     notes: [
       "sUSDS is an ERC-4626 savings wrapper over USDS: holders can deposit USDS to mint sUSDS and redeem back into USDS at the live vault exchange rate",
@@ -369,7 +341,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription: "Spark documents withdrawals from savings vaults without slippage or platform fees",
     docs: [
       sourceRef("Spark website", "https://spark.fi/", ["route", "fees"]),
-      sourceRef("Spark docs portal", "https://docs.spark.fi/", ["route", "capacity"]),
+      sourceRefRouteCapacity("Spark docs portal", "https://docs.spark.fi/"),
     ],
     notes: [
       "sDAI is the Dai Savings Rate wrapper: holders exit at the live ERC-4626 exchange rate into DAI rather than through a queued or discretionary process",
@@ -383,15 +355,13 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     totalScoreCap: 70,
     feeDescription: "sDOLA docs describe permissionless instant unwrapping back to DOLA with no lock-up period or early-withdrawal penalty.",
     docs: [
-      sourceRef(
+      sourceRefFull(
         "sDOLA docs",
         "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
-      sourceRef(
+      sourceRefRouteCapacityFees(
         "Inverse Peg Stability Module",
         "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module",
-        ["route", "capacity", "fees"],
       ),
     ],
     notes: [
@@ -410,13 +380,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "formula",
     ),
     docs: [
-      sourceRef("dTRINITY sdUSD docs", "https://docs.dtrinity.org/protocol-components/sdusd", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("dTRINITY sdUSD docs", "https://docs.dtrinity.org/protocol-components/sdusd"),
     ],
     notes: [
       "Modeled route is the permissionless atomic sdUSD wrapper exit into dUSD; the output is pinned explicitly to the tracked dUSD asset.",
@@ -434,20 +398,18 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     reviewedAt: "2026-07-24",
     docs: [
-      sourceRef(
+      sourceRefFull(
         "Frax sfrxUSD stake and unstake guide",
         "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
       sourceRef(
         "Frax Ethereum RemoteHop",
         "https://www.codeslaw.app/contracts/ethereum/0x99b5587ab54a49e3f827d10175caf69c0187bfa8",
         ["route", "fees", "access", "settlement"],
       ),
-      sourceRef(
+      sourceRefFull(
         "Frax Fraxtal Hop",
         "https://www.codeslaw.app/contracts/fraxtal/0x3e6a2cbafd864e09e6dab9cf035a0abea32bc0bc",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
       sourceRef(
         "Frax Fraxtal MintRedeemer implementation",
@@ -467,10 +429,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "Curve docs describe scrvUSD as a Yearn V3 vault with idle crvUSD always available for redemption; yield accrues through share price rather than a separate exit fee.",
     docs: [
-      sourceRef("Curve scrvUSD month-in-review", "https://news.curve.finance/savings-crvusd-a-month-in-review/", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacity("Curve scrvUSD month-in-review", "https://news.curve.finance/savings-crvusd-a-month-in-review/"),
       sourceRef("Curve resources", "https://resources.curve.finance/", ["route"]),
     ],
     notes: [
@@ -484,7 +443,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "OpenEden integration docs route cUSDO redeem through the wrapper into USDO at convertToAssets; the separate USDO primary redemption fee is downstream of this wrapper leg.",
     docs: [
-      sourceRef("OpenEden cUSDO token docs", "https://docs.openeden.com/usdo/cusdo-token", ["route", "capacity"]),
+      sourceRefRouteCapacity("OpenEden cUSDO token docs", "https://docs.openeden.com/usdo/cusdo-token"),
       sourceRef("OpenEden integration guide", "https://docs.openeden.com/usdo/developers/integration-guide", ["route"]),
     ],
     notes: [
@@ -504,13 +463,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     reviewedAt: "2026-05-14",
     docs: [
-      sourceRef("Aster USDF FAQ", "https://docs.asterdex.com/usdf-stablecoin/overview/faqs", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Aster USDF FAQ", "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"),
       sourceRef("Aster USDF page", "https://www.asterdex.com/en/usdf", ["route"]),
     ],
     notes: [
@@ -523,7 +476,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: undisclosedReviewedFee(),
     reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
-      sourceRef("Resolv docs", "https://docs.resolv.xyz/", ["route", "capacity"]),
+      sourceRefRouteCapacity("Resolv docs", "https://docs.resolv.xyz/"),
       sourceRef("Resolv Apostro reserves", "https://info.apostro.xyz/resolv-reserves", ["capacity"]),
     ],
     notes: [
@@ -541,7 +494,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
-      sourceRef("Aegis liquidity", "https://docs.aegis.im/overview/liquidity", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("Aegis liquidity", "https://docs.aegis.im/overview/liquidity"),
       sourceRef("Aegis FAQ", "https://docs.aegis.im/aegis-faq/how-can-i-get-my-earned-yusd", ["route"]),
       sourceRef("Aegis Accountable dashboard", "https://aegis.accountable.capital/", ["capacity"]),
     ],
@@ -560,10 +513,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
-      sourceRef(
+      sourceRefRouteCapacity(
         "Noon USN documentation",
         "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/return-generation",
-        ["route", "capacity"],
       ),
       sourceRef("Noon smart contract audits", "https://docs.noon.capital/built-for-safety/smart-contract-audits", [
         "route",
@@ -591,7 +543,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "https://docs.gaib.ai/products/gaib-products/how-to-get-aid-said",
         ["route", "capacity", "access", "fees"],
       ),
-      sourceRef("GAIB economy", "https://docs.gaib.ai/gaib-overview/gaib-economy", ["route", "capacity"]),
+      sourceRefRouteCapacity("GAIB economy", "https://docs.gaib.ai/gaib-overview/gaib-economy"),
     ],
     notes: [
       "Regular users typically exit AID through the GAIB app or DEX liquidity, while the modeled primary redemption rail is the whitelisted direct burn-and-withdraw contract path",
@@ -620,7 +572,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: undisclosedReviewedFee(
       "Direct minting and redemption of USX is reserved for KYC'd institutional investors depositing or withdrawing USDC and USDT through the Solstice protocol; public fee schedule not disclosed",
     ),
-    docs: [sourceRef("Solstice USX", "https://solstice.finance/usx", ["route", "capacity", "access"])],
+    docs: [sourceRefRouteCapacityAccess("Solstice USX", "https://solstice.finance/usx")],
     notes: [
       "Retail users access USX primarily through DEX liquidity or the Solstice platform, while the primary mint/redeem rail is institution-only",
     ],
@@ -677,7 +629,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "USD.AI's mint/redeem upgrade notice states that direct mint and redeem are routed through market makers with a 10 bps fee applied to redemptions",
     ),
     docs: [
-      sourceRef("USD.AI buy / stake", "https://docs.usd.ai/app-guide/buy-stake", ["route", "capacity"]),
+      sourceRefRouteCapacity("USD.AI buy / stake", "https://docs.usd.ai/app-guide/buy-stake"),
       sourceRef("USD.AI app buy flow", "https://app.usd.ai/buy", ["route"]),
       sourceRef("USD.AI mint and redeem upgrade", "https://usd.ai/insights/usdai-mint-redeem-upgrade", [
         "route",
@@ -700,15 +652,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Direct Ethereum mint and redeem contracts support 1:1 conversion between frxUSD and USDC; public docs do not publish a fixed redemption fee",
     ),
     docs: [
-      sourceRef("frxUSD mint and redeem overview", "https://docs.frax.com/frxusd/mint-and-redeem-overview", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacity("frxUSD mint and redeem overview", "https://docs.frax.com/frxusd/mint-and-redeem-overview"),
       sourceRef("frxUSD USDC quickstart", "https://docs.frax.com/frxusd/mint-and-redeem-quickstarts/usdc", ["route"]),
-      sourceRef("FraxNetDeposit contract", "https://docs.frax.com/fraxnet/contracts/fraxnetDeposit", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacity("FraxNetDeposit contract", "https://docs.frax.com/fraxnet/contracts/fraxnetDeposit"),
     ],
     notes: [
       "Cross-chain and fiat off-ramp flows exist too, but the modeled backstop focuses on the direct onchain USDC redemption rail",
@@ -730,7 +676,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
-      sourceRef("JupUSD homepage", "https://jupusd.money/", ["route", "capacity"]),
+      sourceRefRouteCapacity("JupUSD homepage", "https://jupusd.money/"),
       sourceRef("Offside Labs JupUSD audit", "https://jupusd.money/homepage/audits/offsidelabs.pdf", [
         "route",
         "capacity",
@@ -779,15 +725,13 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "Smokehouse USDC uses a MetaMorpho vault; withdrawals redeem to USDC when vault liquidity is available and Morpho vault fees accrue from generated yield rather than a separate withdrawal fee.",
     docs: [
-      sourceRef(
+      sourceRefFull(
         "Smokehouse USDC vault",
         "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
-      sourceRef(
+      sourceRefRouteCapacityAccess(
         "Smokehouse launch forum",
         "https://forum.morpho.org/t/introducing-the-smokehouse-product-line-bbqusdc-and-bbqdai/1182",
-        ["route", "capacity", "access"],
       ),
       sourceRef(
         "Morpho vault integration",
@@ -809,7 +753,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "wM docs describe wrap and unwrap as fee-free permissionless calls against the underlying M token",
     ),
     docs: [
-      sourceRef("M0 wM token", "https://www.m0.org/faq", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("M0 wM token", "https://www.m0.org/faq"),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
     ],
     notes: [
@@ -848,7 +792,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     docs: [
       sourceRef("Anzen Finance", "https://www.anzen.finance/", ["route"]),
-      sourceRef("Anzen documentation", "https://docs.anzen.finance/", ["route", "capacity"]),
+      sourceRefRouteCapacity("Anzen documentation", "https://docs.anzen.finance/"),
       sourceRef("Anzen USDz overview", "https://docs.anzen.finance/usdz-101/overview", ["route", "fees"]),
       sourceRef(
         "USDz verified deployed source (Ethereum 0xa469b7ee...10067)",
@@ -872,7 +816,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     totalScoreCap: 70,
     costModel: fixedFee(0, "Startale docs describe USDSC as a fee-free 1:1 wrapper around M0's M token on Soneium"),
     docs: [
-      sourceRef("Startale USDSC", "https://startale.com/usdsc", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("Startale USDSC", "https://startale.com/usdsc"),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
     ],
     notes: [
@@ -888,11 +832,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     docs: [
       sourceRef("How to Buy apxUSD", "https://docs.apyx.fi/app-guide/how-to-buy-apxusd", ["route", "access"]),
-      sourceRef("How Apyx Works", "https://docs.apyx.fi/apyx-overview/how-apyx-works", ["route", "capacity", "fees"]),
-      sourceRef("Peg Stability Model", "https://docs.apyx.fi/solution-overview/peg-stability-model", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacityFees("How Apyx Works", "https://docs.apyx.fi/apyx-overview/how-apyx-works"),
+      sourceRefRouteCapacity("Peg Stability Model", "https://docs.apyx.fi/solution-overview/peg-stability-model"),
     ],
     notes: [
       "Retail users primarily access apxUSD via the Curve pool, while direct minting and redemption are reserved for whitelisted participants who rebalance the market",
@@ -905,7 +846,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssetType: "stable-basket",
     costModel: fixedFee(0, "1:1 wrap/unwrap via CollateralOnramp/Offramp; Polymarket documents no unwrap fee"),
     docs: [
-      sourceRef("Polymarket pUSD docs", "https://docs.polymarket.com/concepts/pusd", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("Polymarket pUSD docs", "https://docs.polymarket.com/concepts/pusd"),
       sourceRef("Polymarket withdrawal help", "https://help.polymarket.com/en/articles/13369898-how-to-withdraw", [
         "route",
         "settlement",
@@ -944,7 +885,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "capacity",
         "settlement",
       ]),
-      sourceRef("dForce USX LSR", "https://docs.usx.finance/minting-and-redeeming/lsr", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("dForce USX LSR", "https://docs.usx.finance/minting-and-redeeming/lsr"),
     ],
   }),
   "xdai-gnosis": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_BATCH_AT, {
@@ -969,13 +910,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
     feeDescription: "USDD docs describe sUSDD withdrawals to USDD with no lock-up or protocol fee",
     docs: [
-      sourceRef("USDD sUSDD mechanism", "https://docs.usdd.io/susdd-mechanism", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("USDD sUSDD mechanism", "https://docs.usdd.io/susdd-mechanism"),
       sourceRef("USDD savings guide", "https://docs.usdd.io/user-guide/usdd-savings", ["route"]),
     ],
     notes: [
@@ -994,13 +929,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "Yuzu syzUSD ERC-4626 unwrap charges no exit fee: on-chain previewRedeem == convertToAssets (Plasma 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6), no fee selectors; downstream yzUSD primary redemption stays KYC-gated",
     docs: [
-      sourceRef("Yuzu syzUSD docs", "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/staked-yzusd-syzusd", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Yuzu syzUSD docs", "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/staked-yzusd-syzusd"),
       sourceRef("Yuzu yzUSD docs", "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/yuzu-stablecoin-yzusd", [
         "route",
         "access",
@@ -1019,13 +948,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     reviewedAt: REVIEWED_FXSAVE_LIVE_REDEMPTION_AT,
     docs: [
-      sourceRef("f(x) Stability Pool", "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("f(x) Stability Pool", "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"),
       sourceRef("Integrating fxSAVE", "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave", [
         "route",
         "fees",
@@ -1045,13 +968,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "Noon docs state Noon does not charge fees or other dApp charges; sUSN unstaking exits to USN subject to cooldown and gas.",
     docs: [
-      sourceRef("Noon USN and sUSN", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Noon USN and sUSN", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"),
       sourceRef(
         "Noon minting and redemption",
         "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption",
@@ -1076,17 +993,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Circle xReserve docs describe 1:1 USDCx burn/release against USDC; public materials reviewed do not publish a separate fixed redemption fee",
     ),
     docs: [
-      sourceRef("Circle xReserve", "https://www.circle.com/xreserve", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
+      sourceRefFull("Circle xReserve", "https://www.circle.com/xreserve"),
+      sourceRefRouteCapacityAccess(
         "Movement USDCx announcement",
         "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
-        ["route", "capacity", "access"],
       ),
     ],
     notes: [
@@ -1103,7 +1013,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         feeDescription:
           "Spark docs describe Savings vault tokens as fee-free ERC-4626 products; spUSDT withdrawals redeem for USDT at the live vault exchange rate.",
         docs: [
-          sourceRef("Spark docs", "https://docs.spark.fi/", ["route", "capacity", "fees", "access", "settlement"]),
+          sourceRefFull("Spark docs", "https://docs.spark.fi/"),
           sourceRef("Spark app", "https://spark.fi/", ["route"]),
         ],
         notes: [
@@ -1117,7 +1027,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         feeDescription:
           "Spark docs describe Savings vault tokens as fee-free ERC-4626 products; spUSDC withdrawals redeem for USDC at the live vault exchange rate.",
         docs: [
-          sourceRef("Spark docs", "https://docs.spark.fi/", ["route", "capacity", "fees", "access", "settlement"]),
+          sourceRefFull("Spark docs", "https://docs.spark.fi/"),
           sourceRef("Spark app", "https://spark.fi/", ["route"]),
         ],
         notes: [
@@ -1141,14 +1051,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "Yearn v3 vault withdrawals redeem yvUSDC-1 to USDC at the live vault exchange rate; Yearn reports performance fees on yield, not a separate withdrawal fee.",
     docs: [
-      sourceRef("Yearn v3 USDC vault", "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef("Yearn docs", "https://docs.yearn.fi/", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRefFull("Yearn v3 USDC vault", "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"),
+      sourceRefFull("Yearn docs", "https://docs.yearn.fi/"),
     ],
     notes: [
       "Fresh ERC-4626 reserve telemetry measures Yearn V3 default-queue withdrawable capacity from total idle USDC plus each funded strategy's maxRedeem(vault) value; if the live snapshot is unavailable, the route is left unrated instead of falling back to full NAV.",
@@ -1160,17 +1064,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "Aave sGHO previewRedeem returns the GHO amount received for redeeming sGHO shares; no separate sGHO redemption fee is documented.",
     docs: [
-      sourceRef("Aave sGHO guide", "https://aave.com/docs/aave-v3/guides/sgho", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
+      sourceRefFull("Aave sGHO guide", "https://aave.com/docs/aave-v3/guides/sgho"),
+      sourceRefRouteCapacityAccess(
         "Aave sGHO governance configuration",
         "https://governance.aave.com/t/arfc-sgho-launch-configuration/24346",
-        ["route", "capacity", "access"],
       ),
     ],
     notes: [
@@ -1184,17 +1081,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "Sky stUSDS implements ERC-4626 withdraw/redeem to USDS at the chi exchange rate; the published implementation does not apply a separate exit fee.",
     docs: [
-      sourceRef("Sky stUSDS docs", "https://developers.skyeco.com/protocol/tokens/stusds/", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef("Sky protocol token routes", "https://developers.sky.money/quick-start/protocol-token-routes/", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefFull("Sky stUSDS docs", "https://developers.skyeco.com/protocol/tokens/stusds/"),
+      sourceRefRouteCapacity("Sky protocol token routes", "https://developers.sky.money/quick-start/protocol-token-routes/"),
     ],
     notes: [
       "stUSDS is an ERC-4626 risk-capital wrapper over USDS: holders can deposit USDS to receive stUSDS or withdraw USDS with their stUSDS balance.",
@@ -1208,15 +1096,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "stcUSD unstakes to cUSD fee-free at the live vault exchange rate (only accrued-yield/lockedProfit NAV growth, no separate stcUSD wrapper fee); the 0.25% (0% whitelisted) fee is the downstream cUSD mint/burn/redeem leg, not the stcUSD step",
     docs: [
-      sourceRef("Cap stcUSD mechanics", "https://docs.cap.app/protocol-overview/stcusd-mechanics", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef("Cap cUSD mechanics", "https://docs.cap.app/protocol-overview/cusd-mechanics", ["route", "capacity"]),
-      sourceRef("Cap vault", "https://docs.cap.app/concepts/vault", ["route", "capacity", "fees"]),
+      sourceRefFull("Cap stcUSD mechanics", "https://docs.cap.app/protocol-overview/stcusd-mechanics"),
+      sourceRefRouteCapacity("Cap cUSD mechanics", "https://docs.cap.app/protocol-overview/cusd-mechanics"),
+      sourceRefRouteCapacityFees("Cap vault", "https://docs.cap.app/concepts/vault"),
     ],
     notes: [
       "Fresh ERC-4626 reserve telemetry reads the vault's idle cUSD balance as current direct wrapper capacity; final cUSD par exit inherits Cap's proportional reserve-basket redemption route.",
@@ -1233,15 +1115,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "K3 docs describe sBOLD entry fees only on deposit and mint; withdraw/redeem burns shares and returns BOLD at the vault exchange rate.",
     docs: [
-      sourceRef("K3 sBOLD introduction", "https://k3-capital.gitbook.io/sbold/introducing-sbold", [
-        "route",
-        "capacity",
-      ]),
-      sourceRef("K3 sBOLD technical details", "https://k3-capital.gitbook.io/sbold/technical-details", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefRouteCapacity("K3 sBOLD introduction", "https://k3-capital.gitbook.io/sbold/introducing-sbold"),
+      sourceRefRouteCapacityFees("K3 sBOLD technical details", "https://k3-capital.gitbook.io/sbold/technical-details"),
       sourceRef("K3 sBOLD interactions", "https://k3-capital.gitbook.io/sbold/technical-details/interactions", [
         "route",
         "capacity",
@@ -1261,23 +1136,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     feeDescription: "Yearn yBOLD docs state yBOLD is always redeemable for underlying BOLD without withdrawal fees or a waiting period.",
     docs: [
-      sourceRef("Yearn yBOLD vault", "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef("Yearn yBOLD docs", "https://docs.yearn.fi/getting-started/products/yvaults/yBold", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
-      sourceRef("Yearn yBOLD API", "https://ydaemon.yearn.fi/1/vaults/0x9f4330700a36b29952869fac9b33f45eedd8a3d8", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefFull("Yearn yBOLD vault", "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8"),
+      sourceRefRouteCapacityFees("Yearn yBOLD docs", "https://docs.yearn.fi/getting-started/products/yvaults/yBold"),
+      sourceRefRouteCapacityFees("Yearn yBOLD API", "https://ydaemon.yearn.fi/1/vaults/0x9f4330700a36b29952869fac9b33f45eedd8a3d8"),
     ],
     notes: [
       "yBOLD exits into BOLD through ERC-4626 withdrawal/redeem mechanics; downstream BOLD par exit remains Liquity's collateral-redemption route.",
@@ -1293,11 +1154,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "YieldFi yUSD token terms list no redemption fee other than network gas; requests still settle after the documented cooldown/keeper process.",
     docs: [
-      sourceRef("YieldFi yUSD token terms", "https://docs.yield.fi/legal-documents/token-terms/yusd", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefRouteCapacityFees("YieldFi yUSD token terms", "https://docs.yield.fi/legal-documents/token-terms/yusd"),
       sourceRef(
         "YieldFi smart contract interaction",
         "https://docs.yield.fi/technical-docs/smart-contract-interaction",
@@ -1320,13 +1177,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "sAID exits to AID through a monthly FIFO withdrawal cycle at unstaking NAV; verified source exposes no separate unstaking-fee deduction",
     docs: [
-      sourceRef("GAIB sAID docs", "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("GAIB sAID docs", "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"),
       sourceRef("GAIB AID docs", "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid", ["route", "access"]),
     ],
     notes: [
@@ -1346,11 +1197,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Zephyr's consensus RingCT verification deducts a fixed 0.1% conversion fee from the yield price on every REDEEM_YIELD conversion",
     ),
     docs: [
-      sourceRef("Zephyr integration documentation", "https://zephyrprotocol.com/documentation", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefRouteCapacityAccess("Zephyr integration documentation", "https://zephyrprotocol.com/documentation"),
       sourceRef(
         "Zephyr RingCT conversion-fee source (pinned)",
         "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/ringct/rctSigs.cpp",
@@ -1380,17 +1227,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Idle Perpetual Yield Tranches expose CDO tranche redemption mechanics; public materials reviewed do not publish one fixed senior-tranche redemption fee",
     ),
     docs: [
-      sourceRef("Idle Yield Tranches methods", "https://docs.idle.finance/developers/yield-tranches/methods", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
+      sourceRefFull("Idle Yield Tranches methods", "https://docs.idle.finance/developers/yield-tranches/methods"),
+      sourceRefRouteCapacityAccess(
         "Pareto credit vault addresses",
         "https://docs.pareto.credit/developers/addresses/product/credit-vaults",
-        ["route", "capacity", "access"],
       ),
     ],
     notes: [
@@ -1406,13 +1246,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     routeExitCorrelation: "wrapper-to-parent-dependency",
     docs: [
-      sourceRef("Blast developer docs", "https://docs.blast.io/", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Blast developer docs", "https://docs.blast.io/"),
     ],
     notes: [
       "Models the canonical Blast bridge exit from USDB to Ethereum DAI, not secondary-market USDB liquidity on Blast.",
@@ -1449,13 +1283,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["usdc-circle"],
     costModel: fixedFee(100, "PicWe docs describe a 1% WEUSD redemption fee"),
     docs: [
-      sourceRef("PicWe WEUSD", "https://docs.picwe.org/what-is-weusd", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("PicWe WEUSD", "https://docs.picwe.org/what-is-weusd"),
       sourceRef("PicWe mint and redeem", "https://docs.picwe.org/mint-and-redeem", ["route", "fees"]),
     ],
   }),
@@ -1466,22 +1294,15 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     feeDescription:
       "Auto Finance autopools redeem/withdraw burns autoUSD shares for USDC without a separate exit-fee deduction; streaming and periodic fees are NAV/accounting fees",
     docs: [
-      sourceRef("Auto Finance autopools overview", "https://docs.auto.finance/auto-pools-protocol/autopools-tl-dr.md", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Auto Finance autopools overview", "https://docs.auto.finance/auto-pools-protocol/autopools-tl-dr.md"),
       sourceRef(
         "Auto Finance protocol mechanics",
         "https://docs.auto.finance/auto-pools-protocol/protocol-mechanics.md",
         ["route", "capacity", "access", "settlement"],
       ),
-      sourceRef(
+      sourceRefRouteCapacityAccess(
         "Auto Finance contract addresses",
         "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses",
-        ["route", "capacity", "access"],
       ),
     ],
     notes: [
@@ -1497,19 +1318,12 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "On-chain ERC-4626 check on the eEARN contract (Ethereum 0x9be9...cafa2) shows previewRedeem equals convertToAssets, so no exit/withdrawal fee is currently skimmed; the fee is admin-configurable and presently zero",
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     docs: [
-      sourceRef("Ember Earn", "https://trade.bluefin.io/ember/eEARN", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
+      sourceRefFull("Ember Earn", "https://trade.bluefin.io/ember/eEARN"),
+      sourceRefRouteCapacityAccess(
         "Ethereum eEARN contract",
         "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract",
-        ["route", "capacity", "access"],
       ),
-      sourceRef("Royco Dawn eEARN market", "https://dawn.royco.org/", ["route", "capacity"]),
+      sourceRefRouteCapacity("Royco Dawn eEARN market", "https://dawn.royco.org/"),
     ],
     notes: [
       "The holder path submits a request to an operator-processed queue. The reviewed route therefore publishes queued settlement; no positive capacity is eligible for the shared 300-second horizon without a bounded completion path.",
@@ -1548,13 +1362,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: fixedFee(0, "JuiceDollar's bridge documentation describes fee-free 1:1 burns into the source stablecoin"),
     routeExitCorrelation: "same-stablecoin-pool-backing",
     docs: [
-      sourceRef("JuiceDollar stablecoin bridges", "https://docs.juicedollar.com/swap", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("JuiceDollar stablecoin bridges", "https://docs.juicedollar.com/swap"),
       sourceRef("JuiceDollar smart-contract registry", "https://docs.juicedollar.com/smart-contracts", [
         "route",
         "access",
@@ -1570,7 +1378,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "access",
         "settlement",
       ]),
-      sourceRef("CitreaScan mainnet explorer", "https://citreascan.com", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("CitreaScan mainnet explorer", "https://citreascan.com"),
       sourceRef("Citrea mainnet RPC", "https://rpc.mainnet.citrea.xyz", ["capacity", "route"]),
     ],
     notes: [

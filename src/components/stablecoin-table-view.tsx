@@ -7,8 +7,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   TableBody,
   TableCaption,
+  TableFrame,
   TableSkeletonRows,
-  VirtualTableFrame,
   type TableSkeletonColumn,
 } from "@/components/table";
 import { TableBackgroundRefreshingBar } from "@/components/data-table-shell";
@@ -121,8 +121,9 @@ function StablecoinTableFrame({
   const isOverview = variant === "figmaOverview";
 
   return (
-    <VirtualTableFrame
+    <TableFrame
       {...STABLECOIN_FRAME_SHARED}
+      viewportDefaults="virtual"
       surfaceRef={surfaceRef}
       className={STABLECOIN_FRAME_CLASS_NAMES[mode][variant]}
       density={density}
@@ -135,7 +136,7 @@ function StablecoinTableFrame({
       footerSlot={footerSlot}
     >
       {children}
-    </VirtualTableFrame>
+    </TableFrame>
   );
 }
 

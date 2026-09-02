@@ -210,6 +210,38 @@ export interface TelegramMutationOperations {
   wasMutationApplied: boolean;
 }
 
+export type TelegramMutationContext = Partial<Pick<
+  TelegramMutationOperations,
+  | "beforeIrreversibleEffect"
+  | "planIntent"
+  | "prepareMutationAppliedStatement"
+  | "confirmAtomicMutationApplied"
+  | "storedIntent"
+  | "wasMutationApplied"
+>>;
+
+export type TelegramPendingWriteContext = TelegramMutationContext & Partial<Pick<
+  TelegramMutationOperations,
+  "preparePendingMutationAppliedStatement" | "markMutationApplied"
+>>;
+
+export type TelegramCommandMutationContext = TelegramPendingWriteContext & Partial<Pick<
+  TelegramMutationOperations,
+  "prepareMutationOperationStatements"
+>>;
+
+export type TelegramCallbackMutationContext = Pick<
+  TelegramMutationOperations,
+  "beforeIrreversibleEffect" | "markMutationApplied"
+> & Partial<Pick<
+  TelegramMutationOperations,
+  | "planIntent"
+  | "prepareMutationAppliedStatement"
+  | "confirmAtomicMutationApplied"
+  | "storedIntent"
+  | "wasMutationApplied"
+>>;
+
 export interface BuildMutationOperationsOptions {
   /** Crosses the at-most-once boundary; owned by the request, not the fence. */
   beforeIrreversibleEffect: (kind: string) => Promise<void>;

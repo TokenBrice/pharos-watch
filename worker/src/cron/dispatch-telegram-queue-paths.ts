@@ -2,13 +2,9 @@ import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cac
 import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
-import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 import {
-  emptyResult,
-  pendingDispatchFields,
+  buildDispatchResult,
   pendingTailState,
-  reserveSourceFields,
-  safetySourceFields,
   type DispatchResult,
 } from "./dispatch-telegram-result";
 import {
@@ -105,17 +101,13 @@ export async function executeCircuitOpenQueuePath({
   });
   const { drainResult, expiredCount, pendingCapacityAfter } = lifecycle;
 
-  const base = emptyResult(false);
   const result: DispatchResult & { skipped: "circuit-open" } = {
-    ...base,
+    ...buildDispatchResult({
+      snapshotSeeded: false,
+      pendingLifecycle: { drainResult, expiredCount },
+      capacity: { before: pendingCapacityBefore, after: pendingCapacityAfter },
+    }),
     skipped: "circuit-open",
-    messagesSent: drainResult.sent,
-    blockedUsersCleanedUp: drainResult.blockedCleanedUp,
-    blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
-    ...pendingDispatchFields(drainResult, { expiredCount }),
-    ...pendingCapacityFields(pendingCapacityAfter),
-    pendingCapacityBefore,
-    pendingCapacityAfter,
   };
 
   await lifecycle.recordDrainOutcome();
@@ -182,27 +174,19 @@ export async function executeEventlessFastPath({
   await writeSnapshots(db, currentSnapshots);
   await writePresetFailureCount(db, 0);
 
-  const base = emptyResult(false, chatsWithActiveSnooze);
-  const result: DispatchResult = {
-    ...base,
-    eventsDetected: { ...base.eventsDetected, suppressedMethodologyChanges },
-    messagesSent: drainResult.sent,
-    blockedUsersCleanedUp: drainResult.blockedCleanedUp,
-    blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
-    ...pendingDispatchFields(drainResult, { expiredCount }),
-    reserveSourceUnavailable,
-    ...reserveSourceFields(reserveSourceAssessment),
-    ...pendingCapacityFields(pendingCapacityAfter),
-    pendingCapacityBefore,
-    pendingCapacityAfter,
+  const result = buildDispatchResult({
+    snapshotSeeded: false,
     chatsWithActiveSnooze,
-    ...safetySourceFields(
-      safetySourceAssessment,
-      safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
-    ),
-    suppressedSafetyChangesAtSeed,
-    eventlessFastPath: true,
-  };
+    eventOverrides: { suppressedMethodologyChanges },
+    pendingLifecycle: { drainResult, expiredCount },
+    capacity: { before: pendingCapacityBefore, after: pendingCapacityAfter },
+    reserve: { assessment: reserveSourceAssessment, unavailable: reserveSourceUnavailable },
+    safety: {
+      assessment: safetySourceAssessment,
+      suppressed: safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
+    },
+    overrides: { suppressedSafetyChangesAtSeed, eventlessFastPath: true },
+  });
 
   await lifecycle.recordDrainOutcome();
   await reportCronProgress(reportProgress, {
@@ -256,18 +240,19 @@ export async function executeSourceRecoveryQueueSidecar(args: {
   });
   const { drainResult, expiredCount, pendingCapacityAfter } = lifecycle;
   await lifecycle.recordDrainOutcome();
-  return {
-    ...emptyResult(false, args.chatsWithActiveSnooze),
-    messagesSent: drainResult.sent,
-    subscribersNotified: drainResult.acceptedChats,
-    blockedUsersCleanedUp: drainResult.blockedCleanedUp,
-    blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
-    ...pendingDispatchFields(drainResult, { expiredCount }),
-    ...pendingCapacityFields(pendingCapacityAfter),
-    pendingCapacityBefore: args.pendingCapacityBefore,
-    pendingCapacityAfter,
-    reserveSourceUnavailable: args.reserveSourceUnavailable,
-    ...reserveSourceFields(args.reserveSourceAssessment),
-    ...safetySourceFields(args.safetySourceAssessment, args.safetySourceAssessment.state !== "ok"),
-  };
+  return buildDispatchResult({
+    snapshotSeeded: false,
+    chatsWithActiveSnooze: args.chatsWithActiveSnooze,
+    pendingLifecycle: { drainResult, expiredCount },
+    capacity: { before: args.pendingCapacityBefore, after: pendingCapacityAfter },
+    reserve: {
+      assessment: args.reserveSourceAssessment,
+      unavailable: args.reserveSourceUnavailable,
+    },
+    safety: {
+      assessment: args.safetySourceAssessment,
+      suppressed: args.safetySourceAssessment.state !== "ok",
+    },
+    overrides: { subscribersNotified: drainResult.acceptedChats },
+  });
 }

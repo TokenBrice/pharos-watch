@@ -7,6 +7,10 @@ import {
   fixedFee,
   issuerBase,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
+  sourceRefRouteCapacityFees,
 } from "../shared";
 import {
   reviewedDirectRedemptionSupplyFull,
@@ -22,7 +26,7 @@ const vnxGitbookBase: RedemptionBackstopConfig = {
     "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
   ),
   docs: [
-    sourceRef("VNX docs", "https://vnx.gitbook.io/vnx-platform/", ["route", "capacity"]),
+    sourceRefRouteCapacity("VNX docs", "https://vnx.gitbook.io/vnx-platform/"),
     sourceRef("VNX website", "https://vnx.li/", ["route"]),
   ],
 };
@@ -33,7 +37,7 @@ const allunityBase: RedemptionBackstopConfig = {
   ...reviewedDirectRedemptionSupplyFull,
   costModel: undisclosedReviewedFee("Direct 1:1 redemption through AllUnity; public fee schedule not disclosed"),
   docs: [
-    sourceRef("AllUnity whitepaper", "https://allunity.com/whitepaper/", ["route", "capacity"]),
+    sourceRefRouteCapacity("AllUnity whitepaper", "https://allunity.com/whitepaper/"),
     sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
   ],
 };
@@ -46,7 +50,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "Direct 1:1 redemption for CAD through Loon / PayTrie; public fee schedule not disclosed",
     ),
     docs: [
-      sourceRef("CADC FAQ", "https://faq.paytrie.com/col/cadc-faqs", ["route", "capacity"]),
+      sourceRefRouteCapacity("CADC FAQ", "https://faq.paytrie.com/col/cadc-faqs"),
       sourceRef("Loon website", "https://loon.finance/", ["route"]),
     ],
   },
@@ -57,7 +61,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: undisclosedReviewedFee(
       "Direct 1:1 issuance and redemption through BiLira; public fee schedule not disclosed",
     ),
-    docs: [sourceRef("BiLira TRYB page", "https://www.bilira.co/en/product/tryb-stablecoin", ["route", "capacity"])],
+    docs: [sourceRefRouteCapacity("BiLira TRYB page", "https://www.bilira.co/en/product/tryb-stablecoin")],
   },
   "tgbp-tokenised": {
     ...issuerBase,
@@ -100,9 +104,9 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       rationale:
         "AnchorX establishes a direct CNH redemption mechanism, but reviewed public materials do not establish executable capacity, bank-credit settlement timing, or all-in redemption cost.",
       reviewedAt: "2026-08-24",
-      docs: [sourceRef("AnchorX website", "https://www.anchorx.org/", ["route", "capacity"])],
+      docs: [sourceRefRouteCapacity("AnchorX website", "https://www.anchorx.org/")],
     },
-    docs: [sourceRef("AnchorX website", "https://www.anchorx.org/", ["route", "capacity"])],
+    docs: [sourceRefRouteCapacity("AnchorX website", "https://www.anchorx.org/")],
   },
   "idrt-rupiah-token": {
     ...issuerBase,
@@ -110,7 +114,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: undisclosedReviewedFee(
       "Direct 1:1 issuance and redemption through PT Rupiah Token Indonesia after KYC; public fee schedule not disclosed",
     ),
-    docs: [sourceRef("Rupiah Token website", "https://www.rupiahtoken.com/", ["route", "capacity"])],
+    docs: [sourceRefRouteCapacity("Rupiah Token website", "https://www.rupiahtoken.com/")],
   },
   "idrx-idrx": {
     ...issuerBase,
@@ -149,18 +153,16 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "Juno documents quote-specific MXNB conversion limits, but no dated public terms establish the scored notional's executable limit, settlement SLA, or conversion cost.",
       reviewedAt: "2026-08-24",
       docs: [
-        sourceRef(
+        sourceRefRouteCapacityFees(
           "Juno MXNB and USD stablecoin conversions",
           "https://docs.bitso.com/juno/docs/conversions-between-mxnb-and-usd-stablecoins",
-          ["route", "capacity", "fees"],
         ),
       ],
     },
     docs: [
-      sourceRef(
+      sourceRefRouteCapacityFees(
         "Juno MXNB and USD stablecoin conversions",
         "https://docs.bitso.com/juno/docs/conversions-between-mxnb-and-usd-stablecoins",
-        ["route", "capacity", "fees"],
       ),
       sourceRef("MXNB transparency", "https://mxnb.mx/transparency", ["capacity"]),
     ],
@@ -179,10 +181,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       feeBpsMax: 0,
     },
     docs: [
-      sourceRef("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacity("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"),
       sourceRef("EUROP white paper v1.7", "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf", ["fees"]),
       sourceRef("Schuman reserve audits", "https://schuman.io/reserve-audits/", ["capacity"]),
     ],
@@ -208,12 +207,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       feeBpsMax: 85,
     },
     docs: [
-      sourceRef("CASH overview", "https://www.usecash.xyz/", ["route", "capacity"]),
-      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefRouteCapacity("CASH overview", "https://www.usecash.xyz/"),
+      sourceRefRouteCapacityFees("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq"),
       sourceRef("Phantom Cash fees", "https://help.phantom.com/hc/en-us/articles/44800531617939-Cash-fees", ["fees"]),
     ],
   },
@@ -240,7 +235,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       ],
     },
     docs: [
-      sourceRef("SBC stablecoin page", "https://brale.xyz/stablecoins/SBC", ["route", "capacity"]),
+      sourceRefRouteCapacity("SBC stablecoin page", "https://brale.xyz/stablecoins/SBC"),
       sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
     ],
   },
@@ -266,7 +261,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "M0 docs describe $M as fully backed and redeemable 1:1, but direct mint and redemption access is restricted to permissioned minters and no public fee schedule is disclosed",
     ),
     docs: [
-      sourceRef("M0 FAQ", "https://www.m0.org/faq", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("M0 FAQ", "https://www.m0.org/faq"),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
     ],
     notes: [
@@ -281,11 +276,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "Eligible FinChain customers mint and redeem FUSD through the issuer against a tokenized Treasury and money-market fund reserve portfolio; public docs reviewed do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("FUSD introduction", "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefRouteCapacityAccess("FUSD introduction", "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"),
       sourceRef("FUSD reserves", "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves", [
         "capacity",
         "settlement",
@@ -305,12 +296,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "MetaMask USD is issued 1:1 by Bridge on top of M0 reserve infrastructure; public redemption fees are not disclosed",
     ),
     docs: [
-      sourceRef("MetaMask USD introduction", "https://musd.to/blog", ["route", "capacity"]),
-      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefRouteCapacity("MetaMask USD introduction", "https://musd.to/blog"),
+      sourceRefRouteCapacityFees("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq"),
       sourceRef("M0 FAQ", "https://www.m0.org/faq", ["capacity", "access"]),
     ],
     notes: [
@@ -385,8 +372,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     },
     reviewedAt: "2026-05-17",
     docs: [
-      sourceRef("Ondo USDY", "https://ondo.finance/usdy", ["route", "capacity"]),
-      sourceRef("Ondo docs", "https://docs.ondo.finance/", ["route", "capacity"]),
+      sourceRefRouteCapacity("Ondo USDY", "https://ondo.finance/usdy"),
+      sourceRefRouteCapacity("Ondo docs", "https://docs.ondo.finance/"),
       sourceRef(
         "Ondo USDY STEP application",
         "https://forum.arbitrum.foundation/t/ondo-finance-usdy-llc-step-application/23593",
@@ -422,7 +409,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
           `Ondo Global Markets subscriptions and redemptions follow the tokenized ${underlyingTicker} economic exposure for eligible investors; public materials reviewed do not publish one fixed redemption fee`,
         ),
         docs: [
-          sourceRef(`${label} asset page`, `https://app.ondo.finance/assets/${slug}`, ["route", "capacity"]),
+          sourceRefRouteCapacity(`${label} asset page`, `https://app.ondo.finance/assets/${slug}`),
           sourceRef("Ondo Global Markets overview", "https://docs.ondo.finance/ondo-global-markets/overview", [
             "route",
             "access",
@@ -471,10 +458,9 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "NAV-based valuation; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
     ),
     docs: [
-      sourceRef(
+      sourceRefRouteCapacity(
         "Multipli unwind and peg module",
         "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module",
-        ["route", "capacity"],
       ),
       sourceRef(
         "Multipli issuer, custody & operational risk",
@@ -501,12 +487,12 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       reviewedAt: "2026-08-24",
       docs: [
         sourceRef("NASD terms", "https://dollar.noble.xyz/terms-of-use", ["route", "access"]),
-        sourceRef("Noble USDN launch", "https://noble.xyz/blog/introducing-usdn", ["route", "capacity"]),
+        sourceRefRouteCapacity("Noble USDN launch", "https://noble.xyz/blog/introducing-usdn"),
       ],
     },
     docs: [
-      sourceRef("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/", ["route", "capacity"]),
-      sourceRef("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/", ["route", "capacity"]),
+      sourceRefRouteCapacity("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/"),
+      sourceRefRouteCapacity("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/"),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
     ],
     notes: [
@@ -521,14 +507,10 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "Direct redemption is available through Anchored Coins AG for amounts of at least AEUR 250,000; public fee schedule not disclosed",
     ),
     docs: [
-      sourceRef("Anchored Coins AEUR redemption", "https://www.anchoredcoins.com/en/landing/aeur", [
-        "route",
-        "capacity",
-      ]),
-      sourceRef(
+      sourceRefRouteCapacity("Anchored Coins AEUR redemption", "https://www.anchoredcoins.com/en/landing/aeur"),
+      sourceRefRouteCapacity(
         "Anchored Coins white paper",
         "https://static.anchoredcoins.com/static/cloud/anchoredcoins/static/images/admin_mgs_image_upload/whitepaper_for_launch.pdf",
-        ["route", "capacity"],
       ),
     ],
     notes: [
@@ -543,11 +525,10 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "Redeemable 1:1 in EUR directly with SG-FORGE; public fee schedule not disclosed",
     ),
     docs: [
-      sourceRef("SG-FORGE CoinVertible", "https://www.sgforge.com/product/coinvertible/", ["route", "capacity"]),
-      sourceRef(
+      sourceRefRouteCapacity("SG-FORGE CoinVertible", "https://www.sgforge.com/product/coinvertible/"),
+      sourceRefRouteCapacity(
         "EURCV white paper",
         "https://www.sgforge.com/wp-content/uploads/2025/06/EURCV-White-Paper_iXBRL-2.html",
-        ["route", "capacity"],
       ),
     ],
     notes: ["White paper describes issuer-side redemption subject to KYC/AML and permitted-transferee checks"],
@@ -557,7 +538,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Monerium currently states minting and burning EURe are free of charge"),
     docs: [
-      sourceRef("EURe MiCA white paper", "https://monerium.com/whitepapers/eure-whitepaper/", ["route", "capacity"]),
+      sourceRefRouteCapacity("EURe MiCA white paper", "https://monerium.com/whitepapers/eure-whitepaper/"),
       sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
     ],
   },
@@ -566,8 +547,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "StablR docs state qualified businesses can onramp and offramp EURR at no additional cost"),
     docs: [
-      sourceRef("What is EURR", "https://docs.stablr.com/docs/what-is-eurr", ["route", "capacity", "fees"]),
-      sourceRef("StablR overview", "https://docs.stablr.com/docs/overview", ["route", "capacity"]),
+      sourceRefRouteCapacityFees("What is EURR", "https://docs.stablr.com/docs/what-is-eurr"),
+      sourceRefRouteCapacity("StablR overview", "https://docs.stablr.com/docs/overview"),
     ],
   },
   "emxn-telcoin": {
@@ -586,13 +567,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     routeExitCorrelation: "independent-issuer-rail",
     docs: [
       sourceRef("Telcoin Digital Cash", "https://www.telco.in/en/digital-cash", ["route", "access", "capacity"]),
-      sourceRef("Telcoin eXYZ Terms of Use", "https://www.telco.in/en/terms-of-use", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Telcoin eXYZ Terms of Use", "https://www.telco.in/en/terms-of-use"),
       sourceRef("Telcoin eXYZ Terms, redemption policy", "https://www.telco.in/index.html/terms-of-use", [
         "route",
         "fees",
@@ -664,7 +639,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     reviewedAt: "2026-08-13",
     docs: [
       sourceRef("HeLa HLUSD documentation", "https://docs.helalabs.com/hlusd/editor", ["route", "access"]),
-      sourceRef("HeLa HLUSD benefits", "https://docs.helalabs.com/hlusd/markdown", ["route", "capacity"]),
+      sourceRefRouteCapacity("HeLa HLUSD benefits", "https://docs.helalabs.com/hlusd/markdown"),
       sourceRef("StableHodl HLUSD trading guide", "https://docs.stablehodl.com/product/trade-hlusd", [
         "route",
         "fees",

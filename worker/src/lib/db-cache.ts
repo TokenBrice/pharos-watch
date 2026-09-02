@@ -1,6 +1,6 @@
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { throwIfAborted } from "./abort";
-import { D1_BATCH_SIZE } from "./constants";
+import { batchExecute, buildInClause } from "./d1-primitives";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {
   getFreshnessSentinelCacheKey,
@@ -37,19 +37,7 @@ function buildCacheInClause(values: readonly unknown[]): { sql: string; binds: u
   if (values.length === 0 || values.length > 100) {
     throw new RangeError(`cache IN clause requires 1-100 values (received ${values.length})`);
   }
-  return { sql: new Array(values.length).fill("?").join(","), binds: [...values] };
-}
-
-async function executeCacheBatches(
-  db: D1Database,
-  statements: readonly D1PreparedStatement[],
-  signal?: AbortSignal,
-): Promise<void> {
-  for (let index = 0; index < statements.length; index += D1_BATCH_SIZE) {
-    throwIfAborted(signal);
-    await runWithOverloadRetry(() => db.batch(statements.slice(index, index + D1_BATCH_SIZE)), 3, signal);
-  }
-  throwIfAborted(signal);
+  return buildInClause(values);
 }
 
 export async function getCache(
@@ -154,7 +142,7 @@ export async function setCachesAt(
 ): Promise<void> {
   throwIfAborted(signal);
   if (entries.length === 0) return;
-  await executeCacheBatches(db, entries.map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt }, mode)), signal);
+  await batchExecute(db, entries.map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt }, mode)), { signal });
 }
 
 async function setCacheAt(
@@ -379,5 +367,5 @@ export async function savePriceCache(db: D1Database, entries: PriceCacheWriteEnt
         JSON.stringify(e.consensusSources ?? []),
       ),
   );
-  await executeCacheBatches(db, stmts);
+  await batchExecute(db, stmts);
 }

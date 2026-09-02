@@ -8,9 +8,9 @@ import {
   buildContentSecurityPolicy,
   createCspNonce,
 } from "@shared/lib/site-csp";
+import { cloneResponseWithPolicy } from "@shared/lib/response-policy";
 import { NOINDEX_HEADER_VALUE } from "./noindex";
 import { isHtmlResponse } from "./proxy-utils";
-import { cloneResponseWithPolicy } from "./response-policy";
 
 export interface InjectHtmlCspOptions {
   method: string;

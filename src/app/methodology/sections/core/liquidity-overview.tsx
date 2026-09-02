@@ -1,4 +1,4 @@
-import { MethodologyFacts } from "../../methodology-shared";
+import { MethodologyFacts, MethodologyPreconditions } from "../../methodology-shared";
 
 export function LiquidityOverview() {
   return (
@@ -26,26 +26,23 @@ export function LiquidityPreconditions() {
           { label: "Output", value: "0-100 DEX depth score" },
         ]}
       />
-      <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-        <MethodologyFacts
-          facts={[
-            {
-              label: "Minimum data",
-              value: "No hard minimum in scorer; missing stability history defaults to neutral 50 sub-scores",
-            },
-            {
-              label: "Required sources",
-              value: "Pool TVL/volume/chain data plus mechanism and pair-quality metadata",
-            },
-            {
-              label: "Failure behavior",
-              value:
-                "Standalone DEX rows can be unavailable. In V9 Exit, missing or unsupported comparable-route evidence receives the bounded floor and exit-unverified ceiling; a reviewed-complete portfolio with no viable route scores Exit 0, except that an open route with an unproven settlement bound takes the bounded floor and exit-unverified ceiling.",
-            },
-          ]}
-        />
-      </div>
+      <MethodologyPreconditions
+        facts={[
+          {
+            label: "Minimum data",
+            value: "No hard minimum in scorer; missing stability history defaults to neutral 50 sub-scores",
+          },
+          {
+            label: "Required sources",
+            value: "Pool TVL/volume/chain data plus mechanism and pair-quality metadata",
+          },
+          {
+            label: "Failure behavior",
+            value:
+              "Standalone DEX rows can be unavailable. In V9 Exit, missing or unsupported comparable-route evidence receives the bounded floor and exit-unverified ceiling; a reviewed-complete portfolio with no viable route scores Exit 0, except that an open route with an unproven settlement bound takes the bounded floor and exit-unverified ceiling.",
+          },
+        ]}
+      />
     </>
   );
 }

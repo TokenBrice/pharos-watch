@@ -6,8 +6,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
   fetchJsonWithRetry: fetchJsonWithRetryMock,
 }));
 
-import { fetchSubgraphEntities } from "../subgraph-helpers";
-import { mergeDexPriceObservationMap } from "../orchestrator-phases/price-obs";
+import { fetchSubgraphEntities, mergeDexPriceObservationMap } from "../subgraph-helpers";
 
 describe("subgraph helpers", () => {
   beforeEach(() => {

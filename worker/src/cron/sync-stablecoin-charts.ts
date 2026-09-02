@@ -8,15 +8,9 @@ import { chunkArray } from "../lib/collections";
 import { normalizeStablecoinChartDateSeconds } from "../lib/stablecoin-charts-payload";
 import { mergeStructuralSupplementalHistoryIntoCharts, STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../lib/stablecoin-charts-reconciliation";
 import { throwIfAborted } from "../lib/abort";
-import {
-  appendCadenceResultMetadata,
-  cadenceBucketFor,
-  claimCadenceBucket,
-  completeCadenceBucket,
-  failCadenceBucket,
-} from "../lib/cadence-bucket";
+import { runCadenceBucketPublication } from "../lib/cadence-bucket";
 import { logWorkerEvent } from "../lib/structured-log";
-import { parseJson, parseJsonObject } from "../lib/json-parse";
+import { parseJson } from "../lib/json-parse";
 
 // D1 caps bound parameters per query at 100; keep headroom for non-IN binds.
 const SUPPLEMENTAL_HISTORY_IN_CHUNK_SIZE = 90;
@@ -105,60 +99,17 @@ export async function syncStablecoinCharts(
   throwIfAborted(signal);
   const syncStartSec = Math.floor(Date.now() / 1000);
   const scheduledAtSec = options.scheduledAtSec ?? syncStartSec;
-  const bucket = cadenceBucketFor(scheduledAtSec, CHART_CADENCE_SEC);
-  const claimResult = await claimCadenceBucket(db, {
+  return runCadenceBucketPublication(db, {
     key: CHART_CADENCE_KEY,
-    bucket,
-    nowSec: syncStartSec,
+    cadenceSec: CHART_CADENCE_SEC,
     staleClaimAfterSec: CHART_STALE_CLAIM_SEC,
+    scheduledAtSec,
+    startedAtSec: syncStartSec,
+    job: "sync-stablecoin-charts",
+    releaseFailureEvent: "sync_stablecoin_charts.cadence_claim_release_failed",
+    releaseFailureMessage: "Failed to release chart cadence claim after publication failure",
+    publication: () => runStablecoinChartsPublication(db, syncStartSec, signal),
   });
-  if (claimResult.kind === "skip") {
-    return {
-      itemCount: 0,
-      metadata: JSON.stringify({
-        reason: claimResult.reason === "already-completed"
-          ? "cadence_bucket_completed"
-          : "cadence_bucket_in_progress",
-        cadence: {
-          bucket,
-          observedBucket: claimResult.bucket,
-          cadenceSec: CHART_CADENCE_SEC,
-        },
-      }),
-    };
-  }
-
-  try {
-    const result = await runStablecoinChartsPublication(db, syncStartSec, signal);
-    const resultMetadata = parseJsonObject(result.metadata) ?? {};
-    if (resultMetadata.lastWriteAdvanced !== true) {
-      await failCadenceBucket(db, claimResult.claim);
-      return appendCadenceResultMetadata(
-        { ...result, status: "degraded" },
-        { bucket, cadenceSec: CHART_CADENCE_SEC, completed: false, retryable: true },
-      );
-    }
-    const completed = await completeCadenceBucket(db, claimResult.claim);
-    return appendCadenceResultMetadata(
-      completed ? result : { ...result, status: "degraded" },
-      { bucket, cadenceSec: CHART_CADENCE_SEC, completed, retryable: !completed },
-    );
-  } catch (error) {
-    try {
-      await failCadenceBucket(db, claimResult.claim);
-    } catch (transitionError) {
-      logWorkerEvent({
-        scope: "lib",
-        level: "warn",
-        event: "sync_stablecoin_charts.cadence_claim_release_failed",
-        job: "sync-stablecoin-charts",
-        message: "Failed to release chart cadence claim after publication failure",
-        error: transitionError,
-        metadata: { bucket },
-      });
-    }
-    throw error;
-  }
 }
 
 async function runStablecoinChartsPublication(

@@ -15,14 +15,16 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import type { DexMeasuredQuoteOutcome } from "./persistence";
 import type { DexMeasuredRawQuotePoint } from "./profiles";
-import { isDexMeasuredExecutionDeploymentScoreEligible, type DexMeasuredExecutionDeployment } from "./registry";
+import {
+  getDexMeasuredExecutionDeployment,
+  isDexMeasuredExecutionDeploymentScoreEligible,
+  type DexMeasuredExecutionDeployment,
+} from "./registry";
 import { getCurveCryptoSwapShadowPolicy, type CurveCryptoSwapPoolPolicy } from "./curve-cryptoswap";
 import { CURVE_STABLESWAP_ADAPTER_PROFILE_ID, getCurveStableSwapPolicy, type CurveStableSwapPoolPolicy } from "./curve-stableswap";
 import { getCurveStableSwapNgPolicy, type CurveStableSwapNgPoolPolicy } from "./curve-stableswap-ng";
 import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "./curve-composite";
-import { type UniswapV4Deployment } from "./uniswap-v4";
-import { resolveQuoterV2AdapterDeployment } from "./adapters/quoter-v2";
-import { resolveUniswapV4AdapterDeployment } from "./adapters/uniswap-v4";
+import { getUniswapV4Deployment, type UniswapV4Deployment } from "./uniswap-v4";
 
 export const MEASURED_EXECUTION_RPC_REQUEST_LIMIT = 1_300;
 const RPC_ADMISSION_FRAGMENTATION_HEADROOM = 80;
@@ -63,7 +65,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
   const registration = getDexExecutionCapabilityRegistration(target.adapterProfileId);
   if (!registration) return null;
   if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4) {
-    const deployment = resolveUniswapV4AdapterDeployment(target);
+    const deployment = getUniswapV4Deployment(target.chain);
     return deployment ? { kind: "uniswap-v4", config: deployment } : null;
   }
   if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.curveCryptoSwap) {
@@ -103,7 +105,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
       : null;
   }
   const deployment = registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2
-    ? resolveQuoterV2AdapterDeployment(target)
+    ? getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain)
     : null;
   return deployment ? { kind: "quoter-v2", config: deployment } : null;
 }

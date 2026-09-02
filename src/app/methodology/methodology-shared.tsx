@@ -130,6 +130,34 @@ export function MethodologyFacts({ facts }: { facts: Array<{ label: string; valu
   );
 }
 
+export function MethodologyPreconditions({ facts, variant = "normal" }: {
+  facts: Array<{ label: string; value: string }>;
+  variant?: "normal" | "compact";
+}) {
+  if (variant === "compact") {
+    return (
+      <div className="rounded-lg border border-border/60 bg-muted/20 p-4 space-y-2">
+        <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs">
+          {facts.map((fact) => (
+            <Fragment key={fact.label}>
+              <dt className="text-foreground font-medium">{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
+      <MethodologyFacts facts={facts} />
+    </div>
+  );
+}
+
 export function WorkedExample({ children, summary }: { children: ReactNode; summary: string }) {
   return (
     <details data-methodology-worked-example="true" className="rounded-xl border border-border/60 bg-background/80">
@@ -141,25 +169,34 @@ export function WorkedExample({ children, summary }: { children: ReactNode; summ
   );
 }
 
+type MethodologyPipelineCardClasses = readonly [card: string, title: string, subtitle?: string];
+
+export type MethodologyDiagramCardProps = {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  className?: string;
+  titleClassName?: string;
+  subtitleClassName?: string;
+  footer?: { className: string; content: ReactNode };
+  exactClassNames?: MethodologyPipelineCardClasses;
+};
+
 export function MethodologyDiagramCard({
   title,
   subtitle,
   className,
   titleClassName,
   subtitleClassName,
-}: {
-  title: ReactNode;
-  subtitle?: ReactNode;
-  className?: string;
-  titleClassName?: string;
-  subtitleClassName?: string;
-}) {
+  footer,
+  exactClassNames,
+}: MethodologyDiagramCardProps) {
   return (
-    <div className={cn("rounded-lg border p-3 text-center", className)}>
-      <p className={cn("text-foreground font-medium", titleClassName)}>{title}</p>
+    <div className={exactClassNames?.[0] ?? cn("rounded-lg border p-3 text-center", className)}>
+      <p className={exactClassNames?.[1] ?? cn("text-foreground font-medium", titleClassName)}>{title}</p>
       {subtitle ? (
-        <p className={cn("mt-0.5 text-xs text-muted-foreground", subtitleClassName)}>{subtitle}</p>
+        <p className={exactClassNames?.[2] ?? cn("mt-0.5 text-xs text-muted-foreground", subtitleClassName)}>{subtitle}</p>
       ) : null}
+      {footer ? <p className={footer.className}>{footer.content}</p> : null}
     </div>
   );
 }
@@ -180,6 +217,59 @@ export function MethodologyDiagramArrow({
     >
       {direction === "right" ? "\u2192" : "\u2193"}
     </div>
+  );
+}
+
+export type ResponsiveMethodologyPipelineCard = MethodologyDiagramCardProps;
+
+export type ResponsiveMethodologyPipelineStage = {
+  wrapperClassName?: string; cards: ResponsiveMethodologyPipelineCard[]; exactClassNames?: MethodologyPipelineCardClasses;
+};
+
+export type ResponsiveMethodologyPipelineLayout = {
+  wrapperClassName: string;
+  arrow: { className: string; symbol: "→" | "↓"; ariaHidden?: boolean };
+  stages: ResponsiveMethodologyPipelineStage[];
+  exactClassNames?: MethodologyPipelineCardClasses;
+};
+
+export type ResponsiveMethodologyPipelineProps = { desktop: ResponsiveMethodologyPipelineLayout; mobile: ResponsiveMethodologyPipelineLayout };
+
+function ResponsiveMethodologyPipelineLayout({ layout }: { layout: ResponsiveMethodologyPipelineLayout }) {
+  return (
+    <div className={layout.wrapperClassName}>
+      {layout.stages.map((stage, index) => {
+        const cards = stage.cards.map((card, cardIndex) => (
+          <MethodologyDiagramCard
+            key={cardIndex}
+            {...card}
+            exactClassNames={card.exactClassNames ?? stage.exactClassNames ?? layout.exactClassNames}
+          />
+        ));
+        return (
+          <Fragment key={index}>
+            {stage.wrapperClassName ? <div className={stage.wrapperClassName}>{cards}</div> : cards}
+            {index < layout.stages.length - 1 ? (
+              <div
+                aria-hidden={layout.arrow.ariaHidden ? "true" : undefined}
+                className={layout.arrow.className}
+              >
+                {layout.arrow.symbol}
+              </div>
+            ) : null}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ResponsiveMethodologyPipeline({ desktop, mobile }: ResponsiveMethodologyPipelineProps) {
+  return (
+    <>
+      <ResponsiveMethodologyPipelineLayout layout={desktop} />
+      <ResponsiveMethodologyPipelineLayout layout={mobile} />
+    </>
   );
 }
 

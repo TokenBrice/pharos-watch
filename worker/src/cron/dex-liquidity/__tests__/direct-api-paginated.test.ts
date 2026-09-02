@@ -218,4 +218,42 @@ describe("runPaginatedDirectApiFetch", () => {
     expect(result.errors).toEqual([]);
     expect(result.successfulPages).toBe(2);
   });
+
+  it("builds page-dependent POST requests while retaining shared headers and signals", async () => {
+    const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
+    const fetchSpy = mockFetch([{
+      match: "api.example.com",
+      body: { items: ["a"] },
+    }], { requireMatch: true });
+
+    const result = await runPaginatedDirectApiFetch<string>({
+      source: "test",
+      buildRequest: (page) => ({
+        url: "https://api.example.com/graphql",
+        init: {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ page }),
+        },
+      }),
+      pageSize: 10,
+      parsePage: (body) => {
+        const b = body as Record<string, unknown>;
+        return Array.isArray(b.items) ? b.items : null;
+      },
+      mapRow: (raw) => (typeof raw === "string" ? raw : null),
+    });
+
+    expect(result.rows).toEqual(["a"]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": expect.any(String),
+      },
+      body: '{"page":1}',
+      signal: expect.any(AbortSignal),
+    });
+  });
 });

@@ -119,6 +119,25 @@ describe("analyze-gsc-performance", () => {
     ]);
   });
 
+  it("truncates decimal counts and clamps negative performance values", async () => {
+    const root = fixtureDir();
+    writeFileSync(
+      join(root, "Pages.csv"),
+      [
+        "Page,Clicks,Impressions,CTR,Position",
+        "https://pharos.watch/stablecoin/euro-fixture/,-2.9,100.9,1%,8",
+      ].join("\n"),
+    );
+
+    const report = await analyzeGscPerformanceInputs([root], {
+      targetCtr: 0.05,
+      minImpressions: 1,
+      topCount: 5,
+    });
+
+    expect(report.priorityPages[0]).toMatchObject({ clicks: 0, impressions: 100, targetClickGap: 5 });
+  });
+
   it("parses CLI CTR options as percentages", async () => {
     const root = fixtureDir();
     writeFileSync(

@@ -2,6 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
@@ -491,13 +492,15 @@ function normalizeCurveCandidates(payload: unknown): CurvePoolCandidate[] {
   });
 }
 
-function formatUsd(value: number): string {
-  if (!Number.isFinite(value)) return "$0";
-  if (Math.abs(value) >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)}B`;
-  if (Math.abs(value) >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(value) >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-  return `$${value.toFixed(0)}`;
-}
+const DEX_PRICING_AUDIT_USD_PROFILE = {
+  decimals: { trillion: 2, billion: 2, million: 2, thousand: 1, unit: 0 },
+  invalidFallback: "$0",
+  maximumTier: "billion",
+  signPosition: "after-currency",
+} as const;
+
+const formatUsd = (value: number): string =>
+  formatCompactUsdWithOptions(value, DEX_PRICING_AUDIT_USD_PROFILE);
 
 export function renderDexPricingSourceGapMarkdown(audit: DexPricingSourceGapAudit): string {
   const lines: string[] = [

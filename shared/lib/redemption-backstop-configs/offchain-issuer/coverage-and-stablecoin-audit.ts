@@ -8,6 +8,9 @@ import {
   undisclosedReviewedFee,
   issuerBase,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
 } from "../shared";
 import {
   reviewedDirectRedemptionSupplyFull,
@@ -102,7 +105,7 @@ const MIDAS_LYT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromE
           `Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed ${ticker} redemption fee`,
         );
     config.docs = [
-      sourceRef(`Midas ${ticker}`, productUrl, ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRefFull(`Midas ${ticker}`, productUrl),
       ...(feeDisclosure ? [sourceRef(feeDisclosure.label, feeDisclosure.url, ["fees"])] : []),
       ...config.docs!,
     ];
@@ -350,13 +353,7 @@ const SPIKO_FUND_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.from
 /** bIB01 and bC3M share these two Backed sourceRefs verbatim (the redemption docs and
  *  the product-structure page); each product keeps its own middle docRef, cost, and notes. */
 const backedRedemptionRef = () =>
-  sourceRef("Backed redemption docs", "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption", [
-    "route",
-    "capacity",
-    "fees",
-    "access",
-    "settlement",
-  ]);
+  sourceRefFull("Backed redemption docs", "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption");
 const backedProductStructureRef = () =>
   sourceRef("Backed product structure", "https://assets.backed.fi/structure", ["capacity", "access"]);
 
@@ -378,7 +375,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     },
     docs: [
       sourceRef("Tether Transparency", "https://tether.to/en/transparency", ["capacity"]),
-      sourceRef("Tether legal terms", "https://tether.to/en/legal/", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("Tether legal terms", "https://tether.to/en/legal/"),
       sourceRef("Tether fees", "https://tether.to/en/fees/", ["fees", "access"]),
     ],
   },
@@ -440,13 +437,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "https://monerium.com/policies/business-terms-of-service/",
         ["route", "access", "settlement"],
       ),
-      sourceRef("Monerium financial information", "https://monerium.com/financial-information/", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Monerium financial information", "https://monerium.com/financial-information/"),
       sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
     ],
     notes: ["Modeled as regulated e-money redemption for onboarded Monerium customers through bank-transfer rails"],
@@ -465,17 +456,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       reviewedAt: "2026-08-24",
       docs: [
         sourceRef("Stablecorp", "https://stablecorp.ca/", ["route", "access"]),
-        sourceRef("Stablecorp transparency", "https://stablecorp.ca/transparency", ["route", "capacity"]),
+        sourceRefRouteCapacity("Stablecorp transparency", "https://stablecorp.ca/transparency"),
       ],
     },
     docs: [
-      sourceRef("Stablecorp transparency", "https://stablecorp.ca/transparency", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Stablecorp transparency", "https://stablecorp.ca/transparency"),
       sourceRef("Stablecorp balances API", "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json", [
         "capacity",
       ]),
@@ -491,11 +476,10 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Fluid materials describe bank-account mint/redeem flows for DUSD; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("Fluid DUSD", "https://fluid.ch/dusd/", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef(
+      sourceRefFull("Fluid DUSD", "https://fluid.ch/dusd/"),
+      sourceRefFull(
         "Fluid app mint/redeem guide",
         "https://medium.com/fluidfi/how-to-use-the-web-app-and-mint-redeem-digitaldollar-dusd-5183c8dcfb6",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
     ],
     notes: [
@@ -512,13 +496,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       feeBpsMax: 50,
     },
     docs: [
-      sourceRef("Midas mRe7YIELD", "https://docs.midas.app/tokens/mre7yield", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Midas mRe7YIELD", "https://docs.midas.app/tokens/mre7yield"),
       sourceRef("Midas smart contracts", "https://docs.midas.app/protocol-mechanics/smart-contracts", [
         "route",
         "access",
@@ -542,10 +520,9 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Franklin Templeton materials describe BENJI redemptions through the Benji app/platform; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef(
+      sourceRefFull(
         "Franklin FOBXX prospectus",
         "https://www.franklintempleton.com/forms-literature/download-preview/9001-P",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
       sourceRef(
         "Franklin FOBXX fund page",
@@ -566,13 +543,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "WisdomTree Connect supports subscriptions and redemptions through USD wires or stablecoin conversion; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("WisdomTree Connect", "https://www.wisdomtreeconnect.com/", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("WisdomTree Connect", "https://www.wisdomtreeconnect.com/"),
       sourceRef("WTGXX fund page", "https://www.wisdomtree.com/investments/digital-funds/money-market/wtgxx", [
         "capacity",
         "fees",
@@ -604,13 +575,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       ],
     },
     docs: [
-      sourceRef("Securitize VBILL", "https://securitize.io/primary-market/vaneck-vbill", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Securitize VBILL", "https://securitize.io/primary-market/vaneck-vbill"),
       sourceRef(
         "VanEck VBILL launch",
         "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
@@ -632,13 +597,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       feeBpsMax: 0,
     },
     docs: [
-      sourceRef("Centrifuge JTRSY pool", "https://centrifuge.io/pools/jtrsy", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Centrifuge JTRSY pool", "https://centrifuge.io/pools/jtrsy"),
       sourceRef("Centrifuge investor docs", "https://docs.centrifuge.io/user/investor/", [
         "route",
         "access",
@@ -668,23 +627,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "Anemoy describes daily access and settlement, but no dated public governing terms establish the scored notional's executable capacity, maximum settlement SLA, gates, or holder-paid charges.",
       reviewedAt: "2026-08-24",
       docs: [
-        sourceRef("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa", [
-          "route",
-          "capacity",
-          "fees",
-          "access",
-          "settlement",
-        ]),
+        sourceRefFull("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa"),
       ],
     },
     docs: [
-      sourceRef("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa"),
       sourceRef("Centrifuge investor docs", "https://docs.centrifuge.io/user/investor/", [
         "route",
         "access",
@@ -710,13 +657,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "access",
         "settlement",
       ]),
-      sourceRef("RWA.xyz ACRDX profile", "https://app.rwa.xyz/assets/ACRDX", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("RWA.xyz ACRDX profile", "https://app.rwa.xyz/assets/ACRDX"),
       sourceRef("Centrifuge investor docs", "https://docs.centrifuge.io/user/investor/", [
         "route",
         "access",
@@ -737,13 +678,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Securitize materials describe STAC subscriptions and redemptions at fund NAV; public materials reviewed do not publish one fixed STAC redemption fee",
     ),
     docs: [
-      sourceRef("Securitize STAC", "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Securitize STAC", "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"),
       sourceRef(
         "Securitize STAC launch",
         "https://securitize.io/learn/press/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-BNY",
@@ -763,13 +698,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Securitize / Hamilton Lane materials describe SCOPE feeder-fund redemption features; public materials reviewed do not publish one fixed HLSCOPE redemption fee",
     ),
     docs: [
-      sourceRef("Securitize HLSCOPE", "https://securitize.io/primary-market/hl-scope", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Securitize HLSCOPE", "https://securitize.io/primary-market/hl-scope"),
       sourceRef(
         "Hamilton Lane SCOPE via Securitize",
         "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
@@ -827,13 +756,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "access",
         "settlement",
       ]),
-      sourceRef("CADD trust indenture", "https://tetradg.com/tetra-trust-indenture/", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("CADD trust indenture", "https://tetradg.com/tetra-trust-indenture/"),
       sourceRef("CADD reserve attestations", "https://tetradg.com/cadd-reserve-attestations/", ["capacity", "fees"]),
       sourceRef("CADD stablecoin page", "https://tetradg.com/cadd-stablecoin/", ["route", "access"]),
     ],
@@ -850,8 +773,8 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Blox materials describe 1:1 MYRC redemption for Malaysian Ringgit; product terms leave issuance and redemption subject to Blox terms and do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("Blox MYRC", "https://www.blox.my/myrc", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Blox MYRC transparency", "https://www.blox.my/myrc/transparency", ["route", "capacity"]),
+      sourceRefFull("Blox MYRC", "https://www.blox.my/myrc"),
+      sourceRefRouteCapacity("Blox MYRC transparency", "https://www.blox.my/myrc/transparency"),
       sourceRef("Blox product term sheet", "https://www.blox.my/policies/product-term-sheet", [
         "route",
         "fees",
@@ -871,7 +794,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "KRWQ materials expose a Mint/Redeem flow and KYC-gated institutional controls; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("KRWQ homepage", "https://www.krwq.cash/", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRefFull("KRWQ homepage", "https://www.krwq.cash/"),
       sourceRef("KRWQ mint/redeem", "https://www.krwq.cash/mint", ["route", "access"]),
       sourceRef("KRWQ whitepaper", "https://www.krwq.cash/whitepaper.pdf", ["capacity", "fees", "access"]),
     ],
@@ -887,22 +810,15 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "BitGo Mint supports native SoFiUSD minting and redemption for institutions; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("SoFiUSD", "https://www.sofi.com/crypto/sofiusd/", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("SoFiUSD", "https://www.sofi.com/crypto/sofiusd/"),
       sourceRef(
         "BitGo Mint launch",
         "https://investors.bitgo.com/news/news-details/2026/BitGo-Launches-BitGo-Mint-Native-Stablecoin-Minting-and-Redemption-for-Institutions/default.aspx",
         ["route", "access", "settlement"],
       ),
-      sourceRef(
+      sourceRefRouteCapacityAccess(
         "BitGo SoFiUSD infrastructure",
         "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/",
-        ["route", "capacity", "access"],
       ),
     ],
     notes: ["Modeled as institutional BitGo/SoFi issuer redemption, not a retail self-service on-chain burn path."],

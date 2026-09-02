@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   canonicalizeChainCirculating,
-  findCanonicalChainData,
   type RawChainCirculating,
 } from "../chains/circulating";
 
@@ -41,7 +40,7 @@ describe("chain-circulating", () => {
       },
     };
 
-    expect(findCanonicalChainData(chainCirculating, "ethereum")).toEqual({
+    expect(canonicalizeChainCirculating(chainCirculating).get("ethereum") ?? null).toEqual({
       current: 120,
       circulatingPrevDay: 110,
       circulatingPrevWeek: 100,
@@ -49,7 +48,7 @@ describe("chain-circulating", () => {
     });
 
     expect(
-      findCanonicalChainData(
+      canonicalizeChainCirculating(
         {
           "Citrea Mainnet": {
             current: 42,
@@ -58,8 +57,7 @@ describe("chain-circulating", () => {
             circulatingPrevMonth: 39,
           },
         },
-        "citrea",
-      ),
+      ).get("citrea") ?? null,
     ).toEqual({
       current: 42,
       circulatingPrevDay: 41,
@@ -113,7 +111,7 @@ describe("chain-circulating", () => {
     };
 
     expect(canonicalizeChainCirculating(chainCirculating).size).toBe(0);
-    expect(findCanonicalChainData(chainCirculating, "ethereum")).toBeNull();
+    expect(canonicalizeChainCirculating(chainCirculating).get("ethereum") ?? null).toBeNull();
   });
 
   it("does not propagate invalid supply values from loose callers", () => {

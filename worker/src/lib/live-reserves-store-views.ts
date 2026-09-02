@@ -2,8 +2,8 @@ import {
   buildReserveDisplayBadge,
   getReserveDisplayBadgeKindForAdapter,
   hasReserveDisplayBadgeForAdapter,
-  inferReserveDisplayBadgeKindFromEvidenceClass,
 } from "@shared/lib/live-reserve-display";
+import { inferReserveDisplayBadgeKindFromEvidenceClass } from "@shared/lib/live-reserve-adapter-descriptors";
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type {

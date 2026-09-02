@@ -1,15 +1,9 @@
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
-import { USER_AGENT } from "../../lib/constants";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
-import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
-import {
-  DIRECT_API_DEFAULT_MAX_PAGES,
-  buildDirectApiRequestSignal,
-} from "./direct-api-policy";
-import { toErrorMessage } from "@shared/lib/error-utils";
+import { isDexApiRecord } from "./direct-api-json";
+import { DIRECT_API_DEFAULT_MAX_PAGES } from "./direct-api-policy";
+import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { rethrowIfAborted } from "../../lib/abort";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
 
@@ -249,61 +243,54 @@ async function fetchBalancerCapabilities(
   warnings: string[],
   signal?: AbortSignal,
 ): Promise<BalancerCapabilitySweep> {
-  const rowsByPoolId = new Map<string, number | null>();
   const pageSize = 1000;
-  for (let page = 1; page <= DIRECT_API_DEFAULT_MAX_PAGES; page++) {
-    const skip = (page - 1) * pageSize;
-    let res: Response;
-    try {
-      res = await fetch(BALANCER_API, {
+  const sweep = await runPaginatedDirectApiFetch<BalancerAmpRow>({
+    source: "capability sweep",
+    pageSize,
+    maxPages: DIRECT_API_DEFAULT_MAX_PAGES,
+    signal,
+    buildRequest: (page) => ({
+      url: BALANCER_API,
+      init: {
         method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-        body: JSON.stringify({ query: AMP_QUERY, variables: { first: pageSize, skip } }),
-        signal: buildDirectApiRequestSignal(signal),
-      });
-    } catch (err) {
-      rethrowIfAborted(err, signal);
-      warnings.push(`capability sweep request failed on page ${page}: ${toErrorMessage(err)}`);
-      return { rowsByPoolId, complete: false };
-    }
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: AMP_QUERY,
+          variables: { first: pageSize, skip: (page - 1) * pageSize },
+        }),
+      },
+    }),
+    pageContext: (page) => `amp sweep page ${page}`,
+    formatRequestError: (page, message) =>
+      `capability sweep request failed on page ${page}: ${message}`,
+    formatResponseError: (page, status) =>
+      `capability sweep returned ${status} on page ${page}`,
+    formatPaginationCapError: (page) =>
+      `capability sweep pagination cap reached at page ${page}`,
+    parsePage: (body, page) => {
+      const response = body as BalancerAmpResponse;
+      const graphqlErrors = formatGraphqlErrors(response.errors);
+      if (graphqlErrors.length > 0) {
+        return { error: `capability sweep GraphQL errors on page ${page}: ${graphqlErrors.join("; ")}` };
+      }
+      const rows = response.data?.aggregatorPools;
+      return Array.isArray(rows)
+        ? rows
+        : { error: `capability sweep malformed response on page ${page}` };
+    },
+    mapRow: (row) => isBalancerAmpRow(row) ? row : null,
+  });
 
-    if (!res.ok) {
-      warnings.push(`capability sweep returned ${res.status} on page ${page}`);
-      await cancelResponseBodyQuietly(res);
-      return { rowsByPoolId, complete: false };
-    }
-
-    const parsed = await readDexApiJson<BalancerAmpResponse>(res, `amp sweep page ${page}`);
-    if (!parsed.ok) {
-      warnings.push(parsed.error);
-      return { rowsByPoolId, complete: false };
-    }
-    const graphqlErrors = formatGraphqlErrors(parsed.data.errors);
-    if (graphqlErrors.length > 0) {
-      warnings.push(`capability sweep GraphQL errors on page ${page}: ${graphqlErrors.join("; ")}`);
-      return { rowsByPoolId, complete: false };
-    }
-    const rows = parsed.data.data?.aggregatorPools;
-    if (!Array.isArray(rows)) {
-      warnings.push(`capability sweep malformed response on page ${page}`);
-      return { rowsByPoolId, complete: false };
-    }
-
-    for (const row of rows) {
-      if (!isBalancerAmpRow(row)) continue;
-      const amp = row.amp == null ? null : parseStrictFiniteDecimal(row.amp);
-      rowsByPoolId.set(
-        ampJoinKey(row.chain, row.id),
-        amp != null && Number.isFinite(amp) && amp > 0 ? amp : null,
-      );
-    }
-
-    if (rows.length < pageSize) return { rowsByPoolId, complete: true };
-    if (page === DIRECT_API_DEFAULT_MAX_PAGES) {
-      warnings.push(`capability sweep pagination cap reached at page ${page}`);
-    }
+  const rowsByPoolId = new Map<string, number | null>();
+  for (const row of sweep.rows) {
+    const amp = row.amp == null ? null : parseStrictFiniteDecimal(row.amp);
+    rowsByPoolId.set(
+      ampJoinKey(row.chain, row.id),
+      amp != null && Number.isFinite(amp) && amp > 0 ? amp : null,
+    );
   }
-  return { rowsByPoolId, complete: false };
+  warnings.push(...sweep.errors, ...sweep.warnings);
+  return { rowsByPoolId, complete: sweep.completed };
 }
 
 function captureGateForPool(
@@ -446,68 +433,51 @@ function shapeBalancerPool(
 }
 
 export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
-  const results: DexApiPool[] = [];
-  const errors: string[] = [];
-  const warnings: string[] = [];
   const pageSize = 1000;
-  let successfulPages = 0;
-  const exactCandidatePoolIdsByIndex = new Map<number, { poolId: string; stableMath: boolean }>();
-
-  for (let page = 1; page <= DIRECT_API_DEFAULT_MAX_PAGES; page++) {
-    const skip = (page - 1) * pageSize;
-    let res: Response;
-    try {
-      res = await fetch(BALANCER_API, {
+  const malformedRowsByPage = new Map<number, number>();
+  const fetchResult = await runPaginatedDirectApiFetch<{
+    pool: DexApiPool;
+    exactCandidate?: { poolId: string; stableMath: boolean };
+  }>({
+    source: "balancer",
+    pageSize,
+    maxPages: DIRECT_API_DEFAULT_MAX_PAGES,
+    signal,
+    buildRequest: (page) => ({
+      url: BALANCER_API,
+      init: {
         method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-        body: JSON.stringify({ query: QUERY, variables: { first: pageSize, skip } }),
-        signal: buildDirectApiRequestSignal(signal),
-      });
-    } catch (err) {
-      rethrowIfAborted(err, signal);
-      const message = toErrorMessage(err);
-      errors.push(`request failed on page ${page}: ${message}`);
-      break;
-    }
-
-    if (!res.ok) {
-      errors.push(`API returned ${res.status} on page ${page}`);
-      await cancelResponseBodyQuietly(res);
-      break;
-    }
-
-    const parsed = await readDexApiJson<BalancerResponse>(res, `page ${page}`);
-    if (!parsed.ok) {
-      errors.push(parsed.error);
-      break;
-    }
-
-    const json = parsed.data;
-    const graphqlErrors = formatGraphqlErrors(json.errors);
-    if (graphqlErrors.length > 0) {
-      errors.push(
-        `GraphQL errors on page ${page}: ${graphqlErrors.join("; ")}`,
-      );
-      break;
-    }
-    const pools = json.data?.poolGetPools;
-    if (!Array.isArray(pools)) {
-      errors.push(`Malformed response on page ${page}`);
-      break;
-    }
-
-    successfulPages++;
-    if (pools.length === 0) break;
-
-    let malformedRows = 0;
-    for (const rawPool of pools) {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: QUERY,
+          variables: { first: pageSize, skip: (page - 1) * pageSize },
+        }),
+      },
+    }),
+    pageContext: (page) => `page ${page}`,
+    formatRequestError: (page, message) => `request failed on page ${page}: ${message}`,
+    formatResponseError: (page, status) => `API returned ${status} on page ${page}`,
+    formatPaginationCapError: (page, nextPage) =>
+      `pagination cap reached at page ${page}; resumeFromSkip=${(nextPage - 1) * pageSize}`,
+    parsePage: (body, page) => {
+      const response = body as BalancerResponse;
+      const graphqlErrors = formatGraphqlErrors(response.errors);
+      if (graphqlErrors.length > 0) {
+        return { error: `GraphQL errors on page ${page}: ${graphqlErrors.join("; ")}` };
+      }
+      const pools = response.data?.poolGetPools;
+      return Array.isArray(pools)
+        ? pools
+        : { error: `Malformed response on page ${page}` };
+    },
+    mapRow: (rawPool, { page }) => {
       if (!isBalancerPool(rawPool)) {
-        malformedRows++;
-        continue;
+        malformedRowsByPage.set(page, (malformedRowsByPage.get(page) ?? 0) + 1);
+        return null;
       }
 
       const pool = rawPool;
-      if (!REVIEWED_POOL_TYPES.has(pool.type)) continue;
+      if (!REVIEWED_POOL_TYPES.has(pool.type)) return null;
 
       const chain = BALANCER_CHAIN_MAP[pool.chain];
       if (!chain) {
@@ -519,35 +489,45 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
           message: "Unknown Balancer chain enum value; pool skipped",
           metadata: { poolId: pool.id, chain: pool.chain },
         });
-        continue;
+        return null;
       }
 
       const tvlUsd = parseStrictFiniteDecimal(pool.dynamicData.totalLiquidity);
-      if (tvlUsd == null || tvlUsd <= 0) continue;
+      if (tvlUsd == null || tvlUsd <= 0) return null;
       if (tvlUsd > BALANCER_MAX_POOL_TVL_USD) {
-        malformedRows++;
-        continue;
+        malformedRowsByPage.set(page, (malformedRowsByPage.get(page) ?? 0) + 1);
+        return null;
       }
 
       const shapedPool = shapeBalancerPool(pool, chain);
-      results.push(shapedPool);
-      const executionCapabilityGate = shapedPool.executionCapabilityGate;
-      if (executionCapabilityGate == null && (STABLE_MATH_POOL_TYPES.has(pool.type) || pool.type === "WEIGHTED")) {
-        exactCandidatePoolIdsByIndex.set(results.length - 1, {
-          poolId: ampJoinKey(pool.chain, pool.id),
-          stableMath: STABLE_MATH_POOL_TYPES.has(pool.type),
-        });
+      return {
+        pool: shapedPool,
+        ...(shapedPool.executionCapabilityGate == null &&
+        (STABLE_MATH_POOL_TYPES.has(pool.type) || pool.type === "WEIGHTED")
+          ? {
+              exactCandidate: {
+                poolId: ampJoinKey(pool.chain, pool.id),
+                stableMath: STABLE_MATH_POOL_TYPES.has(pool.type),
+              },
+            }
+          : {}),
+      };
+    },
+    afterPage: ({ page, warnings }) => {
+      const malformedRows = malformedRowsByPage.get(page) ?? 0;
+      if (malformedRows > 0) {
+        warnings.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
       }
-    }
-    if (malformedRows > 0) {
-      warnings.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
-    }
+    },
+  });
 
-    if (pools.length < pageSize) break;
-    if (page === DIRECT_API_DEFAULT_MAX_PAGES) {
-      errors.push(`pagination cap reached at page ${page}; resumeFromSkip=${skip + pageSize}`);
-      break;
-    }
+  const results = fetchResult.rows.map(({ pool }) => pool);
+  const errors = fetchResult.errors;
+  const warnings = fetchResult.warnings;
+  const successfulPages = fetchResult.successfulPages;
+  const exactCandidatePoolIdsByIndex = new Map<number, { poolId: string; stableMath: boolean }>();
+  for (const [index, row] of fetchResult.rows.entries()) {
+    if (row.exactCandidate) exactCandidatePoolIdsByIndex.set(index, row.exactCandidate);
   }
 
   if (exactCandidatePoolIdsByIndex.size > 0) {

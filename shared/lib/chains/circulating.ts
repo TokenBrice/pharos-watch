@@ -60,10 +60,3 @@ export function canonicalizeChainCirculating(
 
   return canonical;
 }
-
-export function findCanonicalChainData(
-  chainCirculating: RawChainCirculating | null | undefined,
-  targetChainId: string,
-): ChainCirculatingPoint | null {
-  return canonicalizeChainCirculating(chainCirculating).get(targetChainId) ?? null;
-}

@@ -9,6 +9,7 @@ import type {
 } from "./telegram-pending";
 import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
+import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 
 export type PerAlertTypeTargets = Record<Exclude<TelegramAlertType, "freeze">, { chats: number; chunks: number }> &
   Partial<Record<"freeze", { chats: number; chunks: number }>>;
@@ -316,4 +317,56 @@ export function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0):
     suppressedSafetyChangesAtSeed: 0,
     reserveSourceUnavailable: false,
   };
+}
+
+export function buildDispatchResult(args: {
+  snapshotSeeded: boolean;
+  chatsWithActiveSnooze?: number;
+  eventOverrides?: Partial<DispatchResult["eventsDetected"]>;
+  pendingLifecycle?: {
+    drainResult: PendingDrainResult;
+    expiredCount: number;
+    pendingEnqueued?: number;
+  };
+  capacity?: {
+    before: PendingCapacitySnapshot;
+    after: PendingCapacitySnapshot;
+  };
+  reserve?: {
+    assessment: AlertReserveSourceAssessment;
+    unavailable: boolean;
+  };
+  safety?: {
+    assessment: AlertSafetySourceAssessment;
+    suppressed: boolean;
+  };
+  overrides?: Partial<DispatchResult>;
+}): DispatchResult {
+  const result = emptyResult(args.snapshotSeeded, args.chatsWithActiveSnooze);
+  if (args.eventOverrides) {
+    result.eventsDetected = { ...result.eventsDetected, ...args.eventOverrides };
+  }
+  if (args.pendingLifecycle) {
+    const { drainResult, expiredCount, pendingEnqueued } = args.pendingLifecycle;
+    Object.assign(result, {
+      messagesSent: drainResult.sent,
+      blockedUsersCleanedUp: drainResult.blockedCleanedUp,
+      blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
+    });
+    Object.assign(result, pendingDispatchFields(drainResult, { expiredCount, pendingEnqueued }));
+  }
+  if (args.capacity) {
+    Object.assign(result, pendingCapacityFields(args.capacity.after));
+    result.pendingCapacityBefore = args.capacity.before;
+    result.pendingCapacityAfter = args.capacity.after;
+  }
+  if (args.reserve) {
+    result.reserveSourceUnavailable = args.reserve.unavailable;
+    Object.assign(result, reserveSourceFields(args.reserve.assessment));
+  }
+  if (args.safety) {
+    Object.assign(result, safetySourceFields(args.safety.assessment, args.safety.suppressed));
+  }
+  Object.assign(result, args.overrides);
+  return result;
 }

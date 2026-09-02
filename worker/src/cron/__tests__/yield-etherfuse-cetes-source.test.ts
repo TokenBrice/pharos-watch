@@ -4,6 +4,7 @@ import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourc
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchEtherfuseCetesSource } from "../yield-sync/sources";
+import { parseEtherfuseCetesStablebondPage } from "../yield-sync/etherfuse-cetes";
 
 const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
   props: {
@@ -75,5 +76,17 @@ describe("fetchEtherfuseCetesSource", () => {
     ]);
 
     await expect(fetchEtherfuseCetesSource()).resolves.toBeNull();
+  });
+
+  it("preserves parseFloat suffix coercion before epoch normalization", () => {
+    const html = ETHERFUSE_CETES_HTML
+      .replace("1778798112000", '"1778798112000ms"')
+      .replace("1779402912000", '"1779402912000ms"');
+
+    expect(parseEtherfuseCetesStablebondPage(html)).toMatchObject({
+      startSec: 1_778_798_112,
+      endSec: 1_779_402_912,
+      recordDate: "2026-05-14",
+    });
   });
 });

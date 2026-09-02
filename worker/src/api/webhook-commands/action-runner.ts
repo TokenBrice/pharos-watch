@@ -46,30 +46,18 @@ import {
   BULK_CONFIRM_COIN_THRESHOLD,
   BULK_CONFIRM_PREVIEW_LIMIT,
 } from "../../lib/telegram-constants";
-import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
-import type { TelegramWebhookOperationIntent } from "../telegram-webhook-store";
+import {
+  createTelegramWebhookIntent,
+  type TelegramCommandMutationContext,
+} from "../telegram-webhook-effect-fence";
 import { DISAMBIGUATION_TTL_SEC } from "../telegram-webhook-shared";
 import type { WebhookCommandContext } from "./context";
 
-export interface TelegramActionContext {
+export interface TelegramActionContext extends TelegramCommandMutationContext {
   db: D1Database;
   chatId: string;
   username: string | null;
   initiatorUserId: string | null;
-  beforeIrreversibleEffect?: (kind: string) => Promise<void>;
-  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-  prepareMutationAppliedStatement?: () => D1PreparedStatement;
-  prepareMutationOperationStatements?: () => D1PreparedStatement[];
-  preparePendingMutationAppliedStatement?: (input: {
-    chatId: string;
-    actionType: string;
-    actionPayload: string;
-    expiresAt: number;
-  }) => D1PreparedStatement;
-  confirmAtomicMutationApplied?: () => void;
-  markMutationApplied?: () => Promise<void>;
-  storedIntent?: TelegramWebhookOperationIntent | null;
-  wasMutationApplied?: boolean;
   operationNowSec?: number;
 }
 

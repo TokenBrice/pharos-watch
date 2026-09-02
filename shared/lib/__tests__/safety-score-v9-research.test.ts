@@ -13,6 +13,7 @@ import {
   scoreV9ResearchScenarioInput,
   scoreV9Input,
 } from "../safety-score-v9-research";
+import { projectV9ScoringInput } from "../safety-score-v9/score";
 
 const AS_OF = "2026-07-01T00:00:00.000Z";
 
@@ -56,22 +57,28 @@ describe("v9 research handoff contracts", () => {
   });
 
   it("scores expectation-free input without redistributing a missing pillar", () => {
-    const trace = scoreV9Input(
-      {
-        assetId: "missing-exit",
-        pillars: { backing: 90, exit: null, control: 80 },
-        pegScore: 100,
-        pegApplicable: true,
-        evidenceLevel: "adequate",
-        trackRecordMonths: 48,
-        activeDepegBps: null,
-        parentRequired: false,
-        parentScore: null,
-        structuralSignals: [],
-        unresolved: [],
-      },
-      V9_CANDIDATE_POLICY_V1,
-    );
+    const compiledInput = compiled("missing-exit");
+    compiledInput.pillars.exit.score = null;
+    const input = projectV9ScoringInput(compiledInput, V9_CANDIDATE_POLICY_V1, {
+      parentRequired: false,
+      parentScore: null,
+      structuralSignals: [],
+      unresolved: [],
+    });
+    expect(input).toStrictEqual({
+      assetId: "missing-exit",
+      pillars: { backing: 90, exit: null, control: 70 },
+      pegScore: 100,
+      pegApplicable: true,
+      evidenceLevel: "strong",
+      trackRecordMonths: 72,
+      activeDepegBps: null,
+      parentRequired: false,
+      parentScore: null,
+      structuralSignals: [],
+      unresolved: [],
+    });
+    const trace = scoreV9Input(input, V9_CANDIDATE_POLICY_V1);
     expect(trace.finalGrade).toBe("NR");
     expect(trace.nrReasons).toContainEqual(expect.objectContaining({ code: "missing-pillar" }));
   });

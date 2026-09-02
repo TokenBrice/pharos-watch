@@ -4,9 +4,8 @@ import Link from "next/link";
 import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
-import { ExternalLink } from "lucide-react";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
-import { EventFeedEmpty, EventFeedSkeleton } from "@/components/event-feed-state";
+import { EventFeedEmpty, EventFeedSkeleton, EventTransactionCell } from "@/components/event-feed-state";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { formatAddress, formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
@@ -116,18 +115,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
                 <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">{amount.detail}</span>
               </TableCell>
               <TableCell className="hidden sm:table-cell text-sm">{evt.chainName}</TableCell>
-              <TableCell className="text-center">
-                <a
-                  href={evt.explorerTxUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
-                  aria-label="View transaction on block explorer"
-                >
-                  <span className="hidden md:inline">{formatAddress(evt.txHash)}</span>
-                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                </a>
-              </TableCell>
+              <EventTransactionCell txHash={evt.txHash} href={evt.explorerTxUrl} />
             </TableRow>
           );
         })}

@@ -7,9 +7,28 @@ import {
   type V9BackingResult,
   type V9BackingStructuralReason,
 } from "../backing";
-import type { V9RwaCreditFundMechanismRiskReview } from "../../../types/safety-score-v9-backing";
+import type {
+  V9MechanismMetricApplicability,
+  V9RwaCreditFundMechanismRiskReview,
+} from "../../../types/safety-score-v9-backing";
 
 export type { V9RwaCreditFundMechanismRiskReview } from "../../../types/safety-score-v9-backing";
+
+export function resolveV9MetricApplicability(
+  applicability: V9MechanismMetricApplicability | undefined,
+  status: Parameters<typeof v9StructuralResponsibilityForStatus>[0],
+) {
+  const state = applicability?.state ?? "measured";
+  const unavailable = applicability?.state === "unavailable";
+  return {
+    state,
+    unavailable,
+    responsibility: unavailable
+      ? "issuer-undisclosed" as const
+      : v9StructuralResponsibilityForStatus(status),
+    evidenceRefIds: unavailable ? applicability.evidenceRefIds : status.evidenceRefIds,
+  };
+}
 
 export function evaluateV9RwaCreditFundBacking(
   asset: V9BackingAssetInput,
@@ -22,30 +41,22 @@ export function evaluateV9RwaCreditFundBacking(
   // keeps the mismatch signal firing — an unmeasured book is never presumed
   // short-dated — while an evidenced `not-applicable` metric skips it. Absent
   // applicability means the metric is measured (legacy full-metric reviews).
-  const maturityApplicability =
-    review.metricApplicability?.weightedAverageMaturityDays;
-  const maturityState = maturityApplicability?.state ?? "measured";
-  const maturityUnavailable = maturityState === "unavailable";
-  const maturityUnavailableEvidenceRefIds =
-    maturityApplicability?.state === "unavailable"
-      ? maturityApplicability.evidenceRefIds
-      : null;
+  const maturityApplicability = resolveV9MetricApplicability(
+    review.metricApplicability?.weightedAverageMaturityDays,
+    review.maturityAndLiquidity.status,
+  );
   if (
-    maturityUnavailable ||
-    (maturityState === "measured" &&
+    maturityApplicability.unavailable ||
+    (maturityApplicability.state === "measured" &&
       review.weightedAverageMaturityDays !== null &&
       review.weightedAverageMaturityDays > backing.structural.rwaCreditFund.maturityMismatchDays)
   ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.rwaCreditFund.signal, {
-        responsibility: maturityUnavailable
-          ? "issuer-undisclosed"
-          : v9StructuralResponsibilityForStatus(review.maturityAndLiquidity.status),
+        responsibility: maturityApplicability.responsibility,
         pathKey: "mechanism:maturity-and-liquidity",
         materialShare: null,
-        evidenceRefIds:
-          maturityUnavailableEvidenceRefIds ??
-          review.maturityAndLiquidity.status.evidenceRefIds,
+        evidenceRefIds: maturityApplicability.evidenceRefIds,
         failureDomains: review.maturityAndLiquidity.failureDomains,
       }),
     );

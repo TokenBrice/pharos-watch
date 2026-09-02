@@ -200,12 +200,15 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     const { resolveReserveSyncRunStatus } = await import("../sync-live-reserves-finalize");
 
     expect(resolveReserveSyncRunStatus({
-      synced: 99,
-      failed: 0,
-      skipped: 1,
-      deferredSkipped: 1,
-      circuitSkipped: 0,
-      deferredCoins: 1,
+      counts: {
+        synced: 99,
+        failed: 0,
+        skipped: 1,
+        deferredSkipped: 1,
+        circuitSkipped: 0,
+        deferredCoins: 1,
+        attemptedCoins: 99,
+      },
       total: 100,
     })).toBe("degraded");
   });

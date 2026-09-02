@@ -11,7 +11,7 @@ import {
   readEnvFirst,
   readNonNegativeIntEnv,
   readPositiveIntEnv,
-  sleep,
+  retrySmokeResult,
 } from "../lib/smoke-runtime.mjs";
 import { REDEMPTION_ENUMS, assertRedemptionEntry } from "../lib/smoke-redemption-assertions.mjs";
 
@@ -161,32 +161,36 @@ function isRetryableError(error) {
 
 async function fetchWithRetry(fetcher, endpointPath, timeoutMs, retryCount, retryDelayMs) {
   const totalAttempts = retryCount + 1;
-  let lastError = null;
-  for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
-    try {
-      const result = await fetcher(timeoutMs);
-      if (attempt < totalAttempts && isRetryableStatus(result.status)) {
-        console.log(
-          `[smoke-api] WARN ${endpointPath} returned ${result.status} on attempt ${attempt}/${totalAttempts}; retrying in ${retryDelayMs}ms`,
-        );
-        await sleep(retryDelayMs);
-        continue;
+  const outcome = await retrySmokeResult(
+    async () => {
+      try {
+        return { ok: true, result: await fetcher(timeoutMs) };
+      } catch (error) {
+        return { ok: false, error };
       }
-      return result;
-    } catch (error) {
-      lastError = error;
-      if (attempt < totalAttempts && isRetryableError(error)) {
-        console.log(
-          `[smoke-api] WARN ${endpointPath} failed on attempt ${attempt}/${totalAttempts} (${formatError(error)}); retrying in ${retryDelayMs}ms`,
-        );
-        await sleep(retryDelayMs);
-        continue;
-      }
-      throw new Error(`${endpointPath} request failed: ${formatError(error)}`);
-    }
+    },
+    {
+      retries: retryCount,
+      delayMs: retryDelayMs,
+      shouldRetry: (outcome) =>
+        outcome.ok ? isRetryableStatus(outcome.result.status) : isRetryableError(outcome.error),
+      onRetry: ({ attempt, result: outcome }) => {
+        if (outcome.ok) {
+          console.log(
+            `[smoke-api] WARN ${endpointPath} returned ${outcome.result.status} on attempt ${attempt}/${totalAttempts}; retrying in ${retryDelayMs}ms`,
+          );
+        } else {
+          console.log(
+            `[smoke-api] WARN ${endpointPath} failed on attempt ${attempt}/${totalAttempts} (${formatError(outcome.error)}); retrying in ${retryDelayMs}ms`,
+          );
+        }
+      },
+    },
+  );
+  if (!outcome.ok) {
+    throw new Error(`${endpointPath} request failed: ${formatError(outcome.error)}`);
   }
-
-  throw new Error(`${endpointPath} request failed after ${totalAttempts} attempts: ${formatError(lastError)}`);
+  return outcome.result;
 }
 
 function fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs) {

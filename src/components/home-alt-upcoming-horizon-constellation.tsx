@@ -1,7 +1,5 @@
-import Link from "next/link";
-import { SquareArrowRight } from "lucide-react";
-
 import { HorizonConstellation } from "@/components/horizon-constellation";
+import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
 import { HORIZON_PRE_LAUNCH_STABLECOINS } from "@/lib/horizon-constellation-layout";
 
 export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null {
@@ -22,18 +20,10 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
               <span className="pharos-numeric font-semibold text-foreground">{total}</span> Tokens
             </span>
             <span aria-hidden="true" className="hidden h-1 w-1 rounded-full bg-border sm:inline-block" />
-            <Link
+            <HomeAltTrackerLink
               href="/upcoming/"
-              aria-label="Open tracker"
-              className="pharos-focus-ring group inline-flex min-h-7 items-center gap-1.5 rounded-[4px] border border-border/70 bg-muted/30 px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-border hover:bg-muted/60 sm:min-h-8 sm:rounded-md sm:px-3 sm:py-1.5 sm:text-[13px]"
-            >
-              Tracker
-              <SquareArrowRight
-                aria-hidden="true"
-                className="h-3 w-3 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground sm:h-3.5 sm:w-3.5"
-                strokeWidth={2}
-              />
-            </Link>
+              ariaLabel="Open tracker"
+            />
           </div>
         </div>
         <p className="max-w-[13rem] text-[10px] leading-snug text-muted-foreground sm:max-w-none sm:text-sm">

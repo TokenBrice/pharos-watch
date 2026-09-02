@@ -1,8 +1,7 @@
-import type { LiveReserveEvidenceClass, ReserveDisplayBadgeKind } from "../types/live-reserve-core";
+import type { ReserveDisplayBadgeKind } from "../types/live-reserve-core";
 import type { ReserveDisplayBadgeView } from "../types/live-reserves";
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
-  inferReserveDisplayBadgeKindFromEvidenceClass as inferBadgeKindFromEvidenceClass,
   type LiveReserveAdapterKey,
 } from "./live-reserve-adapter-descriptors";
 
@@ -25,12 +24,6 @@ export function buildReserveDisplayBadge(kind: ReserveDisplayBadgeKind): Reserve
     kind,
     label: getReserveDisplayBadgeLabel(kind),
   };
-}
-
-export function inferReserveDisplayBadgeKindFromEvidenceClass(
-  evidenceClass: LiveReserveEvidenceClass,
-): ReserveDisplayBadgeKind {
-  return inferBadgeKindFromEvidenceClass(evidenceClass);
 }
 
 export function hasReserveDisplayBadgeForAdapter(adapterKey: string): adapterKey is LiveReserveAdapterKey {

@@ -15,6 +15,7 @@ import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import {
+  buildStablecoinsCacheFreshnessGateResult,
   buildSupplySnapshotCompletionMarker,
   preflightSupplySnapshot,
   SNAPSHOT_SUPPLY_LAST_WRITE_KEY,
@@ -35,41 +36,6 @@ interface SnapshotSupplyOptions {
   publicationWaivers?: readonly StablecoinPublicationWaiver[];
   requiredActiveIds?: readonly string[];
   snapshotEligibleIds?: readonly string[];
-}
-
-function buildStablecoinsCacheBeforeSlotResult(
-  cacheUpdatedAt: number,
-  requiredUpdatedAt: number,
-  freshnessGateLabel?: string,
-): CronResult {
-  return {
-    status: "degraded",
-    itemCount: 0,
-    metadata: JSON.stringify({
-      reason: "stablecoins_cache_before_slot",
-      cacheUpdatedAt,
-      requiredUpdatedAt,
-      freshnessGateLabel,
-    }),
-  };
-}
-
-function buildAlreadyWrittenBeforeFreshnessGateResult(params: {
-  snapshotDate: number;
-  cacheUpdatedAt: number;
-  requiredUpdatedAt: number;
-  freshnessGateLabel?: string;
-}): CronResult {
-  return {
-    itemCount: 0,
-    metadata: JSON.stringify({
-      reason: "already_written_today_before_freshness_gate",
-      snapshotDate: params.snapshotDate,
-      cacheUpdatedAt: params.cacheUpdatedAt,
-      requiredUpdatedAt: params.requiredUpdatedAt,
-      freshnessGateLabel: params.freshnessGateLabel,
-    }),
-  };
 }
 
 async function repairSameDayMissingPrices(
@@ -188,18 +154,18 @@ export async function snapshotSupply(
       && lastWrite?.snapshotDate === snapshotDate
       && lastWrite.exactCoverageVerified
     ) {
-      return buildAlreadyWrittenBeforeFreshnessGateResult({
-        snapshotDate,
+      return buildStablecoinsCacheFreshnessGateResult({
+        alreadyWrittenSnapshotDate: snapshotDate,
         cacheUpdatedAt: stablecoinsCache.updatedAt,
         requiredUpdatedAt: options.minStablecoinsCacheUpdatedAtSec,
         freshnessGateLabel: options.freshnessGateLabel,
       });
     }
-    return buildStablecoinsCacheBeforeSlotResult(
-      stablecoinsCache.updatedAt,
-      options.minStablecoinsCacheUpdatedAtSec,
-      options.freshnessGateLabel,
-    );
+    return buildStablecoinsCacheFreshnessGateResult({
+      cacheUpdatedAt: stablecoinsCache.updatedAt,
+      requiredUpdatedAt: options.minStablecoinsCacheUpdatedAtSec,
+      freshnessGateLabel: options.freshnessGateLabel,
+    });
   }
 
   // Verify cache freshness — skip if stale (>20 min) to avoid snapshotting outdated data

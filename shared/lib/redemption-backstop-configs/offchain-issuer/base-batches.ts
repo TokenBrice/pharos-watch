@@ -1,5 +1,15 @@
 import { defineBatch, type RedemptionBackstopRegistryEntry } from "../factory";
-import { documentedBoundSupplyFull, documentedVariableFee, fixedFee, issuerBase, sourceRef } from "../shared";
+import {
+  documentedBoundSupplyFull,
+  documentedVariableFee,
+  fixedFee,
+  issuerBase,
+  sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
+  sourceRefRouteCapacityFees,
+} from "../shared";
 import { reviewedDirectRedemptionSupplyFull, REVIEWED_NON_USD_BATCH_AT, REVIEWED_REMEDIATION_AT } from "./shared";
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts";
@@ -32,13 +42,12 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
     sourceRef("A7A5 transparency", "https://docs.a7a5.io/legal/transparency", ["capacity"]),
   ],
   "audx-aussie-dollar-token": [
-    sourceRef(
+    sourceRefFull(
       "AUDX White Paper v1.8 and Terms of Token Sale",
       "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
-      ["route", "capacity", "fees", "access", "settlement"],
     ),
   ],
-  "brl1-brl1": [sourceRef("BRL1 how it works", "https://brl1.io/en/como_funciona", ["route", "capacity", "access"])],
+  "brl1-brl1": [sourceRefRouteCapacityAccess("BRL1 how it works", "https://brl1.io/en/como_funciona")],
   "cetes-etherfuse": [
     sourceRef("Etherfuse PoR", "https://app.etherfuse.com/legal/proof-of-reserves", ["capacity"]),
     sourceRef("Etherfuse Stablebonds overview", "https://docs.etherfuse.com/stablebonds/cetes-or-mexico", [
@@ -62,13 +71,7 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
     ]),
   ],
   "eusd-telcoin": [
-    sourceRef("Telcoin Digital Asset Bank terms", "https://bank.telco.in/terms-of-use", [
-      "route",
-      "capacity",
-      "fees",
-      "access",
-      "settlement",
-    ]),
+    sourceRefFull("Telcoin Digital Asset Bank terms", "https://bank.telco.in/terms-of-use"),
   ],
   "gusd-gate": [
     sourceRef("Gate GUSD product", "https://www.gate.com/staking/USDT?isDebtType=1&pid=33", [
@@ -77,22 +80,16 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
       "access",
       "settlement",
     ]),
-    sourceRef("Gate GUSD minting and redemption guide", "https://www.gate.com/help/lend/staking/46831", [
-      "route",
-      "capacity",
-      "fees",
-      "access",
-      "settlement",
-    ]),
+    sourceRefFull("Gate GUSD minting and redemption guide", "https://www.gate.com/help/lend/staking/46831"),
     sourceRef(
       "Gate GUSD Flexible US Treasury upgrade announcement (2026-07-27)",
       "https://www.gate.com/announcements/article/100840",
       ["route", "fees", "access", "settlement"],
     ),
-    sourceRef("Gate GUSD overview", "https://www.gate.com/gusd", ["route", "capacity", "fees"]),
+    sourceRefRouteCapacityFees("Gate GUSD overview", "https://www.gate.com/gusd"),
   ],
-  "reur-royal-euro": [sourceRef("REUR", "https://www.rcoins.digital/REUR.html", ["route", "capacity", "access"])],
-  "rusd-royal-dollar": [sourceRef("RUSD", "https://www.rcoins.digital/RUSD.html", ["route", "capacity", "access"])],
+  "reur-royal-euro": [sourceRefRouteCapacityAccess("REUR", "https://www.rcoins.digital/REUR.html")],
+  "rusd-royal-dollar": [sourceRefRouteCapacityAccess("RUSD", "https://www.rcoins.digital/RUSD.html")],
   "usyc-hashnote": [
     sourceRef("Hashnote", "https://usyc.hashnote.com/", ["capacity"]),
     sourceRef(
@@ -117,9 +114,9 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
     ]),
   ],
   "zarp-zarp": [
-    sourceRef("ZARP Stablecoin", "https://www.zarpstablecoin.com/", ["route", "capacity"]),
+    sourceRefRouteCapacity("ZARP Stablecoin", "https://www.zarpstablecoin.com/"),
     sourceRef("ZARP partners", "https://docs.zarpstablecoin.com/zarp-stablecoin/zarp-partners", ["route", "access"]),
-    sourceRef("ZARP transparency", "https://www.zarpstablecoin.com/transparency/", ["route", "capacity"]),
+    sourceRefRouteCapacity("ZARP transparency", "https://www.zarpstablecoin.com/transparency/"),
   ],
 } satisfies Partial<Record<string, RedemptionDocs>>;
 
@@ -214,17 +211,10 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       ...issuerBase,
       ...documentedBoundSupplyFull("2026-05-17"),
       docs: [
-        sourceRef("Brale MXNe", "https://brale.xyz/stablecoins/MXNe", [
-          "route",
-          "capacity",
-          "fees",
-          "access",
-          "settlement",
-        ]),
-        sourceRef(
+        sourceRefFull("Brale MXNe", "https://brale.xyz/stablecoins/MXNe"),
+        sourceRefRouteCapacity(
           "Etherfuse MXNe launch",
           "https://www.etherfuse.com/blogs/etherfuse-r-introduces-real-mxn-mxne-stablecoin-on-solana-base-and-stellar",
-          ["route", "capacity"],
         ),
       ],
     },
@@ -236,13 +226,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       ...issuerBase,
       reviewedAt: "2026-05-17",
       docs: [
-        sourceRef("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins", [
-          "route",
-          "capacity",
-          "fees",
-          "access",
-          "settlement",
-        ]),
+        sourceRefFull("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins"),
       ],
       notes: [
         "Reviewed as a heuristic issuer route because current tracked materials describe 1:1 local-currency backing and selected attestations, but do not publish a hard immediate redemption-capacity source for all five Ripio wFIAT entries.",

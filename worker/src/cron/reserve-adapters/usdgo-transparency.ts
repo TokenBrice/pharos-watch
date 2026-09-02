@@ -16,6 +16,7 @@ import {
   fetchIndependentAssuranceReserves,
   type IndependentAssuranceProfile,
 } from "./independent-assurance";
+import { formatValidIsoDate } from "./report-date";
 
 const ADAPTER_KEY = "usdgo-transparency";
 const BUIDL_DECIMALS = 6;
@@ -93,10 +94,7 @@ function usdgoReportDate(href: string): string | null {
   const month = Number(match[1]);
   const day = Number(match[2]);
   const year = 2000 + Number(match[3]);
-  if (month < 1 || month > 12 || day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) {
-    return null;
-  }
-  return `${year}-${match[1]}-${match[2]}`;
+  return formatValidIsoDate(year, month, day, 2000);
 }
 
 function requireHex(value: unknown, label: string): string {

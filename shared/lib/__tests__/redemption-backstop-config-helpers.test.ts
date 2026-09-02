@@ -14,6 +14,10 @@ import {
   resolveDefaultHolderEligibility,
   resolveV9RedemptionRouteCostBpsAtNotional,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
+  sourceRefRouteCapacityFees,
   undisclosedReviewedFee,
   withTrackedReviewedDocs,
   type RedemptionBackstopConfig,
@@ -127,6 +131,23 @@ describe("redemption backstop config helpers", () => {
       url: "https://example.com/docs",
       supports: ["route", "capacity"],
     });
+  });
+
+  it("builds common source support vectors in exact order as fresh arrays", () => {
+    const cases = [
+      [sourceRefFull, ["route", "capacity", "fees", "access", "settlement"]],
+      [sourceRefRouteCapacity, ["route", "capacity"]],
+      [sourceRefRouteCapacityFees, ["route", "capacity", "fees"]],
+      [sourceRefRouteCapacityAccess, ["route", "capacity", "access"]],
+    ] as const;
+
+    for (const [buildSourceRef, supports] of cases) {
+      const first = buildSourceRef("Docs", "https://example.com/docs");
+      const second = buildSourceRef("Docs", "https://example.com/docs");
+      expect(first.supports).toEqual(supports);
+      expect(second.supports).toEqual(supports);
+      expect(first.supports).not.toBe(second.supports);
+    }
   });
 
   it("separates fixed, documented variable, formula, and undisclosed reviewed fee helpers", () => {

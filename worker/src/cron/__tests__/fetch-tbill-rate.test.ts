@@ -267,6 +267,21 @@ describe("fetchTbillRate", () => {
       isFallback: false,
       fallbackMode: null,
     });
+    expect(Object.keys(latestStructuredCachePayload().benchmarks)).toEqual([
+      "USD",
+      "USD_EFFR",
+      "EUR",
+      "CHF",
+      "GBP",
+      "JPY",
+      "MXN",
+      "BRL",
+      "AUD",
+      "CAD",
+      "RUB",
+      "TRY",
+      "SGD",
+    ]);
   });
 
   it("falls back to the ALFRED SONIA index when the FRED mirror is unreachable", async () => {
