@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { computeReserveCompositionOverview, resolveReserveResult } from "../../lib/live-reserves-store";
@@ -413,6 +413,35 @@ describe("recordDeferredTail", () => {
       tailState: "incomplete",
       tailError: "batch unavailable",
     });
+  });
+
+  it("logs when both deferred batching and the incomplete cursor write fail", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let cursorWrites = 0;
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({
+          sql,
+          binds,
+          run: async () => {
+            if (sql.includes("INSERT OR REPLACE INTO cache") && binds[0] === LIVE_RESERVE_RUN_CURSOR_CACHE_KEY) {
+              cursorWrites += 1;
+              if (cursorWrites === 2) throw new Error("cursor write unavailable");
+            }
+            return { success: true, meta: { changes: 1 } };
+          },
+          first: async () => null,
+        }),
+      }),
+      batch: async () => { throw new Error("batch unavailable"); },
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    await expect(recordDeferredTail(db, [makeCoin("coin-a")], 1_700_000_000))
+      .rejects.toThrow("Failed to record deferred reserve tail state: batch unavailable");
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Failed to mark deferred cursor incomplete"));
+    warn.mockRestore();
   });
 });
 

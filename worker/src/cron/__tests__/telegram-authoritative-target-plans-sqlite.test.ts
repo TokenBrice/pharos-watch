@@ -17,7 +17,10 @@ import {
   type TelegramPlanningDecision,
   type TelegramTargetPlanningClaim,
 } from "../telegram-alert-target-plans";
-import { hasDeferredTelegramAuthoritativeWork } from "../dispatch-telegram-authoritative-path";
+import {
+  executeAuthoritativeFanoutPath,
+  hasDeferredTelegramAuthoritativeWork,
+} from "../dispatch-telegram-authoritative-path";
 import {
   reconcileTelegramAlertJobCounters,
   reconcileTelegramJobTargetFinalDeliveryFromPending,
@@ -31,6 +34,7 @@ import {
 import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { resolveTelegramTargetExpiresAt } from "../telegram-alert-target-plans/materialization";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
+import { loadTelegramPendingCapacity } from "../../lib/telegram-pending-capacity";
 
 const NOW = 1_800_000_000;
 const databases: DatabaseSync[] = [];
@@ -1236,6 +1240,40 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
         .prepare("SELECT status, baseline_committed_at FROM telegram_alert_source_events WHERE source_event_id = ?")
         .get(sourceEventId),
     ).toEqual({ status: "expired", baseline_committed_at: NOW + calls });
+  });
+
+  it("expires a fully reconciled source through the authoritative fanout path", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:authoritative-expiry";
+    insertSource(sqlite, sourceEventId, { expiresAt: NOW - 1 });
+    const sourceEvent = await loadTelegramAlertSourceEvent(db, sourceEventId);
+    expect(sourceEvent).not.toBeNull();
+
+    await executeAuthoritativeFanoutPath({
+      db,
+      botToken: "bot-token",
+      snapshotState: {
+        reserveSourceAssessment: { state: "ok", ageSeconds: 0, generation: "test", envelope: null },
+        reserveSourceUnavailable: false,
+        safetySourceAssessment: { state: "ok", ageSeconds: 0, generation: "test", envelope: null },
+        safetySnapshotNeedsSeed: false,
+      } as never,
+      events: sourceEvent!.events,
+      sourceEvent: sourceEvent!,
+      suppressedSafetyChangesAtSeed: 0,
+      pendingCapacityBefore: await loadTelegramPendingCapacity(db, NOW),
+      nowSec: NOW,
+      dispatchStartedAtMs: Date.now(),
+      chatsWithActiveSnooze: 0,
+    }, {
+      updatePresetFailureState: async () => undefined,
+    });
+
+    expect(
+      sqlite
+        .prepare("SELECT status, baseline_committed_at FROM telegram_alert_source_events WHERE source_event_id = ?")
+        .get(sourceEventId),
+    ).toEqual({ status: "expired", baseline_committed_at: NOW });
   });
 
   it("expires targets before first enqueue and between enqueue pages", async () => {

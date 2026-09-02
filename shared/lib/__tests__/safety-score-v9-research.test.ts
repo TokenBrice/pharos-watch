@@ -271,6 +271,25 @@ describe("v9 research handoff contracts", () => {
     expect(reversed).toEqual(result);
   });
 
+  it("marks a cycle member's otherwise binding cap as nonbinding", () => {
+    const capped = compiled("a", "b");
+    capped.structuralSignals = [{
+      kind: "unsafe-backing",
+      severity: "critical",
+      reason: "Unsecured backing loss.",
+      failureDomainKeys: ["obligor:test"],
+      evidence: [],
+    }];
+
+    const result = scoreCompiledAssetSet([capped, compiled("b", "a")], V9_CANDIDATE_POLICY_V1);
+    const trace = result.traces.find((candidate) => candidate.assetId === "a");
+    expect(trace?.caps).toContainEqual(expect.objectContaining({
+      kind: "signal:unsafe-backing:critical",
+      binding: false,
+    }));
+    expect(trace?.bindingCap).toBeNull();
+  });
+
   it("rejects historical look-ahead evidence", () => {
     const parsed = HistoricalV9FixtureSchema.safeParse({
       schemaVersion: 1,

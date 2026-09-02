@@ -134,6 +134,108 @@ describe("syncLiveReserves", () => {
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
   });
 
+  it("rejects a recovery attempt when its checkpoint is missing", async () => {
+    const checkpointIdentity = {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 1_000,
+      job: "sync-live-reserves",
+      attemptNo: 2,
+      executionGeneration: 2,
+      invocationId: "missing-owner",
+    };
+    const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [] }]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+
+    await expect(syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      undefined,
+      checkpointIdentity,
+    )).rejects.toThrow("live reserve checkpoint missing");
+    expect(getReserveAdapterMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      label: "history repair loses the authoritative generation",
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id,
+      currentDomainAttemptId: "authoritative-attempt",
+      repaired: 0,
+      expected: `live reserve checkpoint history repair lost authoritative generation for ${SYNC_ORDERED_CONFIGURED_COINS[0]!.id}`,
+    },
+    {
+      label: "an authoritative checkpoint item left the queue",
+      nextItemKey: "removed-coin",
+      currentDomainAttemptId: "authoritative-attempt",
+      repaired: 1,
+      expected: "live reserve checkpoint item removed-coin no longer exists in the queue",
+    },
+    {
+      label: "a pending checkpoint item left the queue",
+      nextItemKey: "removed-coin",
+      currentDomainAttemptId: null,
+      repaired: null,
+      expected: "live reserve checkpoint item removed-coin no longer exists in the queue",
+    },
+  ])("rejects unsafe recovery when $label", async ({ nextItemKey, currentDomainAttemptId, repaired, expected }) => {
+    const checkpointIdentity = {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 1_000,
+      job: "sync-live-reserves",
+      attemptNo: 2,
+      executionGeneration: 2,
+      invocationId: "recovery-owner",
+    };
+    const db = mockD1([
+      {
+        match: "FROM worker_scheduled_checkpoints",
+        rows: [{
+          schedule_key: checkpointIdentity.scheduleKey,
+          slot_started_at: checkpointIdentity.slotStartedAt,
+          job: checkpointIdentity.job,
+          attempt_no: checkpointIdentity.attemptNo,
+          execution_generation: checkpointIdentity.executionGeneration,
+          invocation_id: checkpointIdentity.invocationId,
+          worker_version: "version-a",
+          queue_hash: LIVE_RESERVE_QUEUE_HASH,
+          state: "recovering",
+          next_item_key: nextItemKey,
+          current_item_key: currentDomainAttemptId ? nextItemKey : null,
+          current_domain_attempt_id: currentDomainAttemptId,
+          items_done: 0,
+          items_total: SYNC_ORDERED_CONFIGURED_COINS.length,
+          child_dispositions_json: "{}",
+          recovery_owner: checkpointIdentity.invocationId,
+          recovery_lease_until: 2_000,
+          source_attempt_no: 1,
+          error: null,
+          created_at: 1_000,
+          updated_at: 1_100,
+          completed_at: null,
+        }],
+      },
+      ...(currentDomainAttemptId
+        ? [
+            { match: "SELECT 1 AS finalized", rows: [{ finalized: 1 }] },
+            { match: "SELECT 1 AS repaired", rows: repaired ? [{ repaired }] : [] },
+          ]
+        : []),
+    ]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+
+    await expect(syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      undefined,
+      checkpointIdentity,
+    )).rejects.toThrow(expected);
+    expect(getReserveAdapterMock).not.toHaveBeenCalled();
+  });
+
   it("repairs crash-omitted history before advancing an authoritative item on retry", async () => {
     const lastCoin = SYNC_ORDERED_CONFIGURED_COINS[SYNC_ORDERED_CONFIGURED_COINS.length - 1];
     expect(lastCoin).toBeDefined();
@@ -902,6 +1004,28 @@ describe("syncLiveReserves", () => {
       && entry.binds.some((bind) => typeof bind === "string" && bind.includes("adapter-timeout"))
     ));
     expect(timeoutAttempt).toBeDefined();
+  });
+
+  it("records string abort reasons and the adapter fallback for non-error reasons", async () => {
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    for (const { reason, expectedAttemptError, expectedRunError } of [
+      { reason: "operator cancelled", expectedAttemptError: "operator cancelled", expectedRunError: "operator cancelled" },
+      { reason: 42, expectedAttemptError: "adapter-timeout", expectedRunError: "Operation aborted" },
+    ]) {
+      const controller = new AbortController();
+      mockAdapterRegistry(async () => {
+        controller.abort(reason);
+        return await new Promise<never>(() => undefined);
+      });
+      const db = mockD1();
+
+      await expect(syncLiveReserves(db, controller.signal, {})).rejects.toThrow(expectedRunError);
+      const failedAttempt = db.getHistory().find((entry) => (
+        entry.sql.includes("reserve_sync_attempt_history")
+        && entry.binds.some((bind) => typeof bind === "string" && bind.includes(expectedAttemptError))
+      ));
+      expect(failedAttempt).toBeDefined();
+    }
   });
 
   it("emits durationMs in reserve_composition metadata for successful syncs", async () => {
