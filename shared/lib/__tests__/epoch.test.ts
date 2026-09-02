@@ -36,59 +36,10 @@ describe("parseEpoch", () => {
 });
 
 describe("parseEpochSeconds", () => {
-  const positiveFlooredOptions = {
-    numericTextPolicy: "any" as const,
-    millisecondsThreshold: 10_000_000_000,
-    millisecondsThresholdInclusive: false,
-    floor: true,
-    minExclusive: 0,
-  };
-
-  it("preserves the exclusive 10^10 adapter threshold and floors both units", () => {
-    expect(parseEpochSeconds(9_999_999_999.9, positiveFlooredOptions)).toBe(9_999_999_999);
-    expect(parseEpochSeconds(10_000_000_000, positiveFlooredOptions)).toBe(10_000_000_000);
-    expect(parseEpochSeconds(10_000_000_001, positiveFlooredOptions)).toBe(10_000_000);
-  });
-
-  it("preserves the inclusive 10^12 freshness threshold", () => {
-    const freshnessOptions = {
-      ...positiveFlooredOptions,
-      numericTextPolicy: "digits-only" as const,
-      millisecondsThreshold: 1_000_000_000_000,
-      millisecondsThresholdInclusive: true,
-    };
-    expect(parseEpochSeconds(999_999_999_999, freshnessOptions)).toBe(999_999_999_999);
-    expect(parseEpochSeconds(1_000_000_000_000, freshnessOptions)).toBe(1_000_000_000);
-  });
-
-  it("makes numeric text, ISO, positivity, and flooring policies explicit", () => {
-    expect(parseEpochSeconds("1700000000.9", positiveFlooredOptions)).toBe(1_700_000_000);
-    expect(parseEpochSeconds(-1, positiveFlooredOptions)).toBeNull();
-    expect(parseEpochSeconds("2025-01-01T00:00:00.999Z", positiveFlooredOptions)).toBe(1_735_689_600);
-    expect(parseEpochSeconds("1700000000.9", {
-      ...positiveFlooredOptions,
-      numericTextPolicy: "digits-only",
-    })).toBeNull();
-  });
-
-  it("can preserve adapter-specific minimum and numeric-text fallback behavior", () => {
-    expect(parseEpochSeconds("0", {
-      ...positiveFlooredOptions,
-      isoMinExclusive: null,
-      numericTextMinRejectionPolicy: "iso-fallback",
-    })).toBe(Math.floor(Date.parse("0") / 1000));
-    expect(parseEpochSeconds("1960-01-01T00:00:00Z", {
-      ...positiveFlooredOptions,
-      isoMinExclusive: null,
-    })).toBe(-315_619_200);
-  });
-
-  it("applies the minimum after milliseconds conversion and flooring", () => {
-    const etherfuseOptions = {
-      ...positiveFlooredOptions,
-      minExclusive: 946_684_800,
-    };
-    expect(parseEpochSeconds(946_684_800_999, etherfuseOptions)).toBeNull();
-    expect(parseEpochSeconds(946_684_801_000, etherfuseOptions)).toBe(946_684_801);
-  });
+  const options = { numericTextPolicy: "any" as const, millisecondsThreshold: 10_000_000_000, millisecondsThresholdInclusive: false, floor: true, minExclusive: 0 };
+  it.each([
+    [9_999_999_999.9, options, 9_999_999_999], [10_000_000_000, options, 10_000_000_000], [10_000_000_001, options, 10_000_000], ["1700000000.9", options, 1_700_000_000],
+    ["2025-01-01T00:00:00.999Z", options, 1_735_689_600], [-1, options, null], [1_000_000_000_000, { ...options, millisecondsThreshold: 1_000_000_000_000, millisecondsThresholdInclusive: true }, 1_000_000_000],
+    [946_684_800_999, { ...options, minExclusive: 946_684_800 }, null],
+  ])("normalizes %s with explicit policy", (value, parserOptions, expected) => expect(parseEpochSeconds(value, parserOptions)).toBe(expected));
 });

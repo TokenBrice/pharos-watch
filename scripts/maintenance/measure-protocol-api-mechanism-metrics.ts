@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 
 import {
   assertCliUsage,
@@ -8,7 +8,6 @@ import {
   runCliEntrypoint,
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
-import { parseEvidenceProducerMode, runEvidenceProducer } from "../lib/measurement-evidence-runner";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
   buildProtocolApiMeasurement,
@@ -81,21 +80,24 @@ function parseOptions(argv: string[]): CliOptions | null {
   });
   if (writeCliHelpIfRequested(values, USAGE)) return null;
 
-  const mode = parseEvidenceProducerMode<ProtocolApiAssetId>(values, DEFAULT_OUT_DIR);
+  const rawAssets = Array.isArray(values.asset) ? values.asset.map(String) : [];
+  const replayPaths = Array.isArray(values.replay) ? values.replay.map(String) : [];
   const replayAll = values["replay-all"] === true;
-  const liveOptionPresent = mode.assets.length > 0 || values["out-dir"] != null;
-  assertCliUsage(!(mode.replayPaths.length > 0 && (liveOptionPresent || replayAll)), "--replay is exclusive with --asset, --out-dir, and --replay-all");
-  assertCliUsage(!(replayAll && (liveOptionPresent || mode.replayPaths.length > 0)), "--replay-all is exclusive with --asset, --out-dir, and --replay");
-  assertCliUsage(mode.replayPaths.length > 0 || replayAll || mode.assets.length > 0, "live capture requires at least one --asset");
-  assertCliUsage(new Set(mode.assets).size === mode.assets.length, "--asset values must not be duplicated");
-  assertCliUsage(new Set(mode.replayPaths).size === mode.replayPaths.length, "--replay values must not be duplicated");
+  const liveOptionPresent = rawAssets.length > 0 || values["out-dir"] != null;
+  assertCliUsage(!(replayPaths.length > 0 && (liveOptionPresent || replayAll)), "--replay is exclusive with --asset, --out-dir, and --replay-all");
+  assertCliUsage(!(replayAll && (liveOptionPresent || replayPaths.length > 0)), "--replay-all is exclusive with --asset, --out-dir, and --replay");
+  assertCliUsage(replayPaths.length > 0 || replayAll || rawAssets.length > 0, "live capture requires at least one --asset");
+  assertCliUsage(new Set(rawAssets).size === rawAssets.length, "--asset values must not be duplicated");
+  assertCliUsage(new Set(replayPaths).size === replayPaths.length, "--replay values must not be duplicated");
 
   const knownAssets = Object.keys(PROTOCOL_API_TARGETS) as ProtocolApiAssetId[];
-  for (const asset of mode.assets) {
+  for (const asset of rawAssets) {
     assertCliUsage(knownAssets.includes(asset as ProtocolApiAssetId), `unknown --asset ${asset} (known: ${knownAssets.join(", ")})`);
   }
   return {
-    ...mode,
+    assets: rawAssets as ProtocolApiAssetId[],
+    outDir: typeof values["out-dir"] === "string" ? values["out-dir"] : DEFAULT_OUT_DIR,
+    replayPaths,
     replayAll,
   };
 }
@@ -240,11 +242,18 @@ function replayEvidence(path: string): ProtocolApiMechanismMeasurement | null {
   return replayed;
 }
 
-function assertExistingSnapshot(path: string, incoming: ProtocolApiMechanismMeasurement): void {
-  const existing = readArtifact(path);
-  if (!existing) throw new Error(`Legacy V1 evidence cannot occupy a V2 snapshot path: ${path}`);
-  if (!isSameProtocolApiSourceSnapshot(existing, incoming)) {
-    throw new Error(`Evidence ${path} exists with different source content or derivation`);
+function acceptExistingSnapshot(path: string, incoming: ProtocolApiMechanismMeasurement): boolean {
+  try {
+    const existing = readArtifact(path);
+    if (!existing) throw new Error(`Legacy V1 evidence cannot occupy a V2 snapshot path: ${path}`);
+    if (!isSameProtocolApiSourceSnapshot(existing, incoming)) {
+      throw new Error(`Evidence ${path} exists with different source content or derivation`);
+    }
+    console.log(`[protocol-api-measurement] identical source snapshot already recorded at ${path}`);
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("ENOENT")) return false;
+    throw error;
   }
 }
 
@@ -259,45 +268,36 @@ function existingArtifacts(outDir: string): unknown[] {
   }
 }
 
-async function run(options: CliOptions): Promise<void> {
-  const configuredAssets = Object.keys(PROTOCOL_API_TARGETS) as ProtocolApiAssetId[];
-  await runEvidenceProducer({
-    options,
-    configuredAssets,
-    resolveTarget: (assetId) => PROTOCOL_API_TARGETS[assetId],
-    unknownTargetError: (assetId) => `unknown --asset ${assetId} (known: ${configuredAssets.join(", ")})`,
-    replay: replayEvidence,
-    afterReplay: (artifacts) => {
-      validateProtocolApiArtifactSet(
-        artifacts.filter((artifact): artifact is ProtocolApiMechanismMeasurement => artifact !== null),
-      );
-    },
-    capture: async (target, _attempt, _options, assetId) => {
-      const observations: RawProtocolApiObservationInput[] = [];
-      for (const source of target.sources) observations.push(await fetchRawObservation(source));
-      const artifact = buildProtocolApiMeasurement(assetId, observations);
-      replayProtocolApiMeasurement(artifact);
-      return artifact;
-    },
-    artifactPath: (artifact) => join(options.outDir, artifact.assetId, protocolApiEvidenceFilename(artifact)),
-    serialize: serializeProtocolApiMeasurement,
-    compareExisting: assertExistingSnapshot,
-    onExisting: ({ outPath }) => {
-      console.log(`[protocol-api-measurement] identical source snapshot already recorded at ${outPath}`);
-    },
-    beforeWrite: ({ evidence }) => {
-      validateProtocolApiArtifactSet([...existingArtifacts(options.outDir), evidence]);
-    },
-    exclusiveWrite: true,
-    onWritten: ({ assetId, evidence, outPath }) => {
-      const measured = Object.fromEntries(
-        evidence.metrics.filter((metric) => metric.state === "measured").map((metric) => [metric.id, metric.value]),
-      );
-      console.log(
-        `[protocol-api-measurement] ${assetId}: snapshot=${evidence.snapshotId} metrics=${JSON.stringify(measured)} -> ${outPath}`,
-      );
-    },
-  });
+async function measureTarget(outDir: string, assetId: ProtocolApiAssetId): Promise<void> {
+  const target = PROTOCOL_API_TARGETS[assetId];
+  const observations: RawProtocolApiObservationInput[] = [];
+  for (const source of target.sources) observations.push(await fetchRawObservation(source));
+  const artifact = buildProtocolApiMeasurement(assetId, observations);
+  replayProtocolApiMeasurement(artifact);
+
+  const outPath = resolve(join(outDir, assetId, protocolApiEvidenceFilename(artifact)));
+  try {
+    if (acceptExistingSnapshot(outPath, artifact)) return;
+  } catch (error) {
+    if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) throw error;
+  }
+
+  validateProtocolApiArtifactSet([...existingArtifacts(outDir), artifact]);
+  mkdirSync(dirname(outPath), { recursive: true });
+  try {
+    writeFileSync(outPath, serializeProtocolApiMeasurement(artifact), { flag: "wx" });
+  } catch (error) {
+    if (!(error && typeof error === "object" && "code" in error && error.code === "EEXIST")) throw error;
+    acceptExistingSnapshot(outPath, artifact);
+    return;
+  }
+
+  const measured = Object.fromEntries(
+    artifact.metrics.filter((metric) => metric.state === "measured").map((metric) => [metric.id, metric.value]),
+  );
+  console.log(
+    `[protocol-api-measurement] ${assetId}: snapshot=${artifact.snapshotId} metrics=${JSON.stringify(measured)} -> ${outPath}`,
+  );
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
@@ -305,6 +305,13 @@ if (isDirectRun(import.meta.url, process.argv[1])) {
     async () => {
       const options = parseOptions(process.argv.slice(2));
       if (!options) return;
+      if (options.replayPaths.length > 0) {
+        const artifacts = options.replayPaths
+          .map(replayEvidence)
+          .filter((artifact): artifact is ProtocolApiMechanismMeasurement => artifact !== null);
+        validateProtocolApiArtifactSet(artifacts);
+        return;
+      }
       if (options.replayAll) {
         const paths = discoverProtocolArtifacts(DEFAULT_OUT_DIR);
         const artifacts = paths
@@ -316,7 +323,7 @@ if (isDirectRun(import.meta.url, process.argv[1])) {
         );
         return;
       }
-      await run(options);
+      for (const asset of options.assets) await measureTarget(options.outDir, asset);
     },
     { label: "measure-protocol-api-mechanism-metrics", usage: USAGE },
   );

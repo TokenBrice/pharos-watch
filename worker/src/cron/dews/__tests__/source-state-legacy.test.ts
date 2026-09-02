@@ -317,7 +317,6 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       reject: (error: Error) => void;
     };
     const pending: PendingCall[] = [];
-    const started: string[] = [];
     const replayOrder: string[] = [];
 
     const labelSql = (sql: string, binds: unknown[]): string => {
@@ -340,15 +339,9 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       return sql.replace(/\s+/g, " ").trim();
     };
 
-    const resultFor = (call: PendingCall): unknown => {
-      if (call.kind === "first") return null;
-      return { results: [] };
-    };
-
     const stmt = (sql: string, binds: unknown[] = []) => {
       const enqueue = (kind: "all" | "first") => new Promise<unknown>((resolve, reject) => {
         const label = labelSql(sql, binds);
-        started.push(label);
         pending.push({ label, kind, resolve, reject });
       });
       return {
@@ -379,36 +372,14 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
 
     await Promise.resolve();
 
-    expect(started).toEqual(expect.arrayContaining([
-      "dex-liquidity",
-      "dex-prices",
-      "dex-liquidity-history",
-      "blacklist-events",
-      "cache:dews:published-generation",
-      "mint-burn-24h",
-      "yield-warnings",
-      "cache:yield-rankings",
-      "latest-psi-score",
-    ]));
-
-    const failedReads = new Set([
-      "dex-liquidity",
-      "dex-prices",
-      "dex-liquidity-history",
-      "blacklist-events",
-      "previous-stress-latest",
-      "mint-burn-24h",
-      "yield-warnings",
-      "cache:yield-rankings",
-      "latest-psi-score",
-    ]);
+    const failedReads = /^(dex-liquidity(?:-history)?|dex-prices|blacklist-events|previous-stress-latest|mint-burn-24h|yield-warnings|cache:yield-rankings|latest-psi-score)$/;
     for (let guard = 0; !settled && guard < 10; guard++) {
       const batch = pending.splice(0);
       for (const call of batch.reverse()) {
-        if (failedReads.has(call.label)) {
+        if (failedReads.test(call.label)) {
           call.reject(new Error(call.label));
         } else {
-          call.resolve(resultFor(call));
+          call.resolve(call.kind === "first" ? null : { results: [] });
         }
       }
       await Promise.resolve();

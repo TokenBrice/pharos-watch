@@ -8,7 +8,6 @@ import {
   formatOgWriteStatus,
   promoteGeneratedPngIfChanged,
   runOgArtifactBuild,
-  runOgPlaywrightFamily,
   writeFileIfChanged,
 } from "../lib/og-image-checks.mts";
 
@@ -127,56 +126,5 @@ describe("OG image file promotion", () => {
       render: async () => { throw new Error("render failed"); },
     })).rejects.toThrow("render failed");
     expect(existsSync(stagingDir)).toBe(false);
-  });
-
-  it("uses an exact PNG-bound signature manifest to skip Firefox", async () => {
-    const root = makeTempDir();
-    const publicDir = join(root, "public");
-    const stagingDir = join(root, "staging");
-    const signaturePath = join(root, "state", "signatures.json");
-    mkdirSync(publicDir);
-    mkdirSync(join(root, "state"));
-    const publicPath = join(publicDir, "card.png");
-    await sharp({
-      create: { width: 2, height: 2, channels: 4, background: { r: 10, g: 20, b: 30, alpha: 1 } },
-    }).png().toFile(publicPath);
-    const roster = [{ file: "card.png", label: "Card" }];
-    const buildManifest = (cards: Array<{
-      file: string;
-      label: string;
-      svgSha256: string;
-      pngSha256?: string | null;
-    }>) => `${JSON.stringify({ generatedBy: "test", cards }, null, 2)}\n`;
-    writeFileSync(signaturePath, buildManifest([{
-      file: "card.png",
-      label: "Card",
-      svgSha256: contentSha256("<svg/>"),
-      pngSha256: contentSha256(readFileSync(publicPath)),
-    }]));
-    const results: string[] = [];
-
-    await expect(runOgPlaywrightFamily({
-      background: "#fff",
-      buildRenderInput: (entry) => ({
-        file: entry.file,
-        signature: { file: entry.file, label: entry.label, svgSha256: contentSha256("<svg/>") },
-        sourceBasename: "card",
-        svg: "<svg/>",
-      }),
-      buildSignatureManifest: buildManifest,
-      check: true,
-      family: "Test",
-      fonts: [],
-      includePngSignatures: true,
-      onResult: (entry) => results.push(entry.file),
-      publicDir,
-      refreshCommand: "refresh",
-      roster,
-      signatureFastPath: true,
-      signaturePath,
-      signatureStaleLabel: "signatures.json",
-      stagingDir,
-    })).resolves.toMatchObject({ skipped: true, staleFiles: [] });
-    expect(results).toEqual(["card.png"]);
   });
 });

@@ -1,8 +1,7 @@
-import { readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 
 import { parseCliInteger, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
-import { parseEvidenceProducerMode, runEvidenceProducer } from "../lib/measurement-evidence-runner";
 import { fetchBlockByNumber, pinBlock } from "../lib/mechanism-measurement/core";
 import { JournaledShockCaller, ReplayShockCaller } from "../lib/mechanism-measurement/shock-journal";
 import { measureConfiguredShockCoverageTarget } from "../lib/mechanism-measurement/shock-measure";
@@ -53,13 +52,14 @@ function parseOptions(argv: string[]): CliOptions | null {
   });
   if (writeCliHelpIfRequested(values, USAGE)) return null;
 
-  const mode = parseEvidenceProducerMode(values, DEFAULT_OUT_DIR);
+  const assets = Array.isArray(values.asset) ? values.asset.map(String) : [];
+  const replayPaths = Array.isArray(values.replay) ? values.replay.map(String) : [];
   const applicabilityAssets = Array.isArray(values["check-applicability"])
     ? values["check-applicability"].map(String)
     : [];
   const liveOptionPresent =
-    mode.assets.length > 0 || values.rpc != null || values.block != null || values["out-dir"] != null;
-  if (mode.replayPaths.length > 0 && (liveOptionPresent || applicabilityAssets.length > 0)) {
+    assets.length > 0 || values.rpc != null || values.block != null || values["out-dir"] != null;
+  if (replayPaths.length > 0 && (liveOptionPresent || applicabilityAssets.length > 0)) {
     throw new Error("--replay is exclusive with live and applicability options");
   }
   if (applicabilityAssets.length > 0 && liveOptionPresent) {
@@ -67,9 +67,11 @@ function parseOptions(argv: string[]): CliOptions | null {
   }
 
   return {
-    ...mode,
+    assets,
     rpc: typeof values.rpc === "string" ? values.rpc : null,
     block: values.block == null ? null : parseCliInteger(values.block, { name: "--block", min: 1 }),
+    outDir: typeof values["out-dir"] === "string" ? values["out-dir"] : DEFAULT_OUT_DIR,
+    replayPaths,
     applicabilityAssets,
   };
 }
@@ -213,63 +215,76 @@ async function replayEvidence(path: string): Promise<void> {
   );
 }
 
-async function run(options: CliOptions): Promise<void> {
-  await runEvidenceProducer({
-    options,
-    configuredAssets: SHOCK_COVERAGE_TARGETS.map((target) => target.assetId),
-    resolveTarget: getShockCoverageTarget,
-    unknownTargetError: (assetId) =>
+async function measureTarget(options: CliOptions, assetId: string): Promise<void> {
+  const target = getShockCoverageTarget(assetId);
+  if (!target) {
+    throw new Error(
       `No shock target configured for ${assetId} (known: ${SHOCK_COVERAGE_TARGETS.map((entry) => entry.assetId).join(", ")})`,
-    replay: replayEvidence,
-    attempts: (target) => options.rpc ? [options.rpc] : target.rpcs,
-    capture: async (target, rpcUrl) => {
-      const endpoint = rpcUrl as string;
-      const block = options.block == null ? await pinBlock(endpoint) : await fetchBlockByNumber(endpoint, options.block);
-      const caller = new JournaledShockCaller(endpoint, { blockHash: block.hash, requireCanonical: true });
-      return ShockCoverageEvidenceV1Schema.parse(
-        await measureConfiguredShockCoverageTarget(caller, target, block, endpoint),
+    );
+  }
+
+  const rpcs = options.rpc ? [options.rpc] : target.rpcs;
+  let lastError: unknown = null;
+  for (const rpcUrl of rpcs) {
+    try {
+      const block = options.block == null ? await pinBlock(rpcUrl) : await fetchBlockByNumber(rpcUrl, options.block);
+      const caller = new JournaledShockCaller(rpcUrl, { blockHash: block.hash, requireCanonical: true });
+      const evidence = ShockCoverageEvidenceV1Schema.parse(
+        await measureConfiguredShockCoverageTarget(caller, target, block, rpcUrl),
       );
-    },
-    artifactPath: (evidence) => {
       const date = evidence.block.timestampIso.slice(0, 10);
-      return join(options.outDir, evidence.assetId, `${date}-block-${evidence.block.number}-shock-coverage.json`);
-    },
-    serialize: (evidence) => `${JSON.stringify(evidence, null, 2)}\n`,
-    compareExisting: assertExistingMeasurement,
-    onExisting: ({ assetId, outPath }) => {
-      console.log(`[shock-coverage] ${assetId}: identical measurement already recorded at ${outPath}`);
-    },
-    exclusiveWrite: true,
-    onWritten: ({ assetId, evidence, outPath }) => {
+      const outPath = resolve(
+        join(options.outDir, evidence.assetId, `${date}-block-${evidence.block.number}-shock-coverage.json`),
+      );
+      const serialized = `${JSON.stringify(evidence, null, 2)}\n`;
+
+      mkdirSync(dirname(outPath), { recursive: true });
+      try {
+        writeFileSync(outPath, serialized, { flag: "wx" });
+      } catch (error) {
+        if (!(error && typeof error === "object" && "code" in error && error.code === "EEXIST")) throw error;
+        assertExistingMeasurement(outPath, evidence);
+        console.log(`[shock-coverage] ${assetId}: identical measurement already recorded at ${outPath}`);
+        return;
+      }
       console.log(
-        `[shock-coverage] ${assetId}: block ${evidence.block.number} (${evidence.block.selection}) via ${evidence.rpcUrl}\n` +
+        `[shock-coverage] ${assetId}: block ${evidence.block.number} (${evidence.block.selection}) via ${rpcUrl}\n` +
           `  coverage50=${evidence.measuredFacts.stressLiquidationCoverageRatio} ` +
           `Q50=${evidence.measuredFacts.stressLiquidatableDebt} ` +
           `O50=${evidence.measuredFacts.stressPoolOffsetDebt}\n` +
           `  calls=${evidence.calls.length} codePins=${evidence.codePins.length} checks=${evidence.checks.length} -> ${outPath}`,
       );
-    },
-    onAttemptError: (error, assetId, rpcUrl) => {
+      return;
+    } catch (error) {
+      lastError = error;
       console.warn(
         `[shock-coverage] ${assetId}: ${rpcUrl} failed - ${error instanceof Error ? error.message : String(error)}`,
       );
-    },
-    attemptsFailedError: (error, assetId) =>
-      `All RPC endpoints failed for ${assetId}: ${error instanceof Error ? error.message : String(error)}`,
-  });
+    }
+  }
+  throw new Error(
+    `All RPC endpoints failed for ${assetId}: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  );
 }
 
 void runCliEntrypoint(
   async () => {
     const options = parseOptions(process.argv.slice(2));
     if (!options) return;
+    if (options.replayPaths.length > 0) {
+      for (const path of options.replayPaths) await replayEvidence(path);
+      return;
+    }
     if (options.applicabilityAssets.length > 0) {
       for (const assetId of options.applicabilityAssets) {
         console.log(JSON.stringify(assessShockCoverageApplicability(assetId)));
       }
       return;
     }
-    await run(options);
+
+    const assetIds =
+      options.assets.length > 0 ? options.assets : SHOCK_COVERAGE_TARGETS.map((target) => target.assetId);
+    for (const assetId of assetIds) await measureTarget(options, assetId);
   },
   { label: "measure-cdp-shock-coverage", usage: USAGE },
 );

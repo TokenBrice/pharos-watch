@@ -2,7 +2,6 @@ import {
   decodeFunctionData,
   decodeFunctionResult,
   encodeFunctionData,
-  keccak256,
   parseAbi,
 } from "viem/utils";
 
@@ -17,20 +16,14 @@ import type {
   EvmCodeAtBlockResult,
   EvmMulticall3Call,
   EvmMulticall3Result,
-  EvmRpcOptions,
 } from "../../lib/evm-rpc";
-import { DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS } from "./profiles";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
 import {
   createCurveGetDyQuoteAdapter,
   makeCurveGetDyPlan,
   type CurveGetDyPlan,
 } from "./curve-get-dy-quote-engine";
-import {
-  canonicalEvmAddress,
-  canonicalEvmHash,
-  decodeAddressResult as decodeEvmAddressResult,
-} from "./evm-codecs";
+import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
 import { usdToRawAmount } from "./fixed-point";
 import type {
   DexMeasuredExecutionBudgetStopReason,
@@ -71,182 +64,21 @@ interface CurveStableSwapPinnedReaderDependencies {
     chain: string,
     address: string,
     blockNumber: number,
-    options: EvmRpcOptions,
+    options: unknown,
   ): Promise<EvmCodeAtBlockResult>;
   fetchCall(
     chain: string,
     address: string,
     callData: string,
     blockNumber: number,
-    options: EvmRpcOptions,
+    options: unknown,
   ): Promise<`0x${string}` | null>;
-}
-
-export interface CurveStableSwapDeploymentDependencies
-  extends CurveStableSwapPinnedReaderDependencies {
-  hashCode?(code: `0x${string}`): `0x${string}`;
-}
-
-interface CurveStableSwapDeploymentInput<Policy extends CurveStableSwapExecutionPolicy> {
-  policy?: Policy;
-  nowSec: number;
-  chainRpcs: Map<string, ChainRpcConfig>;
-  signal?: AbortSignal;
-  rpcBudget?: DexMeasuredExecutionRpcBudget;
-}
-
-interface CurveStableSwapPinnedBlock {
-  blockNumber: number;
-  blockTimestamp: number;
-  blockHash?: `0x${string}`;
-}
-
-type CurveStableSwapVerificationStep<Value, Failure extends string> =
-  | { ok: true; value: Value }
-  | { ok: false; reason: Failure };
-
-type CurveStableSwapDeploymentFailure =
-  | "future-pinned-block"
-  | "stale-pinned-block"
-  | "runtime-code-unavailable"
-  | "runtime-code-absent"
-  | "runtime-code-hash-mismatch";
-
-export interface CurveStableSwapDeploymentContext<
-  Policy extends CurveStableSwapExecutionPolicy,
-  Input extends CurveStableSwapDeploymentInput<Policy>,
-> extends CurveStableSwapPinnedBlock {
-  input: Input;
-  policy: Policy;
-  requestOptions: EvmRpcOptions;
-  readCode(address: `0x${string}`): Promise<EvmCodeAtBlockResult>;
-  readCall(address: `0x${string}`, callData: `0x${string}`): Promise<`0x${string}` | null>;
-  hashCode(code: `0x${string}`): `0x${string}`;
-}
-
-export function createCurveStableSwapDeploymentVerifier<
-  Policy extends CurveStableSwapExecutionPolicy,
-  Input extends CurveStableSwapDeploymentInput<Policy>,
-  BindingProof,
-  Failure extends string,
->(
-  dependencies: CurveStableSwapDeploymentDependencies,
-  strategy: {
-    defaultPolicy: Policy;
-    freshnessMaxSec: number;
-    precheck?(input: Input, policy: Policy): Failure | null;
-    acquireBlock(input: Input, policy: Policy, options: EvmRpcOptions): Promise<
-      CurveStableSwapVerificationStep<CurveStableSwapPinnedBlock, Failure>
-    >;
-    bindingCode: {
-      address(policy: Policy): `0x${string}`;
-      expectedHash(policy: Policy): `0x${string}`;
-      beforePoolHash: boolean;
-      unavailable: Failure;
-      absent: Failure;
-      mismatch: Failure;
-    };
-    verifyBinding(context: CurveStableSwapDeploymentContext<Policy, Input> & {
-      bindingCodeHash: `0x${string}`;
-    }): Promise<CurveStableSwapVerificationStep<BindingProof, Failure>>;
-  },
-) {
-  return async function verifyCurveStableSwapDeployment(input: Input): Promise<
-    | {
-        ok: true;
-        codeHash: `0x${string}`;
-        blockNumber: number;
-        blockTimestamp: number;
-        bindingProof: BindingProof;
-      }
-    | { ok: false; reason: Failure | CurveStableSwapDeploymentFailure }
-  > {
-    const policy = input.policy ?? strategy.defaultPolicy;
-    const precheckFailure = strategy.precheck?.(input, policy);
-    if (precheckFailure) return { ok: false, reason: precheckFailure };
-
-    const requestOptions: EvmRpcOptions = {
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-      maxRetries: 0,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
-    };
-    const pinnedBlock = await strategy.acquireBlock(input, policy, requestOptions);
-    if (!pinnedBlock.ok) return pinnedBlock;
-    const { blockNumber, blockTimestamp } = pinnedBlock.value;
-    if (blockTimestamp > input.nowSec + 60) {
-      return { ok: false, reason: "future-pinned-block" };
-    }
-    if (input.nowSec - blockTimestamp > strategy.freshnessMaxSec) {
-      return { ok: false, reason: "stale-pinned-block" };
-    }
-
-    const { readCode, readCall } = createCurveStableSwapPinnedReaders(
-      { policy, blockNumber, rpcBudget: input.rpcBudget },
-      dependencies,
-      requestOptions,
-    );
-    const hashCode = dependencies.hashCode ?? ((code: `0x${string}`) => keccak256(code));
-    const context: CurveStableSwapDeploymentContext<Policy, Input> = {
-      input,
-      policy,
-      requestOptions,
-      blockNumber,
-      blockTimestamp,
-      ...(pinnedBlock.value.blockHash ? { blockHash: pinnedBlock.value.blockHash } : {}),
-      readCode,
-      readCall,
-      hashCode,
-    };
-
-    const poolCodeResult = await readCode(policy.poolAddress);
-    if (poolCodeResult.status === "unavailable") {
-      return { ok: false, reason: "runtime-code-unavailable" };
-    }
-    if (poolCodeResult.status === "absent") {
-      return { ok: false, reason: "runtime-code-absent" };
-    }
-    const readBindingCode = async () => {
-      const result = await readCode(strategy.bindingCode.address(policy));
-      if (result.status === "unavailable") {
-        return { ok: false, reason: strategy.bindingCode.unavailable } as const;
-      }
-      if (result.status === "absent") {
-        return { ok: false, reason: strategy.bindingCode.absent } as const;
-      }
-      return { ok: true, value: result.code } as const;
-    };
-    let bindingCode = strategy.bindingCode.beforePoolHash ? await readBindingCode() : null;
-    if (bindingCode && !bindingCode.ok) return bindingCode;
-    const poolCodeHash = hashCode(poolCodeResult.code).toLowerCase() as `0x${string}`;
-    if (poolCodeHash !== policy.expectedPoolCodeHash) {
-      return { ok: false, reason: "runtime-code-hash-mismatch" };
-    }
-    bindingCode ??= await readBindingCode();
-    if (!bindingCode.ok) return bindingCode;
-    const bindingCodeHash = hashCode(bindingCode.value).toLowerCase() as `0x${string}`;
-    if (bindingCodeHash !== strategy.bindingCode.expectedHash(policy)) {
-      return { ok: false, reason: strategy.bindingCode.mismatch };
-    }
-
-    const binding = await strategy.verifyBinding({ ...context, bindingCodeHash });
-    if (!binding.ok) return binding;
-    return {
-      ok: true,
-      codeHash: poolCodeHash,
-      blockNumber,
-      blockTimestamp,
-      bindingProof: binding.value,
-    };
-  };
 }
 
 export function createCurveStableSwapPinnedReaders<P extends CurveStableSwapExecutionPolicy>(
   input: CurveStableSwapPinnedReaderInput<P>,
   dependencies: CurveStableSwapPinnedReaderDependencies,
-  requestOptions: EvmRpcOptions,
+  requestOptions: unknown,
 ) {
   return {
     readCode: async (address: `0x${string}`): Promise<EvmCodeAtBlockResult> => {
@@ -278,61 +110,6 @@ export function createCurveStableSwapPinnedReaders<P extends CurveStableSwapExec
       return result;
     },
   };
-}
-
-interface CurveStableSwapBaseRuntimeEvidence {
-  blockTimestamp: number;
-  poolCodeHash: `0x${string}`;
-}
-
-type CurveStableSwapBaseEligibilityFailure =
-  | "pool-not-reviewed"
-  | "execution-endpoint-mismatch"
-  | "invalid-pinned-block"
-  | "future-pinned-block"
-  | "stale-pinned-block"
-  | "runtime-code-unavailable"
-  | "runtime-code-hash-mismatch";
-
-export function evaluateCurveStableSwapBaseEligibility<
-  Policy extends CurveStableSwapExecutionPolicy,
-  Evidence extends CurveStableSwapBaseRuntimeEvidence,
-  Failure extends string,
->(input: {
-  chain: string;
-  endpointAddress: string;
-  blockNumber: number;
-  nowSec: number;
-  evidence?: Evidence;
-}, getPolicy: (chain: string, poolAddress: string) => Policy | null, freshnessMaxSec: number,
-blockTimestampUnavailable: Failure):
-  | { ok: true; policy: Policy; evidence: Evidence }
-  | { ok: false; reason: Failure | CurveStableSwapBaseEligibilityFailure } {
-  const policy = getPolicy(input.chain, input.endpointAddress);
-  if (!policy) return { ok: false, reason: "pool-not-reviewed" };
-  if (canonicalEvmAddress(input.endpointAddress) !== policy.poolAddress) {
-    return { ok: false, reason: "execution-endpoint-mismatch" };
-  }
-  if (!Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {
-    return { ok: false, reason: "invalid-pinned-block" };
-  }
-  const evidence = input.evidence;
-  if (!evidence || !Number.isSafeInteger(evidence.blockTimestamp) || evidence.blockTimestamp <= 0) {
-    return { ok: false, reason: blockTimestampUnavailable };
-  }
-  if (evidence.blockTimestamp > input.nowSec + 60) {
-    return { ok: false, reason: "future-pinned-block" };
-  }
-  if (input.nowSec - evidence.blockTimestamp > freshnessMaxSec) {
-    return { ok: false, reason: "stale-pinned-block" };
-  }
-  if (canonicalEvmHash(evidence.poolCodeHash) == null) {
-    return { ok: false, reason: "runtime-code-unavailable" };
-  }
-  if (evidence.poolCodeHash !== policy.expectedPoolCodeHash) {
-    return { ok: false, reason: "runtime-code-hash-mismatch" };
-  }
-  return { ok: true, policy, evidence };
 }
 
 interface CurveStableSwapIndexedProof {

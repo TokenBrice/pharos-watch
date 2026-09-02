@@ -88,39 +88,29 @@ async function observeWmEvmDeployment(
       deploymentChainId === "plume" ? [PLUME_RPC_URL] : undefined,
     protocolCalls: (identity) => [
       {
-        label: "m-token",
-        target: contractAddress,
-        callData: M_TOKEN_SELECTOR,
-        allowFailure: false,
+        label: "m-token", target: contractAddress,
+        callData: M_TOKEN_SELECTOR, allowFailure: false,
       },
       {
-        label: "controller",
-        target: identity.underlyingTokenAddress,
+        label: "controller", target: identity.underlyingTokenAddress,
         callData: identity.controllerRead === "minter-gateway"
           ? MINTER_GATEWAY_SELECTOR
           : PORTAL_SELECTOR,
         allowFailure: false,
       },
     ],
-    decodeProtocolObservation: ({
-      results,
-      implementationSlot,
-    }) => {
+    decodeProtocolObservation: ({ results, implementationSlot }) => {
       const underlyingTokenAddress = decodeEvmAddress(results[2]);
       const controllerAddress = decodeEvmAddress(results[3]);
       const implementationAddress = decodeEvmAddressHex(implementationSlot);
       if (
-        underlyingTokenAddress === null ||
-        controllerAddress === null ||
+        underlyingTokenAddress === null || controllerAddress === null ||
         implementationAddress === null
       ) {
         return { status: "rejected", rejectionCode: "deployment-state-invalid" };
       }
-      return {
-        status: "accepted",
-        implementationAddress,
-        observation: { underlyingTokenAddress, controllerAddress },
-      };
+      return { status: "accepted", implementationAddress,
+        observation: { underlyingTokenAddress, controllerAddress } };
     },
     identityValidationError: reviewedDeploymentIdentityValidationError,
   });

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DataTableColumn } from "@/components/data-table-shell";
 import { cn } from "@/lib/utils";
 
-export function defineStatusColumns(columns: readonly (readonly [id: string, label: string])[]): readonly DataTableColumn[] {
+export function defineStatusColumns(columns: readonly (readonly [string, string])[]): readonly DataTableColumn[] {
   return columns.map(([id, label]) => ({ id, label, className: "pb-2 font-medium" }));
 }
 

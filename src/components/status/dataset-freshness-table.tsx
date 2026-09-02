@@ -11,13 +11,8 @@ import { defineStatusColumns } from "./page-primitives";
 type DatasetKey = keyof StatusResponse["datasetFreshness"];
 
 const DATASET_FRESHNESS_COLUMNS = defineStatusColumns([
-  ["domain", "Domain"],
-  ["updated", "Updated"],
-  ["age", "Age"],
-  ["cadence", "Cadence"],
-  ["grace-basis", "Grace Basis"],
-  ["writers", "Writers"],
-  ["band", "Band"],
+  ["domain", "Domain"], ["updated", "Updated"], ["age", "Age"], ["cadence", "Cadence"],
+  ["grace-basis", "Grace Basis"], ["writers", "Writers"], ["band", "Band"],
 ]);
 
 const DATASET_META: Record<

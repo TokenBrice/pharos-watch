@@ -62,135 +62,68 @@ export interface ReviewedDeploymentEvmObserverDependencies {
   fetchEvmBlockNumber: typeof fetchEvmBlockNumber;
   fetchEvmBlockHeader: typeof fetchEvmBlockHeader;
   fetchEvmCodeAtBlock: typeof fetchEvmCodeAtBlock;
-  fetchEvmMulticall3Aggregate3AtBlock:
-    typeof fetchEvmMulticall3Aggregate3AtBlock;
+  fetchEvmMulticall3Aggregate3AtBlock: typeof fetchEvmMulticall3Aggregate3AtBlock;
   fetchEvmStorageAtBlock: typeof fetchEvmStorageAtBlock;
 }
 
 type ReviewedDeploymentEvmProtocolResult =
-  | {
-      status: "accepted";
-      implementationAddress?: string;
-      observation: Partial<ReviewedDeploymentSupplyObservation>;
-    }
-  | {
-      status: "rejected";
-      rejectionCode: Extract<
-        ReviewedDeploymentObservationRejectionCode,
-        "deployment-state-unavailable" | "deployment-state-invalid"
-      >;
-    };
+  | { status: "accepted"; implementationAddress?: string; observation: Partial<ReviewedDeploymentSupplyObservation> }
+  | { status: "rejected"; rejectionCode: "deployment-state-unavailable" | "deployment-state-invalid" };
 
 export async function observeReviewedEvmDeployment<Identity>(input: {
-  routeId: string;
-  chainId: string;
-  contractAddress: string;
-  scoringClockSec: number;
-  chainRpcs: Map<string, ChainRpcConfig>;
-  dependencies: ReviewedDeploymentEvmObserverDependencies;
+  routeId: string; chainId: string; contractAddress: string; scoringClockSec: number;
+  chainRpcs: Map<string, ChainRpcConfig>; dependencies: ReviewedDeploymentEvmObserverDependencies;
   signal?: AbortSignal;
   identity: (routeId: string) => Identity | undefined;
   safeBlockLag: (identity: Identity, chainId: string) => number;
-  extraRpcUrls: (
-    identity: Identity,
-    chainId: string,
-  ) => readonly string[] | undefined;
-  protocolCalls: (
-    identity: Identity,
-  ) => readonly EvmMulticall3Call[];
-  decodeProtocolObservation: (context: {
-    identity: Identity;
-    results: EvmMulticall3Result[];
-    implementationSlot: `0x${string}`;
-  }) => ReviewedDeploymentEvmProtocolResult;
-  identityValidationError: (
-    observation: ReviewedDeploymentSupplyObservation,
-  ) => string | null;
+  extraRpcUrls: (identity: Identity, chainId: string) => readonly string[] | undefined;
+  protocolCalls: (identity: Identity) => readonly EvmMulticall3Call[];
+  decodeProtocolObservation: (context: { identity: Identity; results: EvmMulticall3Result[];
+    implementationSlot: `0x${string}` }) => ReviewedDeploymentEvmProtocolResult;
+  identityValidationError: (observation: ReviewedDeploymentSupplyObservation) => string | null;
 }): Promise<ReviewedDeploymentObservationResult> {
+  const { routeId, chainId, contractAddress, chainRpcs, dependencies, signal } = input;
   const rejectDeployment = (
     rejectionCode: ReviewedDeploymentObservationRejectionCode,
   ): ReviewedDeploymentObservationResult => ({
     status: "rejected",
     rejectionCode,
-    failedRouteId: input.routeId,
+    failedRouteId: routeId,
   });
-  const identity = input.identity(input.routeId);
-  if (!identity) {
-    return rejectDeployment("deployment-identity-unavailable");
-  }
+  const identity = input.identity(routeId);
+  if (!identity) return rejectDeployment("deployment-identity-unavailable");
 
-  const extraRpcUrls = input.extraRpcUrls(identity, input.chainId);
-  if (!input.chainRpcs.has(input.chainId) && (extraRpcUrls?.length ?? 0) === 0) {
+  const extraRpcUrls = input.extraRpcUrls(identity, chainId);
+  if (!chainRpcs.has(chainId) && (extraRpcUrls?.length ?? 0) === 0) {
     return rejectDeployment("chain-rpc-unavailable");
   }
-  const options = safetyScoreV9EvmObservationOptions({
-    chainRpcs: input.chainRpcs,
-    ...(extraRpcUrls ? { extraRpcUrls } : {}),
-    signal: input.signal,
-  });
-  const headBlockNumber = await input.dependencies.fetchEvmBlockNumber(
-    input.chainId,
-    options,
-  );
-  const safetyLag = input.safeBlockLag(identity, input.chainId);
-  if (
-    headBlockNumber === null ||
-    !Number.isSafeInteger(safetyLag) ||
-    safetyLag <= 0 ||
-    headBlockNumber < safetyLag
-  ) {
+  const options = safetyScoreV9EvmObservationOptions({ chainRpcs,
+    ...(extraRpcUrls ? { extraRpcUrls } : {}), signal });
+  const headBlockNumber = await dependencies.fetchEvmBlockNumber(chainId, options);
+  const safetyLag = input.safeBlockLag(identity, chainId);
+  if (headBlockNumber === null || !Number.isSafeInteger(safetyLag) ||
+      safetyLag <= 0 || headBlockNumber < safetyLag) {
     return rejectDeployment("safe-block-unavailable");
   }
 
   const blockHeader = await rewindEvmBlockHeaderToScoringClock({
     initialBlockNumber: headBlockNumber - safetyLag,
     scoringClockSec: input.scoringClockSec,
-    signal: input.signal,
-    fetchHeader: (blockNumber) => input.dependencies.fetchEvmBlockHeader(
-      input.chainId,
-      blockNumber,
-      options,
-    ),
+    signal,
+    fetchHeader: (blockNumber) => dependencies.fetchEvmBlockHeader(chainId, blockNumber, options),
   });
-  if (blockHeader === null) {
-    return rejectDeployment("safe-block-unavailable");
-  }
+  if (blockHeader === null) return rejectDeployment("safe-block-unavailable");
   const blockNumber = blockHeader.number;
   const calls = [
-    {
-      label: "total-supply",
-      target: input.contractAddress,
-      callData: TOTAL_SUPPLY_SELECTOR,
-      allowFailure: false,
-    },
-    {
-      label: "decimals",
-      target: input.contractAddress,
-      callData: DECIMALS_SELECTOR,
-      allowFailure: false,
-    },
+    { label: "total-supply", target: contractAddress, callData: TOTAL_SUPPLY_SELECTOR, allowFailure: false },
+    { label: "decimals", target: contractAddress, callData: DECIMALS_SELECTOR, allowFailure: false },
     ...input.protocolCalls(identity),
   ];
   const [results, runtimeCode, implementationSlot] = await Promise.all([
-    input.dependencies.fetchEvmMulticall3Aggregate3AtBlock(
-      input.chainId,
-      calls,
-      blockNumber,
-      options,
-    ),
-    input.dependencies.fetchEvmCodeAtBlock(
-      input.chainId,
-      input.contractAddress,
-      blockNumber,
-      options,
-    ),
-    input.dependencies.fetchEvmStorageAtBlock(
-      input.chainId,
-      input.contractAddress,
-      EIP1967_IMPLEMENTATION_SLOT,
-      blockNumber,
-      options,
-    ),
+    dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, options),
+    dependencies.fetchEvmCodeAtBlock(chainId, contractAddress, blockNumber, options),
+    dependencies.fetchEvmStorageAtBlock(chainId, contractAddress,
+      EIP1967_IMPLEMENTATION_SLOT, blockNumber, options),
   ]);
   if (!results || results.length !== calls.length || !runtimeCode || !implementationSlot) {
     return rejectDeployment("deployment-state-unavailable");
@@ -199,12 +132,8 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
   const totalSupplyRaw = decodeEvmUint256(results[0]);
   const decimalsRaw = decodeEvmUint256(results[1]);
   const runtimeBytes = decodeEvmHexBytes(runtimeCode);
-  if (
-    totalSupplyRaw === null ||
-    decimalsRaw === null ||
-    decimalsRaw > 36n ||
-    runtimeBytes === null
-  ) {
+  if (totalSupplyRaw === null || decimalsRaw === null ||
+      decimalsRaw > 36n || runtimeBytes === null) {
     return rejectDeployment("deployment-state-invalid");
   }
   const protocolResult = input.decodeProtocolObservation({
@@ -212,12 +141,10 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
     results,
     implementationSlot,
   });
-  if (protocolResult.status === "rejected") {
-    return rejectDeployment(protocolResult.rejectionCode);
-  }
+  if (protocolResult.status === "rejected") return rejectDeployment(protocolResult.rejectionCode);
   const implementationBytes = protocolResult.implementationAddress
-    ? decodeEvmHexBytes(await input.dependencies.fetchEvmCodeAtBlock(
-        input.chainId,
+    ? decodeEvmHexBytes(await dependencies.fetchEvmCodeAtBlock(
+        chainId,
         protocolResult.implementationAddress,
         blockNumber,
         options,
@@ -228,23 +155,19 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
   }
 
   const observation: ReviewedDeploymentSupplyObservation = {
-    routeId: input.routeId,
-    chainId: input.chainId,
-    contractAddress: normalizeReviewedDeploymentAddress(
-      input.chainId,
-      input.contractAddress,
-    ),
+    routeId,
+    chainId,
+    contractAddress: normalizeReviewedDeploymentAddress(chainId, contractAddress),
     decimals: Number(decimalsRaw),
     rawSupply: totalSupplyRaw.toString(),
     blockNumberOrSlot: blockNumber.toString(),
     blockTimeSec: blockHeader.timestamp,
     blockHash: blockHeader.hash,
-    runtimeCodeSha256: input.dependencies.sha256HexFromBytes(runtimeBytes),
+    runtimeCodeSha256: dependencies.sha256HexFromBytes(runtimeBytes),
     ...(protocolResult.implementationAddress && implementationBytes
       ? {
           implementationAddress: protocolResult.implementationAddress,
-          implementationCodeSha256:
-            input.dependencies.sha256HexFromBytes(implementationBytes),
+          implementationCodeSha256: dependencies.sha256HexFromBytes(implementationBytes),
         }
       : {}),
     ...protocolResult.observation,

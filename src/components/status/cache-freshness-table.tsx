@@ -14,14 +14,8 @@ interface CacheFreshnessTableProps {
 }
 
 const CACHE_FRESHNESS_COLUMNS = defineStatusColumns([
-  ["lane", "Lane"],
-  ["provider", "Provider"],
-  ["producer", "Producer"],
-  ["cache", "Cache"],
-  ["endpoint-basis", "Endpoint Basis"],
-  ["source", "Source"],
-  ["mode", "Mode"],
-  ["band", "Band"],
+  ["lane", "Lane"], ["provider", "Provider"], ["producer", "Producer"], ["cache", "Cache"],
+  ["endpoint-basis", "Endpoint Basis"], ["source", "Source"], ["mode", "Mode"], ["band", "Band"],
   ["note", "Actionable Note"],
 ]);
 

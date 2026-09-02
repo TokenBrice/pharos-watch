@@ -65,7 +65,7 @@ describe("analyze-gsc-coverage", () => {
       [
         "Reason,Source,Validation,Trend,Pages",
         '"Blocked due to access forbidden (403)",Website,Not Started,Rising,2',
-        '"Server error (5xx)",Website,Passed,Flat,0',
+        '"Server error (5xx)",Website,Passed,Flat,-2.9',
       ].join("\n"),
     );
     writeStoredZip(join(root, "Page with redirect.zip"), {
@@ -86,6 +86,7 @@ describe("analyze-gsc-coverage", () => {
     expect(report.missingDrilldowns).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ issueName: "Server error (5xx)" })]),
     );
+    expect(report.issueCounts).toContainEqual(expect.objectContaining({ issueName: "Server error (5xx)", pages: -2 }));
     expect(report.notes).toEqual(
       expect.arrayContaining([expect.stringContaining("XLSX/XLS parsing is unsupported without adding a dependency")]),
     );
@@ -118,18 +119,6 @@ describe("analyze-gsc-coverage", () => {
     ]);
     expect(report.missingDrilldowns).toEqual([]);
     expect(rendered).toContain("Crawled - currently not indexed | urls=1 | pathQueryGroups=1 | matchedIssue=yes");
-  });
-
-  it("truncates decimal counts without clamping negative coverage values", async () => {
-    const root = fixtureDir();
-    writeFileSync(
-      join(root, "Critical issues.csv"),
-      ["Reason,Pages", '"Negative fixture",-2.9'].join("\n"),
-    );
-
-    const report = await analyzeGscCoverageInputs([root]);
-
-    expect(report.issueCounts[0]).toMatchObject({ issueName: "Negative fixture", pages: -2 });
   });
 
   it.each([

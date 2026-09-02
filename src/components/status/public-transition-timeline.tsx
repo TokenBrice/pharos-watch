@@ -14,10 +14,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const PUBLIC_TRANSITION_COLUMNS = defineStatusColumns([
-  ["time", "Time"],
-  ["transition", "Transition"],
-  ["type", "Type"],
-  ["reason", "Reason"],
+  ["time", "Time"], ["transition", "Transition"], ["type", "Type"], ["reason", "Reason"],
 ]);
 
 interface PublicTransitionTimelineProps {

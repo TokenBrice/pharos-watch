@@ -31,7 +31,7 @@ describe("classification descriptor projections", () => {
     const projections = [HERO_CHIP_BACKING_LABELS, HERO_CHIP_GOVERNANCE_LABELS, MECHANISM_ARCHETYPE_DESCRIPTORS,
       MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_SHORT_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, GRADE_RADAR_COLORS];
     expect(createHash("sha256").update(JSON.stringify(projections)).digest("hex"))
-      .toBe("621fcbda135b95044ddffb148ea858710f28b9751846fcf8d208f1a30d60e0e9");
+      .toBe("d5c2d2f3be63b5eedb2f1c13d1ff0033d2c71d0fd947912cf79cc3f2ee6e1297");
   });
 
   it("preserves every governance and backing projection", () => {

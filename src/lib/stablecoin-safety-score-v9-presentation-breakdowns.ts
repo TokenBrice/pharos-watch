@@ -5,7 +5,7 @@ import type {
   SafetyScoreV9ExitBreakdown,
   SafetyScoreV9PillarAdjustment,
 } from "@shared/types";
-import { formatCompactUsdWithOptions } from "@shared/lib/format";
+import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 
@@ -228,27 +228,6 @@ function backingGroups(
     ...groups,
     ...orphans.map(([key, rows]) => groupWithTail(key, null, null, null, rows)),
   ];
-}
-
-const V9_PRESENTATION_USD_PROFILE = {
-  compactNegative: false,
-  decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 },
-  invalidFallback: "$0",
-  maximumTier: "million",
-  signPosition: "after-currency",
-  suffixes: { million: "m", thousand: "k" },
-} as const;
-
-function compactUsd(value: number): string {
-  return formatCompactUsdWithOptions(value, {
-    ...V9_PRESENTATION_USD_PROFILE,
-    decimals: {
-      ...V9_PRESENTATION_USD_PROFILE.decimals,
-      million: value >= 10_000_000 ? 0 : 1,
-      thousand: value >= 10_000 ? 0 : 1,
-    },
-    useGrouping: value < 1_000,
-  });
 }
 
 function fullUsd(value: number): string {

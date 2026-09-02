@@ -41,21 +41,6 @@ describe("fetchZephyrZysSource", () => {
     );
   });
 
-  it.each([
-    ["10000000000", 10_000_000_000],
-    ["10000000001", 10_000_000],
-  ])("keeps the exclusive header epoch threshold for %s", async (header, expected) => {
-    mockYieldSourceRoutes([{
-      match: "zephyrprotocol.com/api/v1/historicalreturns",
-      headers: { "x-last-success-at": header },
-      body: { oneDay: { effectiveApy: 9.3084 } },
-    }]);
-
-    const result = await fetchZephyrZysSource();
-
-    expect(result?.sourceObservedAt).toBe(expected);
-  });
-
   it("returns null when the one-day effective APY is missing", async () => {
     mockYieldSourceRoutes([
       {

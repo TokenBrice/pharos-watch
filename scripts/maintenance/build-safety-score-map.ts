@@ -46,7 +46,7 @@ import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
-import { formatCompactUsdWithOptions, formatScore } from "@shared/lib/format";
+import { formatSafetyMapUsd as formatUsdCompact, formatScore } from "@shared/lib/format";
 import { getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import { GRADE_THRESHOLDS, scoreToGrade } from "@shared/lib/report-card-core";
@@ -449,23 +449,6 @@ export function selectMapPsi(current: MapPsiCurrent): MapPsi {
 
 export function buildPsiSubtitle(psi: Pick<MapPsi, "score" | "band" | "basis">): string {
   return `PSI ${formatScore(psi.score)} · ${psi.band} · ${psi.basis}`;
-}
-
-const SAFETY_MAP_USD_PROFILE = {
-  decimals: { trillion: 1, billion: 1, million: 0, thousand: 0, unit: 0 },
-  forcedLowestTier: "thousand",
-  invalidFallback: "$0K",
-  signPosition: "after-currency",
-} as const;
-
-function formatUsdCompact(value: number): string {
-  if (value < 0) {
-    return formatCompactUsdWithOptions(Math.round(value / 1e3) * 1e3, {
-      ...SAFETY_MAP_USD_PROFILE,
-      maximumTier: "thousand",
-    });
-  }
-  return formatCompactUsdWithOptions(value, SAFETY_MAP_USD_PROFILE);
 }
 
 // U+20AE and friends are absent from every embedded face; transliterate the

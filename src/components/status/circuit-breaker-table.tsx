@@ -11,11 +11,8 @@ interface CircuitBreakerTableProps {
 }
 
 const CIRCUIT_BREAKER_COLUMNS = defineStatusColumns([
-  ["name", "Name"],
-  ["state", "State"],
-  ["failures", "Failures"],
-  ["last-failure", "Last Failure"],
-  ["last-success", "Last Success"],
+  ["name", "Name"], ["state", "State"], ["failures", "Failures"],
+  ["last-failure", "Last Failure"], ["last-success", "Last Success"],
 ]);
 
 export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {

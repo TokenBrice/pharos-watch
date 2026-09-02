@@ -1,7 +1,6 @@
-import { readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { parseCliInteger, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
-import { parseEvidenceProducerMode, runEvidenceProducer } from "../lib/measurement-evidence-runner";
 import { fetchBlockByNumber, pinBlock, JournaledEthCaller, ReplayEthCaller } from "../lib/mechanism-measurement/core";
 import { measureConfiguredTarget } from "../lib/mechanism-measurement/measure";
 import { MechanismMeasurementEvidenceV1Schema } from "../lib/mechanism-measurement/schema";
@@ -43,17 +42,21 @@ function parseOptions(argv: string[]): CliOptions | null {
   });
   if (writeCliHelpIfRequested(values, USAGE)) return null;
   const block = values.block == null ? null : parseCliInteger(values.block, { name: "--block", min: 1 });
-  const mode = parseEvidenceProducerMode(values, "shared/data/safety-score-v9/mechanism-measurements");
+  const assets = Array.isArray(values.asset) ? values.asset.map(String) : [];
+  const replayPaths = Array.isArray(values.replay) ? values.replay.map(String) : [];
   if (
-    mode.replayPaths.length > 0 &&
-    (mode.assets.length > 0 || values.rpc != null || values.block != null || values["out-dir"] != null)
+    replayPaths.length > 0 &&
+    (assets.length > 0 || values.rpc != null || values.block != null || values["out-dir"] != null)
   ) {
     throw new Error("--replay is exclusive with --asset, --rpc, --block, and --out-dir");
   }
   return {
-    ...mode,
+    assets,
     rpc: typeof values.rpc === "string" ? values.rpc : null,
     block,
+    outDir:
+      typeof values["out-dir"] === "string" ? values["out-dir"] : "shared/data/safety-score-v9/mechanism-measurements",
+    replayPaths,
   };
 }
 
@@ -87,66 +90,74 @@ async function replayEvidence(path: string): Promise<void> {
   );
 }
 
-async function run(options: CliOptions): Promise<void> {
-  await runEvidenceProducer({
-    options,
-    configuredAssets: CDP_MEASUREMENT_TARGETS.map((target) => target.assetId),
-    resolveTarget: (assetId) => CDP_MEASUREMENT_TARGETS.find((candidate) => candidate.assetId === assetId),
-    unknownTargetError: (assetId) =>
+async function measureTarget(options: CliOptions, assetId: string): Promise<void> {
+  const target = CDP_MEASUREMENT_TARGETS.find((candidate) => candidate.assetId === assetId);
+  if (!target) {
+    throw new Error(
       `No measurement target configured for ${assetId} (known: ${CDP_MEASUREMENT_TARGETS.map((t) => t.assetId).join(", ")})`,
-    replay: replayEvidence,
-    attempts: (target) => options.rpc ? [options.rpc] : target.rpcs,
-    capture: async (target, rpcUrl) => {
-      const endpoint = rpcUrl as string;
-      const block = options.block == null ? await pinBlock(endpoint) : await fetchBlockByNumber(endpoint, options.block);
-      const caller = new JournaledEthCaller(endpoint, `0x${block.number.toString(16)}`);
-      const evidenceRpcUrl = redactRpcUrlForEvidence(endpoint);
+    );
+  }
+  const rpcs = options.rpc ? [options.rpc] : target.rpcs;
+  let lastError: unknown = null;
+  for (const rpcUrl of rpcs) {
+    try {
+      const block = options.block == null ? await pinBlock(rpcUrl) : await fetchBlockByNumber(rpcUrl, options.block);
+      const caller = new JournaledEthCaller(rpcUrl, `0x${block.number.toString(16)}`);
+      const evidenceRpcUrl = redactRpcUrlForEvidence(rpcUrl);
       const evidence = await measureConfiguredTarget(caller, target, block, evidenceRpcUrl);
-      return MechanismMeasurementEvidenceV1Schema.parse(evidence);
-    },
-    artifactPath: (evidence) => {
-      const date = evidence.block.timestampIso.slice(0, 10);
-      return join(options.outDir, evidence.assetId, `${date}-block-${evidence.block.number}.json`);
-    },
-    serialize: (evidence) => `${JSON.stringify(evidence, null, 2)}\n`,
-    compareExisting: (outPath, evidence) => {
-      const existing = readFileSync(outPath, "utf8");
-      // rpcUrl and block.selection describe how THIS run reached the block,
-      // not what was measured; everything else must replay byte-identically.
-      if (measurementOnly(JSON.parse(existing)) !== measurementOnly(evidence)) {
-        throw new Error(
-          `Evidence file ${outPath} already exists with a different measurement — refusing to overwrite`,
-        );
+      const parsed = MechanismMeasurementEvidenceV1Schema.parse(evidence);
+
+      const date = parsed.block.timestampIso.slice(0, 10);
+      const outPath = resolve(join(options.outDir, parsed.assetId, `${date}-block-${parsed.block.number}.json`));
+      const serialized = `${JSON.stringify(parsed, null, 2)}\n`;
+      if (existsSync(outPath)) {
+        const existing = readFileSync(outPath, "utf8");
+        // rpcUrl and block.selection describe how THIS run reached the block,
+        // not what was measured; everything else must replay byte-identically.
+        if (measurementOnly(JSON.parse(existing)) !== measurementOnly(parsed)) {
+          throw new Error(
+            `Evidence file ${outPath} already exists with a different measurement — refusing to overwrite`,
+          );
+        }
+        console.log(`[measure-cdp] ${parsed.assetId}: identical measurement already recorded at ${outPath}`);
+        return;
       }
-    },
-    onExisting: ({ evidence, outPath }) => {
-      console.log(`[measure-cdp] ${evidence.assetId}: identical measurement already recorded at ${outPath}`);
-    },
-    onWritten: ({ evidence, outPath }) => {
-      const completeness = evidence.completeness ?? { complete: true, blockers: [] };
+      mkdirSync(dirname(outPath), { recursive: true });
+      writeFileSync(outPath, serialized);
+      const completeness = parsed.completeness ?? { complete: true, blockers: [] };
       const formatMetric = (value: number | null): string => (value === null ? "N/A" : String(value));
       console.log(
-        `[measure-cdp] ${evidence.assetId}: block ${evidence.block.number} (${evidence.block.selection}) via ${evidence.rpcUrl}\n` +
-          `  collateralizationRatio=${formatMetric(evidence.metrics.collateralizationRatio)} liquidationCapacityRatio=${formatMetric(evidence.metrics.liquidationCapacityRatio)}\n` +
+        `[measure-cdp] ${parsed.assetId}: block ${parsed.block.number} (${parsed.block.selection}) via ${parsed.rpcUrl}\n` +
+          `  collateralizationRatio=${formatMetric(parsed.metrics.collateralizationRatio)} liquidationCapacityRatio=${formatMetric(parsed.metrics.liquidationCapacityRatio)}\n` +
           `  complete=${completeness.complete}${completeness.blockers.length > 0 ? ` blockers=${completeness.blockers.join(" | ")}` : ""}\n` +
-          `  checks=${evidence.checks.length} pass -> ${outPath}`,
+          `  checks=${parsed.checks.length} pass -> ${outPath}`,
       );
-    },
-    onAttemptError: (error, assetId, rpcUrl) => {
+      return;
+    } catch (error) {
+      lastError = error;
       console.warn(
         `[measure-cdp] ${assetId}: ${redactRpcUrlForEvidence(rpcUrl)} failed — ${error instanceof Error ? error.message : String(error)}`,
       );
-    },
-    attemptsFailedError: (error, assetId) =>
-      `All RPC endpoints failed for ${assetId}: ${error instanceof Error ? error.message : String(error)}`,
-  });
+    }
+  }
+  throw new Error(
+    `All RPC endpoints failed for ${assetId}: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  );
 }
 
 void runCliEntrypoint(
   async () => {
     const options = parseOptions(process.argv.slice(2));
     if (!options) return;
-    await run(options);
+    if (options.replayPaths.length > 0) {
+      for (const path of options.replayPaths) await replayEvidence(path);
+      return;
+    }
+    const assetIds =
+      options.assets.length > 0 ? options.assets : CDP_MEASUREMENT_TARGETS.map((target) => target.assetId);
+    for (const assetId of assetIds) {
+      await measureTarget(options, assetId);
+    }
   },
   { label: "measure-cdp-mechanism-metrics", usage: USAGE },
 );

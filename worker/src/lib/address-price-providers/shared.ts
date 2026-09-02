@@ -67,13 +67,8 @@ export function normalizeAddressForKey(address: string): string {
 
 export function parseObservedAt(value: unknown): number | null {
   return parseEpochSeconds(value, {
-    numericTextPolicy: "any",
-    millisecondsThreshold: 10_000_000_000,
-    millisecondsThresholdInclusive: false,
-    floor: true,
-    minExclusive: 0,
-    isoMinExclusive: null,
-    numericTextMinRejectionPolicy: "iso-fallback",
+    numericTextPolicy: "any", millisecondsThreshold: 10_000_000_000,
+    millisecondsThresholdInclusive: false, floor: true, minExclusive: 0,
   });
 }
 

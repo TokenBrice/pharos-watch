@@ -71,30 +71,22 @@ async function observeCentrifugeEvmDeployment(
     dependencies,
     signal,
     identity: (deploymentRouteId) => {
-      const identity = expectedCentrifugeDeploymentIdentity(
-        assetId,
-        deploymentRouteId,
-      );
+      const identity = expectedCentrifugeDeploymentIdentity(assetId, deploymentRouteId);
       return identity?.runtime === "evm" ? identity : undefined;
     },
     safeBlockLag: (identity) => identity.safeBlockLag,
     extraRpcUrls: (identity) => identity.extraRpcUrls,
     protocolCalls: (identity) => [{
-      label: "spoke-ward",
-      target: contractAddress,
-      callData: `${WARDS_SELECTOR}${encodeAddress(
-        identity.controllerAddress,
-      )}` as `0x${string}`,
+      label: "spoke-ward", target: contractAddress,
+      callData: `${WARDS_SELECTOR}${encodeAddress(identity.controllerAddress)}` as `0x${string}`,
       allowFailure: false,
     }],
     decodeProtocolObservation: ({ identity, results, implementationSlot }) =>
       decodeEvmUint256(results[2]) !== 1n ||
       implementationSlot.toLowerCase() !== ZERO_STORAGE_WORD
         ? { status: "rejected", rejectionCode: "deployment-state-invalid" }
-        : {
-            status: "accepted",
-            observation: { controllerAddress: identity.controllerAddress },
-          },
+        : { status: "accepted",
+            observation: { controllerAddress: identity.controllerAddress } },
     identityValidationError: (observation) =>
       reviewedDeploymentIdentityValidationError(observation, assetId),
   });

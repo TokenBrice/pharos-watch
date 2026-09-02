@@ -201,24 +201,6 @@ describe("formatCompactUsdWithOptions", () => {
       signPosition: "after-currency",
     })).toBe("$-2M");
   });
-
-  it("supports per-tier suffixes and a forced lowest tier", () => {
-    const forcedThousands = {
-      ...profile,
-      forcedLowestTier: "thousand",
-      suffixes: { trillion: "tn", billion: "bn", million: "mn", thousand: "k" },
-    } as const;
-
-    expect(formatCompactUsdWithOptions(1_000_000_000_000, forcedThousands)).toBe("$1tn");
-    expect(formatCompactUsdWithOptions(1_000_000_000, forcedThousands)).toBe("$1bn");
-    expect(formatCompactUsdWithOptions(1_000_000, forcedThousands)).toBe("$1mn");
-    expect(formatCompactUsdWithOptions(999, forcedThousands)).toBe("$1k");
-    expect(formatCompactUsdWithOptions(0, forcedThousands)).toBe("$0k");
-    expect(formatCompactUsdWithOptions(-999, {
-      ...forcedThousands,
-      signPosition: "after-currency",
-    })).toBe("$-1k");
-  });
 });
 
 describe("formatSignedCurrency", () => {

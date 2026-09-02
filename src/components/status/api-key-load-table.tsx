@@ -10,13 +10,8 @@ import { defineStatusColumns, STATUS_PANEL_SHELL_CLASS } from "@/components/stat
 import { cn } from "@/lib/utils";
 
 const API_KEY_LOAD_COLUMNS = defineStatusColumns([
-  ["key", "Key"],
-  ["class", "Class"],
-  ["requests", "Requests"],
-  ["keyed-share", "Keyed Share"],
-  ["public-api-share", "Public API Share"],
-  ["rate-limit", "Rate Limit"],
-  ["status", "Status"],
+  ["key", "Key"], ["class", "Class"], ["requests", "Requests"], ["keyed-share", "Keyed Share"],
+  ["public-api-share", "Public API Share"], ["rate-limit", "Rate Limit"], ["status", "Status"],
 ]);
 
 function trafficClassBadgeClassName(trafficClass: "external" | "site"): string {

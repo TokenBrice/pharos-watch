@@ -16,15 +16,6 @@ import {
 } from "./vaults-fyi-normalization";
 import type { VaultsFyiTelemetry } from "./vaults-fyi-types";
 
-const VAULTS_FYI_EPOCH_OPTIONS = {
-  numericTextPolicy: "any",
-  millisecondsThreshold: 10_000_000_000,
-  millisecondsThresholdInclusive: false,
-  floor: true,
-  minExclusive: 0,
-  numericTextMinRejectionPolicy: "iso-fallback",
-} as const;
-
 function parseAssetAddress(asset: Record<string, unknown>): string | null {
   const direct = getString(asset.address);
   if (direct) return direct;
@@ -235,9 +226,10 @@ export function parseVaultsFyiCandidateFromDetailedVault(
       yieldType: "lending-opportunity",
       project: protocolSlug,
       chain,
-      sourceObservedAt:
-        parseEpochSeconds(row.lastUpdateTimestamp ?? row.updatedAt, VAULTS_FYI_EPOCH_OPTIONS) ??
-        options.sourceObservedAt,
+      sourceObservedAt: parseEpochSeconds(row.lastUpdateTimestamp ?? row.updatedAt, {
+        numericTextPolicy: "any", millisecondsThreshold: 10_000_000_000,
+        millisecondsThresholdInclusive: false, floor: true, minExclusive: 0,
+      }) ?? options.sourceObservedAt,
       comparisonAnchorObservedAt: null,
       sourceRisk: {
         venueProtocol: protocolSlug,

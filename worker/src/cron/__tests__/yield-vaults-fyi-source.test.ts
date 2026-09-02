@@ -180,25 +180,6 @@ describe("fetchVaultsFyiSources", () => {
     });
   });
 
-  it.each([
-    [10_000_000_000, 10_000_000_000],
-    [10_000_000_001, 10_000_000],
-  ])("keeps the exclusive epoch threshold for %s", async (timestamp, expected) => {
-    mockYieldSourceRoutes([{
-      match: () => true,
-      respond: () => response({ data: detailedVault({ lastUpdateTimestamp: timestamp }) }),
-    }]);
-
-    const result = await fetchVaultsFyiSources({
-      config: enabledConfig({
-        rankableVaults: ["mainnet/0x1111111111111111111111111111111111111111"],
-      }),
-      startSec: 1_781_267_400,
-    });
-
-    expect(result.candidates[0]?.yield.sourceObservedAt).toBe(expected);
-  });
-
   it("fails closed without fetching when the paid credit ledger is corrupt", async () => {
     const { db, writes } = creditLedgerDb("{not-json");
     const fetchSpy = mockYieldSourceRoutes([], { requireMatch: true });

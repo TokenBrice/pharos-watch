@@ -21,25 +21,16 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const COIN_DIR = path.join(ROOT_DIR, "shared/data/stablecoins/coins");
 const DEAD_STABLECOINS_PATH = path.join(ROOT_DIR, "shared/data/dead-stablecoins.json");
 interface AuditCoin {
-  id?: string;
-  symbol?: string;
-  status?: string;
-  marketAvailability?: string;
+  id?: string; symbol?: string; status?: string; marketAvailability?: string;
   contracts?: { chain?: string }[];
-  coin_id?: unknown;
-  ticker?: unknown;
-  name?: unknown;
-  issuer_full?: unknown;
-  issuer?: unknown;
-  market_status?: string;
-  mica_status?: unknown;
-  mica_jurisdiction?: unknown;
-  total_supply?: unknown;
-  circulating_supply?: unknown;
-  treasury_held?: unknown;
-  recorded_at?: unknown;
-  chains?: unknown[];
-  _sourceFile?: string;
+  coin_id?: unknown; ticker?: unknown; name?: unknown; issuer_full?: unknown; issuer?: unknown; market_status?: string;
+  mica_status?: unknown; mica_jurisdiction?: unknown; total_supply?: unknown; circulating_supply?: unknown;
+  treasury_held?: unknown; recorded_at?: unknown; chains?: unknown[];
+}
+
+interface AuditInput {
+  externalCoins: readonly AuditCoin[]; localCoins: readonly AuditCoin[]; deadCoins: readonly AuditCoin[];
+  supportedChains: ReadonlySet<string>; generatedAt: string; apiUrl: string;
 }
 
 function parseArgs(argv: readonly string[]) {
@@ -180,14 +171,7 @@ export function buildAudit({
   supportedChains,
   generatedAt,
   apiUrl,
-}: {
-  externalCoins: readonly AuditCoin[];
-  localCoins: readonly AuditCoin[];
-  deadCoins: readonly AuditCoin[];
-  supportedChains: ReadonlySet<string>;
-  generatedAt: string;
-  apiUrl: string;
-}) {
+}: AuditInput) {
   const localBySymbol = buildSymbolIndex(localCoins);
   const deadBySymbol = buildSymbolIndex(deadCoins);
   const externalRows = externalCoins.map((coin) => ({

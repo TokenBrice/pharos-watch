@@ -16,7 +16,7 @@
 
 import type { DewsSourceState, PersistedJsonDecodeReason } from "./contracts";
 import * as hydration from "./source-state/hydration";
-import type { HydrationContext, HydrationLoader } from "./source-state/hydration";
+import type { HydrationContext } from "./source-state/hydration";
 
 interface LoadDewsSourceStateOptions {
   db: D1Database;
@@ -47,25 +47,25 @@ type HydrationEvent =
 
 type ProjectedSourceState = Omit<DewsSourceState, "sourceCoverage" | "dependencyDiagnostics">;
 
-interface HydrationProjection {
+type HydrationProjection = {
   state: Partial<ProjectedSourceState>;
   coverage: Record<string, number>;
   dependencyDiagnostics?: Partial<DewsSourceState["dependencyDiagnostics"]>;
-}
+};
 
-function defineHydration<Key extends string, Result>(
-  key: Key,
-  loader: HydrationLoader<Result>,
+function defineHydration<DescriptorKey extends string, Result, StateKey extends keyof Result & keyof ProjectedSourceState>(
+  key: DescriptorKey,
+  loader: (ctx: HydrationContext) => Promise<Result>,
+  stateKeys: readonly StateKey[],
   projectCoverage: (result: Result) => Record<string, number>,
-  projectState: (result: Result) => Partial<ProjectedSourceState>,
   projectDependencyDiagnostics?: (result: Result) => Partial<DewsSourceState["dependencyDiagnostics"]>,
 ) {
   return {
-    key, loader, projectCoverage, projectState, projectDependencyDiagnostics,
+    key,
     async hydrate(ctx: HydrationContext): Promise<HydrationProjection> {
       const result = await loader(ctx);
       return {
-        state: projectState(result),
+        state: Object.fromEntries(stateKeys.map((stateKey) => [stateKey, result[stateKey]])) as Partial<ProjectedSourceState>,
         coverage: projectCoverage(result),
         dependencyDiagnostics: projectDependencyDiagnostics?.(result),
       };
@@ -73,94 +73,72 @@ function defineHydration<Key extends string, Result>(
   };
 }
 
+// Named (not inline) so `Result` is inferred before the state-key tuple; a
+// contextually typed arrow would defer and collapse StateKey to `never`.
+async function hydrateLatestPsiScoreState(ctx: HydrationContext) {
+  return { latestPsiScore: await hydration.hydrateLatestPsiScore(ctx) };
+}
+
 const DEWS_HYDRATION_REGISTRY = [
   defineHydration(
     "dexLiquidity",
     hydration.hydrateDexLiquidity,
+    ["dexLiqRows", "dexLiqMap", "dexLiqAgeSecById", "dexLiqStaleIds"],
     (result) => ({
       dexLiquidity: result.totalRows,
       dexLiquidityFreshRows: result.freshCount,
       dexLiquidityStaleRows: result.staleCount,
       ...(result.freshnessAgeSec != null ? { dexLiquidityAgeSec: result.freshnessAgeSec } : {}),
     }),
-    (result) => ({
-      dexLiqRows: result.dexLiqRows,
-      dexLiqMap: result.dexLiqMap,
-      dexLiqAgeSecById: result.dexLiqAgeSecById,
-      dexLiqStaleIds: result.dexLiqStaleIds,
-    }),
     (result) => ({ dexLiquidity: result.dependencyDiagnostics }),
   ),
   defineHydration(
     "dexPrices",
     hydration.hydrateDexPrices,
+    ["dexPriceMap", "dexPriceAgeSecById", "dexPriceStaleIds"],
     (result) => ({
       dexPrices: result.trustedCount,
       ...(result.staleCount != null ? { dexPricesStaleRows: result.staleCount } : {}),
     }),
-    (result) => ({
-      dexPriceMap: result.dexPriceMap,
-      dexPriceAgeSecById: result.dexPriceAgeSecById,
-      dexPriceStaleIds: result.dexPriceStaleIds,
-    }),
   ),
-  defineHydration(
-    "dexLiquidityHistory",
-    hydration.hydrateDexLiquidityHistory,
+  defineHydration("dexLiquidityHistory", hydration.hydrateDexLiquidityHistory,
+    ["liqHist7dMap", "liqHistRowsRead"],
     (result) => ({ dexLiquidityHistory: result.liqHistRowsRead }),
-    (result) => ({ liqHist7dMap: result.liqHist7dMap, liqHistRowsRead: result.liqHistRowsRead }),
   ),
-  defineHydration("blacklistEvents", hydration.hydrateBlacklistEvents,
+  defineHydration("blacklistEvents", hydration.hydrateBlacklistEvents, ["blacklistCounts"],
     (result) => ({ blacklistEvents: result.rowsRead }),
-    (result) => ({ blacklistCounts: result.blacklistCounts }),
   ),
   defineHydration(
     "previousStressSignals",
     hydration.hydratePreviousStressSignals,
-    (result) => ({
-      previousStressSignals: result.rowsRead,
-      previousStressSignalsFreshRows: result.prevSignals.size,
-      previousStressSignalsStaleRows: result.prevSignalStaleIds.size,
-    }),
-    (result) => ({ prevSignals: result.prevSignals, prevSignalStaleIds: result.prevSignalStaleIds }),
+    ["prevSignals", "prevSignalStaleIds"],
+    (result) => ({ previousStressSignals: result.rowsRead,
+      previousStressSignalsFreshRows: result.prevSignals.size, previousStressSignalsStaleRows: result.prevSignalStaleIds.size }),
   ),
   defineHydration(
     "mintBurn",
     hydration.hydrateMintBurn,
+    ["mintBurnMap", "mintBurnAgeSecById", "mintBurnStaleIds"],
     (result) => ({
       mintBurnHourly: result.rowsRead,
       mintBurnHourlyFreshRows: result.freshCount,
       mintBurnHourlyStaleRows: result.staleCount,
       ...(result.freshnessAgeSec != null ? { mintBurnHourlyAgeSec: result.freshnessAgeSec } : {}),
     }),
-    (result) => ({
-      mintBurnMap: result.mintBurnMap,
-      mintBurnAgeSecById: result.mintBurnAgeSecById,
-      mintBurnStaleIds: result.mintBurnStaleIds,
-    }),
   ),
-  defineHydration("yieldWarnings", hydration.hydrateYieldWarnings,
+  defineHydration("yieldWarnings", hydration.hydrateYieldWarnings, ["yieldWarnings"],
     (result) => ({ yieldWarnings: result.rowsRead }),
-    (result) => ({ yieldWarnings: result.yieldWarnings }),
   ),
-  defineHydration(
-    "yieldRankings",
-    hydration.hydrateYieldRankingsCache,
+  defineHydration("yieldRankings", hydration.hydrateYieldRankingsCache,
+    ["yieldSourceRisk", "yieldRankChangeAttribution"],
     (result) => ({ yieldStructuredRows: result.yieldSourceRisk.size }),
-    (result) => ({
-      yieldSourceRisk: result.yieldSourceRisk,
-      yieldRankChangeAttribution: result.yieldRankChangeAttribution,
-    }),
   ),
-  defineHydration("latestPsiScore", hydration.hydrateLatestPsiScore,
-    () => ({}),
-    (result) => ({ latestPsiScore: result }),
-  ),
+  defineHydration("latestPsiScore", hydrateLatestPsiScoreState, ["latestPsiScore"], () => ({})),
 ] as const;
 
 async function hydrateSource<T>(
   ctx: HydrationContext,
-  descriptor: { hydrate: HydrationLoader<T> },
+  descriptor: { hydrate: (ctx: HydrationContext) => Promise<T> },
 ): Promise<{ result: T; events: HydrationEvent[] }> {
   const events: HydrationEvent[] = [];
   const bufferedCtx: HydrationContext = {

@@ -25,7 +25,7 @@ describe("analyze-gsc-performance", () => {
         'https://pharos.watch/stablecoin/usdc-circle/?utm_source=search,20,"1,000",2.00%,6.2',
         "https://pharos.watch/chains/ethereum/,10,200,5.00%,3.4",
         "https://pharos.watch/coverage/,1,80,1.25%,6.0",
-        "https://pharos.watch/compare/,0,120,0%,11.0",
+        "https://pharos.watch/compare/,-0.9,120.9,0%,11.0",
       ].join("\n"),
     );
     writeFileSync(
@@ -72,6 +72,8 @@ describe("analyze-gsc-performance", () => {
         expect.objectContaining({
           path: "/compare/",
           family: "non-indexable-or-retired",
+          clicks: 0,
+          impressions: 120,
           targetClickGap: 6,
         }),
       ]),
@@ -117,25 +119,6 @@ describe("analyze-gsc-performance", () => {
         targetClickGap: 24,
       }),
     ]);
-  });
-
-  it("truncates decimal counts and clamps negative performance values", async () => {
-    const root = fixtureDir();
-    writeFileSync(
-      join(root, "Pages.csv"),
-      [
-        "Page,Clicks,Impressions,CTR,Position",
-        "https://pharos.watch/stablecoin/euro-fixture/,-2.9,100.9,1%,8",
-      ].join("\n"),
-    );
-
-    const report = await analyzeGscPerformanceInputs([root], {
-      targetCtr: 0.05,
-      minImpressions: 1,
-      topCount: 5,
-    });
-
-    expect(report.priorityPages[0]).toMatchObject({ clicks: 0, impressions: 100, targetClickGap: 5 });
   });
 
   it("parses CLI CTR options as percentages", async () => {

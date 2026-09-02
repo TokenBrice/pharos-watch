@@ -165,9 +165,7 @@ async function fetchWithRetry(fetcher, endpointPath, timeoutMs, retryCount, retr
     async () => {
       try {
         return { ok: true, result: await fetcher(timeoutMs) };
-      } catch (error) {
-        return { ok: false, error };
-      }
+      } catch (error) { return { ok: false, error }; }
     },
     {
       retries: retryCount,
@@ -175,21 +173,16 @@ async function fetchWithRetry(fetcher, endpointPath, timeoutMs, retryCount, retr
       shouldRetry: (outcome) =>
         outcome.ok ? isRetryableStatus(outcome.result.status) : isRetryableError(outcome.error),
       onRetry: ({ attempt, result: outcome }) => {
-        if (outcome.ok) {
-          console.log(
-            `[smoke-api] WARN ${endpointPath} returned ${outcome.result.status} on attempt ${attempt}/${totalAttempts}; retrying in ${retryDelayMs}ms`,
-          );
-        } else {
-          console.log(
-            `[smoke-api] WARN ${endpointPath} failed on attempt ${attempt}/${totalAttempts} (${formatError(outcome.error)}); retrying in ${retryDelayMs}ms`,
-          );
-        }
+        const detail = outcome.ok
+          ? `returned ${outcome.result.status}`
+          : `failed (${formatError(outcome.error)})`;
+        console.log(
+          `[smoke-api] WARN ${endpointPath} ${detail} on attempt ${attempt}/${totalAttempts}; retrying in ${retryDelayMs}ms`,
+        );
       },
     },
   );
-  if (!outcome.ok) {
-    throw new Error(`${endpointPath} request failed: ${formatError(outcome.error)}`);
-  }
+  if (!outcome.ok) throw new Error(`${endpointPath} request failed: ${formatError(outcome.error)}`);
   return outcome.result;
 }
 

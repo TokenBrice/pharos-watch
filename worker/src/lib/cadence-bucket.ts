@@ -174,7 +174,7 @@ export async function runCadenceBucketPublication(
     job: string;
     releaseFailureEvent: string;
     releaseFailureMessage: string;
-    publication: (startedAtSec: number) => Promise<CronResult>;
+    publication: () => Promise<CronResult>;
   },
 ): Promise<CronResult> {
   const bucket = cadenceBucketFor(options.scheduledAtSec, options.cadenceSec);
@@ -201,7 +201,7 @@ export async function runCadenceBucketPublication(
   }
 
   try {
-    const result = await options.publication(options.startedAtSec);
+    const result = await options.publication();
     const resultMetadata = parseJsonObject(result.metadata) ?? {};
     if (resultMetadata.lastWriteAdvanced !== true) {
       await failCadenceBucket(db, claimResult.claim);

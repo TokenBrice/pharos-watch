@@ -4,7 +4,6 @@ import {
   USER_AGENT,
 } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
-import { parseEpochSeconds } from "@shared/lib/epoch";
 import { isRecord } from "@shared/lib/type-guards";
 
 const ETHERFUSE_CETES_BENCHMARK_SOURCE = "etherfuse-cetes-current-issuance";
@@ -41,14 +40,9 @@ function parseFiniteNumber(value: unknown): number | null {
 
 function parseUnixTimestampSec(value: unknown): number | null {
   const parsed = parseFiniteNumber(value);
-  if (parsed == null) return null;
-  return parseEpochSeconds(parsed, {
-    numericTextPolicy: "any",
-    millisecondsThreshold: 10_000_000_000,
-    millisecondsThresholdInclusive: false,
-    floor: true,
-    minExclusive: 946_684_800,
-  });
+  if (parsed == null || parsed <= 0) return null;
+  const sec = parsed > 10_000_000_000 ? Math.floor(parsed / 1000) : Math.floor(parsed);
+  return sec > 946_684_800 ? sec : null;
 }
 
 function parseIsoTimestampSec(value: unknown): number | null {

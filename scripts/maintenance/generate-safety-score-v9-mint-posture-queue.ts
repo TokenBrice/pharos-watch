@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
   buildV9CuratedMintPostureQueue,
   type V9CuratedMintPostureInput,
@@ -6,14 +7,12 @@ import {
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   assertCliUsage,
+  parseStrictCliArgs,
   requireCliString,
   runDirectCli,
+  writeCliHelpIfRequested,
+  writeJsonOutput,
 } from "../lib/cli-args.mjs";
-import {
-  createDefaultReportCliIo,
-  runOperationalQueueCli,
-  type ReportCliIo,
-} from "../lib/report-cli";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-mint-posture-queue.ts [options]
 
@@ -32,9 +31,17 @@ Options:
   --require-clear    Exit nonzero after writing when disagreements remain
   -h, --help         Show this help`;
 
-export type V9MintPostureQueueIo = ReportCliIo;
+export interface V9MintPostureQueueIo {
+  readJson(path: string): unknown;
+  writeText(path: string, contents: string): void;
+  stdout: { write(text: string): unknown };
+}
 
-const DEFAULT_IO = createDefaultReportCliIo();
+const DEFAULT_IO: V9MintPostureQueueIo = {
+  readJson: (path) => JSON.parse(readFileSync(path, "utf8")) as unknown,
+  writeText: writeJsonOutput,
+  stdout: process.stdout,
+};
 
 interface PublishedCard {
   id?: unknown;
@@ -73,26 +80,27 @@ export function runV9MintPostureQueueCli(
   argv: readonly string[],
   io: V9MintPostureQueueIo = DEFAULT_IO,
 ): V9CuratedMintPostureQueue | null {
-  return runOperationalQueueCli({
-    argv,
-    io,
-    usage: USAGE,
+  const { values } = parseStrictCliArgs(argv, {
     options: {
       replay: { type: "string" },
-    },
-    buildQueue(values) {
-      const replayPath = requireCliString(values.replay, "--replay");
-      return buildV9MintPostureQueueFromCards(readV9PublishedCards(io.readJson(replayPath)));
-    },
-    isClear: (queue) => queue.entries.length === 0,
-    failureMessage: (queue) => `${queue.entries.length} curated mint-posture disagreement(s) remain`,
-    writeSummary(queue, stdout) {
-      stdout.write(
-        `Curated mint-posture queue: ${queue.entries.length} disagreement(s) across ${queue.reviewedAssetCount} asset(s); ` +
-          `${queue.nrCards.length} NR card(s) excluded.\n`,
-      );
+      output: { type: "string" },
+      "require-clear": { type: "boolean" },
     },
   });
+  if (writeCliHelpIfRequested(values, USAGE, io.stdout)) return null;
+  const replayPath = requireCliString(values.replay, "--replay");
+  const outputPath = requireCliString(values.output, "--output");
+
+  const queue = buildV9MintPostureQueueFromCards(readV9PublishedCards(io.readJson(replayPath)));
+  io.writeText(outputPath, `${JSON.stringify(queue, null, 2)}\n`);
+  io.stdout.write(
+    `Curated mint-posture queue: ${queue.entries.length} disagreement(s) across ${queue.reviewedAssetCount} asset(s); ` +
+      `${queue.nrCards.length} NR card(s) excluded.\n`,
+  );
+  if (values["require-clear"] === true && queue.entries.length > 0) {
+    throw new Error(`${queue.entries.length} curated mint-posture disagreement(s) remain`);
+  }
+  return queue;
 }
 
 runDirectCli(import.meta.url, () => runV9MintPostureQueueCli(process.argv.slice(2)), {

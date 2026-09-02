@@ -17,14 +17,17 @@
  *   node scripts/maintenance/build-og-editorial.mjs
  *   node scripts/maintenance/build-og-editorial.mjs --check
  */
-import { readFileSync } from "node:fs";
+import { firefox } from "playwright";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { escapeXml } from "../lib/og-svg.mts";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { buildSvgBrowserDocument, escapeXml } from "../lib/og-svg.mts";
 import {
-  contentSha256,
+  assertNoStaleOgOutputs,
   formatOgWriteStatus,
-  runOgPlaywrightFamily,
+  runOgArtifactBuild,
+  writeFileIfChanged,
 } from "../lib/og-image-checks.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -35,6 +38,10 @@ const SIGNATURE_PATH = resolve(REPO_ROOT, "scripts/maintenance/state/og-editoria
 const NEWSREADER_FONT = resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Variable.subset.woff2");
 const GEIST_MONO_FONT = resolve(REPO_ROOT, "src/assets/fonts/GeistMono-Regular.woff2");
 const CHECK_MODE = process.argv.includes("--check");
+
+mkdirSync(STAGING, { recursive: true });
+mkdirSync(PUBLIC, { recursive: true });
+mkdirSync(dirname(SIGNATURE_PATH), { recursive: true });
 
 // Read the canonical methodology version label so the version pin always
 // matches what the rest of the app renders. Both the TS app and this script
@@ -47,8 +54,8 @@ const { currentVersion } = JSON.parse(
 );
 const METHODOLOGY_LABEL = `Methodology v${currentVersion}`;
 const FONT_SIGNATURES = {
-  newsreader: contentSha256(readFileSync(NEWSREADER_FONT)),
-  geistMono: contentSha256(readFileSync(GEIST_MONO_FONT)),
+  newsreader: sha256(readFileSync(NEWSREADER_FONT)),
+  geistMono: sha256(readFileSync(GEIST_MONO_FONT)),
 };
 
 const CARDS = [
@@ -139,6 +146,10 @@ function buildSvg({ kicker, title }) {
 `;
 }
 
+function sha256(input) {
+  return createHash("sha256").update(input).digest("hex");
+}
+
 function buildSignatureManifest(cards) {
   return `${JSON.stringify(
     {
@@ -152,49 +163,172 @@ function buildSignatureManifest(cards) {
   )}\n`;
 }
 
+function withPublicPngSignatures(signatures) {
+  return signatures.map((signature) => {
+    const publicPath = resolve(PUBLIC, signature.file);
+    return {
+      ...signature,
+      pngSha256: existsSync(publicPath) ? sha256(readFileSync(publicPath)) : null,
+    };
+  });
+}
+
+const renderInputs = CARDS.map((card) => {
+  const svg = buildSvg({ kicker: card.kicker, title: card.title });
+  return {
+    card,
+    file: card.file,
+    svg,
+    signature: {
+      file: card.file,
+      kicker: card.kicker,
+      title: card.title,
+      svgSha256: sha256(svg),
+    },
+  };
+});
+const renderInputSignatures = renderInputs.map(({ signature }) => signature);
+const inputSignatureManifest = buildSignatureManifest(renderInputSignatures);
+const signatureManifest = CHECK_MODE
+  ? buildSignatureManifest(withPublicPngSignatures(renderInputSignatures))
+  : inputSignatureManifest;
+
+function readExistingSignatureManifest() {
+  return existsSync(SIGNATURE_PATH) ? readFileSync(SIGNATURE_PATH, "utf-8") : null;
+}
+
+function stripPngSignatures(manifest) {
+  if (!manifest) return null;
+  try {
+    const parsed = JSON.parse(manifest);
+    parsed.cards = parsed.cards.map((signature) => ({
+      file: signature.file,
+      kicker: signature.kicker,
+      title: signature.title,
+      svgSha256: signature.svgSha256,
+    }));
+    return `${JSON.stringify(parsed, null, 2)}\n`;
+  } catch {
+    return null;
+  }
+}
+
+function stalePngSignatureLabels(manifest) {
+  if (!manifest) return CARDS.map((card) => card.file);
+  try {
+    return JSON.parse(manifest).cards
+      .filter(
+        (signature) =>
+          !signature.pngSha256 ||
+          signature.pngSha256 !== sha256(readFileSync(resolve(PUBLIC, signature.file))),
+      )
+      .map((signature) => signature.file);
+  } catch {
+    return CARDS.map((card) => card.file);
+  }
+}
+
+function allPublicOutputsExist() {
+  return CARDS.every((card) => existsSync(resolve(PUBLIC, card.file)));
+}
+
 // The signature manifest fingerprints every deterministic render input and
 // committed PNG. When it matches and all committed PNGs exist, --check does
 // not need Firefox while still detecting hand-edited or corrupted assets.
-await runOgPlaywrightFamily({
-  check: CHECK_MODE,
-  family: "Editorial",
-  publicDir: PUBLIC,
-  refreshCommand: "npm run build:og-editorial",
-  roster: CARDS,
-  stagingDir: STAGING,
-  cleanupStaging: false,
-  cleanupSources: true,
-  signaturePath: SIGNATURE_PATH,
-  signatureStaleLabel: "scripts/maintenance/state/og-editorial-signatures.json",
-  signatureFastPath: true,
-  includePngSignatures: true,
-  skippedMessage: "Skipped Firefox render; editorial OG signatures are current.",
-  background: "#f8f8fa",
-  fonts: [
-    { family: "Newsreader", file: NEWSREADER_FONT, weight: "200 800" },
-    { family: "GeistMono", file: GEIST_MONO_FONT, weight: "400 700" },
-  ],
-  buildSignatureManifest,
-  buildRenderInput: (card) => {
-    const svg = buildSvg({ kicker: card.kicker, title: card.title });
-    return {
-      file: card.file,
-      sourceBasename: card.file.replace(/\.png$/, ""),
-      svg,
-      signature: {
-        file: card.file,
-        kicker: card.kicker,
-        title: card.title,
-        svgSha256: contentSha256(svg),
-      },
-    };
-  },
-  onResult: (card, { changed, publicPath }) => {
+const existingSignatureManifest = readExistingSignatureManifest();
+
+if (CHECK_MODE && existingSignatureManifest === signatureManifest && allPublicOutputsExist()) {
+  for (const card of CARDS) {
     console.log(formatOgWriteStatus({
-      check: CHECK_MODE,
-      changed,
-      publicPath,
+      check: true,
+      publicPath: resolve(PUBLIC, card.file),
       suffix: ` (kicker: ${card.kicker})`,
     }));
-  },
-});
+  }
+  console.log("Skipped Firefox render; editorial OG signatures are current.");
+  process.exit(0);
+}
+
+if (
+  CHECK_MODE &&
+  allPublicOutputsExist() &&
+  stripPngSignatures(existingSignatureManifest) === inputSignatureManifest
+) {
+  assertNoStaleOgOutputs({
+    family: "Editorial",
+    staleFiles: stalePngSignatureLabels(existingSignatureManifest),
+    refreshCommand: "npm run build:og-editorial",
+  });
+}
+
+const browser = await firefox.launch({ headless: true });
+const staleFiles = [];
+try {
+  const artifactResult = await runOgArtifactBuild({
+    check: CHECK_MODE,
+    family: "Editorial",
+    publicDir: PUBLIC,
+    refreshCommand: "npm run build:og-editorial",
+    roster: renderInputs,
+    stagingDir: STAGING,
+    cleanup: false,
+    assertStale: false,
+    render: async ({ card, svg }, { stagedPath }) => {
+      const svgPath = resolve(STAGING, card.file.replace(/\.png$/, ".svg"));
+      const htmlPath = resolve(STAGING, card.file.replace(/\.png$/, ".html"));
+      writeFileSync(svgPath, svg);
+      writeFileSync(htmlPath, buildSvgBrowserDocument({
+        svg,
+        background: "#f8f8fa",
+        fonts: [
+          { family: "Newsreader", file: NEWSREADER_FONT, weight: "200 800" },
+          { family: "GeistMono", file: GEIST_MONO_FONT, weight: "400 700" },
+        ],
+      }));
+      const page = await browser.newPage({ viewport: { width: 1200, height: 628 } });
+      try {
+        await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
+        await page.evaluate(() => document.fonts.ready);
+        await page.screenshot({
+          path: stagedPath,
+          omitBackground: false,
+          clip: { x: 0, y: 0, width: 1200, height: 628 },
+          timeout: 30000,
+        });
+      } finally {
+        await page.close();
+        try {
+          unlinkSync(svgPath);
+          unlinkSync(htmlPath);
+        } catch {
+          /* swallow */
+        }
+      }
+    },
+    onResult: ({ card }, { changed, publicPath }) => {
+      console.log(formatOgWriteStatus({
+        check: CHECK_MODE,
+        changed,
+        publicPath,
+        suffix: ` (kicker: ${card.kicker})`,
+      }));
+    },
+  });
+  staleFiles.push(...artifactResult.staleFiles);
+
+  if (CHECK_MODE) {
+    if (existingSignatureManifest !== signatureManifest) {
+      staleFiles.push("scripts/maintenance/state/og-editorial-signatures.json");
+    }
+  } else {
+    writeFileIfChanged(SIGNATURE_PATH, buildSignatureManifest(withPublicPngSignatures(renderInputSignatures)));
+  }
+
+  assertNoStaleOgOutputs({
+    family: "Editorial",
+    staleFiles,
+    refreshCommand: "npm run build:og-editorial",
+  });
+} finally {
+  await browser.close();
+}

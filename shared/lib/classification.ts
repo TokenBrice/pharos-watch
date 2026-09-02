@@ -1,5 +1,6 @@
+import type { GovernanceType } from "../types";
 import { BACKING_BADGE_STYLES } from "./classification/badges";
-import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
+import { BACKING_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
 import { PEG_HERO_CHIP_LABELS } from "./peg-taxonomy";
 
 export * from "./classification/domain";
@@ -18,7 +19,12 @@ export { PEG_TAXONOMY } from "./peg-taxonomy";
 
 export const HERO_CHIP_BACKING_LABELS = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.badgeLabel);
 
-export const HERO_CHIP_GOVERNANCE_LABELS = projectDescriptors(GOVERNANCE_DESCRIPTORS, (descriptor) => descriptor.badgeLabel);
+/** Hero chips spell out "Centralized-Dependent"; the badge descriptor abbreviates to "CeFi-Dependent". */
+export const HERO_CHIP_GOVERNANCE_LABELS = {
+  centralized: "Centralized",
+  "centralized-dependent": "Centralized-Dependent",
+  decentralized: "Decentralized",
+} as const satisfies Record<GovernanceType, string>;
 
 /** Solid chart-fill twins of the canonical BACKING_BADGE_STYLES hues. */
 export const BACKING_CHART_FILL_CLASSES = {

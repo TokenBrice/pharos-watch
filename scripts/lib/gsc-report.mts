@@ -139,14 +139,8 @@ export function uniqueHeaders(headers: readonly unknown[]): string[] {
   });
 }
 
-export type GscCsvRecord = Record<string, string>;
-
-export function recordFromCsvRow(headers: readonly string[], row: readonly unknown[]): GscCsvRecord {
-  const record: GscCsvRecord = {};
-  headers.forEach((header, index) => {
-    record[header] = String(row[index] ?? "").trim();
-  });
-  return record;
+export function recordFromCsvRow(headers: readonly string[], row: readonly unknown[]): Record<string, string> {
+  return Object.fromEntries(headers.map((header, index) => [header, String(row[index] ?? "").trim()]));
 }
 
 export function findHeader(headers: readonly string[], candidates: readonly string[]): string {
@@ -158,9 +152,7 @@ export function findHeader(headers: readonly string[], candidates: readonly stri
   return "";
 }
 
-export function hasHeader(headers: readonly string[], candidates: readonly string[]): boolean {
-  return findHeader(headers, candidates) !== "";
-}
+export const hasHeader = (headers: readonly string[], candidates: readonly string[]): boolean => findHeader(headers, candidates) !== "";
 
 export function isDigit(char: string): boolean {
   return char >= "0" && char <= "9";
@@ -193,10 +185,8 @@ export function firstNumberToken(value: unknown): string {
 }
 
 export function parseCsvNumber(value: unknown): number | null {
-  const token = firstNumberToken(value);
-  if (!token) return null;
-  const parsed = Number(token);
-  return Number.isFinite(parsed) ? parsed : null;
+  const token = firstNumberToken(value); const parsed = Number(token);
+  return token && Number.isFinite(parsed) ? parsed : null;
 }
 
 export function parsePositiveNumber(value: unknown, optionName: string, { integer = false } = {}): number {

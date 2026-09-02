@@ -4,9 +4,8 @@ import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
 import { cancelResponseBodyQuietly, readResponseTextWithinLimitWithSignal } from "../lib/response-body";
-import { escapeHtml, type TelegramCreds } from "../lib/telegram";
+import { escapeHtml, sendToChat, type TelegramCreds } from "../lib/telegram";
 import type { CronResult } from "../lib/cron-logger";
-import { deliverWatchdogTransitions } from "./shared/watchdog-transition-alert";
 import {
   NON_BLOCKED_DIGEST_SQL_FILTER,
   NON_INTERNAL_DIGEST_SQL_FILTER,
@@ -401,30 +400,37 @@ export async function runDigestPublicationWatchdog(
     signal,
   );
 
-  // The map check is deliberately advisory. It must not consume the shared
-  // publication-alert cooldown, otherwise a 07:45 map notice could hide a
-  // genuinely late daily edition at 08:30.
-  const hasBlockingTransition = [...stale, ...recovered].some((observation) => !observation.advisory);
-  const deliveredTransitions = await deliverWatchdogTransitions({
-    db,
-    stale,
-    recovered,
-    hasCooldownConsumingTransition: hasBlockingTransition,
-    alertCacheKey: DIGEST_WATCHDOG_ALERT_KEY,
-    lastAlertValue: alertCache?.value,
-    cooldownSec: DIGEST_PUBLICATION_ALERT_COOLDOWN_SEC,
-    nowSec,
-    operatorTelegramCreds: options.operatorTelegramCreds ?? null,
-    buildAlertText: () => buildAlertText(date, stale, recovered),
-    signal,
-    cacheSignal: signal,
-  });
   const transitions = {
-    stale: deliveredTransitions.stale.map((observation) => observation.condition),
-    recovered: deliveredTransitions.recovered.map((observation) => observation.condition),
-    sent: deliveredTransitions.sent,
-    cooldown: deliveredTransitions.cooldown,
+    stale: stale.map((observation) => observation.condition),
+    recovered: recovered.map((observation) => observation.condition),
+    sent: false,
+    cooldown: false,
   };
+  if (stale.length > 0 || recovered.length > 0) {
+    // The map check is deliberately advisory. It must not consume the shared
+    // publication-alert cooldown, otherwise a 07:45 map notice could hide a
+    // genuinely late daily edition at 08:30.
+    const hasBlockingTransition = [...stale, ...recovered].some((observation) => !observation.advisory);
+    const lastAlertAt = Number(alertCache?.value);
+    const cooldown = hasBlockingTransition && Number.isFinite(lastAlertAt)
+      && nowSec - lastAlertAt < DIGEST_PUBLICATION_ALERT_COOLDOWN_SEC;
+    transitions.cooldown = cooldown;
+    const creds = options.operatorTelegramCreds ?? null;
+    if (!cooldown && creds) {
+      const delivery = await sendToChat(
+        creds.chatId,
+        buildAlertText(date, stale, recovered),
+        creds.botToken,
+        { disableWebPagePreview: true, signal },
+      );
+      if (delivery.ok && hasBlockingTransition) {
+        transitions.sent = true;
+        await setCache(db, DIGEST_WATCHDOG_ALERT_KEY, String(nowSec), signal);
+      } else if (delivery.ok) {
+        transitions.sent = true;
+      }
+    }
+  }
 
   const blockingStale = observations.filter((observation) => (
     !observation.advisory && observation.state === "stale"
