@@ -1,5 +1,7 @@
 # Pharos Editorial Style
 
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Voice · No machine tells · Neutral but compelling · Pointed only when the evidence closes the case · Clear, informative, descriptive · Claim safety · Banned constructions · Punctuation and labels · Registers by surface · Exemplars · Scope and enforcement · Final edit · Machine-readable policy.
+
 Version 1.2. This is the sole style authority for Pharos-owned prose. Surface prompts, agent skills, and lints derive from it; none may add or relax a voice rule locally. Surface-specific factual and structural rules (lead selection, anti-repetition, length contracts) live in the register table here and in each surface's factual contract.
 
 The fenced `editorial-policy` block at the end of this document is the machine-readable source of truth. `shared/lib/editorial-style.generated.ts` is generated from it; never hand-edit that file, and never maintain a second phrase list.

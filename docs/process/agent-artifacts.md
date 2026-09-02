@@ -23,24 +23,86 @@ Before deleting a historical artifact, check whether any verified doc, test, sou
 
 Do not create new committed planning-archive or calibration-snapshot material. Temporary investigation output should stay local, untracked, or in `/agents/`. Reviewed methodology decisions belong in the owning feature document and structured changelog; the evidence report remains scratch output.
 
+## Campaign Index And Handoff
+
+Name new campaign directories `agents/<YYYY-MM-DD>-<slug>/`. Each campaign README is its closure index and carries one row per top-level artifact or task output with these fields:
+
+| Field | Meaning |
+| --- | --- |
+| `path` | Repository-relative scratch path |
+| `kind` | Plan, evidence, generated output, report, or handoff |
+| `owner` | Human, team, or assigned session responsible for closure |
+| `status` | `active`, `blocked`, `ready-to-release`, `complete`, or `superseded` |
+| created / lastReviewed | ISO dates |
+| `source/plan` | Stable plan, task IDs, source pin, or other authority |
+| `durable destinations` | Verified docs, changelog, source, or `none` |
+| `retention` | Review date or event through which the artifact stays useful |
+| `safe-to-remove condition` | Explicit gate plus required owner confirmation |
+
+Reserve `outputs/` for reproducible generated material and `evidence/` for reviewed notes. A complete campaign summary must reconcile every task ID, including deferred and superseded work. Use this plan and handoff template:
+
+```md
+# <Campaign> — <date>
+
+Owner: <human/team>    Status: active|blocked|ready-to-release|complete|superseded
+Created: YYYY-MM-DD    Last reviewed: YYYY-MM-DD
+Goal: <bounded outcome and invariants>
+Source of truth: <tracked source/docs; scratch is evidence only>
+
+## Global constraints
+- <files outside scope, behavior/byte/API invariants, no formatter rule>
+- <credential, migration, deployment, and concurrent-tree constraints>
+
+## Task ledger
+| ID | Task / exact files | Owner/session | Status | Depends on | Verify | Result |
+| A1 | <paths and change> | <agent> | pending | — | <commands + expected result> | — |
+
+## Dispatch packet (repeat per task)
+Task: <ID and one-line objective>
+Files: <allowlist, including new/deleted files>
+Inputs: <brief/report/source refs>
+Do not touch: <explicit exclusions>
+Verification: <focused commands and invariant/byte/parity expectation>
+Return: status, changed files, diff/LOC delta, verification output, blocker, next step.
+
+## Wave gates
+<serial/parallel rules, disjointness proof, generated-artifact gates, release gate>
+
+## Closeout / handoff
+- Every task ID: <complete|deferred|superseded|blocked>, with reason and owner.
+- Actual changed files and net LOC: <recorded from Git>.
+- Verification: <commands, commit SHAs, CI/deploy URLs, operational acceptance state>.
+- Durable decisions distilled to: <tracked docs/changelog paths>.
+- Scratch retention: <keep until/date or safe-to-remove condition>.
+- Next action and owner: <one sentence>.
+```
+
 ## Agent Skills
 
 Project-local skill directories should contain Pharos-specific workflows only. Keep generic design, browser, vendor, or personal workflow skills in the user's global agent config instead of this repository.
 
-The shared Pharos convention:
+`.codex/skills/<name>/` is the canonical physical skill tree. `.agents/skills` points to `../.codex/skills`, while `.claude/skills/<name>/` mirrors canonical files and directories through relative symlinks. Codex-only `agents/` display metadata is allowlisted; all other companions, including `scripts/` and `references/`, must be mirrored. Run `npm run check:agent-skills` (part of `check:structural`) to validate parity, links, frontmatter, and duplicate physical bodies; use `node scripts/maintenance/sync-agent-skills.mjs --write` only to create or repair Claude facade symlinks.
 
-- `.codex/skills/<name>/SKILL.md` is the editable canonical source.
-- `.agents/skills` is a directory symlink to `.codex/skills`, providing standard project-skill discovery without duplicating bodies.
-- `.claude/skills/<name>/SKILL.md` is a relative symlink to `../../../.codex/skills/<name>/SKILL.md`.
-- Canonical shared skill bodies must use repo-relative paths such as `.codex/skills/<name>/references/...` or normal repo source paths. Do not use `$CODEX_HOME` paths in a skill that Claude symlinks.
-
-Every Pharos skill is canonical in `.codex/skills/` with matching `.claude/skills/<name>/` symlinks; there are no runtime-exclusive skills. The directory listing is the source of truth — do not maintain a name roster here. When a canonical skill's body reads companion files by skill-relative path (for example `./reference.md` or `references/subagents.md`), symlink those alongside `SKILL.md`; a body that reads them by repo-relative `.codex/skills/<name>/...` path needs no mirror.
+Canonical shared skill bodies must use repo-relative paths such as `.codex/skills/<name>/references/...` or normal repo source paths. Do not use `$CODEX_HOME` paths in a skill that Claude symlinks. The canonical directory listing is the source of truth; do not maintain a skill-name roster here.
 
 Skill bodies must not hard-code snapshots of current repo state (counts, methodology versions, enum lists, skill rosters). State the rule and point at the owning source file instead; when an enumeration is embedded for reading convenience, mark it with "the source file wins" so agents re-verify before relying on it.
 
 Release and CI skills summarize the operating path, but `docs/deployment-process.md`, `docs/testing.md`, the workflow YAML, and the automation registries remain authoritative. Keep protected-main authorization wording, validation targets, generated-artifact staging behavior, and deployment-versus-operational proof aligned across both skills instead of allowing separate agent-specific release procedures.
 
-Skill symlinks are not CI-validated. A broken `.agents/skills` alias or Claude skill mirror fails loudly at agent load time, and symlinks pointing outside this repository are unsupported.
+Symlinks pointing outside this repository are unsupported.
+
+## Harness Configuration
+
+Repo-local omp settings live in `.omp/config.yml` (tracked). It sets `task.isolation.mode: none`, `tools.approvalMode: yolo`, and the Pharos task/smol/review/security/research/designer model roles; every other role falls through to the user's global `~/.omp/agent/config.yml`. Verify with `omp config get task.isolation.mode` from the repo root.
+
+| Capability | omp | Claude Code | Codex CLI |
+| --- | --- | --- | --- |
+| Context/config | `.omp/config.yml`; root/scoped `AGENTS.md`/`CLAUDE.md` | Tracked `.claude/settings.json`; root/scoped `CLAUDE.md`/`AGENTS.md` | Root/scoped `AGENTS.md`; no project `config.toml` |
+| Hooks | Supported; none configured | Tracked SessionStart + PreToolUse hooks | Ignored `.codex/hooks.json` (opt-in install; enable in Codex) |
+| Skills | Discovers `.agents/skills` → `.codex/skills` | `.claude/skills` symlink facade | Canonical `.codex/skills` |
+| MCP | None configured (harness-managed `node_repl` only) | None configured | `node_repl` enabled |
+| Subagents | Native typed agents (`task`) | Agents/workflows + `codex-agent` wrapper | Standalone `codex exec` sessions via wrapper |
+| Isolation/approval | Overlay: no worktree isolation, yolo | Permission prompts/rules | Workspace-write sandbox rooted at `-C` |
 
 ## Claude Workflow Orchestrators
 

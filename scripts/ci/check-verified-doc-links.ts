@@ -4,9 +4,11 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { getVerifiedDocFiles, splitLines } from "../lib/doc-files.mts";
 import { reportViolations } from "../lib/report-violations.mts";
+import { runAsCli } from "../lib/source-files.mts";
 
-const repoRoot = process.cwd();
-const verifiedDocFiles = getVerifiedDocFiles(repoRoot);
+const NAVIGATION_LINE_THRESHOLD = 400;
+const NAVIGATION_BYTE_THRESHOLD = 50 * 1024;
+const NAVIGATION_SCAN_LINES = 20;
 
 interface ResolvedDocTarget {
   filePath: string;
@@ -106,7 +108,7 @@ function isExternalTarget(target: string): boolean {
   return target.startsWith("mailto:") || target.includes("://") || hasExplicitScheme(target);
 }
 
-function resolveDocTarget(sourceFile: string, target: string): ResolvedDocTarget {
+function resolveDocTarget(sourceFile: string, target: string, repoRoot: string): ResolvedDocTarget {
   const [rawPath, rawFragment] = target.split("#", 2);
   const fragment = rawFragment?.trim() || null;
 
@@ -212,45 +214,85 @@ function* iterMarkdownLinks(content: string): Generator<string> {
   }
 }
 
-const errors: string[] = [];
-const anchorCache = new Map<string, Set<string>>();
+export function collectNavigationBlockViolations(
+  filePaths: readonly string[],
+  repoRoot = process.cwd(),
+): string[] {
+  const violations: string[] = [];
 
-for (const filePath of verifiedDocFiles) {
-  const content = readFileSync(filePath, "utf8");
+  for (const filePath of filePaths) {
+    const content = readFileSync(filePath, "utf8");
+    const lines = splitLines(content);
+    const lineCount = lines.length - (lines.at(-1) === "" ? 1 : 0);
+    const qualifies = lineCount >= NAVIGATION_LINE_THRESHOLD
+      || Buffer.byteLength(content, "utf8") >= NAVIGATION_BYTE_THRESHOLD;
+    if (!qualifies) continue;
 
-  for (const target of iterMarkdownLinks(content)) {
-    if (!target || isExternalTarget(target)) continue;
-
-    const resolvedTarget = resolveDocTarget(filePath, target);
-    if (!resolvedTarget.filePath.startsWith(repoRoot)) {
-      errors.push(`${relative(repoRoot, filePath)} -> ${target}: absolute path is outside the repo`);
-      continue;
-    }
-    if (!existsSync(resolvedTarget.filePath) || !statSync(resolvedTarget.filePath).isFile()) {
-      errors.push(`${relative(repoRoot, filePath)} -> ${target}: target file does not exist`);
-      continue;
-    }
-
-    if (!resolvedTarget.fragment) continue;
-
-    if (!anchorCache.has(resolvedTarget.filePath)) {
-      anchorCache.set(resolvedTarget.filePath, collectAnchors(resolvedTarget.filePath));
-    }
-
-    const anchors = anchorCache.get(resolvedTarget.filePath);
-    if (!anchors || !anchors.has(resolvedTarget.fragment)) {
-      errors.push(
-        `${relative(repoRoot, filePath)} -> ${target}: missing heading anchor "#${resolvedTarget.fragment}" in ${relative(repoRoot, resolvedTarget.filePath)}`,
+    const hasTopNavigation = lines
+      .slice(0, NAVIGATION_SCAN_LINES)
+      .some((line) => line.startsWith("> **Agent navigation**"));
+    if (!hasTopNavigation) {
+      violations.push(
+        `${relative(repoRoot, filePath)}: docs at or above 400 lines or 50 KB must include a top `
+          + `\`> **Agent navigation**\` block (docs/README.md#documentation-rules)`,
       );
     }
   }
+
+  return violations;
 }
 
-process.exit(
-  reportViolations({
+function collectLinkViolations(filePaths: readonly string[], repoRoot: string): string[] {
+  const errors: string[] = [];
+  const anchorCache = new Map<string, Set<string>>();
+
+  for (const filePath of filePaths) {
+    const content = readFileSync(filePath, "utf8");
+
+    for (const target of iterMarkdownLinks(content)) {
+      if (!target || isExternalTarget(target)) continue;
+
+      const resolvedTarget = resolveDocTarget(filePath, target, repoRoot);
+      if (!resolvedTarget.filePath.startsWith(repoRoot)) {
+        errors.push(`${relative(repoRoot, filePath)} -> ${target}: absolute path is outside the repo`);
+        continue;
+      }
+      if (!existsSync(resolvedTarget.filePath) || !statSync(resolvedTarget.filePath).isFile()) {
+        errors.push(`${relative(repoRoot, filePath)} -> ${target}: target file does not exist`);
+        continue;
+      }
+
+      if (!resolvedTarget.fragment) continue;
+
+      if (!anchorCache.has(resolvedTarget.filePath)) {
+        anchorCache.set(resolvedTarget.filePath, collectAnchors(resolvedTarget.filePath));
+      }
+
+      const anchors = anchorCache.get(resolvedTarget.filePath);
+      if (!anchors || !anchors.has(resolvedTarget.fragment)) {
+        errors.push(
+          `${relative(repoRoot, filePath)} -> ${target}: missing heading anchor "#${resolvedTarget.fragment}" in ${relative(repoRoot, resolvedTarget.filePath)}`,
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
+export function main(repoRoot = process.cwd()): number {
+  const verifiedDocFiles = getVerifiedDocFiles(repoRoot);
+  const errors = [
+    ...collectLinkViolations(verifiedDocFiles, repoRoot),
+    ...collectNavigationBlockViolations(verifiedDocFiles, repoRoot),
+  ];
+
+  return reportViolations({
     label: "Verified documentation links",
     heading: "Verified documentation link check failed",
     violations: errors,
     scannedCount: verifiedDocFiles.length,
-  }),
-);
+  });
+}
+
+runAsCli(import.meta.url, main);

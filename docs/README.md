@@ -5,6 +5,7 @@ Verified entry point for Pharos documentation. Code, schemas, registries, and ch
 ## Start Here
 
 - [../README.md](../README.md) - repository overview, local setup, and deployment summary
+- [process/agent-start-here.md](./process/agent-start-here.md) - compact, harness-neutral agent workflow from routing through handoff
 - [agent-task-router.md](./agent-task-router.md) - find the smallest relevant docs and checks for a change
 - [architecture.md](./architecture.md) - runtime boundaries, host model, and architectural decisions
 - [data-flow-map.md](./data-flow-map.md) - source-to-cron-to-API-to-page flow map
@@ -44,13 +45,28 @@ rg -n '/route-name/|src/app/route-name' docs
 
 - [pharos-urn.md](./pharos-urn.md) - stable citation identifiers and JSON-LD integration
 
-## Process References
+## Process Index
 
-- [process/boundary-waivers.md](./process/boundary-waivers.md) - reviewed worker import exceptions
-- [process/d1-baseline-squash-plan.md](./process/d1-baseline-squash-plan.md) - migration baseline consolidation
-- [process/font-assets.md](./process/font-assets.md) - font production and licensing
-- [process/protocol-api-mechanism-refresh.md](./process/protocol-api-mechanism-refresh.md) - protocol mechanism evidence refresh
-- [process/shock-coverage-refresh.md](./process/shock-coverage-refresh.md) - automated CDP shock coverage refresh
+Start with [Agent Start Here](./process/agent-start-here.md), then open only the process owner needed for the task. Skill wrappers below are the `.codex/skills/` workflows that directly reference the page; `none` means the page is used directly.
+
+| Process document | Kind | Skill wrapper | Primary command | Verification command |
+| --- | --- | --- | --- | --- |
+| [Adding a Stablecoin](./process/adding-a-stablecoin.md) | runbook | `contract-enrich`, `contract-populate`, `mica-research`, `resilience-classify`, `reserve-research`, `stablecoin-addition-orchestrator`, `stablecoin-info-fetch` | `npm run bootstrap:generated` | `npm run check:stablecoin-data` |
+| [Agent Artifacts](./process/agent-artifacts.md) | convention | `pharos-docs-sync-audit`, `pharos-release-runner` | none | `npm run check:agent-skills` |
+| [Blog Publishing](./process/blog-publishing.md) | runbook | none | edit the post body and registry | `npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts` |
+| [Worker Import Boundary Waivers](./process/boundary-waivers.md) | policy | none | none; review and document the waiver | `npx vitest run scripts/__tests__/eslint-import-boundaries.test.ts` |
+| [Cron Trigger Budget Policy](./process/cron-trigger-policy.md) | policy | none | `npm run check:cron-connections` | `npm run check:cron-sync` |
+| [D1 Baseline Squash Policy](./process/d1-baseline-squash-plan.md) | runbook | none | rehearse against two fresh D1 databases | `npm run check:migrations` |
+| [DDRR Calibration](./process/ddrr-calibration.md) | methodology | none | `npm run calibrate:ddrr -- --prod --report agents/ddrr-calibration-report.md` | semantic review; no pass/fail gate |
+| [Feature Flags](./process/feature-flags.md) | policy | none | `NEXT_PUBLIC_PHAROS_<NAME>=true npm run dev` | `npm run check:stale-flags` |
+| [Font Assets](./process/font-assets.md) | runbook | none | `npm run subset:fonts` | `npm run subset:fonts -- --check` |
+| [Mechanism-overlay Evidence Standard](./process/mechanism-overlay-evidence-standard.md) | methodology | `stablecoin-addition-orchestrator` | none; apply the evidence standard | pinned-envelope replay and attributed mover review |
+| [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) | runbook | none | `npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset <asset>` | `npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay-all` |
+| [Safety Score Curation-Expiry Sweep](./process/safety-score-curation-expiry-sweep.md) | runbook | none | `npm run safety-score-v9:replay -- --input <capture> --output <replay> --published-at <clock>` | complete the five closeout gates in the runbook |
+| [Safety Score Equivalence Harness](./process/safety-score-equivalence-harness.md) | methodology | none | `npm run safety-score-v9:replay -- --input <capture> --output <replay> --published-at <clock>` | `npm run safety-score-v9:diff -- --baseline <baseline> --candidate <candidate> --assert-empty` |
+| [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md) | runbook | `pharos-ci-failure-triage` | `npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset <asset>` | `node --import tsx scripts/ci/check-shock-coverage-freshness.ts` |
+| [Stablecoin Research Sidecars](./process/stablecoin-research-sidecars.md) | runbook | `genius-research`, `mica-research`, `reserve-research`, `stablecoin-addition-orchestrator`, `stablecoin-info-fetch` | `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` | `npm run check:stablecoin-data` |
+| [Worker Runtime Experiments](./process/worker-runtime-experiments.md) | runbook | none | `npm run ops:benchmark-worker-compatibility -- --candidate-date YYYY-MM-DD` | compare both bundle/startup checks and local smoke runs |
 
 ## Methodology History
 

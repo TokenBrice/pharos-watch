@@ -1,8 +1,8 @@
 # Digest Pipeline
 
-Daily AI-generated stablecoin market recap, distributed to the web, Twitter/X, and Telegram.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Generation · Data collection · DEX liquidity admission gate · LLM call · Editorial style gate · Failure handling · Storage · API Endpoints · Distribution · Weekly Recap · Frontend · Static Generation Pipeline · Internal sentinel rows · Environment Variables.
 
-> **Agent navigation:** Grep the heading you need: Overview · Generation · Editorial style gate · Storage · API Endpoints · Distribution · Weekly Recap · Frontend · Static Generation Pipeline · Environment Variables.
+Daily AI-generated stablecoin market recap, distributed to the web, Twitter/X, and Telegram.
 
 ---
 
