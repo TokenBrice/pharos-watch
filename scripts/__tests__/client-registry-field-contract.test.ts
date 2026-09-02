@@ -12,6 +12,7 @@ import {
   readGeniusClientFields,
 } from "../build-data/build-client-registry.mjs";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { expectedWorkerRuntimeCoin } from "@shared/lib/__tests__/worker-runtime-registry.test-support";
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
@@ -21,21 +22,7 @@ import {
 describe("client registry field contract", () => {
   it("projects the exact narrow Worker identity and lifecycle contract", () => {
     const { runtimeCoins } = buildWorkerRuntimeRegistryOutput();
-    const expected = TRACKED_STABLECOINS.map((coin) => ({
-      id: coin.id,
-      symbol: coin.symbol,
-      name: coin.name,
-      pegCurrency: coin.flags.pegCurrency,
-      ...(coin.status != null ? { status: coin.status } : {}),
-      ...(coin.contracts != null ? { contracts: coin.contracts } : {}),
-      ...(coin.tradedContracts != null ? { tradedContracts: coin.tradedContracts } : {}),
-      ...((coin.status == null || coin.status === "active") && coin.liveReservesConfig != null
-        ? {
-            liveReserveCircuitSource:
-              `live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`,
-          }
-        : {}),
-    }));
+    const expected = TRACKED_STABLECOINS.map(expectedWorkerRuntimeCoin);
 
     expect(runtimeCoins).toEqual(expected);
     expect(

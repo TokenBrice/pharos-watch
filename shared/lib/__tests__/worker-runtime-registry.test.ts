@@ -15,26 +15,11 @@ import {
   WORKER_PRE_LAUNCH_STABLECOINS,
   WORKER_TRACKED_STABLECOINS,
 } from "../stablecoins/worker-runtime-registry";
+import { expectedWorkerRuntimeCoin } from "./worker-runtime-registry.test-support";
 
 describe("Worker runtime stablecoin registry", () => {
   it("preserves the canonical contract identity projection", () => {
-    expect(WORKER_TRACKED_STABLECOINS).toEqual(
-      TRACKED_STABLECOINS.map((coin) => ({
-        id: coin.id,
-        symbol: coin.symbol,
-        name: coin.name,
-        pegCurrency: coin.flags.pegCurrency,
-        ...(coin.status != null ? { status: coin.status } : {}),
-        ...(coin.contracts != null ? { contracts: coin.contracts } : {}),
-        ...(coin.tradedContracts != null ? { tradedContracts: coin.tradedContracts } : {}),
-        ...((coin.status == null || coin.status === "active") && coin.liveReservesConfig != null
-          ? {
-              liveReserveCircuitSource:
-                `live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`,
-            }
-          : {}),
-      })),
-    );
+    expect(WORKER_TRACKED_STABLECOINS).toEqual(TRACKED_STABLECOINS.map(expectedWorkerRuntimeCoin));
   });
 
   it("preserves active, pre-launch, frozen, and live-reserve circuit membership", () => {
